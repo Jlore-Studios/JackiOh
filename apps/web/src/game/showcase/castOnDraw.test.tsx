@@ -1,7 +1,6 @@
-// R502: a card cast the moment it was drawn is held up on both seats, under a "Cast on draw!" ribbon,
-// longer than a play, bursting out of its drawer's Deck pile; with Game's runner it appears as the
-// runner reaches its `cardPlayed`. R436: a Call to Chaos roll is said in words on both seats, and
-// shown still where the effects layer draws nothing (CardShowcase.tsx, ChaosBanner.tsx).
+// R502: a card cast the moment it was drawn is held up on both seats; with Game's runner it appears
+// as the runner reaches its `cardPlayed`. R436: a Call to Chaos roll is said in words on both seats,
+// and shown still where the effects layer draws nothing (CardShowcase.tsx, ChaosBanner.tsx).
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -34,7 +33,6 @@ const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 const drawn = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "drawn", player, instanceId, defId });
 const cast = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 0 });
 
-/** Mounts on a first view, then gives it `view` (with `events` after TURN). */
 function mountThen(events: GameEvent[], options: { queue?: AnimationQueue; view?: PlayerView } = {}) {
   const base = options.view ?? baseView();
   const tree = (view: PlayerView) => withCatalog(<CardShowcase view={view} {...(options.queue === undefined ? {} : { queue: options.queue })} />);

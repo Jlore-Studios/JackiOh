@@ -1,17 +1,11 @@
 //! Last boards: a match setup input from outside the match (docs/classic-sets.md B5 E30; SPEC §8.7
 //! C+ #29 Portal to the Past, §9.3, §10.1, R417, R564).
 //!
-//! "Your last game" is a game this match never saw, so its board is an INPUT: one list per seat, handed
-//! to `create_game` beside the decks and handicaps and frozen into the match (`GameState.last_boards`).
-//! Nothing writes it again, so the match folds exactly from `(seed, decks, handicaps, lastBoards, log)`
-//! (§9.3, `replay::ReplayInput.last_boards`).
-//!
-//!  - `freeze_last_boards` keeps `{ defId, radiant }` per entry, only those this match can rebuild from
-//!    the id alone (R564), reading the catalog and the id's text only, so every process freezes alike.
-//!  - `last_board_for`: the reader the server calls for each seat as a game ends.
-//!
-//! `view_for` never sends a last board; the AI's redaction keeps only its own seat's
-//! (`crates/ai/src/observe.rs`, R185).
+//! "Your last game" is a game this match never saw, so its board is an INPUT, one list per seat, frozen
+//! into the match by `create_game` (`GameState.last_boards`) from the catalog and the id's text only,
+//! so every process freezes alike and the match folds from `(seed, decks, handicaps, lastBoards, log)`
+//! (§9.3, `replay::ReplayInput.last_boards`). The server calls `last_board_for` per seat as a game
+//! ends. `view_for` never sends one; the AI keeps only its own seat's (`crates/ai/src/observe.rs`, R185).
 
 use crate::catalog::{fused_id_specs, is_digest_id};
 // R77's smallest fusion, as `subsystems::fuse`'s `FUSE_MIN_INGREDIENTS`.
@@ -31,8 +25,7 @@ pub fn rebuildable_from_id(def_id: &str, catalog: &CardDefs) -> bool {
     if is_digest_id(def_id) {
         return false;
     }
-    // No state here (`create_game` freezes before the match exists): a digest id was refused above,
-    // so the readable id's own text is all there is to read.
+    // No state here: `create_game` freezes before the match exists.
     let Some(specs) = fused_id_specs(None, def_id) else {
         return false;
     };
@@ -76,10 +69,9 @@ fn entry_of(card: &CardInstance) -> LastBoardEntry {
     }
 }
 
-/// R417: the board `seat` takes away from this game — every card on the field, both sides, in board
-/// order (p1's unit lanes, then p1's backrow lanes, a carried Unit before its carrier, R446, then
-/// p2's), each as its card and face, except a backrow card `seat` may not read (R33: a face-down Trap
-/// or Field Trap it does not control). Dormant cards are not on the field (R13).
+/// R417: the board `seat` takes away from this game — every card on the field in board order (p1's
+/// unit lanes, its backrow lanes, a carried Unit before its carrier, R446, then p2's), as card and face,
+/// minus a face-down backrow card `seat` does not control (R33). Dormant cards are not on the field (R13).
 pub fn last_board_for(state: &GameState, seat: PlayerId) -> Vec<LastBoardEntry> {
     let mut board: Vec<LastBoardEntry> = Vec::new();
     for player in PLAYER_IDS {
@@ -102,9 +94,8 @@ pub fn last_board_for(state: &GameState, seat: PlayerId) -> Vec<LastBoardEntry> 
     board
 }
 
-/// R564: the different cards C+ #29 picks among on `player`'s frozen board — each definition once,
-/// where it first appears, on its Radiant face if any of its entries was Radiant — minus `exclude`
-/// (R387: the generating card's own definitions).
+/// R564: the cards C+ #29 picks among on `player`'s frozen board — each definition once, where it first
+/// appears, Radiant if any entry was — minus `exclude` (R387: the generating card's own definitions).
 pub fn last_board_candidates(state: &GameState, player: PlayerId, exclude: &[String]) -> Vec<LastBoardEntry> {
     let mut candidates: Vec<LastBoardEntry> = Vec::new();
     let entries: &[LastBoardEntry] = state

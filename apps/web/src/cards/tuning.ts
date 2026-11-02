@@ -1,8 +1,8 @@
 // B3.4, R386; R1320: face marks present Degrade and Upgrade as Nerf and Buff while verdict data keeps
 // the engine's words. Compare `tuning` and `params` with the public catalog only (SPEC §10.8;
-// CLAUDE.md rule 7). Stats and keywords use their player-facing direction; numbered keywords and X are
-// greater-is-better except Tribute (§6.3). Declared numbers use `better` (B3.4 rule 5); constants set
-// outright are neither better nor worse. `filledText` stays identical to `fillParams`.
+// CLAUDE.md rule 7). Stats and keywords use their player-facing direction, declared numbers `better`
+// (B3.4 rule 5); constants set outright are neither better nor worse. `filledText` stays identical to
+// `fillParams`.
 
 import {
   PARAM_PLACEHOLDER,

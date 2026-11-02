@@ -62,69 +62,14 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
 /// what a card's script does, not only a number its definition holds, keeps the script it replaces
 /// here, under the newest shipped version that ran it, as any `fn` that builds that card's scripts
-/// (`docs/ADDING_CARDS.md` §3). A replay of a game on that version, or on one before it back to the
-/// previous kept script, folds under the kept one; every other card runs the build's own. The first
-/// kept are #1034's: Wishing Well and Prison rolled without their controller's Luck (R987) through
-/// v0.3.7b, and #1039's: Montaña Giant read a full hand as `HAND_CAP` cards, not its player's hand cap
-/// (R1143), through v0.3.7b. K-Pop Fanatic's plain steal is kept beside them: it marked its target
-/// purple and left one it had no room for with the opponent through v0.3.7b, before it Allured (R1045000).
-/// #1149's five are kept beside them, each as it ran through v0.3.7b: Snom Bunny Mind Control stole any
-/// enemy permanent, not only a Unit; Siphon Squad's aura worked from the moment it was set, not once it
-/// was revealed (R1149000); True Craft a Card went to the graveyard, not to exile; CN in a Bottle was
-/// replaced on any arrival in a hand, not cast on draw (R1149001); Appropriations' Culture and the
-/// Radiant's Military and Healthcare had their higher multiples. #1194's four ran their v0.3.7b scripts
-/// through v0.3.7b too: Malzahar's Recycler discarded at the end of its controller's turn, Ivory Tower had
-/// no Aura, Money Machine rolled its controller's card and either player could Tribute it, and Aluneth's
-/// draws took no discount. #1279's three ran theirs through v0.3.16: Pickle's questions opened during your
-/// turn, Income Tax's keep opened at once on either turn, and In Too Deep's reward G asked at once with
-/// its quest opening beside the prompt (R1279000). #1563's ran theirs through v0.4.0f: YileGPT Tamed put
-/// its Prime on the bottom of the deck, not shuffled in, GIGA Glowy Jelly Bean had no Float discount, and
-/// Expedition12 and Expedition123 lost all mana for their turns (R844), Expedition12's Radiant face with
-/// Echo 1, and Bob's Plan added Spa Day after Aestheticize the Game, with no Discover. #1704's nine ran
-/// theirs through v0.4.0f too: KY's Papaya offered 3 cells on its base face, could end on "done" and
-/// exiled (R831003); The House summoned at its Cry and each start of turn (R406); Felinor Feelings stole
-/// any enemy permanent; Final Gambit redirected the hit to the enemy hero; Straaza's pool was (3) or (4)
-/// Cost Units; Fickle E-Kitten asked at the start of the turn; CN in a Bottle's base card took no raise;
-/// Appropriations had +2X Attack, 2X Books, 8X% and +2X Health [+4X, 5X, 20X%, +6X]; and In Too Deep's
-/// quests 3, 5 and 6 asked 3 permanents, 12 damage and totals of 10. #1748's eleven ran theirs through
-/// v0.4.4b with the numbers printed that they now declare (R1748003): Hinder's discard, Reoccurring
-/// Dream's and Eugenics' chances, Call to Arms' recruits, Zao Gao's tokens, Outbreak's draws per
-/// counter, the cost Claude's Datacenter, H1B Printer, Wondrous Wand and Grubby Gloves set, and CN in a
-/// Bottle's raise and its Radiant face's cost. #1828's four ran theirs through v0.4.9: API Key Fishing's
-/// Radiant face added a base copy (R1828000), AI Slop fused from every AI generated card (R1828001), KY's
-/// Empty Notebook drew 1, or 2 on its Radiant face (R1828002), and Shrinking Felinor's Radiant face
-/// summoned a Radiant body (R1828003). #1851's ran its through v0.4.11: Prestige could be played on
-/// either face with nothing to De-Radiant (R1103, R1851003). #1803's Shadowstep ran through v0.4.12b
-/// with its definition-remade hand cards carrying none of the flickered unit's stats, Armor or tuning.
-/// #2020's Infinite Reserves ran its through v0.4.12c. #2179's seventeen ran theirs through v0.5.2:
-/// Tranquility went to the graveyard; Knowledge Breaker Nerfed the decks too; Felinor Fuser's Discovers
-/// had no cost limit; Transmogulate had one price and replaced the board, graveyard and exile too; Devil's
-/// Pact's Radiant Book of Flame was Radiant; Playtester's controller chose the Book (R1161); Catboy Maid
-/// added 1-3 (1-6); Magic Amplifier had no Cry; Prep drew nothing; Anime Armor guarded the hero alone;
-/// Dropshipping gave Brittle {brittle}; The Power to Punish's damage did not pierce; Spiritually 中国 did one
-/// of its three at random (R920); Radiant Saintess's Radiant Death radiated the hand; Book of Buff's base
-/// face could take a hand card; Claude's Datacenter added at its controller's end of turn; and KY's Test
-/// asked two-digit sums (R580) from v0.5.2's bank (R2179003). #2396's three ran theirs through v0.5.11:
-/// Prem Panther drew and Boots on the Ground drew or Recruited only after an attack they survived, and CN
-/// Golem shuffled nothing when it died in the combat that killed (R2396000). #2521's twenty-two ran
-/// theirs through v0.5.11 too: Pestilent Slime had no Death; Going Long and Aluneth were Quickdraw;
-/// Bob's Plan added Alteran Reach with no Star Chart; ZolarKeth summoned a Radiant University and ran
-/// Universities without spending their uses; the Beams, Repeaters and Cannons could hit the enemy hero
-/// for half, the Repeaters at Activate 4, 6 and 6; the Flaks dealt their declared damage, not a random
-/// range; Paragon-X carried Immune to Spell Damage as a flag; Tmack Trav's kill lifted its summoning
-/// sickness; Swear Loyalities exiled the other four Faction cards alone, from the graveyard too; Narcor
-/// added a Rare card; and Red Narcor added a Legendary or Mythic card at a discount. #2657's
-/// thirty-five ran theirs through v0.5.9f: the sixteen that printed "Can't be in Defense Position" had it
-/// as the static flag, before the keyword Can't Defend (R2657000, `never_defense_kept`); GIGA Glowy Jelly
-/// Bean, YileGPT Prime, Drone Core VIII to X and Prototype-X2 Floated in the deck too (R2657002), and
-/// YileGPT Prime made permanents Radiant; Recurring Felinor answered a Field Trap's every firing
-/// (R2657001); Classic Golem's second attack lifted its summoning sickness (R2657004); the Flaks hit the
-/// enemy hero; Book Launcher had two Activates; Spiritually 中国's hand cost (0); Spell Basket's Spells were
-/// not Temporary; Book of Knowledge drew 3 or 6; Anti-oneshot Armor's Radiant face gave no Armor; Wildar's
-/// Radiant face gave the opponent nothing; Prep's base face drew the highest cost Spell; Book of Tokens
-/// rolled 1 or 2 evenly; and ZolarKeth ran its Universities.
-/// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
-/// by its final hash.
+/// (`docs/ADDING_CARDS.md` §3). A replay on that version, or on one before it back to the previous kept
+/// script, folds under the kept one; every other card runs the build's own. Each card's file says what
+/// its kept script ran. Kept by #1034 (R987), #1039 (R1143), K-Pop Fanatic (R1045000),
+/// #1149 (R1149000, R1149001), #1194, #1279 (R1279000), #1563 (R844), #1704 (R831003, R406), #1748
+/// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
+/// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
+/// `never_defense_kept`, R2657001, R2657002, R2657004).
+/// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
         c097_2_wishing_well::ID,
@@ -870,7 +815,6 @@ mod tests {
         assert!(shipped_catalog(own).is_none());
         assert!(shipped_catalog("v0.0.0-unknown").is_none());
 
-        // The oldest is rebuilt, entry for entry, as its snapshot holds it.
         let oldest = shipped_catalog("v0.1.0").expect("v0.1.0 is carried");
         assert_eq!(oldest.version(), "v0.1.0");
         let snapshot: CardDefs =
@@ -1009,7 +953,6 @@ mod tests {
             .collect();
         assert_eq!(shipped_versions(), shipped);
 
-        // The oldest snapshot is rebuilt, entry for entry.
         let oldest = catalog_defs_at("v0.1.0").expect("v0.1.0 is carried");
         let snapshot_v0_1_0: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
@@ -1018,8 +961,8 @@ mod tests {
             serde_json::to_value(&snapshot_v0_1_0).expect("serializes")
         );
 
-        // The newest is carried too, and v0.3.7b, the newest when this was written, is rebuilt as its
-        // snapshot holds it, without the pending patches' changes `catalog.json` already has.
+        // The newest is carried too, and v0.3.7b is rebuilt as its snapshot holds it, without the
+        // pending patches' changes `catalog.json` already has.
         assert!(
             catalog_defs_at(crate::CATALOG_VERSION).is_some(),
             "the newest is carried"

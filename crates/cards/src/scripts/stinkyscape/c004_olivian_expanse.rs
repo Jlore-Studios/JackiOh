@@ -7,11 +7,7 @@
 //! shown to its caster alone: the set's six Terminus tokens (R1857002) and Core #100 Ceaseless Void
 //! (tagged Terminus since R1837000). Terminus is no `POOL_TOKEN_TAGS` tag (R382), so the pool names its
 //! cards by id, which reaches them whether or not the set ships (R1420). The pick reaches the hand on its
-//! base face. Both conditions are read as the Spell resolves and carried to the answer in its data: an
-//! empty library gives the pick a `costOverride` of 0, and on the Radiant face an empty hand as well
-//! (this card is out of it by then) puts the win on that one instance (`effects::WIN_ON_PLAY_KEY`), so
-//! its play, a cast too (R70), wins the game at the state check that closes it, a hero at 0 losing first
-//! (R850). A full hand burns the pick, the win with it (§2.4) (R1870000).
+//! base face.
 
 use jackioh_engine::config::DISCOVER_OPTIONS;
 use jackioh_engine::effects::{WIN_ON_PLAY_KEY, add_to_hand, discover_from_catalog};
@@ -76,12 +72,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #4 Olivian Expanse — SPEC §8.10 row S 4, BUILD M12 row S 4: "discovers 3 different Terminus cards
-// (S 4.1–4.6 and Core 100 Ceaseless Void, the set previewed), the pick added on its base face; with an
-// empty deck it costs (0), with a card left in the deck its printed cost; a full hand burns it; radiant
-// with an empty deck and no other card in hand, playing the pick wins the game at the state check
-// after its play (a hero at 0 still losing first), and with a card left in the hand it does not"
-// (R1870000).
+// S #4 Olivian Expanse — SPEC §8.10 row S 4, BUILD M12 row S 4 (R1870000).
 #[cfg(test)]
 mod tests {
     use super::{ID, TERMINUS_CARDS};
@@ -95,8 +86,6 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    /// The picks a test plays, simplest first: two Spells, two Traps, a Unit. Any three of the seven
-    /// offer one of them.
     const PLAYABLE: [&str; 5] = [
         "stinkyscape-004-3",
         "stinkyscape-004-1",
@@ -105,7 +94,6 @@ mod tests {
         "core-100",
     ];
 
-    /// p1 plays Olivian Expanse with `hand` beside it and `library` in their deck.
     fn expanse(seed: &str, radiant: bool, hand: Value, library: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
         cards.extend(hand.as_array().cloned().unwrap_or_default());
@@ -132,7 +120,6 @@ mod tests {
             .collect()
     }
 
-    /// Answers the Discover with the first playable option, and returns the card it added.
     fn pick(s: &mut Scenario) -> Option<CardInstance> {
         let options = offered(s);
         let choice = PLAYABLE

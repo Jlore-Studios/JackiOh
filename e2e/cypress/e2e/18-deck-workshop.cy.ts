@@ -1,7 +1,5 @@
 // BUILD M8 spec 18: drafts, autosave, codes, trios, and deck caps (R250, R252, R255, R256).
-// Autosave is proven from server state after its own retry; trio readiness is also queue-validated.
 // This spec uses p2 because R109 rate-limits accounts and specs 09/19 share p1 (R253).
-// BUILD M6 supplies the deck endpoints.
 
 import {
   DECK_AUTOSAVE_RETRY_SECONDS,
@@ -250,7 +248,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
                   cy.get(ts(trioRowId(trioId))).should("have.attr", "data-ready", "false").click();
                   cy.get(ts(TRIO_EDITOR)).should("have.attr", "data-trio", trioId);
 
-                  // Each conflicting card names its counterpart deck.
                   for (const card of shared) {
                     cy.get(ts(trioCardId(1, card)))
                       .should("have.attr", "data-conflict", "true")

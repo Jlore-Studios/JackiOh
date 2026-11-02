@@ -134,8 +134,7 @@ mod tests {
         let neighbour = s.unit(P2, 2).unwrap().id;
         s.end_turn();
         s.attack(&foe, "hero");
-        // The attack fought the ally instead: the neighbour took the Vanilla's 4 and struck back
-        // for its 1, the hero took nothing, and the 1/1 is destroyed.
+        // The attack fought the ally instead: the hero took nothing.
         assert_eq!(
             hits(&s),
             vec![
@@ -149,8 +148,7 @@ mod tests {
     }
 
     /// R1750000: the redirected attack is still the attacker's own, so its Trample goes on to "the
-    /// target's controller's hero", which is its own side's. The neighbour that is attacked takes no
-    /// Trample onto anyone: it strikes back 1 on the Vanilla and nothing more.
+    /// target's controller's hero", which is its own side's.
     #[test]
     fn r1750000_a_redirected_trample_attack_tramples_into_its_own_hero() {
         let mut s = blood_game();
@@ -173,8 +171,7 @@ mod tests {
 
     #[test]
     fn lonely_stays_set() {
-        // No adjacent Unit: Blood stays set and the hero takes the hit. (A forced attack never
-        // opens the window either; the engine's redirect tests cover that path.)
+        // No adjacent Unit: Blood stays set and the hero takes the hit.
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "backrow": [{ "def": ID, "faceDown": true }] },
@@ -183,8 +180,6 @@ mod tests {
         let foe = s.unit(P2, 1).unwrap().id;
         s.end_turn();
         s.attack(&foe, "hero");
-        // The hero took the Vanilla's 4 (the turns that end by themselves afterwards add fatigue,
-        // which is no part of the attack), and nothing fired.
         assert_eq!(hits(&s), vec![(Some(foe.clone()), "hero-p1".to_string(), 4)]);
         let kinds: Vec<&str> = s
             .last_events()
@@ -208,7 +203,6 @@ mod tests {
         let right = s.unit(P2, 3).unwrap().id;
         s.end_turn();
         s.attack(&foe, "hero");
-        // The Vanilla's 4 lands on exactly one of the two, and on nothing else.
         let struck: Vec<String> = hits(&s)
             .into_iter()
             .filter(|(source, _, amount)| source.as_deref() == Some(foe.as_str()) && *amount == 4)

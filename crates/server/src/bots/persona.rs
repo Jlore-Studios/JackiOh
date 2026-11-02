@@ -1,24 +1,13 @@
-//! A ladder bot's emote persona (SPEC §9.9, R645, R1344; #638): the server's port of
-//! `apps/web/src/practice/personas.ts`, which stays in the web client for the practice AI. The
-//! tables are `crate::config`'s (`AI_PERSONAS`, `AI_EMOTE`); this module is the rolls, the trigger
-//! detection, the caps and the rate limit, draw for draw as TS makes them, so the same scripted rng
-//! gives the same emotes.
+//! A ladder bot's emote persona (SPEC §9.9, R645, R1344; #638): rolls, trigger detection, caps,
+//! and rate limit (`AI_PERSONAS`, `AI_EMOTE`).
 //!
-//! R645: cosmetic only. A persona reads nothing but the bot seat's redacted `PlayerView`, the events
-//! that view carries and its own injected rng (never `state.rng`, a determinization or the move
-//! search's), and it returns emote intents a caller may send or drop. So it can never touch game
-//! state, the action log, a replay or a search. R1344: every roll picks only from the bot seat's
-//! dealt hand, or sends nothing.
-//!
-//! One documented difference from TS: R643's rate limit (`emote_gate`) takes whole milliseconds, so
-//! the send instant `now + delay_ms` is rounded to the nearest millisecond before the gate judges it
-//! and before it is recorded; TS judges and records the unrounded float.
+//! R645: cosmetic only. A persona reads nothing but the bot seat's redacted `PlayerView`, events
+//! it carries, and its own injected rng, returning emote intents. It never touches game state, action
+//! log, or search. R1344: every roll picks only from the bot seat's dealt hand, or sends nothing.
+//! R643: `emote_gate` takes whole milliseconds, rounding `now + delay_ms` to nearest millisecond.
 //!
 //! R639000: a ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and waits
-//! out its emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT`
-//! (`EmotePersona::with_delays`), the rows `jackioh-server timing-fit` refits from people's emotes.
-//! Everything else, and the TS port's own functions, keep the practice AI's weights and its 0.8–2.5 s
-//! window, so the port still draws as `personas.ts` does.
+//! out emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT` (`EmotePersona::with_delays`).
 
 use jackioh_engine::wire::{
     EMOTE_IDS, EmoteId, GameEvent, Phase, PlayerId, PlayerView, SideView, emote_gate, hand_holds, opponent_of,
@@ -36,7 +25,7 @@ pub const PRACTICE_EMOTE_DELAY: EmoteDelayFit = EmoteDelayFit {
     max_ms: AI_EMOTE.delay_max_ms,
 };
 
-/// R645: an emote the persona wants on screen, `delay_ms` after its trigger (TS `AiEmote`).
+/// R645: an emote the persona wants on screen, `delay_ms` after its trigger.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AiEmote {
     pub emote: EmoteId,
@@ -55,7 +44,7 @@ fn unit_count(side: &SideView) -> usize {
     side.units.iter().filter(|unit| unit.is_some()).count()
 }
 
-/// The highest attack on `side`'s units, never below 0 (TS's `reduce` from 0).
+/// The highest attack on `side`'s units, never below 0.
 fn max_attack_of(side: &SideView) -> i32 {
     side.units
         .iter()
@@ -68,11 +57,9 @@ fn hero_id(seat: PlayerId) -> String {
     format!("hero-{seat}")
 }
 
-// ---------------------------------------------------------------------------------------------
 // The pure rolls (R645, R1344).
-// ---------------------------------------------------------------------------------------------
 
-/// R645: the weighted deal (TS `pickPersona`), one draw. A tutorial bot is always Silent instead.
+/// R645: the weighted deal, one draw. A tutorial bot is always Silent instead.
 pub fn pick_persona(rng: &mut dyn FnMut() -> f64) -> PersonaName {
     deal_by(rng, &AI_PERSONAS.map(|(_, spec)| spec.weight))
 }
@@ -97,8 +84,7 @@ fn deal_by(rng: &mut dyn FnMut() -> f64, weights: &[f64; 4]) -> PersonaName {
     PersonaName::Silent
 }
 
-/// The uniform pick from a pool (TS `pickFrom`). It draws even from an empty pool, and then picks
-/// nothing; a negative or NaN draw picks nothing too, as TS's `pool[at] ?? null` does.
+/// The uniform pick from a pool, returning `None` if empty or invalid.
 fn pick_from(pool: &[EmoteId], rng: &mut dyn FnMut() -> f64) -> Option<EmoteId> {
     let drawn = (rng() * pool.len() as f64).floor();
     let last = pool.len().checked_sub(1)?;
@@ -108,8 +94,7 @@ fn pick_from(pool: &[EmoteId], rng: &mut dyn FnMut() -> f64) -> Option<EmoteId> 
     pool.get((drawn as usize).min(last)).copied()
 }
 
-/// R645's "a random 0.8–2.5 s delay", drawn inside `window` (TS `rollDelay`; R639000: a ladder bot's
-/// window is its refit row).
+/// R645, R639000: delay drawn inside `window`.
 pub fn roll_delay(rng: &mut dyn FnMut() -> f64, window: &EmoteDelayFit) -> f64 {
     window.min_ms + rng() * (window.max_ms - window.min_ms)
 }
@@ -211,9 +196,7 @@ pub fn roll_for_reply_within(
     ))
 }
 
-// ---------------------------------------------------------------------------------------------
 // One match's persona: the session triggers, the caps and the rate limit (R645, R643).
-// ---------------------------------------------------------------------------------------------
 
 /// Whose turn it is and in which phase: what a roll's caps are counted against.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -222,14 +205,12 @@ struct Moment {
     phase: Phase,
 }
 
-/// R643: the instant an emote rolled at `now` goes out, in whole milliseconds (`emote_gate` takes
-/// them; TS keeps the float).
+/// R643: the instant an emote rolled at `now` goes out, in whole milliseconds.
 fn send_instant(now: i64, delay_ms: f64) -> i64 {
     (now as f64 + delay_ms).round() as i64
 }
 
-/// R645: one match's persona for the bot in `seat` (TS `createEmotePersona`). R1344: every roll is
-/// constrained to its dealt hand.
+/// R645, R1344: match persona for the bot in `seat`, constrained to its dealt hand.
 pub struct EmotePersona {
     persona: PersonaName,
     seat: PlayerId,
@@ -295,13 +276,12 @@ impl EmotePersona {
         self.persona
     }
 
-    /// R677: a Glitch's swap moved the bot to the other engine seat, which its triggers read from now.
-    /// The server's driver alone calls it; practice has no swap to follow.
+    /// R677: a Glitch's swap moved the bot to the other engine seat.
     pub fn set_seat(&mut self, seat: PlayerId) {
         self.seat = seat;
     }
 
-    /// R645's caps and R643's shared limiter (TS `admit`); a blocked emote is dropped, never queued.
+    /// R645's caps and R643's shared limiter; a blocked emote is dropped, never queued.
     fn admit(
         &mut self,
         roll: Option<AiEmote>,
@@ -347,7 +327,7 @@ impl EmotePersona {
         Some(roll)
     }
 
-    /// Rolls `trigger` and pushes what `admit` lets through (TS `emit`).
+    /// Rolls `trigger` and pushes what `admit` lets through.
     fn fire(
         &mut self,
         trigger: EmoteTrigger,
@@ -368,9 +348,7 @@ impl EmotePersona {
         }
     }
 
-    /// R645: detects the trigger table's triggers across one view step (`prev` to `view`, with the
-    /// `fresh` events between them), in the table's order, and rolls each that fires. The whole batch
-    /// is counted against `view`'s moment.
+    /// R645: detects and fires triggers across one view step (`prev` to `view`).
     pub fn on_events(
         &mut self,
         fresh: &[GameEvent],
@@ -477,9 +455,8 @@ impl EmotePersona {
         out
     }
 
-    /// R645: a player's emote may earn a reply, each reply row at most once a match. Only a player's
-    /// emote is passed here, so the bot never replies to a reply. A row is spent only when its reply
-    /// is sent; the roll comes before that check, so a spent row still draws.
+    /// R645: a player's emote may earn a reply, each reply row at most once a match. A row is spent
+    /// only when its reply is sent.
     pub fn on_player_emote(&mut self, emote: EmoteId, now: i64) -> Vec<AiEmote> {
         let Some((roll, key)) =
             roll_for_reply_within(self.persona, emote, &mut *self.rng, &self.hand, &self.reply_delay)
@@ -502,8 +479,7 @@ impl EmotePersona {
         }
     }
 
-    /// R645's long-turn trigger: the driver calls it when the player's turn has run past
-    /// `AI_EMOTE.long_turn_ms`. It rolls once per turn number, and never on the bot's own turn.
+    /// R645: rolls when the player's turn exceeds `AI_EMOTE.long_turn_ms`.
     pub fn on_player_turn_long(&mut self, view: &PlayerView, now: i64) -> Vec<AiEmote> {
         let moment = Moment {
             active: view.active,

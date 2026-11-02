@@ -3,9 +3,8 @@
 //! the face damage it counts (`face_threat_with`, through `can_swing`); and the search signature tells
 //! two positions apart that differ only in a freeze.
 //!
-//! No card freezes yet (M+ #24 Bob is the first, #1185), so each board freezes a unit on the field
-//! by writing its thaw, as `freeze::freeze_unit` would. The cards: Mr. Vanilla (core-008) 4/4 and
-//! Tempo Timmy (core-011) 3/3.
+//! No card freezes yet (M+ #24 Bob is the first, #1185), so each board freezes a unit on the field by writing
+//! its thaw, as `freeze::freeze_unit` would. The cards: Mr. Vanilla 4/4 and Tempo Timmy 3/3.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

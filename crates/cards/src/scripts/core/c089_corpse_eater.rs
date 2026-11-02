@@ -4,12 +4,10 @@
 //! max health". Radiant: "Rush, Divine Shield; gains double". §8's Conventions: both keyword lists
 //! are printed in `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
 //!
-//! A hand-zone trigger: "while in your hand" and "stops once on the field" are the registry's
-//! doing (§10.3, R68). It reads the event, not the instance: R78 resets an instance leaving the
-//! field, and R89's `destroyed` event carries the attack and max health the layers computed at death
-//! (R38's "current" numbers). A death is a unit going from the field to a graveyard (§4.5 step 1, §6.2);
-//! a discard, burn or bounce emits another event. Units only, tokens excluded (R11); `def_of` is the layers' own catalog
-//! read, a transient Fuse def included (R77). The gain is a layer-4 `buff`, kept on entering the field.
+//! A hand-zone trigger: "while in your hand" and "stops once on the field" are the registry's doing
+//! (§10.3, R68). It reads the event, not the instance (R78 resets an instance leaving the field): R89's
+//! `destroyed` carries the attack and max health the layers computed at death (R38). A discard, burn or
+//! bounce is no death (§4.5 step 1, §6.2). `def_of` includes a transient Fuse def (R77).
 
 use jackioh_engine::prelude::*;
 
@@ -64,10 +62,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89): "In hand it gains the dying unit's current
-// attack and max health from either side, tokens excluded (R11); stats per R38; stops once on the
-// field; radiant double". R219: a gain is never a loss, so a unit #46 starved below 0 max health
-// feeds it nothing.
+// #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89) (R11, R38).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,8 +73,7 @@ mod tests {
 
     const EATER: &str = "core-089"; // 2/2 → 4/4 (6/6 before patch v0.3.10), cost 4
 
-    // Inert fixtures: every unit below has a Cry and nothing else, and the harness's `field` setup
-    // never fires a Cry.
+    // Inert fixtures: each unit's only text is a Cry, which `field` never fires.
     const GARY: &str = "core-004"; // 1/1
     const FELINORS: &str = "core-012"; // 3/4
     const RENO: &str = "core-053"; // 4/6
@@ -135,7 +129,6 @@ mod tests {
             s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
             s.attack(FELINORS, GARY);
 
-            // Gary was 1/1, so the Eater is 3/3 while still sitting in hand.
             s.expect_stats(EATER, json!({ "attack": 3, "maxHealth": 3 }));
             assert_eq!(s.card(EATER).zone.z(), ZoneName::Hand);
             s.expect_events(json!(["destroyed", "buffed"]));
@@ -179,7 +172,6 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
-                // Gary (1/1) trades with Felinors' 3 attack and deals 1 back to a 1/1 attacker.
                 "p1": { "hand": [EATER, FILLER], "field": [{ "def": GARY, "lane": 1 }] },
                 "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] },
             }));
@@ -205,7 +197,6 @@ mod tests {
 
             s.attack(FELINORS, &token);
 
-            // R11: the token ceased to exist — in no pile at all — and the Eater is untouched.
             s.expect_in_zone(&token, "gone");
             s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
             assert_eq!(count_of(&s, GameEventType::Buffed), 0);
@@ -226,7 +217,6 @@ mod tests {
 
             s.start_turn();
 
-            // The unit went from hand to graveyard: `burned`, never `destroyed`.
             s.expect_events(json!(["drawn", "burned"]));
             assert_eq!(count_of(&s, GameEventType::Destroyed), 0);
             s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
@@ -379,9 +369,8 @@ mod tests {
                 .cloned();
             assert!(matches_object(&js(&died), &json!({ "attack": 0, "maxHealth": -1 })));
 
-            // "Whenever a unit dies, this GAINS its attack and max health": the unit had no attack and no
-            // max health to give, so the Eater in hand is still its printed 2/2 — it does not shrink by the
-            // −1 the aura dragged the dead unit's max health to.
+            // The unit had no attack and no max health to give, so the Eater does not shrink by the −1 the
+            // aura dragged the dead unit's max health to.
             assert_eq!(js(&g.card(&eater).buffs), json!({ "attack": 0, "health": 0 }));
         }
     }

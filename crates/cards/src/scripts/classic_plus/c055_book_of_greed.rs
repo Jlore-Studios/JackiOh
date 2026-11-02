@@ -30,10 +30,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #55 Book of Greed — SPEC §8.7 row 55, BUILD M9 Classic+ row C+ 55: "Adds 3 random non-token
-// Legendary or Mythic cards of any set, a token's printed rarity never counting (no Pancake, Loser or
-// KY's Gift); repeats allowed; a full hand burns; hidden from the opponent (R97); the count reads
-// through `param()`; radiant they are Radiant".
+// C+ #55 Book of Greed — SPEC §8.7 row 55, BUILD M9 Classic+ row C+ 55 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -43,7 +40,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `book({ radiant?, seed?, fillers? })`: `None` is the TS default.
     fn book(radiant: bool, seed: Option<&str>, fillers: Option<usize>) -> Scenario {
         let mut hand = vec![json!({ "def": BOOK, "radiant": radiant })];
         hand.extend((0..fillers.unwrap_or(1)).map(|_| json!(FILLER)));
@@ -132,10 +128,8 @@ mod tests {
                 .into_iter()
                 .collect();
             sets.sort();
-            // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-            // #1187): the Meditative+ set joins it (M+ #1 Bob's Plan, #24 Bob, #26 Scratch Pad); and for
-            // the Stinkyscape release (#1884): that set; and for the Training Grounds release (#2204): that
-            // set (#37 Seance, #38 Tutorial Master, #39 Call to Chaos, #40 Goetzmann Game Design).
+            // Meditative+ (#1187) by M+ #1, #24, #26; Stinkyscape (#1884); Training Grounds (#2204) by
+            // #37, #38, #39, #40.
             assert_eq!(
                 sets,
                 vec![

@@ -1,22 +1,13 @@
 //! Echo: SPEC §6.3's Echo row, §10.5 step 6 and R30's Twinspell lifetime — what a resolution owes,
 //! where the repeats wait, and where the card lands once they are done (BUILD M3-T2, R30, R70, R113).
 //!
-//! §6.3: "Echo X | Recast this card X more times | Play resolves, then the same instance re-resolves
-//! X times with fresh mode/target prompts; Twinspell grants Echo +1 to the next spell." The repeats
-//! outstanding are state, never a loop variable: one `EchoItem` per instance on `state.echoQueue`
-//! (§10.1), taken one at a time, so a prompt inside one repeat pauses the rest (§9.3, R113).
-//!
-//! Why Echo is its own module rather than a section of `play_steps.rs`: what the play pipeline and
-//! its readers share here is state and rules, not prompting — the queue, the printed `Echo X`, R30's
-//! grant and where a resolved card goes (§10.5 step 7) — and `view_for.rs` reads the grant for R169's
-//! badge. A cast is the same pipeline (R70: "a cast Spell does use Twinspell's Echo"), entered by
+//! The repeats outstanding are state, never a loop variable: one `EchoItem` per instance on
+//! `state.echoQueue` (§10.1), taken one at a time, so a prompt inside one repeat pauses the rest (§9.3,
+//! R113). `view_for.rs` reads the grant for R169's badge. A cast is the same pipeline (R70), entered by
 //! `resolve::cast_card` through `play_steps::cast_through_pipeline`.
 //!
-//! Asking a repeat's fresh prompts (§10.6 "an Echo repeat of Glowy Jelly Bean reopens its hand
-//! pick", R81) is the other half of step 6, and it stays with the pipeline driver in `play_steps.rs`,
-//! the one side that may open prompts.
-//!
-//! Port of `packages/engine/src/echo.ts`.
+//! Asking a repeat's fresh prompts (§10.6, R81) stays with the pipeline driver in `play_steps.rs`, the
+//! one side that may open prompts.
 
 use indexmap::IndexSet;
 use serde_json::Value;
@@ -41,9 +32,7 @@ fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
     find_instance(state, instance_id).cloned()
 }
 
-// ---------------------------------------------------------------------------
 // The queue (§10.1 `echoQueue`)
-// ---------------------------------------------------------------------------
 
 /// The repeats this instance still owes, as one queue entry per instance (§10.1 `EchoItem`).
 fn echo_entry(state: &GameState, instance_id: &str) -> Option<usize> {
@@ -53,7 +42,7 @@ fn echo_entry(state: &GameState, instance_id: &str) -> Option<usize> {
         .position(|item| item.instance_id == instance_id)
 }
 
-/// How many repeats this instance is still owed, for a caller that only wants to know.
+/// How many repeats this instance is still owed.
 pub fn echo_repeats_owed(state: &GameState, instance_id: &str) -> i32 {
     let remaining = echo_entry(state, instance_id).map_or(0, |at| state.echo_queue[at].remaining);
     0.max(remaining)
@@ -106,25 +95,17 @@ pub fn take_echo_repeat(state: &mut GameState, instance_id: &str) -> bool {
 }
 
 /// Forget every repeat this instance is owed: it is no longer there to re-resolve (a trap took it
-/// off, it ceased to exist), so the entry would otherwise wait in `state.echoQueue` for ever. The
-/// repeats were queued as the card was played (§10.5 step 4), before anything could remove it.
+/// off, it ceased to exist), so the entry would otherwise wait in `state.echoQueue` for ever.
 pub fn drop_echo_repeats(state: &mut GameState, instance_id: &str) {
     state.echo_queue.retain(|item| item.instance_id != instance_id);
 }
 
-// ---------------------------------------------------------------------------
 // What a resolution owes (§6.3, R30)
-// ---------------------------------------------------------------------------
 
-/// §6.1: the card's own printed Echo X (`staticFlags.echo`), plus, given the state, for a card that has
-/// a copied Spell's text (B5 E14, Classic #57 Echo, R546), the Echo X that text prints.
-///
-/// TS's `state` was optional; every caller passed it, and Rust needs it to read the card's script
-/// (fused scripts are built from the state, SURFACE §6.6), so it is required here.
-///
-/// R802: a card whose script computes its Echo X (`Script.echo_x`, Meditative #5) prints the larger of
-/// that and `staticFlags.echo`. The pipeline reads this once, as the card is played (§10.5 step 4,
-/// `queue_echo_repeats`), so the X it queues stays fixed while the card resolves.
+/// §6.1: the card's own printed Echo X (`staticFlags.echo`), plus, for a card that has a copied Spell's
+/// text (B5 E14, Classic #57 Echo, R546), the Echo X that text prints; fused scripts read the state
+/// (SURFACE §6.6). R802: a script that computes its Echo X (`Script.echo_x`) prints the larger of that
+/// and `staticFlags.echo`, read once as the card is played (§10.5 step 4), so the X stays fixed.
 pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
     let computed = crate::scripts::script_of(state, card)
         .echo_x
@@ -146,12 +127,9 @@ pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
 }
 
 /// How much Echo one rider grants now. A rider a permanent installed (`sourceId`, #79 Twinspell) is
-/// that permanent's lasting effect (§5.1, R209), so it grants only while the permanent is on the
-/// field under the rider's player, and it grants what the permanent's face says NOW: §5.2 has a card
-/// made Radiant on the field run its radiant text from then on, so a Twinspell #49 radiant steals
-/// says "Echo +2" (`staticFlags.echoGrant`) whatever its base face installed. A rider with no source
-/// (an engine or test fixture) grants its own `amount`. Returns 0 for a rider whose permanent has
-/// gone, which the state check would end anyway (R209).
+/// that permanent's lasting effect (§5.1, R209): it grants only while the permanent is on the field
+/// under the rider's player, and what its face says now (§5.2: a Twinspell #49 made Radiant says
+/// "Echo +2"). A rider with no source (an engine or test fixture) grants its own `amount`.
 pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModifier) -> i32 {
     let ModifierKind::EchoNextSpell { amount, source_id } = &modifier.kind else {
         return 0;
@@ -175,13 +153,11 @@ pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModif
 }
 
 /// R30: Twinspell grants Echo to the next Spell and "stays until a spell is played, then goes to the
-/// GY". The grant is spent here — when it applies — and the Field Spell that gave it follows. Only a
-/// Spell takes it ("the next Spell you play"), so a cast or played permanent leaves it armed, and
-/// R70 makes a cast Spell take it like any other.
+/// GY": the grant is spent when it applies and the Field Spell follows. Only a Spell takes it, so a
+/// permanent leaves it armed; R70 makes a cast Spell take it like any other.
 ///
-/// R209: one grant per Twinspell on the field. Every rider a permanent owns is spent with it, but only
-/// the first counts, so a Twinspell that left the field and came back between two state checks —
-/// the second stay installing a second rider before the first was ended — still echoes once.
+/// R209: one grant per Twinspell on the field: every rider a permanent owns is spent, only the first
+/// counts, so a Twinspell that left and came back between two state checks still echoes once.
 pub fn granted_echo(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInstance) -> i32 {
     if card_type_of(sink.state, card) != CardType::Spell {
         return 0;
@@ -231,30 +207,22 @@ pub fn granted_echo(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInst
     granted
 }
 
-/// Work out what this resolution owes and put it on the queue, once: the card's printed `Echo X`
-/// plus whatever R30's grant adds. Returns how many repeats are owed now, so a caller that has to
-/// decide whether to hand off a tail at all can ask in one line.
-///
-/// Called exactly once per resolution — §10.5 step 4 calls it as the card is played, for a play from
-/// hand and for a cast alike, and sets the run's `echoQueued` flag (R178: a Spell gains its Echo as
-/// it is played) — because it *consumes* the grant.
+/// Work out what this resolution owes and put it on the queue: the card's printed `Echo X` plus R30's
+/// grant. Returns how many repeats are owed now. Called exactly once per resolution, as §10.5 step 4
+/// plays the card (from hand or cast) and sets the run's `echoQueued` flag (R178), because it
+/// *consumes* the grant.
 pub fn queue_echo_repeats(sink: &mut EngineSink<'_>, card: &CardInstance, player: PlayerId) -> i32 {
     let printed = printed_echo(card, sink.state);
     let granted = granted_echo(sink, player, card);
     add_echo_repeats(sink, card, player, printed + granted)
 }
 
-// ---------------------------------------------------------------------------
 // Where the card lands afterwards, and saying so (§10.5 step 7, R17)
-// ---------------------------------------------------------------------------
 
 /// R178: the mark a resolving Spell's own "exile this" leaves (#39, #44, #72, #76, #87, #97). §10.5
-/// puts "Spells go to the GY or exile" at step 7, after step 6's Echo repeats, and §6.2 has "the same
-/// instance re-resolve" — so a Spell that says "exile this" is still resolving until step 7, which
-/// sends it to exile instead of the graveyard. Moving it at once had it leave before its own
-/// repeats: Twinspell's grant (R30) was never taken and the repeats never came.
-///
-/// It lives in the card's own `memory`, which is JSON (§10.1), and step 7 clears it as it acts.
+/// step 7 lands Spells "to the GY or exile" after step 6's Echo repeats (§6.2: "the same instance
+/// re-resolve"), so such a Spell stays resolving until step 7 sends it to exile. It lives in the card's
+/// own `memory`, which is JSON (§10.1), and step 7 clears it as it acts.
 pub const EXILE_ON_LANDING: &str = "@exileOnLanding";
 
 /// R178: send this resolving Spell to exile when §10.5 step 7 lands it, rather than now.
@@ -270,21 +238,16 @@ pub struct ResolvedCard {
     pub def_id: String,
     /// The player who played or cast it, which `cardResolved` reports.
     pub player: PlayerId,
-    /// The mana actually charged, which is the same number `cardPlayed` reports: after every modifier,
-    /// with R65's X and embiggen prices included, and 0 for a cast (R70: "a cast is free and counts as
-    /// a play … with cost paid 0"). The caller passes it because R89 is the hazard — a trigger
-    /// answering this event must find what it needs ON the event, since the instance may have been
-    /// reset between step 4 and step 7 — so #60 Bear Honeypot's "costing 1 or less" (R56: "the cost
-    /// actually paid after modifiers") is never looked up off the board.
+    /// The mana actually charged, as `cardPlayed` reports it: after every modifier, with R65's X and
+    /// embiggen prices, and 0 for a cast (R70). R89: a trigger answering this event reads it ON the
+    /// event, as the instance may be reset between steps 4 and 7 (#60 Bear Honeypot's R56 threshold).
     pub cost_paid: i32,
     /// The face the card was played with (after §10.5 step 3's Gifted Program hook), for a card that
-    /// has ceased to exist by step 7 — Sheepish transformed it at step 4 — so the event can still say
-    /// what resolved (R34, R57).
+    /// has ceased to exist by step 7 (R34, R57).
     pub radiant: bool,
     /// R174, R61: the field's departures once §10.5 step 4 had put a permanent on the field. "Still in
-    /// play" is asked of that stay: a played unit that died in its own resolution (its Cry, or the check
-    /// after step 6) and is back through Reborn by step 7 is a new arrival (R83), not the card that was
-    /// played, so #60's tokens do not attack it and #85 does not fuse it away.
+    /// play" is asked of that stay: a played unit back through Reborn by step 7 is a new arrival (R83),
+    /// so #60's tokens do not attack it and #85 does not fuse it away.
     pub placed_from: Option<u32>,
     /// R119: the permanents that arrived on the field while the play resolved, which do not answer it.
     pub arrived_during: Option<Vec<String>>,
@@ -295,23 +258,10 @@ pub struct ResolvedCard {
     pub on_draw: bool,
 }
 
-// §10.5 step 7, both halves, for a play and for a cast (R70) alike.
-//
-// Where the card lands: "Spells go to the GY or exile" — and only now, after the script and every
-// Echo repeat have run, so a repeat that reads a graveyard does not find the card already in it
-// (the M3 review filed the other order as B-4). A card a script sent somewhere else, and a
-// permanent that step 4 put on the field, have already left `resolving`, so nothing moves for them.
-//
-// Then `cardResolved`, the moment §10.5 step 7 and R17 name: "Unstable Clone Machine and Bear
-// Honeypot fire after resolution; Unlicensed Experimentation fires after a played permanent's Cry
-// (R61)", as against Sheepish, which answers step 4's `summoned` and costs the card its Cry. It is
-// emitted exactly once per resolution — this is step 7, which runs after step 6 has drained every
-// repeat — and `permanent` says whether the card is still in play, which is R61's distinction. A
-// card that has left play by now (a Spell in its graveyard, a unit a trap took, a token that ceased
-// to exist) reports `permanent: false`, and the event still names it, so a trap can see what
-// resolved. `costPaid` rides along for the same reason: R89 has a trigger read the event rather
-// than the board, so the caller hands over the number it charged (0 for a cast, R70) and #60 Bear
-// Honeypot's R56 threshold never re-derives a cost from an instance step 7 may have reset.
+// §10.5 step 7, both halves, for a play and for a cast (R70) alike. The card lands "to the GY or
+// exile" only now, after the script and every Echo repeat, so a repeat that reads a graveyard does
+// not find it there. Then `cardResolved`, once per resolution (R17; R61: after a played permanent's
+// Cry); `permanent` says whether the card is still in play, and a card that left play is still named.
 
 /// R61, R174: whether the card the play put on the field is still in play, on that same stay.
 fn still_in_play(sink: &EngineSink<'_>, resolved: &ResolvedCard) -> bool {

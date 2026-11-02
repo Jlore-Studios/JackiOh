@@ -1,9 +1,7 @@
-// The v0.2.0 controls against the REAL engine. The fixture tests (ActivateControl, activate,
-// PromptE18) pin each control's behavior; here the view and the legal list are `viewFor` and
-// `legalActions` of real states built through the web's own engine seam (the WebAssembly module,
-// `../wasm`, docs/v0.3.0/SURFACE.md §10.3), so a field the engine renames or a body it shapes
-// differently fails here, not in production. Every action a control sends must be one the engine
-// accepts (CLAUDE.md rule 7).
+// The v0.2.0 controls against the REAL engine: the view and the legal list are `viewFor` and
+// `legalActions` of real states built through the web's own engine seam (docs/v0.3.0/SURFACE.md
+// §10.3), so a field the engine renames or a body it shapes differently fails here, not in
+// production. Every action a control sends must be one the engine accepts (CLAUDE.md rule 7).
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE, MAX_MANA } from "@jackioh/engine/config";
@@ -21,20 +19,12 @@ import Game from "./Game.tsx";
 const lookup = lookupFromDefs(CATALOG);
 const el = (id: string): HTMLElement => screen.getByTestId(id);
 
-// ---------------------------------------------------------------------------------------------
-// The boards. Each case sets the board the cards' test harness set for it (BUILD M4-T3), and sets
-// it the same way: `createGame` deals two filler decks, both libraries are emptied and the instance
-// ids start again at c1, the clock is turn 9 in p1's main phase (both sides at MAX_MANA), and each
-// side's cards are laid out in the harness's order — hand, field and backrow, library, graveyard —
-// so the ids follow the setup literal. The state is plain JSON (SURFACE §5.1), so the layout is
-// written into it here, and every card laid out is a copy of one the engine dealt, so it carries
-// every field the engine gives a new card. Nothing here decides a rule: the engine plays, lists and
-// views every step.
-// ---------------------------------------------------------------------------------------------
+// Each case sets the board the cards' test harness set for it (BUILD M4-T3). The state is plain JSON
+// (SURFACE §5.1), so the layout is written into it here. Nothing here decides a rule: the engine
+// plays, lists and views every step.
 
 type GameState = Parameters<typeof reduce>[0];
 
-/** A card as the state holds it: what a layout writes and a case reads, the rest untouched. */
 type Instance = {
   id: string;
   defId: string;
@@ -58,12 +48,11 @@ type Side = {
   turnsStarted: number;
 };
 
-/** The fields of the state a layout writes. */
 type Board = { active: PlayerId; turn: number; phase: string; nextId: number; players: Record<PlayerId, Side> };
 
 type Row = "units" | "backrow";
 
-/** A card on the field: its def, and optionally its lane (1-based) and, in the backrow, its face. */
+/** `lane` is 1-based. */
 type FieldSpec = { def: string; lane?: number; faceUp?: boolean };
 type FieldEntry = string | FieldSpec;
 
@@ -90,7 +79,7 @@ type Scenario = {
 };
 
 const SEED = "jackioh-harness";
-/** A mid-game board: the active side has started ceil(9/2) = 5 turns and the other 4. */
+/** A mid-game board. */
 const TURN = 9;
 const PLAYERS = ["p1", "p2"] as const;
 
@@ -104,10 +93,7 @@ function defOf(defId: string): { type: string; name: string } {
   return def;
 }
 
-/**
- * Two legal decks for `createGame`: the first DECK_SIZE non-token Core cards in §5 index order, as
- * the harness's filler was. Both libraries are emptied straight after, so what they hold is moot.
- */
+/** The first DECK_SIZE non-token Core cards in §5 index order; both libraries are emptied straight after. */
 function fillerDeck(): string[] {
   return Object.values(registeredCatalog())
     .filter((def) => def.set === "Core" && !def.token && !def.tags.includes("Token"))
@@ -155,10 +141,7 @@ function layOut(options: ScenarioOptions): GameState {
   layout.players[active].turnsStarted = Math.ceil(TURN / 2);
   layout.players[other(active)].turnsStarted = Math.floor(TURN / 2);
 
-  /**
-   * A new card, numbered next: a copy of one the engine dealt (the state is JSON-only, so a JSON
-   * round trip copies it faithfully), with only its identity and its zone changed.
-   */
+  /** A copy of one the engine dealt (the state is JSON-only, so a JSON round trip copies it faithfully). */
   const card = (defId: string, owner: PlayerId, zone: Instance["zone"]): Instance => {
     const copy = JSON.parse(JSON.stringify(template)) as Instance;
     const fresh: Instance = { ...copy, id: `c${String(layout.nextId)}`, defId, owner, controller: owner, zone };
@@ -172,8 +155,7 @@ function layOut(options: ScenarioOptions): GameState {
     const side = layout.players[player];
     for (const defId of setup.hand ?? []) side.hand.push(card(defId, player, { z: "hand", player }));
 
-    // `field` and `backrow` are one board: each entry's row is its def's, and the lanes are handed
-    // out per row, `field` entries first.
+    // Each entry's row is its def's, and the lanes are handed out per row, `field` entries first.
     const entries = [...(setup.field ?? []), ...(setup.backrow ?? [])].map((entry) => {
       const fields: FieldSpec = typeof entry === "string" ? { def: entry } : entry;
       return { ...fields, row: rowOf(fields.def) };
@@ -204,8 +186,7 @@ function layOut(options: ScenarioOptions): GameState {
     }
     for (const defId of setup.graveyard ?? []) side.graveyard.push(card(defId, player, { z: "graveyard", player }));
 
-    // §2.3: max mana is the turns started, capped at MAX_MANA, and the refresh fills it; `mana` sets
-    // current only.
+    // §2.3: max mana is the turns started, capped at MAX_MANA, and the refresh fills it.
     side.mana.max = Math.max(0, Math.min(side.turnsStarted, MAX_MANA) + side.mana.permMod);
     side.mana.current = Math.max(0, side.mana.max + side.mana.nextTurnMod);
     side.mana.nextTurnMod = 0;
@@ -261,7 +242,6 @@ afterEach(() => {
   cleanup();
 });
 
-/** `<Game/>` on `player`'s real view and legal list; returns the spy every control reports to. */
 function renderReal(s: Scenario, player: PlayerId = "p1") {
   const legal = legalActions(s.state, player);
   const onAction = vi.fn<(body: ActionBody) => void>();
@@ -301,8 +281,6 @@ describe("the Activate control on real views", () => {
     if (turtle === null || timmy === null) throw new Error("the board is not set");
     const { legal, onAction } = renderReal(s);
 
-    // Only Timmy can pay the Tribute, so no tribute picker opens: the target comes first and the
-    // forced Tribute rides along in the sent body.
     fireEvent.click(el(testid.activate(turtle.id)));
     expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "target");
     fireEvent.click(el(testid.hero("opponent")));

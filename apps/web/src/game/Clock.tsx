@@ -1,20 +1,10 @@
 // The match clock (BUILD M7-T1). It decides nothing: R79 fixes the behavior and the server's match
 // actor runs it, so a paused turn clock is a `turnDeadline` of `null` in the frame the server pushed,
-// not an inference drawn here (CLAUDE.md rule 7).
-//
-// The mulligan is both seats' at once (R265) on one clock (R268): while `mulligan` is set both sides show
-// the frame's one `promptDeadline` over `MULLIGAN_CLOCK_MS`, and there is no turn clock (§2.1).
-//
-// Every length comes from the server's config (`TICK_MS` below is only a repaint cadence). Time is
+// not an inference drawn here (CLAUDE.md rule 7). Every length comes from the server's config. Time is
 // monotonic: each frame is anchored to `performance.now()` on arrival and every repaint adds the delta
 // to the server's `now`, as `protocol.rs`'s `clock` message says, never `Date.now()`.
-//
-// The last 30 seconds of a turn (R439): the running side's line turns urgent (`data-clock-urgency`,
-// `data-clock-side`) and the viewer's own turn adds an ember fuse (`TurnFuse`). Only a running turn clock
-// has a final stretch (`clockUrgency.ts`); reduced motion keeps the static readout, no fuse.
-//
-// A seat whose socket is away shows its disconnect grace (§9.5, R79) as a named timer: whose window
-// it is, in words, beside the seconds left (`GraceLine`).
+// The last 30 seconds of a running turn clock (R439): the running side's line turns urgent and the
+// viewer's own turn adds an ember fuse; reduced motion keeps the static readout, no fuse.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -42,7 +32,7 @@ import { useSetting } from "../settings/index.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import "./clock.css";
 
-/** How often the readout repaints. Not a SPEC value; see the header. */
+/** How often the readout repaints; not a SPEC value. */
 const TICK_MS = 200;
 
 export type Seat = "p1" | "p2";
@@ -71,10 +61,7 @@ export type ClockProps = {
   opponentMs: number | null;
   /** Per-player disconnect grace remaining (§9.5), or null when nobody is away. */
   graceMs?: { you: number | null; opponent: number | null };
-  /**
-   * The last `clock` frame: its absolute deadlines let the readout tick between pushes. Without one
-   * (a hotseat game runs no clock) `youMs`/`opponentMs` answer.
-   */
+  /** The last `clock` frame, whose deadlines tick between pushes; without one, `youMs`/`opponentMs`. */
   frame?: ClockFrame | null;
   /** The viewer's seat, to map the frame's `p1`/`p2` grace onto `you`/`opponent`. */
   viewer?: Seat;
@@ -82,10 +69,7 @@ export type ClockProps = {
   activePlayer?: Seat | null;
   /** R79: the seat holding the open prompt, when one is open. */
   promptHolder?: Seat | null;
-  /**
-   * R265, R268: both mulligans are open (the view carries `view.mulligan`). The frame's
-   * `promptDeadline` is then the one mulligan deadline, and `youMs` / `opponentMs` both carry it.
-   */
+  /** R265, R268: both mulligans are open; the frame's `promptDeadline` is then the one mulligan deadline. */
   mulligan?: boolean;
   /** Monotonic source; `performance.now` in a browser, injected in tests. */
   monotonic?: () => number;
@@ -125,17 +109,13 @@ function seatOf(side: ClockSide, viewer: Seat): Seat {
   return side === "you" ? viewer : other;
 }
 
-/**
- * The whole readout, as a function of the frame and the monotonic time since it arrived. Pure, so
- * R79's pause is testable without a timer: `elapsedMs` is the only thing that moves.
- */
+/** The whole readout, pure, so R79's pause is testable without a timer: `elapsedMs` is all that moves. */
 export function readClock(props: ClockProps, elapsedMs: number): ClockReadout {
   const viewer: Seat = props.viewer ?? "p1";
   const frame = props.frame ?? null;
   const clocks = frame?.clocks ?? null;
   const serverNow = frame === null ? null : frame.now + elapsedMs;
   const mulligan = props.mulligan === true;
-  /** R268: the one mulligan deadline, when a frame reports it. */
   const mulliganMs =
     mulligan && clocks !== null && serverNow !== null && clocks.promptDeadline !== null
       ? clocks.promptDeadline - serverNow
@@ -278,7 +258,6 @@ const GRACE_LABEL: Readonly<Record<ClockSide, string>> = {
   opponent: "Opponent reconnecting",
 };
 
-/** The grace line's accessible name: "Opponent reconnecting, 45 seconds left". */
 function graceAccessibleName(side: ClockSide, seconds: number): string {
   const count = String(seconds);
   if (side === "you") {
@@ -310,10 +289,7 @@ function UrgencyGauge({ fraction }: { fraction: number }): ReactElement {
   );
 }
 
-/**
- * One side's line: the side's name and the seconds, or in the turn clock's final stretch (R439) the
- * urgent readout, its digits keyed on the second so each one pops in.
- */
+/** One side's line; in the turn clock's final stretch (R439), its digits keyed on the second to pop in. */
 function SideLine({
   side,
   line,
@@ -352,10 +328,7 @@ function SideLine({
   );
 }
 
-/**
- * §9.5: one seat's disconnect grace while its socket is away: whose reconnect window it is, in
- * words, and the seconds left on it, as a timer with a name (as R439's urgent readout is).
- */
+/** §9.5: one seat's disconnect grace while its socket is away, as a timer with a name. */
 function GraceLine({ side, remainingMs }: { side: ClockSide; remainingMs: number }): ReactElement {
   return (
     <span
@@ -372,10 +345,7 @@ function GraceLine({ side, remainingMs }: { side: ClockSide; remainingMs: number
   );
 }
 
-/**
- * R439: the ember fuse, on the viewer's own turn clock only and never under reduced motion. It burns
- * clockwise from the top-left corner and is gone at the deadline. Fixed, blind to the pointer.
- */
+/** R439: the ember fuse, on the viewer's own turn clock only and never under reduced motion. */
 function TurnFuse({ remainingMs, level }: { remainingMs: number; level: TurnClockUrgencyLevel }): ReactElement {
   const { edges, spark } = fuseGeometry(finalFraction(remainingMs));
   const edge = (name: string, lit: number): ReactElement => (
@@ -393,10 +363,9 @@ function TurnFuse({ remainingMs, level }: { remainingMs: number; level: TurnCloc
 }
 
 /**
- * The latest `clock` frame, or null while it belongs to an earlier turn than the view beside it. The
- * server pushes views then clocks, so for a moment the old turn's frame sits beside the new turn's view
- * and would count down on it (and sound R439's alarm). A frame is handed on only while the view still
- * names the turn (`turnKey`) it arrived in.
+ * The latest `clock` frame, or null while it belongs to an earlier turn than the view beside it: the
+ * server pushes views then clocks, so the old turn's frame would count down on the new turn's view
+ * (and sound R439's alarm).
  */
 export function useFrameFor<F>(frame: F | null, turnKey: string | null): F | null {
   const paired = useRef<{ frame: F; turnKey: string | null } | null>(null);
@@ -443,7 +412,6 @@ export default function Clock(props: ClockProps) {
 
   const elapsed = anchor.current === null ? 0 : Math.max(0, monotonic() - anchor.current.at);
   const readout = readClock(props, elapsed);
-  // R439: the turn clock's final stretch, recomputed on every repaint.
   const urgency = readUrgency(readout);
   const turnRemaining = readout.turn?.remainingMs ?? null;
   // R439, R506: the viewer's own running turn clock beats in its last 30 seconds (audio/clockAlarm.ts).

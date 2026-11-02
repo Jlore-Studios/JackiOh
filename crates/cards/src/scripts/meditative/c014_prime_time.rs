@@ -2,16 +2,13 @@
 //!   Base:    "Draw {draws|card|cards} with a prime index from your deck." (3)
 //!   Radiant: "Draw every card with a prime index from your deck."
 //!
-//! "Prime indexed" (R804) means the card's catalog index, read as a whole number, is a prime (2, 3, 5
-//! … 101), in any set: indices repeat across sets, so Core #2 and Meditative #2 both count. It never
-//! means a position in the deck, whose order is hidden. A token's "N.k" or T-name index, and a
-//! transient card's (whose index is its id), fail the parse and never match.
+//! "Prime indexed" (R804) means the card's catalog index, read as a whole number, is a prime, in any
+//! set: indices repeat across sets, so Core #2 and Meditative #2 both count. It never means a position
+//! in the deck, whose order is hidden.
 //!
-//! Each draw is `draw_from_library`, topmost match first (R801). The base face takes the first
-//! `draws` matches; the Radiant face takes every match in the deck as it stood when the effect began
-//! (§2.4's "draw your whole library" reading) — one memoized `for_each_card`, so a cast-on-draw pause
-//! cannot move them. The hand cap burns the overflow. The number is declared and read through `param`
-//! (R386); the Radiant face ignores it (`tunedOn: "base"`, R1431).
+//! Each draw is `draw_from_library`, topmost match first (R801). The Radiant face takes every match in
+//! the deck as it stood when the effect began (§2.4's "draw your whole library" reading). The number is
+//! declared and read through `param` (R386); the Radiant face ignores it (`tunedOn: "base"`, R1431).
 
 use jackioh_engine::effects::{ForEachCardArgs, draw_from_library, for_each_card};
 use jackioh_engine::prelude::*;
@@ -69,7 +66,6 @@ fn prime_time(take: Option<i32>) -> Vec<Effect> {
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
-            // "Draw 3 …": the declared number `draws` (R386, R1431).
             cry: Some(hook(|ctx| {
                 let draws = param(&*ctx, "draws");
                 prime_time(Some(draws))
@@ -83,10 +79,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #14 Prime Time — SPEC §8.8 row 14, BUILD M10 row M 14: "Draw the 3 topmost prime-indexed cards
-// of any set (R804); a token index never matches; fewer matches draw fewer without fatigue (R801);
-// radiant draws every prime-indexed card and burns the overflow; its tuned number (draws) reads
-// through `param()` (R386, R1431)".
+// M #14 Prime Time — SPEC §8.8 row 14, BUILD M10 row M 14.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,7 +101,6 @@ mod tests {
     const RUSH_TOKEN: &str = "core-t-rush"; // Index "T-rush": never prime.
     const FILLER: &str = "core-005"; // (1) Spell.
 
-    /// The def ids of p1's `drawn` events, in order.
     fn drawn_defs(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -136,7 +128,6 @@ mod tests {
 
             s.play(PRIME, json!({}));
 
-            // Indices 5, 11 and 5 (Core, then Meditative: any set counts), skipping 8 and 15.
             assert_eq!(drawn_defs(&s), vec![FIVE, ELEVEN, MED_FIVE]);
             let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![EIGHT, FIFTEEN, TWENTY_FIVE, NINETEEN]);

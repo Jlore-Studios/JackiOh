@@ -1,50 +1,15 @@
 // A hero: health, armor and the Heroic Power (SPEC §3, BUILD M5-T1).
 //
-// The hero is a click target like any card — `hero-<side>` — so an attack can land on it, by a
-// click or by a pointer drag the DragLayer resolves through the same testid. Whether it may be
-// attacked is `props.highlight.legal`, and whether it glows green is `props.highlight.glow`;
-// Taunt lives in the engine.
-//
-// The modifier badges (BUILD M5-T4 `modifierChanged`: "badge list equals the view's modifiers")
-// come from `SideView.modifiers`, which R169 put in the view — `{ id, label }` per §10.1 modifier,
-// on both seats. The list is rendered here and nowhere else, so `modifiers-<side>` (the testid the
-// M5-T4 animation table resolves `modifierChanged` to) has exactly one element per seat. The
-// container is rendered even when the list is empty, because the fade the table plays on it is
-// the animation for the modifier that has just *left*.
-//
-// Nothing is derived here: the label is the view's, the order is the view's, and a modifier the
-// view does not carry is not drawn. Reconstructing badges from the event window would be a guess —
-// it is the last N events (§10.8), so a badge could appear and never leave.
-//
-// The Heroic Powers (R43, R384, R510, R752). The view carries every Heroic Power a player controls,
-// each separately once per turn, with its `instanceId`, its name on the card (`title`) and its X. Each of the viewer's own is a button that
-// reports `{ on: "activate", instanceId }`, the click every Activate control reports
-// (ActivateControl.tsx), so `actions.ts` builds a power exactly as it builds any activation:
-// whichever of `activatePower` (R43's alias) or `activate` `legalActions` lists for it, sent at
-// once when there is one, or waiting for its target on the board (and draggable to it, game/drag)
-// when there are several. The first keeps the `power` testid the e2e specs press; any further one
-// is `power-<instanceId>`. The opponent's powers are tags. Whether a button is live is
-// `props.highlight.legal`; `usedThisTurn` is drawn (R1639000: a "Used" mark first in the chip, a
-// greyed chip and a title that says so), never obeyed. A power flashes on the `activated` row,
-// which plays on its card (`card-<instanceId>`).
-//
-// The portrait has two presses (R1449). A click on the hero when it is not a legal target, or Enter
-// or Space on the portrait's own button (a control named for the hero, laid over the art and given
-// no testid, so a drag or a click still resolves to `hero-<side>`), toggles the emote menu hung off
-// the portrait: your picker, or the opponent's one-item mute (R643). A hold on the portrait (a
-// touch's or a mouse's, for LONG_PRESS_MS), a right-click, or the context-menu key or Shift+F10 on
-// its button opens the hero's inspect view instead (`emotes/HeroInspect.tsx`, R1330): the portrait
-// large, with the same menu in it. The portrait answers either with a short squash and glint, none
-// under Reduce Motion (R1331). A target is still a target first.
-//
-// R847: a side whose Temporal Rift turn is granted (`SideView.riftExtraTurn`) wears "Rift turn used"
-// on both seats; owed extra turns are the engine's own modifier badge (R846).
-//
-// R1840005: a seat's Credits, a public count on both seats, which the Marketplace spends (R1853003)
-// and a Resource played or discarded from the hand earns (R2250001), are a pill beside the Jade
-// Counter's, `market-credits-<side>`. Absent until first gained, so a seat without them draws
-// nothing; unlike the Jade Counter's, a count of 0 still shows, since a seat that spent down to 0
-// still has Credits. A Resource is a hand card since #2250 (R2250000), so the hand draws it.
+// A click target like any card, `hero-<side>`, for a click or a DragLayer drag; whether it may be attacked is
+// `props.highlight.legal` (Taunt lives in the engine). Modifier badges are `SideView.modifiers` (R169, §10.1,
+// both seats), rendered here only, one `modifiers-<side>` element per seat; one rebuilt from the event window
+// (§10.8) could appear and never leave. Heroic Powers (R43, R384, R510, R752) are each once per turn: the first keeps
+// the `power` testid e2e presses, others `power-<instanceId>`; the opponent's are tags; `usedThisTurn` is drawn,
+// never obeyed; the flash plays on `card-<instanceId>`. Portrait (R1449): a click, Enter or Space on a non-target
+// toggles the emote menu (R643: the opponent's is a one-item mute); a hold opens `emotes/HeroInspect.tsx` (R1330).
+// R847: "Rift turn used" (`SideView.riftExtraTurn`); owed extra turns are the modifier badge (R846). R1840005: a
+// seat's Credits (spent by R1853003's Marketplace, earned by R2250001's Resource) show as `market-credits-<side>`,
+// even at 0; a Resource is a hand card (#2250, R2250000), so the hand draws it.
 
 import type { ReactElement } from "react";
 
@@ -125,13 +90,10 @@ export default function Hero(props: HeroProps): ReactElement {
   const panelReduces = useSetting("reduceMotion");
   const osReduces = useOsReducedMotion();
   const reacting = usePortraitReaction(menu !== null, panelReduces || osReduces);
-  // R1449: a touch or a mouse held on the portrait opens the view, unless the hero is a target (a
-  // hold there is the player aiming). The handlers sit on the whole oval, badges included. Hover is
-  // off: a portrait has nothing to preview. The trigger's capture swallows the click that lifting the
-  // finger or the button sends, which would otherwise toggle the menu on the portrait as well. The
-  // menus stop their own pointerdowns, so a press held on a menu item is no hold on the portrait. A right-click is the mouse's twin of the hold, and the
-  // context-menu key's and Shift+F10's on the button; Game ignores all three while anything is
-  // being targeted, which is when the drag layer takes the right-click to cancel.
+  // R1449: a touch or mouse held on the portrait opens the view, unless the hero is a target (a hold there
+  // is aiming); no hover. The trigger's capture swallows the click a lift sends, which would toggle the menu;
+  // menus stop their own pointerdowns. A right-click, the context-menu key and Shift+F10 are the hold's twins;
+  // Game ignores all three while anything is targeted (the drag layer takes the right-click to cancel).
   const press = useInspectTrigger(
     emotes === undefined ? null : { key: `hero-portrait-${side}`, render: NO_OVERLAY },
     {
@@ -159,8 +121,7 @@ export default function Hero(props: HeroProps): ReactElement {
       tabIndex={legal ? 0 : undefined}
       onClick={() => {
         // Issue §2: targeting always wins. A legal hero is a target, so the click lands on it; a
-        // non-legal one toggles its menu on the portrait instead (R1449): the emote picker (yours)
-        // or the mute item (theirs).
+        // non-legal one toggles its menu on the portrait instead (R1449).
         if (legal) {
           props.onClick?.(target);
         } else {
@@ -349,9 +310,8 @@ export default function Hero(props: HeroProps): ReactElement {
 }
 
 /**
- * R1639000: the mark a Heroic Power used this turn wears, first in its chip on either seat, so the
- * chip's clip (a flex box draws no ellipsis) never takes it. The space keeps the name "Used
- * Ranching", where a flex box draws none (Board.tsx's Pile). Drawn from the view, never obeyed.
+ * R1639000: the mark a used Heroic Power wears, first in its chip so the chip's clip never takes it. The
+ * space keeps the name "Used Ranching" (a flex box draws none; Board.tsx's Pile).
  */
 function UsedMark({ power }: { power: HeroPowerView }): ReactElement | null {
   if (!power.usedThisTurn) return null;
@@ -362,15 +322,13 @@ function UsedMark({ power }: { power: HeroPowerView }): ReactElement | null {
   );
 }
 
-/** R1639000: a used power's title, the same on the viewer's button and the opponent's tag. */
 function usedTitle(power: HeroPowerView): string {
   return t("{power}: used this turn", { power: t(power.title) });
 }
 
 /**
- * One of the viewer's Heroic Powers. A press reports the power's instance as an activation
- * (`{ on: "activate" }`), never the `power` board control, so a power with targets is built like any
- * activation; `data-instance-id` is also what a drag from it reads (game/drag/targets.ts).
+ * One of the viewer's Heroic Powers. A press reports its instance as an activation, never the `power` board
+ * control; `data-instance-id` is also what a drag from it reads (game/drag/targets.ts).
  */
 function PowerButton({
   power,

@@ -116,29 +116,24 @@ describe("Conquest first-series walkthrough and onboarding", () => {
     const explainer = screen.getByTestId(seriesTestid.explainer);
     expect(explainer).toHaveTextContent(conquestText("explainerTitle"));
 
-    // 1. wins needed (R330)
+    // In order: wins and locks (R330), sealed (R331), draws and concede (R334), rating (R604).
     const winsItem = screen.getByTestId(conquestExplainerTestid.item("wins"));
     expect(winsItem).toHaveTextContent(conquestText("winsNeeded"));
     expect(winsItem).toHaveTextContent(`${String(SERIES_WINS_NEEDED)} decks`);
 
-    // 2. lock-on-win (R330)
     const locksItem = screen.getByTestId(conquestExplainerTestid.item("locks"));
     expect(locksItem).toHaveTextContent(conquestText("lockOnWin"));
 
-    // 3. sealed simultaneous picks (R331)
     const sealedItem = screen.getByTestId(conquestExplainerTestid.item("sealed"));
     expect(sealedItem).toHaveTextContent(conquestText("sealedPicks"));
 
-    // 4. draws lock nothing (R334)
     const drawsItem = screen.getByTestId(conquestExplainerTestid.item("draws"));
     expect(drawsItem).toHaveTextContent(conquestText("draws"));
     expect(drawsItem).toHaveTextContent(`${String(SERIES_MAX_GAMES)} games`);
 
-    // 5. concede vs forfeit (R334)
     const concedeItem = screen.getByTestId(conquestExplainerTestid.item("concede"));
     expect(concedeItem).toHaveTextContent(conquestText("concedeVsForfeit"));
 
-    // 6. rating moves once (R604)
     const ratingItem = screen.getByTestId(conquestExplainerTestid.item("rating"));
     expect(ratingItem).toHaveTextContent(conquestText("ratingMovesOnce"));
   });
@@ -167,12 +162,10 @@ describe("Conquest first-series walkthrough and onboarding", () => {
       expect(screen.getByTestId(seriesTestid.screen)).toBeInTheDocument();
     });
 
-    // Explainer is closed initially
     expect(screen.queryByTestId(seriesTestid.explainer)).toBeNull();
     const toggleButton = screen.getByTestId(seriesTestid.explainerToggle);
     expect(toggleButton).toHaveTextContent(conquestText("toggleOpen"));
 
-    // Clicking toggle opens the explainer
     fireEvent.click(toggleButton);
     expect(screen.getByTestId(seriesTestid.explainer)).toBeInTheDocument();
   });

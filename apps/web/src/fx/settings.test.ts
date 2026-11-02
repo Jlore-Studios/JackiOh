@@ -1,8 +1,6 @@
-// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3).
-//
-// `localStorage` must only ever be touched inside try/catch: a missing, throwing or full storage and
-// unparsable JSON all fall back to the defaults without throwing, and `setFxSettings` keeps working
-// in memory. Every test leaves storage empty and the store reset.
+// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3). `localStorage` must
+// only ever be touched inside try/catch: a missing, throwing or full storage and unparsable JSON fall back
+// to the defaults without throwing, and `setFxSettings` keeps working in memory.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ReactElement } from "react";
@@ -97,9 +95,7 @@ function store(value: unknown): void {
   window.localStorage.setItem(FX_SETTINGS_KEY, JSON.stringify(value));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B6: loading and normalizing
- * ------------------------------------------------------------------------------------------- */
+/* B6: loading and normalizing */
 
 describe("B6 loadFxSettings and normalization", () => {
   it("B6 the defaults are speed 1, intensity normal and motion system, under the key jackioh.fx.v1", () => {
@@ -221,9 +217,7 @@ describe("B6 loadFxSettings and normalization", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B6: the in-memory store and persistence
- * ------------------------------------------------------------------------------------------- */
+/* B6: the in-memory store and persistence */
 
 describe("B6 getFxSettings and setFxSettings", () => {
   it("B6 getFxSettings starts at the defaults with empty storage", () => {
@@ -299,9 +293,7 @@ describe("B6 getFxSettings and setFxSettings", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B7: notification and the hook
- * ------------------------------------------------------------------------------------------- */
+/* B7: notification and the hook */
 
 function Probe(): ReactElement {
   const [settings, update] = useFxSettings();

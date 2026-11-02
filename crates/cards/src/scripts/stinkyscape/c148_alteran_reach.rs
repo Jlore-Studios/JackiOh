@@ -10,10 +10,7 @@
 //! dealing it in the opening hand (R640). The travel is `subsystems::starscape_abilities`: an Activate
 //! ♾️ for `STARSCAPE_TRAVEL_MANA` (R1847002) that moves its controller one node along their map, the
 //! player's and not the card's, charted from the match rng at their first travel (R1847000), and gives
-//! the node's reward (R1847001). The 20th travel adds S #148.1 Edge of the Universe on its base face, a
-//! full hand burning it, and nothing travels past the edge. Radiant: the player's first travel each
-//! turn is free, the free ability and the paid one switching (R1847002). Declares no numbers: the
-//! price, the map and its length are the engine's.
+//! the node's reward (R1847001).
 
 use jackioh_engine::prelude::*;
 
@@ -42,11 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #148 Alteran Reach — SPEC §8.10 row S 148, BUILD M12 row S 148: "Indestructible; each Activate
-// costs (1) and moves its controller one node, giving the node's reward as the map was charted; any
-// number a turn; the 20th adds Edge of the Universe to the hand and then no travel is offered; a second
-// Alteran Reach travels the same map; radiant the first travel each turn costs nothing and the next
-// (1)".
+// S #148 Alteran Reach — SPEC §8.10 row S 148, BUILD M12 row S 148.
 #[cfg(test)]
 mod tests {
     use super::{EDGE_OF_THE_UNIVERSE, ID, script};
@@ -57,13 +50,10 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// (1) Spell: destroy a backrow card and Lock its zone.
     const JAMMED: &str = "core-036";
-    /// (1) Spell: draw 2, heal your hero 2.
     const FILLER: &str = "core-005";
 
-    /// p1's main phase, a Reach in p1's backrow from lane 1 on for each of `faces` (its Radiant face
-    /// where true); cards to draw, 4 mana, and p2's hero at 100 so no reward ends the game. Neither
+    /// Neither
     /// side's turn ends by itself (R82).
     fn board_with(seed: &str, faces: &[bool]) -> Scenario {
         let reaches: Vec<Value> = faces
@@ -84,14 +74,12 @@ mod tests {
         board_with(seed, &[radiant])
     }
 
-    /// 19 Heals and the edge: a map whose every node but the last gives the same thing.
     fn heal_path() -> Vec<StarscapeReward> {
         let mut nodes = vec![StarscapeReward::Heal; (STARSCAPE_EDGE_TRAVELS - 1) as usize];
         nodes.push(StarscapeReward::Edge);
         nodes
     }
 
-    /// Writes p1's map as charted, standing on `at`, last traveled on no turn.
     fn set_map(s: &mut Scenario, nodes: Vec<StarscapeReward>, at: i32) {
         s.state_mut().players.p1.starscape = Some(StarscapeMap {
             nodes,
@@ -115,7 +103,6 @@ mod tests {
         s.state().players.p1.mana.current
     }
 
-    /// The nodes the given events traveled to, in order.
     fn traveled(events: &[GameEvent]) -> Vec<(PlayerId, i32, StarscapeReward)> {
         events
             .iter()
@@ -126,7 +113,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's own view of the Reach in backrow lane 1: its abilities as (ability, usable).
     fn activations(s: &Scenario) -> Vec<(String, bool)> {
         let view = crate::js(&s.view(P1));
         view["you"]["backrow"][0]["activations"]
@@ -142,7 +128,6 @@ mod tests {
             .collect()
     }
 
-    /// The abilities `legal_actions` offers p1 on the Reach in lane 1.
     fn legal_abilities(s: &Scenario) -> Vec<String> {
         let reach = s.backrow(P1, 1).expect("the Reach is in lane 1").id;
         legal_actions(s.state(), P1)
@@ -156,14 +141,12 @@ mod tests {
             .collect()
     }
 
-    /// The Edge of the Universe in p1's hand, if the edge added one.
     fn edge_in_hand(s: &Scenario) -> Option<CardInstance> {
         s.hand(P1)
             .into_iter()
             .find(|card| card.def_id == EDGE_OF_THE_UNIVERSE)
     }
 
-    /// R46: a destroy of the Reach does nothing, and it stays in p1's backrow.
     fn a_destroy_leaves_it(radiant: bool) {
         let mut s = crate::scenario(json!({
             "seed": "s148-indestructible",

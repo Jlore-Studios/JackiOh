@@ -1,11 +1,7 @@
-//! Test-only cards for ME-CRAFT (Meditative #17 True Craft a Card, R880–R883): `pm-crafter`
-//! runs the card's own chain — a `number` prompt for the cost, then a `craft` prompt, then the
-//! mint — so the engine is proved without `crates/cards` (CLAUDE.md: the engine never imports it).
-//!
-//! Meditative+ (#1182): `pm-potion-crafter` and `pm-huge-potion-crafter` open the crafter in a
-//! potion frame at once (Jazakus and Jazakus Prime's Cry, R1182000, R1182001), and
-//! `pm-scratch-crafter` runs `pm-crafter`'s chain with the from-scratch flag (Scratch Pad's,
-//! R1182002).
+//! Test-only cards for ME-CRAFT (Meditative #17 True Craft a Card, R880–R883), proved without
+//! `crates/cards`: `pm-crafter` runs the card's own chain. Meditative+ (#1182): the potion crafters open
+//! it in a potion frame at once (Jazakus and Jazakus Prime's Cry, R1182000, R1182001), and
+//! `pm-scratch-crafter` runs the chain with the from-scratch flag (Scratch Pad's, R1182002).
 
 use std::sync::LazyLock;
 
@@ -172,7 +168,6 @@ static CRAFTER_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(
     ])
 });
 
-/// This file's defs, by id.
 pub fn catalog() -> IndexMap<String, CardDef> {
     let potion = fixture_spell("pm-potion-crafter", "3403", "crafter (potion)");
     let huge = fixture_spell("pm-huge-potion-crafter", "3404", "crafter (HUGE potion)");
@@ -186,7 +181,6 @@ pub fn catalog() -> IndexMap<String, CardDef> {
     ])
 }
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     CRAFTER_SCRIPTS.clone()
 }

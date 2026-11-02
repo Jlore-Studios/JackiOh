@@ -3,8 +3,8 @@
 //! free of the order the moves came in, so positions differing on them stop merging in the beam's
 //! duplicate check and the lethal solver's visited set.
 //!
-//! The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy (core-011) 3/3 Rush First Strike, Pointmaster
-//! (core-020) 7/1 First Strike and Midrange Menace (core-019) 9/9 Taunt.
+//! The cards: Mr. Vanilla 4/4, Tempo Timmy 3/3 Rush First Strike, Pointmaster 7/1 First Strike and Midrange
+//! Menace 9/9 Taunt.
 
 use indexmap::IndexMap;
 use jackioh_ai::*;
@@ -20,8 +20,7 @@ fn board(setup: Value) -> GameState {
 mod signature {
     use super::*;
 
-    /// The AI with Mr. Vanilla and Tempo Timmy in hand and Pointmaster on the field, the enemy with
-    /// Midrange Menace: a position with none of the new parts.
+    /// A position with none of the new parts.
     fn base() -> GameState {
         board(json!({
             "seed": "ai-signature-axes",
@@ -30,7 +29,6 @@ mod signature {
         }))
     }
 
-    /// `change` alone moves the AI's signature of `base()`.
     #[track_caller]
     fn assert_signed(change: impl FnOnce(&mut GameState)) {
         let before = base();
@@ -47,7 +45,6 @@ mod signature {
         }
     }
 
-    /// `player`'s first unit on the field.
     fn field_unit(state: &mut GameState, player: PlayerId) -> &mut CardInstance {
         let id = active_units_of(state, player)[0].id.clone();
         find_instance_mut(state, &id).expect("the unit stands on the field")
@@ -301,7 +298,6 @@ mod soak {
         state.players[HUMAN].hero.health - after.players[HUMAN].hero.health
     }
 
-    /// `face_threat` counts what playing the attacks out does.
     #[track_caller]
     fn assert_soaks(setup: Value, expected: i32) {
         let state = board(setup);
@@ -312,8 +308,7 @@ mod soak {
     #[test]
     fn armor_comes_off_each_hit_so_one_attack_units_never_scratch_an_armored_taunt() {
         // A Mr. Vanilla in Defense Position at 1 health with Armor 1: each 1-attack hit loses its point
-        // to the Armor, and the 4/4 destroys it with nothing left over. Pooled as health + armor (2),
-        // the two 1s paid it off and the 4 went face.
+        // to the Armor, and the 4/4 destroys it with nothing left over.
         assert_soaks(
             json!({
                 "seed": "ai-soak-armor",
@@ -331,7 +326,7 @@ mod soak {
     #[test]
     fn a_poisonous_attacker_destroys_the_taunt_with_one_point_and_the_rest_go_face() {
         // Wrong-House Attacker's 1 Poisonous point destroys Midrange Menace (9/9 Taunt), so Mr.
-        // Vanilla's 4 goes face; pooled, the 1 and the 4 never paid off 9.
+        // Vanilla's 4 goes face.
         assert_soaks(
             json!({
                 "seed": "ai-soak-poisonous",
@@ -344,8 +339,7 @@ mod soak {
 
     #[test]
     fn a_trample_attacker_sends_what_lands_beyond_the_taunts_health_to_the_hero() {
-        // Plague Bringer Goliath's 7 Trample into Midrange Menace at 2 health: 5 tramples through to
-        // the hero, where the pooled soak counted the whole 7 spent.
+        // Plague Bringer Goliath's 7 Trample into Midrange Menace at 2 health: 5 tramples through.
         assert_soaks(
             json!({
                 "seed": "ai-soak-trample",
@@ -359,8 +353,7 @@ mod soak {
     #[test]
     fn a_first_strike_taunt_destroys_the_attackers_it_outstrikes_before_they_land_a_blow() {
         // Pointmaster (7/1 First Strike) in Defense Position strikes each Mr. Vanilla for 7 before its 4
-        // lands, so neither touches it and nothing goes face. Pooled (1 health + 1 Armor), the first 4
-        // paid it off and the second went face.
+        // lands, so neither touches it and nothing goes face.
         assert_soaks(
             json!({
                 "seed": "ai-soak-first-strike",
@@ -375,7 +368,7 @@ mod soak {
     fn a_reborn_taunt_comes_back_with_its_printed_shield_and_binds_again() {
         // Right-house defender (1/1 Taunt, Divine Shield, Reborn): one Mr. Vanilla takes the shield, one
         // destroys it, its body comes back with the shield, and two more go into it before the fifth
-        // goes face for 4. Pooled, the shield and the 1 health took two and three went face for 12.
+        // goes face for 4.
         assert_soaks(
             json!({
                 "seed": "ai-soak-reborn",

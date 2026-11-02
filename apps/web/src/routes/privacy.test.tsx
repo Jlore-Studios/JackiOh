@@ -180,20 +180,17 @@ describe("the privacy policy", () => {
       within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
     const minutes = (ms: number): number => ms / 60_000;
 
-    // Co-op is collected: its rooms and its games, every move included.
     const collected = section(/what we collect/i);
     expect(collected).toMatch(/co-op \(Duos\)/);
     expect(collected).toMatch(/the co-op rooms you make or join/);
     expect(collected).toMatch(/every player.s deck, every move, and the result/);
 
-    // Who sees it: a teammate sees the hand; an opponent's friends see your moves; an opponent may share.
     const handled = section(/who handles it/i);
     expect(handled).toMatch(/your teammate sees your hand, your face-down cards and the choices in front of you/);
     expect(handled).toMatch(/from your opponent.s seat, which shows your moves as your opponent sees them/);
     expect(handled).toMatch(/a replay your opponent shares shows the game from their seat, your moves included/);
 
-    // How long: co-op moves as 1v1 moves, a challenge for its life, a share until its sharer or the
-    // friendship ends it; no "until you or the other player removes them" for what only one side may.
+    // No "until you or the other player removes them" for what only one side may remove.
     const kept = section(/how long we keep it/i);
     expect(kept).toContain(`co-op games included: ${String(MATCH_ACTION_RETENTION_DAYS)} days after the match ends`);
     expect(kept).toContain(`A challenge: about ${String(minutes(CHALLENGE_TTL_MS))} minutes after it was sent`);
@@ -204,8 +201,7 @@ describe("the privacy policy", () => {
     expect(kept).toMatch(/A block: until the player who made it lifts it/);
     expect(kept).not.toMatch(/until you or the other player removes them/);
 
-    // Deleting: a finished co-op game stays for the teammate (R1497000), and a live one holds the
-    // deletion back.
+    // R1497000: a finished co-op game stays for the teammate.
     const deleting = section(/deleting your account/i);
     expect(deleting).toMatch(/and so does a finished co-op game in your teammate.s, its moves and its result included/);
     expect(deleting).not.toMatch(/deletes the whole co-op game/);

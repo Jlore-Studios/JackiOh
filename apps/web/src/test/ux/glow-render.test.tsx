@@ -207,8 +207,6 @@ describe("B16 data-glow on the board follows highlight.glow", () => {
   });
 });
 
-// B17: data-condition-active
-
 function flaggedView(): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -294,8 +292,6 @@ describe("B17 data-condition-active follows the view's conditionActive", () => {
     expect(flagged).not.toHaveAttribute("data-glow");
   });
 });
-
-// R1844001: data-pareto-optimal
 
 describe("R1844001 the Pareto hint lights the hand cards the view flags", () => {
   it("R1844001 only a flagged hand card carries data-pareto-optimal", () => {

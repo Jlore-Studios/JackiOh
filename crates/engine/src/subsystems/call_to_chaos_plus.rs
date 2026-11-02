@@ -1,13 +1,8 @@
 //! C+ #73 Call to Chaos (Classic+ Edition) (SPEC §8.7 row 73, R28, R87, R380, R382, R387, R423, R436): its
-//! table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls, announces and resolves —
-//! `call_to_chaos({ radiant, table: CHAOS_PLUS_EFFECTS })` — so one rule serves both editions: the base face
-//! rolls one entry, the Radiant three different ones resolved in the list's order (R423), the recursion
-//! counts casts of either edition against `CALL_TO_CHAOS_CHAIN_CAP` (R28) and at the cap resolves into
-//! nothing (R87), and both players are told what was rolled (`chaosRolled`, R436).
-//!
-//! Every entry is built when it resolves, not when the Cry returns (a part of the list, `lazy_part`), as
-//! Core's are: a recursion rolled before it resolves its whole chain first and changes the hand, the deck
-//! and the board each later entry reads (R87), and a pause inside one parks the rest of it (R113).
+//! table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls, announces and resolves,
+//! so one rule serves both editions (the Radiant's three in list order, R423). Every entry is built when
+//! it resolves (`lazy_part`), as Core's are: a recursion rolled before it resolves its whole chain first,
+//! changing what each later entry reads (R87), and a pause inside one parks the rest of it (R113).
 
 use std::sync::Arc;
 
@@ -67,11 +62,10 @@ fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
     })
 }
 
-/// Entry 9: "replace your deck with random Call to Chaos cards, which cost (0)": each deck card as the entry
-/// resolves is Replaced (§6.3, R35) one for one, where it lies, by a random card of the "Call to Chaos"
-/// pool (both editions, this one included: R387, R28), each pick its own (R60) and unseen by its owner
-/// (R311). The new card carries a `costOverride` of (0) until it reaches a graveyard or an exile pile
-/// (R78, R766). An empty deck draws nothing (R129).
+/// Entry 9: "replace your deck with random Call to Chaos cards, which cost (0)": each deck card is
+/// Replaced (§6.3, R35) where it lies by its own pick (R60) of the "Call to Chaos" pool (both editions,
+/// this one included: R387, R28), unseen by its owner (R311), at (0) until it reaches a graveyard or an
+/// exile pile (R78, R766). An empty deck draws nothing (R129).
 pub fn replace_deck_with_call_to_chaos() -> Effect {
     entry("replace", |ctx| {
         let deck: Vec<CardInstance> = ctx.sink.state.players[ctx.controller].library.clone();

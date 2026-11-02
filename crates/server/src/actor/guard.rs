@@ -1,8 +1,7 @@
-//! The abuse guards a person's socket stands behind (SPEC §9.8): `SeatGuard`, one per human seat,
-//! which the 1v1 match actor and the co-op actor (§13.9) each keep (R137, R835000, R835002, and for a
-//! seat's hellos R2686000), and one per watcher's socket (R2609000), and `HelloGate`, which `/ws/duos` and `/ws/watch` hold a socket
-//! behind until it says its hello (R835002). Every number is in `crate::config`; none is stated
-//! here.
+//! The abuse guards a person's socket stands behind (SPEC §9.8): `SeatGuard`, one per human seat of
+//! the 1v1 and co-op actors (§13.9; R137, R835000, R835002, R2686000) and one per watcher's socket
+//! (R2609000), and `HelloGate`, which `/ws/duos` and `/ws/watch` hold a socket behind until it says
+//! its hello (R835002). Every number is in `crate::config`.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, Weak};
@@ -29,7 +28,6 @@ pub const FLOOD_WINDOW_MS: i64 = 1000;
 /// violation, sent when a seat's malformed frames cross the budget.
 pub const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
-/// Drops the entries of `window` that are `span` or more behind `now`.
 fn prune(window: &mut VecDeque<i64>, now: i64, span: i64) {
     while window.front().is_some_and(|at| *at <= now - span) {
         window.pop_front();
@@ -51,17 +49,9 @@ pub struct SeatGuard {
 }
 
 impl SeatGuard {
-    /// §9.8's action flood limit, `MATCH_ACTIONS_PER_SECOND` from `crate::config` (R109), held as
-    /// one window *per seat*; `false` once the seat is over it, and the action is not counted.
-    ///
-    /// SPEC §11 R137 settles the scope of the counter: "Per seat, not per match." §9.8 says
-    /// "per-match rate limit in the actor" and R109 says "5 actions per second per match", but one
-    /// shared per-match counter lets a flooding player spend the *opponent's* budget and have the
-    /// victim's legitimate clicks refused, "turning an anti-abuse limit into the abuse". So R137
-    /// gives each socket the allowance R109 names and makes the match's aggregate ceiling twice it,
-    /// which is also the per-socket reading `docs/architecture.md` §5.1 step 1 asks for
-    /// ("rate-limit the socket"). R157 applies the same reasoning to §9.8's per-account half in
-    /// `api/http.rs`.
+    /// §9.8 action flood limit (R109), held as one window per seat (SPEC §11 R137, §5.1): counter is
+    /// per seat so a flooder cannot spend the opponent's budget.
+    /// R157 applies the same per-account reasoning in `api/http.rs`.
     pub fn action_allowed(&mut self, now: i64) -> bool {
         prune(&mut self.actions, now, FLOOD_WINDOW_MS);
         if self.actions.len() >= MATCH_ACTIONS_PER_SECOND {
@@ -71,11 +61,8 @@ impl SeatGuard {
         true
     }
 
-    /// R835000: counts one refused action (a reducer refusal or a flood rejection) and answers
-    /// the count the first time the seat's window crosses `REJECTION_ALERT_THRESHOLD`: `None`
-    /// before that and after the alert has gone, so one alert per match per seat. The window is
-    /// pruned to `REJECTION_ALERT_WINDOW_MS` first, so old refusals fall out and the crossing is
-    /// strictly over the threshold.
+    /// R835000: counts a refused action; returns count the first time seat crosses
+    /// `REJECTION_ALERT_THRESHOLD` within `REJECTION_ALERT_WINDOW_MS` (one alert per seat).
     pub fn note_rejection(&mut self, now: i64) -> Option<usize> {
         prune(&mut self.rejections, now, REJECTION_ALERT_WINDOW_MS);
         self.rejections.push_back(now);
@@ -96,10 +83,9 @@ impl SeatGuard {
     }
 
     /// R2609000, R2686000: `true`, and `now` kept, unless a hello of this socket `generation` was
-    /// answered less than `WATCH_HELLO_INTERVAL_MS` before `now`, so a hello flood costs one view per
-    /// interval. A hello of a generation not answered last (a reattach's first, or a seat's first
-    /// ever) is always allowed and starts its own interval. A seat's hellos that find one queued
-    /// coalesce first (R835001) and never ask this.
+    /// answered less than `WATCH_HELLO_INTERVAL_MS` before `now`, so a flood costs one view per
+    /// interval; a generation not answered last (a reattach's first) starts its own. A seat's hellos
+    /// that find one queued coalesce first (R835001) and never ask this.
     pub fn hello_answer_allowed(&mut self, generation: u64, now: i64) -> bool {
         if self
             .hello_answered
@@ -126,9 +112,7 @@ pub fn alert_unusual_rejections(match_id: &str, profile_id: &str, rejected: usiz
     );
 }
 
-/// What the gate has heard.
 struct GateState<H> {
-    /// The first frame that parsed as a hello, once one came.
     hello: Option<H>,
     closed: bool,
     /// The socket's own malformed budget: no seat is known before the hello.

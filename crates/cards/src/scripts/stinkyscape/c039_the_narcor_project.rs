@@ -6,17 +6,9 @@
 //!   Radiant: "… Gain a Red Narcor.\nActivate: Discard a Narcor or a Red Narcor to lower this card's
 //!            Brittle by 1.\nDeath: If Brittle destroyed this, …, gain two Red Narcors …"
 //!
-//! Brittle 4 is the printed keyword, the engine's (§6.1, R385, R638). End of turn (R62): `gain_resources`
-//! of one Narcor (S #T-narcor, a one-id pool, R1840002) into its controller's hand, a full hand burning
-//! it (R2250000). Activate (§6.2, R384), offered only while the hand holds a Narcor (a `canActivate`
-//! read of the hand, `hand_holds_any`): `discard_resource` of the one longest there, a hand discard that
-//! pays its Credits (R2250000, R2250001), then `lower_brittle` of 1 on this card, which crumbles it at
-//! once when it leaves the count at 0 (R1861001), a Brittle death like the tick's. Death: when Brittle
-//! destroyed it (`brittle_spent` on the Death snapshot, R1861001), a rest-of-game player effect on its
-//! controller, C+ #52's `forRestOfGame` with `atEnd` (R1861002): at the end of each of their turns, the
-//! one it died on included, two Narcors, whatever became of the card (R127). Another destroy, or an
-//! exile, gives nothing more. Radiant: Red Narcors (S #T-red-narcor), and the Activate takes the oldest
-//! Narcor or Red Narcor. Its numbers are printed in its words, none declared.
+//! Brittle 4 printed (§6.1, R385, R638). End of turn gain_resources (R62, S #T-narcor, R1840002, R2250000).
+//! Activate (§6.2, R384) discards Narcor and calls lower_brittle (R2250000, R2250001).
+//! Death if Brittle destroyed: forRestOfGame gains Narcors at end of each turn (C+ #52, R1861002, R127).
 
 use jackioh_engine::effects::{discard_resource, for_rest_of_game, gain_resources, lower_brittle};
 use jackioh_engine::prelude::*;
@@ -104,12 +96,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 39 The Narcor Project — SPEC §8.10 row 39, BUILD M12 row S 39: "at its controller's end of turn
-// gains a Narcor into the hand; its Activate is offered only with a Narcor in the
-// hand, discards the oldest and lowers Brittle by 1; driven to 0 it crumbles at once and from then on
-// its controller gains two Narcors at the end of each of their turns, the one it died on included, the
-// card long gone (R1861001, R1861002); destroyed otherwise, nothing more; radiant Red Narcors, the
-// Activate taking a Narcor or a Red Narcor".
+// S 39 The Narcor Project — SPEC §8.10 row 39, BUILD M12 row S 39 (R1861001, R1861002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -123,7 +110,6 @@ mod tests {
     const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
     const REKNITE: &str = "stinkyscape-t-reknite";
 
-    /// p1's Project in the backrow, a hand of Twisting Nether, a filler and `held`.
     fn project(radiant: bool, held: Value) -> Scenario {
         let mut hand = vec![json!(NETHER), json!(FILLER)];
         hand.extend(held.as_array().cloned().unwrap_or_default());
@@ -145,7 +131,6 @@ mod tests {
         active_brittle_count(s.card(ID))
     }
 
-    /// The Activates `legal_actions` offers p1 on the Project.
     fn offered(s: &Scenario) -> usize {
         let id = s.card(ID).id.clone();
         legal_actions(s.state(), P1)
@@ -163,7 +148,6 @@ mod tests {
         s.activate(ID, json!({ "ability": DISCARD_NARCOR }))
     }
 
-    /// The Project's count set to 1, as three earlier Activates would have left it.
     fn at_one(s: &mut Scenario) {
         s.card_mut(ID)
             .brittle

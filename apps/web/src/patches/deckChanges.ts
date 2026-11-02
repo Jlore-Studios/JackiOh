@@ -1,6 +1,5 @@
-// R2097000: what the newest shipped patch changed of a deck. A deck whose latest save predates
-// the newest patch wears a badge when it holds a card that patch changed; the badge opens exactly
-// those cards, each with its change. Presentation only (CLAUDE.md rule 7).
+// R2097000: a deck saved before the newest shipped patch wears a badge when it holds a card that
+// patch changed, opening exactly those cards, each with its change. Presentation only (CLAUDE.md rule 7).
 
 import { patchCards, versionBefore } from "./history.ts";
 import type { CardDelta } from "./diff.ts";
@@ -25,10 +24,7 @@ export function deckChanges(deck: DeckRef, changes: NewestChanges): ChangedCard[
   return [...changes.cards.values()].filter((delta) => held.has(delta.id));
 }
 
-/**
- * Loads the newest patch's changes, but only while that patch is the catalog the builder shows:
- * the badge describes only the patch the builder's catalog is.
- */
+/** The newest patch's changes, loaded only while that patch is the catalog the builder shows: the badge describes no other. */
 export async function loadNewestChanges(source: PatchSource, catalogVersion: string): Promise<NewestChanges | null> {
   const patches = await source.patches();
   const newest = patches.at(-1);

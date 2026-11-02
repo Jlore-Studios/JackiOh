@@ -1,8 +1,8 @@
 // Procedural sound effects (docs/polish/2-sound.md, "sfx.ts"; B14, B15, B16): one sfxr-style recipe
 // per `SfxId`. It stays within its returned span, connects only into `out` below peak 1, uses positive
 // exponential ramps, and relies only on Web Audio that the test fake implements.
-// Cypress imports this file alone, so it imports only small leaf modules (`./types.ts`, `./constants.ts`,
-// `../game/damageFeel.ts`, `../fx/rng.ts`); local recipe values need no constants (CLAUDE.md rule 9).
+// Cypress imports this file alone, so it imports only small leaf modules; local recipe values need no
+// constants (CLAUDE.md rule 9).
 // PITCH (R655) preserves timings; LEVELS (B57) are tested.
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
@@ -63,11 +63,7 @@ const CRUSH_HOLD = 4;
 const CRUSH_LEVELS = 3;
 const crushCache = new WeakMap<BaseAudioContext, AudioBuffer>();
 
-/**
- * One cycle of a sine held in coarse steps and rounded to a few levels, cached per context: the
- * gritty, aliased blip of an old sound chip, built from a buffer since the permitted subset has no
- * wave shaper.
- */
+/** A sine cycle held in coarse steps and rounded to a few levels, cached per context (the permitted subset has no wave shaper). */
 function crushedBuffer(ctx: BaseAudioContext): AudioBuffer {
   const cached = crushCache.get(ctx);
   if (cached !== undefined) return cached;
@@ -91,7 +87,6 @@ const UNTIL_END = Number.POSITIVE_INFINITY;
 /** One recipe run: its context, its output, its span [at, end] and its pitch shift in cents (R655). */
 type Kit = { ctx: BaseAudioContext; out: AudioNode; at: number; end: number; cents: number };
 
-/** A detune of this many cents is an octave. */
 const CENTS_PER_OCTAVE = 1200;
 /** The pitch shift of the recipe `renderSfx` is running, in cents; 0 outside it. Recipes run synchronously. */
 let pitchNow = 0;
@@ -147,14 +142,12 @@ function biquad(k: Kit, type: BiquadFilterType, hz: number, q: number): BiquadFi
   return filter;
 }
 
-/** A fixed gain from `start` on. */
 function level(k: Kit, value: number, start = 0): GainNode {
   const gain = k.ctx.createGain();
   gain.gain.setValueAtTime(value, time(k, start));
   return gain;
 }
 
-/** An exponential glide of `param` to `to`, landing at `offset`. */
 function glide(k: Kit, param: AudioParam, to: number, offset: number): void {
   param.exponentialRampToValueAtTime(to, time(k, offset));
 }
@@ -189,10 +182,7 @@ function heldEnvelope(
   return gain;
 }
 
-/**
- * A gain that an LFO swings between `base - depth` and `base + depth` for the whole recipe:
- * tremolo with a sine, flutter or crackle with a square.
- */
+/** A gain that an LFO swings between `base - depth` and `base + depth` for the whole recipe. */
 function modulatedGain(k: Kit, type: OscillatorType, rateHz: number, base: number, depth: number): GainNode {
   const gain = level(k, base);
   const lfo = oscillator(k, type, rateHz);
@@ -208,7 +198,6 @@ function tremolo(k: Kit, rateHz: number, depth: number): GainNode {
   return modulatedGain(k, "sine", rateHz, 1 - depth, depth);
 }
 
-/** A sine vibrato of ±`depthHz` on `param` between `start` and `stop`. */
 function vibrato(k: Kit, param: AudioParam, rateHz: number, depthHz: number, start: number, stop: number): void {
   const lfo = oscillator(k, "sine", rateHz, start);
   const amount = level(k, depthHz, start);
@@ -240,7 +229,6 @@ function fmBell(
   run(k, modulator, start, stop);
 }
 
-/** A plain enveloped tone into `into`. */
 function tone(
   k: Kit,
   into: AudioNode,
@@ -267,10 +255,7 @@ function crushedBlip(k: Kit, into: AudioNode, hz: number, start: number, stop: n
   run(k, source, start, stop);
 }
 
-/**
- * Short clicks on one filtered noise band, at `times` (a reel's ratchet, a clock's escapement):
- * one gain whose envelope strikes and falls again at each time.
- */
+/** Short clicks on one filtered noise band at `times`: one gain whose envelope strikes and falls at each. */
 function clickTrain(k: Kit, into: AudioNode, times: readonly number[], hz: number, q: number, peak: number, decay: number): void {
   const noise = noiseSource(k);
   const gain = k.ctx.createGain();
@@ -293,7 +278,6 @@ function amountT(params: SfxParams): number {
 
 // Recipes
 
-/** A card slides off the deck: a bright rising noise flick. */
 const draw: SfxRecipe = (ctx, out, at) => {
   const len = 0.17;
   const k = kit(ctx, out, at, len);
@@ -305,7 +289,6 @@ const draw: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card thrown onto the table: a rising whoosh, then a soft blip as it lands. */
 const play: SfxRecipe = (ctx, out, at) => {
   const len = 0.25;
   const k = kit(ctx, out, at, len);
@@ -322,8 +305,8 @@ const play: SfxRecipe = (ctx, out, at) => {
 const ACCENT_AT = 0.05;
 
 /**
- * The family's voice on top of a summon thud, quiet and short (it ends by 0.24 s, inside the
- * shortest thud): the thud carries the unit's size, the accent only says what kind landed.
+ * The family's voice on a summon thud, quiet and ended by 0.24 s (inside the shortest thud): the thud
+ * carries the unit's size, the accent only says what kind landed.
  */
 function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
   const t0 = ACCENT_AT;
@@ -402,13 +385,9 @@ function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
   }
 }
 
-/**
- * A unit lands: a falling sine thud and a puff of dust, sized by the unit (`amount` is its attack
- * plus health), plus its family's accent (`timbre`) when the viewer can name it.
- */
+/** A unit lands: a thud sized by `amount` (attack plus health), plus its family's accent when the viewer can name it. */
 const summon: SfxRecipe = (ctx, out, at, params) => {
-  // A landing Unit's tier weighs its thud at a pitch within SLAM_PITCH_SPREAD; without one, its
-  // stats do.
+  // A landing Unit's tier weighs its thud at a pitch within SLAM_PITCH_SPREAD; without one, its stats do.
   const t = params.slamTier === undefined ? amountT(params) : UNIT_SLAM[params.slamTier].thud;
   const pitch = params.slamTier === undefined ? 1 : 1 + (Math.min(1, Math.max(0, params.variation ?? 0.5)) * 2 - 1) * SLAM_PITCH_SPREAD;
   const len = 0.25 + 0.12 * t;
@@ -425,7 +404,6 @@ const summon: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** An attack swing: a falling band of noise. */
 const attack: SfxRecipe = (ctx, out, at) => {
   const len = 0.23;
   const k = kit(ctx, out, at, len);
@@ -457,7 +435,6 @@ const impact: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** A Divine Shield breaks: five glassy partials and a hiss of shards. */
 const shieldShatter: SfxRecipe = (ctx, out, at) => {
   const len = 0.48;
   const k = kit(ctx, out, at, len);
@@ -472,7 +449,6 @@ const shieldShatter: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A heal: three FM bells rising through a major triad. */
 const heal: SfxRecipe = (ctx, out, at) => {
   const len = 0.68;
   const k = kit(ctx, out, at, len);
@@ -483,7 +459,6 @@ const heal: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A buff: a sawtooth rising an octave through an opening filter. */
 const buff: SfxRecipe = (ctx, out, at) => {
   const len = 0.4;
   const k = kit(ctx, out, at, len);
@@ -496,7 +471,6 @@ const buff: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A debuff: the buff in reverse, falling and closing. */
 const debuff: SfxRecipe = (ctx, out, at) => {
   const len = 0.4;
   const k = kit(ctx, out, at, len);
@@ -509,7 +483,6 @@ const debuff: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A unit crumbles: fluttering, darkening rubble over a sinking groan. */
 const death: SfxRecipe = (ctx, out, at) => {
   const len = 0.62;
   const k = kit(ctx, out, at, len);
@@ -524,7 +497,6 @@ const death: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card burns: gated crackle over a low hiss. */
 const burn: SfxRecipe = (ctx, out, at) => {
   const len = 0.58;
   const k = kit(ctx, out, at, len);
@@ -536,7 +508,6 @@ const burn: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A trap is set face-down: a papery slap and a small tick. */
 const trapSet: SfxRecipe = (ctx, out, at) => {
   const len = 0.15;
   const k = kit(ctx, out, at, len);
@@ -547,7 +518,6 @@ const trapSet: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A trap springs: a dissonant square pair closing down, with a high ping on top. */
 const trapSting: SfxRecipe = (ctx, out, at) => {
   const len = 0.66;
   const k = kit(ctx, out, at, len);
@@ -564,10 +534,7 @@ const trapSting: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * Each family's four chimes, their FM ratio and their spacing (the default is the plain spell). The
- * peak and the span are the plain spell's, so a family changes the color and never the level.
- */
+/** Each family's four chimes, FM ratio and spacing, at the plain spell's peak and span: a family changes color, never level. */
 const SPELL_CHIMES: Readonly<Record<SfxTimbre | "plain", { hz: readonly number[]; ratio: number; step: number }>> = {
   plain: { hz: [1319, 1760, 2093, 2637], ratio: 3.5, step: 0.06 },
   field: { hz: [659, 880, 1047, 1319], ratio: 2, step: 0.06 },
@@ -584,10 +551,7 @@ const SPELL_CHIMES: Readonly<Record<SfxTimbre | "plain", { hz: readonly number[]
   ai: { hz: [1568, 2349, 1976, 3136], ratio: 4.5, step: 0.035 },
 };
 
-/**
- * What a family lays under its chimes, quietly (R506): a Book's page turning as it opens, a
- * Pancake's sizzle under a syrupy glide, an AI's bit-crushed data blips and a servo settling.
- */
+/** What a family lays quietly under its chimes (R506). */
 function spellTexture(k: Kit, timbre: SfxTimbre | undefined): void {
   switch (timbre) {
     case "book": {
@@ -625,7 +589,6 @@ function spellTexture(k: Kit, timbre: SfxTimbre | undefined): void {
   }
 }
 
-/** A spell is cast: four FM chimes with a shimmering tremolo, in its family's color. */
 const spell: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.78;
   const k = kit(ctx, out, at, len);
@@ -640,7 +603,7 @@ const spell: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** A mana crystal fills: a pluck and its octave, higher on your own side. */
+/** A mana crystal fills, higher on your own side. */
 const mana: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.25;
   const k = kit(ctx, out, at, len);
@@ -659,10 +622,7 @@ const turnStart: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/**
- * Victory: a rising brass arpeggio that lands on a full C major chord over a low root, held and
- * left to ring: the fanfare has to sound bigger than anything the game played before it.
- */
+/** Victory: a brass arpeggio onto a held C major chord, bigger than anything the game played before it. */
 const victory: SfxRecipe = (ctx, out, at) => {
   const len = 1.55;
   const k = kit(ctx, out, at, len);
@@ -687,7 +647,6 @@ const victory: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Defeat: four falling triangle notes, the last one wavering. */
 const defeat: SfxRecipe = (ctx, out, at) => {
   const len = 1.55;
   const k = kit(ctx, out, at, len);
@@ -702,7 +661,6 @@ const defeat: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A UI click: a short high sine and a tick of noise. */
 const uiClick: SfxRecipe = (ctx, out, at) => {
   const len = 0.045;
   const k = kit(ctx, out, at, len);
@@ -713,7 +671,6 @@ const uiClick: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A UI hover: the smallest blip. */
 const uiHover: SfxRecipe = (ctx, out, at) => {
   const len = 0.035;
   const k = kit(ctx, out, at, len);
@@ -721,7 +678,7 @@ const uiHover: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Something moves past: a noise band that sweeps up and back down. */
+/** Something moves past. */
 const whoosh: SfxRecipe = (ctx, out, at) => {
   const len = 0.33;
   const k = kit(ctx, out, at, len);
@@ -734,7 +691,6 @@ const whoosh: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card turns Radiant: six high glints under a fast shimmer. */
 const radiant: SfxRecipe = (ctx, out, at) => {
   const len = 0.72;
   const k = kit(ctx, out, at, len);
@@ -747,7 +703,7 @@ const radiant: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A zone locks: a ring-modulated clank and a click. */
+/** A zone locks. */
 const lock: SfxRecipe = (ctx, out, at) => {
   const len = 0.36;
   const k = kit(ctx, out, at, len);
@@ -765,13 +721,12 @@ const lock: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card vanishes (exile, transform, fuse), or sand compresses: a soft dark puff. */
+/** A card vanishes (exile, transform, fuse), or sand compresses. */
 const poof: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.43;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
-  // Sand passes a deterministic 0..1 variation, mapping to the requested ±8% crunch pitch;
-  // absent callers retain the original neutral recipe exactly.
+  // Sand's 0..1 `variation` sways the pitch ±8%; without one the recipe is unshifted.
   const pitch = 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16;
   const filter = biquad(k, "lowpass", 900 * pitch, 0);
   glide(k, filter.frequency, 300 * pitch, len);
@@ -780,7 +735,7 @@ const poof: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** A dry sand crunch: four grain bands, an ±8% pitch sway and a fuller transient as a pile builds. */
+/** A dry sand crunch, an ±8% pitch sway and a fuller transient as a pile builds. */
 const sand: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.24;
   const k = kit(ctx, out, at, len);
@@ -804,7 +759,6 @@ function tapFeel(params: SfxParams): { variant: number; pitch: number; build: nu
   };
 }
 
-/** #1954: a hollow wood knock: a short pitched body thump plus a click transient. */
 const tapWood: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.16;
   const k = kit(ctx, out, at, len);
@@ -818,7 +772,6 @@ const tapWood: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** #1954: a muffled felt press: a soft low thud under low-passed noise. */
 const tapFelt: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.14;
   const k = kit(ctx, out, at, len);
@@ -830,7 +783,6 @@ const tapFelt: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** #1954: a hard rock tap: a short click under a high resonant ping. */
 const tapStone: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.18;
   const k = kit(ctx, out, at, len);
@@ -842,7 +794,6 @@ const tapStone: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** #1954: an electronic blip: a short square blip with a pitched zap falling under it. */
 const tapNeon: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.15;
   const k = kit(ctx, out, at, len);
@@ -854,7 +805,6 @@ const tapNeon: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** #1954: a dry papery tap: a soft paper thump with a crinkle of high-passed clicks. */
 const tapParchment: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.16;
   const k = kit(ctx, out, at, len);
@@ -866,7 +816,6 @@ const tapParchment: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** #1954: a soft astral chime: a short bell partial with a faint sparkle tail. */
 const tapAstral: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.24;
   const k = kit(ctx, out, at, len);
@@ -892,7 +841,7 @@ const endTurn: SfxRecipe = (ctx, out, at) => {
 
 /**
  * A notice: two rising blips. An `urgent` one (a question the viewer has to answer, the other seat's
- * draw offer) is a doorbell instead: a bell struck twice, so it is never taken for the routine blips.
+ * draw offer) is a doorbell instead, so it is never taken for the routine blips.
  */
 const notify: SfxRecipe = (ctx, out, at, params) => {
   if (params.urgent === true) {
@@ -909,7 +858,7 @@ const notify: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** Life drains away: a sinking, wavering sine that grows with the amount, like impact. */
+/** Life drains away, growing with the amount like impact. */
 const drain: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.58;
   const k = kit(ctx, out, at, len);
@@ -922,7 +871,6 @@ const drain: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/** An attack is called off: a square falling an octave. */
 const cancel: SfxRecipe = (ctx, out, at) => {
   const len = 0.24;
   const k = kit(ctx, out, at, len);
@@ -933,10 +881,7 @@ const cancel: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * A Legendary or Mythic unit enters (cues.ts, with the effects layer's light rays): a low gong under
- * a brass fifth that swells open, and high glints; a Mythic's are longer, faster and shimmering.
- */
+/** A Legendary or Mythic unit enters (cues.ts); a Mythic's entrance is longer. */
 const entrance: SfxRecipe = (ctx, out, at, params) => {
   const len = 1.3;
   const k = kit(ctx, out, at, len);
@@ -960,10 +905,7 @@ const entrance: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/**
- * R319: a draw finds the library empty (`fatigue`, before the hit's own impact): two hollow knocks
- * on an empty box, the second lower, and a low sigh that sinks under them.
- */
+/** R319: a draw finds the library empty (`fatigue`, before the hit's own impact). */
 const fatigue: SfxRecipe = (ctx, out, at) => {
   const len = 0.62;
   const k = kit(ctx, out, at, len);
@@ -982,10 +924,7 @@ const fatigue: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R319: a full library turns a card away (`libraryOverflow`): a dull two-note "no", falling a
- * fourth, muffled, with a soft thud as the card bounces off.
- */
+/** R319: a full library turns a card away (`libraryOverflow`). */
 const refuse: SfxRecipe = (ctx, out, at) => {
   const len = 0.36;
   const k = kit(ctx, out, at, len);
@@ -1006,25 +945,19 @@ const refuse: SfxRecipe = (ctx, out, at) => {
 
 // Card moments (R506), Call to Chaos's roll (R436), a mark (R437), the clock (R439)
 
-/**
- * #21 Hinder lands on the victim's next refresh: a mana crystal cracks, sharp and glassy, its shards
- * tinkle down, and what is left drops away hollow.
- */
+/** #21 Hinder lands on the victim's next refresh: a mana crystal cracks. */
 const manaCrack: SfxRecipe = (ctx, out, at) => {
   const len = 0.88;
   const k = kit(ctx, out, at, len);
   const noise = noiseSource(k);
-  // The crack, and a splinter right behind it.
   chain(noise, biquad(k, "highpass", 1800, 0), envelope(k, 0, 0.002, 0.22, 0.06), out);
   chain(noise, biquad(k, "bandpass", 4200, 2), envelope(k, 0.028, 0.002, 0.5, 0.09), out);
   run(k, noise, 0, 0.09);
   tone(k, out, "sine", 3730, 0, 0.002, 0.16, 0.25);
-  // The shards: short glassy pings, falling and spreading out.
   const shards: readonly (readonly [number, number])[] = [
     [0.05, 5274], [0.09, 4435], [0.12, 6272], [0.17, 3951], [0.23, 4978], [0.3, 3322], [0.38, 4186],
   ];
   for (const [start, hz] of shards) tone(k, out, "sine", hz, start, 0.002, 0.14, start + 0.12);
-  // The hollow drop: a tube-like tone sinking away, over a falling sub.
   const drop = oscillator(k, "triangle", 440, 0.2);
   glide(k, drop.frequency, 110, 0.75);
   const hollow = biquad(k, "bandpass", 700, 3);
@@ -1036,7 +969,7 @@ const manaCrack: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** #27's blood price: a wet, low whoosh draining downward, gurgling as it goes. */
+/** #27's blood price. */
 const bloodDrain: SfxRecipe = (ctx, out, at) => {
   const len = 0.55;
   const k = kit(ctx, out, at, len);
@@ -1054,7 +987,7 @@ const bloodDrain: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** #27's reward: gold bursting from the card, a chord of bright chimes struck at once, and sparkle. */
+/** #27's reward. */
 const goldBurst: SfxRecipe = (ctx, out, at) => {
   const len = 0.82;
   const k = kit(ctx, out, at, len);
@@ -1073,7 +1006,7 @@ const goldBurst: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** A card cast as it is drawn: it snaps off the deck, flares and pops open, in one quick sting. */
+/** A card cast as it is drawn: one quick sting. */
 const castOnDraw: SfxRecipe = (ctx, out, at) => {
   const len = 0.36;
   const k = kit(ctx, out, at, len);
@@ -1090,13 +1023,10 @@ const castOnDraw: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Call to Chaos's reveal dings, one per effect named, climbing. */
+/** Call to Chaos's reveal dings, one per effect named. */
 const CHAOS_DINGS: readonly number[] = [1568, 2093, 2637];
 
-/**
- * Call to Chaos rolls (R436): a slot machine's reels ratchet and slow under a jangling jingle and
- * clunk to a stop; then one bright ding per effect the roll names (`amount`, up to CHAOS_REVEAL_MAX).
- */
+/** Call to Chaos rolls (R436): reels ratchet to a stop, then one ding per effect named (`amount`, up to CHAOS_REVEAL_MAX). */
 const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
   const reveals = Math.min(CHAOS_REVEAL_MAX, Math.max(0, Math.round(params.amount ?? 1)));
   const landAt = 0.78;
@@ -1104,14 +1034,12 @@ const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
   const ring = 0.42;
   const len = reveals === 0 ? landAt + 0.1 : landAt + dingGap * (reveals - 1) + ring;
   const k = kit(ctx, out, at, len);
-  // The reels: clicks whose gaps grow as they slow.
   const clicks: number[] = [];
   for (let t = 0, gap = 0.035; t < landAt - 0.04; gap *= 1.16) {
     clicks.push(t);
     t += gap;
   }
   clickTrain(k, out, clicks, 2600, 5, 2.4, 0.025);
-  // The jingle, stepping round an arpeggio until the reels land.
   const notes = [1047, 1319, 1568, 2093];
   const jingle = oscillator(k, "square", notes[0] ?? 1047);
   for (let i = 1; 0.05 * i < landAt; i += 1) {
@@ -1119,7 +1047,6 @@ const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
   }
   chain(jingle, biquad(k, "lowpass", 2400, 0), heldEnvelope(k, 0, 0.02, 0.14, 0.5, 0.1, landAt), out);
   run(k, jingle, 0, landAt);
-  // The clunk as they stop.
   tone(k, out, "sine", 150, landAt - 0.03, 0.003, 0.6, landAt + 0.1);
   CHAOS_DINGS.slice(0, reveals).forEach((hz, i) => {
     const start = landAt + dingGap * i;
@@ -1128,10 +1055,7 @@ const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/**
- * A mark settles on a card (R437; #50 K-Pop Fanatic's pending steal): a dark brand sears in, a low
- * beating drone under a hiss and a cold shimmer. With `release` the mark lifts: the shimmer alone.
- */
+/** A mark settles on a card (R437; #50 K-Pop Fanatic's pending steal): a seared brand; with `release` it lifts. */
 const brand: SfxRecipe = (ctx, out, at, params) => {
   if (params.release === true) {
     const len = 0.45;
@@ -1189,10 +1113,7 @@ const heartbeat: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R439: the last ten seconds of the viewer's own turn clock: a sharp tick over a tight heartbeat
- * thump, each second (`amount` 1 at ten left to 10 at one left) higher, louder and shorter.
- */
+/** R439: the last ten seconds of the viewer's turn clock: each tick (`amount` 1 at ten left) higher, louder, shorter. */
 const clockTick: SfxRecipe = (ctx, out, at, params) => {
   const t = amountT(params);
   const len = 0.3 - 0.08 * t;
@@ -1209,7 +1130,6 @@ const clockTick: SfxRecipe = (ctx, out, at, params) => {
 
 // R644's emoji emotes (issue §4): five synthesized sticker sounds on the effects channel
 
-/** Sob: a wobbly falling whimper — two little cries, each sliding down and shaking. */
 const emoteSob: SfxRecipe = (ctx, out, at) => {
   const len = 1.2;
   const k = kit(ctx, out, at, len);
@@ -1228,7 +1148,6 @@ const emoteSob: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Yawn: a long falling breath — band-passed noise swelling in and sighing out over a soft tone. */
 const emoteYawn: SfxRecipe = (ctx, out, at) => {
   const len = 1.4;
   const k = kit(ctx, out, at, len);
@@ -1244,7 +1163,6 @@ const emoteYawn: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Laugh: a quick bouncing "ha-ha" — four short square blips stepping down. */
 const emoteLaugh: SfxRecipe = (ctx, out, at) => {
   const len = 0.75;
   const k = kit(ctx, out, at, len);
@@ -1262,7 +1180,6 @@ const emoteLaugh: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Angry: a short growl — a low sawtooth and its rattle, buzzing out through a closed filter. */
 const emoteAngry: SfxRecipe = (ctx, out, at) => {
   const len = 0.7;
   const k = kit(ctx, out, at, len);
@@ -1273,9 +1190,8 @@ const emoteAngry: SfxRecipe = (ctx, out, at) => {
   chain(growl, envelope(k, 0, 0.03, 0.42, len), muffle);
   run(k, growl, 0, len);
   const rattle = modulatedGain(k, "square", 30, 0.5, 0.5);
-  // The grind goes out through its own envelope like every other voice in this file: a raw
-  // oscillator stopped at full level both clips against the growl (B15's 1.0 ceiling) and rings
-  // the filter past durationMs (B15's silence floor).
+  // The grind has its own envelope: a raw oscillator stopped at full level clips against the growl
+  // (B15's 1.0 ceiling) and rings the filter past durationMs (B15's silence floor).
   chain(rattle, envelope(k, 0, 0.01, 0.35, len), muffle);
   const grind = oscillator(k, "sawtooth", 190, 0);
   chain(grind, rattle);
@@ -1283,10 +1199,7 @@ const emoteAngry: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * Wah Wah: the sad trombone. Four notes stepping down a minor third each — wah, wah, wah — and the
- * last dropping a semitone more, held long with vibrato until it trails off.
- */
+/** Wah Wah: the sad trombone. */
 const emoteWahWah: SfxRecipe = (ctx, out, at) => {
   const len = 1.8;
   const k = kit(ctx, out, at, len);
@@ -1309,7 +1222,6 @@ const emoteWahWah: SfxRecipe = (ctx, out, at) => {
 
 // R1345, MN03's fourteen emoji emotes: one short, light sticker sound each, never a card moment
 
-/** Wave: a bright two-note "hi-ya" — a quick chirp, then a higher one sliding up with a wiggle. */
 const emoteWave: SfxRecipe = (ctx, out, at) => {
   const len = 0.5;
   const k = kit(ctx, out, at, len);
@@ -1322,7 +1234,6 @@ const emoteWave: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Clap: a ragged burst of applause — a run of hand claps on two noise bands. */
 const emoteClap: SfxRecipe = (ctx, out, at) => {
   const len = 0.62;
   const k = kit(ctx, out, at, len);
@@ -1331,7 +1242,6 @@ const emoteClap: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Thumbs Up: a warm "uh-huh" — two round blips, the second a fourth above the first. */
 const emoteThumbsUp: SfxRecipe = (ctx, out, at) => {
   const len = 0.4;
   const k = kit(ctx, out, at, len);
@@ -1342,7 +1252,6 @@ const emoteThumbsUp: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Facepalm: a soft slap, then a long groan falling away under it. */
 const emoteFacepalm: SfxRecipe = (ctx, out, at) => {
   const len = 0.95;
   const k = kit(ctx, out, at, len);
@@ -1359,7 +1268,6 @@ const emoteFacepalm: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Shrug: a lilting "meh" — a note, a step down, and a lazy slide back up. */
 const emoteShrug: SfxRecipe = (ctx, out, at) => {
   const len = 0.6;
   const k = kit(ctx, out, at, len);
@@ -1371,7 +1279,6 @@ const emoteShrug: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Thinking: a soft rising "hmm" — a hum with a slow wobble and a quiet octave over it. */
 const emoteThinking: SfxRecipe = (ctx, out, at) => {
   const len = 1;
   const k = kit(ctx, out, at, len);
@@ -1387,7 +1294,6 @@ const emoteThinking: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Heart: two soft heartbeat thumps, then a little warm chime. */
 const emoteHeart: SfxRecipe = (ctx, out, at) => {
   const len = 0.9;
   const k = kit(ctx, out, at, len);
@@ -1399,7 +1305,6 @@ const emoteHeart: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Fire: a crackling whoosh — a roar of noise swelling and brightening, with sparks popping in it. */
 const emoteFire: SfxRecipe = (ctx, out, at) => {
   const len = 0.9;
   const k = kit(ctx, out, at, len);
@@ -1412,7 +1317,6 @@ const emoteFire: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Skull: a hollow bony rattle — a quick run of wooden knocks falling down a scale. */
 const emoteSkull: SfxRecipe = (ctx, out, at) => {
   const len = 0.45;
   const k = kit(ctx, out, at, len);
@@ -1426,7 +1330,6 @@ const emoteSkull: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Sweat: a nervous gulp — a quick blip leaping up, and a second one dropping away. */
 const emoteSweat: SfxRecipe = (ctx, out, at) => {
   const len = 0.45;
   const k = kit(ctx, out, at, len);
@@ -1437,7 +1340,6 @@ const emoteSweat: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Cool: a smooth "yeah" — a low glide up into a held note, a shimmer on top. */
 const emoteCool: SfxRecipe = (ctx, out, at) => {
   const len = 0.9;
   const k = kit(ctx, out, at, len);
@@ -1452,7 +1354,6 @@ const emoteCool: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Gasp: a sharp intake of breath — a short rush of noise climbing in pitch. */
 const emoteGasp: SfxRecipe = (ctx, out, at) => {
   const len = 0.5;
   const k = kit(ctx, out, at, len);
@@ -1464,7 +1365,6 @@ const emoteGasp: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Salute: a two-note bugle call — a fourth up, the top note held with a little vibrato. */
 const emoteSalute: SfxRecipe = (ctx, out, at) => {
   const len = 0.75;
   const k = kit(ctx, out, at, len);
@@ -1478,7 +1378,6 @@ const emoteSalute: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** Party: a popper's pop, and a shower of bright tinkles falling out of it. */
 const emoteParty: SfxRecipe = (ctx, out, at) => {
   const len = 0.85;
   const k = kit(ctx, out, at, len);
@@ -1496,10 +1395,7 @@ const emoteParty: SfxRecipe = (ctx, out, at) => {
 
 // The play sting (R669)
 
-/**
- * R669: a card the viewer can read is played (cues.ts), a sting sized by its rarity under the card
- * whoosh: Common, Rare and Epic grow in notes and shimmer. Legendary and Mythic have the entrance.
- */
+/** R669: a card the viewer can read is played (cues.ts): a rarity sting; Legendary and Mythic have the entrance. */
 const sting: SfxRecipe = (ctx, out, at, params) => {
   const tier = params.tier ?? "common";
   const len = tier === "epic" ? 0.78 : tier === "rare" ? 0.56 : 0.36;
@@ -1525,10 +1421,7 @@ const sting: SfxRecipe = (ctx, out, at, params) => {
 
 // Armor (R1363) and the niche moments (R1364–R1366), docs/meditative-set.md M8, MN05
 
-/**
- * R1363: Armor takes half or more of a hit (`damage.absorbed`), under the hit's own impact: a dull
- * clank, a muffled ring-modulated plate struck low, over a short thud and a scrape of grit.
- */
+/** R1363: Armor takes half or more of a hit (`damage.absorbed`), under the hit's own impact. */
 const armorClank: SfxRecipe = (ctx, out, at) => {
   const len = 0.32;
   const k = kit(ctx, out, at, len);
@@ -1548,10 +1441,7 @@ const armorClank: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1363: Armor takes the whole hit (`damageAbsorbed`): a bright ring, a struck shield's metallic
- * partials (FM bells at inharmonic ratios) after a sharp tick, with a glint shimmering on top.
- */
+/** R1363: Armor takes the whole hit (`damageAbsorbed`). */
 const armorRing: SfxRecipe = (ctx, out, at) => {
   const len = 0.8;
   const k = kit(ctx, out, at, len);
@@ -1566,10 +1456,7 @@ const armorRing: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1364: a hit that does far more than the health left (overkill), on top of its impact: a wet
- * crunch, band-passed noise chopped by a fast gate, over a deep sub falling away.
- */
+/** R1364: a hit that does far more than the health left (overkill), on top of its impact. */
 const overkill: SfxRecipe = (ctx, out, at) => {
   const len = 0.5;
   const k = kit(ctx, out, at, len);
@@ -1582,13 +1469,10 @@ const overkill: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** R1365's crumble: the grains of rubble, falling faster then thinning out. */
+/** R1365's crumble: the grains of rubble. */
 const CRUMBLE_GRAINS: readonly number[] = [0.04, 0.07, 0.09, 0.13, 0.16, 0.2, 0.25, 0.29, 0.34, 0.4, 0.47];
 
-/**
- * R1365: a Brittle count runs out (`crumbled`): the card cracks dry and falls apart, a snap, then
- * grit trickling down over a low rubble that settles — stone, not glass, and nothing killed it.
- */
+/** R1365: a Brittle count runs out (`crumbled`): a dry snap and grit: stone, not glass, and nothing killed it. */
 const crumble: SfxRecipe = (ctx, out, at) => {
   const len = 0.6;
   const k = kit(ctx, out, at, len);
@@ -1602,10 +1486,7 @@ const crumble: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1365: a Locked zone opens (`unlocked`), which `lock` closed: a latch clicks, the shackle springs
- * up with a rising twang, and a small clink rings out.
- */
+/** R1365: a Locked zone opens (`unlocked`), which `lock` closed. */
 const unlock: SfxRecipe = (ctx, out, at) => {
   const len = 0.34;
   const k = kit(ctx, out, at, len);
@@ -1619,10 +1500,7 @@ const unlock: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1366: a card taken (`stolen`, and a `controlChanged` toward the player who acts): a quick
- * upward whip of air, the grab's thump, and a sly falling blip.
- */
+/** R1366: a card taken (`stolen`, and a `controlChanged` toward the player who acts). */
 const steal: SfxRecipe = (ctx, out, at) => {
   const len = 0.36;
   const k = kit(ctx, out, at, len);
@@ -1638,10 +1516,7 @@ const steal: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1366: a card handed over (a `controlChanged` away from the player who acts, R1423's give): a
- * soft breath of air settling, then a warm two-note chime falling, a gift set down.
- */
+/** R1366: a card handed over (a `controlChanged` away from the player who acts, R1423's give). */
 const give: SfxRecipe = (ctx, out, at) => {
   const len = 0.5;
   const k = kit(ctx, out, at, len);
@@ -1655,10 +1530,7 @@ const give: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1365: a Counter cancels a play (`countered`): a dissonant pair slammed shut and falling an
- * octave, then the spell's hiss fizzling away.
- */
+/** R1365: a Counter cancels a play (`countered`). */
 const counterspell: SfxRecipe = (ctx, out, at) => {
   const len = 0.55;
   const k = kit(ctx, out, at, len);
@@ -1679,10 +1551,7 @@ const counterspell: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1365: a card transformed into a Sheep (`transformed`, a Sheep the viewer can read): its bleat, a
- * buzzing sawtooth through a nasal formant, wavering fast and sinking a little.
- */
+/** R1365: a card transformed into a Sheep (`transformed`, a Sheep the viewer can read) bleats. */
 const bleat: SfxRecipe = (ctx, out, at) => {
   const len = 0.62;
   const k = kit(ctx, out, at, len);
@@ -1694,10 +1563,7 @@ const bleat: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1365: cards fuse into one (`fused`): two tones from either side converge on one note under a
- * swirl of air, which locks with a bell and a soft thump.
- */
+/** R1365: cards fuse into one (`fused`). */
 const fuse: SfxRecipe = (ctx, out, at) => {
   const len = 0.6;
   const k = kit(ctx, out, at, len);
@@ -1715,10 +1581,7 @@ const fuse: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1365: a Nerf (`degraded`, one change): the card goes out of tune, two detuned squares beating
- * against each other as they sag a sixth, wobbling, through a closing filter.
- */
+/** R1365: a Nerf (`degraded`, one change): the card goes out of tune. */
 const degrade: SfxRecipe = (ctx, out, at) => {
   const len = 0.48;
   const k = kit(ctx, out, at, len);
@@ -1739,10 +1602,7 @@ const degrade: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/**
- * R1365: a Buff (`upgraded`, one change): the card tunes up, a quick three-note climb of bright
- * blips into a ringing ping.
- */
+/** R1365: a Buff (`upgraded`, one change): the card tunes up. */
 const upgrade: SfxRecipe = (ctx, out, at) => {
   const len = 0.46;
   const k = kit(ctx, out, at, len);
@@ -1838,10 +1698,7 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   tapAstral: { recipe: tapAstral, durationMs: 240, gain: 0.52 },
 };
 
-/**
- * R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio: 1 as written, 0.5 an octave down)
- * and returns its length in seconds, which is the unshifted recipe's.
- */
+/** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */
 export function renderSfx(
   id: SfxId,
   ctx: BaseAudioContext,

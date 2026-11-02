@@ -2,19 +2,13 @@
 //!   Base:    "Pierce / Deal 4 damage. Exile this."
 //!   Radiant: "Pierce / Deal 8 damage. Exile this." (the faces differ only in the number.)
 //!   Engine:  "Pierce: skips pipeline step 2; Divine Shield still applies."
-//!
-//! PIERCE ON A SPELL (R346): its damage ignores Armor. §4.4 step 2 reads Pierce off the source
-//! (`damage.pierces`), and the effect states it too (`ignoreArmor`, the effect's own Pierce as R85's
-//! `lifesteal` is Lifesteal), so the hit pierces on every run, an Echo repeat included, whose source R98
-//! may have left empty once "exile this" took the card from the resolving zone. It skips step 2 and
-//! NOTHING else: step 1 still negates a hit on a Divine Shield, step 3 still clamps Anti-oneshot Armor,
-//! step 4 still makes an Indestructible target take nothing.
-//! "Deal 4 damage" takes a DECLARED play-time target (R81, §8 Conventions: any unit or hero), read as
-//! `ctx.targets[0]`, never a prompt; R90 validates it against the declaration.
-//! "Exile this" (§5.1, §6.3): the spell is in the `resolving` zone while its script runs (§10.1, §10.5
-//! step 4), so `exile` moves it from there and step 7 must not send it to the graveyard. `exile` bumps
-//! the exile counter (R55), which #40 Echoes of the Forgotten and #100 Ceaseless Void read.
-//! Damage then exile in one list: the state check runs after both (R59).
+//! PIERCE ON A SPELL (R346): its damage ignores Armor. §4.4 step 2 reads Pierce off the source, and the
+//! effect states it too (`ignoreArmor`, as R85's `lifesteal` is Lifesteal), so an Echo repeat pierces
+//! even once R98 has left its source empty. It skips step 2 and NOTHING else: Divine Shield,
+//! Anti-oneshot Armor and Indestructible (steps 1, 3 and 4) still apply.
+//! "Deal 4 damage" takes a DECLARED play-time target (R81, §8 Conventions: any unit or hero), never a
+//! prompt; R90 validates it against the declaration.
+//! "Exile this" (§5.1, §6.3): resolving zone (§10.1, §10.5 step 4); exile bumps counter (R55; #40, #100, R63, R65). State check after both (R59).
 
 use jackioh_engine::effects::{damage, exile};
 use jackioh_engine::prelude::*;
@@ -44,9 +38,9 @@ pub fn script() -> CardScripts {
 }
 
 // #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
-// Must-pass row (BUILD M4-T4 #44): "4 damage through Armor 7; Divine Shield still blocks; exiled;
-// radiant 8." Pierce skips §4.4 step 2 only, so each half is one test: #25 4-mana 7/7 (Armor 7) takes
-// the full hit, #56 Jilliax (Divine Shield) takes none because step 1 negates the whole instance.
+// Must-pass row: BUILD M4-T4 #44. Pierce skips §4.4 step 2 only, so Armor and Divine Shield are a test
+// each: #25 4-mana 7/7 (Armor 7) takes the full hit, #56 Jilliax (Divine Shield) takes none because
+// step 1 negates the whole instance.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

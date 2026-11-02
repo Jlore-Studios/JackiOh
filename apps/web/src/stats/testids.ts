@@ -4,18 +4,18 @@ export const statsTestid = {
   screen: "stats-screen",
   tabCards: "stats-tab-cards",
   tabPlayers: "stats-tab-players",
-  /** R1966000: the Sets tab, its leaders, its table, its strongest and weakest cards and its Retry. */
+  /** R1966000: the Sets tab. */
   tabSets: "stats-tab-sets",
   setsLeaders: "stats-sets-leaders",
   setsTable: "stats-sets-table",
   setsOutliers: "stats-sets-outliers",
   setsRetry: "stats-sets-retry",
   summaryTiles: "stats-summary-tiles",
-  /** R1994000: the Games panel, its note of too few games and its Try again. */
+  /** R1994000: the Games panel. */
   gamesPanel: "stats-games-panel",
   gamesFew: "stats-games-few",
   gamesRetry: "stats-games-retry",
-  /** R1973002: the patch bar, its picker and the patch before and after. */
+  /** R1973002: the patch bar. */
   patchBar: "stats-patch-bar",
   patchSelect: "stats-patch-select",
   patchPrevious: "stats-patch-previous",
@@ -24,10 +24,10 @@ export const statsTestid = {
   searchInput: "stats-search-input",
   cardsTable: "stats-cards-table",
   cardsGrid: "stats-cards-grid",
-  /** R2089000: the Created cards' section, below the cards table, and its table. */
+  /** R2089000: the Created cards' section. */
   createdPanel: "stats-created-panel",
   createdTable: "stats-created-table",
-  /** R2370000: the Cards tab's Show tokens toggle, and the Tokens section it shows and its table. */
+  /** R2370000: the Cards tab's Show tokens toggle and its Tokens section. */
   tokensToggle: "stats-tokens-toggle",
   tokensPanel: "stats-tokens-panel",
   tokensTable: "stats-tokens-table",

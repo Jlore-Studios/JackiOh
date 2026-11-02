@@ -2,11 +2,7 @@
 //! Health set (`set_stats_all`, R1185002), a card on the field taken into your hand (`take_to_hand`,
 //! R1185003), R429's play count raised (`raise_times_played`, R1185001), a board filled in Chinese
 //! (`fill_board`'s `chinese` rider) and a draw that fills the hand with copies (`draw_priced`'s
-//! `fillWithCopies`, R1185004). Each does it through the engine's own verbs, as a card script would,
-//! so the engine never imports `crates/cards`; the real cards (M+ #1.1 Base Camp, #21 Harmony Spirit,
-//! #24 Bob) test the same cases again.
-//!
-//! Ids are prefixed `b7-` and indexed from 11850, so they collide with no other fixture file's.
+//! `fillWithCopies`, R1185004). Ids `b7-…` from 11850.
 
 #![allow(non_upper_case_globals)]
 
@@ -50,10 +46,10 @@ fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords
     }))
 }
 
-/// A 2/4 Unit: "Cry: Set every other Unit's Attack and Health to 3/3" (M+ #21's shape).
+/// "Cry: Set every other Unit's Attack and Health to 3/3" (M+ #21's shape).
 pub static harmony: LazyLock<CardDef> =
     LazyLock::new(|| card(11850, "harmony", "Unit", Some((2, 4)), json!([])));
-/// A 5/5 Immutable Unit (R23).
+/// Immutable (R23).
 pub static stoic: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         11851,
@@ -63,11 +59,10 @@ pub static stoic: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Immutable" }]),
     )
 });
-/// A 1/1 Unit: "Aura: Your other Units have +1/+1" (§10.4 layer 5).
+/// "Aura: Your other Units have +1/+1" (§10.4 layer 5).
 pub static banner: LazyLock<CardDef> =
     LazyLock::new(|| card(11852, "banner", "Unit", Some((1, 1)), json!([])));
-/// A 0/0 unit token that prints no Radiant form of its own: the Ghoul Token's shape, its X/X doubled on
-/// its Radiant face (R349).
+/// The Ghoul Token's shape: no Radiant form of its own, its X/X doubled on its Radiant face (R349).
 pub static ghoul: LazyLock<CardDef> = LazyLock::new(|| {
     json_as(json!({
         "id": "b7-ghoul",
@@ -84,23 +79,23 @@ pub static ghoul: LazyLock<CardDef> = LazyLock::new(|| {
         "radiant": { "attack": 0, "health": 0, "keywords": [], "text": "X/X" },
     }))
 });
-/// A 2/4 Unit: "Cry: Put a chosen enemy Unit into your hand" (M+ #24's second mode).
+/// "Cry: Put a chosen enemy Unit into your hand" (M+ #24's second mode).
 pub static kidnapper: LazyLock<CardDef> =
     LazyLock::new(|| card(11853, "kidnapper", "Unit", Some((2, 4)), json!([])));
-/// A Spell: "Put a chosen Unit into your hand. It costs (0)" — either side, with a rider.
+/// "Put a chosen Unit into your hand. It costs (0)": either side, with a rider.
 pub static snatch: LazyLock<CardDef> = LazyLock::new(|| card(11854, "snatch", "Spell", None, json!([])));
-/// A Spell that counts its plays (`countsPlays`, R429): M #8 Reach the Summit's shape, with no text.
+/// Counts its plays (`countsPlays`, R429): M #8 Reach the Summit's shape, with no text.
 pub static summit: LazyLock<CardDef> = LazyLock::new(|| card(11855, "summit", "Spell", None, json!([])));
-/// A Spell: "Every summit you own gets 2 more plays" (M+ #1.1 Base Camp's shape).
+/// "Every summit you own gets 2 more plays" (M+ #1.1 Base Camp's shape).
 pub static camp: LazyLock<CardDef> = LazyLock::new(|| card(11856, "camp", "Spell", None, json!([])));
-/// A Spell that does not count its plays: the camp fixture passes it by.
+/// Does not count its plays: the camp fixture passes it by.
 pub static plain_spell: LazyLock<CardDef> =
     LazyLock::new(|| card(11857, "plain-spell", "Spell", None, json!([])));
-/// A Spell: "Fill your board with Rush Tokens in Chinese" (M+ #21's Radiant face).
+/// "Fill your board with Rush Tokens in Chinese" (M+ #21's Radiant face).
 pub static party: LazyLock<CardDef> = LazyLock::new(|| card(11858, "party", "Spell", None, json!([])));
-/// A Spell: "Draw 1. Fill your hand with copies of it." (M+ #24's fourth mode).
+/// "Draw 1. Fill your hand with copies of it." (M+ #24's fourth mode).
 pub static xerox: LazyLock<CardDef> = LazyLock::new(|| card(11859, "xerox", "Spell", None, json!([])));
-/// A Spell with Cast on draw: 1 damage to the enemy hero, so a draw puts nothing in the hand (R58).
+/// Cast on draw: 1 damage to the enemy hero, so a draw puts nothing in the hand (R58).
 pub static spark: LazyLock<CardDef> = LazyLock::new(|| card(11860, "spark", "Spell", None, json!([])));
 
 static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
@@ -242,7 +237,6 @@ pub static B07_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_b07_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

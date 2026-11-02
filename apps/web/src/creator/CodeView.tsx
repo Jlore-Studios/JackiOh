@@ -1,6 +1,5 @@
-// The creator's code view (#920, K3): the card's kit script, editable, highlighted (`highlight.ts`),
-// with each problem the Luau module's check found shown on its line. The text area is the editor;
-// the highlighted copy is drawn under it, line for line, and never read.
+// The creator's code view (#920, K3): the card's kit script, editable, highlighted (`highlight.ts`).
+// The text area is the editor; the highlighted copy is drawn under it, line for line, and never read.
 
 import { useRef, type ReactElement } from "react";
 

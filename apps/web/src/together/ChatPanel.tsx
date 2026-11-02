@@ -1,10 +1,5 @@
-// A conversation with one friend (#936, B53, B58): the newest page of it, read again every
-// `CHAT_POLL_MS` while the panel is open (a read marks it read), earlier pages on request, each by the
-// cursor the page after it answered (R1384000), a reply box, and a report on each of the friend's messages.
-// A read that fails says why with Try again until a read answers, and never passes for an empty conversation (#1898).
-// A message sent shows at once, marked as sending, until the server's answer replaces it; sends go to
-// the server one at a time in the order sent, and a refused or failed one is marked failed with Retry and Discard (R2120000).
-//
+// A conversation with one friend (#936, B53, B58): the newest page, read again every `CHAT_POLL_MS`
+// while the panel is open (a read marks it read), and earlier pages by cursor (R1384000).
 // CLAUDE.md rule 7: the box keeps a draft to `CHAT_MAX_CHARS` and will not send an empty one, as
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
 // refusal is shown in its own words. A message is drawn as text, never as markup.
@@ -36,7 +31,6 @@ const REPORT_WORDS: Readonly<Record<ReportReason, string>> = {
   other: "Something else",
 };
 
-/** When a message was sent, as the reader's clock says a time; nothing for a time that is not one. */
 function sentAt(iso: string): string {
   const at = Date.parse(iso);
   return Number.isFinite(at) ? formatDateTime(at, { timeStyle: "short" }) : "";
@@ -57,10 +51,7 @@ export function mergeMessages(held: readonly ChatMessage[], page: readonly ChatM
   return [...all.values()].sort(byTime);
 }
 
-/**
- * A message this panel sent that no answer of the server's has replaced yet (R2120000): on its way, or
- * refused or failed, with why in the server's words. `key` is the panel's own, never a message id.
- */
+/** A send no answer of the server's has replaced yet (R2120000); `key` is the panel's own, never a message id. */
 type Outgoing = { key: string; body: string } & ({ state: "sending" } | { state: "failed"; error: string });
 
 export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () => void }): ReactElement {
@@ -75,7 +66,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const [earlier, setEarlier] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [draft, setDraft] = useState("");
-  /** The player's sends that no answer has replaced yet, in the order sent (R2120000). */
   const [outgoing, setOutgoing] = useState<readonly Outgoing[]>([]);
   const [error, setError] = useState<string | null>(null);
   /** The newest page's read failed and none has answered since (#1898); a refused send or report is `error`'s. */
@@ -87,7 +77,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const input = useRef<HTMLInputElement>(null);
   /** The poll's read, for Try again to make at once (#1898). */
   const readNow = useRef<() => void>(() => undefined);
-  /** How many sends this panel has made, for each one's key. */
   const sendCount = useRef(0);
   /** The last send queued: each waits for the one before it to settle, so the server stores them in the order sent (R2120000). */
   const sendQueue = useRef<Promise<void>>(Promise.resolve());
@@ -95,7 +84,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const sendsOpen = useRef(0);
   const friendId = friend.profileId;
 
-  // The newest page now and every CHAT_POLL_MS while open (B58).
   useEffect(() => {
     let canceled = false;
     let first = true;
@@ -128,7 +116,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     };
   }, [friendId]);
 
-  // The newest message in view whenever one arrives or is sent.
   const newest = messages.at(-1)?.id ?? null;
   const newestSend = outgoing.at(-1)?.key ?? null;
   useEffect(() => {
@@ -158,7 +145,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
       });
   }, [friendId, earlier, loadingEarlier]);
 
-  /** Queue `body` behind the sends before it: the answer replaces row `key`, a refusal or failure marks it failed (R2120000). */
   const dispatch = (key: string, body: string): void => {
     sendsOpen.current += 1;
     sendQueue.current = sendQueue.current.then(() =>
@@ -190,7 +176,6 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     dispatch(entry.key, body);
   };
 
-  /** A failed send again, with the same body and in its place. */
   const retry = (key: string, body: string): void => {
     setOutgoing((sends) => sends.map((send): Outgoing => (send.key === key ? { key, body, state: "sending" } : send)));
     dispatch(key, body);

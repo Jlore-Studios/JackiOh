@@ -1,19 +1,5 @@
-//! What a play may choose, what its choices then do, and what `legalActions` offers (SPEC §2.5, §8
-//! Conventions, §10.2, R43, R81, R90, R102, R151, R211). Found by the polish-4 edge-case hunt,
-//! round 2 (docs/polish/4-edge-cases.md, lenses L7 and L9); every case here failed before its fix.
-//!
-//! The agreement between `legalActions` and `reduce` held across seeded random-policy games and
-//! millions of mutated candidate actions. What failed is below: a power SPEC makes usable that neither
-//! side offered, choices a fused card was offered and then ignored, a mode SPEC's conventions require
-//! a target for that could name none, and a concede `reduce` accepts while a prompt is open that
-//! `legalActions` did not list.
-//!
-//! Round 9, lens "legality agreement": the bound on `legalActions`' enumeration dropped whole picks —
-//! a Lava Golem's all-enemy Tribute, a crafted card's first declaration's later picks — so the client,
-//! which builds a play only out of the plays listed (CLAUDE.md rule 7), could not make them. A Tribute's
-//! sets are listed whole and a cut keeps every pick of every declaration (R90, amended).
-//!
-//! Port of `packages/cards/test/play-choices.test.ts`.
+//! What a play may choose, what choices do, and legalActions (SPEC §2.5, §8, §10.2, R43, R81, R90,
+//! R102, R151, R211; CLAUDE.md rule 7; docs/polish/4-edge-cases.md lenses L7, L9).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -38,21 +24,17 @@ const HEROIC_POWER: &str = "core-098";
 const CALL_TO_CHAOS: &str = "core-095";
 const KYS_TUTOR: &str = "core-051";
 
-/// TS `let nonce = 0`: the file's action counter, so every action this file sends has its own nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// TS `act(state, { ...body, playerId })`: one action through `reduce` with a fresh nonce.
 fn act(state: &GameState, body: ActionBody, player: PlayerId) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     reduce(state, &Action::new(body, player, format!("play-choices-{nonce}")))
 }
 
-/// An action body written as the TS object literal (`{ type: "play", … }`).
 fn body(literal: Value) -> ActionBody {
     json_as(literal)
 }
 
-/// The `play` actions `legalActions` offers the card's controller for this card.
 fn plays_of(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
     legal_actions(state, card.controller)
         .into_iter()
@@ -60,7 +42,6 @@ fn plays_of(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
         .collect()
 }
 
-/// A play's `modes`, empty when it names none (TS `play.modes ?? []`).
 fn modes_of(action: &ActionBody) -> Vec<String> {
     match action {
         ActionBody::Play { modes, .. } => modes.clone().unwrap_or_default(),
@@ -75,13 +56,10 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
     fn r151_a_heroic_power_95_call_to_chaos_summons_straight_into_the_backrow_rolls_a_power_so_activatepower_is_offered_and_accepted_for_it_r43()
      {
         register_all();
-        // R43: "one created later rolls when it is created"; R151: it rolls "as it arrives anywhere a
-        // card can be looked at". #95's "summon 5 random Field Spells or Traps into your backrow" puts a
-        // Heroic Power straight onto the field — never through a hand or a library, the only arrivals
-        // that roll. (Carnivorous Cube's copies were this test's route until R428 took backrow meals
-        // away from the Cube.) The roll is searched for: the play's first rng draw is #95's roll, and the
-        // first backrow pick follows it, from the pool of every set (R380). The seed is arbitrary; the
-        // cursor is found at run time, so a card joining the pool moves nothing.
+        // R43, R151: a Heroic Power created later rolls "as it arrives anywhere a card can be looked at".
+        // #95's "summon 5 random Field Spells or Traps into your backrow" puts one straight onto the field,
+        // never through a hand or a library (not a Cube's meal, R428). The roll is searched for at run
+        // time, so a card joining the pool of every set (R380) moves nothing.
         let seed = "r151-chaos";
         let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
         let backrow = subsystems::CHAOS_EFFECTS
@@ -100,7 +78,6 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
             }
             at += 1;
         }
-        // TS `expect(cursor).toBeGreaterThanOrEqual(0)`: a cursor was found.
         assert!(cursor.is_some());
         let cursor = must(
             cursor,
@@ -148,7 +125,6 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
                 .collect()
         };
         let mana = g.state().players.p1.mana.current;
-        // TS `(powerOf(power)?.x ?? Number.POSITIVE_INFINITY) <= mana.current`.
         let affordable: Vec<CardInstance> = powers
             .iter()
             .filter(|power| subsystems::power_of(power).is_some_and(|rolled| rolled.x <= mana))
@@ -172,9 +148,7 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
 mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s_choices {
     // Craft a Card fuses two Discovered Units into one hand card whose declared targets and modes are
     // the ingredients' lists concatenated in ingredient order (R102), so `legalActions` offers — and
-    // `reduce` validates — one flat list read declaration by declaration (R90). The fused Cry used to
-    // hand the whole list to every ingredient, and each ingredient read its first slot, so every
-    // choice after the first was offered, accepted and then ignored.
+    // `reduce` validates — one flat list read declaration by declaration (R90).
     use super::*;
 
     #[test]
@@ -197,7 +171,6 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
         );
         let panther = must(g.unit(P2, 1), "p2's Prem Panther (not a Human)");
 
-        // Bigot's declaration first, the Sorcerer's second: both targets travel in the one play.
         let choice = vec![
             Selection::Instance {
                 instance_id: panther.id.clone(),
@@ -243,7 +216,6 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
         );
         let theirs = must(g.unit(P2, 1), "p2's Mr. Vanilla");
 
-        // Archivist's declaration first, Silas's second: "highest", then "right".
         let wanted = vec!["highest".to_string(), "right".to_string()];
         assert!(
             plays_of(g.state(), &crafted)
@@ -277,9 +249,7 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         register_all();
         // §8: "target" means the player picks from all legal units and heroes, and only a target SET that
         // is empty lets the Cry fizzle; R90: "a declaration the board cannot satisfy does not refuse the
-        // play". A hero is always a legal target, so "deal X damage to a target" and "heal a target 2X"
-        // can always be satisfied. The card used to declare its target `min: 0` for the sake of the mana
-        // mode, which let a damage or heal play name nobody and pay its X for nothing.
+        // play".
         let g = scenario(json!({
             "p1": { "hand": [EFFICIENCY_DIVIDEND, RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [MR_VANILLA] },
@@ -303,7 +273,6 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         );
         assert!(refused.error.is_some());
 
-        // The mana mode names no target at all: it is offered without one, and refused with one.
         let mana: Vec<ActionBody> = plays_of(g.state(), &dividend)
             .into_iter()
             .filter(|play| modes_of(play).first().map(String::as_str) == Some("mana"))
@@ -332,9 +301,9 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
     fn r211_legalactions_offers_concede_to_both_players_while_a_prompt_is_open_as_reduce_accepts_it_2_5_10_2()
     {
         register_all();
-        // KY's Private Tutor opens a type prompt for p1. reduce accepts a concede from either seat while
-        // it is open (BUILD M1-T3), so legalActions — which the client's Concede button reads (§10.2) —
-        // must list it for both, alongside the holder's answers.
+        // reduce accepts a concede from either seat while a prompt is open (BUILD M1-T3), so legalActions,
+        // which the client's Concede button reads (§10.2), must list it for both, beside the holder's
+        // answers.
         let mut g = scenario(json!({
             "p1": { "hand": [KYS_TUTOR], "library": [RENO, MR_VANILLA, "core-005"] },
             "p2": { "field": [{ "def": MR_VANILLA, "lane": 1 }], "library": [RENO] },
@@ -360,7 +329,6 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
                 .collect();
             assert!(types.contains(&ActionType::Concede));
         }
-        // The holder is still offered its answers; the other seat nothing else.
         assert!(
             legal_actions(g.state(), P1)
                 .iter()
@@ -370,9 +338,7 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 9: every pick a play may make is one legalActions offers (R81, R90, R101, R102)
-// ---------------------------------------------------------------------------
 
 const LAVA_GOLEM: &str = "core-055"; // Tribute 3; may tribute enemy units (§8 #55, R101)
 const KPOP_FANATIC: &str = "core-050"; // Unit: Cry: choose an enemy permanent (unit or backrow)
@@ -392,7 +358,6 @@ fn plays_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Ac
         .collect()
 }
 
-/// A sorted copy joined by commas (TS `[...ids].sort().join(",")`).
 fn sorted_key(ids: &[String]) -> String {
     let mut ids = ids.to_vec();
     ids.sort();
@@ -406,7 +371,6 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
     fn s8_55_a_lava_golem_play_that_tributes_three_enemy_units_is_offered_not_only_sets_holding_the_player_s_own_first_units_r81_r90_r101()
      {
         register_all();
-        // p1 has four units and one free unit zone, p2 five units: nine units Lava Golem may tribute.
         let s = scenario(json!({
             "p1": { "hand": [LAVA_GOLEM], "field": [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA] },
             "p2": { "field": [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA], "hand": [MR_VANILLA] },
@@ -442,9 +406,7 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
         );
 
         // …so legalActions, which the client narrows and the AI policy draws from (§10.2, CLAUDE.md
-        // rule 7), must offer it. The Tribute sets are enumerated own units first and cut at
-        // MAX_CHOICE_COMBINATIONS, so with nine candidates every offered set holds one of p1's first
-        // three units and no set of enemy units alone is ever offered.
+        // rule 7), must offer it.
         let offered = plays_for(s.state(), P1, &golem);
         assert!(!offered.is_empty());
         let enemy_only: Vec<&ActionBody> = offered
@@ -465,8 +427,6 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
     }
 }
 
-/// The first pick of an offered play, as the TS test keys it: `none`, `hero:<player>`, the instance
-/// id, or the pick's own name.
 fn first_pick_key(action: &ActionBody) -> String {
     match targets_of(action).first() {
         None => "none".to_string(),
@@ -486,9 +446,6 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
     fn s8_99_a_crafted_twisted_sorcerer_k_pop_fanatic_is_offered_with_the_sorcerer_s_4_damage_aimed_at_the_enemy_hero_r81_r90_r102()
      {
         register_all();
-        // p1: four units and a free lane; p2: five units and three public Field Spells. The Sorcerer's
-        // declaration reaches eleven picks (p1's four units and hero, p2's five units and hero), Kpop's
-        // eight (p2's five units and three backrow cards).
         let mut s = scenario(json!({
             "p1": { "hand": [TWISTED_SORCERER, KPOP_FANATIC], "field": [MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA] },
             "p2": {
@@ -520,7 +477,6 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
         // §8 #99: "Discover a Unit, then Discover another; Fuse them; the result costs 0 and goes to your
         // hand" — the fusion #99's last step makes, called where the rule lives (R77, R102).
         let crafted = {
-            // TS `{ state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) }`.
             let state = s.state_mut();
             let mut events: Vec<GameEvent> = Vec::new();
             let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -561,9 +517,6 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
             "the Sorcerer's part dealt its 4 to the enemy hero"
         );
 
-        // legalActions must offer the Sorcerer's part every pick it may make. The two declarations are
-        // crossed first-slowest and cut at MAX_CHOICE_COMBINATIONS, so only the Sorcerer's first eight
-        // picks (p1's side, then p2's first three units) ever reach an offered play.
         let offered = plays_for(s.state(), P1, &crafted);
         assert!(!offered.is_empty());
         let first_picks: IndexSet<String> = offered.iter().map(first_pick_key).collect();

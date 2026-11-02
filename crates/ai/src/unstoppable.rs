@@ -29,13 +29,10 @@ use crate::observe::{HIDDEN_DEF_ID, redact};
 use crate::simulate::{LineStatus, create_node_counter, line_status, search_signature, simulate, unit_lanes};
 use crate::types::NodeCounter;
 
-/// R2660000: whether `seat`, at its own turn, faces a lethal showing on the opponent's board that
-/// nothing it can do this turn stops. It fills `redact(state, seat)`, the opponent's hand and
-/// face-down cards taken out (`showing_only`), as `UNSTOPPABLE_LETHAL_DETERMINIZATIONS` worlds drawn
-/// from `UNSTOPPABLE_LETHAL_SEED`'s stream, its own, and holds only when every line of the seat's turn
-/// loses on every one of them (`doomed_on`), within `UNSTOPPABLE_LETHAL_NODES` nodes in all. False
-/// outside the seat's own main phase, with a prompt open, after the game is over, on a panic, and when
-/// the walk is cut short: by the nodes, or by `should_stop` (the bot's decision deadline).
+/// R2660000: whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing
+/// it can do this turn stops: every line of its turn loses (`doomed_on`) on every world of what shows
+/// (`showing_only`), within `UNSTOPPABLE_LETHAL_NODES` nodes in all. False outside the seat's own main
+/// phase, with a prompt open, after the game is over, on a panic, and when the walk is cut short.
 pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool {
     let own_main = state.active == seat && state.phase == Phase::Main;
     if state.result.is_some() || state.pending.is_some() || !own_main {
@@ -54,12 +51,11 @@ pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option
     .unwrap_or(false)
 }
 
-/// R2660000: the redacted state with only what shows on the opponent's side: no hand, and no
-/// face-down card (`HIDDEN_DEF_ID`) in its backrow, beneath a backrow pile or waiting to be set, so no
-/// unseen trap can stop the seat's answer and no unseen card can make the lethal. A pile whose top
-/// was hidden goes with it. It also turns off both automatic turn ends (R345): the opponent's, so its
-/// turn never runs on into the seat's own draw or fatigue, and the seat's, so only "end turn" hands
-/// the turn over (`step_from`), as it would once the seat had nothing else left (R82).
+/// R2660000: the redacted state with only what shows on the opponent's side: no hand, and no face-down
+/// card (`HIDDEN_DEF_ID`) in its backrow, beneath a backrow pile or waiting to be set, so no unseen trap
+/// can stop the seat's answer and no unseen card can make the lethal. A pile whose top was hidden goes
+/// with it. Both automatic turn ends (R345) are off: the opponent's turn never runs on into the seat's
+/// own draw or fatigue, and only "end turn" hands the turn over (`step_from`), as at R82.
 fn showing_only(mut public: GameState, seat: PlayerId) -> GameState {
     let hidden = |card: &CardInstance| card.def_id == HIDDEN_DEF_ID;
     public.players[seat].auto_end_turn = Some(false);
@@ -84,10 +80,9 @@ fn showing_only(mut public: GameState, seat: PlayerId) -> GameState {
 }
 
 /// R2660000: whether every line `seat` can play this turn on `world` ends lost: by the end of its own
-/// turn, or by a lethal the opponent's board then has (`board_lethal`). It tries every legal action
-/// but the ones R84 skips and the mulligan, "end turn" first, a position once (`position_key`). A
-/// step that fails, that the nodes cut, or that leaves anything to chance (`sure_step`) is an escape,
-/// and so is a line that ends in anything but the opponent's win.
+/// turn, or by a lethal the opponent's board then has (`board_lethal`), each position once
+/// (`position_key`). A step that fails, that the nodes cut, or that leaves anything to chance
+/// (`sure_step`) is an escape, and so is a line that ends in anything but the opponent's win.
 fn doomed_on(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> bool {
     let root_turn = world.turn;
     let mut visited: IndexSet<String> = IndexSet::new();
@@ -140,10 +135,9 @@ fn push_moves(stack: &mut Vec<(Rc<GameState>, ActionBody)>, state: Rc<GameState>
 }
 
 /// R2660000: the state `action` is played from: `state`, but for "end turn" without the Marketplace
-/// (R1853000). Ending the turn is the seat's last use of it, and the opponent's turn start would roll
-/// the opponent new offers on the match's random numbers, which `sure_step` refuses, so no game with
-/// a Marketplace could ever be proved; and a card the opponent bought from them would be no card on
-/// its board. Taking it out takes away only the opponent's options.
+/// (R1853000). Ending the turn is the seat's last use of it, and the opponent's turn start would roll it
+/// new offers on the match's random numbers, which `sure_step` refuses, so no game with a Marketplace
+/// could ever be proved. Taking it out takes away only the opponent's options.
 fn step_from<'a>(state: &'a GameState, action: &ActionBody) -> Cow<'a, GameState> {
     if matches!(action, ActionBody::EndTurn) && state.marketplace.is_some() {
         let mut from = state.clone();
@@ -185,11 +179,10 @@ fn lost(state: &GameState, seat: PlayerId) -> bool {
 
 /// R2660000: whether `seat`'s opponent, on the turn `state` hands it, has a lethal on its board alone.
 /// The card it just drew is dropped with its hand, and the line `find_lethal` proves within
-/// `UNSTOPPABLE_LETHAL_REPLY_NODES` is played again step by step: it counts only when it draws no
-/// random number and no card of the opponent's library (`sure_step`) and opens no prompt for `seat`,
-/// whose answer the solver would only have guessed. A lethal that needs the opponent's turn to end
-/// (an end-of-turn trigger) is not counted: the solver looks inside one turn, and that errs only
-/// towards playing on.
+/// `UNSTOPPABLE_LETHAL_REPLY_NODES` is played again step by step: it counts only when it draws no random
+/// number and no card of the opponent's library (`sure_step`) and opens no prompt for `seat`, whose answer
+/// the solver would only have guessed. A lethal that needs the turn to end (an end-of-turn trigger) is not
+/// counted: the solver looks inside one turn, and that errs only towards playing on.
 fn board_lethal(state: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> bool {
     let opp = seat.opponent();
     let mut leaf = state.clone();

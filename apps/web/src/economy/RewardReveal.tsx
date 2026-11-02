@@ -1,15 +1,9 @@
 // The reward reveal (#1658, part of #1651, SPEC §14.5): what a bar, a pack or a level paid, flying
-// out one by one, each with the sting the pack opening plays (`packs.ts::playStinger` on the
-// existing audio buses; no new sound).
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). The items are what the server's answer says was paid; the
-// reveal only shows them in turn. `items` may grow while it plays (a bar's fill adds its reward as
-// it bursts): an item flies out after the one before it, in the order given, and a key already
-// shown never flies out again. `onDone` is called once every item given so far has flown out, and
-// again after the items that came later.
-//
-// REDUCED MOTION (the panel's setting or the system's) shows every item at once with one sting, the
-// strongest one's, as `PackScene` does for a skip-all, and calls `onDone` straight away.
+// out one by one, each with the pack opening's sting (`packs.ts::playStinger`; no new sound).
+// THE SERVER DECIDES (CLAUDE.md rule 7): the items are what the server's answer says was paid.
+// `items` may grow while it plays (a bar's fill adds its reward as it bursts): a key already shown
+// never flies out again, and `onDone` is called again after later items. REDUCED MOTION shows every
+// item at once with the strongest one's sting, as `PackScene` does for a skip-all.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -37,7 +31,6 @@ export default function RewardReveal({ items, testid, onDone }: RewardRevealProp
   const next = reduced ? undefined : items.find((item) => !revealed.has(item.key));
   const settled = !reduced && items.length > 0 && next === undefined;
 
-  // Motion off: whatever has not been shown yet shows at once, with the strongest one's sting.
   useEffect(() => {
     if (!reduced) return;
     const fresh = items.filter((item) => !stung.current.has(item.key));
@@ -48,7 +41,6 @@ export default function RewardReveal({ items, testid, onDone }: RewardRevealProp
     callbacks.current.onDone?.();
   }, [reduced, items]);
 
-  // Motion on: the next item waits its turn, then flies out with its sting.
   const nextKey = next?.key;
   useEffect(() => {
     if (next === undefined) return undefined;

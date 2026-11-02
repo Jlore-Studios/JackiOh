@@ -6,10 +6,7 @@
 //! which a Degrade and an Upgrade do not move. This module reads them; `effects/tune.rs` moves them.
 //!
 //! Every read is a pure function of the card as it stands, so a card script may ask it (KY's
-//! Constant's "a card in your hand with a number that isn't already 3" is a `targetChecks` predicate
-//! over `numbers_on`) and `legal_actions`, `view_for` and the verb all read the same answer.
-//!
-//! Port of `packages/engine/src/numbers.ts`.
+//! Constant's `targetChecks` over `numbers_on`) and `legal_actions`, `view_for` and the verb agree.
 
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +31,7 @@ pub enum NumberedKey {
 }
 
 impl NumberedKey {
-    /// The literal, as TS writes it (and as the tuning keys it).
+    /// The literal, as the wire writes it and the tuning keys it.
     pub fn as_str(self) -> &'static str {
         match self {
             NumberedKey::Armor => "Armor",
@@ -107,10 +104,9 @@ fn in_unit_row(state: &GameState, card: &CardInstance) -> bool {
     crate::zones::in_units_row_or_standing(state, card)
 }
 
-/// R65, B3.4 rule 3: the card's own cost — `costOverride` or its printed cost (a computed or embiggen
-/// price where R65 reads one; an Embiggened version's own price, R1181003), plus its `costMod` — with no
-/// player discount, since a Degrade changes the card and not a price for a play. `None` for an X-cost
-/// card, whose X is no cost a number may move.
+/// R65, B3.4 rule 3: the card's own cost, `costOverride` or its printed cost (an Embiggened version's
+/// own, R1181003) plus its `costMod`, with no player discount, since a Degrade changes the card and not
+/// a price for a play. `None` for an X-cost card, whose X is no cost a number may move.
 pub fn own_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
     if crate::mana::is_x_cost(state, card) {
         return None;
@@ -128,10 +124,9 @@ pub fn has_stats(state: &GameState, card: &CardInstance) -> bool {
     crate::faces::card_type_of(state, card) == CardType::Unit || has_stat_line(state, card)
 }
 
-/// B3.4 rule 6: the card's attack and current health as they stand — through all five layers in the
-/// unit row (§10.4), and elsewhere its face with its buffs and tuning (§10.4 layers 1 to 4, R243) less
-/// any damage it kept (an Animated card back in its backrow, B3.1 rule 5). `None` for a card with no
-/// stats (`has_stats`).
+/// B3.4 rule 6: the card's attack and current health, through all five layers in the unit row (§10.4),
+/// elsewhere its face with buffs and tuning (§10.4 layers 1 to 4, R243) less any damage it kept (an
+/// Animated card back in its backrow, B3.1 rule 5). `None` for a card with no stats (`has_stats`).
 pub fn current_stats(state: &GameState, card: &CardInstance) -> Option<AttackHealth> {
     if !has_stats(state, card) {
         return None;
@@ -152,9 +147,8 @@ pub fn current_stats(state: &GameState, card: &CardInstance) -> Option<AttackHea
 
 /// B3.4 rule 3's numbered keywords on the card, with their values now: Armor, Lucky and Spell Damage
 /// its running face prints (and no Degrade removed); its Brittle (the count in force, else the printed
-/// one that has not started); and the Echo, Activate and Tribute its text declares (`staticFlags.echo`,
-/// the numbered `ActivationDecl.uses`, `staticFlags.tribute`). A Vanilla card prints and declares none
-/// of them (§6.3), though a Brittle count it was given stays (B3.3 rule 5).
+/// one that has not started); and the Echo, Activate and Tribute its text declares. A Vanilla card
+/// prints and declares none of them (§6.3), though a Brittle count it was given stays (B3.3 rule 5).
 pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<NumberedKeyword> {
     let mut out: Vec<NumberedKeyword> = Vec::new();
     let add = |out: &mut Vec<NumberedKeyword>, key: NumberedKey, printed: i32, better: ParamBetter| {

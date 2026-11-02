@@ -2,11 +2,10 @@
 // crest (docs/polish/6-cards.md, Surface B), and the struck-through eye a face-down card you
 // control wears (R371).
 //
-// Each glyph is an original SVG with no <text> and no <title>, so it names nothing and reads as
-// nothing to a screen reader. It is drawn as an `<img>` of a `data:` URI rather than inline <svg>,
-// because a full face renders only span, strong and img elements (B12): that is what lets a face
-// sit inside the deck builder's <button>. Gradient ids are scoped to their own image, so two
-// glyphs on one page can never collide.
+// Each glyph is an original SVG with no <text> and no <title>, so it reads as nothing to a screen
+// reader. It is an `<img>` of a `data:` URI, not inline <svg>, because a full face renders only span,
+// strong and img elements (B12), so it can sit inside the deck builder's <button>; and so gradient ids
+// stay scoped to their own image and two glyphs on one page never collide.
 
 import type { ReactElement } from "react";
 
@@ -26,9 +25,8 @@ export type IconName =
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-// A gold medallion, as large as the drop beside it, over a long blade laid corner to corner: the
-// tip shows top right and the guard and pommel bottom left, so the number sits on the medallion
-// and both stats carry the same weight.
+// A gold medallion as large as the drop beside it, over a blade laid corner to corner, so the number
+// sits on the medallion and both stats carry the same weight.
 const SWORD = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <defs><radialGradient id='m' cx='.38' cy='.3' r='.8'><stop offset='0' stop-color='#fff6c4'/><stop offset='.42' stop-color='#f5bd2e'/><stop offset='.85' stop-color='#a86400'/><stop offset='1' stop-color='#6b3c00'/></radialGradient>
 <linearGradient id='b' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#ffffff'/><stop offset='.5' stop-color='#cfd6e4'/><stop offset='1' stop-color='#7d879c'/></linearGradient></defs>
@@ -77,8 +75,7 @@ const EYE_OFF = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <path d='M14 50 L50 14' stroke='#e8ecf8' stroke-width='4.5' stroke-linecap='round'/>
 </svg>`;
 
-// Patch v0.2.0's state badges (cardState.ts). Each is a pale outline on a dark plate, so it reads by
-// shape on any frame and to a color-blind player alike, as the struck eye does.
+// The state badges (cardState.ts), each a pale outline on a dark plate like the struck eye.
 
 // B3.3, R385: a pane of glass with a crack running through it (Brittle); the count sits over it.
 const BRITTLE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
@@ -117,9 +114,7 @@ const COG = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='6' fill='none' stroke='#e8ecf8' stroke-width='3.5'/>
 </svg>`;
 
-// #2269: two opposing horizontal arrows, the Tradable swap mark (R1838000). A pale outline on a
-// dark disc, so it reads by shape on any frame and to a color-blind player alike, as the struck
-// eye does.
+// #2269: two opposing horizontal arrows, the Tradable swap mark (R1838000), drawn as the badges are.
 const TRADE = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
 <path d='M12 24 H44' fill='none' stroke='#e8ecf8' stroke-width='5' stroke-linecap='round'/>

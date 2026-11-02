@@ -1,28 +1,6 @@
-//! #1240: the pinned positions, decisions found slow: two by the improve screen of 2026-10-16
-//! (`training/history/improve-cycle-2026-10-16.md`) and one since Meditative+ shipped (#1337). Each
-//! fixture holds the true state, the deciding seat and the seat's stream (`rngSeed`, `rngCursor`) at
-//! the decision, beside where it came from:
-//!
-//! - `pinned-improve-dev-154.json`: game 307 (`improve-dev:154`), turn 15. The other side's Pareto
-//!   Optimality judges every play the seat makes, running §10.7's scorer once per playable card.
-//! - `pinned-improve-dev-200.json`: game 399 (`improve-dev:200`), turn 23. The seat holds a fused
-//!   Zephyrs, whose resolve ranks every shipped card as Zephyrs' does.
-//! - `pinned-autopilot-draw.json`: the gate's hard-vs-easy deal 3 (`lagforce:hard-vs-easy:3`, with
-//!   Meditative+ #15 Book of Potions put in both decks), turn 7. The other side's library holds
-//!   Cognitive Offloading, hidden from the seat. When its search ended the turn into a draw of it,
-//!   `reduce` played that whole turn by §10.7's scorer inside the one step, and the decision took
-//!   2.9 s with 97% of its work there; a search's step now leaves that turn owed
-//!   (`reduce_unpiloted`) and the decision takes about 0.16 s.
-//!
-//! The first two were captured from that screen's candidate (#1058's second reply, switched on over
-//! `f04c284`) against its parent, in an `arena` run over `improve-dev` that wrote the state before the
-//! decision once game 307's log held 78 actions and game 399's 101 (the run's games 307 and 399 ended
-//! with hashes `7e73ab3a` and `a0b48401`); the third, on `f72f2af`, from a hard-vs-easy game whose
-//! decisions were timed. Today's deals deal other decks, so no game reaches them now; the perf gate
-//! times them (`cargo jackioh gate`, `AI_GATE.pinned_decision_ms`), and these tests hold what `cargo
-//! test` can: the charges `surcharge_nodes` makes for their costly steps, the autopilot's turn left
-//! owed, and a decision on each that is deterministic, legal, within the node budget and blind to the
-//! hidden cards (R185).
+//! #1240: pinned slow positions from improve cycles (#1058, Meditative+ #15 #1337).
+//! Tests costly steps (§10.7, `surcharge_nodes`), autopilot owed turns, determinism,
+//! and node budgets while blind to hidden cards (R185).
 
 use jackioh_ai::{
     AI_BUDGET, AI_SEARCH, AiOptions, Decision, Prices, SearchBudget, create_node_counter, decide,

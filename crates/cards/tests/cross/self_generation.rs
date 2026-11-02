@@ -1,5 +1,3 @@
-//! Port of `packages/cards/test/self-generation.test.ts` (v0.3.0 part 27.5).
-//!
 //! B4.1, R387: a card never Discovers or generates a copy of itself, unless its text names a pool
 //! that holds it or makes copies of "this" (docs/classic-sets.md B4.1). This is rule 5's sweep: every
 //! card with a script is played on a busy board under several seeds, every prompt it opens is
@@ -8,7 +6,6 @@
 //! rather than created (a card returning itself to hand, R25) is not generation and is not counted,
 //! and neither is what a card the play casts makes while it resolves: that is the cast card's own
 //! generation, swept under its own id.
-//!
 //! The sweep reaches every set's scripts as they land: a new generating card that forgets its own
 //! exclusion fails here, named. The exceptions are the texts that say so, each with its reason.
 
@@ -16,7 +13,7 @@ use jackioh_cards::{CATALOG, CATALOG_IDS};
 use jackioh_engine::testkit::*;
 
 /// B4.1 rules 3 and 4: the cards whose text makes a copy of itself, names itself, or names a pool
-/// that holds it. Anything else that produces its own definition is a bug.
+/// that holds it.
 const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
     (
         "core-012",
@@ -64,17 +61,14 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
     ),
 ];
 
-/// The seeds each card is played under.
 const SEEDS: &[&str] = &["self-gen-a", "self-gen-b", "self-gen-c", "self-gen-d"];
 
-/// The most prompts one play may open before the sweep gives up answering (a bound, not a rule).
 const MAX_ANSWERS: usize = 40;
 
 fn names_its_own_pool(id: &str) -> bool {
     NAMES_ITS_OWN_POOL.iter().any(|(own, _)| *own == id)
 }
 
-/// A busy board: units and backrow on both sides, libraries, graveyards and hands to reach into.
 fn board(seed: &str, def_id: &str) -> Scenario {
     scenario(json!({
         "seed": seed,
@@ -95,7 +89,6 @@ fn board(seed: &str, def_id: &str) -> Scenario {
     }))
 }
 
-/// TS `/^c(\d+)$/`: an instance id's number, or -1 for anything else.
 fn instance_number(id: &str) -> i64 {
     match id.strip_prefix('c') {
         Some(digits) if !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) => {
@@ -105,7 +98,6 @@ fn instance_number(id: &str) -> i64 {
     }
 }
 
-/// The instances an event says came into being or arrived somewhere, with their definitions.
 fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
     match event {
         GameEvent::AddedToHand {
@@ -123,7 +115,6 @@ fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
         | GameEvent::Burned {
             instance_id, def_id, ..
         } => vec![(instance_id.clone(), def_id.clone())],
-        // A copy the full library refused was still generated.
         GameEvent::LibraryOverflow {
             instance_id,
             def_id,
@@ -148,11 +139,9 @@ fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
 }
 
 /// The play's events read for whose generation each one is: the swept card's ids (a card set
-/// face-down takes a fresh id, which the events that set it name through `formerId`, R227), and for
-/// each event whether a card the play cast was resolving when it came (after that card's
-/// `cardPlayed`, before its `cardResolved`), and whether one still is. What a cast card makes is that
-/// card's own generation, swept under its own id, not the caster's (R387): C+ #47 Jogg's Box never
-/// casts itself, but a C+ #27 Zephrys Zealotism it casts deals a perfect hand that may hold one.
+/// face-down takes a fresh id, named through `formerId`, R227), and for each event whether a card the
+/// play cast was resolving when it came, and whether one still is. What a cast card makes is its own
+/// generation, not the caster's (R387), as C+ #27 Zephrys Zealotism's is when C+ #47 Jogg's Box casts it.
 struct Attribution {
     own_ids: IndexSet<String>,
     in_cast: Vec<bool>,
@@ -200,7 +189,6 @@ fn attribute(events: &[GameEvent], own: &str) -> Attribution {
     }
 }
 
-/// TS `sweep`'s closures (`step`, `offersItself`) over the state it drives.
 struct Sweep {
     state: GameState,
     events: Vec<GameEvent>,
@@ -241,7 +229,6 @@ impl Sweep {
     }
 }
 
-/// What one play of `def_id` under `seed` generated of itself, and what its Discovers offered of it.
 fn sweep(def_id: &str, seed: &str) -> Vec<String> {
     let s = board(seed, def_id);
     let own = s.card(def_id).id.clone();
@@ -296,8 +283,6 @@ fn sweep(def_id: &str, seed: &str) -> Vec<String> {
         answered += 1;
     }
 
-    // The played card itself is not generated, under whatever id it wears, and what a card it cast
-    // makes is that card's own generation (`attribute`).
     let Attribution { own_ids, in_cast, .. } = attribute(&run.events, &own);
     let mut found = run.found;
     for (event, in_cast) in run.events.iter().zip(in_cast) {
@@ -316,7 +301,6 @@ fn sweep(def_id: &str, seed: &str) -> Vec<String> {
     found
 }
 
-/// Every card the sweep plays: non-token, with its own definition in the catalog.
 fn swept() -> Vec<String> {
     CATALOG_IDS
         .iter()
@@ -331,7 +315,6 @@ fn swept() -> Vec<String> {
 mod r387_a_card_never_generates_itself_b4_1_rule_5s_sweep {
     use super::*;
 
-    // TS ran this one under `{ timeout: 120_000 }`; Rust's test runner has no per-test timeout.
     #[test]
     fn r387_no_cards_play_creates_or_discovers_its_own_definition_over_every_set_and_several_seeds() {
         jackioh_cards::register_all();

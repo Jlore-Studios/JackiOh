@@ -1,10 +1,7 @@
 // The hook `game/Clock.tsx` calls for the turn clock's last 30 seconds (R439, R506; clockAlarm.ts
-// has the schedule). Clock passes the viewer's own turn clock as it shows it on each repaint:
-//
-//   useTurnClockAlarm(turn?.remainingMs ?? null, turn !== null && turn.side === "you" && !turn.paused);
-//
-// It never throws: with no AudioContext (jsdom), or before the first gesture, every reading is
-// passed over in silence.
+// has the schedule). Clock passes the clock as it shows it on each repaint, `own` while it is the
+// viewer's own turn and not paused.
+// It never throws: with no AudioContext (jsdom), or before the first gesture, it stays silent.
 
 import { useEffect, useRef } from "react";
 

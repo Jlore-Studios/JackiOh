@@ -64,10 +64,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #111 Shockwave447 — SPEC §8.10 row 111, BUILD M12 row S 111: "arrives with 3 different random
-// combat keywords (R781004); Cry (played): each hand moved to its graveyard and refilled with as many random
-// complicated cards (R1846000), no discard reported; keywords reads through `param()`; radiant 8/14 and your
-// new cards Radiant".
+// Stinkyscape #111 Shockwave447 — SPEC §8.10 row 111, BUILD M12 row S 111 (R1846000, R781004).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,7 +79,6 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// p1 holds Shockwave447 (Radiant on `radiant`) and two more cards; p2 holds `theirs` cards.
     fn played(radiant: bool, seed: &str, theirs: usize) -> (Scenario, Vec<String>, Vec<String>) {
         let mut s = scenario(json!({
             "seed": seed,

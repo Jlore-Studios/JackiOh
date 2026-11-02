@@ -1,14 +1,11 @@
-//! `cli/seed_accounts.rs`'s gate. The accounts it makes skip the invite gate, so it must refuse
-//! unless the caller names the one project it is meant for, and its password must come from the
-//! environment: a password written in this public repo let anyone sign in to the seeded accounts.
-//! (← `apps/server/test/db/seed-accounts.test.ts`)
+//! Development account seeding CLI gate (`src/cli/seed_accounts.rs`).
 
 use indexmap::IndexMap;
 
 use jackioh_server::cli::seed_accounts::{SEED_PASSWORD_VAR, SEED_PROJECT_VAR, seed_accounts_settings};
 use jackioh_server::config::AUTH_PASSWORD_MIN_LENGTH;
 
-/// TS's `ENV`: the two server variables the gate reads (`Pick<ServerEnv, "SUPABASE_URL" | "NODE_ENV">`).
+/// Server variables the gate reads.
 const SUPABASE_URL: &str = "https://dev-project.supabase.co";
 const NODE_ENV: &str = "development";
 
@@ -65,7 +62,6 @@ fn refuses_a_missing_or_short_password() {
         &source(&[(SEED_PROJECT_VAR, "dev-project.supabase.co")]),
         NODE_ENV,
     );
-    // TS: /SEED_ACCOUNTS_PASSWORD .*it is not set/
     assert!(missing.lines().any(|line| {
         line.find("SEED_ACCOUNTS_PASSWORD ")
             .is_some_and(|at| line[at..].contains("it is not set"))

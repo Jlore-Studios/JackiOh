@@ -24,7 +24,6 @@ import {
 
 const CARD_TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
 
-/** A Unit recipe holding every keyword and every hat the tables list. */
 function everything(): CraftRecipe {
   return {
     cost: 2,
@@ -39,7 +38,6 @@ function everything(): CraftRecipe {
   };
 }
 
-/** What the table allows: a Unit any keyword, a Spell the `spell` rows, any other type none. */
 function keywordAllowed(type: CardType, spell: boolean): boolean {
   return type === "Unit" || (type === "Spell" && spell);
 }

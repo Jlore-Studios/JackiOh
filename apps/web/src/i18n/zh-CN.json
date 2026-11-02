@@ -1835,6 +1835,8 @@
   "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.": "英雄的卡牌只显示卡图和名称；悬停或点击即可阅读。关闭后像其他卡牌一样显示文字。",
   "Show opponents' cosmetics": "显示对手的外观",
   "Your opponents' cards and side wear what they equipped. Off shows them plain.": "对手的卡牌和半场会穿戴他们装备的外观。关闭后一律显示默认样式。",
+  "Set watermarks": "系列水印",
+  "Each card shows its set's symbol, faint, behind its text. Off prints the text on a plain box.": "每张卡牌的文字背后淡淡地印着其系列的标志。关闭后文字印在素色的文字框上。",
   "Mentions": "提及",
   "Copying: {name} (Radiant)": "复制中：{name}（光辉）",
   "Copying: {name}": "复制中：{name}",

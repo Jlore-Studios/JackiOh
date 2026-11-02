@@ -11,6 +11,8 @@ import type { CardDef } from "@jackioh/shared";
 import PoolGrid from "../../game/deckbuilder/PoolGrid.tsx";
 import { poolCardId } from "../../game/deckbuilder/testids.ts";
 import { faceModel, type FaceModel } from "../model.ts";
+import { watermarkOf } from "../setMark.ts";
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { ASCENT_LABEL, SUMMIT_DEF_ID } from "../shortText.ts";
 import { CardDetail } from "./CardDetail.tsx";
 import { HOVER_DELAY_MS } from "./constants.ts";
@@ -35,6 +37,7 @@ afterEach(() => {
   closeInspect();
   cleanup();
   vi.useRealTimers();
+  writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
 describe("R1017000 the extended description", () => {
@@ -109,5 +112,47 @@ describe("R1017000 the extended description", () => {
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     rest("meditative-022-1");
     expect(within(screen.getByTestId(INSPECT_HOVER)).getByTestId(INSPECT_EXTENDED).textContent).toContain("Defend:");
+  });
+
+  it("R2718000 a full-art card's Full text and detail rules carry its set's watermark in the dark ink, its face none; Set watermarks off removes it", () => {
+    const dark = watermarkOf("Core")?.srcOnDark;
+    expect(dark).toBeDefined();
+    render(<HoverPreview face={collection("core-001")} anchor={ANCHOR} />);
+    const face = screen.getByTestId(INSPECT_FACE);
+    expect(face.querySelector(".cf")?.getAttribute("data-full-art")).toBe("true");
+    expect(face.querySelector(".cf-watermark")).toBeNull();
+    const extended = screen.getByTestId(INSPECT_EXTENDED);
+    expect(extended.getAttribute("data-watermark")).toBe("core");
+    const marks = extended.querySelectorAll("img.inspect-watermark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.getAttribute("src")).toBe(dark);
+    expect(marks[0]?.getAttribute("alt")).toBe("");
+    expect(marks[0]?.getAttribute("aria-hidden")).toBe("true");
+    expect(extended.firstElementChild).toBe(marks[0]);
+    cleanup();
+
+    render(<CardDetail def={def("core-001")} onClose={() => undefined} />);
+    const rules = screen.getByTestId(INSPECT_DETAIL).querySelector(".inspect-rules");
+    expect(rules?.getAttribute("data-watermark")).toBe("core");
+    expect(rules?.querySelectorAll(":scope > img.inspect-watermark")).toHaveLength(1);
+    expect(rules?.querySelector(":scope > img.inspect-watermark")?.getAttribute("src")).toBe(dark);
+    cleanup();
+
+    // A face with a rules box of its own holds its watermark there, not on the panel beside it.
+    render(<HoverPreview face={collection("meditative-022-1")} anchor={ANCHOR} />);
+    const own = screen.getByTestId(INSPECT_EXTENDED);
+    expect(own.getAttribute("data-watermark")).toBeNull();
+    expect(own.querySelector(".inspect-watermark")).toBeNull();
+    expect(screen.getByTestId(INSPECT_FACE).querySelector(".cf-watermark")).not.toBeNull();
+    cleanup();
+
+    writeCardSettings({ setWatermarks: false });
+    render(<HoverPreview face={collection("core-001")} anchor={ANCHOR} />);
+    const plain = screen.getByTestId(INSPECT_EXTENDED);
+    expect(plain.getAttribute("data-watermark")).toBeNull();
+    expect(plain.querySelector(".inspect-watermark")).toBeNull();
+    cleanup();
+    render(<CardDetail def={def("core-001")} onClose={() => undefined} />);
+    expect(screen.getByTestId(INSPECT_DETAIL).querySelector(".inspect-watermark")).toBeNull();
   });
 });

@@ -27,7 +27,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-088";
 
-/// The aura's and `tribute_when`'s argument, and the preview's context narrowed to it (`read_of`).
 type Read<'a> = HookArgs<'a>;
 
 fn read_of(c: ConditionContext<'_>) -> Read<'_> {
@@ -48,7 +47,6 @@ fn arrived_carrying_it(read: Read<'_>) -> bool {
     read.self_.def_id != ID && read.self_.summoned_turn == Some(read.state.turn)
 }
 
-/// X: {multiplier} times the Units the opponent controls now.
 fn x_now(read: Read<'_>) -> i32 {
     param(&read, "multiplier") * enemy_units(read)
 }
@@ -60,7 +58,6 @@ fn dormant(read: Read<'_>) -> bool {
         && read.self_.revealed != Some(true)
 }
 
-/// `live_face_down` is v0.3.7b's reading, which never slept: the aura worked from the moment it was set.
 fn siphon(
     mod_: fn(Read<'_>) -> StatMod,
     preview: fn(Read<'_>) -> Vec<PreviewValue>,
@@ -139,11 +136,9 @@ pub fn script_v0_3_7b() -> CardScripts {
     scripts(true)
 }
 
-// SPEC §8.6 (R1149000): dormant while set and unrevealed, its aura and preview wake once it is revealed,
-// at its start of turn or by anything else (R686); the self-Tribute is live face-down (R403). Enemy
-// units have −X Attack floored at 0; unrevealed, the opponent's view shows no drop and never names the
-// card (R33); preview shows X once revealed (§10.8, R280). Multiplier is tuned via param() (R386).
-// Radiant sets attack to 0 after all other layers (§10.4), so their hits are no hits (R63).
+// SPEC §8.6 (R1149000, R686, R403, §10.8, R280, R386). Unrevealed, the opponent's view shows no Attack
+// drop and never names the card (R33). Radiant sets attack to 0 after all other layers (§10.4), so their
+// hits are no hits (R63).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -173,7 +168,6 @@ mod tests {
         }
     }
 
-    /// p1 sets Siphon Squad against p2's board.
     fn set_against(enemies: &[&str], radiant_face: bool, mine: &[&str]) -> Scenario {
         let field: Vec<Value> = enemies
             .iter()
@@ -200,7 +194,6 @@ mod tests {
         s
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -261,13 +254,11 @@ mod tests {
             assert_eq!(s.card(SIPHON).revealed, Some(true));
             assert_ne!(s.card(SIPHON).face_up, Some(true));
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
-            // The opponent reads its face now, and the aura works.
             assert!(serde_json::to_string(&s.view(P2)).expect("serializable").contains(SIPHON));
             assert_eq!(attack_of(&s, P2, 1), 0);
             assert_eq!(attack_of(&s, P2, 2), 5);
         }
 
-        /// its own Units are untouched
         #[test]
         fn its_own_units_are_untouched() {
             let s = revealed_against(&[VANILLA], false, &[MENACE]);
@@ -275,7 +266,6 @@ mod tests {
             assert_eq!(attack_of(&s, P2, 1), 2);
         }
 
-        /// X is recomputed on every change: one enemy Unit fewer, X drops from 4 to 2
         #[test]
         fn x_is_recomputed_on_every_change_one_enemy_unit_fewer_x_drops_from_4_to_2() {
             let mut s = revealed_against(&[VANILLA, MENACE], false, &[]);
@@ -353,7 +343,6 @@ mod tests {
             assert_eq!(attack_of(&s, P2, 1), 5 - 2);
         }
 
-        /// its own controller's Units never count toward X
         #[test]
         fn its_own_controller_s_units_never_count_toward_x() {
             let s = revealed_against(&[MENACE], false, &[VANILLA, TIMMY]);
@@ -375,7 +364,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
@@ -442,7 +430,6 @@ mod tests {
             s.expect_in_zone(SIPHON, "graveyard");
         }
 
-        /// its own Units keep their attack
         #[test]
         fn its_own_units_keep_their_attack() {
             let s = revealed_against(&[VANILLA], true, &[MENACE]);

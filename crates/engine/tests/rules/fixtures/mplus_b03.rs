@@ -1,12 +1,7 @@
 //! Test-only cards for the systems Meditative+ batch 03 builds (issue #1181): an effect made "in N
 //! turns" with its countdown badge (`delay`'s `turns` and `label`, R1181000), Mountaintop Garden's
 //! aura over embiggen prices (the `embiggenGarden` static flag, R1181002) and a price for the
-//! Embiggened version alone (`add_to_hand`'s `embiggenCostOverride`, R1181003). Each does it through
-//! the engine's own verbs and flags, as a card script would, so the engine never imports
-//! `crates/cards`; the real cards (M+ #4 Supply Drop, #22 Mountaintop Garden, #23 Enormous
-//! Elderberry) test the same cases again.
-//!
-//! Ids are prefixed `b3-` and indexed from 11840, so they collide with no other fixture file's.
+//! Embiggened version alone (`add_to_hand`'s `embiggenCostOverride`, R1181003). Ids `b3-…` from 11840.
 
 use std::sync::LazyLock;
 
@@ -15,11 +10,8 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// The fixture "in N turns" counts.
 pub const LATER_TURNS: i32 = 3;
-/// What the delayed hit deals to each enemy.
 pub const LATER_DAMAGE: i32 = 2;
-/// The countdown's caption.
 pub const LATER_LABEL: &str = "later";
 /// The swell fixture's printed prices: "2 embiggen 4".
 pub const SWELL_BASE: i32 = 2;
@@ -48,9 +40,9 @@ fn card(index: u32, name: &str, type_: &str, cost: Value) -> CardDef {
     }))
 }
 
-/// A (0) Spell: "In 3 turns, deal 2 damage to each enemy, with Pierce and Lifesteal" (M+ #4's Combat).
+/// "In 3 turns, deal 2 damage to each enemy, with Pierce and Lifesteal" (M+ #4's Combat).
 pub static LATER: LazyLock<CardDef> = LazyLock::new(|| card(11840, "later", "Spell", json!(0)));
-/// A (2, Embiggened 4) Field Spell with no text: the embiggen card the garden reaches.
+/// The embiggen card the garden reaches, with no text.
 pub static SWELL: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         11841,
@@ -59,12 +51,12 @@ pub static SWELL: LazyLock<CardDef> = LazyLock::new(|| {
         json!({ "base": SWELL_BASE, "embiggen": SWELL_EMBIGGEN }),
     )
 });
-/// A (0) Field Spell: "Aura: Embiggen cards play their Embiggened version at their normal price; for
-/// (2) more (Radiant: (1)), one that isn't Radiant is also played Radiant" (M+ #22's shape).
+/// "Aura: Embiggen cards play their Embiggened version at their normal price; for (2) more (Radiant:
+/// (1)), one that isn't Radiant is also played Radiant" (M+ #22's shape).
 pub static GARDEN: LazyLock<CardDef> = LazyLock::new(|| card(11842, "garden", "Field Spell", json!(0)));
-/// A (0) Spell: "Cast a swell" (R545's cast, which the garden does not reach).
+/// "Cast a swell" (R545's cast, which the garden does not reach).
 pub static CASTER: LazyLock<CardDef> = LazyLock::new(|| card(11843, "caster", "Spell", json!(0)));
-/// A (0) Spell: "Add a swell to your hand; its Embiggened version costs (0)" (M+ #23's shape).
+/// "Add a swell to your hand; its Embiggened version costs (0)" (M+ #23's shape).
 pub static ELDER: LazyLock<CardDef> = LazyLock::new(|| card(11844, "elder", "Spell", json!(0)));
 
 fn garden(premium: i32) -> Script {
@@ -148,7 +140,6 @@ pub static B03_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_b03_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

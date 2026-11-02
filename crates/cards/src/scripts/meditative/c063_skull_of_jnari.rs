@@ -35,12 +35,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #63 Skull of J'Nari — SPEC §8.8 row 63, BUILD M10 row M 63: "At your start of turn only, one
-// random Unit card from your hand is summoned into your leftmost open unit zone with no Cry,
-// summoning sick (R1083); a Spell in hand is never picked; no Unit in hand or no open zone draws
-// no random number (R129); the opponent sees only the arrival; one of its voice lines plays from
-// the client's own rng, never the match's; units reads through `param()`; radiant the Unit becomes
-// Radiant on the field".
+// M #63 Skull of J'Nari — SPEC §8.8 row 63, BUILD M10 row M 63 (R129).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,7 +113,6 @@ mod tests {
                 let cursor = s.state().rng_cursor;
                 s.start_turn();
 
-                // The Vanilla never left the hand, and no pick was drawn.
                 assert!(def_ids(&s.hand(P1)).contains(&VANILLA.to_string()));
                 assert_eq!(cursor, s.state().rng_cursor);
             }
@@ -221,7 +215,6 @@ mod tests {
                 let s = skull_with("skull-hidden", false, json!([VANILLA, FIELD_SPELL]));
                 let view = s.view(PlayerId::P2);
                 let seen = serde_json::to_string(&view).expect("the view serializes");
-                // The arrival is public…
                 assert!(
                     view.opponent
                         .units
@@ -230,7 +223,6 @@ mod tests {
                         .any(|unit| unit.def_id == VANILLA),
                     "p2 sees the summoned Vanilla"
                 );
-                // …and nothing else of the hand it came from.
                 assert!(!seen.contains(FIELD_SPELL), "p2 reads the rest of p1's hand");
             }
 

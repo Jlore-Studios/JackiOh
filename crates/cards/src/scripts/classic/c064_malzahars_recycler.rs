@@ -45,7 +45,6 @@ fn end_of_turn(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![discard_random(json_as(json!({ "count": DISCARDS })))]
 }
 
-/// Whether this event is a card its controller discarded.
 fn your_discard(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::Discarded { owner, .. } if *owner == ctx.controller)
 }
@@ -57,7 +56,6 @@ fn answer(draws: Hook) -> TriggerDef {
     .with_when(|ctx, event| your_discard(ctx, event))
 }
 
-/// "Draw that many": one draw for each card discarded.
 fn draw_one(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![draw(json_as(json!({ "count": 1 })))]
 }
@@ -144,7 +142,6 @@ mod tests {
             .collect()
     }
 
-    /// The index of the first event of this type, which every caller expects to find.
     fn find_index(events: &[GameEvent], type_: &str) -> usize {
         events
             .iter()
@@ -170,8 +167,6 @@ mod tests {
         json!(picks)
     }
 
-    /// p1's Recycler on the field, in p1's main phase.
-    /// `opts`: `{ radiant?, hand, library? }`.
     fn recycling(opts: Value) -> Scenario {
         let radiant = opts["radiant"] == true;
         let library = if opts["library"].is_null() {
@@ -189,7 +184,6 @@ mod tests {
         }))
     }
 
-    /// Whether every found def id is one of `pool`.
     fn all_among(found: &[Value], pool: &[&str]) -> bool {
         found.iter().all(|def_id| pool.iter().any(|id| *def_id == *id))
     }
@@ -219,7 +213,6 @@ mod tests {
                     discarded_by(s.last_events(), P1).iter().map(|event| event["defId"].clone()).collect();
                 assert_eq!(discarded.len(), 2);
                 assert!(all_among(&discarded, &[MENACE, VANILLA, FILLER]));
-                // The two draws answer the discards in the same action, still p1's main phase.
                 assert_eq!(s.state().active, P1);
                 assert_eq!(drawn_by(s.last_events(), P1).len(), 2);
                 assert_eq!(s.hand(P1).len(), 3);
@@ -288,7 +281,6 @@ mod tests {
                 // Hinder is cast on the first draw and discards at random (R682): no prompt opens.
                 assert!(s.state().pending.is_none());
                 assert_eq!(discarded_by(s.last_events(), P1).len(), 1);
-                // Stockpile's two draws (the first repeating past Hinder) and the Recycler's one.
                 assert_eq!(drawn_by(s.events(), P1).len(), 4);
             }
 
@@ -393,7 +385,6 @@ mod tests {
                 // The answer is a queued trigger (§10.3): it draws once Pickle has finished asking.
                 s.answer(json!("exile")).answer(json!("exile"));
                 assert!(s.state().pending.is_none());
-                // The owed start-of-turn draw landed behind the questions, then the Recycler's.
                 assert_eq!(drawn_by(s.events(), P1).len(), 2);
                 assert_eq!(s.hand(P1).len(), 3);
                 assert!(s.hand(P1).iter().any(|card| card.def_id == VANILLA));
@@ -466,7 +457,6 @@ mod tests {
                 assert_eq!(s.state().active, P1);
                 assert!(s.last_events().iter().map(js).any(|event| event["type"] == "crumbled"));
                 assert_eq!(discarded_by(s.last_events(), P1).len(), 0);
-                // Only the turn's own draw.
                 assert_eq!(drawn_by(s.last_events(), P1).len(), 1);
             }
 
@@ -490,7 +480,6 @@ mod tests {
                 {
                     assert!(!drawn_ids.contains(&event["instanceId"]));
                 }
-                // The discards are public: the graveyard is.
                 let grave: Vec<Value> = theirs["opponent"]["graveyard"]
                     .as_array()
                     .expect("the opponent's graveyard")
@@ -519,7 +508,6 @@ mod tests {
                 assert_eq!(discarded_by(s.last_events(), P1).len(), 2);
                 assert_eq!(drawn_by(s.last_events(), P1).len(), 5);
                 assert_eq!(s.pile(P1, "library").len(), 0);
-                // Each discard is answered: the second finds the deck empty and draws nothing, and no fatigue.
                 assert_eq!(s.state().players.p1.fatigue_count, 0);
             }
 

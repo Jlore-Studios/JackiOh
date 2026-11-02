@@ -3,9 +3,7 @@
 //
 // This file owns the LOOP (nonces, the log, the seat, the subscription), not the rules, so the port is
 // a fake: a turn counter with a settable pending choice. Every assertion is about what the session did
-// with the port, the whole contract between client and engine (CLAUDE.md rule 7). Nothing here speaks
-// to the engine's determinism: that half of M5-T3 is folded in `crates/engine/tests/golden.rs` and
-// checked in `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`.
+// with the port, the whole contract between client and engine (CLAUDE.md rule 7).
 
 import { describe, expect, it } from "vitest";
 
@@ -25,19 +23,15 @@ type FakeState = { turn: number; active: PlayerId; pendingFor: PlayerId | null; 
 
 type FakeEngine = {
   port: EnginePort;
-  /** Every port call, in order, for the "createGame then beginGame" assertion. */
   calls: string[];
   createGameArgs: CreateGameArgs[];
-  /** Every action handed to `reduce`, accepted or rejected. */
   reduced: Action[];
-  /** The player argument of every `viewFor` / `legalActions` call. */
   viewedBy: PlayerId[];
   askedBy: PlayerId[];
   /** Set to make the next `reduce` refuse; cleared once it has. */
   nextError: string | null;
   /** Mutates the state the next accepted `reduce` returns. Consumed once. */
   nextEffect: ((state: FakeState) => void) | null;
-  /** Whose prompt `beginGame` leaves open. */
   pendingAfterBegin: PlayerId | null;
   current(): FakeState;
 };
@@ -175,8 +169,8 @@ describe("createHotseat", () => {
   });
 
   it("R180 passes a seat's handicap to createGame untouched, and omits the key when there is none", () => {
-    // The E2E build of /dev/hotseat injects one from a fixture deck (spec 25): a 4-card library that
-    // fatigues on turn 3, a 60-card one that fills. The session carries it and decides nothing.
+    // The E2E build of /dev/hotseat injects one from a fixture deck (spec 25). The session carries it
+    // and decides nothing.
     const handicaps = { p1: { deckSize: 2, manaBonus: 3, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 } };
     const withHandicap = makeEngine();
     createHotseat({ seed: "42", decks: DECKS, engine: withHandicap.port, handicaps });
@@ -236,9 +230,9 @@ describe("nonces", () => {
   });
 
   // NOT the M5-T3 replay acceptance: the port is scripted, so this shows only that the SESSION is a pure
-  // function of (seed, the bodies dispatched). It would pass against a nondeterministic engine. The
-  // real proof is `e2e/cypress/e2e/01-hotseat-full-game.cy.ts` (browser hash vs a Node fold of the
-  // log) and `crates/engine/tests/golden.rs` (the same log folded by the Rust engine).
+  // function of (seed, the bodies dispatched). The real proof is `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`
+  // (browser hash vs a Node fold of the log) and `crates/engine/tests/golden.rs` (the same log folded by
+  // the Rust engine).
   it("two sessions with the same seed and the same actions agree on hash() and log()", () => {
     const bodies: ActionBody[] = [
       { type: "endTurn" },
@@ -611,8 +605,7 @@ describe("with the real engine", () => {
   });
 
   it("R180 a handicapped game starts from its handicap, fatigues on it (R315), and folds with it", () => {
-    // Spec 25's first scenario, headless: seat 1 plays a 4-card library (its handicap's deckSize,
-    // R184), holds all four cards after its turn-1 draw, and its turn-3 draw is fatigue 1.
+    // Spec 25's first scenario, headless: seat 1 plays a 4-card library (its handicap's deckSize, R184).
     const seed = "hotseat-handicap-fatigue";
     const handicaps = { p1: { deckSize: 4, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 } };
     const short = decks[0].slice(0, 4);
@@ -827,7 +820,6 @@ describe("printedCost and byIndex", () => {
     expect(byIndex(def(2), def(10))).toBeLessThan(0);
     expect(byIndex(def(10), def(2))).toBeGreaterThan(0);
     expect(byIndex(def(2), def(2))).toBe(0);
-    // A non-numeric index sorts after every numeric one, and two of them still order.
     const rush = def(1, { id: "t-rush", index: "T-rush" });
     const sheep = def(1, { id: "t-sheep", index: "T-sheep" });
     expect(byIndex(def(100), rush)).toBeLessThan(0);

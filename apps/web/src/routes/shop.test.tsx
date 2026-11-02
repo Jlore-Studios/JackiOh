@@ -1,10 +1,7 @@
-// `/shop` (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000): the Shop screen holds the Jlore shop, the
-// card packs with their opening, the cosmetic packs and the token picker, each reading with the
-// caller's token and the others again when one changes the account (#1309, moved from the account
-// screen). Their odds and the pity are `/purchases`', which it links (R1665000). The route table serves
-// it behind the gate like `/collection` (the anonymous and pending bounces live in gate.test.tsx beside
-// the other routes'): an active account sees the shop, the landing's Shop door lands on it, and the
-// account screen links it no more but by the top bar's Jlore pill (R1646000, R1651000).
+// `/shop` (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000): four panels, each reading with the caller's
+// token and the others again when one changes the account (#1309); odds and pity are `/purchases`'
+// (R1665000). Gated like `/collection` (its bounces are in gate.test.tsx); the account screen links it
+// only by the top bar's Jlore pill (R1646000, R1651000).
 
 import { CATALOG } from "@jackioh/cards";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -69,7 +66,7 @@ function shopRead(call: Call): Reply | undefined {
   }
 }
 
-/** The gate's read, the account screen's profile and the Shop's six reads, answered from the fixtures. */
+/** The gate's read, the account's profile and the Shop's six reads, from the fixtures. */
 function serveShop(status: "active" | "pending" = "active"): StubServer {
   return stubServer((call) => {
     if (call.path === "/api/auth/me") {
@@ -236,7 +233,6 @@ describe("#1577 the shop screen", () => {
     let owned = before;
     stubServer((call) => {
       if (call.method === "POST" && call.path === "/api/cosmetic-packs/open") {
-        // The server settled the grant: the ledger lists both cosmetics from now on.
         owned = {
           cards: [...before.cards, { cardId: "core-001", cosmeticId: "border-stone" }],
           account: [...before.account, "table-marble"],
@@ -273,7 +269,6 @@ describe("#1577 the shop screen", () => {
         </ViewerAccountCosmetics>
       </ViewerFullArt>,
     );
-    // The first read landed: the chessboard is owned and the marble is not, yet.
     await waitFor(() => {
       expect(screen.getByTestId(collectionTestid.tile("table-chessboard"))).toHaveAttribute("data-owned", "true");
     }, SLOW);
@@ -298,7 +293,7 @@ describe("#1577 the shop screen", () => {
     serveShop();
     render(<ShopRoute token={TOKEN} />);
 
-    // Wait for every panel to read, so an element a panel draws only once it has its answer would be here.
+    // Every panel has read, so anything drawn only on an answer would be here.
     await screen.findByTestId(packTestid.open("Core"), undefined, SLOW);
     await screen.findByTestId(shopTestid.unopened, undefined, SLOW);
     await screen.findByTestId(shopTestid.cardBar, undefined, SLOW);

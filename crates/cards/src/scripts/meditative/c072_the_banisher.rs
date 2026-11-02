@@ -72,8 +72,7 @@ mod tests {
     #[test]
     fn exiles_both_ways() {
         let mut s = banisher_game();
-        // Ours attacks their Taunt, the 9/9 Menace: its 2 marks it, and the check exiles it ahead of
-        // deaths, so no death collects it. The Banisher itself dies to the strike back as usual.
+        // Ours attacks the 9/9 Menace: its 2 marks it, and the check exiles it ahead of deaths.
         let banisher = s.unit(P1, 1).unwrap().id;
         let menace = s.unit(P2, 1).unwrap().id;
         s.attack(&banisher, &menace);
@@ -83,8 +82,7 @@ mod tests {
         );
         s.expect_in_zone(&menace, "exile");
         s.expect_in_zone(&banisher, "graveyard");
-        // Their big Felinor attacks our second Banisher: its strike back marks the attacker, so the
-        // exile works facing either way, and our Banisher dies as usual.
+        // Their big Felinor attacks our second Banisher: its strike back marks the attacker.
         s.end_turn();
         let big = s.unit(P2, 2).unwrap().id;
         let ours = s.unit(P1, 2).unwrap().id;
@@ -211,7 +209,6 @@ mod tests {
 
     #[test]
     fn its_own_death_still_happens() {
-        // The 9/9 strikes back for 9: the Banisher dies as usual, `destroyed` and graveyard.
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": ["core-005"] },
@@ -228,7 +225,6 @@ mod tests {
 
     #[test]
     fn radiant_cleave_exiles() {
-        // The Radiant face's Cleave carries the mark to the neighbours it damages.
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": ID, "radiant": true }] },

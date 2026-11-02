@@ -18,14 +18,13 @@ pub const ID: &str = "classic-073";
 pub fn script() -> CardScripts {
     let base = Script::default();
     CardScripts {
-        // The same empty script: the Radiant face's 6/12 and its Charge for Rush are catalog data.
         radiant: base.clone(),
         base,
     }
 }
 
 // C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 3/6 → 6/12: Rush,
-// Cleave, Lifesteal; Radiant: Charge, Cleave, Lifesteal. Keywords only.
+// Cleave, Lifesteal; Radiant: Charge, Cleave, Lifesteal.
 
 /// `describe("C #73 Nurse Cleaver")`.
 #[cfg(test)]
@@ -44,17 +43,14 @@ mod tests {
 
     use crate::merged;
 
-    /// TS `SPARE: SideSetup`.
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": [VANILLA, VANILLA] })
     }
 
-    /// Three 4/4s side by side, the middle one the defender.
     fn row() -> Value {
         merged(json!({ "field": [VANILLA, VANILLA, VANILLA] }), spare())
     }
 
-    /// The damage instances the Cleaver dealt in the last step: (target, amount), in order.
     fn cleaver_hits(s: &Scenario) -> Vec<(String, i32)> {
         let cleaver = s.card(CLEAVER).id.clone();
         s.last_events()
@@ -71,7 +67,6 @@ mod tests {
             .collect()
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -111,12 +106,10 @@ mod tests {
             let mut s = scenario(json!({ "p1": merged(json!({ "field": [CLEAVER], "health": 10 }), spare()), "p2": row() }));
             let middle = s.unit(P2, 2).expect("p2's middle unit");
             s.attack(CLEAVER, &middle);
-            // Three hits of 3; the defender's 4 back does not heal anyone.
             s.expect_health(P1, 19);
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 

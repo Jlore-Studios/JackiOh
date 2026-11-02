@@ -1,6 +1,5 @@
-// R768000, issue #768: how a result screen opens a replay. "Watch the replay" opens at step 0;
-// "Share the last turn" opens at the last step with "Share as GIF" open and that turn's GIF already
-// being made, once. A finished match's replay, whose length the client does not hold, loads its
+// R768000, issue #768: a result screen opens a replay at step 0, or at the last step with that turn's
+// GIF being made, once. A finished match's replay, whose length the client does not hold, loads its
 // first page first (`openOnlineMatchReplay`, `OpenedReplay`) and says why when it cannot.
 
 import { CATALOG } from "@jackioh/cards";
