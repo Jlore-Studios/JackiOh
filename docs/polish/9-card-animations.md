@@ -160,3 +160,4 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
 - #2782's full text, with its 27 motif names and section 4's table layout, is not in the
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
+- `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
