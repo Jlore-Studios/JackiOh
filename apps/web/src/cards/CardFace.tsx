@@ -37,6 +37,11 @@
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
 // 2–5") under its text.
 //
+// R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
+// (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
+// it has no name banner, signature, rarity gem, set mark or crest. Its name stays in its words,
+// visually hidden (`.cf-hand-name`), for a screen reader and the by-name finders.
+//
 // R2718000: a face with a rules box, blank ones included, prints its set's watermark behind the words: its set
 // mark (R503) large, faint and in one ink (`.cf-watermark`, an `img` with no text, setMark.ts `watermarkOf`).
 // Glitch, a face with no box (compact, full art), a set with no symbol and the Set watermarks setting off print
@@ -86,6 +91,8 @@ export type CardFaceProps = {
    */
   ascentLevel?: number | null;
   worn?: boolean;
+  /** R2723000: a card in the viewer's own hand on a board they play (Card.tsx): a full-art face there draws its art alone. */
+  ownHand?: boolean;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -266,7 +273,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false }: CardFaceProps): ReactElement {
+export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false, ownHand = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -277,6 +284,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const textRef = useRef<HTMLSpanElement>(null);
 
   const full = layout === "full";
+  // R1017001: a full-art card fills its full face with its art, and prints no words.
+  const fullArt = full && showsFullArt(face, fullArtOn);
+  // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
+  // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
+  const bare = fullArt && ownHand;
   // Issues #814, #1017: a short form is the full text's prefix, so its values (R280), marks and tuned
   // numbers keep their offsets, and RulesText drops marks past the printed words. A Quest card's
   // stage (R2450000) is no prefix, so it brings its marks and tuned numbers with it (`text`).
@@ -288,7 +300,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const printed = printedText(face, shown);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, face.name);
+  useFitText(nameRef, bare ? "" : face.name);
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
@@ -303,14 +315,13 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const glitch = isGlitch(face.defId);
   // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
   const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
-  // R1017001: a full-art card fills its full face with its art, and prints no words.
-  const fullArt = full && showsFullArt(face, fullArtOn);
   const tier = fullArt ? fullArtTier : null;
   const moving = tier === "Legendary" || tier === "Mythic";
+  const signed = tier === "Mythic" && !bare;
 
   return (
     <span
-      className={cx("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", tier === "Mythic" && "cf-full-art--signed")}
+      className={cx("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", signed && "cf-full-art--signed")}
       data-layout={layout}
       data-card-type={face.type}
       data-rarity={rarity ?? undefined}
@@ -324,6 +335,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-full-art-motion={moving ? (settings.animatedFoil ? "animated" : "static") : undefined}
       {...cosmetics}
@@ -341,7 +353,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
           </span>
         )}
 
-        {crested(rarity) && (
+        {crested(rarity) && !bare && (
           <span className="cf-crest">
             <Icon name="crest" />
           </span>
@@ -365,19 +377,23 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
           {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
         </span>
 
-        <span className="card-name" ref={nameRef}>
-          {face.name}
-        </span>
+        {bare ? (
+          <span className="cf-hand-name">{face.name}</span>
+        ) : (
+          <span className="card-name" ref={nameRef}>
+            {face.name}
+          </span>
+        )}
 
-        {tier === "Mythic" && <FullArtSignature name={face.englishName ?? face.name} />}
+        {signed && <FullArtSignature name={face.englishName ?? face.name} />}
 
-        {hasRarityGem(rarity) && (
+        {hasRarityGem(rarity) && !bare && (
           <span className="cf-gem" data-rarity={rarity ?? undefined}>
             <Icon name="gem" />
           </span>
         )}
 
-        {!glitch && <SetMarkBadge set={face.set} />}
+        {!glitch && !bare && <SetMarkBadge set={face.set} />}
 
         <CardStates face={face} />
 

@@ -103,6 +103,7 @@ hour (`RELEASE_HOUR`, `RELEASE_TZ`) and the label (`RELEASE_LABEL`).
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
+| GitHub secret | `CLOUDFLARE_BILLING_TOKEN`: a custom token with the account's Billing: Read alone | `cf-spend.yml` |
 | GitHub secret | `BOT_GITHUB_TOKEN` (already set) | moving `production` |
 | `infra/terraform.tfvars` (git ignores it) | `staging_team_emails`: who Access lets into staging | `terraform apply` |
 
@@ -115,6 +116,13 @@ every visitor, and the repository is public.
 ## 4. Moving from Render and Vercel, in order
 
 Production keeps serving from Render until step 6 verifies the new server, so do these in order.
+
+**Actions -> cutover** (`.github/workflows/cutover.yml`) runs steps 3 and 6's secrets, the copy and
+the dropping of staging's keep-alive, one `step` a run, so no secret passes through a person: each
+value goes from Render's `jackioh-server` or a repository secret straight to where it is used. It
+needs only `RENDER_API_KEY` and `CLOUDFLARE_API_TOKEN`, which the repository holds, and for production
+`PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key and
+session pooler URI, with its password). The commands below are what it does, for doing it by hand.
 
 ### Step 1: Hold production, then merge
 
@@ -148,7 +156,8 @@ Supabase's **session pooler** URI (Supabase -> Connect -> Session pooler), which
 direct host is IPv6-only, and a container's outbound IPv6 is not something to depend on. Copy
 `DEV_PROFILE_IDS` if Render has it. Production's are set in step 6, from its own project. A secret reaches a container when it
 starts, so after setting them run **deploy staging** by hand (Actions -> deploy staging -> Run
-workflow).
+workflow). Actions -> cutover, step `staging-secrets`, does all of this once deploy staging has
+created the Worker.
 
 ### Step 4: Staging's address and Access
 
@@ -191,9 +200,10 @@ Replace `$SITE` with `https://staging.jackioh.com`. A browser asks for an Access
 1. Step 3's secrets for `--env=""`, from JackiOh-Production (Project Settings -> API Keys, and its
    own session pooler URI), with the `CODE_PEPPER` and `DEV_PROFILE_IDS` Render holds: the copy
    keeps every invite code's hash and every account's id, so the same pepper and ids still fit.
+   Actions -> cutover, step `production-secrets`.
 2. Copy the data into JackiOh-Production (section 8, The copy), straight before the next item: Render
    writes to the old project until the redeploy, so anything a player saves between the two stays
-   on staging.
+   on staging. Actions -> cutover, step `drop-ping` first, then `copy` with `dry_run` and without.
 3. Actions -> promote production -> Run workflow, with **redeploy** ticked. This deploys `production`
    as it is to the `jackioh` Worker and its container, and checks the live site.
 4. Verify as in step 5 against `https://jackioh.com` (no Access). The site and the server now share
@@ -267,6 +277,13 @@ instance; the second project's instance is billed on top, and each project's dis
 (`apps/edge/src/index.ts`) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its site's
 server awake through its presence beat.
 
+Cloudflare has no spend cap, so two things watch the usage bill (the plan's $5 aside). The account's
+budget alerts (Notifications -> Budget Alert: one at $1 and the auto-created one at $10) email the
+owner when the period's projected usage spend crosses them. `cf-spend.yml` reads the same figures
+once a day and opens a `human` issue once the period's spend, or its projection, reaches its
+`ALERT_DOLLARS` ($15, about both containers awake all month); it needs `CLOUDFLARE_BILLING_TOKEN`
+(section 3) and says so, green, until it is set.
+
 ## 7. Known gaps
 
 - **An open tab can run an older client.** A deploy ships both halves together, but a browser that
@@ -309,7 +326,8 @@ makes `stats_importer` but granted only `select`.
 **The copy,** at section 4's step 6 with production on `/hold`: Supabase's own way between projects,
 the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the empty production
 project, both through their session pooler URIs as `postgres`, held in a file outside the repository
-(`chmod 600`) and never pasted anywhere:
+(`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, does it all, refuses a
+production project that is not empty, and rolls the whole copy back when the counts differ:
 
 ```
 supabase db dump --db-url "$STAGING_DB_URL" -f roles.sql --role-only

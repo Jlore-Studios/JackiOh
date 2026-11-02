@@ -5,12 +5,13 @@
 //! #1086 prices what a side has banked in public state, #1224 what its coming refreshes will or will
 //! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see. The
 //! decision's root prices each Death the seat can read by what it leaves behind (#2424; a Starship
-//! Piece's by the copy it fuses into, #2566), each turn hook by one firing (#2477, #2565; the start of
-//! the opponent's turn too, #2689), each Activate by one use (#2564; a face-up backrow card's, #2603)
-//! and each attack hook by the unit's next attack against its hookless twin's (#2688), and the rest read
-//! them (`Prices`), counting a start-of-turn or end-of-turn firing once for each time its controller's
-//! turn runs it (Meditative #9 Joint Filing's extra runs, #2689). It reads only what the seat may know or
-//! what a determinization sampled, and nothing here reads a handicap or a difficulty (R180).
+//! Piece's by the copy it fuses into, #2566; a backrow card's, either side's, and a hand Field Spell's,
+//! #2687), each turn hook by one firing (#2477, #2565; the start of the opponent's turn too, #2689),
+//! each Activate by one use (#2564; a face-up backrow card's, #2603) and each attack hook by the unit's
+//! next attack against its hookless twin's (#2688), and the rest read them (`Prices`), counting a
+//! start-of-turn or end-of-turn firing once for each time its controller's turn runs it (Meditative #9
+//! Joint Filing's extra runs, #2689). It reads only what the seat may know or what a determinization
+//! sampled, and nothing here reads a handicap or a difficulty (R180).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -28,12 +29,13 @@ use jackioh_engine::{
     Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag, active_brittle_count,
     active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
-    effective_cost, effective_life, face_of, find_def, find_instance, find_instance_mut, first_entry_zone,
-    frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_standing_unit, is_starship_piece,
-    is_temporary_card, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pierces, pile_at, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
+    first_entry_zone, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_standing_unit,
+    is_starship_piece, is_temporary_card, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
+    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -132,9 +134,10 @@ pub(crate) fn deft_in_defense(view: &UnitView) -> bool {
     view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Deft)
 }
 
-/// R2424000: what a unit's Death leaves its controller, as a decision's root priced it (`death_prices`),
-/// and the card it prices: its definition, its face, its granted Deaths and its stat override (Trigor's
-/// Death reads its base stats), so the same card the search moves or makes later reads the same price.
+/// R2424000, R2687000: what a unit's or a backrow card's Death leaves its controller, as a decision's
+/// root priced it (`death_prices`), and the card it prices: its definition, its face, its granted Deaths
+/// and its stat override (Trigor's Death reads its base stats), so the same card the search moves or
+/// makes later reads the same price.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeathPrice {
     pub def_id: String,
@@ -165,14 +168,16 @@ impl DeathPrice {
 }
 
 /// R2424000, R2566000: whether `card`'s death leaves its controller something to price: a live Death
-/// (`death_hook_of`: a Vanilla unit has none), or, while it is a Starship Piece (`is_starship_piece`:
-/// the keyword through the layers, face-up), the copy its death fuses into its owner's Starship (R1852000).
+/// (`death_hook_of`, a unit's or a backrow card's, R2687000: a Vanilla card has none), or, while it is
+/// a Starship Piece (`is_starship_piece`: the keyword through the layers, face-up), the copy its death
+/// fuses into its owner's Starship (R1852000).
 fn leaves_behind(state: &GameState, card: &CardInstance) -> bool {
     death_hook_of(state, card).is_some() || is_starship_piece(state, card)
 }
 
-/// R2424000: what `unit`'s death leaves its controller, by `prices`, while it leaves something
-/// (`leaves_behind`, R2566000). 0 where `prices` has no entry and at a zero `death` weight.
+/// R2424000, R2687000: what `unit`'s death, a unit's or a backrow card's, leaves its controller, by
+/// `prices`, while it leaves something (`leaves_behind`, R2566000). 0 where `prices` has no entry and at
+/// a zero `death` weight.
 fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     if w.death == 0.0 {
         return 0.0;
@@ -763,6 +768,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 // R2477000, R2565000: what one firing of its turn hooks gives its controller, as the root
                 // priced it; either side's, since a card the seat can read is one it may price.
                 value += w.turn_hook * turn_hook_price(state, card, w, prices);
+                // R2687000: what its Death leaves its controller, as the root priced it, outside its
+                // Brittle share as a unit's is (R2424000): a crumble is a destroy, so a card that crumbles
+                // still pays it. Either side's; an enemy face-down card is not here.
+                value += w.death * death_price(state, card, w, prices);
                 // R2603000: what one use of its Activate gives its controller, as the root priced it, inside
                 // its Brittle share as a unit's is (R2564000); either side's.
                 value += brittle_share(card, w) * w.activation * activation_price(state, card, w, prices);
@@ -1096,10 +1105,11 @@ fn sandbox_step(
     Some((next.pending.is_none() && next.result.is_none()).then_some(next))
 }
 
-/// R2424000: what `unit`'s Death leaves its controller on `before`, a sandbox (R923000): the controller's
-/// evaluation after the destroy, which runs its Death, less after its remove, which does not (R923003),
-/// less the body a Reborn brings back. `None` when the counter is spent; `Some(None)` when the destroy
-/// spares the unit, or either leaves a prompt open or ends the game (`sandbox_step`).
+/// R2424000, R2687000: what `unit`'s Death leaves its controller on `before`, a sandbox (R923000),
+/// `unit` a unit or a backrow card: the controller's evaluation after the destroy, which runs its Death,
+/// less after its remove, which does not (R923003), less the body a Reborn brings back. `None` when the
+/// counter is spent; `Some(None)` when the destroy spares the card, or either leaves a prompt open or
+/// ends the game (`sandbox_step`).
 fn death_probe(
     before: &GameState,
     seat: PlayerId,
@@ -1109,13 +1119,14 @@ fn death_probe(
     let destroy = SandboxOp::Destroy {
         instance_id: unit.id.clone(),
     };
+    let mark = exit_mark(before);
     let Some(destroyed) = sandbox_step(before, seat, destroy, counter)? else {
         return Some(None);
     };
-    // A unit still on the field with its Reborn as it was is one the destroy spared (Indestructible).
-    let spared = find_instance(&destroyed, &unit.id)
-        .is_some_and(|card| card.zone.z() == ZoneName::Field && card.reborn_spent == unit.reborn_spent);
-    if spared {
+    // R174, R2687000: a card that never left the field is one the destroy spared (Indestructible); one
+    // back under the same id left all the same: a Reborn body, or a card its own Death returns
+    // (Stinkyscape #112 Job Application).
+    if !left_field_after(&destroyed, mark, &unit.id) {
         return Some(None);
     }
     let remove = SandboxOp::Remove {
@@ -1186,24 +1197,63 @@ fn spawn_hand_unit(
     Some(Some((placed, unit)))
 }
 
-/// R2424000: `death_probe` for a Unit in `seat`'s hand, placed on its field first (`spawn_hand_unit`).
+/// R923001, R2565000, R2687000: `card`, a Field Spell in `seat`'s hand, spawned into the backrow zone a
+/// play would take (`first_entry_zone`, a fresh card of its definition and face), with the state after
+/// it and the card as it stands. `None` when the counter refuses the step; `Some(None)` on a full
+/// backrow or a refused tool.
+fn spawn_hand_field_spell(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
+    let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
+        return Some(None);
+    };
+    let spawn = SandboxOp::Spawn {
+        player: seat,
+        def_id: card.def_id.clone(),
+        radiant: card.radiant.then_some(true),
+        to: SpawnZone::Field {
+            row: Row::Backrow,
+            lane: slot.lane,
+        },
+    };
+    let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
+        return Some(None);
+    };
+    let Some(set) = card_at(&placed, slot).cloned() else {
+        return Some(None);
+    };
+    Some(Some((placed, set)))
+}
+
+/// R2424000, R2687000: `death_probe` for a Unit or a Field Spell in `seat`'s hand, placed on its field
+/// (`spawn_hand_unit`) or set in its backrow (`spawn_hand_field_spell`) first.
 fn spawned_death_probe(
     world: &GameState,
     seat: PlayerId,
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<f64>> {
-    let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
+    let spawned = match card_type_of_face(world, &card.def_id, card.radiant) {
+        CardType::Unit => spawn_hand_unit(world, seat, card, counter)?,
+        CardType::FieldSpell => spawn_hand_field_spell(world, seat, card, counter)?,
+        _ => return Some(None),
+    };
+    let Some((placed, spawned)) = spawned else {
         return Some(None);
     };
-    death_probe(&placed, seat, &unit, counter)
+    death_probe(&placed, seat, &spawned, counter)
 }
 
 /// R2424000: the Death prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe world
-/// (R185), each card once: every unit on either field whose Death is live, the seat's first, then each Unit
-/// in the seat's hand with one (R923001). R2566000: last, each Starship Piece with none, so pieces never take
-/// the nodes a Death drew. On a sandbox copy (R923000), automatic turn end off (R345, R82), no price passed
-/// (R923003), at most `AI_DEATH_PROBE_NODES` nodes from `counter`.
+/// (R185), each card once: every unit on either field whose Death is live, the seat's first, then
+/// (R2687000) every backrow card with one the seat can read (`readable_by`: never a face-down enemy card),
+/// the seat's first, then each Unit and Field Spell in the seat's hand with one (R923001). R2566000: last,
+/// each Starship Piece with none, so pieces never take the nodes a Death drew. On a sandbox copy (R923000),
+/// automatic turn end off (R345, R82), no price passed (R923003), at most `AI_DEATH_PROBE_NODES` nodes
+/// from `counter`.
 pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
     if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1212,12 +1262,24 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
         .into_iter()
         .chain(active_units_of(world, seat.opponent()))
         .map(|unit| (unit, false));
+    // R2687000: then the backrow cards the seat can read, its own and then the enemy's, never a Unit
+    // standing there (one of the units above, R1081000) nor a face-down enemy card (R185).
+    let backrow = [seat, seat.opponent()]
+        .into_iter()
+        .flat_map(|player| world.players[player].backrow.iter().flatten())
+        .filter(|card| readable_by(world, card, seat) && !is_standing_unit(world, card))
+        .map(|card| (card, false));
     let hand = world.players[seat]
         .hand
         .iter()
-        .filter(|card| card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit)
+        .filter(|card| {
+            matches!(
+                card_type_of_face(world, &card.def_id, card.radiant),
+                CardType::Unit | CardType::FieldSpell
+            )
+        })
         .map(|card| (card, true));
-    let listed: Vec<(&CardInstance, bool)> = field.chain(hand).collect();
+    let listed: Vec<(&CardInstance, bool)> = field.chain(backrow).chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
     for pieces in [false, true] {
         for &(card, in_hand) in &listed {
@@ -1352,8 +1414,8 @@ fn turn_hook_probe(
 }
 
 /// R2477000, R2565000, R2689000: `turn_hook_probe` for a Field Spell or a Unit in `seat`'s hand, set or
-/// placed first (R923001's spawn): a Field Spell in the backrow zone a set would take (`first_entry_zone`;
-/// a full backrow prices nothing), a Unit as `spawn_hand_unit` does.
+/// placed first (R923001's spawn): a Field Spell as `spawn_hand_field_spell` sets it (a full backrow
+/// prices nothing), a Unit as `spawn_hand_unit` does.
 fn spawned_turn_hook_probe(
     world: &GameState,
     seat: PlayerId,
@@ -1368,22 +1430,7 @@ fn spawned_turn_hook_probe(
             turn_hook_probe(&placed, seat, &unit.id, counter)
         }
         CardType::FieldSpell => {
-            let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
-                return Some(None);
-            };
-            let spawn = SandboxOp::Spawn {
-                player: seat,
-                def_id: card.def_id.clone(),
-                radiant: card.radiant.then_some(true),
-                to: SpawnZone::Field {
-                    row: Row::Backrow,
-                    lane: slot.lane,
-                },
-            };
-            let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
-                return Some(None);
-            };
-            let Some(set) = card_at(&placed, slot).cloned() else {
+            let Some((placed, set)) = spawn_hand_field_spell(world, seat, card, counter)? else {
                 return Some(None);
             };
             turn_hook_probe(&placed, seat, &set.id, counter)

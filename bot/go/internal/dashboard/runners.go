@@ -69,11 +69,13 @@ var Workflows = map[string]string{
 		"reviewed), deliver",
 	"bot-status.yml": "this issue's loop: rewrites it, sweeps, plans and starts night runs, " +
 		"delivers them",
+	"cf-spend.yml":    "daily: an issue once Cloudflare's usage spend is on course past its alert",
 	"ci-duration.yml": "after CI, an issue for any job over seven minutes",
 	"ci.yml":          "CI: the five required checks on a pull request; everything on a push to main",
 	"claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 " +
 		"Central",
 	"code-audit.yml":         "every three days: the code audit's issue for the night bot",
+	"cutover.yml":            "by hand, once: the move's secrets and database copy (delete after it)",
 	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
 	"deploy-staging.yml":     "deploys main to staging after every green CI run on main",
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
