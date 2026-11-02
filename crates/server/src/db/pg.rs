@@ -765,7 +765,7 @@ impl ResultDbRow {
 fn to_result(row: ResultDbRow) -> Result<ResultRow, StoreError> {
     Ok(ResultRow {
         match_id: row.match_id,
-        // See KNOWN DIVERGENCES (deleted accounts): a deleted seat reads back as an empty id.
+        // KNOWN DIVERGENCES, deleted accounts.
         players: (
             row.p1_profile_id.unwrap_or_default(),
             row.p2_profile_id.unwrap_or_default(),
@@ -1248,7 +1248,7 @@ fn to_series(row: SeriesDbRow) -> Result<SeriesRow, StoreError> {
     };
     let side = |profile_id: Option<String>, held: &Value| -> Result<SeriesSide, StoreError> {
         Ok(SeriesSide {
-            // See KNOWN DIVERGENCES (deleted accounts): a deleted seat reads back as an empty id.
+            // KNOWN DIVERGENCES, deleted accounts.
             profile_id: profile_id.unwrap_or_default(),
             trio: frozen_trio_of(held.get("trio").unwrap_or(&Value::Null))?,
             wins: state_field(held, "wins")?,

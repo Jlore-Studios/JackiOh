@@ -6,9 +6,8 @@
 //! The server is the only judge of a name (§9.1, CLAUDE.md rule 7). It is only a display label: every
 //! table, request and log names a player by profile id (R1436).
 //!
-//! - [`normalize_username`] checks a proposed base name (R1432, R1433) and answers its stored form, NFKC.
-//! - [`username_key`] is the NFKC case fold two names clash on (R1434). Both stores call it; Postgres
-//!   collation never decides.
+//! [`username_key`] is the NFKC case fold two names clash on (R1434). Both stores call it; Postgres
+//! collation never decides.
 
 use caseless::default_case_fold_str;
 use unicode_normalization::UnicodeNormalization;

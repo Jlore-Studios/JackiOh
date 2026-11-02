@@ -205,9 +205,8 @@ macro_rules! h {
 }
 
 /// Every route the server serves, in one table, in the order the router tries them in
-/// (`api::http::dispatch`), which tests assert. `GET /api/catalog` reports the deployed commit in a
-/// header (`api::catalog`). Auth levels (§9.4): `None` is open; `User` is a verified token and a
-/// profile of any status (the code screen); `Active` also needs `status = 'active'`.
+/// (`api::http::dispatch`), which tests assert. Auth levels (§9.4): `None` is open; `User` is a
+/// verified token and a profile of any status (the code screen); `Active` also needs `status = 'active'`.
 pub static ROUTES: &[Route] = &[
     // api/auth.rs
     (

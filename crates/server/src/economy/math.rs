@@ -340,9 +340,9 @@ mod tests {
     }
 
     /// The seeded simulation (SPEC §14.4, R1339001) reports each tracked rarity's share of packs holding it
-    /// with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^PACK_SLOTS` (30.4%, 9.6% and 4.9%), and tunes
-    /// nothing to them: the rate with pity is at least the rate before it, within `RATE_TOLERANCE`, and no
-    /// counter ever reaches its threshold (pity fires on the threshold pack).
+    /// with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^PACK_SLOTS`, and tunes nothing to them: the
+    /// rate with pity is at least the rate before it, within `RATE_TOLERANCE`, and no counter ever reaches
+    /// its threshold (pity fires on the threshold pack).
     #[test]
     fn r1339001_the_simulation_reports_pity_on_top_and_caps_every_counter() {
         const PACKS: usize = 200_000;

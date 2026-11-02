@@ -513,7 +513,6 @@ async fn upgrade_socket(
 /// Authenticates upgraded socket and attaches to registry (R1379000).
 pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri, token: Option<String>) {
     let refuse = |code: u16, message: &str| {
-        // Send forbidden error frame and close socket.
         socket.send(error_frame(SocketErrorCode::Forbidden, message));
         socket.close(Some(code), Some(message));
     };

@@ -1058,8 +1058,8 @@ impl Default for RateLimiter {
     }
 }
 
-/// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, the one fallback of `app::router`,
-/// behind the CORS layer, which answers preflights first.
+/// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, behind the CORS layer, which answers
+/// preflights first.
 ///
 /// §9.8's per-account limit is `app.limiter`, keyed (SPEC §11 R157) on `profiles.id` (§9.4), not the
 /// auth user or token a caller can hold several of, since one shared counter lets one caller spend

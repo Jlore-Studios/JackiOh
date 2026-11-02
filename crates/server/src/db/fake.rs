@@ -3,7 +3,7 @@
 //!
 //! R144 makes the server reseed its fixture accounts and invite codes at boot, and the e2e suite has no
 //! Postgres, so this test fixture lives in `src/`: `src/app.rs` chooses it only when `env.E2E` is true
-//! (`src/env.rs` refuses `E2E` with `NODE_ENV=production`). The real implementation is `src/db/pg.rs`.
+//! (`src/env.rs` refuses `E2E` with `NODE_ENV=production`).
 //!
 //! It is strict everywhere Postgres is strict (SPEC §9.4, §9.5), or a laxer fixture would let a real bug pass
 //! the suite: a transaction snapshots every table at `begin`, restores it unless committed and runs one at a

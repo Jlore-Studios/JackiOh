@@ -6,7 +6,7 @@
 //! unstarted games after `SERIES_START_GRACE_SECONDS`.
 //! Ladder bot sides pick via sweeper delays (R641000) and rate as bots (R610).
 //!
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2. Sweeper: `run_sweeper`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use std::sync::Arc;
 use std::time::Duration;
