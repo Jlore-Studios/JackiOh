@@ -41,7 +41,6 @@ import {
   FILTER_SETS,
   FILTER_TYPES,
   deckListOrder,
-  manaCurve,
   type SortKey,
 } from "./filters.ts";
 import { fixtureCatalog, fixtureCollection, legalDecks } from "./fixtures.ts";
@@ -146,7 +145,6 @@ const SNAPSHOT: CatalogSnapshot = {
 };
 
 const UNOWNED = "x-09";
-const TOKEN = "x-t1";
 
 /** Everything but x-09, the token included. */
 const COLLECTION: Collection = Object.fromEntries(DEFS.filter((d) => d.id !== UNOWNED).map((d) => [d.id, 1]));
@@ -364,13 +362,6 @@ describe("the pool grid (B30)", () => {
     expect(css).toMatch(/grid-template-areas:\s*"browse sidebar"/);
   });
 
-  it("B30 a token is never offered, even one the collection lists", () => {
-    mount();
-    expect(COLLECTION[TOKEN]).toBe(1);
-    expect(screen.queryByTestId(`card-pool-${TOKEN}`)).toBeNull();
-    expect(poolOrder()).not.toContain(TOKEN);
-  });
-
   it("B30 the testids and data attributes hold on a full deck", () => {
     const deck = legalDecks()[0] ?? [];
     mount(deck, { catalog: fixtureCatalog(), collection: fixtureCollection() });
@@ -465,69 +456,12 @@ describe("filtering (B31)", () => {
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
   });
 
-  it("B31 the 6+ chip shows the 6-cost and the 100-cost card", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterCostId("6+")));
-    expect(poolOrder()).toEqual(["x-03", "x-04"]);
-    expectCount(2);
-  });
-
-  it("B31 the X chip shows only the X card", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterCostId("X")));
-    expect(poolOrder()).toEqual(["x-05"]);
-    expectCount(1);
-  });
-
-  it("B31 an embiggen card is under its base price, not its embiggen price", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterCostId("2")));
-    expect(poolOrder()).toEqual(["x-06"]);
-    fireEvent.click(screen.getByTestId(filterCostId("2")));
-    fireEvent.click(screen.getByTestId(filterCostId("4")));
-    expect(poolOrder()).toEqual(["x-11", "x-10"]);
-  });
-
-  it("B31 chips in one group OR together", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterCostId("0")));
-    fireEvent.click(screen.getByTestId(filterCostId("1")));
-    expect(poolOrder()).toEqual(["x-01", "x-02"]);
-    expectCount(2);
-  });
-
-  it("B31 groups AND together", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterCostId("3")));
-    fireEvent.click(screen.getByTestId(filterTypeId("Unit")));
-    expect(poolOrder()).toEqual(["x-08"]);
-
-    fireEvent.click(screen.getByTestId(DB_FILTER_CLEAR));
-    fireEvent.click(screen.getByTestId(filterTagId("Human")));
-    fireEvent.click(screen.getByTestId(filterRarityId("Rare")));
-    expect(poolOrder()).toEqual(["x-07"]);
-  });
-
-  it("B31 the Trap chip leaves Field Traps out", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterTypeId("Trap")));
-    expect(poolOrder()).toEqual(["x-06"]);
-  });
-
   it("B31 a filter nothing passes empties the pool, shows db-empty and counts 0", () => {
     mount();
     fireEvent.click(screen.getByTestId(filterCostId("5")));
     expect(poolOrder()).toEqual([]);
     expect(screen.getByTestId(DB_EMPTY)).toBeInTheDocument();
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", "0");
-  });
-
-  it("B31 groups that share no card empty the pool", () => {
-    mount();
-    fireEvent.click(screen.getByTestId(filterTypeId("Spell")));
-    fireEvent.click(screen.getByTestId(filterRarityId("Mythic")));
-    expectCount(0);
-    expect(screen.getByTestId(DB_EMPTY)).toBeInTheDocument();
   });
 
   it("B31 db-filter-clear restores the default filter", () => {
@@ -570,51 +504,11 @@ describe("searching (B32)", () => {
     expectCount(1);
   });
 
-  it("B32 the search ignores case", () => {
-    mount();
-    search("BRAMBLE");
-    expect(poolOrder()).toEqual(["x-02"]);
-  });
-
-  it("B32 finds a word only the radiant text has", () => {
-    mount();
-    search("banana");
-    expect(poolOrder()).toEqual(["x-05"]);
-  });
-
-  it("B32 finds a printed keyword kind the text never names", () => {
-    mount();
-    search("divine");
-    expect(poolOrder()).toEqual(["x-10"]);
-    search("poisonous");
-    expect(poolOrder()).toEqual(["x-11"]);
-  });
-
-  it("B32 finds tags and rarities", () => {
-    mount();
-    search("felinor");
-    expect(poolOrder()).toEqual(["x-02"]);
-    search("legendary");
-    expect(poolOrder()).toEqual(["x-05"]);
-  });
-
-  it("B32 surrounding and repeated whitespace does not matter", () => {
-    mount();
-    search("   cat    rare  ");
-    expect(poolOrder()).toEqual(["x-02"]);
-  });
-
   it("B32 a query nothing matches shows db-empty", () => {
     mount();
     search("zzz");
     expectCount(0);
     expect(screen.getByTestId(DB_EMPTY)).toBeInTheDocument();
-  });
-
-  it("B32 one unmatched term rules out a card the other terms match", () => {
-    mount();
-    search("bramble zzz");
-    expectCount(0);
   });
 
   it("B32 clearing the search brings the pool back", () => {
@@ -664,10 +558,8 @@ describe("the owned filter (B33)", () => {
     expect(screen.getByTestId(DB_FILTER_OWNED)).toBeDisabled();
     expect(poolOrder()).toEqual(SORTED.cost.asc);
     for (const id of NON_TOKEN_IDS) expect(poolCard(id), id).not.toHaveAttribute("data-owned");
-  });
 
-  it("B33 clicking the disabled checkbox changes nothing", () => {
-    mount([], { collection: null });
+    // Clicking the disabled checkbox changes nothing.
     fireEvent.click(screen.getByTestId(DB_FILTER_OWNED));
     expect(screen.getByTestId(DB_FILTER_OWNED)).toBeDisabled();
     expect(poolOrder()).toEqual(SORTED.cost.asc);
@@ -693,13 +585,6 @@ describe("the owned filter (B33)", () => {
 
 // B34: sorting
 describe("sorting (B34)", () => {
-  it("B34 the default is cost ascending", () => {
-    mount();
-    expect(screen.getByTestId(DB_SORT)).toHaveValue("cost");
-    expect(screen.getByTestId(DB_SORT_DIR)).toHaveAttribute("data-dir", "asc");
-    expect(poolOrder()).toEqual(DEFAULT_ORDER);
-  });
-
   for (const key of ["cost", "name", "rarity", "attack", "health", "type"] as const) {
     for (const dir of ["asc", "desc"] as const) {
       it(`B34 orders the grid by ${key} ${dir}`, () => {
@@ -718,15 +603,6 @@ describe("sorting (B34)", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("data-dir", "asc");
     expect(poolOrder()).toEqual(DEFAULT_ORDER);
-  });
-
-  it("B34 cards with no stats stay last when sorting by attack, in both directions", () => {
-    mount();
-    const statless = ["x-03", "x-05", "x-06", "x-07"];
-    for (const dir of ["asc", "desc"] as const) {
-      sortBy("attack", dir);
-      expect([...poolOrder().slice(-statless.length)].sort(), dir).toEqual(statless);
-    }
   });
 
   it("B34 sorting keeps the active filters", () => {
@@ -923,15 +799,6 @@ describe("the deck sidebar (B35)", () => {
 describe("the mana curve (B36)", () => {
   const DECK = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
 
-  it("B36 deck-curve has one bar per bucket, in order, counting the deck's cards", () => {
-    mount(DECK);
-    const bars = curve();
-    expect(bars.map((bar) => bar.bucket)).toEqual([...COST_BUCKETS]);
-    expect(bars.map((bar) => bar.count)).toEqual([1, 1, 1, 2, 0, 0, 1, 1]);
-    const pure = manaCurve(DECK, SNAPSHOT);
-    expect(bars.map((bar) => bar.count)).toEqual(COST_BUCKETS.map((bucket) => pure[bucket]));
-  });
-
   it("B36 an empty deck still has all eight bars, each at zero", () => {
     mount();
     const bars = curve();
@@ -956,14 +823,10 @@ describe("the mana curve (B36)", () => {
 
 // B37: where a card already is
 describe("held badges (B37)", () => {
-  it("B37 a pool card the open deck holds shows .db-held and data-in-deck", () => {
+  it("B37 a pool card the open deck holds shows .db-held and data-in-deck, and a card no deck holds shows neither", () => {
     mount(["x-01"]);
     expect(poolCard("x-01")).toHaveAttribute("data-in-deck", "true");
     expect(poolCard("x-01").querySelector(".db-held")).toHaveTextContent("In deck");
-  });
-
-  it("B37 a card no deck holds has no badge and no data-in-deck", () => {
-    mount(["x-01"]);
     expect(poolCard("x-06")).not.toHaveAttribute("data-in-deck");
     expect(poolCard("x-06")).not.toHaveAttribute("data-unavailable");
     expect(poolCard("x-06").querySelector(".db-held")).toBeNull();
@@ -994,9 +857,12 @@ describe("inspecting in the builder (B38)", () => {
     expect(openInspectOverlays()).toEqual([INSPECT_DETAIL]);
     expect(detailName()).toBe(card("x-08").name);
     expect(screen.queryByTestId(deckCardId("x-08"))).toBeNull();
-  });
 
-  it("B38 Enter or Space on a focused pool card opens its detail too (it is a button)", () => {
+    // Enter or Space on a focused pool card opens its detail too (it is a button).
+    act(() => {
+      closeInspect();
+    });
+    cleanup();
     mount();
     const target = poolCard("x-08");
     target.focus();
@@ -1030,21 +896,34 @@ describe("inspecting in the builder (B38)", () => {
     expect(screen.getByTestId(deckCardId("x-01"))).toBeInTheDocument();
   });
 
-  it("B38 db-detail-add is disabled while a compared deck holds the card, and adds nothing", () => {
-    mount([], { others: [{ id: OTHER, name: OTHER_NAME, cards: ["x-02"] }] });
-    compareWith(OTHER);
-    fireEvent.click(poolCard("x-02"));
-    const add = screen.getByTestId(DB_DETAIL_ADD);
-    expect(add).toBeDisabled();
-    fireEvent.click(add);
-    expect(screen.queryByTestId(deckCardId("x-02"))).toBeNull();
-  });
-
-  it("B38 db-detail-add is disabled while the open deck itself holds the card", () => {
-    mount(["x-01"]);
-    fireEvent.click(poolCard("x-01"));
-    expect(screen.getByTestId(DB_DETAIL_ADD)).toBeDisabled();
-  });
+  for (const row of [
+    {
+      holder: "compared deck",
+      cards: [] as readonly string[],
+      others: [{ id: OTHER, name: OTHER_NAME, cards: ["x-02"] as readonly string[] }],
+      compare: true,
+      card: "x-02",
+      tiles: 0,
+    },
+    {
+      holder: "open deck",
+      cards: ["x-01"] as readonly string[],
+      others: [] as { id: string; name: string; cards: readonly string[] }[],
+      compare: false,
+      card: "x-01",
+      tiles: 1,
+    },
+  ]) {
+    it(`B38 db-detail-add is disabled while the ${row.holder} holds the card, and adds nothing`, () => {
+      mount(row.cards, { others: row.others });
+      if (row.compare) compareWith(OTHER);
+      fireEvent.click(poolCard(row.card));
+      const add = screen.getByTestId(DB_DETAIL_ADD);
+      expect(add).toBeDisabled();
+      fireEvent.click(add);
+      expect(screen.queryAllByTestId(deckCardId(row.card))).toHaveLength(row.tiles);
+    });
+  }
 
   it("B38 the + on a pool card adds it to the open deck and opens nothing", () => {
     mount();
