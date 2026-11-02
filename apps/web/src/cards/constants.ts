@@ -81,6 +81,12 @@ export const ART_DWELL_MS = 150;
 export const COSMETIC_FOIL_ANIMATED_MAX = 6;
 
 /**
+ * R2720000: the most a finish covers a full-art face's art: its band round the art's edge has this
+ * opacity at the rim and fades to nothing toward the middle. Mirrored in cosmetics.css.
+ */
+export const FULL_ART_FINISH_OPACITY = 0.6;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim. The hue's two ends, in degrees.

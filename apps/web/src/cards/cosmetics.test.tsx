@@ -24,6 +24,7 @@ import { unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
 import {
   COSMETIC_FOIL_ANIMATED_MAX,
+  FULL_ART_FINISH_OPACITY,
   RADIANT_GOLD_HUE_MAX_DEG,
   RADIANT_GOLD_HUE_MIN_DEG,
   RADIANT_GOLD_LIGHTNESS_MAX,
@@ -78,6 +79,7 @@ function sheet(name: string): string {
 
 const cosmeticsCss = sheet("cosmetics.css");
 const cardsCss = sheet("cards.css");
+const setmarkCss = sheet("setmark.css");
 const tableCss = readFileSync(join(HERE, "..", "game", "table.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 const collectionCss = readFileSync(join(HERE, "..", "collection", "collection.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -1129,6 +1131,118 @@ describe("R2655003 the full-art tiers' motion", () => {
     const text = ruleBody(cosmeticsCss, /\.cf-signature-text\s*\{/);
     expect(text).toMatch(/font-family:\s*var\(--font-signature\)/);
     for (const rule of all.filter((rule) => /cf-full-art|cf-signature/.test(rule.selector))) expect(hexes(rule.body), rule.selector).toEqual([]);
+  });
+});
+
+describe("R2720000 every finish on a full-art face", () => {
+  /** Every non-default finish: each paints a band of itself round a full-art face's art. */
+  const FINISHES = cosmeticsOf("finish")
+    .filter((cosmetic) => !cosmetic.default)
+    .map((cosmetic) => cosmetic.id);
+  const ANIMATED = ["finish-gilded-edge", "finish-obsidian", "finish-starlit"];
+  const GATE = ':root:not([data-reduce-motion="true"]) ';
+
+  /** The rules painting the band: those whose selector reaches the panel's ::before for a finish. */
+  function bandRules(): { selector: string; body: string; at: number }[] {
+    return rules(cosmeticsCss).filter((rule) => rule.selector.includes(".cf-scale::before") && rule.selector.includes("[data-finish"));
+  }
+
+  /** The number after `z-index:` in the first rule of `css` whose selector `pattern` matches. */
+  function zIndexOf(css: string, pattern: RegExp): number {
+    const zIndex = /z-index:\s*(-?\d+)/.exec(ruleBody(css, pattern))?.[1];
+    if (zIndex === undefined) throw new Error(`no z-index in ${String(pattern)}`);
+    return Number(zIndex);
+  }
+
+  it("R2720000 every finish paints a band round a full-art face's art at FULL_ART_FINISH_OPACITY, under its gems, banner, stats and signature", () => {
+    expect(FINISHES).toHaveLength(9);
+    const base = ruleBody(cosmeticsCss, /\.cf\[data-full-art="true"\]\[data-finish\] \.cf-scale::before\s*\{/);
+    expect(base).toMatch(/content:\s*""/);
+    expect(base).toMatch(/position:\s*absolute/);
+    expect(base).toMatch(/pointer-events:\s*none/);
+    expect(base).toContain(`opacity: ${FULL_ART_FINISH_OPACITY};`);
+    expect(base).toMatch(/z-index:\s*1\b/);
+    const mask = /mask-image:\s*([^;]+);/.exec(base)?.[1] ?? "";
+    expect(mask).toContain("transparent 14%, transparent 86%");
+    expect(mask).toContain("transparent 10%, transparent 90%");
+    // The band lies over the art and its scrim, and under everything the face prints.
+    expect(zIndexOf(cardsCss, /\.cf\[data-full-art="true"\] \.cf-art-frame,/)).toBeLessThan(1);
+    expect(zIndexOf(cardsCss, /^\.cf \.cost-gem\s*\{/m)).toBeGreaterThan(1);
+    expect(zIndexOf(cardsCss, /^\.cf \.cf-gem\s*\{/m)).toBeGreaterThan(1);
+    expect(zIndexOf(cardsCss, /^\.cf \.card-name\s*\{/m)).toBeGreaterThan(1);
+    expect(zIndexOf(cardsCss, /^\.cf \.cf-crest\s*\{/m)).toBeGreaterThan(1);
+    expect(zIndexOf(cardsCss, /^\.cf \.cf-stats\s*\{/m)).toBeGreaterThan(1);
+    expect(zIndexOf(setmarkCss, /^\.cf \.cf-set\s*\{/m)).toBeGreaterThan(1);
+    expect(zIndexOf(cosmeticsCss, /^\.cf \.cf-signature\s*\{/m)).toBeGreaterThan(1);
+    // Each finish paints the band, and nothing else about it: the base rule holds the layer.
+    for (const finish of FINISHES) {
+      const painting = bandRules().filter((rule) => rule.selector.includes(`[data-finish="${finish}"]`));
+      expect(painting.length, `${finish} paints the band`).toBeGreaterThan(0);
+      expect(painting.some((rule) => /background\s*:/.test(rule.body)), `${finish}'s background`).toBe(true);
+      for (const rule of painting) expect(rule.body, rule.selector).not.toMatch(/opacity|z-index|mask|inset|position/);
+    }
+  });
+
+  it("R2720000 a face that is not full art draws no band", () => {
+    const bands = bandRules();
+    expect(bands).toHaveLength(5);
+    for (const rule of bands) {
+      for (const selector of rule.selector.split(",")) {
+        expect(selector.trim().startsWith('.cf[data-full-art="true"][data-finish'), rule.selector).toBe(true);
+      }
+    }
+    writeCardSettings({ fullArt: false });
+    for (const finish of FINISHES) {
+      wearOn("core-004", { finish });
+      const { container } = render(<CardFace face={face("core-004")} worn />);
+      expect(root(container).getAttribute("data-finish")).toBe(finish);
+      expect(root(container).getAttribute("data-full-art")).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("R2720000 a full-art face wearing Gilded edge, Obsidian or Starlit moves it in a motion slot, and holds it still past the cap and with Animated foil off", () => {
+    for (const id of ANIMATED) {
+      expect(MOVING_FINISHES_AND_BORDERS.has(id), `${id} takes a motion slot`).toBe(true);
+      const moving = gatedRules(cosmeticsCss).find(
+        (rule) => rule.selector === `${GATE}.cf[data-finish="${id}"][data-cosmetic-motion="animated"]::before`,
+      );
+      expect(moving, `${id}'s moving rule`).toBeDefined();
+      expect(moving?.body).toMatch(/animation\s*:/);
+    }
+    // The band never moves: no gated finish rule reaches a full-art face, and no band rule animates.
+    for (const rule of gatedRules(cosmeticsCss)) {
+      if (rule.selector.includes("[data-finish")) expect(rule.selector, "no gated finish rule is full art's").not.toContain("data-full-art");
+    }
+    for (const rule of bandRules()) expect(rule.body, rule.selector).not.toMatch(/animation|transition|transform\s*:/);
+    // Past the cap a moving finish holds still, on a full-art face as on any face.
+    wearOn("core-004", { finish: "finish-starlit" });
+    const { container } = render(
+      <>
+        {Array.from({ length: COSMETIC_FOIL_ANIMATED_MAX + 1 }, (_unused, index) => (
+          <CardFace key={index} face={face("core-004")} worn />
+        ))}
+      </>,
+    );
+    const faces = [...container.querySelectorAll<HTMLElement>(".cf")];
+    expect(faces).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX + 1);
+    for (const element of faces) expect(element.getAttribute("data-full-art"), "a full face is full art").toBe("true");
+    expect(faces.map((element) => element.getAttribute("data-cosmetic-motion"))).toEqual([
+      ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
+      "static",
+    ]);
+    cleanup();
+
+    // With Animated foil off it holds still too.
+    writeCardSettings({ animatedFoil: false });
+    for (const id of ANIMATED) {
+      wearOn("core-004", { finish: id as CosmeticId });
+      const { container: single } = render(<CardFace face={face("core-004")} worn />);
+      expect(root(single).getAttribute("data-full-art")).toBe("true");
+      expect(root(single).getAttribute("data-finish")).toBe(id);
+      expect(root(single).getAttribute("data-cosmetic-motion")).toBe("static");
+      cleanup();
+    }
   });
 });
 
