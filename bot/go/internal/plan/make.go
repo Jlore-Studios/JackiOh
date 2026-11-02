@@ -208,7 +208,7 @@ var PruneEvery = 24 * time.Hour
 // ShedWhenClosed is SHED_WHEN_CLOSED: what a closed thread's record sheds at once: the bulky
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
-	"asks", "taken_asks", "question", "session"}
+	"asks", "taken_asks", "question"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep

@@ -4,12 +4,13 @@ package work
 //
 // After each builder or planner call the run notes the session the CLI named; whenever it writes
 // `result.json` (its end and every checkpoint) it seals that session's file with the
-// subscription's vault key into the output directory, for deliver to keep on the state branch.
-// The item's next run on the same subscription and model family gets the record in its plan
-// (`session`): its first builder pass, or its planner, restores the file to where Claude Code
-// files it and resumes it with a short continuation prompt instead of the whole first prompt
-// and the handoff. Anything that fails on the way (no file, a key that does not open it, the CLI
-// refusing the id, the resumed call failing before it did anything) leaves the call to a fresh
+// subscription's vault key into the output directory, which the job's `work` artifact carries;
+// deliver records a pointer to it. The item's next run on the same subscription and model family
+// gets the pointer in its plan (`session`): its first builder pass, or its planner, takes the
+// session out of that artifact, restores it to where Claude Code files it and resumes it with a
+// short continuation prompt instead of the whole first prompt and the handoff. Anything that
+// fails on the way (an expired artifact, a key that does not open it, the CLI refusing the id,
+// the resumed call failing before it did anything) leaves the call to a fresh
 // session with the first prompt and the handoff, as before; `result.json`'s `session` and the
 // journal say which happened, and the resumed call's minutes and tokens.
 
@@ -38,8 +39,9 @@ type Sessions struct {
 	Secret string
 	// ConfigDir is the CLI's CLAUDE_CONFIG_DIR, under which Claude Code files every session.
 	ConfigDir string
-	// Fetch is the sealed session at a path on the state branch, "" when there is none.
-	Fetch func(path string) string
+	// Fetch is the sealed session a kept record points at, out of its run's `work` artifact
+	// (`sessions.Fetch`), or why it could not be had.
+	Fetch func(record *pyjson.Object) (string, error)
 }
 
 // NewSessions is a run's Sessions, or nil when it keeps and resumes none: `resume_sessions` is
@@ -48,7 +50,7 @@ type Sessions struct {
 // Only Claude resumes for now. Codex (`codex exec resume <id>`), Muse and agy would each need
 // their session captured here, and their resume flag in their backend's Argv (`runner`).
 func NewSessions(cfg *config.Config, provider *providers.Provider, secret string, configDir string,
-	fetch func(path string) string) *Sessions {
+	fetch func(record *pyjson.Object) (string, error)) *Sessions {
 	if !cfg.ResumeSessions || provider == nil || provider.CLI != "claude" || secret == "" ||
 		configDir == "" || fetch == nil {
 		return nil
@@ -207,7 +209,7 @@ func (x *Worker) resumeFrom(kind string, request *runner.RunRequest) (string, st
 		return fresh("none was kept for this item", false)
 	}
 	from := pyjson.New()
-	for _, key := range []string{"id", "provider", "model", "kind", "at", "run", "bytes"} {
+	for _, key := range []string{"id", "provider", "model", "kind", "at", "run", "artifact", "bytes"} {
 		if stored.Has(key) {
 			from.Set(key, stored.Get(key))
 		}
@@ -230,13 +232,17 @@ func (x *Worker) resumeFrom(kind string, request *runner.RunRequest) (string, st
 	case head != "" && !x.holds(head):
 		return fresh(fmt.Sprintf("the branch no longer holds `%s`, where it stopped", first12(head)), false)
 	}
-	number := py.MustInt(x.planItem("number"))
+	// Out of the run's `work` artifact, which may have expired since (a fallback like any other).
 	text := ""
-	if exc := herr.Try(func() { text = x.Sessions.Fetch(sessions.Path(number, x.Provider.ID)) }); exc != nil {
-		return fresh("its file could not be read: "+py.SliceTo(redact.Redact(herr.Str(exc), nil), 200), true)
+	var problem error
+	if exc := herr.Try(func() { text, problem = x.Sessions.Fetch(stored) }); exc != nil {
+		problem = exc
+	}
+	if problem != nil {
+		return fresh("it could not be had: "+py.SliceTo(redact.Redact(herr.Str(problem), nil), 200), true)
 	}
 	if strings.TrimSpace(text) == "" {
-		return fresh("its file is not on the state branch", true)
+		return fresh("it could not be had: its run's artifact holds none", true)
 	}
 	if stored.Str("cwd") != request.Cwd {
 		project = sessions.Project(request.Cwd) // where Claude Code looks for it from here

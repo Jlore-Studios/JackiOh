@@ -34,11 +34,13 @@ func goesOn(action, status string) bool {
 }
 
 // keepSession keeps the Claude session the model job sealed (`work.Worker.keepSession`) for the
-// item's next run on this subscription, as `sessions/<item>-<subscription>.bin` on the state
-// branch and the item's `session` record. This job cannot open it and only checks its shape. A
-// session another subscription kept goes once a run of the item here delivers (the work changed
-// hands); a review run takes no work over and changes nothing. A closed item keeps none. What
-// it did goes into the result's `session`, for the journal.
+// item's next run on this subscription. The session stays where the model job put it, in this
+// run's `work` artifact: this job checks its shape (it cannot open it) and records only a pointer
+// to it as the item's `session` (the run and artifact that hold it, and what it is), so nothing
+// session-sized is ever committed to the state branch. A session another subscription kept goes
+// once a run of the item here delivers (the work changed hands); a review run takes no work over
+// and changes nothing. A closed item keeps none. What it did goes into the result's `session`,
+// for the journal.
 func (x *Deliverer) keepSession(number int) {
 	action := py.OrStr(x.Plan.Get("action"), "")
 	if action != "plan" && action != "build" && action != "revise" {
@@ -76,14 +78,14 @@ func (x *Deliverer) keepSession(number int) {
 			if calls == 0 {
 				return
 			}
-			x.dropSession(number, record, fmt.Sprintf("#%d's work moved from `%s` to `%s`", number,
+			x.dropSession(number, fmt.Sprintf("#%d's work moved from `%s` to `%s`", number,
 				record.Str("provider"), x.Provider.ID))
 			record = nil
 		}
 		status := py.Str(x.Result.Get("status"))
 		if !goesOn(action, status) {
 			if record.Len() > 0 {
-				x.dropSession(number, record, fmt.Sprintf("this %s ended %s", action, status))
+				x.dropSession(number, fmt.Sprintf("this %s ended %s", action, status))
 			}
 			if brought {
 				said(fmt.Sprintf("kept no session: this %s ended %s, so no run of #%d goes on from it",
@@ -94,31 +96,31 @@ func (x *Deliverer) keepSession(number int) {
 		kept := session.Obj("kept")
 		problem := x.sessionProblem(text, kept)
 		if problem == "" {
-			path := sessions.Path(number, x.Provider.ID)
-			if err := sessions.Put(x.GH, path, text, fmt.Sprintf("session: #%d on %s [skip ci]", number,
-				x.Provider.ID)); err != nil {
-				problem = "could not store it: " + err.Error()
-			} else {
-				entry := pyjson.New("id", kept.Str("id"), "provider", x.Provider.ID,
-					"model", kept.Str("model"), "kind", kept.Str("kind"), "action", action,
-					"cwd", kept.Str("cwd"), "project", kept.Str("project"), "head", kept.Str("head"),
-					"bytes", len(text), "at", clock.ISO(x.Ctx.Now()), "run", x.Cfg.RunID,
-					"ended", py.SliceTo(redact.Redact(status+": "+py.OrStr(x.Result.Get("reason"), ""), nil), 300))
-				x.Ctx.Store.Update(func(s *pyjson.Object) any {
-					statemod.Item(s, number).Set("session", entry)
-					return nil
-				}, fmt.Sprintf("session #%d", number))
-				said(fmt.Sprintf("kept session `%s` of #%d on %s (%s bytes) for its next run there",
-					kept.Str("id"), number, x.Provider.ID, py.Thousands(len(text))))
-				return
-			}
+			artifact, size := x.sessionArtifact()
+			entry := pyjson.New("id", kept.Str("id"), "provider", x.Provider.ID,
+				"model", kept.Str("model"), "kind", kept.Str("kind"), "action", action,
+				"cwd", kept.Str("cwd"), "project", kept.Str("project"), "head", kept.Str("head"),
+				"bytes", len(text), "at", clock.ISO(x.Ctx.Now()),
+				// Where it is: this run's `work` artifact. Without its id the next run looks it up
+				// among the run's artifacts by name.
+				"run", x.Cfg.RunID, "artifact", artifact, "artifact_name", sessions.Artifact,
+				"artifact_bytes", size,
+				"ended", py.SliceTo(redact.Redact(status+": "+py.OrStr(x.Result.Get("reason"), ""), nil), 300))
+			x.Ctx.Store.Update(func(s *pyjson.Object) any {
+				statemod.Item(s, number).Set("session", entry)
+				return nil
+			}, fmt.Sprintf("session #%d", number))
+			said(fmt.Sprintf("kept session `%s` of #%d on %s (%s bytes) in run %s's `%s` artifact, for "+
+				"its next run there", kept.Str("id"), number, x.Provider.ID, py.Thousands(len(text)),
+				x.Cfg.RunID, sessions.Artifact))
+			return
 		}
 		if brought {
 			said("kept no session: " + problem)
 		}
 		// This run's session is newer than the one kept, which no longer says where the work is.
 		if record.Len() > 0 && brought {
-			x.dropSession(number, record, "this run's own session could not be kept")
+			x.dropSession(number, "this run's own session could not be kept")
 		}
 	}); exc != nil {
 		x.log("could not settle the kept session: " + py.SliceTo(redact.Redact(herr.Str(exc), nil), 300))
@@ -130,6 +132,8 @@ func (x *Deliverer) sessionProblem(text string, kept *pyjson.Object) string {
 	switch {
 	case text == "":
 		return py.OrStr(x.Result.Obj("session").Get("not_kept"), "the model job sealed none")
+	case !py.IsDecimal(x.Cfg.RunID):
+		return "this delivery names no run whose artifact holds it"
 	case !vault.LooksSealedBlob(text, sessions.MaxBytes):
 		return "the model job's session is not sealed, or over the cap"
 	case !sessions.ValidID(kept.Str("id")) || !sessions.ValidProject(kept.Str("project")) ||
@@ -143,16 +147,20 @@ func (x *Deliverer) sessionProblem(text string, kept *pyjson.Object) string {
 	return ""
 }
 
-// dropSession deletes the session `record` names and the record.
-func (x *Deliverer) dropSession(number int, record *pyjson.Object, why string) {
-	path := sessions.Path(number, record.Str("provider"))
-	if err := sessions.Remove(x.GH, path, fmt.Sprintf("session: drop #%d (%s) [skip ci]", number, why)); err != nil {
-		x.log(fmt.Sprintf("could not drop the kept session `%s`: %s", path, err))
-	} else {
-		x.log(fmt.Sprintf("dropped the kept session `%s`: %s", path, why))
+// sessionArtifact is this run's `work` artifact, which holds the session: its id and size, or
+// nil for each when the listing cannot say (the next run then looks it up by name).
+func (x *Deliverer) sessionArtifact() (any, any) {
+	var found *pyjson.Object
+	herr.Catch[*herr.GitHubError](func() { found = sessions.WorkArtifact(x.Ctx.Act().ListArtifacts(x.Cfg.RunID)) })
+	if found == nil {
+		return nil, nil
 	}
-	x.Ctx.Store.Update(func(s *pyjson.Object) any {
-		statemod.Item(s, number).Pop("session")
-		return nil
-	}, fmt.Sprintf("session #%d dropped", number))
+	return found.Get("id"), found.Get("size_in_bytes")
+}
+
+// dropSession clears the item's kept session: its pointer (the artifact expires by itself).
+func (x *Deliverer) dropSession(number int, why string) {
+	for _, note := range sessions.DropItem(x.Ctx, number, why) {
+		x.log(note)
+	}
 }

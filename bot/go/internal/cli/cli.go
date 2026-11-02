@@ -42,6 +42,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/quiet"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
@@ -624,13 +625,10 @@ func CmdWork(cfg *config.Config, args *Args) int {
 		keepLogin, nil, nil, nil, nil)
 	if login != nil {
 		// A Claude account keeps its own session, and resumes the one the item's last run on it
-		// kept (#2748); NewSessions is nil for every other CLI and with `resume_sessions` off.
+		// kept (#2748), out of that run's `work` artifact (the job's token has `actions: read`);
+		// NewSessions is nil for every other CLI and with `resume_sessions` off.
 		worker.Sessions = work.NewSessions(cfg, provider, login.Secret, login.Env["CLAUDE_CONFIG_DIR"],
-			func(path string) string {
-				text := ""
-				herr.Catch[*herr.GitHubError](func() { text, _ = ctx.GH.GetFile(path, config.StateBranch) })
-				return text
-			})
+			func(record *pyjson.Object) (string, error) { return sessions.Fetch(ctx.GH, record) })
 	}
 	if cfg.Backend != "fake" && provider.Limits.Stops().Len() > 0 {
 		// A fresh reading before any model work: the stored one is the last run's, and none at

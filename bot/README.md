@@ -929,23 +929,31 @@ session's file (`$CLAUDE_CONFIG_DIR/projects/<the worktree's path, every charact
 or digit made ->/<id>.jsonl`, and what Claude Code keeps beside it but its subagents'
 transcripts), redacted, gzipped and encrypted with that subscription's vault key (the Codex
 logins' cipher, under a key derived from its own secret, with an HMAC that tells it from a
-login's), into `session.enc` beside the result, which the `work` artifact carries. It holds every
-tool output of the run, so it never leaves the job readable. A sealed session over
-`sessions.MaxBytes` (4,000,000 characters) is not kept, and the run's log and journal say so:
-each kept one is a new blob in `bot-state`'s history, which nothing rewrites. Deliver, which
-cannot open it and checks only its shape, stores it on `bot-state` as
-`sessions/<item>-<subscription>.bin` with a small record in the item's state (`session`: its id,
-subscription, model, kind, worktree, the commit it stopped at, size, when and how the run ended)
-while the item's own next run could take it up: a revision's pull request, or an unfinished
-build or plan; a build that opened its pull request (or split, or landed as a part) and a
-finished plan drop it. It is also dropped when a run of the item on **another subscription**
-delivers having made a model call (the work changed hands; a review run takes nothing over),
-when the item closes (deliver, a bot pull request's close or merge, which drops its issue's too,
-and the daily prune of the state file), and when a newer session of the item could not be kept.
-State from before has no record, and its items simply start fresh.
+login's), into `session.enc` beside the result. It holds every tool output of the run, so it
+never leaves the job readable. A sealed session over `sessions.MaxBytes` (4,000,000 characters)
+is not kept, and the run's log and journal say so. **The run's `work` artifact is the store**:
+the upload that already carries the result and the bundle carries `session.enc` too, for its
+retention (14 days in `bot-night.yml`), and nothing session-sized is ever committed to
+`bot-state`. Deliver, which cannot open it and checks only its shape, records a pointer in the
+item's state (`session`: the run and the artifact that hold it, found among the run's artifacts by
+name, and its id, subscription, model, kind, worktree, the commit it stopped at, size, when and
+how the run ended) while the item's own next run could take it up: a revision's pull request, or
+an unfinished build or plan; a build that opened its pull request (or split, or landed as a part)
+and a finished plan clear it. Dropping a session is clearing its pointer, and the artifact expires
+by itself. It is dropped when a run of the item on **another subscription** delivers having made
+a model call (the work changed hands; a review run takes nothing over), when the item closes
+(deliver, a bot pull request's close or merge, which drops its issue's too, and the daily prune of
+the state file, which also deletes any `sessions/*.bin` an earlier draft of this left on
+`bot-state`; no run reads one), and when a newer session of the item could not be kept. State from
+before has no pointer, and its items simply start fresh.
 
-The next run's plan carries the record; the work job, with its read-only token, fetches the file
-itself. Its first builder pass (or its planner, for a planner's session) resumes it only when the
+The next run's plan carries the pointer; the work job downloads that run's `work` artifact
+itself (`GET /actions/artifacts/<id>/zip`, following the redirect, with the job's own token, which
+has `actions: read` for this and `contents: read`, and writes nothing) and takes `session.enc`
+alone out of it: any other entry stays in the zip, and a zip with a path outside it, or a
+`session.enc` over the cap, is refused. Squishy's `squishy-run.yml` work job has no `actions:
+read`, which it would need before its `resume_sessions` goes on. Its first builder pass (or its
+planner, for a planner's session) resumes it only when the
 record is this subscription's, of the same kind and model family (`opus`, `sonnet`), and the
 worktree still holds the commit it stopped at (a branch built again from `main`, or a revision
 whose pull request moved past its unfinished work, does not). The file is restored where Claude
@@ -953,8 +961,9 @@ Code looks for it from the worktree (the same path on GitHub's runners,
 `$RUNNER_TEMP/work/item-<n>`; elsewhere the session is told its old path), and the call is told
 only what it lacks: a "Resuming your own session" section with why the last run stopped and what
 changed since (the new feedback, the merge of `main`, the last findings, an answer to its
-question, the branch now). Anything that fails on the way (no file, a key that will not open it,
-the CLI refusing the id, the resumed call failing before it did anything) leaves the call to a
+question, the branch now). Anything that fails on the way (an artifact expired or deleted, a 404
+or 410, a download that fails, a key that will not open it, the CLI refusing the id, the resumed
+call failing before it did anything) leaves the call to a
 fresh session with the whole first prompt and the handoff, as before, as a step of its own.
 `result.json`'s `session` records `resumed` (true or false), the `fallback` reason, whether a
 kept one was `tried`, and the resumed call's minutes, tokens and cost (`call`), so the usage
@@ -1224,10 +1233,13 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
   parks it until the limit resets while the item moves to another subscription.
 - **Refreshed logins** from a secret (Codex rotates its own) are kept on `bot-state` only
   encrypted (AES-256 with an HMAC, through `openssl`), under a key derived from that
-  subscription's secret. A login on the machine never leaves it. A Claude run's own session,
-  which holds every tool output of the run, is kept the same way, redacted first
-  ([resumed sessions](#the-self-check-loop)); the model that wrote it could also have written
-  what the next session reads, and that run is held to the same checks.
+  subscription's secret. A login on the machine never leaves it.
+- **A Claude run's own session** ([resumed sessions](#the-self-check-loop)) holds every tool
+  output of the run. It is kept in that run's `work` artifact, which anyone who can read the
+  repository's Actions can download, so it is redacted first and sealed with the subscription's
+  vault key (the cipher and key of the refreshed logins); only a pointer to it goes on
+  `bot-state`. The model that wrote it could also have written what the next session reads, and
+  that run is held to the same checks.
 
 **What it cannot rule out.** The model has a shell and its subscription's login, because it
 needs the login to run. Network tools such as `curl`, `wget` and `ssh` are denied, but that only slows a
@@ -1426,7 +1438,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/providers/` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
 | `go/internal/runner/` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
 | `go/internal/logins/`, `go/internal/vault/` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
-| `go/internal/sessions/` | a Claude run's own session (#2748): packed, redacted and sealed with the vault's key, kept on `bot-state` per item and subscription, restored for the next run there, and dropped when the item closes or changes hands |
+| `go/internal/sessions/` | a Claude run's own session (#2748): packed, redacted and sealed with the vault's key, kept in its run's `work` artifact with a pointer in the item's state, taken out of that artifact and restored for the next run there, and dropped (the pointer cleared) when the item closes or changes hands |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the Go module) |
 | `go/internal/git/`, `go/internal/gates/` | worktrees, commits, bundles, pushes; the repository's checks |
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |

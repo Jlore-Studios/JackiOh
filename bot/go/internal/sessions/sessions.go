@@ -6,12 +6,15 @@
 // (with whatever it keeps beside it in `<id>/`), and resumes one headless with `--resume <id>`.
 // A runner is thrown away after its job, so the model job packs the last builder's (or a cut-off
 // planner's) session, redacted, gzipped and sealed under the subscription's own vault key
-// (`vault.SealBlob`): it holds every tool output of the run, so it never leaves the job readable.
-// `deliver`, which holds the bot's token but no key, stores it on the state branch as
-// `sessions/<item>-<subscription>.bin` with a small record in the item's state (`session`), and
-// drops it when the item closes or a run of it on another subscription delivers. The next run on
-// the same subscription restores it to the same path and resumes it; if anything fails it goes on
-// as before, in a fresh session that reads the handoff.
+// (`vault.SealBlob`), into `session.enc` in its output: it holds every tool output of the run, so
+// it never leaves the job readable. The job's `work` artifact carries it (for its retention, 14
+// days in bot-night.yml), and that artifact is the store: nothing session-sized is ever committed.
+// `deliver`, which holds the bot's token but no key, checks its shape and records only a pointer
+// in the item's state (`session`: the run and artifact that hold it, and what it is), and clears
+// the pointer when the item closes or a run of it on another subscription delivers. The next run
+// on the same subscription downloads that artifact (`actions: read`), takes `session.enc` alone out
+// of it, restores the session to the same path and resumes it; if anything fails (the artifact
+// expired among the reasons) it goes on as before, in a fresh session that reads the handoff.
 //
 // Only Claude resumes for now. Codex (`codex exec resume`), Muse and agy would each need their own
 // capture and resume flag: `work.NewSessions` and each backend's `Argv` are where they go.
@@ -19,6 +22,7 @@ package sessions
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"errors"
@@ -39,27 +43,31 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/vault"
 )
 
-// Dir is the directory on the state branch the sessions are kept in.
-var Dir = "sessions"
-
 // OutFile is the sealed session in the model job's output directory, which the `work` artifact
-// carries to `deliver` beside `result.json` and `vault.enc`.
+// carries beside `result.json` and `vault.enc`, and the one entry taken out of that artifact.
 var OutFile = "session.enc"
 
+// Artifact is the model job's upload that holds it (bot-night.yml's and squishy-run.yml's `work`,
+// `controller.WorkArtifact`).
+var Artifact = "work"
+
+// LegacyDir is where an earlier draft of this kept sessions on the state branch, which no run
+// reads and the daily prune deletes.
+var LegacyDir = "sessions"
+
 // MaxBytes caps a sealed session, in characters of its text: one over it is not kept (the run's
-// log and journal say so). Every kept session is a new blob in the state branch's history, which
-// nothing rewrites, so this bounds what a run adds to it.
+// log and journal say so), and an artifact's `session.enc` over it is not taken out.
 var MaxBytes = 4_000_000
+
+// ArtifactMaxBytes caps the artifact the next run downloads to take the session out of (its
+// bundle and its transcripts come with it).
+var ArtifactMaxBytes = 500_000_000
 
 // UnpackedMaxBytes caps what a sealed session may unpack to.
 var UnpackedMaxBytes int64 = 200_000_000
-
-// Attempts is how many times a write to the state branch is tried when another writer raced it.
-var Attempts = 4
 
 // Kinds are the sessions a run keeps and resumes: a builder's (its first pass, a fix, a
 // revision) and a planner's that keeps a draft. Reviews, self checks, splits and surveys run in a
@@ -69,11 +77,6 @@ var Kinds = []string{"build", "plan"}
 // Families are the Claude model families: a session resumes only on its own family, whose
 // prompt cache it can use.
 var Families = []string{"opus", "sonnet", "haiku"}
-
-// Path is where item `number`'s session on subscription `provider` is kept on the state branch.
-func Path(number int, provider string) string {
-	return fmt.Sprintf("%s/%d-%s.bin", Dir, number, provider)
-}
 
 // Family is a model's family (`opus` for `opus` and `claude-opus-4-7`), or its own name lowered.
 func Family(model string) string {
@@ -257,131 +260,198 @@ func Restore(sealed, secret, configDir, project, id string) error {
 	return Unpack(data, configDir, project, id)
 }
 
-// ------------------------------------------------------------------ the state branch
+// ------------------------------------------------------------------ the run's artifact
 
-// listed is the stored sessions' file names and blob shas: a listing, never a download, since a
-// session runs to megabytes.
-func listed(client gh.Client) [][2]string {
-	return client.ListDir(Dir, config.StateBranch)
-}
-
-// shaOf is the blob sha of the stored session at `path`, "" when there is none.
-func shaOf(client gh.Client, path string) string {
-	for _, entry := range listed(client) {
-		if Dir+"/"+entry[0] == path {
-			return entry[1]
+// WorkArtifact is the newest `work` artifact among a run's that has not expired, or nil.
+func WorkArtifact(artifacts []*pyjson.Object) *pyjson.Object {
+	var found *pyjson.Object
+	for _, a := range artifacts {
+		if a.Get("name") != Artifact || a.Truthy("expired") {
+			continue
+		}
+		id, _ := py.Int(py.Or(a.Get("id"), 0))
+		best, _ := py.Int(py.Or(found.Get("id"), 0))
+		if found == nil || id > best {
+			found = a
 		}
 	}
-	return ""
+	return found
 }
 
-// Put stores sealed `text` at `path` on the state branch, again when another writer raced it.
-func Put(client gh.Client, path, text, message string) error {
-	var problem error
-	for range Attempts {
-		exc, raised := herr.Catch[*herr.GitHubError](func() {
-			client.PutFile(path, text+"\n", config.StateBranch, shaOf(client, path), message)
-		})
-		if !raised {
-			return nil
-		}
-		problem = exc
-		if exc.Status != 409 && exc.Status != 422 {
-			break // only a race with another writer is worth trying again
-		}
-	}
-	return problem
-}
-
-// Remove deletes the stored session at `path`; one that is gone already is no error.
-func Remove(client gh.Client, path, message string) error {
-	var problem error
-	for range Attempts {
-		sha := shaOf(client, path)
-		if sha == "" {
-			return nil
-		}
-		exc, raised := herr.Catch[*herr.GitHubError](func() {
-			client.DeleteFile(path, config.StateBranch, sha, message)
-		})
-		if !raised || exc.Status == 404 {
-			return nil
-		}
-		problem = exc
-		if exc.Status != 409 && exc.Status != 422 {
-			break
-		}
-	}
-	return problem
-}
-
-// itemOf is the item a stored session's file name is of (`<item>-<subscription>.bin`), or 0.
-func itemOf(name string) int {
-	number, _, ok := strings.Cut(name, "-")
-	if !ok || !strings.HasSuffix(name, ".bin") || !py.IsDecimal(number) {
-		return 0
-	}
-	n, err := strconv.Atoi(number)
+// FromZip is the sealed session in an artifact's zip: its `session.enc` and nothing else, at most
+// MaxBytes long. A zip with an entry outside it (an absolute path, `..`) is refused whole.
+func FromZip(data []byte) (string, error) {
+	archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		return 0
+		return "", fmt.Errorf("the artifact is not a zip: %s", err)
 	}
-	return n
+	var found *zip.File
+	for _, member := range archive.File {
+		name := member.Name
+		if strings.Contains(name, `\`) || !filepath.IsLocal(filepath.FromSlash(name)) {
+			return "", fmt.Errorf("the artifact holds a path outside it: %s", py.Repr(name))
+		}
+		if name != OutFile {
+			continue // never taken out: only the session is wanted here
+		}
+		if found != nil {
+			return "", fmt.Errorf("the artifact holds two %s", OutFile)
+		}
+		found = member
+	}
+	if found == nil {
+		return "", fmt.Errorf("the artifact holds no %s", OutFile)
+	}
+	limit := int64(MaxBytes) + 1 // the line break it was written with
+	if found.UncompressedSize64 > uint64(limit) {
+		return "", &vault.TooLarge{Size: int(found.UncompressedSize64), Limit: MaxBytes}
+	}
+	reader, err := found.Open()
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
+	body, err := io.ReadAll(io.LimitReader(reader, limit+1))
+	if err != nil {
+		return "", err
+	}
+	if int64(len(body)) > limit {
+		return "", &vault.TooLarge{Size: len(body), Limit: MaxBytes}
+	}
+	return strings.TrimSpace(string(body)), nil
 }
 
-// DropItem deletes every session kept for item `number` and its record: the item closed, or
-// its work moved on. Returns what it did, for a log; nothing here raises.
+// Fetch is the sealed session a kept record points at, out of its run's `work` artifact
+// (`GET /actions/artifacts/<id>/zip`, which needs `actions: read`). Its error says why it could
+// not be had: a record with no run, an artifact expired or deleted (404, 410), a download that
+// failed, or an artifact that does not hold one.
+func Fetch(client gh.Client, record *pyjson.Object) (string, error) {
+	run := py.Str(py.Or(record.Get("run"), ""))
+	if !py.IsDecimal(run) {
+		return "", errors.New("its record names no run whose artifact holds it")
+	}
+	id := record.Get("artifact")
+	size, _ := py.Int(py.Or(record.Get("artifact_bytes"), 0))
+	if !pyjson.Truthy(id) {
+		// Deliver could not name it when it recorded the session: the run's own, by its name.
+		var listed []*pyjson.Object
+		if exc, failed := herr.Catch[*herr.GitHubError](func() { listed = client.ListArtifacts(run) }); failed {
+			return "", fmt.Errorf("could not list run %s's artifacts: %s", run, exc.Error())
+		}
+		found := WorkArtifact(listed)
+		if found == nil {
+			return "", fmt.Errorf("run %s has no `%s` artifact left: it expired, or was deleted", run, Artifact)
+		}
+		id = found.Get("id")
+		size, _ = py.Int(py.Or(found.Get("size_in_bytes"), 0))
+	}
+	if size > ArtifactMaxBytes {
+		return "", fmt.Errorf("run %s's `%s` artifact is %s bytes, over the %s-byte cap", run, Artifact,
+			py.Thousands(size), py.Thousands(ArtifactMaxBytes))
+	}
+	var data []byte
+	if exc, failed := herr.Catch[*herr.GitHubError](func() { data = client.DownloadArtifact(id) }); failed {
+		if exc.Status == 404 || exc.Status == 410 {
+			return "", fmt.Errorf("run %s's `%s` artifact is gone (HTTP %d): it expired, or was deleted",
+				run, Artifact, exc.Status)
+		}
+		return "", fmt.Errorf("could not download run %s's `%s` artifact: %s", run, Artifact,
+			py.SliceTo(redact.Redact(exc.Error(), nil), 200))
+	}
+	if len(data) > ArtifactMaxBytes {
+		return "", fmt.Errorf("run %s's `%s` artifact is over the %s-byte cap", run, Artifact,
+			py.Thousands(ArtifactMaxBytes))
+	}
+	return FromZip(data)
+}
+
+// ------------------------------------------------------------------ the pointer in the state
+
+// Remove clears item `number`'s kept session in `state` (its pointer: the session itself is its
+// run's artifact, which expires by itself). Whether there was one. For a store update.
+func Remove(s *pyjson.Object, number int) bool {
+	record := s.Obj("items").Obj(strconv.Itoa(number))
+	if !record.Has("session") {
+		return false
+	}
+	record.Pop("session")
+	return true
+}
+
+// DropItem clears the session kept for item `number`: the item closed, or its work moved on.
+// Returns what it did, for a log; nothing here raises.
 func DropItem(ctx *hctx.Context, number int, why string) []string {
 	notes := []string{}
 	if exc := herr.Try(func() {
-		for _, entry := range listed(ctx.GH) {
-			if itemOf(entry[0]) != number {
-				continue
-			}
-			path := Dir + "/" + entry[0]
-			if err := Remove(ctx.GH, path, fmt.Sprintf("session: drop #%d (%s) [skip ci]", number, why)); err != nil {
-				notes = append(notes, fmt.Sprintf("could not drop the kept session `%s`: %s", path, err))
-				continue
-			}
-			notes = append(notes, fmt.Sprintf("dropped the kept session `%s`: %s", path, why))
+		if !ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number)).Has("session") {
+			return
 		}
-		if ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number)).Has("session") {
-			ctx.Store.Update(func(s *pyjson.Object) any {
-				state.Item(s, number).Pop("session")
-				return nil
-			}, fmt.Sprintf("session #%d dropped", number))
-		}
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			Remove(s, number)
+			return nil
+		}, fmt.Sprintf("session #%d dropped", number))
+		notes = append(notes, fmt.Sprintf("dropped #%d's kept session: %s", number, why))
 	}); exc != nil {
-		notes = append(notes, fmt.Sprintf("could not drop the kept sessions of #%d: %s", number,
+		notes = append(notes, fmt.Sprintf("could not drop #%d's kept session: %s", number,
 			py.SliceTo(redact.Redact(herr.Str(exc), nil), 300)))
 	}
 	return notes
 }
 
-// Prune deletes every kept session whose item is closed (once a day, with the state file's own
-// prune): `open` holds the open items' numbers, and each other one is asked before its session
-// goes. Returns what it did; nothing here raises.
+// Prune, once a day with the state file's own prune: clear the kept session of every item that
+// closed (`open` holds the open items' numbers; each other one is asked first), and delete any
+// session file an earlier draft left on the state branch (`LegacyDir`), which no run reads.
+// Returns what it did; nothing here raises.
 func Prune(ctx *hctx.Context, open map[int]bool) []string {
 	notes := []string{}
-	var entries [][2]string
-	if _, failed := herr.Catch[*herr.GitHubError](func() { entries = listed(ctx.GH) }); failed {
-		return notes
-	}
-	for _, entry := range entries {
-		number := itemOf(entry[0])
-		if number == 0 || open[number] {
-			continue
+	if exc := herr.Try(func() {
+		items := ctx.Store.Load().Obj("items")
+		var closed []int
+		for _, key := range items.Keys() {
+			number, err := strconv.Atoi(key)
+			if err != nil || number == 0 || open[number] || !items.Obj(key).Has("session") {
+				continue
+			}
+			var thread *pyjson.Object
+			if _, failed := herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(number) }); failed {
+				continue
+			}
+			if thread.Get("state") == "closed" {
+				closed = append(closed, number)
+			}
 		}
-		var thread *pyjson.Object
-		if _, failed := herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(number) }); failed {
-			continue
+		if len(closed) > 0 {
+			ctx.Store.Update(func(s *pyjson.Object) any {
+				for _, number := range closed {
+					Remove(s, number)
+				}
+				return nil
+			}, "sessions of closed items dropped")
+			for _, number := range closed {
+				notes = append(notes, fmt.Sprintf("dropped #%d's kept session: #%d is closed", number, number))
+			}
 		}
-		if thread.Get("state") != "closed" {
-			continue
+		var legacy [][2]string
+		if _, failed := herr.Catch[*herr.GitHubError](func() {
+			legacy = ctx.GH.ListDir(LegacyDir, config.StateBranch)
+		}); failed {
+			return
 		}
-		path := Dir + "/" + entry[0]
-		if err := Remove(ctx.GH, path, fmt.Sprintf("session: drop #%d (closed) [skip ci]", number)); err == nil {
-			notes = append(notes, fmt.Sprintf("dropped the kept session `%s`: #%d is closed", path, number))
+		for _, entry := range legacy {
+			if !strings.HasSuffix(entry[0], ".bin") {
+				continue
+			}
+			path := LegacyDir + "/" + entry[0]
+			if _, failed := herr.Catch[*herr.GitHubError](func() {
+				ctx.GH.DeleteFile(path, config.StateBranch, entry[1],
+					"session: a kept session lives in its run's artifact [skip ci]")
+			}); !failed {
+				notes = append(notes, fmt.Sprintf("deleted `%s` from the state branch: a kept session "+
+					"lives in its run's artifact", path))
+			}
 		}
+	}); exc != nil {
+		notes = append(notes, "could not prune the kept sessions: "+py.SliceTo(redact.Redact(herr.Str(exc), nil), 300))
 	}
 	return notes
 }

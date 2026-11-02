@@ -2,8 +2,8 @@ package vault
 
 // Blobs: bytes kept the way a refreshed login is (#2748). A Claude run's own Claude Code session
 // (`internal/sessions`) holds every tool output of the run, so it leaves the model job only
-// sealed, under the same subscription's key, and `deliver`, which holds no key, checks only its
-// shape before it stores it on the state branch.
+// sealed, under the same subscription's key, in the job's `work` artifact, and `deliver`, which
+// holds no key, checks only its shape before it records where it is.
 //
 // A blob is `BlobVersion:<hmac>:<base64>`: the cipher and the keys are a login's, but its HMAC
 // covers the version too, so a login's vault never opens as a blob nor a blob as a login's vault.
@@ -85,8 +85,8 @@ func OpenBlob(text string, secret string, limit int) ([]byte, error) {
 	return plain, nil
 }
 
-// LooksSealedBlob is the check `deliver` makes before it stores a blob it cannot open: the right
-// shape and size, so a model cannot park arbitrary text on the state branch.
+// LooksSealedBlob is the check `deliver` makes before it points the next run at a blob it cannot
+// open: the right shape and size, so a model cannot hand that run arbitrary text.
 func LooksSealedBlob(text string, limit int) bool {
 	text = strings.TrimSpace(text)
 	if text == "" || len(text) > limit {
