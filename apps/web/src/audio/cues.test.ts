@@ -688,9 +688,6 @@ describe("R204: which moments speak", () => {
 
 describe("R203: audio reveals no more than the screen", () => {
   it("R203 (B20) HIDDEN_DEF_ID is the sentinel a redacted event carries", () => {
-    // Kept per issue #2849 step 9: #2846's rule deletes a pin only when its constant is
-    // generated into wire/*Config.ts or is in S2, and HIDDEN_DEF_ID is neither (it
-    // hand-mirrors the engine's hidden sentinel).
     expect(HIDDEN_DEF_ID).toBe("hidden");
   });
 
@@ -754,76 +751,27 @@ describe("R203: audio reveals no more than the screen", () => {
 
 // B21: amounts
 describe("B21 amounts", () => {
-  const B21_AMOUNT_ROWS: { title: string; run: () => void }[] = [
-    {
-      title: "B21 damage, healed and healthLost with amount 0 give nothing",
-      run: () => {
-        expect(cuesFor({ type: "damage", sourceId: null, targetId: "u1", amount: 0, combat: false }, ctx())).toEqual([]);
-        expect(cuesFor({ type: "healed", targetId: "hero-p1", amount: 0 }, ctx())).toEqual([]);
-        expect(cuesFor({ type: "healthLost", player: "p1", amount: 0 }, ctx())).toEqual([]);
-      },
-    },
-    {
-      title: "B21 a negative amount gives nothing either",
-      run: () => {
-        expect(cuesFor({ type: "damage", sourceId: null, targetId: "u1", amount: -2, combat: false }, ctx())).toEqual([]);
-        expect(cuesFor({ type: "healed", targetId: "u1", amount: -1 }, ctx())).toEqual([]);
-        expect(cuesFor({ type: "healthLost", player: "p2", amount: -5 }, ctx())).toEqual([]);
-      },
-    },
-    {
-      title: "B21 damage n gives impact, healed n gives heal and healthLost n gives drain, each with params.amount n",
-      run: () => {
-        for (const n of [1, 7, 25]) {
-          const hit = onlySfx({ type: "damage", sourceId: "u1", targetId: "u2", amount: n, combat: true });
-          expect([hit.id, hit.params?.amount, hit.delayMs]).toEqual(["impact", n, 0]);
-          const heal = onlySfx({ type: "healed", targetId: "hero-p2", amount: n });
-          expect([heal.id, heal.params?.amount, heal.delayMs]).toEqual(["heal", n, 0]);
-          const drain = onlySfx({ type: "healthLost", player: "p2", amount: n });
-          expect([drain.id, drain.params?.amount, drain.delayMs]).toEqual(["drain", n, 0]);
-        }
-      },
-    },
-    {
-      title: "B21 buffed gives buff when attack + health is 0 or more",
-      run: () => {
-        for (const [attack, health] of [
-          [1, 1],
-          [0, 0],
-          [2, -2],
-          [-1, 3],
-        ] as const) {
-          expect(shape({ type: "buffed", instanceId: "u2", attack, health }), `${String(attack)}/${String(health)}`).toEqual([sfx("buff")]);
-        }
-      },
-    },
-    {
-      title: "B21 buffed gives debuff when attack + health is below 0",
-      run: () => {
-        for (const [attack, health] of [
-          [-1, 0],
-          [0, -1],
-          [3, -4],
-          [-2, -2],
-        ] as const) {
-          expect(shape({ type: "buffed", instanceId: "u2", attack, health }), `${String(attack)}/${String(health)}`).toEqual([sfx("debuff")]);
-        }
-      },
-    },
-    {
-      title: "#1598 keywordGranted gives buff on a grant and debuff on a loss",
-      run: () => {
-        expect(shape(SAMPLES.keywordGranted)).toEqual([sfx("buff")]);
-        for (const keyword of [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Rush" }] as const) {
-          expect(shape({ type: "keywordGranted", instanceId: "u2", keyword }), keyword.kind).toEqual([sfx("buff")]);
-          expect(shape({ type: "keywordGranted", instanceId: "u2", keyword, lost: true }), keyword.kind).toEqual([sfx("debuff")]);
-        }
-      },
-    },
-  ];
+  it("B21 damage, healed and healthLost with amount 0 give nothing", () => {
+    expect(cuesFor({ type: "damage", sourceId: null, targetId: "u1", amount: 0, combat: false }, ctx())).toEqual([]);
+    expect(cuesFor({ type: "healed", targetId: "hero-p1", amount: 0 }, ctx())).toEqual([]);
+    expect(cuesFor({ type: "healthLost", player: "p1", amount: 0 }, ctx())).toEqual([]);
+  });
 
-  it.each(B21_AMOUNT_ROWS)("B21 amounts map to their sounds: $title", ({ run }) => {
-    run();
+  it("B21 a negative amount gives nothing either", () => {
+    expect(cuesFor({ type: "damage", sourceId: null, targetId: "u1", amount: -2, combat: false }, ctx())).toEqual([]);
+    expect(cuesFor({ type: "healed", targetId: "u1", amount: -1 }, ctx())).toEqual([]);
+    expect(cuesFor({ type: "healthLost", player: "p2", amount: -5 }, ctx())).toEqual([]);
+  });
+
+  it("B21 damage n gives impact, healed n gives heal and healthLost n gives drain, each with params.amount n", () => {
+    for (const n of [1, 7, 25]) {
+      const hit = onlySfx({ type: "damage", sourceId: "u1", targetId: "u2", amount: n, combat: true });
+      expect([hit.id, hit.params?.amount, hit.delayMs]).toEqual(["impact", n, 0]);
+      const heal = onlySfx({ type: "healed", targetId: "hero-p2", amount: n });
+      expect([heal.id, heal.params?.amount, heal.delayMs]).toEqual(["heal", n, 0]);
+      const drain = onlySfx({ type: "healthLost", player: "p2", amount: n });
+      expect([drain.id, drain.params?.amount, drain.delayMs]).toEqual(["drain", n, 0]);
+    }
   });
 
   it("B21 gives repeated identical impacts independent ±5% pitch samples", () => {
@@ -834,6 +782,35 @@ describe("B21 amounts", () => {
     random.mockRestore();
   });
 
+  it("B21 buffed gives buff when attack + health is 0 or more", () => {
+    for (const [attack, health] of [
+      [1, 1],
+      [0, 0],
+      [2, -2],
+      [-1, 3],
+    ] as const) {
+      expect(shape({ type: "buffed", instanceId: "u2", attack, health }), `${String(attack)}/${String(health)}`).toEqual([sfx("buff")]);
+    }
+  });
+
+  it("B21 buffed gives debuff when attack + health is below 0", () => {
+    for (const [attack, health] of [
+      [-1, 0],
+      [0, -1],
+      [3, -4],
+      [-2, -2],
+    ] as const) {
+      expect(shape({ type: "buffed", instanceId: "u2", attack, health }), `${String(attack)}/${String(health)}`).toEqual([sfx("debuff")]);
+    }
+  });
+
+  it("#1598 keywordGranted gives buff on a grant and debuff on a loss", () => {
+    expect(shape(SAMPLES.keywordGranted)).toEqual([sfx("buff")]);
+    for (const keyword of [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Rush" }] as const) {
+      expect(shape({ type: "keywordGranted", instanceId: "u2", keyword }), keyword.kind).toEqual([sfx("buff")]);
+      expect(shape({ type: "keywordGranted", instanceId: "u2", keyword, lost: true }), keyword.kind).toEqual([sfx("debuff")]);
+    }
+  });
 });
 
 /* B22: mana against a baseline */
@@ -946,37 +923,22 @@ describe("B56 a summon is sized by the unit that lands", () => {
   const landed: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 1 };
   const played1 = ctx({ wasPlayed: () => true });
 
-  const B56_SUMMON_ROWS: { title: string; run: () => void }[] = [
-    {
-      title: "B56 the summon thud carries the unit's attack plus health, as the newest view shows it",
-      run: () => {
-        const big = unit("p1", { instanceId: "c1", defId: UNIT, attack: 7, health: 7, maxHealth: 7 });
-        const cues = cuesFor(landed, { ...played1, unitNow: (id) => (id === "c1" ? big : null) });
-        expect(cues).toEqual([{ kind: "sfx", id: "summon", params: { amount: 14 }, delayMs: 0 }]);
-      },
-    },
-    {
-      title: "B56 a unit the view cannot find sounds the plain thud",
-      run: () => {
-        expect(cuesFor(landed, { ...played1, unitNow: () => null })).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
-        expect(cuesFor(landed, played1)).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
-      },
-    },
-    {
-      title: "B56 a Radiant unit lands with a golden glint on top of the thud",
-      run: () => {
-        const golden = unit("p1", { instanceId: "c1", defId: UNIT, attack: 2, health: 3, radiant: true });
-        const ids = cuesFor(landed, { ...played1, unitNow: () => golden }).map((c) => (c.kind === "sfx" ? c.id : c.kind));
-        expect(ids).toEqual(["summon", "radiant"]);
-      },
-    },
-  ];
-
-  it.each(B56_SUMMON_ROWS)("B56 summon size follows the unit the view shows: $title", ({ run }) => {
-    run();
+  it("B56 the summon thud carries the unit's attack plus health, as the newest view shows it", () => {
+    const big = unit("p1", { instanceId: "c1", defId: UNIT, attack: 7, health: 7, maxHealth: 7 });
+    const cues = cuesFor(landed, { ...played1, unitNow: (id) => (id === "c1" ? big : null) });
+    expect(cues).toEqual([{ kind: "sfx", id: "summon", params: { amount: 14 }, delayMs: 0 }]);
   });
 
+  it("B56 a unit the view cannot find sounds the plain thud", () => {
+    expect(cuesFor(landed, { ...played1, unitNow: () => null })).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
+    expect(cuesFor(landed, played1)).toEqual([{ kind: "sfx", id: "summon", delayMs: 0 }]);
+  });
 
+  it("B56 a Radiant unit lands with a golden glint on top of the thud", () => {
+    const golden = unit("p1", { instanceId: "c1", defId: UNIT, attack: 2, health: 3, radiant: true });
+    const ids = cuesFor(landed, { ...played1, unitNow: () => golden }).map((c) => (c.kind === "sfx" ? c.id : c.kind));
+    expect(ids).toEqual(["summon", "radiant"]);
+  });
 });
 
 /*
@@ -1006,59 +968,40 @@ describe("the catalog colors summons and spells, never what the viewer cannot na
   const sfxCue = (cues: readonly SoundCue[], id: SfxId): Extract<SoundCue, { kind: "sfx" }> | undefined =>
     cues.find((cue): cue is Extract<SoundCue, { kind: "sfx" }> => cue.kind === "sfx" && cue.id === id);
 
-  const TIMBRE_ROWS: { title: string; run: () => void }[] = [
-    {
-      title: "timbreFor follows the card art's theme: tags first, then Token, then a Field Spell's type",
-      run: () => {
-        expect(timbreFor({ type: "Unit", tags: ["Human", "Felinor"] })).toBe("felinor");
-        expect(timbreFor({ type: "Spell", tags: ["Call to Chaos", "KY"] })).toBe("chaos");
-        expect(timbreFor({ type: "Unit", tags: ["Token"] })).toBe("token");
-        expect(timbreFor({ type: "Field Spell", tags: [] })).toBe("field");
-        expect(timbreFor({ type: "Unit", tags: [] })).toBeUndefined();
-        expect(timbreFor({ type: "Spell", tags: [] })).toBeUndefined();
-      },
-    },
-    {
-      title: "a unit the viewer can name lands with its family's accent on the thud",
-      run: () => {
-        const cue = sfxCue(cuesFor(summoned(UNIT), withCueCatalog()), "summon");
-        expect(cue?.params?.timbre).toBe("felinor");
-      },
-    },
-    {
-      title: "a Legendary unit enters with the brass sting, a Mythic one with the prismatic sting, at the thud",
-      run: () => {
-        const legend = cuesFor(summoned("core-legend"), withCueCatalog());
-        expect(sfxCue(legend, "entrance")).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
-        expect(sfxCue(legend, "summon")?.params?.timbre).toBe("human");
-
-        const mythic = cuesFor(summoned("core-mythic"), withCueCatalog());
-        expect(sfxCue(mythic, "entrance")).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: 0 });
-        expect(sfxCue(cuesFor(summoned(UNIT), withCueCatalog()), "entrance")).toBeUndefined();
-      },
-    },
-    {
-      title: "a cast spell rings in its family's chimes, a Field Spell in the field's",
-      run: () => {
-        expect(sfxCue(cuesFor(played(SPELL), withCueCatalog()), "spell")?.params).toEqual({ timbre: "chaos" });
-        expect(sfxCue(cuesFor(played(FIELD_SPELL), withCueCatalog()), "spell")?.params).toEqual({ timbre: "field" });
-      },
-    },
-    {
-      title: "with no catalog every card keeps its type's plain sounds",
-      run: () => {
-        expect(sfxCue(cuesFor(summoned("core-legend"), ctx()), "entrance")).toBeUndefined();
-        expect(sfxCue(cuesFor(summoned(UNIT), ctx()), "summon")?.params).toBeUndefined();
-        expect(sfxCue(cuesFor(played(SPELL), ctx()), "spell")?.params).toBeUndefined();
-      },
-    },
-  ];
-
-  it.each(TIMBRE_ROWS)("catalog timbres follow the card the viewer can read: $title", ({ run }) => {
-    run();
+  it("timbreFor follows the card art's theme: tags first, then Token, then a Field Spell's type", () => {
+    expect(timbreFor({ type: "Unit", tags: ["Human", "Felinor"] })).toBe("felinor");
+    expect(timbreFor({ type: "Spell", tags: ["Call to Chaos", "KY"] })).toBe("chaos");
+    expect(timbreFor({ type: "Unit", tags: ["Token"] })).toBe("token");
+    expect(timbreFor({ type: "Field Spell", tags: [] })).toBe("field");
+    expect(timbreFor({ type: "Unit", tags: [] })).toBeUndefined();
+    expect(timbreFor({ type: "Spell", tags: [] })).toBeUndefined();
   });
 
+  it("a unit the viewer can name lands with its family's accent on the thud", () => {
+    const cue = sfxCue(cuesFor(summoned(UNIT), withCueCatalog()), "summon");
+    expect(cue?.params?.timbre).toBe("felinor");
+  });
 
+  it("a Legendary unit enters with the brass sting, a Mythic one with the prismatic sting, at the thud", () => {
+    const legend = cuesFor(summoned("core-legend"), withCueCatalog());
+    expect(sfxCue(legend, "entrance")).toEqual({ kind: "sfx", id: "entrance", delayMs: 0 });
+    expect(sfxCue(legend, "summon")?.params?.timbre).toBe("human");
+
+    const mythic = cuesFor(summoned("core-mythic"), withCueCatalog());
+    expect(sfxCue(mythic, "entrance")).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: 0 });
+    expect(sfxCue(cuesFor(summoned(UNIT), withCueCatalog()), "entrance")).toBeUndefined();
+  });
+
+  it("a cast spell rings in its family's chimes, a Field Spell in the field's", () => {
+    expect(sfxCue(cuesFor(played(SPELL), withCueCatalog()), "spell")?.params).toEqual({ timbre: "chaos" });
+    expect(sfxCue(cuesFor(played(FIELD_SPELL), withCueCatalog()), "spell")?.params).toEqual({ timbre: "field" });
+  });
+
+  it("with no catalog every card keeps its type's plain sounds", () => {
+    expect(sfxCue(cuesFor(summoned("core-legend"), ctx()), "entrance")).toBeUndefined();
+    expect(sfxCue(cuesFor(summoned(UNIT), ctx()), "summon")?.params).toBeUndefined();
+    expect(sfxCue(cuesFor(played(SPELL), ctx()), "spell")?.params).toBeUndefined();
+  });
 
   it("R203 a card behind the sentinel is never looked up: no accent, no sting, the generic sound", () => {
     const asked: string[] = [];
@@ -1570,8 +1513,6 @@ describe("R1363 Armor clanks when it takes half or more of a hit, and rings when
 
 describe("R1364 a hit that does far more than the health left is overkill", () => {
   it("R1364 overkill is at least OVERKILL_MIN_EXCESS beyond the health, and at least that health beyond it", () => {
-    // Kept per issue #2849 step 9: #2846's rule deletes a pin only when its constant is
-    // generated into wire/*Config.ts or is in S2, and this audio-local threshold is neither.
     expect(OVERKILL_MIN_EXCESS).toBe(3);
     expect(isOverkill(4, 1)).toBe(true); // 3 beyond 1
     expect(isOverkill(3, 1)).toBe(false); // 2 beyond

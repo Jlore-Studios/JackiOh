@@ -972,257 +972,88 @@ describe("B15 cast", () => {
 /* B16: one test per S7 row */
 
 describe("B16 the recipe table, row by row", () => {
-  const B16_RECIPE_ROWS: { title: string; type: GameEvent["type"]; check: (D: number) => void }[] = [
-    {
-      title: "B16 healed: holy rays and a holy burst at 0, a heal splat at 0.2 D",
-      type: "healed",
-      check: (D) => {
-        const at = r(FX_HEAL_SPLAT_AT * D);
-        expectCues(plan([{ type: "healed", targetId: "hero-p1", amount: 4 }], D), [
-          rays("holy", heroT("you"), 0, D),
-          burst("holy", heroT("you"), "area", 0),
-          splat("heal", 4, heroT("you"), at, D),
-        ]);
-        expectCues(plan([{ type: "healed", targetId: MINE_3, amount: 2 }], D), [
-          rays("holy", cardT(MINE_3), 0, D),
-          burst("holy", cardT(MINE_3), "area", 0),
-          splat("heal", 2, cardT(MINE_3), at, D),
-        ]);
-      },
-    },
-    {
-      title: "B16 healthLost: a void burst and a loss splat at the hero, both at 0",
-      type: "healthLost",
-      check: (D) => {
-        expectCues(plan([{ type: "healthLost", player: "p2", amount: 3 }], D), [
-          burst("void", heroT("opponent"), "area", 0),
-          splat("loss", 3, heroT("opponent"), 0, D),
-        ]);
-        expectCues(plan([{ type: "healthLost", player: "p1", amount: 5 }], D), [
-          burst("void", heroT("you"), "area", 0),
-          splat("loss", 5, heroT("you"), 0, D),
-        ]);
-      },
-    },
-    {
-      title: "B16 divineShieldLost: a gold ring and a shard ring burst at the card",
-      type: "divineShieldLost",
-      check: (D) => {
-        expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [
-          ring("gold", cardT(ENEMY), 0, D),
-          burst("shard", cardT(ENEMY), "ring", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D, plus its flavor's exit (#1446)",
-      type: "destroyed",
-      check: (D) => {
-        expectCues(
-          plan([{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", controller: "p1", attack: 1, maxHealth: 6, killerId: ENEMY }], D),
-          [
-            crack(cardT(MINE_3), 0, D),
-            burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
-            burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
-            // #1446: core-017 is Nature, so it wilts.
-            burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
-            burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
-          ],
-        );
-      },
-    },
-    {
-      title: "B16 destroyed off the board: one smoke puff at the graveyard pile and no crack",
-      type: "destroyed",
-      check: (D) => {
-        expectCues(
-          plan([{ type: "destroyed", instanceId: "gone", defId: "core-017", owner: "p2", controller: "p2", attack: 1, maxHealth: 1, killerId: null }], D),
-          [burst("smoke", tid("graveyard-opponent"), "point", 0)],
-        );
-      },
-    },
-    {
-      title: "B16 exiled: a void ring and a void burst, at the card or at the exile pile",
-      type: "exiled",
-      check: (D) => {
-        expectCues(plan([{ type: "exiled", instanceId: ENEMY_2, defId: "core-013", owner: "p2" }], D), [
-          ring("void", cardT(ENEMY_2), 0, D),
-          burst("void", cardT(ENEMY_2), "area", 0),
-        ]);
-        expectCues(plan([{ type: "exiled", instanceId: "gone", defId: "core-013", owner: "p1" }], D), [
-          ring("void", tid("exile-you"), 0, D),
-          burst("void", tid("exile-you"), "area", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 radiantSet on a board card: a sheen, radiant rays and a gold burst at 0.4 D",
-      type: "radiantSet",
-      check: (D) => {
-        expectCues(
-          plan([{ type: "radiantSet", instanceId: POISONER, defId: "core-011", zone: { z: "field", player: "p1", row: "units", lane: 2 } }], D),
-          [sheen(cardT(POISONER), D), burst("gold", cardT(POISONER), "area", r(FX_RADIANT_BURST_AT * D)), rays("radiant", cardT(POISONER), 0, D)],
-        );
-      },
-    },
-    {
-      title: "B16 radiantSet off the board gets the sheen and burst but no rays",
-      type: "radiantSet",
-      check: (D) => {
-        const at = r(FX_RADIANT_BURST_AT * D);
-        expectCues(plan([{ type: "radiantSet", instanceId: HAND_2, defId: "core-019", zone: { z: "hand", player: "p1" } }], D), [
-          sheen(handCardT(HAND_2), D),
-          burst("gold", handCardT(HAND_2), "area", at),
-        ]);
-        expectCues(plan([{ type: "radiantSet", instanceId: "hidden", defId: "hidden", zone: { z: "hand", player: "p2" } }], D), [
-          sheen(tid("hand-opponent"), D),
-          burst("gold", tid("hand-opponent"), "area", at),
-        ]);
-        expectCues(plan([{ type: "radiantSet", instanceId: "gone", defId: "core-003", zone: { z: "graveyard", player: "p1" } }], D), [
-          sheen(tid("graveyard-you"), D),
-          burst("gold", tid("graveyard-you"), "area", at),
-        ]);
-      },
-    },
-    {
-      title: "B16 transformed: a smoke point burst and an arcane point burst at the card",
-      type: "transformed",
-      check: (D) => {
-        expectCues(
-          plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D),
-          // Centered on the unit (integration QA: an area of puffs drifted over the next lanes).
-          [burst("smoke", cardT(MINE_3), "point", 0), burst("arcane", cardT(MINE_3), "point", 0)],
-        );
-      },
-    },
-    {
-      title: "B16 fused: smoke at every located ingredient, arcane projectiles into the survivor and an arcane burst on arrival",
-      type: "fused",
-      check: (D) => {
-        const f = r(FX_FUSE_FLIGHT_FRACTION * D);
-        expectCues(plan([{ type: "fused", instanceIds: [MINE, POISONER], resultInstanceId: "c91", defId: "core-088" }], D), [
-          burst("smoke", cardT(MINE), "area", 0),
-          burst("smoke", cardT(POISONER), "area", 0),
-          projectile("arcane", cardT(POISONER), cardT(MINE), f),
-          burst("arcane", cardT(MINE), "area", f),
-        ]);
-      },
-    },
-    {
-      title: "B16 trapFired: an arcane ring, a ring burst in the card's flavor and a punch shake at 0.3 D, on the card the viewer reads",
-      type: "trapFired",
-      check: (D) => {
-        const b = r(FX_TRAP_BURST_AT * D);
-        const holy = FLAVOR_LOOKS.Holy;
-        expectCues(plan([{ type: "trapFired", instanceId: MY_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 5 }], D), [
-          ring("arcane", cardT(MY_TRAP), 0, D),
-          burst(holy.particle, cardT(MY_TRAP), "ring", b, holy.colors),
-          shake(0.4, b),
-        ]);
-      },
-    },
-    {
-      title: "B16 locked: a dust ring and a dust burst at the zone",
-      type: "locked",
-      check: (D) => {
-        expectCues(plan([{ type: "locked", player: "p2", row: "units", lane: 2 }], D), [
-          ring("dust", zoneT("opponent", "units", 2), 0, D),
-          burst("dust", zoneT("opponent", "units", 2), "area", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 attackDeclared: a flavor kick at the attacker's foot",
-      type: "attackDeclared",
-      check: (D) => {
-        expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], D), [
-          burst("gold", tid(testid.card(MINE), FOOT), "point", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 attackCancelled: a smoke puff at the attacker",
-      type: "attackCancelled",
-      check: (D) => {
-        expectCues(plan([{ type: "attackCancelled", attackerId: MINE, targetId: ENEMY, byInstanceId: "b5" }], D), [
-          burst("smoke", cardT(MINE), "point", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 keywordGranted: Divine Shield rings gold, Poisonous clouds, Taunt rings dust, anything else sparks arcane",
-      type: "keywordGranted",
-      check: (D) => {
-        const grant = (keyword: Extract<GameEvent, { type: "keywordGranted" }>["keyword"]) =>
-          plan([{ type: "keywordGranted", instanceId: MINE_3, keyword }], D);
-        expectCues(grant({ kind: "Divine Shield" }), [ring("gold", cardT(MINE_3), 0, D), burst("holy", cardT(MINE_3), "ring", 0)]);
-        expectCues(grant({ kind: "Poisonous" }), [burst("poison", cardT(MINE_3), "area", 0)]);
-        expectCues(grant({ kind: "Taunt" }), [ring("dust", cardT(MINE_3), 0, D)]);
-        for (const keyword of [{ kind: "Rush" }, { kind: "Charge" }, { kind: "Armor", n: 2 }, { kind: "Lucky", n: 3 }] as const) {
-          expectCues(grant(keyword), [burst("arcane", cardT(MINE_3), "point", 0)]);
-        }
-      },
-    },
-    {
-      title: "B16 counterChanged: plague clouds poison, grade sparkles",
-      type: "counterChanged",
-      check: (D) => {
-        expectCues(plan([{ type: "counterChanged", instanceId: ENEMY, counter: "plague", value: 2 }], D), [
-          burst("poison", cardT(ENEMY), "area", 0),
-        ]);
-        expectCues(plan([{ type: "counterChanged", instanceId: MINE_3, counter: "grade", value: 1 }], D), [
-          burst("sparkle", cardT(MINE_3), "point", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 modifierChanged: an arcane glint when added",
-      type: "modifierChanged",
-      check: () => {
-        expectCues(plan([{ type: "modifierChanged", player: "p2", modifierId: "m9", added: true }], 200), [
-          burst("arcane", tid("modifiers-opponent"), "point", 0),
-        ]);
-        expectCues(plan([{ type: "modifierChanged", player: "p1", modifierId: "m9", added: true }], 200), [
-          burst("arcane", tid("modifiers-you"), "point", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 addedToHand: a sparkle burst over the player's hand",
-      type: "addedToHand",
-      check: (D) => {
-        expectCues(plan([{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }], D), [
-          burst("sparkle", tid("hand-opponent"), "area", 0),
-        ]);
-        expectCues(plan([{ type: "addedToHand", player: "p1", instanceId: "cZ", defId: "core-060" }], D), [
-          burst("sparkle", tid("hand-you"), "area", 0),
-        ]);
-      },
-    },
-    {
-      title: "B16 controlChanged: arcane motes fly from the card's old place to its new zone over 0.7 D",
-      type: "controlChanged",
-      check: (D) => {
-        const f = r(FX_MIND_CONTROL_FLIGHT_FRACTION * D);
-        const zone = zoneT("you", "units", 4);
-        expectCues(plan([{ type: "controlChanged", instanceId: ENEMY, controller: "p1", row: "units", lane: 4 }], D), [
-          projectile("arcane", cardT(ENEMY), zone, f),
-          burst("arcane", zone, "area", f),
-        ]);
-      },
-    },
-  ];
-
-  it.each(B16_RECIPE_ROWS)("B16 recipe rows plan their S7 cues: $title", ({ type, check }) => {
-    forDs(type, check);
+  it("B16 healed: holy rays and a holy burst at 0, a heal splat at 0.2 D", () => {
+    forDs("healed", (D) => {
+      const at = r(FX_HEAL_SPLAT_AT * D);
+      expectCues(plan([{ type: "healed", targetId: "hero-p1", amount: 4 }], D), [
+        rays("holy", heroT("you"), 0, D),
+        burst("holy", heroT("you"), "area", 0),
+        splat("heal", 4, heroT("you"), at, D),
+      ]);
+      expectCues(plan([{ type: "healed", targetId: MINE_3, amount: 2 }], D), [
+        rays("holy", cardT(MINE_3), 0, D),
+        burst("holy", cardT(MINE_3), "area", 0),
+        splat("heal", 2, cardT(MINE_3), at, D),
+      ]);
+    });
   });
 
   it("B16 healed on a target the view does not render plans nothing", () => {
     expect(plan([{ type: "healed", targetId: "nowhere", amount: 4 }], 300)).toEqual([]);
   });
 
+  it("B16 healthLost: a void burst and a loss splat at the hero, both at 0", () => {
+    forDs("healthLost", (D) => {
+      expectCues(plan([{ type: "healthLost", player: "p2", amount: 3 }], D), [
+        burst("void", heroT("opponent"), "area", 0),
+        splat("loss", 3, heroT("opponent"), 0, D),
+      ]);
+      expectCues(plan([{ type: "healthLost", player: "p1", amount: 5 }], D), [
+        burst("void", heroT("you"), "area", 0),
+        splat("loss", 5, heroT("you"), 0, D),
+      ]);
+    });
+  });
+
+  it("B16 divineShieldLost: a gold ring and a shard ring burst at the card", () => {
+    forDs("divineShieldLost", (D) => {
+      expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [
+        ring("gold", cardT(ENEMY), 0, D),
+        burst("shard", cardT(ENEMY), "ring", 0),
+      ]);
+    });
+  });
+
   it("B16 divineShieldLost on a card the view does not render plans nothing", () => {
     expect(plan([{ type: "divineShieldLost", instanceId: "nowhere" }], 250)).toEqual([]);
+  });
+
+  it("B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D, plus its flavor's exit (#1446)", () => {
+    forDs("destroyed", (D) => {
+      expectCues(
+        plan([{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", controller: "p1", attack: 1, maxHealth: 6, killerId: ENEMY }], D),
+        [
+          crack(cardT(MINE_3), 0, D),
+          burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
+          burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
+          // #1446: core-017 is Nature, so it wilts.
+          burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
+          burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
+        ],
+      );
+    });
+  });
+
+  it("B16 destroyed off the board: one smoke puff at the graveyard pile and no crack", () => {
+    forDs("destroyed", (D) => {
+      expectCues(
+        plan([{ type: "destroyed", instanceId: "gone", defId: "core-017", owner: "p2", controller: "p2", attack: 1, maxHealth: 1, killerId: null }], D),
+        [burst("smoke", tid("graveyard-opponent"), "point", 0)],
+      );
+    });
+  });
+
+  it("B16 exiled: a void ring and a void burst, at the card or at the exile pile", () => {
+    forDs("exiled", (D) => {
+      expectCues(plan([{ type: "exiled", instanceId: ENEMY_2, defId: "core-013", owner: "p2" }], D), [
+        ring("void", cardT(ENEMY_2), 0, D),
+        burst("void", cardT(ENEMY_2), "area", 0),
+      ]);
+      expectCues(plan([{ type: "exiled", instanceId: "gone", defId: "core-013", owner: "p1" }], D), [
+        ring("void", tid("exile-you"), 0, D),
+        burst("void", tid("exile-you"), "area", 0),
+      ]);
+    });
   });
 
   it("R318 burned: fire and embers over the owner's hand at 0.25 D, and embers at its graveyard at D", () => {
@@ -1288,10 +1119,59 @@ describe("B16 the recipe table, row by row", () => {
     expect(burnedHidden).toEqual(burnedReadable);
   });
 
+  it("B16 radiantSet on a board card: a sheen, radiant rays and a gold burst at 0.4 D", () => {
+    forDs("radiantSet", (D) => {
+      expectCues(
+        plan([{ type: "radiantSet", instanceId: POISONER, defId: "core-011", zone: { z: "field", player: "p1", row: "units", lane: 2 } }], D),
+        [sheen(cardT(POISONER), D), burst("gold", cardT(POISONER), "area", r(FX_RADIANT_BURST_AT * D)), rays("radiant", cardT(POISONER), 0, D)],
+      );
+    });
+  });
+
+  it("B16 radiantSet off the board gets the sheen and burst but no rays", () => {
+    forDs("radiantSet", (D) => {
+      const at = r(FX_RADIANT_BURST_AT * D);
+      expectCues(plan([{ type: "radiantSet", instanceId: HAND_2, defId: "core-019", zone: { z: "hand", player: "p1" } }], D), [
+        sheen(handCardT(HAND_2), D),
+        burst("gold", handCardT(HAND_2), "area", at),
+      ]);
+      expectCues(plan([{ type: "radiantSet", instanceId: "hidden", defId: "hidden", zone: { z: "hand", player: "p2" } }], D), [
+        sheen(tid("hand-opponent"), D),
+        burst("gold", tid("hand-opponent"), "area", at),
+      ]);
+      expectCues(plan([{ type: "radiantSet", instanceId: "gone", defId: "core-003", zone: { z: "graveyard", player: "p1" } }], D), [
+        sheen(tid("graveyard-you"), D),
+        burst("gold", tid("graveyard-you"), "area", at),
+      ]);
+    });
+  });
+
+  it("B16 transformed: a smoke point burst and an arcane point burst at the card", () => {
+    forDs("transformed", (D) => {
+      expectCues(
+        plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D),
+        // Centered on the unit (integration QA: an area of puffs drifted over the next lanes).
+        [burst("smoke", cardT(MINE_3), "point", 0), burst("arcane", cardT(MINE_3), "point", 0)],
+      );
+    });
+  });
+
   it("B16 transformed with neither instance rendered plans nothing", () => {
     expect(
       plan([{ type: "transformed", instanceId: "gone", fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "also-gone" }], 400),
     ).toEqual([]);
+  });
+
+  it("B16 fused: smoke at every located ingredient, arcane projectiles into the survivor and an arcane burst on arrival", () => {
+    forDs("fused", (D) => {
+      const f = r(FX_FUSE_FLIGHT_FRACTION * D);
+      expectCues(plan([{ type: "fused", instanceIds: [MINE, POISONER], resultInstanceId: "c91", defId: "core-088" }], D), [
+        burst("smoke", cardT(MINE), "area", 0),
+        burst("smoke", cardT(POISONER), "area", 0),
+        projectile("arcane", cardT(POISONER), cardT(MINE), f),
+        burst("arcane", cardT(MINE), "area", f),
+      ]);
+    });
   });
 
   it("B16 fused skips ingredients the view does not render", () => {
@@ -1306,6 +1186,18 @@ describe("B16 the recipe table, row by row", () => {
       expectCues(plan([{ type: "fused", instanceIds: [MINE, "gone"], resultInstanceId: "c91", defId: "core-088" }], D), [
         burst("smoke", cardT(MINE), "area", 0),
         burst("arcane", cardT(MINE), "area", f),
+      ]);
+    });
+  });
+
+  it("B16 trapFired: an arcane ring, a ring burst in the card's flavor and a punch shake at 0.3 D, on the card the viewer reads", () => {
+    forDs("trapFired", (D) => {
+      const b = r(FX_TRAP_BURST_AT * D);
+      const holy = FLAVOR_LOOKS.Holy;
+      expectCues(plan([{ type: "trapFired", instanceId: MY_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 5 }], D), [
+        ring("arcane", cardT(MY_TRAP), 0, D),
+        burst(holy.particle, cardT(MY_TRAP), "ring", b, holy.colors),
+        shake(0.4, b),
       ]);
     });
   });
@@ -1376,6 +1268,23 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
+  it("B16 locked: a dust ring and a dust burst at the zone", () => {
+    forDs("locked", (D) => {
+      expectCues(plan([{ type: "locked", player: "p2", row: "units", lane: 2 }], D), [
+        ring("dust", zoneT("opponent", "units", 2), 0, D),
+        burst("dust", zoneT("opponent", "units", 2), "area", 0),
+      ]);
+    });
+  });
+
+  it("B16 attackDeclared: a flavor kick at the attacker's foot", () => {
+    forDs("attackDeclared", (D) => {
+      expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], D), [
+        burst("gold", tid(testid.card(MINE), FOOT), "point", 0),
+      ]);
+    });
+  });
+
   it("B16 attackDeclared by an attacker the view does not render plans nothing", () => {
     expect(plan([{ type: "attackDeclared", attackerId: "nowhere", targetId: ENEMY, forced: true }], 350)).toEqual([]);
   });
@@ -1406,6 +1315,27 @@ describe("B16 the recipe table, row by row", () => {
     ]);
   });
 
+  it("B16 attackCancelled: a smoke puff at the attacker", () => {
+    forDs("attackCancelled", (D) => {
+      expectCues(plan([{ type: "attackCancelled", attackerId: MINE, targetId: ENEMY, byInstanceId: "b5" }], D), [
+        burst("smoke", cardT(MINE), "point", 0),
+      ]);
+    });
+  });
+
+  it("B16 keywordGranted: Divine Shield rings gold, Poisonous clouds, Taunt rings dust, anything else sparks arcane", () => {
+    forDs("keywordGranted", (D) => {
+      const grant = (keyword: Extract<GameEvent, { type: "keywordGranted" }>["keyword"]) =>
+        plan([{ type: "keywordGranted", instanceId: MINE_3, keyword }], D);
+      expectCues(grant({ kind: "Divine Shield" }), [ring("gold", cardT(MINE_3), 0, D), burst("holy", cardT(MINE_3), "ring", 0)]);
+      expectCues(grant({ kind: "Poisonous" }), [burst("poison", cardT(MINE_3), "area", 0)]);
+      expectCues(grant({ kind: "Taunt" }), [ring("dust", cardT(MINE_3), 0, D)]);
+      for (const keyword of [{ kind: "Rush" }, { kind: "Charge" }, { kind: "Armor", n: 2 }, { kind: "Lucky", n: 3 }] as const) {
+        expectCues(grant(keyword), [burst("arcane", cardT(MINE_3), "point", 0)]);
+      }
+    });
+  });
+
   it("#1598 keywordGranted with lost set plans arrows down and a void burst, whatever the keyword", () => {
     forDs("keywordGranted", (D) => {
       for (const keyword of [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Poisonous" }, { kind: "Rush" }] as const) {
@@ -1421,14 +1351,56 @@ describe("B16 the recipe table, row by row", () => {
     expect(plan([{ type: "counterChanged", instanceId: "nowhere", counter: "grade", value: 1 }], 200)).toEqual([]);
   });
 
+  it("B16 counterChanged: plague clouds poison, grade sparkles", () => {
+    forDs("counterChanged", (D) => {
+      expectCues(plan([{ type: "counterChanged", instanceId: ENEMY, counter: "plague", value: 2 }], D), [
+        burst("poison", cardT(ENEMY), "area", 0),
+      ]);
+      expectCues(plan([{ type: "counterChanged", instanceId: MINE_3, counter: "grade", value: 1 }], D), [
+        burst("sparkle", cardT(MINE_3), "point", 0),
+      ]);
+    });
+  });
+
   it("B16 costChanged: an arcane glint at the card, and nothing when it is not rendered", () => {
     expectCues(plan([{ type: "costChanged", instanceId: HAND, cost: 0 }], 200), [burst("arcane", handCardT(HAND), "point", 0)]);
     expectCues(plan([{ type: "costChanged", instanceId: ENEMY, cost: 1 }], 200), [burst("arcane", cardT(ENEMY), "point", 0)]);
     expect(plan([{ type: "costChanged", instanceId: "nowhere", cost: 1 }], 200)).toEqual([]);
   });
 
+  it("B16 modifierChanged: an arcane glint when added", () => {
+    expectCues(plan([{ type: "modifierChanged", player: "p2", modifierId: "m9", added: true }], 200), [
+      burst("arcane", tid("modifiers-opponent"), "point", 0),
+    ]);
+    expectCues(plan([{ type: "modifierChanged", player: "p1", modifierId: "m9", added: true }], 200), [
+      burst("arcane", tid("modifiers-you"), "point", 0),
+    ]);
+  });
+
   it("B16 modifierChanged plans nothing when a modifier is removed", () => {
     expect(plan([{ type: "modifierChanged", player: "p2", modifierId: "m3", added: false }], 200)).toEqual([]);
+  });
+
+  it("B16 addedToHand: a sparkle burst over the player's hand", () => {
+    forDs("addedToHand", (D) => {
+      expectCues(plan([{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }], D), [
+        burst("sparkle", tid("hand-opponent"), "area", 0),
+      ]);
+      expectCues(plan([{ type: "addedToHand", player: "p1", instanceId: "cZ", defId: "core-060" }], D), [
+        burst("sparkle", tid("hand-you"), "area", 0),
+      ]);
+    });
+  });
+
+  it("B16 controlChanged: arcane motes fly from the card's old place to its new zone over 0.7 D", () => {
+    forDs("controlChanged", (D) => {
+      const f = r(FX_MIND_CONTROL_FLIGHT_FRACTION * D);
+      const zone = zoneT("you", "units", 4);
+      expectCues(plan([{ type: "controlChanged", instanceId: ENEMY, controller: "p1", row: "units", lane: 4 }], D), [
+        projectile("arcane", cardT(ENEMY), zone, f),
+        burst("arcane", zone, "area", f),
+      ]);
+    });
   });
 
   it("B16 controlChanged of a card the view does not render bursts at the new zone at 0", () => {
@@ -1469,67 +1441,30 @@ describe("B16 the recipe table, row by row", () => {
 /* B17, B18: flights and buffs */
 
 describe("B17 card flights", () => {
-  const B17_FLIGHT_ROWS: { title: string; type: GameEvent["type"]; check: (D: number) => void }[] = [
-    {
-      title: "B17 drawn: a card back flies from library to hand over D, and a sparkle lands at D",
-      type: "drawn",
-      check: (D) => {
-        expectCues(plan([{ type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" }], D), [
-          ghost(tid("library-you"), tid("hand-you"), D),
-          burst("sparkle", tid("hand-you"), "point", D),
-        ]);
-        expectCues(plan([{ type: "drawn", player: "p2", instanceId: "hidden", defId: "hidden" }], D), [
-          ghost(tid("library-opponent"), tid("hand-opponent"), D),
-          burst("sparkle", tid("hand-opponent"), "point", D),
-        ]);
-      },
-    },
-    {
-      title: "B17 bounced: smoke at the card and a card back flying to the owner's hand",
-      type: "bounced",
-      check: (D) => {
-        expectCues(plan([{ type: "bounced", instanceId: MINE_3, defId: "core-017", owner: "p1" }], D), [
-          burst("smoke", cardT(MINE_3), "area", 0),
-          ghost(cardT(MINE_3), tid("hand-you"), D),
-        ]);
-        expectCues(plan([{ type: "bounced", instanceId: ENEMY_2, defId: "core-013", owner: "p2" }], D), [
-          burst("smoke", cardT(ENEMY_2), "area", 0),
-          ghost(cardT(ENEMY_2), tid("hand-opponent"), D),
-        ]);
-      },
-    },
-    {
-      title: "B17 discarded: a card back flies from the hand card to the owner's graveyard, with embers at D",
-      type: "discarded",
-      check: (D) => {
-        expectCues(plan([{ type: "discarded", instanceId: HAND, defId: "core-002", owner: "p1" }], D), [
-          ghost(handCardT(HAND), tid("graveyard-you"), D),
-          burst("ember", tid("graveyard-you"), "point", D),
-        ]);
-        expectCues(plan([{ type: "discarded", instanceId: "hidden", defId: "hidden", owner: "p2" }], D), [
-          ghost(tid("hand-opponent"), tid("graveyard-opponent"), D),
-          burst("ember", tid("graveyard-opponent"), "point", D),
-        ]);
-      },
-    },
-    {
-      title: "B17 shuffledIn: a card back flies from the viewport center into the library, with an arcane burst at D",
-      type: "shuffledIn",
-      check: (D) => {
-        expectCues(plan([{ type: "shuffledIn", player: "p1", instanceId: "cW", defId: "core-070", position: 3 }], D), [
-          ghost(CENTER, tid("library-you"), D),
-          burst("arcane", tid("library-you"), "point", D),
-        ]);
-        expectCues(plan([{ type: "shuffledIn", player: "p2", instanceId: "hidden", defId: "hidden", position: 0 }], D), [
-          ghost(CENTER, tid("library-opponent"), D),
-          burst("arcane", tid("library-opponent"), "point", D),
-        ]);
-      },
-    },
-  ];
+  it("B17 drawn: a card back flies from library to hand over D, and a sparkle lands at D", () => {
+    forDs("drawn", (D) => {
+      expectCues(plan([{ type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" }], D), [
+        ghost(tid("library-you"), tid("hand-you"), D),
+        burst("sparkle", tid("hand-you"), "point", D),
+      ]);
+      expectCues(plan([{ type: "drawn", player: "p2", instanceId: "hidden", defId: "hidden" }], D), [
+        ghost(tid("library-opponent"), tid("hand-opponent"), D),
+        burst("sparkle", tid("hand-opponent"), "point", D),
+      ]);
+    });
+  });
 
-  it.each(B17_FLIGHT_ROWS)("B17 card flights fly backs and land their bursts: $title", ({ type, check }) => {
-    forDs(type, check);
+  it("B17 bounced: smoke at the card and a card back flying to the owner's hand", () => {
+    forDs("bounced", (D) => {
+      expectCues(plan([{ type: "bounced", instanceId: MINE_3, defId: "core-017", owner: "p1" }], D), [
+        burst("smoke", cardT(MINE_3), "area", 0),
+        ghost(cardT(MINE_3), tid("hand-you"), D),
+      ]);
+      expectCues(plan([{ type: "bounced", instanceId: ENEMY_2, defId: "core-013", owner: "p2" }], D), [
+        burst("smoke", cardT(ENEMY_2), "area", 0),
+        ghost(cardT(ENEMY_2), tid("hand-opponent"), D),
+      ]);
+    });
   });
 
   it("B17 bounced off the board: smoke at the hand region and no ghost", () => {
@@ -1540,38 +1475,54 @@ describe("B17 card flights", () => {
     });
   });
 
+  it("B17 discarded: a card back flies from the hand card to the owner's graveyard, with embers at D", () => {
+    forDs("discarded", (D) => {
+      expectCues(plan([{ type: "discarded", instanceId: HAND, defId: "core-002", owner: "p1" }], D), [
+        ghost(handCardT(HAND), tid("graveyard-you"), D),
+        burst("ember", tid("graveyard-you"), "point", D),
+      ]);
+      expectCues(plan([{ type: "discarded", instanceId: "hidden", defId: "hidden", owner: "p2" }], D), [
+        ghost(tid("hand-opponent"), tid("graveyard-opponent"), D),
+        burst("ember", tid("graveyard-opponent"), "point", D),
+      ]);
+    });
+  });
+
+  it("B17 shuffledIn: a card back flies from the viewport center into the library, with an arcane burst at D", () => {
+    forDs("shuffledIn", (D) => {
+      expectCues(plan([{ type: "shuffledIn", player: "p1", instanceId: "cW", defId: "core-070", position: 3 }], D), [
+        ghost(CENTER, tid("library-you"), D),
+        burst("arcane", tid("library-you"), "point", D),
+      ]);
+      expectCues(plan([{ type: "shuffledIn", player: "p2", instanceId: "hidden", defId: "hidden", position: 0 }], D), [
+        ghost(CENTER, tid("library-opponent"), D),
+        burst("arcane", tid("library-opponent"), "point", D),
+      ]);
+    });
+  });
 });
 
 describe("B18 buff arrows", () => {
-  const B18_BUFF_ROWS: { title: string; type: GameEvent["type"]; check: (D: number) => void }[] = [
-    {
-      title: "B18 a net-positive buff plans arrows up and sparkles",
-      type: "buffed",
-      check: (D) => {
-        for (const [attack, health] of [[2, 1], [0, 1], [3, -1]] as const) {
-          expectCues(plan([{ type: "buffed", instanceId: MINE_3, attack, health }], D), [
-            arrows("up", cardT(MINE_3), D),
-            burst("sparkle", cardT(MINE_3), "area", 0),
-          ]);
-        }
-      },
-    },
-    {
-      title: "B18 a net-negative buff plans arrows down and a void burst",
-      type: "buffed",
-      check: (D) => {
-        for (const [attack, health] of [[-2, 0], [-1, -1], [1, -3]] as const) {
-          expectCues(plan([{ type: "buffed", instanceId: ENEMY, attack, health }], D), [
-            arrows("down", cardT(ENEMY), D),
-            burst("void", cardT(ENEMY), "area", 0),
-          ]);
-        }
-      },
-    },
-  ];
+  it("B18 a net-positive buff plans arrows up and sparkles", () => {
+    forDs("buffed", (D) => {
+      for (const [attack, health] of [[2, 1], [0, 1], [3, -1]] as const) {
+        expectCues(plan([{ type: "buffed", instanceId: MINE_3, attack, health }], D), [
+          arrows("up", cardT(MINE_3), D),
+          burst("sparkle", cardT(MINE_3), "area", 0),
+        ]);
+      }
+    });
+  });
 
-  it.each(B18_BUFF_ROWS)("B18 buff direction follows the sign of the net: $title", ({ type, check }) => {
-    forDs(type, check);
+  it("B18 a net-negative buff plans arrows down and a void burst", () => {
+    forDs("buffed", (D) => {
+      for (const [attack, health] of [[-2, 0], [-1, -1], [1, -3]] as const) {
+        expectCues(plan([{ type: "buffed", instanceId: ENEMY, attack, health }], D), [
+          arrows("down", cardT(ENEMY), D),
+          burst("void", cardT(ENEMY), "area", 0),
+        ]);
+      }
+    });
   });
 
   it("B18 a buff that nets to zero plans nothing", () => {
