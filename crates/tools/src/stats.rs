@@ -41,8 +41,8 @@ use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH
 use jackioh_engine::{
     CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
     DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord,
-    GameReport, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, Tally,
-    WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, card_stats,
+    GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
+    Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, card_stats,
     created_played_delta, describe_filter, drawn_delta, format_card_stats, format_delta, format_tally,
     game_report, not_drawn, windowed_card_stats,
 };
@@ -450,7 +450,7 @@ pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
             history: &history,
             at,
             live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
-            mode: None,
+            mode: ModeFilter::All,
             request: WindowRequest::Gated,
         },
     );

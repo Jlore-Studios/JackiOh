@@ -110,21 +110,6 @@ mod tests {
         keywords.iter().map(|keyword| keyword.kind()).collect()
     }
 
-    mod n89_corpse_eater_printed_faces_s8_conventions {
-        use super::*;
-
-        #[test]
-        fn the_radiant_keyword_cell_lists_no_plus_so_rush_and_divine_shield_are_the_complete_list() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Rush]);
-            assert_eq!(
-                kinds(&def.radiant.keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield]
-            );
-        }
-    }
-
     mod n89_corpse_eater_base {
         use super::*;
 

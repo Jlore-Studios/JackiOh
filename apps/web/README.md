@@ -40,7 +40,9 @@ The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark 
 the stacked logo and the mark alone each on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
 the repository's `photos/logo`, which no build reads. `scripts/brand-logo.py` draws them all, outlining
 the wordmark from the self-hosted Alegreya, so no SVG needs a font; run it by hand and commit what it
-writes.
+writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws whatever a filter touches
+at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
+no screen shows, still use filters).
 
 The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
@@ -315,7 +317,7 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
-(`fx/motifs/`) in any flavor's palette at any gallery scale, and any card whose entry in its set's
+(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
 effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
@@ -395,7 +397,8 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
                         panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
-                        own rank and links /leaderboard (R661); a queue it joined is remembered for the
+                        own rank on the ladder of the mode picked and links that ladder's /leaderboard
+                        (R661, R2778000); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
                         its join form (R767); a queue the server no longer holds ends the wait with a
@@ -423,7 +426,8 @@ routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as t
 routes/SeriesBanner.tsx the board's banner for a series game, each side's won decks as pips, and its
                         "Continue" once the game is over
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
-                        Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
+                        Grape tiers, the Raisins — and the caller's own standing, on Constructed or All
+                        Random by its switch (`?ladder=random`, R2778000); rank/rank.ts says
                         a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's

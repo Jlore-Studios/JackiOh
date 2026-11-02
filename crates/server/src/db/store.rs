@@ -36,7 +36,7 @@ use crate::bots::cosmetics::BotCosmetics;
 use crate::config::PersonaName;
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
-use crate::ranked::ladder::{RankTier, SeasonRank, VisibleRank};
+use crate::ranked::ladder::{Ladder, RankTier, SeasonRank, VisibleRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
 use crate::username::render_username;
 
@@ -220,6 +220,14 @@ pub struct Profile {
     pub rating: f64,
     pub rating_deviation: f64,
     pub rating_volatility: f64,
+    /// R2778000: the All Random ladder's hidden Glicko-2 triple (migration 0076); the three above are
+    /// the Constructed ladder's. Server-side only, as they are (R612).
+    #[serde(default = "rating_start")]
+    pub random_rating: f64,
+    #[serde(default = "rating_deviation_start")]
+    pub random_rating_deviation: f64,
+    #[serde(default = "rating_volatility_start")]
+    pub random_rating_volatility: f64,
     /// Non-null while the profile is in a match (§9.5: every ending clears it).
     pub in_match_id: Option<String>,
     pub created_at: i64,
@@ -229,6 +237,45 @@ impl Profile {
     /// The username as shown: `Max`, or `Max#3` when it carries a tag (R1432).
     pub fn username(&self) -> String {
         render_username(&self.username_base, self.username_tag)
+    }
+
+    /// R2778000: the hidden rating the profile holds on `ladder`.
+    pub fn glicko(&self, ladder: Ladder) -> Glicko {
+        match ladder {
+            Ladder::Constructed => Glicko {
+                rating: self.rating,
+                deviation: self.rating_deviation,
+                volatility: self.rating_volatility,
+            },
+            Ladder::Random => Glicko {
+                rating: self.random_rating,
+                deviation: self.random_rating_deviation,
+                volatility: self.random_rating_volatility,
+            },
+        }
+    }
+}
+
+/// A new player's rating, deviation and volatility (R603), for a profile read without the All Random
+/// triple (R2778000).
+fn rating_start() -> f64 {
+    crate::config::RATING_START
+}
+
+fn rating_deviation_start() -> f64 {
+    crate::config::RATING_DEVIATION_START
+}
+
+fn rating_volatility_start() -> f64 {
+    crate::config::RATING_VOLATILITY_START
+}
+
+/// R2778000: the ladder a ranked game of `mode` moves: Best of 1 and Conquest the Constructed one,
+/// All Random its own.
+pub fn ladder_of_mode(mode: QueueMode) -> Ladder {
+    match mode {
+        QueueMode::Bo1 | QueueMode::Bo3 => Ladder::Constructed,
+        QueueMode::Random => Ladder::Random,
     }
 }
 
@@ -1059,6 +1106,9 @@ pub struct SeasonStanding {
 #[serde(rename_all = "camelCase")]
 pub struct BotRating {
     pub bot_id: String,
+    /// R2778000: the ladder the rating is on; a bot holds one per ladder (migration 0076).
+    #[serde(default)]
+    pub format: Ladder,
     pub glicko: Glicko,
     pub games: i64,
     pub updated_at: i64,
@@ -1109,8 +1159,11 @@ pub struct BotRow {
     pub created_at: i64,
     /// Epoch ms it was retired (R1454), or none while it is in the pool.
     pub retired_at: Option<i64>,
-    /// Its R610 rating (`bot_ratings`), `RATING_START` before it has a row.
+    /// Its R610 rating (`bot_ratings`) on the Constructed ladder, `RATING_START` before it has a row.
     pub rating: f64,
+    /// R2778000: its rating on the All Random ladder, likewise.
+    #[serde(default = "rating_start")]
+    pub random_rating: f64,
     /// The match it is in, as for a profile (§9.5).
     pub in_match_id: Option<String>,
     /// R1555000: whether it grinds now (migration 0053), set and cleared by the pool's refresh.
@@ -1123,6 +1176,16 @@ pub struct BotRow {
     /// the pool; none before the first draw. Never in the ledger or `GET /api/cosmetics`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cosmetics: Option<BotCosmetics>,
+}
+
+impl BotRow {
+    /// R2778000: the bot's rating on `ladder`.
+    pub fn rating_on(&self, ladder: Ladder) -> f64 {
+        match ladder {
+            Ladder::Constructed => self.rating,
+            Ladder::Random => self.random_rating,
+        }
+    }
 }
 
 /// R1834006: one person's seat of a match, as `cosmetics-fit` reads what people wear: the loadout
@@ -1194,6 +1257,9 @@ pub enum RatedReason {
 pub struct RatedGameRow {
     pub id: String,
     pub kind: RatedGameKind,
+    /// R2778000: the ladder the game moved (migration 0076; a row from before it, Constructed).
+    #[serde(default)]
+    pub format: Ladder,
     pub season_id: String,
     /// The game's version, the newest patch (R375), and the catalog version it was played on.
     pub patch_version: String,
@@ -1695,8 +1761,13 @@ impl Tx<'_> {
     }
 
     /// R603: one profile's hidden rating after a rated game.
-    pub async fn profiles_set_glicko(&mut self, profile_id: &str, glicko: &Glicko) -> StoreResult<()> {
-        dispatch!(self, profiles_set_glicko(profile_id, glicko))
+    pub async fn profiles_set_glicko(
+        &mut self,
+        profile_id: &str,
+        ladder: Ladder,
+        glicko: &Glicko,
+    ) -> StoreResult<()> {
+        dispatch!(self, profiles_set_glicko(profile_id, ladder, glicko))
     }
 
     /// R1434: the tag a claim of the base whose key is `key` would carry now: none when no other profile
@@ -2269,20 +2340,26 @@ impl Tx<'_> {
         dispatch!(self, ranked_create_season(season))
     }
 
-    /// R609: every profile that has played a rated game, with its hidden rating: the soft reset's
-    /// input. Bots are not profiles and are never in it.
-    pub async fn ranked_rated_players(&mut self) -> StoreResult<Vec<ResetPlayer>> {
-        dispatch!(self, ranked_rated_players())
+    /// R609: every profile that has played a rated game, with its hidden rating on `ladder`: the
+    /// soft reset's input. Bots are not profiles and are never in it. R2778000: a rated game on
+    /// either ladder makes a rated player of both, whose two triples each reset.
+    pub async fn ranked_rated_players(&mut self, ladder: Ladder) -> StoreResult<Vec<ResetPlayer>> {
+        dispatch!(self, ranked_rated_players(ladder))
     }
 
-    /// R609: writes a soft reset's ratings, every one in one statement.
-    pub async fn ranked_reset_ratings(&mut self, changes: &[ResetChange]) -> StoreResult<()> {
-        dispatch!(self, ranked_reset_ratings(changes))
+    /// R609: writes a soft reset's ratings on `ladder`, every one in one statement.
+    pub async fn ranked_reset_ratings(&mut self, ladder: Ladder, changes: &[ResetChange]) -> StoreResult<()> {
+        dispatch!(self, ranked_reset_ratings(ladder, changes))
     }
 
-    /// Every row of a season, each with the player's current rating, in profile-id order.
-    pub async fn ranked_standings(&mut self, season_id: &str) -> StoreResult<Vec<SeasonStanding>> {
-        dispatch!(self, ranked_standings(season_id))
+    /// Every row of a season's `ladder`, each with the player's current rating on it, in profile-id
+    /// order.
+    pub async fn ranked_standings(
+        &mut self,
+        season_id: &str,
+        ladder: Ladder,
+    ) -> StoreResult<Vec<SeasonStanding>> {
+        dispatch!(self, ranked_standings(season_id, ladder))
     }
 
     /// `ranked_standings` cut to what a rank read shows (#2022): the season's rows of `profile_ids`, plus
@@ -2292,21 +2369,27 @@ impl Tx<'_> {
     pub async fn ranked_standings_subset(
         &mut self,
         season_id: &str,
+        ladder: Ladder,
         profile_ids: &[String],
         min_ladder: i32,
     ) -> StoreResult<Vec<SeasonStanding>> {
-        dispatch!(self, ranked_standings_subset(season_id, profile_ids, min_ladder))
+        dispatch!(
+            self,
+            ranked_standings_subset(season_id, ladder, profile_ids, min_ladder)
+        )
     }
 
     pub async fn ranked_rank(
         &mut self,
         season_id: &str,
         profile_id: &str,
+        ladder: Ladder,
     ) -> StoreResult<Option<SeasonRank>> {
-        dispatch!(self, ranked_rank(season_id, profile_id))
+        dispatch!(self, ranked_rank(season_id, profile_id, ladder))
     }
 
-    /// Every season row this profile has, oldest season first: the profile's badges (R607).
+    /// Every season row this profile has on both ladders, oldest season first (Constructed before All
+    /// Random within a season): the profile's badges (R607, R2778000).
     pub async fn ranked_ranks_of(&mut self, profile_id: &str) -> StoreResult<Vec<SeasonRank>> {
         dispatch!(self, ranked_ranks_of(profile_id))
     }
@@ -2324,15 +2407,19 @@ impl Tx<'_> {
     pub async fn ranked_note_peak_jlorious(
         &mut self,
         season_id: &str,
+        ladder: Ladder,
         profile_id: &str,
         position: i64,
     ) -> StoreResult<()> {
-        dispatch!(self, ranked_note_peak_jlorious(season_id, profile_id, position))
+        dispatch!(
+            self,
+            ranked_note_peak_jlorious(season_id, ladder, profile_id, position)
+        )
     }
 
-    /// R610: a bot's rating, or `None` before its first rated game.
-    pub async fn ranked_bot(&mut self, bot_id: &str) -> StoreResult<Option<BotRating>> {
-        dispatch!(self, ranked_bot(bot_id))
+    /// R610: a bot's rating on `ladder` (R2778000), or `None` before its first rated game there.
+    pub async fn ranked_bot(&mut self, bot_id: &str, ladder: Ladder) -> StoreResult<Option<BotRating>> {
+        dispatch!(self, ranked_bot(bot_id, ladder))
     }
 
     pub async fn ranked_put_bot(&mut self, bot: &BotRating) -> StoreResult<()> {

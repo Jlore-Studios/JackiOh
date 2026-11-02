@@ -18,7 +18,15 @@ import { catalogFacts } from "../fx/FxLayer.tsx";
 import { planFx } from "../fx/cues.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import type { FxCue, FxRaysCue, FxTakeoverCue } from "../fx/types.ts";
-import { entranceEntries, newEventsSince, planEntries, type AnimationEntry, type EntranceResolver } from "./animations.ts";
+import {
+  entranceEntries,
+  newEventsSince,
+  planEntries,
+  setPieceEntries,
+  takeoverClaim,
+  type AnimationEntry,
+  type EntranceResolver,
+} from "./animations.ts";
 import { lookupFromDefs } from "./catalog.ts";
 import { firstReveal, isFaceDownSet } from "./entrance.ts";
 
@@ -80,7 +88,8 @@ function seat(first: PlayerView): Seat {
       sfx.length = 0;
       intros.length = 0;
       const fresh = newEventsSince(s.view.events, next.events);
-      const entries = entranceEntries(planEntries(fresh, s.view, false), resolve, { reduced: false, speed: 1, seen: entered });
+      const entrances = entranceEntries(planEntries(fresh, s.view, false), resolve, { seen: entered });
+      const entries = setPieceEntries(entrances, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
       sound.onView(next);
       music.onView(next);
       const env = { intensity: 1, card: (defId: string) => catalogFacts(lookup, defId), memory };
@@ -178,7 +187,7 @@ function grandCues(heard: Heard): string[] {
   return [
     ...heard.intros.map((id) => `intro:${id}`),
     ...heard.sfx.filter((s) => s.id === "entrance" || s.id === "sting").map((s) => `sfx:${s.id}${s.params?.mythic === true ? ":mythic" : ""}${s.params?.tier === undefined ? "" : `:${s.params.tier}`}`),
-    ...heard.entries.flatMap((entry) => (entry.entrance === undefined ? [] : [`entrance:${entry.entrance.tier}:${String(entry.entrance.holdMs > 0)}`])),
+    ...heard.entries.flatMap((entry) => (entry.entrance === undefined ? [] : [`entrance:${entry.entrance.tier}:${String((entry.setPiece?.holdMs ?? 0) > 0)}`])),
     ...heard.fx.filter(isEntranceFx).map((cue) => (cue.kind === "rays" ? `rays:${cue.tone}` : `takeover:${cue.look}`)),
   ].sort();
 }

@@ -22,6 +22,14 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
+# It is also production's gate (#2750; production manual since 2026-11-02): a `/promote` on the
+# production issue opens a pull request of a commit of main into `production`, this workflow runs on
+# it (`pull_request` below), and promote-production.yml merges it only once every job here passed. A
+# red run on such a pull request opens its own issue, CANDIDATE_TITLE, handed to the night bot as
+# `priority:high` and `difficulty:hard`, since production waits on it; the pull request stays open,
+# and re-running the failed jobs merges it once they pass. A run that passes on one closes that issue,
+# never the daily one.
+#
 # A failed run on the default branch hands the issue to the night bot (.harness/config.json's
 # bot_login), as ci-duration.yml hands over its report: a new issue is assigned to it and queued with
 # bot:build, and an open one nobody is assigned to is handed over the same way, so main's red run is
@@ -37,6 +45,10 @@ on:
   schedule:
     - cron: "17 7 * * *"
   workflow_dispatch:
+  # A promotion pull request (promote-production.yml): its head is a commit of main, so the run tests
+  # exactly what production would get.
+  pull_request:
+    branches: [production]
 
 # One run per branch at a time; a run is never cancelled for the next one, so every day reports.
 concurrency:
@@ -429,12 +441,16 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REF: ${{ github.ref_name }}
+          REF: ${{ github.head_ref || github.ref_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          SHA: ${{ github.sha }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+          PR: ${{ github.event.pull_request.number }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
-          TITLE: "CI: daily super run failed"
+          DAILY_TITLE: "CI: daily super run failed"
+          # A promotion pull request's own issue; scripts/promote-production.sh names it (SUPER_TITLE).
+          CANDIDATE_TITLE: "CI: super run failed on a production candidate"
           # Who fixes main's red run: the night bot (.harness/config.json's bot_login).
           BOT_LOGIN: jgoetzmann-bot
         run: |
@@ -445,9 +461,20 @@ jobs:
           done
           echo "results: $RESULTS"
 
+          # A promotion pull request into production has its own issue, so its run never closes, or
+          # comments on, the daily one.
+          candidate=false
+          TITLE=$DAILY_TITLE
+          if [ "$EVENT" = pull_request ] && [ "$BASE" = production ]; then
+            candidate=true
+            TITLE=$CANDIDATE_TITLE
+          fi
+          export TITLE
+
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
             --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
           where="[super run $RUN_ID]($RUN_URL) on \`$REF\` (\`${SHA:0:7}\`, $EVENT)"
+          [ "$candidate" = false ] || where="[super run $RUN_ID]($RUN_URL) on #$PR, the promotion of \`${SHA:0:12}\` into production,"
 
           if [ "$red" = false ]; then
             if [ -n "$open" ]; then
@@ -471,8 +498,11 @@ jobs:
           fi
           echo "$failed"
 
-          # Main's red run is the night bot's to fix; a branch's is its author's.
-          if [ "$REF" = "$DEFAULT_BRANCH" ]; then
+          # Main's red run is the night bot's to fix, and so is a promotion's, first; a branch's is its
+          # author's.
+          if [ "$candidate" = true ]; then
+            owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`). #$PR promotes \`${SHA:0:12}\`, a commit of \`$DEFAULT_BRANCH\`, so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, a person comments \`/promote\` on the production issue, which tests the newer commit."
+          elif [ "$REF" = "$DEFAULT_BRANCH" ]; then
             owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
           else
             owner="This run is on \`$REF\`, not \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
@@ -493,9 +523,17 @@ jobs:
             "_Posted by \`.github/workflows/super.yml\`._")
 
           # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
-          # would, for a red run on the default branch only. A failure here leaves the report
-          # standing for a person.
+          # would, for a red run on the default branch or on a promotion pull request only, the
+          # promotion's as high priority and hard (docs/issues-and-patches.md). A failure here leaves
+          # the report standing for a person.
           hand_over() {
+            if [ "$candidate" = true ]; then
+              gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+                --add-label "priority:high" --add-label "difficulty:hard" \
+                && echo "handed #$1 to @$BOT_LOGIN, high priority" \
+                || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
+              return 0
+            fi
             if [ "$REF" != "$DEFAULT_BRANCH" ]; then
               echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"
               return 0

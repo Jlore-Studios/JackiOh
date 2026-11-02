@@ -18,12 +18,12 @@ use crate::config::{BOT_GRIND_STEP_GAMES, BOT_STRENGTHS};
 use crate::cosmetics::JLORIOUS_CARD_BACK;
 use crate::db::store::{
     BotRating, MatchRow, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide,
-    Season, SeasonStanding, SeriesStatus, StoreError, Tx,
+    Season, SeasonStanding, SeriesStatus, StoreError, Tx, ladder_of_mode,
 };
 use crate::economy::store::{CosmeticGrant, EconomyReason};
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game_scored, widen_for_promotions};
 use crate::ranked::ladder::{
-    self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
+    self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, Ladder, PeakBadge, RankTier, SeasonRank, Standing,
     VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_floor, jlorious_order, peak_badge,
     percentile_of, place_of, target_ladder, tier_index_of, visible_rank, with_jlorious_peak,
 };
@@ -64,7 +64,10 @@ pub fn build_season_id(deps: &SeasonDeps) -> String {
 pub struct OpenedSeason {
     pub season: Season,
     pub opened: bool,
+    /// The Constructed ladder's soft reset, when this call opened the season.
     pub reset: Option<ResetReport>,
+    /// R2778000: the All Random ladder's, reset apart, its ratings pulled toward their own mean.
+    pub random_reset: Option<ResetReport>,
 }
 
 /// R609: the build's season, opened inside `t` when it does not exist yet. The first season of all
@@ -80,6 +83,7 @@ pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<Open
             season: existing.clone(),
             opened: false,
             reset: None,
+            random_reset: None,
         });
     }
 
@@ -103,6 +107,7 @@ pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<Open
             season: raced,
             opened: false,
             reset: None,
+            random_reset: None,
         });
     }
     if seasons.is_empty() {
@@ -114,23 +119,33 @@ pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<Open
             season,
             opened: true,
             reset: None,
+            random_reset: None,
         });
     }
-    let players = t.ranked_rated_players().await?;
-    let reset = soft_reset(&players);
-    t.ranked_reset_ratings(&reset.changes).await?;
+    // R2778000: each ladder's ratings reset apart, each toward its own players' mean.
+    let mut reports: Vec<ResetReport> = Vec::new();
+    for ladder in Ladder::ALL {
+        let players = t.ranked_rated_players(ladder).await?;
+        let reset = soft_reset(&players);
+        t.ranked_reset_ratings(ladder, &reset.changes).await?;
+        reports.push(reset.report);
+    }
+    let random_reset = reports.pop();
+    let reset = reports.pop();
     log_info(
         "season.opened",
         json!({
             "seasonId": id,
             "patchVersion": deps.patch_version,
-            "reset": serde_json::to_value(&reset.report).unwrap_or(Value::Null),
+            "reset": serde_json::to_value(&reset).unwrap_or(Value::Null),
+            "randomReset": serde_json::to_value(&random_reset).unwrap_or(Value::Null),
         }),
     );
     Ok(OpenedSeason {
         season,
         opened: true,
-        reset: Some(reset.report),
+        reset,
+        random_reset,
     })
 }
 
@@ -171,6 +186,10 @@ pub struct RankedGameInput {
     /// Absent (a normal game, a series) rates once.
     #[serde(default)]
     pub stake: Option<i32>,
+    /// R2778000: the ladder the game moves, its mode's (`ladder_of_mode`): a Conquest series and a
+    /// Best of 1 match the Constructed one, an All Random match its own.
+    #[serde(default)]
+    pub ladder: Ladder,
 }
 
 /// One side's rating write.
@@ -289,10 +308,11 @@ async fn before_of(
     profiles: &[Profile],
     side: &RankedSideInput,
     game_id: &str,
+    ladder: Ladder,
 ) -> Result<Before, StoreError> {
     match side {
         RankedSideInput::Bot { bot_id } => {
-            let bot = t.ranked_bot(bot_id).await?;
+            let bot = t.ranked_bot(bot_id, ladder).await?;
             Ok(match bot {
                 // R1560000: a bot last rated on an older AI is rated from a widened deviation.
                 Some(bot) => Before {
@@ -320,11 +340,7 @@ async fn before_of(
                     })
                 }
                 Some(profile) => Ok(Before {
-                    glicko: Glicko {
-                        rating: profile.rating,
-                        deviation: profile.rating_deviation,
-                        volatility: profile.rating_volatility,
-                    },
+                    glicko: profile.glicko(ladder),
                     games: 0,
                 }),
             }
@@ -372,7 +388,9 @@ pub async fn plan_ranked_game(
 
     let deps = SeasonDeps::current();
     let OpenedSeason { season, .. } = open_season_in_tx(t, &deps).await?;
-    let standings = t.ranked_standings(&season.id).await?;
+    // R2778000: the game's own ladder, its rows and ratings alone.
+    let on = input.ladder;
+    let standings = t.ranked_standings(&season.id, on).await?;
     let side_ids: Vec<String> = sides
         .iter()
         .map(|side| match side {
@@ -393,8 +411,8 @@ pub async fn plan_ranked_game(
     };
 
     let before = [
-        before_of(t, &profiles, first, &input.id).await?,
-        before_of(t, &profiles, second, &input.id).await?,
+        before_of(t, &profiles, first, &input.id, on).await?,
+        before_of(t, &profiles, second, &input.id, on).await?,
     ];
     // R1843004: each side's own score, so a fled game rates the fleer's win and the other's draw.
     let rated = rate_game_scored(
@@ -457,9 +475,10 @@ pub async fn plan_ranked_game(
             .map(|candidate| candidate.rating)
             .collect();
         let target = target_ladder(&percentile_of(after[index].rating, &others));
-        let start = row_before
-            .clone()
-            .unwrap_or_else(|| fresh_rank(&season.id, &profile_id, input.at));
+        let start = row_before.clone().unwrap_or_else(|| SeasonRank {
+            format: on,
+            ..fresh_rank(&season.id, &profile_id, input.at)
+        });
         let row_after = apply_ranked_game(
             &start,
             &ApplyRankedGameInput {
@@ -558,6 +577,7 @@ pub async fn plan_ranked_game(
     let row = RatedGameRow {
         id: input.id.clone(),
         kind: input.kind,
+        format: on,
         season_id: season.id.clone(),
         patch_version: deps.patch_version.clone(),
         catalog_version: input.catalog_version.clone(),
@@ -592,14 +612,17 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
     let Some(writes) = &plan.writes else {
         return Ok(());
     };
+    // R2778000: every write lands on the game's own ladder.
+    let on = plan.row.format;
     for (index, write) in writes.glickos.iter().enumerate() {
         match &write.side {
             RankedSideInput::Player { profile_id } => {
-                t.profiles_set_glicko(profile_id, &write.glicko).await?
+                t.profiles_set_glicko(profile_id, on, &write.glicko).await?
             }
             RankedSideInput::Bot { bot_id } => {
                 t.ranked_put_bot(&BotRating {
                     bot_id: bot_id.clone(),
+                    format: on,
                     glicko: write.glicko,
                     games: write.games as _,
                     updated_at: at,
@@ -623,8 +646,13 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
         t.ranked_put_rank(rank).await?;
     }
     for peak in &writes.peaks {
-        t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, i64::from(peak.position))
-            .await?;
+        t.ranked_note_peak_jlorious(
+            &plan.row.season_id,
+            on,
+            &peak.profile_id,
+            i64::from(peak.position),
+        )
+        .await?;
     }
     // R2755000: a grant to someone who owns it already writes nothing.
     for profile_id in &writes.jlorious {
@@ -705,11 +733,13 @@ fn username_in(usernames: &IndexMap<String, String>, profile_id: &str) -> String
     usernames.get(profile_id).cloned().unwrap_or_default()
 }
 
-/// `GET /api/ranked`: the caller's own season, profile id, username and badges.
+/// `GET /api/ranked`: the caller's own season, profile id, username and badges, on one ladder.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnRankBody {
     pub season: String,
+    /// R2778000: the ladder the body reads, `?ladder=`'s (Constructed when none is asked for).
+    pub ladder: Ladder,
     /// R1436: for keys and requests only; a player is shown by `username`.
     pub profile_id: String,
     pub username: String,
@@ -721,12 +751,12 @@ pub struct OwnRankBody {
     pub badges: Vec<PeakBadge>,
 }
 
-pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiError> {
+pub async fn own_rank(app: &App, profile_id: &str, ladder: Ladder) -> Result<OwnRankBody, ApiError> {
     let season_id = build_season_id(&SeasonDeps::current());
     let mut tx = app.db.begin(Some(profile_id)).await?;
     // #2022: the rows shown and Mythic Grape's, all that a rank and Jlorious read.
     let standings = tx
-        .ranked_standings_subset(&season_id, &[profile_id.to_string()], jlorious_floor())
+        .ranked_standings_subset(&season_id, ladder, &[profile_id.to_string()], jlorious_floor())
         .await?;
     let history = tx.ranked_ranks_of(profile_id).await?;
     let usernames = usernames_of(&mut tx, [profile_id]).await?;
@@ -738,6 +768,7 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
         .map(|standing| &standing.rank);
     Ok(OwnRankBody {
         season: season_id,
+        ladder,
         profile_id: profile_id.to_string(),
         username: username_in(&usernames, profile_id),
         rank: rank_in(&standings, &jlorious, profile_id),
@@ -748,7 +779,13 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
             losses: mine.map(|rank| rank.losses as i64).unwrap_or(0),
             draws: mine.map(|rank| rank.draws as i64).unwrap_or(0),
         },
-        badges: history.iter().filter_map(peak_badge).rev().collect(),
+        // R2778000: the ladder's own seasons' badges.
+        badges: history
+            .iter()
+            .filter(|rank| rank.format == ladder)
+            .filter_map(peak_badge)
+            .rev()
+            .collect(),
     })
 }
 
@@ -788,6 +825,8 @@ pub struct LeaderboardTier {
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardBody {
     pub season: String,
+    /// R2778000: the ladder the board shows, `?ladder=`'s (Constructed when none is asked for).
+    pub ladder: Ladder,
     /// Jlorious, #1 first.
     pub jlorious: Vec<JloriousRow>,
     /// Every other placed player, grouped by Grape tier, highest tier first and, inside a tier,
@@ -806,10 +845,10 @@ struct TierEntry {
     you: bool,
 }
 
-pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, ApiError> {
+pub async fn leaderboard(app: &App, viewer_id: &str, ladder: Ladder) -> Result<LeaderboardBody, ApiError> {
     let season_id = build_season_id(&SeasonDeps::current());
     let mut tx = app.db.begin(Some(viewer_id)).await?;
-    let standings = tx.ranked_standings(&season_id).await?;
+    let standings = tx.ranked_standings(&season_id, ladder).await?;
     let usernames = usernames_of(
         &mut tx,
         standings.iter().map(|standing| standing.rank.profile_id.as_str()),
@@ -872,6 +911,7 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
 
     Ok(LeaderboardBody {
         season: season_id,
+        ladder,
         jlorious: jlorious
             .iter()
             .enumerate()
@@ -936,6 +976,8 @@ pub struct MatchRanksBody {
     /// itself; a ranked series' games carry the flag while the series moves the rating once,
     /// when it ends.
     pub ranked: bool,
+    /// R2778000: the ladder the seats' ranks are read on, the match's mode's.
+    pub ladder: Ladder,
     pub seats: PerPlayer<SeatRank>,
 }
 
@@ -951,9 +993,15 @@ pub async fn match_ranks(
     if row.players.0 != viewer_id && row.players.1 != viewer_id {
         return Ok(None);
     }
+    // R2778000: the match's own ladder; a match no queue, room or series made reads Constructed.
+    let ladder = tx
+        .matches_mode_of(match_id)
+        .await?
+        .map_or(Ladder::Constructed, ladder_of_mode);
     let standings = tx
         .ranked_standings_subset(
             &build_season_id(&SeasonDeps::current()),
+            ladder,
             &[row.players.0.clone(), row.players.1.clone()],
             jlorious_floor(),
         )
@@ -991,6 +1039,7 @@ pub async fn match_ranks(
     // A missing flag is unranked (a pre-0022 row, or a room's), so this game moved nothing.
     Ok(Some(MatchRanksBody {
         ranked: row.ranked.unwrap_or(false),
+        ladder,
         seats: PerPlayer {
             p1: seat(&row.players.0),
             p2: seat(&row.players.1),
@@ -999,12 +1048,22 @@ pub async fn match_ranks(
 }
 
 /// R1442: the ladder tier each of a match's players holds now (seat order, `MatchRow.players`), read
-/// as `match_ranks` reads a rank, for the play telemetry's rank bucket.
-pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(RankTier, RankTier), StoreError> {
+/// as `match_ranks` reads a rank, for the play telemetry's rank bucket. R2778000: on the match's own
+/// ladder.
+pub async fn ladder_tiers(
+    app: &App,
+    match_id: &str,
+    players: &(String, String),
+) -> Result<(RankTier, RankTier), StoreError> {
     let mut tx = app.db.begin(None).await?;
+    let ladder = tx
+        .matches_mode_of(match_id)
+        .await?
+        .map_or(Ladder::Constructed, ladder_of_mode);
     let standings = tx
         .ranked_standings_subset(
             &build_season_id(&SeasonDeps::current()),
+            ladder,
             &[players.0.clone(), players.1.clone()],
             jlorious_floor(),
         )
@@ -1018,17 +1077,19 @@ pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(Rank
 // Routes
 
 /// `GET /api/ranked`: the caller's own rank, record, streak, username and season badges. Never the
-/// rating (R612).
+/// rating (R612). R2778000: on `?ladder=` (`constructed`, the default, or `random`).
 pub async fn get_ranked(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    ok_of(&own_rank(app, &profile.id).await?)
+    let ladder = Ladder::parse(req.query.get("ladder").map(String::as_str));
+    ok_of(&own_rank(app, &profile.id, ladder).await?)
 }
 
 /// `GET /api/leaderboard`. R612: Jlorious #1–#100, then everyone else by Grape tier, then how many
-/// are still placing.
+/// are still placing. R2778000: of `?ladder=` (`constructed`, the default, or `random`).
 pub async fn get_leaderboard(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    ok_of(&leaderboard(app, &profile.id).await?)
+    let ladder = Ladder::parse(req.query.get("ladder").map(String::as_str));
+    ok_of(&leaderboard(app, &profile.id, ladder).await?)
 }
 
 /// `GET /api/matches/:matchId/ranks`. Both players' ranks for the match screen. 404 when the caller

@@ -63,6 +63,7 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       notDrawnGames: 10,
       notDrawnWinRate: 0.4,
       drawnDelta: 0.25,
+      adjustedWinRate: 0.534,
       playRate: 0.5,
       hasEnoughGames: true,
       playedRadiantGames: 30,
@@ -88,6 +89,7 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       notDrawnGames: 2,
       notDrawnWinRate: 1.0,
       drawnDelta: -0.1,
+      adjustedWinRate: 0.497,
       playRate: 0.1,
       hasEnoughGames: false, // Below sample threshold (20)
       playedRadiantGames: 5,
@@ -113,6 +115,7 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       notDrawnGames: 5,
       notDrawnWinRate: 0.6,
       drawnDelta: -0.15,
+      adjustedWinRate: 0.486,
       playRate: 0.3,
       hasEnoughGames: true,
       playedRadiantGames: 20,
@@ -728,9 +731,9 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("-15%")).toBeInTheDocument();
     expect(screen.getByText("(25 / 5)")).toBeInTheDocument();
 
-    // Lava Hound (below sample floor: 10 games < 20): its When drawn renders "—"
+    // Lava Hound (below sample floor: 10 games < 20): its Adjusted (R2777000) and When drawn render "—"
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(3);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
 
     await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
     expect(screen.queryByRole("columnheader", { name: /Drawn vs not drawn/i })).not.toBeInTheDocument();
@@ -799,9 +802,9 @@ describe("R654 public statistics route", () => {
     const wardenRow = screen.getByText("Aqua Warden").closest("tr")!;
     expect(within(wardenRow).getByText("40%")).toBeInTheDocument();
 
-    // Lava Hound (<20 games total => — for both)
+    // Lava Hound (<20 games total => — for both, and for its Adjusted, R2777000)
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(3);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
 
     await user.click(radiantHeader);
     expect(radiantHeader).toHaveAttribute("aria-sort", "descending");
@@ -868,7 +871,7 @@ describe("R654 public statistics route", () => {
     const sortSelect = screen.getByTestId(statsTestid.sortSelect);
     const sortDirBtn = screen.getByTestId(statsTestid.sortDir);
 
-    expect(sortSelect).toHaveValue("winRate");
+    expect(sortSelect).toHaveValue("adjustedWinRate");
     expect(sortDirBtn).toHaveTextContent("↓");
 
     await user.selectOptions(sortSelect, "name");
@@ -944,13 +947,22 @@ describe("R377 public statistics match type", () => {
       .filter((url) => url.pathname === "/api/stats/cards");
   }
 
-  it("R377 mode picker asks the server for each match type and keeps it in the URL", async () => {
+  it("R377 R2777001 mode picker opens on Constructed, offers no mix of modes, asks the server for each match type and keeps any other in the URL", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
     const select = screen.getByTestId(statsTestid.modeSelect) as HTMLSelectElement;
-    expect(select).toHaveValue("");
+    expect(select).toHaveValue("constructed");
+    expect([...select.options].map((option) => option.textContent)).toEqual([
+      "Constructed",
+      "All Random",
+      "Best of 1",
+      "Conquest",
+    ]);
+    expect(cardsCalls().length).toBeGreaterThan(0);
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(window.location.search).not.toContain("mode=");
 
     await user.selectOptions(select, "bo1");
     await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo1")).toBe(true));
@@ -963,10 +975,48 @@ describe("R377 public statistics match type", () => {
     expect(window.location.search).toContain("mode=random");
 
     vi.mocked(fetch).mockClear();
-    await user.selectOptions(select, "");
+    await user.selectOptions(select, "constructed");
     await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
-    expect(cardsCalls().every((url) => !url.searchParams.has("mode"))).toBe(true);
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
+  });
+
+  it("R2777001 an old address's mode=all, which the page no longer offers, opens on Constructed", async () => {
+    at("/stats?mode=all");
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("constructed");
+    await waitFor(() =>
+      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(true),
+    );
+    expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(false);
+  });
+
+  it("R2777000 lists the cards by their adjusted win rate, shown to a tenth of a point, a card below the floor last with none shown", async () => {
+    const user = userEvent.setup();
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) =>
+      // Aqua Warden wins less than Spark Pup but lifts its decks more: the adjusted rate puts it first.
+      card.id === "core-003" ? { ...card, adjustedWinRate: 0.5612 } : card,
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const header = within(table).getByRole("columnheader", { name: /Adjusted/ });
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    const order = (): (string | null)[] =>
+      [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    const adjusted = within(table).getAllByTestId(statsTestid.adjustedCell).map((cell) => cell.textContent);
+    expect(adjusted).toEqual(["56.1%", "53.4%", "—"]);
+
+    // The raw win rate is still a column, and sorting by it puts Spark Pup back on top.
+    await user.click(within(table).getByRole("columnheader", { name: /^Win rate/ }));
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
   });
 
   it("R377 stats page starts with the mode the URL names", async () => {
@@ -1268,6 +1318,18 @@ describe("the drill-down's card preview", () => {
     expect(body).toMatch(/align-items:\s*flex-start/);
     const preview = /\.stats-drilldown-card-preview\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(preview).toMatch(/aspect-ratio:\s*5\s*\/\s*7/);
+  });
+
+  it("stretches the details column to the body's width on a phone, so the loading skeleton draws its rows", () => {
+    // In the phone's column the body centers its items, which shrank the details column to its
+    // content and left the skeleton's rows (`width: 100%` of it) no room for their lines.
+    const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const phone = /@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
+    expect(body).toMatch(/flex-direction:\s*column/);
+    expect(body).toMatch(/align-items:\s*center/);
+    const details = /\.stats-drilldown-details\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
+    expect(details).toMatch(/align-self:\s*stretch/);
   });
 
   it("shows the Radiant face beside the normal one on Show Radiant, and only the normal one again on a second press", async () => {
@@ -1677,6 +1739,7 @@ describe("R2446000 the Cards table's columns", () => {
       "Card",
       "Name",
       "Games",
+      "Adjusted",
       "Win rate",
       "When drawn",
       "Drawn vs not drawn",
@@ -1692,18 +1755,28 @@ describe("R2446000 the Cards table's columns", () => {
       within(screen.getByTestId(statsTestid.sortSelect))
         .getAllByRole("option")
         .map((option) => option.getAttribute("value")),
-    ).toEqual(["name", "games", "winRate", "drawnWinRate", "drawnDelta", "radiantWinRate", "normalWinRate", "playRate"]);
+    ).toEqual([
+      "name",
+      "games",
+      "adjustedWinRate",
+      "winRate",
+      "drawnWinRate",
+      "drawnDelta",
+      "radiantWinRate",
+      "normalWinRate",
+      "playRate",
+    ]);
   });
 
-  it("R2446000 an old address's sort by cost, rarity or keyword opens on the default sort, win rate descending", async () => {
+  it("R2446000 R2777000 an old address's sort by cost, rarity or keyword opens on the default sort, adjusted win rate descending", async () => {
     for (const gone of ["cost", "rarity", "keyword"]) {
       at(`/stats?sort=${gone}&dir=asc`);
       render(<StatsRoute />);
 
       const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-      expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("winRate");
+      expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
       expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");
-      expect(within(table).getByRole("columnheader", { name: /Win rate/ })).toHaveAttribute("aria-sort", "descending");
+      expect(within(table).getByRole("columnheader", { name: /Adjusted/ })).toHaveAttribute("aria-sort", "descending");
       expect([...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"))).toEqual([
         "core-001",
         "core-003",
@@ -1956,7 +2029,7 @@ describe("R2370000 the Tokens toggle", () => {
 
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
-    rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 
@@ -1975,7 +2048,7 @@ describe("R2125000 the Cards tab opens on its last table", () => {
   });
 
   it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
-    rememberRead(null, cardStatsPath(), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
     await waitFor(() => expect(held).toHaveLength(1), SLOW);

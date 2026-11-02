@@ -3642,17 +3642,12 @@ pub(crate) mod tests {
             reduce(&fresh, action)
         }
 
-        /// `probe` fails seed 1 in the probe stage, naming the probe called `name` and its step.
-        fn assert_caught(probe: Reducer, name: &str) {
-            assert_caught_at(1, probe, name);
-        }
-
-        /// `assert_caught` on `seed`'s game.
-        fn assert_caught_at(seed: u32, probe: Reducer, name: &str) {
+        /// `probe` fails `seed` in the probe stage, naming the probe called `name` and its step.
+        fn assert_caught(seed: u32, probe: Reducer, name: &str) {
             register_all();
-            let failure = fuzz_deal_probed(seed, decks_for_seed(seed), probe)
-                .err()
-                .expect("a reducer that breaks the probe must fail the seed");
+            let Some(failure) = fuzz_deal_probed(seed, decks_for_seed(seed), probe).err() else {
+                panic!("a reducer that breaks the {name} probe must fail seed {seed}");
+            };
             assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
             assert!(
                 failure
@@ -3666,16 +3661,6 @@ pub(crate) mod tests {
             assert!(text.contains("[probe]"), "{text}");
         }
 
-        #[test]
-        fn a_reducer_that_takes_the_wrong_seat_s_action_fails_the_wrong_seat_probe() {
-            assert_caught(seatless, WRONG_SEAT_PROBE);
-        }
-
-        #[test]
-        fn a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe() {
-            assert_caught(forgetful, REUSED_NONCE_PROBE);
-        }
-
         /// A reducer that takes any answer from the prompt's holder as the prompt's first listed answer.
         fn lenient(state: &GameState, action: &Action) -> ReduceResult {
             if let (ActionBody::Answer { .. }, Some(pending)) = (&action.body, &state.pending)
@@ -3685,12 +3670,6 @@ pub(crate) mod tests {
                 return reduce(state, &Action::new(first, action.player_id, action.nonce.clone()));
             }
             reduce(state, action)
-        }
-
-        #[test]
-        fn a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe() {
-            // Seed 1's game opens no prompt under #1705's 25-card decks; seed 2's does.
-            assert_caught_at(2, lenient, MALFORMED_ANSWER_PROBE);
         }
 
         /// A reducer that takes any play its seat is not listed as the seat's first listed play.
@@ -3709,8 +3688,17 @@ pub(crate) mod tests {
         }
 
         #[test]
-        fn a_reducer_that_takes_a_malformed_play_fails_the_malformed_action_probe() {
-            assert_caught(forgiving, MALFORMED_ACTION_PROBE);
+        fn a_reducer_that_breaks_a_probe_fails_the_seed_in_that_probe() {
+            let cases: [(u32, Reducer, &str); 4] = [
+                (1, seatless, WRONG_SEAT_PROBE),
+                (1, forgetful, REUSED_NONCE_PROBE),
+                // Seed 1's game opens no prompt under #1705's 25-card decks; seed 2's does.
+                (2, lenient, MALFORMED_ANSWER_PROBE),
+                (1, forgiving, MALFORMED_ACTION_PROBE),
+            ];
+            for (seed, probe, name) in cases {
+                assert_caught(seed, probe, name);
+            }
         }
 
         /// A reducer that accepts the prompt-open probe's forged actions, which the real game
