@@ -15053,6 +15053,9 @@
     "2812": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "c98757a881d846c227b9bcd27e3b0d636aa9ad7c": 1
+      },
       "cleared": {
         "at": "2026-11-02T08:12:45Z",
         "by": "`claude` (strong)",
