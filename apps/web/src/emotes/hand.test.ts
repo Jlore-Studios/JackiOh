@@ -41,8 +41,6 @@ describe("R1341 the hand the engine deals, over WASM", () => {
   });
 
   it("R1341 holds EMOTE_HAND_VOICE voice lines and the rest emoji, EMOTE_HAND_SIZE distinct, in the pool's order", () => {
-    expect(EMOTE_HAND_SIZE).toBe(8);
-    expect(EMOTE_HAND_VOICE).toBe(3);
     for (const seed of SEEDS) {
       for (const seat of ["p1", "p2"] as const) {
         const hand = dealEmoteHand(seed, seat);

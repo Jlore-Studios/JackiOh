@@ -1,11 +1,13 @@
 // R2784000: `/dev/fx`, the motif gallery: it offers every drawn motif, every flavor's palette, every
-// gallery scale and every card whose table entry names a motif, and each plays something.
+// gallery scale and every card whose table entry names a motif, and each plays something. R2785000: it
+// plays a card as the fixture set piece, which holds the board until a click skips it.
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
-import { galleryCues } from "../../fx/motifs/gallery.ts";
+import { GALLERY_SET_PIECE, galleryCues } from "../../fx/motifs/gallery.ts";
+import { BURST_BUDGET_MS } from "../../game/animations.ts";
 import { FX_DRAWN_MOTIFS } from "../../fx/motifs/names.ts";
 import { fullBoardView } from "../../test/fixtures.ts";
 import FxGallery, { FLAVORS, fxGalleryTestid, galleryCards } from "./fx.tsx";
@@ -48,6 +50,30 @@ describe("R2784000 the /dev/fx gallery", () => {
       }
       // The effects off plays nothing.
       expect(galleryCues(motif, "Fire", 1, view, FX_INTENSITY_SCALE.off)).toEqual([]);
+    }
+  });
+
+  it("R2785000 the gallery plays a card as the fixture set piece, which holds the board until a click skips it", () => {
+    vi.useFakeTimers();
+    try {
+      render(<FxGallery />);
+      const game = screen.getByTestId("game");
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSetPiece));
+      expect(game).toHaveAttribute("data-set-piece", GALLERY_SET_PIECE);
+      expect(screen.getByTestId("set-piece-skip")).toHaveTextContent("Tap to skip");
+      fireEvent.click(game);
+      expect(game).not.toHaveAttribute("data-set-piece");
+      expect(screen.queryByTestId("set-piece-skip")).toBeNull();
+
+      // Once the board has caught up, a plain play holds nothing.
+      act(() => {
+        vi.advanceTimersByTime(BURST_BUDGET_MS * 4);
+      });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playCard));
+      expect(game.querySelector("[data-animating]")).not.toBeNull();
+      expect(game).not.toHaveAttribute("data-set-piece");
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

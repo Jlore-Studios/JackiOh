@@ -1193,6 +1193,22 @@ export function getSeriesForMatch(token: string, matchId: string): Promise<{ ser
 
 export type GrapeTier = "rotten" | "normal" | "large" | "golden" | "mythic";
 
+/**
+ * R2778000: the two ranked ladders: Constructed (the Best of 1 and Conquest queues) and All Random, each
+ * with its own rank, record, badges and leaderboard. A read that names none is Constructed's.
+ */
+export type Ladder = "constructed" | "random";
+
+/** R2778000: the ladder a queue mode's ranked games move. */
+export function ladderOfMode(mode: "bo1" | "bo3" | "random"): Ladder {
+  return mode === "random" ? "random" : "constructed";
+}
+
+/** R2778000: a ranked read's path with its ladder: Constructed's is the bare path, as before. */
+export function ladderPath(path: string, ladder: Ladder): string {
+  return ladder === "constructed" ? path : `${path}?ladder=${ladder}`;
+}
+
 /** What a player is shown as (R605, R608, R612): never the rating. */
 export type VisibleRank =
   | { tier: "raisin"; placementsPlayed: number; placementGames: number }
@@ -1207,6 +1223,8 @@ export type PeakBadge =
 /** `GET /api/ranked`. The profile id is for keys and requests; a player is only ever shown by `username` (R1436). */
 export type OwnRankResponse = {
   season: string;
+  /** R2778000: the ladder the answer reads. */
+  ladder: Ladder;
   profileId: string;
   username: string;
   rank: VisibleRank;
@@ -1215,13 +1233,16 @@ export type OwnRankResponse = {
   badges: PeakBadge[];
 };
 
-export function getOwnRank(token: string): Promise<OwnRankResponse> {
-  return apiRequest<OwnRankResponse>("/api/ranked", { token });
+/** R2778000: `GET /api/ranked` on `ladder`, Constructed unless asked. */
+export function getOwnRank(token: string, ladder: Ladder = "constructed"): Promise<OwnRankResponse> {
+  return apiRequest<OwnRankResponse>(ladderPath("/api/ranked", ladder), { token });
 }
 
 /** `GET /api/leaderboard` (R608, R612): Jlorious #1–#100, then every other tier, then the Raisins. */
 export type LeaderboardResponse = {
   season: string;
+  /** R2778000: the ladder the board shows. */
+  ladder: Ladder;
   jlorious: { position: number; profileId: string; username: string; you: boolean }[];
   tiers: {
     tier: GrapeTier;
@@ -1232,8 +1253,9 @@ export type LeaderboardResponse = {
   you: VisibleRank;
 };
 
-export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
-  return keptGet<LeaderboardResponse>(keptPaths.leaderboard, token);
+/** R2778000: `ladder`'s board, kept under its own path (`ladderPath`), so each ladder keeps its own. */
+export function getLeaderboard(token: string, ladder: Ladder = "constructed"): Promise<LeaderboardResponse> {
+  return keptGet<LeaderboardResponse>(ladderPath(keptPaths.leaderboard, ladder), token);
 }
 
 /**
@@ -1242,6 +1264,8 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
  */
 export type MatchRanksResponse = {
   ranked: boolean;
+  /** R2778000: the ladder the seats' ranks are read on, the match's mode's. */
+  ladder: Ladder;
   seats: Record<
     "p1" | "p2",
     { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean; rankBefore?: VisibleRank; rankAfter?: VisibleRank }

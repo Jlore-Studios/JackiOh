@@ -225,7 +225,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           const table = animationRow(entry.type)?.durationMs ?? 0;
           const parent = root?.parentElement ?? null;
           if (parent !== null) {
-            // A slam's anticipation and a takeover's hold (R2722001) are a wait before the motion, not a slower motion.
+            // A slam's anticipation and a set piece's hold (R2722001, R2785000) are a wait before the motion, not a slower motion.
             const motionMs = entry.durationMs - leadMs(entry);
             // An event type this build does not know has no row (issue #769): no squeeze.
             if (table > 0) parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
@@ -265,6 +265,11 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           played.current = [];
           return;
         }
+        case "skip":
+          // R2785000: a skipped set piece cuts to its end; the next entry's start plays on as ever.
+          removeSqueeze(root);
+          director.current?.cut();
+          return;
         case "reset":
           removeSqueeze(root);
           director.current?.clear();

@@ -219,6 +219,31 @@ describe("every setting persists and applies live, on a board already on screen"
     expect(screen.getByTestId("fx-layer")).toHaveAttribute("data-fx", "on");
   });
 
+  it("R2785000 Big moments offers full, short and off in Visuals, and each choice is stored in jackioh.fx.v1", () => {
+    renderGame();
+    openFromBoard();
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
+    const control = select("setting-fxBigMoments");
+    expect(screen.getByTestId("settings-section-visuals").contains(control)).toBe(true);
+    expect(screen.getByRole("combobox", { name: "Big moments" })).toBe(control);
+    expect([...control.options].map((option) => [option.value, option.text])).toEqual([
+      ["full", "Full"],
+      ["short", "Short"],
+      ["off", "Off"],
+    ]);
+    expect(control.value).toBe(DEFAULT_FX_SETTINGS.bigMoments);
+    expect(control.value).toBe("full");
+
+    for (const value of ["short", "off", "full"] as const) {
+      fireEvent.change(select("setting-fxBigMoments"), { target: { value } });
+      expect(getFxSettings().bigMoments).toBe(value);
+      expect(stored(FX_SETTINGS_KEY)).toMatchObject({ bigMoments: value });
+      expect(select("setting-fxBigMoments").value).toBe(value);
+    }
+    // Stored with the other effects settings: the speed and intensity beside it are kept.
+    expect(stored(FX_SETTINGS_KEY)).toMatchObject({ speed: DEFAULT_FX_SETTINGS.speed, intensity: DEFAULT_FX_SETTINGS.intensity });
+  });
+
   it("animated foil: a Mythic face on screen stops shimmering and starts again", () => {
     if (MYTHIC === undefined) throw new Error("the catalog has no Mythic card");
     writeCardSettings({ rarityFoil: true });

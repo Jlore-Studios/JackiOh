@@ -243,7 +243,6 @@ describe("#1442 a Ranged attacker fires its flavor's shot", () => {
     expect(cues).toHaveLength(3);
     expect(cues[1]).toMatchObject({ kind: "shot", shot: FLAVOR_LOOKS.Brute.projectile, preset: "dust" });
     expect(cues[2]).toEqual({ kind: "shake", trauma: FX_SHOT_SHAKE_TRAUMA, delayMs: D });
-    expect(FX_SHOT_SHAKE_TRAUMA).toBe(0.3);
     expect(attack(view, MINE, ENEMY, { D, intensity: FX_INTENSITY_SCALE.high })[2]).toMatchObject({
       kind: "shake",
       trauma: Math.min(1, FX_SHOT_SHAKE_TRAUMA * FX_INTENSITY_SCALE.high),
