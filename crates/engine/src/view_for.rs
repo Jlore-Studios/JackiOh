@@ -15,6 +15,9 @@
 //!     animation fields and shows `HIDDEN_ID` for that card.
 //!   - R2652000: a `rolled` batch a face-down trap made is dropped for the other player unless the trap fired
 //!     in the same action (`withheld_rolls`).
+//!   - R2783000: a `hookResolving` marker is dropped for a seat that could not read its card where it stood
+//!     as the hook began, unless that trap fired in the same action (`withheld_rolls`), and takes no room in
+//!     R168's floor; R2783001's `via` goes with a hidden card's identity.
 //!   - R764: a Glitch's reset or boards (R676, R678) takes cards out unseen, so events up to the end of its
 //!     action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id; events naming its old id follow it through `formerId`.
@@ -1640,7 +1643,10 @@ fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -
 /// redaction (R185) keeps that many blank options where it drops the other seat's, so a world's view
 /// counts what the true one does.
 pub fn other_seats_option_count(state: &GameState, viewer: PlayerId) -> Option<i32> {
-    let pending = state.pending.as_ref().filter(|pending| pending.player_id != viewer)?;
+    let pending = state
+        .pending
+        .as_ref()
+        .filter(|pending| pending.player_id != viewer)?;
     shown_option_count(state, viewer, pending)
 }
 
@@ -2115,6 +2121,8 @@ fn redact_event(
             let killer_hidden = nullable_at(&shown, "killerId").is_some_and(|killer| hidden(&killer));
             if hidden(&instance) {
                 shown.remove("radiant");
+                // R2783001: the keyword it died by is the card's.
+                shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             if killer_hidden {
@@ -2138,6 +2146,8 @@ fn redact_event(
                     shown.remove("embiggened");
                 }
                 shown.remove("formerId");
+                // R2783001: as the card's Reborn is.
+                shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             // R1088: `sourceId`, the summoning card, may since be unreadable: hidden as `killerId` is.
@@ -2346,6 +2356,8 @@ fn redact_event(
         // R1361: the report of a hit Armor took whole names what `damage` names, and hides it alike.
         GameEventType::Damage | GameEventType::DamageAbsorbed => {
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
+                // R2783001: the hit's keyword is its source's, so it goes with the source.
+                shown.remove("via");
                 hide(&mut shown, &["sourceId"]);
             }
             if hidden(&text_at(&shown, "targetId")) {
@@ -2612,6 +2624,17 @@ fn redact_event(
             rebuild(shown)
         }
 
+        // R2783000: a marker a viewer reads at all (`withheld_rolls` drops the rest) names its card as
+        // the card itself is named now (R97); `hiddenFrom` is the engine's, so no view forwards it.
+        GameEventType::HookResolving => {
+            shown.remove("hiddenFrom");
+            let source = text_at(&shown, "sourceId");
+            if !source.is_empty() && hidden(&source) {
+                hide(&mut shown, &["sourceId", "defId"]);
+            }
+            rebuild(shown)
+        }
+
         // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
         GameEventType::ChaosRolled => {
             if !hidden(&instance) {
@@ -2693,25 +2716,32 @@ fn hidden_tuning_change() -> TuningChange {
 /// R2652000: the places, in `state.applied`'s events flattened oldest action first, of the `rolled`
 /// batches `viewer` never reads: a face-down card's in its controller's backrow, to the other player,
 /// unless that trap's own `trapFired` follows in the same action (Hearthstone's Secret). Judged inside
-/// the action that rolled, so a batch never comes into a window or leaves it after the fact.
+/// the action that rolled, so a batch never comes into a window or leaves it after the fact. R2783000:
+/// and the `hookResolving` markers of cards `viewer` could not read where they stood as the hook began
+/// (`hiddenFrom`), under the same exception for a trap that fires in that action.
 pub(crate) fn withheld_rolls(state: &GameState, viewer: PlayerId) -> IndexSet<usize> {
     let mut withheld = IndexSet::new();
     let mut base = 0;
     for entry in &state.applied {
         for (at, event) in entry.events.iter().enumerate() {
-            let GameEvent::Rolled {
-                player,
-                instance_id,
-                face_down: Some(true),
-                ..
-            } = event
-            else {
-                continue;
+            let (card_id, unread) = match event {
+                GameEvent::Rolled {
+                    player,
+                    instance_id,
+                    face_down: Some(true),
+                    ..
+                } => (instance_id, *player != viewer),
+                GameEvent::HookResolving {
+                    source_id,
+                    hidden_from: Some(hidden),
+                    ..
+                } => (source_id, hidden.contains(&viewer)),
+                _ => continue,
             };
-            let fired = entry.events[at + 1..].iter().any(|later| {
-                matches!(later, GameEvent::TrapFired { instance_id: trap, .. } if trap == instance_id)
-            });
-            if *player != viewer && !fired {
+            let fired = entry.events[at + 1..].iter().any(
+                |later| matches!(later, GameEvent::TrapFired { instance_id: trap, .. } if trap == card_id),
+            );
+            if unread && !fired {
                 withheld.insert(base + at);
             }
         }
@@ -2749,8 +2779,24 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let withheld = withheld_rolls(state, viewer);
     let read: Vec<usize> = (0..all.len()).filter(|at| !withheld.contains(at)).collect();
     let newest_from = all.len() - state.applied.last().map_or(0, |entry| entry.events.len());
-    let newest = read.iter().filter(|at| **at >= newest_from).count();
+    // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
+    // it would had no hook been marked, each marker among them beside them, and the markers just before
+    // its first event with it (a hook's marker comes before its first effect).
+    let marker = |at: &usize| matches!(all[*at], GameEvent::HookResolving { .. });
+    let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();
+    let newest = counted.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
+    let from = match counted.len().checked_sub(window) {
+        Some(skip) if skip > 0 => {
+            let first = counted[skip];
+            let mut start = read.partition_point(|at| *at < first);
+            while start > 0 && marker(&read[start - 1]) {
+                start -= 1;
+            }
+            read[start].min(newest_from)
+        }
+        _ => 0,
+    };
     let replaced = replacements_of(&all, Some(state));
     // R764: a Glitch's reset or boards (R676, R678) took cards out unseen, so a card the events up to the
     // end of its action name that the state no longer holds is not public, as a token's was (R11).
@@ -2775,8 +2821,8 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         voided: true,
         ..replaced.clone()
     };
-    read[read.len().saturating_sub(window)..]
-        .iter()
+    read.iter()
+        .filter(|at| **at >= from)
         .map(|&at| {
             redact_event(
                 state,
@@ -2853,6 +2899,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
 /// R243: the match-made definitions (`state.transient_defs`: a Fuse's, a crafted card's; R77, R102,
 /// R179) the finished view names anywhere, copied beside it since no client catalog has them. Read
 /// after redaction, so an unreadable card is the sentinel by then (R97) and its definition stays put.
+/// R2783000: a `hookResolving` marker brings in none, since it only marks a moment its card's own
+/// events and stand on the board already show; the view's definitions are the ones it had without it.
 fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardDef> {
     fn visit(value: &Value, state: &GameState, defs: &mut IndexMap<String, CardDef>) {
         match value {
@@ -2885,7 +2933,12 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
         return defs;
     }
     match serde_json::to_value(view) {
-        Ok(value) => visit(&value, state, &mut defs),
+        Ok(mut value) => {
+            if let Some(Value::Array(events)) = value.get_mut("events") {
+                events.retain(|event| event["type"].as_str() != Some("hookResolving"));
+            }
+            visit(&value, state, &mut defs)
+        }
         Err(error) => panic!("a view serializes: {error}"),
     }
     defs

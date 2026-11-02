@@ -1260,3 +1260,51 @@
     0 0 0 3px color-mix(in srgb, var(--pal-ember-500) 90%, transparent),
     0 0 14px color-mix(in srgb, var(--pal-ember-500) 25%, transparent);
 }
+
+/* --- a Choose one of lanes is its lanes on the board (#2757) --- */
+
+/* Last in the sheet, so each rule beats the small pickers' docks of the same weight above. No dim and no
+   panel: the lanes are lit on the board (LanePick.tsx), and what is left is a hint and Cancel in one pill at the
+   foot of the screen, clear of the home indicator, solid so it reads over the hand and the control bar it covers
+   (as the phone's target bar does). A replay's top placement is more specific and wins. */
+.prompt-scrim:has(> .prompt[data-lane-pick]) {
+  place-items: end center;
+  padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: transparent;
+}
+
+.prompt[data-prompt-kind][data-lane-pick] {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  max-height: none;
+  padding: 4px 6px 4px 16px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-2);
+}
+
+.prompt[data-prompt-kind][data-lane-pick] > :is(.prompt-board-hint, .prompt-title) {
+  display: block;
+  max-width: none;
+  margin: 0;
+  font-size: var(--type-sm);
+}
+
+.prompt[data-prompt-kind][data-lane-pick] > .prompt-actions {
+  position: static;
+  padding: 0;
+  border-top: 0;
+  background: transparent;
+}
+
+.prompt[data-prompt-kind][data-lane-pick] > .prompt-actions button {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
+}

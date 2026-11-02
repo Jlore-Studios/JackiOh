@@ -402,8 +402,10 @@ mod redact_b9 {
         );
     }
 
+    /// R2739000: the seat's view counts the cards of this Choose one out of a public graveyard, so the
+    /// redaction keeps that many blank options and none of what they were.
     #[test]
-    fn r185_b9_the_opponents_open_prompt_reaches_the_seat_with_no_options() {
+    fn r185_r2739000_b9_the_opponents_open_prompt_reaches_the_seat_as_its_count_of_blank_options() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
             "seed": "observe-their-prompt",
@@ -425,10 +427,15 @@ mod redact_b9 {
             public.pending.as_ref().map(|pending| pending.player_id),
             Some(PlayerId::P2)
         );
-        assert_eq!(
-            public.pending.as_ref().map(|pending| pending.options.len()),
-            Some(0)
-        );
+        let shown = jackioh_engine::view_for::other_seats_option_count(&state, AI);
+        assert_eq!(shown, Some(2));
+        let kept = public
+            .pending
+            .as_ref()
+            .map_or_else(Vec::new, |pending| pending.options.clone());
+        assert_eq!(i32::try_from(kept.len()).ok(), shown);
+        let blank = json!({ "key": "", "label": "", "selection": { "pick": "mode", "option": "" } });
+        assert!(kept.iter().all(|option| js(option) == blank), "{}", js(&kept));
         assert_eq!(
             js(redact(&state, PlayerId::P2)
                 .pending

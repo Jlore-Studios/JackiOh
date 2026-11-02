@@ -68,6 +68,7 @@ const S2 = {
   // R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand; R436's Call to Chaos.
   FX_MEMORY_RECENT: 16,
   FX_MEMORY_RESOLVING: 8,
+  FX_MEMORY_HITS: 44,
   FX_CAST_ON_DRAW_TRAUMA: 0.25,
   FX_CRACK_HIT_AT: 0.45,
   FX_CRACK_STAGGER_MS: 50,
@@ -114,6 +115,19 @@ const S2 = {
   FX_SHOT_LAUNCH_AT: 0.24,
   FX_SHOT_SHAKE_TRAUMA: 0.3,
   FX_FLAVOR_VOLLEY_MAX: 4,
+  // Issue #2784: the motifs (R2784000) and the gallery's scales.
+  FX_MOTIF_PHASES: { gather: 0, travel: 0.2, land: 0.6, linger: 0.75 },
+  FX_MOTIF_SCALE_PER_COST: 0.08,
+  FX_MOTIF_COST_CAP: 7,
+  FX_MOTIF_X_COST: 3,
+  FX_MOTIF_SCALE_MAX: 2,
+  FX_MOTIF_RARITY_SCALE: { Common: 1, Rare: 1.1, Epic: 1.25, Legendary: 1.4, Mythic: 1.6, Token: 0.9 },
+  FX_MOTIF_VOLLEY_MAX: 5,
+  FX_MOTIF_BARRAGE_MAX: 8,
+  FX_MOTIF_BARRAGE_STEP: 0.02,
+  FX_MOTIF_CENTER_LANE: 3,
+  FX_MOTIF_TRAUMA: { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 },
+  FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },
@@ -240,6 +254,13 @@ describe("S2 the effects constants", () => {
       expect(fraction).toBeGreaterThan(0);
       expect(fraction).toBeLessThanOrEqual(1);
     }
+    // R2784000: a motif's phases run in order from the entry's start, each inside it.
+    const phases = [constants.FX_MOTIF_PHASES.gather, constants.FX_MOTIF_PHASES.travel, constants.FX_MOTIF_PHASES.land, constants.FX_MOTIF_PHASES.linger];
+    expect(phases[0]).toBe(0);
+    for (let k = 1; k < phases.length; k += 1) {
+      expect(phases[k]).toBeGreaterThan(phases[k - 1] ?? 1);
+      expect(phases[k]).toBeLessThanOrEqual(1);
+    }
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
     // #1446: a Beast's streak leaves at the embers' beat and lands inside its entry.
@@ -269,6 +290,11 @@ describe("S2 the effects constants", () => {
       constants.FX_TAKEOVER_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
+      expect(trauma).toBeLessThanOrEqual(1);
+    }
+    // R2784000: a motif's shake, none for vanish.
+    for (const trauma of Object.values(constants.FX_MOTIF_TRAUMA)) {
+      expect(trauma).toBeGreaterThanOrEqual(0);
       expect(trauma).toBeLessThanOrEqual(1);
     }
   });

@@ -46,6 +46,17 @@ pause parks what it still owes on `state.work` as plain-data `Resume` records, n
 order R113 sets (`state.work_cursor`). Read `work.rs`'s header before touching anything that can
 open a prompt.
 
+The event stream also says why things happen, for the client's cues and never for a rule. A keyword
+behind a `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` rides it as `via`, set where
+the keyword applies: Cleave, Trample and First Strike as the hit's route (`DamageFlags.via`, never
+serialized, from `combat.rs` and `damage.rs`'s Trample), Pierce and Lifesteal in `damage.rs`'s steps,
+Poisonous and First Strike's unanswered kill on the `destroyed` through `Frontier.death_via`, and
+Reborn in `state_check.rs` (R2783001). `hook_marks.rs` emits `hookResolving` just before each first run
+of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
+`state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
+`view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
+drops `via`, so neither moves a hash.
+
 ## Purity (CLAUDE.md rule 4)
 
 No clock, no I/O, no environment, no threads, no OS randomness, no hash-ordered collection, no
