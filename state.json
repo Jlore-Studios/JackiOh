@@ -13362,6 +13362,7 @@
     "2836": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "aef8330855ed6e98b9c3c38669ee6efa77710e6e",
       "ci_fixes": 2,
       "ci_reruns": {
         "9b7f56d81d6906ff9a56474d890710983f4d906e": 1
@@ -13376,7 +13377,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-02T15:32:40Z",
+      "feedback_since": "2026-11-02T16:51:54Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2785,
@@ -13391,11 +13392,11 @@
       "run_id": "41485620295",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-02T16:51:54Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "claude"
