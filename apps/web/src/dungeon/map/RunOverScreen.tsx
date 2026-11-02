@@ -120,7 +120,6 @@ export function RunOverScreen({ dungeon, run, content, won }: RunOverScreenProps
         >
           {t("Start a new run")}
         </button>
-        {/* Part D owns the dungeon routes, so the address is literal until it names a path. */}
         <a href={paths.dungeonStats} data-testid={dungeonMapTestid.statsLink} onClick={followInApp(paths.dungeonStats)}>
           {t("Statistics")}
         </a>

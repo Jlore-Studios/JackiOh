@@ -7,19 +7,13 @@
 import type { ReactElement, ReactNode } from "react";
 
 import type { CardDef } from "@jackioh/shared";
-import type {
-  RunAction,
-  RunCard,
-  RunContent,
-  RunPassiveDef,
-  RunState,
-  RunTier,
-} from "@jackioh/run";
+import type { RunAction, RunCard, RunContent, RunPassiveDef, RunState } from "@jackioh/run";
 
 import { CardFace, faceModel } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { currentCatalog } from "../../game/currentCatalog.ts";
 import { t } from "../../i18n/i18n.ts";
+import { TIER_LABEL } from "../fight/ArtifactTray.tsx";
 
 /** What every screen below sends to the run: part D's `Dungeon.act` behind it. */
 export type SendRunAction = (action: RunAction) => void;
@@ -40,7 +34,7 @@ export function cardName(content: RunContent, id: string): string {
 }
 
 /** A relic's or blessing's definition in the run's content, or undefined for an unknown id. */
-export function passiveDef(content: RunContent, id: string): RunPassiveDef | undefined {
+function passiveDef(content: RunContent, id: string): RunPassiveDef | undefined {
   return content.passives.find((passive) => passive.id === id);
 }
 
@@ -132,15 +126,6 @@ export function RunCardFace({
     </button>
   );
 }
-
-/** Each tier as details name it, through `t()`, as the fight's tray does. */
-const TIER_LABEL: Readonly<Record<RunTier, string>> = {
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
-  platinum: "Platinum",
-  diamond: "Diamond",
-};
 
 type PassiveChoiceProps = {
   /** The relic's or blessing's id. */

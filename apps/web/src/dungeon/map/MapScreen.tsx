@@ -36,7 +36,7 @@ function isBossRow(run: RunState, row: number): boolean {
  * before the next row to visit, through the next row holding a mini-boss or boss, inclusive. Just
  * past a beaten boss the completed act stays behind, so the only selectable row is always shown.
  */
-export function currentActRows(run: RunState): { row: number }[] {
+function currentActRows(run: RunState): { row: number }[] {
   const next = (run.row ?? -1) + 1;
   let start = 0;
   for (let row = 0; row < next && row < run.map.length; row += 1) {

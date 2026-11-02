@@ -21,6 +21,8 @@
 //!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2);
 //!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
+//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
+//!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -233,7 +235,8 @@ const STRUCTURAL_READERS: &[&str] = &[
     // SPEC §7's table of tokens, its Token and Index cells, one row per token (R1177001).
     "crates/cards/tests/cross/catalog.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
-    // table, the first cell of each row only (#1720).
+    // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
+    // row only, and the line of `spec/README.md`'s map that links §15.
     "crates/tools/tests/acceptance.rs",
 ];
 
@@ -1797,4 +1800,48 @@ fn preview_no_test_previews_only_sets_that_ship() {
 fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
     let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Custom]);\nlet _e = preview_every_set();\n";
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
+}
+
+/// The constants `spec/15-dungeon-run.md`'s table names, the first cell of each row, in order.
+fn spec_table_constants(section: &str) -> Vec<String> {
+    section
+        .lines()
+        .filter_map(|line| line.strip_prefix("| `"))
+        .filter_map(|rest| rest.split('`').next())
+        .map(str::to_string)
+        .collect()
+}
+
+// B33 (DR14, #2709): the dungeon run's spec section holds one row per `pub const` of the run's
+// `config.rs` and no other, and the spec's map links the note.
+#[test]
+fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
+    let root = repo();
+    let config = fs::read_to_string(root.join("crates/run/src/config.rs")).expect("the run's config.rs");
+    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md");
+    let map = fs::read_to_string(root.join("spec/README.md")).expect("spec/README.md");
+    let constants: BTreeSet<String> = config_constants(&config).into_iter().collect();
+    let rows: BTreeSet<String> = spec_table_constants(&section).into_iter().collect();
+    assert!(
+        constants.len() > 40,
+        "only {} constants found in crates/run/src/config.rs",
+        constants.len()
+    );
+    let missing: Vec<&String> = constants.difference(&rows).collect();
+    let stale: Vec<&String> = rows.difference(&constants).collect();
+    assert!(
+        missing.is_empty() && stale.is_empty(),
+        "spec/15-dungeon-run.md's constants table and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
+    );
+    assert!(
+        map.lines()
+            .any(|line| line.starts_with("- [[§15]]") && line.contains("(15-dungeon-run.md)")),
+        "spec/README.md does not map spec/15-dungeon-run.md"
+    );
+}
+
+#[test]
+fn dungeon_the_table_scan_reads_each_rows_first_cell() {
+    let section = "| Constant | What | Where |\n| --- | --- | --- |\n| `RUN_A` | One | [[§15.1]] |\n| `RUN_B` | Two, see `RUN_A` | [[§15.2]] |\nProse naming `RUN_C`.\n";
+    assert_eq!(spec_table_constants(section), ["RUN_A", "RUN_B"]);
 }

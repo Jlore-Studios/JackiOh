@@ -15,6 +15,7 @@ import {
   cardName,
   IndexedCardChoices,
   PassiveChoice,
+  passiveName,
   RunCardFace,
   TileSection,
   type SendRunAction,
@@ -57,7 +58,7 @@ export function ShopScreen({ run, content, phase, send }: TileProps & { phase: S
                     name:
                       item.good.type === "card"
                         ? cardName(content, item.good.id)
-                        : passiveRelicName(content, item.good.id),
+                        : passiveName(content, item.good.id),
                   })}
                   onClick={() => {
                     send({ type: "buy", index });
@@ -134,12 +135,6 @@ export function ShopScreen({ run, content, phase, send }: TileProps & { phase: S
       </div>
     </section>
   );
-}
-
-/** A relic's translated name for sentences, without its details. */
-function passiveRelicName(content: RunContent, id: string): string {
-  const def = content.passives.find((passive) => passive.id === id);
-  return def === undefined ? id : t(def.name);
 }
 
 /** The campfire: heal, make a card Radiant, buff a card, or remove cards. */

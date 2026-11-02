@@ -23,7 +23,7 @@ type RewardPhase = Extract<RunPhase, { phase: "reward" }>;
 type PackPhase = Extract<RunPhase, { phase: "pack" }>;
 
 /** A pack's label: its kind, translated. */
-export function packLabel(kind: RunPackKind): string {
+function packLabel(kind: RunPackKind): string {
   switch (kind.type) {
     case "boss":
       return t("Boss deck");

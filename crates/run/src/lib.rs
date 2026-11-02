@@ -797,7 +797,7 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
     }
     if setup.artifacts.len() > RUN_STARTER_ARTIFACTS_MAX {
         return Err(format!(
-            "a run starts with at most {RUN_STARTER_ARTIFACTS_MAX} artifacts"
+            "a run starts with at most {RUN_STARTER_ARTIFACTS_MAX} relics"
         ));
     }
     for (i, id) in setup.artifacts.iter().enumerate() {
@@ -805,7 +805,7 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
             return Err(format!("{id} is taken twice"));
         }
         let Some(def) = passive_def(content, id) else {
-            return Err(format!("{id} is no artifact"));
+            return Err(format!("{id} is no relic"));
         };
         if !matches!(def.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) || def.unobtainable {
             return Err(format!("{id} cannot start a run"));
@@ -821,7 +821,7 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
         .sum();
     if points > RUN_STARTER_ARTIFACT_POINTS {
         return Err(format!(
-            "the artifacts are worth {points} points, over {RUN_STARTER_ARTIFACT_POINTS}"
+            "the relics are worth {points} points, over {RUN_STARTER_ARTIFACT_POINTS}"
         ));
     }
     for id in &setup.curses {
@@ -1532,7 +1532,7 @@ fn apply(
             },
             RunAction::OpenPack { .. },
         ) => {
-            return Err("take or leave the artifact first".into());
+            return Err("take or leave the relic first".into());
         }
         (
             RunPhase::Reward {
@@ -1584,7 +1584,7 @@ fn apply(
         }
         (RunPhase::ExtractArtifact, RunAction::Extract { index }) => {
             if let Some(i) = index {
-                let id = state.artifacts.get(*i).ok_or("no such artifact")?.id.clone();
+                let id = state.artifacts.get(*i).ok_or("no such relic")?.id.clone();
                 if passive_def(content, &id).is_some_and(|p| p.unobtainable) {
                     return Err(format!("{id} is a boss's own and cannot be extracted"));
                 }
@@ -1641,9 +1641,9 @@ fn apply(
             buff(state, *index)?;
         }
         (RunPhase::Shop { .. }, RunAction::LevelArtifact { index }) => {
-            let level = state.artifacts.get(*index).ok_or("no such artifact")?.level;
+            let level = state.artifacts.get(*index).ok_or("no such relic")?.level;
             if level >= RUN_ARTIFACT_LEVEL_MAX {
-                return Err("that artifact is at its highest level".into());
+                return Err("that relic is at its highest level".into());
             }
             spend_tickets(state, RUN_LEVEL_TICKETS * level)?;
             with_max_hp(state, content, |s| s.artifacts[*index].level += 1);

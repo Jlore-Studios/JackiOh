@@ -19,8 +19,8 @@ import "./fight.css";
 /** One relic or blessing in a tray: its passive's id and, for a run's relic, its level. */
 export type TrayItem = { id: string; level: number | null };
 
-/** Each tier as the list names it, through `t()`. */
-const TIER_LABEL: Readonly<Record<RunTier, string>> = {
+/** Each tier as the list names it, through `t()`; the map's relic details read it too. */
+export const TIER_LABEL: Readonly<Record<RunTier, string>> = {
   bronze: "Bronze",
   silver: "Silver",
   gold: "Gold",

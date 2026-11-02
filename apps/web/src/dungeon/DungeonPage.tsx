@@ -4,7 +4,7 @@
 // dropping them into a fight. A fight is the practice board (part E), every other phase, the map and its
 // tiles and the run-over screen (part F). The store holds the run (`store.ts`); the screens show it.
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { FightScreen } from "./fight/FightScreen.tsx";
 import { RunScreen } from "./map/RunScreen.tsx";
@@ -19,9 +19,17 @@ export default function DungeonPage(): ReactElement {
   const [entered, setEntered] = useState(() => run !== null && runFinished(run));
   // A run given up leaves nothing to enter: the next one is entered when it starts.
   if (run === null && entered) setEntered(false);
+  const kind = run === null || !entered ? "start" : run.phase.phase === "fight" ? "fight" : "run";
+  // Each screen opens at its top, as a new address does (#1756): the start screen is long.
+  const shown = useRef(kind);
+  useEffect(() => {
+    if (shown.current === kind) return;
+    shown.current = kind;
+    window.scrollTo(0, 0);
+  }, [kind]);
 
   let screen: ReactElement;
-  if (run === null || !entered) {
+  if (kind === "start") {
     screen = (
       <StartScreen
         dungeon={dungeon}
@@ -30,7 +38,7 @@ export default function DungeonPage(): ReactElement {
         }}
       />
     );
-  } else if (run.phase.phase === "fight") {
+  } else if (kind === "fight") {
     screen = <FightScreen dungeon={dungeon} />;
   } else {
     screen = <RunScreen dungeon={dungeon} />;

@@ -11,7 +11,8 @@ import type { RunAction, RunContent, RunState } from "@jackioh/run";
 
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { runMaxHp, runScore } from "../../wasm/index.ts";
-import type { Dungeon } from "../store.ts";
+import { RunTimer } from "../fight/RunTimer.tsx";
+import { runFinished, type Dungeon } from "../store.ts";
 import { MapScreen } from "./MapScreen.tsx";
 import {
   ExtractArtifactScreen,
@@ -23,14 +24,19 @@ import { dungeonMapTestid } from "./testids.ts";
 import { CampfireScreen, EventScreen, ShopScreen, ShrineScreen } from "./TileScreens.tsx";
 import { RunOverScreen } from "./RunOverScreen.tsx";
 import { passiveName, type SendRunAction } from "./RunDisplay.tsx";
+import "../../auth/tavern.css";
 import "./run.css";
 
-/** The HUD, on every screen: HP, Coins, Tickets, the deck's size, the relics held and the score. */
-function RunHud({ run, content }: { run: RunState; content: RunContent }): ReactElement {
+/**
+ * The HUD, on every screen: HP, Coins, Tickets, the deck's size, the relics held and the score, and
+ * the run's time until the run is over (B24), whose record then holds it.
+ */
+function RunHud({ run, content, startedAt }: { run: RunState; content: RunContent; startedAt: number | null }): ReactElement {
   const max = runMaxHp(run, content);
   const score = runScore(run, content);
   return (
     <header className="dungeon-run-hud" data-testid={dungeonMapTestid.hud}>
+      {runFinished(run) ? null : <RunTimer startedAt={startedAt} />}
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.hp}>
         {t("HP")}: {run.hp} / {max}
       </span>
@@ -78,7 +84,7 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
   // screen that crashes on null is a screen that crashes.
   if (run === null) {
     return (
-      <div className="dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
+      <div className="app-shell tavern dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
         <p className="notice" role="alert">
           {t("There is no run to show.")}
         </p>
@@ -89,8 +95,8 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
     setRefusal(dungeon.act(action));
   };
   return (
-    <div className="dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
-      <RunHud run={run} content={content} />
+    <div className="app-shell tavern dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
+      <RunHud run={run} content={content} startedAt={dungeon.startedAt} />
       {refusal === null ? null : (
         <p className="notice" role="alert" data-testid={dungeonMapTestid.refusal}>
           {t(refusal)}

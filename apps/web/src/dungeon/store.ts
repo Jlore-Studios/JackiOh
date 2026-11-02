@@ -71,6 +71,11 @@ export type RunRecord = {
 
 export type Dungeon = {
   content: RunContent;
+  /**
+   * The custom cards `content`'s pool holds, as a game carries them: the run's kept copy while a run
+   * stands, so its fights deal the cards its pool was dealt from (B21), else the account's.
+   */
+  customCards: CustomCard[];
   progress: DungeonProgress;
   run: RunState | null;
   /** `Date.now()` when the run started, for the timer. */
@@ -500,9 +505,11 @@ export function useDungeon(): Dungeon {
   const fresh = useMemo(() => contentFor(customCards), [customCards]);
   const start = useCallback((setup: RunSetup) => startRun(setup, customCards), [customCards]);
   const content = live === null ? fresh : live.content;
+  const cards = live === null ? customCards : live.customCards;
   return useMemo(
     () => ({
       content,
+      customCards: cards,
       progress,
       run: live === null ? null : live.run,
       startedAt: live === null ? null : live.startedAt,
@@ -511,6 +518,6 @@ export function useDungeon(): Dungeon {
       abandon: abandonRun,
       buyLevel: buyNextLevel,
     }),
-    [content, progress, live, start],
+    [content, cards, progress, live, start],
   );
 }

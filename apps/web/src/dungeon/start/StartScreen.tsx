@@ -18,7 +18,7 @@ import { t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { runCheckSetup, runConstants, runDailySeed, runLevelCost } from "../../wasm/index.ts";
-import { DUNGEON_LEVEL_STEP } from "../config.ts";
+import { DUNGEON_FIRST_LEVEL, DUNGEON_LEVEL_STEP } from "../config.ts";
 import { isTypedSeed, randomSeed, seedLength, todayDate } from "../seed.ts";
 import { dailyRunNumber, runFinished, type Dungeon } from "../store.ts";
 import { dungeonTestid } from "../testids.ts";
@@ -133,7 +133,7 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
   const seedUsable = seedChoice !== "typed" || isTypedSeed(typed);
 
   // The starting deck's slots and the cards a deck may hold: the unlocked ones, in the pool's order.
-  const slots = constants.slotLadder[unlocks.level - 1] ?? [];
+  const slots = constants.slotLadder[unlocks.level - DUNGEON_FIRST_LEVEL] ?? [];
   const offered = useMemo(() => {
     const allowed = new Set([...content.starterAccess, ...unlocks.cards]);
     const seen = new Set<string>();

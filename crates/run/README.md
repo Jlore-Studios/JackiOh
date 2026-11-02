@@ -31,6 +31,8 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 
 ## What the caller does
 
+- **Refusals.** A refusal is a sentence the Sandbox's screens show word for word, so it says "relic"
+  where the code says artifact (`apps/web/WRITING.md`'s Plain table).
 - **Content.** The caller passes a `RunContent`: the pool, the starting cards, the enemies, the passives,
   the events and the curses. A Sandbox caller adds the player's custom cards to the pool.
 - **Unlocks.** The caller keeps `RunUnlocks` (the level, the extracted cards and artifacts, and in the

@@ -95,7 +95,9 @@
 #    types it writes to the C bindings) tools, wasm; apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
-#    scripts, #2646) tools, wasm.
+#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md and spec/README.md (acceptance.rs holds
+#    the first's table of constants to crates/run/src/config.rs, and the second's map to it, B33)
+#    tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23), every Rust source for a file it includes from outside its crate, every Rust source for
 #    an `#[ignore]` that does not say it runs daily, and every Rust source for a preview of sets that
@@ -256,6 +258,7 @@ for file in $files; do
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
+    spec/15-dungeon-run.md | spec/README.md) on rust_tools_wasm ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
   esac

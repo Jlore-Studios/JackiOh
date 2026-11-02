@@ -318,6 +318,7 @@ export type RunRecord = {
 };
 export type Dungeon = {
   content: RunContent;
+  customCards: CustomCard[];              // the pool's custom cards: the run's kept copy while it stands (B21; the reconcile's)
   progress: DungeonProgress;
   run: RunState | null;
   startedAt: number | null;               // Date.now() when the run started, for the timer

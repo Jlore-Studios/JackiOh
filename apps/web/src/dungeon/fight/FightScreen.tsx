@@ -25,12 +25,11 @@ import type { ActionBody } from "@jackioh/shared";
 import type { RunAction } from "@jackioh/run";
 
 import "../../auth/tavern.css";
-import { customCardsOfDeck, gameCustomCards, namesCustomCard, useCustomCards } from "../../creator/useCustomCards.ts";
+import { customCardsOfDeck } from "../../creator/useCustomCards.ts";
 import Game from "../../game/Game.tsx";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { t } from "../../i18n/i18n.ts";
-import { useAccount } from "../../net/gate.ts";
 import { PRACTICE_PACING, PRACTICE_PACING_REDUCED, type PracticePacing } from "../../practice/config.ts";
 import {
   PRACTICE_IDLE_STATE,
@@ -121,22 +120,12 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const setupRef = useRef(setup);
   setupRef.current = setup;
 
-  // §12.9, R915006: in the Sandbox the run's pool holds the creator's custom cards (DR1), which the
-  // game must carry when either deck names one; an active account's are read, as practice reads them.
-  const account = useAccount();
-  const token = account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
+  // §12.9, R915006: in the Sandbox the run's pool holds the creator's custom cards (DR1, B21), which
+  // the game must carry when either deck names one: the run's own copy, kept since it started.
   const decks = useMemo(() => (setup === null ? [] : [...setup.humanDeck, ...setup.enemyDeck]), [setup]);
-  const needs = namesCustomCard(decks);
-  const custom = useCustomCards(needs ? token : null);
-  const ready = !needs || (account.kind !== "loading" && custom.state.kind !== "loading");
-  const customCards = custom.state.kind === "ready" ? custom.state.cards : null;
-  const cards = useMemo(() => gameCustomCards(customCardsOfDeck(decks, customCards ?? []).cards), [decks, customCards]);
+  const cards = useMemo(() => customCardsOfDeck(decks, dungeon.customCards).cards, [decks, dungeon.customCards]);
   const cardsRef = useRef(cards);
   cardsRef.current = cards;
-  /** The seed whose fight may start: once its cards are read it stays startable, so a renewed token never ends it. */
-  const [readyFor, setReadyFor] = useState<string | null>(null);
-  if (seed !== null && ready && readyFor !== seed) setReadyFor(seed);
-  const startable = seed !== null && readyFor === seed;
 
   // Read when a fight starts, so a prop change mid-game does not tear it down.
   const factory = useRef(hostFactory ?? defaultHostFactory);
@@ -149,7 +138,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const [controller, setController] = useState<PracticeController | null>(null);
   useEffect(() => {
     const fight = setupRef.current;
-    if (!startable || fight === null) return;
+    if (fight === null) return;
     const next = createPracticeController({ host: factory.current(), pacing: pace.current });
     setController(next);
     const carried = cardsRef.current;
@@ -166,7 +155,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       next.dispose();
       setController((current) => (current === next ? null : current));
     };
-  }, [startable, seed, restart]);
+  }, [seed, restart]);
 
   const state = useControllerState(controller);
   const [boardRoot, setBoardRoot] = useState<HTMLDivElement | null>(null);

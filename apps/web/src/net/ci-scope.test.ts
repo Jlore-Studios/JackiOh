@@ -549,6 +549,9 @@ describe("scripts/ci-scope.sh", () => {
     ["apps/web/src/audio/voice-text.json", ["rust_tools_wasm"]],
     // The tools' export_card_modes.rs writes it from the card scripts (#2646).
     ["apps/web/src/game/cardModes.json", ["rust_tools_wasm"]],
+    // The tools' acceptance.rs holds §15's table of constants to the run's config.rs, and the map to §15 (B33).
+    ["spec/15-dungeon-run.md", ["rust_tools_wasm"]],
+    ["spec/README.md", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
     ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],

@@ -16,6 +16,7 @@ import type {
   RunStats,
 } from "@jackioh/run";
 
+import { fightTestid } from "../fight/testids.ts";
 import type { Dungeon } from "../store.ts";
 import { RUN_STAT_LABELS } from "./RunOverScreen.tsx";
 import { RunScreen } from "./RunScreen.tsx";
@@ -198,6 +199,23 @@ function expectHud(): void {
   expect(chip).toHaveTextContent("Level 2");
   expect(screen.getByTestId(dungeonMapTestid.score)).toHaveTextContent("130");
 }
+
+describe("B24 the run's time on screen between fights", () => {
+  // B24
+  it("B24 the HUD shows the run's time from its start until the run is over", () => {
+    vi.useFakeTimers({ now: 66_000, toFake: ["Date"] });
+    try {
+      const { dungeon } = fakeDungeon(runWith({ phase: "map" }));
+      render(<RunScreen dungeon={dungeon} />);
+      expect(within(screen.getByTestId(dungeonMapTestid.hud)).getByTestId(fightTestid.timer)).toHaveTextContent("1:05");
+      cleanup();
+      render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "dead" })).dungeon} />);
+      expect(screen.queryByTestId(fightTestid.timer)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
 
 describe("B27 the map shows the current act and only the next row goes", () => {
   // B27

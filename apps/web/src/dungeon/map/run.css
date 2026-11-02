@@ -142,7 +142,7 @@
 }
 
 .dungeon-run-map__icon {
-  font-size: 20px;
+  font-size: var(--type-2xl);
   line-height: 1;
 }
 
@@ -192,7 +192,7 @@
 }
 
 button.dungeon-run-card {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 button.dungeon-run-card:disabled {
@@ -281,6 +281,11 @@ button.dungeon-run-card:disabled {
   background: var(--bg-raised);
 }
 
+/* A card for sale is a card grid's column wide, not the whole row (its face keeps 5:7). */
+.dungeon-run-stock > .dungeon-run-card {
+  width: 140px;
+}
+
 .dungeon-run-stock__price {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -317,7 +322,7 @@ button.dungeon-run-card:disabled {
 }
 
 .dungeon-run-end__score {
-  font-size: 20px;
+  font-size: var(--type-2xl);
   font-weight: 700;
   margin: 0;
 }
