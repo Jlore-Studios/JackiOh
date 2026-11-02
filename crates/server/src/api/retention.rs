@@ -7,20 +7,15 @@
 //!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
 //!    match is replayed from its log; the result row, and so the rating history, is kept.
 //!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
-//!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53;
-//!    `social::chat::purge`, its own transaction after the others).
-//!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended (§13.9;
-//!    `duos::purge_expired_logs`, its own transaction). Its row (seed, decks, result) is kept.
+//!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53).
+//!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended (§13.9).
+//!    Its row (seed, decks, result) is kept.
 //!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
-//!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept. The
-//!    loop folds any record written before the totals first (`game_records::fold_pending`).
-//!  - a spend's idempotency key and its kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written
-//!    (R2124000; `economy::idempotency::sweep_expired`, its own transaction).
+//!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept.
+//!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
 //!
 //! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
-//! and 0041's fourth). Before it purges, the loop refiles any game record whose write failed
-//! (R1596000), so the purge never takes the log of a game the card statistics lack; last, it settles
-//! the practice claims left unsettled (R2422000, `api::practice::sweep_unsettled`).
+//! and 0041's fourth).
 
 use std::sync::Arc;
 use std::time::Duration;

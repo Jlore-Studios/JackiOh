@@ -132,9 +132,7 @@ fn i7_work_a_game_over_left_owed_is_not_orphaned() {
     assert_eq!(orphaned(&monitor.after(&[], &state)), Vec::<&String>::new());
 }
 
-// ---------------------------------------------------------------------------------------------
 // I11: Unit tokens never persist off the field (§3, §3.2, R11)
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn i11_unit_tokens_in_graveyard_exile_or_held_are_flagged_and_a_spell_token_in_graveyard_is_allowed() {
@@ -183,9 +181,7 @@ fn i11_unit_tokens_in_graveyard_exile_or_held_are_flagged_and_a_spell_token_in_g
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // I12: a switch and an attack share exertion unless the Unit has Deft (§4.1, R49, R636)
-// ---------------------------------------------------------------------------------------------
 
 fn exertion_state(seed: &str, attacker_def: &str) -> (GameState, String, String) {
     let mut state = playing(seed);
