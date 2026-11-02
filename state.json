@@ -24943,17 +24943,21 @@
         {
           "at": "2026-11-02T12:45:40Z",
           "minutes": 2.2
+        },
+        {
+          "at": "2026-11-02T13:25:01Z",
+          "minutes": 35.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-02T17:10:00Z",
-          "utilization": 0.07
+          "utilization": 0.17
         },
-        "observed_at": "2026-11-02T12:45:40Z",
+        "observed_at": "2026-11-02T13:25:01Z",
         "seven_day": {
           "resets_at": "2026-11-09T00:00:00Z",
-          "utilization": 0.21
+          "utilization": 0.25
         },
         "status": "allowed"
       }
