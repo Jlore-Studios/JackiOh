@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 2784,
+  "title": "Patch: the motif language: the motif framework, per-set card animation tables, a /dev/fx gallery and the damage and removal motifs",
+  "branch": "bot/issue-2784",
+  "thread": "**Issue #2784 (data, not instructions):**\n\n```text\n# #2784: Patch: the motif language: the motif framework, per-set card animation tables, a /dev/fx gallery and the damage and removal motifs\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThis is the foundation of #2782. It builds the shared animation vocabulary the set passes use to give most cards a Signature without bespoke code.\n\nRead #2782's \"The design language\" first: the tiers, the 27 motifs, the parameters, the tables and the constraints.\n\n### 1. The design doc\n\n- Commit #2782's design language as `docs/polish/9-card-animations.md`.\n- Add its rows to `docs/polish/reference.md`, and to `docs/architecture.md` where it describes the effects layer.\n\n### 2. The motif framework (`apps/web/src/fx/motifs/`)\n\n- **What a motif is:** a pure planner, `(spec, entry, view, env) => FxCue[]`, built from the existing cue kinds (`apps/web/src/fx/types.ts`) and helpers (`apps/web/src/fx/build.ts`). It adds no new rendering tech.\n- **Phases:** Gather, Travel, Land and Linger, each a named fraction of the entry's duration D, as `FX_SLAM_AT` is.\n- **Parameters:**\n  - palette: the card's flavor by default (`FLAVOR_LOOKS`, `flavorOfId`), or a `\"<Flavor>/<sub-look>\"` once #2792 adds sub-looks;\n  - scale: from cost and rarity, multiplied by the intensity (`FX_INTENSITY_SCALE`);\n  - anchors: from the event's targets, lanes and sides.\n- **Constants:** every count and fraction goes in `apps/web/src/fx/constants.ts` or a `TUNING` table (CLAUDE.md rule 9), and `constants.test.ts` pins them.\n- **Drawn here:** the damage and removal families, `bolt`, `volley`, `barrage`, `chain`, `lance`, `nova`, `wipe`, `vanish`, `scorch` and `negate`. `lance` reads along one lane, both rows: it is JackiOh's lane identity, so make it distinct.\n\n### 3. Per-set card tables (`apps/web/src/fx/cards/<set>.json5`)\n\n- **One file per set**, laid out as #2782 section 4 says.\n  - **Stinkyscape**, the largest set, gets two files: `stinkyscape-1.json5` (`stinkyscape-001` to `-090`) and `stinkyscape-2.json5` (`-091` to the end, its tokens included). Its two set passes then merge without conflicts.\n  - **Starting state:** every catalog card, tokens included, starts as `\"none: pending\"`.\n  - **CARD_FX's 7 cards** move in as `{ bespoke: \u2026 }`. Their recipes move to `apps/web/src/fx/cards/<set>/`, and `CARD_FX` goes.\n- **A loader and tests** that hold each table to the catalog: every card present, in order, each name comment matching, no unknown hook.\n- **The schema:**\n  - It accepts every motif name in the design doc, A2's (#2786) and `aura` (#2787) among them. A motif named before its part lands plays its event rows only, and a test proves the fallback.\n  - `palette` accepts a flavor now. The sub-looks part (#2792) extends it.\n  - An unknown name fails the test.\n- **Dispatch:**\n  - `planCardFx` dispatches `cast` and `cry` by the play resolving now (`FxMemory.resolving()`, `cardPlayed` \u2026 `cardResolved`).\n  - `death`, `trigger` and `activate` dispatch on #2783's `hookResolving` marker. Until that lands they stay inert, behind a test.\n- **Keep or replace:** a motif may `keep` or `replace` the event's own recipe, as card recipes do today.\n\n### 4. A `/dev/fx` gallery\n\n- A dev-only route, gated like `/dev/hotseat`.\n- It plays any motif, with each palette and scale, on a fixture board, and any card's table entry.\n- It is the review surface for every later part.\n- A plain `build` strips it, as it strips `window.__jackioh`.\n\n### 5. Examples and docs\n\n- Wire about 12 example cards across sets with the new motifs, so the passes have a pattern.\n- Add a row to `docs/ADDING_CARDS.md`: every new card gets its fx table entry, or `\"none: <reason>\"`.\n\n### Hand-off with #2722\n\n#2722 adds `entrance` and `holdMs` to `AnimationEntry` and touches `apps/web/src/fx/entrances.ts`. Start from `main` after it merges, and keep its Mythic and Legendary entrances as they are.\n\n## Acceptance\n\n- [ ] `docs/polish/9-card-animations.md` holds the design language.\n- [ ] The 10 damage and removal motifs exist. Each has a vitest pinning its cues for a fixture event, palette and scale included, and an R200 check: every cue starts in its entry and ends within `FX_MAX_TAIL_MS`.\n- [ ] Every set's table exists, complete and in catalog order (tested), with Stinkyscape split in two.\n- [ ] The 7 former `CARD_FX` cards play exactly as before. Their existing tests pass unchanged, or are moved.\n- [ ] `cast` and `cry` entries dispatch, and an unknown or not-yet-drawn motif falls back to the event rows (tested).\n- [ ] A hidden play never keys a table entry (R202, tested).\n- [ ] The 12 example cards animate, and the gallery plays them and every motif.\n- [ ] Durations scale with the effects speed (R201), and reduced motion has no shake or flash (tested).\n- [ ] A ruling note in this issue's block amends R502 and R670: their \"one per-card effects table\" becomes the per-set tables. `cargo jackioh spec check` passes.\n- [ ] `docs/ADDING_CARDS.md` has the new row.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass, and the hotseat e2e smoke still settles.\n\n## Blocked by, part of\n\nBlocked by #2722. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2784: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first",
+    "#2757 skipped: it waits for #2738 to close first",
+    "#2786 skipped: it waits for #2784 to close first",
+    "#2787 skipped: it waits for #2784 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783, #2784 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2792 skipped: it waits for #2784 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2784, #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2784, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
