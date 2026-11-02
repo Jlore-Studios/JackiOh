@@ -82,7 +82,7 @@ jackioh/
     ai/                        jackioh-ai: the practice opponent (§9.9); generation.json, the training lanes' record
     wasm/                      jackioh-wasm: the engine, cards, AI and validator as WebAssembly for apps/web
     server/                    jackioh-server: the HTTP API and the match actors, one binary
-      Dockerfile               the image Render runs (render.yaml)
+      Dockerfile               the image the Cloudflare container runs (wrangler.jsonc)
       migrations/              profiles, invite_codes, code_attempts, cards, collection, collection_grants, loadouts,
                                loadout_decks, loadout_deck_cards, tickets, matches, match_actions, results, decks, trios,
                                series, tutorial_progress, game_records, …; compiled into the binary

@@ -894,7 +894,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::e2e::post_reseed),
     ),
-    // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
+    // api/health.rs (#861): the Worker reads /healthz's commit, and its daily cron requests /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
@@ -1118,9 +1118,9 @@ fn init_logging() {
 /// `stop_loops` can abort them on shutdown (#861).
 fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     // §9.5: the matchmaker's sweeper and the reaper; R260, R263: the series sweeper runs the pick
-    // clock and starts a game a restart left unstarted. The retention purge runs once now, since a
-    // free instance may sleep before an hour is up. R1454: with `LADDER_BOTS=on`, the bot pool is
-    // sized once now and then hourly.
+    // clock and starts a game a restart left unstarted. The retention purge runs once now, since the
+    // container sleeps after ten idle minutes (apps/edge). R1454: with `LADDER_BOTS=on`, the bot pool
+    // is sized once now and then hourly.
     let mut running = vec![
         (
             "matchmaker",

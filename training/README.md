@@ -97,8 +97,7 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    its stack and going to the gate only with a stack that screened above its parent
    ([`improve.md`](improve.md)). A session ends after a promotion or after four hours. Meanwhile,
    every 15 minutes (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>`
-   as one `[skip ci]` commit when it changed (`[skip ci]` stops CI, not Vercel: `vercel.json` switches
-   Vercel off for `ai/**`, or each push would spend one of its 100 daily deployments), rewrites the
+   as one `[skip ci]` commit when it changed, rewrites the
    session's comment on the draft, and rewrites the draft's description when a new pass of the gate
    changed it. When the session ends, the loop stops any `jackioh` process it left running as the
    lane's user (an arena or a gate cut off by the time limit, and the parent agents it spawned), so
@@ -310,8 +309,9 @@ from-selfplay <shards>… --out <file>` files each game of an export that still 
 catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
 and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
 `learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
-records' counts go into the totals and no row is kept per game, so production's database grows with
-the patches and not the games. Runs follow one another, so an export comes about every two days; a
+records' counts go into the totals and no row is kept per game, so staging's database (JackiOh-Staging,
+where the development lanes file; production's holds live games alone) grows with the patches and not
+the games. Runs follow one another, so an export comes about every two days; a
 patch shipped between two has none until the next. `.github/workflows/gather.yml` plays `GATHER_GAMES`
 (2,000) games of each patch as it ships, on the PC, and files them the same way, but only while the
 repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about 3 MB of

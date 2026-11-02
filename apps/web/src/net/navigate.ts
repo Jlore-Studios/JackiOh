@@ -206,16 +206,16 @@ export function useSearch(): string {
  * The address `index.html`, `public/robots.txt` and `public/.well-known/security.txt` spell, which
  * `static-pages.ts` replaces with the build's own (#696): staging's, and a build's with no `VITE_SITE_ORIGIN`.
  */
-export const SITE_ORIGIN = "https://jackioh.vercel.app";
+export const SITE_ORIGIN = "https://staging.jackioh.com";
 
 export function originOf(configured: unknown): string {
   return typeof configured === "string" && configured.length > 0 ? configured.replace(/\/+$/u, "") : SITE_ORIGIN;
 }
 
 /**
- * jackioh.com in production (`.env.production`), the Vercel host on staging (`vercel.json`'s build
- * command). Read here, not at load: Vite's config loader runs this file with no `import.meta.env`, so
- * `static-pages.ts` calls `originOf` instead.
+ * The address this bundle is served from: jackioh.com in production (`.env.production`),
+ * staging.jackioh.com on staging (`.env.staging`). Read here, not at load: Vite's config loader runs
+ * this file with no `import.meta.env`, so `static-pages.ts` calls `originOf` instead.
  */
 export function siteOrigin(): string {
   const configured: unknown = import.meta.env.VITE_SITE_ORIGIN;
@@ -223,7 +223,7 @@ export function siteOrigin(): string {
 }
 
 /**
- * Client routes live in one table. `vercel.json` and `apps/web/vercel.json` must match it or
+ * Client routes live in one table. `public/_redirects` must serve every screen in it or
  * `net/deploy-routes.test.ts` fails; other paths are real 404s.
  */
 export const paths = {

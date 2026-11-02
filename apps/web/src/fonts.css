@@ -11,8 +11,8 @@
    All are variable fonts over the weight axis, so the many weights the CSS asks for (400 to 900)
    are one file each, plus an italic for the first two. Only the Latin subset is shipped; anything outside it falls to
    the stacks' system faces glyph by glyph. The files are Fontsource's builds (v5.3.0); the version
-   is in the file name, because public/_headers and vercel.json let browsers keep /fonts/* for a year
-   without asking: a new file needs a new name.
+   is in the file name, because public/_headers lets browsers keep /fonts/* for a year without
+   asking: a new file needs a new name.
 
    `font-display: swap` shows the text at once in the fallback and swaps the face in when it lands.
    So that the swap moves nothing, each face has a metric-matched fallback: a local Arial or Times

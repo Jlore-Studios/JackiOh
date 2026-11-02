@@ -6,11 +6,10 @@
 # thread a person unlocks is locked again by the next sweep.
 #
 # The workflow's own token cannot comment on a locked thread, so the threads `github-actions[bot]`
-# opened stay unlocked: the CI alerts (ci-duration.yml, super.yml, deploy-watch.yml,
-# patches-ship.yml), the production countdown (promote-production.yml) and the weekly hygiene
-# issues post there with it. patches-ship's "Shipped as" comment on a thread it did not open
-# unlocks, comments and locks again (bot/go/internal/titles, `RetitleShipped`). Vercel's preview
-# comment does not post on a locked pull request; its deployment still shows in the checks.
+# opened stay unlocked: the CI alerts (ci-duration.yml, super.yml, patches-ship.yml), the
+# production countdown (promote-production.yml) and the weekly hygiene issues post there with it.
+# patches-ship's "Shipped as" comment on a thread it did not open unlocks, comments and locks again
+# (bot/go/internal/titles, `RetitleShipped`).
 name: lock conversations
 
 on:
