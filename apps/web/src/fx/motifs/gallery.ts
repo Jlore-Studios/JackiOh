@@ -4,7 +4,7 @@
 
 import type { Flavor, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
-import { animationRow, scaleForSpeed, type AnimationEntry } from "../../game/animations.ts";
+import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
 import { FLAVOR_LOOKS } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
 import type { FxCue } from "../types.ts";
@@ -13,6 +13,25 @@ import type { DrawnMotif } from "./names.ts";
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
+
+/** The instance id of the gallery's n-th card play. */
+export function galleryPlayId(n: number): string {
+  return n === 0 ? GALLERY_CARD_ID : `${GALLERY_CARD_ID}-${String(n)}`;
+}
+
+/** R2785000: the key of the gallery's fixture set piece. */
+export const GALLERY_SET_PIECE = "fixture";
+
+/**
+ * R2785000: the gallery's fixture set piece: the entry holding the play of `instanceId` claims the set
+ * piece's default beat, as a card or a system of issue #2782 will claim its own.
+ */
+export function gallerySetPiece(instanceId: string): SetPieceClaimer {
+  return (entry) =>
+    entry.events.some((event) => event.type === "cardPlayed" && event.instanceId === instanceId)
+      ? { key: GALLERY_SET_PIECE, holdMs: SET_PIECE_HOLD_MS }
+      : null;
+}
 
 type UnitOf = NonNullable<PlayerView["you"]["units"][number]>;
 
@@ -87,7 +106,7 @@ export function galleryCues(motif: DrawnMotif, palette: Flavor, scale: number, v
 
 /** A card's table entry played out: the viewer plays it, its motif's fixture resolves under it, and it resolves. */
 export function cardFixtureEvents(defId: string, motif: DrawnMotif, view: PlayerView, n = 0): GameEvent[] {
-  const instanceId = n === 0 ? GALLERY_CARD_ID : `${GALLERY_CARD_ID}-${String(n)}`;
+  const instanceId = galleryPlayId(n);
   const player = view.viewer;
   return [
     { type: "cardPlayed", player, instanceId, defId, costPaid: 1 },
