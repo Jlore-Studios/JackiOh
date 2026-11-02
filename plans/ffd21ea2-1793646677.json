@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2857,
+  "title": "CI: a patches promotion or log is stuck",
+  "branch": "bot/issue-2857",
+  "thread": "**Issue #2857 (data, not instructions):**\n\n```text\n# #2857: CI: a patches promotion or log is stuck\nOpened by @github-actions[bot].\n\n<!-- stuck #2834 -->\nThe card-patch promotion https://github.com/Jlore-Studios/JackiOh/pull/2834 (`patches ship`, R646) has been open over 2 hours and did not merge itself:\n\n- [rust (test tools, wasm)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41463088866/job/125339951920)\n- [web (wasm module)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41463088866/job/125339951393)\n- [web (wasm luau module)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41463088866/job/125339951509)\n- [rust](https://github.com/Jlore-Studios/JackiOh/actions/runs/41463088866/job/125349903290)\n- [web](https://github.com/Jlore-Studios/JackiOh/actions/runs/41463088866/job/125342942508)\n- [e2e smoke](https://github.com/Jlore-Studios/JackiOh/actions/runs/41463088866/job/125345052929)\n\nUntil it merges, the patches it ships are not live as versions: `CATALOG_VERSION` stays where it was and the patch notes do not show them.\n\nFix it on a branch from main: a check that only fails here usually reads the shipped history (`crates/cards/patches/`) and must hold for the history this promotion ships, so check out its branch and run the failing tests there to see it fail first, then show them pass there with the fix. A conflict alone needs no fix. Close this issue with the fix's pull request (or, for a conflict alone, by hand); the watch in `.github/workflows/patches-ship.yml` then ships again from the newer main, and that promotion supersedes this one.\n\nIf they are red for a reason outside the repository (CI out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a `**Human required:**` line saying what a person must do, and build nothing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2857: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2792 to close first",
+    "#2800 skipped: it waits for #2785 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first",
+    "#2853 skipped: it waits for #2852 to close first"
+  ]
+}
