@@ -14778,12 +14778,9 @@
     "what": "build #2701 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-02T05:18:20Z",
+    "at": "2026-11-02T05:26:16Z",
     "notes": [
-      "delivered build #2728 on claude-1 (run 41380452719): approved",
-      "started build #2701 on claude-1 (run 41393386710)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered build #2738 on muse (run 41387167841): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15489,7 +15486,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T05:18:20Z",
+  "loop_tick": "2026-11-02T05:26:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
