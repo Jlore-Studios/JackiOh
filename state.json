@@ -26722,17 +26722,21 @@
         {
           "at": "2026-11-02T06:46:46Z",
           "minutes": 122.3
+        },
+        {
+          "at": "2026-11-02T07:13:20Z",
+          "minutes": 158.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-02T10:09:00Z",
-          "utilization": 0.03
+          "utilization": 0.04
         },
-        "observed_at": "2026-11-02T06:46:46Z",
+        "observed_at": "2026-11-02T07:13:20Z",
         "seven_day": {
           "resets_at": "2026-11-09T00:00:00Z",
-          "utilization": 0.17
+          "utilization": 0.18
         },
         "status": "allowed"
       }
