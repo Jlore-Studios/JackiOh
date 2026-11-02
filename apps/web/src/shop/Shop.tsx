@@ -33,12 +33,8 @@ import PackObject from "../packs/PackObject.tsx";
 import { packName } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf } from "./shop.ts";
+import { messageOf } from "../net/errors.ts";
 import "./shop.css";
-
-/** What a failed request says: the server's words, else the error's. */
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 /** The counts after a bought pack: the answer's count for its kind, every other kind untouched. */
 function withBought(
@@ -101,7 +97,7 @@ export default function Shop({
           const keptInfo = cachedRead<PacksResponse>(token, keptPaths.packs);
           const keptWallet = cachedRead<WalletResponse>(token, keptPaths.wallet);
           if (keptInfo === undefined || keptWallet === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setInfo(keptInfo);
             setWallet(keptWallet);
@@ -128,7 +124,7 @@ export default function Shop({
         onChanged?.();
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);

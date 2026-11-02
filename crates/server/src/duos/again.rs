@@ -44,7 +44,7 @@ use tokio::sync::futures::OwnedNotified;
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{assert_free_to_play, assert_no_custom_cards, lean_of};
+use crate::api::decks::{already_in_match, assert_free_to_play, assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::new_uuid;
 use crate::api::rematch::cards_changed;
@@ -246,11 +246,6 @@ fn not_finished() -> ApiError {
 
 fn not_open() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "that co-op room is not open")
-}
-
-/// R1065000: a seat in another game is refused with no details, since it may be the teammate's.
-fn already_in_match() -> ApiError {
-    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
 }
 
 // Offers

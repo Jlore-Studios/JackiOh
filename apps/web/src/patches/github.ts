@@ -15,6 +15,7 @@ import { changeSummary } from "./ChangeList.tsx";
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import type { CardDelta, FieldChange } from "./diff.ts";
 import { cardCount, countsLine, patchCards, type PatchCards } from "./history.ts";
+import { releaseArtPath } from "./releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, type NoteSection, type Release } from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
@@ -170,6 +171,9 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
   }
   const tier = patch.tier === undefined ? [] : [TIER_NAME[patch.tier]];
   out.push([`**${patch.date}**`, markdownText(placed.release.name), ...tier].join(" · "));
+  // #2681: the patch's artwork, served by the host the footer names (a staging build has it before production does).
+  const site = live ? sites.production : sites.staging;
+  out.push(`![${markdownText(`${patch.version}: ${playerTitle(patch)}, release artwork`)}](${site}${releaseArtPath(patch.version, "animated")})`);
   if (placed.major) out.push(...lineSection(placed.release));
   for (const { key, heading } of NOTE_SECTIONS) out.push(...lines(heading, SECTION_ICON[key], patch.player?.[key] ?? []));
   out.push(...lines("Technical changes", TECHNICAL_ICON, technical));
@@ -193,7 +197,6 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
       );
     }
   }
-  const site = live ? sites.production : sites.staging;
   out.push("---", `<sub>Every patch, card by card: Patch notes on ${link(site, sites.patchNotes)}</sub>`);
   return `${out.join("\n\n")}\n`;
 }

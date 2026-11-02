@@ -100,6 +100,7 @@ import {
   type InspectRenderSubject,
   type InspectSubject,
 } from "../cards/index.ts";
+import { cx } from "../cards/CardFace.tsx";
 import CardMarks from "../cards/CardMarks.tsx";
 import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
@@ -129,9 +130,8 @@ export const SPENT_NOTE = "No action left this turn";
 /** R90 (#992): what a hand card whose listed plays were cut says; informational, never "illegal". */
 export const CHOICES_TRUNCATED_NOTE = "Not every combination of this card's choices is listed; each choice is in at least one listed play";
 
-export function cx(...parts: (string | false | null | undefined)[]): string {
-  return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
-}
+/** B17: the board's class joiner, still exported here, is the card face's own. */
+export { cx };
 
 export function isLegal(highlight: Highlight | undefined, testId: string | undefined): boolean {
   if (testId === undefined) return false;

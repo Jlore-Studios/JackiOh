@@ -15,6 +15,7 @@ import {
   type RematchStatusResponse,
   type RematchStakes,
 } from "../net/api.ts";
+import { messageOf } from "../net/errors.ts";
 
 export const rematchTestid = {
   offer: "rematch-offer",
@@ -120,7 +121,7 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
         }
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(messageOf(cause));
     } finally {
       setOffering(null);
     }

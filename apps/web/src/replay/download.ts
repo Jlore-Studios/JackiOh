@@ -103,6 +103,21 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
 }
 
 /**
+ * A replay file's header, the 1v1 file's and the Duos file's alike: refused as `UNSUPPORTED` unless
+ * it names `format` and a version from `unmarked` to `current`, and as `OTHER_PATCH` unless its
+ * catalog is this build's.
+ */
+export function checkReplayHeader(json: Record<string, unknown>, format: string, unmarked: number, current: number): void {
+  // R2532000: the file's version is the scheme its catalog is named by, read through `aliases.json`.
+  const scheme = json.version;
+  if (json.format !== format || typeof scheme !== "number" || !Number.isInteger(scheme) || scheme < unmarked || scheme > current) {
+    throw new ReplayFailure("error", UNSUPPORTED);
+  }
+  const played = typeof json.catalogVersion === "string" ? versionNameFrom(scheme, json.catalogVersion) : json.catalogVersion;
+  if (played !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
+}
+
+/**
  * The steps of a file `replayJsonFile` wrote (#1160), or a `ReplayFailure` saying why it is refused:
  * too big, not JSON of the documented shape, another format or version, or another catalog version
  * (a file from a newer build is refused as a stale one is, since its views may differ). The file is
@@ -111,13 +126,7 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
  * catalog gate is what makes that enough, and the page never enforces rules on a view (rule 7).
  */
 export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
-  // R2532000: the file's version is the scheme its catalog is named by, read through `aliases.json`.
-  const scheme = json.version;
-  if (json.format !== REPLAY_JSON_FORMAT || typeof scheme !== "number" || !Number.isInteger(scheme) || scheme < REPLAY_JSON_UNMARKED_VERSION || scheme > REPLAY_JSON_VERSION) {
-    throw new ReplayFailure("error", UNSUPPORTED);
-  }
-  const played = typeof json.catalogVersion === "string" ? versionNameFrom(scheme, json.catalogVersion) : json.catalogVersion;
-  if (played !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
+  checkReplayHeader(json, REPLAY_JSON_FORMAT, REPLAY_JSON_UNMARKED_VERSION, REPLAY_JSON_VERSION);
   const { steps } = json;
   if (!Array.isArray(steps) || steps.length === 0) throw new ReplayFailure("error", NOT_A_REPLAY);
   if (steps.length > REPLAY_JSON_MAX_STEPS) throw new ReplayFailure("error", TOO_BIG);

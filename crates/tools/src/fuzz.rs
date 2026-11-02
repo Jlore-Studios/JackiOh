@@ -22,13 +22,13 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I5 and I8 (summoning sickness and exertion,
-//! R171, and nothing after game over, R216) hold on the state each action is chosen in and on the
-//! state it produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal
-//! actions, §10.8) holds for both seats on every state, setup's included: every state under
-//! `cargo test`, every I6_GATE_STRIDE-th under the gate.
-//! I8 (no unlisted attack, switch or activation `reduce` accepts, §4.1, §4.2, §10.2) runs on every state under `cargo test`,
-//! every I8_GATE_STRIDE-th under the gate and `--handicap`.
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I12 hold on every applicable state or
+//! action (stage "invariant"). I11 scans the graveyards, exile piles and held cards for Unit tokens
+//! that should have ceased to exist (R11), and I12 shadows chosen position switches and declared
+//! attacks through each turn and field stint (R49, R636). Only the expensive I6 (no card a seat may
+//! not read in its view or legal actions, §10.8) and I8 (no unlisted attack, switch or activation
+//! `reduce` accepts, §4.1, §4.2, §10.2) are sampled: every state under `cargo test`, every
+//! I6_GATE_STRIDE-th or I8_GATE_STRIDE-th state respectively under the gate and `--handicap`.
 //!
 //! And after every action, GROWTH (#1254): the gate weighs each action it applies by the events `reduce`
 //! returned, the largest number on any card instance and the number of instances in play, prints each
@@ -98,7 +98,7 @@
 //! handicapped, rotating by seed over Medium and Hard and over both seats, through the gate's own
 //! loop (`GameSetup` names the streams and the handicaps, `run_seed` plays and checks), and holds
 //! them to the same checks: no throw, a real ending inside the cap in `Phase::Over`, a log that folds
-//! back, handicaps included, to the live hash, the invariant monitor (I1–I8), growth weighing, the
+//! back, handicaps included, to the live hash, the invariant monitor (I1–I12), growth weighing, the
 //! same probes and the serialization checkpoint. A failure goes through `Failure` and `report` with
 //! its tier and seat in the example line and both decks printed, and `--json` prints the wave as one
 //! JSON object.

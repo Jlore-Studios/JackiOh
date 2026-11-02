@@ -17,9 +17,8 @@ import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { REPLAY_FAILURE_TEXT } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { baseView } from "../test/fixtures.ts";
+import { duosView } from "../test/fixtures.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
-import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { duosReplayJson } from "./download.ts";
 import DuosReplay, { nextRound, openDuosReplay, previousRound, type DuosReplaySteps } from "./DuosReplay.tsx";
@@ -38,36 +37,7 @@ const ROUNDS = [0, 1, 1, 1, 2, 2, 3];
 const LAST = ROUNDS.length - 1;
 const CONCEDED: DuosView["result"] = { outcome: "win", winner: "b", reason: "concede" };
 
-function teamView(team: "a" | "b"): DuosTeamView {
-  return {
-    team,
-    pool: 20,
-    poolCap: 20,
-    sides: [
-      { own: 10, spent: false },
-      { own: 10, spent: false },
-    ],
-    ended: [false, false],
-    passesLeft: [0, 0],
-    passCost: 1,
-  };
-}
-
-function step(round: number, result: DuosView["result"] = null): DuosView {
-  return {
-    seat: "a1",
-    own: baseView(),
-    teammate: baseView(),
-    team: teamView("a"),
-    enemy: teamView("b"),
-    round,
-    roundSeats: ["a1", "a2"],
-    concedeOfferedBy: null,
-    result,
-  };
-}
-
-const STEPS: DuosView[] = ROUNDS.map((round, index) => step(round, index === LAST ? CONCEDED : null));
+const STEPS: DuosView[] = ROUNDS.map((round, index) => duosView(round, index === LAST ? CONCEDED : null));
 
 function serve(steps: readonly DuosView[] = STEPS): void {
   vi.mocked(getDuosReplay).mockResolvedValue({ seat: "a1", steps: [...steps] });

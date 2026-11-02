@@ -20,7 +20,7 @@ import type { CardDef, CustomCard, CustomIssue } from "@jackioh/shared";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
-import { ApiRequestError, type SendOptions } from "../net/api.ts";
+import type { SendOptions } from "../net/api.ts";
 import {
   createCustomCard,
   customIssuesOf,
@@ -32,7 +32,6 @@ import {
   type CustomCardsResponse,
 } from "../net/customCards.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { messageOf } from "../together/session.ts";
 import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
 import { UndoToast } from "../undo/UndoToast.tsx";
 import { checkCustomCard, type ScriptProblem } from "../wasm/index.ts";
@@ -55,6 +54,7 @@ import {
 import { FrameForm } from "./FrameForm.tsx";
 import { creatorTestid } from "./testids.ts";
 import { useCustomCards } from "./useCustomCards.ts";
+import { messageOf } from "../net/errors.ts";
 
 import "./creator.css";
 
@@ -425,7 +425,7 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved, un
         return null;
       }
       const issues = customIssuesOf(cause);
-      const message = cause instanceof ApiRequestError || cause instanceof Error ? cause.message : String(cause);
+      const message = messageOf(cause);
       setSave({ kind: "refused", message, issues });
       return null;
     }

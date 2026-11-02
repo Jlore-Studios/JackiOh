@@ -20,9 +20,9 @@ import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { navigate } from "../net/navigate.ts";
 import { findRoomLinkInText } from "../net/roomLink.ts";
 import { getChat, reportMessage, sendChat, type ChatMessage, type PlayerRef } from "../net/social.ts";
-import { attempt, messageOf } from "./session.ts";
 import { chatTestid } from "./testids.ts";
 import { Named } from "./words.tsx";
+import { attempt, messageOf } from "../net/errors.ts";
 
 import "./together.css";
 

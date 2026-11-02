@@ -8,22 +8,15 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
-    cloak_spells, cloak_units, cloaked_bolt, cloaked_field, cloaked_field_trap, cloaked_mourner,
-    cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, register_keywords_783, second_wind,
-    toe_cracker, trap_discount,
+    board_783 as playing, cloak_spells, cloak_units, cloaked_bolt, cloaked_field, cloaked_field_trap,
+    cloaked_mourner, cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, second_wind, toe_cracker,
+    trap_discount,
 };
 use super::fixtures::play_pipeline_b::plays_of;
-use super::fixtures::prompt_harness::{answer_keys, board, cast_now, open_as, round_trip};
+use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-
-/// p1's main phase on turn 3 with 4 mana a side and #783's cards registered.
-fn playing(seed: &str) -> GameState {
-    let state = board(seed);
-    register_keywords_783();
-    state
-}
 
 fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health

@@ -6,22 +6,12 @@
 // tests ask questions of that rather than of raw substrings, so formatting, ordering and grouping
 // are the stylesheet author's choice. The browser half of B40 is e2e/cypress/component/fx-layer.cy.tsx.
 
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { describe, expect, it } from "vitest";
+import { readSheet } from "../test/setup.ts";
 
 /* ------------------------------------------------------------------------------------------- *
  * Reading and parsing
  * ------------------------------------------------------------------------------------------- */
-
-function readSheet(fromWeb: string): string {
-  for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
-    const path = resolve(process.cwd(), candidate);
-    if (existsSync(path)) return readFileSync(path, "utf8");
-  }
-  throw new Error(`${fromWeb} not found from ${process.cwd()}`);
-}
 
 type Rule = { selectors: string[]; decls: Map<string, string>; media: string | null };
 type Sheet = { rules: Rule[]; keyframes: Set<string>; text: string };

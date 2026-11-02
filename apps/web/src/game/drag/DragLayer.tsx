@@ -12,7 +12,7 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, isBuilding, type Interaction } from "../actions.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
-import { testid, type ClickTarget } from "../contract.ts";
+import { byTestid, testid, type ClickTarget } from "../contract.ts";
 import { liveFace } from "../faces.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { setLanding } from "./landing.ts";
@@ -83,10 +83,6 @@ function centerOf(element: Element): Point | null {
   if (!element.isConnected) return null;
   const rect = element.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-}
-
-function byTestid(id: string): Element | null {
-  return document.querySelector(`[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`);
 }
 
 /** Heroes are ringed at their health gem; other targets are ringed at center. */

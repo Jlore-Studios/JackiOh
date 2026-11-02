@@ -3843,6 +3843,34 @@
   },
   {
     "version": "v0.5.10",
+    "commit": "42df8e376f9c1a5cb3f2e2af041b3a4efd75729d",
+    "pr": 2677,
+    "title": "Your Table adds 30 stats for Temporary, Brittle, Tradable, Freeze, Created cards and more",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "89f0a1b567c91a0402989bb8f79c63925700b5f3",
+    "pr": 2665,
+    "title": "bot: build pass 1 for #2646",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "fb1e762241d022e6ac879960431177c18c08ae52",
+    "pr": 2658,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-11-01",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "1dc9eef7f92160153849f434be31d6efae831923",
+    "pr": 2668,
+    "title": "bot: build pass 1 for #2660",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.10",
     "commit": "c9f76e178f5db3d1d89e8b3c76b408c8da95aa0b",
     "pr": 2693,
     "title": "the #2160 audit's decided dead code goes, and the docs it flagged say what the code does",

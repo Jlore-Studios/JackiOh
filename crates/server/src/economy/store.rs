@@ -972,30 +972,10 @@ mod pg {
     };
     use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
-    use crate::db::pg::PgTx;
+    // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`), so it
+    // runs as `service_role` with `request.jwt.claim.sub` the profile the call is about.
+    use crate::db::pg::{PgTx, ms_of, run_as};
     use crate::db::store::StoreError;
-
-    /// `db::pg`'s `SESSION_SQL` and acting role: every method re-stamps its subject first, so it
-    /// runs as `service_role` with `request.jwt.claim.sub` the profile the call is about.
-    const SESSION_SQL: &str =
-        "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
-    const ACTING_ROLE: &str = "service_role";
-
-    /// Nanoseconds in a millisecond.
-    const NANOS_PER_MS: i128 = 1_000_000;
-
-    async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
-        sqlx::query(SESSION_SQL)
-            .bind(ACTING_ROLE)
-            .bind(subject.unwrap_or(""))
-            .execute(&mut **t)
-            .await?;
-        Ok(())
-    }
-
-    fn ms_of(value: OffsetDateTime) -> i64 {
-        (value.unix_timestamp_nanos() / NANOS_PER_MS) as i64
-    }
 
     fn at_of(row: &PgRow) -> Result<i64, StoreError> {
         Ok(ms_of(row.try_get("at")?))

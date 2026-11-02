@@ -53,7 +53,7 @@ use crate::db::store::{
     UpsertOutcome,
 };
 use crate::loadout::DeckSlots;
-use crate::seats::Seat;
+use crate::seats::{Seat, Taken};
 
 // Ids
 
@@ -1243,9 +1243,7 @@ pub async fn freeze_choice(
 /// included, is told to finish it, as its in-match flag always told it.
 pub fn in_game(seat: &Seat) -> ApiError {
     match seat {
-        Seat::Match(_) | Seat::Series { game: Some(_), .. } => {
-            ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
-        }
+        Seat::Match(_) | Seat::Series { game: Some(_), .. } => already_in_match(),
         Seat::Series { id, game: None } => ApiError::with_details(
             ApiErrorCode::AlreadyInMatch,
             "Finish your Conquest series first.",
@@ -1259,6 +1257,14 @@ pub fn in_game(seat: &Seat) -> ApiError {
     }
 }
 
+/// R264: `already_in_match` with no details, "finish your current match first": what a profile in
+/// a match meets (`in_game`), and what a door answers for a seat that may be another player's, so
+/// it says nothing of that player's game (R1065000): a pair's seat the queue's compare-and-set
+/// refused (R890000), a rematch's or a co-op Play again's.
+pub fn already_in_match() -> ApiError {
+    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
+}
+
 /// R1065000: a join refused because the room's host holds a game (they may have been matched since
 /// the room opened): in a match, a series that is not over or a live co-op match.
 pub fn host_busy() -> ApiError {
@@ -1266,6 +1272,16 @@ pub fn host_busy() -> ApiError {
         ApiErrorCode::Conflict,
         "The host of that room is playing another game right now.",
     )
+}
+
+/// R1065000, R1523000: a room's join whose seats the ledger refused. A joiner who holds a game
+/// meets the refusal `assert_free_to_play` answers, and a host who holds one the host's.
+pub fn join_refusal(joiner: &str, taken: &Taken) -> ApiError {
+    if taken.profile == joiner {
+        in_game(&taken.seat)
+    } else {
+        host_busy()
+    }
 }
 
 /// R264, R1065000: a profile in a match, in a series that is not over or in a live co-op match can
@@ -1276,5 +1292,52 @@ pub async fn assert_free_to_play(app: &App, profile_id: &str) -> Result<(), ApiE
     match app.seats.of(profile_id) {
         None => Ok(()),
         Some(seat) => Err(in_game(&seat)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn said(error: &ApiError) -> (ApiErrorCode, &str, Option<&Value>) {
+        (error.code, error.message.as_str(), error.details.as_ref())
+    }
+
+    /// The refusal every door answers a seat in a match with, and the one it answers a seat that may
+    /// be another player's: `already_in_match`, "finish your current match first", no details.
+    #[test]
+    fn a_seat_in_a_match_is_told_to_finish_it_with_no_details() {
+        let refused = already_in_match();
+        assert_eq!(
+            said(&refused),
+            (
+                ApiErrorCode::AlreadyInMatch,
+                "finish your current match first",
+                None
+            )
+        );
+        for seat in [
+            Seat::Match("m-1".to_string()),
+            Seat::Series {
+                id: "s-1".to_string(),
+                game: Some("m-2".to_string()),
+            },
+        ] {
+            assert_eq!(said(&in_game(&seat)), said(&refused), "{seat:?}");
+        }
+    }
+
+    /// A room's join whose seats were taken: the joiner's own game, or the host's.
+    #[test]
+    fn a_refused_join_names_the_joiners_game_or_the_hosts() {
+        let taken = |profile: &str| Taken {
+            profile: profile.to_string(),
+            seat: Seat::Duos("d-1".to_string()),
+        };
+        assert_eq!(
+            said(&join_refusal("guest", &taken("guest"))),
+            said(&in_game(&Seat::Duos("d-1".to_string())))
+        );
+        assert_eq!(said(&join_refusal("guest", &taken("host"))), said(&host_busy()));
     }
 }

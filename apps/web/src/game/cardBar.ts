@@ -15,6 +15,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { sameSpot, spotOfElement, type BoardSpot } from "../duos/spots.ts";
+import { testidSelector } from "./contract.ts";
 
 export type Box = { left: number; top: number; width: number; height: number };
 
@@ -38,11 +39,6 @@ function sameBoxes(a: ReadonlyMap<string, Box>, b: ReadonlyMap<string, Box>): bo
     }
   }
   return true;
-}
-
-/** `[data-testid="…"]` for an id read off the board, quoted as DragLayer quotes it. */
-function byTestid(id: string): string {
-  return `[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`;
 }
 
 /**
@@ -70,7 +66,7 @@ export function useBoxes(
         const from = origin === "host" ? host.getBoundingClientRect() : { left: 0, top: 0 };
         const next = new Map<string, Box>();
         for (const id of ids) {
-          const element = host.querySelector(byTestid(id));
+          const element = host.querySelector(testidSelector(id));
           if (element === null) continue;
           const rect = element.getBoundingClientRect();
           next.set(id, { left: rect.left - from.left, top: rect.top - from.top, width: rect.width, height: rect.height });

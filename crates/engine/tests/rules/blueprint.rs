@@ -15,7 +15,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::blueprint::*;
-use super::fixtures::harness::{act, act_result, put, sink_for, slot};
+use super::fixtures::harness::{act, act_result, put, run_on_sink as run, sink_for, slot};
 use super::fixtures::play_pipeline_b::{plays_of, round_trip};
 use super::fixtures::prompt_harness::board;
 
@@ -57,13 +57,6 @@ fn hits(events: &[GameEvent]) -> Vec<(Option<String>, String, i32, bool)> {
             _ => None,
         })
         .collect()
-}
-
-fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
-    let mut sink = sink_for(state);
-    let out = f(&mut sink);
-    let events = sink.events.clone();
-    (out, events)
 }
 
 fn as_p1() -> HookOptions {

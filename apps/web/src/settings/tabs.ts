@@ -6,24 +6,18 @@
 // the tabs the dialog has right now is ignored.
 
 import type { SettingsSectionId } from "./slots.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export const SETTINGS_TAB_STORAGE_KEY = "jackioh.settings.tab";
 
 /** The tab the player last used, or null when nothing usable is stored. */
 export function readRememberedTab(available: readonly SettingsSectionId[]): SettingsSectionId | null {
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_TAB_STORAGE_KEY);
-    return available.find((id) => id === raw) ?? null;
-  } catch {
-    return null;
-  }
+  const raw = getStored(SETTINGS_TAB_STORAGE_KEY);
+  return available.find((id) => id === raw) ?? null;
 }
 
 /** Remembers the tab; a failed write only means the dialog opens on the default next time. */
 export function rememberTab(id: SettingsSectionId): void {
-  try {
-    window.localStorage.setItem(SETTINGS_TAB_STORAGE_KEY, id);
-  } catch {
-    // Quota, private mode or blocked storage: this visit is unaffected.
-  }
+  // Quota, private mode or blocked storage: this visit is unaffected.
+  setStored(SETTINGS_TAB_STORAGE_KEY, id);
 }

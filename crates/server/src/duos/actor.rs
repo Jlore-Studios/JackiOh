@@ -67,9 +67,9 @@ use jackioh_engine::{Rng, mulligan_owed};
 use crate::actor::clock::{Timer, after};
 use crate::actor::contracts::{SocketHandlers, one_tx};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
-use crate::actor::protocol::{SERVER_NONCE_PREFIX, SocketErrorCode};
+use crate::actor::protocol::{ACTION_PANICKED_MESSAGE, SERVER_NONCE_PREFIX, SocketErrorCode};
 use crate::actor::registry::panic_text;
-use crate::actor::ws_server::Socket;
+use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket};
 use crate::app::{App, now_ms};
 use crate::bots::seat::r188_forbidden;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
@@ -93,10 +93,6 @@ use crate::seats::Seat;
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
 /// indexed in this order.
 pub const HUMAN_SEATS: [DuosSeat; 2] = [DuosSeat::A1, DuosSeat::A2];
-
-/// RFC 6455's normal closure and "going away".
-const CLOSE_NORMAL: u16 = 1000;
-const CLOSE_GOING_AWAY: u16 = 1001;
 
 /// A seat's index in `DUOS_SEATS` order (a1, a2, b1, b2).
 fn slot(seat: DuosSeat) -> usize {
@@ -411,11 +407,7 @@ struct Countdown {
 
 /// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
 fn panicked_answer(nonce: &str) -> DuosServerMessage {
-    error_message(
-        SocketErrorCode::Internal,
-        "the server could not apply this action; it has been reported",
-        Some(nonce),
-    )
+    error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
 }
 
 fn armed_by(countdown: Option<&Countdown>, timer: u64) -> bool {

@@ -15,13 +15,10 @@ use indexmap::IndexSet;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
 use serde::{Deserialize, Serialize};
 
-use crate::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
+use crate::config::{MS_PER_SECOND, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
 use crate::db::store::{
     FrozenDeck, FrozenTrio, MatchSeat, SeriesEnd, SeriesGame, SeriesRow, SeriesSeat, SeriesSide, SeriesStatus,
 };
-
-/// Unit conversion, not configuration: the pick clock is stated in seconds, rows in epoch ms.
-const MS_PER_SECOND: i64 = 1000;
 
 /// Games are numbered from one (`SeriesGame.game_no`).
 const FIRST_GAME: i32 = 1;

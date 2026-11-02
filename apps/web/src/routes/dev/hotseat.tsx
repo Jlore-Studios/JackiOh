@@ -30,6 +30,8 @@ import { SEATS, createHotseat, otherSeat } from "../../game/hotseat.ts";
 import type { DispatchResult, HotseatSession } from "../../game/hotseat.ts";
 import { navigate, paths } from "../../net/navigate.ts";
 import { navTestid } from "../nav.tsx";
+import { messageOf } from "../../net/errors.ts";
+import { getStored } from "../../net/storage.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -123,7 +125,7 @@ function readInjection(): unknown {
   const raw: unknown = window.__jackiohE2E;
   if (raw !== undefined && raw !== null) return raw;
   try {
-    const stored = window.localStorage.getItem(E2E_DECKS_KEY);
+    const stored = getStored(E2E_DECKS_KEY);
     return stored === null ? undefined : JSON.parse(stored);
   } catch {
     // A private window, blocked site data, or malformed JSON: there is simply no injection.
@@ -282,7 +284,7 @@ function startSession(port: EnginePort, params: HotseatParams): Status {
   } catch (cause) {
     // `createGame` throws on an illegal deck (§2.6) or handicap (R184) — the engine's ruling,
     // printed as given.
-    return { kind: "no-game", message: cause instanceof Error ? cause.message : String(cause) };
+    return { kind: "no-game", message: messageOf(cause) };
   }
 }
 
@@ -494,7 +496,7 @@ export function HotseatRoute() {
         setStatus({
           kind: "no-engine",
           missing: error?.missing ?? [],
-          message: cause instanceof Error ? cause.message : String(cause),
+          message: messageOf(cause),
         });
       });
     return () => {

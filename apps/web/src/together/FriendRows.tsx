@@ -13,10 +13,10 @@ import Username from "../auth/Username.tsx";
 import { t } from "../i18n/i18n.ts";
 import { navigate } from "../net/navigate.ts";
 import { sendFriendRequest, type Friend, type FriendRequest } from "../net/social.ts";
-import { attempt, messageOf } from "./session.ts";
 import { togetherTestid } from "./testids.ts";
 import { watchLink } from "./watchLink.ts";
 import { Named, STATUS_WORDS } from "./words.tsx";
+import { attempt, messageOf } from "../net/errors.ts";
 
 import "./together.css";
 

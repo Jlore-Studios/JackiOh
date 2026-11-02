@@ -158,9 +158,10 @@ function defaultContextFactory(): (() => AudioContext) | null {
   return () => new Ctor();
 }
 
-async function defaultFetchBytes(url: string): Promise<ArrayBuffer> {
+/** A sound file's bytes; a refusal throws, its message naming `what` asked (the engine's "audio", the music's "music"). */
+export async function fetchAudioBytes(url: string, what: string = "audio"): Promise<ArrayBuffer> {
   const response = await fetch(url);
-  if (!response.ok) throw new Error(`audio: GET ${url} answered ${response.status}`);
+  if (!response.ok) throw new Error(`${what}: GET ${url} answered ${response.status}`);
   return response.arrayBuffer();
 }
 
@@ -252,7 +253,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   const factory = options.createContext === undefined ? defaultContextFactory() : options.createContext;
   const lifecycle = options.lifecycle === undefined ? browserLifecycle() : options.lifecycle;
   const speech = options.speech === undefined ? browserSpeechPort() : options.speech;
-  const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
+  const fetchBytes = options.fetchBytes ?? ((url: string) => fetchAudioBytes(url));
   const now = options.now ?? defaultNow;
   const visibility = options.visibility ?? defaultVisibility;
   const lines = options.lines ?? CARD_AUDIO;

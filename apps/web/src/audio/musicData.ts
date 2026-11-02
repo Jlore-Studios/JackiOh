@@ -11,6 +11,7 @@ import rawCards from "./music-cards.json";
 import rawManifest from "./music-manifest.json";
 import type { MusicCardEntry, MusicManifest, MusicStation, MusicTrack } from "./types.ts";
 import { isRecord } from "../wire/json.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 /** The main menu theme: every screen without a board plays it. */
 export const MENU_TRACK = "menu";
@@ -119,21 +120,14 @@ export function isStationTrack(id: string): boolean {
 
 /** The rotation counter, read inside try/catch: 0 when storage is unavailable. */
 export function readRotation(): number {
-  try {
-    const n = Number(window.localStorage.getItem(MUSIC_ROTATION_KEY));
-    return Number.isInteger(n) && n >= 0 ? n : 0;
-  } catch {
-    return 0;
-  }
+  const n = Number(getStored(MUSIC_ROTATION_KEY));
+  return Number.isInteger(n) && n >= 0 ? n : 0;
 }
 
 /** Moves the counter on for a new match and returns the value this match uses. */
 export function nextRotation(): number {
   const n = readRotation();
-  try {
-    window.localStorage.setItem(MUSIC_ROTATION_KEY, String(n + 1));
-  } catch {
-    // Storage is unavailable: every match plays the first track, which is still music.
-  }
+  // Storage that refuses it: every match plays the first track, which is still music.
+  setStored(MUSIC_ROTATION_KEY, String(n + 1));
   return n;
 }

@@ -43,6 +43,7 @@ import { DuosChromeContext, type DuosChrome } from "./context.ts";
 import { DuosBoard } from "./DuosBoard.tsx";
 import { DUOS_SEATS, seatLabel, teamOf } from "./seats.ts";
 import { duosTestid } from "./testids.ts";
+import { messageOf } from "../net/errors.ts";
 import "./duos.css";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -99,7 +100,7 @@ function start(params: DevDuosParams): Status {
     if (begun.error !== undefined) return { kind: "failed", message: begun.error };
     return { kind: "ready", state: begun.state, defs, seed: params.seed };
   } catch (cause) {
-    return { kind: "failed", message: cause instanceof Error ? cause.message : String(cause) };
+    return { kind: "failed", message: messageOf(cause) };
   }
 }
 
@@ -263,7 +264,7 @@ export function DevDuosRoute(): ReactElement {
         if (!canceled) setStatus(start(params));
       },
       (cause: unknown) => {
-        if (!canceled) setStatus({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause) });
+        if (!canceled) setStatus({ kind: "failed", message: messageOf(cause) });
       },
     );
     return () => {

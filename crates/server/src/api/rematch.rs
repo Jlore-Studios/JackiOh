@@ -41,7 +41,7 @@ use serde_json::{Value, json};
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{assert_no_custom_cards, lean_of};
+use crate::api::decks::{already_in_match, assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -128,10 +128,6 @@ pub fn sweep_rematch_offers(app: &App, now: i64) -> usize {
 
 fn no_such_match() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "no such match")
-}
-
-fn already_in_match() -> ApiError {
-    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
 }
 
 fn series_game() -> ApiError {

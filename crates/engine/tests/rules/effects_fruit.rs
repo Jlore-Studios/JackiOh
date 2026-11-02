@@ -18,7 +18,7 @@ use crate::rules::fixtures::fruit::{
     FRUIT_SCRIPTS, cast_on_draw, fruit_catalog, grape_roller, mythic, priced_draw, replacer,
 };
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, live, live_mut, new_game, put, set_library, slot,
+    events_of_type, in_hand, live, live_mut, new_game, put, run_with_targets as run, set_library, slot,
 };
 use crate::rules::fixtures::jade::{JADE_SCRIPTS, jade_catalog};
 use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
@@ -63,34 +63,6 @@ fn resolving(state: &mut GameState, def_id: &str, radiant: bool, player: PlayerI
 /// `resolving(state, defId)` with TS's defaults (base face, p1).
 fn resolving_p1(state: &mut GameState, def_id: &str) -> CardInstance {
     resolving(state, def_id, false, PlayerId::P1)
-}
-
-/// TS `run(state, effect, self, targets, controller)`: one effect on a sink over `state`, the rng cursor
-/// written back; its events.
-fn run(
-    state: &mut GameState,
-    effect: Effect,
-    self_: Option<&CardInstance>,
-    targets: Vec<Selection>,
-    controller: PlayerId,
-) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            self_,
-            HookOptions {
-                controller: Some(controller),
-                targets: Some(targets),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 /// `run(state, effect, self)` with TS's defaults (no targets, p1).

@@ -159,6 +159,8 @@ describe("scripts/vercel-ignore.sh", () => {
       ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", "reviews/2026-10-03.md"],
       ["scripts/ci-scope.sh", "scripts/golden/record.ts", "JackiOh_Core_Cards.md", "ARCHITECTURE-CCG.md"],
       ["spec/rulings/R0195.md", "spec/INDEX.md", "training/README.md", "training/history/improve.jsonl"],
+      // The logo's PNGs and screenshots: nothing builds from photos/ (photos/README.md).
+      ["photos/README.md", "photos/logo/jackioh-logo.png", "photos/screens/loading-screen-desktop.png"],
       // Tests and tooling inside the client and the crates are never imported by the bundle.
       ["apps/web/src/game/Board.test.tsx", "apps/web/src/net/x.test.ts", "apps/web/src/test/setup.ts"],
       ["crates/engine/tests/rules/combat.rs", "crates/engine/tests/golden/pre-equip-log.json", "crates/engine/tests/fixtures/code-input-cases.json"],

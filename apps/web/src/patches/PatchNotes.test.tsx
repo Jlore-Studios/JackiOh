@@ -5,6 +5,10 @@
 // filter; a card opens its full history. Fixtures through the context, the empty and failed states,
 // then the real history through the default source.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +20,8 @@ import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes } from "./PatchNotes.tsx";
 import { countsLine } from "./history.ts";
+import { RELEASE_ART_MAJOR_CYCLE_SECONDS } from "./constants.ts";
+import { releaseArtPath } from "./releaseArt.ts";
 import { RELEASES, majors, releaseGroups, type Release } from "./releases.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type Patch, type PatchSource, type TechnicalEntry } from "./source.ts";
 import { patchTestid } from "./testids.ts";
@@ -527,5 +533,91 @@ describe("R1369000 the technical log on the Patch notes page", () => {
       if (kind === "internal" || player === undefined) continue;
       expect(patchEntry(version)).toHaveTextContent(player);
     }
+  }, 30_000);
+});
+
+describe("#2681 release artwork on the Patch notes page", () => {
+  const HERE = dirname(fileURLToPath(import.meta.url));
+
+  it("#2681 shows generated artwork for every patch and uses CSS-owned still art for majors", async () => {
+    // V1 is a major here (R1369000: its recorded tier), V2 and V3 are micro patches of its line.
+    const patches = FIXTURE_PATCHES.map((patch) => (patch.version === V1 ? { ...patch, tier: "major" as const } : patch));
+    const data = sourceFromData({ patches, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS });
+    const asked: string[] = [];
+    renderPage({
+      ...data,
+      snapshot: (version) => {
+        asked.push(version);
+        return data.snapshot(version);
+      },
+    });
+    await screen.findAllByTestId(patchTestid.patch);
+    await screen.findByTestId(patchTestid.cards);
+
+    const art = screen.getAllByTestId(patchTestid.releaseArt);
+    expect(art.map((image) => image.dataset.version)).toEqual([V3, V2, V1]);
+    for (const image of art) {
+      const version = image.dataset.version ?? "";
+      const major = version === V1;
+      // One decorative, lazy image per patch, inside its entry and right after its heading.
+      expect(within(patchEntry(version)).getAllByTestId(patchTestid.releaseArt), version).toEqual([image]);
+      expect(image.tagName).toBe("IMG");
+      expect(image.getAttribute("alt"), version).toBe("");
+      expect(image.getAttribute("loading"), version).toBe("lazy");
+      expect(image.getAttribute("decoding"), version).toBe("async");
+      expect(image.getAttribute("draggable"), version).toBe("false");
+      expect(image.dataset.major, version).toBe(major ? "true" : "false");
+      // A major loads its still file, for the page's CSS to move; every other patch its one file.
+      expect(image.getAttribute("src"), version).toBe(releaseArtPath(version, major ? "still" : "animated"));
+      expect(image.parentElement?.previousElementSibling?.tagName, version).toBe("HEADER");
+      const cycle = image.parentElement?.style.getPropertyValue("--patch-art-cycle");
+      expect(cycle, version).toBe(major ? `${String(RELEASE_ART_MAJOR_CYCLE_SECONDS)}s` : "");
+    }
+    expect(art.map((image) => image.getAttribute("src"))).toEqual([
+      "/release-art/v5-third.svg",
+      "/release-art/v1-second.svg",
+      "/release-art/v9-first-still.svg",
+    ]);
+
+    // The art asks for no snapshot, and the release line and the patches keep their state (R507, R724000).
+    expect(new Set(asked)).toEqual(new Set([V3, V2]));
+    expect(screen.getAllByTestId(patchTestid.toggle).map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(["true", "false", "false"]);
+    fireEvent.click(within(releaseSet("core")).getByTestId(patchTestid.setToggle));
+    expect(screen.queryAllByTestId(patchTestid.releaseArt)).toEqual([]);
+    fireEvent.click(within(releaseSet("core")).getByTestId(patchTestid.setToggle));
+    expect(screen.getAllByTestId(patchTestid.releaseArt)).toHaveLength(3);
+  });
+
+  it("#2681 only a major's artwork moves, and only where the system and the app's Reduce motion allow it", () => {
+    const css = readFileSync(resolve(HERE, "patches.css"), "utf8");
+    const gate = /@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}/u.exec(css);
+    expect(gate).not.toBeNull();
+    const [whole, inside] = gate ?? ["", ""];
+    expect(inside).toContain(':root:not([data-reduce-motion="true"])');
+    expect(inside).toContain('.patch__art-img[data-major="true"]');
+    expect(inside).toMatch(/animation: patch-art-drift var\(--patch-art-cycle\) /u);
+    // Nothing else on the page animates: no other rule of the file sets an animation.
+    expect(css.replace(whole, "")).not.toMatch(/animation\s*:/u);
+    expect(css).toMatch(/@keyframes patch-art-drift/u);
+    expect(css.match(/@keyframes/gu)).toHaveLength(1);
+  });
+
+  it("#2681 every patch of the real history has its artwork, a still one for each major", async () => {
+    renderPage();
+    const shipped = await realPatchSource.patches();
+    await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    openEverySet();
+    const flags = majors(shipped);
+    const art = screen.getAllByTestId(patchTestid.releaseArt);
+    expect(art.map((image) => image.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
+    for (const image of art) {
+      const at = shipped.findIndex((patch) => patch.version === image.dataset.version);
+      const major = flags[at] === true;
+      expect(image.dataset.major, image.dataset.version).toBe(major ? "true" : "false");
+      expect(image.getAttribute("src"), image.dataset.version).toBe(releaseArtPath(image.dataset.version ?? "", major ? "still" : "animated"));
+    }
+    expect(art.filter((image) => image.dataset.major === "true").map((image) => image.dataset.version)).toEqual(
+      expect.arrayContaining(["v0.3.0", "v0.4.0"]),
+    );
   }, 30_000);
 });

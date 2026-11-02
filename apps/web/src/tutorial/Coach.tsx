@@ -16,7 +16,7 @@ import {
   type ReactElement,
 } from "react";
 
-import { LANES, testid } from "../game/contract.ts";
+import { LANES, byTestid, testid } from "../game/contract.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import {
   COACH_BUBBLE_MIN_HEIGHT_PX,
@@ -50,10 +50,6 @@ const FOCUS_KEEPERS = '[data-testid="prompt-modal"], [role="dialog"][aria-modal=
 
 const YOUR_MOVE = "Your move: play cards and attack, then press End turn.";
 const AI_MOVE = "The AI is taking its turn.";
-
-function byTestid(id: string): Element | null {
-  return document.querySelector(`[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`);
-}
 
 function rectOf(element: Element | null): Rect | null {
   if (element === null) return null;

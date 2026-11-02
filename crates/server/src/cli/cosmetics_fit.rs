@@ -38,7 +38,7 @@ use anyhow::bail;
 use crate::bots::cosmetics::age_bucket;
 use crate::cli::{connect_one, database_url};
 use crate::config::{
-    BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FIT_WINDOW_DAYS,
+    BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FIT_WINDOW_DAYS, MS_PER_DAY,
 };
 use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, full_art_picked, registry};
 use crate::db::store::{Db, LoadoutSample, StoreError};
@@ -56,8 +56,6 @@ const USAGE: &str = "Usage: jackioh-server cosmetics-fit
 /// The comment line the printed rows open with.
 const HEADER: &str =
     "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs";
-
-const MS_PER_DAY: i64 = 86_400_000;
 
 /// One bucket's fit (`config::CosmeticFit`'s fields, as values).
 #[derive(Clone, Debug, PartialEq)]

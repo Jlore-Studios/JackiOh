@@ -16,6 +16,7 @@ import { navigate } from "../net/navigate.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import SeriesRoute, { endReasonWords, seriesTestid } from "./series.tsx";
+import { setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -275,19 +276,15 @@ describe("the series screen", () => {
 
   it("a woken page reads the series again at once, and a game that started while away opens", async () => {
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     try {
       await renderSeries();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(1);
 
       // A hidden tab reads nothing; a visible one reads once; so does the network coming back.
-      show("hidden");
+      setVisibility("hidden");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(1);
-      show("visible");
+      setVisibility("visible");
       await waitFor(() => {
         expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
       });
@@ -301,7 +298,7 @@ describe("the series screen", () => {
 
       // The opponent locked in while the tab slept: the wake finds the game and opens it.
       vi.mocked(getSeries).mockResolvedValue(view({ status: "playing", pickDeadline: null, currentMatchId: "m-1" }));
-      show("visible");
+      setVisibility("visible");
       await waitFor(() => {
         expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/m-1");
       });
@@ -315,10 +312,6 @@ describe("the series screen", () => {
 
   it("a woken read never overlaps another, and its late answer cannot undo a pick or reach a closed screen", async () => {
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     const held = (): { read: Promise<SeriesView>; answer: (view: SeriesView) => void } => {
       let answer: (view: SeriesView) => void = () => undefined;
       const read = new Promise<SeriesView>((resolve) => {
@@ -338,10 +331,10 @@ describe("the series screen", () => {
       // A read is out: more wakes add none.
       const first = held();
       vi.mocked(getSeries).mockReturnValueOnce(first.read);
-      show("visible");
+      setVisibility("visible");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
-      show("visible");
+      setVisibility("visible");
       window.dispatchEvent(new Event("online"));
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
@@ -359,7 +352,7 @@ describe("the series screen", () => {
       // A read that is out when the player leaves is let go: the game it names opens nothing.
       const second = held();
       vi.mocked(getSeries).mockReturnValueOnce(second.read);
-      show("visible");
+      setVisibility("visible");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(3);
       unmount();
@@ -368,7 +361,7 @@ describe("the series screen", () => {
       expect(vi.mocked(navigate)).not.toHaveBeenCalled();
 
       // Leaving also ends the listening.
-      show("visible");
+      setVisibility("visible");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(3);
     } finally {

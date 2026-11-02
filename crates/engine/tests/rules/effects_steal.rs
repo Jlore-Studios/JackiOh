@@ -9,9 +9,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::effects::{give_control, steal, steal_all};
 use jackioh_engine::layers::unit_view;
-use jackioh_engine::resolve::{HookOptions, make_context};
-use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{Effect, EngineSink};
+use jackioh_engine::resolve::HookOptions;
 use jackioh_engine::state::{CardInstance, Exertion, GameState, find_instance_mut, new_instance};
 use jackioh_engine::zones::{
     OffFieldZone, PlaceOnFieldOptions, active_units_of, card_at, lock_zone, move_to_zone, place_on_field,
@@ -19,7 +17,7 @@ use jackioh_engine::zones::{
 
 use super::fixtures::catalog::spell_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{events_json, in_hand, live, new_game, put, slot};
+use super::fixtures::harness::{events_json, in_hand, live, new_game, put, run_with_options as run, slot};
 
 /// A face-down Trap for R33; #36 radiant steals a backrow card.
 fn trap() -> CardDef {
@@ -36,19 +34,6 @@ fn game() -> GameState {
     catalog.insert(def.id.clone(), def);
     register_catalog(catalog);
     state
-}
-
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted.
-fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut events = Vec::new();
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, options);
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 fn as_p1() -> HookOptions {

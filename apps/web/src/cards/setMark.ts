@@ -79,18 +79,19 @@ const GLYPHS: Readonly<Record<SetMarkKind, string>> = {
   unknown: `<path d='M12 1.6L22.4 12L12 22.4L1.6 12Z' fill='#bba8dc' stroke='#1d1530' stroke-width='1.6' stroke-linejoin='round'/><path d='M12 7.4L16.6 12L12 16.6L7.4 12Z' fill='#1d1530'/>`,
 };
 
-function dataUri(body: string): string {
+/** A glyph's body, drawn on a 24-unit square, as an SVG data URI; the pack's own emblems are drawn the same way. */
+export function glyphUri(body: string): string {
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='${SVG_NS}' viewBox='0 0 24 24'>${body}</svg>`)}`;
 }
 
 const SRC: Readonly<Record<SetMarkKind, string>> = {
-  core: dataUri(GLYPHS.core),
-  classic: dataUri(GLYPHS.classic),
-  "classic-plus": dataUri(GLYPHS["classic-plus"]),
-  meditative: dataUri(GLYPHS.meditative),
-  stinkyscape: dataUri(GLYPHS.stinkyscape),
-  "training-grounds": dataUri(GLYPHS["training-grounds"]),
-  unknown: dataUri(GLYPHS.unknown),
+  core: glyphUri(GLYPHS.core),
+  classic: glyphUri(GLYPHS.classic),
+  "classic-plus": glyphUri(GLYPHS["classic-plus"]),
+  meditative: glyphUri(GLYPHS.meditative),
+  stinkyscape: glyphUri(GLYPHS.stinkyscape),
+  "training-grounds": glyphUri(GLYPHS["training-grounds"]),
+  unknown: glyphUri(GLYPHS.unknown),
 };
 
 const KINDS: Readonly<Record<string, SetMarkKind>> = {

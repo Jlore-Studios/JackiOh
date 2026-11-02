@@ -7,23 +7,16 @@
 use jackioh_engine::testkit::*;
 use jackioh_engine::zones::is_locked;
 
-use super::fixtures::harness::{act, act_result, events_of_type, put, set_library, slot};
+use super::fixtures::harness::{act, act_result, apply_now, events_of_type, put, set_library, slot};
 use super::fixtures::keywords_783::{
-    crater_cloaked, crater_field, crater_moon, crater_reborn, crater_spell, crater_trap, crater_unit,
-    flicker_all, plague_field, plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
+    board_783 as playing, crater_cloaked, crater_field, crater_moon, crater_reborn, crater_spell,
+    crater_trap, crater_unit, flicker_all, plague_field, plain_unit, recruiter, stacker, summon_crater,
 };
 use super::fixtures::play_pipeline_b::plays_of;
-use super::fixtures::prompt_harness::{board, cast_now};
+use super::fixtures::prompt_harness::cast_now;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-
-/// p1's main phase on turn 3 with 4 mana a side and #783's cards registered.
-fn playing(seed: &str) -> GameState {
-    let state = board(seed);
-    register_keywords_783();
-    state
-}
 
 fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Hand { player });
@@ -46,28 +39,6 @@ fn play_into(state: &GameState, id: &str, row: &str, lane: i32) -> ReduceResult 
             "playerId": "p1",
         }),
     )
-}
-
-/// Apply one effect for p1 and settle, as a resolving card's would.
-fn apply_now(state: &mut GameState, effect: Effect) {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        {
-            let mut ctx = make_context(
-                &mut sink,
-                None,
-                HookOptions {
-                    controller: Some(P1),
-                    ..Default::default()
-                },
-            );
-            (effect.apply)(&mut ctx);
-        }
-        settle(&mut sink, SettleOptions::default());
-    }
-    state.rng_cursor = rng.cursor();
 }
 
 fn destroy(state: &mut GameState, id: &str) {

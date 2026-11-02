@@ -12,7 +12,9 @@ use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
 
 use super::fixtures::combat::cleaver;
 use super::fixtures::field::{banner, fuser};
-use super::fixtures::harness::{act, events_of_type, live, new_game, put, run_effect, sink_for, slot};
+use super::fixtures::harness::{
+    act, events_of_type, live, new_game, put, run_effect, run_on_sink as run, sink_for, slot,
+};
 use super::fixtures::keywords_783::{
     cloaked_bolt, cloaked_field, crater_trap, crater_unit, first_striker, flyer, flying_reborner,
     flying_stacker, flying_taunter, grunt, plague_field, quake, ranged, ranged_cleaver, ranged_striker,
@@ -34,14 +36,6 @@ fn on_unit(state: &GameState, id: &str) -> AttackTarget {
     AttackTarget::Unit {
         instance: live(state, id),
     }
-}
-
-/// Run `f` on a sink over `state` and hand back what it emitted.
-fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
-    let mut sink = sink_for(state);
-    let out = f(&mut sink);
-    let events = sink.events.clone();
-    (out, events)
 }
 
 /// Declare `attacker`'s attack on the unit `target`, answering the refusal's text or `None`.

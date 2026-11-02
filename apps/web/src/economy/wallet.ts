@@ -10,6 +10,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 
 import { getWallet } from "../net/api.ts";
+import { attempt } from "../net/errors.ts";
 import { isRecord } from "../wire/json.ts";
 
 /** Fired by `announceWallet`; its `detail` is the balance a server answer gave, or absent. */
@@ -52,12 +53,10 @@ function read(token: string, again: boolean): void {
     if (mine === latest) inflight = null;
   };
   // An answer that is not a balance is a failed read, as a refusal is.
-  Promise.resolve()
-    .then(() => getWallet(token))
-    .then((answer: unknown) => {
-      if (!isRecord(answer) || typeof answer.jlore !== "number" || !Number.isFinite(answer.jlore)) return failed();
-      if (mine === latest) remember(token, answer.jlore);
-    }, failed);
+  attempt(() => getWallet(token)).then((answer: unknown) => {
+    if (!isRecord(answer) || typeof answer.jlore !== "number" || !Number.isFinite(answer.jlore)) return failed();
+    if (mine === latest) remember(token, answer.jlore);
+  }, failed);
 }
 
 /**

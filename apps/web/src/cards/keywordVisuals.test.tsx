@@ -7,9 +7,6 @@
 // Vitest stubs CSS imports, so keywords.css is read as text and parsed the way fx/css.test.ts reads
 // fx.css: into rules (selectors, declarations, the @media they sit in) and keyframes bodies.
 
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -32,6 +29,7 @@ import {
 } from "./keywordVisuals.ts";
 import { MinionFace, keywordChips } from "./MinionFace.tsx";
 import { faceModel } from "./model.ts";
+import { readSheet } from "../test/setup.ts";
 
 afterEach(() => {
   cleanup();
@@ -87,14 +85,6 @@ const OFF_FIELD_KINDS: KeywordKind[] = KEYWORD_KINDS.filter((kind) => !KEYWORD_V
 /* ------------------------------------------------------------------------------------------- *
  * keywords.css, parsed
  * ------------------------------------------------------------------------------------------- */
-
-function readSheet(fromWeb: string): string {
-  for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
-    const path = resolve(process.cwd(), candidate);
-    if (existsSync(path)) return readFileSync(path, "utf8");
-  }
-  throw new Error(`${fromWeb} not found from ${process.cwd()}`);
-}
 
 type Rule = { selectors: string[]; decls: Map<string, string>; media: string | null };
 

@@ -31,7 +31,7 @@ use jackioh_server::config::{
 };
 
 use super::ws_server::seed_matches;
-use crate::support::socket::{FakeSocket, create_fake_socket, settle};
+use crate::support::socket::{FakeSocket, create_fake_socket, read_frame_now, settle};
 
 /// The pipe's buffer each way: far more than a match's first frames, so a write never waits on the
 /// pump and the paused clock has nothing to race.
@@ -163,32 +163,10 @@ impl Client {
         self.stream.write_all(&frame).await.expect("the frame is written");
     }
 
-    /// The next frame as it stands on the wire (server frames are unmasked), or `None` at the end
-    /// of the stream.
-    async fn read_frame_now(&mut self) -> Option<(u8, Vec<u8>)> {
-        let mut head = [0u8; 2];
-        self.stream.read_exact(&mut head).await.ok()?;
-        let opcode = head[0] & 0x0F;
-        let mut length = u64::from(head[1] & 0x7F);
-        if length == 126 {
-            let mut extended = [0u8; 2];
-            self.stream.read_exact(&mut extended).await.ok()?;
-            length = u64::from(u16::from_be_bytes(extended));
-        } else if length == 127 {
-            let mut extended = [0u8; 8];
-            self.stream.read_exact(&mut extended).await.ok()?;
-            length = u64::from_be_bytes(extended);
-        }
-        let mut payload = vec![0u8; usize::try_from(length).ok()?];
-        self.stream.read_exact(&mut payload).await.ok()?;
-        Some((opcode, payload))
-    }
-
     /// The first `view` frame: the actor pushes one when the registry attaches the socket (§9.5).
     async fn first_view(&mut self) -> Value {
         loop {
-            let (opcode, payload) = self
-                .read_frame_now()
+            let (opcode, payload) = read_frame_now(&mut self.stream)
                 .await
                 .expect("a view frame after the attach");
             if opcode != 0x1 {
@@ -212,7 +190,7 @@ async fn r1441_drops_a_socket_that_answers_no_ping_after_the_idle_timeout_and_sh
 
     // Pings arrive and none is answered, until the server ends the connection.
     let mut pings = 0;
-    while let Some((opcode, _)) = p1.read_frame_now().await {
+    while let Some((opcode, _)) = read_frame_now(&mut p1.stream).await {
         if opcode == PING {
             pings += 1;
         }
@@ -254,8 +232,7 @@ async fn r1441_keeps_a_socket_that_answers_its_pings_open_past_the_idle_timeout(
     // Three idle timeouts' worth of pings, each answered with a pong that carries its payload.
     let mut pongs = 0;
     while opened.elapsed() < IDLE_TIMEOUT * 3 {
-        let (opcode, payload) = p1
-            .read_frame_now()
+        let (opcode, payload) = read_frame_now(&mut p1.stream)
             .await
             .expect("the server kept a socket that answers its pings");
         assert_ne!(opcode, 0x8, "the server closed a socket that answers its pings");

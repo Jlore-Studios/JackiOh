@@ -10,6 +10,8 @@
 // would not reach it), one per flow, each timestamped so the newest is tried first. A code with no
 // verifier here was asked for on another device or browser (R324). A verifier is forgotten once used.
 
+import { getStored, removeStored, setStored } from "../net/storage.ts";
+
 export const PKCE_STORAGE_KEY = "jackioh.auth.pkce";
 /** The stored value's shape version: anything else reads as no verifier. */
 const PKCE_STORAGE_VERSION = 1;
@@ -61,12 +63,7 @@ export async function challengeFor(verifier: string): Promise<string> {
 /** The stored verifiers, read as untrusted input: anything malformed is no verifier. */
 function readStored(): StoredValue {
   const empty: StoredValue = { v: PKCE_STORAGE_VERSION };
-  let raw: string | null;
-  try {
-    raw = window.localStorage.getItem(PKCE_STORAGE_KEY);
-  } catch {
-    return empty;
-  }
+  const raw = getStored(PKCE_STORAGE_KEY);
   if (raw === null) return empty;
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -87,13 +84,10 @@ function readStored(): StoredValue {
 }
 
 function writeStored(value: StoredValue): void {
-  try {
-    if (FLOWS.every((flow) => value[flow] === undefined)) window.localStorage.removeItem(PKCE_STORAGE_KEY);
-    else window.localStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify(value));
-  } catch {
-    // Blocked storage: the link still confirms the address; the code just cannot be exchanged
-    // here, which reads as a link opened elsewhere (R324).
-  }
+  // Blocked storage: the link still confirms the address; the code just cannot be exchanged
+  // here, which reads as a link opened elsewhere (R324).
+  if (FLOWS.every((flow) => value[flow] === undefined)) removeStored(PKCE_STORAGE_KEY);
+  else setStored(PKCE_STORAGE_KEY, JSON.stringify(value));
 }
 
 /**

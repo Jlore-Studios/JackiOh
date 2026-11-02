@@ -24,7 +24,7 @@ import {
   MUSIC_OPPONENT_LOWPASS_HZ,
   MUSIC_TURN_TC_S,
 } from "./constants.ts";
-import { getAudioEngine } from "./engine.ts";
+import { fetchAudioBytes, getAudioEngine } from "./engine.ts";
 import { MUSIC_MANIFEST, isStationTrack, musicUrl } from "./musicData.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
 import type { AudioEngine, AudioSettings, MusicManifest, MusicTrack } from "./types.ts";
@@ -84,12 +84,6 @@ const LOG_MAX = 100;
 /** How long after a faded voice falls silent its source is stopped. */
 const STOP_GRACE_S = 0.02;
 
-async function defaultFetchBytes(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`music: GET ${url} answered ${response.status}`);
-  return response.arrayBuffer();
-}
-
 export function browserFocus(): FocusPort | null {
   if (typeof document === "undefined" || typeof window === "undefined") return null;
   return {
@@ -147,7 +141,7 @@ function trackTime(voice: Voice, t: number): number {
 export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer {
   const engineOf = options.engine ?? getAudioEngine;
   const manifest = options.manifest ?? MUSIC_MANIFEST;
-  const fetchBytes = options.fetchBytes ?? defaultFetchBytes;
+  const fetchBytes = options.fetchBytes ?? ((url: string) => fetchAudioBytes(url, "music"));
   const focusPort = options.focus === undefined ? browserFocus() : options.focus;
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;

@@ -28,12 +28,11 @@
 //! `DuosMatchOptions::catalog_version`).
 //!
 //! S6's two join refusals keep the error body every route answers with, the code being S6's:
-//! `409 { "error": { "code": "full" | "own_room", "message" } }`.
+//! `409 { "error": { "code": "full" | "own_room", "message" } }`, as `social::refused` writes them.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex};
 
-use axum::response::Response;
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
@@ -44,7 +43,7 @@ use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, lean_of,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, join_refusal, lean_of,
     read_mode_choice,
 };
 use crate::api::http::{
@@ -58,7 +57,7 @@ use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
 use crate::seats::{Seat, Taken};
-use crate::social::no_content;
+use crate::social::{no_content, refused};
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -147,11 +146,6 @@ async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result
         FrozenChoice::Random { lean } => Ok(DuosChoice::Random { lean }),
         FrozenChoice::Bo3 { .. } => Err(ApiError::internal("a trio reached a co-op room")),
     }
-}
-
-/// S6's 409: the error body every route answers with, under S6's code.
-fn refusal(status: u16, code: &str, message: &str) -> Response {
-    json_response(status, json!({ "error": { "code": code, "message": message } }))
 }
 
 /// The code a path names, normalized, or none when it could never be a room code.
@@ -407,14 +401,14 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let joiner_seed = seed_override_of(app, &req.body)?;
     let room = room_of(app, &req, &profile.id).await?;
     if room.host == profile.id {
-        return Ok(refusal(
+        return refused(
             409,
             "own_room",
             "you made that room; wait for your teammate to join",
-        ));
+        );
     }
     if room.guest.is_some() {
-        return Ok(refusal(409, "full", "someone already joined that room"));
+        return refused(409, "full", "someone already joined that room");
     }
     // §9.4: a stale catalog is refused at every door into a match. The host's deck was checked
     // against the catalog it was frozen under, which may not deal it now.
@@ -443,22 +437,16 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             seed: take_seed(&room.code, joiner_seed),
             claim_room: Some(room.code.clone()),
         },
-        |taken| {
-            // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers,
-            // and a host who holds one the host's (R1065000).
-            if taken.profile == profile.id {
-                in_game(&taken.seat)
-            } else {
-                host_busy()
-            }
-        },
+        // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers, and a
+        // host who holds one the host's (R1065000).
+        |taken| join_refusal(&profile.id, &taken),
     )
     .await?;
     match outcome {
         CoopStartOutcome::Started => {}
         CoopStartOutcome::Blocked => return Err(not_open()),
         CoopStartOutcome::Unavailable => {
-            return Ok(refusal(409, "full", "someone already joined that room"));
+            return refused(409, "full", "someone already joined that room");
         }
     }
     tracing::info!(
@@ -482,12 +470,12 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(not_open());
     };
     if room.guest.is_some() {
-        return Ok(refusal(409, "full", "someone already joined that room"));
+        return refused(409, "full", "someone already joined that room");
     }
     let deleted = one_tx!(app.db, |t| t.duos_rooms_delete(&code, &profile.id).await?)?;
     if !deleted {
         // A guest's claim landed between the read and the delete.
-        return Ok(refusal(409, "full", "someone already joined that room"));
+        return refused(409, "full", "someone already joined that room");
     }
     forget_seed(&code);
     tracing::info!(event = "duos.room.cancelled", code = %code);

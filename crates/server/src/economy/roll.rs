@@ -381,6 +381,7 @@ mod tests {
     use super::*;
     use crate::config::{PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL};
     use crate::cosmetics::CosmeticKind;
+    use crate::economy::test_support::{card_place, foil, four_foils};
     use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds, cosmetic_odds};
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
 
@@ -392,30 +393,6 @@ mod tests {
             id: id.to_owned(),
             rarity,
         }
-    }
-
-    /// A per-card cosmetic a pack may drop.
-    fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
-        Cosmetic {
-            id: id.to_owned(),
-            kind: CosmeticKind::Foil,
-            name: id.to_owned(),
-            rarity,
-            default: false,
-            starter: false,
-            chase: rarity.is_chase(),
-            card: None,
-        }
-    }
-
-    /// One droppable foil of each cosmetic rarity the registry has.
-    fn four_foils() -> Vec<Cosmetic> {
-        vec![
-            foil("foil-common", CosmeticRarity::Common),
-            foil("foil-rare", CosmeticRarity::Rare),
-            foil("foil-epic", CosmeticRarity::Epic),
-            foil("foil-legendary", CosmeticRarity::Legendary),
-        ]
     }
 
     /// An account cosmetic the global roll may drop: a playmat (R1661001).
@@ -489,13 +466,6 @@ mod tests {
                 "{what}: tier {tier}'s share {share} outside tolerance of {chance}"
             );
         }
-    }
-
-    fn card_place(rarity: PrintedRarity) -> usize {
-        PrintedRarity::ALL
-            .iter()
-            .position(|each| *each == rarity)
-            .expect("a printed rarity")
     }
 
     #[test]

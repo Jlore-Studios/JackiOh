@@ -1,8 +1,15 @@
-// Where the hover preview goes (B27). Pure: the caller measures the anchor and the viewport.
+// Where the hover preview goes (B27). Pure but for `rectOf`, which measures an anchor for it; the
+// caller measures the viewport.
 
 import { PREVIEW_GAP_PX, PREVIEW_MARGIN_PX } from "./constants.ts";
 
 export type Rect = { left: number; top: number; width: number; height: number };
+
+/** The anchor a preview or a tip is placed against: `element`'s box on screen now. */
+export function rectOf(element: Element): Rect {
+  const box = element.getBoundingClientRect();
+  return { left: box.left, top: box.top, width: box.width, height: box.height };
+}
 type PreviewSide = "right" | "left" | "above" | "below";
 
 /**

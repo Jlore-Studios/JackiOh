@@ -18,9 +18,9 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::SHARED_REPLAYS_LIST_MAX;
 use jackioh_server::db::store::{MatchActionRow, MatchRow, ReplayShare, ResultRow, StoreError};
 
-use crate::support::deps::{add_user, call, empty_test_app};
+use crate::support::deps::{call, empty_test_app};
 use crate::support::engine::{begun_game, decks_that_open_on_the_mulligans, install_test_cards, real_pool};
-use crate::support::store::{fake, from, q, to_json, uuid};
+use crate::support::store::{Account, account, befriend, fake, from, q, to_json, uuid};
 
 /// How many log actions a game runs before its seat to act concedes: one page of steps.
 const PLAYED_ACTIONS: usize = 8;
@@ -31,57 +31,9 @@ const HOUR_MS: i64 = 3_600_000;
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
 
-struct Account {
-    id: String,
-    name: String,
-    token: String,
-}
-
-async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    let id = uuid(n);
-    let user_id = format!("user-{n}");
-    let tag = i64::from(n);
-    fake(app).lock().await.seed_profile(json!({
-        "id": id,
-        "userId": user_id,
-        "status": "active",
-        "username": base,
-        "usernameTag": tag,
-        "usernamePrompted": true,
-    }));
-    let token = add_user(app, &user_id, &format!("{user_id}@example.test"), true);
-    Account {
-        id,
-        name: format!("{base}#{tag}"),
-        token,
-    }
-}
-
 async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
     (status, body)
-}
-
-async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
-    let (status, body) = api(
-        app,
-        "POST",
-        "/api/friends/requests",
-        &a.token,
-        json!({ "username": b.name }),
-    )
-    .await;
-    assert_eq!(status, 201, "{body}");
-    let request_id = body["requestId"].as_str().expect("a request id").to_string();
-    let (status, body) = api(
-        app,
-        "POST",
-        &format!("/api/friends/requests/{request_id}/accept"),
-        &b.token,
-        Value::Null,
-    )
-    .await;
-    assert_eq!(status, 200, "{body}");
 }
 
 // ---------------------------------------------------------------------------------------------

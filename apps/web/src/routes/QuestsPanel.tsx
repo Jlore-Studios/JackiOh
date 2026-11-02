@@ -22,6 +22,7 @@ import { formatNumber, t } from "../i18n/i18n.ts";
 import { getQuests, keptPaths, replaceQuest, type QuestsResponse } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { messageOf } from "../net/errors.ts";
 
 /** Unit conversions, not configuration. */
 const SECONDS_PER_MINUTE = 60;
@@ -208,7 +209,7 @@ export function useQuests(token: string): {
       .catch((cause: unknown) => {
         if (canceled) return;
         const kept = cachedRead<QuestsResponse>(token, keptPaths.quests);
-        if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
+        if (kept === undefined) setError(messageOf(cause));
         else setQuests(kept);
       });
     return () => {
@@ -230,7 +231,7 @@ export function useQuests(token: string): {
         return null;
       } catch (cause: unknown) {
         setAttempt((before) => before + 1);
-        return cause instanceof Error ? cause.message : String(cause);
+        return messageOf(cause);
       }
     },
     [token],

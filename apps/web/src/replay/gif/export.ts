@@ -30,6 +30,7 @@ import { planFrames } from "./plan.ts";
 import type { GifPlan } from "./plan.ts";
 import { gifFile } from "./share.ts";
 import type { GifAssets, GifFace, RasterAnswer, RasterRequest } from "./raster.ts";
+import { isAbort } from "../../net/errors.ts";
 
 export { canShareFile, shareGif } from "./share.ts";
 
@@ -193,10 +194,6 @@ export type GifExportResult =
 
 /** The `render` an export draws with: `renderGif`, or a stand-in for a test. */
 export type GifRender = (plan: GifPlan, assets: GifAssets, options: RenderOptions) => Promise<Uint8Array<ArrayBuffer> | null>;
-
-function isAbort(cause: unknown): boolean {
-  return cause instanceof DOMException && cause.name === "AbortError";
-}
 
 /** The clip as a GIF file, the first try that fits the byte cap; `tooBig` when none does. */
 export async function exportGif(

@@ -15,7 +15,7 @@ import type { Shortcut } from "../../shortcuts/shortcuts.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
 import { HoverPreview } from "./HoverPreview.tsx";
 import { InspectSheet } from "./InspectSheet.tsx";
-import type { PreviewPrefer, Rect } from "./placement.ts";
+import { rectOf, type PreviewPrefer, type Rect } from "./placement.ts";
 import { closeHoverFor, closeInspect, inspectSnapshot, openInspect, subscribeInspect } from "./store.ts";
 import "./inspect.css";
 
@@ -101,11 +101,6 @@ function hoverAllowed(): boolean {
 
 function hoverPointer(pointerType: string | undefined): boolean {
   return pointerType === undefined || pointerType === "" || pointerType === "mouse" || pointerType === "pen";
-}
-
-function rectOf(element: Element): Rect {
-  const box = element.getBoundingClientRect();
-  return { left: box.left, top: box.top, width: box.width, height: box.height };
 }
 
 export function useInspectTrigger(

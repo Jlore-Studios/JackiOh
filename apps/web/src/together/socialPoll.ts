@@ -16,6 +16,7 @@ import { readSession } from "../net/session.ts";
 import { getChallenges, getUnread, type Challenge } from "../net/social.ts";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
+import { isQueueMode } from "../net/api.ts";
 
 export type SocialReads = {
   /** Challenges to this account, as the last read listed them. */
@@ -67,7 +68,7 @@ function isChallenge(value: unknown): value is Challenge {
   return (
     typeof challengeId === "string" &&
     typeof roomCode === "string" &&
-    (mode === "bo1" || mode === "bo3" || mode === "random") &&
+    isQueueMode(mode) &&
     typeof from === "object" &&
     from !== null &&
     typeof (from as { username?: unknown }).username === "string"

@@ -15,6 +15,7 @@ import {
 } from "../game/net.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import { createDuosClient, parseDuosFrame, type DuosClient } from "./socket.ts";
+import { setVisibility } from "../test/setup.ts";
 
 // Fakes
 
@@ -264,15 +265,11 @@ describe("a quiet co-op socket on a woken page", () => {
     const h = connected({ pageEvents: true });
     const current = h.socket();
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     try {
       h.advance(SILENCE_MS + 1);
-      show("hidden");
+      setVisibility("hidden");
       expect(current.frames()).toEqual([HELLO]);
-      show("visible");
+      setVisibility("visible");
       expect(current.frames()).toEqual([HELLO, HELLO]);
 
       current.deliver(view(1));

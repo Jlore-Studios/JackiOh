@@ -71,7 +71,7 @@ use jackioh_engine::{Action, CustomCard, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
 use crate::bots::cosmetics::BotCosmetics;
-use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
+use crate::config::{NANOS_PER_MS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
@@ -181,12 +181,10 @@ fn db_error(error: sqlx::Error) -> StoreError {
 // timestamptz, jsonb, uuid and int8.
 // ---------------------------------------------------------------------------
 
-/// Nanoseconds in a millisecond: `OffsetDateTime` counts the one, the port the other.
-const NANOS_PER_MS: i128 = 1_000_000;
-
 /// `timestamptz` -> epoch ms. sqlx decodes it into an `OffsetDateTime` (TS: node-pg's `Date`, whose
-/// `getTime()` drops the microseconds the same way).
-fn ms_of(value: OffsetDateTime) -> i64 {
+/// `getTime()` drops the microseconds the same way). The co-op and economy stores read theirs with
+/// it too (`duos::store`, `economy::store`).
+pub(crate) fn ms_of(value: OffsetDateTime) -> i64 {
     (value.unix_timestamp_nanos() / NANOS_PER_MS) as i64
 }
 
@@ -452,11 +450,12 @@ where
 }
 
 /// A `uuid` column as the text the port carries (lower case, hyphenated: Postgres's own text form).
-fn uuid_text(row: &PgRow, column: &str) -> Result<String, StoreError> {
+/// The co-op store reads its ids with it and the next one too (`duos::store`).
+pub(crate) fn uuid_text(row: &PgRow, column: &str) -> Result<String, StoreError> {
     Ok(get::<Uuid>(row, column)?.to_string())
 }
 
-fn uuid_text_or_null(row: &PgRow, column: &str) -> Result<Option<String>, StoreError> {
+pub(crate) fn uuid_text_or_null(row: &PgRow, column: &str) -> Result<Option<String>, StoreError> {
     Ok(get::<Option<Uuid>>(row, column)?.map(|id| id.to_string()))
 }
 
@@ -508,8 +507,9 @@ pub async fn commit(t: PgTx<'_>) -> Result<(), StoreError> {
 /// about — or `None` for the calls that are about nobody. Every statement the method issues after
 /// it is on the same connection and commits or rolls back together — which is what a method like
 /// `matches_create` (read-lock, then write) or `tickets_claim_pair` (claim, then link) needs to be
-/// safe at all, and what makes a mid-method error leave nothing behind.
-async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
+/// safe at all, and what makes a mid-method error leave nothing behind. The co-op and economy stores'
+/// methods re-stamp theirs with it too (`duos::store`, `economy::store`).
+pub(crate) async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
     sqlx::query(SESSION_SQL)
         .bind(ACTING_ROLE)
         .bind(subject.unwrap_or(""))

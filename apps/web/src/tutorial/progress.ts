@@ -13,7 +13,7 @@ import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION } from "./config.ts";
 import { FIELD_GUIDE } from "./discoveries.ts";
 import { TUTORIAL_LESSONS, currentLessonId, type TutorialLesson } from "./lessons.ts";
 import { isRecord } from "../wire/json.ts";
-import { localStorageOrNull } from "../net/storage.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export type TutorialHiddenChoice = {
   readonly hidden: boolean;
@@ -107,7 +107,7 @@ export function parseTutorialProgress(raw: unknown): TutorialProgress {
 
 function loadStored(): TutorialProgress {
   try {
-    const raw = localStorageOrNull()?.getItem(TUTORIAL_PROGRESS_KEY) ?? null;
+    const raw = getStored(TUTORIAL_PROGRESS_KEY);
     return raw === null ? EMPTY : parseTutorialProgress(raw);
   } catch {
     return EMPTY;
@@ -115,21 +115,18 @@ function loadStored(): TutorialProgress {
 }
 
 function persist(progress: TutorialProgress): void {
-  try {
-    localStorageOrNull()?.setItem(
-      TUTORIAL_PROGRESS_KEY,
-      JSON.stringify({
-        v: TUTORIAL_PROGRESS_VERSION,
-        completed: progress.completed,
-        // Omit an unmade choice to keep R294's stored shape.
-        ...(progress.hiddenChoice === null ? {} : { hiddenChoice: progress.hiddenChoice }),
-        ...(progress.found.length === 0 ? {} : { found: progress.found }),
-        ...(progress.lost.length === 0 ? {} : { lost: progress.lost }),
-      }),
-    );
-  } catch {
-    // Storage failure must not interrupt the current lesson.
-  }
+  // A storage failure must not interrupt the current lesson.
+  setStored(
+    TUTORIAL_PROGRESS_KEY,
+    JSON.stringify({
+      v: TUTORIAL_PROGRESS_VERSION,
+      completed: progress.completed,
+      // Omit an unmade choice to keep R294's stored shape.
+      ...(progress.hiddenChoice === null ? {} : { hiddenChoice: progress.hiddenChoice }),
+      ...(progress.found.length === 0 ? {} : { found: progress.found }),
+      ...(progress.lost.length === 0 ? {} : { lost: progress.lost }),
+    }),
+  );
 }
 
 function sameChoice(a: TutorialHiddenChoice | null, b: TutorialHiddenChoice | null): boolean {

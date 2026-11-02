@@ -60,12 +60,8 @@ import {
   shopTestid,
   type RegistryCosmetic,
 } from "./shop.ts";
+import { messageOf } from "../net/errors.ts";
 import "./shop.css";
-
-/** What a failed request says: the server's words, else the error's. */
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 /**
  * The panel. `revision` is how many times the page has asked it to read again (another panel
@@ -129,7 +125,7 @@ export default function CosmeticPacks({
           const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
           const keptOwned = cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics);
           if (keptInfo === undefined || keptCollection === undefined || keptOwned === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setInfo(keptInfo);
             setCollection(keptCollection);
@@ -162,12 +158,12 @@ export default function CosmeticPacks({
             setOwned(nextOwned);
           },
           (cause: unknown) => {
-            setError(wordsOf(cause));
+            setError(messageOf(cause));
           },
         );
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);
@@ -186,7 +182,7 @@ export default function CosmeticPacks({
         onChanged?.();
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);
