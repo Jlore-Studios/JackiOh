@@ -445,7 +445,7 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
       span.cf-hp[data-face-health][data-tone]    drop icon + number
 ```
 
-- **`data-foil`:** `animated` for Mythic and radiant faces while `animatedFoil` is on, `static` for
+- **`data-foil`:** `animated` for radiant faces, and Mythic ones while `rarityFoil` is on (R2721000), while `animatedFoil` is on, `static` for
   them while it is off, and `none` for everything else. The CSS never animates under
   `prefers-reduced-motion: reduce`.
 - **`layout="compact"`** (a face-up backrow card) renders cost, art, name, rarity gem and
@@ -937,7 +937,7 @@ The deck builder does the same for its own buttons by scoping every button rule 
   It renders no `data-attack`, `data-health`, `data-keyword` or `data-testid`.
 - **B13.** `.cf` carries `data-layout`, `data-card-type`, `data-rarity` (omitted when unknown),
   `data-name-tier`, `data-text-tier` and `data-foil`. `.cf-crest` renders only for Legendary and
-  Mythic. `data-foil` is "animated" for Mythic and radiant faces while `animatedFoil` is on,
+  Mythic. `data-foil` is "animated" for radiant faces, and Mythic ones while `rarityFoil` is on (R2721000), while `animatedFoil` is on,
   "static" for them while it is off, and "none" otherwise (jsdom). A full face of a hero
   portrait's card (R641's roster, `fullArt.ts`) carries `data-full-art="true"`, draws its art in the
   `full` shape across the whole face and prints no rules box, tags or type line, while the Full-art

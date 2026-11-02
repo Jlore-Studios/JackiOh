@@ -1,0 +1,19 @@
+{
+  "title": "Patch: no rarity foil on Legendary and Mythic cards by default; the crest and the music set them apart",
+  "sources": "#2721",
+  "notes": "R2721000: Legendary and Mythic faces wear no rarity foil by default; the Rarity foil setting gives the Mythic its sheen and rainbow edge back. Radiant faces keep their foil. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Quieter Legendary and Mythic cards",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Mythic cards no longer shine with a rainbow foil and edge by default: like Legendary cards, they stand out by the crest at the top, their gem and their music.",
+      "Turn on Rarity foil in Settings, Visuals, to bring the Mythic's rainbow foil and edge back.",
+      "A Mythic card now shows the cosmetic foil you equip on it."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

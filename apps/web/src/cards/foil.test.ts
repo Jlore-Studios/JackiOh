@@ -6,7 +6,8 @@
 // fan) drew a dark wedge past the rounded corner, and its band is lit at a share of the still
 // band's alpha instead.
 //
-// Presentation only: no ruling, so these tests carry no R number.
+// Presentation only: no ruling, so these tests carry no R number, save R2721000's test below,
+// which pins where the Mythic's rainbow edge and ring apply.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -162,6 +163,19 @@ describe("the animated foil sweep", () => {
   it("keeps the still foil's overlay, which never moves (#1700)", () => {
     const still = ruleBody(/\.cf\[data-foil="static"\]::after,\s*\.cf\[data-foil="animated"\]::after/);
     expect(still).toMatch(/mix-blend-mode:\s*overlay/);
+  });
+
+  it("R2721000 the rainbow edge and portrait ring apply only where data-foil is static or animated", () => {
+    const plain = ruleBody(/\.cf\[data-rarity="Mythic"\]\s*\{/);
+    expect(plain).toMatch(/--rarity-mythic/);
+    expect(plain).not.toMatch(/--cf-edge/);
+    const edged = ruleBody(/\.cf\[data-rarity="Mythic"\]:where\(\[data-foil="static"\], \[data-foil="animated"\]\)\s*\{/);
+    expect(edged).toMatch(/conic-gradient\(/);
+    const ring = ruleBody(/\.cf\[data-rarity="Mythic"\]:where\(\[data-foil="static"\], \[data-foil="animated"\]\) \.cf-portrait\s*\{/);
+    expect(ring).toMatch(/#94d0ff/);
+    expect(cardsCss).not.toMatch(/\.cf\[data-rarity="Mythic"\] \.cf-portrait/);
+    const crest = ruleBody(/\.cf\[data-rarity="Mythic"\] \.cf-crest/);
+    expect(crest).toMatch(/hue-rotate\(/);
   });
 
   it("lights the swept band at SWEPT_ALPHA_SHARE of the still band's alpha, stop for stop (#1700)", () => {

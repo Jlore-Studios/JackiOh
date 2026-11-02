@@ -282,7 +282,8 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     }
   });
 
-  it("R1295000 a Mythic face wears no cosmetic foil; a Radiant face no foil, finish or border", () => {
+  it("R1295000 a Mythic face wearing its rarity foil wears no cosmetic foil; a Radiant face no foil, finish or border", () => {
+    writeCardSettings({ rarityFoil: true });
     wearOn("core-096", PICKS);
     wearOn("core-004", PICKS);
     const { container } = render(
@@ -301,6 +302,32 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
       expect(element?.getAttribute("data-radiant-face")).toBe("true");
       for (const attribute of ATTRIBUTES) expect(element?.getAttribute(attribute), attribute).toBeNull();
     }
+  });
+
+  it("R2721000 a cosmetic foil shows on a Legendary and on a Mythic that wears no rarity foil", () => {
+    wearOn("core-052", PICKS);
+    wearOn("core-096", PICKS);
+    const worn = () => {
+      const { container } = render(
+        <>
+          <CardFace face={face("core-052")} worn />
+          <CardFace face={face("core-096")} worn />
+        </>,
+      );
+      return [...container.querySelectorAll<HTMLElement>(".cf")];
+    };
+    const [legendary, mythic] = worn();
+    for (const element of [legendary, mythic]) {
+      expect(element?.getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
+      expect(element?.getAttribute("data-foil")).toBe("none");
+    }
+    cleanup();
+    writeCardSettings({ rarityFoil: true });
+    const [legendaryOn, mythicOn] = worn();
+    expect(legendaryOn?.getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
+    expect(legendaryOn?.getAttribute("data-foil")).toBe("none");
+    expect(mythicOn?.getAttribute("data-foil")).toBe("animated");
+    expect(mythicOn?.getAttribute("data-cosmetic-foil")).toBeNull();
   });
 
   it("R1295000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, and a freed slot passes on", () => {
@@ -737,6 +764,7 @@ describe("R1655000 the picks of each card", () => {
   });
 
   it("R1655000 a Mythic face wears no cosmetic foil and a Radiant face nothing, whatever its card's picks", () => {
+    writeCardSettings({ rarityFoil: true });
     for (const defId of ["core-096", OWN]) {
       writeCardPick(defId, "foil", PICKS.foil);
       writeCardPick(defId, "finish", PICKS.finish);
@@ -930,6 +958,7 @@ describe("R1956000 R1956001 picks across tabs, and a Created card's generator", 
     cleanup();
 
     // The Created card's own rarity holds: a Mythic face wears no cosmetic foil, a Radiant face nothing.
+    writeCardSettings({ rarityFoil: true });
     ({ container } = render(
       <>
         <CardFace face={created("core-096")} worn />

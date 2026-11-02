@@ -60,19 +60,20 @@ afterEach(() => {
 });
 
 describe("the contract (B28)", () => {
-  it("B28 settings live under jackioh.cards.settings.v1, and every one defaults to on", () => {
+  it("B28 R2721000 settings live under jackioh.cards.settings.v1, every one on by default but rarityFoil", () => {
     expect(CARD_SETTINGS_KEY).toBe("jackioh.cards.settings.v1");
-    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true, opponentCosmetics: true });
+    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
-  it("B28 CARD_SETTINGS_FIELDS puts hoverPreviews under gameplay, and animatedFoil, fullArt (R1017001) and opponentCosmetics (R1834004) under visuals, each labeled", () => {
+  it("B28 CARD_SETTINGS_FIELDS puts hoverPreviews under gameplay, and animatedFoil, fullArt (R1017001), opponentCosmetics (R1834004) and rarityFoil (R2721000) under visuals, each labeled", () => {
     const byKey = new Map(CARD_SETTINGS_FIELDS.map((field) => [field.key, field]));
-    expect([...byKey.keys()].sort()).toEqual(["animatedFoil", "fullArt", "hoverPreviews", "opponentCosmetics"]);
-    expect(CARD_SETTINGS_FIELDS).toHaveLength(4);
+    expect([...byKey.keys()].sort()).toEqual(["animatedFoil", "fullArt", "hoverPreviews", "opponentCosmetics", "rarityFoil"]);
+    expect(CARD_SETTINGS_FIELDS).toHaveLength(5);
     expect(byKey.get("hoverPreviews")?.section).toBe("gameplay");
     expect(byKey.get("animatedFoil")?.section).toBe("visuals");
     expect(byKey.get("fullArt")?.section).toBe("visuals");
     expect(byKey.get("opponentCosmetics")?.section).toBe("visuals");
+    expect(byKey.get("rarityFoil")?.section).toBe("visuals");
     for (const field of CARD_SETTINGS_FIELDS) {
       expect(field.label.trim().length, `${field.key} label`).toBeGreaterThan(0);
       expect(field.description.trim().length, `${field.key} description`).toBeGreaterThan(0);
@@ -90,13 +91,13 @@ describe("reading (B28)", () => {
   it("B28 a stored value is what a fresh page reads", async () => {
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: false, animatedFoil: false }));
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
   it("B28 a missing key is filled from the defaults", async () => {
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ animatedFoil: false }));
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
   it("B28 invalid JSON reads as the defaults", async () => {
@@ -116,11 +117,11 @@ describe("reading (B28)", () => {
   it("B28 a key holding anything but a boolean is filled from the defaults, and the other key is kept", async () => {
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: "no", animatedFoil: false }));
     let fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
 
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: false, animatedFoil: 0 }));
     fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true, rarityFoil: false });
 
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: null, animatedFoil: "false" }));
     fresh = await freshSettings();
@@ -148,7 +149,7 @@ describe("reading (B28)", () => {
 describe("writing (B28)", () => {
   it("B28 writeCardSettings merges the patch, returns the whole settings, and stores them under the key", () => {
     const next = writeCardSettings({ animatedFoil: false });
-    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
     expect(readCardSettings()).toEqual(next);
     expect(stored()).toMatchObject({ animatedFoil: false });
   });
@@ -156,24 +157,32 @@ describe("writing (B28)", () => {
   it("B28 R1017001 a written fullArt is what the next page load reads, the other keys kept", async () => {
     writeCardSettings({ fullArt: false });
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: false, opponentCosmetics: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: false, opponentCosmetics: true, rarityFoil: false });
+  });
+
+  it("R2721000 a written rarityFoil is what the next page load reads, under the card settings key alone", async () => {
+    writeCardSettings({ rarityFoil: true });
+    expect(window.localStorage.length).toBe(1);
+    expect(window.localStorage.key(0)).toBe(CARD_SETTINGS_KEY);
+    const fresh = await freshSettings();
+    expect(fresh.readCardSettings().rarityFoil).toBe(true);
   });
 
   it("B28 a written value is what the next page load reads", async () => {
     writeCardSettings({ hoverPreviews: false });
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
   it("B28 an empty patch changes nothing and returns the current settings", () => {
     writeCardSettings({ animatedFoil: false });
-    expect(writeCardSettings({})).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
-    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(writeCardSettings({})).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
+    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
   it("B28 writing never changes CARD_SETTINGS_DEFAULTS", () => {
     writeCardSettings({ hoverPreviews: false, animatedFoil: false });
-    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true, opponentCosmetics: true });
+    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
   it("B28 writeCardSettings keeps working in memory when setItem throws", () => {
@@ -182,8 +191,8 @@ describe("writing (B28)", () => {
     expect(() => {
       next = writeCardSettings({ hoverPreviews: false });
     }).not.toThrow();
-    expect(next).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true });
-    expect(readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true });
+    expect(next).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true, rarityFoil: false });
+    expect(readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 
   it("B28 writeCardSettings keeps working in memory when getItem and setItem both throw", () => {
@@ -192,8 +201,8 @@ describe("writing (B28)", () => {
     expect(() => {
       next = writeCardSettings({ animatedFoil: false });
     }).not.toThrow();
-    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
-    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
+    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
   });
 });
 

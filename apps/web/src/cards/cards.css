@@ -241,6 +241,11 @@
 
 .cf[data-rarity="Mythic"] {
   --cf-rarity: var(--rarity-mythic);
+}
+
+/* R2721000: the rainbow is the rarity foil's, worn only while data-foil shows it; `:where` keeps
+   the old weight so the later Radiant gold edge still wins. */
+.cf[data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]) {
   --cf-edge: conic-gradient(
     from 210deg,
     #ff6ad5,
@@ -1276,7 +1281,7 @@
     0 0 3.5cqmin color-mix(in srgb, var(--foil-gold) 75%, transparent);
 }
 
-.cf[data-rarity="Mythic"] .cf-portrait {
+.cf[data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]) .cf-portrait {
   box-shadow:
     0 0 0 1.4cqmin #ff6ad5,
     0 0 0 2.6cqmin #94d0ff,

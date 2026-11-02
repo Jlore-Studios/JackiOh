@@ -6,11 +6,12 @@
 // R1834004: `opponentCosmetics` is the viewer's own say over what the other seat wears: on, an
 // opponent's cards and side wear the loadout their seat froze when the match began (game/wearer.ts);
 // off, they draw the defaults, on a live, a watched and a replayed board alike.
+// R2721000: `rarityFoil`, off by default, gives a Mythic face its rarity foil (model.ts foilFor).
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
 
-export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean; opponentCosmetics: boolean };
+export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean; opponentCosmetics: boolean; rarityFoil: boolean };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
 
@@ -19,6 +20,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   animatedFoil: true,
   fullArt: true,
   opponentCosmetics: true,
+  rarityFoil: false,
 });
 
 type CardSettingsField = {
@@ -36,10 +38,16 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     description: "Rest the pointer on a card to see it enlarged, with its keywords explained.",
   },
   {
+    key: "rarityFoil",
+    section: "visuals",
+    label: "Rarity foil",
+    description: "Mythic cards shine with a rainbow foil and edge. Off, the crest at the top marks Legendary and Mythic cards.",
+  },
+  {
     key: "animatedFoil",
     section: "visuals",
     label: "Animated foil",
-    description: "Mythic and Radiant cards shimmer. Off shows the foil standing still.",
+    description: "Radiant cards and foils shimmer. Off shows the foil standing still.",
   },
   {
     key: "fullArt",
@@ -55,7 +63,7 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
   },
 ];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics"];
+const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "rarityFoil"];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`

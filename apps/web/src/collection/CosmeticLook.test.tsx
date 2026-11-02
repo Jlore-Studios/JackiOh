@@ -3,9 +3,10 @@
 // game draws it; a portrait as its art. A full art, and a per-card cosmetic with no card to draw it
 // on, have none.
 
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { DEFAULT_CARD_COSMETICS } from "../cards/cosmetics.ts";
 import { CosmeticLook, hasLook } from "./CosmeticLook.tsx";
 
@@ -16,6 +17,7 @@ const MYTHIC = "core-096";
 
 afterEach(() => {
   cleanup();
+  writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
 });
 
 describe("R1833000 a cosmetic's look", () => {
@@ -46,7 +48,12 @@ describe("R1833000 a cosmetic's look", () => {
     expect(look().querySelector(".cf")).not.toHaveAttribute("data-cosmetic-foil");
     rerender(<CosmeticLook id="border-celestial" cardId={CARD} />);
     expect(look().querySelector(".cf")).toHaveAttribute("data-frame", "border-celestial");
-    // A Mythic card keeps its own foil, as it does in a game.
+    // A Mythic card wears the cosmetic foil while no rarity foil shows, and keeps its own with Rarity foil on, as it does in a game.
+    rerender(<CosmeticLook id="foil-void-shimmer" cardId={MYTHIC} />);
+    expect(look().querySelector(".cf")).toHaveAttribute("data-cosmetic-foil", "foil-void-shimmer");
+    act(() => {
+      writeCardSettings({ rarityFoil: true });
+    });
     rerender(<CosmeticLook id="foil-void-shimmer" cardId={MYTHIC} />);
     expect(look().querySelector(".cf")).not.toHaveAttribute("data-cosmetic-foil");
 

@@ -538,6 +538,7 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
   });
 
   it("R1834004 Mythic, Radiant and B16 hold on the opponent's faces", () => {
+    writeCardSettings({ rarityFoil: true });
     // Their cards pick a foil, a finish and a border of their own, the Mythic and the Radiant card among them.
     const theirs = loadout(
       { cardBack: THEIR_BACK },

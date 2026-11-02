@@ -149,7 +149,7 @@ export function FxControls(): ReactElement {
 }
 
 /** A card presentation switch in Task 6's words (cards/settings.ts), so the panel and the module agree. */
-function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" }): ReactElement {
+function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" | "rarityFoil" }): ReactElement {
   const settings = useCardSettings();
   const hintId = useId();
   const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === setting);
@@ -176,6 +176,11 @@ function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | 
       </p>
     </div>
   );
+}
+
+/** R2721000: the Mythic's rarity foil, off by default. */
+export function RarityFoilSwitch(): ReactElement {
+  return <CardSettingSwitch setting="rarityFoil" />;
 }
 
 /** Task 6's animated foil on Mythic and Radiant faces. */

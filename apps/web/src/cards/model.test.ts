@@ -12,7 +12,7 @@ import { fillParams, type CardDef, type CardFace, type Tag } from "@jackioh/shar
 
 import { fusedDef } from "../test/fixtures.ts";
 import { CONCEALED_TEXT, VANILLA_TEXT } from "./inPlay.ts";
-import { ALL_TRIBES, faceModel, frameRarity, frameTags, type FaceModel, type FaceSource } from "./model.ts";
+import { ALL_TRIBES, faceModel, foilFor, frameRarity, frameTags, type FaceModel, type FaceSource } from "./model.ts";
 import { markedText } from "./radiantDiff.ts";
 import { termsIn } from "./rules.ts";
 
@@ -657,5 +657,33 @@ describe("R1162: All Tribes", () => {
       "CN",
     ]);
     expect(frameTags([])).toEqual([]);
+  });
+});
+
+describe("R2721000: the rarity foil", () => {
+  it("R2721000 foilFor gives a Mythic face no foil while Rarity foil is off, and today's while it is on", () => {
+    for (const id of ["core-096", "core-100"]) {
+      const f = face(id, false);
+      expect(foilFor(f, true, false), id).toBe("none");
+      expect(foilFor(f, false, false), id).toBe("none");
+      expect(foilFor(f, true, true), id).toBe("animated");
+      expect(foilFor(f, false, true), id).toBe("static");
+    }
+  });
+
+  it("R2721000 foilFor leaves a Legendary bare and a Radiant face foiled, whatever Rarity foil says", () => {
+    const legendary = face("core-052", false);
+    for (const animatedFoil of [true, false]) {
+      for (const rarityFoil of [true, false]) {
+        expect(foilFor(legendary, animatedFoil, rarityFoil)).toBe("none");
+      }
+    }
+    for (const id of ["core-052", "core-096"]) {
+      const radiant = face(id, true);
+      for (const rarityFoil of [true, false]) {
+        expect(foilFor(radiant, true, rarityFoil), `${id} rarityFoil=${String(rarityFoil)}`).toBe("animated");
+        expect(foilFor(radiant, false, rarityFoil), `${id} rarityFoil=${String(rarityFoil)}`).toBe("static");
+      }
+    }
   });
 });

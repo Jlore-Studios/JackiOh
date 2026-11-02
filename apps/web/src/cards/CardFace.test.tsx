@@ -541,8 +541,8 @@ describe("B13: .cf attributes, crest and foil", () => {
     expect(renderFace({ defId: UNKNOWN_ID, radiant: false }).querySelector(".cf-crest")).toBeNull();
   });
 
-  it("B13 data-foil is animated for Mythic and radiant faces while animatedFoil is on", () => {
-    writeCardSettings({ animatedFoil: true });
+  it("B13 data-foil is animated for radiant faces, and Mythic ones with rarityFoil on, while animatedFoil is on", () => {
+    writeCardSettings({ animatedFoil: true, rarityFoil: true });
     expect(catalogFace("core-096").getAttribute("data-foil")).toBe("animated");
     cleanup();
     expect(catalogFace("core-002", true).getAttribute("data-foil")).toBe("animated");
@@ -550,8 +550,8 @@ describe("B13: .cf attributes, crest and foil", () => {
     expect(catalogFace("core-t-rush", true).getAttribute("data-foil")).toBe("animated");
   });
 
-  it("B13 data-foil is static for Mythic and radiant faces while animatedFoil is off", () => {
-    writeCardSettings({ animatedFoil: false });
+  it("B13 data-foil is static for radiant faces, and Mythic ones with rarityFoil on, while animatedFoil is off", () => {
+    writeCardSettings({ animatedFoil: false, rarityFoil: true });
     expect(catalogFace("core-096").getAttribute("data-foil")).toBe("static");
     cleanup();
     expect(catalogFace("core-002", true).getAttribute("data-foil")).toBe("static");
@@ -559,11 +559,24 @@ describe("B13: .cf attributes, crest and foil", () => {
 
   it("B13 data-foil is none for base Common, Rare, Epic, Legendary and Token faces, whatever the setting", () => {
     for (const animatedFoil of [true, false]) {
-      writeCardSettings({ animatedFoil });
-      for (const id of ["core-002", "core-007", "core-018", "core-052", "core-t-rush"]) {
-        expect(catalogFace(id).getAttribute("data-foil"), `${id} animatedFoil=${String(animatedFoil)}`).toBe("none");
-        cleanup();
+      for (const rarityFoil of [true, false]) {
+        writeCardSettings({ animatedFoil, rarityFoil });
+        for (const id of ["core-002", "core-007", "core-018", "core-052", "core-t-rush"]) {
+          expect(catalogFace(id).getAttribute("data-foil"), `${id} animatedFoil=${String(animatedFoil)}`).toBe("none");
+          cleanup();
+        }
       }
+    }
+  });
+
+  it("R2721000 with the default settings a Mythic face carries no data-foil, a Legendary none either, and both wear their crest, full and on the board", () => {
+    for (const id of ["core-100", "core-052"]) {
+      expect(catalogFace(id).getAttribute("data-foil"), `${id} full`).toBe("none");
+      expect(catalogFace(id).querySelectorAll(".cf-crest"), `${id} full crest`).toHaveLength(1);
+      cleanup();
+      expect(minionFace(id).getAttribute("data-foil"), `${id} board`).toBe("none");
+      expect(minionFace(id).querySelectorAll(".cf-crest"), `${id} board crest`).toHaveLength(1);
+      cleanup();
     }
   });
 });
@@ -967,11 +980,13 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(rotten.querySelector(".cf-crest")).toBeNull();
   });
 
-  it("R503 a Mythic-printed token carries the Mythic foil, animated or still as the setting says", () => {
-    writeCardSettings({ animatedFoil: true });
+  it("R503 a Mythic-printed token with Rarity foil on carries the Mythic foil, animated or still as the setting says", () => {
+    expect(catalogFace("classicplus-065-5").getAttribute("data-foil")).toBe("none");
+    cleanup();
+    writeCardSettings({ animatedFoil: true, rarityFoil: true });
     expect(catalogFace("classicplus-065-5").getAttribute("data-foil")).toBe("animated");
     cleanup();
-    writeCardSettings({ animatedFoil: false });
+    writeCardSettings({ animatedFoil: false, rarityFoil: true });
     expect(catalogFace("classicplus-065-5").getAttribute("data-foil")).toBe("static");
   });
 

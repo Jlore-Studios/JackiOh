@@ -165,7 +165,7 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
       data-layout="minion"
       data-card-type={face.type}
       data-rarity={frameRarity(face) ?? undefined}
-      data-foil={foilFor(face, settings.animatedFoil)}
+      data-foil={foilFor(face, settings.animatedFoil, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}

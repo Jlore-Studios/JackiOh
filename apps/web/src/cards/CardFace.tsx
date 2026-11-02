@@ -366,7 +366,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-printed-rarity={face.printedRarity ?? undefined}
       data-name-tier={names}
       data-text-tier={texts}
-      data-foil={foilFor({ ...face, rarity }, settings.animatedFoil)}
+      data-foil={foilFor({ ...face, rarity }, settings.animatedFoil, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-in-play={face.inPlay ? "true" : undefined}
       data-vanilla={face.vanilla ? "true" : undefined}

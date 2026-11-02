@@ -130,6 +130,7 @@ export function hasLook(id: string, cardId: string | null): boolean {
 
 /** `id`'s look (`cardId` the card a per-card one is on), or nothing where `hasLook` says it has none. */
 export function CosmeticLook({ id, cardId }: { id: string; cardId: string | null }): ReactElement | null {
+  const { rarityFoil } = useCardSettings();
   const cosmetic = entryOf(id);
   if (cosmetic === undefined || !hasLook(id, cardId)) return null;
   const { kind } = cosmetic;
@@ -139,8 +140,9 @@ export function CosmeticLook({ id, cardId }: { id: string; cardId: string | null
   let look: ReactElement | null = null;
   if (isCardSlot(kind) && cardId !== null) {
     const face = faceModel({ defId: cardId, def: CATALOG[cardId], radiant: false });
-    // What the card wears in a game with this pick and the defaults: a Mythic face keeps its own foil.
-    look = <SampleFace face={face} layout="full" wears={wornCosmetics(face, normalizeCosmetics({ [kind]: id }))} />;
+    // What the card wears in a game with this pick and the defaults: a Mythic face wearing its
+    // rarity foil (R2721000) keeps its own foil.
+    look = <SampleFace face={face} layout="full" wears={wornCosmetics(face, normalizeCosmetics({ [kind]: id }), {}, () => true, rarityFoil)} />;
   } else if (kind === "table" || kind === "field") {
     look = (
       <MiniBoard

@@ -99,10 +99,11 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists the vibration under gameplay (R669), task 1's effects, task 6's foil, the full-art switch (R1017001) and Show opponents' cosmetics under visuals, and task 2's audio under audio, each with a reset", () => {
+  it("lists the vibration under gameplay (R669), task 1's effects, the Rarity foil switch (R2721000), task 6's foil, the full-art switch (R1017001) and Show opponents' cosmetics under visuals, and task 2's audio under audio, each with a reset", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["gameplay", "haptics"],
       ["visuals", "fx"],
+      ["visuals", "card-rarity-foil"],
       ["visuals", "card-foil"],
       ["visuals", "card-full-art"],
       ["visuals", "card-opponent-cosmetics"],
@@ -225,6 +226,7 @@ describe("every setting persists and applies live, on a board already on screen"
 
   it("animated foil: a Mythic face on screen stops shimmering and starts again", () => {
     if (MYTHIC === undefined) throw new Error("the catalog has no Mythic card");
+    writeCardSettings({ rarityFoil: true });
     render(
       <>
         <CardFace face={faceModel({ defId: MYTHIC.id, def: MYTHIC, radiant: false })} layout="full" />
@@ -284,6 +286,34 @@ describe("every setting persists and applies live, on a board already on screen"
     });
     expect(readCardSettings().opponentCosmetics).toBe(true);
     expect(toggle("setting-opponentCosmetics").checked).toBe(true);
+  });
+
+  it("R2721000 Rarity foil is a switch on the visuals tab, off by default, that gives a Mythic face on screen its foil; its reset turns it off", () => {
+    if (MYTHIC === undefined) throw new Error("the catalog has no Mythic card");
+    render(
+      <>
+        <CardFace face={faceModel({ defId: MYTHIC.id, def: MYTHIC, radiant: false })} layout="full" />
+        <SettingsPanel onClose={noop} />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
+    const face = (): Element | null => document.querySelector(".cf[data-foil]");
+    const toggled = toggle("setting-rarityFoil");
+    expect(screen.getByRole("switch", { name: "Rarity foil" })).toBe(toggled);
+    expect(toggled.checked).toBe(false);
+    expect(face()).toHaveAttribute("data-foil", "none");
+
+    fireEvent.click(toggled);
+    expect(face()).toHaveAttribute("data-foil", "animated");
+    expect(readCardSettings()).toMatchObject({ rarityFoil: true });
+    expect(stored(CARD_SETTINGS_KEY)).toMatchObject({ rarityFoil: true });
+
+    act(() => {
+      SETTINGS_SLOTS.find((slot) => slot.id === "card-rarity-foil")?.reset?.();
+    });
+    expect(readCardSettings().rarityFoil).toBe(false);
+    expect(toggle("setting-rarityFoil").checked).toBe(false);
+    expect(face()).toHaveAttribute("data-foil", "none");
   });
 
   it("audio: a volume, mute and voice lines write task 2's store, which the engine hears", () => {

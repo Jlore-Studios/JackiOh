@@ -482,7 +482,8 @@ describe("R1655000 a card in context", () => {
     expect(JSON.parse(localStorage.getItem(CARD_PICKS_SETTINGS_KEY) ?? "null")).toEqual({ [BIG_D]: { finish: "finish-linen" } });
   });
 
-  it("R1655000 a shown foil keeps the rarity rules: a Mythic card wears none", () => {
+  it("R1655000 a shown foil keeps the rarity rules: a Mythic card wearing its rarity foil wears none", () => {
+    writeCardSettings({ rarityFoil: true });
     open(MYTHIC);
     fireEvent.mouseEnter(item("foil-rainbow"));
 
@@ -742,7 +743,7 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     return face;
   };
 
-  it("R1956000 an owned grid tile wears its card's picks, never the account's; a locked tile, a Mythic tile's foil and a Radiant face do not", () => {
+  it("R1956000 an owned grid tile wears its card's picks, never the account's; a locked tile and a Radiant face do not, and a Mythic tile's foil follows Rarity foil (R2721000)", () => {
     writeCosmetics({ finish: "finish-linen" });
     writeCardPick(PLAIN, "border", "border-bone");
     writeCardPick(PLAIN, "foil", "foil-rainbow");
@@ -759,7 +760,12 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     expect(plain.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
     // A grid's foil holds still: the moving slots stay with the card a player opens.
     expect(plain.getAttribute("data-cosmetic-motion")).toBe("static");
-    // A Mythic face wears no cosmetic foil, and its other picks.
+    // A Mythic face wears its cosmetic foil while no rarity foil shows (R2721000), and its other picks.
+    expect(tile(MYTHIC).getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
+    expect(tile(MYTHIC).getAttribute("data-frame")).toBe("border-bone");
+    act(() => {
+      writeCardSettings({ rarityFoil: true });
+    });
     expect(tile(MYTHIC).getAttribute("data-cosmetic-foil")).toBeNull();
     expect(tile(MYTHIC).getAttribute("data-frame")).toBe("border-bone");
     // A locked silhouette is no copy of the viewer's.
