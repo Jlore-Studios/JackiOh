@@ -14206,6 +14206,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2773": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-02T00:05:51Z",
+      "issue": 2721,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
