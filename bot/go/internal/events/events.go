@@ -28,6 +28,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stepup"
@@ -845,6 +846,11 @@ func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 		return nil
 	}, fmt.Sprintf("closed #%d", number))
 	DropWip(ctx, number)
+	// The Claude sessions kept for its runs (#2748), and on a merge its issue's, which closes.
+	sessions.DropItem(ctx, number, fmt.Sprintf("#%d was closed", number))
+	if pull.Truthy("merged") && issue != nil && *issue != 0 {
+		sessions.DropItem(ctx, *issue, fmt.Sprintf("#%d merged", number))
+	}
 	if pull.Truthy("merged") {
 		// merged: approved and green, so its strikes are over
 		herr.Catch[*herr.GitHubError](func() { stepup.Clear(ctx, number) })

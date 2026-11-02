@@ -389,6 +389,10 @@ type RunRequest struct {
 	// UsageStop is asked with each usage reading the CLI streams while the call runs (Claude's
 	// `rate_limit_event`): a reason stops the call there, "" (None) lets it go on.
 	UsageStop func(*pyjson.Object) string // default: None
+	// Resume is the id of an earlier session this call goes on in (`claude --resume`, #2748),
+	// "" for a fresh one. Only Claude's backend reads it: Codex's `codex exec resume <id>`, and
+	// whatever Muse and agy offer, would each go in its own Argv.
+	Resume string // default: ""
 }
 
 // RunResult is runner.RunResult. Build one with NewRunResult.
@@ -410,6 +414,9 @@ type RunResult struct {
 	Tokens *pyjson.Object // default: None
 	// CostUSD is this call's cost in USD, when its CLI reports one (Claude's `total_cost_usd`).
 	CostUSD *float64 // default: None
+	// SessionID is the session the call ran in, when its CLI names it (Claude's stream-json does,
+	// in its init and result events): what a later run resumes (#2748).
+	SessionID string // default: ""
 }
 
 // NewRunResult is RunResult(ok, text) with the dataclass's defaults; set the other fields on
@@ -538,13 +545,20 @@ func jsonLines(lines []string) []*pyjson.Object {
 	return out
 }
 
-// streamParser is parse_stream's loop, fed a line at a time.
-type streamParser struct{ result, usage *pyjson.Object }
+// streamParser is parse_stream's loop, fed a line at a time; `session` is the last session id an
+// event named.
+type streamParser struct {
+	result, usage *pyjson.Object
+	session       string
+}
 
 func (p *streamParser) add(line string) {
 	event := jsonLine(line)
 	if event == nil {
 		return
+	}
+	if id, ok := event.Get("session_id").(string); ok && id != "" {
+		p.session = id
 	}
 	switch {
 	case pyjson.Equal(event.Get("type"), "result"):

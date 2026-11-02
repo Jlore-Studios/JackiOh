@@ -266,6 +266,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
+	if record.Truthy("session") {
+		// The Claude session the item's last run kept, which a run on its subscription resumes
+		// (#2748): the record only; the work job fetches the sealed file itself.
+		planned.Set("session", record.Get("session"))
+	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).
 	journalOf := journal.Key(planned)
 	if journalOf == 0 {

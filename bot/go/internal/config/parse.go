@@ -429,6 +429,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))
 	c.ReviewPaths = mustStrs(raw.Get("review_paths"))
 	c.UploadTranscripts = pyjson.Truthy(raw.Get("upload_transcripts"))
+	c.ResumeSessions = pyjson.Truthy(raw.GetOr("resume_sessions", optional.Get("resume_sessions")))
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
 		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))

@@ -918,6 +918,52 @@ Log (`journal.Compact`), never to the last 8,000 characters, which lost the plan
 next run, on any subscription, starts with a "Picking up from another agent" section in its
 prompt. So a task agy started when its quota ran out can be finished by Codex the same hour.
 
+**A Claude run resumes its own session** (#2748, [`go/internal/sessions/`](go/internal/sessions/)).
+On a Claude account the next run of an item on the **same subscription** goes on in the Claude
+Code session the last one left (`claude -p --resume <id>`), instead of a fresh session that reads
+the handoff. What is kept: the last builder's session (its first pass, a fix or a revision), or a
+cut-off planner's; reviews and self checks run fresh by design and are never kept. After each
+such call the work job notes the session id the CLI's stream-json names; whenever it writes
+`result.json` (its end, and every checkpoint, so a killed job keeps it too) it packs the
+session's file (`$CLAUDE_CONFIG_DIR/projects/<the worktree's path, every character but a letter
+or digit made ->/<id>.jsonl`, and what Claude Code keeps beside it but its subagents'
+transcripts), redacted, gzipped and encrypted with that subscription's vault key (the Codex
+logins' cipher, under a key derived from its own secret, with an HMAC that tells it from a
+login's), into `session.enc` beside the result, which the `work` artifact carries. It holds every
+tool output of the run, so it never leaves the job readable. A sealed session over
+`sessions.MaxBytes` (4,000,000 characters) is not kept, and the run's log and journal say so:
+each kept one is a new blob in `bot-state`'s history, which nothing rewrites. Deliver, which
+cannot open it and checks only its shape, stores it on `bot-state` as
+`sessions/<item>-<subscription>.bin` with a small record in the item's state (`session`: its id,
+subscription, model, kind, worktree, the commit it stopped at, size, when and how the run ended)
+while the item's own next run could take it up: a revision's pull request, or an unfinished
+build or plan; a build that opened its pull request (or split, or landed as a part) and a
+finished plan drop it. It is also dropped when a run of the item on **another subscription**
+delivers having made a model call (the work changed hands; a review run takes nothing over),
+when the item closes (deliver, a bot pull request's close or merge, which drops its issue's too,
+and the daily prune of the state file), and when a newer session of the item could not be kept.
+State from before has no record, and its items simply start fresh.
+
+The next run's plan carries the record; the work job, with its read-only token, fetches the file
+itself. Its first builder pass (or its planner, for a planner's session) resumes it only when the
+record is this subscription's, of the same kind and model family (`opus`, `sonnet`), and the
+worktree still holds the commit it stopped at (a branch built again from `main`, or a revision
+whose pull request moved past its unfinished work, does not). The file is restored where Claude
+Code looks for it from the worktree (the same path on GitHub's runners,
+`$RUNNER_TEMP/work/item-<n>`; elsewhere the session is told its old path), and the call is told
+only what it lacks: a "Resuming your own session" section with why the last run stopped and what
+changed since (the new feedback, the merge of `main`, the last findings, an answer to its
+question, the branch now). Anything that fails on the way (no file, a key that will not open it,
+the CLI refusing the id, the resumed call failing before it did anything) leaves the call to a
+fresh session with the whole first prompt and the handoff, as before, as a step of its own.
+`result.json`'s `session` records `resumed` (true or false), the `fallback` reason, whether a
+kept one was `tried`, and the resumed call's minutes, tokens and cost (`call`), so the usage
+history (#2749) can set resumed sessions against fresh ones; the run's journal section has a
+`Session:` line saying the same and what became of the run's own session. `resume_sessions` in
+`config.json` turns it all off: on for the night bot, off for Squishy until the night bot's
+numbers say it pays. Only Claude resumes for now: Codex (`codex exec resume`), Muse and agy start
+fresh every call, and `work.NewSessions` and each backend's `Argv` are where theirs would go.
+
 A plan is handed over the same way. The planner keeps its plan as it stands in an ignored
 `.bot-plan.md` (`work.PlanDraftFile`, the one file it may write): what it has found, the files
 to touch so far, and the sections as far as it has got. A planning session cut off before its
@@ -940,8 +986,11 @@ plan job reads the end of the file into the plan, and the work job puts it in th
 `.bot-journal.md`, ignored like the notes, so the machine needs no GitHub credential to read it.
 The first prompt lists the earlier runs and asks the builder to bring its `## State` up to date
 from the journal before it goes on: that rewrite is the compression, with no model call of its
-own. Headless CLIs can resume a session only where the session's files are, and the next run is
-often another job, subscription and CLI, so the journal is the handover; a file over 300,000
+own. A headless CLI resumes a session only where the session's files are, and the next run is
+often another job, subscription and CLI, so the journal is the handover; a Claude run on the same
+subscription resumes its own session as well (above), and the journal and the handoff stay its
+fallback. Each section has a `Session:` line for a Claude run (whether it resumed, or why not,
+and what the resumed call took). A file over 300,000
 characters drops its oldest runs' notes first (the branch's history keeps them). The branch
 starts with a `vercel.json` that switches Vercel off for it, as `bot-state`'s does.
 
@@ -1175,7 +1224,10 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
   parks it until the limit resets while the item moves to another subscription.
 - **Refreshed logins** from a secret (Codex rotates its own) are kept on `bot-state` only
   encrypted (AES-256 with an HMAC, through `openssl`), under a key derived from that
-  subscription's secret. A login on the machine never leaves it.
+  subscription's secret. A login on the machine never leaves it. A Claude run's own session,
+  which holds every tool output of the run, is kept the same way, redacted first
+  ([resumed sessions](#the-self-check-loop)); the model that wrote it could also have written
+  what the next session reads, and that run is held to the same checks.
 
 **What it cannot rule out.** The model has a shell and its subscription's login, because it
 needs the login to run. Network tools such as `curl`, `wget` and `ssh` are denied, but that only slows a
@@ -1374,6 +1426,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/providers/` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
 | `go/internal/runner/` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
 | `go/internal/logins/`, `go/internal/vault/` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
+| `go/internal/sessions/` | a Claude run's own session (#2748): packed, redacted and sealed with the vault's key, kept on `bot-state` per item and subscription, restored for the next run there, and dropped when the item closes or changes hands |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the Go module) |
 | `go/internal/git/`, `go/internal/gates/` | worktrees, commits, bundles, pushes; the repository's checks |
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |

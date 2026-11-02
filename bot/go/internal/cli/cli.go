@@ -33,6 +33,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/logins"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
@@ -621,6 +622,16 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	worker = work.NewWorker(cfg, planned, run, cfg.Root, args.WorkDir, out,
 		MakeProbe(ctx, item, provider, func() time.Time { return worker.LastHour }),
 		keepLogin, nil, nil, nil, nil)
+	if login != nil {
+		// A Claude account keeps its own session, and resumes the one the item's last run on it
+		// kept (#2748); NewSessions is nil for every other CLI and with `resume_sessions` off.
+		worker.Sessions = work.NewSessions(cfg, provider, login.Secret, login.Env["CLAUDE_CONFIG_DIR"],
+			func(path string) string {
+				text := ""
+				herr.Catch[*herr.GitHubError](func() { text, _ = ctx.GH.GetFile(path, config.StateBranch) })
+				return text
+			})
+	}
 	if cfg.Backend != "fake" && provider.Limits.Stops().Len() > 0 {
 		// A fresh reading before any model work: the stored one is the last run's, and none at
 		// all once its window reset. Claude: one Haiku turn, signed in as this subscription; agy
@@ -639,6 +650,9 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	keepLogin()
 	Summary(fmt.Sprintf("### Work: %s\n\n%s\n", py.Str(result.Get("status")), py.Str(result.GetOr("reason", ""))))
 	say(fmt.Sprintf("work: %s: %s", py.Str(result.Get("status")), py.Str(result.GetOr("reason", ""))))
+	if session := result.Obj("session"); session != nil {
+		say("work: " + journal.SessionLine(session))
+	}
 	return 0
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	hstate "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 )
 
@@ -207,7 +208,7 @@ var PruneEvery = 24 * time.Hour
 // ShedWhenClosed is SHED_WHEN_CLOSED: what a closed thread's record sheds at once: the bulky
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
-	"asks", "taken_asks", "question"}
+	"asks", "taken_asks", "question", "session"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep
@@ -263,8 +264,9 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 		s.Set("pruned", pyjson.New("at", clock.ISO(now), "dropped", len(gone), "shed", len(shed)))
 		return nil
 	}, "prune")
-	return []string{fmt.Sprintf("pruned the state file: dropped %d closed item(s), lightened %d",
-		len(gone), len(shed))}
+	dropped := sessions.Prune(ctx, openNow) // the Claude sessions kept for closed items (#2748)
+	return append([]string{fmt.Sprintf("pruned the state file: dropped %d closed item(s), lightened %d",
+		len(gone), len(shed))}, dropped...)
 }
 
 // Housekeeping requeues items a dead run left working; queues a revision for conflicted bot

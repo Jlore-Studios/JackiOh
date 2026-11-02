@@ -103,6 +103,7 @@
     "crates/server/migrations/"
   ],
   "upload_transcripts": false,
+  "resume_sessions": false,
   "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
     { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },

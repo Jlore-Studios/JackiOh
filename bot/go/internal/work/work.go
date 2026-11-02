@@ -397,6 +397,10 @@ type Worker struct {
 	// replace the bound method (`worker._review = …`).
 	ReviewFunc func(cycle int, report *verdicts.BuildReport, results []*gates.GateResult,
 		previous []*verdicts.Finding, context string, maxCycles *int, role string) *verdicts.Review
+	// Sessions: what lets this run keep its own Claude session and resume the one the item's
+	// last run on this subscription kept (`session.go`, #2748); nil keeps and resumes none.
+	Sessions *Sessions
+	session  sessionState
 
 	sigMu sync.Mutex
 	sigCh chan os.Signal
@@ -854,27 +858,13 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 		ExtraDirs:       x.gitDirs(cwd),
 		UsageStop:       usageStop,
 	}
-	result := x.Runner.(modelRunner).Run(request)
-	step.Set("minutes", py.RoundN(result.DurationS/60, 1))
-	step.Set("outcome", callOutcome(result))
-	if result.Tokens.Len() > 0 {
-		these := pyjson.New()
-		for _, name := range x.Tokens.Keys() {
-			n := tokenCount(result.Tokens, name)
-			x.Tokens.Set(name, x.Tokens.Int(name)+n)
-			these.Set(name, n)
-		}
-		step.Set("tokens", these)
-	}
-	if result.CostUSD != nil && *result.CostUSD != 0 {
-		x.CostUSD += *result.CostUSD
-		step.Set("cost_usd", py.RoundN(*result.CostUSD, 4))
-	}
+	// The call, and its tally on `step`: in its own session's continuation when the item's last
+	// run here kept one, else (and whenever that fails) fresh (`session.go`, #2748).
+	result, step := x.runCall(request, step, reader, drafting)
 	x.readMemory()
 	if x.AfterCall != nil {
 		x.AfterCall()
 	}
-	x.Minutes += result.DurationS / 60
 	if result.Usage.Len() > 0 {
 		x.LastUsage = result.Usage
 	}
@@ -896,6 +886,27 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 			or(result.Error, "it said nothing")), "infra", ""))
 	}
 	return result
+}
+
+// tally puts one model call's minutes, outcome, tokens and cost on its step and adds them to the
+// run's totals.
+func (x *Worker) tally(step *pyjson.Object, result *runner.RunResult) {
+	step.Set("minutes", py.RoundN(result.DurationS/60, 1))
+	step.Set("outcome", callOutcome(result))
+	if result.Tokens.Len() > 0 {
+		these := pyjson.New()
+		for _, name := range x.Tokens.Keys() {
+			n := tokenCount(result.Tokens, name)
+			x.Tokens.Set(name, x.Tokens.Int(name)+n)
+			these.Set(name, n)
+		}
+		step.Set("tokens", these)
+	}
+	if result.CostUSD != nil && *result.CostUSD != 0 {
+		x.CostUSD += *result.CostUSD
+		step.Set("cost_usd", py.RoundN(*result.CostUSD, 4))
+	}
+	x.Minutes += result.DurationS / 60
 }
 
 // tokenCount is `int(tokens.get(name) or 0)`.
@@ -976,6 +987,7 @@ func (x *Worker) gitDirs(cwd string) []string {
 // here on should hand on, as a pause of kind `died` (#342).
 func (x *Worker) WriteResult(checkpoint bool /* = False */) string {
 	mkdirAll(x.OutDir)
+	x.keepSession() // the builder's session as it stands, sealed beside the result (#2748)
 	x.Result.Set("usage", objOrNone(x.LastUsage))
 	x.Result.Set("finished_at", clock.ISO(x.Now()))
 	x.Result.Set("model_calls", x.Calls)
