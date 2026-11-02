@@ -13227,9 +13227,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-02T01:39:43Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6561629936"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2716": {
