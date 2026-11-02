@@ -14042,9 +14042,12 @@
         "sha": "4eb29b7015ea384659c27032c1e9ed4b4972dd46"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T00:07:27Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2731,
       "kind": "review",
       "pending_request": false,
