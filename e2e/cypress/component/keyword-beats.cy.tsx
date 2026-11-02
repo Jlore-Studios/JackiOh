@@ -1,11 +1,12 @@
 // R2789000: the combat keyword beats over a real board, caught mid-flight at the slowest effects speed:
 // Cleave's arc over the lanes beside the target, and First Strike's cancelled counter, the dying defender's
 // counter-blow breaking off with the attacker never taking a hit. The callout is a DOM badge over the
-// attacker, the arc and the break-off canvas cues; the screenshots are the pixel record, and the
-// assertions are what they show (the layer's DOM, the board's `data-animating`).
+// attacker, the arc and the break-off canvas cues. A shot waits until the canvas holds a lit pixel where the
+// cue is drawn (the arc between the two lanes, the break-off path in front of the defender), then is taken with
+// CSS animations running (e2e/README.md: by default Cypress jumps them to their end, the badge to opacity 0).
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/keyword-beats.cy.tsx
 
-import { FX_SPEED_DEFAULT, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
+import { FX_FIRST_STRIKE_BREAK_REACH, FX_SPEED_DEFAULT, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.ts";
@@ -19,6 +20,42 @@ const FX_DOM = '[data-testid="fx-dom"]';
 const SLOW = { timeout: 12_000 } as const;
 
 const noop = (): void => undefined;
+
+type Box = { left: number; top: number; right: number; bottom: number };
+
+/** Whether the canvas holds a lit (non-transparent) pixel inside `box`, in viewport pixels. */
+function litIn(canvas: HTMLCanvasElement, box: Box): boolean {
+  const ctx = canvas.getContext("2d");
+  if (ctx === null) return false;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  const x0 = Math.max(0, Math.floor((box.left - rect.left) * sx));
+  const y0 = Math.max(0, Math.floor((box.top - rect.top) * sy));
+  const x1 = Math.min(canvas.width, Math.ceil((box.right - rect.left) * sx));
+  const y1 = Math.min(canvas.height, Math.ceil((box.bottom - rect.top) * sy));
+  if (x1 <= x0 || y1 <= y0) return false;
+  const data = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+  for (let i = 3; i < data.length; i += 4) {
+    if ((data[i] ?? 0) > 0) return true;
+  }
+  return false;
+}
+
+/** Retries until the canvas is lit inside the box `region` reads, then the shot follows at once, animations running. */
+function shootWhenLit(name: string, region: () => Box): void {
+  cy.get('[data-testid="fx-canvas"]', SLOW).should(($canvas) => {
+    expect(litIn($canvas[0] as HTMLCanvasElement, region()), "the cue is drawn on the canvas here").to.eq(true);
+  });
+  cy.screenshot(name, { capture: "viewport", overwrite: true, disableTimersAndAnimations: false });
+}
+
+const rectOf = (selector: string): DOMRect => {
+  const el = Cypress.$(selector)[0];
+  if (el === undefined) throw new Error(`${selector} is not on the page`);
+  return el.getBoundingClientRect();
+};
 
 function unitId(view: PlayerView, side: "you" | "opponent", lane: number): string {
   const unit = view[side].units[lane - 1];
@@ -60,10 +97,21 @@ describe("R2789000 the combat keyword beats over a real board", () => {
       { type: "damage", sourceId: attacker, targetId: target, amount: 1, combat: true },
       { type: "damage", sourceId: attacker, targetId: neighbour, amount: 1, combat: true, via: "Cleave" },
     ]);
-    // Mid-flight: lane 3's unit is taking the Cleave hit and the keyword's badge is over the attacker.
+    // Mid-flight: lane 3's unit is taking the Cleave hit, the keyword's badge is over the attacker, and the arc
+    // is drawn across the gap from the struck lane to its neighbour (it lands at the entry's Land phase, after
+    // which the lit pixels there would be the splat's burst; the shot follows the first lit frame at once).
     cy.get(`[data-testid="card-${neighbour}"]`, SLOW).should("have.attr", "data-animating", "damage");
     cy.get(`${FX_DOM} [data-fx="callout"][data-callout="Cleave"]`).should("exist");
-    cy.screenshot("cleave-arc-mid", { capture: "viewport", overwrite: true });
+    shootWhenLit("cleave-arc-mid", () => {
+      const from = rectOf(`[data-testid="card-${target}"]`);
+      const to = rectOf(`[data-testid="card-${neighbour}"]`);
+      return {
+        left: Math.min(from.right, to.left),
+        right: Math.max(from.right, to.left),
+        top: Math.min(from.top, to.top),
+        bottom: Math.max(from.bottom, to.bottom),
+      };
+    });
     // At rest: nothing animating and every cue gone.
     cy.get("[data-animating]", SLOW).should("not.exist");
     cy.get(FX_DOM, { timeout: 4_000 }).should(($root) => {
@@ -111,10 +159,19 @@ describe("R2789000 the combat keyword beats over a real board", () => {
         ),
       );
     });
-    // Mid-flight: the defender is dissolving, its counter-blow breaking off, and the glint's badge is over the attacker.
+    // Mid-flight: the defender is dissolving, its counter-blow is in the air on the path toward the attacker that
+    // breaks off FX_FIRST_STRIKE_BREAK_REACH card heights past the defender, and the glint's badge is over the attacker.
     cy.get(`[data-testid="card-${defender}"]`, SLOW).should("have.attr", "data-animating", "destroyed");
     cy.get(`${FX_DOM} [data-fx="callout"][data-callout="First Strike"]`).should("exist");
-    cy.screenshot("first-strike-cancelled-mid", { capture: "viewport", overwrite: true });
+    shootWhenLit("first-strike-cancelled-mid", () => {
+      const card = rectOf(`[data-testid="card-${defender}"]`);
+      return {
+        left: card.left,
+        right: card.right,
+        top: card.bottom,
+        bottom: card.bottom + card.height * FX_FIRST_STRIKE_BREAK_REACH,
+      };
+    });
     cy.get("[data-animating]", SLOW).should("not.exist");
     cy.then(() => {
       observer?.disconnect();
