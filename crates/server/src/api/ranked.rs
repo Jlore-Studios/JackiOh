@@ -28,6 +28,8 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{BOT_GRIND_STEP_GAMES, BOT_STRENGTHS};
+use crate::cosmetics::JLORIOUS_CARD_BACK;
+use crate::economy::store::{CosmeticGrant, EconomyReason};
 use crate::db::store::{
     BotRating, MatchRow, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide,
     Season, SeasonStanding, SeriesStatus, StoreError, Tx,
@@ -212,6 +214,10 @@ pub struct RankedWrites {
     pub glickos: Vec<GlickoWrite>,
     pub ranks: Vec<SeasonRank>,
     pub peaks: Vec<PeakWrite>,
+    /// R2755000: the people this game leaves Jlorious who may not own the Jlorious card back yet:
+    /// its own people in Jlorious and each bystander whose peak it writes. Empty while the economy
+    /// is off (§14.12).
+    pub jlorious: Vec<String>,
 }
 
 /// Everything one ranked game will write, decided before any of it is written. Kept apart from the
@@ -365,7 +371,7 @@ struct RankChange {
 /// bare rating) holds no row.
 pub async fn plan_ranked_game(
     t: &mut Tx<'_>,
-    _app: &App,
+    app: &App,
     input: &RankedGameInput,
 ) -> Result<RankedPlan, StoreError> {
     if let Some(recorded) = t.ranked_game(&input.id).await? {
@@ -511,10 +517,12 @@ pub async fn plan_ranked_game(
     }
     let jlorious_after = jlorious_order(&standings_of(&standings_after));
     let mut peaks: Vec<PeakWrite> = Vec::new();
+    let mut jlorious: Vec<String> = Vec::new();
     for (index, profile_id) in jlorious_after.iter().enumerate() {
         let position = index as i32 + 1;
         if let Some(own) = ranks.get_mut(profile_id) {
             own.after = with_jlorious_peak(&own.after, position);
+            jlorious.push(profile_id.clone());
             continue;
         }
         let standing = standings_after
@@ -527,7 +535,11 @@ pub async fn plan_ranked_game(
                 profile_id: profile_id.clone(),
                 position,
             });
+            jlorious.push(profile_id.clone());
         }
+    }
+    if !app.economy_live {
+        jlorious.clear();
     }
 
     let side_of = |side: &RankedSideInput, index: usize| -> RatedSide {
@@ -594,11 +606,13 @@ pub async fn plan_ranked_game(
             glickos,
             ranks: ranks.values().map(|rank| rank.after.clone()).collect(),
             peaks,
+            jlorious,
         }),
     })
 }
 
-/// Writes a plan inside `t`: both ratings, both season rows, the peaks, and the record (R611).
+/// Writes a plan inside `t`: both ratings, both season rows, the peaks, the Jlorious card back of
+/// each person it leaves Jlorious (R2755000), and the record (R611).
 pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> Result<(), StoreError> {
     let Some(writes) = &plan.writes else {
         return Ok(());
@@ -636,6 +650,20 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
     for peak in &writes.peaks {
         t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, i64::from(peak.position))
             .await?;
+    }
+    // R2755000: a grant to someone who owns it already writes nothing.
+    for profile_id in &writes.jlorious {
+        t.economy_cosmetics_grant(&CosmeticGrant {
+            profile_id: profile_id.clone(),
+            card_id: None,
+            cosmetic_id: JLORIOUS_CARD_BACK.to_string(),
+            delta: 1,
+            reason: EconomyReason::Jlorious,
+            reference: Some(plan.row.id.clone()),
+            dev: false,
+            at,
+        })
+        .await?;
     }
     t.ranked_record_game(&plan.row).await?;
     Ok(())
