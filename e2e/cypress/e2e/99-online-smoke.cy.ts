@@ -4,8 +4,9 @@
  * Every other spec here drives a LOCAL client against fixtures: specs 01-04 and 07-12 run the
  * engine in the tab with no server at all, and 05, 06, 09 and 10 seed
  * `localStorage["jackioh.e2e.session"]` because ASSUMPTION A6 hands them ready-made tokens. None
- * of that exercises the thing that actually breaks in a deployment — Vercel serving the bundle,
- * Supabase issuing a token to a real password, Render verifying it, and Postgres behind Render.
+ * of that exercises the thing that actually breaks in a deployment — Cloudflare serving the bundle,
+ * Supabase issuing a token to a real password, the server in its Cloudflare container verifying it,
+ * and Postgres behind the server.
  * This spec signs in through the form like a person does and asserts each of those in turn.
  *
  * SKIPPED BY DEFAULT. CI runs `cypress run` over every spec against localhost, where none of this
@@ -141,7 +142,7 @@ function signInThroughForm(email: string): void {
       expect(main, "a main bundle is referenced").to.be.a("string");
       cy.request(String(main)).then((js) => {
         const body = String(js.body);
-        expect(body, "the Render URL is compiled in").to.contain(SERVER);
+        expect(body, "the server's URL is compiled in").to.contain(SERVER);
         expect(body, "the localhost fallback is not in use").to.not.contain("localhost:8787");
       });
     });
@@ -165,7 +166,7 @@ function signInThroughForm(email: string): void {
     cy.location("pathname").should("eq", "/decks");
   });
 
-  it("the collection and the three seeded decks come back from Render", () => {
+  it("the collection and the three seeded decks come back from the server", () => {
     tokenFor(P1).then((token) => {
       cy.request({ url: `${SERVER}/api/collection`, headers: { Authorization: `Bearer ${token}` } })
         .then((res) => {

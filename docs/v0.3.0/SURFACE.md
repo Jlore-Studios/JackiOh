@@ -765,8 +765,9 @@ keeps behind its opaque `EngineState` brand.
 wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarball into
 `.cache/bin/`; then `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown` and
 `wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
-`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. On Vercel,
-`vercel.json`'s `installCommand` (`scripts/vercel-install.sh`) uses the build image's rustup (Vercel ships one under `/rust`), installs rustup (minimal profile) only where there is none, then the pinned toolchain, before `pnpm install`.
+`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
+(`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
+the web build.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
@@ -946,7 +947,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `crates/cards/patches/patches.json`. `CATALOG_VERSION` in the environment is still read, but only
   to warn when it disagrees: the compiled-in version is served either way, so a stale dashboard value
   never stops a deploy (#488; it first refused to boot, which made every card patch a hand edit).
-  `GET /api/catalog` keeps `x-deployed-commit` from `RENDER_GIT_COMMIT`.
+  `GET /api/catalog` keeps `x-deployed-commit`, from `RENDER_GIT_COMMIT` then and `DEPLOYED_COMMIT` now.
 - **Routes dropped** (unused): `POST /api/auth/signup` (503 in production). `GET /api/catalog/:version`
   stays, since R388 and §9.4 promise it (#2160). `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
@@ -995,9 +996,10 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.
 - **Deploy**: `crates/server/Dockerfile` (multi-stage: `rust:1.97-slim` builds
   `cargo build --release -p jackioh-server`; `debian:bookworm-slim` with `ca-certificates` runs
-  `/app/jackioh-server release`), `render.yaml` `runtime: docker`, the same service name, region,
-  plan, health check (`/api/catalog` then, `/readyz` since #861) and env contract minus the Node-only keys (`NODE_VERSION`,
-  `CYPRESS_INSTALL_BINARY`). `NODE_ENV` is still read (E2E refusal).
+  `/app/jackioh-server release`), now run in a Cloudflare container behind the
+  site's Worker (`wrangler.jsonc`, `apps/edge`), with the same env contract minus the Node-only keys
+  (`NODE_VERSION`, `CYPRESS_INSTALL_BINARY`) and Render's `RENDER_GIT_COMMIT`, now `DEPLOYED_COMMIT`.
+  `NODE_ENV` is still read (E2E refusal).
 
 ## 12. The `jackioh` CLI
 

@@ -12,9 +12,10 @@ ai-gate-shards/
 .env
 .env.*
 !.env.example
-# The production web build's public settings: VITE_ values only, all of them shipped to every browser
-# (apps/web/src/net/env-production.test.ts holds it to that).
+# The production and staging web builds' public settings: VITE_ values only, all of them shipped to
+# every browser (apps/web/src/net/env-production.test.ts holds both to that).
 !apps/web/.env.production
+!apps/web/.env.staging
 
 # Local scratch.
 *.tmp.*

@@ -1,6 +1,9 @@
 packages:
+  - apps/edge
   - apps/web
   - e2e
 allowBuilds:
   cypress: true
   esbuild: true
+  # wrangler's local runtime, which only `wrangler dev` runs; `wrangler deploy` (apps/edge) bundles with esbuild.
+  workerd: false

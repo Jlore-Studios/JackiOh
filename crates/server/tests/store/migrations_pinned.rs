@@ -1,5 +1,5 @@
 //! Migrations are append-only (`src/db/migrate.rs`): a database refuses to start the server when a
-//! file it already applied has changed, and Render runs the migration on every deploy. #325's
+//! file it already applied has changed, and the image's `release` migrates on every boot. #325's
 //! repo-wide rename of "Plague Tokens" edited a comment in 0020_plague_tag.sql, and every deploy
 //! from 97a00bd6 on exited at `db:migrate` ("0020_plague_tag.sql was already applied but its
 //! contents changed (1384d000 -> 621182a3)"). CI never saw it, since it migrates a fresh database.

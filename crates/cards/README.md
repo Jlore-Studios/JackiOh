@@ -349,8 +349,8 @@ Every change to card data is a patch, and every patch is kept.
   with the cards the fragment claims as the catalog holds them (R1280000), writes its win-rate table
   (`data/win_rates.json` from the fragment that claims it on, the patch before it's until then,
   R1329000), records `shipped.json`, deletes
-  the fragment and bumps the catalog version at every site that carries it (`render.yaml`,
-  `crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
+  the fragment and bumps the catalog version at every site that carries it
+  (`crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
 - A version is opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s. A snapshot keeps a card's data, not its script.

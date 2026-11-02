@@ -31,8 +31,9 @@
 #             `learn-<run>` artifact and in its summary, whether or not it passed.
 #   import    once the retrain has ended, however it ended: the export's games filed as development
 #             records (`cargo jackioh stats from-selfplay`, R1676000, folded by the export's own build
-#             as the retrain's positions are) and imported into production's card statistics as totals
-#             only (`jackioh-server stats-import --totals-only`, R1976000) over
+#             as the retrain's positions are) and imported into staging's card statistics (the
+#             JackiOh-Staging project's; production's holds live games alone) as totals only
+#             (`jackioh-server stats-import --totals-only`, R1976000) over
 #             STATS_IMPORT_DATABASE_URL; without it, nothing is filed
 #   next      the next run, started as this one ends, unless another is already on its way (a chain
 #             on this export, or the schedule's) or this one took under LEARN_NEXT_MIN_MINUTES (it

@@ -313,9 +313,9 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
-/// taken with `pg_advisory_xact_lock` inside each transaction, never as a session lock: Render's
-/// release runs this runner on every deploy (render.yaml), over whatever `DATABASE_URL` the
-/// server uses, and behind a transaction-mode pooler a session lock stays held on whichever pooled
+/// taken with `pg_advisory_xact_lock` inside each transaction, never as a session lock: the
+/// image's `release` runs this runner on every boot of its container (each deploy, and each wake
+/// from sleep), over whatever `DATABASE_URL` the server uses, and behind a transaction-mode pooler a session lock stays held on whichever pooled
 /// backend took it, so the next deploy's lock could wait forever and the server never boot.
 pub const LOCK_ID: i64 = 0x6a61636b; // "jack"
 

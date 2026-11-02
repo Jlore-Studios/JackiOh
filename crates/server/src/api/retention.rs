@@ -93,8 +93,8 @@ pub async fn refile_unfiled(app: &App) -> Result<usize, StoreError> {
     Ok(filed)
 }
 
-/// The retention purge's loop: once now, since a free instance may sleep before an hour is up, and
-/// then on its interval. A failure is logged and the next run tries again. Never returns; `app.rs`
+/// The retention purge's loop: once now, since the container may sleep before an hour is up (it
+/// stops after ten idle minutes, apps/edge), and then on its interval. A failure is logged and the next run tries again. Never returns; `app.rs`
 /// spawns it.
 pub async fn run_purge(app: Arc<App>) {
     loop {

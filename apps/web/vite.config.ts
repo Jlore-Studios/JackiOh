@@ -8,9 +8,9 @@ import { staticPages } from "./static-pages.ts";
 // The client is a pure `PlayerView` renderer (CLAUDE.md rule 7, SPEC §10.8): it sends intent
 // and draws what the engine hands it. The rules are the Rust engine, compiled to WebAssembly
 // (`src/wasm/`, built into `src/wasm/pkg/` by `scripts/build-wasm.sh`, which `predev`, `prebuild`,
-// `prebuild:e2e` and `pretest` run): the page loads the module for the hotseat and the deck
-// builder's validator, and the practice worker loads its own and runs the engine and the AI off the
-// page's thread (SPEC §9.9, R187).
+// `prebuild:staging`, `prebuild:e2e` and `pretest` run): the page loads the module for the hotseat
+// and the deck builder's validator, and the practice worker loads its own and runs the engine and
+// the AI off the page's thread (SPEC §9.9, R187).
 
 /** The repository root and the client's wire layer, as absolute paths with a trailing slash. */
 const REPO = fileURLToPath(new URL("../../", import.meta.url));

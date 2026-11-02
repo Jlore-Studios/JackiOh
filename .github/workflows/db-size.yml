@@ -1,19 +1,23 @@
-# Warns before production's database outgrows its Supabase plan. Twice a day this reads the
-# database's size and, once it holds ALERT_PERCENT of DB_CAP_MB, opens an issue for a person,
-# labelled `human`: the fix is a bigger plan or a lane turned off, neither of them code. One issue
-# at a time: while it is open, a run that finds the database still that full adds nothing.
+# Warns before either Supabase database outgrows its plan. Twice a day this reads each project's
+# database size and, once one holds ALERT_PERCENT of DB_CAP_MB, opens an issue for a person,
+# labelled `human`: the fix is a bigger allowance or a lane turned off, neither of them code. One
+# issue per project at a time: while it is open, a run that finds the database still that full adds
+# nothing.
 #
-# The cap is the free plan's 500 MB. The gather lane (gather.yml, while GATHER_ON_PATCH is `true`)
-# adds about 3 MB for each patch shipped, 2 to 7 a day, and the learn lane's imports (learn.yml)
-# add their own, so the free plan fills in weeks. After an upgrade, set DB_CAP_MB to the new plan's.
+# The two projects are production's, JackiOh-Production, and staging's, JackiOh-Staging
+# (docs/deploy-cloudflare.md section 8), both in the organization's Pro plan, whose disk includes
+# 8 GB a project; past that Supabase grows the disk and bills it. Staging is the one that grows:
+# the gather lane (gather.yml, while GATHER_ON_PATCH is `true`) adds about 3 MB for each patch
+# shipped, 2 to 7 a day, and the learn lane's imports (learn.yml) add their own. Production holds
+# the live games alone.
 #
-# The size is Supabase's own measure: pg_database_size over every database, those this connection
-# may connect to. It reads through STATS_DATABASE_URL, the read-only connection string
-# winrates-refresh.yml uses, or else STATS_IMPORT_DATABASE_URL, the one the stats imports write
-# through. A GitHub-hosted runner has no IPv6, so the string must be a pooler's (Supabase ->
-# Connect -> Session pooler), not the direct `db.<ref>.supabase.co`, which is IPv6 only. With
-# neither secret set it says so and stops, green; a connection that fails fails the run, so a
-# broken check is seen rather than silent.
+# The size is Supabase's own measure: pg_database_size over every database, those the connection
+# may connect to. Production is read through STATS_DATABASE_URL, the read-only connection string
+# winrates-refresh.yml uses, and staging through STATS_IMPORT_DATABASE_URL, the one the stats
+# imports write through. A GitHub-hosted runner has no IPv6, so each string must be a pooler's
+# (Supabase -> Connect -> Session pooler), not the direct `db.<ref>.supabase.co`, which is IPv6
+# only. A project whose secret is unset is said so and skipped, green; a connection that fails fails
+# its run, so a broken check is seen rather than silent.
 name: db size
 
 on:
@@ -22,8 +26,8 @@ on:
   workflow_dispatch:
 
 env:
-  # The plan's database size, in Supabase's MB (1024 x 1024 bytes).
-  DB_CAP_MB: "500"
+  # The disk the plan includes for each project, in Supabase's MB (1024 x 1024 bytes): Pro's 8 GB.
+  DB_CAP_MB: "8192"
   # The issue opens once the database holds this much of the cap.
   ALERT_PERCENT: "90"
 
@@ -36,19 +40,29 @@ concurrency:
 
 jobs:
   check:
-    name: warn when the database nears its plan's cap
+    name: warn when ${{ matrix.site }}'s database nears its plan's cap
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - site: production
+            secret: STATS_DATABASE_URL
+          - site: staging
+            secret: STATS_IMPORT_DATABASE_URL
     steps:
       - name: measure the database, and open an issue when it is near the cap
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          DATABASE_URL: ${{ secrets.STATS_DATABASE_URL || secrets.STATS_IMPORT_DATABASE_URL }}
+          SITE: ${{ matrix.site }}
+          SECRET: ${{ matrix.secret }}
+          DATABASE_URL: ${{ secrets[matrix.secret] }}
         run: |
           set -euo pipefail
           if [ -z "$DATABASE_URL" ]; then
-            echo "::notice::neither STATS_DATABASE_URL nor STATS_IMPORT_DATABASE_URL is set, so nothing is measured"
+            echo "::notice::$SECRET is not set, so $SITE's database is not measured"
             exit 0
           fi
           command -v psql > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
@@ -57,12 +71,12 @@ jobs:
           bytes=$(q "select coalesce(sum(pg_database_size(datname)), 0) from pg_database where has_database_privilege(datname, 'CONNECT')")
           used_mb=$(( bytes / 1048576 ))
           percent=$(( bytes * 100 / (DB_CAP_MB * 1048576) ))
-          echo "the database holds $used_mb MB of $DB_CAP_MB MB ($percent%); the alert is at $ALERT_PERCENT%" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "$SITE's database holds $used_mb MB of $DB_CAP_MB MB ($percent%); the alert is at $ALERT_PERCENT%" | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$percent" -lt "$ALERT_PERCENT" ]; then
             exit 0
           fi
 
-          export TITLE="Supabase: the database is over $ALERT_PERCENT% of its $DB_CAP_MB MB plan"
+          export TITLE="Supabase: $SITE's database is over $ALERT_PERCENT% of its $DB_CAP_MB MB plan"
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
             --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
           if [ -n "$open" ]; then
@@ -77,15 +91,15 @@ jobs:
             order by pg_total_relation_size(c.oid) desc limit 8") || tables="| (the tables could not be listed) | |"
 
           body=$(printf '%s\n' \
-            "Production's Supabase database holds **$used_mb MB of its plan's $DB_CAP_MB MB ($percent%)**, past the $ALERT_PERCENT% alert. At the cap Supabase puts it into read-only mode, and the stats imports and the live games' records stop being written." \
+            "The $SITE Supabase database (read through \`$SECRET\`) holds **$used_mb MB of the $DB_CAP_MB MB its plan includes ($percent%)**, past the $ALERT_PERCENT% alert. Past it Supabase grows the disk and bills the extra on the Pro plan; on a spend cap or the free plan the database goes read-only, and the stats imports and the live games' records stop being written." \
             "" \
             "| Table | Size |" \
             "|---|---|" \
             "$tables" \
             "" \
             "One of these, then close this issue:" \
-            "- Move to a bigger plan, and set \`DB_CAP_MB\` in \`.github/workflows/db-size.yml\` to its size." \
-            "- Or stop the biggest grower: \`gh variable set GATHER_ON_PATCH --body false\` turns the gather lane off (\`.github/workflows/gather.yml\`)." \
+            "- Accept the bigger disk, and set \`DB_CAP_MB\` in \`.github/workflows/db-size.yml\` to the new size." \
+            "- Or, on staging, stop the biggest grower: \`gh variable set GATHER_ON_PATCH --body false\` turns the gather lane off (\`.github/workflows/gather.yml\`)." \
             "" \
             "A run that finds the database still this full after the issue is closed opens a new one." \
             "" \

@@ -404,7 +404,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         </ShellPanel>
       );
     }
-    // Render's free tier can take most of a minute to wake, which `slow` says once it has.
+    // A server that has slept takes a while to start again (apps/edge), which `slow` says once it has.
     return (
       <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
         <p className="auth-hint">

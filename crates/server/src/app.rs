@@ -945,7 +945,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::e2e::post_reseed),
     ),
-    // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
+    // api/health.rs (#861): the Worker reads /healthz's commit, and its daily cron requests /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
@@ -1174,12 +1174,13 @@ fn init_logging() {
 fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
     // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
-    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
-    // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
-    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
-    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
-    // unwinds out of a loop (`loop.crashed`, #842) or a loop that returns (`loop.returned`, #1093)
-    // is logged as an alert and the loop starts again (`loop.restarted`) instead of dying silently.
+    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since the
+    // container sleeps once ten minutes pass with no request (apps/edge), and then on its
+    // interval. Each loop logs its own failures and tries again on its next tick. R1454: with
+    // `LADDER_BOTS=on`, the bot pool is sized once now and then hourly. Each starts through
+    // `loops::spawn_supervised`, so a panic that unwinds out of a loop (`loop.crashed`, #842) or a
+    // loop that returns (`loop.returned`, #1093) is logged as an alert and the loop starts again
+    // (`loop.restarted`) instead of dying silently.
     let mut running = vec![
         (
             "matchmaker",

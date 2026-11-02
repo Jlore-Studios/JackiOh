@@ -1,8 +1,9 @@
-# Cloudflare's copy of vercel.json's `rewrites`: only these paths serve the app (status 200);
-# every other path gets public/404.html with a 404 status (wrangler.jsonc `not_found_handling`).
-# The target is `/`, not `/index.html`: Cloudflare answers /index.html with a 307 to `/`, which
-# would drop the path. apps/web/src/net/cloudflare-config.test.ts holds this list equal to
-# vercel.json's.
+# The app's screens: only these paths serve the app (status 200); every other path that is no file
+# gets public/404.html with a 404 status (wrangler.jsonc `not_found_handling`), but /api/* and /ws/*,
+# which reach the Worker first (`run_worker_first`) and so have no rule here. The target is `/`, not
+# `/index.html`: Cloudflare answers /index.html with a 307 to `/`, which would drop the path.
+# apps/web/src/net/deploy-routes.test.ts holds this list to the route table (net/navigate.ts
+# `paths`), and cloudflare-serve.test.ts to the pages the build writes.
 #
 # A page the build writes (apps/web/static-pages.ts) is rewritten to its own folder, not to `/`: a
 # rule wins over a file, and a path with no rule gets a 307 to the slashed path. Its slashed path is

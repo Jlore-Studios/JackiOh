@@ -10,9 +10,9 @@ trap backrow. This file binds every agent, not only Claude.
   the bug.
 - `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass tables); `REVIEW.md` is
   the audit, its reports in `reviews/`.
-- Each crate's and app's `README.md` (`crates/*`, `apps/web`, `e2e`) is its contract: read it before you
-  change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708), and
-  `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/ADDING_CARDS.md`,
+- Each crate's and app's `README.md` (`crates/*`, `apps/edge`, `apps/web`, `e2e`) is its contract: read it
+  before you change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform
+  (#1708), and `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/ADDING_CARDS.md`,
   `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers), `docs/architecture.md`,
   `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`, `training/README.md`, `docs/v0.3.0/SURFACE.md`
   (every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442, and
@@ -83,8 +83,8 @@ trap backrow. This file binds every agent, not only Claude.
     red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
 13. Never delete or disable anything called from outside this codebase without asking a person first: a
     webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
-    or a person or another service calls (`/readyz` is Render's health check, and deploy-watch polls
-    `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
+    or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its
+    check of the running image, and the deploy jobs poll `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
     runs. That nothing in the tree calls it is no proof it is dead (#900).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
@@ -114,7 +114,7 @@ pnpm --dir apps/web dev            # http://localhost:5173: hotseat at /dev/hots
 pnpm --dir apps/web build          # the production bundle
 pnpm --dir apps/web typecheck
 pnpm --dir apps/web test           # the web's unit tests (vitest, jsdom)
-pnpm exec eslint apps/web e2e
+pnpm exec eslint apps/edge apps/web e2e
 cd bot/go && go test ./...                             # the bot selftest's harness suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
 cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's Python suites: what stays Python (bot/machine's Lambdas and scripts, .github/hygiene's branch rule)
 sh crates/server/tests/sql/run.sh          # schema, RLS and trigger invariants (Docker: a throwaway postgres:16)
@@ -134,6 +134,7 @@ cargo test -p jackioh-cards c002_bigot                              # one card's
 cargo test -p jackioh-engine --features testkit --test 'rules*' r58 # by ruling: every test whose name holds r58
 cargo test -p jackioh-server --test server actor::                  # one area of the server suite
 pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web test file
+pnpm exec vitest run --project edge                                 # the Worker's tests (apps/edge)
 ```
 
 ### E2E

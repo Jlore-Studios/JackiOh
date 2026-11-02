@@ -1,5 +1,6 @@
-# The server's image (docs/v0.3.0/SURFACE.md §11.3): what Render builds from render.yaml
-# (`runtime: docker`, `dockerfilePath: crates/server/Dockerfile`, `dockerContext: .`) and what
+# The server's image (docs/v0.3.0/SURFACE.md §11.3): what `wrangler deploy` builds from
+# wrangler.jsonc's `containers` (`image: ./crates/server/Dockerfile`, `image_build_context: .`) and
+# runs in a Cloudflare container behind the `jackioh` and `jackioh-staging` Workers, and what
 # crates/server/tests/deploy/rehearse.sh (CI's `db` job) builds and boots before any deploy.
 #
 # Build from the repository root, because the server crate builds against the engine, the cards
@@ -112,8 +113,9 @@ RUN cargo build --release --locked -p jackioh-server \
 FROM debian:bookworm-slim
 
 # ca-certificates: the roots rustls trusts for Supabase (Auth, JWKS) and for a TLS DATABASE_URL.
-# tini: PID 1 that forwards Render's SIGTERM to the server and reaps children, so a deploy that
-# stops this instance stops the server promptly instead of waiting out the kill timeout.
+# tini: PID 1 that forwards the container's SIGTERM to the server and reaps children, so a deploy
+# or a sleep that stops this container stops the server promptly instead of waiting out the kill
+# timeout.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates tini \
  && rm -rf /var/lib/apt/lists/*
@@ -125,13 +127,14 @@ COPY --from=build /jackioh-server /app/jackioh-server
 
 USER jackioh
 
-# Render injects PORT (and RENDER_GIT_COMMIT); this is the server's own default, src/env.rs's 8787,
-# for a `docker run` that sets neither.
+# The Worker sets PORT (8080) and DEPLOYED_COMMIT (apps/edge/src/routing.ts); this is the server's
+# own default, src/env.rs's 8787, for a `docker run` that sets neither.
 ENV PORT=8787
 EXPOSE 8787
 
-# `release` is render.yaml's start: migrate (the ledger, the checksums, one advisory lock per file),
-# seed the catalog at the compiled-in catalog version, then serve. Any other subcommand of the
-# binary runs in its place: `docker run <image> migrate`, `docker run <image> mint-code`, ….
+# `release` is the container's start, on every boot (each deploy, and each wake from sleep): migrate
+# (the ledger, the checksums, one advisory lock per file), seed the catalog at the compiled-in
+# catalog version, then serve. Any other subcommand of the binary runs in its place:
+# `docker run <image> migrate`, `docker run <image> mint-code`, ….
 ENTRYPOINT ["/usr/bin/tini", "--", "/app/jackioh-server"]
 CMD ["release"]

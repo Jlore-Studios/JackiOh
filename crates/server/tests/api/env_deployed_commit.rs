@@ -1,6 +1,7 @@
-//! RENDER_GIT_COMMIT -> `Env.deployed_commit` (src/env.rs): the commit `GET /api/catalog` reports
-//! so deploy-watch.yml can compare it with the push. It is optional, never a problem, and only a
-//! git SHA survives, because the value ends up in a response header.
+//! DEPLOYED_COMMIT -> `Env.deployed_commit` (src/env.rs): the commit `GET /api/catalog` and the
+//! probes report, which the Worker hands the container from `wrangler deploy`'s
+//! `--var DEPLOYED_COMMIT:<sha>` (apps/edge/src/routing.ts). It is optional, never a problem, and
+//! only a git SHA survives, because the value ends up in a response header.
 //!
 //! Port of `apps/server/test/env-deployed-commit.test.ts` (part 18).
 
@@ -33,18 +34,18 @@ fn valid_env() -> IndexMap<String, String> {
     .collect()
 }
 
-/// `valid_env()` with `RENDER_GIT_COMMIT` set to `value`.
+/// `valid_env()` with `DEPLOYED_COMMIT` set to `value`.
 fn with_commit(value: &str) -> IndexMap<String, String> {
     let mut source = valid_env();
-    source.insert("RENDER_GIT_COMMIT".to_string(), value.to_string());
+    source.insert("DEPLOYED_COMMIT".to_string(), value.to_string());
     source
 }
 
-mod render_git_commit {
+mod deployed_commit {
     use super::*;
 
     #[test]
-    fn is_unset_not_a_problem_when_the_server_is_not_on_render() {
+    fn is_unset_not_a_problem_when_no_deploy_names_one() {
         assert_eq!(
             load_env(&valid_env())
                 .expect("a valid environment")
@@ -78,6 +79,6 @@ mod render_git_commit {
 
     #[test]
     fn is_listed_with_the_server_only_variables_load_env_reads() {
-        assert!(SERVER_ONLY_ENV_VARS.contains(&"RENDER_GIT_COMMIT"));
+        assert!(SERVER_ONLY_ENV_VARS.contains(&"DEPLOYED_COMMIT"));
     }
 }

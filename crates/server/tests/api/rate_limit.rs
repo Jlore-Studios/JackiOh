@@ -40,7 +40,7 @@ use crate::support::store::{fake_lock, record_calls};
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 const MINUTE_MS: u64 = 60_000;
 
-/// The default `x-forwarded-for`, the entry one proxy hop writes (`render.yaml`).
+/// The default `x-forwarded-for`, the entry one proxy hop writes (the Worker's, wrangler.jsonc).
 const DEFAULT_IP: &str = "203.0.113.7";
 
 /// The stand-ins: one route of each auth level.

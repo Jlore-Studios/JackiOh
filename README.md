@@ -53,8 +53,8 @@ and where the rest are.
 ```mermaid
 flowchart LR
   subgraph play["Playing"]
-    W["web client<br/>Cloudflare, Vercel for staging"]
-    SV["jackioh-server<br/>Render, Ohio"]
+    W["web client<br/>Cloudflare Workers"]
+    SV["jackioh-server<br/>a Cloudflare container, eastern US"]
     DB["Postgres and Auth<br/>Supabase, us-east-2"]
     W -- "API, WebSocket" --> SV
     SV --> DB
@@ -78,8 +78,8 @@ flowchart LR
 
 | Part | Where | What runs there | Read |
 |---|---|---|---|
-| The web client | Cloudflare; Vercel is staging | the Vite and React app, with the engine and the AI as WebAssembly | [`apps/web`](apps/web/README.md), [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
-| The server | Render, in Ohio | `jackioh-server`: the HTTP API and one match actor per match. `/readyz` is Render's health check, and deploy-watch polls `/api/catalog` | [`crates/server`](crates/server/README.md), [`render.yaml`](render.yaml) |
+| The web client | Cloudflare Workers: jackioh.com, and staging.jackioh.com for the team (Cloudflare Access) | the Vite and React app, with the engine and the AI as WebAssembly | [`apps/web`](apps/web/README.md), [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
+| The server | a Cloudflare container in eastern North America, one per site, behind its Worker at the same origin | `jackioh-server`: the HTTP API and one match actor per match. It sleeps when idle; the Worker's daily cron requests `/readyz`, and the deploys poll `/api/catalog` | [`crates/server`](crates/server/README.md), [`apps/edge`](apps/edge/README.md), [`wrangler.jsonc`](wrangler.jsonc) |
 | The database and sign-in | Supabase, in `us-east-2` | Postgres and Auth | [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
 | CI | GitHub's runners | the five required checks on every pull request, and the slow suites once a day | [`CLAUDE.md`](CLAUDE.md), CI |
 | The night bot | GitHub Actions | `bot-commands.yml` answers comments and labels within seconds; each `bot-night.yml` run is four jobs: gate, plan, work and deliver. Only the work job runs a model, and it holds no GitHub write token | [`bot/README.md`](bot/README.md) |

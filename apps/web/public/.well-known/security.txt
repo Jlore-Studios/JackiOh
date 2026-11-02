@@ -1,4 +1,4 @@
 Contact: mailto:jmgoetzmann6@gmail.com
 Expires: 2027-09-29T00:00:00Z
 Preferred-Languages: en
-Canonical: https://jackioh.vercel.app/.well-known/security.txt
+Canonical: https://staging.jackioh.com/.well-known/security.txt

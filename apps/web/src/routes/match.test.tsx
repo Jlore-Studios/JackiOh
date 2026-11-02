@@ -319,11 +319,11 @@ describe("withoutToken", () => {
    */
   it("strips the access token from the socket URL it displays", () => {
     const withToken =
-      "wss://jackioh-server.onrender.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
+      "wss://jackioh.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
     const shown = withoutToken(withToken);
     expect(shown).not.toContain("SECRET");
     expect(shown).not.toContain("token=");
-    expect(shown).toContain("wss://jackioh-server.onrender.com/ws/match");
+    expect(shown).toContain("wss://jackioh.com/ws/match");
   });
 
   it("returns an unparseable value unchanged rather than throwing", () => {

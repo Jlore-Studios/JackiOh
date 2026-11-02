@@ -1,5 +1,5 @@
 // `/patch-notes` (R388, R724000): a public route, lazy like the others, with its tab title and canonical link,
-// linked from the site footer, served by vercel.json (net/deploy-routes.test.ts reads `paths`) and
+// linked from the site footer, served by public/_redirects (net/deploy-routes.test.ts reads `paths`) and
 // listed in the sitemap.
 
 import { cleanup, render, screen, within } from "@testing-library/react";

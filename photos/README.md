@@ -1,7 +1,7 @@
 # Photos
 
 Images to look at, share and reuse. No build reads this folder, so nothing here ships with the game:
-the site is `apps/web/dist`, and `scripts/vercel-ignore.sh` skips a commit that changes only this.
+the site is `apps/web/dist`.
 
 ## `logo/`
 

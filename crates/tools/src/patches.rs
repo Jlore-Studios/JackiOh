@@ -452,9 +452,9 @@ pub(crate) mod js {
 /// Branches add a fragment under `patches/pending/` rather than writing the history (R646).
 ///
 /// Every binary compiles the catalog version in from `crates/cards/patches/patches.json` (SURFACE
-/// §11.3). What still carries the string is the server's `.env.example`, `render.yaml` (whose value
-/// the server checks against its own at boot) and, when the web build names it,
-/// `apps/web/.env.production`'s `VITE_CATALOG_VERSION`.
+/// §11.3). What still carries the string is the server's `.env.example` (which the deploy rehearsal,
+/// `crates/server/tests/deploy/rehearse.sh`, reads as the version the image must serve) and, when
+/// the web build names it, `apps/web/.env.production`'s `VITE_CATALOG_VERSION`.
 pub mod patch {
     use std::fs;
     use std::path::Path;
@@ -462,6 +462,7 @@ pub mod patch {
     use anyhow::{Context as _, bail};
 
     use super::js::is_line_terminator;
+    #[cfg(test)]
     use jackioh_engine::wire::is_js_space;
 
     /// How a site's pattern finds the version.
@@ -469,8 +470,6 @@ pub mod patch {
     pub enum SitePattern {
         /// The first line that starts with the key (`CATALOG_VERSION=`); the key is kept.
         Line(&'static str),
-        /// render.yaml's env entry: `- key: CATALOG_VERSION`, then `value: <version>`.
-        RenderValue,
     }
 
     /// One file that carries the catalog version. `optional` sites are rewritten when they carry
@@ -490,11 +489,6 @@ pub mod patch {
             optional: false,
         },
         VersionSite {
-            file: "render.yaml",
-            pattern: SitePattern::RenderValue,
-            optional: false,
-        },
-        VersionSite {
             file: "apps/web/.env.production",
             pattern: SitePattern::Line("VITE_CATALOG_VERSION="),
             optional: true,
@@ -510,14 +504,10 @@ pub mod patch {
         end: usize,
     }
 
-    const RENDER_KEY: &str = "- key: CATALOG_VERSION\n";
-    const RENDER_VALUE: &str = "value: ";
-
     impl SitePattern {
         fn locate(self, text: &str) -> Option<SiteMatch> {
             match self {
                 SitePattern::Line(key) => locate_line(text, key),
-                SitePattern::RenderValue => locate_render_value(text),
             }
         }
     }
@@ -547,39 +537,6 @@ pub mod patch {
             })
     }
 
-    /// `/(- key: CATALOG_VERSION\n\s+value: )\S+/`. `\s+` is greedy and `value: ` opens with a
-    /// letter, so the only run that can work is the whole run of white space.
-    fn locate_render_value(text: &str) -> Option<SiteMatch> {
-        for (start, _) in text.match_indices(RENDER_KEY) {
-            let after_key = start + RENDER_KEY.len();
-            let spaces = text[after_key..]
-                .char_indices()
-                .find(|(_, c)| !is_js_space(*c))
-                .map_or(text.len() - after_key, |(at, _)| at);
-            if spaces == 0 {
-                continue;
-            }
-            let label = after_key + spaces;
-            if !text[label..].starts_with(RENDER_VALUE) {
-                continue;
-            }
-            let value_start = label + RENDER_VALUE.len();
-            let value_length = text[value_start..]
-                .char_indices()
-                .find(|(_, c)| is_js_space(*c))
-                .map_or(text.len() - value_start, |(at, _)| at);
-            if value_length == 0 {
-                continue;
-            }
-            return Some(SiteMatch {
-                start,
-                value_start,
-                end: value_start + value_length,
-            });
-        }
-        None
-    }
-
     #[cfg(test)]
     fn non_space_length(text: &str) -> usize {
         text.char_indices()
@@ -587,7 +544,7 @@ pub mod patch {
             .map_or(text.len(), |(at, _)| at)
     }
 
-    /// The version a site's match carries: the first alternative (`"v"`, `=v` or `value: v`) matching at the leftmost position.
+    /// The version a site's match carries: the first alternative (`"v"` or `=v`) matching at the leftmost position.
     #[cfg(test)]
     fn version_in(matched: &str) -> Option<String> {
         for (at, _) in matched.char_indices() {
@@ -599,11 +556,6 @@ pub mod patch {
                 return Some(inner[..length].to_string());
             }
             if let Some(inner) = rest.strip_prefix('=')
-                && non_space_length(inner) > 0
-            {
-                return Some(inner[..non_space_length(inner)].to_string());
-            }
-            if let Some(inner) = rest.strip_prefix(RENDER_VALUE)
                 && non_space_length(inner) > 0
             {
                 return Some(inner[..non_space_length(inner)].to_string());
@@ -3339,16 +3291,10 @@ mod tests {
 
             /// The version sites as a fixture tree carries them at `version`.
             fn version_sites(version: &str) -> Vec<(&'static str, String)> {
-                vec![
-                    (
-                        "crates/server/.env.example",
-                        format!("CATALOG_VERSION={version}\n"),
-                    ),
-                    (
-                        "render.yaml",
-                        format!("x:\n- key: CATALOG_VERSION\n  value: {version}\n"),
-                    ),
-                ]
+                vec![(
+                    "crates/server/.env.example",
+                    format!("CATALOG_VERSION={version}\n"),
+                )]
             }
 
             fn shipped_of(names: &[&str]) -> ShipResult {
@@ -3739,7 +3685,6 @@ mod tests {
                 );
                 assert_eq!(shipped[2].commit, c2);
                 assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.1c"));
-                assert!(read(&root.join("render.yaml")).contains("value: v0.1.1c"));
                 assert!(
                     read(&root.join("apps/web/.env.production")).contains("VITE_CATALOG_VERSION=v0.1.1c")
                 );
@@ -4079,7 +4024,7 @@ mod tests {
                     (Some(Tier::Patch), Some(ids(3, 3 + bar)))
                 );
                 assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), many);
-                assert!(read(&root.join("render.yaml")).contains("value: v0.1.2"));
+                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.2"));
                 commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
 
                 // A micro after a patch is named after the patch.
@@ -4335,7 +4280,7 @@ mod tests {
                 );
                 let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
                 assert_eq!(shipped[1].blob, git_blob_hash(&read(&dir.join("v0.1.1b.json"))));
-                assert!(read(&root.join("render.yaml")).contains("value: v0.1.1c"));
+                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.1c"));
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
 
@@ -4570,7 +4515,7 @@ mod tests {
                             "crates/cards/catalog.json",
                             json(&catalog_of(vec![card("aaa", 2)])),
                         ),
-                        ("render.yaml", "x: {}\n".to_string()),
+                        ("crates/server/.env.example", "PORT=8787\n".to_string()),
                     ],
                 );
                 write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
@@ -4581,7 +4526,10 @@ mod tests {
                     Some("2026-10-01T12:00:00+00:00"),
                 );
                 let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
-                assert!(refused.contains("render.yaml: no CATALOG_VERSION"), "{refused}");
+                assert!(
+                    refused.contains("crates/server/.env.example: no CATALOG_VERSION"),
+                    "{refused}"
+                );
                 assert_eq!(git(root, &["status", "--porcelain"], None), "");
             }
 
@@ -4978,9 +4926,8 @@ mod tests {
 
             // The Rust binaries compile the version in from patches.json (SURFACE §11.3), so no source site carries it.
             #[test]
-            fn r388_bumps_the_version_everywhere_the_string_lives_the_servers_env_example_and_render_yaml() {
+            fn r388_bumps_the_version_everywhere_the_string_lives_the_servers_env_example() {
                 let sites = versions_at_sites(&repo_root()).unwrap();
-                assert!(sites.iter().any(|site| site.file == "render.yaml"));
                 assert!(sites.iter().any(|site| site.file == "crates/server/.env.example"));
                 for site in sites {
                     assert_eq!(
@@ -5002,14 +4949,6 @@ mod tests {
                 assert_eq!(
                     crate::catalog::newest_version(&patches_json()).unwrap(),
                     jackioh_cards::CATALOG_VERSION
-                );
-
-                // render.yaml leaves the start to the image, so no command can override the version.
-                let render = fs::read_to_string(repo_root().join("render.yaml")).unwrap();
-                assert!(
-                    !render
-                        .lines()
-                        .any(|line| line.trim_start().starts_with("startCommand:"))
                 );
 
                 // A patch list that names no newest version stops the chain with nothing printed.

@@ -65,8 +65,11 @@
 #    rehearsal; the rest of tests/db/, tests/store/ and what they compile with (tests/server_store.rs
 #    and tests/support/test_app.rs, the one support module it takes) and what its seed test reads
 #    (the real catalog.json and the shipped sets, catalog_types.rs) the store contract; the server's
-#    boot path (main.rs, app.rs, env.rs, the catalog's seeding, and its route, which is Render's
-#    readiness probe), the Dockerfile, render.yaml and tests/deploy/ the deploy rehearsal. A suite
+#    boot path (main.rs, app.rs, env.rs, the catalog's seeding, and its route, which the deploys'
+#    live check polls), the Dockerfile, wrangler.jsonc (the image, its build context and the
+#    server's settings, which the rehearsal reads as wrangler builds and runs them),
+#    crates/server/.env.example (the catalog version it boots on) and tests/deploy/ the deploy
+#    rehearsal. A suite
 #    a pull request leaves runs in the daily super run (docs/v0.3.0/README.md §7), and its skip
 #    passes the check.
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
@@ -82,11 +85,10 @@
 #  - The files outside a crate that its tests read run that crate's groups: apps/web/src/wire/
 #    (the engine's and the server's export tests write it) engine and server; docs/radiant-audit.md
 #    (radiant_standard.rs) and spec/07-tokens.md (the catalog test's table of tokens, R1177001) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
-#    crates/server/.env.example, render.yaml and apps/web/.env.production (the catalog version's
-#    sites, which the tools' patches tests read) tools, wasm, the first as well as server;
-#    render.yaml too (the server's tests/api/health.rs reads its healthCheckPath, #861) server;
-#    crates/server/tests/'s actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their
-#    helpers to support/'s, #2385) tools, wasm as well as server; and
+#    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
+#    tools' patches tests read) tools, wasm, the first as well as server; crates/server/tests/'s
+#    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
+#    #2385) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
@@ -104,23 +106,26 @@
 #    `preview_sets(` runs tools, wasm.
 #  - web runs for everything but what no web test, build or typecheck reads: the server's, the
 #    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
-#    the web's tests read there: env.rs, the Dockerfile, tests/deploy/, the practice claim fixture,
+#    the web's tests read there: env.rs, app.rs (whose probe routes apps/edge's config test holds),
+#    the Dockerfile, tests/deploy/, the practice claim fixture,
 #    tests/fixtures/practice-claim.json, which the worker's claim test plays, and the quest pool,
 #    quests.json, whose titles the quests panel's test holds to zh-CN), every crate's README, the
 #    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), docs/, training/, reviews/, analysis/, infra/ and the top-level
-#    Markdown.
+#    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
+#    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
+#    the file.
 #  - web_promote runs for what promote-production.test.ts runs and reads: scripts/promote-production.sh,
-#    scripts/vercel-ignore.sh, the workflow (under .github/, so every job runs) and the test itself,
+#    the workflow (under .github/, so every job runs) and the test itself,
 #    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
 #    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's tests/golden/,
 #    whose hotseat fixture tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
-#    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (render.yaml, the
-#    Dockerfile, vercel.json, wrangler.jsonc), the lint and unit-test configs, and the scripts no
-#    build runs.
+#    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
+#    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
+#    Worker), the lint and unit-test configs, and the scripts no build runs.
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
 # repository path their sources name; crates/tools/tests/acceptance.rs holds the Rust groups to
@@ -175,7 +180,7 @@ skipped() {
     analysis/*) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
-    .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;
+    .github/workflows/triage.yml | .github/workflows/ci-duration.yml) ;;
     .github/workflows/pr-title.yml) ;;
     *) return 1 ;;
   esac
@@ -227,7 +232,8 @@ for file in $files; do
     crates/server/tests/db/* | crates/server/tests/store/* | crates/server/tests/support/test_app.rs | crates/server/tests/server_store.rs) on db_store ;;
     crates/cards/catalog.json | crates/engine/src/wire/catalog_types.rs) on db_store ;;
     crates/server/src/env.rs | crates/server/src/main.rs | crates/server/src/app.rs | crates/server/src/cli/seed_catalog.rs | \
-      crates/server/src/api/catalog.rs | crates/server/Dockerfile | render.yaml | crates/server/tests/deploy/*) on db_deploy ;;
+      crates/server/src/api/catalog.rs | crates/server/Dockerfile | wrangler.jsonc | crates/server/.env.example | \
+      crates/server/tests/deploy/*) on db_deploy ;;
   esac
 
   case "$file" in
@@ -252,7 +258,6 @@ for file in $files; do
     apps/web/src/wire/*) on rust_engine rust_server ;;
     docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
-    render.yaml) on rust_server rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
@@ -266,7 +271,7 @@ for file in $files; do
 
   case "$file" in
     crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml) on web ;;
-    crates/server/src/env.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
+    crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
     crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json | crates/server/quests.json) on web ;;
     crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
@@ -276,7 +281,7 @@ for file in $files; do
   esac
 
   case "$file" in
-    scripts/promote-production.sh | scripts/vercel-ignore.sh | apps/web/src/net/promote-production.test.ts) on web web_promote ;;
+    scripts/promote-production.sh | apps/web/src/net/promote-production.test.ts) on web web_promote ;;
     package.json | apps/web/package.json | pnpm-lock.yaml | pnpm-workspace.yaml | .nvmrc) on web web_promote ;;
     vitest.config.ts | apps/web/vitest.config.ts | apps/web/src/test/*) on web web_promote ;;
   esac
@@ -286,8 +291,8 @@ for file in $files; do
     crates/*/tests/* | crates/*/README.md | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
-    render.yaml | crates/server/Dockerfile | vercel.json | wrangler.jsonc | eslint.config.js | vitest.config.ts) ;;
-    scripts/browse.sh | scripts/promote-production.sh | scripts/vercel-ignore.sh | scripts/vercel-install.sh | scripts/worktree.sh) ;;
+    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done

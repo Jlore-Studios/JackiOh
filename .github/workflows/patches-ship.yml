@@ -5,7 +5,7 @@
 # Once it merges, `cargo jackioh patches ship` (crates/tools, docs/v0.3.0/SURFACE.md §12) appends the
 # patches in ship order, each snapshot the patch before it with the cards its fragment claims as the
 # catalog holds them (R1280000), records shipped.json, deletes the fragments and bumps CATALOG_VERSION
-# everywhere it lives (render.yaml, crates/server/.env.example, apps/web/.env.production). It needs
+# everywhere it lives (crates/server/.env.example, apps/web/.env.production). It needs
 # main's whole history (fetch-depth: 0) for the commits' order and dates. It ships whenever
 # `patches check` passes, which CI holds every pull request to; a refusal writes nothing, fails this
 # run and opens (or comments on) an issue for the night bot, so the queue never waits unseen: patch
@@ -275,7 +275,7 @@ jobs:
                     "" \
                     "Fix it on a branch from main: add the entries this pull request adds to \`$TECHNICAL\` as they are, each after the entry it follows here, and keep main's, each commit once (\`cargo jackioh patches check\` holds the file's shape). Keep their \`version\`, the patch that was live when they went live (R1369000): \`cargo jackioh patches log\` run again would log them on today's. Fix too any check red here that is red on main. Close this issue with that pull request; the watch in \`.github/workflows/patches-ship.yml\` then closes this one." \
                     "" \
-                    "If they are red for a reason outside the repository (CI or Render out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
+                    "If they are red for a reason outside the repository (CI out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
                 else
                   note=$(printf '%s\n' \
                     "$marker" \
@@ -287,7 +287,7 @@ jobs:
                     "" \
                     "Fix it on a branch from main: a check that only fails here usually reads the shipped history (\`crates/cards/patches/\`) and must hold for the history this promotion ships, so check out its branch and run the failing tests there to see it fail first, then show them pass there with the fix. A conflict alone needs no fix. Close this issue with the fix's pull request (or, for a conflict alone, by hand); the watch in \`.github/workflows/patches-ship.yml\` then ships again from the newer main, and that promotion supersedes this one." \
                     "" \
-                    "If they are red for a reason outside the repository (CI or Render out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
+                    "If they are red for a reason outside the repository (CI out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
                 fi
                 if [ -n "$open" ]; then
                   gh issue comment "$open" --repo "$REPO" --body "$note"

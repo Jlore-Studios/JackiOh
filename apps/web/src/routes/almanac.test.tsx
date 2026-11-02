@@ -1,6 +1,6 @@
 // `/almanac` (R630): the public Card Almanac. A route anyone reaches signed out, lazy like the
 // others, with its tab title and canonical link, linked from the site footer beside Patch notes,
-// served by vercel.json (net/deploy-routes.test.ts reads `paths`) and listed in the sitemap. It
+// served by public/_redirects (net/deploy-routes.test.ts reads `paths`) and listed in the sitemap. It
 // shows every catalog card, tokens included, through the deck builder's own browse pane, read-only,
 // and the page itself asks no server anything (the R654 statistics block in the detail view reads
 // the public card aggregates). The pool's filter and sort semantics are filters.test.ts's.

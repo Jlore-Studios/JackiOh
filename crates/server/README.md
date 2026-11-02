@@ -82,8 +82,10 @@ target/release/jackioh-server seed-accounts     #    or active test accounts tha
 target/release/jackioh-server                   # 4. serve (the default subcommand)
 ```
 
-`release` runs 1, 2 and then serves; it is what the Docker image runs on Render (`Dockerfile`,
-`render.yaml`), so a deploy migrates and reseeds the database itself. Both steps are idempotent.
+`release` runs 1, 2 and then serves; it is what the Docker image (`Dockerfile`) runs in its
+Cloudflare container behind the `jackioh` and `jackioh-staging` Workers (wrangler.jsonc,
+`apps/edge`), on every boot: a deploy, and each wake after the container has slept, migrates and
+reseeds the database itself. Both steps are idempotent.
 
 - **Migrations are append-only.** `migrate` refuses to start when a file the database already
   applied has changed (its FNV-1a checksum in `app.migrations`). Change the schema with a new file.
@@ -139,9 +141,9 @@ placeholders (`app::load_server_env`).
 | `PUBLIC_ORIGINS` | no | allowed browser origins, for CORS and the WebSocket `Origin` check (R162) |
 | `NODE_ENV` | no | `development`, `test` or `production`; `E2E` with `production` is refused |
 | `E2E` | no | BUILD M8's test-server mode: fixture auth, accounts and codes, the in-memory store |
-| `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0 |
-| `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
-| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
+| `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0; wrangler.jsonc sets 1, since the Worker replaces the header with `CF-Connecting-IP` (calibrate from the `api.forwarded_for` log line) |
+| `DEPLOYED_COMMIT` | no | the full sha `wrangler deploy --var DEPLOYED_COMMIT:<sha>` names, which the Worker hands the container; `GET /api/catalog`, `/healthz` and `/readyz` report it as `x-deployed-commit`, and the Worker restarts a container whose `/healthz` names another |
+| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search (wrangler.jsonc's `instance_type`) |
 | `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
 | `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. Only the boot reads it: no catalog stamp grants anyone (R1310001), so `seed-catalog` does not. The boot logs how many, never which |
@@ -234,7 +236,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§13.9) |
 | `POST`, `GET` | `/api/duos/matches/:matchId/again` | active | Play again after a finished co-op match: either human seat's offer, and the game both offers make with the same seats and difficulty under a fresh seed (a saved deck replayed, a dealt one dealt afresh on its latest pick; 404 to a non-seat and an unknown id, 409 while it is live, an offer past `REMATCH_OFFER_TTL_MS` lapsing silently, 409 `update_required` on a stale catalog, 422 `loadout_invalid` on a custom card, `already_in_match` for a seat in another game, an unknown code's 404 to a blocked pair), and what each seat offered with whether the teammate is still here (R2092000) |
 | `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
-| `GET` | `/readyz` | none | readiness, render.yaml's `healthCheckPath`: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
+| `GET` | `/readyz` | none | readiness, what the Worker's daily cron requests to wake the server: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
@@ -550,12 +552,12 @@ seat and its type, never the panic's message, which only the server's log line `
 
 The night bot takes `bot:build` only from an account at level 2 or more in `.harness/trust.txt` or
 a collaborator (bot/README.md, Who may do what), so the token is made on such an account: a
-fine-grained personal access token for this repository with Issues read and write, set on Render
-under `jackioh-server` → Environment. At boot the server asks GitHub to open an issue with no
-title, which GitHub refuses as unprocessable when the token may open issues and as forbidden when it
+fine-grained personal access token for this repository with Issues read and write, set on each
+Worker as the secret `CREATE_ISSUES_TOKEN` (`wrangler secret put`, apps/edge/README.md). At boot
+the server asks GitHub to open an issue with no title, which GitHub refuses as unprocessable when the token may open issues and as forbidden when it
 may not, so nothing is filed; `GET /api/catalog` then reports the answer in `x-bug-reports` (`off`,
-`checking`, `ready`, `refused` or `unreachable`), which `deploy-watch.yml` prints once a deploy is
-live, and a refusal is logged as the alert `bug.reports.refused` with GitHub's message.
+`checking`, `ready`, `refused` or `unreachable`), which the live check after a deploy prints once
+it is live, and a refusal is logged as the alert `bug.reports.refused` with GitHub's message.
 
 To read a reported match, export it (Supabase's SQL editor; the log holds both hands, so it stays
 out of the issue):
@@ -874,7 +876,7 @@ of which 29 the AI's, verified in 680–700 ms, about 20–45 ms per AI move; th
 
 Migration 0048 holds the shape of a game record's `build` (R1367000): absent, or the commit that
 played the game with, when the AI played a seat, its AI generation (`game_records_build_check`). The
-live writer (`api/game_records.rs`) files the deployed commit (`RENDER_GIT_COMMIT`) and, for a ladder
+live writer (`api/game_records.rs`) files the deployed commit (`DEPLOYED_COMMIT`) and, for a ladder
 bot's game, `crates/ai/generation.json`'s generation; with no deployed commit it files none. A record
 written before it has no build and reads as before.
 
@@ -1048,7 +1050,7 @@ cargo test -p jackioh-server --test server actor::    # one area of the general 
 cargo test -p jackioh-server --test server_store store::   # the store suite, on the in-memory store
 sh crates/server/tests/sql/run.sh                     # schema, RLS and trigger invariants (Docker)
 sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it; DB_SHARDS=n databases at once, 3 by default)
-sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
+sh crates/server/tests/deploy/rehearse.sh             # the container's boot rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
 Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and

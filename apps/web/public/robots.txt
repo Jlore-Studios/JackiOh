@@ -5,4 +5,4 @@ Disallow: /invite
 Disallow: /match/
 Disallow: /series/
 
-Sitemap: https://jackioh.vercel.app/sitemap.xml
+Sitemap: https://staging.jackioh.com/sitemap.xml

@@ -9,15 +9,14 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 
 | Host | Owned here | File | Left to |
 | --- | --- | --- | --- |
-| Cloudflare | The jackioh.com zone's DNS records, and the `jackioh` Worker's custom domains (`jackioh.com`, and `www.jackioh.com` once it serves) | `cloudflare.tf` | `wrangler.jsonc` (the Worker, its assets, its workers.dev route), deployed by `promote-production.yml` |
-| Supabase (`exmjdaswedxhnzmpzqrq`) | Authentication's Site URL and Redirect URLs | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
+| Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, and `www.jackioh.com` once it serves); the Access application and policies that keep staging to the team | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
+| Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL and Redirect URLs | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
 | GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), and the `production` ruleset | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores) |
-| Render | nothing | | `render.yaml`, the Blueprint: a Terraform-managed service would fight it |
-| Vercel | nothing | | `vercel.json`: its build, routes and headers |
 
-Not here at all: secret values (Actions secrets, Render's `sync: false` variables, the deploy hook
-URLs), because the state would hold them. Render's `PUBLIC_ORIGINS` is the one non-secret setting
-still only in a dashboard (#256's sign-in outage of 2026-10-04); it needs its own change.
+Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
+because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler.jsonc`'s `vars`.
+Nor the team's addresses for staging's Access policy: they are personal data in a public repository,
+so `var.staging_team_emails` is set in `infra/terraform.tfvars`, which git ignores (Running it).
 
 `docs/deploy-cloudflare.md` §4 Steps 2, 3, 4 and 6 point here for the settings above.
 
@@ -32,7 +31,7 @@ Each provider reads its token from the environment, and no file here and no outp
 
 | Variable | What it is | Scope |
 | --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token of its own (My Profile -> API Tokens -> Create Custom Token), not the deploy job's | Account: Workers Scripts, Edit. Zone `jackioh.com`: Zone, Read; DNS, Edit; Workers Routes, Edit |
+| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token of its own (My Profile -> API Tokens -> Create Custom Token), not the deploy job's | Account: Workers Scripts, Edit; Access: Apps and Policies, Edit. Zone `jackioh.com`: Zone, Read; DNS, Edit; Workers Routes, Edit |
 | `SUPABASE_ACCESS_TOKEN` | A Supabase personal access token (Account -> Access Tokens) of a member of the project | the whole account: Supabase's tokens have no narrower scope |
 | `GITHUB_TOKEN` | A GitHub token of a repository admin | classic: `repo`; fine-grained, on this repository only: Administration, read and write |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | The S3 pair of an R2 API token (R2 -> Manage API tokens), for the state | Object Read & Write, on the state bucket only |
@@ -50,7 +49,8 @@ time.
 
 ## Running it
 
-From the repository root, with the variables above exported:
+From the repository root, with the variables above exported and `infra/terraform.tfvars` holding
+the team's addresses for staging (`staging_team_emails = ["you@example.com", ...]`; never commit it):
 
 ```
 terraform -chdir=infra init       # the backend and the pinned providers
@@ -96,12 +96,14 @@ from.
 3. **The lock file.** `terraform -chdir=infra providers lock -platform=linux_amd64
    -platform=darwin_arm64 -platform=darwin_amd64 -platform=windows_amd64` writes
    `.terraform.lock.hcl`; commit it.
-4. **Plan.** `init`, then `plan`. It reads `Plan: 3 to import, 1 to add, 1 to change, 0 to
-   destroy`. The one add is the `production` ruleset, and the one change is `supabase_settings.auth`:
-   an import reads every Supabase setting
-   into the state, and the first apply drops all but the Site URL and the Redirect URLs from it,
-   sending Supabase those two values as they already are. Any other change means a file differs
-   from the host. Make the file say what the host says, and when the host is the one that is wrong,
+4. **Plan.** `init`, then `plan`. It reads `Plan: 4 to import, 1 to add, 2 to change, 0 to
+   destroy`. The one add is the `production` ruleset, and the two changes are the two
+   `supabase_settings`: an import reads every Supabase setting into the state, and the first apply
+   drops all but the Site URL and the Redirect URLs from it. Production's sends the two values its
+   project was set up with; staging's moves its project's Site URL from `https://jackioh.com` to
+   `https://staging.jackioh.com` and takes `https://jackioh.com/login` off its list, so apply it only
+   once production runs on its own project (`docs/deploy-cloudflare.md` section 4, step 6). Any other change
+   means a file differs from the host. Make the file say what the host says, and when the host is the one that is wrong,
    say so on the pull request and let a person decide: a Redirect URL the list lacks (local
    development's `http://localhost:5173/login`, say), or `strict` on `main`'s protection, which
    `training/README.md` expects on ("require branches to be up to date") and the night bot's

@@ -29,8 +29,7 @@
 # first: the first run created v0.1.0, at the initial commit, and was refused v0.1.0b with "HTTP 403:
 # Resource not accessible by integration" (promote-production.yml meets the same refusal). A tag or
 # release made with that token can start a workflow, and none listens for one: every `push` trigger
-# names branches, nothing runs on `create` or `release`, and scripts/vercel-ignore.sh reads only its
-# own two tags.
+# names branches, and nothing runs on `create` or `release`.
 name: releases
 
 on:

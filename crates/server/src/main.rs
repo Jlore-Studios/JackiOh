@@ -1,7 +1,7 @@
 //! `jackioh-server`: the server binary and its command-line tools (Surface contract:
-//! docs/v0.3.0/SURFACE.md §11.1). `serve` is the default; `release` is what the Docker image runs on
-//! Render (migrate, seed the catalog, serve). Every other subcommand hands its tool the arguments
-//! after its name. A failure prints on stderr and exits 1; bad usage exits 2 (clap).
+//! docs/v0.3.0/SURFACE.md §11.1). `serve` is the default; `release` is what the Docker image runs in
+//! its Cloudflare container (migrate, seed the catalog, serve). Every other subcommand hands its tool
+//! the arguments after its name. A failure prints on stderr and exits 1; bad usage exits 2 (clap).
 
 use std::process::ExitCode;
 
@@ -108,7 +108,7 @@ async fn serve() -> anyhow::Result<()> {
     app::serve(env).await
 }
 
-/// Render's release: every migration, the catalog, then the server (Surface contract: docs/v0.3.0/SURFACE.md §11.3).
+/// The image's release, on every boot of its container: every migration, the catalog, then the server (Surface contract: docs/v0.3.0/SURFACE.md §11.3).
 async fn release() -> anyhow::Result<()> {
     db::migrate::run(Vec::new()).await?;
     cli::seed_catalog::run(Vec::new()).await?;

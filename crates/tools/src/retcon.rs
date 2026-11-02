@@ -1424,11 +1424,6 @@ mod tests {
         )
         .expect("a site");
         fs::write(
-            root.join("render.yaml"),
-            "services:\n  - envVars:\n      - key: CATALOG_VERSION\n        value: v0.1.3\n",
-        )
-        .expect("a site");
-        fs::write(
             root.join("src/lib.rs"),
             "// Since v0.1.1.\nconst A: &str = \"v0.1.1\";\nconst B: &str = \"dev:v0.1.2:learned-v0.1.3-1:4\";\n",
         )

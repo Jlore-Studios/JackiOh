@@ -346,7 +346,7 @@ mod live_game_records {
     #[tokio::test(start_paused = true)]
     async fn r1367000_files_the_deployed_commit_as_the_records_build() {
         let app = test_app_with(TestAppOptions {
-            env: vec![("RENDER_GIT_COMMIT".to_string(), "0123abcdef".to_string())],
+            env: vec![("DEPLOYED_COMMIT".to_string(), "0123abcdef".to_string())],
             ..TestAppOptions::default()
         })
         .await;
@@ -474,7 +474,7 @@ mod live_game_records {
     async fn r1596000_the_retention_pass_files_a_record_whose_first_write_failed() {
         let (logs, _guard) = log_lines();
         let app = test_app_with(TestAppOptions {
-            env: vec![("RENDER_GIT_COMMIT".into(), "0123abcdef".into())],
+            env: vec![("DEPLOYED_COMMIT".into(), "0123abcdef".into())],
             ..TestAppOptions::default()
         })
         .await;

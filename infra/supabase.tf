@@ -1,37 +1,60 @@
-# Supabase: Authentication's Site URL and Redirect URLs of the production project, and nothing else.
+# Supabase: Authentication's Site URL and Redirect URLs of each site's project, and nothing else.
 # The schema belongs to the migrations, which `jackioh-server release` applies, and the keys are
-# secrets (render.yaml's `sync: false` values).
+# secrets (the Workers' `wrangler secret put` values, apps/edge/README.md).
 #
-# The token is SUPABASE_ACCESS_TOKEN (README.md, Tokens).
+# The token is SUPABASE_ACCESS_TOKEN (README.md, Tokens). Both projects are in one organization
+# (jlore-studios), so one member's token reaches both.
 provider "supabase" {}
 
 locals {
-  # apps/web/.env.production's VITE_SUPABASE_URL, which both sites use.
-  supabase_project_ref = "exmjdaswedxhnzmpzqrq"
+  # Each site's own project (docs/deploy-cloudflare.md section 8): the VITE_SUPABASE_URL of
+  # apps/web/.env.production and .env.staging, and each Worker's SUPABASE_URL in wrangler.jsonc.
+  # Staging's is the original project, which production used until it got JackiOh-Production.
+  supabase_production_ref = "fuzpvmjdejvbjcarypyi"
+  supabase_staging_ref    = "exmjdaswedxhnzmpzqrq"
 }
 
-# Emailed links (sign-up confirmation, password reset) come back to the page's own origin's login
-# path (`authRedirectUrl` in apps/web/src/net/auth.ts), and Supabase quietly swaps any `redirect_to`
-# missing from `uri_allow_list` for `site_url` (docs/deploy-cloudflare.md §4, Step 4). The list is
-# production's alone, as the first import found it (2026-10-25): staging, which shares this project,
-# is not on it, so its emailed links land on the Site URL, jackioh.com. Adding
-# `https://jackioh.vercel.app/login` here would send them back to staging.
+# Emailed links (sign-up confirmation, password reset) and OAuth sign-ins (R666) come back to the
+# page's own origin's login path (`authRedirectUrl` in apps/web/src/net/auth.ts), and Supabase
+# quietly swaps any `redirect_to` missing from `uri_allow_list` for `site_url`. Each project serves
+# one site, so each lists that site's `/login` alone and its `site_url` is that site: no link sends a
+# player to the other site, where the account does not exist (and an OAuth sign-in there would fail
+# anyway, its PKCE verifier being in the storage of the origin that started it).
 #
 # `auth` names only these two keys, and the provider then reads and writes only them. An import reads
 # every setting into state, so the first apply narrows the state to these two and sends Supabase the
-# same two values back (README.md, The first import).
-resource "supabase_settings" "auth" {
-  project_ref = local.supabase_project_ref
+# two values (README.md, The first import).
+resource "supabase_settings" "production" {
+  project_ref = local.supabase_production_ref
 
   auth = jsonencode({
-    site_url = "https://jackioh.com"
-    uri_allow_list = join(",", [
-      "https://jackioh.com/login",
-    ])
+    site_url       = "https://jackioh.com"
+    uri_allow_list = "https://jackioh.com/login"
+  })
+}
+
+resource "supabase_settings" "staging" {
+  project_ref = local.supabase_staging_ref
+
+  auth = jsonencode({
+    site_url       = "https://staging.jackioh.com"
+    uri_allow_list = "https://staging.jackioh.com/login"
   })
 }
 
 import {
-  to = supabase_settings.auth
-  id = local.supabase_project_ref
+  to = supabase_settings.production
+  id = local.supabase_production_ref
+}
+
+import {
+  to = supabase_settings.staging
+  id = local.supabase_staging_ref
+}
+
+# The one project's resource was `supabase_settings.auth`, at the project that is now staging's. A
+# state that already holds it carries it over; with none, this does nothing.
+moved {
+  from = supabase_settings.auth
+  to   = supabase_settings.staging
 }

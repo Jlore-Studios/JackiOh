@@ -1145,8 +1145,8 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
   @-mentions you to merge it. The review-only paths are the files that define
   what the checks do or how the game deploys: every `package.json` and `Cargo.toml`, the
   lockfiles, `rust-toolchain.toml`, `rustfmt.toml` and `.cargo/`, the crates' `clippy.toml`
-  (the pure crates' purity) and build scripts, the vitest, vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`,
-  `render.yaml`, the server's `Dockerfile` and the database migrations.
+  (the pure crates' purity) and build scripts, the vitest, vite, eslint, TypeScript and Cypress configs, `scripts/`,
+  `wrangler.jsonc`, the server's `Dockerfile` and the database migrations.
 - **It cannot change its own rules.** `.github/`, `.harness/`, `bot/`, `.claude/`, `.mcp.json`,
   editor and devcontainer config, git hooks, `.gitattributes` and `.gitmodules` are forbidden
   paths (`forbidden_paths`). They are enforced twice: in the work job, which puts such a change

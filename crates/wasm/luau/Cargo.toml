@@ -24,7 +24,6 @@ preview = ["jackioh-wasm-core/preview"]
 jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
 jackioh-luau = { workspace = true }
-# By path, not through the workspace: the crate sits inside `crates/wasm`, which
-# scripts/build-wasm.sh hashes whole (`MODULE_CRATES`).
+# By path, not through the workspace: the crate sits inside `crates/wasm`.
 jackioh-wasm-core = { path = "../core" }
 serde_json = { workspace = true }

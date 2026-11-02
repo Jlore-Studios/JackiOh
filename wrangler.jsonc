@@ -1,16 +1,87 @@
-// Production: apps/web as static assets on Cloudflare Workers, built from the `production` branch
-// (.github/workflows/promote-production.yml, docs/deploy-cloudflare.md).
-// Vercel stays on as staging (vercel.json). No Worker script: assets only, so nothing runs per
-// request and nothing here needs a secret. promote-production.yml builds apps/web (its VITE_ values
-// from apps/web/.env.production) and runs `wrangler deploy` against this file; Cloudflare builds
-// nothing.
-// apps/web/src/net/cloudflare-config.test.ts holds this file in place.
+// The site and its game server on Cloudflare Workers, one Worker per environment
+// (docs/deploy-cloudflare.md). The top level is production: `jackioh`, at jackioh.com, deployed from
+// the `production` branch by promote-production.yml. `env.staging` is staging: `jackioh-staging`, at
+// staging.jackioh.com behind Cloudflare Access, deployed from main by deploy-staging.yml.
+//
+// Each serves apps/web/dist as static assets, which no Worker code runs for, and sends `/api/*` and
+// `/ws/*` (`run_worker_first`) to apps/edge's Worker, which hands them to one container running
+// crates/server's image: the site and its server share an origin. The custom domains and Access are
+// infra/cloudflare.tf's; the server's secrets are set with `wrangler secret put` (apps/edge/README.md).
+//
+// `containers`, `durable_objects` and `vars` are not inherited by a named environment, so staging
+// repeats them. apps/edge/src/config.test.ts and apps/web/src/net/cloudflare-config.test.ts hold this
+// file in place.
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "./apps/edge/node_modules/wrangler/config-schema.json",
   "name": "jackioh",
+  "main": "./apps/edge/src/index.ts",
   "compatibility_date": "2026-09-01",
+  // promote-production.yml's live check reads jackioh.<account>.workers.dev as well as jackioh.com.
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
   "assets": {
     "directory": "./apps/web/dist",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*", "/ws/*"]
+  },
+  // One instance (the server holds every live match in memory, so every request must reach the same
+  // one), `basic` (1/4 vCPU, 1 GiB), placed in eastern North America beside Supabase's us-east-2.
+  "containers": [
+    {
+      "name": "jackioh-server",
+      "class_name": "Server",
+      "image": "./crates/server/Dockerfile",
+      "image_build_context": ".",
+      "instance_type": "basic",
+      "max_instances": 1,
+      "constraints": { "regions": ["ENAM"] }
+    }
+  ],
+  "durable_objects": { "bindings": [{ "name": "SERVER", "class_name": "Server" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Server"] }],
+  // Once a day: wakes the server, so its hourly loops run and Supabase sees the project in use.
+  "triggers": { "crons": ["23 14 * * *"] },
+  // The server's settings that are not secrets (crates/server/README.md, Environment).
+  "vars": {
+    "PUBLIC_ORIGINS": "https://jackioh.com",
+    // JackiOh-Production; staging's below is JackiOh-Staging (docs/deploy-cloudflare.md section 8).
+    "SUPABASE_URL": "https://fuzpvmjdejvbjcarypyi.supabase.co",
+    "TRUSTED_PROXY_HOPS": "1",
+    "LADDER_BOTS": "on"
+  },
+  "env": {
+    "staging": {
+      "name": "jackioh-staging",
+      // Access guards staging.jackioh.com; a workers.dev or preview address would be a way around it.
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "assets": {
+        "directory": "./apps/web/dist",
+        "not_found_handling": "404-page",
+        "run_worker_first": ["/api/*", "/ws/*"]
+      },
+      "containers": [
+        {
+          "name": "jackioh-staging-server",
+          "class_name": "Server",
+          "image": "./crates/server/Dockerfile",
+          "image_build_context": ".",
+          "instance_type": "basic",
+          "max_instances": 1,
+          "constraints": { "regions": ["ENAM"] }
+        }
+      ],
+      "durable_objects": { "bindings": [{ "name": "SERVER", "class_name": "Server" }] },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Server"] }],
+      "triggers": { "crons": ["23 14 * * *"] },
+      "vars": {
+        "PUBLIC_ORIGINS": "https://staging.jackioh.com",
+        "SUPABASE_URL": "https://exmjdaswedxhnzmpzqrq.supabase.co",
+        "TRUSTED_PROXY_HOPS": "1",
+        "LADDER_BOTS": "on"
+      }
+    }
   }
 }
