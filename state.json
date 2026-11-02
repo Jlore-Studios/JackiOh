@@ -13494,7 +13494,7 @@
       "asks": [
         "c:6591282056"
       ],
-      "ci_fixes": 1,
+      "ci_fixes": 2,
       "ci_reruns": {
         "55264c4f473b7d169f2393fe9e2940a9d43e0e2f": 1
       },
@@ -13520,8 +13520,8 @@
       "pending_request": false,
       "provider": "muse",
       "question": "CI on #2839 fails only on main's own E0027 in crates/run/src/fight.rs:164 (Healed pattern missing the `via` field), byte-identical on main and untouched by this PR \u2014 so per the revision brief I changed nothing. Decide: fix it on main first (this PR then merges as-is), or authorize this PR to carry the one-line `..` fix as a scope exception?",
-      "queued_at": "2026-11-02T23:38:18Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-11-02T23:41:54Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "try again",
       "run_id": "41480411903",
