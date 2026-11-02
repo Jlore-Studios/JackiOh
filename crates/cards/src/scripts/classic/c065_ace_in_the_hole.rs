@@ -354,8 +354,9 @@ mod tests {
             }
 
             /// R2652000, R645: a host that slices a view by the step's event count (the server's bot
-            /// personas) is told the opponent's view holds one event fewer, so it reads exactly the
-            /// step's events the view carries, the flip's controller every one of them.
+            /// personas) is told the opponent's view holds two events fewer, the flip and the marker of
+            /// the face-down card's hook that flipped it (R2783000), so it reads exactly the step's
+            /// events the view carries, the flip's controller every one of them.
             #[test]
             fn r2652000_a_host_slicing_a_view_by_the_step_reads_the_step_alone() {
                 crate::register_all();
@@ -363,12 +364,14 @@ mod tests {
                 s.end_turn();
                 let fresh = s.last_events().len();
                 assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P1, fresh), fresh);
-                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P2, fresh), fresh - 1);
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P2, fresh), fresh - 2);
                 let theirs = s.view(P2).events;
                 let step: Vec<GameEvent> = s
                     .last_events()
                     .iter()
-                    .filter(|event| event.event_type() != GameEventType::Rolled)
+                    .filter(|event| {
+                        !matches!(event.event_type(), GameEventType::Rolled | GameEventType::HookResolving)
+                    })
                     .cloned()
                     .collect();
                 let seen = &theirs[theirs.len() - jackioh_engine::viewed_of_newest(s.state(), P2, fresh)..];

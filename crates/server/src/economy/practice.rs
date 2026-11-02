@@ -208,6 +208,7 @@ pub fn verify(
             glitch_boards: args.glitch_boards,
             sandbox: args.sandbox,
             custom_cards: args.custom_cards,
+            deck_marks: args.deck_marks,
         },
     );
     Ok(Verified {
