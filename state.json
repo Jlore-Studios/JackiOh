@@ -15106,13 +15106,14 @@
     "what": "plan #2785 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-02T07:29:39Z",
+    "at": "2026-11-02T07:41:27Z",
     "notes": [
-      "delivered review #2770 on claude-7 (run 41405972275): reviewed",
-      "delivered review #2815 on claude-3 (run 41405003937): reviewed",
-      "started revise #2815 on muse (run 41406860105)",
+      "#2784 needs a plan",
+      "#2785 needs a plan",
+      "started plan #2784 on claude-3 (its run is not listed yet)",
+      "started plan #2785 on claude-7 (run 41408085114)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15818,7 +15819,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T07:29:39Z",
+  "loop_tick": "2026-11-02T07:41:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
