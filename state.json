@@ -13292,6 +13292,11 @@
             "family": "claude",
             "run": "41450913449",
             "tier": "strong"
+          },
+          {
+            "family": "claude",
+            "run": "41471235788",
+            "tier": "strong"
           }
         ],
         "sha": "0f6c22cb5cfdda3fbe4a2f8966c49627dc20d84c",
