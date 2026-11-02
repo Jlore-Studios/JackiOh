@@ -1,6 +1,6 @@
-// R2784000: the damage and removal motifs (fx/motifs/) pinned on their gallery fixtures, held inside
-// their entry (R200) and scaled through it (R201), and their dispatch by the readable play resolving now
-// (cardFx.ts `planCardMotif`), planned the way FxLayer plans them: remember, then plan.
+// R2784000: the motifs (fx/motifs/) pinned on their gallery fixtures, held inside their entry (R200)
+// and scaled through it (R201), and their dispatch by the readable play resolving now (cardFx.ts
+// `planCardMotif`), planned the way FxLayer plans them: remember, then plan.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -76,6 +76,31 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   wipe: [...[80, 120, 160, 200, 240].flatMap((at) => repeat(2, `burst@${String(at)}`)), "ring@240", "shake@240", ...repeat(10, "burst@240")],
   vanish: ["burst@0", "sheen@80", "burst@240", "ring@240"],
   negate: ["ring@0", "burst@240", "crack@240", "burst@300", "shake@240"],
+  // The stream leaves the enemy hero at gather, flies travel to land and pools where it lands.
+  drain: ["burst@0", "projectile@80", "burst@240", "splat@240", "burst@300", "shake@240"],
+  bless: ["arrows@0", "sheen@80", "burst@240", "shake@240"],
+  curse: ["arrows@0", "burst@240", "shake@240"],
+  // Armor's full shield blooms on the hit, then the shake.
+  ward: ["shield@240", "ring@240", "burst@240", "shake@240"],
+  conjure: ["burst@0", "burst@240", "ring@240", "burst@300", "shake@240"],
+  rise: ["ghost@80", "burst@240", "ring@240", "shake@240"],
+  // The glyph rings the lane while the unit sinks where it stood.
+  offering: ["ring@0", "burst@0", "burst@240", "ring@300", "shake@240"],
+  // Every one of the ten units walks its own path across the centre line.
+  shift: [...repeat(10, "ghost@80", "burst@240"), "shake@240"],
+  bind: ["ring@0", "burst@240", "shake@240"],
+  tether: ["shot@80", "burst@240", "shake@240"],
+  // The double peels off unseen (its copy is not on the board yet): a sheen and a landing flare.
+  mirror: ["sheen@80", "burst@240", "shake@240"],
+  transmute: ["burst@0", "sheen@80", "burst@240", "burst@300", "shake@240"],
+  flight: ["ghost@80", "burst@240"],
+  glimpse: ["sheen@80", "burst@240", "shake@240"],
+  // A gather where the mana sits, one sparkle per crystal gained across Travel to Land, and the fill landing.
+  mana: ["burst@0", "burst@80", "burst@160", "burst@240"],
+  tithe: ["burst@240", "shake@240"],
+  tally: ["burst@240", "shake@240"],
+  // The ring closes at gather, the reveal lands on jk-trap-flip's stop, the shake on Land.
+  snap: ["ring@0", "burst@120", "shake@240"],
 };
 
 describe("R2784000 the damage and removal motifs", () => {

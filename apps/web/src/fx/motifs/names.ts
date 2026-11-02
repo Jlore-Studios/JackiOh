@@ -2,11 +2,73 @@
 // the hooks it may give one to. A name is accepted before its part draws it (`aura` waits for #2787):
 // such an entry plays its event rows only, as a card with no entry does.
 
-/** Every motif name a table may use: the ten damage and removal motifs drawn here, then those still to come. */
-export const FX_MOTIF_NAMES = ["bolt", "volley", "barrage", "chain", "lance", "nova", "wipe", "vanish", "scorch", "negate", "aura"] as const;
+/** Every motif name a table may use: the drawn motifs, then `aura`, which waits for #2787. */
+export const FX_MOTIF_NAMES = [
+  "bolt",
+  "volley",
+  "barrage",
+  "chain",
+  "lance",
+  "nova",
+  "wipe",
+  "vanish",
+  "scorch",
+  "negate",
+  "drain",
+  "bless",
+  "curse",
+  "ward",
+  "conjure",
+  "rise",
+  "offering",
+  "shift",
+  "bind",
+  "tether",
+  "mirror",
+  "transmute",
+  "flight",
+  "glimpse",
+  "mana",
+  "tithe",
+  "tally",
+  "snap",
+  "aura",
+] as const;
 
-/** The motifs `MOTIF_PLANNERS` draws (#2784's damage and removal family). */
-export const FX_DRAWN_MOTIFS = ["bolt", "volley", "barrage", "chain", "lance", "nova", "wipe", "vanish", "scorch", "negate"] as const;
+/**
+ * The motifs `MOTIF_PLANNERS` draws: #2784's damage and removal family, then #2786's life and
+ * stats, board, cards and mana, and trap motifs.
+ */
+export const FX_DRAWN_MOTIFS = [
+  "bolt",
+  "volley",
+  "barrage",
+  "chain",
+  "lance",
+  "nova",
+  "wipe",
+  "vanish",
+  "scorch",
+  "negate",
+  "drain",
+  "bless",
+  "curse",
+  "ward",
+  "conjure",
+  "rise",
+  "offering",
+  "shift",
+  "bind",
+  "tether",
+  "mirror",
+  "transmute",
+  "flight",
+  "glimpse",
+  "mana",
+  "tithe",
+  "tally",
+  "snap",
+] as const;
 
 /**
  * Where on its card a motif plays: `cast` a non-Unit's play, `cry` a Unit's; `death`, `trigger` and

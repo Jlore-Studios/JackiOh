@@ -23,13 +23,14 @@ import { rollCues } from "./rolls.ts";
 import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
-import { flavorLook } from "./flavors.ts";
+import { FLAVOR_LOOKS, flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
+import type { MotifSpec } from "./motifs/build.ts";
+import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { shotCue } from "./stage.ts";
 import { entranceCues, entranceLandMs } from "./takeover.ts";
 import {
-  FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
   FX_CAST_SCALE_MAX,
@@ -53,8 +54,6 @@ import {
   FX_HEAL_SPLAT_AT,
   FX_LEGENDARY_TRAUMA,
   FX_LETHAL_LEAD_MAX_MS,
-  FX_MANA_MAX_SPARKS,
-  FX_MANA_STAGGER_MS,
   FX_MAX_TAIL_MS,
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_OVERFLOW_FIZZLE_AT,
@@ -73,8 +72,6 @@ import {
   FX_SLAM_TRAUMA_PER_STAT,
   FX_SPLAT_HOLD_MS,
   FX_TEXT,
-  FX_TRAP_BURST_AT,
-  FX_TRAP_TRAUMA,
   FX_ZONE_COUNT_AT,
   FX_ZONE_TAIL_MS,
 } from "./constants.ts";
@@ -136,14 +133,8 @@ const TUNING = {
   overflowSmoke: { count: 12, power: 0.7 },
   overflowEmber: { count: 8, power: 0.6 },
   discardEmber: { count: 8, power: 0.6 },
-  drawSparkle: { count: 6, power: 0.6 },
   handSparkle: { count: 10, power: 0.7 },
   shuffleArcane: { count: 8, power: 0.6 },
-  buffSparkle: { count: 12, power: 0.8 },
-  debuffVoid: { count: 12, power: 0.8 },
-  keywordHoly: { count: 16, power: 0.9 },
-  keywordPoison: { count: 14, power: 0.8 },
-  keywordOther: { count: 10, power: 0.8 },
   counterPoison: { count: 12, power: 0.7 },
   counterSparkle: { count: 8, power: 0.7 },
   glintArcane: { count: 8, power: 0.6 },
@@ -153,11 +144,8 @@ const TUNING = {
   fuseSmoke: { count: 12, power: 0.7 },
   fuseArcane: { count: 20, power: 1 },
   controlArcane: { count: 18, power: 1 },
-  lockDust: { count: 12, power: 0.7 },
-  trapArcane: { count: 30, power: 1 },
   lungeDust: { count: 12, power: 0.8 },
   fizzleSmoke: { count: 10, power: 0.7 },
-  manaSparkle: { count: 6, power: 0.5 },
   // docs/classic-sets.md B3, B5's events.
   announceSparkle: { count: 10, power: 0.6 },
   animateArcane: { count: 12, power: 0.8 },
@@ -166,7 +154,6 @@ const TUNING = {
   counterShard: { count: 22, power: 1.2 },
   counterVoid: { count: 16, power: 0.9 },
   flickerArcane: { count: 14, power: 0.9 },
-  unlockShard: { count: 18, power: 1 },
   healthSetHoly: { count: 18, power: 0.9 },
   rewindArcane: { count: 40, power: 1.2 },
   resultConfetti: { count: 90, power: 1.4 },
@@ -335,6 +322,25 @@ export function sourceAnchor(
   const caster = memory.casterOf(sourceId);
   if (caster !== undefined) return { anchor: anchor(testid.hero(sideOf(view, caster))), kind: "hero" };
   return null;
+}
+
+/* R2784000: the generic rows drawn as motifs (docs/polish/9-card-animations.md) */
+
+/** The default look each delegated row draws its motif in: its old preset's flavor, else Holy or Dark. */
+const MOTIF_ROW_LOOK = {
+  bless: FLAVOR_LOOKS.Holy,
+  curse: FLAVOR_LOOKS.Dark,
+  ward: FLAVOR_LOOKS.Holy,
+  flight: FLAVOR_LOOKS.Spirit,
+  mana: FLAVOR_LOOKS.Holy,
+  snap: FLAVOR_LOOKS.Dark,
+  bind: FLAVOR_LOOKS.Dark,
+};
+
+/** A generic row as its motif with default parameters: the default look, the intensity for scale. */
+function motifRow(motif: keyof typeof MOTIF_ROW_LOOK, p: Plan): FxCue[] {
+  const spec: MotifSpec = { motif, look: MOTIF_ROW_LOOK[motif], scale: p.env.intensity, row: "replace" };
+  return planMotif(spec, p.entry, p.view, p.env);
 }
 
 /* Recipes: one per FxRecipe (S7) */
@@ -542,10 +548,10 @@ const impact: Recipe = (event, p) => {
   return [...cues, ...impactTail(event, p, p.D, look.particle)];
 };
 
-/** R1363: the Armor took the whole hit (`damageAbsorbed`). */
+/** R1363: the Armor took the whole hit (`damageAbsorbed`), drawn as `ward`. */
 const armor: Recipe = (event, p) => {
   if (event.type !== "damageAbsorbed") return [];
-  return shieldCues("full", anchor(p.tgt), p.D, 0, p.env.intensity);
+  return motifRow("ward", p);
 };
 
 const drain: Recipe = (event, p) => {
@@ -567,8 +573,7 @@ const heal: Recipe = (event, p) => {
 
 const shieldBreak: Recipe = (event, p) => {
   if (event.type !== "divineShieldLost") return [];
-  const at = anchor(p.tgt);
-  return [ring(p.D, "gold", at, 0), burst(p.env.intensity, "shard", at, "ring", 0, "shieldShard")];
+  return motifRow("ward", p);
 };
 
 const death: Recipe = (event, p) => {
@@ -650,11 +655,7 @@ const discard: Recipe = (event, p) => {
 
 const draw: Recipe = (event, p) => {
   if (event.type !== "drawn") return [];
-  const side = sideOf(p.view, event.player);
-  return [
-    ghost(p.D, anchor(animTestid.library(side)), anchor(animTestid.hand(side))),
-    burst(p.env.intensity, "sparkle", anchor(animTestid.hand(side)), "point", p.D, "drawSparkle"),
-  ];
+  return motifRow("flight", p);
 };
 
 const handGlint: Recipe = (event, p) => {
@@ -681,51 +682,18 @@ const shuffle: Recipe = (event, p) => {
   ];
 };
 
-/** B3.4: which way a Degrade or Upgrade moved the card, for the arrows. */
-function tuningDirection(event: Extract<GameEvent, { type: "degraded" | "upgraded" }>): number {
-  return event.type === "upgraded" ? 1 : -1;
-}
-
+/** B3.4: a buff's arrows fly as `bless` when it nets up, as `curse` when it nets down. */
 const buff: Recipe = (event, p) => {
   if (event.type !== "buffed" && event.type !== "degraded" && event.type !== "upgraded") return [];
-  const net = event.type === "buffed" ? event.attack + event.health : tuningDirection(event);
-  const at = anchor(p.tgt);
-  if (net > 0) {
-    return [
-      { kind: "arrows", direction: "up", at, delayMs: 0, durationMs: p.D + FX_ARROWS_TAIL_MS },
-      burst(p.env.intensity, "sparkle", at, "area", 0, "buffSparkle"),
-    ];
-  }
-  if (net < 0) {
-    return [
-      { kind: "arrows", direction: "down", at, delayMs: 0, durationMs: p.D + FX_ARROWS_TAIL_MS },
-      burst(p.env.intensity, "void", at, "area", 0, "debuffVoid"),
-    ];
-  }
-  return [];
+  const net = event.type === "buffed" ? event.attack + event.health : event.type === "upgraded" ? 1 : -1;
+  if (net === 0) return [];
+  return motifRow(net > 0 ? "bless" : "curse", p);
 };
 
 const keyword: Recipe = (event, p) => {
   if (event.type !== "keywordGranted") return [];
-  const i = p.env.intensity;
-  const at = anchor(p.tgt);
-  // #1598: a keyword the unit loses (R46) reads as a debuff does (`buff` above), whatever the keyword.
-  if (event.lost === true) {
-    return [
-      { kind: "arrows", direction: "down", at, delayMs: 0, durationMs: p.D + FX_ARROWS_TAIL_MS },
-      burst(i, "void", at, "area", 0, "debuffVoid"),
-    ];
-  }
-  switch (event.keyword.kind) {
-    case "Divine Shield":
-      return [ring(p.D, "gold", at, 0), burst(i, "holy", at, "ring", 0, "keywordHoly")];
-    case "Poisonous":
-      return [burst(i, "poison", at, "area", 0, "keywordPoison")];
-    case "Taunt":
-      return [ring(p.D, "dust", at, 0)];
-    default:
-      return [burst(i, "arcane", at, "point", 0, "keywordOther")];
-  }
+  // #1598: a keyword the unit loses (R46) reads as a curse does, whatever the keyword.
+  return motifRow(event.lost === true ? "curse" : "bless", p);
 };
 
 const counter: Recipe = (event, p) => {
@@ -806,29 +774,13 @@ const mindControl: Recipe = (event, p) => {
 
 const lock: Recipe = (event, p) => {
   if (event.type !== "locked" && event.type !== "unlocked") return [];
-  const at = anchor(p.tgt);
   // B5 E20: an unlock snaps the chains in gold shards.
-  if (event.type === "unlocked") return [ring(p.D, "gold", at, 0), burst(p.env.intensity, "shard", at, "ring", 0, "unlockShard")];
-  return [ring(p.D, "dust", at, 0), burst(p.env.intensity, "dust", at, "area", 0, "lockDust")];
+  return motifRow("bind", p);
 };
 
 const trap: Recipe = (event, p) => {
   if (event.type !== "trapFired") return [];
-  const at = anchor(p.tgt);
-  // R2657001: a face-up Field Trap firing again reveals nothing: the short flare an activation gets
-  // (`cast`'s), with no reveal burst and no shake.
-  if (event.again === true) return [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "point", 0, "cast")];
-  const delay = frac(FX_TRAP_BURST_AT, p.D);
-  // #1447: the burst takes the card's flavor only when the view shows this very instance (§10.8, R33): an
-  // opponent's face-down trap is not in it, so its burst stays arcane.
-  const look = FX_FLAVOR_LIVE && locateInstance(p.view, event.instanceId) !== null ? flavorLookOf(event.defId, event.instanceId, p.view) : null;
-  // A tight ring on the trap's own zone, not motes over the whole area (integration QA).
-  const cues: FxCue[] = [
-    ring(p.D, "arcane", at, 0),
-    burst(p.env.intensity, look?.particle ?? "arcane", at, "ring", delay, "trapArcane", undefined, look?.colors),
-  ];
-  pushShake(cues, p.env.intensity, FX_TRAP_TRAUMA, delay);
-  return cues;
+  return motifRow("snap", p);
 };
 
 const lunge: Recipe = (event, p) => {
@@ -854,17 +806,7 @@ const fizzle: Recipe = (event, p) => {
 
 const mana: Recipe = (event, p) => {
   if (event.type !== "manaChanged") return [];
-  const side = sideOf(p.view, event.player);
-  const old = (side === "you" ? p.view.you : p.view.opponent).mana.current;
-  const n = Math.min(event.current, old + FX_MANA_MAX_SPARKS) - old;
-  if (n <= 0) return [];
-  const step = Math.min(FX_MANA_STAGGER_MS, Math.floor(p.D / Math.max(n, 1)));
-  const cues: FxCue[] = [];
-  for (let k = 0; k < n; k += 1) {
-    const crystal: FxAnchor = { kind: "crystal", side, index: old + k };
-    cues.push(burst(p.env.intensity, "sparkle", crystal, "point", Math.min(p.D, k * step), "manaSparkle"));
-  }
-  return cues;
+  return motifRow("mana", p);
 };
 
 const turnBanner: Recipe = (event, p) => {
