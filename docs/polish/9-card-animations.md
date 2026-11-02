@@ -127,6 +127,40 @@ and a card its hits already reached dies under its own row, so a lethal bolt fli
   and shake a constant in `fx/constants.ts`, pinned by `constants.test.ts`.
 - **No new rendering tech:** a motif builds the cue kinds the layer already draws.
 
+## Keyword beats
+
+A **beat** is #2782's smallest tier: a short decoration inside the entry of the event it keys on (at most
+about 400 ms at speed 1), holding nothing and reading no card. The nine combat keywords each have one
+(`fx/motifs/beats.ts`, ruling R2789000), planned by `planFx` after the cast cues and built from the
+helpers of `fx/motifs/build.ts` (`CueSpec` is the part of a motif's spec they read). The beats key on the
+`via` of #2783's events (R2783001), and on the keywords the view shows on an attacker for the three that
+act when it attacks.
+
+| Keyword | Keyed on | Beat |
+|---|---|---|
+| Cleave | `damage` or `damageAbsorbed`, `combat`, `via: Cleave` | a wide `swipe` arc from the attacked target to the neighbour, a smaller landing and splat there at the land phase; the row is replaced |
+| First Strike | `damage`, `combat`, `via: First Strike`; the death with `via: First Strike` | a sheen and glint on the attacker. The dying defender's counter-blow starts toward the attacker (a spark) and breaks off in smoke at `FX_FIRST_STRIKE_BREAK_AT`. A survivor's counter-blow, the next combat `damage` back, lands at the land phase, not at 0 |
+| Trample | `damage`, `combat`, `via: Trample` | a bolt from the dead unit to the hero (or the unit beyond), a second splat there; the row is replaced |
+| Pierce | `damage`, `via: Pierce` | a `beam` spear line `FX_PIERCE_REACH` past the defender's card on each side; the row is kept |
+| Lifesteal | `healed`, `via: Lifesteal` | red `blood` motes from the damaged unit to the hero, landing with the heal's splat at the land phase; the heal row is replaced |
+| Windfury | `attackDeclared`, second of the turn (`FxMemory.attacksThisTurn`) | a card-back `ghost` of the first attack's flight and a ring on the attacker |
+| Poisonous | `destroyed`, `via: Poisonous` | the callout over the poisoner; the poison burst is the death recipe's (`sourceIsPoisonous`'s guess from the view is gone) |
+| Ranged | `attackDeclared` by a Ranged unit | the callout; the flavor shot stays `stage.ts`'s |
+| Flying | `attackDeclared` by a Flying unit | the callout; the lunge carries `arc`, and the director sets `--fx-lunge-lift` (`FX_FLYING_LUNGE_LIFT`) so `jk-lunge` lifts toward the viewer |
+
+**The callout** (`fx/motifs/callout.ts`) is the shared cue every keyword part of #2782 uses: the keyword's
+icon (`KEYWORD_CALLOUT_ICONS`, `cards/keywordVisuals.ts`) pops over a unit for `FX_CALLOUT_MS`
+(`.fx-callout`, a badge on the unit's top edge). A repeat of one keyword over a unit takes the first's place.
+
+**Several keywords on one hit:** each fires its beat, `FX_BEAT_STAGGER_MS` apart (scaled with the speed,
+and at most `FX_BEAT_STAGGER_MAX` of the entry in); at most `FX_CALLOUTS_PER_HIT` of them pop a callout.
+Each beat is planned in the entry's D less its stagger, so it ends inside the entry and its tail (R200).
+
+**Speed and motion:** D carries the speed, and so the stagger (R201). Under reduced motion a beat keeps
+its callout as a static icon (`still`, `data-still`) and drops its motion: the runner signals `still`
+for an entry that plays with no duration, and the layer draws `planStillCallouts` for it. With the
+effects off, nothing. **R202:** a beat reads `via`, public keywords and shown ids only.
+
 ## The gallery
 
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
@@ -160,3 +194,4 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
 - #2782's full text, with its 27 motif names and section 4's table layout, is not in the
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
+- `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.

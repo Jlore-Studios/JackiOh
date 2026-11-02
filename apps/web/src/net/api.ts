@@ -1381,6 +1381,11 @@ export type PublicCardStat = {
   notDrawnGames?: number;
   notDrawnWinRate?: number | null;
   drawnDelta?: number | null;
+  /**
+   * R2777000: the drawn delta kept as far as the card's games back it, read from an even game: the page's
+   * headline rate. Null when it was never seen or never unseen; absent from a server deployed before it.
+   */
+  adjustedWinRate?: number | null;
   playRate: number;
   hasEnoughGames: boolean;
   window?: PublicCardWindow;
@@ -1435,7 +1440,7 @@ export type PublicStatsCardsResponse = {
   sourceLabel: string;
   pilot: "merged" | "human" | "ai";
   pilotLabel: string;
-  mode: "all" | "bo1" | "bo3" | "random";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   modeLabel: string;
   minSample: number;
   totalGames: number;
@@ -1453,7 +1458,7 @@ export type PublicStatsCardsResponse = {
     activePatch: string;
     source: PublicStatsSource;
     pilot: "merged" | "human" | "ai";
-    mode: "all" | "bo1" | "bo3" | "random";
+    mode: "all" | "bo1" | "bo3" | "random" | "constructed";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -1546,7 +1551,7 @@ export type PublicStatsGamesResponse = {
   patch: string;
   source: PublicStatsSource;
   sourceLabel: string;
-  mode: "all" | "bo1" | "bo3" | "random";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   modeLabel: string;
   minSample: number;
   /** Every game the patch's window counted, those recorded before these figures were kept among them. */

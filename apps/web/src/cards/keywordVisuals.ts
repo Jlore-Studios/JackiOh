@@ -443,3 +443,21 @@ export function keywordFxAttributes(entry: KeywordFxPlan): Record<string, string
   if (entry.stage !== undefined) attributes["data-stage"] = String(entry.stage);
   return attributes;
 }
+
+/** R2789000: a callout's icon (fx/motifs/callout.ts): SVG path data in a 100×100 box, filled, or only stroked when `line` is set. */
+export type KeywordIcon = { d: string; line?: true };
+
+/** R2789000: the combat keywords' callout icons; a keyword with none draws no callout. */
+export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, KeywordIcon>>> = {
+  "First Strike": { d: "M50 3 L65 22 L65 60 L35 60 L35 22 Z M20 60 H80 V72 H20 Z M43 72 H57 V96 H43 Z" },
+  Cleave: { d: "M10 82 A48 48 0 0 1 90 18 A62 62 0 0 0 10 82 Z" },
+  Trample: { d: "M30 34 C30 16 70 16 70 34 L70 62 C70 71 61 73 57 66 L55 46 C55 39 45 39 45 46 L43 66 C39 73 30 71 30 62 Z" },
+  Pierce: { d: "M50 4 L64 34 L50 46 L36 34 Z M43 46 H57 V52 H43 Z M46 52 H54 V96 H46 Z" },
+  Lifesteal: { d: "M50 90 C22 70 8 54 8 34 A21 21 0 0 1 50 24 A21 21 0 0 1 92 34 C92 54 78 70 50 90 Z" },
+  Poisonous: { d: "M50 6 C60 30 78 46 78 64 A28 28 0 0 1 22 64 C22 46 40 30 50 6 Z" },
+  Flying: {
+    d: "M50 58 C38 36 20 28 4 30 C14 40 18 52 30 58 C22 60 16 66 12 72 C28 72 42 68 50 58 Z M50 58 C62 36 80 28 96 30 C86 40 82 52 70 58 C78 60 84 66 88 72 C72 72 58 68 50 58 Z",
+  },
+  Windfury: { d: "M8 36 H62 C84 36 84 12 66 14 M8 66 H70 C94 66 94 90 74 88", line: true },
+  Ranged: { d: "M30 10 C66 26 66 74 30 90 M30 10 V90 M14 50 H84 M74 42 L86 50 L74 58", line: true },
+};

@@ -48,7 +48,9 @@ as its owner's list shows it, by the definition and face it went in with and its
 prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
 hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
-non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
+non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
+cards and a card of the seat's library from the opponent's deck, R73, against what the opponent shows,
+every other hidden card of its library against what the seat shows), a hidden backrow card from the
 traps alone, minus any whose live aura would change a shown stat (R602), and of the shown cost while
 an unseen trap of that cost is left (R351, R762). So two states that differ only in hidden cards give the same decision under
 the same rng. The caller reads `options.rng.cursor()` back afterwards.

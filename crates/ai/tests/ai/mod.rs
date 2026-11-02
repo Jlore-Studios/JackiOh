@@ -16,6 +16,7 @@ pub mod deaths;
 pub mod decide;
 pub mod deck;
 pub mod determinize_shown_cost;
+pub mod determinize_sides;
 pub mod dev_run;
 pub mod duos;
 pub mod endings;
