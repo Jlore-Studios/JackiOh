@@ -2,8 +2,8 @@
 // bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
 // on screen. Each slot's points (R1999000) fly from the slot into the HUD, tinted by rarity.
 // THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer, what the cosmetic bar paid
-// (R1305001) and each slot's points included; nothing here counts a point or picks a reward, and both
-// bars are drawn whether or not the opening moved them.
+// (R1305001), the size of each step it crosses (R2728000) and each slot's points included; nothing here
+// counts a point or picks a reward, and both bars are drawn whether or not the opening moved them.
 // REDUCED MOTION, or the effects' intensity off, flies, sweeps and pulses nothing (`still` carries
 // the intensity off to FillBar).
 
@@ -18,6 +18,7 @@ import {
   BURST_MS,
   fillReward,
   flightsMs,
+  sizeAt,
   type BarFlight,
   type OpeningBar,
   type RevealItem,
@@ -99,8 +100,9 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
   };
 
   const part = (name: string): string | undefined => (testid === undefined ? undefined : `${testid}-${name}`);
-  // Until the bars fill, each rests where the opening found it.
-  const drawBar = (name: "card" | "cosmetic", label: string, bar: OpeningBar): ReactElement =>
+  // Until the bars fill, each rests where the opening found it, on the bar of the step it stood at
+  // (R2728000: the cosmetic bar's `sizes`, the size of each step it crosses, the first its start's).
+  const drawBar = (name: "card" | "cosmetic", label: string, bar: OpeningBar, sizes?: readonly number[]): ReactElement =>
     phase === "fill" ? (
       <FillBar
         label={label}
@@ -108,6 +110,7 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
         value={bar.after}
         from={bar.before}
         fills={bar.pays}
+        sizes={sizes}
         still={!moving}
         onFill={(fill) => {
           reveal(name, fill);
@@ -115,7 +118,7 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
         testid={part(name)}
       />
     ) : (
-      <FillBar label={label} size={bar.size} value={bar.before} testid={part(name)} />
+      <FillBar label={label} size={sizeAt(bar.size, sizes, 0)} value={bar.before} testid={part(name)} />
     );
 
   const style = { "--flight-ms": `${String(BAR_FLIGHT_MS)}ms`, "--pulse-ms": `${String(BURST_MS)}ms` } as CSSProperties;
@@ -129,7 +132,7 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
       style={style}
     >
       {drawBar("card", t("Card token bar"), bars.card)}
-      {drawBar("cosmetic", t("Cosmetic token bar"), bars.cosmetic)}
+      {drawBar("cosmetic", t("Cosmetic token bar"), bars.cosmetic, bars.cosmeticSizes)}
       <RewardReveal items={rewards} testid={part("rewards")} />
       {phase === "flights"
         ? flights.map((flight, index) => {

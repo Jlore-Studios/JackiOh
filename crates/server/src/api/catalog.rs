@@ -190,9 +190,10 @@ pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 
 /// `GET /api/catalog`. R163: the catalog whole, since §9.4 shares one validator between client and
 /// server and a trimmed card would be a weaker copy; unauthenticated, as it is the same bytes for
-/// everybody, with R105's version. No screen reads it since #1378; it stays for the deploy check,
-/// Render's health check and the e2e runs (CLAUDE.md rule 13). `commit` goes in a header so the
-/// body stays the same bytes for everybody (R163); `deploy-watch.yml` reads it.
+/// everybody, with R105's version. No screen reads it since #1378; it stays for the deploy workflows'
+/// live check and the e2e runs (CLAUDE.md rule 13). `commit` goes in a header so the body stays the
+/// same bytes for everybody (R163); the live check after `wrangler deploy` (promote-production.yml,
+/// deploy-staging.yml) polls this route until it names the deployed commit.
 pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     let catalog = &app.catalog;
     let version = serde_json::to_string(&catalog.version).unwrap_or_else(|_| "\"\"".to_string());

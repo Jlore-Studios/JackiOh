@@ -1,5 +1,7 @@
-// R2202000: the Training Grounds set's own art (issue #2202, traininggrounds.ts). No other set's card
-// reaches it, so every picture R503 pinned stays as it was.
+// R2202000: the Training Grounds set's own art (issue #2202, traininggrounds.ts). Each family draws
+// one look, both faces share their geometry, the Legacy cards draw their Core card's subject in the
+// yard with a touch of their own (R2724000), and no other set's card reaches any of it, so every
+// picture R503 pinned stays as it was.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -7,10 +9,27 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { EMBLEMS } from "./emblems.ts";
 import { CardArt } from "./CardArt.tsx";
-import { proceduralArtUri, trainingGroundsArtUri } from "./svg.ts";
+import ART_BEFORE_2724 from "./fixtures/art-before-2724.json";
+import { hashId } from "./hash.ts";
+import { motifFor } from "./motifs.ts";
+import { artSpec } from "./procedural.ts";
+import { legacyArtUri, proceduralArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
-import { isTrainingGroundsArt, SNAPSHOT_ART, snapshotArtOf, trainingGroundsSvg, yardSubject, type YardFamily } from "./traininggrounds.ts";
+import {
+  isTrainingGroundsArt,
+  LEGACY_PAINT,
+  LEGACY_PREFIX,
+  LEGACY_TOUCHES,
+  legacySvg,
+  SNAPSHOT_ART,
+  snapshotArtOf,
+  TOUCH_DRAWINGS,
+  trainingGroundsSvg,
+  yardSubject,
+  type YardFamily,
+} from "./traininggrounds.ts";
 
 afterEach(cleanup);
 
@@ -153,7 +172,7 @@ describe("R2202000: CardArt draws the set's art and leaves every other card's", 
     expect(art?.style.backgroundImage).toContain(trainingGroundsArtUri(card.id, card.name, card.tags, card.type, false));
   });
 
-  it("R2202000 R2511000 a Legacy card draws its Core card's picture, base and Radiant, under its own name and tags", () => {
+  it("R2511000 R2724000 a Legacy card draws its own yard picture, base and Radiant, never its Core card's", () => {
     const card = core("core-002");
     const legacy = CATALOG["traininggrounds-041"];
     if (legacy === undefined) throw new Error("no traininggrounds-041");
@@ -163,8 +182,9 @@ describe("R2202000: CardArt draws the set's art and leaves every other card's", 
       cleanup();
       const original = render(<CardArt defId={card.id} radiant={radiant} tags={card.tags} type={card.type} name={card.name} shape="portrait" />);
       const own = original.container.querySelector<HTMLElement>(".cf-art");
-      expect(drawn?.dataset.artFamily).toBeUndefined();
-      expect(drawn?.style.backgroundImage).toBe(own?.style.backgroundImage);
+      expect(drawn?.dataset.artFamily).toBe("legacy");
+      expect(drawn?.style.backgroundImage).toContain(legacyArtUri(legacy.id, card.id, card.name, legacy.tags, legacy.type, radiant));
+      expect(drawn?.style.backgroundImage).not.toBe(own?.style.backgroundImage);
       cleanup();
     }
   });
@@ -177,6 +197,111 @@ describe("R2202000: CardArt draws the set's art and leaves every other card's", 
       expect(art?.dataset.artFamily, card.id).toBeUndefined();
       expect(art?.style.backgroundImage, card.id).toContain(proceduralArtUri(card.id, theme, compositionFor(card.type), false, null));
       cleanup();
+    }
+  });
+});
+
+const LEGACY = Object.keys(SNAPSHOT_ART).map(core);
+
+/** A Legacy card's own face beside the Core picture it freezes, on both faces. */
+function legacyOf(card: CardDef, radiant: boolean): { svg: string; spec: ReturnType<typeof artSpec>; uri: string; coreUri: string } {
+  const coreId = snapshotArtOf(card.id) ?? "";
+  const name = card.name.replace(LEGACY_PREFIX, "");
+  const theme = themeFor(card.tags, card.type);
+  const motif = motifFor(name, theme);
+  return {
+    svg: legacySvg(card.id, coreId, name, card.tags, card.type, radiant),
+    spec: artSpec(coreId, theme, compositionFor(card.type), radiant, motif),
+    uri: legacyArtUri(card.id, coreId, name, card.tags, card.type, radiant),
+    coreUri: proceduralArtUri(coreId, theme, compositionFor(card.type), radiant, motif),
+  };
+}
+
+describe("R2724000: each Legacy card redraws its Core card's subject in the yard", () => {
+  it("R2724000 every Legacy face, base and Radiant, differs from its Core card's and is clean", () => {
+    for (const card of LEGACY) {
+      for (const radiant of [false, true]) {
+        const { svg, uri, coreUri } = legacyOf(card, radiant);
+        expect(uri, card.id).not.toBe(coreUri);
+        expect(svg.startsWith('<svg viewBox="0 0 100 100"'), card.id).toBe(true);
+        expect(svg.match(/<svg/g)).toHaveLength(1);
+        expect(svg, card.id).not.toMatch(/NaN|undefined|Infinity|<text|<title|href|<image/);
+        expect(svg.replace('xmlns="http://www.w3.org/2000/svg"', ""), card.id).not.toMatch(/https?:/);
+      }
+    }
+  });
+
+  it("R2724000 each still draws its Core card's subject: its composition's shapes, its emblem and its motif's glyphs", () => {
+    for (const card of LEGACY) {
+      for (const radiant of [false, true]) {
+        const { svg, spec } = legacyOf(card, radiant);
+        const [from, to] = spec.subjectRidges;
+        if (spec.composition !== "landscape") expect(to, card.id).toBeGreaterThan(from);
+        for (const ridge of spec.ridges.slice(from, to)) expect(svg, card.id).toContain(`d="${ridge.d}"`);
+        expect(svg, card.id).toContain(`d="${EMBLEMS[spec.emblem.glyph].d}"`);
+        for (const placed of spec.motifGlyphs) expect(svg, card.id).toContain(`d="${EMBLEMS[placed.glyph].d}"`);
+        if (spec.accent !== null) expect(svg, card.id).toContain(`d="${EMBLEMS[spec.accent.glyph].d}"`);
+      }
+    }
+  });
+
+  it("R2724000 each draws the yard's layers: its sky, its palisade and its sand floor", () => {
+    for (const card of LEGACY) {
+      for (const radiant of [false, true]) {
+        const { svg } = legacyOf(card, radiant);
+        expect(svg, card.id).toContain('fill="url(#sk)"');
+        expect(svg, card.id).toContain('fill="url(#gr)"');
+        expect(svg.match(/<polygon/g)?.length ?? 0, card.id).toBeGreaterThanOrEqual(13);
+      }
+    }
+  });
+
+  it("R2724000 every Legacy card has a yard touch of its own, drawn on its face, and no two share one", () => {
+    expect(Object.keys(LEGACY_TOUCHES).sort()).toEqual(Object.keys(SNAPSHOT_ART).sort());
+    const touches = Object.values(LEGACY_TOUCHES);
+    expect(new Set(touches).size).toBe(touches.length);
+    const drawings = touches.map((touch) => TOUCH_DRAWINGS[touch](LEGACY_PAINT));
+    expect(new Set(drawings).size).toBe(drawings.length);
+    for (const card of LEGACY) {
+      const touch = LEGACY_TOUCHES[card.id];
+      if (touch === undefined) throw new Error(`no touch for ${card.id}`);
+      expect(legacyOf(card, false).svg, card.id).toContain(TOUCH_DRAWINGS[touch](LEGACY_PAINT));
+    }
+  });
+
+  it("R2724000 the Radiant face keeps the base geometry, gilds its paint and adds the rays", () => {
+    const shapes = (svg: string): string[] => [...svg.matchAll(/(?:points|d)="([^"]*)"/g)].map((match) => match[1] ?? "");
+    for (const card of LEGACY) {
+      const base = legacyOf(card, false).svg;
+      expect(legacyOf(card, false).svg).toBe(base);
+      const radiant = legacyOf(card, true).svg;
+      expect(radiant, card.id).not.toBe(base);
+      const baseShapes = shapes(base);
+      const radiantShapes = shapes(radiant);
+      for (const d of baseShapes) expect(radiantShapes, card.id).toContain(d);
+      expect(radiantShapes.length).toBeGreaterThan(baseShapes.length);
+    }
+  });
+});
+
+describe("R2724000: no other card's picture moves", () => {
+  const recorded = ART_BEFORE_2724 as unknown as Readonly<Record<string, readonly [number, number]>>;
+  const KEPT = Object.values(CATALOG).filter((card) => (card.set === "Core" || card.set === "Training Grounds") && snapshotArtOf(card.id) === null);
+  function pictureOf(card: CardDef, radiant: boolean): string {
+    if (isTrainingGroundsArt(card.id)) return trainingGroundsArtUri(card.id, card.name, card.tags, card.type, radiant);
+    const theme = themeFor(card.tags, card.type);
+    return proceduralArtUri(card.id, theme, compositionFor(card.type), radiant, motifFor(card.name, theme));
+  }
+
+  it("R2724000 the fixture covers every Core card and every Training Grounds card but the Legacy ones", () => {
+    expect(Object.keys(recorded).sort()).toEqual(KEPT.map((card) => card.id).sort());
+  });
+
+  it("R2724000 each of them draws exactly the picture it drew before, on both faces", () => {
+    for (const card of KEPT) {
+      const pair = recorded[card.id] ?? (() => { throw new Error(`no fixture for ${card.id}`); })();
+      expect(hashId(pictureOf(card, false)), card.id).toBe(pair[0]);
+      expect(hashId(pictureOf(card, true)), card.id).toBe(pair[1]);
     }
   });
 });

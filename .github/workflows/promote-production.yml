@@ -1,40 +1,35 @@
-# Merges main into production (Cloudflare) through a pull request, once a day, with one countdown
-# issue anyone can hold or delay, which also holds or hurries Vercel's builds of main (staging) and
-# lists what is queued for each. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh
-# is the logic (read its header first) and apps/web/src/net/promote-production.test.ts holds it.
+# Merges main into production through a pull request, once a day, with one countdown issue anyone
+# can hold or delay, which lists what is queued; then deploys production to jackioh.com, the site and
+# its game server together. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is
+# the logic (read its header first) and apps/web/src/net/promote-production.test.ts holds it.
+# Staging is deploy-staging.yml's, which deploys every green commit of main by itself.
 #
-# The Worker serves what the `production` branch holds, and nothing else. This workflow is the only
-# thing that moves it, and only by merging a pull request whose head is a commit of main whose push-to-main CI
-# run passed. It never force-pushes: a `production` that carries anything main does not fails the
-# run, loudly, for a human to look at.
+# The `jackioh` Worker serves what the `production` branch holds, and nothing else. This workflow is
+# the only thing that moves it, and only by merging a pull request whose head is a commit of main
+# whose push-to-main CI run passed. It never force-pushes: a `production` that carries anything main
+# does not fails the run, loudly, for a human to look at.
 #
 # The open issue labelled `production merge` says "Merging to production in N hours" and stays open
 # for good: a merge is a comment on it. The check merges when the issue's time has passed and nobody
-# has put it on hold. `/hold vercel`, `/delay vercel 3h`, `/resume vercel` and `/fast-forward vercel`
-# do the same for Vercel, through two tags scripts/vercel-ignore.sh reads at every Vercel build and,
-# for a build now, Vercel's deploy hook (the VERCEL_DEPLOY_HOOK_URL secret). The issue's body shows
-# the queue: every pull request on main not yet live on both, with its CI, read from the runs and from
-# the deployments Vercel's GitHub app reports (hence `deployments: read`). GitHub has not started this
-# repository's scheduled runs at all (CLAUDE.md, the night bot), so the check never rests on the
-# cron: every green CI run on main runs it too, and main moves many times a day.
+# has put it on hold. The issue's body shows the queue: every pull request on main not yet in
+# production, with its CI, read from the runs. GitHub has not started this repository's scheduled
+# runs at all (CLAUDE.md, the night bot), so the check never rests on the cron: every green CI run on
+# main runs it too, and main moves many times a day.
 #
 # Four ways in:
 #   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest),
 #                      if GitHub starts it: read the new comments, merge if due and not on hold, then
-#                      say so on the issue and count down to the next. It also ends a Vercel delay.
+#                      say so on the issue and count down to the next.
 #   issue_comment      a /hold, /resume, /delay or /fast-forward on the countdown issue, from someone GitHub calls an
 #                      owner, member or collaborator: the same check, so the answer is quick and a
 #                      /resume on an overdue merge goes out at once.
 #   workflow_run (CI)  right after a green CI run on main: the same check, and the one that does the
-#                      work in practice. It also merges a commit that changes render.yaml's
-#                      CATALOG_VERSION at once, hold or no hold. Render deploys crates/server from main
-#                      on every push, and the bundle compiles the catalog version in
-#                      (crates/cards), so a catalog bump left a day behind would refuse every deck
-#                      save and queue in production (SPEC §9.4, R105).
-#   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): for `target`
-#                      production, the newest green commit, or the `sha` given, which must also be
-#                      green and on main; for vercel, a build of main's newest commit on Vercel now;
-#                      both, both. A hold does not stop it.
+#                      work in practice. A catalog bump waits for it like any other change: the site
+#                      and the server go out together from production, so they always agree on the
+#                      catalog version (SPEC §9.4, R105).
+#   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
+#                      commit, or the `sha` given, which must also be green and on main. A hold does
+#                      not stop it.
 #
 # The promote branch, its pull request and the merge go out with the bot's token (BOT_GITHUB_TOKEN),
 # because GitHub refuses the Actions token any update to production that carries a change to
@@ -49,16 +44,21 @@
 # newest shipped patch, with the player note its pull request's "## Player note" carries. It lands
 # on main through the same auto-merged pull request path patches-ship.yml uses, in that workflow's
 # concurrency group, so it never interleaves with a ship. Technical changes never bump the catalog
-# version, which would force a production merge that can't be held (R105). Nothing supersedes a log
-# that does not merge, so patches-ship.yml's `watch` escalates one still red or in conflict 2 hours on.
+# version, which the server and every client must agree on (R105). Nothing supersedes a log that
+# does not merge, so patches-ship.yml's `watch` escalates one still red or in conflict 2 hours on.
 #
-# The `deploy` job then builds production and deploys it to the Cloudflare Worker itself, with
-# `wrangler deploy` and the CLOUDFLARE_API_TOKEN secret: the same install CI runs (where the build is
-# known to pass), the public VITE_ settings from apps/web/.env.production, and
+# The `deploy` job then builds production and deploys it to the `jackioh` Worker and its container
+# itself, with `wrangler deploy` and the CLOUDFLARE_API_TOKEN secret: the same install CI runs (where
+# the build is known to pass), the public VITE_ settings from apps/web/.env.production, and
 # apps/web/scripts/check-production-bundle.mjs between the build and the deploy, so a bundle that
-# cannot sign in never goes live. Cloudflare's own Git builds failed on every commit after the first,
-# with logs only the dashboard shows, and built every branch; with this job they are disconnected
-# (docs/deploy-cloudflare.md, step 3). After the deploy it fetches the live site and checks it.
+# cannot sign in never goes live. wrangler builds the server's image from crates/server/Dockerfile
+# (wrangler.jsonc's `containers`) with this runner's Docker, and the Worker hands the container the
+# commit it was deployed from (DEPLOYED_COMMIT), which the server reports as `x-deployed-commit`.
+# Cloudflare's own Git builds failed on every commit after the first, with logs only the dashboard
+# shows, and built every branch; with this job they are disconnected (docs/deploy-cloudflare.md,
+# step 3). After the deploy it fetches the live site and checks it, then waits for the server to
+# report the commit. The server's own secrets are the Worker's (`wrangler secret put`,
+# apps/edge/README.md), never this repository's.
 name: promote production
 
 on:
@@ -72,12 +72,6 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      target:
-        description: "What to bring up to date: production (Cloudflare), vercel (staging) or both"
-        type: choice
-        options: [production, vercel, both]
-        required: false
-        default: production
       sha:
         description: "Commit of main to promote (default: the newest one whose CI passed)"
         required: false
@@ -89,14 +83,14 @@ on:
         default: false
 
 env:
-  # The Cloudflare account the `jackioh` Worker lives in (dash.cloudflare.com/<this>/workers/...).
-  # An identifier, not a secret; the API token is the secret.
+  # The Cloudflare account the `jackioh` Worker lives in (dash.cloudflare.com/<this>/workers/...),
+  # and deploy-staging.yml's `jackioh-staging`. An identifier, not a secret; the API token is the
+  # secret.
   CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
 
 permissions:
   contents: write
   actions: read
-  deployments: read
   issues: write
   pull-requests: write
 
@@ -142,12 +136,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PROMOTE_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           EVENT: ${{ github.event_name }}
-          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_SHA: ${{ inputs.sha }}
-          INPUT_TARGET: ${{ inputs.target }}
-          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
-          # deploy-watch.yml's: production takes no catalog the live server does not serve yet.
-          SERVER_URL: https://jackioh-server.onrender.com
         run: bash scripts/promote-production.sh
 
   # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge
@@ -245,10 +234,21 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # An hour, for a cold release build of the server's image: wrangler builds crates/server/Dockerfile
+    # with this runner's Docker and no layer cache from any earlier run, so every deploy compiles the
+    # server's dependencies, the workspace's crates and the thin-LTO link from nothing (CI's deploy
+    # rehearsal, which keeps those layers in GitHub's cache, still splits the same build into three
+    # jobs). Then the web's build, the image's upload, and the wait for the server (LIVE_SECONDS).
+    timeout-minutes: 60
     env:
       # The install covers the whole workspace, e2e/ included; no browser is needed here.
       CYPRESS_INSTALL_BINARY: "0"
+      # The address players use, which the live checks read.
+      SITE: https://jackioh.com
+      # How long the live check waits for the server to report the deployed commit: the first request
+      # starts the container on the new image, after the Worker has drained one still on the old
+      # (apps/edge/src/index.ts).
+      LIVE_SECONDS: "900"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -256,7 +256,7 @@ jobs:
 
       # Both halves, as CI's `wasm` job has: the build's prebuild runs scripts/build-wasm.sh, so this
       # job builds the module, and production's setup action caches the emsdk it links with once
-      # the module moves to emscripten (#442 L12, #450).
+      # the module moves to emscripten (#442 L12, #450). The Node half installs apps/edge's wrangler.
       - uses: ./.github/actions/setup
 
       - name: build the web app
@@ -280,41 +280,64 @@ jobs:
           fi
           node apps/web/scripts/check-production-bundle.mjs
 
-      - name: deploy
+      # The Worker, the site's files and the server's container in one deploy, so the site and its
+      # server never run apart. `--env=""` names the top level, production, which wrangler otherwise
+      # warns is left implicit in a file that has environments.
+      - name: deploy the site and its server
         id: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -o pipefail
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so production was built but not deployed. docs/deploy-cloudflare.md, step 3, says how to make one."
+            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so production was built but not deployed. docs/deploy-cloudflare.md, section 4, step 2, says how to make one."
             exit 1
           fi
-          npx --yes wrangler@4 deploy 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+          if [ ! -f apps/edge/package.json ]; then
+            echo "::error::production ($(git rev-parse --short HEAD)) predates the Worker in front of the server (apps/edge). Run this workflow without a sha once main's CI is green, so production moves to a commit that has it."
+            exit 1
+          fi
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          pnpm --dir apps/edge exec wrangler deploy --config ../../wrangler.jsonc --env="" --var "DEPLOYED_COMMIT:$sha" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
           url=$(grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n 1 || true)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
+      # jackioh.com, and the workers.dev address the deploy printed, which wrangler.jsonc keeps on.
       - name: check the live site
-        if: steps.deploy.outputs.url != ''
         env:
-          SITE: ${{ steps.deploy.outputs.url }}
+          WORKERS_DEV: ${{ steps.deploy.outputs.url }}
         run: |
-          # The new version can take a few seconds to reach every edge.
-          # The settings land in whichever chunk holds src/net/auth.ts, so every script index.html
-          # loads or preloads is read.
-          for attempt in 1 2 3 4 5 6; do
-            scripts=$(curl -fsS "$SITE/" | grep -oE '/assets/[A-Za-z0-9_.-]+\.js' | sort -u || true)
-            found=
-            for script in $scripts; do
-              if curl -fsS "$SITE$script" | grep -q 'sb_publishable_'; then found=$script; break; fi
+          for address in "$SITE" ${WORKERS_DEV:+"$WORKERS_DEV"}; do
+            # The new version can take a few seconds to reach every edge.
+            # The settings land in whichever chunk holds src/net/auth.ts, so every script index.html
+            # loads or preloads is read.
+            for attempt in 1 2 3 4 5 6; do
+              scripts=$(curl -fsS "$address/" | grep -oE '/assets/[A-Za-z0-9_.-]+\.js' | sort -u || true)
+              found=
+              for script in $scripts; do
+                if curl -fsS "$address$script" | grep -q 'sb_publishable_'; then found=$script; break; fi
+              done
+              if [ -n "$found" ]; then echo "$address: sign-in is configured ($found)"; break; fi
+              if [ "$attempt" = 6 ]; then echo "::error::$address does not serve a bundle with sign-in configured"; exit 1; fi
+              sleep 10
             done
-            if [ -n "$found" ]; then echo "sign-in is configured ($found)"; break; fi
-            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve a bundle with sign-in configured"; exit 1; fi
-            sleep 10
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$address/decks")
+            [ "$status" = 200 ] || { echo "::error::$address/decks answered $status, not 200"; exit 1; }
+            curl -sI "$address/decks" | grep -qi '^content-security-policy:' || { echo "::error::$address sends no Content-Security-Policy"; exit 1; }
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$address/not-a-page")
+            [ "$status" = 404 ] || { echo "::error::$address/not-a-page answered $status, not 404"; exit 1; }
           done
-          status=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/decks")
-          [ "$status" = 200 ] || { echo "::error::$SITE/decks answered $status, not 200"; exit 1; }
-          curl -sI "$SITE/decks" | grep -qi '^content-security-policy:' || { echo "::error::$SITE sends no Content-Security-Policy"; exit 1; }
-          status=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/not-a-page")
-          [ "$status" = 404 ] || { echo "::error::$SITE/not-a-page answered $status, not 404"; exit 1; }
-          echo "### production is live at $SITE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: wait for the server on this commit
+        uses: ./.github/actions/poll-live
+        with:
+          site: ${{ env.SITE }}
+          commit: ${{ steps.deploy.outputs.sha }}
+          seconds: ${{ env.LIVE_SECONDS }}
+
+      - name: say so
+        env:
+          SHA: ${{ steps.deploy.outputs.sha }}
+        run: |
+          echo "### production is live at $SITE, its server on \`${SHA:0:12}\`" >> "$GITHUB_STEP_SUMMARY"

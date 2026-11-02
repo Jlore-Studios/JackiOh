@@ -1,5 +1,5 @@
 // `/almanac` (R630): the public Card Almanac, reached signed out, lazy, with its tab title and
-// canonical link, linked from the footer, served by vercel.json (net/deploy-routes.test.ts reads
+// canonical link, linked from the footer, served by public/_redirects (net/deploy-routes.test.ts reads
 // `paths`) and in the sitemap: every card through the deck builder's browse pane, read-only, asking
 // no server anything but the R654 public aggregates. Filter and sort semantics are filters.test.ts's.
 

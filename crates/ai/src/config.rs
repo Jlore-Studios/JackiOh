@@ -81,7 +81,7 @@ pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize = AI_BUDGET.lethal_nodes;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
-/// baseline, `duos.rs`'s `duos_gate`.
+/// baseline, `duos.rs`'s `duos_gate_game`.
 pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 
 /// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
@@ -419,9 +419,10 @@ pub struct EvalWeights {
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
     /// killing a unit whose Death pays its owner is worth less than its body.
     pub death: f64,
-    /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
-    /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
-    /// seat can read, either side's, and `unit_worth` adds for each unit on the field.
+    /// R2477000, R2565000, R2689000: the share of what a card's turn hooks give its controller
+    /// (`evaluate::turn_hook_price`: one firing of each, its start-of-turn and end-of-turn hooks' once
+    /// for each time its controller's turn runs them) that `material` adds for each backrow card the seat
+    /// can read, either side's, and `unit_worth` adds for each unit on the field.
     pub turn_hook: f64,
     /// R2564000: the share of what one use of a unit's Activate gives its controller
     /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units

@@ -3,7 +3,8 @@
 // EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7): nothing here prices, counts or decides.
 // The pickers' filters only mirror the server's `choice_of`, which re-refuses every redemption.
 // Cosmetic rarity is its own scale and type (`CosmeticRarity`, never a card's `PrintedRarity`, R1333000):
-// a token buys at its tier or below on the COSMETIC's rarity, and no token exceeds Epic (R1305003).
+// a token buys at its tier or below on the COSMETIC's rarity, and no token exceeds Legendary, so none
+// reaches a Mythic (R1305003, R2728000).
 
 import { CATALOG } from "@jackioh/cards";
 import { MAX_COPIES } from "@jackioh/engine/config";
@@ -13,7 +14,7 @@ import { SHIPPED_SETS, setShips, type CardDef } from "@jackioh/shared";
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { CatalogSnapshot } from "@jackioh/validator";
 import { t } from "../i18n/i18n.ts";
-import type { CollectionResponse, CosmeticSlot, OwnedCosmeticsResponse } from "../net/api.ts";
+import type { CollectionResponse, CosmeticSlot, CosmeticTokenStep, OwnedCosmeticsResponse } from "../net/api.ts";
 import { matchesFilter, sortPool, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
 
 /** One registry entry, structurally: what the filters read. */
@@ -72,6 +73,7 @@ export const shopTestid = {
   heldCard: "token-held-card",
   heldRare: "token-held-rare",
   heldEpic: "token-held-epic",
+  heldLegendary: "token-held-legendary",
   heldPack: "token-held-pack",
   cosmeticSpend: "token-cosmetic-spend",
   cardPick: (id: string) => `token-card-pick-${id}`,
@@ -196,12 +198,14 @@ export function chaseCandidates(
   });
 }
 
-export function nextStepWords(step: "rare" | "epic" | "cosmeticPack"): string {
+export function nextStepWords(step: CosmeticTokenStep): string {
   switch (step) {
     case "rare":
       return t("Rare token");
     case "epic":
       return t("Epic token");
+    case "legendary":
+      return t("Legendary token");
     case "cosmeticPack":
       return t("Cosmetic pack");
   }

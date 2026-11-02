@@ -32,7 +32,7 @@ variable over weight, Latin subset, self-hosted in `public/fonts` with their lic
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
-(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
+(`public/_headers`, held by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
 The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark beside it or under it,
 the stacked logo and the mark alone each on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
@@ -272,16 +272,25 @@ which the engine sets on the viewer's own hand cards only and never at 0.
 ## Commands
 
 ```
-pnpm --dir apps/web dev          # vite dev server on :5173
-pnpm --dir apps/web build        # production build
-pnpm --dir apps/web build:e2e    # the build e2e drives: development mode, so window.__jackioh stays
-pnpm --dir apps/web typecheck    # tsc -p apps/web/tsconfig.json
-pnpm --dir apps/web test         # vitest (jsdom)
+pnpm --dir apps/web dev            # vite dev server on :5173
+pnpm --dir apps/web build          # production build, from .env.production
+pnpm --dir apps/web build:staging  # staging's: the same build with .env.staging's values over it
+pnpm --dir apps/web build:e2e      # the build e2e drives: development mode, so window.__jackioh stays
+pnpm --dir apps/web typecheck      # tsc -p apps/web/tsconfig.json
+pnpm --dir apps/web test           # vitest (jsdom)
 ```
 
-`dev`, `build`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre` scripts), which
-needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
-so run one of them (or the script) once first.
+`dev`, `build`, `build:staging`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre`
+scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
+generated `.d.ts`, so run one of them (or the script) once first.
+
+Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
+puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a
+variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,
+`public/_headers` sends the security headers, and the build fills its CSP's `connect-src` with its
+own hosts (`static-pages.ts` `connectSources`): `'self'`, its `VITE_SUPABASE_URL` and `wss://` on
+its own host, since the server shares the site's origin. `scripts/check-production-bundle.mjs`
+(`--staging` for staging's) refuses a bundle that would deploy without its settings or that CSP.
 
 The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
 `scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
@@ -421,8 +430,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
                         collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
                         tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
-                        group as before (R633), beside the owned list from GET /api/cosmetics
-                        (collection/CosmeticsPanel.tsx), with no defaults of every card, so a card with no pick
+                        group as before (R633), with no list of what the account owns (R2731000) and no
+                        defaults of every card, so a card with no pick
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
@@ -433,10 +442,10 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
                         stored pick draws as the default (R1833000); a locked tile or strip item a held
-                        Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
-                        POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
+                        Rare, Epic or Legendary cosmetic token covers offers it in place (collection/TokenOffer.tsx,
+                        POST /api/tokens/redeem-cosmetic, R1953001, R2728000), and ownership is read again;
                         collection/
-                        holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
+                        holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
@@ -455,7 +464,8 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
                         client sum); `JlorePill.tsx`, the pill in routes/nav.tsx's top bar and the
                         landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
-                        to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
+                        to after, bursts when full and restarts with the overflow, each fill on its own
+                        step's size where the answer gives one (R2728000); `RewardReveal.tsx`, a
                         filled bar's reward flown out one at a time; `OpeningBars.tsx`, the opening's
                         token bars pinned at the top of the screen, each slot's points (`slotPoints`)
                         flying from its card into them and a full bar pulsing before its reward
@@ -528,7 +538,7 @@ legality comes from the `legal` array its socket sends (rule 7). Every screen he
 active account, and asks for one the way `/play` does.
 
 ```
-routes (net/navigate.ts paths, and both vercel.json route tables):
+routes (net/navigate.ts paths, and public/_redirects):
   /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
                          (accept, decline, cancel), the blocked players (unblock), the add form by
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),

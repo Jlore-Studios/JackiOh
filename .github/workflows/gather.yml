@@ -1,5 +1,7 @@
 # The gather workflow (#1976, R1976000; training/gather.md): development games of each card patch as it
-# ships, played on the owner's PC and filed into production's card statistics as totals only.
+# ships, played on the owner's PC and filed into staging's card statistics as totals only: the
+# JackiOh-Staging project's, since production's holds live games alone (docs/deploy-cloudflare.md
+# section 8).
 #
 # A card change ships as a new patch (patches-ship.yml), and a changed card's figures start again on
 # it (R1367000). The learn lane's exports file a patch's games too (learn.yml, `import`), but one

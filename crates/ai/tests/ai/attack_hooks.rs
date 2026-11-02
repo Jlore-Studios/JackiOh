@@ -14,7 +14,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, register_cards};
+use super::support::{AI, HUMAN, register_cards, unit};
 
 const WASP: &str = "stinkyscape-091";
 const HORNET: &str = "stinkyscape-092";
@@ -57,14 +57,6 @@ fn prices_of(attack_hooks: Vec<AttackHookPrice>) -> Prices {
         attack_hooks,
         ..Prices::default()
     }
-}
-
-/// `player`'s unit of `def_id` on the field.
-fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
-    active_units_of(state, player)
-        .into_iter()
-        .find(|unit| unit.def_id == def_id)
-        .expect("the unit is on the field")
 }
 
 /// The price of `controller`'s `def_id`, which must be priced.

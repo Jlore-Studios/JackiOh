@@ -130,7 +130,7 @@ pub const ROOM_CODE_FORMAT: CodeFormat = CodeFormat {
 /// SPEC §11 R190: how many `X-Forwarded-For` entries, counted from the right, the deployment's own
 /// proxies wrote, when `TRUSTED_PROXY_HOPS` does not say. Zero: with no proxy in front (a local or
 /// E2E server) the header is whatever the caller wrote, and trusting it would let a caller choose its
-/// own per-IP bucket. A deployment behind a proxy says so explicitly (`render.yaml` sets 1).
+/// own per-IP bucket. A deployment behind a proxy says so explicitly (wrangler.jsonc sets 1).
 pub const DEFAULT_TRUSTED_PROXY_HOPS: usize = 0;
 /// R190: the most hops `TRUSTED_PROXY_HOPS` may name; anything above it is a misconfiguration.
 pub const MAX_TRUSTED_PROXY_HOPS: usize = 5;
@@ -201,7 +201,8 @@ pub const JWKS_FETCH_TIMEOUT_MS: i64 = 5_000;
 /// stale set; past it the token is refused until the key endpoint answers again.
 pub const JWKS_STALE_MAX_MS: i64 = 3_600_000;
 /// A request to this server that has not answered in this long is a network failure. Longer than the
-/// provider's, because Render's free tier takes about 50 s to wake a sleeping instance.
+/// provider's, because the first request after the server has slept starts its container, which
+/// migrates and reseeds before it listens (`release`).
 pub const API_REQUEST_TIMEOUT_SECONDS: i64 = 75;
 /// How long the gate's "Checking your account…" waits before it offers a way out and says why.
 pub const GATE_SLOW_NOTICE_SECONDS: i64 = 5;
@@ -228,7 +229,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-31/2026-10-31";
+pub const TERMS_VERSION: &str = "2026-10-31/2026-11-01";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -271,7 +272,7 @@ pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 /// (R1044000), so the detail serves only `stats-export` and the analysis notebooks; the record's id,
 /// source, mode, patch and time stay, so a second write of the same game is still refused.
 pub const GAME_RECORD_RAW_RETENTION_DAYS: i64 = 7;
-/// How often the retention purge runs. It also runs once at boot, since a free instance sleeps.
+/// How often the retention purge runs. It also runs once at boot, since the container sleeps when idle.
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 /// R1596000: seconds after a match ended before the retention loop files its missing game record
 /// again, so the filing that follows the result has long finished and is never raced.
@@ -301,8 +302,9 @@ pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
 /// `db/pg.rs`). Without this bound, a dead database would hold the probe instead of failing it.
 pub const READINESS_PROBE_TIMEOUT_MS: i64 = 2_000;
 /// How long `app::serve_until`'s drain may run after SIGTERM or Ctrl-C before it stops waiting
-/// and still exits 0. Under the 30 s that Render (and `docker stop -t 30` in
-/// `tests/deploy/rehearse.sh`) waits between SIGTERM and SIGKILL.
+/// and still exits 0. Under the 30 s that the Worker gives a container on an older image (apps/edge's
+/// `RETIRE_WAIT_MS`) and `docker stop -t 30` in `tests/deploy/rehearse.sh` gives, between SIGTERM and
+/// the kill.
 pub const SHUTDOWN_DRAIN_SECONDS: i64 = 20;
 /// How often the drain checks whether every match socket has finished.
 pub const SHUTDOWN_SOCKETS_POLL_MS: i64 = 50;
@@ -2560,7 +2562,20 @@ pub struct PackUnownedWeights {
 pub enum CosmeticTokenStep {
     Rare,
     Epic,
+    Legendary,
     CosmeticPack,
+}
+
+impl CosmeticTokenStep {
+    /// SPEC §14.5, R2728000: the cosmetic token bar's points this step takes to pay.
+    pub const fn bar_size(self) -> i64 {
+        match self {
+            Self::Rare => COSMETIC_TOKEN_BAR_SIZE_RARE,
+            Self::Epic => COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            Self::Legendary => COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+            Self::CosmeticPack => COSMETIC_TOKEN_BAR_SIZE_PACK,
+        }
+    }
 }
 
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
@@ -2631,11 +2646,29 @@ pub const PITY_MYTHIC_PACKS: usize = 30;
 /// SPEC §14.5, R1953000, R1999000: the points that fill the card token bar (#1953: 200). On any
 /// collection a card pack's slots add about 8.65 points under `CARD_TIER_WEIGHTS` (four slots at
 /// 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
-/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`).
+/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`). The cosmetic token bar takes a size of
+/// its own at each step of its cycle (`CosmeticTokenStep::bar_size`, R2728000).
 pub const CARD_TOKEN_BAR_SIZE: i64 = 200;
-/// SPEC §14.5, R1953000: the points that fill the cosmetic token bar (#1953: 200), the same points
-/// as the card token bar's, so likewise about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS` packs.
-pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 200;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Rare cosmetic token
+/// (#2728: 50), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_RARE: i64 = 50;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay an Epic cosmetic token
+/// (#2728: 75), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_EPIC: i64 = 75;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Legendary cosmetic token
+/// (#2728: 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_LEGENDARY: i64 = 100;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a cosmetic pack (#2728:
+/// 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_PACK: i64 = 100;
+// SPEC §14.5, R2728000: a step of no points would pay for ever
+// (`economy::tokens::settle_cosmetic_bar`).
+const _: () = assert!(
+    COSMETIC_TOKEN_BAR_SIZE_RARE > 0
+        && COSMETIC_TOKEN_BAR_SIZE_EPIC > 0
+        && COSMETIC_TOKEN_BAR_SIZE_LEGENDARY > 0
+        && COSMETIC_TOKEN_BAR_SIZE_PACK > 0
+);
 /// SPEC §14.5, R1953000, R1999000: the points each opened slot of a card pack adds to each token
 /// bar, whatever it grants, by the card rarity its slot rolled, pity's force included (#1953: 1,
 /// 2, 3, 5 and 10).
@@ -2660,16 +2693,27 @@ pub const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY: RarityPoints = RarityPoints {
 /// #1953's points and size: 23, `CARD_TOKEN_BAR_SIZE` over the mean points of a pack, rounded,
 /// held by `economy/math.rs`).
 pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 23;
-/// SPEC §14.5: the card packs the cosmetic token bar takes to fill, on average (#1953: 23, as the
-/// card token bar's).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS: usize = 23;
-/// SPEC §14.5: the steps the cosmetic token bar pays, in order, verbatim.
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Rare step, on
+/// average (#2728: 6, `COSMETIC_TOKEN_BAR_SIZE_RARE` over the mean points of a pack, rounded, held
+/// by `economy/math.rs`).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE: usize = 6;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Epic step, on
+/// average (#2728: 9).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC: usize = 9;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Legendary step, on
+/// average (#2728: 12).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY: usize = 12;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its cosmetic pack step,
+/// on average (#2728: 12).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK: usize = 12;
+/// SPEC §14.5, R2728000: the steps the cosmetic token bar pays, in order, verbatim (#2728), each at
+/// its own size (`CosmeticTokenStep::bar_size`).
 pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
     CosmeticTokenStep::Rare,
     CosmeticTokenStep::Epic,
+    CosmeticTokenStep::Legendary,
     CosmeticTokenStep::Rare,
     CosmeticTokenStep::Epic,
-    CosmeticTokenStep::Rare,
     CosmeticTokenStep::CosmeticPack,
 ];
 /// SPEC §14.6: a cosmetic pack's slots (#1333's table: 5), each rolling `COSMETIC_TIER_WEIGHTS`,

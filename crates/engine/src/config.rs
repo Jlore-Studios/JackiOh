@@ -558,6 +558,12 @@ pub const TUNE_BUFF_ANY_KEYWORDS: &[KeywordKind] = &[KeywordKind::Flashback];
 /// R2657005: the harmful keywords a Nerf's keyword row may add to a Unit, a Field Spell, a Trap or a
 /// Field Trap that lacks them, while it is in a hand.
 pub const TUNE_NERF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Crater];
+/// R2727000: the keywords a Buff's keyword row may add to a Unit, a Spell or a Field Spell that lacks them
+/// of its own while it is in a hand, after the row's other additions. Never to a Trap or a Field Trap.
+pub const TUNE_BUFF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Cloaked];
+/// R2727001: the harmful keywords a Buff's keyword row may also take off a card of any type that has them
+/// of its own while it is in a hand, beside `TUNE_BUFF_REMOVES`.
+pub const TUNE_BUFF_HAND_REMOVES: &[KeywordKind] = &[KeywordKind::Crater];
 /// R1748001: the keywords a Buff's keyword row may add to a Field Spell, in this order; R2436000 added
 /// Immutable after Indestructible.
 pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible, KeywordKind::Immutable];
