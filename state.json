@@ -13943,7 +13943,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-02T00:02:34Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:396d497a-1793606670",
+      "run_id": "41410446600",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-02T08:04:46Z",
       "stop_requested": false,
