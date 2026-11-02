@@ -12910,7 +12910,9 @@
         "bot/issue-2705"
       ],
       "pending_request": false,
+      "pr": 2821,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-11-02T05:03:45Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
@@ -12935,7 +12937,7 @@
         "mode": "fullsend",
         "onto": "bot/issue-2701"
       },
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "2702": {
       "action": "build",
