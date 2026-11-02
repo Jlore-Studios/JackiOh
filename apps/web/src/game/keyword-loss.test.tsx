@@ -2,9 +2,6 @@
 // `data-lost` beside `data-animating`, animations.css plays `jk-icon-pop-out` on it, the `keyword`
 // recipe plans arrows down and a void burst, and the cue plays `debuff`.
 
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,16 +14,8 @@ import Game from "./Game.tsx";
 import { keywordLossesFrom } from "./keywordLoss.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
-import { setReducedMotion } from "../test/setup.ts";
+import { readSheet, setReducedMotion } from "../test/setup.ts";
 import { must } from "../test/stubServer.ts";
-
-function readSheet(fromWeb: string): string {
-  for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
-    const path = resolve(process.cwd(), candidate);
-    if (existsSync(path)) return readFileSync(path, "utf8");
-  }
-  throw new Error(`${fromWeb} not found from ${process.cwd()}`);
-}
 
 const css = readSheet("src/game/animations.css");
 

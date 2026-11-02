@@ -38,6 +38,8 @@ pub mod rewards;
 pub mod roll;
 pub mod spend_slots;
 pub mod store;
+#[cfg(test)]
+mod test_support;
 pub mod tiers;
 pub mod tokens;
 pub mod track_rewards;

@@ -3840,5 +3840,69 @@
     "pr": 2673,
     "title": "patches ship: v0.5.10",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "42df8e376f9c1a5cb3f2e2af041b3a4efd75729d",
+    "pr": 2677,
+    "title": "Your Table adds 30 stats for Temporary, Brittle, Tradable, Freeze, Created cards and more",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "89f0a1b567c91a0402989bb8f79c63925700b5f3",
+    "pr": 2665,
+    "title": "bot: build pass 1 for #2646",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "fb1e762241d022e6ac879960431177c18c08ae52",
+    "pr": 2658,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-11-01",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "1dc9eef7f92160153849f434be31d6efae831923",
+    "pr": 2668,
+    "title": "bot: build pass 1 for #2660",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c9f76e178f5db3d1d89e8b3c76b408c8da95aa0b",
+    "pr": 2693,
+    "title": "the #2160 audit's decided dead code goes, and the docs it flagged say what the code does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "b13cef3496186b772629a692be0fc217ca8a0613",
+    "pr": 2695,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "ea2a5dcb51a0d7b74a73ba469a38bf6e880ad835",
+    "pr": 2697,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5a1d98d803dbde9f91b44811062d5961dff273b8",
+    "pr": 2699,
+    "title": "Block on an incoming friend request asks first, as Block on a friend does",
+    "kind": "app",
+    "player": "Blocking an incoming friend request now asks for confirmation first."
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "ff76fd6f4895aed536e4dc210970796ada5b0328",
+    "pr": 2698,
+    "title": "patches ship: v0.5.10b, v0.5.10c",
+    "kind": "app"
   }
 ]

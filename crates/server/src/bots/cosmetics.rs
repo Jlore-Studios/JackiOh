@@ -36,14 +36,12 @@ use crate::config::{
     BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_MIN_AGE_DAYS,
     BOT_COSMETIC_MIN_OWNERS, BOT_COSMETIC_PRIOR, BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
     BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS,
-    BOT_COSMETIC_SLOT_CHANGE_SHARE, CosmeticFit,
+    BOT_COSMETIC_SLOT_CHANGE_SHARE, CosmeticFit, MS_PER_DAY,
 };
 use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, owns};
 use crate::db::store::{BotDeck, BotRow, FrozenTrio};
 use crate::economy::store::{CardCosmetic, CardPicks, CosmeticOwners, FullArtPick, OwnedCosmetics};
 use crate::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots, setting_key};
-
-const MS_PER_DAY: i64 = 86_400_000;
 
 /// R1834005: what a bot may wear and what it wears (`bots.cosmetics`, migration 0061): its
 /// wardrobe, the cosmetics it holds past the starters, in the ledger's shape but never in the ledger;
@@ -86,11 +84,15 @@ pub fn fit_for(fits: &'static [CosmeticFit], age_days: i64) -> &'static Cosmetic
 /// R1834005: the non-starters a bot may own as of `now`, sorted: each held, where it is held, by at
 /// least `BOT_COSMETIC_MIN_OWNERS` people (`owners`, `economy_cosmetic_owners`), and first granted
 /// to one at least `BOT_COSMETIC_MIN_AGE_DAYS` before `now`. A cosmetic of no kind a loadout wears
-/// (a portrait) and one no grant dates are never eligible.
+/// (a portrait) and one no grant dates are never eligible, nor is a Jlorious one, which a bot,
+/// never Jlorious (R640000), could not have earned (R2755000).
 pub fn eligible(registry: &[Cosmetic], owners: &[CosmeticOwners], now: i64) -> Vec<Holding> {
     let shipped_by = now - BOT_COSMETIC_MIN_AGE_DAYS * MS_PER_DAY;
     let worn = |cosmetic: &Cosmetic| {
-        cosmetic.kind != CosmeticKind::Portrait && !cosmetic.default && !cosmetic.starter
+        cosmetic.kind != CosmeticKind::Portrait
+            && !cosmetic.default
+            && !cosmetic.starter
+            && !cosmetic.jlorious
     };
     let mut out: Vec<Holding> = owners
         .iter()

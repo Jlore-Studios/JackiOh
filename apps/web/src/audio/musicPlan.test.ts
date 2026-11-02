@@ -51,7 +51,7 @@ describe("R631 the music's priority stack", () => {
     expect(defaultTrack("lofi", 0, MANIFEST)).toBe("menu");
   });
 
-  it("R631 the shipped manifest gives every station two in-game tracks to rotate", () => {
+  it("R631 the shipped manifest gives every station at least two in-game tracks to rotate", () => {
     for (const station of ["tavern", "edm", "lofi", "epic"] as const) {
       expect(defaultTrack(station, 0)).toBe(`${station}-1`);
       expect(defaultTrack(station, 1)).toBe(`${station}-2`);

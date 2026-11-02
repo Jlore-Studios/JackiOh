@@ -3,11 +3,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  AUTH_MESSAGES,
   AUTH_UNCONFIGURED_MESSAGE,
   AuthError,
   SIGN_IN_FAILED_MESSAGE,
   SIGN_UP_FAILED_MESSAGE,
   authConfig,
+  authMessageOf,
   signIn,
   signUp,
 } from "./auth.ts";
@@ -34,6 +36,14 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+});
+
+describe("authMessageOf", () => {
+  it("shows an AuthError's own sentence and the service sentence for anything else (#2160)", () => {
+    expect(authMessageOf(new AuthError("sessionEnded"))).toBe(AUTH_MESSAGES.sessionEnded);
+    expect(authMessageOf(new Error("Failed to fetch"))).toBe(AUTH_MESSAGES.service);
+    expect(authMessageOf("offline")).toBe(AUTH_MESSAGES.service);
+  });
 });
 
 describe("authConfig", () => {

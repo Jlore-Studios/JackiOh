@@ -559,9 +559,11 @@ pub async fn buy_chase_once(
     if bar < CHASE_SHARD_PACKS {
         return Err(conflict("the Chase Shard bar is not full"));
     }
-    if !cosmetic.rarity.is_chase() {
+    // The registry's chase mark, a Legendary or Mythic cosmetic's but a Jlorious one's, which only
+    // reaching Jlorious grants (R2755000).
+    if !cosmetic.chase {
         return Err(conflict(
-            "the Chase Shard bar buys only a Legendary or Mythic cosmetic",
+            "the Chase Shard bar buys only a chase: a Legendary or Mythic cosmetic, but the Jlorious one",
         ));
     }
     if !choice.fits {
@@ -681,6 +683,7 @@ mod tests {
     use crate::cosmetics::CosmeticKind;
     use crate::cosmetics::CosmeticRarity::{Common, Epic, Legendary, Mythic, Rare};
     use crate::economy::store::CardCosmetic;
+    use crate::economy::test_support::{foil, four_foils};
     use crate::economy::tiers::RATE_TOLERANCE;
     use jackioh_engine::wire::PrintedRarity;
 
@@ -704,12 +707,9 @@ mod tests {
             default: false,
             starter: false,
             chase: rarity.is_chase(),
+            jlorious: false,
             card: None,
         }
-    }
-
-    fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
-        cosmetic(id, CosmeticKind::Foil, rarity)
     }
 
     /// An account cosmetic a pack may drop: a playmat.
@@ -722,16 +722,6 @@ mod tests {
             card: Some(card_id.to_owned()),
             ..cosmetic(id, CosmeticKind::FullArt, rarity)
         }
-    }
-
-    /// One droppable foil of each cosmetic rarity the registry has.
-    fn four_foils() -> Vec<Cosmetic> {
-        vec![
-            foil("foil-common", CosmeticRarity::Common),
-            foil("foil-rare", CosmeticRarity::Rare),
-            foil("foil-epic", CosmeticRarity::Epic),
-            foil("foil-legendary", CosmeticRarity::Legendary),
-        ]
     }
 
     fn pool_of(count: usize) -> Vec<PoolCard> {

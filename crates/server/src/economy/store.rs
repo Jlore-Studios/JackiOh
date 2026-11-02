@@ -54,7 +54,7 @@ pub enum JloreReason {
 
 /// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, and a pack
 /// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5), the Chase Shard bar
-/// buying (§14.6) and the launch's reset (§14.12).
+/// buying (§14.6), the launch's reset (§14.12) and reaching Jlorious (R2755000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EconomyReason {
@@ -70,6 +70,9 @@ pub enum EconomyReason {
     /// Migration 0050's reset of every existing account's economy (R1310002), and migration
     /// 0057's grant of the portraits (R1827000); no server path writes it.
     Launch,
+    /// R2755000: the Jlorious card back, granted by the rated game that left its person Jlorious,
+    /// or by migration 0074 to each person who had held Jlorious before.
+    Jlorious,
 }
 
 /// What an inventory row counts (§14.3, §14.5, §14.6). A set's card pack is keyed by its set, the
@@ -972,30 +975,10 @@ mod pg {
     };
     use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
-    use crate::db::pg::PgTx;
+    // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`), so it
+    // runs as `service_role` with `request.jwt.claim.sub` the profile the call is about.
+    use crate::db::pg::{PgTx, ms_of, run_as};
     use crate::db::store::StoreError;
-
-    /// `db::pg`'s `SESSION_SQL` and acting role: every method re-stamps its subject first, so it
-    /// runs as `service_role` with `request.jwt.claim.sub` the profile the call is about.
-    const SESSION_SQL: &str =
-        "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
-    const ACTING_ROLE: &str = "service_role";
-
-    /// Nanoseconds in a millisecond.
-    const NANOS_PER_MS: i128 = 1_000_000;
-
-    async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
-        sqlx::query(SESSION_SQL)
-            .bind(ACTING_ROLE)
-            .bind(subject.unwrap_or(""))
-            .execute(&mut **t)
-            .await?;
-        Ok(())
-    }
-
-    fn ms_of(value: OffsetDateTime) -> i64 {
-        (value.unix_timestamp_nanos() / NANOS_PER_MS) as i64
-    }
 
     fn at_of(row: &PgRow) -> Result<i64, StoreError> {
         Ok(ms_of(row.try_get("at")?))

@@ -1183,6 +1183,11 @@ export async function putPlayerSettings(
 
 export type QueueMode = "bo1" | "bo3" | "random";
 
+/** Whether an untrusted value (a stored pick, a link, a server answer) names a queue mode. */
+export function isQueueMode(value: unknown): value is QueueMode {
+  return value === "bo1" || value === "bo3" || value === "random";
+}
+
 /**
  * What a queue ticket or a room is made with: a deck, a trio, or nothing at all. All Random's
  * `leanSet` is the player's "More cards from" pick for their own dealt deck (R1372, R924000), sent
@@ -1270,7 +1275,7 @@ export function roomModeOf(error: unknown): QueueMode | null {
   const details = error.details;
   if (typeof details !== "object" || details === null) return null;
   const mode = (details as { mode?: unknown }).mode;
-  return mode === "bo1" || mode === "bo3" || mode === "random" ? mode : null;
+  return isQueueMode(mode) ? mode : null;
 }
 
 // ---------------------------------------------------------------------------------------------

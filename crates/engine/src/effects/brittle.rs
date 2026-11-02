@@ -113,9 +113,7 @@ fn write_count(
     card: &CardInstance,
     change: impl FnOnce(&GameState, &mut CardInstance),
 ) {
-    let mut live = find_instance(ctx.state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone());
+    let mut live = crate::zones::live_or(ctx.state, card);
     change(ctx.state, &mut live);
     if let Some(stored) = find_instance_mut(&mut *ctx.state, &card.id) {
         stored.brittle = live.brittle;

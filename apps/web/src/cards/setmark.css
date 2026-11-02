@@ -67,3 +67,20 @@
     display: none;
   }
 }
+
+/* R2718000: the set's watermark (setMark.ts), centred in the rules box. The box is a stacking
+   context (cards.css), so -1 lays it over the parchment and under every word; it hides with the
+   box on a small face, takes no pointer and never moves. 88% is WATERMARK_SIZE_PCT. */
+.cf .cf-watermark {
+  position: absolute;
+  z-index: -1;
+  top: 6%;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 88%;
+  max-width: none;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}

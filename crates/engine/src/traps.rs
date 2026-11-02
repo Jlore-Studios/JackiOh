@@ -299,9 +299,7 @@ pub fn is_spent(state: &GameState, trap: &CardInstance) -> bool {
 /// R61 makes this unconditional: a trap that fired is consumed whether or not its effects achieved
 /// anything, so the caller never asks what the effect list managed to do.
 pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
-    let mut card = find_instance(sink.state, &instance.id)
-        .cloned()
-        .unwrap_or_else(|| instance.clone());
+    let mut card = crate::zones::live_or(sink.state, instance);
     card.face_up = Some(true);
     if let Some(live) = find_instance_mut(sink.state, &instance.id) {
         live.face_up = Some(true);
@@ -401,8 +399,9 @@ pub fn fire_trap(
     // R154: the zone is read before the trap resolves, because firing it can move the card — a Trap
     // reaches its owner's graveyard on consumption and would then have no slot to report.
     let at = crate::zones::slot_of(sink.state, trap);
-    // `controller` names the seat that reads the trap's identity (R154), and a trap stolen since the
-    // event is face-down on its new controller's side: the flip is announced to the seat it sits on.
+    // `controller` is the seat the trap sits on (R154); its identity follows R97 on both seats
+    // (R2734000). A trap stolen since the event is face-down on its new controller's side: the flip is
+    // announced on the seat it sits on.
     // R2657001: a Field Trap already face-up reveals nothing as it fires again (`again`).
     sink.events.push(GameEvent::TrapFired {
         instance_id: trap.id.clone(),

@@ -809,9 +809,7 @@ fn tune_once_with(
     matches: bool,
     with_cost: bool,
 ) {
-    let card = find_instance(ctx.state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone());
+    let card = crate::zones::live_or(ctx.state, card);
     // R177: who could not read the card where it changed, judged before the change moves anything.
     let hidden_from = unreadable_by(ctx.state, &card);
     // R1160: the card's own multiplier scales this one application.

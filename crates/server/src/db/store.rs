@@ -1605,22 +1605,6 @@ pub struct StartMatchInput {
 
 // The store: Db (a pool or the fake's tables) and Tx (one transaction)
 
-/// Migration 0001 §8, and the same closing note in 0002-0009: `service_role` is the role the API
-/// server and the match actor hold. It is the only role granted EXECUTE on
-/// `app.redeem_invite_code`, `app.upsert_deck`, `app.append_match_action`, `app.claim_ticket_pair`
-/// and the rest, so running as it is not a formality — a call that gets it wrong fails with
-/// `insufficient_privilege` instead of succeeding because the connection happened to own the table.
-const ACTING_ROLE: &str = "service_role";
-
-/// One statement, two `SET LOCAL`s. `set_config(name, value, true)` is `SET LOCAL name = value`,
-/// and unlike `SET LOCAL` it takes parameters, so the profile id is bound rather than interpolated.
-/// `request.jwt.claim.sub` is the GUC `auth.uid()` reads (`tests/sql/00_supabase_stub.sql`).
-/// `service_role` bypasses RLS, but a policy, trigger or SECURITY INVOKER helper that consults the
-/// caller then sees the right profile. `SET LOCAL` is a silent no-op outside a transaction, so
-/// `Db::begin` is the only way to a `Tx`: `BEGIN` first, and no SQL runs outside a `Tx`.
-const SESSION_SQL: &str =
-    "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
-
 /// The store: Postgres behind a pool, or the fake's tables behind one lock (unit tests and
 /// `E2E=1`). Cloning shares the pool or the tables.
 #[derive(Clone)]
@@ -1642,22 +1626,16 @@ impl Db {
         Db::Fake(Arc::new(tokio::sync::Mutex::new(fake::FakeData::default())))
     }
 
-    /// Opens one transaction. Postgres: `BEGIN`, then the role switch to `service_role` and
-    /// `request.jwt.claim.sub` set to `claim_sub` — the profile the call is about, or `""` for the
-    /// calls that are about nobody (`tickets_list_open`, `matches_live`, the breaker's
-    /// `codes_count_failures`) — in the one `SESSION_SQL` statement. The fake:
-    /// takes the tables' lock and a snapshot to restore if the transaction is dropped uncommitted.
+    /// Opens one transaction. Postgres (`pg::begin`): `BEGIN`, then the role switch to
+    /// `service_role` and `request.jwt.claim.sub` set to `claim_sub` — the profile the call is
+    /// about, or `""` for the calls that are about nobody (`tickets_list_open`, `matches_live`, the
+    /// breaker's `codes_count_failures`) — in `db::pg`'s one `SESSION_SQL` statement. `SET LOCAL` is
+    /// a silent no-op outside a transaction, so this is the only way to a `Tx`: `BEGIN` first, and
+    /// no SQL runs outside a `Tx`. The fake: takes the tables' lock and a snapshot to restore if
+    /// the transaction is dropped uncommitted.
     pub async fn begin(&self, claim_sub: Option<&str>) -> Result<Tx<'_>, StoreError> {
         match self {
-            Db::Pg(pool) => {
-                let mut t = pool.begin().await?;
-                sqlx::query(SESSION_SQL)
-                    .bind(ACTING_ROLE)
-                    .bind(claim_sub.unwrap_or(""))
-                    .execute(&mut *t)
-                    .await?;
-                Ok(Tx::Pg(t))
-            }
+            Db::Pg(pool) => Ok(Tx::Pg(pg::begin(pool, claim_sub).await?)),
             Db::Fake(data) => Ok(Tx::Fake(fake::begin(data).await)),
         }
     }
@@ -1703,10 +1681,7 @@ impl Tx<'_> {
     /// Ends the transaction, keeping every write in it.
     pub async fn commit(self) -> Result<(), StoreError> {
         match self {
-            Tx::Pg(t) => {
-                t.commit().await?;
-                Ok(())
-            }
+            Tx::Pg(t) => pg::commit(t).await,
             Tx::Fake(f) => {
                 fake::commit(f);
                 Ok(())
@@ -3233,8 +3208,8 @@ impl Tx<'_> {
 // ---- Social: watching and shared replays (#939, #940) ----
 //
 // Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and
-// sharing a replay with one (B52) read and write them. Its `profiles.allow_spectators` is read no
-// longer (R2615000).
+// sharing a replay with one (B52) read and write them. Friends may always watch (R2615000): migration
+// 0073 drops 0038's watching setting from `profiles`.
 
 /// B52: one replay share (`public.replay_shares`): `sharer`, who held a seat in the finished match
 /// `match_id`, shares its replay with `friend`.

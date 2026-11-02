@@ -65,15 +65,12 @@ type Login struct {
 	Files   *pyjson.Object    // default: field(default_factory=dict)
 	Initial map[string]string // default: field(default_factory=dict, repr=False)
 	Secret  string            // default: field(default="", repr=False)
-	// Source is where the login came from: `secret`, `vault`, or `api key`.
-	Source string // default: "secret"
 }
 
-// newLogin is Login(provider, cli, home, env, secret=secret, source=source), its other fields at
-// their defaults.
-func newLogin(provider, cli, home string, env map[string]string, secret, source string) *Login {
+// newLogin is Login(provider, cli, home, env, secret=secret), its other fields at their defaults.
+func newLogin(provider, cli, home string, env map[string]string, secret string) *Login {
 	return &Login{Provider: provider, CLI: cli, Home: home, Env: env, Files: pyjson.New(),
-		Initial: map[string]string{}, Secret: secret, Source: source}
+		Initial: map[string]string{}, Secret: secret}
 }
 
 // jsonText is _json_text: the secret as JSON text: as pasted, or base64-decoded. False when it is
@@ -178,7 +175,7 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 		for k, v := range provider.Env {
 			env[k] = v
 		}
-		return newLogin(provider.ID, provider.CLI, purePath(home), env, "", "machine")
+		return newLogin(provider.ID, provider.CLI, purePath(home), env, "")
 	}
 	secret = strings.TrimSpace(secret)
 	if secret == "" {
@@ -192,7 +189,7 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 	for k, v := range provider.Env {
 		env[k] = v
 	}
-	login := newLogin(provider.ID, provider.CLI, home, env, secret, "secret")
+	login := newLogin(provider.ID, provider.CLI, home, env, secret)
 	saved := map[string]string{}
 	var opened *pyjson.Object
 	if vaultText != "" {
@@ -230,7 +227,6 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 		} else {
 			// Not a login file: an API key, which Meta bills per token, not on the subscription.
 			env["META_API_KEY"] = secret
-			login.Source = "api key"
 		}
 	} else {
 		herr.Raise(&herr.LoginError{Msg: fmt.Sprintf(
@@ -246,9 +242,7 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 // Install is _install.
 func Install(login *Login, name string, path string, saved map[string]string, secret string) {
 	text := saved[name]
-	if text != "" {
-		login.Source = "vault"
-	} else {
+	if text == "" {
 		var ok bool
 		if text, ok = jsonText(secret); !ok {
 			herr.Raise(&herr.LoginError{Msg: fmt.Sprintf("`%s`'s secret is not %s (as JSON, or base64 of it)",
