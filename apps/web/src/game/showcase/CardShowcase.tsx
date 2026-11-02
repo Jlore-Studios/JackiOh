@@ -289,6 +289,8 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   useLayoutEffect(() => {
     if (queue === undefined) return undefined;
     const onSignal = (signal: RunnerSignal): void => {
+      // R2785000: a skipped set piece starts the next entry, whose `start` releases what waits for it.
+      if (signal.kind === "skip") return;
       if (signal.kind === "start") {
         release((event) => signal.entry.events.some((played) => sameEvent(played, event)));
         refreshGate();

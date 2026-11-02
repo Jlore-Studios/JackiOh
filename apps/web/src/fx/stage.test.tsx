@@ -572,6 +572,32 @@ describe("B47 concealing in the page", () => {
     h.director.clear();
     expect(card.hasAttribute("data-fx-concealed")).toBe(false);
   });
+
+  it("R2785000 cut() lands a waiting conceal now, keeps the stand-in and the concealment, and drops every other effect", () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const card = boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    const h = directorHarness();
+    h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    h.director.play(stage([{ type: "destroyed", instanceId: ENEMY, owner: "p2" } as GameEvent], 350));
+    h.director.play([{ kind: "splat", tone: "heal", amount: 1, at: tid(`card-${ENEMY}`), delayMs: 0, durationMs: 500 }]);
+    h.frameAt(1016);
+    expect(h.root.querySelector('[data-fx="splat"]')).not.toBeNull();
+    expect(card.hasAttribute("data-fx-concealed")).toBe(false);
+
+    // A skipped set piece: the board stands as the entry would leave it, until it shows the next view.
+    h.director.cut();
+    expect(h.root.querySelector('[data-fx="splat"]')).toBeNull();
+    expect(h.root.querySelector('[data-fx="hold"]')).not.toBeNull();
+    expect(hand.getAttribute("data-fx-concealed")).toBe("now");
+    expect(card.getAttribute("data-fx-concealed")).toBe("after");
+    h.frameAt(2000);
+    expect(h.root.querySelector('[data-fx="splat"]')).toBeNull();
+    h.director.release();
+    expect(hand.hasAttribute("data-fx-concealed")).toBe(false);
+    expect(card.hasAttribute("data-fx-concealed")).toBe(false);
+  });
 });
 
 describe("B48 aiming the lunge in the page", () => {

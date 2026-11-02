@@ -306,9 +306,10 @@ export const FX_TEXT = {
 ```ts
 export type FxIntensity = "off" | "low" | "normal" | "high";
 export type FxMotion = "system" | "reduce";
-export type FxSettings = { speed: number; intensity: FxIntensity; motion: FxMotion };
+export type FxBigMoments = "full" | "short" | "off"; // R2785000: how long a set piece holds the game
+export type FxSettings = { speed: number; intensity: FxIntensity; motion: FxMotion; bigMoments: FxBigMoments };
 
-export const DEFAULT_FX_SETTINGS: FxSettings;          // { speed: 1, intensity: "normal", motion: "system" }
+export const DEFAULT_FX_SETTINGS: FxSettings;          // { speed: 1, intensity: "normal", motion: "system", bigMoments: "full" }
 export function normalizeSpeed(speed: unknown): number; // non-finite → 1; clamps to [FX_SPEED_MIN, FX_SPEED_MAX]
 export function normalizeFxSettings(raw: unknown): FxSettings; // field by field; unknown values → defaults
 export function loadFxSettings(storage?: Storage | null): FxSettings;   // reads FX_SETTINGS_KEY in try/catch
@@ -353,12 +354,15 @@ export type RunnerSignal =
   | { kind: "start"; entry: AnimationEntry } // an entry went in flight (durationMs > 0 only)
   | { kind: "idle" }                         // emitted each time the pump fires onSettled
   | { kind: "drain"; entries: readonly AnimationEntry[] } // drain() ran; the in-flight entry, then the waiting ones, it cut short
+  | { kind: "skip"; entry: AnimationEntry }  // R2785000: skip() ended this set piece, which was in flight
   | { kind: "reset" };                       // reset() ran
 
 export type AnimationQueue = {
   /* …every existing member unchanged… */
   /** Lifecycle signals for the effects layer. Synchronous; returns its own unsubscribe. */
   subscribeSignals(listener: (signal: RunnerSignal) => void): () => void;
+  /** R2785000: ends the set piece in flight at once and starts the next entry; false, doing nothing, when none holds. */
+  skip(): boolean;
 };
 
 export type AnimationQueueOptions = {
@@ -384,6 +388,7 @@ Runner semantics:
   - Run `fitBudget` against `burstBudgetMs / normalizeSpeed(s.speed)`, then `pump()`.
 - In `pump`: when an entry becomes `current`, emit `start` right after `notify()`. When the queue runs dry and `settle()` fires `onSettled`, emit `idle` after it.
 - `drain()` emits `drain` after its `notify`/`settle`. `reset()` emits `reset`.
+- R2785000: `skip()` ends a set piece in flight. It bumps the epoch, so the entry's timer does nothing, emits `skip` and pumps the next entry, as the timer would have; the FX layer cuts the set piece's effects (`director.cut()`). It returns false and does nothing when the entry in flight is no set piece.
 - `schedule` is still called exactly once per non-zero entry. The FX layer never calls it.
 
 Every `ANIMATIONS` row keeps its `animation`, `durationMs`, `testid` and `target` byte-for-byte and adds

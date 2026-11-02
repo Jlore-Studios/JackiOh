@@ -369,8 +369,8 @@ const cast: Recipe = (event, p) => {
   const paired = p.entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
   if (paired) return [];
   const at = anchor(p.tgt);
-  // R2722001: a Mythic's play bursts once its takeover's hold is over, as its card moves.
-  const wait = p.entry.entrance?.holdMs ?? 0;
+  // R2722001: a Mythic's play bursts once its takeover's hold is over, as its card moves (a set piece's, R2785000).
+  const wait = p.entry.setPiece?.holdMs ?? 0;
   // Issue #124: a card the viewer reads flares in its family's look as well; R2722002: never as it is
   // set face-down, which keys nothing on the card.
   const look = event.formerId === undefined ? lookOf(factsOf(event.defId, p.env)) : undefined;
@@ -384,8 +384,8 @@ const cast: Recipe = (event, p) => {
   return [burst(p.env.intensity, base, at, "point", wait, "castOpponent"), ...accent];
 };
 
-/** #185: when a Unit hits the table, after the slam's anticipation and a takeover's hold (R2722001). */
-export function slamLandMs(entry: Pick<AnimationEntry, "slam" | "entrance">, D: number): number {
+/** #185: when a Unit hits the table, after the slam's anticipation and a set piece's hold (R2722001, R2785000). */
+export function slamLandMs(entry: Pick<AnimationEntry, "slam" | "setPiece">, D: number): number {
   return entranceLandMs(entry, D);
 }
 

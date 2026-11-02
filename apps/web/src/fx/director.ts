@@ -63,6 +63,12 @@ export type FxDirector = {
   play(cues: readonly FxCue[]): void;
   /** Removes all effects and resets the shake sink. */
   clear(): void;
+  /**
+   * R2785000: a skipped set piece cuts to its end. Its stage cues still waiting land now, so the board
+   * stands as the entry would leave it, and every other effect goes at once, the shake with them; the
+   * stand-ins and concealment stay until the board shows the next view, as ever (R200).
+   */
+  cut(): void;
   /** Removes a pending or active turn banner and its rays once the player acts. */
   dismissBanner(): void;
   /** Clears stand-ins, concealment and lunges for a newer board view (B46–B48). */
@@ -508,11 +514,11 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     return hasWork();
   };
 
-  const clear = (): void => {
+  /** Drops every effect but the stage's: the pending cues, the mounted ones, the canvas and the shake. */
+  const dropEffects = (): void => {
     pending = [];
     for (const item of mounted) item.effect.remove();
     mounted = [];
-    releaseStaged();
     particles.clear();
     canvasFx.clear();
     shake.reset();
@@ -520,6 +526,11 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     shakeSink.clear();
     surface?.clear();
     painted = false;
+  };
+
+  const clear = (): void => {
+    dropEffects();
+    releaseStaged();
   };
 
   const loop = createFrameLoop({
@@ -554,6 +565,14 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       if (added > 0) loop.wake();
     },
     clear,
+    cut(): void {
+      if (disposed) return;
+      const at = now();
+      const landing = pending.flatMap((item) => (isStageCue(item.cue) ? [item.cue] : []));
+      dropEffects();
+      for (const cue of landing) stage(cue, at, at);
+      if (hasWork()) loop.wake();
+    },
     dismissBanner(): void {
       pending = pending.filter((item) => item.cue.kind !== "banner");
       if (!mounted.some((item) => item.kind === "banner")) return;

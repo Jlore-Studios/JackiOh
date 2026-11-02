@@ -1,13 +1,14 @@
 // R2722001: a Mythic's entrance on the board. With motion, the entry in flight holds for the takeover
-// (`data-takeover`, `--takeover-hold`); under Reduce motion there is no hold, no shake and no flash,
-// and a still card stands over the board for TAKEOVER_STILL_MS instead.
+// (`data-takeover`, and since R2785000 its set piece's `data-set-piece` and `--set-piece-hold`); under
+// Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
+// TAKEOVER_STILL_MS instead.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TAKEOVER_HOLD_MS } from "./animations.ts";
+import { TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
@@ -50,7 +51,8 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     playOut(ZEPHRYS);
     const game = screen.getByTestId("game");
     expect(game).toHaveAttribute("data-takeover", "mythic");
-    expect(game.style.getPropertyValue("--takeover-hold")).toBe(`${String(TAKEOVER_HOLD_MS)}ms`);
+    expect(game).toHaveAttribute("data-set-piece", TAKEOVER_SET_PIECE);
+    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(TAKEOVER_HOLD_MS)}ms`);
     expect(screen.queryByTestId("takeover-still")).toBeNull();
   });
 

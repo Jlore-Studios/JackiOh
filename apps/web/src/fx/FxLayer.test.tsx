@@ -6,7 +6,7 @@ import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ANIMATIONS, BURST_BUDGET_MS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
+import { ANIMATIONS, BURST_BUDGET_MS, SET_PIECE_HOLD_MS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
@@ -315,6 +315,46 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     expect(m.fxDom()?.childElementCount).toBe(0);
     fx.pump(2_000);
     expect(m.fxDom()?.childElementCount).toBe(0);
+  });
+
+  it("R2785000 a skip cuts the set piece's effects at once and the next entry plays", () => {
+    const sched = fakeSchedule();
+    // The fixture set piece: the action's first hit (one per action, so the second is a plain entry).
+    const queue = createAnimationQueue({
+      schedule: sched.schedule,
+      reducedMotion: false,
+      setPieceOf: (entry) => (entry.type === "damage" ? { key: "fixture", holdMs: SET_PIECE_HOLD_MS } : null),
+    });
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fx);
+
+    act(() => queue.enqueue([HIT, HIT], view));
+    expect(queue.inFlight()?.setPiece?.key).toBe("fixture");
+    // The hold is a wait before the motion, not a slower motion.
+    expect(m.squeeze()).toBe("1.000");
+    fx.pump(50);
+    expect(m.fxDom()?.childElementCount ?? 0).toBeGreaterThan(0);
+
+    let skipped = false;
+    act(() => {
+      skipped = queue.skip();
+    });
+    expect(skipped).toBe(true);
+    // Nothing of the set piece is left on screen, and the next hit is in flight with its own squeeze.
+    expect(m.fxDom()?.childElementCount).toBe(0);
+    expect(fx.shakes.at(-1)).toBe("clear");
+    expect(queue.inFlight()?.setPiece).toBeUndefined();
+    expect(queue.inFlight()?.type).toBe("damage");
+    expect(m.squeeze()).toBe(((queue.inFlight()?.durationMs ?? 0) / ANIMATIONS.damage.durationMs).toFixed(3));
+    fx.pump(50);
+    expect(m.fxDom()?.childElementCount ?? 0).toBeGreaterThan(0);
+    // The skipped entry's timer finds nothing to end; the hit's own ends the burst.
+    act(() => sched.tick());
+    expect(queue.inFlight()?.type).toBe("damage");
+    act(() => sched.tick());
+    expect(queue.idle()).toBe(true);
+    expect(m.squeeze()).toBe("");
   });
 
   it("B36 reset() removes the squeeze and every effect on screen", () => {
