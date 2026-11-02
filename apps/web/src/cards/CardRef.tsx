@@ -9,7 +9,7 @@ import type { CardDef } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
 import { FACE_ASPECT, REF_HOVER_DELAY_MS, REF_TOOLTIP_HEIGHT_PX } from "./constants.ts";
-import { placePreview, type Rect } from "./inspect/placement.ts";
+import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
 import { faceModel } from "./model.ts";
 import { RefsInteractive, useRefsInteractive } from "./refContext.tsx";
 
@@ -20,11 +20,6 @@ export const REF_TOOLTIP_TESTID = "card-ref-tooltip";
 type Timer = ReturnType<typeof setTimeout>;
 
 type Press = { touch: boolean; wasOpen: boolean };
-
-function rectOf(element: Element): Rect {
-  const box = element.getBoundingClientRect();
-  return { left: box.left, top: box.top, width: box.width, height: box.height };
-}
 
 function RefTooltip({ id, def, radiant, anchor }: { id: string; def: CardDef; radiant: boolean; anchor: Rect }): ReactElement {
   const height = Math.min(REF_TOOLTIP_HEIGHT_PX, window.innerHeight);

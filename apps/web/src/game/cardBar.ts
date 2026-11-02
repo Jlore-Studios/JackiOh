@@ -1,20 +1,19 @@
 // A small bar of controls over the board spot the pointer or the focus is on (#936 B62, R1838000):
-// what the Duos card bar (duos/CardActions.tsx, its ping wheel and pass control) and the Trade
-// control (game/TradeControl.tsx) share. Nothing here is a rule: it says which spot is pointed at and
-// where its element sits, and the caller decides what the bar offers from the view and `legal`.
+// what the Duos card bar (duos/CardActions.tsx) and the Trade control (game/TradeControl.tsx) share.
+// Nothing here is a rule: it says which spot is pointed at and where its element sits, and the caller
+// decides what the bar offers from the view and `legal`.
 //
 // THE FOCUS. Pointing at a hero, a zone or a hand card (a mouse over it, a tap on it, the keyboard's
 // focus on it) puts the bar on it. It stays `graceMs` after the pointer leaves its card, so the
 // pointer can reach it, and goes on Escape and on a press elsewhere; `close` takes it off after a pick.
-// Nothing hovers on a phone, so a tap's bar stays until the next press.
 //
 // THE BOXES. The bar and anything else laid over the board sits at the box of the element the board
-// draws for a spot (`duos/spots.ts`), re-measured every frame while any is up, since cards move as the
-// board animates.
+// draws for a spot (`duos/spots.ts`), re-measured every frame since cards move as the board animates.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { sameSpot, spotOfElement, type BoardSpot } from "../duos/spots.ts";
+import { testidSelector } from "./contract.ts";
 
 export type Box = { left: number; top: number; width: number; height: number };
 
@@ -38,11 +37,6 @@ function sameBoxes(a: ReadonlyMap<string, Box>, b: ReadonlyMap<string, Box>): bo
     }
   }
   return true;
-}
-
-/** `[data-testid="…"]` for an id read off the board, quoted as DragLayer quotes it. */
-function byTestid(id: string): string {
-  return `[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`;
 }
 
 /**
@@ -70,7 +64,7 @@ export function useBoxes(
         const from = origin === "host" ? host.getBoundingClientRect() : { left: 0, top: 0 };
         const next = new Map<string, Box>();
         for (const id of ids) {
-          const element = host.querySelector(byTestid(id));
+          const element = host.querySelector(testidSelector(id));
           if (element === null) continue;
           const rect = element.getBoundingClientRect();
           next.set(id, { left: rect.left - from.left, top: rect.top - from.top, width: rect.width, height: rect.height });

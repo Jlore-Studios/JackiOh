@@ -37,10 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #145 Fortify Flesh — SPEC §8.10 row S 145, BUILD M12 row S 145: "its caster's hero's Armor rises
-// by 3, 4 or 5, each seen over the seeds, and stays on later turns: a hit of 6 then deals 1 to 3;
-// it stacks with Armor already there; least and most read through `param()`; radiant 3 to 7 with
-// Lucky 1: two rolls, the higher kept" (R1867008).
+// S #145 Fortify Flesh — SPEC §8.10 row S 145, BUILD M12 row S 145 (R1867008).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -58,7 +55,6 @@ mod tests {
         s.state().players[player].hero.armor
     }
 
-    /// A play of one Fortify from `hand` over `seed`; the Armor gained and the draws it took.
     fn gained(seed: &str, hand: Value) -> (i32, u32) {
         crate::register_all();
         let mut s = scenario(json!({
@@ -104,8 +100,6 @@ mod tests {
             let armor = armor_of(&s, P1);
             assert!((5..=7).contains(&armor), "2 stacked with a roll of 3 to 5: {armor}");
 
-            // The play spends all 4 mana, so with nothing meaningful left the harness already
-            // handed the turn to p2: the 6-Attack hits on that later turn, reduced by the Armor.
             let before = s.state().players.p1.hero.health;
             s.attack(&hammer.id, "hero");
             let dealt = before - s.state().players.p1.hero.health;
@@ -151,7 +145,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// A Radiant play over `seed`; the Armor gained and the draws it took.
         fn radiant_gained(seed: &str) -> (i32, u32) {
             gained(seed, json!([{ "def": FORTIFY, "radiant": true }, FILLER]))
         }
@@ -174,7 +167,6 @@ mod tests {
                 let (plain, _) =
                     gained(&format!("fortify-paired-{seed}"), json!([FORTIFY, FILLER]));
                 let (lucky, _) = radiant_gained(&format!("fortify-paired-{seed}"));
-                // Same first roll, the Radiant face keeping the higher of its two.
                 assert!(lucky >= plain, "radiant {lucky} against base {plain}");
             }
         }

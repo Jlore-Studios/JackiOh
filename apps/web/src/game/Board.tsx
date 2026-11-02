@@ -1,36 +1,11 @@
-// The board (BUILD M5-T1): five lanes as columns, two seats, two hands, the control bar and the
-// log — all of it drawn from one `PlayerView` (CLAUDE.md rule 7, SPEC §10.8).
-//
-// `viewFor` has already oriented the view, so the DOM speaks in "you" and "opponent" and the
-// board never has to know which seat is which. Nothing here decides anything: every clickable
-// element takes `data-legal` from `props.highlight.legal` (built by `actions.ts` from the
-// engine's `legalActions`) and fires `props.onClick` only when that says true (or, R979000, to
-// show the reason a hand card of yours cannot be played, which sends nothing). With the default
-// `NO_HIGHLIGHT` the whole board is greyed out, which is the honest default for "the client has
-// not been told what is legal".
-//
-// Polish task 7 (docs/polish/7-mobile-ux.md S6, S11): the green glow is `data-glow`, written from
-// `highlight.glow` (a subset of `legal`); `data-legal` stays the only click gate. The board reads
-// two settings: `dragToPlay` becomes `data-drag` on the root (drag.css keys touch-action off it),
-// and `confirmEndTurn` makes End turn ask twice while something is still playable (Hand.tsx reads
-// the third, `hoverPreviews`). The layout itself is board.css's grid, which keeps the children
-// below in this order. A phone has no room for the log beside the field, so board.css hides it
-// there and shows `log-toggle` instead, which opens it over the top of the board
-// (`data-log="open"`) until it is pressed again.
-//
-// #2645: on a phone (`usePhoneBar`, the same two layouts) the control bar keeps to one row: End turn, the
-// Marketplace's toggle while `market` is given and the view carries one, the log toggle, ⋯ and the gear.
-// Offer draw, Concede and Friends are the rows of ⋯'s menu (`MatchMenu.tsx`), the same controls the
-// desktop bar holds as buttons, built once; the menu and the shop are never open together, and neither
-// decides anything.
-//
-// While a hand card of yours is hovered or selected, the field rings the cards its preview names
-// (#991, SPEC §10.10).
-//
-// R1297000: the viewer's half wears the playmat and backdrop the wearer picked. R1834004: an online
-// board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts), as a second mat
-// under the opponent's rows (`data-their-table`) and a second backdrop behind them
-// (`data-their-backdrop`); a watched or replayed game's lower half wears its own seat's too.
+// The board (BUILD M5-T1): five lanes, two seats, two hands, the control bar and the log, all drawn from one `PlayerView`
+// (CLAUDE.md rule 7, SPEC §10.8), oriented by `viewFor`. Nothing here decides anything: every clickable element takes
+// `data-legal` from `props.highlight.legal` (`actions.ts`, from `legalActions`) and fires `props.onClick` only when true (or,
+// R979000, to show why a hand card cannot be played, sending nothing). `data-glow` (docs/polish/7-mobile-ux.md S6, S11) is a subset
+// of `legal`; `dragToPlay` becomes `data-drag`; `confirmEndTurn` makes End turn ask twice while something is playable. board.css's
+// grid keeps the children in this order. #2645: on a phone (`usePhoneBar`) the bar keeps to one row; Offer draw, Concede and Friends
+// are ⋯'s menu rows (`MatchMenu.tsx`). A hovered or selected hand card rings the cards its preview names (#991, SPEC §10.10).
+// R1297000: the viewer's half wears the wearer's playmat and backdrop. R1834004: an online board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts).
 
 import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
@@ -99,9 +74,7 @@ const FIELD_ROWS: readonly { side: Side; row: Row }[] = [
 
 /**
  * ASSUMPTION, recorded because `contract.ts` has no entry for them: the per-side pile, hand and
- * mana counters use the ids `e2e/support/testids.ts` already assumes —
- * `library-count-<side>`, `graveyard-count-<side>`, `exile-count-<side>`, `hand-count-<side>`,
- * `mana-<side>` — so the specs and the board agree. Adding them to `testid` would be tidier.
+ * mana counters use the ids `e2e/support/testids.ts` already assumes, so the specs and the board agree.
  */
 function countId(pile: "library" | "graveyard" | "exile", side: Side): string {
   return `${pile}-count-${side}`;
@@ -112,12 +85,8 @@ function restingFatigue(count: number, fatigue: number | undefined): number | nu
   return count === 0 && fatigue !== undefined && fatigue > 0 ? fatigue : null;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Animation hooks: `.damage-pop`, `.heal-pop` and `.loss-pop` take their text from the event the
-// runner is currently animating on that element (BUILD M5-T4). The board does not time anything;
-// it pairs `props.animating` (testid → event type) with the matching event in `view.events` so
-// the pop can show the amount, and shows nothing when the element is not animating.
-// ---------------------------------------------------------------------------------------------
+// runner is currently animating on that element (BUILD M5-T4). The board does not time anything.
 
 const POP_EVENTS: readonly GameEventType[] = ["damage", "healed", "healthLost"];
 
@@ -152,16 +121,8 @@ function amountFor(
 }
 
 /**
- * The numbers to pop, one entry of the current burst at a time.
- *
- * `animated` is what the runner has played since the board last caught up; each entry knows both
- * the elements it marks and the events it is playing, and the amount comes from the latter. It
- * cannot come from `view`: that is the view the runner is still HOLDING BACK (BUILD M5-T4), so by
- * definition it does not yet carry the event being animated. Keeping the whole burst rather than
- * only the entry in flight is what lets both halves of a trade stand on screen together.
- *
- * A caller with no burst to hand falls back to "whatever is animating, against the shown view",
- * which is what a board rendered straight out of a fixture wants.
+ * The numbers to pop come from the burst's events, not `view`: the runner is still HOLDING BACK that
+ * view (BUILD M5-T4), so it lacks the event being animated. No burst: what animates against the shown view.
  */
 export function popsFrom(
   view: PlayerView,
@@ -254,21 +215,8 @@ function ManaTray({
 }
 
 /**
- * A library / graveyard / exile pile. Two testids, two consumers: `regionId` is the element the
- * M5-T4 animation table moves (`animTestid.library` and friends), `testId` is the number the e2e
- * specs read (`library-count-<side>` in `e2e/support/testids.ts`). They are different elements
- * because the count must not be the thing that pulses.
- *
- * A graveyard or an exile pile is public on both seats (§10.8: `SideView.graveyard` and `.exile` are
- * full `CardView` lists), so either one can be looked through (`browse`): a resting mouse opens a
- * preview of its newest cards, and a click, a tap, a long-press or Enter opens every card in a
- * sheet, newest first. The viewer's own library can be looked through the same way (R313), from the
- * list without order the view carries for it (`SideView.ownLibrary`, R310): one face per entry with
- * its count, in the view's order, each printed on the face it went in with (R311), and a card back
- * for the cards the viewer was never shown (R312). The opponent's library is a count and nothing
- * else, so it has no `browse`. Nothing here reads a rule or a hidden card (CLAUDE.md rule 7). While
- * a permission lets the viewer play cards from their graveyard (B5 E11), their graveyard pile glows
- * and its sheet offers "Play" on each card `legalActions` lists a play for (`PilePlays`).
+ * A pile: `regionId` is what the M5-T4 animation table moves, `testId` what e2e reads (`e2e/support/testids.ts`). Graveyards and
+ * exiles are public (§10.8), as is the viewer's own library (R313, `SideView.ownLibrary` R310; R311 faces, R312 backs): `browse`. Not the opponent's (CLAUDE.md rule 7).
  */
 type PileBrowse =
   | { kind: "pile"; title: string; cards: readonly CardView[]; view: PlayerView }
@@ -278,9 +226,8 @@ type PileBrowse =
 const LIBRARY_ORDER = "Order hidden";
 
 /**
- * B5 E11: what the viewer's graveyard pile needs to offer "Play" on a card: the highlight (a card's
- * `pile-play-<id>` is in `legal` exactly when `legalActions` lists a play for it) and the board's
- * click, which reports `{ on: "graveyard", instanceId }` to `actions.ts`.
+ * B5 E11: what the viewer's graveyard pile needs to offer "Play": the highlight (`pile-play-<id>` is
+ * in `legal` exactly when `legalActions` lists a play for it) and the board's click.
  */
 type PilePlays = { highlight: Highlight; onClick?: BoardProps["onClick"] };
 
@@ -307,7 +254,6 @@ function pileLabel(title: string, count: number, order: string | undefined): str
     : t("{title}: {count} cards, {order}. Show them", { title, count, order: lower });
 }
 
-/** The list a pile opens: its entries in the order to show them, and what that order is. */
 function browseEntries(
   lookup: CardLookup | null,
   browse: PileBrowse,
@@ -710,11 +656,9 @@ export default function Board({
     onControl?.("end-turn");
   }
 
-  // R243: the match-made definitions and field powers this view names, for every card drawn below;
-  // #258: and who is acting now, for the units that have no action left (spent.ts); R1295000: and
-  // whose cards wear the device's cosmetics (wearer.ts); R1297000: and the deck's picks; R1834004: and
-  // both seats' loadouts; #1598: and which cards are losing a keyword (keywordLoss.ts);
-  // #2435: and which cards the burst has awakened (awakening.ts).
+  // For every card drawn below: R243's match-made definitions and field powers, #258's acting seat,
+  // R1295000's wearer, R1297000's deck picks, R1834004's loadouts, #1598's keyword losses and #2435's
+  // awakenings.
   return (
     <MatchCardsProvider view={view}>
       <ActingProvider view={view}>

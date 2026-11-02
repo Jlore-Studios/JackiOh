@@ -1,4 +1,4 @@
-// E2E selector contract: BUILD M5-T1, BUILD M5-T2, BUILD M5-T3 and BUILD M5-T4 fix base testids and attributes; BUILD M8 exercises them. Assumptions are in e2e/README.md.
+// E2E selector contract: BUILD M5-T1 to M5-T4 fix base testids and attributes, M8 exercises them; assumptions in e2e/README.md.
 
 import type { EventType, Lane, PromptKind, Row, Side } from "./types.ts";
 
@@ -193,7 +193,6 @@ export const CONCEDE = "concede";
 export const LOG = "log";
 /** §9.3: where a refused action's reason is shown, relayed and never restated. */
 export const ACTION_ERROR = "action-error";
-/** §2.5: the draw-offer toast. */
 export const DRAW_TOAST = "draw-toast";
 export const PROMPT_MODAL = "prompt-modal";
 export const PROMPT_SCRIM = "prompt-scrim";
@@ -281,7 +280,6 @@ export const DECK_STATUS = "deck-status";
 /** R256: save errors are verbatim. */
 export const DECK_SAVE_ERROR = "deck-save-error";
 
-/** R255: deck-code output. */
 export const DECK_COPY_CODE = "deck-copy-code";
 export const DECK_CODE_OUTPUT = "deck-code-output";
 
@@ -301,7 +299,7 @@ export const DECK_CONFLICTS = "deck-conflicts";
 
 export const DECK_VERDICT = "deck-verdict";
 
-/** R1297000: the header button that opens the deck's playmat, backdrop and card back picks. */
+/** R1297000: opens the deck's cosmetics picks. */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
 
 /** L1–L6 verdict sentences. */
@@ -338,7 +336,6 @@ export function trioCardId(slot: number, catalogCardId: string): string {
 }
 
 export const TRIO_DELETE = "trio-delete";
-/** R339: trio-code output. */
 export const TRIO_COPY_CODE = "trio-copy-code";
 export const TRIO_CODE_OUTPUT = "trio-code-output";
 
@@ -370,7 +367,7 @@ export const TRIO_IMPORT_ERROR = "trio-import-error";
 export const INVITE_CODE_INPUT = "invite-code-input";
 /** Submit only a complete, unpaused, non-rate-limited code. */
 export const INVITE_SUBMIT = "invite-submit";
-/** The server's refusal, rendered verbatim — §9.4's identical error is never paraphrased here. */
+/** The server's refusal, verbatim: §9.4's identical error is never paraphrased here. */
 export const INVITE_ERROR = "invite-error";
 export const INVITE_PAUSED = "invite-paused";
 export const INVITE_NOT_NEEDED = "invite-not-needed";
@@ -426,7 +423,6 @@ export const PRACTICE_LEAVE_STAY = "practice-leave-stay";
 export const PRACTICE_RESUME_LOST = "practice-resume-lost";
 export const PRACTICE_RESUME_BANNER = "practice-resume-banner";
 export const PRACTICE_RESUME = "practice-resume";
-/** R765: live online-game banner. */
 export const LIVE_GAME_BANNER = "live-game-banner";
 export const LIVE_GAME_REJOIN = "live-game-rejoin";
 export const QUEUE_FOUND = "queue-found";
@@ -474,13 +470,12 @@ export const TUTORIAL_HUD = "tutorial-hud";
 export const TUTORIAL_STEP = "tutorial-step";
 export const TUTORIAL_EXIT = "tutorial-exit";
 export const TUTORIAL_OUTCOME = "tutorial-outcome";
-/** Coach state, step and anchors. */
 export const COACH = "coach";
 export const COACH_ACK = "coach-ack";
 export const COACH_RING = "coach-ring";
 /** R2205000: a moment's Hint button. */
 export const COACH_HINT = "coach-hint";
-/** R2205002: the Field Guide's buttons (HUD, path) and its dialog. */
+/** R2205002: the Field Guide's buttons and its dialog. */
 export const FIELD_GUIDE_HUD = "field-guide-hud";
 export const FIELD_GUIDE_PATH = "field-guide-path";
 export const FIELD_GUIDE = "field-guide";
@@ -603,7 +598,7 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All Random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
-/** R1578000: the Play hub, its primary online panel, the nav of the other ways to play and their tiles. */
+/** R1578000: the Play hub, its online panel, the other ways to play and their tiles. */
 export const PLAY_SCREEN = "play-screen";
 export const PLAY_ONLINE = "play-online";
 export const PLAY_WAYS = "play-ways";
@@ -722,8 +717,7 @@ export const REMATCH_STATUS = "rematch-status";
 export const MATCH_RANKS = "match-ranks";
 
 
-// #920: the card creator's selectors mirror `creatorTestid` in `apps/web/src/creator/testids.ts`
-// (SPEC §12.11, R915010).
+// #920: the card creator's selectors mirror `creatorTestid` in `apps/web/src/creator/testids.ts` (SPEC §12.11, R915010).
 
 export const CREATOR_SCREEN = "creator-screen";
 export const CREATOR_LIST_ITEM = "creator-list-item";
@@ -767,8 +761,7 @@ export function replaysOnlineId(matchId: string): string {
   return `replays-online-${matchId}`;
 }
 
-// #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
-// the chat panel and the Friends button's panel (#1831), the challenge toast, the watch screen and the replay share.
+// #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`.
 
 export const TOGETHER_ROOT = "together";
 export const TOGETHER_ADD_INPUT = "together-add-input";
@@ -827,7 +820,7 @@ export const CHAT_REPORT_REASON = "chat-report-reason";
 export const CHAT_REPORT_SEND = "chat-report-send";
 export const CHAT_REPORTED = "chat-reported";
 export const CHAT_JOIN = "chat-join";
-/** #1831: the Friends button every signed-in screen has at the top right, its badge and its panel. */
+/** #1831: the Friends button on every signed-in screen, its badge and its panel. */
 export const FRIENDS_BUTTON = "friends-button";
 export const FRIENDS_BADGE = "friends-badge";
 export const FRIENDS_PANEL = "friends-panel";
@@ -862,9 +855,7 @@ export const OPPONENT_AIM_ARROW = "opponent-aim-arrow";
 export const EMOTE_BUBBLE = "emote-bubble";
 export const EMOTE_MUTE_MENU = "emote-mute-menu";
 export const EMOTE_MUTE = "emote-mute";
-// #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65): the
-// co-op panel's, the board's (its life strip, teammate strip, portal, pass control and pings), and
-// the slice's own chrome after them.
+// #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65).
 
 export const COOP_CREATE = "coop-create";
 export const COOP_DIFFICULTY = "coop-difficulty";
@@ -909,11 +900,10 @@ export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
   return `duos-dev-seat-${seat}`;
 }
 
-// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid` in
-// apps/web/src/routes/account.tsx, `devToolsTestid` in routes/DevTools.tsx, `shopTestid` in
-// shop/shop.ts, `packTestid` in packs/packs.ts, `questsTestid` in routes/QuestsPanel.tsx and
-// `collectionTestid` in collection/collection.ts, none of which this project can import (each
-// reaches `@jackioh/*`, which only the client's own build resolves).
+// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid`, `devToolsTestid`,
+// `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, in `apps/web/src/` routes/account.tsx,
+// routes/DevTools.tsx, shop/shop.ts, packs/packs.ts, routes/QuestsPanel.tsx and collection/collection.ts;
+// this project can import none of them (each reaches `@jackioh/*`, which only the client's own build resolves).
 
 /** `/account`: the Dev tools toggle (R1300000). */
 export const ACCOUNT_SCREEN = "account-screen";
@@ -989,5 +979,5 @@ export function collectionTrackXpId(set: string): string {
   return `collection-track-xp-${set}`;
 }
 
-/** A card face's root (apps/web/src/cards/CardFace.tsx), which carries `data-full-art="true"` when it prints full art (R1017001, R1313000). */
+/** A card face's root (apps/web/src/cards/CardFace.tsx); `data-full-art="true"` when it prints full art (R1017001, R1313000). */
 export const CARD_FACE = ".cf";

@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/windfury.test.ts`.
-//!
 //! Windfury (SPEC §6.1, R636): a Unit may attack twice each turn. The second attack is a full one, the
 //! first spends the exertion a switch needs, and `legalActions` and the reducer's refusal agree on it
 //! because both ask `combat.hasExertion` (BUILD M2-T1).
@@ -32,7 +30,6 @@ fn unit_in(state: &GameState, player: PlayerId, lane: i32) -> &CardInstance {
         .unwrap_or_else(|| panic!("no unit in {player} lane {lane}"))
 }
 
-/// `unitAt(...)` written through, as TS wrote through the live object.
 fn unit_at_mut(state: &mut GameState, player: PlayerId, lane: i32) -> &mut CardInstance {
     state.players[player]
         .units
@@ -63,7 +60,7 @@ fn offers_attack(state: &GameState, unit: &CardInstance) -> bool {
         .any(|a| matches!(a, ActionBody::Attack { attacker_id, .. } if *attacker_id == unit.id))
 }
 
-/// TS's `sinkFor(state)` for one call: a sink whose rng starts at the state's cursor, as reduce does.
+/// A sink for one call, its rng starting at the state's cursor, as reduce does.
 fn with_sink<T>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events: Vec<GameEvent> = Vec::new();
@@ -71,7 +68,6 @@ fn with_sink<T>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> T)
     f(&mut sink)
 }
 
-/// `expect(error).toMatch(/text/)`: a refusal whose message contains the text.
 fn expect_refusal(error: Option<String>, text: &str) {
     match error {
         Some(message) => assert!(message.contains(text), "expected {message:?} to match /{text}/"),

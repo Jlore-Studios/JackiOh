@@ -178,7 +178,6 @@ describe("R2094000 the co-op room link", () => {
 
   it("R2094000 coopLinkOf reads a code as R191 does and refuses one that is no room code", () => {
     expect(coopLinkOf("?coop=%20ab-c2%2034%20")).toBe("ABC234");
-    // R104's alphabet has no 1, and a co-op code is exactly six characters.
     expect(coopLinkOf("?coop=abc123")).toBeNull();
     expect(coopLinkOf("?coop=abc23")).toBeNull();
     expect(coopLinkOf("?coop=abc2345")).toBeNull();
@@ -194,19 +193,16 @@ describe("R2094000 the co-op room link", () => {
     expect(window.location.search).toBe("?x=1");
     expect(window.location.hash).toBe("#top");
     expect(readCoopLink()).toBe("ABC234");
-    // Reading removes nothing, so React StrictMode's second call gets the same answer.
     expect(readCoopLink()).toBe("ABC234");
     forgetCoopLink();
     expect(readCoopLink()).toBeNull();
     expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
 
-    // `coop` on another path is some other page's: nothing is read, nothing is taken out.
     visit("/decks?coop=abc234");
     expect(adoptCoopLink()).toBe(false);
     expect(window.location.search).toBe("?coop=abc234");
     expect(readCoopLink()).toBeNull();
 
-    // A code that is no room code is stripped all the same, and nothing is stored.
     visit("/together?coop=abc123");
     expect(adoptCoopLink()).toBe(false);
     expect(window.location.search).toBe("");
@@ -278,16 +274,13 @@ describe("R2094000 a room link in chat text", () => {
       path: "/together?coop=ABC234",
     });
 
-    // A link to any other origin draws no button.
     expect(findRoomLinkInText("join here: https://evil.test/together?coop=ABC234", origin)).toBeNull();
     expect(findRoomLinkInText("join here: https://evil.test/play?room=ABC234&mode=bo1", origin)).toBeNull();
-    // A malformed code draws no button.
     expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc123`, origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/play?room=abc123&mode=bo1`, origin)).toBeNull();
     // A link on the wrong path draws no button.
     expect(findRoomLinkInText(`join here: ${origin}/play?coop=ABC234`, origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/together?room=ABC234&mode=bo1`, origin)).toBeNull();
-    // No link draws no button.
     expect(findRoomLinkInText("good luck, have fun", origin)).toBeNull();
     expect(findRoomLinkInText("", origin)).toBeNull();
   });

@@ -1,12 +1,7 @@
-//! The Meditative+ set (issue #1173) meets the AI (issue #1186): its health price, its declared modes
-//! and its two prices need nothing new here, since `legal_actions` lists every play they allow and the
-//! search tries each through `reduce`. Bloodbloom's health price (R1180004) offers a Spell only the
-//! health affords, and the AI casts it for lethal with no mana but never pays its last health for it.
-//! Bob's four modes (R1185004) are four plays, the take with its target and only while there is an
-//! enemy Unit to take, and the Radiant face's Discover pauses its list for the AI to answer. Supply
-//! Drop's two modes come at both prices (R1181001), and Mountaintop Garden's dearer choice (R1181002)
-//! is weighed at the normal price plus the premium.
-//! Supply Drop's countdown is a payoff and a threat past the opponent's reply (#1995).
+//! The Meditative+ set (issue #1173) meets the AI (issue #1186): its health price (R1180004), its
+//! declared modes (R1185004) and its two prices (R1181001, R1181002) need nothing new here, since
+//! `legal_actions` lists every play they allow and the search tries each through `reduce`. Supply
+//! Drop's countdown is a payoff and a threat past the opponent's reply (#1995).
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -331,8 +326,8 @@ fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the
                 _ => None,
             });
             assert_eq!(paid, Some(dearer), "the normal price plus the premium");
-            // Radiant and Embiggened, the Wand draws 4 (5 through v0.5.2, issue #2179): the filler and
-            // the four draws are in the hand.
+            // Radiant and Embiggened, the Wand draws 4 (#2179): the filler and the four draws are in
+            // the hand.
             assert_eq!(result.state.players[AI].hand.len(), 5, "played Radiant");
         }
     }
@@ -421,8 +416,8 @@ fn scored_after_ending(state: &GameState) -> f64 {
     .expect("a score")
 }
 
-/// Due in 1, the blast lands as the AI ends its turn, which the search priced before #1995; due in 2,
-/// it lands past the reply, right after the AI's next turn, and counts in full.
+/// Due in 1, the blast lands as the AI ends its turn; due in 2, it lands past the reply, right after
+/// the AI's next turn, and counts in full.
 #[test]
 fn an_enemy_countdown_scores_a_3_health_unit_on_the_field_below_one_held() {
     let field = scored_after_ending(&facing_a_countdown("ai-countdown-threat", None, true));

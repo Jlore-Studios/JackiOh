@@ -1,14 +1,8 @@
-// M5-T2 acceptance: one test per `PromptKind` (all ten), each rendering the picker, clicking an
-// option and asserting the exact action. R81 splits them in two:
-//
-//   * `discover`, `target`, `mode`, `mulligan` and `hand` answer a `PendingChoice` that has paused
-//     resolution, so they submit an `answer` (or, for the mulligan, §10.2's `mulligan` action);
-//   * `zone`, `tribute`, `direction`, `x` and `embiggen` are the card's own play choices. Nothing
-//     is paused and `view.pending` is null: they are driven by the in-flight `Interaction` and
-//     they submit a `play`.
-//
-// Plus: the other seat sees "waiting for choice" and no options at all, a disabled confirm fires
-// nothing, and `min`/`max` gate the confirm for `tribute` and `mulligan`.
+// M5-T2 acceptance: one test per `PromptKind` (all ten), each asserting the exact action. R81 splits
+// them in two: `discover`, `target`, `mode`, `mulligan` and `hand` answer a `PendingChoice` that has
+// paused resolution, so they submit an `answer` (or, for the mulligan, §10.2's `mulligan` action);
+// `zone`, `tribute`, `direction`, `x` and `embiggen` are the card's own play choices, driven by the
+// in-flight `Interaction` with `view.pending` null, and submit a `play`.
 
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -49,9 +43,7 @@ function kindOfModal(): string | null {
   return screen.getByTestId("prompt-modal").getAttribute("data-prompt-kind");
 }
 
-// ---------------------------------------------------------------------------------------------
 // The five prompt-driven kinds: an open `PendingChoice`, answered with `answer` / `mulligan`.
-// ---------------------------------------------------------------------------------------------
 
 describe("prompt-driven pickers answer the open PendingChoice (§10.6)", () => {
   it("discover shows exactly three options as cards and answers with the chosen def", () => {
@@ -176,9 +168,7 @@ describe("prompt-driven pickers answer the open PendingChoice (§10.6)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The five R81 kinds: no prompt is open, and each submits a `play`.
-// ---------------------------------------------------------------------------------------------
 
 describe("R81 inline pickers submit a play with no PendingChoice at all", () => {
   it("zone shows a grid of the zones the candidates name", () => {
@@ -272,7 +262,6 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
   });
 
   it("a Choose one names the card asking and says what each option does, answering with the card's own option string", () => {
-    // Integration QA: Pocket Chaos offered three bare buttons, "health", "board" and "library".
     const onAction = vi.fn();
     const view = viewWith({
       you: emptySide("p1", { hand: [card({ instanceId: "h3", defId: "core-087" })] }),
@@ -349,7 +338,6 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(screen.getByTestId("x-stepper")).toBeInTheDocument();
     expect(screen.getByTestId("x-value")).toHaveTextContent("0");
 
-    // The stepper never walks past the ends of the engine's list.
     for (let press = 0; press <= values.length; press += 1) fireEvent.click(screen.getByTestId("x-plus"));
     expect(screen.getByTestId("x-value")).toHaveTextContent(String(X_CARD_LIMIT));
 
@@ -545,9 +533,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The five R81 kinds are still valid prompt kinds (§10.6 keeps them for later sets).
-// ---------------------------------------------------------------------------------------------
 
 describe("the R81 kinds render the same picker when the engine does open them as prompts", () => {
   const cases: [string, Parameters<typeof pendingFor>[1], string][] = [
@@ -751,9 +737,7 @@ describe("the R81 kinds render the same picker when the engine does open them as
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The other seat, and the confirm gate.
-// ---------------------------------------------------------------------------------------------
 
 describe("R821000 a Plague Counter placement is answered on the board, not from a list", () => {
   const placement = (prompt: string) =>
@@ -975,9 +959,7 @@ describe("R1044 the face-down picker asks how to play it", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1204: a card picker folds away to show the board and comes back with its pick kept.
-// ---------------------------------------------------------------------------------------------
 
 describe("#1204 View the board folds a card picker to a bar", () => {
   const DISCOVER_OPTIONS: PendingOption[] = [
@@ -1216,9 +1198,7 @@ describe("#1204 View the board folds a card picker to a bar", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A replay's board: the open prompt as offered, folded and inert (R2211000).
-// ---------------------------------------------------------------------------------------------
 
 describe("R2211000 a read-only prompt, a replay's", () => {
   const DISCOVER: PendingOption[] = [

@@ -19,11 +19,9 @@ import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_VERB_PRICES } from "../..
  * ```
  *
  * `//` starts a comment; `;` and line breaks are optional; names are the blocks' own, a name of two
- * words written as one (`FieldSpell`, `DivineShield`, `FirstStrike`). The cost is
- * the prompt's, chosen before. A misspelt or misplaced word is a syntax error with its line, as a
- * compiler gives one; whether the card may be crafted is the engine's verdict alone. */
+ * words written as one. The cost is the prompt's, chosen before. A misspelt or misplaced word is a
+ * syntax error with its line; whether the card may be crafted is the engine's verdict alone. */
 
-/** The text's word for each card type: the type's name, one word. */
 const TYPE_WORDS: Readonly<Record<string, CardType>> = {
   Unit: "Unit",
   Spell: "Spell",
@@ -34,19 +32,16 @@ const TYPE_WORDS: Readonly<Record<string, CardType>> = {
 const VERBS: ReadonlySet<string> = new Set(CRAFT_VERB_PRICES.map((row) => row.verb));
 const HATS: ReadonlySet<string> = new Set(CRAFT_HAT_PRICES.map((row) => row.hat));
 
-/** A keyword or a card type as one code word: its name with the spaces taken out. */
 export function codeWord(name: string): string {
   return name.replaceAll(" ", "");
 }
 
-/** The text's word for each keyword. */
 const KEYWORD_WORDS: ReadonlyMap<string, Keyword["kind"]> = new Map(
   CRAFT_KEYWORD_PRICES.map((row) => [codeWord(row.kind), row.kind]),
 );
 
 type Token = { kind: "word" | "number" | "string" | "punct"; text: string; line: number };
 
-/** What a parse gives: the recipe, or every syntax error found with its line. */
 export type ParsedRecipe = { ok: true; recipe: CraftRecipe } | { ok: false; errors: string[] };
 
 class Syntax extends Error {}

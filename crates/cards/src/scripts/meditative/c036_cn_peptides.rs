@@ -6,20 +6,16 @@
 //! - **Play-time pick:** a declared Unit on either side (R81). The pick is `required` (R703), so
 //!   with no Unit the play is refused; a cast still fizzles (R70).
 //! - **The roll:** the Cry resolves the target first; with no target it draws nothing (R129). Then
-//!   it flips one `ctx.rng.coin()`. With the card's Lucky X (§6.1 `rng.lucky`; the Spell's printed
-//!   keyword as Nerf and Buff have moved it, plus any Lucky given to it, R1438, read with `lucky_on`
-//!   as `effects/fruit.rs`'s `lucky_of` reads a Spell's), it flips X more coins. The comparator keeps
-//!   the outcome better for the caster: the Buffs on a Unit the caster controls, the destroy on an
-//!   enemy one (MD-B17, R902).
-//! - **Heads:** `upgrade({ target: chosen, times })`. **Tails:** `destroy`; an Indestructible Unit
-//!   survives (R46).
+//!   it flips one `ctx.rng.coin()`, and X more for the card's Lucky X (§6.1 `rng.lucky`, R1438). The
+//!   comparator keeps the outcome better for the caster: the Buffs on a Unit the caster controls,
+//!   the destroy on an enemy one (MD-B17, R902).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-036";
 
-/// The card's Lucky X, printed plus given (R1438): the face's as Nerf and Buff have moved it, and any
-/// Lucky given to it (`effects/fruit.rs`'s `lucky_of` shape), plus its controller's Luck (R987).
+/// The card's Lucky X, printed plus given (R1438) as `effects/fruit.rs`'s `lucky_of` reads it, plus
+/// its controller's Luck (R987).
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
     ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own)) + luck_of(ctx.sink.state, ctx.controller)
 }
@@ -61,18 +57,13 @@ fn peptides() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // Both faces share the one script: the printed Lucky 1 and the declared `times` (7,
-    // radiant 10) are what differ.
+    // Both faces share the one script: only the printed Lucky 1 and the declared `times` differ.
     let base = peptides();
     let radiant = peptides();
     CardScripts { base, radiant }
 }
 
-// M #36 CN Peptides — SPEC §8.8 row 36, BUILD M10 row M 36: "A declared Unit on either side; one
-// coin: heads 7 separate Buffs (R386), tails destroyed, an Indestructible one surviving (R46); fair
-// on the base face; times reads through `param()`; radiant Lucky 1: two coins, keeping the Buffs on
-// your own Unit and the destroy on an enemy one (MD-B17), the controller read as it resolves, so
-// 75% each way, and 10 Buffs".
+// M #36 CN Peptides — SPEC §8.8 row 36, BUILD M10 row M 36.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,8 +172,7 @@ mod tests {
                 let mut s = s.expect("a tails seed over 32 tries");
                 let wall = s.unit(P1, 1).expect("the wall");
                 s.play(PEPTIDES, pick(&wall.id));
-                // Tails destroys, and the Indestructible wall ignores the mark (R46): no Buffs,
-                // no destruction, and the wall stands as it was.
+                // Tails destroys, and the Indestructible wall ignores the mark (R46).
                 assert!(upgraded(s.events()).is_empty());
                 assert!(destroyed(s.events()).is_empty());
                 let wall_id = wall.id.clone();
@@ -259,7 +249,6 @@ mod tests {
                     let heads = pair[0] || pair[1];
                     s.play(PEPTIDES, pick(&victim.id));
                     if heads {
-                        // The Buffs come 10 at a time.
                         assert_eq!(upgraded(s.events()).len(), 10, "{seed}");
                         assert!(destroyed(s.events()).is_empty(), "{seed}");
                     } else {

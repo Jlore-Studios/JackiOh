@@ -1,14 +1,9 @@
-// PKCE for the emailed links (R323, R324): the confirmation, its resend, the password reset and an
-// email change's confirmation (R663); and for the two ways in that come back with a code to sign
-// this browser in: the email sign-in link (R664) and an OAuth provider (R666).
-//
-// The request that mails a link carries `code_challenge` (base64url SHA-256 of a random verifier)
-// and `code_challenge_method: "s256"`; the link comes back to `/login?code=…`, and only the browser
-// holding the verifier can exchange the code (`net/auth.ts` `exchangeAuthCode`). No token is in a URL.
-//
-// Verifiers live in `localStorage` (a confirmation link usually opens in a new tab; `sessionStorage`
-// would not reach it), one per flow, each timestamped so the newest is tried first. A code with no
-// verifier here was asked for on another device or browser (R324). A verifier is forgotten once used.
+// PKCE for the emailed links (R323, R324; an email change's, R663), the email sign-in link (R664) and
+// OAuth (R666): only the browser holding the verifier can exchange the returned code, so no token is in a
+// URL. Verifiers live in `localStorage`, since a link usually opens in a new tab, which `sessionStorage`
+// would not reach; a code with no verifier here was asked for elsewhere (R324).
+
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 
 export const PKCE_STORAGE_KEY = "jackioh.auth.pkce";
 /** The stored value's shape version: anything else reads as no verifier. */
@@ -61,12 +56,7 @@ export async function challengeFor(verifier: string): Promise<string> {
 /** The stored verifiers, read as untrusted input: anything malformed is no verifier. */
 function readStored(): StoredValue {
   const empty: StoredValue = { v: PKCE_STORAGE_VERSION };
-  let raw: string | null;
-  try {
-    raw = window.localStorage.getItem(PKCE_STORAGE_KEY);
-  } catch {
-    return empty;
-  }
+  const raw = getStored(PKCE_STORAGE_KEY);
   if (raw === null) return empty;
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -87,20 +77,13 @@ function readStored(): StoredValue {
 }
 
 function writeStored(value: StoredValue): void {
-  try {
-    if (FLOWS.every((flow) => value[flow] === undefined)) window.localStorage.removeItem(PKCE_STORAGE_KEY);
-    else window.localStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify(value));
-  } catch {
-    // Blocked storage: the link still confirms the address; the code just cannot be exchanged
-    // here, which reads as a link opened elsewhere (R324).
-  }
+  // Blocked storage: the link still confirms the address; the code just cannot be exchanged
+  // here, which reads as a link opened elsewhere (R324).
+  if (FLOWS.every((flow) => value[flow] === undefined)) removeStored(PKCE_STORAGE_KEY);
+  else setStored(PKCE_STORAGE_KEY, JSON.stringify(value));
 }
 
-/**
- * The challenge to send with a request that mails a `flow` link, remembering its verifier. A new
- * verifier each time, except that a resend of the confirmation reuses the sign-up's (`reuse`), so
- * the link in the first email still works once the second has been sent.
- */
+/** A new verifier each time, but a resend of the confirmation reuses the sign-up's, so the first link still works. */
 export async function challengeForRequest(flow: PkceFlow, options: { reuse?: boolean } = {}): Promise<PkceChallenge> {
   const kept = options.reuse === true ? readStored()[flow]?.verifier : undefined;
   const verifier = kept ?? newVerifier();

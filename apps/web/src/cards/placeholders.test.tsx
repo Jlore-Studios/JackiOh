@@ -1,8 +1,6 @@
 // B3.4 rule 5, R386: a card's tunable numbers are written `{key}` (or `{key|singular|plural}`) in the
-// catalog's face texts, and the client fills every one in before a player reads it: from the face's
-// printed values in the collection, from the numbers the view says the card has now in play. A raw
-// placeholder must never reach the screen, so every catalog face goes through each text path the
-// client draws with, and none of them may still hold a "{".
+// catalog's face texts, and the client fills every one in before a player reads it. So every catalog
+// face goes through each text path the client draws with, and none of them may still hold a "{".
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

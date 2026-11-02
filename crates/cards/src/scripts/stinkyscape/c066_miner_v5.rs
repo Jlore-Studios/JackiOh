@@ -56,10 +56,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #66 Miner v5 — SPEC §8.10 row 66, BUILD M12 row S 66: "its Activate puts one Resource into its
-// controller's hand (R2250000), by the rarity roll that replays (R1840002); into a full hand it burns
-// (R1840001's sale gone, R2250000); five uses a turn, a sixth refused; equipped onto a Unit, the host takes
-// the Activate; radiant 0/16 and a Radiant Resource".
+// Stinkyscape #66 Miner v5 — SPEC §8.10 row 66, BUILD M12 row S 66 (R1840001, R1840002, R2250000).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -71,7 +68,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const REKNITE: &str = "stinkyscape-t-reknite"; // a Common Resource.
 
-    /// p1's Miner v5 (Radiant on `radiant`) stands in lane 1.
     fn mining(radiant: bool, seed: &str) -> Scenario {
         weapon_board(seed, json!({ "field": [{ "def": ID, "radiant": radiant }] }), json!({}))
     }
@@ -80,7 +76,6 @@ mod tests {
         json!({ "ability": "mine" })
     }
 
-    /// The Resources in p1's hand (R2250000).
     fn mined(s: &Scenario) -> Vec<CardInstance> {
         resources_in_hand_of(s.state(), P1)
     }

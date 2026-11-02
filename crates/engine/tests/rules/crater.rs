@@ -1,8 +1,7 @@
-//! Crater (#783, R783010, R783011, R1850006): a Unit Locks its own zone as it arrives on the field, every
-//! way it arrives, before its Cry; a Trap Locks its backrow zone as it is revealed, and a Field Spell as
-//! it enters. The Lock is R688's: it
-//! refuses plays, a Stack play included, and outlasts the card. The fixtures in
-//! `fixtures/keywords_783.rs` stand in for the cards #781 prints.
+//! Crater (#783, R783010, R783011, R1850006): a Unit Locks its zone as it arrives, however it arrives,
+//! before its Cry; a Trap as it is revealed; a Field Spell as it enters. The Lock is R688's: it
+//! refuses plays, a Stack play included, and outlasts the card. `fixtures/keywords_783.rs` stands in
+//! for #781's cards.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::zones::is_locked;
@@ -28,7 +27,6 @@ fn unit_zone(lane: i32) -> ZoneSlot {
     slot(P1, Row::Units, lane)
 }
 
-/// Play this card from p1's hand into this zone, answering the whole result.
 fn play_into(state: &GameState, id: &str, row: &str, lane: i32) -> ReduceResult {
     act_result(
         state,
@@ -50,7 +48,6 @@ fn destroy(state: &mut GameState, id: &str) {
     );
 }
 
-/// The id of the top card in p1's unit zone `lane`, if any.
 fn unit_in(state: &GameState, lane: i32) -> Option<String> {
     state.players.p1.units[(lane - 1) as usize]
         .as_ref()
@@ -82,7 +79,6 @@ mod r783010_crater_arrivals {
         let state = result.state;
         assert!(is_locked(&state, unit_zone(2)));
         assert_eq!(locked_count(&state), 1);
-        // The zone is Locked before the Cry's damage lands.
         let locked_at = must(
             result.events.iter().position(|event| {
                 matches!(
@@ -104,7 +100,6 @@ mod r783010_crater_arrivals {
             "the Cry's damage",
         );
         assert!(locked_at < cry_at);
-        // A card that is not Crater locks nothing.
         let mut plain = playing("r783010-plain");
         let other = in_hand(&mut plain, &plain_unit().id, P1);
         let plain = act(
@@ -122,7 +117,6 @@ mod r783010_crater_arrivals {
         assert!(unit_in(&summoned, 1).is_some());
         assert!(is_locked(&summoned, unit_zone(1)));
 
-        // Recruited from the library.
         let mut recruited = playing("r783010-recruit");
         set_library(&mut recruited, P1, &[crater_unit().id]);
         cast_now(&mut recruited, &recruiter().id, P1, false);
@@ -263,7 +257,7 @@ mod r783011_crater_traps {
         // Crater on a Spell does nothing (a Field Spell's is R1850006's).
         let mut spells = playing("r783011-spell");
         let spell = in_hand(&mut spells, &crater_spell().id, P1);
-        // A card still to play, so the turn does not end by itself.
+        // A card still to play, as above.
         in_hand(&mut spells, &plain_unit().id, P1);
         let spells = act(
             &spells,
@@ -283,7 +277,6 @@ mod r1850006_crater_field_spells {
 
     #[test]
     fn r1850006_a_crater_field_spell_locks_its_backrow_zone_played_summoned_or_flickered() {
-        // Played into a backrow zone: that zone is Locked, and only it.
         let mut played = playing("r1850006-played");
         let field = in_hand(&mut played, &crater_field().id, P1);
         in_hand(&mut played, &plain_unit().id, P1);
@@ -295,7 +288,6 @@ mod r1850006_crater_field_spells {
         assert!(is_locked(&played, backrow_zone(2)));
         assert_eq!(locked_count(&played), 1);
 
-        // Summoned by an effect.
         let mut summoned = playing("r1850006-summoned");
         apply_now(
             &mut summoned,
@@ -309,7 +301,6 @@ mod r1850006_crater_field_spells {
         assert!(is_locked(&summoned, backrow_zone(lane)));
         assert_eq!(locked_count(&summoned), 1);
 
-        // Flickered: it re-enters its zone.
         let mut flickered = playing("r1850006-flickered");
         let card = put(&mut flickered, &crater_field().id, backrow_zone(4), json!({}));
         assert!(!is_locked(&flickered, backrow_zone(4)));

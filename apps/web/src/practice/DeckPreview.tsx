@@ -1,12 +1,10 @@
-// What the chosen deck is, before Start: its name, what it does, its mana curve and its cards.
-//
-// The card data is the catalog the practice worker sends (`{ type: "catalog" }`, §5.1: the catalog
-// is public), so this page still imports no card data of its own. Until it arrives, or when it
-// cannot be read, the preview says so and Start still works: the deck is the same either way.
+// What the chosen deck is, before Start. The card
+// data is the catalog the worker sends (§5.1: the catalog is public), so this page imports none of its own;
+// until it arrives, or when it cannot be read, the preview says so and Start still works.
 
 import { useMemo, type ReactElement } from "react";
 
-import type { CardCost, CardDef, CardDefs } from "@jackioh/shared";
+import type { CardDef, CardDefs } from "@jackioh/shared";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
 import { faceModel, useInspectTrigger } from "../cards/index.ts";
@@ -14,17 +12,11 @@ import { readerName } from "../cards/chinese.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { practiceTestid } from "./testids.ts";
+import { printedPrice } from "../game/deckbuilder/filters.ts";
 
 /** The curve's columns, Hearthstone's way: one per cost up to the last, which holds the rest. */
 const CURVE_COLUMNS = ["0", "1", "2", "3", "4", "5+"] as const;
 type CurveColumn = (typeof CURVE_COLUMNS)[number] | "X";
-
-/** The cost the preview prints: an X cost is "X", an embiggen card its base cost (§5.1). */
-function printedCost(cost: CardCost): number | "X" {
-  if (cost === "X") return "X";
-  if (typeof cost === "number") return cost;
-  return cost.base;
-}
 
 function columnOf(cost: number | "X"): CurveColumn {
   if (cost === "X") return "X";
@@ -38,7 +30,7 @@ function previewCards(ids: readonly string[], defs: CardDefs): PreviewCard[] {
   const cards = ids.map((id): PreviewCard => {
     const def: CardDef | undefined = defs[id];
     if (def === undefined) return { id, name: id, type: "", cost: 0 };
-    return { id, name: readerName(def), type: def.type, cost: printedCost(def.cost), def };
+    return { id, name: readerName(def), type: def.type, cost: printedPrice(def.cost), def };
   });
   // Cheapest first, X last, then by name: the order a deck list reads in.
   const rank = (cost: number | "X"): number => (cost === "X" ? Number.POSITIVE_INFINITY : cost);
@@ -114,11 +106,7 @@ export function DeckPreview({ title, identity, cards, defs, defsFailed, onRetry 
   );
 }
 
-/**
- * One card of the list. Resting the pointer on it shows the whole card and a touch long-press opens
- * the inspect sheet, as the deck builder's list does (task 6's inspect, docs/polish/6-cards.md), so
- * a deck can be read before it is played.
- */
+/** One card of the list: hover and long-press inspect it as the deck builder's list does (docs/polish/6-cards.md). */
 function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
   const def = card.def;
   const locale = useLocale();

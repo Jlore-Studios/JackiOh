@@ -1,12 +1,8 @@
 // A glossary term in a card's text shows its glossary line where the face takes the pointer
-// (R2098000, issue #2098): on the board and in the hand, in the Almanac's and the deck builder's
-// pool, and in the inspect views (the detail view, the touch sheet, a pile's dialog). A mouse or
-// pen resting on the term shows it after TERM_HOVER_DELAY_MS; a touch held on it for LONG_PRESS_MS
-// shows it too, and an ordinary tap still plays, aims, selects or opens the card, since the term's
-// long press takes over from the card's and its closing click goes nowhere. The tooltip takes no
-// pointer events, so it never blocks play. Where the surface allows a control the term is a tab
-// stop: focus shows the tooltip, which is `role="tooltip"` and linked by `aria-describedby`, and
-// blur or Escape closes it. Outside these surfaces terms print plain, as before.
+// (R2098000, issue #2098): on the board, in the hand, in the Almanac's and deck builder's pool and
+// in the inspect views. An ordinary tap still plays, aims, selects or opens the card, since the
+// term's long press takes over from the card's and its closing click goes nowhere; the tooltip takes
+// no pointer events, so it never blocks play. Outside these surfaces terms print plain.
 
 import {
   createContext,
@@ -25,7 +21,7 @@ import { createPortal } from "react-dom";
 import { TERM_HOVER_DELAY_MS } from "./constants.ts";
 import { GLOSSARY, type GlossaryTermId } from "./glossary.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
-import { placePreview, type Rect } from "./inspect/placement.ts";
+import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
 import { useRefsInteractive } from "./refContext.tsx";
 
 export type TermTipMode = "off" | "pointer" | "control";
@@ -56,11 +52,6 @@ function useTermTipMode(): TermTipMode {
 /** Whether a press starts on a term that shows its rule: then it is the term's long press. */
 export function startsOnTermTip(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(TERM_TIP_SELECTOR) !== null;
-}
-
-function rectOf(element: Element): Rect {
-  const box = element.getBoundingClientRect();
-  return { left: box.left, top: box.top, width: box.width, height: box.height };
 }
 
 function viewport(): { width: number; height: number } {

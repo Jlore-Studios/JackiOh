@@ -1,9 +1,7 @@
-// scripts/build-wasm.sh's cache on Vercel (#997): Vercel's build cache keeps only node_modules, so
-// the script keeps the modules it built in node_modules/.cache/jackioh-wasm/<key>, the key a hash of
-// what they are built from, and a deploy with the same key copies them back instead of building.
-// A stale module on staging is the failure that matters, so every input the build reads must change
-// the key. Each case runs the real script in a throwaway tree with stand-ins for cargo, rustup,
-// wasm-bindgen and the emsdk, which write a module that names the run that built it.
+// scripts/build-wasm.sh's cache on Vercel (#997), which keeps only node_modules: the modules go in
+// node_modules/.cache/jackioh-wasm/<key>, the key a hash of their inputs. A stale module on staging is
+// the failure that matters, so every input the build reads must change the key. Each case runs the real
+// script in a throwaway tree with stand-ins for cargo, rustup, wasm-bindgen and the emsdk.
 
 import { spawnSync } from "node:child_process";
 import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -66,8 +64,7 @@ function world(): string {
     mkdirSync(dirname(join(root, file)), { recursive: true });
     writeFileSync(join(root, file), `${file}\n`);
   }
-  // cargo logs each build and leaves what that target's build leaves in target/ (CARGO_TARGET_DIR
-  // when it is set, as cargo does), naming the run.
+  // cargo logs each build and leaves its output in target/ (CARGO_TARGET_DIR when set), naming the run.
   sh(
     join(root, "bin/cargo"),
     [
@@ -81,7 +78,6 @@ function world(): string {
     ].join("\n"),
   );
   sh(join(root, "bin/rustup"), "printf '%s\\n' wasm32-unknown-unknown wasm32-unknown-emscripten");
-  // wasm-bindgen: the pinned version, and the four files it writes from the module it is given.
   sh(
     join(root, ".cache/bin/wasm-bindgen"),
     [
@@ -122,7 +118,6 @@ function run(root: string, name: string, { vercel = true, env = {} as Record<str
   return { builds: readFileSync(log, "utf8").split("\n").filter(Boolean), out: result.stdout };
 }
 
-/** Every file under `dir` with its contents, by path relative to it. */
 function files(dir: string): Record<string, string> {
   const found: Record<string, string> = {};
   const walk = (at: string): void => {
@@ -188,7 +183,6 @@ describe("scripts/build-wasm.sh on Vercel", () => {
       "rust-toolchain.toml",
       // The script itself pins wasm-bindgen and the emsdk.
       "scripts/build-wasm.sh",
-      // A new file is a change too.
       "crates/engine/src/new.rs",
     ]) {
       mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -246,8 +240,8 @@ describe("scripts/build-wasm.sh's directories", () => {
     const root = world();
     const shared = mkdtempSync(join(tmpdir(), "build-wasm-shared-"));
     roots.push(shared);
-    // The tools live only in the shared cache: a script that looked in the root's .cache would
-    // clone the emsdk and download wasm-bindgen there, which the last line catches.
+    // The tools live only in the shared cache: a script that looked in the root's .cache would fetch
+    // them there, which the last line catches.
     renameSync(join(root, ".cache"), join(shared, "cache"));
     run(root, "shared", { vercel: false, env: { CARGO_TARGET_DIR: join(shared, "target"), JACKIOH_CACHE_DIR: join(shared, "cache") } });
     const built = files(pkg(root));

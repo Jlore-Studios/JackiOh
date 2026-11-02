@@ -95,7 +95,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's Living Bomb, and a plagued and a clean board on each side.
     fn board(radiant_face: bool, bomb_tokens: i32) -> Scenario {
         let bomb_counters = if bomb_tokens > 0 { json!({ "plague": bomb_tokens }) } else { json!({}) };
         scenario(json!({
@@ -157,7 +156,6 @@ mod tests {
                 s.expect_in_zone(&their_vanilla, "graveyard");
                 s.expect_in_zone(&their_well, "graveyard");
                 s.expect_in_zone(&their_trap, "graveyard");
-                // The clean ones stay, the clean face-down trap still unnamed to p1.
                 assert_eq!(s.unit(P2, 2).map(|unit| unit.def_id), Some(MENACE.to_string()));
                 assert_eq!(s.backrow(P2, 3).map(|card| card.id), Some(their_clean_trap.id.clone()));
             }
@@ -194,7 +192,6 @@ mod tests {
                 );
                 s.expect_in_zone(&bomb, "graveyard");
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(MENACE.to_string()));
-                // p2's survivors are untouched on p1's turn.
                 assert_eq!(s.unit(P2, 2).map(|unit| unit.def_id), Some(MENACE.to_string()));
             }
 

@@ -3,13 +3,10 @@
 //! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
 //! target, controller's end of turn".
 //!
-//! R51: every enemy unit plus the enemy hero, ONE damage instance each, so each hit goes through
-//! §4.4's pipeline alone and meets that target's Armor, Divine Shield and Anti-oneshot cap.
-//!
-//! R59: the state check never runs between the hits of one effect, so a unit the first hit kills is
-//! still on the field while the rest land. `damage_all` (engine/src/effects/damage.rs) is one effect
-//! and `end_turn` runs `state_check` after each end-of-turn hook. The scan for `endOfTurn` hooks is
-//! narrowed to the player whose turn is ending, so this card needs no check of its own.
+//! R51: ONE damage instance per target, each meeting that target's Armor, Divine Shield and
+//! Anti-oneshot cap (§4.4). R59: `damage_all` is one effect, and no state check runs between its hits,
+//! so a unit the first hit kills stays while the rest land. `end_turn` scans only the ending player's
+//! `endOfTurn` hooks, so this card needs no check of its own.
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;
@@ -31,15 +28,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13): "Controller's end of turn: 2 to every
-// enemy unit and hero as separate instances; units it kills die after all hits land (R59); not on
-// the opponent's end; radiant 4 (R51)".
-//
-// The board: p2 lane 1 is Pointmaster (7/1), which 2 damage kills, and lane 2 is Mr. Vanilla (4/4),
-// which survives at 2. A lane-1 death makes R59 observable: the later hits must still land.
-//
-// Both sides get a library, so nobody takes §2.4 fatigue damage when the opponent draws, and a spare
-// hand card, so the fresh turn has an action and cannot auto-end onwards (§2.5).
+// #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13, R59, R51, §2.4, §2.5).
+// End of turn damage to enemy units and hero; deaths collected after all hits (R59).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -109,9 +99,6 @@ mod tests {
 
                 s.end_turn();
 
-                // Lane 1 was dead on the first hit, yet the lane-2 unit and the hero were still hit, and
-                // the `destroyed` event comes after the last `damage` — the state check never ran
-                // between them.
                 s.expect_events(json!(["damage", "damage", "damage", "destroyed"]));
                 let types: Vec<GameEventType> = s.last_events().iter().map(|event| event.event_type()).collect();
                 let first_destroyed = types.iter().position(|kind| *kind == GameEventType::Destroyed);
@@ -178,7 +165,6 @@ mod tests {
                 s.play("core-013", json!({}));
                 s.expect_stats("core-013", json!({ "attack": attack, "health": health, "maxHealth": health }));
 
-                // And it deals 2 [4] to the enemy hero at its controller's end of turn.
                 s.end_turn();
                 s.expect_health(PlayerId::P2, 30 - amount);
                 assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![amount]);

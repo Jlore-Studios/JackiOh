@@ -1,13 +1,7 @@
-// The token picker (#1309, SPEC §14.5): both token bars, the cosmetic cycle's next step, the
-// card token's pick of an unowned card and the cosmetic tokens held. R1953001: a cosmetic token is
-// spent where a locked cosmetic is shown, in the Collection (collection/TokenOffer.tsx), so the shop
-// keeps no pick of one and links there.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). The bars, their sizes, the next step and the held
-// counts come from `GET /api/tokens`; the filter only chooses what to browse. A redemption sends
-// intent and renders the answer: success re-reads the bars (and the collection, so the unlocked
-// card leaves the list), refusal shows the server's words through `t()` (R711000) with nothing
-// changed on screen.
+// The token picker (#1309, SPEC §14.5). R1953001: a cosmetic token is spent in the Collection
+// (collection/TokenOffer.tsx), so the shop keeps no pick of one and links there. THE SERVER DECIDES
+// (CLAUDE.md rule 7): the bars, the next step and the held counts come from `GET /api/tokens`; a
+// refused redemption shows the server's words through `t()` (R711000) with nothing changed.
 
 import { useEffect, useId, useMemo, useState, type ReactElement } from "react";
 
@@ -32,13 +26,9 @@ import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { nextStepWords, shopTestid, tokenPoolIds, unownedCards } from "./shop.ts";
+import { messageOf } from "../net/errors.ts";
 import "../game/deckbuilder/deckbuilder.css";
 import "./shop.css";
-
-/** What a failed request says: the server's words, else the error's. */
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 /**
  * The panel. `revision` is how many times the page has asked it to read again (another panel
@@ -85,7 +75,7 @@ export default function TokenPicker({
           const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
           const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
           if (keptBars === undefined || keptCollection === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setBars(keptBars);
             setCollection(keptCollection);
@@ -113,12 +103,12 @@ export default function TokenPicker({
             setCollection(next);
           },
           (cause: unknown) => {
-            setError(wordsOf(cause));
+            setError(messageOf(cause));
           },
         );
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);
@@ -163,7 +153,6 @@ export default function TokenPicker({
   );
 }
 
-/** The bars, the next step, the card picker and the cosmetic tokens held, once every read has answered. */
 function TokenBody({
   bars,
   collection,
@@ -175,8 +164,7 @@ function TokenBody({
   busy: string | null;
   onPickCard: (cardId: string) => void;
 }): ReactElement {
-  // The browse pane's filter, sort, open detail view and pending confirm live here, so the page's
-  // reads (bars, collection) still own what the server decided (CLAUDE.md rule 7).
+  // Browse state (filter, sort, open detail, pending confirm) lives here, apart from the server-owned reads.
   const [filter, setFilter] = useState<PoolFilter>({ ...DEFAULT_FILTER, ownedOnly: false });
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
@@ -198,9 +186,9 @@ function TokenBody({
     setAsking(false);
     setDetailCardId(null);
   };
-  // The question takes Unlock's place in the detail's own actions row: the detail is a modal over
-  // the page (CardDetail.tsx), so a confirm drawn anywhere else lies under its scrim, out of Tab's
-  // reach. Cancel, which spends nothing, takes the focus.
+  // The question takes Unlock's place in the detail's actions row: the detail is a modal (CardDetail.tsx),
+  // so a confirm drawn anywhere else lies under its scrim, out of Tab's reach. Cancel, which spends
+  // nothing, takes the focus.
   const detail =
     detailCardId === null || detailDef === undefined
       ? null

@@ -1,10 +1,6 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: the merge of
 // main into production through a pull request, Vercel's hold and fast-forward, and the one countdown
-// issue that can hold or delay either and shows the queue. Each case runs the real script in a fresh
-// clone of a throwaway "origin", with a stand-in for `gh` (below) that keeps issues, pull requests,
-// comments, reactions, CI runs and Vercel's deployments in a JSON file and does the merge for real
-// with git, so what production ends up holding is what GitHub would leave it, and one for `curl`
-// that records the deploy hook's calls.
+// issue that can hold or delay either and shows the queue; each case runs it against a throwaway origin.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -25,7 +21,7 @@ const LABEL = "production merge";
 // Both people, and `human` so the night bot never picks these up.
 const PEOPLE = ["jgoetzmann", "MaxGoetzmann"];
 
-// --- the stand-in for `gh` -------------------------------------------------------------------
+// The stand-in for `gh`
 
 const FAKE_GH = String.raw`#!/usr/bin/env node
 const fs = require("fs");
@@ -151,7 +147,6 @@ echo "$*" >> "$FAKE_GH_DIR/curl.log"
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
 interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean }
-/** What Vercel's GitHub app reported for a build of main: its commit and its latest status. */
 interface Deployment { id: number; sha: string; state: string; creator?: string }
 interface Gh {
   next: number;
@@ -171,7 +166,7 @@ interface Gh {
   tokens: string[];
 }
 
-// --- a world: origin, a working copy, the stand-in -------------------------------------------
+// A world: origin, a working copy, the stand-in
 
 interface World { root: string; origin: string; work: string; bin: string; sha: Record<string, string> }
 const roots: string[] = [];
@@ -298,7 +293,6 @@ const comment = (w: World, number: number, body: string, when: string, who: { lo
 const reactions = (w: World, id: number): string[] => gh(w).reactions.filter((r) => r.comment === id).map((r) => r.content);
 /** The commit a tag names on origin, or "" when there is no such tag. */
 const tagAt = (w: World, tag: string): string => git(w.origin, "for-each-ref", "--format=%(objectname)", `refs/tags/${tag}`);
-/** The deploy hook's calls, one line of curl's arguments each. */
 const hookCalls = (w: World): string[] => {
   try {
     return readFileSync(join(w.root, "gh", "curl.log"), "utf8").split("\n").filter((line) => line !== "");
@@ -666,7 +660,6 @@ describe("Vercel, from the same issue", () => {
     expect(issue(w, 1).body).toContain("**Vercel (staging): on hold.**");
     expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT) · Vercel on hold");
     expect(marker(issue(w, 1))).toContain("held=0");
-    // Production still merges at its time.
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     expect(gh(w).prs).toHaveLength(1);
     expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);

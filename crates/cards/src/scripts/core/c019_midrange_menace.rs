@@ -1,15 +1,6 @@
 //! #19 Midrange Menace (SPEC §8.1): 9/9 → 18/18, "Taunt; End of turn: heal to full", radiant
 //! "Taunt, Immutable; same". Engine cell: "Heal removes all damage".
-//!
-//! The radiant cell lists keywords without "Plus", so `[Taunt, Immutable]` is the radiant form's
-//! complete keyword list, and "same" restates the end-of-turn clause (§8 Conventions): both faces carry
-//! the identical hook. Neither keyword is granted here: both are PRINTED in the catalog and applied by
-//! §10.4's layer system (combat enforces the Taunt; R23's Immutable scope is the effects library's), so
-//! a re-grant would double it.
-//!
-//! "End of turn" is the controller's own (§6.2), never the opponent's, as in #13. "Heal to full" is
-//! §6.3's Heal with `toFull`: it takes ALL damage off and raises nothing. §4 says damage stays between
-//! turns, which is why the card needs this at all.
+//! Printed keywords (§10.4, R23, R781001; #41, #13, §8). End of turn (§6.2) heals to full (§6.3, §4; R17, R78, §10.8, §9.3).
 
 use jackioh_engine::prelude::*;
 
@@ -32,14 +23,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19.
-//
-// Must-pass (M4-T4): "Taunt enforced; heals to full at own end of turn; radiant Immutable refuses
-// Sheepish". §4: damage stays on a unit until a heal (§6.3) or leaving the field (R78) takes it off.
-//
-// R23's "refuses Sheepish": the transform half belongs to #41 Sheepish's file. This file owns the half
-// that makes R23 apply: the radiant face carries Immutable, printed and visible in the view, and the
-// base face does not. Both faces are asserted for the keyword list and the end-of-turn heal.
+// #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19 (§4, §6.3, R78, R23, #41).
+// Taunt enforced; heals to full at end of turn; radiant Immutable refuses #41 Sheepish.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

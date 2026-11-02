@@ -66,9 +66,7 @@ pub fn script() -> CardScripts {
 }
 
 // #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58: token each start of turn; radiant +3/+3 aura only on
-// Rush Tokens). Proved here: R62 and §6.2 (start of turn fires on the controller's turn only, after the
-// mana refresh, before the draw), R64 (leftmost empty unlocked zone; a full row summons nothing), §10.4
-// layer 5 (the aura is a computed layer, not a buff), §7, §8 Conventions ("same": the face summons AND pumps).
+// Rush Tokens).
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -132,7 +130,6 @@ mod tests {
             assert_eq!(units_of(&g, P1).len(), 1);
             assert_eq!(units_of(&g, P2).len(), 0);
 
-            // Back to p1: a second token.
             g.end_turn();
             assert_eq!(units_of(&g, P1), ["core-t-rush", "core-t-rush"]);
         }
@@ -322,7 +319,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-058, on both faces: a Rush Token at the start of turn, buffed on the Radiant face.
+    /// R2195003: the snapshot plays exactly as core-058, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_058() {
         for radiant in [false, true] {

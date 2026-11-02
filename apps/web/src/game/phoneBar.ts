@@ -1,11 +1,10 @@
 // #2645: whether the board is on one of its two phone layouts, followed live.
 //
 // board.css keeps the control bar to one row there, so Offer draw, Concede and Friends sit in the match
-// menu (`MatchMenu.tsx`) instead of beside End turn, and the Marketplace's toggle is a button of the
-// bar. That is a choice of which controls are drawn, so the hook reads the same media query the
-// stylesheet does (`PHONE_BAR_QUERY`) and re-renders its caller whenever it flips (a phone turned on its
-// side, a window resized). It only says which layout is showing: every control still sends the intent it
-// always sent and decides nothing (CLAUDE.md rule 7). A host without `matchMedia` reads false.
+// menu (`MatchMenu.tsx`) instead of beside End turn. That is a choice of which controls are drawn, so
+// the hook reads the same media query the stylesheet does (`PHONE_BAR_QUERY`) and re-renders its
+// caller whenever it flips. It only says which layout is showing: every control decides nothing
+// (CLAUDE.md rule 7). A host without `matchMedia` reads false.
 
 import { useSyncExternalStore } from "react";
 

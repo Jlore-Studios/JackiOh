@@ -1,8 +1,6 @@
 // Coach bubble and anchor ring (SPEC §9.10, R292): wait for board animation and keep controls clear.
-// R2434003: on a desktop the bubble docks to a corner, never the middle of the board; the ring is the
-// pointing at a target.
-// R314: it never skips or blocks play; focus stays in prompts and dialogs.
-// CLAUDE.md rule 7: anchors come from view testids.
+// R2434003: on a desktop the bubble docks to a corner; the ring does the pointing. R314: it never skips
+// or blocks play; focus stays in prompts and dialogs. CLAUDE.md rule 7: anchors come from view testids.
 
 import {
   useCallback,
@@ -16,7 +14,7 @@ import {
   type ReactElement,
 } from "react";
 
-import { LANES, testid } from "../game/contract.ts";
+import { LANES, byTestid, testid } from "../game/contract.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import {
   COACH_BUBBLE_MIN_HEIGHT_PX,
@@ -50,10 +48,6 @@ const FOCUS_KEEPERS = '[data-testid="prompt-modal"], [role="dialog"][aria-modal=
 
 const YOUR_MOVE = "Your move: play cards and attack, then press End turn.";
 const AI_MOVE = "The AI is taking its turn.";
-
-function byTestid(id: string): Element | null {
-  return document.querySelector(`[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`);
-}
 
 function rectOf(element: Element | null): Rect | null {
   if (element === null) return null;

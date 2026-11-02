@@ -1,11 +1,8 @@
 // Lesson 1 data (SPEC §9.10, R291, R2434001, R2533001); ../lessons.ts defines its fields and
-// ../scripts/basics.ts is the coach. The first steps, and nothing else: the player's deck is mostly
-// vanilla units, copies of Training Grounds' three with no text at all and of its Rush-only Boulder Fist
-// Ogre, at most `deckCopies` (4) of each (R2433001), with six Cry units; the AI's is twelve Training
-// Grounds units too, copies of the same vanilla units (its own `deckCopies`, R2533001) and two Cry units.
-// No spell, keyword but Rush, backrow card, Legendary or Mythic, the pool hold on. Deck order fixes this
-// seed's deal (`scripts/lesson-deal.ts basics`): reordering it changes the game, so rerun the lesson's
-// tests.
+// ../scripts/basics.ts is the coach. The first steps, and nothing else: mostly vanilla units, at most
+// `deckCopies` of each (R2433001; the AI's own, R2533001), and no spell, keyword but Rush, backrow card,
+// Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal (`scripts/lesson-deal.ts
+// basics`): reordering it changes the game, so rerun the lesson's tests.
 
 import type { TutorialLesson } from "../lessons.ts";
 

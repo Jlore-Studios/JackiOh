@@ -1,10 +1,6 @@
-// The emote session (session.ts) driven through its injected clock — no timers, no React.
-//
-// R643 is what is proved here: an admitted send shows for that player at once, a send the shared
-// `emoteGate` drops shows nothing (and notifies nobody — the same silent drop the server gives),
-// a received emote shows unless its player is muted, one emote per player stands at a time, and
-// `expire` clears only the show it was armed for. The state is keyed by PlayerId throughout, so a
-// hotseat hand-over moves nothing.
+// The emote session (session.ts) driven through its injected clock, proving R643: a send the shared
+// `emoteGate` drops shows nothing and notifies nobody, the same silent drop the server gives. The
+// state is keyed by PlayerId throughout, so a hotseat hand-over moves nothing.
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -59,7 +55,6 @@ describe("R643 the emote session", () => {
     expect(gate.ok).toBe(false);
     if (gate.ok === false) expect(gate.retryAfterMs).toBe(1);
 
-    // The menu stays open and the first emote keeps standing: the drop changes nothing on screen.
     expect(session.send("p1", "oops", "Oops.", HOLD)).toBe(false);
     expect(session.visible("p1")).toMatchObject({ key: 1, emote: "greetings" });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -186,7 +181,6 @@ describe("R643 the emote session", () => {
       expect(session.gate(player).ok, player).toBe(player === "p1" ? false : true);
     }
 
-    // Muting one seat leaves the other able to show.
     session.mute("p1");
     expect(session.receive("p2", "yawn", null, HOLD)).toBe(true);
     expect(session.visible("p2")?.emote).toBe("yawn");

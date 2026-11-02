@@ -1,8 +1,5 @@
-// #2266: the pool's cards are memoized. A filter, a sort, an ownership change or a card the deck takes
-// re-renders only the cards it changes (a face renders once per card render, which is what these
-// count), every card calls the screen's latest handlers though its own never change, and a pool
-// longer than POOL_FIRST_CARDS draws that many first and the rest in a render of its own. The
-// viewer's picks are PoolGrid.test.tsx's (R1956000), the Almanac's route is almanac.test.tsx's.
+// #2266: the pool's cards are memoized. A face renders once per card render, which is what these
+// count. The viewer's picks are PoolGrid.test.tsx's (R1956000), the Almanac's route is almanac.test.tsx's.
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { cleanup, fireEvent, render } from "@testing-library/react";

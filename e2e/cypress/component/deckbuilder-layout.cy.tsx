@@ -1,6 +1,5 @@
-// Polish 6: B39 verifies the real deck workshop at phone and desktop widths; B29 verifies its detail faces.
-// Mount `/decks`'s bare `DeckWorkshop` with its heaviest data so the browser measures production layout (SPEC §9.4, R250–R256).
-// jsdom cannot measure layout; retried Cypress assertions require the workshop and every pool item to render.
+// Polish 6: B39 measures the real deck workshop at phone and desktop widths, and B29 its detail faces,
+// on `/decks`'s bare `DeckWorkshop` with its heaviest data (SPEC §9.4, R250–R256): jsdom cannot measure layout.
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
@@ -233,7 +232,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // B39: the pool scrolls internally while its bottom remains onscreen.
   it("B39 at 1280x720 the pool's own bottom edge is on screen and the page itself does not scroll", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
@@ -289,7 +287,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // #263: an off-screen card fits only after it nears the screen.
   it("#263 a pool card off the screen is fitted when it nears the screen, not before", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
@@ -308,11 +305,10 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // #85: pool keywords use their rules box's ink and bold weight; B10 checks which terms appear.
+  // #85: how pool keywords print; B10 checks which terms appear.
   it("every pool card prints its keywords in bold in the rules box's ink (#85)", () => {
     cy.viewport(1280, 720);
     cy.get(ts(WORKSHOP)).should("have.class", "tavern");
-    // Each face is drawn once it nears the screen (PoolGrid's PoolFace), so every card is visited.
     fitEveryPoolCard();
     cy.document().should((doc) => {
       const missing: string[] = [];
@@ -373,7 +369,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // B29: the header's deck cosmetics button takes a finger, as Back and the gear on its row do.
   it(`B29 at 390x844 the deck cosmetics button is at least ${String(TOUCH_PX)} px square`, () => {
     cy.viewport(390, 844);
     cy.get(ts(DECK_COSMETICS_BUTTON)).should(($button) => {
@@ -383,8 +378,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // R2100000: the deck's history button sits in the editor's head, the top bar having no room left
-  // on the first screen above, and takes a finger as the cosmetics button does.
+  // R2100000: the history button sits in the editor's head, the top bar having no room left above.
   it(`R2100000 at 390x844 the deck history button is at least ${String(TOUCH_PX)} px square`, () => {
     cy.viewport(390, 844);
     cy.get(`${ts(DB_SIDEBAR)} ${ts(DECK_HISTORY_BUTTON)}`).should(($button) => {

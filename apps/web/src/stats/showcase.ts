@@ -1,19 +1,12 @@
-// R1584000: the stats the floor below the tavern's showcase shows, one at a time: each with a title,
-// the card it is about and the player's number for it. A stat the device holds no data for is left
-// out. This module only chooses and words them; StatShowcase.tsx draws them and showcaseStage.ts
-// plays the board's animation for each. It takes the stage's types and nothing else of it, so the
-// effects layer stays off the first screen until the showcase is drawn.
+// R1584000: the stats the floor below the tavern's showcase shows, one at a time. A stat the device
+// holds no data for is left out. This module only chooses and words them; it takes the stage's types
+// and nothing else of it, so the effects layer stays off the first screen until the showcase is drawn.
 //
-// R1743000: there are 35 of them (R2649000: 65), and a stat's card is never a token: every choice
-// passes over a card whose catalog entry is a token, as it does one the catalog no longer holds. The
-// order they come in is the showcase's (`nextInBag`), a shuffled bag drawn from the page's random source.
+// R1743000: a stat's card is never a token, nor one the catalog no longer holds (R2649000: 65 stats).
+// The order is a shuffled bag (`nextInBag`) drawn from the page's random source.
 //
-// R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit; Hot
-// Streak, The Record and Ride or Die read the wins), and `animationFor` fits a lunge to the card's type.
-//
-// R2649000: thirty more, almost all about one of the game's own mechanics each (Temporary, Brittle, Feng
-// Shui, trades, Created cards, combat and its keywords, freezes, Flashback, mana, counters, burns,
-// bounces and Starships), read off the counters `track.ts` keeps for them.
+// R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit), and
+// `animationFor` fits a lunge to the card's type. R2649000's thirty are read off `track.ts`'s counters.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import { hasKeyword, type CardDefs, type KeywordKind } from "@jackioh/shared";
@@ -131,7 +124,6 @@ export function pocketLine(pick: PocketPick): string {
   return t("you play it {n}× as often as everyone else", { n: Math.round((pick.playerRate / pick.baseRate) * 10) / 10 });
 }
 
-/** R1743000: a stat's card is one the catalog holds and that is not a token. */
 function showable(id: string): boolean {
   const def = CATALOG[id];
   return def !== undefined && !def.token;
@@ -186,9 +178,8 @@ function topCard(stats: PlayerStats, counter: CardCounter, at = 0): CardTally | 
 type Share = { readonly id: string; readonly part: number; readonly whole: number };
 
 /**
- * R1743000: the showable card with the highest `part` per `whole`, among those with a `whole` of at
- * least SHOWCASE_MIN_PLAYS and a `part` above 0. The part is capped at the whole (a card can be
- * destroyed more often than it was played); a tie goes to the lower id.
+ * R1743000: the showable card with the highest `part` per `whole` (a `whole` of at least SHOWCASE_MIN_PLAYS,
+ * a `part` above 0), the part capped at the whole; a tie goes to the lower id.
  */
 function topShare(
   stats: PlayerStats,
@@ -212,17 +203,14 @@ function drawOne(ids: readonly string[], random: RandomSource): string | undefin
 
 type StatMeta = Omit<ShowcaseStat, "cardId" | "line">;
 
-/** A stat about a card tallied under one number, worded with that number. */
 function tallied(top: CardTally | undefined, stat: StatMeta, line: (n: number) => string): ShowcaseStat[] {
   return top === undefined ? [] : [{ ...stat, cardId: top.id, line: () => line(top.count) }];
 }
 
-/** A stat about the card the device logged most under one counter, worded with that count. */
 function counted(stats: PlayerStats, counter: CardCounter, stat: StatMeta, line: (n: number) => string): ShowcaseStat[] {
   return tallied(topCard(stats, counter), stat, line);
 }
 
-/** A stat about the card with the highest share of one number, worded with the part and the whole. */
 function shared(share: Share | undefined, stat: StatMeta, line: (part: number, whole: number) => string): ShowcaseStat[] {
   return share === undefined ? [] : [{ ...stat, cardId: share.id, line: () => line(share.part, share.whole) }];
 }
@@ -232,12 +220,11 @@ function about(id: string | undefined, stat: StatMeta, line: () => string): Show
   return id === undefined ? [] : [{ ...stat, cardId: id, line }];
 }
 
-/** The tally of a card, all zeros for one the device holds none of. */
 function countsOf(stats: PlayerStats, id: string): CardCounters {
   return stats.cards[id] ?? NO_COUNTS;
 }
 
-/** R1584000: the Pocket Pick, once its request has answered with a card the catalog holds (a token never is one, R1743000); none before a game. */
+/** R1584000: the Pocket Pick once its request answers with a showable card; none before a game. */
 export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): ShowcaseStat[] {
   if (stats.games === 0 || pocket === null || !showable(pocket.id)) return [];
   return [
@@ -253,11 +240,9 @@ export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): Showc
 }
 
 /**
- * The stats there are to show: one for each the device has data for, none before the first finished
- * game. The Pocket Pick comes from R1583000's request, so it is absent until that answers (or from
- * `pocketStat`, which a caller adds after the draw so its answer redraws nothing), when it names
- * nothing, or when the catalog no longer holds its card. R1743000: the order is not the stats'; and
- * each stat that picks a card at random draws once from `random`, and only when it has a candidate.
+ * One stat for each the device has data for, none before the first finished game. The Pocket Pick
+ * (R1583000) may come after the draw through `pocketStat`, so its answer redraws nothing. R1743000: each
+ * stat that picks at random draws once from `random`, only with a candidate.
  */
 export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, random: RandomSource): ShowcaseStat[] {
   if (stats.games === 0) return [];
@@ -522,15 +507,14 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
   return out.map((stat) => ({ ...stat, animation: animationFor(stat.cardId, stat.animation) }));
 }
 
-/** R1743000: the order the showcase tells its stats in: what is left of this round, and the stat shown now. */
+/** R1743000: the showcase's order: what is left of this round, and the stat shown now. */
 export type ShowcaseBag = { readonly shown: ShowcaseKey | null; readonly left: readonly ShowcaseKey[] };
 
 export const EMPTY_BAG: ShowcaseBag = Object.freeze({ shown: null, left: Object.freeze([]) });
 
 /**
- * R1743000: the bag after one stat more. What is left of the round (those of it that `keys` still holds)
- * gives the next; with none left the stats are shuffled by `random` into a new round, and a round never
- * starts with the stat just shown (it goes to the round's end), so none shows twice in a row.
+ * R1743000: the bag after one stat more: the next of the round's left (those `keys` still holds), or,
+ * with none left, a new round shuffled by `random` that never starts with the stat just shown.
  */
 export function nextInBag(bag: ShowcaseBag, keys: readonly ShowcaseKey[], random: RandomSource): ShowcaseBag {
   let left = bag.left.filter((key) => keys.includes(key));

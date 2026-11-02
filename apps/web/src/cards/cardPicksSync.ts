@@ -1,22 +1,15 @@
 // R1834000: a signed-in account's per-card picks (R1655000) live on the account, and the device's store
 // (`cards/cosmetics.ts`) is their cache. The device's own picks are sent up once, by the first active
-// profile to sign in on it while it holds some (`POST /api/card-picks/upload`, which never overwrites a
-// card the account holds); any other time the account's copy is read. Either answer replaces the
-// device's copy, but for a write made here while it was on its way, which stands and is sent after it,
-// and lists the profile under CARD_PICKS_UPLOADED_KEY: from then on the store holds an account's copy,
-// which is never sent up again, so a pick cleared on another device never comes back from this one's
-// cache, and no profile's copy is sent up as another's. Each write on this page is then sent as the
-// fields it changed (`PUT /api/card-picks`, null clearing one), one request at a time.
-//
-// A failed request throws nothing into React and changes nothing on the device: a failed upload or
-// read lists no profile, so the next sign-in tries again, and a failed send leaves the pick worn here.
-// The screens share one sync per profile, as the settings' does (`settings/accountSync.ts`).
-
-import { useEffect, useRef } from "react";
+// profile to sign in on it while it holds some (`POST /api/card-picks/upload` never overwrites a card
+// the account holds); any other time the account's copy is read. Either answer replaces the device's
+// copy, but for a write made here meanwhile, and lists the profile under CARD_PICKS_UPLOADED_KEY: an
+// account's copy is never sent up again, so a pick cleared on another device never comes back from this
+// one's cache. A failed request throws nothing into React, changes nothing here and lists no profile,
+// so the next sign-in tries again.
 
 import { getCardPicks, putCardPick, uploadCardPicks, type CardPicksEntry, type CardPicksResponse, type CardPickPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { SETTINGS_SYNC_GRACE_MS } from "../settings/accountSync.ts";
+import { SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
 import { isRecord } from "../wire/json.ts";
 import {
   readAllCardPicks,
@@ -25,6 +18,7 @@ import {
   type CardPickChange,
   type StoredCardPicks,
 } from "./cosmetics.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 /** R1834000: the profiles whose account copy has replaced this device's picks, a JSON list of profile ids. */
 export const CARD_PICKS_UPLOADED_KEY = "jackioh.cosmetics.cards.uploaded.v1";
@@ -52,7 +46,7 @@ export type CardPicksAccountSync = {
 /** The profiles listed under CARD_PICKS_UPLOADED_KEY; none where storage is missing, blocked or unparsable. */
 function uploadedProfiles(): string[] {
   try {
-    const raw: unknown = JSON.parse(window.localStorage.getItem(CARD_PICKS_UPLOADED_KEY) ?? "[]");
+    const raw: unknown = JSON.parse(getStored(CARD_PICKS_UPLOADED_KEY) ?? "[]");
     return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : [];
   } catch {
     return [];
@@ -60,11 +54,8 @@ function uploadedProfiles(): string[] {
 }
 
 function markUploaded(profileId: string): void {
-  try {
-    window.localStorage.setItem(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
-  } catch {
-    // Storage refused: the next sign-in may send the picks again, which overwrites nothing on the account.
-  }
+  // Storage that refuses it: the next sign-in may send the picks again, which overwrites nothing on the account.
+  setStored(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
 }
 
 /** The account's answer as the store's input, card id to picks; an answer of another shape is a failed request. */
@@ -77,7 +68,7 @@ function accountCopy(answer: unknown): Record<string, unknown> {
   return picks;
 }
 
-/** `picks` with `change` made to `defId`'s: a field set to its new value, or dropped where it is null. */
+/** Applies `change` to `picks[defId]` in place: a null field is dropped. */
 function withChange(picks: Record<string, unknown>, defId: string, change: CardPickChange): void {
   const held = picks[defId];
   const next: Record<string, unknown> = isRecord(held) ? { ...held } : {};
@@ -213,21 +204,7 @@ function attach(profileId: string, token: () => string, api: () => CardPicksAcco
 
 /** R1834000: an active account's per-card picks are kept level with this device's, on every gated screen. */
 export function useCardPicksAccountSync(account: Account, api: CardPicksAccountApi = cardPicksAccountApi): void {
-  const active = account.kind === "ready" && account.me.profile.status === "active";
-  const profileId = active ? account.me.profile.id : null;
-  const token = useRef<string>("");
-  token.current = active ? account.token : "";
-  const requests = useRef(api);
-  requests.current = api;
-
-  useEffect(() => {
-    if (profileId === null) return;
-    return attach(
-      profileId,
-      () => token.current,
-      () => requests.current,
-    );
-  }, [profileId]);
+  useAccountSync(account, api, attach);
 }
 
 /** Test seam: a new page, with no sync running. */

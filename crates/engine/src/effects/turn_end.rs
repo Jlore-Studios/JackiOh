@@ -10,8 +10,6 @@
 //! main-phase actions (a play, an attack, a position switch, an activation) and ends the turn once the
 //! last one has resolved; ending the turn themselves uses it up. On the other player's turn there is no
 //! turn of that player's to end, and nothing happens.
-//!
-//! Port of `packages/engine/src/effects/turnEnd.ts`.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/damage.test.ts`.
-//!
 //! One test per step of the damage pipeline (SPEC §4.4), in order, steps 0, 0a and 4a among them,
 //! plus §6.3 healing and R18.
 
@@ -18,13 +16,11 @@ use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, live, ne
 use crate::rules::fixtures::scripts::anti_oneshot;
 use crate::rules::fixtures::stinkyscape_verbs::{MASOCHISM, PLAIN, REDIRECT_CAP, register_stinkyscape_verbs};
 
-/// TS `newGame()`: the harness's default seed.
 fn game() -> GameState {
     new_game("engine-test", None)
 }
 
-/// Where a hit lands: TS's `onUnit(instance)` and `onHero(player)`. A unit is named by id, so the hit
-/// is dealt to the card as the state holds it at that moment (TS hands over the live object).
+/// Where a hit lands; a unit by id, so the hit meets the card as the state then holds it.
 enum Aim<'a> {
     Unit(&'a str),
     Hero(PlayerId),
@@ -38,7 +34,7 @@ fn on_hero(player: PlayerId) -> Aim<'static> {
     Aim::Hero(player)
 }
 
-/// One damage instance, returning the amount actually dealt.
+/// One damage instance; returns the amount dealt.
 fn hit(
     sink: &mut EngineSink,
     source: Option<&str>,
@@ -74,7 +70,6 @@ fn amounts(events: &[GameEvent], kind: GameEventType) -> Vec<i32> {
         .collect()
 }
 
-/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it (TS `sinkFor`).
 fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -82,7 +77,6 @@ fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -
     run(&mut sink)
 }
 
-/// `describe("the damage pipeline (§4.4, M2-T3)")`.
 mod the_damage_pipeline_s4_4_m2_t3 {
     use super::*;
 
@@ -94,7 +88,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let spell = in_hand(&mut state, &bolt.id, P1, 1).remove(0);
         with_sink(&mut state, |sink| {
             assert_eq!(spell_damage_of(sink.state, P1), 2);
-            // The Spell's 3 is raised by its controller's Spell Damage +2, before every later step.
+            // Spell Damage +2 raises the Spell's 3 before every later step.
             assert_eq!(hit(sink, Some(&spell.id), on_unit(&target.id), 3, None), 5);
             assert_eq!(live(sink.state, &target.id).damage, 5);
             // The Unit that prints it deals its own hit unraised.
@@ -115,7 +109,6 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let p1 = s.state().players.p1.hero.health;
         let p2 = s.state().players.p2.hero.health;
         with_sink(s.state_mut(), |sink| {
-            // The whole hit is under the cap: none of it is taken, and all of it is dealt to p2.
             assert_eq!(
                 hit(sink, None, on_hero(P1), REDIRECT_CAP - 5, None),
                 REDIRECT_CAP - 5
@@ -123,7 +116,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(sink.state.players.p1.hero.health, p1);
             assert_eq!(sink.state.players.p2.hero.health, p2 - (REDIRECT_CAP - 5));
             assert_eq!(events_of_type(sink.events, GameEventType::Redirected).len(), 1);
-            // The next 10: the cap's last 5 move, and the other 5 go on from step 1 as the rest of the hit.
+            // The next 10: the cap's last 5 move, and the other 5 go on from step 1.
             assert_eq!(hit(sink, None, on_hero(P1), 10, None), 10);
             assert_eq!(sink.state.players.p1.hero.health, p1 - 5);
             assert_eq!(sink.state.players.p2.hero.health, p2 - REDIRECT_CAP);
@@ -220,7 +213,6 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             json!({}),
         );
         with_sink(&mut state, |sink| {
-            // Printed, Defense and aura Armor all: the whole 7 lands.
             find_instance_mut(sink.state, &target.id)
                 .expect("on the field")
                 .position = Some(Position::Def);
@@ -267,7 +259,6 @@ mod the_damage_pipeline_s4_4_m2_t3 {
                 HERO_HEALTH - ANTI_ONESHOT_CAP.base
             );
 
-            // A unit behind the same Anti-oneshot Armor takes the whole hit.
             assert_eq!(hit(sink, None, on_unit(&own.id), 12, None), 12);
             assert_eq!(live(sink.state, &own.id).damage, 12);
 
@@ -355,15 +346,14 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let action =
             json!({ "type": "attack", "attackerId": attacker.id, "targetId": "hero-p2", "playerId": "p1" });
 
-        // At 30 the grunt's 2 is no lethal hit: the window stays shut, the hit lands and the trap waits.
+        // At 30 the grunt's 2 is not lethal: the window stays shut, the hit lands, the trap waits.
         let mut game = recorder(&state);
         let result = game.play(action.clone());
         assert_eq!(game.state().players.p2.hero.health, 28);
         assert_eq!(amounts(&result.events, GameEventType::Damage), vec![2]);
         assert!(events_of_type(&result.events, GameEventType::TrapFired).is_empty());
 
-        // At 2 the same hit would leave the hero at 0: the replacement acts first and cancels it, so it
-        // deals nothing and emits no damage (R1704001).
+        // At 2 the same hit is lethal: the replacement cancels it first, so no damage (R1704001).
         state.players.p2.hero.health = 2;
         let mut game = recorder(&state);
         let result = game.play(action);
@@ -410,9 +400,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     #[test]
     fn r63_r1361_step_6_an_instance_armor_reduces_to_0_emits_no_damage_event_and_a_0_hit_is_no_instance_at_all()
      {
-        // M1 has no trigger dispatch, so what step 6 makes observable is the `damage` event an
-        // on-damage trigger such as Fed Fauci's Plague Counter would fire from: one per instance dealt,
-        // none at all for an instance stopped before step 5.
+        // Step 6 is observed as the `damage` event on-damage triggers fire from.
         let mut state = game();
         let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({}));
         let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({}));
@@ -433,7 +421,6 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert!(unit_has(sink.state, &now, KeywordKind::DivineShield));
             assert_eq!(sink.events.len(), 0);
 
-            // Two instances that do land emit exactly one `damage` event each.
             assert_eq!(hit(sink, None, on_unit(&armor.id), 9, None), 2);
             assert_eq!(hit(sink, None, on_unit(&armor.id), 9, None), 2);
             assert_eq!(amounts(sink.events, GameEventType::Damage), vec![2, 2]);
@@ -443,7 +430,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     #[test]
     fn r85_an_effect_may_state_its_damage_has_lifesteal_without_the_source_carrying_the_keyword() {
         let mut state = game();
-        // A plain 3/3 source: no Lifesteal anywhere on it (§6.1).
+        // A plain source: no Lifesteal on it (§6.1).
         let source = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let armor = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
         state.players[P1].hero.health = 20;
@@ -511,7 +498,6 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(hit(sink, Some(&source.id), on_unit(&armor.id), 1, None), 0);
             assert_eq!(live(sink.state, &armor.id).marked_destroyed, None);
 
-            // Poisonous only affects units: the hero just takes the damage.
             assert_eq!(hit(sink, Some(&source.id), on_hero(P2), 1, None), 1);
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH - 1);
             assert_eq!(sink.state.result, None);
@@ -551,8 +537,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let spare = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
         let other = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         with_sink(&mut state, |sink| {
-            // R1750000: damage that is no hit of an attack, a strike back or a card's text, never
-            // tramples, whatever the source's keywords: the whole 10 lands on the unit.
+            // R1750000: only an attack's hit, a strike back or a card's text tramples; all 10 land here.
             assert_eq!(hit(sink, Some(&source.id), on_unit(&other.id), 10, None), 10);
             assert_eq!(live(sink.state, &other.id).damage, 10);
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH);
@@ -632,7 +617,6 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         assert_eq!(live(&state, &left.id).damage, 3);
         assert_eq!(live(&state, &right.id).damage, 3);
         assert_eq!(live(&state, &attacker.id).damage, 5); // the defender struck back
-        // The attacker's own neighbours are on the other side of the field and are never cleaved.
         assert_eq!(live(&state, &own_left.id).damage, 0);
         assert_eq!(live(&state, &own_right.id).damage, 0);
         assert!(all_combat);
@@ -672,7 +656,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 }
 
-/// `describe("heal and lose health (§6.3, R18, R19, M2-T3)")`.
+/// Heal and lose health (§6.3, R18, R19, M2-T3).
 mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
     use super::*;
 
@@ -694,7 +678,6 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
                 json!([{ "type": "healed", "targetId": unit.id, "amount": 4 }])
             );
 
-            // An undamaged unit heals nothing and emits nothing.
             assert_eq!(heal_unit(sink, &now, 5), 0);
             assert_eq!(events_of_type(sink.events, GameEventType::Healed).len(), 1);
 
@@ -749,7 +732,6 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
             );
             assert_eq!(events_of_type(sink.events, GameEventType::Damage).len(), 0);
 
-            // The same 12 as damage loses 5 to Armor and is then clamped by the cap.
             assert_eq!(hit(sink, None, on_hero(P1), 12, None), ANTI_ONESHOT_CAP.base);
             assert_eq!(
                 sink.state.players[P1].hero.health,
@@ -759,8 +741,8 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
     }
 }
 
-/// §8 #91 Fed Fauci, trimmed to the half step 6 is responsible for: a trigger that reads the
-/// `damage` event this card's own hit emits. The mana half of its text is a card script (M4).
+/// §8 #91 Fed Fauci cut to step 6's half: a trigger on the `damage` event its own hit emits; the
+/// mana half is a card script (M4).
 fn fed_fauci() -> CardDef {
     json_as(json!({
         "id": "dm-fed-fauci",
@@ -777,7 +759,6 @@ fn fed_fauci() -> CardDef {
     }))
 }
 
-/// `describe("on-damage triggers (§4.4 step 6, M2-T3)")`.
 mod on_damage_triggers_s4_4_step_6_m2_t3 {
     use super::*;
 
@@ -814,7 +795,6 @@ mod on_damage_triggers_s4_4_step_6_m2_t3 {
 
         let fauci = put(&mut state, &fauci_def.id, slot(P2, Row::Units, 1), json!({}));
         with_sink(&mut state, |sink| {
-            // One instance of 2, one of 3: one token each, not one per point of damage.
             assert_eq!(hit(sink, None, on_unit(&fauci.id), 2, None), 2);
             settle(sink, Default::default());
             assert_eq!(live(sink.state, &fauci.id).counters.plague, Some(1));
@@ -823,8 +803,8 @@ mod on_damage_triggers_s4_4_step_6_m2_t3 {
             settle(sink, Default::default());
             assert_eq!(live(sink.state, &fauci.id).counters.plague, Some(2));
 
-            // An instance Armor reduces to 0 emits no `damage` event, so step 6 never runs (R63): the
-            // `damageAbsorbed` that reports it is all it emits, and nothing answers that (R1361).
+            // Armor to 0 emits no `damage`, so step 6 never runs (R63); the `damageAbsorbed` it emits
+            // instead is answered by nothing (R1361).
             find_instance_mut(sink.state, &fauci.id)
                 .expect("on the field")
                 .granted_keywords

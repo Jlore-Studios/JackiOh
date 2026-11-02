@@ -36,13 +36,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #70 Chaos Machine — SPEC §8.7 row 70, BUILD M9 row C+ 70: at the start and at the end of its
-// controller's turn it Upgrades one random other card among their hand and side of the field and
-// Degrades one random card among the opponent's (R386: one draw each; a pick on an Immutable card or
-// one nothing fits changes nothing); a pick over a hand and a field is split by the piles' sizes
-// (R242), and a hidden card's change reaches the other seat under the sentinel (R177); empty zones,
-// nothing and no draw (R129); the count reads through `param()`; radiant two different cards each
-// way. R585: the Upgrade never picks Chaos Machine itself.
+// C+ #70 Chaos Machine — SPEC §8.7 row 70, BUILD M9 row C+ 70.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,7 +53,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `Tune[]`: the `upgraded` or `degraded` events, as their JSON (`instanceId`, `defId`, `change`).
+    /// The `upgraded` or `degraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn tunes(events: &[GameEvent], kind: &str) -> Vec<Value> {
         events.iter().filter(|event| event.event_type().as_str() == kind).map(js).collect()
     }
@@ -84,7 +78,7 @@ mod tests {
         None
     }
 
-    /// TS `machine(p1, p2, { radiant?, seed? })`: Chaos Machine first in p1's backrow.
+    /// Chaos Machine first in p1's backrow.
     fn machine(p1: Value, p2: Value, radiant: bool, seed: Option<&str>) -> Scenario {
         let mut backrow = vec![json!({ "def": MACHINE, "radiant": radiant })];
         if let Some(rest) = p1.get("backrow").and_then(Value::as_array) {
@@ -149,7 +143,6 @@ mod tests {
             s.start_turn();
             assert!(tunes(s.last_events(), "upgraded").is_empty());
             assert!(s.card(&own).tuning.is_none());
-            // The Degrade still resolves.
             assert_eq!(tunes(s.last_events(), "degraded").len(), 1);
         }
 

@@ -2,14 +2,12 @@
 //! Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Start of game: Gain one of 13
 //! random powers, each 'Activate: Spend (X)'" (each power's words are its catalog line). Radiant: every
 //! power's Radiant words, Armor Up named Tank Up (R757).
-//! The thirteen powers live in `subsystems/hero_power.rs` (R43): `HERO_POWERS` is the table, `roll_power`
-//! the roll, `hero_power` the Discover continuation, and `power_abilities` declares each as an Activate
-//! ability (R384, R752) present only while the card rolled it. This file only wires the `Script`; state is
-//! on the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
-//! COST (R752): the card costs (0) and has no Cry; the power's X is the ability's mana price (R384).
-//! Witness Value, Stitching and Terminus Tricks Discover and resume at `hero_power` (`POWER_RESUME`, §10.6).
-//! Not said here: Indestructible is a printed keyword, a §10.4 layer (R46); Quickdraw is the flag `setup.rs`
-//! step 2 reads (§6.2); the arrival roll is the engine's (R151). Ping's target comes with the activation (R81).
+//! The thirteen powers live in `subsystems/hero_power.rs` (R43); `power_abilities` declares each as an
+//! Activate ability (R384, R752) present only while the card rolled it, its X the mana price. State is on
+//! the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
+//! Discovers resume at `hero_power` (`POWER_RESUME`, §10.6). Indestructible is a §10.4 layer (R46),
+//! Quickdraw the flag `setup.rs` step 2 reads (§6.2), the arrival roll the engine's (R151); Ping's target
+//! comes with the activation (R81).
 
 use jackioh_engine::prelude::*;
 
@@ -26,9 +24,7 @@ fn heroic_power(radiant: bool) -> Script {
         }),
         // R43: every copy in either hand or library rolls its power after the mulligan (§6.2).
         start_of_game: Some(hook(|_ctx| vec![subsystems::roll_power()])),
-        // R752: each power is an "Activate: Spend (X)" ability; the card has the one it rolled.
         activations: subsystems::power_abilities(radiant),
-        // §10.6: where a Discover comes back to.
         resume: IndexMap::from([(subsystems::POWER_RESUME, hook(subsystems::hero_power::hero_power))]),
         ..Script::default()
     }
@@ -41,12 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761):
-// "In opening hand; costs (0) and playing it uses nothing; power chosen at start of game from the
-// seed; each power an Activate paying its X once per turn; Indestructible; each power on both faces".
-// A test pins a power by writing its name into `memory.power` (R103), all `subsystems::ensure_power`
-// writes, so the state is one the engine produces. `scenario()` skips §2.1, so `startOfGame` never
-// runs; `crates/engine/tests/rules/hero_power.rs` covers the roll, and the arrival roll (R151).
+// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761).
+// `scenario()` skips §2.1, so `startOfGame` never runs; `crates/engine/tests/rules/hero_power.rs`
+// covers the roll.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,8 +131,8 @@ mod tests {
         (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
     }
 
-    /// Writes the power's name into `memory.power` (R103), as `subsystems::ensure_power` would, and
-    /// hands back the card as it now stands.
+    /// Writes the power's name into `memory.power` (R103), as `subsystems::ensure_power` would, so the
+    /// state is one the engine produces.
     fn set_power(s: &mut Scenario, card: &CardInstance, name: &str) -> CardInstance {
         let live = find_instance_mut(s.state_mut(), &card.id).expect("the Heroic Power is in the state");
         live.memory.insert(subsystems::POWER_KEY.to_string(), json!(name));
@@ -558,9 +551,8 @@ mod tests {
                 s.activate(&card, json!({}));
                 s
             };
-            // The added card's own discount needs it to be a Spell. Re-pinned for v0.3.15 (Meditative+
-            // ships, #1187): M+ #20 and #25 join the KY pool, so "hp-brainstorm" now adds a KY card that
-            // is no Spell; the seed is the first that adds a Spell.
+            // The added card's own discount needs it to be a Spell, and the KY pool holds some that are
+            // not (M+ #20 and #25, #1187): the seed is the first that adds a Spell.
             let seed = seed_where("hp-brainstorm", |seed| {
                 brainstorm(seed)
                     .hand(P1)
@@ -790,8 +782,7 @@ mod tests {
     }
 
     // Each power's number is one the card declares (B3.4 rule 5, R386), so a Degrade, an Upgrade or KY's
-    // Constant moves it; the engine reads it as `crate::config` prints it, moved by the card's tuning
-    // (`subsystems::hero_power::power_number`).
+    // Constant moves it (`subsystems::hero_power::power_number`).
 
     mod n98_heroic_power_the_numbers_r386 {
         use super::*;
@@ -980,10 +971,9 @@ mod tests {
         }
     }
 
-    // R1430: each number is its power's (`Param.power`), so a Degrade, an Upgrade or KY's Constant
-    // reaches only the numbers of the power the card has now, and a number of another power keeps its
-    // tuning for when a reroll brings that power back. R1431: Life Tap's damage is printed on the base
-    // face alone, so it is tuned there alone.
+    // R1430: each number is its power's (`Param.power`), so tuning reaches only the numbers of the power
+    // the card has now, and another power's number keeps its tuning for a reroll. R1431: Life Tap's
+    // damage is printed on the base face alone, so it is tuned there alone.
 
     mod n98_heroic_power_each_number_is_its_power_s_r1430_r1431 {
         use super::*;
@@ -1083,9 +1073,8 @@ mod tests {
                             assert!(own.contains(&key), "{name} radiant {radiant_face}: {key}");
                         }
                     }
-                    // Played for real: four Upgrades, or five Degrades, of the card on the field. Its cost,
-                    // its keyword and its Activate count are rows of their own; every declared number they
-                    // draw, and every number its tuning holds after, is the power's.
+                    // Played for real: four Upgrades, or five Degrades. Its cost, keyword and Activate
+                    // count are rows of their own; every number they draw or it holds is the power's.
                     for book in [BOOK_OF_BUFF, BOOK_OF_NERF] {
                         let (mut s, card) = on_field(
                             name,
@@ -1124,8 +1113,7 @@ mod tests {
                 assert_eq!(listed_numbers(&s, &card), listed, "{power} radiant {radiant_face}");
             }
             // In a hand, a Heroic Power with Expedition Map has no declared number to change: KY's
-            // Constant sets its cost or its Activate count to 3, where every power's numbers once stood
-            // beside them.
+            // Constant sets its cost or its Activate count to 3.
             let mut s = scenario(json!({
                 "seed": "hp-r1430-constant",
                 "p1": { "hand": [KYS_CONSTANT, HEROIC, SPARE], "mana": 8 },

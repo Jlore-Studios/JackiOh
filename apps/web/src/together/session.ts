@@ -1,26 +1,20 @@
-// What Play together's screens share besides `net/social.ts`: a refusal in its own words and a read
-// that keeps itself fresh. A route that takes a token (decks, replays, settings) is called with the
-// tab's session through `net/gate.ts`'s `withSession`, as the social and Duos wrappers are.
+// What Play together's screens share besides `net/social.ts`: a refused session told apart and a read
+// that keeps itself fresh (a refusal's words are `net/errors.ts`'s `messageOf`). A route that takes a
+// token is called with the tab's session through `net/gate.ts`'s `withSession`, as the social and Duos
+// wrappers are.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiRequestError } from "../net/api.ts";
 import { readFailureOf } from "../net/gate.ts";
-
-/** A refusal's sentence: the server's own for `ApiRequestError`, the transport's plain one otherwise. */
-export function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
+import { attempt } from "../net/errors.ts";
 
 /** The session refused a social route outright: signed out (401), or an account that is not active (403). */
 export function isRefusedSession(cause: unknown): boolean {
   return cause instanceof ApiRequestError && (cause.status === 401 || cause.status === 403);
 }
 
-/**
- * The unread counts in a `GET /api/chat/unread` answer, by friend; anything that is not one reads as
- * none. The board rail reads it on every match screen, so an odd answer must not take a board down.
- */
+/** Anything not a count reads as none: the board rail reads it, and an odd answer must not take a board down. */
 export function unreadCountsOf(answer: unknown): Readonly<Record<string, number>> {
   if (typeof answer !== "object" || answer === null) return {};
   const unread = (answer as { unread?: unknown }).unread;
@@ -32,22 +26,15 @@ export function unreadCountsOf(answer: unknown): Readonly<Record<string, number>
   return counts;
 }
 
-/** Turns a synchronous throw into a rejected promise. */
-export function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
-}
-
 export type Polled<T> =
   | { kind: "loading" }
   | { kind: "ready"; value: T }
   | { kind: "failed"; message: string; retryAfterMs?: number };
 
 /**
- * `read` now, and again every `everyMs` while mounted (never, for null), and whenever `reload` is
- * called. A failed read after a good one keeps the good one on screen; an answer older than one
- * already shown is dropped. After a failure, a later failed poll keeps the failure first shown, so
- * the wait it stated (R192) is counted once; `reload` after a failure shows loading (#1691). R2125000:
- * a mount that finds `kept` holding an answer starts on it, so a failed read leaves it too.
+ * A failed read after a good one keeps the good one; an answer older than one already shown
+ * is dropped. A later failed poll keeps the failure first shown, so the wait it stated (R192) is counted
+ * once (#1691). R2125000: a mount that finds `kept` holding an answer starts on it.
  */
 export function usePolled<T>(
   read: () => Promise<T>,

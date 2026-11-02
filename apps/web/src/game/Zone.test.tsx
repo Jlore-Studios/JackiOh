@@ -37,7 +37,6 @@ function animated(owner: "p1" | "p2") {
   });
 }
 
-/** The title of the held-zone icon drawn in the zone `side` `row` `lane` of `view`. */
 function heldTitle(view: PlayerView, side: Side, row: Row, lane: number): string | null {
   render(
     <CatalogContext.Provider value={lookup}>
@@ -90,7 +89,6 @@ describe("B3.1 rule 6, R64: a held zone's icon says what it is held for", () => 
   });
 });
 
-/** #2015: the empty units zone `you` lane 1 of a base view, with `highlight` and a click spy. */
 function renderZone(highlight: Highlight): { zone: HTMLElement; onClick: ReturnType<typeof vi.fn> } {
   const onClick = vi.fn();
   render(

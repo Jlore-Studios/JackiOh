@@ -2,17 +2,8 @@
 //!   Base:    "Discover one of 3 random sets, then one of 3 random numbers in it. Add the Radiant card
 //!             with that number to your hand."
 //!   Radiant: "… It costs ({setCost})."
-//!
-//! "It" is the card the Discover adds, not this spell (§8 Conventions; JackiOh_Core_Cards.md #82).
-//! Patch v0.3.10 (#831, R831004): the first Discover is a `mode` prompt of three of the sets that ship
-//! (`SHIPPED_SETS`, seven since Training Grounds shipped with #2204), drawn from the match rng; the second
-//! offers three numbers of the chosen set (the Core set alone before). The pool is the engine's (§5.1,
-//! R54): `query` drops tokens and, by R387, never offers #82. Three options are drawn without
-//! replacement (§6.3, R60). The options are the numbers (R247): `offer: "index"` labels each with its
-//! §5 index and names no card. Each pick returns as a mode (§10.6, R81), and the set rides the second
-//! prompt's resume data, since an index is unique only within its set (B2.2). R74/§5.2: Radiant is a
-//! flag on a fresh instance. R65: `costOverride` 0 costs 0 in every zone (R78). R4: a full hand burns
-//! the card that arrives.
+//! Two-step Discover prompt (§6.3, R81, §10.6, R106; set then number, B2, R387). Adds Radiant card (§5.2, R74; R60).
+//! Radiant face overrides cost to setCost (R766, R65; §8, §2.4, R4).
 
 use jackioh_engine::prelude::*;
 
@@ -97,8 +88,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247). BUILD M4-T4's row: "Three distinct numbers
-// 1–100 never 82 or a token index (R54); chosen card is radiant; radiant costs 0". The options are
+// #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247). BUILD M4-T4's row. The options are
 // the numbers (R247), so each case reads them off `state.pending.options` and looks the card up in
 // the catalog, as a player does in the collection.
 #[cfg(test)]

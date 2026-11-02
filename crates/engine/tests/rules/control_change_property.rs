@@ -1,17 +1,9 @@
-//! R171 over random boards (SPEC §4.1, §11; docs/polish/4-edge-cases.md "fast-check properties").
-//!
-//! Each case builds a random board (per side and lane, optionally a keyword body entered this turn,
-//! last turn or never marked, with any exertion, and optionally a Stack card on top), then applies
-//! one to three random control changes for either player, the inactive one too: a steal, Steal all,
-//! the board swap, or a rotation either way on either face. Four properties are read from outside:
-//!   P1 bookkeeping: only a card that crossed takes this turn and a fresh exertion, and one a steal
-//!      uncovered in its pile takes this turn and keeps its own (R1829000); a controller changes only
-//!      with a `controlChanged`; no owner changes.
-//!   P2 the §6.1 oracle: a unit that crossed, was uncovered or entered this turn is sick (no target
-//!      without Rush or Charge, no hero without Charge); one that crossed with Charge has a target.
-//!   P3 `legalActions` offers exactly the attacks `reduce` accepts.
-//!   P4 R53: a forced attack by a unit that crossed still happens and spends nothing.
-//! Runs reproduce from PROPERTY_SEED (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
+//! R171 over random boards (SPEC §4.1, §11; docs/polish/4-edge-cases.md "fast-check properties"):
+//! one to three random control changes for either player, the inactive one too, on a random board.
+//! P1: only a crossed card takes this turn and a fresh exertion, an uncovered one (R1829000) this
+//! turn and its own; P2: the §6.1 sickness oracle; P3: `legalActions` agrees with `reduce`; P4 R53: a
+//! forced attack by a crossed unit happens and spends nothing. Runs reproduce from PROPERTY_SEED
+//! (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
 
 use jackioh_engine::effects::{rotate, steal, steal_all, swap_board};
 use jackioh_engine::testkit::*;
@@ -22,7 +14,6 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::harness::{act_result, events_of_type, new_game, put, slot};
 
-/// The one seed every property runs from, so a failure reproduces exactly.
 const PROPERTY_SEED: u32 = 20260922;
 /// P1, P2 and P4 build a board and apply a few effects: cheap.
 const BOOKKEEPING_RUNS: u32 = 300;
@@ -31,7 +22,6 @@ const FORCED_RUNS: u32 = 150;
 /// P3 calls `reduce` for every attacker and target, and each call clones the state.
 const AGREEMENT_RUNS: u32 = 60;
 
-/// The keyword bodies of `fixtures/combat` a unit zone is filled from.
 fn bodies() -> Vec<CardDef> {
     vec![
         plain.clone(),
@@ -112,7 +102,6 @@ struct Case {
 
 // The arbitraries: seeded `Rng` draws, since the workspace has no fast-check (SURFACE §2)
 
-/// `fc.option(arb)`: nil one time in five (fast-check's default `freq`).
 fn option<T>(rng: &mut Rng, arb: impl FnOnce(&mut Rng) -> T) -> Option<T> {
     if rng.int(5) == 0 { None } else { Some(arb(rng)) }
 }
@@ -205,8 +194,7 @@ fn playing() -> GameState {
     state
 }
 
-/// Built once per test, on the test's own thread, because the fixture registries `new_game`
-/// installs are the testkit's thread-local override (SURFACE §8).
+/// Built once per test, on its own thread: `new_game`'s fixture registries are thread-local (SURFACE §8).
 fn base() -> GameState {
     playing()
 }
@@ -418,9 +406,8 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                     assert_eq!(card.summoned_turn, Some(turn), "run {case}: {} crossed", card.id);
                     assert_eq!(card.exertion, FRESH, "run {case}: {} crossed", card.id);
                 } else if before.dormant && !dormant.contains(&card.id) {
-                    // R1829000: a steal took the card above it, and no verb here covers a card again, so
-                    // it was uncovered: it entered on this turn and keeps its exertion. A swap or a
-                    // rotation lifts whole piles and uncovers nothing.
+                    // R1829000: a steal took the card above it and no verb here covers one again, so
+                    // it was uncovered; a swap or a rotation lifts whole piles and uncovers nothing.
                     assert_eq!(
                         card.summoned_turn,
                         Some(turn),

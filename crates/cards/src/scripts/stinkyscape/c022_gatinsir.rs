@@ -97,12 +97,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22: "set face-down, an enemy attack reveals it on a
-// roll under 30 and not on one above (a seed of each); on a miss it stays set and no event is seen;
-// revealed, two Warp Disruptors and then two Phalanxes arrive for its controller before the combat,
-// which goes on to its declared target; with one open unit zone one Phalanx arrives; chance, disruptors
-// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 6/6)". Each Phalanx it
-// summons runs its Cry (R411, R2176000), and a forced attack rolls nothing (R1875002).
+// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22. Each Phalanx it summons runs its Cry (R411,
+// R2176000), and a forced attack rolls nothing (R1875002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -111,15 +107,10 @@ mod tests {
     use super::{ID, PHALANX, WARP_DISRUPTOR};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    /// Core #9 Moths to the Flame: "Start of turn: Every enemy Unit attacks this", a forced attack.
     const MOTHS: &str = "core-009";
-    /// S #82 Phalanx's Cry: "Discover 2 … Weapons".
     const PHALANX_PICKS: usize = 2;
-    /// Gatinsir's printed chance, out of `PERCENT`.
     const CHANCE: i32 = 30;
 
-    /// p1 has a Vanilla in unit zone 1 and attacks; p2 has Gatinsir (`radiant` its face) set in backrow
-    /// zone 5 and `p2_field` in its unit zones. Turn 9, no turn ending by itself.
     fn trapped(seed: &str, radiant: bool, p2_field: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -136,7 +127,6 @@ mod tests {
         s
     }
 
-    /// Sets the rng so its next draw against `percent` hits or misses as `hit` says.
     fn roll_next(s: &mut Scenario, percent: i32, hit: bool) {
         let seed = s.state().seed.clone();
         let chance = f64::from(percent) / f64::from(PERCENT);
@@ -159,7 +149,6 @@ mod tests {
             .collect()
     }
 
-    /// The order the arrivals were summoned in.
     fn summoned_defs(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
@@ -170,8 +159,6 @@ mod tests {
             .collect()
     }
 
-    /// R411, R2176000: answers each Discover the Phalanxes' Crys open for Gatinsir's controller with the
-    /// first card offered, and returns how many there were.
     fn answer_phalanx_discovers(s: &mut Scenario) -> usize {
         let mut asked = 0;
         while let Some(pending) = s.state().pending.clone() {
@@ -213,7 +200,6 @@ mod tests {
                 vec![(PHALANX.to_string(), false), (PHALANX.to_string(), false)]
             );
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
-            // Spent once its summons and their Crys have resolved.
             s.expect_in_zone(ID, "graveyard");
             // R1875002: the attack goes on to its declared target, with the two Disruptors' +2 each.
             s.expect_health(P2, HERO_HEALTH - (4 + 2 + 2));
@@ -249,7 +235,6 @@ mod tests {
             roll_next(&mut s, CHANCE, true);
             let attacker = s.unit_at(P1, 1);
             s.attack(&attacker, "hero");
-            // The first Phalanx's Cry asks; the second Phalanx leaves the field before its own runs.
             assert!(s.state().pending.is_some(), "the first Phalanx's Discover");
             let lanes: Vec<i32> = (1..=5)
                 .filter(|lane| s.unit(P2, *lane).is_some_and(|card| card.def_id == PHALANX))
@@ -258,7 +243,6 @@ mod tests {
             let gone = s.unit_at(P2, lanes[1]).id;
             let pile = s.state_mut().players[P2].units[(lanes[1] - 1) as usize].take().expect("its pile");
             s.state_mut().players[P2].graveyard.extend(pile);
-            // Only the first Phalanx's two picks are asked; the one that left runs nothing.
             assert_eq!(answer_phalanx_discovers(&mut s), PHALANX_PICKS);
             s.expect_in_zone(gone.as_str(), "graveyard");
         }
@@ -327,7 +311,6 @@ mod tests {
             assert_eq!(crate::upgrade_number(&mut s, &trap, "chance"), CHANCE + 10);
             assert_eq!(crate::upgrade_number(&mut s, &trap, "disruptors"), 3);
             assert_eq!(crate::degrade_number(&mut s, &trap, "phalanxes"), 1);
-            // A roll that misses 30 but hits 40.
             let seed = s.state().seed.clone();
             let cursor = cursor_where(&seed, |cursor| {
                 let roll = Rng::new(&seed, cursor).next();

@@ -75,9 +75,7 @@ fn on_field(state: &GameState, id: &str) -> bool {
     find_instance(state, id).is_some_and(|card| card.zone.z() == ZoneName::Field)
 }
 
-// ---------------------------------------------------------------------------
 // R1200: everything random while a Mayor acts
-// ---------------------------------------------------------------------------
 
 #[test]
 fn r1200_legal_actions_offer_plays_and_attacks_without_targets() {
@@ -122,7 +120,6 @@ fn r1200_a_declared_target_is_drawn_and_replays() {
 
     let mut rec = recorder(&state);
     let result = rec.play(play_action(P1, &bolt.id));
-    // The 10 damage landed on exactly one legal target, whoever the draw named.
     assert_eq!(damaged(&result.events).len(), 1);
     assert!(replays_to(&start, &rec.log, rec.state()));
 }
@@ -234,7 +231,6 @@ fn r1200_choices_return_once_the_mayor_leaves() {
     put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
     assert_eq!(view_for(&state, P1).random_targets, Some(true));
 
-    // The Mayor leaves the field: off its zone, into its owner's graveyard.
     assert!(jackioh_engine::zones::remove_from_field(
         &mut state,
         &mayor,
@@ -293,9 +289,7 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1201: Lucky rolls its controller's draws again
-// ---------------------------------------------------------------------------
 
 /// One Bolt under a Mayor (Radiant: Lucky 1) on `seed`, cast by `caster`: the rng draws the play
 /// took, and whether its one hit landed on the caster's enemy side.
@@ -352,9 +346,7 @@ fn r1201_lucky_keeps_the_aimed_side_the_opponent_rolls_once() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // R1202: a Unit from hand makes the attack
-// ---------------------------------------------------------------------------
 
 /// Hands cleared to exactly these Units: the vanilla hands would hold Units of their own.
 fn clear_hands(state: &mut GameState) {
@@ -381,7 +373,6 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
         Some(windfast.id.as_str()),
         "instead of Windfast"
     );
-    // The 1/4 dealt 1 to the hero — heroes strike nothing back — and went home.
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 1);
     assert!(
         result.state.players[P1]
@@ -390,7 +381,6 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
             .any(|card| card.id == offered.id),
         "bounced"
     );
-    // Windfast spent its exertion without emitting its own declaration.
     assert!(
         find_instance(&result.state, &windfast.id)
             .expect("Windfast")
@@ -401,7 +391,7 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
 
 #[test]
 fn r1202_r831006_several_units_ask_nothing_a_random_one_makes_the_attack_and_seeds_reach_each() {
-    // Patch v0.3.10: the Unit is the match rng's, not the controller's pick.
+    // The Unit is the match rng's, not the controller's pick (R831006).
     let mut seen: Vec<String> = Vec::new();
     for n in 0..12 {
         let mut state = playing(&format!("mb22-pick-{n}"));
@@ -523,7 +513,6 @@ fn r1202_windfury_summons_twice_and_the_invariant_monitor_is_clean() {
         );
         state = result.state;
     }
-    // Each of Windfury's two attacks summoned its own — the same Unit twice, bounced between.
     assert_eq!(fought, vec![offered.id.clone(), offered.id.clone()]);
     assert_eq!(state.players[P2].hero.health, HERO_HEALTH - 2);
     assert!(state.players[P1].hand.iter().any(|card| card.id == offered.id));
@@ -622,9 +611,7 @@ fn r1202_r2248000_a_flying_unit_in_hand_makes_the_attack_from_the_backrow_of_a_f
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 1);
 }
 
-// ---------------------------------------------------------------------------
 // R1203: joiners attack first
-// ---------------------------------------------------------------------------
 
 #[test]
 fn r1203_joiners_attack_first_in_lane_order() {
@@ -656,9 +643,7 @@ fn r1203_joiners_attack_first_in_lane_order() {
         })
         .collect();
     assert!(lanes[0] < lanes[1], "lane order: {lanes:?}");
-    // All three hit: 1 + 1 + 5.
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 7);
-    // The joiners stay; nothing returns.
     assert_eq!(
         result.state.players[P1].units.iter().flatten().count(),
         3,
@@ -702,7 +687,6 @@ fn r1203_a_fallen_target_cancels_the_attack_exertion_spent() {
             .exertion
             .attacked
     );
-    // … and the joiners never mustered: the pool is untouched.
     assert_eq!(result.state.players[P1].hand.len(), 1);
 }
 
@@ -775,13 +759,10 @@ fn r1203_r2248000_a_flying_joiner_musters_into_the_backrow_of_a_full_unit_row() 
             lane: 1
         }
     );
-    // 1 + 5.
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 6);
 }
 
-// ---------------------------------------------------------------------------
 // R1204: the lethal guard
-// ---------------------------------------------------------------------------
 
 #[test]
 fn r1204_a_lethal_hit_reaches_the_guard_through_its_armor() {

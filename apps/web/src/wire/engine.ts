@@ -19,11 +19,8 @@ import type { ActionBody, PlayerId } from "./index.ts";
 
 export * from "./engineConfig.ts";
 export type { GameState } from "./generated/GameState.ts";
-export type { CardInstance } from "./generated/CardInstance.ts";
 export type { ReplayCheckpoints } from "./generated/ReplayCheckpoints.ts";
 export type { ReplayOpen } from "./generated/ReplayOpen.ts";
-export type { ReplayPage } from "./generated/ReplayPage.ts";
-export type { ReplayRecord } from "./generated/ReplayRecord.ts";
 export type { ReplayRefusal } from "./generated/ReplayRefusal.ts";
 export type { ReplayStep } from "./generated/ReplayStep.ts";
 export { createRng, type Rng } from "./rng.ts";
@@ -34,7 +31,6 @@ export {
   craftPreview,
   createGame,
   dealEmoteHand,
-  findInstance,
   fold,
   hashState,
   lastBoardFor,
@@ -46,15 +42,8 @@ export {
   seatPlayedBy,
   seatToAct,
   viewFor,
-  type CreateGameArgs,
   type FoldInput,
-  type FoldResult,
-  type LastBoardCard,
-  type ReduceResult,
 } from "../wasm/index.ts";
-
-/** TypeScript's names for `fold`'s input and answer. */
-export type { FoldInput as ReplayInput, FoldResult as ReplayResult } from "../wasm/index.ts";
 
 /**
  * The engine's `subsystems`, as far as the client reaches into them: the Call to Chaos tables and

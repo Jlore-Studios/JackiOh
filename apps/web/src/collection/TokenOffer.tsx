@@ -1,18 +1,14 @@
 // R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown (a card's own
-// cosmetics view, the playmat, backdrop and card back tiles), in place of the shop's picker it
-// replaces. A Rare token covers Common and Rare, an Epic token Epic and below, a Legendary token
-// Legendary and below, a Legendary chase included (R2728000), and no token a Mythic, a default or a
-// starter (R1305003, §14.2), so the offer shows only where a held token covers the cosmetic.
+// cosmetics view, the playmat, backdrop and card back tiles), and only where a held token covers it
+// (R1305003, §14.2): a Legendary token covers a Legendary chase too, and no token a Mythic (R2728000),
+// a default or a starter.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The held counts are `GET /api/tokens`' and the offer only
-// hides what the server would refuse: its Confirm sends `POST /api/tokens/redeem-cosmetic` and renders
-// the answer, its held counts and a re-read of what the account owns (`rereadOwnedCosmetics`), so the
-// cosmetic shows owned. A refusal shows the server's words and changes nothing.
+// THE SERVER DECIDES (CLAUDE.md rule 7): the held counts are `GET /api/tokens`' and the offer only
+// hides what the server would refuse. A refusal shows the server's words and changes nothing.
 //
 // R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place, as
-// the shop's card token does (shop/TokenPicker.tsx): "Unlock {name}? This spends 1 Epic token.", with
-// Confirm and Cancel, Cancel focused. Cancel and Escape spend nothing and put the offer back, focused.
-// The question is drawn inside the offer, so in the card view, a modal, it lies inside the modal.
+// the shop's card token does (shop/TokenPicker.tsx), Cancel focused. The question is drawn inside the
+// offer, so in the card view, a modal, it lies inside the modal.
 
 import { useEffect, useId, useState, type KeyboardEvent, type ReactElement } from "react";
 
@@ -21,6 +17,7 @@ import { formatNumber, t } from "../i18n/i18n.ts";
 import { getTokens, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
 import { cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
 import { collectionTestid as T } from "./collection.ts";
+import { messageOf } from "../net/errors.ts";
 
 import "./tokenOffer.css";
 
@@ -42,10 +39,9 @@ function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
 }
 
 /**
- * The token a locked `cosmetic` is offered for: the lowest held one whose tier covers its rarity on
- * the cosmetic's own scale (R1305003), so a chase only a Legendary token covers, and a Mythic none
- * (R2728000). Null for a default or a starter, and where nothing held covers it or the held tokens
- * are unread.
+ * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003), so a chase
+ * only a Legendary token covers, and a Mythic none (R2728000). Null for a default or a starter, and
+ * where nothing held covers it or the held tokens are unread.
  */
 export function offerTier(
   cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter">,
@@ -79,7 +75,6 @@ export function useHeldTokens(token: string | null | undefined): [HeldTokens | n
   return [held, setHeld];
 }
 
-/** What the offer's button says: the token it spends and how many of it are held. */
 function offerWords(tier: CosmeticTokenTier, count: number): string {
   switch (tier) {
     case "Rare":
@@ -103,11 +98,7 @@ function questionWords(tier: CosmeticTokenTier, name: string): string {
   }
 }
 
-/**
- * The offer on one locked cosmetic: asks first (R2480000), then spends a `tier` token on
- * `cosmeticId`, on `cardId` for a per-card one and on the account for none, then hands the answer's
- * held tokens to `onRedeemed`.
- */
+/** The offer on one locked cosmetic: asks first (R2480000), then spends a `tier` token on `cosmeticId`. */
 export default function TokenOffer({
   token,
   tier,
@@ -164,7 +155,7 @@ export default function TokenOffer({
       },
       (cause: unknown) => {
         setState("ready");
-        setError(cause instanceof Error ? cause.message : String(cause));
+        setError(messageOf(cause));
       },
     );
   };

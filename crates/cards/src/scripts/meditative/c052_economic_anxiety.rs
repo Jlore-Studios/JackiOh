@@ -4,9 +4,6 @@
 //! Base: Units have +{bonus} Attack while attacking a Unit that shares none of their tags. Radiant:
 //! your Units have +{bonus} Attack and Poisonous while doing so. Tags are printed (`def_of(..).tags`),
 //! so granted tags never count; an Untagged Unit shares nothing, so it qualifies on both sides (M10).
-//! The Radiant face covers only its controller's attackers. `bonus` reads through `param()`, so
-//! tuning moves it (M10). The bonus reads the defender's tags, so it never applies against a Unit
-//! immune to tribal tag based hate (M #25), whatever the attacker's tags (MD-B1, R940).
 
 use jackioh_engine::prelude::*;
 
@@ -175,7 +172,6 @@ mod tests {
         let victim = s.unit(P2, 2).unwrap().id;
         let beside = s.unit(P2, 1).unwrap().id;
         s.attack(&cleaver, &victim);
-        // The untagged Cleaver's strike and its splash are both 3 + 3.
         assert_eq!(dealt(&s, &cleaver, &victim), Some(6));
         assert_eq!(dealt(&s, &cleaver, &beside), Some(6));
     }
@@ -184,7 +180,6 @@ mod tests {
     fn r1120_the_base_face_bonuses_the_opponents_units_too() {
         let mut s = anxiety_game();
         s.end_turn();
-        // Their Human into our Felinor shares no tag: 4 + 3.
         let vanilla = s.unit(P2, 1).unwrap().id;
         let ours = s.unit(P1, 1).unwrap().id;
         s.attack(&vanilla, &ours);
@@ -222,7 +217,6 @@ mod tests {
         let foe = s.unit(P2, 1).unwrap().id;
         s.attack(&felinor, &foe);
         assert_eq!(dealt(&s, &felinor, &foe), Some(6));
-        // Shown 3 before and after the bonused strike.
         assert_eq!(shown(&s, &felinor), 3);
         assert_eq!(unit_attack(&s, &felinor), Some(3));
     }
@@ -256,7 +250,6 @@ mod tests {
                 .flatten()
                 .all(|unit| unit.condition_targets.is_none())
         );
-        // Absent on the opponent's turn.
         s.end_turn();
         assert!(yellow(&s, &felinor).is_empty());
     }
@@ -264,7 +257,6 @@ mod tests {
     #[test]
     fn shared_tag_no_bonus() {
         let mut s = anxiety_game();
-        // Felinor into big Felinor (Felinor vs Felinor): 3 shown, 3 dealt.
         let foe = s.unit(P2, 2).unwrap().id;
         s.attack(&s.unit(P1, 1).unwrap().id, &foe);
         assert_eq!(s.card(&foe).damage, 3);
@@ -274,7 +266,6 @@ mod tests {
     #[test]
     fn untagged_qualifies() {
         let mut s = anxiety_game();
-        // The untagged Scarab shares nothing, so it qualifies even against a tagged foe: 1 + 3.
         let scarab = s.unit(P1, 2).unwrap().id;
         let foe = s.unit(P2, 1).unwrap().id;
         s.attack(&scarab, &foe);
@@ -309,10 +300,8 @@ mod tests {
         let scarab = s.unit(P1, 2).unwrap().id;
         let white = s.unit(P2, 1).unwrap().id;
         let big = s.unit(P2, 2).unwrap().id;
-        // The yellow lists the big Felinor alone, on the tagged attacker and the untagged one.
         assert_eq!(yellow(&s, &vanilla), vec![big.clone()]);
         assert_eq!(yellow(&s, &scarab), vec![big.clone()]);
-        // The Human into M #25 deals its printed 4; the untagged Scarab its printed 1.
         s.attack(&vanilla, &white);
         assert_eq!(dealt(&s, &vanilla, &white), Some(4));
         s.attack(&scarab, &white);
@@ -349,7 +338,6 @@ mod tests {
     fn bonus_tunes() {
         let mut s = anxiety_game();
         set_param(s.card_mut(ID), "bonus", 1);
-        // The untagged Scarab into big Felinor: 1 + 1 dealt, which the 3/10 survives.
         let scarab = s.unit(P1, 2).unwrap().id;
         let foe = s.unit(P2, 2).unwrap().id;
         s.attack(&scarab, &foe);

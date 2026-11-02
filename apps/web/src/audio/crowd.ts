@@ -28,7 +28,6 @@ type ReactionKind = keyof typeof CROWD_FEEL.reactionMs;
 /** The reactions an event can start; cheer and applause only ever follow one. */
 type CrowdReaction = "ooh" | "gasp" | "roar";
 const REACTION_RANK: Readonly<Record<CrowdReaction, number>> = { ooh: 1, gasp: 2, roar: 3 };
-/** #185: a landing's murmur, stirring and excitement, in the reactions the crowd has. */
 const SLAM_CROWD: Readonly<Record<"none" | "murmur" | "anticipation" | "excited", CrowdReaction | null>> = {
   none: null,
   murmur: "ooh",

@@ -62,10 +62,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #141 Fruit Launcher — SPEC §8.10 row 141, BUILD M12 row S 141: its Activate takes a
-// permanent and casts one random Fruit at it for its controller, free (R70), by an rng pick that
-// replays, a Grape among them (tokens included, R2521006); a Fruit whose target cannot be that
-// permanent makes its own choices at random; radiant 0/8 and a Radiant Fruit.
+// Stinkyscape #141 Fruit Launcher — SPEC §8.10 row 141, BUILD M12 row S 141 (R70, R2521006).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,8 +92,6 @@ mod tests {
         )
     }
 
-    /// Fires it at p2's Vanilla; returns the scenario, the Vanilla's id and what was cast: each
-    /// `cardPlayed` of the step, by player, definition and price.
     fn fire(seed: &str, radiant: bool) -> (Scenario, String, Vec<(PlayerId, String, i32)>) {
         let mut s = board(seed, radiant);
         let vanilla = s.unit_at(P2, 1).id;
@@ -117,7 +112,6 @@ mod tests {
         (s, vanilla, cast)
     }
 
-    /// The first seed, under `prefix`, whose cast is the Fig.
     fn fig_seed(prefix: &str, radiant: bool) -> String {
         seed_where(prefix, |seed| {
             fire(seed, radiant)
@@ -161,7 +155,6 @@ mod tests {
                 first.1
             );
             assert!(s.state().pending.is_none(), "a random cast asks nobody");
-            // The pick is the rng's: the same seed casts the same Fruit.
             assert_eq!(fire("s141", false).2.first(), Some(&first));
         }
 
@@ -193,8 +186,6 @@ mod tests {
         }
     }
 
-    /// R1862004: aimed at a Field Spell, a Fig (whose target is a Unit or a hero) cannot take the
-    /// permanent, so it heals a target of its own picking, at random, asking nobody.
     mod random_choice {
         use super::*;
 
@@ -232,7 +223,6 @@ mod tests {
             let healed = healed(&s);
             assert_eq!(healed.len(), 1, "{healed:?}");
             assert_ne!(healed[0], field_spell, "not the Field Spell");
-            // The pick is the rng's: the same seed heals the same target.
             assert_eq!(super::healed(&fire_at_field_spell(&seed).0), healed);
         }
     }

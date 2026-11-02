@@ -49,12 +49,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #29 Forbiddenous Factory — SPEC §8.8 row 29, BUILD M10 row M 29: "Cry (played or cast): one
-// placement of 3 Plague Counters on itself (`counterChanged`), R471's multiplier applying; at your
-// end of turn only, with a counter, one is removed and one Ancient Curse is shuffled into the
-// opponent's deck; at 0 counters nothing is shuffled; three turns empty it, and a refill (C 53)
-// extends it; counters and curses read through `param()`; radiant two Curses per counter". The name
-// keeps the designer's spelling, "Forbiddenous".
+// M #29 Forbiddenous Factory — SPEC §8.8 row 29, BUILD M10 row M 29. The name keeps the designer's
+// spelling, "Forbiddenous".
 #[cfg(test)]
 mod tests {
     use super::*;

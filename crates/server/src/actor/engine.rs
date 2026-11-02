@@ -1,44 +1,13 @@
-//! The one seam between the server and the engine (SPEC §9.3, CLAUDE.md rule 7). Port of
-//! `apps/server/src/match/engine.ts` and `apps/server/src/match/engine.real.ts`.
+//! The one seam between the server and the engine (SPEC §9.3, CLAUDE.md rule 7).
 //!
-//! The engine is pure and server-agnostic: it never reads a clock, opens a socket or touches
-//! Postgres. These functions are how the actor reaches it — `create_game` / `begin_game` / `reduce`
-//! to advance the match, `legal_actions` for the client's greying-out, `view_for` for the only thing
-//! a socket is allowed to carry (§10.8), `fold` to rebuild a crashed actor from
-//! `(seed, decks, log)` (§9.5), and `replay_open` / `replay_page` to serve a finished match's
-//! replay a seat's `view_for` at a time (R768, `api/replays.rs`).
+//! Calls `jackioh_engine` directly (SURFACE §11.3): `create_game`, `reduce`, `view_for` (§10.8),
+//! `fold` (§9.5) and replays (R768). Tests override cards via the testkit (SURFACE §8).
 //!
-//! `EngineState` holds both hands and both libraries, so nothing outside the actor inspects it.
-//! Everything the rest of the server needs about the state comes back through `view_for` (per
-//! player) or `snapshot` (public bookkeeping the clock and the results writer need).
+//! `register_all()` initializes the engine's registered catalog from `jackioh_cards` (SPEC §10.9,
+//! BUILD M4-T2); it is idempotent.
 //!
-//! SURFACE §11.3: plain functions that call `jackioh_engine` directly. TS's `EnginePort` type, its
-//! test injection (`setEnginePort`), the dynamic import that kept the server bootable without an
-//! engine (`loadEnginePort`), `REQUIRED_ENGINE_EXPORTS` and `EngineUnavailableError` are not
-//! ported: the server links the engine, so an engine that is missing an export does not compile.
-//! Tests install their cards with the testkit's thread-local override instead (SURFACE §8).
-//!
-//! WHY `register_all()` IS HERE. `create_game` looks its card definitions up in the engine's
-//! registered catalog, and `jackioh_cards` is the one crate that owns the catalog and the scripts
-//! (SPEC §10.9, BUILD M4-T2). Without this call `registered_catalog()` is empty and every real match
-//! panics on the first card of the first deck. It is idempotent (a `OnceLock`), so calling it on
-//! every entry point that reads the catalog costs nothing. The client does the same in its own
-//! composition root; neither assembles a catalog of its own, which would be a second source of card
-//! data. Under the testkit the thread-local override is consulted first, so a test's cards win.
-//!
-//! Nothing here decides a rule. It renames engine functions and projects the public bookkeeping
-//! the clock needs.
-//!
-//! All Random's deck (R258) is dealt here too, by `jackioh_ai::build_ai_deck` — the same weighted
-//! draw `apps/web/src/practice/core.ts` deals a human who asks for a random deck, with nothing
-//! banned, leaning on the newest set for a seat whose player asked for that (R1372). It reads the
-//! registered catalog, so it belongs behind the same `register_all()` as the match itself, and the ai
-//! crate is pure and seeded like the engine: one seed, one deck, in any process. So is the deck the
-//! practice AI plays, which a practice claim's fold deals again (`economy::practice`, #1303).
-//!
-//! Every catalog-reading function here runs under the match's `Pinned` catalog (R388, R767000),
-//! as `duos::engine` does, so a patch deployed under a live match never changes what its log
-//! folds to.
+//! All Random decks (R258, R1372) and practice AI decks (#1303) are dealt here via `jackioh_ai`.
+//! Every catalog-reading function runs under the match's `Pinned` catalog (R388, R767000).
 
 use std::collections::BTreeMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -56,14 +25,13 @@ pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
 
 use crate::actor::registry::panic_text;
 
-/// TS's opaque `EngineState` brand: the engine's own state, held only by the actor.
+/// The engine's own state, held only by the actor.
 pub type EngineState = GameState;
 
 /// R417: each seat's last board in seat order, a setup input beside the decks (C+ #29).
 pub type LastBoards = (Vec<LastBoardEntry>, Vec<LastBoardEntry>);
 
-/// TS `CreateGameArgs`: `{ seed, decks, catalog?, lastBoards?, glitchBoards?, dealt? }`, the
-/// engine's own `CreateGameOptions`.
+/// The engine's own `CreateGameOptions`.
 pub type CreateGameArgs = CreateGameOptions;
 
 /// The public bookkeeping the clock (`actor/clock.rs`) and the results writer (`api/results.rs`)
@@ -105,11 +73,9 @@ pub fn registered_thread() -> Box<dyn FnOnce() + Send> {
     Box::new(registered)
 }
 
-/// #1035: `run` on tokio's blocking pool, as Duos's rebuild and the bot seat run theirs: a whole
-/// log's fold on a runtime worker holds every socket, clock and route queued behind it. `thread`'s
-/// setup runs first, then `run` inside `catch_unwind`; `run` sets the engine's per-call thread-locals
-/// (`with_shipped`, R767000). `Err` is a panic's text or the join error's. Nothing in a job logs: a
-/// test records its own thread's log, so the caller logs what comes back.
+/// #1035: run blocking engine work on tokio's blocking pool so folds do not block runtime workers.
+/// Sets thread-locals (`with_shipped`, R767000) and runs inside `catch_unwind`.
+/// `Err` is a panic's text or join error.
 pub async fn off_runtime<T: Send + 'static>(
     thread: EngineThread,
     run: impl FnOnce() -> T + Send + 'static,
@@ -172,7 +138,7 @@ pub fn fold_args(
     }
 }
 
-/// TS `createGame`. Panics, as TS threw, on a deck the catalog refuses.
+/// Panics on a deck the catalog refuses.
 pub fn create_game(pinned: Pinned, args: &CreateGameArgs) -> EngineState {
     registered();
     pinned.run(|| jackioh_engine::create_game(args))
@@ -276,8 +242,7 @@ pub fn seat_played_by(state: &EngineState, home: PlayerId) -> PlayerId {
     jackioh_engine::seat_played_by(state, home)
 }
 
-/// TS `snapshot`: the public bookkeeping, read off the state's own fields and the engine's own
-/// answers to the two questions that are not a field.
+/// Public bookkeeping read off state fields and engine queries.
 pub fn snapshot(state: &EngineState) -> MatchSnapshot {
     MatchSnapshot {
         turn: state.turn,
@@ -293,14 +258,9 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
     }
 }
 
-/// SPEC §11 R258: an All Random deck of card ids in library order, from the game's own weighted
-/// random deck-builder with nothing banned, seeded so the same seed deals the same deck in any
-/// process. Callers seed it `"{seed}:p1-deck"` and `"{seed}:p2-deck"`. It lives here because the
-/// deck-builder needs the registered catalog, and this module is the one path to it.
-///
-/// R1372, R924000: `lean` is the set the seat's deck leans on (`lean_of`), at least half of it from that set
-/// (R1370); `None` deals the deck R258 always dealt for that seed. A player's deck is dealt from every
-/// set, the AI's soft gate (R1390) included.
+/// SPEC §11 R258: All Random deck in library order, seeded so the same seed deals the same deck.
+/// R1372, R924000: `lean` is the set the deck leans on, at least half from that set (R1370).
+/// Dealt from every set, soft gate (R1390) included.
 pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
     deal_random_deck_with_strength(seed, lean, 0.0)
 }
@@ -325,10 +285,9 @@ pub fn deal_random_deck_with_strength(seed: &str, lean: Option<SetName>, strengt
     )
 }
 
-/// §9.9, #1303: the deck the practice AI plays in a free game on `seed`, as the browser's worker
-/// deals it (`apps/web/src/practice/core.ts`, `decksAndHandicap`): the AI's own weighted draw, under
-/// its shadow ban (R186) and soft gate (R1390), at the tier's deck size and curved to its mana cap,
-/// on the stream `"{seed}:ai-deck"`. It reads the catalog the caller's `Pinned` runs it under.
+/// §9.9, #1303: deck practice AI plays in a free game on `seed`: weighted draw under shadow
+/// ban (R186) and soft gate (R1390), at tier deck size and curved to mana cap, on stream
+/// `"{seed}:ai-deck"`. Reads catalog caller's `Pinned` runs it under.
 pub fn deal_practice_ai_deck(seed: &str, handicap: &Handicap) -> Vec<String> {
     registered();
     build_ai_deck(
@@ -375,13 +334,9 @@ pub fn lean_of(lean: Option<LeanPick>) -> Option<SetName> {
     lean.map(LeanPick::resolve)
 }
 
-/// R1834003: every card dealt from a deck in a game no action has touched yet (`begin_game`'s, a
-/// replay's step 0), by instance id, with the seat whose deck dealt it and the card it was dealt as.
-/// A card minted after the deal (R943's Created: a token, a copy, a last board's) is not one. A
-/// card's owner can change later (R12: a steal off the field, a Bounce, Pocket Chaos's swap) and its
-/// definition too (a transform), so what this read says about the deal is kept apart from the views:
-/// a card's own cosmetics are sent only for a card that came from its seat's deck and still shows
-/// as what it was dealt (`loadout::shown_defs`), which no decklist can be read from.
+/// R1834003: every card dealt from a deck in a pristine game, by instance id, seat and dealt card id.
+/// Minted cards (R943 Created tokens/copies) are excluded. Owner can change later (R12);
+/// cosmetics are only sent for cards still showing what was dealt.
 pub fn dealt_cards(state: &EngineState) -> BTreeMap<String, (PlayerId, String)> {
     let mut dealt = BTreeMap::new();
     for seat in [PlayerId::P1, PlayerId::P2] {

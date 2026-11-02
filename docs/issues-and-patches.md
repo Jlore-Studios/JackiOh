@@ -362,6 +362,20 @@ part that narrows the task shows the gap instead of hiding it.
   pre-release while only main (staging) holds the version, a release once production does, each
   tagged at the commit `shipped.json` records. Nothing there is written by hand: the next run puts
   back a release edited on GitHub, so a release reads better only when the note it is written from does.
+- **Release art.** Every shipped patch has a 1920×1080 picture (#2681), drawn by
+  `apps/web/src/patches/releaseArt.ts` from the patch's snapshots and nothing else: the cards behind
+  it are the ones its `changes` name (an added or changed card as the patch's own snapshot holds it, a
+  removed one as the snapshot before it held it), at most seven, sampled evenly from a longer list;
+  Glitch is never shown (R674). A patch whose record names no card to show gets card backs instead. A
+  major version (R1369000: its recorded `tier`, the sets it adds before tiers were recorded), never a
+  count of changed cards, also gets an animated file, a slow drift of the picture that holds still
+  under the system's reduced motion; Patch notes loads its `-still` companion and moves it in CSS only
+  while the app's Reduce motion is off too. The build writes every file to `/release-art/<version>.svg`
+  (and `<version>-still.svg` for a major) and the dev server draws one when asked; `github.ts` puts the
+  normal file, on the host the release already names (staging while a pre-release, production after),
+  at the head of each release's notes. Nobody adds an image per version or edits a release's art: the
+  next `patches ship` adds the patch to `patches.json`, and the page, the build and the next release run
+  have its picture, which `releaseArt.test.ts` fails without.
 
 ## Win rates in a balance patch
 

@@ -13,7 +13,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-056";
 
 /// R453: `castEach` with "then exile them" (`afterward: "exile"`), each cast's choices its caster's (R70).
-/// `cards` answers the instance ids to cast, read once as the list reaches it.
 fn cast_each_then_exile(cards: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> Effect {
     cast_each(CastEachArgs {
         cards: Arc::new(cards),
@@ -68,7 +67,6 @@ pub fn script() -> CardScripts {
 // C #56 Spell Tyrant, SPEC §8.6 row 56: the Cry casts up to 3 Spells (`spells`, R386) from your
 // graveyard, free, counted as played, your choices (R70), each exiled after it resolves. Radiant: every
 // Spell there as the Cry begins, oldest first, no choice; a Spell a cast puts in the graveyard is not cast.
-// Mana Well is a Field Spell and Mr. Vanilla a Unit, neither of them a Spell.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -92,7 +90,6 @@ mod tests {
 
     use crate::js;
 
-    /// The state written out and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serializes");
         serde_json::from_str(&text).expect("the state parses back")
@@ -190,7 +187,6 @@ mod tests {
                 assert_eq!(played(&s), vec![TYRANT, STOCKPILE, FRIENDS]);
                 assert_eq!(cards_played_this_turn(s.state(), P1), 3);
                 s.expect_mana(P1, 0);
-                // Stockpile drew 2 and healed 2; Friend of Felinors filled the other four zones.
                 s.expect_health(P1, 22);
                 assert_eq!(s.hand(P1).len(), 3);
                 assert_eq!(

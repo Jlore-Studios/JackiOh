@@ -69,11 +69,8 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// Stinkyscape #86 Prototype-X2 — SPEC §8.10 row 86, BUILD M12 row S 86: Tribute 5, lowered 1 by each of
-// its owner's Floats while it waits in hand, never in the deck (R2657002), never below 0 (R1841003); its Cry asks 3 Discovers in turn, each
-// three Epic Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
-// (R1841002, R1751000); radiant 16/16 and Legendary Weapons. Since #2521 it is no Starship Piece
-// (R1852001).
+// Stinkyscape #86 Prototype-X2 — SPEC §8.10 row 86, BUILD M12 row S 86 (#2521; R2657002, R1841003,
+// R1841002, R1751000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,7 +88,6 @@ mod tests {
     /// A full unit row of Vanillas, the Tribute 5.
     const FIVE: [&str; 5] = [VANILLA; 5];
 
-    /// The Epic and the Legendary Weapons (§8.10 row 86).
     const EPIC: [&str; 6] = [
         "stinkyscape-054",
         "stinkyscape-055",
@@ -107,9 +103,6 @@ mod tests {
         "stinkyscape-061",
     ];
 
-    /// Plays it with a p2 Vanilla on the field, five of p1's Vanillas its Tribute, and answers each Discover
-    /// with the first card offered: each a Discover of three `pool` Weapons it does not hold yet (as many as
-    /// are left), each pick adding the Weapon's health. Returns the scenario and the host's id.
     fn arms(radiant: bool, pool: &[&str]) -> (Scenario, String) {
         let mut s = weapon_board(
             "s086",
@@ -146,7 +139,6 @@ mod tests {
             let before = s.stats(host.as_str()).health;
             s.answer(json!(offered[0]));
             // R77: the fusion wears the face its kept host wears, so a Radiant host takes its picks'
-            // Radiant stats, though each goes in unflagged.
             let def = crate::card_def(&offered[0]);
             let gained = if radiant {
                 def.radiant.health
@@ -212,13 +204,11 @@ mod tests {
             let in_hand = s.hand(P1)[0].id.clone();
             let in_deck = s.pile(P1, "library").last().expect("the deck copy").id.clone();
             let tribute = |s: &Scenario, id: &str| tribute_cost_of(s.state(), s.card(id));
-            // p1 ends turn 9 with its mana unspent: a Float.
             s.end_turn();
             assert_eq!(
                 (tribute(&s, &in_hand), tribute(&s, &in_deck)),
                 (TRIBUTE - 1, TRIBUTE)
             );
-            // p2's Float lowers nothing of p1's.
             s.end_turn();
             assert_eq!(tribute(&s, &in_hand), TRIBUTE - 1);
             for _ in 0..TRIBUTE {

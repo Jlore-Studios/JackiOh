@@ -1,12 +1,5 @@
 //! Test-only cards for #783's five keywords: Ranged, Flying, Cloaked, Crater and Flashback
-//! (R783000–R783013).
-//!
-//! No catalog card prints them until #781's part 2, so these are the engine's proof: plain bodies
-//! for the combat keywords, a Cloaked Unit, Spell, Field Spell and Trap, Field Spells whose auras lend
-//! Cloaked to the cards in their controller's hand, the Trap price rules a Cloaked card must miss,
-//! Crater on every kind of card and on the Spells that summon, Recruit and Flicker, and a Flashback
-//! Spell and Unit.
-//!
+//! (R783000–R783013): the engine's proof, apart from the catalog's cards (#781's part 2).
 //! Ids are prefixed `kw-` and indexed from 7830 up, clear of every other fixture file (BUILD §0).
 
 use std::sync::LazyLock;
@@ -46,16 +39,12 @@ fn unit(index: u32, name: &str, cost: i32, attack: i32, health: i32, keywords: V
     ))
 }
 
-// ---------------------------------------------------------------------------
 // Ranged and Flying (R783000–R783003)
-// ---------------------------------------------------------------------------
 
-/// A Ranged 2/3.
 pub fn ranged() -> CardDef {
     unit(7830, "ranged", 1, 2, 3, json!([{ "kind": "Ranged" }]))
 }
 
-/// A Ranged 2/3 with Cleave.
 pub fn ranged_cleaver() -> CardDef {
     unit(
         7831,
@@ -67,7 +56,6 @@ pub fn ranged_cleaver() -> CardDef {
     )
 }
 
-/// A Ranged 4/2 with Trample.
 pub fn ranged_trampler() -> CardDef {
     unit(
         7832,
@@ -79,7 +67,6 @@ pub fn ranged_trampler() -> CardDef {
     )
 }
 
-/// A Ranged 2/2 with First Strike and Poisonous.
 pub fn ranged_striker() -> CardDef {
     unit(
         7833,
@@ -91,7 +78,6 @@ pub fn ranged_striker() -> CardDef {
     )
 }
 
-/// A First Strike 3/1.
 pub fn first_striker() -> CardDef {
     unit(
         7834,
@@ -103,12 +89,10 @@ pub fn first_striker() -> CardDef {
     )
 }
 
-/// A Flying 2/3.
 pub fn flyer() -> CardDef {
     unit(7835, "flyer", 1, 2, 3, json!([{ "kind": "Flying" }]))
 }
 
-/// A Flying 1/4 with Taunt.
 pub fn flying_taunter() -> CardDef {
     unit(
         7836,
@@ -120,7 +104,6 @@ pub fn flying_taunter() -> CardDef {
     )
 }
 
-/// A plain 3/3.
 pub fn grunt() -> CardDef {
     unit(7837, "grunt", 1, 3, 3, json!([]))
 }
@@ -135,9 +118,7 @@ pub fn sniper() -> CardDef {
     unit(7839, "sniper", 1, 1, 1, json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // Cloaked (R783004–R783009)
-// ---------------------------------------------------------------------------
 
 /// A Cloaked 3/3 at (3) whose Cry deals 2 to a chosen unit or hero.
 pub fn cloaked_unit() -> CardDef {
@@ -176,7 +157,6 @@ pub fn cloak_spells() -> CardDef {
     def(7845, "cloak-spells", "Field Spell", 1, json!([]))
 }
 
-/// A vanilla 2/2 at (2).
 pub fn plain_unit() -> CardDef {
     unit(7846, "plain-unit", 2, 2, 2, json!([]))
 }
@@ -196,16 +176,13 @@ pub fn trap_discount() -> CardDef {
     unit(7849, "trap-discount", 1, 1, 1, json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // Crater (R783010, R783011)
-// ---------------------------------------------------------------------------
 
 /// A Crater 2/2 whose Cry deals 1 to the enemy hero.
 pub fn crater_unit() -> CardDef {
     unit(7850, "crater-unit", 1, 2, 2, json!([{ "kind": "Crater" }]))
 }
 
-/// A Crater 1/1 with Reborn.
 pub fn crater_reborn() -> CardDef {
     unit(
         7851,
@@ -217,7 +194,6 @@ pub fn crater_reborn() -> CardDef {
     )
 }
 
-/// A Crater 2/2 with Cloaked.
 pub fn crater_cloaked() -> CardDef {
     unit(
         7852,
@@ -234,8 +210,7 @@ pub fn crater_trap() -> CardDef {
     def(7853, "crater-trap", "Trap", 1, json!([{ "kind": "Crater" }]))
 }
 
-/// A Crater Trap that fires as it replaces (§5.1): an enemy's heal becomes Pierce damage (Blood Moon's
-/// shape).
+/// A Crater Trap firing as it replaces (§5.1): an enemy's heal becomes Pierce damage (Blood Moon's shape).
 pub fn crater_moon() -> CardDef {
     def(7867, "crater-moon", "Trap", 1, json!([{ "kind": "Crater" }]))
 }
@@ -255,7 +230,6 @@ pub fn flicker_all() -> CardDef {
     def(7856, "flicker-all", "Spell", 1, json!([]))
 }
 
-/// A Stack 1/1.
 pub fn stacker() -> CardDef {
     unit(7857, "stacker", 1, 1, 1, json!([{ "kind": "Stack" }]))
 }
@@ -300,9 +274,7 @@ pub fn crater_field() -> CardDef {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Flashback (R783012, R783013)
-// ---------------------------------------------------------------------------
 
 /// A Flashback Spell at (2): 2 to the enemy hero.
 pub fn flashback_spell() -> CardDef {
@@ -398,7 +370,6 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// 1 to the enemy hero.
 fn ping() -> Vec<Effect> {
     vec![effects::damage(json_as(
         json!({ "to": { "of": "enemyHero" }, "amount": 1 }),

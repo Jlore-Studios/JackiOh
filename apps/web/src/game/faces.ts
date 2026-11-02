@@ -1,22 +1,13 @@
 // The face of a card in play: the one the board draws for a card the view lists, and the one the
 // showcase, a log line, a pile and a prompt draw for a card the view names (SPEC §10.10).
 //
-// A face in play is the card as the view says it stands (R243): the cost the view gives it, a Unit
-// card's stats in its owner's hand, a hand card's keywords where the view gives them (E38, R1438), a
-// unit's numbers, keywords and Vanilla mark on the field, the power a Heroic Power rolled, a
-// match-made definition's own name and text, and what the card's formula comes to now
-// (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle count (R385), what
-// Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow card standing as a
-// Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell text a copier has
-// (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
-// off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
-// faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`). A card the
-// view says is Chinese (`CardView.chinese`, ME-CN, R1301) is drawn in the Chinese table's words.
+// A face in play is the card as the view says it stands (R243). Everything is read off the view —
+// never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's faces, the card as
+// printed, are the deck builder's own (`faceModel` with no `inPlay`).
 //
-// The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
-// definitions the view carries beside the cards it names (R243), else from nothing: the card is
-// drawn by its id, as `Card.tsx` draws one before the catalog has loaded. The R97 sentinel names no
-// card, so it has no face, and the callers draw a back instead.
+// The definition comes from the public catalog (§5.1), else from the match-made definitions the
+// view carries (R243), else from nothing: the card is drawn by its id. The R97 sentinel names no
+// card, so it has no face, and the callers draw a back.
 
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -47,19 +38,15 @@ export type LiveFacts = {
   type?: CardType;
   /** The power a Heroic Power on the field rolled (`HeroView.powers`); a hand card carries its own. */
   fieldPower?: RolledPower;
-  /** B5 E14: the definition of the Spell a copier's `copies` names (`useCopiedDef`, `copiedDefOf`). */
+  /** B5 E14: the definition of the Spell a copier's `copies` names. */
   copied?: CardDef;
   /** R2321000: the counts cards on the field keep on a unit, by their keepers' names (`useTallies`). */
   tallies?: readonly NamedTally[];
-  /** #2437: the card lies in a hand (Card.tsx's `inHandOf`), so its face carries its Temporary count. */
+  /** #2437: the card lies in a hand, so its face carries its Temporary count. */
   inHand?: boolean;
 };
 
-/**
- * The face in play of a card the view lists: its live cost, and whatever else the view says about
- * it — a unit's numbers and keywords, a hand Unit's stats, a hand card's keywords, a Heroic Power's
- * power, the Vanilla mark.
- */
+/** The face in play of a card the view lists: its live cost, and whatever else the view says about it. */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
   const unit = isUnitView(card) ? card : undefined;
   const inPlay: InPlay = {};
@@ -73,8 +60,7 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (power !== undefined) inPlay.power = power;
   // R2247000: the word the card shows in place of its text (Anomaly Found!'s board code).
   if (card.label !== undefined) inPlay.label = card.label;
-  // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`), and the
-  // face it draws reads it the same way a unit's does — the view is what the client renders (rule 7).
+  // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`).
   if (unit?.vanilla === true || (unit === undefined && "vanilla" in card && card.vanilla === true)) {
     inPlay.vanilla = true;
   }
@@ -121,8 +107,7 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.attackReason !== undefined) inPlay.attackReason = unit.attackReason;
   // R2321000: and the counts the field keeps on the unit.
   if (facts.tallies !== undefined && facts.tallies.length > 0) inPlay.tallies = facts.tallies;
-  // R979000: a card in hand that cannot be played says why. Only a hand card or
-  // (R1571000) a card in the viewer's own graveyard carries it, so every other card reads as before.
+  // R979000: a hand card, or (R1571000) one in the viewer's own graveyard, says why it cannot be played.
   if (unit === undefined && card.playReason !== undefined) inPlay.playReason = card.playReason;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
@@ -154,12 +139,10 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   });
 }
 
-/** The face-up backrow card's type, when `card` is one. */
 function backrowType(card: CardView): CardType | undefined {
   return "faceDown" in card && card.faceDown === false && "type" in card ? (card.type as CardType) : undefined;
 }
 
-/** A card the view lists (a pile, the resolving strip, the field, a hand): its face in play. */
 export function listedFace(lookup: CardLookup | null, view: PlayerView, card: CardView): FaceModel | null {
   if (card.defId === HIDDEN_CARD || card.defId === "") return null;
   const info = infoFor(lookup, view, card.defId, card.radiant);
@@ -173,13 +156,11 @@ export function listedFace(lookup: CardLookup | null, view: PlayerView, card: Ca
   });
 }
 
-/** B5 E14: the definition of the Spell a copier has the text of, where the view says it copies one. */
 function copiedDefOf(lookup: CardLookup | null, view: PlayerView, card: CardView): CardDef | undefined {
   const copies = card.copies;
   return copies === undefined ? undefined : infoFor(lookup, view, copies.defId, copies.radiant).def;
 }
 
-/** A card named by an event or a log line: the definition, the face, and the instance when there is one. */
 export type NamedCard = {
   defId: string;
   radiant: boolean;
@@ -190,9 +171,9 @@ export type NamedCard = {
 };
 
 /**
- * The face in play of a card an event names, or null for the sentinel. A card the view still lists
- * is drawn as it stands there (`listedFace`); one it no longer lists — gone to a pile it cannot
- * name, or ceased to exist — is its definition as the game shows it, at `cost` when one is given.
+ * The face in play of a card an event names, or null for the sentinel. A card the view still lists is
+ * drawn as it stands there (`listedFace`); one it no longer lists is its definition as the game shows it,
+ * at `cost` when one is given.
  */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
   if (named.defId === HIDDEN_CARD || named.defId === "") return null;
@@ -211,9 +192,8 @@ export function namedFace(lookup: CardLookup | null, view: PlayerView, named: Na
 }
 
 /**
- * The `CardView` for an instance anywhere the view shows cards face up: the field, a face-up
- * backrow card, both piles, the resolving strip, and the viewer's own hand. Null when the view
- * shows it nowhere, which is also what a hidden card gives.
+ * The `CardView` for an instance anywhere the view shows cards face up. Null when the view shows it
+ * nowhere, which is also what a hidden card gives.
  */
 export function cardInView(view: PlayerView, instanceId: string): CardView | null {
   if (instanceId === HIDDEN_CARD) return null;

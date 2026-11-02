@@ -1,9 +1,8 @@
 // R1313000: the full-art faces (R1017001) are owned cosmetics, each naming its card (R2655000: an Epic,
-// a Legendary and a Mythic on each of the registry's full-art cards, R2655001). Once
-// ownership decides (the economy live, in a production build), a copy prints its full art only where
-// it is the viewer's own and the viewer owns it; every other copy, the opponent's among them, prints
-// its normal face. With no ownership mounted (practice, hotseat, the Almanac, the landing page's
-// fan), and before the economy is live, every full art prints as before.
+// a Legendary and a Mythic on each of the registry's full-art cards, R2655001). Once ownership decides
+// (the economy live, in a production build), only the viewer's own copy of one they own prints it.
+// With no ownership mounted (practice, hotseat, the Almanac, the landing page's fan), and before the
+// economy is live, every full art prints.
 
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
@@ -119,18 +118,13 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
   it("R1310004 a development build gates full art only when the e2e key asks", () => {
     expect(E2E_FULL_ART_GATED_KEY).toBe("jackioh.e2e.fullArtGated");
     for (const e2eGated of [false, true]) {
-      // A production build is gated while the economy is live, whatever the key says.
       expect(fullArtGated(true, "production", e2eGated)).toBe(true);
-      // A development build (dev and e2e) only when the e2e run asks.
       expect(fullArtGated(true, "development", e2eGated)).toBe(e2eGated);
-      // The tests never are.
       expect(fullArtGated(true, "test", e2eGated)).toBe(false);
-      // And no build is while the economy is off.
       for (const mode of ["production", "development", "test"]) {
         expect(fullArtGated(false, mode, e2eGated), mode).toBe(false);
       }
     }
-    // This test build reads no key at all.
     expect(FULL_ART_GATED).toBe(false);
   });
 
@@ -161,7 +155,6 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     if (owned === undefined || other === undefined) throw new Error("two faces");
     await waitFor(() => expect(owned.getAttribute("data-full-art")).toBe("true"));
     expect(other.hasAttribute("data-full-art")).toBe(false);
-    // Its words print, as any card's do.
     expect(other.querySelector(".card-type")).not.toBeNull();
     expect(read).toHaveBeenCalledTimes(1);
     expect(read).toHaveBeenCalledWith("e2e-token-p1");
@@ -192,7 +185,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     expect(failed.container.querySelector(".cf")?.hasAttribute("data-full-art")).toBe(false);
     cleanup();
 
-    // A pending account's screen: no token, so nothing is read and nothing is owned.
+    // A pending account's screen: no token, so nothing is read.
     const unread = vi.fn((): Promise<OwnedByCard> => Promise.resolve(EVERY_HERO));
     expect(
       printsFullArt(OWNED, true, (face) => (
@@ -332,7 +325,6 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     await readOwnedFullArt(sessionToken("s-2", "other"), fetchOwned);
     expect(fetchOwned).toHaveBeenCalledTimes(3);
 
-    // A failed read is not kept: the next asks again.
     const failing = vi.fn(() => Promise.reject(new Error("offline")));
     await expect(readOwnedFullArt("token-b", failing)).rejects.toThrow("offline");
     await expect(readOwnedFullArt("token-b", failing)).rejects.toThrow("offline");
@@ -394,10 +386,8 @@ describe("R1655000 a full art is a pick of its card, worn behind ownership", () 
     const under = (owned: FullArtOwnership | null) => (face: ReactElement) =>
       owned === null ? face : <FullArtOwned owned={owned}>{face}</FullArtOwned>;
 
-    // Practice and hotseat (no ownership), and the builds that treat every cosmetic as owned: worn.
     expect(printsFullArt(OWNED, true, under(null))).toBe(true);
     expect(printsFullArt(NOT_OWNED, true, under("every"))).toBe(true);
-    // Where ownership decides, only the full art the viewer owns, on its own copy.
     expect(printsFullArt(OWNED, true, under(owningFullArt([OWNED])))).toBe(true);
     expect(printsFullArt(NOT_OWNED, true, under(owningFullArt([OWNED])))).toBe(false);
     expect(printsFullArt(OWNED, true, under(NO_FULL_ART))).toBe(false);
@@ -408,19 +398,17 @@ describe("R1655000 a full art is a pick of its card, worn behind ownership", () 
   });
 
   it("R1655000 a card's pick beats the Full-art cards setting on its own copy and leaves every other copy to it", () => {
-    // Setting on, the card's pick off: the viewer's copy hides it; any other copy follows the setting.
+    // Setting on, the card's pick off.
     writeCardFullArt(OWNED, false);
     expect(printsFullArt(OWNED, true)).toBe(false);
     expect(printsFullArt(OWNED, false)).toBe(true);
-    // Another card with no pick follows the setting.
     expect(printsFullArt(NOT_OWNED, true)).toBe(true);
-    // Setting off, the pick on: the viewer's copy prints it; the copy that is not theirs draws the setting.
+    // Setting off, the pick on.
     writeCardSettings({ fullArt: false });
     writeCardFullArt(OWNED, true);
     expect(printsFullArt(OWNED, true)).toBe(true);
     expect(printsFullArt(OWNED, false)).toBe(false);
     expect(printsFullArt(NOT_OWNED, true)).toBe(false);
-    // Clearing the pick returns the card to the setting.
     writeCardFullArt(OWNED, null);
     expect(printsFullArt(OWNED, true)).toBe(false);
   });

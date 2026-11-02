@@ -6,8 +6,7 @@
 //!           Cry: Draw {draw}."
 //! Engine: Cloaked for the Spells in its controller's hand while it acts (`cloak_hand_aura`, R1044);
 //! the Radiant face's Echo +{echo} for each Spell its controller reveals while it acts, read as the
-//! Spell reveals (`reveal_echo`, R1045); the Cry draws. Until patch v0.3.7 it was ME-ALTPLAY's
-//! face-down play permission, each Spell revealing at a time chosen as it was set.
+//! Spell reveals (`reveal_echo`, R1045); the Cry draws.
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;
@@ -167,7 +166,6 @@ mod tests {
             let before = s.hand(P1).len();
             let paranoia = in_hand(&s, PARANOIA);
             s.play(&paranoia.id, json!({}));
-            // Played one, drew one.
             assert_eq!(s.hand(P1).len(), before);
             assert!(s.state().pending.is_none());
         }
@@ -184,7 +182,7 @@ mod tests {
             assert!(cloaked(&s, &spell.id));
             let plays = set_plays(&s, &spell.id);
             assert!(!plays.is_empty());
-            // No timing to choose: a Cloaked set alone (the three of before patch v0.3.7 are gone).
+            // No timing to choose: a Cloaked set alone.
             assert!(
                 plays
                     .iter()
@@ -241,7 +239,6 @@ mod tests {
 
         #[test]
         fn r1044_a_set_spell_is_priced_as_itself_so_toe_crackers_traps_discount_misses_it() {
-            // Cloaked Toe Cracker: "Aura: Your Traps cost (0)." The set Spell still pays its (1).
             let mut s = paranoid(
                 "paranoia-discount",
                 json!([ECLIPSE, VANILLA]),
@@ -255,7 +252,6 @@ mod tests {
 
         #[test]
         fn r1044_a_counter_for_spells_never_sees_it() {
-            // Counterspell: "Reveals when your opponent plays a Spell: Counter it."
             let mut s = paranoid(
                 "paranoia-counter",
                 json!([ECLIPSE, VANILLA]),
@@ -279,7 +275,6 @@ mod tests {
             let mut s = paranoid("paranoia-reveal", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
-            // Silent through the turns: no timing reveals it.
             s.end_turn().end_turn().end_turn().end_turn();
             assert!(s.state().pending.is_none());
             s.expect_in_zone(&eclipse, "field");
@@ -295,14 +290,12 @@ mod tests {
 
         #[test]
         fn r1044_r703_with_no_legal_target_it_needs_its_reveal_is_not_offered() {
-            // Plastic Surgery's Unit target is needed (R703), set with no Unit anywhere: no Reveal,
-            // where it once fizzled as it revealed.
+            // Plastic Surgery's Unit target is needed (R703), set with no Unit anywhere: no Reveal.
             let mut s = paranoid("paranoia-fizzle", json!([SURGERY, VANILLA]), json!([]), json!({}));
             let surgery = set(&mut s, SURGERY);
             assert!(!reveal_offered(&s, &surgery));
             s.expect_refused(|s| s.activate(surgery.as_str(), json!({ "ability": CLOAKED_REVEAL })));
             s.expect_in_zone(&surgery, "field");
-            // A Unit arrives, and the Reveal is offered.
             s.play(VANILLA, json!({ "zone": 1 }));
             assert!(reveal_offered(&s, &surgery));
         }
@@ -405,7 +398,6 @@ mod tests {
             }));
             assert_eq!(crate::upgrade_number(&mut s, PARANOIA, "draw"), 2);
             s.play(PARANOIA, json!({}));
-            // Played one, drew two.
             assert_eq!(s.hand(P1).len(), 2);
         }
 
@@ -435,7 +427,6 @@ mod tests {
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
             reveal(&mut s, &eclipse);
-            // First resolution asks with a prompt; so does the Echo repeat.
             assert_eq!(
                 s.state().pending.as_ref().map(|pending| pending.kind),
                 Some(PromptKind::Target)

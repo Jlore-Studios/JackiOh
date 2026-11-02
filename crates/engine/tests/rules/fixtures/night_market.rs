@@ -1,7 +1,6 @@
 //! Test-only cards for ME-MARKET (Meditative #42 CN Flea Market, R1000–R1002): `nm-market` runs the
-//! card's own night market over fixture shelves (`subsystems::night_market`), so the engine is proved
-//! without `crates/cards` (CLAUDE.md: the engine never imports it). The Rock is registered under its
-//! real id, `meditative-039-1`, as a stand-in, and each CN lot has a price the tests read.
+//! card's own night market over fixture shelves (`subsystems::night_market`), without `crates/cards`.
+//! The Rock stands in under its real id, `meditative-039-1`; each CN lot has a price the tests read.
 
 use std::sync::LazyLock;
 
@@ -32,12 +31,12 @@ fn def(index: u32, id: &str, extra: Value) -> CardDef {
     ))
 }
 
-/// The market's declared yuan: 50, Radiant 80, as the card's.
+/// The yuan the real card declares.
 fn yuan_params() -> Value {
     json!([{ "key": "yuan", "base": 50, "radiant": 80, "better": "up", "step": 10, "min": 10 }])
 }
 
-/// `nm-market`: the fixture night market, a CN Spell (so the stall's CN pool must leave it out, R387).
+/// The fixture market, a CN Spell (so the stall's CN pool must leave it out, R387).
 pub fn market() -> CardDef {
     def(
         3411,
@@ -46,7 +45,7 @@ pub fn market() -> CardDef {
     )
 }
 
-/// `nm-market-qd`: the same market with Quickdraw, so a replayed game deals it in the opening hand.
+/// With Quickdraw, so a replayed game deals it in the opening hand.
 pub fn market_qd() -> CardDef {
     def(
         3412,
@@ -120,8 +119,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// The card's shelves (the cards crate's #42 names the same three): three CN cards, two Rocks, one
-/// AI generated card.
+/// The card's shelves; the cards crate's #42 names the same three.
 pub fn shelves() -> Vec<MarketShelf> {
     vec![
         MarketShelf::Pool {
@@ -171,17 +169,14 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     ])
 });
 
-/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     defs().into_iter().map(|card| (card.id.clone(), card)).collect()
 }
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     SCRIPTS.clone()
 }
 
-/// Add these fixtures to whatever the harness registered.
 pub fn register_night_market_fixtures() {
     let mut all_defs = registered_catalog().clone();
     all_defs.extend(catalog());

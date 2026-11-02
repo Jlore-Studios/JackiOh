@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-012";
 
-/// "a Unit": units only, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
 }
@@ -34,15 +33,11 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // Same script: `param` reads the Radiant face's 8 off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// C #12 Book of Blood — SPEC §8.6 row 12, BUILD M9 Classic row C 12: "Targets a Unit only, either
-// side (no hero offered); one hit of 4; its own Lifesteal heals your hero the amount dealt (R85), so
-// Armor lowers the heal and a Divine Shield leaves it at 0 (R63); radiant 8; its tuned number
-// (damage) reads through `param()` (R386)".
+// C #12 Book of Blood — SPEC §8.6 row 12, BUILD M9 Classic row C 12 (R85, R63, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

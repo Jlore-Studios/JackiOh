@@ -3,23 +3,11 @@
 //! `catalog.json` and applied by §10.4's keyword layer, and "same" says the text is unchanged
 //! (§8 Conventions), so the two faces run the identical hook.
 //!
-//! §8.1's Engine cell is "Forced attacks in enemy lane order (§4.2); stops when Moths dies", which
-//! is R53 in full: the forced attacks skip §4.2 steps 1-3 (no validator, so position, summoning
-//! sickness and Taunt are all irrelevant), spend no exertion, the target still strikes back, each
-//! forced attack is its own combat followed by its own state check, and the next forced attacker
-//! attacks only while the target is still on the field. `combat::force_attacks_on` implements exactly
-//! that, and `start_turn` fires this hook for the controller alone, before their draw (§2.2, R68).
-//!
-//! Armor is not this card's business either: §4.4 step 2 subtracts the defender's armor from each
-//! incoming hit, so the radiant face's printed Armor 1 reduces every forced attack by 1 on its own. Pierce,
-//! printed on both faces since patch v0.3.10, is the layer's too: the hits it strikes back with skip
-//! the attackers' Armor.
-//!
-//! A card file returns `Vec<Effect>` and never touches state (CLAUDE.md rule 5), so it cannot call
-//! `combat::force_attacks_on`, which takes an `EngineSink`. It goes through `forced_attacks_on`
-//! (engine/src/effects/combat.rs, beside #60 Bear Honeypot's `forced_attacks`), a thin wrapper:
-//! `EffectContext` derefs to an `EngineSink`, so the wrapper names the enemy's units in lane order
-//! and hands the rest to `force_attacks_on`, and R53 stays in one place.
+//! §8.1's Engine cell ("Forced attacks in enemy lane order (§4.2); stops when Moths dies") is R53,
+//! all in `combat::force_attacks_on`; `start_turn` fires this hook for the controller alone, before
+//! their draw (§2.2, R68). Armor (§4.4 step 2) and Pierce, printed on both faces, are the layer's. A
+//! card file never touches state (CLAUDE.md rule 5), so it goes through the thin wrapper
+//! `forced_attacks_on` (beside #60 Bear Honeypot's `forced_attacks`), and R53 stays in one place.
 
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::prelude::*;
@@ -42,22 +30,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass: "Each enemy unit attacks it in
-// lane order at controller's start of turn, no exertion spent, sick units included, each attack is
-// its own combat, stops when Moths dies (R53); radiant Armor 1 reduces each hit (R53)".
-//
-// `start_turn()` is the controller's own start of turn, so it is the whole trigger here. The
-// attackers are picked for their arithmetic rather than their text: #7 (1/1), #12 (3/4), #2 (6/1)
-// and #13 (8/10) have Cry or end-of-turn text only, and nothing they do fires when the harness
-// places them on the field or when they are forced to attack.
-//
-// "Sick units included" is the one clause no card test can reach: `is_sick` is
-// `summonedTurn === state.turn` (combat.rs), and a unit the opponent summoned on their own turn
-// is one turn old by the time this card's controller starts a turn, so a summoning-sick ENEMY unit
-// cannot exist at this moment on any legal line of play. `force_attack` never asks the question at
-// all — it skips §4.2 steps 1-3 entirely — which is what the tests below assert in the reachable
-// form (a Defense Position unit, which also cannot legally attack, is forced all the same), and
-// `crates/engine/tests/rules/combat_resolution.rs` covers the sick attacker directly.
+// #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass (R53). `start_turn()` is the controller's
+// own, so it is the whole trigger. #7, #12, #2 and #13 have Cry or end-of-turn text only, which never fires
+// when placed or forced to attack. "Sick units included" is unreachable: an enemy unit is a turn old at its
+// opponent's start of turn; `force_attack` skips §4.2 steps 1-3, so a Defense Position unit is forced all
+// the same (`crates/engine/tests/rules/combat_resolution.rs` covers the sick attacker directly).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -72,7 +49,7 @@ mod tests {
         forced: bool,
     }
 
-    /// Who attacked whom, in the order the step declared it, and whether the attack was forced.
+    /// The step's `attackDeclared` events, in order.
     fn attacks(s: &Scenario) -> Vec<Declared> {
         s.last_events()
             .iter()
@@ -110,7 +87,6 @@ mod tests {
 
             s.start_turn();
 
-            // Three separate forced combats, in enemy lane order.
             let declared = attacks(&s);
             assert_eq!(
                 declared.iter().map(|event| event.attacker_id.clone()).collect::<Vec<_>>(),
@@ -125,8 +101,7 @@ mod tests {
 
             // 1 + 3 + 4 landed on a 1/14.
             s.expect_stats("core-009", json!({ "attack": 1, "health": 6, "maxHealth": 14 }));
-            // The target still strikes back: its 1 attack killed the 1-health attackers and damaged the
-            // rest.
+            // The target strikes back: its 1 attack kills the 1-health attackers.
             s.expect_in_zone(&scarab, "graveyard");
             s.expect_stats(&felinors, json!({ "health": 3, "maxHealth": 4 }));
             s.expect_in_zone(&bigot, "graveyard");
@@ -139,7 +114,7 @@ mod tests {
                 "seed": "core-009-exertion",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // A Defense Position unit cannot legally attack at all (§4.2 step 1), and its position
-                // gives it Armor 1, which Moths' Pierce (patch v0.3.10) goes through.
+                // gives it Armor 1, which Moths' Pierce goes through.
                 "p2": { "field": [{ "def": "core-012", "position": "DEF" }] }
             }));
             let felinors = s.card("core-012").clone();
@@ -164,8 +139,8 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
-                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot is
-                // set to 8/1 (it prints 4/1 since patch v0.3.10), the Shredder a 6/10 since patch v0.3.12.
+                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot
+                // (a 4/1) is set to 8/1; the Shredder is a 6/10.
                 "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 8, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();
@@ -184,7 +159,6 @@ mod tests {
             // strike-back of the combat it started, before the 6/10 attacked.
             s.expect_in_zone(&bigot, "graveyard");
             s.expect_stats(&shredder, json!({ "health": 9, "maxHealth": 10 }));
-            // Lane 3 was never asked: undamaged, unexerted, still on the field.
             s.expect_in_zone(&scarab, "field");
             s.expect_stats(&scarab, json!({ "health": 1, "maxHealth": 1 }));
             assert_eq!(s.card(&scarab).exertion, Exertion::default());

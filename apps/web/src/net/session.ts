@@ -1,41 +1,14 @@
-// Browser session and pending-auth storage.
 // CLAUDE.md rule 7: bearer tokens are not game state, so browser storage stays in this module.
 // Per-tab `sessionStorage` limits token persistence (R632); migrate shared tokens and prefer it to the
 // M8 fixture in `localStorage` (e2e/README.md A6). Pending addresses are non-secret; recovery stays per tab (R193).
 
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS } from "@jackioh/server-config";
 import { clearReadCache } from "./readCache.ts";
-import { sessionStorageOrNull } from "./storage.ts";
+import { getStored, localStorageOrNull, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
 export const SESSION_STORAGE_KEY = "jackioh.session";
 
 export const E2E_SESSION_STORAGE_KEY = "jackioh.e2e.session";
-
-function sharedStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function read(store: Storage | null, key: string): string | null {
-  try {
-    return store?.getItem(key) ?? null;
-  } catch {
-    // Storage is unavailable.
-    return null;
-  }
-}
-
-function remove(store: Storage | null, key: string): void {
-  try {
-    store?.removeItem(key);
-  } catch {
-    // Storage is unavailable.
-  }
-}
 
 export type Session = {
   accessToken: string;
@@ -66,24 +39,24 @@ function parse(raw: string | null): Session | null {
 export function readSession(): Session | null {
   if (typeof window === "undefined") return null;
   const tab = sessionStorageOrNull();
-  const shared = sharedStorage();
+  const shared = localStorageOrNull();
 
-  const current = parse(read(tab, SESSION_STORAGE_KEY));
+  const current = parse(getStored(SESSION_STORAGE_KEY, tab));
   if (current !== null) return current;
 
   // Migrate a shared session to this tab.
-  const older = parse(read(shared, SESSION_STORAGE_KEY));
+  const older = parse(getStored(SESSION_STORAGE_KEY, shared));
   if (older !== null) {
     try {
       tab?.setItem(SESSION_STORAGE_KEY, JSON.stringify(older));
-      remove(shared, SESSION_STORAGE_KEY);
+      removeStored(SESSION_STORAGE_KEY, shared);
     } catch {
       // Keep this read's session if storage is unavailable.
     }
     return older;
   }
 
-  return parse(read(shared, E2E_SESSION_STORAGE_KEY));
+  return parse(getStored(E2E_SESSION_STORAGE_KEY, shared));
 }
 
 export function writeSession(session: Session): void {
@@ -95,16 +68,16 @@ export function writeSession(session: Session): void {
     return;
   }
   // R632: shared tokens must not remain there.
-  remove(sharedStorage(), SESSION_STORAGE_KEY);
+  removeStored(SESSION_STORAGE_KEY, localStorageOrNull());
 }
 
 export function clearSession(): void {
   // R2125000: every sign-out ends here, and the menus' kept answers go with it.
   clearReadCache();
   if (typeof window === "undefined") return;
-  remove(sessionStorageOrNull(), SESSION_STORAGE_KEY);
-  remove(sharedStorage(), SESSION_STORAGE_KEY);
-  remove(sharedStorage(), E2E_SESSION_STORAGE_KEY);
+  removeStored(SESSION_STORAGE_KEY, sessionStorageOrNull());
+  removeStored(SESSION_STORAGE_KEY, localStorageOrNull());
+  removeStored(E2E_SESSION_STORAGE_KEY, localStorageOrNull());
 }
 
 // Pending sign-up and reset addresses (R193).
@@ -113,7 +86,6 @@ export function clearSession(): void {
 
 export const PENDING_EMAIL_STORAGE_KEY = "jackioh.auth.pendingEmail";
 
-/** Guards recovery links against account swaps. */
 export const PENDING_RESET_STORAGE_KEY = "jackioh.auth.pendingReset";
 
 type RememberedAddress = { address: string; at: number };
@@ -123,24 +95,15 @@ function rememberAddress(key: string, email: string): void {
   const trimmed = email.trim();
   if (trimmed.length === 0) return;
   const value: RememberedAddress = { address: trimmed, at: Date.now() };
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Blocked storage leaves the sign-in path intact.
-  }
+  // Blocked storage leaves the sign-in path intact.
+  setStored(key, JSON.stringify(value));
 }
 
 export type PendingAddress = { readonly address: string; readonly at: number };
 
-/** Reject missing, expired, or malformed remembered addresses. */
 function rememberedEntry(key: string): PendingAddress | null {
   if (typeof window === "undefined") return null;
-  let raw: string | null;
-  try {
-    raw = window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  const raw = getStored(key);
   if (raw === null) return null;
   let value: unknown;
   try {
@@ -165,12 +128,7 @@ function rememberedAddress(key: string): string | null {
 }
 
 function forgetAddress(key: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // Storage is unavailable.
-  }
+  removeStored(key);
 }
 
 export function rememberPendingEmail(email: string): void {
@@ -198,7 +156,6 @@ export function pendingReset(): string | null {
   return rememberedAddress(PENDING_RESET_STORAGE_KEY);
 }
 
-/** Uses the same provider interval (R192). */
 export function pendingResetEntry(): PendingAddress | null {
   return rememberedEntry(PENDING_RESET_STORAGE_KEY);
 }

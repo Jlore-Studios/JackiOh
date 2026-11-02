@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #47 Circadian Fullcycler — SPEC §8.10 row 47, BUILD M12 row S 47: "each of your turns while it stands
-// is the autopilot's, within its bound (R1844000, R1183003); End of turn: a Drone Corvette summoned;
-// Brittle 3 crumbles it (R385); radiant: a Radiant Corvette".
+// S #47 Circadian Fullcycler — SPEC §8.10 row 47, BUILD M12 row S 47 (R1844000, R1183003, R385).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -54,8 +52,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p2 to act, p1 with the Fullcycler face-up in the backrow; p2 with cards to play, so their turn
-    /// does not end by itself.
     fn fielded(radiant: bool, hand: Value) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -81,7 +77,6 @@ mod tests {
             .count()
     }
 
-    /// Whether each Drone Corvette `player` summoned among `events` is Radiant.
     fn corvettes(events: &[GameEvent], s: &Scenario, player: PlayerId) -> Vec<bool> {
         events
             .iter()
