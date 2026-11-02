@@ -548,8 +548,15 @@ export default function Card(props: CardProps): ReactElement {
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the inspect
         // overlays (which render their own CardFace from `face`) keep the whole text.
         // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
+        // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
         <TermTips>
-          <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} worn={worn} />
+          <CardFace
+            face={face}
+            layout={form === "compact" ? "compact" : "full"}
+            ascentLevel={ascentLevelOf(face.values)}
+            worn={worn}
+            ownHand={worn && props.inOwnHand === true}
+          />
         </TermTips>
       )}
 

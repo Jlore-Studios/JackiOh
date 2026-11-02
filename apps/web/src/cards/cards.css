@@ -952,6 +952,17 @@
   right: calc(6cqw + 0.4cqh);
 }
 
+/* R2723000: a full-art face in the viewer's own hand prints no name banner; its name stays in its
+   words, for a screen reader and BUILD M5-T1's by-name finding, visually hidden. */
+.cf .cf-hand-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {

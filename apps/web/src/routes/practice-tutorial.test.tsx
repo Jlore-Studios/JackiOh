@@ -432,7 +432,7 @@ describe("R1108000 a lesson's board prints no full art", () => {
 
   function vanillaFaces(): HTMLElement[] {
     return [...screen.getByTestId("game").querySelectorAll<HTMLElement>(".cf")].filter(
-      (face) => face.querySelector(".card-name")?.textContent === "Mr. Vanilla",
+      (face) => face.querySelector(".card-name, .cf-hand-name")?.textContent === "Mr. Vanilla",
     );
   }
 

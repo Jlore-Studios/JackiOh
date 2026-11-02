@@ -181,13 +181,13 @@ describe("the networked board", () => {
       view: baseView({
         viewer: "p1",
         active: "p1",
-        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-001" })] }),
+        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-002" })] }),
       }),
       legal: [{ type: "endTurn" }],
     });
 
     expect(screen.getByTestId("hand-card-h-1378").querySelector(".card-name")?.textContent).toBe(
-      registeredCatalog()["core-001"]?.name,
+      registeredCatalog()["core-002"]?.name,
     );
     expect(requests.mock.calls.map(([url]) => String(url)).filter((url) => /\/api\/catalog$/u.test(url))).toEqual([]);
   });

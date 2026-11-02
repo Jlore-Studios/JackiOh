@@ -19,6 +19,8 @@ import { fillParams, type CardDef, type CardType, type Keyword, type PreviewValu
 
 import { CardFace, TOKEN_WORD, cx, faceText, typeLine } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
+import { resetCosmeticsForTests, writeCardFullArt } from "./cosmetics.ts";
+import { FULL_ARTS_OF_CARD } from "./fullArt.ts";
 import { GLITCH_WORDS } from "./glitch.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { INSPECT_FACE, INSPECT_GLOSSARY, INSPECT_STATES } from "./inspect/testids.ts";
@@ -1322,5 +1324,92 @@ describe("R2647000: Token and Created live in the hover preview, not on the face
     cleanup();
     render(<HoverPreview face={faceModel({ ...source, chinese: true })} anchor={PREVIEW_ANCHOR} />);
     expect(one(screen.getByTestId(INSPECT_FACE), ".card-type").textContent).toBe(`${CHINESE_TERMS.tags.Token}${CHINESE_TERMS.types.Unit}`);
+  });
+});
+
+/* ------------------------------------------------------- R2723000: a full-art face in your hand --- */
+
+describe("R2723000: a full-art face in the viewer's own hand", () => {
+  /** Felinor Flagbearer, a Legendary Unit: a gem, a crest, a set mark and stats. */
+  const UNIT = "classicplus-046";
+  /** League of Losers, a Spell. */
+  const SPELL = "classicplus-019";
+  /** Bigot, a card that prints no full art. */
+  const PLAIN = "core-002";
+  /** What the face prints on its own and a hand's full-art face does not. */
+  const HIDDEN = [".card-name", ".cf-signature", ".cf-gem", ".cf-set", ".cf-crest"] as const;
+
+  // The file's own beforeEach turns full art off; these faces need it on, with no pick of their own.
+  beforeEach(() => {
+    localStorage.clear();
+    resetCosmeticsForTests();
+    writeCardSettings({ fullArt: true });
+  });
+
+  afterEach(() => {
+    resetCosmeticsForTests();
+    localStorage.clear();
+  });
+
+  function ownFace(id: string, { ownHand = true, radiant = false }: { ownHand?: boolean; radiant?: boolean } = {}): HTMLElement {
+    const { container } = render(<CardFace face={faceModel({ defId: id, def: def(id), radiant })} worn ownHand={ownHand} />);
+    flushFits();
+    const face = container.querySelector<HTMLElement>(".cf");
+    if (face === null) throw new Error(`no face for ${id}`);
+    return face;
+  }
+
+  it("R2723000 a full-art Unit in your own hand draws no name, signature, rarity gem, set mark or crest, and keeps its cost gem and stats, base and Radiant", () => {
+    const whole = ownFace(UNIT, { ownHand: false });
+    expect(whole.getAttribute("data-full-art")).toBe("true");
+    expect(whole.hasAttribute("data-full-art-hand")).toBe(false);
+    for (const part of [".card-name", ".cf-gem", ".cf-set", ".cf-crest"]) expect(whole.querySelector(part), part).not.toBeNull();
+    cleanup();
+
+    for (const radiant of [false, true]) {
+      const face = ownFace(UNIT, { radiant });
+      expect(face.getAttribute("data-full-art-hand"), `radiant ${radiant}`).toBe("true");
+      for (const part of HIDDEN) expect(face.querySelector(part), `${part}, radiant ${radiant}`).toBeNull();
+      expect(face.querySelector(".cf-hand-name")?.textContent).toBe(def(UNIT).name);
+      for (const part of [".cost-gem", ".cf-atk", ".cf-hp"]) expect(face.querySelector(part), `${part}, radiant ${radiant}`).not.toBeNull();
+      expect(face.getAttribute("data-radiant-face") === "true").toBe(radiant);
+      cleanup();
+    }
+  });
+
+  it("R2723000 a full-art Spell in your own hand draws only its art and cost gem", () => {
+    const face = ownFace(SPELL);
+    expect(face.getAttribute("data-full-art-hand")).toBe("true");
+    for (const part of [...HIDDEN, ".cf-stats"]) expect(face.querySelector(part), part).toBeNull();
+    expect(face.querySelector(".cost-gem")).not.toBeNull();
+    expect(face.querySelector(".cf-hand-name")?.textContent).toBe(def(SPELL).name);
+  });
+
+  it("R2723000 a Mythic full art in your own hand signs nothing and still moves", () => {
+    writeCardFullArt(UNIT, FULL_ARTS_OF_CARD.get(UNIT)?.get("Mythic") ?? null);
+    const signed = ownFace(UNIT, { ownHand: false });
+    expect(signed.querySelector(".cf-signature")).not.toBeNull();
+    cleanup();
+
+    const face = ownFace(UNIT);
+    expect(face.getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(face.querySelector(".cf-signature")).toBeNull();
+    expect(face.classList.contains("cf-full-art--signed")).toBe(false);
+    expect(face.classList.contains("cf-full-art--animated")).toBe(true);
+    expect(face.querySelector(".cf-full-art-sweep")).not.toBeNull();
+  });
+
+  it("R2723000 a face that prints no full art keeps its name banner in your own hand", () => {
+    const plain = ownFace(PLAIN);
+    expect(plain.querySelector(".card-name")?.textContent).toBe(def(PLAIN).name);
+    expect(plain.querySelector(".cf-hand-name")).toBeNull();
+    expect(plain.hasAttribute("data-full-art-hand")).toBe(false);
+    cleanup();
+
+    writeCardSettings({ fullArt: false });
+    const off = ownFace(UNIT);
+    expect(off.hasAttribute("data-full-art")).toBe(false);
+    expect(off.hasAttribute("data-full-art-hand")).toBe(false);
+    expect(off.querySelector(".card-name")?.textContent).toBe(def(UNIT).name);
   });
 });

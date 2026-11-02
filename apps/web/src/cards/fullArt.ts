@@ -6,6 +6,7 @@
 // entry for its card id (`FULL_ART_CARDS`), so the registry is the one list. The hero portraits' six
 // cards keep theirs, and #2655 adds fifteen more, spells, field spells and a field trap among them.
 // The Full-art cards setting (settings.ts `fullArt`) turns them off, and they print their text like any card.
+// R2723000: in the viewer's own hand it keeps only the cost gem and a Unit's attack and health (CardFace's `ownHand`).
 // R1108000: a tutorial lesson's board prints no full art, whatever the setting: practice.tsx wraps it in
 // `FullArtAllowed` of false, and the faces and inspect overlays below it read `useFullArt`.
 // R1313000: each full art is a cosmetic its card's owner must own (`fullArt` in the cosmetics
