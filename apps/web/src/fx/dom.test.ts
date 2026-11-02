@@ -337,6 +337,47 @@ describe("Patch v0.2.3c — Classic+ #24 Crushing Walls' walls", () => {
   });
 });
 
+describe("R2789000 — a keyword's callout", () => {
+  const callout = (keyword: Extract<FxDomCue, { kind: "callout" }>["keyword"], still = false): FxDomCue => ({
+    kind: "callout",
+    keyword,
+    at: anchor,
+    delayMs: 0,
+    durationMs: 600,
+    ...(still ? { still: true as const } : {}),
+  });
+
+  it("R2789000 a callout carries its keyword and icon, centered on its unit's box, still when asked", () => {
+    const cue = callout("Cleave");
+    const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+    expectCenteredOn(el, AT);
+    expect(el.getAttribute("data-callout")).toBe("Cleave");
+    // Not `data-keyword`, which the card's rules text matches.
+    expect(el.hasAttribute("data-keyword")).toBe(false);
+    expect(el.hasAttribute("data-still")).toBe(false);
+    const icon = el.querySelector("svg.fx-callout-icon");
+    expect(icon?.getAttribute("viewBox")).toBe("0 0 100 100");
+    expect(icon?.getAttribute("aria-hidden")).toBe("true");
+    expect(icon?.querySelectorAll("path")).toHaveLength(1);
+    expect(icon?.querySelector("path")?.getAttribute("d")).toMatch(/^M/);
+    expect(icon?.querySelector("path")?.hasAttribute("data-line")).toBe(false);
+
+    root.innerHTML = "";
+    const stillCue = callout("Ranged", true);
+    const still = expectMounted(mountDomEffect(root, stillCue, { at: AT }), stillCue);
+    expect(still.getAttribute("data-still")).toBe("true");
+    // A line icon is stroked, not filled.
+    expect(still.querySelector("path")?.getAttribute("data-line")).toBe("true");
+  });
+
+  it("R2789000 a callout with no box, or no icon for its keyword, mounts nothing", () => {
+    expect(mountDomEffect(root, callout("Cleave"), {})).toBeNull();
+    expect(mountDomEffect(root, callout("Cleave"), { at: null })).toBeNull();
+    expect(mountDomEffect(root, callout("Taunt"), { at: AT })).toBeNull();
+    expect(root.childElementCount).toBe(0);
+  });
+});
+
 describe("a stand-in swells inward from an edge (integration QA: lane 1 on a phone)", () => {
   // Imported here so the header's contract above stays about mountDomEffect.
   const view = { width: 390, height: 844 };

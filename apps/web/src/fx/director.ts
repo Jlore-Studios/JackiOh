@@ -9,6 +9,7 @@ import {
   FX_ADAPT_SLOW_FACTOR,
   FX_ADAPT_SLOW_MS,
   FX_ADAPT_WINDOW,
+  FX_FLYING_LUNGE_LIFT,
   FX_LUNGE_MAX_PX,
   FX_LUNGE_MIN_PX,
   FX_LUNGE_STANDOFF,
@@ -78,7 +79,7 @@ export type FxDirector = {
 };
 
 type PendingCue = { cue: FxCue; due: number };
-type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string };
+type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string; key?: string };
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
 function defaultViewport(): FxViewportEvents {
@@ -230,6 +231,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "walls":
       case "brand":
       case "shield":
+      case "callout":
       case "takeover": {
         const box = measure(cue.at);
         if (box === null) return;
@@ -261,8 +263,19 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         return false;
       });
     }
+    // R2789000: one callout of a keyword over a unit at a time: a repeat (Cleave's second neighbour) takes the first's place.
+    const key = cue.kind === "callout" ? `${cue.keyword}@${cue.at.kind === "testid" ? cue.at.testid : cue.at.kind}` : undefined;
+    if (key !== undefined) {
+      mounted = mounted.filter((item) => {
+        if (item.key !== key) return true;
+        item.effect.remove();
+        return false;
+      });
+    }
     const effect = mountDomEffect(domRoot, cue, boxes);
-    if (effect !== null) mounted.push({ effect, expiresAt, kind: cue.kind, ...(cue.kind === "rays" ? { tone: cue.tone } : {}) });
+    if (effect !== null) {
+      mounted.push({ effect, expiresAt, kind: cue.kind, ...(cue.kind === "rays" ? { tone: cue.tone } : {}), ...(key === undefined ? {} : { key }) });
+    }
   };
 
   const stage = (cue: FxStageCue, due: number, at: number): void => {
@@ -332,10 +345,13 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const aim = (x: string, y: string): void => {
           attacker.style.setProperty("--fx-lunge-x", x);
           attacker.style.setProperty("--fx-lunge-y", y);
+          // R2789000: a Flying attacker's lunge arcs over the lane, lifted toward the viewer.
+          if (cue.arc === true) attacker.style.setProperty("--fx-lunge-lift", String(FX_FLYING_LUNGE_LIFT));
           staged.push({
             undo: () => {
               attacker.style.removeProperty("--fx-lunge-x");
               attacker.style.removeProperty("--fx-lunge-y");
+              attacker.style.removeProperty("--fx-lunge-lift");
             },
             expiresAt,
           });

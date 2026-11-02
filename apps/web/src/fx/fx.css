@@ -198,6 +198,73 @@
   );
 }
 
+/* ----------------------------------------------------------- callout: a keyword's icon --- */
+
+/* R2789000: a combat keyword's beat (fx/motifs/beats.ts) pops its icon over the unit that has it, a dark
+   round badge on the unit's top edge holding one path of `cards/keywordVisuals.ts` (fx/dom.ts). It pops in,
+   holds through FX_CALLOUT_MS and fades. `data-callout` names the keyword (not `data-keyword`, which the
+   card rules match). Under reduced motion it is `data-still`: the same badge with no animation. */
+
+@keyframes fx-callout-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  14% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  24% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9) translateY(-10px);
+    opacity: 0;
+  }
+}
+
+.fx-callout {
+  left: var(--fx-x);
+  top: calc(var(--fx-y) - var(--fx-h, 82px) * 0.5);
+  width: clamp(26px, calc(var(--fx-w, 82px) * 0.5), 52px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  z-index: 4;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--fx-steel) 30%, var(--fx-ink)) 0%, var(--fx-ink) 100%);
+  border: 2px solid var(--fx-gold);
+  box-shadow: 0 3px 4px color-mix(in srgb, var(--fx-ink) 80%, transparent);
+  animation: fx-callout-pop var(--fx-ms) ease-out both;
+}
+
+.fx-callout[data-still="true"] {
+  animation: none;
+}
+
+.fx-callout-icon {
+  width: 68%;
+  height: 68%;
+  fill: var(--fx-white);
+  stroke: var(--fx-ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+/* A line icon (Windfury, Ranged) is a stroke, not a fill. */
+.fx-callout-icon path[data-line="true"] {
+  fill: none;
+  stroke: var(--fx-white);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
 /* ------------------------------------------------------------ rays: the light-ray fans --- */
 
 /* Legendary and Mythic entrances, the heal column, the radiant set and the victory / "Your turn"
@@ -2172,9 +2239,9 @@
 
 /* ------------------------------------------------------------------------ reduced motion --- */
 
-/* R200: under prefers-reduced-motion no effect is drawn at all. FxLayer already renders
-   `data-fx="off"` with no canvas and plays no cue, which also takes the cocoon away (it is gated on
-   `data-fx="on"`); this block is the belt to that brace. */
+/* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer
+   renders `data-fx="off"` with no canvas and plays only still callouts, which also takes the cocoon away
+   (it is gated on `data-fx="on"`); this block is the belt to that brace. */
 @media (prefers-reduced-motion: reduce) {
   .fx-layer *,
   .fx-layer *::before,
@@ -2187,6 +2254,11 @@
 
   .fx-dom > * {
     visibility: hidden;
+  }
+
+  /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped. */
+  .fx-dom > .fx-callout[data-still="true"] {
+    visibility: visible;
   }
 }
 
