@@ -13270,6 +13270,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2836": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-02T12:57:43Z",
+      "issue": 2785,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
