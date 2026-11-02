@@ -14721,8 +14721,16 @@
     "what": "revise #2839 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-02T23:34:58Z",
-    "notes": [],
+    "at": "2026-11-02T23:41:35Z",
+    "notes": [
+      "CI on #2839: #2839: queued a CI fix",
+      "CI on #2835: #2835: queued a CI fix",
+      "CI on #2831: #2831: queued a CI fix",
+      "started revise #2835 on claude-8 (run 41547564472)",
+      "started revise #2831 on claude-7 (run 41547652174)",
+      "started revise #2839 on muse (run 41547737749)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15427,7 +15435,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T23:34:58Z",
+  "loop_tick": "2026-11-02T23:41:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
