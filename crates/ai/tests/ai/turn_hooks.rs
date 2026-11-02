@@ -4,10 +4,16 @@
 //! priced, the frozen baseline reads no price, and a call not passed a decision's prices reads none.
 //! R2565000 prices the same hooks for a Unit on either field and for a Field Spell the seat can read in
 //! the enemy's backrow too; a face-down card of the enemy's is never probed (R185).
+//! R2689000 counts the start-of-turn and end-of-turn part of a price once for each time its controller's
+//! turn runs it, and prices the start of the opponent's turn too.
 //!
 //! The cards: Mana Well (Radiant 2), Rush Token Farm, Unbiased Immigration, Masochism Mask (a prompt),
 //! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),
-//! three Field Spells with no turn hook, and Mr. Vanilla.
+//! three Field Spells with no turn hook, and Mr. Vanilla. For R2689000: Joint Filing (meditative-009), a
+//! (2) Field Spell, "Aura: Your Start of turn and End of turn effects trigger an extra time" (Radiant two);
+//! Living Bomb (classic-062), a (1) Field Spell, Radiant "At the start of your opponent's turn: Destroy
+//! every permanent they control with a Plague Token on it"; and Fed Fauci (core-091), a (2) 1/6 Rush,
+//! "Start of turn: +1 mana per Plague Counter".
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -28,6 +34,9 @@ const GRAVEDIGGER: &str = "core-037";
 const MELTDOWN_LAYER: &str = "stinkyscape-t-meltdown-layer";
 const HIT_JOB: &str = "core-016";
 const HARMONY_SPIRIT: &str = "meditativeplus-021";
+const FED_FAUCI: &str = "core-091";
+const JOINT_FILING: &str = "meditative-009";
+const LIVING_BOMB: &str = "classic-062";
 const LIBRARY: &[&str] = &[VANILLA, VANILLA, VANILLA, VANILLA];
 
 /// The AI's turn with `hand` and `backrow`, the human's `enemy` backrow and a Mr. Vanilla in the
@@ -56,6 +65,15 @@ fn price_of(prices: &[TurnHookPrice], def_id: &str, radiant: bool) -> f64 {
         .iter()
         .find(|entry| entry.def_id == def_id && entry.radiant == radiant)
         .map(|entry| entry.price)
+        .unwrap_or_else(|| panic!("{def_id}'s turn hooks are priced: {prices:?}"))
+}
+
+/// The start-of-the-opponent's-turn price of `def_id`'s face `radiant`, which must be priced (R2689000).
+fn opponent_turn_of(prices: &[TurnHookPrice], def_id: &str, radiant: bool) -> f64 {
+    prices
+        .iter()
+        .find(|entry| entry.def_id == def_id && entry.radiant == radiant)
+        .map(|entry| entry.opponent_turn)
         .unwrap_or_else(|| panic!("{def_id}'s turn hooks are priced: {prices:?}"))
 }
 
@@ -160,6 +178,7 @@ fn r2477000_an_enemy_face_down_card_is_priced_as_before() {
                 def_id: def_id.to_string(),
                 radiant: false,
                 price: 10.0,
+                opponent_turn: 0.0,
             })
             .to_vec()
     };
@@ -377,6 +396,7 @@ fn r2565000_an_enemy_face_up_field_spell_is_priced_a_face_down_trap_is_not() {
         def_id: ACE_IN_THE_HOLE.to_string(),
         radiant: false,
         price: 10.0,
+        opponent_turn: 0.0,
     }];
     close(eval_with(&state, trap), bare);
 }
@@ -538,4 +558,80 @@ fn r2565000_decide_trades_a_vanilla_unit_before_its_own_gravedigger() {
             }
         }
     }
+}
+
+#[test]
+fn r2689000_joint_filing_multiplies_a_unit_s_turn_hook_price_for_its_controller_alone() {
+    let filed = |backrow: Value, enemy: Value| {
+        sides(
+            "ai-hook-filing",
+            json!({ "field": [{ "def": FED_FAUCI, "counters": { "plague": 1 } }], "backrow": backrow }),
+            json!({ "backrow": enemy }),
+        )
+    };
+    let (prices, _) = priced(&filed(json!([JOINT_FILING]), json!([])));
+    let price = price_of(&prices, FED_FAUCI, false);
+    close(price, AI_EVAL.next_turn_mana);
+    let prices = prices_of(prices);
+    for (backrow, enemy, runs) in [
+        (json!([]), json!([]), 1.0),
+        (json!([JOINT_FILING]), json!([]), 2.0),
+        (json!([{ "def": JOINT_FILING, "radiant": true }]), json!([]), 3.0),
+        (json!([]), json!([JOINT_FILING]), 1.0),
+    ] {
+        let state = filed(backrow, enemy);
+        let fauci = unit(&state, AI, FED_FAUCI);
+        close(
+            unit_worth(&state, fauci, &AI_EVAL, &prices) - unit_worth(&state, fauci, &AI_EVAL, Prices::NONE),
+            runs * AI_EVAL.turn_hook * price,
+        );
+    }
+}
+
+#[test]
+fn r2689000_a_radiant_living_bomb_is_priced_by_the_enemy_s_plagued_permanents() {
+    let plagued = json!({ "def": VANILLA, "counters": { "plague": 1 } });
+    let bomb = json!({ "def": LIVING_BOMB, "radiant": true });
+    let bombed = |backrow: Value, enemy: Value| {
+        sides(
+            "ai-hook-bomb",
+            json!({ "backrow": backrow }),
+            json!({ "field": enemy }),
+        )
+    };
+    let lift = |state: &GameState, prices: &[TurnHookPrice]| {
+        eval_with(state, prices.to_vec()) - evaluate(state, AI, NextSwing::Enemy, &AI_EVAL)
+    };
+
+    let none = bombed(json!([bomb]), json!([VANILLA]));
+    let one = bombed(json!([bomb]), json!([plagued, VANILLA]));
+    let two = bombed(json!([bomb]), json!([plagued, plagued]));
+    let (none_prices, _) = priced(&none);
+    let (one_prices, used) = priced(&one);
+    let (two_prices, _) = priced(&two);
+    assert_eq!(used, 1, "one start-of-the-opponent's-turn hook, one node");
+    close(price_of(&one_prices, LIVING_BOMB, true), 0.0);
+    assert!(
+        opponent_turn_of(&one_prices, LIVING_BOMB, true) > 0.0,
+        "{one_prices:?}"
+    );
+    close(lift(&none, &none_prices), 0.0);
+    let (lift_one, lift_two) = (lift(&one, &one_prices), lift(&two, &two_prices));
+    assert!(lift_one > 0.0, "{lift_one}");
+    assert!(lift_two > lift_one, "{lift_two} against {lift_one}");
+
+    let filing = bombed(json!([bomb, JOINT_FILING]), json!([plagued, VANILLA]));
+    close(lift(&filing, &one_prices), lift_one);
+}
+
+#[test]
+fn r2689000_a_radiant_living_bomb_in_hand_is_priced_by_setting_it_first() {
+    let state = sides(
+        "ai-hook-bomb-hand",
+        json!({ "hand": [{ "def": LIVING_BOMB, "radiant": true }] }),
+        json!({ "field": [{ "def": VANILLA, "counters": { "plague": 1 } }] }),
+    );
+    let (prices, used) = priced(&state);
+    assert_eq!(used, 2, "a spawn and a firing");
+    assert!(opponent_turn_of(&prices, LIVING_BOMB, true) > 0.0, "{prices:?}");
 }
