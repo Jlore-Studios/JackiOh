@@ -27,6 +27,14 @@
 #                       staging's project, and a secret the API does not hand back, stay out and are
 #                       named. With `dry_run` (the default) it lists what it would change and writes
 #                       nothing. Run it before the copy's real run.
+#   email               both projects' sign-in emails through Resend, from no-reply@jackioh.com, since
+#                       Supabase's own mailer reaches only the project's team, two an hour. With the
+#                       repository secret RESEND_API_KEY (a Full access key): adds jackioh.com to Resend
+#                       and prints the DNS records it asks for; once they are in the zone (and in
+#                       infra/cloudflare.tf), verifies the domain, makes a sending-only key for it and
+#                       sets it as both projects' SMTP (SUPABASE_ACCESS_TOKEN), then deletes the keys an
+#                       earlier run made, so running it again rotates the key. `dry_run` changes nothing.
+#                       When this workflow is deleted, this step moves to a workflow of its own.
 #   copy                staging's database into the empty JackiOh-Production (section 8): roles, schema
 #                       and data, the four statistics tables' live rows alone and none of
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
@@ -56,9 +64,10 @@ on:
           - production-secrets
           - check-production
           - production-auth
+          - email
           - copy
       dry_run:
-        description: "copy and production-auth: show what it would do, and write nothing"
+        description: "copy, production-auth and email: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
@@ -412,6 +421,102 @@ jobs:
           api "$config/$PRODUCTION_REF/config/auth" \
             | jq -r '"production now: site_url \(.site_url), redirects \(.uri_allow_list), leaked-password protection \(.password_hibp_enabled), confirm email \(.mailer_autoconfirm | not), SMTP host \(.smtp_host // "Supabase'"'"'s own")"' \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: sign-in emails through Resend
+        if: ${{ inputs.step == 'email' }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          EMAIL_DOMAIN: jackioh.com
+          EMAIL_FROM: no-reply@jackioh.com
+          EMAIL_NAME: JackiOh
+          # The sending-only key this step makes; an earlier run's, by the same name, is deleted.
+          KEY_NAME: supabase-smtp
+        run: |
+          set -euo pipefail
+          umask 077
+          case "$RESEND_API_KEY" in
+            re_*) ;;
+            "") echo "::error::RESEND_API_KEY is not set: a Full access key from https://resend.com/api-keys"; exit 1 ;;
+            *) echo "::error::RESEND_API_KEY is not a Resend API key (re_…)"; exit 1 ;;
+          esac
+          case "$SUPABASE_ACCESS_TOKEN" in sbp_*) ;; *) echo "::error::SUPABASE_ACCESS_TOKEN is not set"; exit 1 ;; esac
+          resend() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $RESEND_API_KEY" \
+              -H "Content-Type: application/json" "$@"
+          }
+          supabase() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          api=https://api.resend.com
+          if ! domains=$(resend "$api/domains" 2>&1); then
+            echo "::error::Resend refused to list the domains, so RESEND_API_KEY is probably a Sending access key: make a Full access one. Resend said: $domains"
+            exit 1
+          fi
+          id=$(jq -r --arg d "$EMAIL_DOMAIN" '[(.data // .)[] | select(.name == $d)][0].id // empty' <<<"$domains")
+          if [ -z "$id" ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "dry_run: would add $EMAIL_DOMAIN to Resend, then print its DNS records" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            id=$(resend -X POST "$api/domains" -d "$(jq -n --arg d "$EMAIL_DOMAIN" '{name: $d}')" | jq -r .id)
+            echo "added $EMAIL_DOMAIN to Resend"
+          fi
+          domain=$(resend "$api/domains/$id")
+          # Sign-in mail carries no tracking: no pixel, and no link rewritten through Resend (whose
+          # Tracking record then is not needed either).
+          if [ "$(jq -r '(.open_tracking // false) or (.click_tracking // false)' <<<"$domain")" = true ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "dry_run: would turn off Resend's open and click tracking for $EMAIL_DOMAIN"
+            else
+              resend -X PATCH "$api/domains/$id" -d '{"open_tracking": false, "click_tracking": false}' > /dev/null
+              domain=$(resend "$api/domains/$id")
+            fi
+          fi
+          status=$(jq -r .status <<<"$domain")
+          echo "Resend's $EMAIL_DOMAIN: $status (open tracking $(jq -r '.open_tracking // false' <<<"$domain"), click tracking $(jq -r '.click_tracking // false' <<<"$domain")). Its DNS records, one JSON object a line:"
+          jq -c '.records[] | select(.record != "Tracking") | {record, type, name, value, priority, ttl, status}' <<<"$domain"
+          if [ "$status" != verified ]; then
+            [ "$DRY_RUN" = true ] && exit 0
+            resend -X POST "$api/domains/$id/verify" > /dev/null
+            for _ in $(seq 1 30); do
+              sleep 10
+              status=$(resend "$api/domains/$id" | jq -r .status)
+              case "$status" in verified | failed) break ;; esac
+            done
+            if [ "$status" != verified ]; then
+              echo "::error::$EMAIL_DOMAIN is $status at Resend: add the records above to the jackioh.com zone, then run this again"
+              exit 1
+            fi
+            echo "$EMAIL_DOMAIN verified"
+          fi
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would make a sending-only key for $EMAIL_DOMAIN and set it as both projects' SMTP" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          old=$(resend "$api/api-keys" | jq -r --arg n "$KEY_NAME" '(.data // .)[] | select(.name == $n) | .id')
+          key=$(resend -X POST "$api/api-keys" \
+            -d "$(jq -n --arg n "$KEY_NAME" --arg d "$id" '{name: $n, permission: "sending_access", domain_id: $d}')" | jq -r .token)
+          echo "::add-mask::$key"
+          case "$key" in re_*) ;; *) echo "::error::Resend made no key"; exit 1 ;; esac
+          jq -n --arg pass "$key" --arg from "$EMAIL_FROM" --arg name "$EMAIL_NAME" \
+            '{smtp_host: "smtp.resend.com", smtp_port: "465", smtp_user: "resend", smtp_pass: $pass,
+              smtp_admin_email: $from, smtp_sender_name: $name}' > "$RUNNER_TEMP/smtp.json"
+          for ref in "$PRODUCTION_REF" "$STAGING_REF"; do
+            supabase -X PATCH "https://api.supabase.com/v1/projects/$ref/config/auth" --data-binary "@$RUNNER_TEMP/smtp.json" > /dev/null
+            supabase "https://api.supabase.com/v1/projects/$ref/config/auth" \
+              | jq -r --arg ref "$ref" '"\($ref): SMTP \(.smtp_host):\(.smtp_port) as \(.smtp_user), from \(.smtp_sender_name) <\(.smtp_admin_email)>, \(.rate_limit_email_sent) emails an hour"' \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          rm -f "$RUNNER_TEMP/smtp.json"
+          # Only now that both projects send with the new key: an earlier run's goes.
+          for gone in $old; do
+            resend -X DELETE "$api/api-keys/$gone" > /dev/null
+            echo "deleted the earlier $KEY_NAME key $gone"
+          done
 
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}
