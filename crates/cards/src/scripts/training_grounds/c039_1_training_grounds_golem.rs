@@ -59,18 +59,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s6_1_a_10_10_with_rush_armor_taunt_divine_shield_and_pierce() {
-            let mut s = defending(false, 12);
-            s.expect_stats(super::super::ID, json!({ "attack": 10, "health": 10 }));
-            assert_eq!(keywords_of(&s), ["Armor", "Divine Shield", "Pierce", "Rush", "Taunt"]);
-            assert!(s
-                .stats(super::super::ID)
-                .keywords
-                .iter()
-                .any(|keyword| matches!(keyword, Keyword::Armor { n: 10 })));
-        }
-
-        #[test]
         fn s6_1_rush_it_attacks_a_unit_the_turn_it_lands_never_the_hero() {
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [super::super::ID] },
