@@ -14470,19 +14470,36 @@
     "2869": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T17:08:53Z",
       "issue": 2849,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The change does not do what #2849 asks: it wraps 39 behaviour tests, one each, into arrays of closures under it.each, so the case count barely moves (fx 142\u2192141, audio 128\u2192128) and the only real pattern-2 removal is the B9 pin.",
+          "evidence": "grep -c '^\\s*it(' on base vs HEAD: fx 142\u2192116 plus 3 it.each with 25 rows, audio 128\u2192114 plus 3 it.each with 14 rows; the PR's own counts agree. The issue's Why is 'One table-driven test ... proves the same thing in far fewer cases', and none of these groups is 'a group of its that differ only in which row they read'. Each row has its own events, its own expected-cue list and its own assertion shape. That is why the builder had to use `{ title, run: () => void }` and `{ title, type, check(D) }` thunks rather than data rows.",
+          "severity": "blocking",
+          "where": "task"
+        },
+        {
+          "claim": "The folded B16, B17 and B18 groups, and in audio the B21, B56 and catalog-timbre groups, are behaviour tests: what cues an event maps to, the fallbacks for an unrendered or missing unit, a catalog with no entry. The issue says to keep those as they are, and the bot's rules forbid rewriting code the task does not need. Here they are moved into closure tables, about 860 changed lines that add no coverage and remove no redundancy.",
+          "evidence": "For example, the row 'B16 destroyed off the board: one smoke puff at the graveyard pile and no crack' (a fallback), 'B56 a unit the view cannot find sounds the plain thud' (a missing row) and 'with no catalog every card keeps its type's plain sounds' (a fallback) were each a plain `it` on base and are now an entry in an array whose callback is just `run()` or `forDs(type, check)`. The issue's Keep bullet covers 'how it maps from an event ... fallbacks, missing rows'. The night-bot rule 'Never reformat or rewrite code the task does not need' applies.",
+          "severity": "blocking",
+          "where": "apps/web/src/fx/cues.test.ts:975"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-02T20:50:20Z",
+      "queued_at": "2026-11-02T21:22:34Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "41525071830",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-02T21:05:01Z",
       "stop_requested": false,
       "taken_asks": [],
