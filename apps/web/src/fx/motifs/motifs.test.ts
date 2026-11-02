@@ -12,10 +12,10 @@ import { planCardMotif } from "../cardFx.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_MOTIF_SCALE_MAX, FX_MOTIF_TRAUMA } from "../constants.ts";
 import { planFx } from "../cues.ts";
-import { FLAVOR_LOOKS } from "../flavors.ts";
+import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS, paletteLook, type FxPalette } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
 import { createFxMemory } from "../memory.ts";
-import type { FxCue, FxPlanEnv } from "../types.ts";
+import type { FxBurstCue, FxCue, FxPlanEnv } from "../types.ts";
 import { MOTIF_TUNING, motifScale, timesOf, type MotifSpec } from "./build.ts";
 import { galleryEntry, gallerySource, motifFixture } from "./gallery.ts";
 import { planMotif } from "./index.ts";
@@ -269,7 +269,7 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
       const entry = FX_CARD_TABLE.get(defId);
       const hook = entry?.kind === "hooks" ? (entry.hooks.cast ?? entry.hooks.cry) : undefined;
       expect(hook?.motif, defId).toBe(motif);
-      const look = hook?.palette !== undefined ? FLAVOR_LOOKS[hook.palette] : flavorLookOf(defId, "ex", fullBoardView());
+      const look = paletteLook(hook?.palette ?? "") ?? flavorLookOf(defId, "ex", fullBoardView());
       const colors = look?.colors ?? [];
       const drawn = effectCues(defId, motif);
       const plain = effectCues("core-016", motif);
@@ -300,6 +300,30 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
     expect(planCardMotif(entry, view, env, tableOf({ kind: "none", reason: "pending" }))).toBeNull();
     // A Spell's `cry` is never read: its play is `cast`.
     expect(planCardMotif(entry, view, env, tableOf({ kind: "hooks", hooks: { cry: { motif: "bolt" } } }))).toBeNull();
+  });
+
+  it("#2792 a palette naming a sub-look draws in its colors and particle, a flavor's name in its base look", () => {
+    const view = fullBoardView();
+    const env = envOf();
+    const events = [played("p1", "ex", "core-035"), ...motifFixture("bolt", view, "ex", "p1")];
+    env.memory.remember(events);
+    const entry = { ...galleryEntry(events.slice(1), view), durationMs: 400 };
+    const tableOf = (card: FxCardEntry): ReadonlyMap<string, FxCardEntry> => new Map([["core-035", card]]);
+    const burstsOf = (palette: FxPalette) => {
+      const result = planCardMotif(entry, view, env, tableOf({ kind: "hooks", hooks: { cast: { motif: "bolt", palette } } }));
+      expect(result, palette).not.toBeNull();
+      return (result?.cues ?? []).filter((cue): cue is FxBurstCue => cue.kind === "burst" && cue.preset !== "smoke");
+    };
+    const laser = FLAVOR_SUB_LOOKS.Tech?.laser;
+    expect(laser).toBeDefined();
+    const laserBursts = burstsOf("Tech/laser");
+    expect(laserBursts.length).toBeGreaterThan(0);
+    for (const burst of laserBursts) expect(burst.colors, "Tech/laser").toEqual(laser?.colors);
+    expect(laserBursts.some((burst) => burst.preset === laser?.particle), "Tech/laser").toBe(true);
+    const techBursts = burstsOf("Tech");
+    expect(techBursts.length).toBeGreaterThan(0);
+    for (const burst of techBursts) expect(burst.colors, "Tech").toEqual(FLAVOR_LOOKS.Tech.colors);
+    expect(techBursts.some((burst) => burst.preset === "circuit"), "Tech").toBe(true);
   });
 
   it("R2784000 a run the runner splits into an entry per hit still chains: each hop leaves from the play's last hit, and it gathers once", () => {

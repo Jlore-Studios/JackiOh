@@ -15,11 +15,35 @@
 #                       Render holds them (the copy keeps every hash and id they fit), with
 #                       JackiOh-Production's own key and database from the repository secrets
 #                       PRODUCTION_SUPABASE_SECRET_KEY and PRODUCTION_DATABASE_URL (step 6.1).
+#   check-production    writes nothing: whether PRODUCTION_SUPABASE_SECRET_KEY is shaped like a secret
+#                       key, and whether PRODUCTION_DATABASE_URL reaches JackiOh-Production and what it
+#                       holds. Run it after setting either secret.
+#   production-auth     JackiOh-Production's sign-in settings, copied from staging's project through
+#                       Supabase's Management API (SUPABASE_ACCESS_TOKEN, a personal access token): email
+#                       confirmations, SMTP, the email templates, rate limits, MFA, sessions, providers,
+#                       with production's own Site URL and Redirect URLs (infra/supabase.tf's) and
+#                       leaked-password protection on. It also adds https://staging.jackioh.com/login to
+#                       staging's Redirect URLs, keeping the rest (section 4, step 4). A value that names
+#                       staging's project, and a secret the API does not hand back, stay out and are
+#                       named. With `dry_run` (the default) it lists what it would change and writes
+#                       nothing. Run it before the copy's real run.
+#   email               both projects' sign-in emails through Resend, from no-reply@jackioh.com, since
+#                       Supabase's own mailer reaches only the project's team, two an hour. With the
+#                       repository secret RESEND_API_KEY (a Full access key): adds jackioh.com to Resend
+#                       and prints the DNS records it asks for; once they are in the zone (and in
+#                       infra/cloudflare.tf), verifies the domain, makes a sending-only key for it and
+#                       sets it as both projects' SMTP (SUPABASE_ACCESS_TOKEN), then deletes the keys an
+#                       earlier run made, so running it again rotates the key. `dry_run` changes nothing.
+#                       When this workflow is deleted, this step moves to a workflow of its own.
 #   copy                staging's database into the empty JackiOh-Production (section 8): roles, schema
 #                       and data, the four statistics tables' live rows alone and none of
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
 #                       auth.users counted on both sides, which must agree. With `dry_run` (the default)
 #                       it dumps and counts and writes nothing.
+#
+# PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
+# and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
+# password with `@`, `/` or `#` in it needs no hand-encoding.
 #
 # Every database is reached through Supabase's session pooler: neither a GitHub runner nor a container
 # has dependable IPv6, so a direct `db.<ref>.supabase.co` address is rewritten to the pooler host
@@ -38,9 +62,12 @@ on:
           - staging-secrets
           - drop-ping
           - production-secrets
+          - check-production
+          - production-auth
+          - email
           - copy
       dry_run:
-        description: "copy only: dump and count, and write nothing to production"
+        description: "copy, production-auth and email: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
@@ -91,9 +118,22 @@ jobs:
           # or ""), the URL goes to stdout and what it names to stderr.
           cat > "$RUNNER_TEMP/pooler.py" <<'EOF'
           import sys, urllib.parse as up
+          import os
           ref, src, pool = sys.argv[1], sys.argv[2], sys.argv[3]
           def fail(why):
               print(f"::error::{why}", file=sys.stderr); sys.exit(1)
+          # A password of its own (PRODUCTION_DB_PASSWORD) wins over whatever the address holds, its
+          # `[YOUR-PASSWORD]` or one typed in, percent-encoded or not: the address is cut at its scheme
+          # and its last `@`, so a raw `@`, `/` or `#` in the old password cannot move the split.
+          raw = os.environ.get("DB_PASSWORD", "")
+          if raw:
+              scheme, sep, rest = src.partition("://")
+              userinfo, at, after = rest.rpartition("@")
+              if not (sep and at):
+                  fail("the address is not scheme://user:password@host/database")
+              src = f"{scheme}://{userinfo.split(':', 1)[0]}:{up.quote(raw, safe='')}@{after}"
+          elif "[YOUR-PASSWORD]" in src:
+              fail("the address still says [YOUR-PASSWORD], and PRODUCTION_DB_PASSWORD is not set")
           p = up.urlsplit(src)
           creds, _, _ = p.netloc.rpartition("@")
           user, _, password = creds.partition(":")
@@ -127,9 +167,11 @@ jobs:
             jq -r --arg n "$RENDER_SERVICE" '[.[].service | select(.name == $n)][0].id // empty')
           [ -n "$id" ] || { echo "::error::Render has no service named $RENDER_SERVICE"; exit 1; }
           vars=$(render "/services/$id/env-vars?limit=100")
-          # Every value masked before anything else can print it.
+          # Every value masked before anything else can print it, but for those under eight characters
+          # (TRUSTED_PROXY_HOPS's `1`, CYPRESS_INSTALL_BINARY's `0`): no secret is that short, and masking
+          # a lone digit stars it out of every line of the log.
           jq -r '.[].envVar.value // empty' <<<"$vars" | while IFS= read -r value; do
-            [ -n "$value" ] && echo "::add-mask::$value"
+            if [ "${#value}" -ge 8 ]; then echo "::add-mask::$value"; fi
           done
           jq '[.[].envVar | {(.key): .value}] | add // {}' <<<"$vars" > "$RUNNER_TEMP/render.json"
           echo "Render's $RENDER_SERVICE ($id) holds: $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/render.json")"
@@ -144,16 +186,31 @@ jobs:
           rm -f "$RUNNER_TEMP/staging.url.raw"
 
       - name: production's database address
-        if: ${{ inputs.step == 'production-secrets' || inputs.step == 'copy' }}
+        if: ${{ inputs.step == 'production-secrets' || inputs.step == 'check-production' || inputs.step == 'copy' }}
         env:
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+          STEP: ${{ inputs.step }}
         run: |
           set -euo pipefail
           umask 077
           if [ -z "$PRODUCTION_DATABASE_URL" ]; then
-            echo "::error::PRODUCTION_DATABASE_URL is not set: JackiOh-Production -> Connect -> Session pooler, with its password"
+            if [ "$STEP" = check-production ]; then
+              echo "PRODUCTION_DATABASE_URL: not set yet" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::PRODUCTION_DATABASE_URL is not set: JackiOh-Production -> Connect -> Session pooler"
             exit 1
           fi
+          # Where the password comes from, and what it looks like (never the password): a refused login
+          # is most often the wrong thing on the clipboard.
+          case "$DB_PASSWORD" in
+            "") pw="PRODUCTION_DB_PASSWORD is unset, so the one written into PRODUCTION_DATABASE_URL" ;;
+            sb_*) pw="PRODUCTION_DB_PASSWORD, which is a Supabase API key, not the database password" ;;
+            postgres*://*) pw="PRODUCTION_DB_PASSWORD, which is a database address, not the password" ;;
+            *) pw="PRODUCTION_DB_PASSWORD, ${#DB_PASSWORD} characters" ;;
+          esac
+          echo "the password: $pw" | tee -a "$GITHUB_STEP_SUMMARY"
           python3 "$RUNNER_TEMP/pooler.py" "$PRODUCTION_REF" "$PRODUCTION_DATABASE_URL" "" \
             > "$RUNNER_TEMP/production.url.raw" 2> "$RUNNER_TEMP/production.where" ||
             { cat "$RUNNER_TEMP/production.where"; exit 1; }
@@ -200,6 +257,27 @@ jobs:
             -c "drop function if exists public.ping()" -c "drop table if exists public.keepalive"
           psql "$db" -XAtq -v ON_ERROR_STOP=1 -c "select 'after: ' || coalesce(to_regprocedure('public.ping()')::text, 'no ping()') || ', ' || coalesce(to_regclass('public.keepalive')::text, 'no keepalive')"
 
+      - name: check production's secrets, writing nothing
+        if: ${{ inputs.step == 'check-production' }}
+        env:
+          PRODUCTION_SUPABASE_SECRET_KEY: ${{ secrets.PRODUCTION_SUPABASE_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          key=$PRODUCTION_SUPABASE_SECRET_KEY
+          case "$key" in
+            sb_secret_*) shape="a secret key (sb_secret_…)" ;;
+            eyJ*) shape="a legacy service_role JWT (eyJ…)" ;;
+            sb_publishable_*) shape="the PUBLISHABLE key, not the secret one" ;;
+            "") shape="EMPTY or unset" ;;
+            *) shape="NOT a Supabase key" ;;
+          esac
+          [ "$key" = "$(jq -r '.SUPABASE_SECRET_KEY // empty' "$RUNNER_TEMP/render.json")" ] && shape="staging's key, not production's"
+          echo "PRODUCTION_SUPABASE_SECRET_KEY: $shape, ${#key} characters" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ -s "$RUNNER_TEMP/production.url" ] || exit 1
+          held=$(psql "$(cat "$RUNNER_TEMP/production.url")" -XAtq -v ON_ERROR_STOP=1 -c "select (select count(*) from information_schema.tables where table_schema = 'public') || ' public tables, ' || (select count(*) from auth.users) || ' users'")
+          echo "PRODUCTION_DATABASE_URL reaches JackiOh-Production: $held" | tee -a "$GITHUB_STEP_SUMMARY"
+          case "$shape" in a\ *) ;; *) exit 1 ;; esac
+
       - name: production's secrets into jackioh
         if: ${{ inputs.step == 'production-secrets' }}
         env:
@@ -231,6 +309,217 @@ jobs:
           (cd apps/edge && pnpm exec wrangler secret bulk "$file" --config ../../wrangler.jsonc --env="")
           rm -f "$file"
           echo "production's server reads these from its next deploy: promote production with redeploy (section 4, step 6.3)"
+
+      - name: copy staging's sign-in settings to JackiOh-Production
+        if: ${{ inputs.step == 'production-auth' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          # infra/supabase.tf's, so Terraform's first full apply finds nothing to change.
+          PRODUCTION_SITE: https://jackioh.com
+          PRODUCTION_REDIRECTS: https://jackioh.com/login
+          STAGING_REDIRECT: https://staging.jackioh.com/login
+        run: |
+          set -euo pipefail
+          umask 077
+          case "$SUPABASE_ACCESS_TOKEN" in
+            sbp_*) ;;
+            "") echo "::error::SUPABASE_ACCESS_TOKEN is not set: a personal access token from https://supabase.com/dashboard/account/tokens"; exit 1 ;;
+            *) echo "::error::SUPABASE_ACCESS_TOKEN is not a Supabase personal access token (sbp_…)"; exit 1 ;;
+          esac
+          api() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          config=https://api.supabase.com/v1/projects
+          api "$config/$STAGING_REF/config/auth" > "$RUNNER_TEMP/auth.staging.json"
+          api "$config/$PRODUCTION_REF/config/auth" > "$RUNNER_TEMP/auth.production.json"
+
+          # Prints the plan, writes the two PATCH bodies (an empty object when nothing changes).
+          python3 - "$RUNNER_TEMP" <<'EOF'
+          import json, os, re, sys
+          tmp = sys.argv[1]
+          staging = json.load(open(f"{tmp}/auth.staging.json"))
+          production = json.load(open(f"{tmp}/auth.production.json"))
+          staging_ref = os.environ["STAGING_REF"]
+          secret = re.compile(r"(pass|secret|key|token)", re.I)
+          # The project's own sizing and SAML (an add-on of its own), not sign-in behaviour.
+          own = re.compile(r"^(db_max_pool_size|db_max_pool_size_unit|api_max_request_duration|saml_.*)$")
+          template = re.compile(r"^mailer_(templates|subjects|notifications)_")
+          def hidden(value):
+              # A secret the API masks rather than hands back.
+              return isinstance(value, str) and re.fullmatch(r"[*\u2022]{3,}", value) is not None
+          def shown(key, value):
+              if value in (None, ""):
+                  return "(empty)"
+              if isinstance(value, str) and secret.search(key):
+                  return "(a secret, set)"
+              if template.match(key):
+                  return f"({len(str(value))} characters)"
+              text = json.dumps(value)
+              return text if len(text) <= 80 else text[:77] + "..."
+          # A provider, a hook or SMTP goes over whole or not at all: half of one breaks sign-in.
+          def group(key):
+              m = re.match(r"^(smtp_|external_[a-z0-9]+_|hook_[a-z0-9_]+?_(?=uri$|secrets$|enabled$))", key)
+              return m.group(1) if m else None
+          patch, left, broken = {}, [], set()
+          for key, value in sorted(staging.items()):
+              if key in ("site_url", "uri_allow_list") or own.match(key):
+                  continue
+              if isinstance(value, str) and staging_ref in value:
+                  left.append(f"{key}: names staging's project ({value})")
+                  broken.add(group(key))
+                  continue
+              if secret.search(key) and (hidden(value) or value in (None, "")):
+                  if hidden(value):
+                      left.append(f"{key}: the API hands it back masked")
+                      broken.add(group(key))
+                  continue
+              if value != production.get(key):
+                  patch[key] = value
+          patch["site_url"] = os.environ["PRODUCTION_SITE"]
+          patch["uri_allow_list"] = os.environ["PRODUCTION_REDIRECTS"]
+          patch["password_hibp_enabled"] = True
+          patch = {k: v for k, v in patch.items() if v != production.get(k)}
+          if staging.get("smtp_host") and not staging.get("smtp_pass"):
+              broken.add("smtp_")
+          broken.discard(None)
+          for prefix in sorted(broken):
+              for k in [k for k in patch if k.startswith(prefix)]:
+                  del patch[k]
+              left.append(f"{prefix}*: all of it, since a part could not come over; set it by hand")
+          if "smtp_" in broken:
+              # Supabase's own mailer takes no higher email rate limit.
+              patch.pop("rate_limit_email_sent", None)
+              left.append("SMTP: staging's password does not come back from the API, so production keeps "
+                          "Supabase's own mailer: Authentication -> Emails -> SMTP Settings, by hand")
+          print(f"JackiOh-Production: {len(patch)} setting(s) to change")
+          for key in sorted(patch):
+              print(f"  {key}: {shown(key, production.get(key))} -> {shown(key, patch[key])}")
+          for line in left:
+              print(f"::warning::left out: {line}")
+          json.dump(patch, open(f"{tmp}/auth.production.patch.json", "w"))
+          redirect = os.environ["STAGING_REDIRECT"]
+          urls = [u for u in (staging.get("uri_allow_list") or "").split(",") if u]
+          staging_patch = {} if redirect in urls else {"uri_allow_list": ",".join(urls + [redirect])}
+          print(f"staging's Redirect URLs: {', '.join(urls) or '(none)'}"
+                + ("" if not staging_patch else f" -> adds {redirect}"))
+          json.dump(staging_patch, open(f"{tmp}/auth.staging.patch.json", "w"))
+          EOF
+
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: nothing written. Run it again without dry_run to apply." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          for ref in "$PRODUCTION_REF" "$STAGING_REF"; do
+            case "$ref" in "$PRODUCTION_REF") body=auth.production.patch.json ;; *) body=auth.staging.patch.json ;; esac
+            if [ "$(cat "$RUNNER_TEMP/$body")" = "{}" ]; then echo "$ref: nothing to change"; continue; fi
+            api -X PATCH "$config/$ref/config/auth" --data-binary "@$RUNNER_TEMP/$body" > /dev/null
+            echo "$ref: changed $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/$body")" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          # Read back what matters most.
+          api "$config/$PRODUCTION_REF/config/auth" \
+            | jq -r '"production now: site_url \(.site_url), redirects \(.uri_allow_list), leaked-password protection \(.password_hibp_enabled), confirm email \(.mailer_autoconfirm | not), SMTP host \(.smtp_host // "Supabase'"'"'s own")"' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: sign-in emails through Resend
+        if: ${{ inputs.step == 'email' }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          EMAIL_DOMAIN: jackioh.com
+          EMAIL_FROM: no-reply@jackioh.com
+          EMAIL_NAME: JackiOh
+          # Supabase's own mailer holds a project to 2 an hour; with SMTP of its own, Supabase's usual
+          # 30, inside Resend's free 100 a day.
+          EMAIL_PER_HOUR: "30"
+          # The sending-only key this step makes; an earlier run's, by the same name, is deleted.
+          KEY_NAME: supabase-smtp
+        run: |
+          set -euo pipefail
+          umask 077
+          case "$RESEND_API_KEY" in
+            re_*) ;;
+            "") echo "::error::RESEND_API_KEY is not set: a Full access key from https://resend.com/api-keys"; exit 1 ;;
+            *) echo "::error::RESEND_API_KEY is not a Resend API key (re_…)"; exit 1 ;;
+          esac
+          case "$SUPABASE_ACCESS_TOKEN" in sbp_*) ;; *) echo "::error::SUPABASE_ACCESS_TOKEN is not set"; exit 1 ;; esac
+          resend() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $RESEND_API_KEY" \
+              -H "Content-Type: application/json" "$@"
+          }
+          supabase() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          api=https://api.resend.com
+          if ! domains=$(resend "$api/domains" 2>&1); then
+            echo "::error::Resend refused to list the domains, so RESEND_API_KEY is probably a Sending access key: make a Full access one. Resend said: $domains"
+            exit 1
+          fi
+          id=$(jq -r --arg d "$EMAIL_DOMAIN" '[(.data // .)[] | select(.name == $d)][0].id // empty' <<<"$domains")
+          if [ -z "$id" ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "dry_run: would add $EMAIL_DOMAIN to Resend, then print its DNS records" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            id=$(resend -X POST "$api/domains" -d "$(jq -n --arg d "$EMAIL_DOMAIN" '{name: $d}')" | jq -r .id)
+            echo "added $EMAIL_DOMAIN to Resend"
+          fi
+          domain=$(resend "$api/domains/$id")
+          # Sign-in mail carries no tracking: no pixel, and no link rewritten through Resend (whose
+          # Tracking record then is not needed either).
+          if [ "$(jq -r '(.open_tracking // false) or (.click_tracking // false)' <<<"$domain")" = true ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "dry_run: would turn off Resend's open and click tracking for $EMAIL_DOMAIN"
+            else
+              resend -X PATCH "$api/domains/$id" -d '{"open_tracking": false, "click_tracking": false}' > /dev/null
+              domain=$(resend "$api/domains/$id")
+            fi
+          fi
+          status=$(jq -r .status <<<"$domain")
+          echo "Resend's $EMAIL_DOMAIN: $status (open tracking $(jq -r '.open_tracking // false' <<<"$domain"), click tracking $(jq -r '.click_tracking // false' <<<"$domain")). Its DNS records, one JSON object a line:"
+          jq -c '.records[] | select(.record != "Tracking") | {record, type, name, value, priority, ttl, status}' <<<"$domain"
+          if [ "$status" != verified ]; then
+            [ "$DRY_RUN" = true ] && exit 0
+            resend -X POST "$api/domains/$id/verify" > /dev/null
+            for _ in $(seq 1 30); do
+              sleep 10
+              status=$(resend "$api/domains/$id" | jq -r .status)
+              case "$status" in verified | failed) break ;; esac
+            done
+            if [ "$status" != verified ]; then
+              echo "::error::$EMAIL_DOMAIN is $status at Resend: add the records above to the jackioh.com zone, then run this again"
+              exit 1
+            fi
+            echo "$EMAIL_DOMAIN verified"
+          fi
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would make a sending-only key for $EMAIL_DOMAIN and set it as both projects' SMTP" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          old=$(resend "$api/api-keys" | jq -r --arg n "$KEY_NAME" '(.data // .)[] | select(.name == $n) | .id')
+          key=$(resend -X POST "$api/api-keys" \
+            -d "$(jq -n --arg n "$KEY_NAME" --arg d "$id" '{name: $n, permission: "sending_access", domain_id: $d}')" | jq -r .token)
+          echo "::add-mask::$key"
+          case "$key" in re_*) ;; *) echo "::error::Resend made no key"; exit 1 ;; esac
+          jq -n --arg pass "$key" --arg from "$EMAIL_FROM" --arg name "$EMAIL_NAME" --argjson hour "$EMAIL_PER_HOUR" \
+            '{smtp_host: "smtp.resend.com", smtp_port: "465", smtp_user: "resend", smtp_pass: $pass,
+              smtp_admin_email: $from, smtp_sender_name: $name, rate_limit_email_sent: $hour}' > "$RUNNER_TEMP/smtp.json"
+          for ref in "$PRODUCTION_REF" "$STAGING_REF"; do
+            supabase -X PATCH "https://api.supabase.com/v1/projects/$ref/config/auth" --data-binary "@$RUNNER_TEMP/smtp.json" > /dev/null
+            supabase "https://api.supabase.com/v1/projects/$ref/config/auth" \
+              | jq -r --arg ref "$ref" '"\($ref): SMTP \(.smtp_host):\(.smtp_port) as \(.smtp_user), from \(.smtp_sender_name) <\(.smtp_admin_email)>, \(.rate_limit_email_sent) emails an hour"' \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          rm -f "$RUNNER_TEMP/smtp.json"
+          # Only now that both projects send with the new key: an earlier run's goes.
+          for gone in $old; do
+            resend -X DELETE "$api/api-keys/$gone" > /dev/null
+            echo "deleted the earlier $KEY_NAME key $gone"
+          done
 
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}

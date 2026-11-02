@@ -118,7 +118,8 @@
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
 #    the file.
 #  - web_promote runs for what promote-production.test.ts runs and reads: scripts/promote-production.sh,
-#    the workflow (under .github/, so every job runs) and the test itself,
+#    the two workflows it reads, promote-production.yml and super.yml (under .github/, so every job
+#    runs), and the test itself,
 #    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.

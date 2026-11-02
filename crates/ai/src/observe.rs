@@ -131,6 +131,20 @@ fn instance_number(id: &str) -> f64 {
     }
 }
 
+/// R73: whether `card` was minted for `player`'s opening deck. createGame mints c1..c{n1} for p1's deck
+/// and c{n1+1}..c{n1+n2} for p2's (R184's deck sizes).
+pub(crate) fn minted_for_deck_of(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    let n1 = f64::from(handicap_of(&state.players.p1).deck_size);
+    let n2 = f64::from(handicap_of(&state.players.p2).deck_size);
+    let (low, high) = if player == PlayerId::P1 {
+        (1.0, n1)
+    } else {
+        (n1 + 1.0, n1 + n2)
+    };
+    let n = instance_number(&card.id);
+    n >= low && n <= high
+}
+
 fn by_instance_id(a: &CardInstance, b: &CardInstance) -> Ordering {
     let na = instance_number(&a.id);
     let nb = instance_number(&b.id);
@@ -213,14 +227,8 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
         }
     }
 
-    // createGame mints c1..c{n1} for p1's deck and c{n1+1}..c{n1+n2} for p2's (R184's deck sizes).
-    let n1 = f64::from(handicap_of(&state.players.p1).deck_size);
-    let n2 = f64::from(handicap_of(&state.players.p2).deck_size);
-    let low = if opp == PlayerId::P1 { 1.0 } else { n1 + 1.0 };
-    let high = if opp == PlayerId::P1 { n1 } else { n1 + n2 };
     for card in &state.players[seat].library {
-        let n = instance_number(&card.id);
-        if n >= low && n <= high {
+        if minted_for_deck_of(state, opp, card) {
             hidden.insert(card.id.clone());
         }
         // R312: a card of the seat's own library it was never shown is as hidden as the opponent's.

@@ -10,6 +10,7 @@ import { MIN_ENTRY_MS, createAnimationQueue, planEntries, type AnimationEntry } 
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import {
   FX_CONCEAL_AT,
+  FX_FLYING_LUNGE_LIFT,
   FX_HOLD_MAX_MS,
   FX_INTENSITY_SCALE,
   FX_LUNGE_CONTACT_AT,
@@ -572,6 +573,32 @@ describe("B47 concealing in the page", () => {
     h.director.clear();
     expect(card.hasAttribute("data-fx-concealed")).toBe(false);
   });
+
+  it("R2785000 cut() lands a waiting conceal now, keeps the stand-in and the concealment, and drops every other effect", () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const card = boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    const h = directorHarness();
+    h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    h.director.play(stage([{ type: "destroyed", instanceId: ENEMY, owner: "p2" } as GameEvent], 350));
+    h.director.play([{ kind: "splat", tone: "heal", amount: 1, at: tid(`card-${ENEMY}`), delayMs: 0, durationMs: 500 }]);
+    h.frameAt(1016);
+    expect(h.root.querySelector('[data-fx="splat"]')).not.toBeNull();
+    expect(card.hasAttribute("data-fx-concealed")).toBe(false);
+
+    // A skipped set piece: the board stands as the entry would leave it, until it shows the next view.
+    h.director.cut();
+    expect(h.root.querySelector('[data-fx="splat"]')).toBeNull();
+    expect(h.root.querySelector('[data-fx="hold"]')).not.toBeNull();
+    expect(hand.getAttribute("data-fx-concealed")).toBe("now");
+    expect(card.getAttribute("data-fx-concealed")).toBe("after");
+    h.frameAt(2000);
+    expect(h.root.querySelector('[data-fx="splat"]')).toBeNull();
+    h.director.release();
+    expect(hand.hasAttribute("data-fx-concealed")).toBe(false);
+    expect(card.hasAttribute("data-fx-concealed")).toBe(false);
+  });
 });
 
 describe("B48 aiming the lunge in the page", () => {
@@ -587,6 +614,23 @@ describe("B48 aiming the lunge in the page", () => {
     expect(y).toBeLessThan(-FX_LUNGE_MIN_PX);
     expect(y).toBeGreaterThan(-200);
     h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
+  });
+
+  it("R2789000 a Flying lunge arcs and release clears --fx-lunge-lift", () => {
+    const attacker = boardElement(`card-${MINE}`, { x: 300, y: 300, width: 60, height: 82 });
+    boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    const h = directorHarness();
+    // A walker's lunge carries no lift.
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350 }]);
+    expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
+    h.director.release();
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350, arc: true }]);
+    expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-lift"))).toBe(FX_FLYING_LUNGE_LIFT);
+    // It still aims along the line to the target.
+    expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-y"))).toBeLessThan(-FX_LUNGE_MIN_PX);
+    h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
     expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
   });
 

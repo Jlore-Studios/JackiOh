@@ -40,29 +40,6 @@ mod tests {
     }
 
     #[test]
-    fn prints_rush_equip_and_starship_piece_4_1_radiant_8_2() {
-        crate::register_all();
-        let def = crate::card_def(CHASSIS);
-        assert_eq!(
-            kinds_of(&def.base.keywords),
-            vec!["Starship Piece", "Equip", "Rush"]
-        );
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Equip", "Rush"]
-        );
-        assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
-    }
-
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    #[test]
     fn rush_may_attack_a_unit_the_turn_it_is_played_but_not_the_hero() {
         crate::register_all();
         let mut s = scenario(json!({

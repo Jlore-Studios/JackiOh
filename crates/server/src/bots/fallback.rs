@@ -17,7 +17,7 @@ use crate::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_ACTIVE_HOURS, BOT_HOURS_PER_DAY,
     BOT_VS_BOT_MIN_GAP_SECONDS, MAX_FAIR_GAP, MS_PER_SECOND,
 };
-use crate::db::store::{BotRow, FrozenTrio, QueueMode, RatedGameRow, Ticket};
+use crate::db::store::{BotRow, FrozenTrio, QueueMode, RatedGameRow, Ticket, ladder_of_mode};
 
 /// Unit conversion, not configuration: an hour in milliseconds.
 const MS_PER_HOUR: i64 = 3_600_000;
@@ -100,6 +100,7 @@ pub fn on_schedule(bot: &BotRow, hour: i32) -> bool {
 /// R1453: the bot the ticket pairs with, or none: on schedule, free, not recent, holding legal
 /// decks for `catalog_version` at `DECK_SIZE` cards (R1454, R641000, R1705001), closest in rating.
 /// Above every bot, only a grinder within `MAX_FAIR_GAP` pairs (R1555000).
+/// R2778000: every rating is the ticket's ladder's (the ticket froze its own so); bots' via `rating_on`.
 pub fn choose_bot<'a>(
     ticket: &Ticket,
     bots: &'a [BotRow],
@@ -108,11 +109,14 @@ pub fn choose_bot<'a>(
     hour: i32,
     catalog_version: &str,
 ) -> Option<&'a BotRow> {
+    let ladder = ladder_of_mode(ticket.mode);
     let pool: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
-    let above_every_bot = pool.iter().all(|bot| ticket.rating > bot.rating);
+    let above_every_bot = pool.iter().all(|bot| ticket.rating > bot.rating_on(ladder));
     pool.into_iter()
         // R1555000: above every bot, only a grinder within the fair gap may play them.
-        .filter(|bot| !above_every_bot || (bot.grinding && ticket.rating - bot.rating <= MAX_FAIR_GAP as f64))
+        .filter(|bot| {
+            !above_every_bot || (bot.grinding && ticket.rating - bot.rating_on(ladder) <= MAX_FAIR_GAP as f64)
+        })
         .filter(|bot| on_schedule(bot, hour))
         .filter(|bot| bot.in_match_id.is_none() && !busy.contains(&bot.profile_id))
         .filter(|bot| !recent.contains(&bot.profile_id))
@@ -122,8 +126,8 @@ pub fn choose_bot<'a>(
             QueueMode::Random => true,
         })
         .min_by(|a, b| {
-            let gap_a = (a.rating - ticket.rating).abs();
-            let gap_b = (b.rating - ticket.rating).abs();
+            let gap_a = (a.rating_on(ladder) - ticket.rating).abs();
+            let gap_b = (b.rating_on(ladder) - ticket.rating).abs();
             gap_a
                 .partial_cmp(&gap_b)
                 .unwrap_or(std::cmp::Ordering::Equal)

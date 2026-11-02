@@ -613,56 +613,27 @@ mod r250_refuses_a_draft_that_breaks_d1_d4_with_the_shared_module_s_own_issues {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_1_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "   ", cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_2_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", &"x".repeat(DECK_NAME_MAX_LENGTH + 1), cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_3_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "Bad\u{0007}name", cards(2, 0)).await;
-    }
-
-    // A right-to-left override makes a name show text it does not hold; a zero-width space hides one.
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_4_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "Aggro\u{202e}orez", cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_5_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "\u{200b}", cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d2_case_6_is_a_400_carrying_every_issue_and_writes_nothing() {
-        // One more than any deck holds: the catalog has room for it.
-        refuses("D2", "Big", cards(DECK_SIZE as usize + 1, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d3_case_7_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D3", "Token", with(cards(2, 0), &[a_token()])).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d3_case_8_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses(
-            "D3",
-            "Unknown",
-            with(cards(2, 0), &["core-does-not-exist".to_string()]),
-        )
-        .await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d4_case_9_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D4", "Twice", with(cards(2, 0), &cards(1, 0))).await;
+    async fn r250_refuses_each_invalid_draft_shape_with_a_400_carrying_every_issue() {
+        // A right-to-left override makes a name show text it does not hold; a zero-width space hides one.
+        let cases: Vec<(&str, String, Vec<String>)> = vec![
+            ("D1", "   ".to_string(), cards(2, 0)),
+            ("D1", "x".repeat(DECK_NAME_MAX_LENGTH + 1), cards(2, 0)),
+            ("D1", "Bad\u{0007}name".to_string(), cards(2, 0)),
+            ("D1", "Aggro\u{202e}orez".to_string(), cards(2, 0)),
+            ("D1", "\u{200b}".to_string(), cards(2, 0)),
+            // One more than any deck holds: the catalog has room for it.
+            ("D2", "Big".to_string(), cards(DECK_SIZE as usize + 1, 0)),
+            ("D3", "Token".to_string(), with(cards(2, 0), &[a_token()])),
+            (
+                "D3",
+                "Unknown".to_string(),
+                with(cards(2, 0), &["core-does-not-exist".to_string()]),
+            ),
+            ("D4", "Twice".to_string(), with(cards(2, 0), &cards(1, 0))),
+        ];
+        for (rule, name, deck) in cases {
+            refuses(rule, &name, deck).await;
+        }
     }
 
     #[tokio::test(start_paused = true)]

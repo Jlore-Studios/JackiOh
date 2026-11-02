@@ -86,7 +86,7 @@ var Workflows = map[string]string{
 	"lock-conversations.yml": "locks every conversation to collaborators",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
-	"promote-production.yml": "merges main into production once a day",
+	"promote-production.yml": "production by hand: /promote opens a pull request super must pass",
 	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",
 	"selfplay-shards.yml":    "one round of a self-play export's shards",
 	"selfplay.yml":           "a self-play export, on the owner's PC unless asked otherwise",

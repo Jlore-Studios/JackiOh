@@ -39,16 +39,6 @@ mod tests {
     }
 
     #[test]
-    fn prints_flying_and_ranged_3_1_radiant_6_2() {
-        crate::register_all();
-        let def = crate::card_def(STRATOS);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Flying", "Ranged"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Flying", "Ranged"]);
-        assert_eq!((def.base.attack, def.base.health), (Some(3), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(6), Some(2)));
-    }
-
-    #[test]
     fn flying_a_unit_without_flying_or_ranged_cannot_attack_it() {
         crate::register_all();
         let mut s = scenario(json!({

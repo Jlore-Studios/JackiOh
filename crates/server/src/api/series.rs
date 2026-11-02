@@ -38,6 +38,7 @@ use crate::db::store::{
     MatchSeat, ProfileKind, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput,
     StoreError, Tx,
 };
+use crate::ranked::ladder::Ladder;
 use crate::seats::Seat;
 
 pub use crate::api::series_rules::NewSeriesInput;
@@ -357,6 +358,8 @@ async fn plan_series_rating(
         reason: RatedReason::Series(end_reason),
         at: series.ended_at.unwrap_or_else(now_ms),
         stake: None,
+        // R2778000: a Conquest series moves the Constructed ladder.
+        ladder: Ladder::Constructed,
     };
     plan_ranked_game(t, app, &input).await.map(Some).map_err(other)
 }

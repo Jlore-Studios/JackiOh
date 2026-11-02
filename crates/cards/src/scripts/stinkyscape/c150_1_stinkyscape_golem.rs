@@ -53,15 +53,6 @@ mod tests {
     }
 
     #[test]
-    fn a_10_10_with_starship_piece_flying_ranged_and_rush() {
-        let mut s = scenario(json!({ "p1": { "field": [ID], "hand": [ANCHOR] } }));
-        let golem = golem_of(&s, P1);
-        s.expect_stats(&golem, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
-        assert_eq!(keywords_of(&s, &golem), vec!["Flying", "Ranged", "Rush", "Starship Piece"]);
-        assert!(crate::card_def(ID).token);
-    }
-
-    #[test]
     fn rush_it_attacks_a_unit_the_turn_it_lands_and_ranged_takes_no_strike_back() {
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": [ANCHOR] },

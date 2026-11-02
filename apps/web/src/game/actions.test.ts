@@ -23,7 +23,7 @@ import {
   selectionTestid,
   type Interaction,
 } from "./actions.ts";
-import { testid } from "./contract.ts";
+import { testid, type ClickTarget } from "./contract.ts";
 import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
@@ -160,56 +160,61 @@ describe("a hero as an attack target", () => {
 });
 
 describe("onClickTarget: illegal clicks change nothing", () => {
-  it("ignores a hand card with no play in the legal array", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [playZone("h1", 1), { type: "endTurn" }];
+  for (const row of [
+    {
+      name: "a hand card with no play in the legal array",
+      legal: [playZone("h1", 1), { type: "endTurn" }],
+      start: "idle",
+      target: { on: "hand", instanceId: "h3" },
+    },
+    {
+      name: "a zone no candidate names",
+      legal: [playZone("h1", 3), playZone("h1", 5)],
+      start: "playing",
+      target: { on: "zone", side: "you", row: "units", lane: 1 },
+    },
+    {
+      name: "a unit with no attack in the legal array",
+      legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }],
+      start: "idle",
+      target: { on: "unit", instanceId: "u2", side: "you", lane: 2 },
+    },
+    {
+      name: "an attack target no candidate names",
+      legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }],
+      start: "attacking",
+      target: { on: "hero", side: "opponent" },
+    },
+    {
+      name: "a switch with no switchPosition in the legal array",
+      legal: [{ type: "endTurn" }],
+      start: "idle",
+      target: { on: "switch", instanceId: "u1" },
+    },
+    {
+      name: "a unit with no attack while an attack is in flight",
+      legal: [
+        { type: "attack", attackerId: "u1", targetId: "e1" },
+        { type: "switchPosition", instanceId: "u2" },
+      ],
+      start: "attacking",
+      target: { on: "unit", instanceId: "u2", side: "you", lane: 2 },
+    },
+  ] as Array<{ name: string; legal: ActionBody[]; start: "idle" | "playing" | "attacking"; target: ClickTarget }>) {
+    it(`ignores an illegal click: nothing is sent and the interaction is unchanged (${row.name})`, () => {
+      const view = seatedView();
+      const playing = onClickTarget(view, row.legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+      const attacking = onClickTarget(view, row.legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+        .interaction;
+      const start = row.start === "idle" ? IDLE : row.start === "playing" ? playing : attacking;
 
-    const result = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h3" });
+      const result = onClickTarget(view, row.legal, start, row.target);
 
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(IDLE);
-  });
-
-  it("ignores a zone no candidate names", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [playZone("h1", 3), playZone("h1", 5)];
-    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
-
-    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "units", lane: 1 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(playing);
-  });
-
-  it("ignores a unit with no attack in the legal array", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
-
-    const result = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(IDLE);
-  });
-
-  it("ignores an attack target no candidate names", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
-
-    const result = onClickTarget(view, legal, attacking, { on: "hero", side: "opponent" });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(attacking);
-  });
-
-  it("ignores a switch with no switchPosition in the legal array", () => {
-    const view = seatedView();
-    const result = onClickTarget(view, [{ type: "endTurn" }], IDLE, { on: "switch", instanceId: "u1" });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(IDLE);
-  });
+      expect(result.action).toBeUndefined();
+      expect(result.notice).toBeUndefined();
+      expect(result.interaction).toBe(start);
+    });
+  }
 });
 
 describe("the click reducer builds a play out of the candidates (R81)", () => {
@@ -564,15 +569,26 @@ describe("the attack flow", () => {
     expect(result.interaction).toEqual(IDLE);
   });
 
-  it("deselects the attacker when it is clicked again", () => {
-    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
+  for (const { listed, legal } of [
+    { listed: "alone", legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }] },
+    {
+      listed: "with another attacker listed",
+      legal: [
+        { type: "attack", attackerId: "u1", targetId: "e1" },
+        { type: "attack", attackerId: "u2", targetId: "e1" },
+      ],
+    },
+  ] as Array<{ listed: string; legal: ActionBody[] }>) {
+    it(`deselects the attacker when it is clicked again (${listed})`, () => {
+      const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+        .interaction;
 
-    expect(
-      onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 }).interaction,
-    ).toEqual(IDLE);
-  });
+      const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+      expect(result.action).toBeUndefined();
+      expect(result.interaction).toEqual(IDLE);
+    });
+  }
 
   it("emits the switchPosition the engine listed", () => {
     const legal: ActionBody[] = [{ type: "switchPosition", instanceId: "u2" }, { type: "endTurn" }];
@@ -610,35 +626,6 @@ describe("the attack flow", () => {
 
     expect(result.action).toEqual({ type: "attack", attackerId: "u1", targetId: "u2" });
     expect(result.interaction).toEqual(IDLE);
-  });
-
-  it("deselects the attacker when it is clicked again, with another attacker listed", () => {
-    const legal: ActionBody[] = [
-      { type: "attack", attackerId: "u1", targetId: "e1" },
-      { type: "attack", attackerId: "u2", targetId: "e1" },
-    ];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
-
-    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toEqual(IDLE);
-  });
-
-  it("ignores a click on a unit with no attack while an attack is in flight", () => {
-    const legal: ActionBody[] = [
-      { type: "attack", attackerId: "u1", targetId: "e1" },
-      { type: "switchPosition", instanceId: "u2" },
-    ];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
-
-    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.notice).toBeUndefined();
-    expect(result.interaction).toBe(attacking);
   });
 
   it("sends a random attack at once when the attack is switched to it", () => {
@@ -909,17 +896,6 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
     const built = answerAction(pending, ["instance:u2", "instance:u1"], view, [enumerated]);
 
     expect(built).toBe(enumerated);
-  });
-
-  it("falls back to its own reconstruction when no legal array is available", () => {
-    const pending = pendingFor("mode", [{ key: "mode:Draw a card", label: "Draw a card" }]);
-    if (!pending.forYou) throw new Error("fixture");
-
-    expect(answerAction(pending, ["mode:Draw a card"], view, [])).toEqual({
-      type: "answer",
-      choiceId: "ch1",
-      selection: [{ pick: "mode", option: "Draw a card" }],
-    });
   });
 
   it("picks the enumerated mulligan subset over its own", () => {

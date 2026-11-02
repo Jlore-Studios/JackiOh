@@ -78,7 +78,7 @@ pub fn run(args: Args) -> Result<()> {
 }
 
 /// The directories `check`'s third rule reads, recursively.
-const CITING_ROOTS: &[&str] = &["crates", "apps/web/src", "e2e"];
+const CITING_ROOTS: &[&str] = &["crates", "apps/web/src", "apps/edge/src", "e2e"];
 
 /// Directories never read: build output, dependencies, test artefacts and generated packages.
 const SKIPPED_DIRS: &[&str] = &[
@@ -1754,6 +1754,43 @@ mod tests {
                 "spec/pending/temp-spec-2200.md: a pending paragraph is `spec/pending/<n>.md`, n the number of its issue or pull request".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn check_reads_edge_workers_citations() {
+        let root = std::env::temp_dir().join(format!("jackioh-spec-edge-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
+        fs::create_dir_all(root.join("crates").join("cards")).unwrap();
+        fs::create_dir_all(root.join("apps").join("edge").join("src")).unwrap();
+        fs::write(root.join(CATALOG_PATH), "{}").unwrap();
+        fs::write(
+            root.join("crates").join("fatigue.rs"),
+            "#[test]\nfn r3_fatigue() {}\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("spec").join("rulings").join("R0003.md"),
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let edge = root.join("apps").join("edge").join("src").join("edge.ts");
+        fs::write(&edge, "// R3 ok\n").unwrap();
+        let clean = check(&root);
+        // Built dynamically: this file is itself what `check` reads (rule 3).
+        let bogus = format!("// R{} bogus\n", 999_999);
+        fs::write(&edge, bogus).unwrap();
+        let broken = check(&root);
+        fs::write(&edge, "// R3 ok\n").unwrap();
+        let restored = check(&root);
+        let _ = fs::remove_dir_all(&root);
+        assert!(clean.is_ok(), "{clean:?}");
+        // `check` prints each problem and bails with only their count, so the
+        // count pins it: the tree is identical to the passing one but for the
+        // edge file's bogus id (its line names apps/edge/src/edge.ts on stdout).
+        assert_eq!(broken.unwrap_err().to_string(), "spec check: 1 problem(s)");
+        assert!(restored.is_ok(), "{restored:?}");
+        assert!(proves("apps/edge/src/routing.test.ts", "it(\"R3 ok\", () => {});", 3).unwrap());
     }
 
     #[test]

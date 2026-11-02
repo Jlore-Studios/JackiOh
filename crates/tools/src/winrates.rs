@@ -18,8 +18,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 use jackioh_engine::{
-    GameSource, PilotFilter, SetName, SourceFilter, StatsTotals, WinRateRow, WinRateSource, WinRateTable,
-    WindowQuery, WindowRequest, WindowedReport, windowed_card_stats,
+    GameSource, ModeFilter, PilotFilter, SetName, SourceFilter, StatsTotals, WinRateRow, WinRateSource,
+    WinRateTable, WindowQuery, WindowRequest, WindowedReport, windowed_card_stats,
 };
 
 use crate::patches::patches_io::{
@@ -258,7 +258,7 @@ fn windowed_records(texts: &[String], patch: &str) -> Result<(WindowedReport, St
             history: &history,
             at: patch,
             live_pilot: PilotFilter::Unified,
-            mode: None,
+            mode: ModeFilter::All,
             request: WindowRequest::Gated,
         },
     );
@@ -713,7 +713,7 @@ mod tests {
                 history,
                 at,
                 live_pilot: PilotFilter::Unified,
-                mode: None,
+                mode: ModeFilter::All,
                 request: WindowRequest::Gated,
             },
         )
