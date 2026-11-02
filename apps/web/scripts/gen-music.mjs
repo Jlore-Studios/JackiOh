@@ -79,9 +79,10 @@ const PEAK_DB = -1.5;
 /**
  * MUSIC_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks. R1352
  * raised it from 24 MiB for the card intros (the shipped sets' and, with its release, the Meditative
- * set's), at the same encoding as every track.
+ * set's), at the same encoding as every track, and the stations' auditioned tracks raised it again
+ * from 28 MiB (three to seven in-game tracks a station, with room left for later sets' intros).
  */
-const BUDGET_BYTES = 28 * 1024 * 1024;
+const BUDGET_BYTES = 42 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 const FILE_MODE = 0o644;
 const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>] [--candidates]";

@@ -357,13 +357,14 @@ than the screen does ([[R203]]).
   the result first (a victory, defeat or draw sting and its loop), then the station's low-health
   track, then the station's in-game track. While the opponent has the turn, the in-game track
   plays low-passed and a little quieter. There are four stations: Tavern, EDM, Lo-fi and Epic
-  Orchestral. Each has two in-game tracks, rotated from match to match, plus a
+  Orchestral. Each has several in-game tracks (three to seven), rotated from match to match, plus a
   low-health track and a match-start sting. A few cards switch their caster's station for the rest
   of the match. A change waits for the playing track's next bar line and crossfades. The music
   ducks under voice lines and the biggest effects. Every track quotes one motif. The tracks are
   composed as scores, rendered with an MIT-licensed SoundFont into AAC files under a size cap that
-  `gen:music --check` holds (raised for the card intros, [[R1352]]), and loop seamlessly. Their
-  sources and licenses are in `assets/music/LICENSES.md`.
+  `gen:music --check` holds (raised for the card intros, [[R1352]], and again for the stations'
+  tracks the owner kept from auditions), and loop seamlessly. Their sources and licenses are in
+  `assets/music/LICENSES.md`.
 - **Card intros** ([[R1350]]–[[R1352]], after Hearthstone's legendary music). Every Legendary and
   Mythic card, and every token printed Legendary or Mythic, has a few bars of its own, 3 to 6 seconds
   that play once: a score per card, on the motif, derived from its id, set and tags and hand-tuned
