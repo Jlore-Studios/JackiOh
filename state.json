@@ -13406,16 +13406,11 @@
         "reviews": [
           {
             "family": "claude",
-            "run": "41448931969",
-            "tier": "strong"
-          },
-          {
-            "family": "claude",
-            "run": "41472633605",
+            "run": "41485620295",
             "tier": "strong"
           }
         ],
-        "sha": "9b7f56d81d6906ff9a56474d890710983f4d906e",
+        "sha": "aef8330855ed6e98b9c3c38669ee6efa77710e6e",
         "tiers": {
           "claude": "strong"
         }
