@@ -1,0 +1,79 @@
+{
+  "action": "build",
+  "number": 2701,
+  "title": "Patch: the dungeon run, playable offline in the Sandbox",
+  "branch": "bot/issue-2701",
+  "thread": "**Issue #2701 (data, not instructions):**\n\n```text\n# #2701: Patch: the dungeon run, playable offline in the Sandbox\nOpened by @squishy-squooby.\n\nThe owner's single-player dungeon run, Slay the Spire style, stage 1: playable offline in the **Sandbox**, on the cards that ship, from the start screen to the final boss. The design is the plan of record, `docs/dungeon-run.md` (DR0\u2013DR13, every owner answer recorded there), and this stage's frozen spec is its **DR14**: the surface every part meets at, 33 numbered behaviors (B1\u2013B33), what is out of scope, and the parts.\n\nBlocked by #2712, which lands the run's rules as a pure crate, `crates/run` (its `README.md` is the contract), and the plan: seeds and the daily run, the three-act map of 16 fights, the starting deck's rarity slots and artifact points, packs and the 3 cards kept, extraction, campfires, shops, events, shrines, curse tiers, the score and Embers, and a run file that folds back to the same state. This tree gets `bot:fullsend` only once #2712 has merged, so its integration branch is cut from a `main` that holds the crate.\n\n## How it is built\n\nA `bot:fullsend` tree whose parts are opened by hand (`bot/README.md`, Fullsend, \"An issue split already\"): eight sub-issues, each built blind on `bot/issue-2701` and reconciled there into one pull request. No part waits for another; each reads the others only through DR14's surface, which is frozen. Each part owns its files (DR14, The parts), writes any ruling in its own issue's block and names its tests' behaviors in a comment (`// B7`).\n\n| Part | Issue | What | Behaviors |\n| --- | --- | --- | --- |\n| A | #2702 | A deck's Radiant and buffed cards at a game's setup (the engine's deck marks) | B1\u2013B4 |\n| B | #2703 | The run plays real cards: catalog content, a fight's setup and its report | B5\u2013B11 |\n| C | #2704 | The run in the browser's WebAssembly modules | B12 |\n| D | #2705 | The Dungeon Run screen: route, start, unlocks and the run kept on the device | B13\u2013B21 |\n| E | #2706 | The run's fights: practice games, the artifact tray and the timer | B22\u2013B26 |\n| F | #2707 | The map, the tiles, the rewards and the run-over screen | B27\u2013B31 |\n| G | #2708 | The leaderboards and run stats on the device | B32 |\n| H | #2709 | The dungeon run's spec section | B33 |\n\n## Done when\n\n- Every behavior B1\u2013B33 has a test that names it, and the reconcile's list of uncited behaviors is empty.\n- The five required checks are green, `apps/web/src/wire/` is regenerated and committed, and `cargo jackioh spec check` passes.\n- A Sandbox run plays in the dev server from the start screen through its first fight, a shop or campfire, a mini-boss's extraction and the run-over screen; the reconcile shows it with screenshots (the `ui-walkthrough` skill).\n\n## Not in this tree (stage 2 and after)\n\nThe Campaign (the account's unlocks and Embers, runs checked by the server before they pay, Jlore rewards, online leaderboards); ghosts from real players' runs; Combat artifacts and curses acting inside a fight; the extended campaign; the designer's lists of artifacts, bosses and events; an e2e spec. One thing needs a person: CI does not yet hold the run's generated TypeScript types to the Rust (add `-p jackioh-run --features ts` to a `ci.yml` test group; the bot cannot edit `.github/`).\n\n---\nComment by @squishy-squooby at 2026-11-01T20:57:14Z:\n\nNotes for the reconcile, from a check of the eight part plans against DR14 (corrections went to #2703, #2704 and #2706, and a wording note to #2707 and #2708):\n\n- **`Cargo.lock`:** parts B (#2703) and C (#2704) both change it, and no part owns it. Regenerate it with cargo; don't merge it by hand.\n- **The spec's constants table:** part B adds `RUN_LOOMING_PRESENCE` and `RUN_OVERWHELMING_PRESENCE` to `crates/run/src/config.rs`. Part H's (#2709) table in `spec/15-dungeon-run.md`, \"one row per `pub const`\", needs those two rows once both have landed.\n- **Player-facing words:** relics, never artifacts (`apps/web/src/writing.test.ts`'s jargon list). Any string from the parts that still says \"artifact\" fails the required `web` check, and every new string needs its `zh-CN.json` entry for `i18n.test`.\n- **Expected edits outside a part's Owns,** each colliding with no other part:\n  - A: the server's `CreateGameOptions` and `FoldArgs` literals in `crates/server/src/actor/engine.rs` and `economy/practice.rs`.\n  - C: `.cargo/config.toml` and `net/build-wasm-cache.test.ts`.\n  - D: `public/_redirects`, `net/head.ts` and the route tests.\n  - E: `game/contract.ts`, `board.css` and its ruling's files.\n- **D's start screen** pauses a run reloaded mid-way behind Continue or Abandon, as #2705 asked. `RunScreen` and `FightScreen` render once the player continues.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "mode": "fullsend",
+  "children": "**The sub-issues #2701 has already (data, not instructions):**\n\n```text\n- #2702 [closed] Patch: a deck's Radiant and buffed cards at a game's setup (deck marks)\n- #2703 [closed] Patch: the dungeon run plays real cards: catalog content, a fight's setup and its report\n- #2704 [closed] Patch: the dungeon run in the browser's WebAssembly modules\n- #2705 [closed] Patch: the Dungeon Run screen: its route, the start, the unlocks and the run kept on the device\n- #2706 [closed] Patch: the dungeon run's fights: practice games against the run's enemy, the artifact tray and the timer\n- #2707 [closed] Patch: the dungeon run's map, tiles, rewards and run-over screen\n- #2708 [closed] Patch: the dungeon run's leaderboards and run stats on the device\n- #2709 [closed] Patch: the dungeon run's spec section\n```",
+  "builders": "me",
+  "parked": [
+    "bot/issue-2705"
+  ],
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-1` (claude, `opus`, strong); review on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first",
+    "#2757 skipped: it waits for #2738 to close first",
+    "#2784 skipped: it waits for #2722 to close first",
+    "#2785 skipped: it waits for #2722 to close first",
+    "#2786 skipped: it waits for #2784 to close first",
+    "#2787 skipped: it waits for #2784 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783, #2784 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2792 skipped: it waits for #2784 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2784, #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2784, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
