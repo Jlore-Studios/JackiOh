@@ -14393,19 +14393,30 @@
     "2868": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T17:09:22Z",
       "issue": 2850,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The acceptance asks the PR to give each file's case counts before and after, and one line per deleted case naming the test that still covers it, but the PR has no description at all and the builder wrote no report.",
+          "evidence": "Issue #2850's Acceptance, third bullet. PR #2868 reads \"_The builder wrote no description._\", and the builder's report holds only that PR text. The earlier review raised this and approved anyway.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-5",
-      "queued_at": "2026-11-02T20:49:29Z",
+      "queued_at": "2026-11-02T21:02:11Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "41522965585",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-02T20:51:02Z",
       "stop_requested": false,
       "taken_asks": [],
