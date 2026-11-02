@@ -21,7 +21,7 @@ import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { INSPECT_GLOSSARY, INSPECT_LIST_CARD, INSPECT_LIST_SHEET } from "../cards/inspect/testids.ts";
 import { closeInspect, costPhrase, faceDownLabel } from "../cards/index.ts";
 import { MARK_PALETTES, MARK_WORDS } from "../cards/marks.ts";
-import { CARD_FX } from "../fx/cardFx.ts";
+import { FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { CHAOS_CORE, chaosNames } from "../fx/chaos.ts";
 import { FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { HINDERED_ATTR } from "../fx/manaMarks.ts";
@@ -394,8 +394,8 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       expect(screen.getByTestId(showcaseTestid.live)).toHaveTextContent(`${CAST_ON_DRAW_TEXT.opponent} ${nameOf(defId)}: ${CAST_ON_DRAW_TEXT.said}`);
       cleanup();
     }
-    expect(CARD_FX[HINDER]).toBe("manaCrack");
-    expect(CARD_FX[BLOOD]).toBe("bloodDrain");
+    expect(FX_CARD_TABLE.get(HINDER)).toEqual({ kind: "bespoke", key: "manaCrack" });
+    expect(FX_CARD_TABLE.get(BLOOD)).toEqual({ kind: "bespoke", key: "bloodDrain" });
 
     showcase([drawn("p2", "hidden", "hidden"), cast("p2", "hidden", "hidden")]);
     expect(screen.getByTestId(showcaseTestid.back)).toContainElement(screen.getByTestId(showcaseTestid.ribbon));

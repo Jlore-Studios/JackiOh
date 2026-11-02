@@ -9,7 +9,8 @@ import { animTestid, planEntries, type AnimationEntry } from "../game/animations
 import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
-import { CARD_FX, CARD_RECIPES } from "./cardFx.ts";
+import { CARD_RECIPES } from "./cards/bespoke.ts";
+import { FX_CARD_TABLE } from "./cards/tables.ts";
 import { ENTRANCES, isEntranceKey } from "./entrances.ts";
 import {
   FX_BLOOD_FLIGHT_FRACTION,
@@ -305,11 +306,13 @@ describe("Patch v0.2.3c: Classic+ #24 Crushing Walls closes in", () => {
 
 describe("R502 the per-card table", () => {
   it("R502 one table keys each recipe by definition, and every recipe it names exists", () => {
-    expect(CARD_FX[HINDER]).toBe("manaCrack");
-    expect(CARD_FX[BLOOD]).toBe("bloodDrain");
-    expect(CARD_FX[WALLS]).toBe("crushingWalls");
-    for (const key of Object.values(CARD_FX)) {
-      expect(isEntranceKey(key) ? typeof ENTRANCES[key] : typeof CARD_RECIPES[key as "manaCrack" | "bloodDrain" | "crushingWalls"]).toBe("function");
+    expect(FX_CARD_TABLE.get(HINDER)).toEqual({ kind: "bespoke", key: "manaCrack" });
+    expect(FX_CARD_TABLE.get(BLOOD)).toEqual({ kind: "bespoke", key: "bloodDrain" });
+    expect(FX_CARD_TABLE.get(WALLS)).toEqual({ kind: "bespoke", key: "crushingWalls" });
+    for (const entry of FX_CARD_TABLE.values()) {
+      if (entry.kind !== "bespoke") continue;
+      const key = entry.key;
+      expect(isEntranceKey(key) ? typeof ENTRANCES[key] : typeof CARD_RECIPES[key]).toBe("function");
     }
   });
 

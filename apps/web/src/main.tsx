@@ -93,6 +93,7 @@ import "./auth/tavern.css";
 
 const HotseatRoute = routeChunks.hotseat?.Screen ?? null;
 const DevDuosRoute = routeChunks.duosDev?.Screen ?? null;
+const FxGalleryRoute = routeChunks.fxGallery?.Screen ?? null;
 const DuosRoute = routeChunks.duos.Screen;
 const ReplaysRoute = routeChunks.replays.Screen;
 const LoginRoute = routeChunks.login.Screen;
@@ -823,6 +824,11 @@ export function App(): ReactElement {
           <DevDuosRoute />
         </EngineGate>
       );
+    }
+    // R2784000: the motif gallery plays fixture events on a fixture board, so it never calls the engine.
+    if (path === paths.fxGallery) {
+      if (FxGalleryRoute === null) return <NotFound path={path} />;
+      return <FxGalleryRoute />;
     }
     return <NotFound path={path} />;
   })();

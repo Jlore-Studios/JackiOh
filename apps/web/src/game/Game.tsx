@@ -55,6 +55,7 @@ import {
   slamEntries,
   type AnimationEntry,
   type AnimationQueue,
+  type SetPieceClaimer,
 } from "./animations.ts";
 import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
@@ -152,6 +153,11 @@ export type GameProps = {
    * on the whole page, so a second board would play the other duel's cues on the own board.
    */
   silent?: boolean;
+  /**
+   * R2785000: claims an entry as a set piece, asked before the takeover; read at each enqueue. The
+   * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
+   */
+  setPieceOf?: SetPieceClaimer;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -196,6 +202,7 @@ export default function Game({
   lethalHint = false,
   tradeBar = true,
   silent = false,
+  setPieceOf,
 }: GameProps): ReactElement {
   useLocale();
   // R2118000: no command menu over a board.
@@ -332,6 +339,8 @@ export default function Game({
   const [still, setStill] = useState<{ defId: string; instanceId: string; view: PlayerView } | null>(null);
   const stillSeen = useRef(new Set<string>());
   const endStill = useCallback(() => setStill(null), []);
+  const setPieceOfRef = useRef(setPieceOf);
+  setPieceOfRef.current = setPieceOf;
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
@@ -341,6 +350,7 @@ export default function Game({
       entranceOf: entranceResolver,
       // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
       setPieces: !silent,
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? null,
       onSettled: () => {
         setShown(latest.current);
       },
