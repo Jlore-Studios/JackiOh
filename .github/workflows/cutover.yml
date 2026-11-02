@@ -15,18 +15,11 @@
 #                       Render holds them (the copy keeps every hash and id they fit), with
 #                       JackiOh-Production's own key and database from the repository secrets
 #                       PRODUCTION_SUPABASE_SECRET_KEY and PRODUCTION_DATABASE_URL (step 6.1).
-#   check-production    writes nothing: whether PRODUCTION_SUPABASE_SECRET_KEY is shaped like a secret
-#                       key, and whether PRODUCTION_DATABASE_URL reaches JackiOh-Production and what it
-#                       holds. Run it after setting either secret.
 #   copy                staging's database into the empty JackiOh-Production (section 8): roles, schema
 #                       and data, the four statistics tables' live rows alone and none of
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
 #                       auth.users counted on both sides, which must agree. With `dry_run` (the default)
 #                       it dumps and counts and writes nothing.
-#
-# PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
-# and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
-# password with `@`, `/` or `#` in it needs no hand-encoding.
 #
 # Every database is reached through Supabase's session pooler: neither a GitHub runner nor a container
 # has dependable IPv6, so a direct `db.<ref>.supabase.co` address is rewritten to the pooler host
@@ -45,7 +38,6 @@ on:
           - staging-secrets
           - drop-ping
           - production-secrets
-          - check-production
           - copy
       dry_run:
         description: "copy only: dump and count, and write nothing to production"
@@ -99,22 +91,9 @@ jobs:
           # or ""), the URL goes to stdout and what it names to stderr.
           cat > "$RUNNER_TEMP/pooler.py" <<'EOF'
           import sys, urllib.parse as up
-          import os
           ref, src, pool = sys.argv[1], sys.argv[2], sys.argv[3]
           def fail(why):
               print(f"::error::{why}", file=sys.stderr); sys.exit(1)
-          # A password of its own (PRODUCTION_DB_PASSWORD) wins over whatever the address holds, its
-          # `[YOUR-PASSWORD]` or one typed in, percent-encoded or not: the address is cut at its scheme
-          # and its last `@`, so a raw `@`, `/` or `#` in the old password cannot move the split.
-          raw = os.environ.get("DB_PASSWORD", "")
-          if raw:
-              scheme, sep, rest = src.partition("://")
-              userinfo, at, after = rest.rpartition("@")
-              if not (sep and at):
-                  fail("the address is not scheme://user:password@host/database")
-              src = f"{scheme}://{userinfo.split(':', 1)[0]}:{up.quote(raw, safe='')}@{after}"
-          elif "[YOUR-PASSWORD]" in src:
-              fail("the address still says [YOUR-PASSWORD], and PRODUCTION_DB_PASSWORD is not set")
           p = up.urlsplit(src)
           creds, _, _ = p.netloc.rpartition("@")
           user, _, password = creds.partition(":")
@@ -148,11 +127,9 @@ jobs:
             jq -r --arg n "$RENDER_SERVICE" '[.[].service | select(.name == $n)][0].id // empty')
           [ -n "$id" ] || { echo "::error::Render has no service named $RENDER_SERVICE"; exit 1; }
           vars=$(render "/services/$id/env-vars?limit=100")
-          # Every value masked before anything else can print it, but for those under eight characters
-          # (TRUSTED_PROXY_HOPS's `1`, CYPRESS_INSTALL_BINARY's `0`): no secret is that short, and masking
-          # a lone digit stars it out of every line of the log.
+          # Every value masked before anything else can print it.
           jq -r '.[].envVar.value // empty' <<<"$vars" | while IFS= read -r value; do
-            if [ "${#value}" -ge 8 ]; then echo "::add-mask::$value"; fi
+            [ -n "$value" ] && echo "::add-mask::$value"
           done
           jq '[.[].envVar | {(.key): .value}] | add // {}' <<<"$vars" > "$RUNNER_TEMP/render.json"
           echo "Render's $RENDER_SERVICE ($id) holds: $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/render.json")"
@@ -167,31 +144,16 @@ jobs:
           rm -f "$RUNNER_TEMP/staging.url.raw"
 
       - name: production's database address
-        if: ${{ inputs.step == 'production-secrets' || inputs.step == 'check-production' || inputs.step == 'copy' }}
+        if: ${{ inputs.step == 'production-secrets' || inputs.step == 'copy' }}
         env:
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-          DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
-          STEP: ${{ inputs.step }}
         run: |
           set -euo pipefail
           umask 077
           if [ -z "$PRODUCTION_DATABASE_URL" ]; then
-            if [ "$STEP" = check-production ]; then
-              echo "PRODUCTION_DATABASE_URL: not set yet" | tee -a "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            echo "::error::PRODUCTION_DATABASE_URL is not set: JackiOh-Production -> Connect -> Session pooler"
+            echo "::error::PRODUCTION_DATABASE_URL is not set: JackiOh-Production -> Connect -> Session pooler, with its password"
             exit 1
           fi
-          # Where the password comes from, and what it looks like (never the password): a refused login
-          # is most often the wrong thing on the clipboard.
-          case "$DB_PASSWORD" in
-            "") pw="PRODUCTION_DB_PASSWORD is unset, so the one written into PRODUCTION_DATABASE_URL" ;;
-            sb_*) pw="PRODUCTION_DB_PASSWORD, which is a Supabase API key, not the database password" ;;
-            postgres*://*) pw="PRODUCTION_DB_PASSWORD, which is a database address, not the password" ;;
-            *) pw="PRODUCTION_DB_PASSWORD, ${#DB_PASSWORD} characters" ;;
-          esac
-          echo "the password: $pw" | tee -a "$GITHUB_STEP_SUMMARY"
           python3 "$RUNNER_TEMP/pooler.py" "$PRODUCTION_REF" "$PRODUCTION_DATABASE_URL" "" \
             > "$RUNNER_TEMP/production.url.raw" 2> "$RUNNER_TEMP/production.where" ||
             { cat "$RUNNER_TEMP/production.where"; exit 1; }
@@ -237,27 +199,6 @@ jobs:
           psql "$db" -Xq -v ON_ERROR_STOP=1 --single-transaction \
             -c "drop function if exists public.ping()" -c "drop table if exists public.keepalive"
           psql "$db" -XAtq -v ON_ERROR_STOP=1 -c "select 'after: ' || coalesce(to_regprocedure('public.ping()')::text, 'no ping()') || ', ' || coalesce(to_regclass('public.keepalive')::text, 'no keepalive')"
-
-      - name: check production's secrets, writing nothing
-        if: ${{ inputs.step == 'check-production' }}
-        env:
-          PRODUCTION_SUPABASE_SECRET_KEY: ${{ secrets.PRODUCTION_SUPABASE_SECRET_KEY }}
-        run: |
-          set -euo pipefail
-          key=$PRODUCTION_SUPABASE_SECRET_KEY
-          case "$key" in
-            sb_secret_*) shape="a secret key (sb_secret_…)" ;;
-            eyJ*) shape="a legacy service_role JWT (eyJ…)" ;;
-            sb_publishable_*) shape="the PUBLISHABLE key, not the secret one" ;;
-            "") shape="EMPTY or unset" ;;
-            *) shape="NOT a Supabase key" ;;
-          esac
-          [ "$key" = "$(jq -r '.SUPABASE_SECRET_KEY // empty' "$RUNNER_TEMP/render.json")" ] && shape="staging's key, not production's"
-          echo "PRODUCTION_SUPABASE_SECRET_KEY: $shape, ${#key} characters" | tee -a "$GITHUB_STEP_SUMMARY"
-          [ -s "$RUNNER_TEMP/production.url" ] || exit 1
-          held=$(psql "$(cat "$RUNNER_TEMP/production.url")" -XAtq -v ON_ERROR_STOP=1 -c "select (select count(*) from information_schema.tables where table_schema = 'public') || ' public tables, ' || (select count(*) from auth.users) || ' users'")
-          echo "PRODUCTION_DATABASE_URL reaches JackiOh-Production: $held" | tee -a "$GITHUB_STEP_SUMMARY"
-          case "$shape" in a\ *) ;; *) exit 1 ;; esac
 
       - name: production's secrets into jackioh
         if: ${{ inputs.step == 'production-secrets' }}
