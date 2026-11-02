@@ -10,8 +10,9 @@
  * covers its edge, as a ring over the panel painted with that same edge. The two chase borders
  * (#1833) add a ring of their own inside it. A finish is the print: a weave, fibres or fine lines
  * over the face, a panel in black ink, steel, velvet or obsidian, leaded panes, a starred midnight,
- * or a gold hairline round the edge. A foil is a sheen over the art window only, two of them with a
- * second layer under it.
+ * or a gold hairline round the edge. R2720000: a full-art face's art covers the panel, so there each
+ * finish also paints a band of itself round the art's edge, lightly, under everything the face prints.
+ * A foil is a sheen over the art window only, two of them with a second layer under it.
  *
  * Every look comes first as its still version. The moving ones move only inside the one motion gate
  * at the end, by transform or opacity alone, and a face's foil, finish or border only while the face
@@ -358,6 +359,57 @@
   box-shadow:
     inset 0 0 0 1px #c9d6ff40,
     inset 0 0 1.2em #5b6cff2e;
+}
+
+/* R2720000: a full-art face (R1017001) lays its art over the whole panel, so a finish that paints the
+   panel or its frame color would show only on the name banner. There each finish also paints a band
+   round the art's edge: its own panel (matte ink, steel, velvet, the leaded panes, obsidian, the
+   starred midnight), or the linen, parchment or gold of the three that paint none. The band lies over
+   the art at FULL_ART_FINISH_OPACITY (constants.ts) at the rim and fades to nothing 14% in from the
+   sides and 10% from the top and foot, the art's middle clear. On the panel's ::before at z 1 it is
+   over the art and its scrim (z 0) and under the name banner, the crest and the signature (z 2) and
+   the gems, the set mark and a Unit's stats (z 3). It holds still: an animated finish moves on its
+   finish layer, in its motion slot, as on any face. A face that is not full art draws none of it. */
+.cf[data-full-art="true"][data-finish] .cf-scale::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.6;
+  -webkit-mask-image:
+    linear-gradient(90deg, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
+    linear-gradient(180deg, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
+  mask-image:
+    linear-gradient(90deg, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
+    linear-gradient(180deg, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
+  pointer-events: none;
+}
+
+.cf[data-full-art="true"][data-finish="finish-matte-black-ink"] .cf-scale::before,
+.cf[data-full-art="true"][data-finish="finish-brushed-steel"] .cf-scale::before,
+.cf[data-full-art="true"][data-finish="finish-velvet"] .cf-scale::before,
+.cf[data-full-art="true"][data-finish="finish-stained-glass"] .cf-scale::before,
+.cf[data-full-art="true"][data-finish="finish-obsidian"] .cf-scale::before,
+.cf[data-full-art="true"][data-finish="finish-starlit"] .cf-scale::before {
+  background: inherit;
+}
+
+.cf[data-full-art="true"][data-finish="finish-linen"] .cf-scale::before {
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--pal-white) 30%, transparent) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-stone-500) 35%, transparent) 0 1px, transparent 1px 3px),
+    linear-gradient(172deg, color-mix(in srgb, var(--pal-parchment) 60%, var(--pal-white)), color-mix(in srgb, var(--pal-parchment) 55%, var(--pal-stone-500)));
+}
+
+.cf[data-full-art="true"][data-finish="finish-parchment"] .cf-scale::before {
+  background:
+    repeating-linear-gradient(8deg, color-mix(in srgb, var(--pal-wood-600) 18%, transparent) 0 1px, transparent 1px 5px),
+    radial-gradient(120% 90% at 50% 42%, var(--pal-parchment) 55%, var(--pal-brass-600));
+}
+
+.cf[data-full-art="true"][data-finish="finish-gilded-edge"] .cf-scale::before {
+  background: linear-gradient(135deg, var(--pal-brass-600), var(--pal-gold-400) 28%, var(--pal-gold-200) 48%, var(--pal-brass-500) 68%, var(--pal-brass-600));
 }
 
 /* ------------------------------------------------------------------------------ foils --- */
