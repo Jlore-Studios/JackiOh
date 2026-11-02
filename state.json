@@ -26299,17 +26299,21 @@
         {
           "at": "2026-11-02T04:52:52Z",
           "minutes": 46.2
+        },
+        {
+          "at": "2026-11-02T05:26:47Z",
+          "minutes": 60.3
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-02T05:09:00Z",
-          "utilization": 0.45
+          "resets_at": "2026-11-02T10:09:00Z",
+          "utilization": 0.01
         },
-        "observed_at": "2026-11-02T04:52:52Z",
+        "observed_at": "2026-11-02T05:26:47Z",
         "seven_day": {
           "resets_at": "2026-11-09T00:00:00Z",
-          "utilization": 0.15
+          "utilization": 0.17
         },
         "status": "allowed"
       }
