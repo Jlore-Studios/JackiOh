@@ -202,6 +202,149 @@ pub extern "C" fn carried_versions() -> *mut c_char {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The dungeon run (docs/dungeon-run.md DR14 part C)
+// ---------------------------------------------------------------------------------------------
+
+// Every binding runs inside `boundary`, as the engine's do: `run_fight_report` folds a fight that
+// may carry custom cards, which folds only under the kit host. A run-rule refusal is a returned
+// value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never NULL.
+
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_content(custom_cards_json: *const c_char) -> *mut c_char {
+    boundary(|| wasm_core::run_content(arg("runContent: the custom cards", custom_cards_json)?))
+}
+
+/// `null` when the setup may start a run, else the reason.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_check_setup(
+    setup_json: *const c_char,
+    unlocks_json: *const c_char,
+    content_json: *const c_char,
+) -> *mut c_char {
+    boundary(|| {
+        let setup = arg("runCheckSetup: the setup", setup_json)?;
+        let unlocks = arg("runCheckSetup: the unlocks", unlocks_json)?;
+        let content = arg("runCheckSetup: the content", content_json)?;
+        wasm_core::run_check_setup(setup, unlocks, content)
+    })
+}
+
+/// `{ state }` for a run started, `{ error }` for a setup the run refuses.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_create(
+    setup_json: *const c_char,
+    unlocks_json: *const c_char,
+    content_json: *const c_char,
+) -> *mut c_char {
+    boundary(|| {
+        let setup = arg("runCreate: the setup", setup_json)?;
+        let unlocks = arg("runCreate: the unlocks", unlocks_json)?;
+        let content = arg("runCreate: the content", content_json)?;
+        wasm_core::run_create(setup, unlocks, content)
+    })
+}
+
+/// `{ state }` for the run after one action, `{ error }` for an action the run refuses.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_reduce(
+    state_json: *const c_char,
+    content_json: *const c_char,
+    action_json: *const c_char,
+) -> *mut c_char {
+    boundary(|| {
+        let state = arg("runReduce: the state", state_json)?;
+        let content = arg("runReduce: the content", content_json)?;
+        let action = arg("runReduce: the action", action_json)?;
+        wasm_core::run_reduce(state, content, action)
+    })
+}
+
+/// `{ state }` for a run file folded, `{ error }` naming the first refused step.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_fold(file_json: *const c_char, content_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let file = arg("runFold: the file", file_json)?;
+        let content = arg("runFold: the content", content_json)?;
+        wasm_core::run_fold(file, content)
+    })
+}
+
+/// The fight being played, or `null` outside one.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_fight_setup(state_json: *const c_char, content_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = arg("runFightSetup: the state", state_json)?;
+        let content = arg("runFightSetup: the content", content_json)?;
+        wasm_core::run_fight_setup(state, content)
+    })
+}
+
+/// `{ action }` for the `FightOver` a finished fight sends, `{ error }` for a game that reports none.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_fight_report(game_json: *const c_char, human_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let game = arg("runFightReport: the game", game_json)?;
+        let human = arg("runFightReport: the human", human_json)?;
+        wasm_core::run_fight_report(game, human)
+    })
+}
+
+/// The run's score so far.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_score(state_json: *const c_char, content_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = arg("runScore: the state", state_json)?;
+        let content = arg("runScore: the content", content_json)?;
+        wasm_core::run_score(state, content)
+    })
+}
+
+/// The Embers a score pays.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_embers(score_json: *const c_char) -> *mut c_char {
+    boundary(|| wasm_core::run_embers(arg("runEmbers: the score", score_json)?))
+}
+
+/// The run's max HP, before no fight and after every artifact and blessing.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_max_hp(state_json: *const c_char, content_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = arg("runMaxHp: the state", state_json)?;
+        let content = arg("runMaxHp: the content", content_json)?;
+        wasm_core::run_max_hp(state, content)
+    })
+}
+
+/// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_level_cost(level_json: *const c_char) -> *mut c_char {
+    boundary(|| wasm_core::run_level_cost(arg("runLevelCost: the level", level_json)?))
+}
+
+/// The run's numbers the screens show, so the client states none (CLAUDE.md rule 9).
+#[unsafe(no_mangle)]
+pub extern "C" fn run_constants() -> *mut c_char {
+    boundary(wasm_core::run_constants)
+}
+
+/// A seed of `RUN_SEED_LENGTH` capital letters drawn from any text.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_seed(source_json: *const c_char) -> *mut c_char {
+    boundary(|| wasm_core::run_seed(arg("runSeed: the source", source_json)?))
+}
+
+/// The daily run's seed: the date's and the day's run number.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_daily_seed(date_json: *const c_char, n_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let date = arg("runDailySeed: the date", date_json)?;
+        let n = arg("runDailySeed: the run number", n_json)?;
+        wasm_core::run_daily_seed(date, n)
+    })
+}
+
+// ---------------------------------------------------------------------------------------------
 // The engine (SURFACE §6.1)
 // ---------------------------------------------------------------------------------------------
 

@@ -33,6 +33,8 @@ const TREE = [
   "crates/ai/src/decide.rs",
   "crates/luau/Cargo.toml",
   "crates/luau/src/lib.rs",
+  "crates/run/Cargo.toml",
+  "crates/run/src/lib.rs",
   "crates/wasm/Cargo.toml",
   "crates/wasm/src/lib.rs",
   "crates/wasm/luau/Cargo.toml",
@@ -177,6 +179,7 @@ describe("scripts/build-wasm.sh on Vercel", () => {
       "crates/cards/src/scripts/core/c001_big_d_fender.rs",
       "crates/ai/src/decide.rs",
       "crates/luau/src/lib.rs",
+      "crates/run/src/lib.rs",
       "crates/wasm/src/lib.rs",
       "crates/wasm/luau/src/main.rs",
       // What cargo reads to build any member: the workspace, the lockfile, every manifest, the config.

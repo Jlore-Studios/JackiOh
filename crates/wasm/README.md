@@ -1,9 +1,10 @@
 # `jackioh-wasm`
 
-The engine, the cards, the AI and the validator compiled to WebAssembly for the web client: hotseat,
-practice, the tutorial and the deck builder run them in the browser. JSON strings in, JSON strings
-out; nothing else crosses. The state is the `GameState` JSON object, which the client keeps behind its
-opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
+The engine, the cards, the AI, the validator and the dungeon run compiled to WebAssembly for the
+web client: hotseat, practice, the tutorial, the deck builder and the dungeon run screen run them in
+the browser. JSON strings in, JSON strings out; nothing else crosses. The state is the `GameState`
+JSON object, which the client keeps behind its opaque `EngineState` brand (CLAUDE.md rule 7) and
+hands back on every call; a run's `RunState` crosses the same way, as plain JSON the client hands back.
 
 ## The bindings (`src/lib.rs`)
 
@@ -27,10 +28,22 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `preview_sets(sets)` | R1400, R1420: treat `SetName[]` as shipped for the module's life (the dev hotseat's E2E injection); a module built without the `preview` feature refuses any set |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | #936: the Duos wrapper for `/dev/duos`: a `DuosState` (its four decks and handicaps checked first, as `create_game`'s setup is), then `{ state, events, error? }`, `DuosActionBody[]` and `DuosView`; the seat crosses as its string (`"a1"`). Built only with the `duos` feature (the dev server's build only: `JACKIOH_WASM_DUOS=1`, off by default); without it each throws the reason |
 | `craft_preview(recipe, cost, prompt)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say; `prompt` is the open prompt's `{ craftMode, craftOffer }`, its frame and offer (R1563007) |
+| `run_content(custom_cards)` | `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards |
+| `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | whether the setup may start a run (`null`, or the reason), then the run's `{ state }` |
+| `run_reduce(state, content, action)`, `run_fold(file, content)` | the run after one action, or a run file folded from its start: `{ state }` |
+| `run_fight_setup(state, content)` | the fight being played (`RunFightSetup`), or `null` outside one |
+| `run_fight_report(game, human)` | the `FightOver` a finished fight sends: `{ action }` |
+| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)` | the run's score, the Embers a score pays, the run's max HP |
+| `run_level_cost(level)`, `run_constants()` | the Embers one level costs (or `null` at the top), and the run's numbers the screens show |
+| `run_seed(source)`, `run_daily_seed(date, n)` | a seed of capital letters, or the daily run's seed |
 
 A binding returns `Err(JsError)`, which JavaScript sees as a thrown `Error` with the engine's message,
 where a JSON argument does not parse or the setup is refused (a deck or handicap `create_game` will
-not take). `reduce` never throws on an illegal action: its refusal is the result's `error`.
+not take). `reduce` never throws on an illegal action: its refusal is the result's `error`. The run
+bindings work the same way: a run-rule refusal is a returned `{ "error": "…" }` value, never thrown —
+except `run_check_setup`, whose refusal is the returned reason string (`string | null`). A fight the
+game has not finished reports `{ "error": "…" }` from `run_fight_report`, as an illegal action reports
+`error` from `reduce`.
 
 The pure crates never read a clock (CLAUDE.md rule 4). The AI's wall-clock cap is this crate's:
 `ai_decide` gives `decide` a `should_stop` that compares `js_sys::Date::now()` with `deadline_ms`
@@ -51,9 +64,10 @@ included, carries them.
 On Vercel (`VERCEL=1`) it also keeps what it built for the next deploy (#997). Vercel's build cache
 keeps only `node_modules` directories, so `target/` and the emsdk start empty on every deploy. The
 script therefore copies `pkg/`, both modules, into `node_modules/.cache/jackioh-wasm/<key>`. The key
-is a hash of everything the modules are built from: this crate and the four it compiles (held to the
-workspace's path dependencies by `apps/web/src/net/build-wasm-cache.test.ts`), every manifest, the
-lockfile, `.cargo/`, `rust-toolchain.toml`, the script itself and the `JACKIOH_WASM_*` flags. A deploy
+is a hash of everything the modules are built from: this crate and the five it compiles (the engine,
+the cards, the AI, the Luau host and the run, held to the workspace's path dependencies by
+`apps/web/src/net/build-wasm-cache.test.ts`), every manifest, the lockfile, `.cargo/`,
+`rust-toolchain.toml`, the script itself and the `JACKIOH_WASM_*` flags. A deploy
 whose key matches copies the modules back and runs no `cargo` at all. Anywhere else nothing is kept.
 
 `apps/web/src/wasm/index.ts` is the only caller: `loadWasm()` (or `loadWasmSync(bytes)` under jsdom)

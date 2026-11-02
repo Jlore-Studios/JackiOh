@@ -18,6 +18,20 @@ export type LuauBindings = {
   catalog(): string;
   catalog_version(): string;
   carried_versions(): string;
+  run_content(customCards: string): string;
+  run_check_setup(setup: string, unlocks: string, content: string): string;
+  run_create(setup: string, unlocks: string, content: string): string;
+  run_reduce(state: string, content: string, action: string): string;
+  run_fold(file: string, content: string): string;
+  run_fight_setup(state: string, content: string): string;
+  run_fight_report(game: string, human: string): string;
+  run_score(state: string, content: string): string;
+  run_embers(score: string): string;
+  run_max_hp(state: string, content: string): string;
+  run_level_cost(level: string): string;
+  run_constants(): string;
+  run_seed(source: string): string;
+  run_daily_seed(date: string, n: string): string;
   create_game(args: string): string;
   begin_game(state: string): string;
   reduce(state: string, action: string): string;
@@ -70,11 +84,29 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
     (call: (a: number, b: number) => number) =>
     (a: string, b: string): string =>
       withArgs([a, b], ([p = 0, q = 0]) => take(call(p, q)));
+  const three =
+    (call: (a: number, b: number, c: number) => number) =>
+    (a: string, b: string, c: string): string =>
+      withArgs([a, b, c], ([p = 0, q = 0, r = 0]) => take(call(p, q, r)));
   return {
     init: () => m._init(),
     catalog: () => take(m._catalog()),
     catalog_version: () => take(m._catalog_version()),
     carried_versions: () => take(m._carried_versions()),
+    run_content: one((a) => m._run_content(a)),
+    run_check_setup: three((a, b, c) => m._run_check_setup(a, b, c)),
+    run_create: three((a, b, c) => m._run_create(a, b, c)),
+    run_reduce: three((a, b, c) => m._run_reduce(a, b, c)),
+    run_fold: two((a, b) => m._run_fold(a, b)),
+    run_fight_setup: two((a, b) => m._run_fight_setup(a, b)),
+    run_fight_report: two((a, b) => m._run_fight_report(a, b)),
+    run_score: two((a, b) => m._run_score(a, b)),
+    run_embers: one((a) => m._run_embers(a)),
+    run_max_hp: two((a, b) => m._run_max_hp(a, b)),
+    run_level_cost: one((a) => m._run_level_cost(a)),
+    run_constants: () => take(m._run_constants()),
+    run_seed: one((a) => m._run_seed(a)),
+    run_daily_seed: two((a, b) => m._run_daily_seed(a, b)),
     create_game: one((a) => m._create_game(a)),
     begin_game: one((a) => m._begin_game(a)),
     reduce: two((a, b) => m._reduce(a, b)),
