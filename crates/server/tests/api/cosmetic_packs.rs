@@ -1340,7 +1340,11 @@ async fn r2755000_a_full_shard_bar_cannot_buy_the_jlorious_card_back() {
         json!({ "cosmeticId": JLORIOUS_CARD_BACK }),
     )
     .await;
-    assert_eq!((status, answer["error"]["code"].clone()), (409, json!("conflict")), "{answer}");
+    assert_eq!(
+        (status, answer["error"]["code"].clone()),
+        (409, json!("conflict")),
+        "{answer}"
+    );
     assert!(!owns_cosmetic(&app, None, JLORIOUS_CARD_BACK).await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
     assert_eq!(ledger(&app).await.cosmetics.len(), before.cosmetics.len());

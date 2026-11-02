@@ -307,7 +307,10 @@ fn r2755000_no_bot_wears_the_jlorious_card_back_however_widely_owned() {
     // A bot is never Jlorious (R640000), so it could not have earned it; the Mythic back that drops
     // stays eligible beside it.
     let owners = vec![widely(JLORIOUS_CARD_BACK), widely("card-back-nebula")];
-    assert_eq!(eligible(registry(), &owners, NOW), vec![holding("card-back-nebula", None)]);
+    assert_eq!(
+        eligible(registry(), &owners, NOW),
+        vec![holding("card-back-nebula", None)]
+    );
 }
 
 #[test]

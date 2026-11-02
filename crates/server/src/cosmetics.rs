@@ -730,7 +730,10 @@ mod tests {
             // Three since #1295 and #1297, and six more since #1833 (R1833000), the Jlorious card
             // back aside (R2755000).
             assert_eq!(
-                of_kind.iter().filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious).count(),
+                of_kind
+                    .iter()
+                    .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+                    .count(),
                 9,
                 "{kind:?}'s items"
             );
@@ -752,7 +755,10 @@ mod tests {
                 "{kind:?}'s defaults"
             );
             assert_eq!(
-                of_kind.iter().filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious).count(),
+                of_kind
+                    .iter()
+                    .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+                    .count(),
                 9,
                 "{kind:?}'s items"
             );
@@ -1722,7 +1728,11 @@ mod tests {
         // The only Jlorious cosmetic, and neither a duplicate's global roll nor a cosmetic pack
         // offers it.
         assert_eq!(cosmetics.iter().filter(|cosmetic| cosmetic.jlorious).count(), 1);
-        assert!(global_cosmetics(&cosmetics).iter().all(|cosmetic| cosmetic.id != JLORIOUS_CARD_BACK));
+        assert!(
+            global_cosmetics(&cosmetics)
+                .iter()
+                .all(|cosmetic| cosmetic.id != JLORIOUS_CARD_BACK)
+        );
         assert!(
             cosmetic_pack_cosmetics(&cosmetics)
                 .iter()
@@ -1743,16 +1753,28 @@ mod tests {
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
         // Its rarity is the chase tier's, but nothing drops it, so a chase mark is refused.
         let mut chased = defaults();
-        chased.push(Cosmetic { chase: true, ..jlorious.clone() });
+        chased.push(Cosmetic {
+            chase: true,
+            ..jlorious.clone()
+        });
         assert_eq!(problems(&chased).len(), 1, "{:?}", problems(&chased));
         for wrong in [
-            Cosmetic { starter: true, ..jlorious.clone() },
-            Cosmetic { kind: CosmeticKind::Foil, id: "foil-earned".to_owned(), ..jlorious.clone() },
+            Cosmetic {
+                starter: true,
+                ..jlorious.clone()
+            },
+            Cosmetic {
+                kind: CosmeticKind::Foil,
+                id: "foil-earned".to_owned(),
+                ..jlorious.clone()
+            },
         ] {
             let mut cosmetics = defaults();
             cosmetics.push(wrong.clone());
             assert!(
-                problems(&cosmetics).iter().any(|problem| problem.contains("only reaching Jlorious may grant")),
+                problems(&cosmetics)
+                    .iter()
+                    .any(|problem| problem.contains("only reaching Jlorious may grant")),
                 "{wrong:?}: {:?}",
                 problems(&cosmetics)
             );

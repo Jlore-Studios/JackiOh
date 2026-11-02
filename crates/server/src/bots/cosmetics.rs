@@ -89,7 +89,10 @@ pub fn fit_for(fits: &'static [CosmeticFit], age_days: i64) -> &'static Cosmetic
 pub fn eligible(registry: &[Cosmetic], owners: &[CosmeticOwners], now: i64) -> Vec<Holding> {
     let shipped_by = now - BOT_COSMETIC_MIN_AGE_DAYS * MS_PER_DAY;
     let worn = |cosmetic: &Cosmetic| {
-        cosmetic.kind != CosmeticKind::Portrait && !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious
+        cosmetic.kind != CosmeticKind::Portrait
+            && !cosmetic.default
+            && !cosmetic.starter
+            && !cosmetic.jlorious
     };
     let mut out: Vec<Holding> = owners
         .iter()
