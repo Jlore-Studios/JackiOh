@@ -14,8 +14,8 @@
 // opacity; under reduced motion, or with Animated foil off, nothing moves and the name stands whole,
 // its flourish under it, from the first frame.
 //
-// The signature is SVG in a fixed view box, so it scales with the card as one, and a longer name is set
-// smaller to fit the box's width. It is decoration (`aria-hidden`): the name banner below says it.
+// The signature is SVG in a fixed view box, so it scales with the card, and a longer name is set smaller
+// to fit the box's width. It is decoration (`aria-hidden`): the name banner below says it.
 // Presentation only (CLAUDE.md rule 7).
 
 import { useId, type CSSProperties, type ReactElement } from "react";

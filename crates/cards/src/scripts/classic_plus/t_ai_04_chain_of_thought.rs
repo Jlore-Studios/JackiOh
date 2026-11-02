@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-t-ai-04";
 
-/// TS's `{ base, radiant } as const`: one number per face.
 #[derive(Clone, Copy)]
 struct ByFaceCost {
     base: i32,
@@ -42,10 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-4 Chain of Thought — SPEC §8.7 row T-AI-4, BUILD M9 Classic+ row T-AI-4: "Draws 1; if the card
-// that draw put in your hand costs (1) or less (its current cost; an X-cost card counts 0, R65) it draws
-// again, at most `CHAIN_OF_THOUGHT_REPEATS` (4) more times, 5 draws in all; a cast-on-draw card (never in
-// hand, R58), a burned card or a fatigue draw ends the chain; radiant the threshold is (2)".
+// T-AI-4 Chain of Thought — SPEC §8.7 row T-AI-4, BUILD M9 Classic+ row T-AI-4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

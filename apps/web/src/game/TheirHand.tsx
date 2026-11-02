@@ -1,11 +1,7 @@
 // "Their hand" on the game-over screen (R434): the opponent's hand as the finished game shows it
 // (`reveal.ts`), each card a face that opens large. Nothing here reads anything but the view's own
-// cards and the public catalog (CLAUDE.md rule 7).
-//
-// - `TheirHand`: the result panel's section. Each face opens its preview on a resting mouse and its
-//   inspect sheet on a click, a tap, a long-press or Enter, as a card in a pile's list does.
-// - `TheirHandButton`: the result chip's "Their hand", which opens the whole hand in the list dialog
-//   (`CardListSheet`). Practice keeps the chip from the start, so this is its way in.
+// cards and the public catalog (CLAUDE.md rule 7). Practice keeps the result chip from the start, so
+// `TheirHandButton` (the list dialog, `CardListSheet`) is its way in.
 //
 // R1834004: the cards are the opponent's, so they wear that seat's loadout where the board carries one
 // (game/wearer.ts), faces and backs alike, as they did in their hand.
@@ -30,13 +26,9 @@ export const THEIR_HAND_TITLE = "Their hand";
 /** What the list says of its order: the hand's own, left to right. */
 const THEIR_HAND_ORDER = "As held";
 
-/** R434: the revealed hand and the view its cards are read in. */
 export type TheirHandProps = { view: PlayerView; cards: readonly CardView[] };
 
-/**
- * Each card's face in play (faces.ts), or a back for a card the view names by the sentinel alone,
- * wearing `back` (R1834004: the opponent's seat's card back, absent for the default).
- */
+/** Each card's face in play (faces.ts), or a back (`back`) for a card the view names by the sentinel alone. */
 export function theirHandEntries(lookup: CardLookup | null, view: PlayerView, cards: readonly CardView[], back?: string): CardListEntry[] {
   return cards.map((card) => ({ key: card.instanceId, face: listedFace(lookup, view, card), ...(back === undefined ? {} : { back }) }));
 }

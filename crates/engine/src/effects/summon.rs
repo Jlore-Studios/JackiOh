@@ -1,15 +1,9 @@
 //! Summon, Recruit and "fill your board": every way a card reaches the field without being played
 //! (SPEC §6.3 Summon and Recruit, §3.2, §7, R64). A summon fires no Cry; `play` and `cast` do (R1).
 //!
-//! Three of the five verbs are a summon with one extra clause, so each is written as the same
-//! placement path with that clause bolted on rather than as a second placement: `summon_copy` is
-//! §10.7's copy semantics (R57), `summon_random` is §10.7's `catalog::query` pool (§5.1), and
-//! `random_keywords` on `summon` is R21's roll (#80). Placement, the `summoned` event, the face-down
-//! Trap and every fizzle stay in `zone_for`/`summon_onto` for all of them.
-//!
-//! Port of `packages/engine/src/effects/summon.ts`. TS handed the live instance from function to
-//! function and wrote through it; here a card travels as an owned copy while it is off the board,
-//! and once it is placed every write goes to the card in the state, found by its id.
+//! `summon_copy` (R57), `summon_random` (§5.1) and `summon`'s `random_keywords` (R21, #80) are each a
+//! summon with one clause bolted on: placement, `summoned`, the face-down Trap and every fizzle stay in
+//! `zone_for`/`summon_onto`. Off the board a card travels as an owned copy; placed, writes go to the state.
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -41,16 +35,13 @@ use crate::zones::{
     remove_from_any_zone, row_size,
 };
 
-// R1 (`CRY_ON_PLAY_ONLY`): a summon fires no Cry, nor does any other verb that puts a card on the
-// field without playing it (Transform, Flicker, Reborn, `summon_this`); only `play` and `cast` do.
+// R1: no verb placing a card without a play fires a Cry (Transform, Flicker, Reborn, `summon_this`).
 const _: () = assert!(
     CRY_ON_PLAY_ONLY,
     "R1: no summon fires a Cry (effects/summon.rs and every verb that places a card without a play)"
 );
 
-/// TS `{ defId, radiant }`, the partial instance `faces.cardTypeOf` reads a definition's running face
-/// from before any card exists: a scratch instance numbered from a counter of its own, so the
-/// state's ids are untouched, with no zone on the field.
+/// A scratch instance to read a def's running face from before any card exists, off the state's ids.
 fn face_probe(def_id: &str, player: PlayerId, radiant: bool) -> CardInstance {
     let mut scratch: u32 = 0;
     let mut probe = new_instance(&mut scratch, def_id, player, Zone::Resolving { player });
@@ -102,8 +93,7 @@ pub struct SummonPlacement {
     pub memory: Option<IndexMap<String, Value>>,
 }
 
-/// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
-/// placement's keys beside the rest, as TS writes the literal).
+/// `summon`'s arguments, the placement's keys beside the rest.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -206,9 +196,7 @@ fn zone_for(ctx: &EffectContext<'_>, player: PlayerId, row: Row, at: &SummonPlac
     zone_and_stance_for(ctx, player, row, at, false).map(|(slot, _)| slot)
 }
 
-/// `zone_for`, and whether the card stands in a backrow zone (R1081000). R2248000: a Unit that `flies`
-/// summoned with no lane named into a full unit row takes the leftmost open backrow zone of its side
-/// (R64, a Locked one too, R688) and stands there, as a Flying play does; the unit row is read first.
+/// `zone_for`, and whether the card stands in a backrow zone (`entry_zone`, R1081000, R2248000).
 fn zone_and_stance_for(
     ctx: &EffectContext<'_>,
     player: PlayerId,
@@ -243,7 +231,7 @@ fn entry_zone(state: &GameState, player: PlayerId, row: Row, flies: bool) -> Opt
 }
 
 /// R2248000: whether this Unit's face, as it stands where it is (§10.4), has Flying, so a summon into a
-/// full unit row may stand it in the backrow. Read off the probe of a fresh card, or the card itself.
+/// full unit row may stand it in the backrow.
 fn summon_flies(state: &GameState, card: &CardInstance) -> bool {
     card_type_of(state, card) == CardType::Unit
         && crate::layers::unit_has(state, card, crate::wire::KeywordKind::Flying)
@@ -256,12 +244,9 @@ pub(crate) fn summon_lands(state: &GameState, player: PlayerId, card: &CardInsta
         .is_some_and(|row| entry_zone(state, player, row, summon_flies(state, card)).is_some())
 }
 
-/// The body every summon shares: put the card in the zone, apply the §7 stat override, leave a Trap
-/// face-down while a Field Spell is public (§3.2, R33), and emit `summoned`.
-///
-/// `card` is the caller's copy, off the board; on success it is the card as it stands placed.
-///
-/// `stands` sets a Unit down standing in a backrow zone (R1081000, R1879001, R2248000).
+/// The body every summon shares: place the card (standing in a backrow zone if `stands`, R1081000,
+/// R1879001, R2248000), apply the §7 stat override, leave a Trap face-down while a Field Spell is public
+/// (§3.2, R33), and emit `summoned`. `card` is the caller's off-board copy, on success the card as placed.
 fn summon_onto(
     ctx: &mut EffectContext<'_>,
     card: &mut CardInstance,
@@ -320,13 +305,9 @@ fn summon_onto(
     // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
     // turn, animates as it enters the field.
     animate_on_entry(ctx, &placed);
-    // R43, R151: "one created later rolls when it is created", as it arrives anywhere a card can be
-    // looked at, and the field is such a place. A #98 Heroic Power that #22's Death summons as a copy
-    // or #95 summons into the backrow reaches neither a hand nor a library, the two arrivals
-    // `draw.rs` rolls on, and would otherwise hold no power and never be offered `activatePower`. The
-    // hook keeps a power the card already rolled (`hero_power::ensure_power`), so a card that arrives
-    // with its answer takes no rng draw.
-    // §9.3, R113: resumably, so a question in the clause pauses the rest of it (`run_start_of_game`).
+    // R43, R151: "one created later rolls when it is created", and the field is such an arrival (a #98
+    // Heroic Power summoned by #22 or #95 reaches no hand or library); a rolled power takes no rng draw.
+    // §9.3, R113: resumably, so a question in the clause pauses the rest of it.
     let arrived = find_instance(ctx.state, &card.id).cloned().unwrap_or(placed);
     run_start_of_game(ctx, &arrived, arrived.owner);
     *card = find_instance(ctx.state, &card.id).cloned().unwrap_or(arrived);
@@ -461,19 +442,14 @@ fn summon_existing(
     }
 }
 
-/// R21's roll, applied to the card the summon actually created and only once it has landed. There is
-/// one keyword-roll implementation in the engine and it lives in `effects::buff`: `grant_random_keywords`
-/// already recomputes R21's pool per draw (so the two keywords of one token are distinct and never
-/// one the token already has, which is why a Rush Token draws from the other ten), and it is reached
-/// here through the `{ of: "instance" }` `TargetSpec` rather than by copying the pool into this file.
+/// R21's roll on the card the summon created, once it has landed, through the engine's one keyword roll
+/// (`effects::buff::grant_random_keywords`, so a token's keywords are distinct and new to it).
 fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count: Option<i32>) {
     let Some(count) = count.filter(|count| *count > 0) else {
         return;
     };
     // R174: the roll is aimed at the stay the card has just arrived on, so it is named from a mark
     // taken now — a unit the same list sent to the graveyard and has just summoned back is this one.
-    // (TS ran it on a copy of the context with that mark; here the mark is set for the one effect and
-    // put back.)
     let effect = grant_random_keywords(json_as(json!({
         "target": { "of": "instance", "instanceId": card.id },
         "count": count,
@@ -484,10 +460,8 @@ fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count:
     ctx.exits_from = before;
 }
 
-/// The `keywords` rider, granted to the card the summon just made once it has landed. Each keyword
-/// goes through the `grantKeyword` effect aimed at the fresh card by its id — the same stay-marked
-/// path as `roll_random_keywords` above (R174) — so every grant is announced (`keywordGranted`) as
-/// any other grant is.
+/// The `keywords` rider: each keyword granted to the fresh card by its id through `grantKeyword`,
+/// stay-marked as `roll_random_keywords` is (R174), so every grant is announced (`keywordGranted`).
 fn grant_summon_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywords: Vec<Keyword>) {
     if keywords.is_empty() {
         return;
@@ -528,8 +502,7 @@ pub fn summon(args: SummonArgs) -> Effect {
         if let Some(made) = summon_fresh(ctx, def_id, player, &at) {
             roll_random_keywords(ctx, &made, args.random_keywords);
             grant_summon_keywords(ctx, &made, args.keywords.clone().unwrap_or_default());
-            // MD-D30, R1126: the running card remembers the summon under `rememberAs`, written the
-            // way `effects::memory::remember` writes it (its own stay, its own part's key).
+            // MD-D30, R1126: as `effects::memory::remember` writes (its own stay, its own part's key).
             if let Some(key) = &args.remember_as
                 && let Some(this) = super::targets::self_on_its_stay(ctx)
                 && let Some(card) = find_instance_mut(ctx.sink.state, &this.id)
@@ -558,12 +531,10 @@ pub struct SummonPileArgs {
     pub radiant: Option<bool>,
 }
 
-/// R1842000: a layered summon, `def_ids` summoned into one unit zone as a §3.2 Stack pile, first at
-/// the bottom, last on top (the Drone Battleship's layers, so the Shield is fought first). The bottom
-/// takes the zone a summon takes (`zone_for`, R64, R688) and each later card is summoned onto it as
-/// the new top, Stack or not; with no such zone nothing is summoned. Each card is its own summon (no
-/// Cry, R1), and a definition that is not a Unit is passed over. The zone is the part's memo, so a
-/// question a card asks as it arrives (R151) pauses the rest, which resumes onto the same zone (R113).
+/// R1842000: `def_ids` summoned into one unit zone as a §3.2 Stack pile, first at the bottom (the Drone
+/// Battleship's layers, so the Shield is fought first), into `zone_for`'s zone (R64, R688) or nothing,
+/// each its own summon (no Cry, R1), a non-Unit passed over. The zone is the part's memo, so a question a
+/// card asks as it arrives (R151) pauses the rest, which resumes onto the same zone (R113).
 pub fn summon_pile(args: SummonPileArgs) -> Effect {
     lazy_part("summonPile", move |ctx, memo| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -636,7 +607,7 @@ pub struct SummonCopyArgs {
 }
 
 impl SummonCopyArgs {
-    /// TS passed these arguments where a `SummonPlacement` was read (its `player`, `lane`, `stack`).
+    /// The `SummonPlacement` half of these arguments (its `player`, `lane`, `stack`).
     fn placement(&self) -> SummonPlacement {
         SummonPlacement {
             player: self.player,
@@ -647,17 +618,10 @@ impl SummonCopyArgs {
     }
 }
 
-/// §10.7's `cloneInstance(inst)` and R57: the copy keeps the radiant flag, the buffs (none, for a
-/// copy made Vanilla, R781003), the granted keywords, the Vanilla state and `statsOverride`, and resets damage, exertion, counters and
-/// `summonedTurn` — the last of which `summon_onto` sets to the current turn, so the copy is
-/// summoning sick like any other new body (§4.1).
-///
-/// §10.7 names `cloneInstance` as the copy primitive but nothing in the engine provides it, so the
-/// clone is written here, once, behind `summon_copy`. Everything R57 does not list is left at
-/// `new_instance`'s default rather than carried: the copy is a new card, so it owes no cost history
-/// (`costMod`, `costOverride`), has an unspent Divine Shield and an unused Reborn, and remembers
-/// nothing of its own (`memory`). Auras are layer 5 of §10.4 and computed on read, so they apply to
-/// the copy afresh with no work here (§8.3 #61).
+/// §10.7's `cloneInstance` and R57: the copy keeps the radiant flag, the buffs (none for a Vanilla copy,
+/// R781003), the granted keywords, the Vanilla state and `statsOverride`; damage, exertion, counters and
+/// `summonedTurn` reset (summoning sick, §4.1), the rest at `new_instance`'s default (no cost history or
+/// memory, an unspent Divine Shield and Reborn). Auras (§10.4 layer 5) apply afresh on read (§8.3 #61).
 pub fn clone_of(
     ctx: &mut EffectContext<'_>,
     source: &CardInstance,
@@ -682,8 +646,6 @@ pub fn clone_of(
         health: source.buffs.health,
     };
     copy.vanilla = args.vanilla == Some(true) || source.vanilla;
-    // A `Keyword` is never mutated in place — `effects::buff` pushes pool constants that several units
-    // already share — so the list is copied and its entries are not.
     if args.granted_keywords != Some(false) {
         copy.granted_keywords = source.granted_keywords.clone();
     }
@@ -697,8 +659,7 @@ pub fn clone_of(
     if let Some(armor) = source.armor_override {
         copy.armor_override = Some(armor);
     }
-    // B3.4 rule 4, R443: a copy keeps the source's tuning and enchantments too — never its Brittle
-    // count, which a copy never inherits (R57's counters). (`copyTuning` is a deep copy.)
+    // B3.4 rule 4, R443: a copy keeps the source's tuning and enchantments, never its Brittle count (R57).
     if let Some(tuning) = source.tuning.clone() {
         copy.tuning = Some(tuning);
     }
@@ -713,15 +674,13 @@ pub fn clone_of(
     copy
 }
 
-/// §6.3 Summon plus §10.7's copy semantics: "summon a copy of this unit" (#12) and "summon a Vanilla
-/// copy" (#61). The copy is placed per R64 through the same path as `summon`, so it emits `summoned`,
-/// fizzles silently on a full, occupied or Locked zone, and fires no Cry (§6.2, R1) — which is the
-/// whole reason #12 does not fill the board for 2 mana.
+/// §6.3 Summon plus §10.7's copy semantics: "summon a copy of this unit" (#12), "summon a Vanilla copy"
+/// (#61), placed per R64 by `summon`'s path: it fizzles on a full, occupied or Locked zone and fires no
+/// Cry (§6.2, R1), which is why #12 does not fill the board for 2 mana.
 pub fn summon_copy(args: SummonCopyArgs) -> Effect {
     Effect::new("summonCopy", move |ctx| {
-        // R57 copies "a unit on the field" (#12 itself, #61's chosen Human). One that has left it —
-        // sacrificed by a fused card's other half (#22) earlier in the same list — is gone for this
-        // effect (R174), and a copy is never made of a card in a graveyard.
+        // R57 copies "a unit on the field": one that left it earlier in the same list (#22's sacrifice)
+        // is gone for this effect (R174), and a card in a graveyard is never copied.
         let Some(source) = instance_of(ctx, &args.of) else {
             return;
         };
@@ -763,7 +722,7 @@ pub struct SummonRandomArgs {
 }
 
 impl SummonRandomArgs {
-    /// TS passed these arguments where a `SummonPlacement` was read.
+    /// The `SummonPlacement` half of these arguments.
     fn placement(&self) -> SummonPlacement {
         SummonPlacement {
             player: self.player,
@@ -775,22 +734,10 @@ impl SummonRandomArgs {
     }
 }
 
-/// §6.3 Summon from a random pool: "summon a random 1-cost Trap face-down into your backrow zone in
-/// this lane" (#67 Zoomerbin Oomen), "summon 3 random 3-cost Units" and "summon 5 random Field Spells
-/// or Traps" (#95 Call to Chaos, one of these per card). §10.7 makes `catalog::query` the single source
-/// of random pools and §5.1 keeps the requesting def out of one, so the draw is one `rng.pick`
-/// over `query({ …, excludeDefId })` (R387), exactly as `discover_from_catalog` builds its offer.
-///
-/// The draw happens inside `apply`, never when the effect is built: a draw taken at
-/// factory-construction time would escape the reducer and desync every later replay (§9.3, R60).
-/// It precedes the placement because the row follows from the def drawn (§5.1) — a Trap goes to
-/// the backrow and a Unit to the units row — and placement is then `summon`'s own code, so R64's
-/// leftmost-free fallback, R47's occupied-or-Locked fizzle, the `summoned` event and the face-down
-/// Trap of §3.2/R33 all stay in one place.
-///
-/// But R129 comes first: "an effect that finds nothing to do draws no random numbers". So the draw is
-/// taken only when some card of the pool has a zone to go to — #67's lane already holding a backrow
-/// card, or a full unit row under #95's third summon, draws nothing at all.
+/// §6.3 Summon from a random pool (#67 Zoomerbin Oomen, #95 Call to Chaos): one `rng.pick` over
+/// `query({ …, excludeDefId })` (§10.7, §5.1, R387), drawn inside `apply`, never as the effect is built,
+/// which would desync every later replay (§9.3, R60), and before placement, as the def drawn picks the
+/// row (R64, R47, §3.2/R33). R129: it draws only when some card of the pool has a zone to go to.
 pub fn summon_random(args: SummonRandomArgs) -> Effect {
     Effect::new("summonRandom", move |ctx| {
         // §5.1: a random pool never offers the card that generated it.
@@ -847,7 +794,7 @@ pub struct RecruitFilter {
     pub def_id: Option<OneOrMany<String>>,
 }
 
-/// TS `asList`: `undefined` is none, one value is a list of one.
+/// No value is an empty list, one value a list of one.
 fn as_list<T: Clone + PartialEq>(value: Option<&OneOrMany<T>>) -> Vec<T> {
     match value {
         None => Vec::new(),
@@ -855,12 +802,9 @@ fn as_list<T: Clone + PartialEq>(value: Option<&OneOrMany<T>>) -> Vec<T> {
     }
 }
 
-/// Whether a library card passes a Recruit's filter. The cost is R65's one calculation for that
-/// instance (`effective_cost`), which R65 applies outside play ("library, hand, GY, pools, filters,
-/// comparisons") and #30 Archivist and #94 Genn's Greed already read library cards by (R24, R66): a
-/// card never played has no X (an X-cost card reads 0) and no embiggen price (its base), and its
-/// `costMod` and `costOverride` travel with it into a hand and a library (R78, R766), so a printed-3 Unit #95 made
-/// "cost 2 less" is a Unit costing 1 for #69 Call to Arms. The definition's printed cost would miss it.
+/// Whether a library card passes a Recruit's filter, at R65's one cost (`effective_cost`), as #30
+/// Archivist and #94 Genn's Greed read library cards (R24, R66): no X (an X-cost card reads 0), no
+/// embiggen price, and the `costMod` and `costOverride` it carries (R78, R766).
 fn matches_filter(ctx: &EffectContext<'_>, card: &CardInstance, filter: &RecruitFilter) -> bool {
     let def = def_of(Some(&*ctx.state), &card.def_id);
     let types = as_list(filter.type_.as_ref());
@@ -930,9 +874,8 @@ fn recruitable(ctx: &EffectContext<'_>, card: &CardInstance, filter: &RecruitFil
         && matches_filter(ctx, card, filter)
 }
 
-/// R690: of the valid targets a scan may take, an (X)-cost card comes last — recruited, never played,
-/// it would arrive with no X behind it, so a scan takes the first valid target that is not (X)-cost
-/// and only when nothing else is valid takes the first (X)-cost one.
+/// R690: a scan takes the first valid target that is not (X)-cost (recruited, never played, it would
+/// arrive with no X), and the first (X)-cost one only when nothing else is valid.
 fn skip_x_cost(ctx: &EffectContext<'_>, cards: Vec<CardInstance>) -> Vec<CardInstance> {
     if cards.is_empty() {
         return cards;
@@ -961,11 +904,9 @@ fn valid_in_pile(
     valid
 }
 
-/// #98 radiant, "Recruit and make it Radiant": the second half is §6.3's Make Radiant, and every
-/// visible change is announced (§10.3) — `radiantSet` is what §10.10 animates the glow from. The flag
-/// went on as the card left the pile, so it lands on its Radiant face; the cue follows the summon, and
-/// goes out whether or not the card was Radiant already, as R177 has a Make Radiant on a card someone
-/// may not read (a face-down Trap) do.
+/// #98 radiant, "Recruit and make it Radiant": §6.3's Make Radiant, announced (§10.3) as `radiantSet`
+/// for §10.10's glow. The flag went on as the card left the pile; the cue follows the summon even on a
+/// card already Radiant, as R177 has a Make Radiant on a card someone may not read (a face-down Trap) do.
 fn announce_radiant(ctx: &mut EffectContext<'_>, recruited: Option<&CardInstance>, radiant: Option<bool>) {
     if let Some(recruited) = recruited
         && radiant == Some(true)
@@ -991,7 +932,6 @@ pub struct RecruitArgs {
     pub lane: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
-    // ---- v0.2.0, generation (E25) ----
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from: Option<RecruitSource>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1000,18 +940,11 @@ pub struct RecruitArgs {
     pub count: Option<i32>,
 }
 
-/// §6.3 Recruit: scan the library top down for the first permanent that matches, summon it per R64
-/// (a Trap face-down), and leave the rest of the library in its order.
-///
-/// B5 E25 extends where and how often: `from: "exile"` scans an exile newest first, and `whose` names
-/// whose pile it is (default the recruiting side's) — "Recruit a card from their exile" (Classic #1
-/// Radiant) summons the opponent's card on the recruiting side, under its control, its owner unchanged,
-/// so it goes back to its owner's piles when it leaves the field (§3.2, R12), but for a graveyard, where it
-/// lands as its controller's (R2618000). `count` is "Recruit N"
-/// (Classic #31 Radiant, #65 Radiant): N scans, one after another, each the whole of a single Recruit,
-/// so a scan whose card finds no zone fizzles and the next scan finds that card again (Core #69's
-/// "three top-down scans; stops when the board is full"). Every scan skips (X)-cost cards unless they
-/// are the only valid targets (R690).
+/// §6.3 Recruit: summon the library's first matching permanent, top down, per R64 (a Trap face-down).
+/// B5 E25: `from: "exile"` scans newest first; `whose` names whose pile (Classic #1 Radiant takes the
+/// opponent's, its owner unchanged, §3.2, R12, but into a graveyard it lands as its controller's,
+/// R2618000); `count` is N whole scans, so a card with no zone fizzles and the next finds it again
+/// (Classic #31 and #65 Radiant, Core #69). (X)-cost cards come last (R690).
 pub fn recruit(args: RecruitArgs) -> Effect {
     Effect::new("recruit", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1054,15 +987,10 @@ pub struct RecruitAllArgs {
     pub whose: Option<PlayerSpec>,
 }
 
-/// B5 E25, Classic #60 Pile On: "Recruit every permanent in your deck". The pile is read once, top
-/// down (a library) or newest first (an exile), as the effect reaches it, and each matching permanent
-/// is summoned in turn while its row has an open zone — a Unit to the unit row, the rest to the backrow,
-/// a Trap face-down (§3.2), a Flying Unit to the backrow once the unit row is full (R2248000) — and
-/// passed over, staying where it is, once there is none; a Spell or a
-/// unit-token card stays (§6.3, R218). (X)-cost cards stay too unless they are the only valid targets
-/// (R690). Each summon is its own step of a part (`resolve::lazy_part`) whose
-/// card list is kept as its memo, so a question a summoned card asks as it arrives (R151) pauses the
-/// rest, which resumes over the same cards in the same order (R113).
+/// B5 E25, Classic #60 Pile On: "Recruit every permanent in your deck". The pile is read once and each
+/// match summoned in turn where its row has an open zone (for a Flying Unit, the backrow's, R2248000),
+/// else passed over; a Spell, a unit-token card (§6.3, R218) and an (X)-cost one unless the only one
+/// (R690) stay. The memo is the card list, so a question a card asks (R151) pauses the rest (R113).
 pub fn recruit_all(args: RecruitAllArgs) -> Effect {
     lazy_part("recruitAll", move |ctx, memo| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1135,12 +1063,9 @@ pub struct FillBoardArgs {
     pub chinese: Option<bool>,
 }
 
-/// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone,
-/// left to right, a Locked one included (`fill_board_zones`, R1136000), each in Chinese with the
-/// `chinese` rider (R1185002), and then, for a token whose face has Flying, every empty, unreserved
-/// backrow zone too, where each stands (R2248000). With `row: backrow` and
-/// `side: any` it fills each side's empty, unlocked backrow zones for that side's player, a Locked
-/// one still skipped (MD-B3, R942).
+/// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone, left to
+/// right, a Locked one included (`fill_board_zones`, R1136000), then, for a Flying token, every such
+/// backrow zone, standing (R2248000). `row: backrow` fills only unlocked backrow zones (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
     Effect::new("fillBoard", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
@@ -1150,13 +1075,11 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
         };
         for player in players {
             let probe = face_probe(&args.def_id, player, args.radiant == Some(true));
-            // Skip a player unless the probe's row equals `row`.
             if row_of(card_type_of(ctx.state, &probe)) != Some(row) {
                 continue;
             }
             let radiant = args.radiant == Some(true)
                 || args.radiant_for.map(|spec| player_of(ctx, spec)) == Some(player);
-            // R1136000: a unit fill enters a Locked zone; R942's backrow fill still skips one.
             let slots = match row {
                 Row::Units => fill_board_zones(ctx.state, player),
                 Row::Backrow => open_zones(ctx.state, player, row),
@@ -1172,8 +1095,6 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
             for slot in slots {
                 summon_fresh(ctx, &args.def_id, player, &at(slot.lane));
             }
-            // R2248000: a Flying Unit fills its side's backrow too, after the unit row, every empty,
-            // unreserved zone left to right, a Locked one included, standing there.
             if row == Row::Units && summon_flies(ctx.state, &probe) {
                 for lane in 1..=row_size(Row::Backrow) {
                     summon_fresh_standing(ctx, &args.def_id, player, &at(lane));
@@ -1196,19 +1117,16 @@ pub struct FillBoardRandomArgs {
     pub radiant: Option<bool>,
 }
 
-/// R1080 (M #51): "fill your board" where every empty, unreserved unit zone, a Locked one included,
-/// left to right (R64, R1136000), gets its own pick from the match rng (R60), repeats allowed. The pool
-/// is `summon_random`'s — every set (R380) but the card that generated it (R387) — kept to the cards
-/// that go in the unit row. With no zone to fill nothing is drawn (R129). Summons fire no Cry (R1).
+/// R1080 (M #51): "fill your board" with a pick from the match rng (R60) for each unit zone `fill_board`
+/// fills (R64, R1136000), repeats allowed, from `summon_random`'s pool (every set, R380, but the card
+/// that generated it, R387) kept to Units. With no zone to fill nothing is drawn (R129).
 pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
     Effect::new("fillBoardRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        // R129: the zones are read before any draw, so a full board draws no random number.
         let slots = fill_board_zones(ctx.state, player);
         if slots.is_empty() {
             return;
         }
-        // §5.1: a random pool never offers the card that generated it.
         let own = ctx
             .self_
             .as_ref()
@@ -1247,11 +1165,9 @@ pub struct SummonRandomFromHandArgs {
     pub radiant: Option<bool>,
 }
 
-/// R1083 (M #63): summon one random Unit card from your hand, with no Cry (R1) and summoning sick,
-/// into the leftmost open unit zone (R64), a Flying one into the backrow when the unit row is full
-/// (R2248000). The pick is drawn only when a zone is open and a Unit is in hand (R129), and the
-/// opponent sees nothing until it lands (R177). On the Radiant face the Unit is made Radiant once it is
-/// on the field.
+/// R1083 (M #63): summon one random Unit card from your hand, summoning sick, where `summon` places it
+/// (R64, R2248000). The pick is drawn only when a zone is open and a Unit is in hand (R129), the opponent
+/// sees nothing until it lands (R177), and on the Radiant face the Unit is made Radiant once there.
 pub fn summon_random_from_hand(args: SummonRandomFromHandArgs) -> Effect {
     Effect::new("summonRandomFromHand", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1284,8 +1200,7 @@ pub fn summon_random_from_hand(args: SummonRandomFromHandArgs) -> Effect {
             return;
         };
         if args.radiant == Some(true) {
-            // R174: the Radiant is aimed at the stay the card has just arrived on, the way
-            // `roll_random_keywords` aims its roll.
+            // R174: aimed at the stay the card has just arrived on, as `roll_random_keywords` aims.
             let effect = set_radiant(json_as(json!({ "instanceId": moved.id })));
             let before = ctx.exits_from;
             ctx.exits_from = Some(exit_mark(ctx.state));

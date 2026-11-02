@@ -1,48 +1,19 @@
 //! `cargo jackioh fuzz --duos [--seeds N] [--from S]` (#936 S5, B25): random-policy Duos games, each
 //! held to the gate's assertions as a Duos game can meet them:
 //!
-//!   1. NO THROW: playing the game out raises nothing, and every action `duos_legal_actions` offered
-//!      is one `duos_reduce` accepts.
-//!   2. TERMINATION: the game ends — a pool emptied, a duel's own ending, or R2's turn cap — inside a
-//!      bounded number of actions. The policy never concedes (R84), so `concede` and the server's
-//!      `ceiling` occur only in a game that takes the endings channel (#1572, below).
+//!   1. NO THROW: nothing raises, and `duos_reduce` accepts every action `duos_legal_actions` offered.
+//!   2. TERMINATION: the game ends (a pool emptied, a duel's own ending, or R2's turn cap) inside a
+//!      bounded number of actions. The policy never concedes (R84); the endings channel does.
 //!   3. REPLAY EQUALITY: `duos_fold` of `(options, log)` refuses nothing and reaches the live hash.
-//!   4. PROBES (#1386): every `probe_stride()`-th state, forged actions that are never logged, each
-//!      owed a refusal with no events and the state exactly as it was. A reused-nonce probe sends the
-//!      action under a nonce of the round's own (`DUOS_NONCE_PREFIX`) that a duel has applied (§13.3),
-//!      so it can only come once a round has closed; a wrong-seat probe sends the body from a seat the
-//!      game is not waiting on; a malformed-answer probe, while the policy answers its duel's open
-//!      prompt, sends that answer made malformed as #1574's 1v1 probe makes it, each variant from its
-//!      seat in that duel; a wrapper-refused probe sends one of six duel bodies the wrapper refuses
-//!      whoever sends them (`why_duel_refused`: a concede, a draw offer, a draw answer, the R82 setting,
-//!      a timeout, an expired disconnect), in turn, from the seat that acted (#1695). A seat's own
-//!      nonces are the server's to dedupe in Duos (§9.3, §13.9), so no probe reuses one. A failure is an
-//!      error beginning `wrong-seat probe`, `reused-nonce probe`, `malformed-answer probe` or
-//!      `wrapper-refused probe` and names the step. The probes skip a step the endings channel sent.
+//!   4. PROBES (#1386): every `probe_stride()`-th state, unlogged forged actions, each owed a refusal
+//!      with no events and the state as it was: a round nonce a duel applied (§13.3), a wrong seat, a
+//!      malformed prompt answer (#1574) and a body the wrapper refuses (#1695). A seat's own nonces are
+//!      the server's to dedupe (§9.3, §13.9), so no probe reuses one.
 //!
-//! A seed fixes the game. Its setup rotates by seed the way a co-op match is made (§13.7, #1573,
-//! `duos_setup_for_seed`): team A plays `DUOS_HUMAN_TEAM` with no handicap, team B is the AI team at
-//! one of `DUOS_FUZZ_TIERS`, under `duos_ai_team` with `AI_DIFFICULTY`'s handicap on each seat (none at
-//! Easy), and the seats of one of `DUOS_DEALT_SEATS` play a dealt deck (R433). The four decks are one
-//! seeded shuffle of the gate's pool (`FUZZ_POOL`), dealt in seat order at each seat's deck size
-//! (R184), so no card is in two decks, and a failure prints the setup, the options and every deck.
-//! The policy's picks come from streams of the seed's own, outside the state (`fuzz.rs`'s header
-//! says why that is what replay equality proves). The policy is §10.7's over a
-//! Duos seat's legal actions: a seat that may act is drawn uniformly, it ends its turn when nothing
-//! else is on offer or with AI_END_TURN_PROBABILITY, and otherwise takes one of the rest, a pass
-//! included, uniformly; it never emotes (`AI_SKIPPED_ACTIONS`); the endings channel does (below).
-//!
-//! # The endings channel (#1572)
-//!
-//! On `ENDINGS_SHARE` of seeds, drawn from the seed's own stream as the 1v1 waves do (`fuzz.rs`), a game
-//! also takes an endings channel: at each step, from a stream of its own, it may send a seat's concede
-//! (B11, the teammate answering a standing offer at `ENDINGS_ANSWER_CHANCE`) or the server's ceiling
-//! (R79) in the policy's place, logged like any action so the fold reaches the live hash. While a
-//! seat's duel lists an emote (a card there hears it, R1127), the channel may send it too, at
-//! `ENDINGS_ACT_CHANCE` (#1695); the stream is drawn only then. Duos refuses a draw, a timeout, an
-//! expired disconnect and the R82 setting (B9, B10, B37, B38), so the channel sends none of them; the
-//! wrapper-refused probe does. A game that took the channel may end by `DUOS_ENDINGS_REASONS`; the
-//! summary and `--json` count the seeds that took it.
+//! A seed fixes the game: its setup rotates as a co-op match is made (§13.7, #1573), some seats on a
+//! dealt deck (R433), the four decks one seeded shuffle of `FUZZ_POOL` at each seat's size (R184), and
+//! the policy's draws come from streams outside the state. On `ENDINGS_SHARE` of seeds a game also
+//! takes the endings channel (#1572, `duos_endings_action`).
 
 use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
@@ -101,7 +72,6 @@ pub const DUOS_ENDINGS_CONCEDE_CHANCE: f64 = 0.004;
 pub const DUOS_ENDINGS_CEILING_CHANCE: f64 = 0.0015;
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
-/// With `json`, prints the wave as one JSON object instead of the text summary.
 pub fn run(from: u32, seeds: Option<u32>, json: bool) -> anyhow::Result<()> {
     let ran = duos_wave_size(seeds);
     let outcomes = play_duos_wave(from, ran);
@@ -137,8 +107,6 @@ fn duos_wave_size(raw: Option<u32>) -> u32 {
     }
 }
 
-/// One seeded shuffle of the pool, a deck of DECK_SIZE cards to each seat in seat order (A1, A2, B1,
-/// B2), so no card is in two decks.
 /// `duos_decks_for_handicaps` with no handicap: the decks `cargo test`'s co-op games deal.
 #[cfg(test)]
 pub fn duos_decks_for_seed(seed: u32) -> DuosDecks {
@@ -147,7 +115,7 @@ pub fn duos_decks_for_seed(seed: u32) -> DuosDecks {
 
 /// The tiers the seeds rotate the AI team (team B) through (#1573), as a co-op match sets it up
 /// (§13.7): its rules `duos_ai_team(tier)` and each of its seats' handicap `AI_DIFFICULTY[tier]`.
-/// Easy is the humans' rules and resources, the setup every seed played before #1573.
+/// Easy is the humans' rules and resources.
 const DUOS_FUZZ_TIERS: [Difficulty; 3] = [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard];
 
 /// The seats whose deck a seed deals rather than builds (R433), rotating (#1573): none; A1's alone,
@@ -182,7 +150,6 @@ impl DuosSetup {
         }
     }
 
-    /// What a failure prints for the setup: `AI team <tier>, dealt <seats, or none>`.
     fn label(self) -> String {
         let dealt: Vec<&str> = self.dealt.iter().map(|seat| seat.as_str()).collect();
         let dealt = if dealt.is_empty() {
@@ -207,8 +174,7 @@ fn duos_setup_for_seed(seed: u32) -> DuosSetup {
 }
 
 /// One seeded shuffle of the pool dealt in seat order (A1, A2, B1, B2), each seat its handicap's
-/// deck size (R184) or DECK_SIZE, so no card is in two decks. Team A's two decks, and with no
-/// handicap all four, are the ones every seed was dealt before #1573.
+/// deck size (R184) or DECK_SIZE, so no card is in two decks.
 fn duos_decks_for_handicaps(seed: u32, handicaps: &DuosHandicaps) -> DuosDecks {
     let mut rng = Rng::new(&format!("jackioh-duos-fuzz-decks-{seed}"), 0);
     let mut rest = rng.shuffle(FUZZ_POOL.as_slice()).into_iter();
@@ -247,12 +213,10 @@ fn max_duos_actions() -> usize {
     usize::try_from(TURN_CAP_PLAYER_TURNS).unwrap_or(0) * AI_PLAYOUT_STEP_CAP * DUOS_DUELS
 }
 
-/// One played game: the setup, the log and where it ended.
 struct DuosRun {
     options: DuosCreateOptions,
     log: Vec<DuosAction>,
     state: DuosState,
-    /// This game's heaviest action by each measure (#1364).
     heaviest: Heaviest,
     /// The prefix lengths whose end state held paused work in some duel (#1387): step 0 is the
     /// setup state, otherwise the state after that many actions.
@@ -312,10 +276,9 @@ fn duos_takes_endings(seed: u32) -> bool {
 }
 
 /// What the endings channel sends at `state` in the policy's place, and from which seat, or `None`
-/// when the policy acts (#1572). Duos refuses draws, timeouts, expired disconnects and the R82
-/// setting (B9, B10, B37, B38), so it sends only the server's ceiling and a seat's concede, and,
-/// while a seat of `seats` (who the game waits on) has its duel list an emote, that emote (R1127,
-/// #1695).
+/// when the policy acts (#1572). Duos refuses draws, timeouts, expired disconnects and the R82 setting
+/// (B9, B10, B37, B38), so it sends only the server's ceiling, a seat's concede, and, while a seat the
+/// game waits on has its duel list an emote, that emote (R1127, #1695).
 fn duos_endings_action(
     state: &DuosState,
     seats: &[DuosSeat],
@@ -418,11 +381,9 @@ fn wrapper_refused_body(seat: DuosSeat, step: usize) -> ActionBody {
     bodies[(step / probe_stride()) % bodies.len()].clone()
 }
 
-/// The probes on one Duos state (#1386), never logged, each owed a refusal: `action` under a nonce
-/// of the round's own that a duel has applied (§13.3); its body sent by a seat not in `seats` (who
-/// the game waits on), rotating by probe; when it is a duel's answer to an open prompt, that answer
-/// made malformed (`malformed_answers`), each variant from its seat in that duel (#1574); and one of
-/// the duel bodies the wrapper refuses whoever sends it, from the seat that acted, in turn (#1695).
+/// The probes on one Duos state (#1386), never logged, each owed a refusal: `action` under a round
+/// nonce a duel applied (§13.3); its body from a seat not in `seats`; a prompt answer made malformed
+/// (#1574); and a duel body the wrapper refuses whoever sends it, from the seat that acted (#1695).
 fn probe_duos_state(
     state: &DuosState,
     action: &DuosAction,
@@ -500,7 +461,6 @@ fn probe_duos_state(
     })
 }
 
-/// Assertion 1: one game played out, every offered action accepted.
 fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
     play_duos_game_inner(seed, duos_reduce, |_, _, _, _| {})
 }
@@ -708,16 +668,12 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
     Ok(result.reason.clone())
 }
 
-// ---------------------------------------------------------------------------------------------
 // The serialization checkpoint (#1387)
-// ---------------------------------------------------------------------------------------------
 
-/// The Duos game survives a serialized restart: folds the log's prefix to the seed-drawn
-/// checkpoint step (paused work preferred, the gate's `checkpoint_step`), round-trips that state
-/// through JSON requiring the identical hash, then applies the rest of the log from the restored
-/// state and requires the live hash and ending. Failures carry the `checkpoint:` prefix the way
-/// growth failures carry `growth:`. Returns the step, whether it held paused work, and the cost
-/// in milliseconds.
+/// The Duos game survives a serialized restart: fold to the seed-drawn checkpoint step (paused work
+/// preferred), round-trip that state through JSON for the identical hash, apply the rest of the log
+/// and require the live hash and ending. Failures carry the `checkpoint:` prefix. Returns the step,
+/// whether it held paused work, and the cost in milliseconds.
 fn check_duos_serial_restart(
     options: &DuosCreateOptions,
     log: &[DuosAction],
@@ -771,7 +727,6 @@ fn check_duos_serial_restart(
     Ok((step, was_paused, ms))
 }
 
-/// One seed's verdict.
 #[derive(Clone, Debug)]
 struct DuosSeedOutcome {
     seed: u32,
@@ -1186,7 +1141,6 @@ mod tests {
 
     #[test]
     fn r679_duos_seed_1427_whose_glitch_voids_the_game_passes() {
-        // The seed of the 2,000-seed wave a Glitch voided, before `voided` was an ending here.
         assert_eq!(failure_lines(&[fuzz_duos_seed(1427)]), Vec::<String>::new());
     }
 

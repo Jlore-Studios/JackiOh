@@ -1,15 +1,7 @@
 //! R1487000: a face-down card's lasting text sleeps until it is revealed or face-up (SPEC §3.2,
-//! §10.4 layer 5, §10.8; R33, R686, R1149000).
-//!
-//!   * Set face-down, a Trap's hero Armor, aura, draw limit and Infinite Reserves act on nothing, so
-//!     the other seat's view shows what a textless Trap would leave.
-//!   * Revealed (R686) or face-up, each of them acts, and so does every other lasting text a reader
-//!     takes off the board: a carrier, a Tribute worth, a targeting cost, a Plague multiplier, an Echo.
-//!   * A lasting text fused onto a face-down Trap (C+ #31, R77, R102) sleeps with it, and the Trap
-//!     still fires on its trigger.
-//!   * A kept script whose text worked face-down (`Script::live_face_down`, R767000) still does.
-//!
-//! Fixtures are this file's own: `fd-` defs indexed from 14871 (BUILD §0).
+//! §10.4 layer 5, §10.8; R33, R686, R1149000), so the other seat sees what a textless Trap would
+//! leave. A text fused onto a face-down Trap (C+ #31, R77, R102) sleeps with it; a kept script whose
+//! text worked face-down still does (R767000). Fixtures: `fd-` defs indexed from 14871 (BUILD §0).
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
@@ -26,8 +18,8 @@ const AURA_DROP: i32 = 2;
 const LIMIT: i32 = 1;
 /// The damage the firing fixture deals the enemy hero.
 const FIRE_DAMAGE: i32 = 2;
-/// The other statics fixture's numbers: its worth as a Tribute, the discards a targeting of it costs,
-/// what it multiplies a Plague placement by and the Echo it gives a revealed Spell.
+/// The statics fixture's numbers: its Tribute worth, the discards targeting it costs, its Plague
+/// multiplier and the Echo it gives a revealed Spell.
 const WORTH: i32 = 2;
 const DISCARDS: i32 = 1;
 const PLAGUE_TIMES: i32 = 2;
@@ -226,7 +218,7 @@ fn board(seed: &str, trap: &str, face: Face) -> (GameState, CardInstance) {
     (state, card)
 }
 
-/// What p2's seat is shown: p1's hero Armor, and the Attack and Health of p2's own Units.
+/// What p2 is shown: p1's hero Armor and the Attack and Health of p2's own Units.
 fn shown_to_p2(state: &GameState) -> (i32, Vec<(i32, i32)>) {
     let view = view_for(state, P2);
     let units = view
@@ -239,7 +231,6 @@ fn shown_to_p2(state: &GameState) -> (i32, Vec<(i32, i32)>) {
     (view.opponent.hero.armor, units)
 }
 
-/// p1 draws from an empty library.
 fn draw_from_empty(state: &mut GameState) -> DrawOutcome {
     state.players[P1].library.clear();
     let mut events = Vec::new();
@@ -256,7 +247,7 @@ fn two_draws(state: &mut GameState) -> usize {
     state.players[P2].hand.len() - before
 }
 
-/// §10.5 step 7's event for a played permanent (R61), built by hand as `trap_cardresolved.rs` does.
+/// §10.5 step 7's event for a played permanent (R61), built by hand.
 fn resolved(instance: &CardInstance) -> GameEvent {
     GameEvent::CardResolved {
         player: instance.controller,

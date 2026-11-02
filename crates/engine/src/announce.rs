@@ -1,18 +1,12 @@
 //! The announce window's record (docs/classic-sets.md B5 E1, R448): the plays and casts that have been
 //! paid for and announced (`cardAnnounced`) but not yet moved by §10.5 step 4.
 //!
-//! §10.5 gains a step between 3 and 4 (`play_steps::announce_step`): once the price is paid and before
-//! the card moves, the engine announces the play and runs a window in which Counters answer it, traps
-//! first and then the other triggers the announce woke (§10.3). The card waits in its player's
-//! resolving zone for the whole window — Hearthstone's stack — so nothing that reaches a hand (a
-//! discard, a hand count, a steal out of the hand) reaches it (R448). This module is only the record
-//! of which announces are open, read by every module that must know: the Counter verb
-//! (`effects::move_::counter_play`), the trap dispatch and the trigger queue (a response to an announce
-//! that a Counter has already canceled finds no card: a trap stays set, a trigger fizzles), and
-//! `view_for` and the AI's redaction (a card being set face-down is read by its player alone while it
-//! waits). It is a leaf: it reads and writes `state.announcing` and nothing else.
-//!
-//! Port of `packages/engine/src/announce.ts`.
+//! §10.5 gains a step between 3 and 4 (`play_steps::announce_step`): the engine announces the play and
+//! runs a window in which Counters answer it, traps first, then the other triggers it woke (§10.3). The
+//! card waits in its player's resolving zone (Hearthstone's stack), so nothing that reaches a hand
+//! reaches it (R448). This leaf reads and writes `state.announcing` alone, for the Counter verb
+//! (`effects::move_::counter_play`), the trap dispatch and trigger queue (a response to a canceled
+//! announce finds no card: a trap stays set, a trigger fizzles), `view_for` and the AI's redaction.
 
 use crate::state::{AnnounceRecord, CardInstance, GameState};
 use crate::wire::{PlayerId, ZoneName};

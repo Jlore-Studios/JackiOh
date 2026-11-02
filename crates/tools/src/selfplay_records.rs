@@ -1,32 +1,16 @@
 //! `cargo jackioh stats from-selfplay <log>… --out <file>`: the learn lane's self-play exports filed as
 //! development records for the card statistics (SPEC §9.11, R378; #1676, R1676000). Each game of a
-//! `selfplay` file (`selfplay.rs`, R1006001) becomes one `GameRecord` line, `source: "dev"`, `mode:
-//! "random"`, both pilots `ai`: what `cargo jackioh stats` files for a game of its own run, over the
-//! same kind of game (R258's All Random deals, the AI at the browser's budget playing both seats).
-//! `stats report`, `stats report --games` and `jackioh-server stats-import` read the file as they
-//! read a `stats --out` file.
+//! `selfplay` file (R1006001) becomes one `GameRecord` line, `source: "dev"`, `mode: "random"`, both
+//! pilots `ai`, as `stats` files a game of its own run (R258's All Random deals); `stats report` and
+//! `jackioh-server stats-import` read the file as they read a `stats --out` file.
 //!
-//! A game is folded from its seed under the catalog it was played on (`catalog_for`, R767000) and its
-//! final hash and result checked, as `positions` folds it (R1006003): a game whose log no longer
-//! reaches them (an engine change since), one played on a catalog this build does not carry, one
-//! without a result and one its self-play run marked with faults (R1489000) files nothing, and is
-//! counted, never guessed at. The counts are printed at the end.
-//!
-//! The record's patch is the catalog version its game names (R1371000: as it is named now). Its build
-//! (R1367000) is the commit and the AI generation the log carries, so no git history is read and every
-//! checkout writes the same file; a log written by a binary without git (`unknown`) files no build.
-//!
-//! The id is `dev:<patch>:selfplay:<seed>`, the seed being the export's `<base>:<n>`. It never collides
-//! with a `stats` run's id (`dev:<patch>:<series>:<n>`, since `stats --series` refuses a series that
-//! begins `selfplay:`), nor with the gather lane's (`dev:<patch>:gather:<n>`: the bases `dev` and
-//! `gather` are legal for `selfplay`, and their ids stay apart through the `selfplay:` between), nor
-//! with the arena's (`dev:<patch>:arena:…`). It is not a forced run's id (R1284000), so `stats-import`
-//! takes it.
-//!
-//! The records are written in the order the files are named and the games read, so the output is
-//! byte-identical whatever the thread count, like `selfplay`'s own file.
-//!
-//! Tooling, so it may read and write files; `crates/ai` and the engine stay pure.
+//! A game is folded under its catalog (R767000) and its hash and result checked, as `positions` folds
+//! it (R1006003): one that no longer reaches them, on an uncarried catalog, without a result or marked
+//! with faults (R1489000) files nothing and is counted. The patch is the version its game names, as
+//! named now (R1371000); the build (R1367000) is the commit and AI generation the log carries, so every
+//! checkout writes the same file. The id `dev:<patch>:selfplay:<seed>` collides with no `stats`, gather
+//! or arena run's and is no forced run's (R1284000), so `stats-import` takes it. Records follow the
+//! files' and games' order, so the output is byte-identical whatever the thread count.
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};

@@ -1,7 +1,6 @@
 // Fixture versions sort out of patch order: consumers must use patches.json order (R105 as B4.2 rewrites it).
-// V1 and V3 carry a player note (R724001); V2 has none, so the page falls back to its record's title.
-// Each records the tier micro, so all three sit in one line, Earlier patches; untiered, V1 and V3 are
-// majors by the sets they add (R1369000).
+// V1 and V3 carry a player note (R724001); V2 falls back to its record's title.
+// All three record tier micro, so they share one Earlier patches line (untiered, V1 and V3 are majors, R1369000).
 
 import type { CardDef } from "@jackioh/shared";
 

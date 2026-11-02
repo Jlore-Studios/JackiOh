@@ -1,6 +1,5 @@
 //! The retention purge: rows nothing reads any more are deleted once they are old, so the privacy
-//! policy can state how long each is kept. Not in SPEC, and no R-row. Port of
-//! `apps/server/src/api/retention.ts`, plus the purge loop `src/index.ts` ran (SURFACE §11.2:
+//! policy can state how long each is kept. Not in SPEC, and no R-row (SURFACE §11.2:
 //! `api::retention::run_purge(app)`, boot + hourly).
 //!
 //!  - `code_attempts` (profile id, peppered IP hash, time) after `CODE_ATTEMPT_RETENTION_DAYS`. The
@@ -8,27 +7,15 @@
 //!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
 //!    match is replayed from its log; the result row, and so the rating history, is kept.
 //!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
-//!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53;
-//!    `social::chat::purge`, its own transaction after the others).
-//!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a
-//!    1v1 match's (§13.9; `duos::purge_expired_logs`, its own transaction). Its row, the seed, the
-//!    decks and the result, is kept, as a 1v1 match's is.
+//!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53).
+//!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended (§13.9).
+//!    Its row (seed, decks, result) is kept.
 //!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
-//!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept. The
-//!    loop folds any record written before the totals first (`game_records::fold_pending`).
-//!  - a spend's idempotency key and its kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written
-//!    (R2124000; `economy::idempotency::sweep_expired`, its own transaction).
+//!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept.
+//!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
 //!
-//! `app.rs` spawns `run_purge`, which runs it at boot and then every
-//! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
-//! `app.purge_expired_rows` (migration 0013, with 0029's third cutoff and 0041's fourth).
-//!
-//! Before it purges, the loop files again any finished match's game record whose write failed (R1596000,
-//! `refile_unfiled`), so the purge never takes the log of a game the card statistics lack.
-//!
-//! Last, the loop settles any practice claim still unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after it
-//! burned its seed (R2422000, `api::practice::sweep_unsettled`): a claim whose pay never landed is
-//! checked again and paid once, or marked refused, as a record whose filing failed is filed again.
+//! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
+//! and 0041's fourth).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -93,9 +80,8 @@ pub async fn refile_unfiled(app: &App) -> Result<usize, StoreError> {
     Ok(filed)
 }
 
-/// The retention purge's loop: once now, since a free instance may sleep before an hour is up, and
-/// then on its interval. A failure is logged and the next run tries again. Never returns; `app.rs`
-/// spawns it.
+/// The retention purge's loop: once now, since a free instance may sleep before an hour is up, then
+/// every `RETENTION_PURGE_INTERVAL_SECONDS`; a failure is logged and the next run tries again.
 pub async fn run_purge(app: Arc<App>) {
     loop {
         // R1044000: the records written before the totals are folded first, in transactions of their

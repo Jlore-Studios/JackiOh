@@ -1,6 +1,4 @@
-// The showcase's trigger rules, from the redacted event stream alone (plan.ts; CLAUDE.md rule 7,
-// R97, R227): the opponent's plays are held up, the viewer's own never are, and a card the view
-// hides is a back that names nothing.
+// The showcase's trigger rules, from the redacted event stream alone (plan.ts; CLAUDE.md rule 7, R97, R227).
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -194,7 +192,6 @@ describe("issue #1493 trap reveals are held up", () => {
     const second = fired("p1", "b2", "core-084");
     const events = [played("p2", "c7", "core-032"), first, second];
     const items = showcasePlays(events, withEvents(view, events));
-    // The reveal and the play keep their stream order, and each reveal names its batch place.
     expect(items.map((item) => item.event)).toEqual(events);
     expect(items.map((item) => item.play)).toEqual([
       { player: "p2", defId: "core-032", instanceId: "c7", costPaid: 1, radiant: false, set: false },
@@ -214,7 +211,7 @@ describe("issue #1493 trap reveals are held up", () => {
   it("issue #1493 preserves R154 and R763 redaction in a trap reveal popup", () => {
     const hidden: GameEvent = { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 2 };
     const items = showcasePlays([hidden], withEvents(view, [hidden]));
-    // The controller's seat is public, but the trap itself names nothing: no definition, no instance.
+    // The controller's seat is public, but the trap itself names nothing.
     expect(items.map((item) => item.play)).toEqual([
       { player: "p2", defId: null, radiant: false, set: false, trapReveal: { ordinal: 1, total: 1 } },
     ]);

@@ -51,9 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-9 Honeypot — SPEC §8.10 row T-AI-9, BUILD M12 row S T-AI-9: "the opponent's Unit play springs it: a
-// Drone Interceptor with Taunt in its controller's leftmost open unit zone; a Spell or its own controller's
-// play leaves it set; radiant two of them".
+// S T-AI-9 Honeypot — SPEC §8.10 row T-AI-9, BUILD M12 row S T-AI-9.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,8 +1,6 @@
 // R660: the real-art delivery convention (convention.ts, ART.md). The first block holds the real
-// `apps/web/public/art/` and `ART_MANIFEST` to it, so an artist's delivery is a file plus a
-// manifest line and CI says what is wrong with either. The rest prove each refusal on files made up
-// here: three real WebP files, one per bitstream (encoded by ImageMagick, base64 below), and bytes
-// patched from them.
+// `apps/web/public/art/` and `ART_MANIFEST` to it, so CI says what is wrong with a delivery; the rest
+// prove each refusal on one real WebP file per bitstream (ImageMagick, base64) and bytes patched from them.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

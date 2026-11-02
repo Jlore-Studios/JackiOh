@@ -41,9 +41,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #1.3 Garage Sale — SPEC §8.9 row 1.3, BUILD M11 row M+ 1.3: "fills its caster's hand with
-// Coins up to their hand size, then discards the hand, every card of it to the graveyard; a hand at its
-// size gets no Coin and is discarded; radiant two rounds, its number read through `param()` (R749)".
+// Meditative+ #1.3 Garage Sale — SPEC §8.9 row 1.3, BUILD M11 row M+ 1.3 (R749).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,7 +84,6 @@ mod tests {
             crate::register_all();
             let cap = HAND_CAP as usize;
             let mut s = sale(false, cap - 1);
-            // Garage Sale leaves the hand as it resolves, so one more card fills it again.
             let extra = s.card(FILLER).clone();
             s.state_mut().players.p1.hand.push(extra);
             s.play(ID, json!({}));

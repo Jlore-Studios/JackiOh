@@ -1,32 +1,16 @@
 //! Declared numbers (docs/classic-sets.md B3.4 rule 5, R386): the numbers on a card that Degrade,
 //! Upgrade and KY's Constant may move, beyond cost, stats and numbered keywords.
 //!
-//! A card declares them in the catalog (`CardDef.params`, one `Param` per number, with its printed
-//! value on each face) and writes them into its texts as `{key}`. A card script never writes the
-//! literal: it reads `param(ctx, key)`, which is the number as it stands on the instance now — its
-//! face's printed value moved by the instance's tuning (`tuning.numbers`, a step count, and
-//! `tuning.set`, KY's Constant's "to 3") and held inside the number's bounds. `view_for` carries the
-//! same values on the card's view (`CardView.params`, `params_view`) for the client to fill the `{key}`s
-//! with, and a `preview` hook (R280) reads `param_value`, so the text, the view and the resolution read
-//! one function and cannot disagree.
+//! A card declares them in the catalog (`CardDef.params`) and writes them into its texts as `{key}`;
+//! a script reads `param(ctx, key)`, the face's printed value moved by the instance's tuning and held
+//! inside its bounds. `view_for` (`params_view`) and a `preview` hook (R280) read the same function, so
+//! the text, the view and the resolution cannot disagree. `param_in_reach` says which numbers a tune
+//! may reach (`tunedOn`, R749, R1431; a power's, #98 Heroic Power's, R1430).
 //!
-//! Which numbers a Degrade, an Upgrade or KY's Constant may reach is `param_in_reach`: a number only
-//! one face prints is tuned on that face alone and reads its printed value on the other (`tunedOn`,
-//! R749 for the Radiant face, R1431 for the base face), and a number that belongs to a power
-//! (`Param.power`, #98 Heroic Power's) only while the card has that power (R1430), keeping its
-//! tuning while it has another.
-//!
-//! A fused card (R77, R102) runs each ingredient's text, and each text reads its own declaration: the
-//! running part's ingredient definition (`work::PART_KEY`'s path) names which. The fused card's own
-//! declared numbers are its ingredients' — the first declaration of each key — and its tuning is one
-//! record, so a step on "damage" moves every ingredient's "damage".
-//!
-//! Port of `packages/engine/src/params.ts`. TS's `param(ctx, key)` took any object with `state`,
-//! `self`, `radiant` and optionally `data` and `defId` — a script context, a hook's
-//! `{ state, self, radiant }`, a condition context — so the Rust `param` takes any `ParamContext`.
-//! TS threw on a number a card never declared; Rust panics with the same message (SURFACE §4.4.9).
-//! A fused id's ingredients are read here as `catalog.ts`'s `fusedIdParts` read them, with a digest
-//! id's list taken off its definition in `state.transient_defs` (SURFACE §6.6: no digest table).
+//! A fused card (R77, R102) runs each ingredient's text against its own declaration (`work::PART_KEY`'s
+//! path); its own numbers are its ingredients' (the first of each key) under one tuning record. A
+//! number a card never declared panics (SURFACE §4.4.9); a digest id's ingredients are read off its
+//! definition in `state.transient_defs` (SURFACE §6.6: no digest table).
 
 use indexmap::IndexMap;
 use serde_json::Value;
@@ -43,8 +27,7 @@ use crate::tuning::{add_step, tidy_tuning, tuning_of};
 use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning, ZoneName};
 
 /// B3.4 rule 5: the numbers a definition declares. A catalog card's are its `params`; a fused
-/// definition's (R77, R102) are its ingredients', the first declaration of each key kept. Empty for a
-/// card that declares none.
+/// definition's (R77, R102) are its ingredients', the first declaration of each key kept.
 pub fn params_of(state: &GameState, def_id: &str) -> Vec<Param> {
     let def = def_of(Some(state), def_id);
     if let Some(params) = def.params.as_ref() {
@@ -64,16 +47,14 @@ pub fn params_of(state: &GameState, def_id: &str) -> Vec<Param> {
     out
 }
 
-/// The declaration of one key, or `None` when the definition declares no such number.
 pub fn param_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param> {
     params_of(state, def_id)
         .into_iter()
         .find(|param| param.key == key)
 }
 
-/// B3.4 rule 5: how far one Degrade or Upgrade moves a declared number — the `step` it declares, else
-/// 1 for a number up to 5, 2 for 6 to 12, and a quarter of it above that (rounded), all read off the
-/// face's printed value.
+/// B3.4 rule 5: how far one Degrade or Upgrade moves a declared number: the `step` it declares, else
+/// `PARAM_DEFAULT_STEP` read off the face's printed value.
 pub fn param_step(param: &Param, printed: i32) -> i32 {
     if let Some(step) = param.step {
         return step.max(1);
@@ -85,7 +66,7 @@ pub fn param_step(param: &Param, printed: i32) -> i32 {
     if size <= PARAM_DEFAULT_STEP.medium.up_to {
         return PARAM_DEFAULT_STEP.medium.step;
     }
-    // `Math.round` rounds .5 up (SURFACE §4.4.4).
+    // Rounded half up (SURFACE §4.4.4).
     let quarter = (f64::from(size) / f64::from(PARAM_DEFAULT_STEP.large_divisor) + 0.5).floor() as i32;
     quarter.max(1)
 }
@@ -96,7 +77,6 @@ fn param_min(param: &Param, printed: i32) -> i32 {
     param.min.unwrap_or_else(|| TUNE_MIN_AMOUNT.min(printed))
 }
 
-/// A declared number's ceiling; `None` is TS's `Number.POSITIVE_INFINITY`.
 fn param_max(param: &Param) -> Option<i32> {
     param.max
 }
@@ -111,21 +91,17 @@ fn tuned_on_face(param: &Param, radiant: bool) -> bool {
     }
 }
 
-/// R1430: whether the card has the power `power` names now — one of the Activate abilities it has
-/// (`abilities_of`, which leaves out an ability `ActivationDecl.has` says it lacks), its id that name,
-/// or `<name>#n` on a fused card (R102).
+/// R1430: whether the card has the power `power` names now: an Activate ability it has (`abilities_of`)
+/// with that id, or `<name>#n` on a fused card (R102).
 fn has_power(state: &GameState, card: &CardInstance, power: &str) -> bool {
     crate::subsystems::activate::abilities_of(state, card)
         .iter()
         .any(|decl| decl.id.split('#').next() == Some(power))
 }
 
-/// B3.4 rule 3's Number row and KY's Constant: whether a Degrade, an Upgrade or KY's Constant may reach
-/// the declared number `param` on `card` now. A number tuned on one face only (`tunedOn`) is out of
-/// reach on the other, where it reads its printed value whatever its tuning (R749, R1431). A number
-/// that belongs to a power (`Param.power`) is in reach only while the card has that power (R1430):
-/// another power's number keeps the tuning it has, which counts again once the card has that power
-/// back, but nothing draws it meanwhile. Every other declared number is in reach.
+/// B3.4 rule 3's Number row and KY's Constant: whether a tune may reach the declared number `param` on
+/// `card` now: not on the face a one-face number is not tuned on (`tunedOn`, R749, R1431), and a power's
+/// number (`Param.power`) only while the card has that power (R1430), keeping its tuning meanwhile.
 pub fn param_in_reach(state: &GameState, card: &CardInstance, param: &Param) -> bool {
     if !tuned_on_face(param, card.radiant) {
         return false;
@@ -137,9 +113,8 @@ pub fn param_in_reach(state: &GameState, card: &CardInstance, param: &Param) -> 
 }
 
 /// A declared number's value on a face, as `tuning` moves it: the one formula every reader shares.
-/// R749, R1431: a number tuned on one face only reads its printed value on the other face, whatever
-/// its tuning, so `steppable_params` finds no step there. A number of a power the card does not have
-/// now still reads its tuning (R1430): `param_in_reach` is what keeps the draws off it.
+/// R749, R1431: a one-face number reads its printed value on the other face; a number of a power the
+/// card lacks still reads its tuning (R1430), `param_in_reach` keeping the draws off it.
 fn value_with(param: &Param, radiant: bool, tuning: Option<&Tuning>, steps: Option<i32>) -> i32 {
     let printed = if radiant { param.radiant } else { param.base };
     if !tuned_on_face(param, radiant) {
@@ -176,11 +151,9 @@ pub struct ParamValueOptions {
     pub radiant: Option<bool>,
 }
 
-/// B3.4 rule 5, R386: the value of the declared number `key` on `instance` now — pure, for `view_for`
-/// (`CardView.params`) and for a `preview` hook (R280). `def_id` names the definition whose declaration
-/// to read when it is not the instance's own (an ingredient of a fused card, `param`); `radiant` the
-/// face, the instance's own by default. Panics for a key the definition does not declare: a card text
-/// that reads a number it never declared is a catalog error, not a 0.
+/// B3.4 rule 5, R386: the value of the declared number `key` on `instance` now, for `view_for`
+/// (`CardView.params`) and a `preview` hook (R280). Panics for a key the definition does not declare:
+/// a card text that reads a number it never declared is a catalog error, not a 0.
 pub fn param_value(
     state: &GameState,
     instance: Option<&CardInstance>,
@@ -209,13 +182,10 @@ pub fn param_value(
     )
 }
 
-/// R386: a number a card's static flag stands for (#73 Anti-oneshot Armor's `cap`, #64 Gifted
-/// Program's `giftLimit`, #79 Twinspell's `echoGain`, #84 Going Long's `armor` and `paidArmor`),
-/// which the engine reads rather than a script: `flag`, the flag's own value, moved by as much as
-/// Degrade, Upgrade and KY's Constant have moved the card's declared number `key` off its printed
-/// value. On a card of its own the flag is that printed value, so this is the number as the card
-/// stands; on a fused card (R102), whose flag may be its ingredients' sum, the one tuning record moves
-/// it as it moves every ingredient's number. A card that declares no `key` reads `flag` as it is.
+/// R386: a number a card's static flag stands for (#73's `cap`, #64's `giftLimit`, #79's `echoGain`,
+/// #84's `armor` and `paidArmor`), which the engine reads rather than a script: `flag` moved by as much
+/// as tunes moved the declared number `key` off its printed value, so on a fused card (R102), whose flag
+/// may be its ingredients' sum, the one tuning record moves it too. No `key`: `flag` as it is.
 pub fn declared_or(state: &GameState, card: &CardInstance, key: &str, flag: i32) -> i32 {
     let Some(param) = param_decl_of(state, &card.def_id, key) else {
         return flag;
@@ -224,19 +194,18 @@ pub fn declared_or(state: &GameState, card: &CardInstance, key: &str, flag: i32)
     flag + param_value(state, Some(card), key, ParamValueOptions::default()) - printed
 }
 
-/// What `param` reads off its context (TS's structural `{ state, self, radiant, data?, defId? }`):
-/// implemented for a script's `EffectContext` and for every read-only hook argument that carries a
-/// state, a card and a face.
+/// What `param` reads off its context: a script's `EffectContext` or any read-only hook argument that
+/// carries a state, a card and a face.
 pub trait ParamContext {
     fn param_state(&self) -> &GameState;
-    /// TS `ctx.self`: the running card as it stands now, or `None` once it has ceased to exist.
+    /// The running card as it stands now, or `None` once it has ceased to exist.
     fn param_self(&self) -> Option<&CardInstance>;
     fn param_radiant(&self) -> bool;
-    /// TS `ctx.data`, absent on a hook's arguments.
+    /// The run's `data`, absent on a hook's arguments.
     fn param_data(&self) -> Option<&IndexMap<String, Value>> {
         None
     }
-    /// TS `ctx.defId`, absent on a hook's arguments.
+    /// The running text's definition, absent on a hook's arguments.
     fn param_def_id(&self) -> Option<&str> {
         None
     }
@@ -272,8 +241,7 @@ impl ParamContext for HookArgs<'_> {
     }
 }
 
-/// MD-D4, R1120: an `attack_mods` hook reads its card's declared numbers (`param`) like any other
-/// pure-read hook.
+/// MD-D4, R1120: an `attack_mods` hook reads its card's declared numbers like any pure-read hook.
 impl ParamContext for crate::script::AttackModArgs<'_> {
     fn param_state(&self) -> &GameState {
         self.state
@@ -346,15 +314,10 @@ impl ParamContext for CostArgs<'_> {
     }
 }
 
-/// B3.4 rule 5: what a card script reads in place of a literal — `param(ctx, "damage")` on a card
-/// whose text says "Deal {damage} damage". The number is the running card's (`ctx.self`), on the face
-/// that is running (`ctx.radiant`), read off the declaration of the text that is running: on a fused
-/// card, the running ingredient's (`work::PART_KEY`). A script whose card has ceased to exist (R127,
-/// `ctx.self` null) reads the printed value of its definition (`ctx.def_id`).
-///
-/// B5 E14, R546: the text that is running is named by `ctx.def_id` where the run set it — a copier
-/// (Classic #57 Echo) running a copied Spell's text reads that Spell's declared numbers, on its own
-/// instance — and by the instance otherwise.
+/// B3.4 rule 5: what a card script reads in place of a literal (`param(ctx, "damage")` for "Deal
+/// {damage} damage"): the running card's number on the running face, off the running text's declaration
+/// (a fused card's ingredient, `work::PART_KEY`; B5 E14, R546: `ctx.def_id`'s, as a Classic #57 Echo's
+/// copied Spell). A card that has ceased to exist (R127) reads its definition's printed value.
 pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
     param_read(ctx, key, None)
 }
@@ -446,12 +409,10 @@ pub struct SteppableParam {
     pub delta: i32,
 }
 
-/// B3.4 rule 3's "Number" row: the declared numbers in reach (`param_in_reach`: on their face, R749,
-/// R1431, and of the card's power now, R1430), but for one only the card's Cry reads (`Param.cry`)
-/// on the face it shows while the card is on the field (R1748000, R2261001), that one step in
-/// `direction` would change — up moves a number the way its `better` says for an Upgrade, the other
-/// way for a Degrade — with how far each would move, in declaration order. A number already at the
-/// bound it would move past is not one.
+/// B3.4 rule 3's "Number" row: the declared numbers in reach (`param_in_reach`), but for one only the
+/// card's Cry reads (`Param.cry`) on the face it shows on the field (R1748000, R2261001), that one step
+/// in `direction` would change (the way `better` says for an Upgrade, the other for a Degrade), with how
+/// far each would move, in declaration order. A number at the bound it would move past is not one.
 pub fn steppable_params(
     state: &GameState,
     instance: &CardInstance,
@@ -519,8 +480,8 @@ pub fn step_param(instance: &mut CardInstance, key: &str, steps: i32) {
     tidy_tuning(instance);
 }
 
-/// Classic+ #41 KY's Constant: set a declared number outright (`tuning.set`). The steps recorded
-/// before it are spent — the number is the set value now — and a later Degrade or Upgrade steps from it.
+/// Classic+ #41 KY's Constant: set a declared number outright (`tuning.set`), spending the steps
+/// recorded before it; a later Degrade or Upgrade steps from it.
 pub fn set_param(instance: &mut CardInstance, key: &str, value: i32) {
     let tuning = tuning_of(instance);
     tuning

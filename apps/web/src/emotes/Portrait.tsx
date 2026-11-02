@@ -1,11 +1,7 @@
-// A hero portrait (issue §1, R641): the portrait's card drawn in `CardArt`'s `oval` shape, with
-// health badged on its lower right and armor on its lower left, the way Hearthstone mounts them.
-// The oval is `PortraitArt` (R1332): the card's art under the portrait's own vivid layers. When the
-// hero's menu or its inspect view opens, the oval answers with a squash and a glint (R1331), `reacting`.
-// R987: Luck rides above the health badge when the side has any.
-// The portrait is presentation only — it lives inside the existing `hero-<side>` element, which
-// keeps the testid, the ClickTarget and every glow/highlight/damage-shake it always had, so a
-// click or a drag attack lands exactly as before and no e2e spec changes.
+// A hero portrait (issue §1, R641): the portrait's card drawn in `CardArt`'s `oval` shape
+// (`PortraitArt`, R1332), squashing and glinting as its menu or inspect view opens (R1331). R987: Luck
+// rides above the health badge. Presentation only: it lives inside the `hero-<side>` element, which
+// keeps the testid, the ClickTarget and every glow, highlight and damage shake.
 
 import { useEffect, useRef, useState, type CSSProperties, type DOMAttributes, type ReactElement, type ReactNode } from "react";
 
@@ -16,10 +12,9 @@ import { PORTRAIT_REACT_MS } from "./config.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
 
 /**
- * Whether the portrait is reacting now (R1331): true for `PORTRAIT_REACT_MS` after `open` turns
- * true, and never under Reduce Motion (`reduced`, the panel's switch or the OS's). Closing the menu
- * or the view does not react, a menu turning into the view does not react again (`open` stays
- * true), and one that was already open when the hook mounted does not either.
+ * Whether the portrait is reacting now (R1331): true for `PORTRAIT_REACT_MS` after `open` turns true,
+ * never under Reduce Motion (`reduced`). Closing does not react, nor a menu turning into the view
+ * (`open` stays true), nor one already open when the hook mounted.
  */
 export function usePortraitReaction(open: boolean, reduced: boolean): boolean {
   const [reacting, setReacting] = useState(false);
@@ -47,10 +42,10 @@ export function HeroPortrait({
   children,
 }: {
   portrait: PortraitId;
-  /** The hero's true health; the badge draws it clamped to 0 like the hero always has. */
+  /** The hero's true health; the badge draws it clamped to 0. */
   health: number;
   armor: number;
-  /** The menu or the inspect view has just opened: the oval squashes and a glint crosses it (R1331). */
+  /** The menu or the inspect view has just opened (R1331). */
   reacting?: boolean;
   /** R987: the side's Luck (`SideView.luck`); the badge draws only above 0. */
   luck?: number;

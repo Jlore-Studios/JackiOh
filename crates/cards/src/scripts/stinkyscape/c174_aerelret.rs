@@ -76,11 +76,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #174 Aerelret — SPEC §8.10 row 174, BUILD M12 row S 174: "set face-down, an enemy attack reveals it
-// on a roll under 30 and not on one above; on a miss it stays set and no event is seen; revealed, a Warp
-// Disruptor and then five Paragon Mk1 arrive for its controller before the combat, which goes on to its
-// declared target; with three open unit zones three Paragons arrive; chance and paragons read through
-// `param()`; radiant all six are Radiant (Paragon Mk1 12/2)".
+// S #174 Aerelret — SPEC §8.10 row 174, BUILD M12 row S 174.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -89,16 +85,11 @@ mod tests {
     use super::{ID, PARAGON_MK1, WARP_DISRUPTOR};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    /// Moths to the Flame: enemy Units must attack it (R121).
     const MOTHS: &str = "core-009";
-    /// Aerelret's printed chance, out of `PERCENT`, and its printed Paragons.
     const CHANCE: i32 = 30;
     const PARAGONS: usize = 5;
-    /// S #23 Warp Disruptor's +2 Attack to every Unit.
     const DISRUPTOR_ATTACK: i32 = 2;
 
-    /// p1 has a Vanilla in unit zone 1 and attacks; p2 has Aerelret (`radiant` its face) set in backrow
-    /// zone 5 and `p2_field` in its unit zones. Turn 9, no turn ending by itself.
     fn trapped(seed: &str, radiant: bool, p2_field: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -115,7 +106,6 @@ mod tests {
         s
     }
 
-    /// Sets the rng so its next draw against `percent` hits or misses as `hit` says.
     fn roll_next(s: &mut Scenario, percent: i32, hit: bool) {
         let seed = s.state().seed.clone();
         let chance = f64::from(percent) / f64::from(PERCENT);
@@ -127,7 +117,6 @@ mod tests {
         s.last_events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
     }
 
-    /// p2's Paragon Mk1s on the field, each with whether it is Radiant.
     fn paragons(s: &Scenario) -> Vec<bool> {
         (1..=5)
             .filter_map(|lane| s.unit(P2, lane))
@@ -144,7 +133,6 @@ mod tests {
             .collect()
     }
 
-    /// The order the arrivals were summoned in.
     fn summoned_defs(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
@@ -191,7 +179,6 @@ mod tests {
 
         #[test]
         fn r1875002_a_forced_attack_rolls_nothing() {
-            // Moths to the Flame on Aerelret's side makes p1's Vanilla attack it at p2's start of turn:
             // an enemy Unit's attack that no one declared (R121).
             let mut s = trapped("aerelret-forced", false, json!([{ "def": MOTHS, "lane": 2 }]));
             let cursor = s.state().rng_cursor;
@@ -236,7 +223,6 @@ mod tests {
             let trap = s.backrow(P2, 5).expect("set").id;
             assert_eq!(crate::upgrade_number(&mut s, &trap, "chance"), CHANCE + 10);
             assert_eq!(crate::degrade_number(&mut s, &trap, "paragons"), 4);
-            // A roll that misses 30 but hits 40.
             let seed = s.state().seed.clone();
             let cursor = cursor_where(&seed, |cursor| {
                 let roll = Rng::new(&seed, cursor).next();
@@ -262,7 +248,6 @@ mod tests {
             assert!(fired(&s));
             assert_eq!(disruptors(&s), vec![true]);
             assert_eq!(paragons(&s), vec![true; PARAGONS]);
-            // A Paragon Mk1 12/2, with the Disruptor's +2.
             let paragon = s.unit_at(P2, 1);
             s.expect_stats(&paragon, json!({ "attack": 12 + DISRUPTOR_ATTACK, "health": 2 }));
         }

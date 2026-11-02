@@ -4,10 +4,9 @@
 //! the behavior it proves (`b<n>_…`).
 //!
 //! The engine does not depend on the real cards, so every game here deals vanilla fixture decks (one
-//! disjoint block of twenty ids per seat, so a card's id says whose deck it came from) and plays this
-//! file's own fixture cards: zero-cost Spells that hit, heal, swap, end the turn, take an extra turn or
-//! win, a lethal-hit redirect, a card with an arrival hook and a 5/5. They are registered through the
-//! testkit's per-thread override and handed to `duos_create` as `DuosCreateOptions.catalog`.
+//! disjoint block per seat, so a card's id says whose deck it came from) and plays this file's own
+//! fixture cards, registered through the testkit's per-thread override and handed to `duos_create` as
+//! `DuosCreateOptions.catalog`.
 //!
 //! A refusal is checked as the engine's contract has it: an error, and a state that hashes as before.
 
@@ -34,9 +33,7 @@ use crate::rules::fixtures::harness::{
     both, json_of, next_nonce, play_random_game, put, setup_catalog, slot,
 };
 
-// ---------------------------------------------------------------------------------------------
 // Fixture cards
-// ---------------------------------------------------------------------------------------------
 
 /// A Spell that does nothing: a move a seat can always make, so the wrapper never ends it as idle.
 const NOOP: &str = "fx-duos-noop";
@@ -86,12 +83,11 @@ const BRUTE_ATTACK: i32 = 5;
 /// What a fresh seat has left once a NUKE has spent its own HP: the pool less the overflow.
 const POOL_AFTER_NUKE: i32 = DUOS_POOL_HEALTH - (NUKE_DAMAGE - DUOS_OWN_HEALTH);
 
-/// The steps a random Duos game may take before the fuzz calls it stuck.
 const MAX_FUZZ_STEPS: usize = 20_000;
 
-/// The random-policy games B25's test plays here. B25's 200 seeds are `cargo jackioh fuzz --duos`'s
-/// (its default), on the real catalog; 200 in this binary took longer than every other rules test
-/// together, so the `rules` group plays a tenth of them on the fixture cards.
+/// B25's 200 seeds are `cargo jackioh fuzz --duos`'s (its default), on the real catalog; 200 in this
+/// binary took longer than every other rules test together, so the `rules` group plays a tenth of them
+/// on the fixture cards.
 const FUZZ_SEEDS: usize = 20;
 
 fn face(text: &str) -> Value {
@@ -132,7 +128,6 @@ fn coin() -> CardDef {
     }))
 }
 
-/// Four decks' worth of vanilla units (`fx-1` … `fx-<4 × DECK_SIZE>`), The Coin and this file's cards.
 fn catalog() -> CardDefs {
     let mut defs = vanilla_catalog(4 * DECK_SIZE, 1);
     for def in [
@@ -166,7 +161,6 @@ fn catalog() -> CardDefs {
     defs
 }
 
-/// A Spell whose resolution is `make`'s effects.
 fn on_play(make: fn() -> Vec<Effect>) -> CardScripts {
     both(Script {
         cry: Some(hook(move |_ctx| make())),
@@ -265,11 +259,8 @@ fn setup() {
     register_scripts(scripts());
 }
 
-// ---------------------------------------------------------------------------------------------
 // Games
-// ---------------------------------------------------------------------------------------------
 
-/// One disjoint block of `DECK_SIZE` vanilla ids per seat: A1 first, then B1, A2 and B2.
 fn decks() -> DuosDecks {
     DuosDecks {
         a1: vanilla_deck(DECK_SIZE, 1),
@@ -349,7 +340,6 @@ fn duos_act(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosRedu
     )
 }
 
-/// The action, which must be accepted.
 fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
     let what = label(&body);
     let result = duos_act(state, seat, body);
@@ -359,7 +349,6 @@ fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
     result.state
 }
 
-/// The action, which must be refused and change nothing.
 fn refused(state: &DuosState, seat: DuosSeat, body: DuosActionBody) {
     let what = label(&body);
     let before = duos_hash(state);
@@ -402,7 +391,6 @@ fn keep_all(state: DuosState) -> DuosState {
     state
 }
 
-/// Every round seat that has not ended ends its turn, so the round closes.
 fn finish_round(state: DuosState) -> DuosState {
     let round = state.round;
     let mut state = state;
@@ -416,9 +404,7 @@ fn finish_round(state: DuosState) -> DuosState {
     state
 }
 
-// ---------------------------------------------------------------------------------------------
 // Reading a seat
-// ---------------------------------------------------------------------------------------------
 
 fn side(state: &DuosState, seat: DuosSeat) -> &PlayerState {
     &state.duels[seat.duel()].players[seat.player()]
@@ -465,7 +451,6 @@ fn on_field(state: &DuosState, seat: DuosSeat, id: &str) -> bool {
         .any(|card| card.id == id)
 }
 
-/// A new card of `def_id` in the seat's hand, at its right end; its instance id.
 fn give(state: &mut DuosState, seat: DuosSeat, def_id: &str) -> String {
     let player = seat.player();
     let game = &mut state.duels[seat.duel()];
@@ -521,7 +506,6 @@ fn offers_play(state: &DuosState, seat: DuosSeat, id: &str) -> bool {
     })
 }
 
-/// The play of `id` the wrapper offers the seat.
 fn legal_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
     duos_legal_actions(state, seat)
         .into_iter()
@@ -554,7 +538,6 @@ fn legal_attack(state: &DuosState, seat: DuosSeat, attacker: &str, target: &str)
         .unwrap_or_else(|| panic!("{seat} is offered no attack of {attacker} on {target}"))
 }
 
-/// Gives the seat a `def_id` and plays it, which must be accepted.
 fn cast(state: DuosState, seat: DuosSeat, def_id: &str) -> DuosReduceResult {
     let mut state = state;
     let id = give(&mut state, seat, def_id);
@@ -572,7 +555,6 @@ fn has_duel_event(events: &[DuosEvent], kind: GameEventType) -> bool {
         .any(|event| matches!(event, DuosEvent::Duel { event, .. } if event.event_type() == kind))
 }
 
-/// The pass's `(from, to, instanceId, newInstanceId)`, one per `passed` event.
 fn passed(events: &[DuosEvent]) -> Vec<(DuosSeat, DuosSeat, String, String)> {
     events
         .iter()
@@ -631,7 +613,6 @@ fn strings_in(value: &Value) -> IndexSet<String> {
     out
 }
 
-/// Every seat's pool reads its team's, and a spent seat's health reads it too.
 fn expect_pools_agree(state: &DuosState) {
     for seat in DUOS_SEATS {
         let pool = state.teams[seat.team()].pool;
@@ -688,9 +669,8 @@ impl Live {
     }
 }
 
-/// §10.7's random policy over the four seats: a uniform seat among those that may act, then a
-/// uniform action, ending the turn when it is all that is left or with AI_END_TURN_PROBABILITY.
-/// Concedes are left out, so a game ends by a pool, a duel's own end or the turn cap.
+/// §10.7's random policy over the four seats, concedes left out, so a game ends by a pool, a duel's
+/// own end or the turn cap.
 fn play_randomly(live: &mut Live, seed: &str, max_steps: usize) {
     let mut policy = Rng::new(&format!("duos-policy-{seed}"), 0);
     for step in 0..max_steps {
@@ -736,9 +716,7 @@ fn play_randomly(live: &mut Live, seed: &str, max_steps: usize) {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B1: two ordinary duels
-// ---------------------------------------------------------------------------------------------
 
 mod b1_two_ordinary_duels {
     use super::*;
@@ -768,7 +746,6 @@ mod b1_two_ordinary_duels {
                 "duel {d}: The Coin waits for the mulligan"
             );
         }
-        // Each seat sits in its own duel with its own deck.
         for seat in DUOS_SEATS {
             let deck = deck_of(seat);
             let own = side(&state, seat);
@@ -865,9 +842,7 @@ mod b1_two_ordinary_duels {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B2: the four mulligans
-// ---------------------------------------------------------------------------------------------
 
 mod b2_mulligans {
     use super::*;
@@ -968,9 +943,7 @@ mod b2_mulligans {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B3: a 1v1 game is untouched
-// ---------------------------------------------------------------------------------------------
 
 mod b3_one_v_one_untouched {
     use super::*;
@@ -1000,9 +973,7 @@ mod b3_one_v_one_untouched {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B4–B9: rounds
-// ---------------------------------------------------------------------------------------------
 
 mod b4_round_seats {
     use super::*;
@@ -1111,7 +1082,6 @@ mod b5_turn_end_sync {
         );
     }
 
-    /// One action under the seat's own nonce.
     fn under(state: &DuosState, seat: DuosSeat, nonce: &str, body: DuosActionBody) -> DuosReduceResult {
         duos_reduce(
             state,
@@ -1298,10 +1268,7 @@ mod b7_turn_ended_by_an_effect {
     }
 
     /// #936: a first turn that ends as it begins, while the other duel's mulligans are still open,
-    /// used to open round 1 on the duel's new active player, so round 1 went to B1 and A2 and duel 0
-    /// stayed a turn ahead for the rest of the game, every round mixing the teams. On the server a
-    /// Tommy Tempo drawn at the start of A1's first turn put A1 in round 2, the AI team's, which then
-    /// waited a whole round clock for a person who was not expecting to act.
+    /// must not open round 1 on the duel's new active player, which would mix the teams every round.
     #[test]
     fn b7_a_first_turn_ended_before_round_1_opens_is_still_round_1s_and_its_seat_has_ended() {
         setup();
@@ -1462,9 +1429,7 @@ mod b9_idle_round_seats {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B10, B11: draws and concedes
-// ---------------------------------------------------------------------------------------------
 
 mod b10_no_draws_no_duel_concede {
     use super::*;
@@ -1632,9 +1597,7 @@ mod b11_team_concede {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B12–B18: life
-// ---------------------------------------------------------------------------------------------
 
 mod b12_starting_life {
     use super::*;
@@ -2137,9 +2100,7 @@ mod b18_health_swap {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B19–B22: passing
-// ---------------------------------------------------------------------------------------------
 
 mod b19_pass_legality {
     use super::*;
@@ -2491,9 +2452,7 @@ mod b22_passes_left {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B23: views
-// ---------------------------------------------------------------------------------------------
 
 mod b23_views {
     use super::*;
@@ -2688,9 +2647,7 @@ mod r1074000_a_passed_card_reads_to_its_passer_alone {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B24, B25: replay
-// ---------------------------------------------------------------------------------------------
 
 mod b24_fold {
     use super::*;

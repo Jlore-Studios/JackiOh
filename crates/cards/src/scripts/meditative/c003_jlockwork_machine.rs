@@ -2,13 +2,12 @@
 //!
 //! Base:    "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
 //! Radiant: "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
-//! Engine: a trigger on `cardPlayed` by the opponent (§10.5 step 4: a cast is a play, R70, a cast on draw
-//! none, R2179002; a Trap set
-//! face-down is a play too; a countered card was never played, §6.3 Counter), exiling the top cards of
-//! its controller's library by C+ #12.6 Frozen Wastes' pattern: `for_each_card` over the library's top
-//! (index 0) and `exile` of each. A short deck exiles what it has; an empty one exiles nothing and causes
-//! no fatigue (Exile is no draw, §6.3). It answers at step 4, before the played card resolves. Rush (on both
-//! faces since patch v0.3.10) is catalog data, so the Radiant face's script is the base's.
+//! A trigger on `cardPlayed` by the opponent (§10.5 step 4: a cast is a play, R70, a cast on draw
+//! none, R2179002; a Trap set face-down is a play too; a countered card was never played, §6.3 Counter),
+//! exiling the top cards of its controller's library by C+ #12.6 Frozen Wastes' pattern. A short deck
+//! exiles what it has; an empty one exiles nothing and causes no fatigue (Exile is no draw, §6.3). It
+//! answers at step 4, before the played card resolves. Rush is catalog data, so the Radiant face's
+//! script is the base's.
 
 use jackioh_engine::prelude::*;
 
@@ -53,13 +52,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #3 Jlockwork Machine — SPEC §8.8 row 3, BUILD M10 row M 3: "A trigger on the opponent's `cardPlayed` that
-// exiles the top 3 cards of its controller's deck, by Frozen Wastes' pattern: a cast counts (R70) and a
-// Trap set face-down is a play; it answers at §10.5 step 4, before the played card resolves (a cast's once
-// the effect that cast it has resolved, R117); a countered card exiles nothing; its own controller's plays
-// exile nothing; a short deck exiles what it has with no fatigue, an empty one nothing; exiles reads
-// through param() (R386); the Radiant face adds Rush".
-//
+// M #3 Jlockwork Machine — SPEC §8.8 row 3, BUILD M10 row M 3.
 // Fixtures: #5 Stockpile is a (1) Spell and #21 Hinder a (0) Spell cast on draw; #17 Counterspell (classic)
 // is a (2) Trap that counters a Spell; #8 Mr. Vanilla is a 4/4. Every game keeps a spare #10 Rapid Replenish
 // in the acting side's hand and cards in both libraries, so no turn ends by itself (R82).
@@ -132,8 +125,7 @@ mod tests {
 
         #[test]
         fn r2179002_an_opponents_cast_on_draw_is_no_play_and_exiles_nothing() {
-            // Hinder is on top of p2's deck: p1 ends its turn, p2 draws it and it is cast on the draw,
-            // which through v0.5.2 was a play and exiled 3 (R70).
+            // Hinder is on top of p2's deck: p1 ends its turn, p2 draws it and it is cast on the draw.
             let mut s = crate::scenario(json!({
                 "p1": { "field": [ID], "hand": [FILLER], "library": DECK.to_vec() },
                 "p2": { "hand": [FILLER], "library": [HINDER, VANILLA, VANILLA] },

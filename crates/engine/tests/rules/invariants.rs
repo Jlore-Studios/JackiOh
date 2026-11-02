@@ -132,9 +132,7 @@ fn i7_work_a_game_over_left_owed_is_not_orphaned() {
     assert_eq!(orphaned(&monitor.after(&[], &state)), Vec::<&String>::new());
 }
 
-// ---------------------------------------------------------------------------------------------
 // I11: Unit tokens never persist off the field (§3, §3.2, R11)
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn i11_unit_tokens_in_graveyard_exile_or_held_are_flagged_and_a_spell_token_in_graveyard_is_allowed() {
@@ -183,9 +181,7 @@ fn i11_unit_tokens_in_graveyard_exile_or_held_are_flagged_and_a_spell_token_in_g
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // I12: a switch and an attack share exertion unless the Unit has Deft (§4.1, R49, R636)
-// ---------------------------------------------------------------------------------------------
 
 fn exertion_state(seed: &str, attacker_def: &str) -> (GameState, String, String) {
     let mut state = playing(seed);
@@ -537,9 +533,7 @@ fn i12_a_confirmed_refresh_used_by_an_r1202_substitute_is_clean() {
     assert_eq!(found, Vec::<String>::new());
 }
 
-// ---------------------------------------------------------------------------------------------
 // I9: what an action announces is what it left (#1719)
-// ---------------------------------------------------------------------------------------------
 
 /// The I9 findings of a monitor started on `start` and fed one action's `events`, which left `state`.
 fn wire_findings(start: &GameState, events: &[GameEvent], state: &GameState) -> Vec<String> {
@@ -676,9 +670,7 @@ fn i9_a_game_over_that_is_not_the_result_is_flagged() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // I9: each fatigue draw is the seat's next, at its damage (#1902)
-// ---------------------------------------------------------------------------------------------
 
 /// p1 ends their first turn into p2's draw from an empty library, p2 having taken `taken` fatigue
 /// draws before it: one `fatigue` for p2's draw `taken + 1` (§2.4, R3, R315).

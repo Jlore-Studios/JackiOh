@@ -33,9 +33,7 @@ afterEach(() => {
   setReducedMotion(false);
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The BUILD M5-T4 duration column, copied literally. A drift in either direction fails.
- * ------------------------------------------------------------------------------------------- */
+/* The BUILD M5-T4 duration column, copied literally. A drift in either direction fails. */
 
 const BUILD_DURATIONS: Record<GameEventType, number> = {
   cardPlayed: 400,
@@ -83,7 +81,6 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   emoted: 0,
   costChanged: 200,
   modifierChanged: 200,
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: 300,
   countered: 450,
   stolen: 450,
@@ -110,29 +107,24 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   translated: 400,
   // R800: a discard a discard guard stopped shakes the hand once.
   discardPrevented: 300,
-  // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
-  // Patch v0.3.X (Meditative #39.2, R961).
+  // Meditative #39.2, R961.
   jadeChanged: 200,
-  // Meditative MB05 (ME-SECRET).
   secretChosen: 300,
   secretRevealed: 400,
   predicted: 400,
   // #915 (R915004).
   scriptFailed: 400,
-  // Meditative batch 17 (MB17).
   deradianted: 400,
   manaSpent: 150,
-  // Patch v0.3.10 (C+ #62 KY's Papaya, R831003).
+  // C+ #62 KY's Papaya, R831003.
   curveDrawn: 700,
   autopilotEngaged: 600,
   // Stinkyscape's Dormant (R1839002).
   awakened: 400,
   // Issue #1838 (Tradable, R1838001).
   traded: 300,
-  // Issue #1840 (Resources and Credits).
   marketCreditsChanged: 200,
-  // Issue #1853 (the Marketplace, R1853003).
   marketBought: 250,
   marketSold: 250,
   // Stinkyscape's Starship (R1852000, R1852003).
@@ -152,9 +144,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   rolled: 1200,
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * One event of every type, so the table can be exercised end to end.
- * ------------------------------------------------------------------------------------------- */
+/* One event of every type, so the table can be exercised end to end. */
 
 const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   cardPlayed: { type: "cardPlayed", player: "p1", instanceId: "c1", defId: "core-002", costPaid: 1 },
@@ -228,7 +218,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  // docs/classic-sets.md B3, B5.
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
   countered: { type: "countered", player: "p1", instanceId: "c1", defId: "core-035", byInstanceId: "b5", to: "graveyard" },
   stolen: { type: "stolen", instanceId: "c1", defId: "core-035", from: "p2", to: "p1", zone: "hand" },
@@ -290,7 +280,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
 
-/** A long stream: one of every type, many times over, so the drain test is a real workload. */
 function longStream(rounds: number): GameEvent[] {
   const out: GameEvent[] = [];
   for (let i = 0; i < rounds; i += 1) out.push(...ALL_SAMPLES);
@@ -298,9 +287,8 @@ function longStream(rounds: number): GameEvent[] {
 }
 
 /**
- * The stylesheet as text. The BUILD table's Animation column is only honored if the keyframes
- * exist, so the test reads the file rather than trusting the table. Vitest stubs CSS imports
- * (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
+ * The stylesheet as text, so the keyframes the table names are checked to exist. Vitest stubs CSS
+ * imports (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
  */
 const animationsCss: string = (() => {
   for (const candidate of ["src/game/animations.css", "apps/web/src/game/animations.css"]) {
@@ -319,13 +307,11 @@ function fakeClock() {
   return {
     schedule,
     calls,
-    /** Fires the oldest pending callback. */
     tick(): void {
       const next = calls.shift();
       expect(next, "nothing scheduled").toBeDefined();
       next?.run();
     },
-    /** Fires callbacks until none is left. */
     flush(): void {
       let guard = 0;
       while (calls.length > 0) {
@@ -338,9 +324,7 @@ function fakeClock() {
   };
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The table is total
- * ------------------------------------------------------------------------------------------- */
+/* The table is total */
 
 describe("ANIMATIONS covers every event type", () => {
   it("has exactly one row per GameEvent[\"type\"]", () => {
@@ -396,9 +380,7 @@ describe("ANIMATIONS covers every event type", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Durations
- * ------------------------------------------------------------------------------------------- */
+/* Durations */
 
 describe("durations", () => {
   it("matches the BUILD M5-T4 table exactly", () => {
@@ -435,9 +417,7 @@ describe("durations", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Payload-dependent targets
- * ------------------------------------------------------------------------------------------- */
+/* Payload-dependent targets */
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;
@@ -554,11 +534,9 @@ describe("target resolution", () => {
   });
 
   it("drawOffered shows the toast on the opponent's seat only", () => {
-    // p1 is the viewer. p1 offering: p1's own seat shows no toast.
+    // p1 is the viewer: its own offer shows it no toast.
     expect(targetFor({ type: "drawOffered", player: "p1" }, view)).toBeNull();
-    // p2 offering: the viewer (p2's opponent) is the seat that sees the toast.
     expect(targetFor({ type: "drawOffered", player: "p2" }, view)).toBe(animTestid.drawToast);
-    // The resolution is visible to both seats.
     expect(targetFor({ type: "drawAnswered", player: "p1", accept: true }, view)).toBe(animTestid.drawToast);
     expect(targetFor({ type: "drawAnswered", player: "p2", accept: false }, view)).toBe(animTestid.drawToast);
   });
@@ -617,7 +595,6 @@ describe("target resolution", () => {
   });
 
   it("trapFired animates the trap's own card, and its zone when the viewer may not identify it", () => {
-    // The viewer's own face-up trap has an element.
     expect(
       targetFor(
         { type: "trapFired", instanceId: YOUR_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 2 },
@@ -707,22 +684,16 @@ describe("target resolution", () => {
     expect(locateInstance(view, YOUR_TRAP)).toBe(testid.card(YOUR_TRAP));
     expect(locateInstance(view, HAND_CARD)).toBe(testid.handCard(HAND_CARD));
     expect(locateInstance(view, "nope")).toBeNull();
-    // A face-down backrow slot carries no instanceId at all (SPEC §10.8), and an empty view has
-    // nothing to find.
+    // A face-down backrow slot carries no instanceId at all (SPEC §10.8).
     expect(locateInstance(baseView(), HAND_CARD)).toBeNull();
   });
 
-  // NOT THE ASSERTION THAT MATTERS. This only proves a row returns a string; it cannot prove the
-  // string names an element, because nothing here renders. A row that points at a testid no
-  // component draws passed this test for the whole of M5 — `modifierChanged` did, and #77
-  // Professor Curvature and #78 /fullsend were invisible to the player because of it. The real
-  // assertion lives in `animation-targets.test.tsx`, which renders the client and checks the
-  // element is in the document; this one is kept only for the rows whose samples name cards the
-  // fixture does not hold, and it is strengthened to say WHICH rows may legitimately go dark.
+  // NOT THE ASSERTION THAT MATTERS: nothing here renders, so this cannot prove a row's string names
+  // an element (`modifierChanged` passed it while #77 Professor Curvature and #78 /fullsend were
+  // invisible). The real assertion lives in `animation-targets.test.tsx`.
   it("resolves a target for every event type without throwing, and only the documented rows go dark", () => {
     // Rows that resolve to nothing on a seat that shows nothing (§10.6), plus the rows whose
-    // `SAMPLES` entry names a card this fixture does not render at all — those are a property of
-    // the sample, not of the table, which is exactly why this test cannot stand in for the real one.
+    // `SAMPLES` entry names a card this fixture does not render at all.
     const mayBeNull = new Set<GameEventType>([
       "promptOpened",
       "promptAnswered",
@@ -749,9 +720,7 @@ describe("target resolution", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Planning and the cardPlayed + summoned collapse
- * ------------------------------------------------------------------------------------------- */
+/* Planning and the cardPlayed + summoned collapse */
 
 describe("planEntries", () => {
   const view: PlayerView = fullBoardView();
@@ -769,8 +738,7 @@ describe("planEntries", () => {
     expect(entry.type).toBe("cardPlayed");
     // One motion, one span of time: the pair takes the `cardPlayed` duration, not the sum.
     expect(entry.durationMs).toBe(BUILD_DURATIONS.cardPlayed);
-    // The hand card reports `cardPlayed` and the landing zone reports `summoned`: the card
-    // leaving the hand and scaling into the zone are the two halves of the same motion.
+    // The card leaving the hand and scaling into the zone are two halves of the same motion.
     expect([...entry.frames]).toEqual([
       [testid.handCard("c1"), "cardPlayed"],
       [testid.zone("you", "units", 2), "summoned"],
@@ -842,9 +810,7 @@ describe("planEntries", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The runner
- * ------------------------------------------------------------------------------------------- */
+/* The runner */
 
 describe("createAnimationQueue", () => {
   const view: PlayerView = fullBoardView();
@@ -860,8 +826,7 @@ describe("createAnimationQueue", () => {
 
     queue.enqueue(events, view);
 
-    // Everything happened inside `enqueue`: nothing is queued, nothing is in flight, nothing is
-    // animating and no timer was ever scheduled (BUILD M5-T4 acceptance).
+    // Everything happened inside `enqueue` (BUILD M5-T4 acceptance).
     expect(clock.schedule).not.toHaveBeenCalled();
     expect(queue.pending()).toBe(0);
     expect(queue.inFlight()).toBeNull();
@@ -909,8 +874,8 @@ describe("createAnimationQueue", () => {
 
   it("schedules exactly one timer per non-zero-duration entry over a long stream", () => {
     const clock = fakeClock();
-    // The burst budget is lifted here so the BUILD M5-T4 durations are the ones scheduled; what the
-    // budget does to a stream this long is pinned by the test below instead.
+    // The burst budget is lifted so the BUILD M5-T4 durations are the ones scheduled; the test
+    // below pins what it does to a stream this long.
     const queue = createAnimationQueue({
       schedule: clock.schedule,
       reducedMotion: false,
@@ -1056,7 +1021,7 @@ describe("createAnimationQueue", () => {
     queue.enqueue(events, view);
     clock.flush();
 
-    // The unknown entry is skipped without a timer, like gameOver: only the known two schedule.
+    // The unknown entry is skipped without a timer, like gameOver.
     expect(clock.schedule.mock.calls.map((c) => c[1])).toEqual([
       BUILD_DURATIONS.manaChanged,
       BUILD_DURATIONS.turnStarted,
@@ -1147,14 +1112,9 @@ describe("createAnimationQueue", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * newEventsSince: the part of a view's window the runner has not been given
- * ------------------------------------------------------------------------------------------- *
- *
+/* newEventsSince: the part of a view's window the runner has not been given.
  * R97 redacts the whole window again for every view, judging each card by where it sits now, so an
- * event two successive views share can read differently in each. The diff compared them byte for
- * byte, found no overlap, and handed the runner the whole window: every animation already played
- * ran a second time before the new ones (the "animations play twice" report).
+ * event two successive views share can read differently in each.
  */
 
 describe("newEventsSince", () => {
@@ -1199,7 +1159,6 @@ describe("newEventsSince", () => {
     const ended: GameEvent = { type: "turnEnded", player: "p1", turn: 5, unspentMana: 0 };
 
     expect(newEventsSince(prev, [...redacted, ended])).toEqual([ended]);
-    // And the reverse: a window that hid them, followed by one that reads them.
     expect(newEventsSince(redacted, [...again(prev), ended])).toEqual([ended]);
   });
 

@@ -1,14 +1,11 @@
-//! The prompt kinds patch v0.2.0 added (docs/classic-sets.md B5 E18): `number`, `answer`, `cell`,
+//! The prompt kinds of docs/classic-sets.md B5 E18: `number`, `answer`, `cell`,
 //! `reward`, a budgeted `pick`, and a mode prompt held by the player who did not play the card. The AI
-//! needs nothing new for them: `legalActions` lists every answer (`prompts.promptAnswers`), the beam
-//! scores each one through `reduce`, and `simulate` answers a prompt the other seat holds mid-line. Each
-//! test opens a kind for the AI's seat with a test-only continuation (the pattern of answer-key.test.ts,
-//! which proves R465's key-stripping and is not repeated here) and checks that `decide` answers within
-//! its budget, with reason "prompt", and picks the clearly better option where one is.
+//! needs nothing new for them: `legalActions` lists every answer, the beam scores each one through
+//! `reduce`, and `simulate` answers a prompt the other seat holds mid-line. Each test opens a kind for
+//! the AI's seat with a test-only continuation (the pattern of answer_key.rs, which proves R465's
+//! key-stripping) and checks that `decide` answers within its budget, with reason "prompt".
 //!
-//! Port of `packages/ai/test/prompts-v020.test.ts`. TS registered the fixture card for the whole file
-//! at import; the testkit's override is per thread (SURFACE §8), so every test calls `install()`
-//! first. TS's per-test `{ timeout }` has no `cargo test` twin.
+//! The testkit's override is per thread (SURFACE §8), so every test calls `install()` first.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -50,12 +47,10 @@ fn damage_enemy(amount: i32) -> Vec<Effect> {
 
 fn continuations() -> Script {
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
-    // The number picked is damage to the enemy hero.
     resume.insert(
         "number",
         hook(|ctx| damage_enemy(effects::chosen_number(ctx).unwrap_or(0))),
     );
-    // The picked cards' costs, summed, are damage to the enemy hero.
     resume.insert(
         "pick",
         hook(|ctx| {
@@ -70,7 +65,6 @@ fn continuations() -> Script {
             damage_enemy(total)
         }),
     );
-    // The unit in the picked cell is destroyed, whoever's it is.
     resume.insert(
         "cell",
         hook(|ctx| {
@@ -88,7 +82,6 @@ fn continuations() -> Script {
             }
         }),
     );
-    // Three rewards: 5 damage to your own hero, nothing, 5 damage to the enemy hero.
     resume.insert(
         "reward",
         hook(|ctx| {
@@ -103,7 +96,6 @@ fn continuations() -> Script {
         }),
     );
     resume.insert("answer", hook(|_ctx| Vec::new()));
-    // Run as the card's controller (the owner), whoever answered: "owner-hurt" hits the owner's hero.
     resume.insert(
         "their-mode",
         hook(|ctx| {
@@ -123,8 +115,8 @@ fn continuations() -> Script {
     }
 }
 
-/// TS's module-level `registerCatalog(…)` and `registerScripts(…)`: the real catalog and scripts plus
-/// the fixture card, installed through the testkit's override for this thread.
+/// The real catalog and scripts plus the fixture card, installed through the testkit's override for
+/// this thread.
 fn install() {
     jackioh_cards::register_all();
     let mut catalog = registered_catalog().clone();
@@ -142,7 +134,6 @@ fn install() {
     register_scripts(scripts);
 }
 
-/// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
 fn spread(base: Value, over: Option<&Value>) -> Value {
     let mut out = base;
     if let (Some(target), Some(Value::Object(extra))) = (out.as_object_mut(), over) {
@@ -201,7 +192,6 @@ fn answered(state: &GameState, seed: &str) -> ActionBody {
     decision.action
 }
 
-/// An `answer` action's selection (TS `answered(…).selection`).
 fn selection_of(action: &ActionBody) -> Vec<Selection> {
     match action {
         ActionBody::Answer { selection, .. } => selection.clone(),
@@ -218,7 +208,6 @@ fn mode(option: &str) -> Selection {
 mod e18_the_ai_answers_the_new_prompt_kinds {
     use super::*;
 
-    /// E18: a `number` prompt whose number is damage to the enemy hero is answered with the largest
     #[test]
     fn e18_a_number_prompt_whose_number_is_damage_to_the_enemy_hero_is_answered_with_the_largest() {
         install();
@@ -231,11 +220,8 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert_eq!(selection_of(&answered(&state, "e18-number")), vec![mode("5")]);
     }
 
-    /// E18: a budgeted `pick` takes the most the budget affords
     #[test]
     fn e18_a_budgeted_pick_takes_the_most_the_budget_affords() {
-        // Midrange Menace (3), Pointmaster (2), Archivist (2), Mr. Vanilla (1), two picks within (4): the
-        // best sets spend all four.
         install();
         let effect = effects::choose_pick(json_as(json!({
             "step": "pick",
@@ -267,10 +253,8 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert_eq!(picked.iter().sum::<i32>(), 4);
     }
 
-    /// E18: a `cell` prompt picks the one cell where the destroy hits an enemy
     #[test]
     fn e18_a_cell_prompt_picks_the_one_cell_where_the_destroy_hits_an_enemy() {
-        // p1's Mr. Vanilla in lane 1 and p2's Pointmaster in lane 3; every other cell is empty.
         install();
         let effect = effects::choose_cell(json_as(json!({ "step": "cell", "cells": { "rows": ["units"] } })));
         let state = asked(
@@ -293,7 +277,6 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         );
     }
 
-    /// E18: a `reward` prompt takes the reward that hurts the enemy
     #[test]
     fn e18_a_reward_prompt_takes_the_reward_that_hurts_the_enemy() {
         install();
@@ -314,7 +297,6 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         );
     }
 
-    /// E18: an `answer` prompt gets one of its options
     #[test]
     fn e18_an_answer_prompt_gets_one_of_its_options() {
         install();
@@ -366,7 +348,6 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
                     .collect()
             })
             .unwrap_or_default();
-        // R1563007: as many as the prompt's offer builds, the Unit always among them.
         assert!(!options.is_empty() && options.len() <= 4);
         let picked = selection_of(&answered(&state, "r881-craft"));
         assert!(picked.first().is_some_and(|first| options.contains(first)));
@@ -435,11 +416,9 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert!(picked.first().is_some_and(|first| options.contains(first)));
     }
 
-    /// E18: a mode prompt the opponent's card hands the AI, on the opponent's turn, is answered against the card's owner
     #[test]
     fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner()
      {
-        // p2 plays a card whose question p1 answers (`by: "enemy"`); the answer runs as p2's.
         install();
         let effect = effects::choose_mode(json_as(json!({
             "step": "their-mode",
@@ -463,12 +442,9 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         );
     }
 
-    /// E18: the AI's own play opens mode prompts the opponent holds; the search answers them in simulation and the turn completes
     #[test]
     fn e18_the_ais_own_play_opens_mode_prompts_the_opponent_holds_the_search_answers_them_in_simulation_and_the_turn_completes()
      {
-        // Pickle is the AI's only card: the opponent chooses three times, on their own turn
-        // (R1279000), discarding from their own hand.
         install();
         let mut state = scenario(json!({
             "seed": "e18-pickle",
@@ -506,8 +482,6 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
                 step += 1;
                 continue;
             }
-            // The deferred questions open on the opponent's turn, so the AI's own turn
-            // holds no prompt for them: once it is over, only answers are left.
             if state.turn != start {
                 break;
             }
@@ -539,15 +513,13 @@ mod e18_a_whole_game_with_the_new_prompts {
     /// questions a turn, so short games never ask them: more games are needed.
     const E18_GAMES: usize = 20;
 
-    /// E18: playMatch finishes a short AI-vs-greedy game in which E18 prompts open, with no refusal, throw or fallback
     #[test]
     fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback()
      {
-        // Pickle (mode prompts the opponent holds, on their own turn since R1279000), Back from
-        // the GY (a budgeted pick), Mind Melt (a pick of the opponent's hand) and Ancient Acquisition
-        // (no prompt since R684: its returns are random), beside cheap Units: eight cards and a hero
-        // of 20, so that the game is short and the prompt cards are drawn. On these seeds greedy's
-        // Pickle hands the AI mode prompts on the AI's turn, and the AI's Back from the GY asks a pick.
+        // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a
+        // pick of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are
+        // random), beside cheap Units: eight cards and a hero of 20, so that the game is short and the
+        // prompt cards are drawn.
         install();
         let deck: Vec<String> = [
             PICKLE,
@@ -602,8 +574,6 @@ mod e18_a_whole_game_with_the_new_prompts {
                             let Some(pending) = after.pending.as_ref() else {
                                 return;
                             };
-                            // R1279000: no opponent-held prompt opens while its holder is not
-                            // active, so a mode prompt is held by whoever's turn it is.
                             let mode = pending.kind == PromptKind::Mode;
                             let new_kind = [
                                 PromptKind::Number,
@@ -741,7 +711,6 @@ mod auto_answers_the_answerers_best {
         assert_eq!(after.players[HUMAN].hand.len(), 3);
         assert_eq!(after.players[HUMAN].library.len(), 3);
         assert!(after.players[AI].hand.is_empty());
-        // One node for the play alone: no question opens mid-line to auto-answer.
         assert_eq!(counter.used(), 1);
         assert_eq!(counter.sim_errors(), 0);
 
@@ -766,14 +735,12 @@ mod auto_answers_the_answerers_best {
             Some(Ok(next)) => next,
             other => panic!("Pickle's play was refused: {other:?}"),
         };
-        // Nothing opened to take a first answer to: every pile stays whole.
         assert_eq!(after.players[HUMAN].hand.len(), 3);
         assert_eq!(after.players[HUMAN].library.len(), 3);
         assert_eq!(counter.used(), 1);
         assert_eq!(counter.sim_errors(), 0);
     }
 
-    /// "chooser-hurt", listed first, hits the chooser; "owner-hurt" hits the AI, whose card it is.
     #[test]
     fn the_opponents_reply_answers_its_prompt_with_its_best_choice_not_its_first() {
         let options = ["chooser-hurt".to_string(), "owner-hurt".to_string()];

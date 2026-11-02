@@ -49,7 +49,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt: kills a Hornet that attacks it.
     const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
 
-    /// p1 has the Hornet (`radiant` its face) in unit zone 1 and `p1_field` after it; p2 has `p2_field`.
     fn board(radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];
         field.extend(p1_field.as_array().cloned().unwrap_or_default());
@@ -63,7 +62,6 @@ mod tests {
         has_keyword(&s.stats(card).keywords, KeywordKind::Flying)
     }
 
-    /// Every copy of this card summoned so far.
     fn copies(s: &Scenario) -> Vec<CardInstance> {
         s.events()
             .iter()
@@ -106,7 +104,6 @@ mod tests {
             s.attack(&hornet, s.unit_at(P2, 1));
             let copies: Vec<CardInstance> = copies(&s).into_iter().filter(|copy| copy.id != hornet.id).collect();
             assert_eq!(copies.len(), 1);
-            // The copy is a Hornet: Rush too.
             assert!(has_keyword(&s.stats(&copies[0]).keywords, KeywordKind::Rush));
         }
 

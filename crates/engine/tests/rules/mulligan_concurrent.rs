@@ -9,8 +9,6 @@
 //!  - R269: a draw offer stands until it is answered or its offerer's turn ends, both seats see it,
 //!    and one that lapses blocks nothing.
 //!  - R36: a declined offer's block shows on its offerer's view alone, as the turns it still covers.
-//!
-//! Port of `packages/engine/test/mulligan-concurrent.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -23,7 +21,6 @@ use crate::rules::fixtures::scripts::{cn_virus, hinder};
 
 const SEATS: [PlayerId; 2] = [P1, P2];
 
-/// An `ActionInput` from its TS object literal.
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
@@ -70,7 +67,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// R265 the mulligans are open at once
 mod r265_the_mulligans_are_open_at_once {
     use super::*;
 
@@ -90,7 +86,6 @@ mod r265_the_mulligans_are_open_at_once {
             let first = answer_in(&begun, &[P1, P2], &keep);
             let second = answer_in(&begun, &[P2, P1], &keep);
 
-            // The same game, whichever answered first: the state after setup hashes the same.
             assert_eq!(hash_state(&second.state), hash_state(&first.state), "{seed}");
             assert_eq!(first.state.turn, 1);
             assert_eq!(first.state.phase, Phase::Main);
@@ -187,7 +182,6 @@ mod r265_the_mulligans_are_open_at_once {
     }
 }
 
-/// R265 a game that ends while the mulligans are open
 mod r265_a_game_that_ends_while_the_mulligans_are_open {
     use super::*;
 
@@ -221,7 +215,6 @@ mod r265_a_game_that_ends_while_the_mulligans_are_open {
     }
 }
 
-/// R266 an answer is sealed until both are in
 mod r266_an_answer_is_sealed_until_both_are_in {
     use super::*;
 
@@ -238,7 +231,6 @@ mod r266_an_answer_is_sealed_until_both_are_in {
             input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })),
         );
 
-        // Nothing moves until p2 answers: p1's hand is as it was dealt.
         assert_eq!(ids(&kept_none.players.p1.hand), hand);
 
         // p2's view is the same whatever p1 chose (§9.1, rule 7): p1 is ready, and that is all.
@@ -306,7 +298,6 @@ mod r266_an_answer_is_sealed_until_both_are_in {
             Some(two_cards)
         );
 
-        // Before anyone answers, each seat sees its own prompt; after, the window is gone from the view.
         assert_eq!(
             view_for(&begun, P1).mulligan,
             Some(MulliganView {
@@ -325,7 +316,6 @@ mod r266_an_answer_is_sealed_until_both_are_in {
     }
 }
 
-/// R267 a sealed answer is read against the hand at resolution
 mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
     use super::*;
 
@@ -431,7 +421,6 @@ mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
     }
 }
 
-/// R268 a mulligan whose clock runs out
 mod r268_a_mulligan_whose_clock_runs_out {
     use super::*;
 
@@ -481,7 +470,6 @@ mod r268_a_mulligan_whose_clock_runs_out {
     }
 }
 
-/// R269 a draw offer's lifetime
 mod r269_a_draw_offer_s_lifetime {
     use super::*;
 

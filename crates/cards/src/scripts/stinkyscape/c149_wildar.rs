@@ -98,12 +98,9 @@ mod tests {
         "stinkyscape-151",
         "traininggrounds-039",
     ];
-    /// A (1) Unit that keeps p1's turn from ending by itself.
     const ANCHOR: &str = "core-008";
-    /// How many cursors the sweeps walk.
     const SWEEP: u32 = 60;
 
-    /// p1 plays Wildar on `radiant`'s face with the rng at `cursor`; p2 holds one card.
     fn wildar_at(cursor: u32, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
             "seed": "wildar",
@@ -115,7 +112,6 @@ mod tests {
         s
     }
 
-    /// The cards of `player`'s hand that are no `ANCHOR`.
     fn gained(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.hand(player).into_iter().filter(|card| card.def_id != ANCHOR).collect()
     }
@@ -137,7 +133,6 @@ mod tests {
         assert_eq!(mine.len(), 1);
         assert!(SHIPPED_EDITIONS.contains(&mine[0].def_id.as_str()));
         assert!(mine[0].radiant);
-        // Its printed (4), no override.
         assert_eq!(mine[0].cost_override, None);
         assert_eq!(cost_of(&s, &mine[0]), 4);
         s.expect_in_zone(ID, "graveyard");
@@ -175,7 +170,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_its_caster_s_card() {
-        // The hand at its cap once Wildar has left it.
         let mut hand = vec![json!(ID)];
         hand.extend((0..HAND_CAP).map(|_| json!(ANCHOR)));
         let mut s = scenario(json!({

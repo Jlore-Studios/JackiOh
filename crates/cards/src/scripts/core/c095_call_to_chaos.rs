@@ -1,20 +1,8 @@
 //! #95 Call to Chaos (Core Edition) (SPEC §8.4, R28, R58, R60, R70, R87, R423, R436, BUILD M4-T4 row 95).
-//!
 //! Base: "One random effect" out of ten. Radiant (R423): "Three different random effects, resolved
-//! in the order listed", the shape Classic+ #73 has. The recursion is one of the ten like any other.
-//!
-//! The whole card is `subsystems::call_to_chaos`; each face here is a one-line hook. The subsystem
-//! owns the ten effects, the roll, the announcement and the chain counter:
-//!   * each effect reads the board when it RESOLVES, not when the hook builds it: a rolled recursion
-//!     resolves its whole chain before the effects after it (R87).
-//!   * the chain length is game state on the cast's `memory` (§10.1, `CHAOS_CHAIN_KEY`), so a resumed
-//!     game keeps its cap and two Calls in one turn never share a counter.
-//!   * R28's cap of 20 (`CALL_TO_CHAOS_CHAIN_CAP`) is a HARD stop: a recursion rolled at the cap
-//!     resolves into nothing and no substitute is rolled (R87).
-//!   * R436: before anything resolves, `chaosRolled` names the rolled clauses to both players.
-//!
-//! R70 makes the recursion a Cast (free, counted as a play, the card's own script, the caster picks
-//! targets); R87 sends a card cast from no zone to the graveyard (§10.5 step 7), feeding Gravedigger.
+//! in the order listed", the shape Classic+ #73 has. Recursion is one of ten.
+//! Handled by subsystems::call_to_chaos; board read at resolution (R87); chain key stored on cast memory (§10.1, CHAOS_CHAIN_KEY).
+//! R28 cap of 20 (CALL_TO_CHAOS_CHAIN_CAP); R436 chaosRolled names clauses. Recursion is Cast (R70, R87, §10.5 step 7).
 
 use jackioh_engine::prelude::*;
 
@@ -53,23 +41,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #95 Call to Chaos (Core Edition) and #95.1 Chaos Golem — SPEC §8.4, §7, §5.1, §10.5, §10.8,
-// R4, R11, R28, R60, R64, R70, R87, R423, R436.
-//
-// BUILD M4-T4 row 95: "Each of the 10 effects has a test; recursion stops at 20 (R28); radiant rolls
-// three different effects of the ten, resolved in the list's order (R423); what was rolled is named
-// to both players (R436)". Row 95.1: "10/10 with all four keywords"; its Radiant face (R276) is 20/20
-// "Charge, Lifesteal, Divine Shield, First Strike" (R275).
-//
-// HOW AN EFFECT IS FORCED. `subsystems::roll_chaos_effects` is a pure function of the rng, whose
-// whole state is `(state.seed, state.rngCursor)` (§9.3, §10.7), and it is the FIRST rng draw of the
-// play action, so setting `state.rngCursor` before the play pins which of the ten resolves.
-// `cursor_for` finds that cursor with the engine's own roll; each test asserts what the card did.
-// `s9_3_the_roll_is_a_pure_function_of_seed_cursor_…` pins the assumption by name.
-//
-// The effects' machinery (lazy wrappers, chain counter, R87's order) is proved in
-// `crates/engine/tests/rules/call_to_chaos.rs`. This file owes the card: both faces wired to it
-// with the right §5.2 flag, and the ten effects against the REAL catalog down the §10.5 play path.
+// #95 Call to Chaos and #95.1 Chaos Golem — SPEC §8.4, §7, §5.1, §10.5, §10.8, §5.2, §9.3, §10.7,
+// R4, R11, R28, R60, R64, R70, R87, R275, R276, R423, R436; BUILD M4-T4 row 95, Row 95.1.
+// Setting rngCursor pins which of the 10 effects resolves in the test.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,7 +83,6 @@ mod tests {
 
     use crate::matches_object;
 
-    /// A shallow object spread: `{ ...base, ...extra }`.
     fn merge(base: Value, extra: Value) -> Value {
         let mut out = base;
         if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
@@ -167,7 +140,6 @@ mod tests {
         keys
     }
 
-    /// `query(args)`, by id.
     fn query_ids(args: Value) -> Vec<String> {
         crate::query::query(&json_as(args))
             .iter()
@@ -216,8 +188,7 @@ mod tests {
         rolled.iter().any(|entry| entry == name)
     }
 
-    /// p1 holds #95 and a spare card and has mana to spare, so §2.5's auto-end never fires under the
-    /// assertions: the spare is still affordable once the 4 is paid, which is a "meaningful" action.
+    /// §2.5: holds #95 and spare card with spare mana so auto-end never fires.
     fn side(extra: Value) -> Value {
         merge(json!({ "hand": [CHAOS, MENACE], "mana": 8 }), extra)
     }
@@ -232,7 +203,6 @@ mod tests {
         chain: Option<i32>,
     }
 
-    /// Writes `memory[key]` on the card a reference names.
     fn set_memory(s: &mut Scenario, card: &str, key: &str, value: Value) {
         let id = s.card(card).id.clone();
         find_instance_mut(s.state_mut(), &id)
@@ -241,8 +211,7 @@ mod tests {
             .insert(key.to_string(), value);
     }
 
-    /// Play #95 with the roll pinned: a base roll of `effect`, or — `radiant_cursor` given — the Radiant
-    /// roll that cursor draws. `chain` seeds R28's counter on the played card.
+    /// Play #95 with roll pinned; `chain` seeds R28's counter.
     fn chaos(effect: Option<&str>, opts: ChaosOpts) -> Scenario {
         let radiant_face = opts.radiant_cursor.is_some();
         let mut p1 = opts.p1.unwrap_or_else(|| side(json!({})));
@@ -277,10 +246,7 @@ mod tests {
         s
     }
 
-    /// The first cursor whose base roll is "cast a random Call to Chaos" AND whose cast is #95 itself.
-    /// The pool is every Call to Chaos of every set (R380) and the edition is a later draw of the same
-    /// rng, so pinning the roll alone does not pin the edition. Re-pinned for v0.3.5: the Meditative
-    /// set joins the pool (its own edition, Meditative #95).
+    /// R380: cursor whose base roll casts #95 itself from all Call to Chaos editions.
     fn recast_of_core_cursor() -> u32 {
         for cursor in 0..CURSOR_SEARCH {
             if rolled_at(cursor).as_deref() != Some("recast") {
@@ -294,7 +260,6 @@ mod tests {
         panic!("no cursor below {CURSOR_SEARCH} rolls \"recast\" into #95 itself from seed \"{SEED}\"");
     }
 
-    /// `chaos` with the base roll "recast" pinned to a cast of #95 itself.
     fn recast_of_core(opts: ChaosOpts) -> Scenario {
         chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor()), ..opts })
     }
@@ -364,9 +329,7 @@ mod tests {
         #[test]
         fn s9_3_the_roll_is_a_pure_function_of_seed_cursor_so_pinning_the_cursor_pins_the_effect() {
             crate::register_all();
-            // The fixture assumption of this file, asserted rather than assumed: the roll is the play's
-            // first rng draw, so `rolled_at(cursor)` is what the card does. Proved through the card with
-            // the one effect nothing else can be mistaken for — the Chaos Golem is a token only #95 makes.
+            // Asserts roll is the play's first RNG draw; Golem token is made only by #95.
             let golem_cursor = cursor_for("golem");
             let play = || -> Scenario {
                 let mut s = scenario(json!({ "seed": SEED, "p1": side(json!({})) }));
@@ -500,8 +463,7 @@ mod tests {
             let hand = s.hand(P1);
             assert_eq!(hand.len(), 2); // #95 left the hand to resolve
             assert!(hand.iter().all(|card| card.radiant));
-            // The already-Radiant #53 keeps its flag, which is never unset; both hand cards are cued all
-            // the same, because a hidden card's cue must not depend on its face (R177, R97).
+            // R177, R97: hidden card cue must not depend on its face.
             assert_eq!(
                 events_of(&s, "radiantSet").iter().map(id_of).collect::<Vec<_>>(),
                 hand.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),
@@ -517,8 +479,7 @@ mod tests {
                 tokens.iter().map(|unit| unit.def_id.clone()).collect::<Vec<_>>(),
                 vec![RUSH_TOKEN.to_string(); 5],
             );
-            // §7: the printed token is 3/3 and its Radiant face is 6/6. #95 summons the token's own
-            // Radiant face with no `statsOverride`, so the stats live in the catalog and nowhere else.
+            // §7: #95 summons token's own Radiant face (6/6) without statsOverride.
             let token_def = js(&crate::card_def(RUSH_TOKEN));
             assert_eq!(token_def["base"]["attack"], 3);
             assert_eq!(token_def["radiant"]["attack"], 6);
@@ -580,8 +541,7 @@ mod tests {
                 },
             );
 
-            // Not the player: no `costDiscount` modifier is created, so a card that arrives later — a
-            // draw, an add — pays full price. The −2 rides on the instances that were there (R78).
+            // R78: the -2 discount rides on instances in hand and library, not the player.
             let discounts: Vec<Value> = js(&s.state().players.p1.mods)
                 .as_array()
                 .cloned()
@@ -642,9 +602,7 @@ mod tests {
                 if js(&crate::card_def(&card.def_id))["type"] == "Field Spell" {
                     assert!(matches_object(seen, &json!({ "faceDown": false, "defId": card.def_id })));
                 } else {
-                    // R351: the cost the controller's own view shows, and nothing else. Re-pinned for
-                    // v0.3.5: the Meditative set joins the pool, so the seed no longer deals only
-                    // (1) Cost Traps; the cost is read off the card rather than assumed.
+                    // R351: the cost the controller's own view shows.
                     assert_eq!(seen, &json!({ "faceDown": true, "cost": effective(&s, card) }));
                 }
             }
@@ -669,8 +627,7 @@ mod tests {
             let cast = s.card(id_of(must(plays.get(1), "the cast card's event")).as_str()).clone();
             assert_eq!(cast.def_id, CHAOS);
             assert!(!cast.radiant);
-            // It was the chain's first cast while it resolved, and it has landed as the printed card
-            // again (R215): the chain's count stays with the chain, never with the card a graveyard holds.
+            // R215: chain count stays with chain, not the card in graveyard.
             assert!(cast.memory.get(subsystems::CHAOS_CHAIN_KEY).is_none());
 
             // R87: a card cast from no zone goes to the caster's graveyard when it resolves, which is
@@ -688,8 +645,7 @@ mod tests {
         #[test]
         fn r4_a_full_hand_takes_what_it_can_and_burns_the_rest() {
             crate::register_all();
-            // §2.4's cap is 10. The hand holds #95 plus nine others, so it is back to nine once #95 is
-            // resolving: one of the three added cards fits and two are burned to the graveyard.
+            // §2.4: hand cap is 10; 1 added card fits and 2 burn to graveyard.
             let mut hand = vec![json!(CHAOS)];
             hand.extend(std::iter::repeat_n(json!(MENACE), 9));
             let s = chaos(
@@ -708,8 +664,7 @@ mod tests {
                 Some("recast"),
                 ChaosOpts { chain: Some(CALL_TO_CHAOS_CHAIN_CAP), ..ChaosOpts::default() },
             );
-            // The played card is already at the cap, so its roll of the recursion casts nothing at all —
-            // and no substitute effect is rolled in its place (R87).
+            // R87: at cap, rolled recursion casts nothing and rolls no substitute.
             assert_eq!(chaos_plays(&s).len(), 1);
             assert_eq!(s.state().counters.played, 1);
             s.expect_in_zone(CHAOS, "graveyard");
@@ -721,8 +676,7 @@ mod tests {
             let mut s = recast_of_core(ChaosOpts { chain: Some(CALL_TO_CHAOS_CHAIN_CAP - 1), ..ChaosOpts::default() });
             let plays = chaos_plays(&s);
             assert_eq!(plays.len(), 2);
-            // The card it cast is AT the cap, so whatever that one rolled, it cast nothing further — the
-            // two plays above are the whole chain — and it landed as the printed card again (R215).
+            // R215: card at cap casts nothing further.
             let cast = s.card(id_of(must(plays.get(1), "the cast card's event")).as_str()).clone();
             s.expect_in_zone(&cast, "graveyard");
             assert!(cast.memory.get(subsystems::CHAOS_CHAIN_KEY).is_none());
@@ -849,8 +803,7 @@ mod tests {
                 },
             );
             let all = events_json(&s);
-            // The recursion casts a random edition (R28), so the second Call played is any of them: it
-            // was #95 itself on this cursor until the Stinkyscape release (#1884) added two editions.
+            // R28, #1884: recursion casts a random edition.
             let edition = |def_id: &Value| {
                 def_id
                     .as_str()
@@ -896,8 +849,7 @@ mod tests {
         #[test]
         fn s5_2_a_base_copy_rolls_one_effect_however_deep_the_chain_is() {
             crate::register_all();
-            // Both faces call the same subsystem; the `radiant` argument each face passes is the whole
-            // difference, which is why the base face can roll any single one of the ten.
+
             let mut s = chaos(
                 Some("heal"),
                 ChaosOpts { chain: Some(CALL_TO_CHAOS_CHAIN_CAP - 1), ..ChaosOpts::default() },
@@ -957,9 +909,7 @@ mod tests {
         #[test]
         fn r436_hinder_s_random_discard_pauses_nothing_the_whole_deck_draw_runs_through_announced_once() {
             crate::register_all();
-            // A Radiant roll with the whole-deck draw and a later effect, the Golem. The library's Hinder
-            // is cast by that draw and discards at random (R682, R431: no prompt), so the draw and the
-            // Golem behind it run through in one pass.
+            // R682, R431: library's Hinder is cast by draw and discards at random without prompt.
             let cursor = radiant_cursor_where(
                 |rolled| has(rolled, "draw") && has(rolled, "golem") && !has(rolled, "recast") && !has(rolled, "tokens"),
                 "the draw and the Golem, with room for it",
@@ -979,11 +929,8 @@ mod tests {
             // No question was asked at any point: with no prompt open the roll cannot have paused (R113).
             assert!(s.state().pending.is_none());
             assert_eq!(events_of(&s, "chaosRolled").len(), 1);
-            // The draw completed: the library is empty and both Renos are in hand.
             assert!(s.pile(P1, "library").is_empty());
             assert_eq!(s.hand(P1).iter().filter(|card| card.def_id == RENO).count(), 2);
-            // The Hinder was cast by the draw and is in the graveyard, and its random discard took exactly
-            // one of the two hand cards: the other is still in hand.
             s.expect_in_zone("core-021", "graveyard");
             let menace = s.hand(P1).iter().any(|card| card.def_id == MENACE);
             let jammed = s.hand(P1).iter().any(|card| card.def_id == JAMMED);
@@ -1013,8 +960,7 @@ mod tests {
                 vec!["Charge".to_string(), "Divine Shield".to_string(), "First Strike".to_string(), "Lifesteal".to_string()],
             );
 
-            // The difference is data on the catalog's two faces; there is no script on either (§10.4
-            // layer 1 reads the stats and keywords straight off the face the flag picks).
+            // §10.4: layer 1 reads stats and keywords off the face chosen by flag.
             let golem_scripts = crate::scripts::core::c095_1_chaos_golem::script();
             assert_eq!(members(&golem_scripts.radiant), members(&golem_scripts.base));
             assert!(members(&golem_scripts.base).is_empty());
@@ -1025,8 +971,7 @@ mod tests {
         #[test]
         fn r275_a_chaos_golem_made_radiant_the_turn_it_arrives_is_a_20_20_that_may_charge_the_hero() {
             crate::register_all();
-            // #95 summons a base Golem into lane 1; a Saintess in lane 5 then dies to True Strike and her
-            // Death makes it Radiant on the field (R22: the base layer swaps, keywords apply at once).
+            // R22: Saintess Death makes Golem Radiant on field (base layer swaps).
             let mut s = chaos(
                 Some("golem"),
                 ChaosOpts {
@@ -1094,8 +1039,7 @@ mod tests {
         #[test]
         fn s4_4_step_1_divine_shield_negates_the_whole_first_hit_and_is_spent() {
             crate::register_all();
-            // A radiant #91 Fed Fauci is 2/12, the one enemy body that survives a 10-attack First Strike
-            // and so gets to strike back into the shield.
+            // Radiant #91 Fed Fauci is 2/12: survives 10-atk First Strike and strikes back into shield.
             let mut s = scenario(json!({
                 "p1": { "field": [GOLEM], "hand": [MENACE], "health": 15 },
                 "p2": { "field": [{ "def": FAUCI, "radiant": true }] },
@@ -1130,8 +1074,7 @@ mod tests {
         #[test]
         fn r11_it_is_a_unit_token_dying_is_ceasing_to_exist_with_no_graveyard_and_no_card_to_eat() {
             crate::register_all();
-            // `divineShieldSpent` is the state one hit leaves behind (§4.4 step 1), set here so a single
-            // exchange can be lethal; a radiant #19 is 18/18, which kills an unshielded 10/10.
+            // §4.4 step 1: divineShieldSpent allows lethal 18/18 exchange from radiant #19.
             let mut s = scenario(json!({
                 "p1": { "field": [GOLEM], "hand": [MENACE] },
                 "p2": { "field": [big_menace()] },
@@ -1144,7 +1087,7 @@ mod tests {
 
             let target = must(s.unit(P2, 1), "the radiant #19");
             s.attack(&golem, &target);
-            // §3.2, R11: it never enters a graveyard, so #89 Corpse Eater can never feed on one either.
+            // §3.2, R11, #89: token never enters graveyard.
             s.expect_in_zone(&golem, "gone");
             assert!(!s.pile(P1, "graveyard").iter().any(|card| card.def_id == GOLEM));
             assert!(!s.pile(P1, "exile").iter().any(|card| card.def_id == GOLEM));

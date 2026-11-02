@@ -1,11 +1,7 @@
-// The owned-cards panel (#1307, SPEC §14): a completion count per shipped set and, behind each
-// set's toggle, its cards. A card the account does not own is a locked silhouette that still
-// opens its view, so a player sees what they are missing. The server's `GET
-// /api/collection` says which are owned (CLAUDE.md rule 7); this counts the rows and draws them.
-// R1655000: a card opens in its own view (CardCosmeticsView), large, wearing its own picks, with
-// a strip of what it may wear; the card's text is one click from there. R1953001: `token` lets that
-// view offer a held cosmetic token on a locked cosmetic. R1956000: an owned card's tile in the grid
-// is the viewer's own copy too, and wears the same picks; a locked one draws the defaults.
+// The owned-cards panel (#1307, SPEC §14): a completion count per shipped set and, behind each set's
+// toggle, its cards, owned as `GET /api/collection` says (CLAUDE.md rule 7). An unowned card is a
+// locked silhouette that still opens its view (R1655000), so a player sees what they miss. R1953001:
+// `token` lets that view offer a held token. R1956000: an owned tile wears the viewer's picks.
 
 import { useId, useState, type ReactElement } from "react";
 

@@ -1,14 +1,9 @@
-//! Port of `packages/engine/test/draw-limit.test.ts`.
-//!
 //! Draws counted per turn and limited (docs/classic-sets.md B5 E3, E4, R457), and the cast-on-draw
 //! enchantment and a Unit cast on draw with nowhere to stand (B5 E39, Classic+ #26, R459).
 //!
-//! What is pinned: every draw that happens is counted for its player on the turn it happens, whoever's
-//! turn that is — the start-of-turn draw and a fatigue draw included — and the `drawn` event carries the
-//! draw's number, which a trap reads however much later the loop hands it the event (Classic #9); a draw
-//! past a limit does not happen at all (no card moves, no fatigue, nothing is cast) and says so with a
-//! public `drawLimited`; the lowest limit holds and "both" binds its own controller; a named draw is a
-//! draw; and both survive a JSON round trip and a replay.
+//! Every draw counts for its player on the turn it happens, whoever's turn it is; `drawn` carries the
+//! draw's number, read by a trap however late the loop hands it the event (Classic #9); a draw past a
+//! limit does not happen and says so with a public `drawLimited`.
 
 use jackioh_engine::draw::{DrawOutcome, draw_blocked, draw_limit_of, draw_one, draws_this_turn};
 use jackioh_engine::effects::draw_from_library;
@@ -68,7 +63,6 @@ fn strings(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// A view's events as JSON.
 fn view_events(state: &GameState, viewer: PlayerId) -> Vec<Value> {
     view_for(state, viewer)
         .events
@@ -92,7 +86,6 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
      {
         let mut state = playing("count");
         let mut bench = Bench::new(&state);
-        // Whatever p1 has drawn this turn so far, the next draw is one more.
         let already = draws_this_turn(&state, PlayerId::P1);
         set_library(&mut state, PlayerId::P1, &strings(&["fx-5", "fx-6"]));
         set_library(&mut state, PlayerId::P2, &strings(&["fx-25"]));
@@ -268,7 +261,6 @@ mod r457_b5_e3_draw_limits {
             draw_one(&mut bench.sink(&mut state), PlayerId::P2, None),
             DrawOutcome::Limited
         );
-        // The cast-on-draw card stays where it was, uncast.
         assert_eq!(ids(&state.players.p2.library), vec![second.id.clone()]);
         assert_eq!(notes(&state), Vec::<String>::new());
         assert_eq!(draws_this_turn(&state, PlayerId::P2), 1);
@@ -563,7 +555,6 @@ mod r459_b5_e39_and_classic_plus_26_cast_on_draw {
         );
         assert_eq!(notes(&state), strings(&["plain"]));
         assert!(ids(&state.players.p1.graveyard).contains(&enchanted.id));
-        // The chain drew on: the card beneath came to hand.
         assert!(def_ids(&state.players.p1.hand).contains(&"fx-6".to_string()));
     }
 

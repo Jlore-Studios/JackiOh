@@ -1,12 +1,10 @@
 //! A Vanilla copy has no text at all, and R46's knock-down reports only a real switch (SPEC §6.3
 //! Vanilla, §6.2, R46, R49, R91, R115). Found by the polish-4 edge-case hunt
 //! (docs/polish/4-edge-cases.md, lens L3).
-//!
 //! #61 Prejudiced Postdoc summons a Vanilla copy (R57, R23). §6.3's Vanilla "clears printed keywords
 //! and scripts", and R115 says so of every hook, so the copy keeps none of the card's text: not Deft
 //! Duelist's second exertion, not Spikey Pillow's "cannot be in Defense Position", not Fed Fauci's
 //! on-damage trigger and not radiant Right-house defender's Death.
-//!
 //! Also: a keyword two sources give is listed once in the view (§6.1, §10.4, §10.8), Armor apart;
 //! R46's knock-down changes nothing silently (§10.3); a unit's view says its text is gone (R243).
 
@@ -34,7 +32,6 @@ fn offers_switch(s: &Scenario, card: &CardInstance) -> bool {
         .any(|action| matches!(action, ActionBody::SwitchPosition { instance_id } if *instance_id == live.id))
 }
 
-/// The keywords' kinds, by the kind's printed name.
 fn kinds(keywords: &[Keyword]) -> Vec<String> {
     keywords
         .iter()
@@ -72,7 +69,6 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
         // One exertion: having attacked, the plain copy cannot also switch (§4.1, R6).
         assert!(!offers_switch(&s, &copy));
         s.expect_refused_with(|s| s.switch_position(&copy), "already acted");
-        // The original keeps its text, so it still has both.
         s.attack(&duelist, "hero");
         assert!(offers_switch(&s, &duelist));
     }
@@ -96,7 +92,6 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
         assert!(offers_switch(&s, &copy));
         s.switch_position(&copy);
         assert_eq!(s.card(&copy).position, Some(Position::Def));
-        // The Pillow itself still cannot.
         assert!(!offers_switch(&s, &pillow));
     }
 
@@ -145,7 +140,6 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
 
         s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&copy) }));
         s.expect_in_zone(&copy, "graveyard");
-        // Nothing came back into the copy's lane or anywhere else: only the original stands.
         let right_houses: Vec<String> = s
             .state()
             .players
@@ -208,10 +202,9 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         );
     }
 
-    // #55 radiant Lava Golem and #56 radiant Jilliax print Taunt beside Indestructible, and the probe's
-    // silent-change check found R46 taking that Taunt with nothing in the action's stream saying so.
-    // R347 takes Taunt off every Indestructible unit, so a knock-down has none to take: the view shows
-    // none before the destroy and none after, and the action reports none.
+    // R347 takes Taunt off every Indestructible unit (#55 and #56 radiant once printed both), so R46's
+    // knock-down has none to take: the view shows none before the destroy and none after, and the
+    // action reports none.
     #[test]
     fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3()
      {
@@ -301,9 +294,7 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
             found
         };
 
-        // Timmy prints Rush and First Strike, and the Weapons aura grants both again: two keywords, not four.
         assert_eq!(kinds_in(1), ["First Strike", "Rush"].map(str::to_string).to_vec());
-        // Right-house defender prints Taunt and Defense Position grants it: one Taunt among its keywords.
         assert_eq!(
             kinds_in(2),
             ["Divine Shield", "First Strike", "Reborn", "Rush", "Taunt"]
@@ -339,9 +330,6 @@ mod r243_r115_a_vanilla_units_view_says_its_text_is_gone_s6_3_vanilla_s10_8 {
             };
             let original = side.units.first().cloned().flatten();
             let vanilla_copy = side.units.get(2).cloned().flatten();
-            // Same definition, same printed keywords (Rush) on the original and none on the copy — but
-            // Fauci's scripted text (the Plague Counter trigger, the start-of-turn mana) is text too, and
-            // only the view can tell a client the copy has none of it.
             assert_eq!(
                 vanilla_copy.as_ref().map(|unit| unit.def_id.clone()),
                 original.as_ref().map(|unit| unit.def_id.clone())

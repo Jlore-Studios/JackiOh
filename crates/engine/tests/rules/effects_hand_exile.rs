@@ -1,9 +1,6 @@
-//! §6.3 Exile at random out of a hand — `exileRandomFromHand` (effects/handExile.ts), the verb Classic
+//! §6.3 Exile at random out of a hand — `exile_random_from_hand`, the verb Classic
 //! #15 Nose Hunter's Radiant face needs ("and a random card from their hand"). SPEC §6.3 (Exile), §3.2
-//! (exile is public), R11, R55, R60. The real card's test (packages/cards/test/classic/
-//! 015-nose-hunter.test.ts) covers the same cases again through the card.
-//!
-//! Port of `packages/engine/test/effects-hand-exile.test.ts`.
+//! (exile is public), R11, R55, R60. The real card's test covers the same cases again through the card.
 
 use jackioh_engine::effects::hand_exile::exile_random_from_hand;
 use jackioh_engine::testkit::*;
@@ -103,7 +100,7 @@ mod exile_random_from_hand_c_15_nose_hunter {
                 exile_random_from_hand(json_as(json!({ "player": "enemy" }))),
                 PlayerId::P1,
             );
-            // TS `String(cards.findIndex((card) => card.zone.z === "exile"))`: -1 when none is.
+            // The exiled card's place, -1 when none is.
             let index = cards
                 .iter()
                 .position(|card| {

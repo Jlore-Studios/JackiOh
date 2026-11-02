@@ -20,7 +20,6 @@ use jackioh_engine::effects::{animate, damage, draw, remember};
 
 pub const ID: &str = "classic-038";
 
-/// What the Auctioneer keeps once it has revealed.
 const ACTIVATED: &str = "activated";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,8 +32,6 @@ fn has_activated(ctx: &EffectContext) -> bool {
     recalled(ctx, ACTIVATED).and_then(|value| value.as_bool()) == Some(true)
 }
 
-/// The answer this play gets: "activate" (its controller's {plays}th play of a turn), "sale" (once
-/// activated), or none.
 fn answer(ctx: &EffectContext, event: &GameEvent) -> Option<Answer> {
     let GameEvent::CardPlayed { player, .. } = event else {
         return None;
@@ -93,8 +90,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 2nd play and 4 damage are its declared numbers, which `param`
-    // reads off the face; its 8/8 body is printed on the catalog face.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -131,8 +126,6 @@ mod tests {
         json!({ "def": AUCTION, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
 
-    /// p1 sets the Auctioneer and is active with four (0) Cost Spells to play; p2 holds a Unit. `mine`
-    /// and `theirs` override each side's setup (`json!({})` for none).
     fn setup(mine: Value, theirs: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "active": "p1",
@@ -272,7 +265,6 @@ mod tests {
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
                 assert_eq!(draws_by(s.events(), "p1"), 0);
 
-                // Revealed by its controller, it still never answers the opponent's play.
                 let mut t = setup(json!({}), json!({ "hand": [FILLER, VANILLA] }), false);
                 play_fillers(&mut t, 3, P1);
                 assert!(matches_object(&zone_of(&t, AUCTION), &json!({ "row": "units" })));
@@ -321,7 +313,6 @@ mod tests {
                 let auction = s.card(AUCTION).id.clone();
                 let before = s.events().len();
 
-                // The 4th play sells once; the Hinder cast on draw by it, or by the sale's own draw, never.
                 s.play(STOCKPILE, json!({}));
                 let sales = s.events()[before..]
                     .iter()
@@ -393,9 +384,6 @@ mod tests {
             #[test]
             fn r383_stuck_in_the_backrow_a_later_firing_animates_it_once_a_unit_zone_has_opened() {
                 crate::register_all();
-                // p1's row is full, so the 3rd play leaves it face-up in the backrow. Hit Job then empties
-                // p1's lane 2 (its own firing on that play finds the row still full); the next play's firing
-                // animates it into that zone.
                 let full = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
                 let mut s = setup(
                     json!({ "hand": [FILLER, FILLER, FILLER, FILLER, HIT_JOB], "field": full, "mana": 9 }),

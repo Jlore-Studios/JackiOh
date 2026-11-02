@@ -1,17 +1,8 @@
 //! #46 Suppressive Aura (SPEC §8.2): "Aura: All Units have −1/−1. Embiggened (4): −2/−2 instead.",
 //! radiant "Aura: Enemy Units have −2/−2. Embiggened (4): −4/−4 instead." The radiant cell restates the whole
 //! clause and replaces the base one (§8 Conventions). Neither face prints a keyword.
-//!
-//! A pure §10.4 layer-5 contribution: `Script.aura` is read on every stat read, never applied once
-//! and stored, which is all of "leaving restores them" (§8.2 Engine). Nothing here mutates
-//! (CLAUDE.md rule 5), and an aura's `applies` predicate reads instance data only, or the layers recurse.
-//!
-//! Attack floors at 0, max health does not: a unit at 0 max health dies at the next state check (§4.5
-//! step 1), Indestructible too, since no destroy effect is involved (R69).
-//!
-//! The price rides in the `play` action (R81; §10.6: no Core card opens an `embiggen` prompt), and R65
-//! makes `instance.embiggened` the price paid, so the aura reads it off `self`. R78: leaving the
-//! field resets it.
+//! Ongoing aura (§10.4 layer 5, R83; #14, #45, R1081000; not permanent R78; CLAUDE.md rule 5). Embiggen reads play action (R1178000).
+//! Negative stat mods floor health/attack at 0 on read (§10.4).
 
 use jackioh_engine::prelude::*;
 
@@ -69,13 +60,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4: "Embiggen price chosen with the play (R81);
-// −1/−1 to all, 1-health units die, restored on leaving; paid 4 → −2/−2; radiant enemy only −2/−2,
-// paid 4 → −4/−4; enough of them together kill an enemy The Rock despite Indestructible (R69)"
+// #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4 (R81, R69).
 //
 // Stat assertions go through `expect_stats`, which reads the engine's `unitView`, so §10.4 layer 5
-// is already in the number. The props have no script beyond printed keywords, so only the aura
-// moves their numbers.
+// is already in the number. The props have no script beyond printed keywords.
 //
 // A scenario cannot place a card with `embiggened` set (R81 makes the price part of the play), so
 // every paid-4 case plays from hand with `{ embiggen: true }`, which writes it (R65).

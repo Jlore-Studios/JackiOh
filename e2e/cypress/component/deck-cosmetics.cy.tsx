@@ -1,16 +1,6 @@
 // R1297000: the deck slots in a real browser. apps/web's vitest suite proves which attributes the
 // board writes (game/cosmetics.test.tsx) and what the stylesheet declares (cards/cosmetics.test.tsx);
-// what only a style engine can say is measured here, one test per item of the nine: each table
-// changes how the viewer's half of the field and its own zones draw and leaves the opponent's zones
-// as they were; each backdrop draws between one and BACKDROP_PARTICLE_MAX particles, moves, lets
-// every pointer through to the board and, in a screenshot, changes the pixels of the board's own
-// surface in the viewer's half against a default board (a layer painted under that surface, which
-// every computed style above would still pass, changes none); each card back draws differently from
-// the default and says nothing; and under Reduce motion every backdrop is still there, still
-// painted, and nothing in it runs.
-//
-// A table's look is what the cosmetics can reach, read off the computed styles: the mat the field's
-// `::before` paints, and a zone's background, border and slot mark.
+// what only a style engine can say is measured here, one test per item of the nine.
 
 import { CardBack } from "../../../apps/web/src/cards/CardBack.tsx";
 import {
@@ -25,7 +15,6 @@ import Game from "../../../apps/web/src/game/Game.tsx";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
 
-/** A hand-sized card back box, 5:7. */
 const BACK_BOX = { width: 150, height: 210 } as const;
 
 /** The items of one kind: every entry but its default. */
@@ -100,9 +89,8 @@ const PIXEL_DELTA_MIN = 4;
 const PAINTED_SHARE_MIN = 0.25;
 
 /**
- * The points of the viewer's half of the board where the pointer meets the board itself: the gaps
- * between its regions, where the board's own surface shows. The backdrop takes no pointer, so it is
- * never what `elementFromPoint` returns; whatever color a screenshot has there is either the
+ * The points of the viewer's half where the pointer meets the board's own surface, in the gaps
+ * between its regions. The backdrop takes no pointer, so a screenshot's color there is either the
  * board's surface or the backdrop drawn over it.
  */
 function barePoints(doc: Document): Point[] {

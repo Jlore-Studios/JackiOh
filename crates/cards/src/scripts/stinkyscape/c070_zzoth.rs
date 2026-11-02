@@ -72,7 +72,6 @@ mod tests {
     const CUBE: &str = "core-022"; // (3) 4/6, a Cry and a Death.
     const MR_TOKEN: &str = "core-015"; // (1) 1/1, "Cry: Summon a Rush Token.": a Cry and no Death.
 
-    /// p1 holds Z'Zoth (`radiant` its face) with `graveyard` in its graveyard and `field` on its field.
     fn holding(radiant: bool, graveyard: Value, field: Value) -> Scenario {
         crate::scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "graveyard": graveyard, "field": field },
@@ -96,7 +95,6 @@ mod tests {
             let some = |id: &str| Some(id.to_string());
             assert_eq!(units_on_board(&s), vec![some(ID), some(SAINTESS), some(CUBE), None, None]);
             assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![VANILLA, FILLER, MR_TOKEN]);
-            // The opponent's graveyard is not reached.
             assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![SAINTESS]);
         }
 

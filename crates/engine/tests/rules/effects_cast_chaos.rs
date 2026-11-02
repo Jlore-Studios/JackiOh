@@ -1,9 +1,6 @@
 //! R28 meets R452: a Call to Chaos that a random cast makes (Classic+ #47 Jogg's Box's `castRandom`) is a
 //! cast of the Call to Chaos chain, the first, so its own recursion stops at CALL_TO_CHAOS_CHAIN_CAP casts
-//! in all. Through fixture cards; the real card's test covers the same case again
-//! (packages/cards/test/classic-plus/047-joggs-box.test.ts).
-//!
-//! Port of `packages/engine/test/effects-cast-chaos.test.ts`.
+//! in all. Through fixture cards.
 
 use std::sync::mpsc;
 
@@ -13,7 +10,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, set_library};
 
-/// TS `spell(id, extra)`: a Common 1-cost Spell named after its id, `extra`'s keys laid over it.
+/// A Common 1-cost Spell named after its id, `extra`'s keys laid over it.
 fn spell(id: &str, extra: Value) -> CardDef {
     let mut def = json!({
         "id": id,

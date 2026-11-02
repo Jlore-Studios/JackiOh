@@ -1,6 +1,4 @@
 // B15 and B16 render SFX in real offline Chrome, not jsdom's schedule-only fake.
-// B15: each recipe is finite, audible, unclipped, and silent after `durationMs`.
-// B16: impact RMS rises from 1 -> 4 -> 10, and 25 matches 10 within 1%.
 // B57 measures SFX through the real mix against decoded voice lines.
 // `sfx.ts` remains independently importable, and every B14 parameter render is bounded by `durationMs`.
 // R506: #21 Hinder and #27 Blood Ridden Glowy Jelly Bean have conspicuous mana-crack effects.
@@ -42,7 +40,6 @@ const EXPECTED_IDS = [
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
 ] as const;
 
-/** Each recipe's silence deadline. */
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   draw: 180,
   play: 260,
@@ -256,8 +253,6 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
   });
 });
 
-// B57: default mix.
-
 /** Dialogue reference across five personas. */
 const REFERENCE_LINES = ["core-013-play", "core-011-play", "core-005-cast", "core-081-play", "core-009-death"] as const;
 const MIX_LEAD_S = 0.01;
@@ -348,16 +343,13 @@ const ROUTINE: readonly Cue[] = [
   { id: "mana", params: { mine: true } },
   { id: "impact", params: { amount: 1 } },
   { id: "drain", params: { amount: 1 } },
-  // R506 variants.
   ...(["bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat"] as const).map((id): Cue => ({ id, params: {} })),
   { id: "chaosRoll", params: { amount: 3 } },
   { id: "clockTick", params: { amount: 1 } },
   { id: "clockTick", params: { amount: 10 } },
-  // R669: sting by rarity.
   { id: "sting", params: {} },
   { id: "sting", params: { tier: "rare" } },
   { id: "sting", params: { tier: "epic" } },
-  // MN05: Armor and niche moments (R1363, R1364, R1365, R1366).
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),

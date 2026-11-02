@@ -3,8 +3,6 @@
 //!
 //! `destroy_all` and `destroy_adjacent_to` are the same mark over a scope (§3.1, §3.2), so a sweep and
 //! a single destroy are collected by the one state check that follows the whole effect (R59).
-//!
-//! Port of `packages/engine/src/effects/destroy.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -16,16 +14,10 @@ use crate::state_check::sacrifice_now;
 use crate::wire::TargetAim;
 use crate::wire::ZoneName;
 
-/// The mark every destroy leaves (§6.3, §4.5 step 1). A destroy is not a damage instance, so no
-/// unit's hit can be the lethal one any more: R42's "a death whose lethal damage instance came from
-/// this unit" and R89's `killerId` read `lastDamagedBy`, and a hit that landed earlier and did not
-/// kill must not be credited with a death this effect caused. A unit something had already killed
-/// before the destroy landed — a hit took it to 0 or less, a Poisonous hit marked it — was killed by
-/// that, and a destroy on a dead unit changes nothing (`damage::already_killed`, R42). Poisonous marks
-/// inside the damage instance itself (`damage.rs` step 7) and so keeps its source.
-///
-/// TS wrote through the live card object; here the card is found again by its id and marked where it
-/// stands, read as it stands now.
+/// The mark every destroy leaves (§6.3, §4.5 step 1). A destroy is not a damage instance, so an earlier
+/// hit that did not kill must not be credited with this death (R42's lethal source and R89's `killerId`
+/// read `lastDamagedBy`); a unit something had already killed (a hit to 0, a Poisonous mark) keeps its
+/// killer (`damage::already_killed`, R42).
 fn mark_destroyed(state: &mut GameState, card: &CardInstance) {
     let Some(current) = find_instance(state, &card.id) else {
         return;
@@ -64,18 +56,10 @@ pub fn destroy(args: DestroyArgs) -> Effect {
     })
 }
 
-/// §6.3 Destroy, board-wide: mark every card the scope names and stop (#2 Bigot, #17 Flood,
-/// #43 Big Felinor, #88 Twisting Nether). Marking and only marking is the whole point — §4.5 step 1
-/// then collects the entire board in ONE state check, which is what R59 requires of a sweep: no
-/// Death trigger of the first victim fires while the rest are still standing.
-///
-/// Indestructible is deliberately NOT filtered out of the scope. "Indestructibles survive" is a
-/// consequence of §4.5's mark resolution, not of this walk: that step drops the mark, switches the
-/// unit to Attack Position and suppresses its Taunt for the turn (R46). A scope that skipped
-/// Indestructible units would quietly lose all three, leaving a warded blocker in Defense Position
-/// after a Twisting Nether that R46 says should have been knocked flat.
-///
-/// `rows` defaults to `["units"]`; a sweep over permanents passes `["units", "backrow"]` (§6.3).
+/// §6.3 Destroy, board-wide (#2, #17, #43, #88 Twisting Nether): mark only, so §4.5 step 1 collects
+/// the board in ONE state check (R59) and no Death trigger fires while the rest still stand.
+/// Indestructible is deliberately NOT filtered out: §4.5's mark resolution drops its mark, puts it in
+/// Attack Position and suppresses its Taunt (R46). `rows` defaults to `["units"]` (§6.3).
 pub fn destroy_all(args: BoardScope) -> Effect {
     Effect::new("destroyAll", move |ctx| {
         // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
@@ -97,11 +81,8 @@ pub struct DestroyAdjacentToArgs {
 }
 
 /// §3.1 Adjacent destroy: mark lanes N-1 and N+1 on the target's own side and row, never the target
-/// itself and never across sides (#16 Hit Job radiant). The card pairs this with a plain
-/// `destroy({ target: { of: "chosen" } })` in the same effect list, so the target and its
-/// neighbours are all marked before the state check and die together under R59.
-///
-/// A target off the field, or one with no neighbours, fizzles silently and the card still resolves.
+/// itself nor across sides (#16 Hit Job radiant, which pairs it with a plain `destroy` so all die
+/// together under R59). A target off the field, or with no neighbours, fizzles silently.
 pub fn destroy_adjacent_to(args: DestroyAdjacentToArgs) -> Effect {
     Effect::new("destroyAdjacentTo", move |ctx| {
         let DestroyAdjacentToArgs { target, scope } = &args;
@@ -122,12 +103,9 @@ pub struct SacrificeArgs {
 }
 
 /// §6.3 Sacrifice: your own card goes from the field to the graveyard at once, bypassing
-/// Indestructible, and it counts as a death — the destroyed counter (R55), the `destroyed` event,
-/// the Death trigger, which reads the card as it was just before it left (R78), and §6.1's Reborn,
-/// which brings a sacrificed Reborn unit back to its zone at 1 health as it would any other first
-/// death. That is §4.5's pass for one card, so it is `state_check::sacrifice_now` rather than a copy
-/// of it. A unit token vanishes instead of entering a graveyard (R11). Tribute may aim it at an enemy
-/// unit (#55), which `allowEnemy` says.
+/// Indestructible, and counts as a death in full — the destroyed counter (R55), the Death trigger
+/// reading the card as it was (R78), §6.1's Reborn — which is §4.5's pass for one card (`sacrifice_now`).
+/// A unit token vanishes instead (R11). Tribute may aim it at an enemy unit (#55): `allowEnemy`.
 pub fn sacrifice(args: SacrificeArgs) -> Effect {
     Effect::new("sacrifice", move |ctx| {
         let Some(card) = instance_of(ctx, &args.target) else {

@@ -1,6 +1,5 @@
-// R738: the opponent's aim on the client — what this seat sends while it aims (by click-select and
-// by drag), that it names only public handles, and the opponent's arrow drawn and cleared.
-//
+// R738: the opponent's aim on the client — what this seat sends while it aims, that it names only
+// public handles, and the opponent's arrow drawn and cleared.
 // jsdom has no layout and no `document.elementsFromPoint`; each test that hovers stubs it to return
 // the element the pointer is "over", as the drag layer's own tests do.
 
@@ -15,7 +14,6 @@ import { __resetSettingsForTests } from "../../settings/index.ts";
 import { baseView, card, emptySide, faceDownBackrow, heroPower, unit } from "../../test/fixtures.ts";
 import { aimFor, aimSource, aimTargets } from "./aim.ts";
 
-/** h1 aims at e1 or the enemy hero; z1 is placed in a zone; u1 may attack e1 or the hero. */
 function aimView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -142,7 +140,6 @@ describe("R738 the opponent's arrow", () => {
     expect(screen.getByTestId("opponent-aim")).toHaveAttribute("data-targeting", "true");
     expect(screen.getByTestId("opponent-aim-arrow")).toBeInTheDocument();
 
-    // Over nothing yet: the source is marked, no arrow.
     rerender(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit: vi.fn(), opponent: { ...theirs, target: null } }} />);
     expect(screen.getByTestId("opponent-aim")).toHaveAttribute("data-targeting", "false");
     expect(screen.queryByTestId("opponent-aim-arrow")).toBeNull();

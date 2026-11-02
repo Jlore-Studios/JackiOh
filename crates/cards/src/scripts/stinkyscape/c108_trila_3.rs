@@ -16,10 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #108 Trila 3 — SPEC §8.10 row 108, BUILD M12 row S 108: "a 7/7 Ranged Windfury
-// Starship Piece, attacking twice a turn (WINDFURY_ATTACKS) and taking no strike back from a
-// defender without Ranged (R783000); radiant 14/14 with Rush, attacking Units the turn it is
-// played".
+// Stinkyscape #108 Trila 3 — SPEC §8.10 row 108, BUILD M12 row S 108 (R783000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,7 +57,6 @@ mod tests {
         }));
         s.attack(TRILA, "hero");
         s.expect_health(PlayerId::P2, 23);
-        // Windfury (WINDFURY_ATTACKS): a second attack in the same turn.
         s.attack(TRILA, "hero");
         s.expect_health(PlayerId::P2, 16);
     }
@@ -73,7 +69,6 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
         }));
         s.play(TRILA, json!({ "zone": 1 }));
-        // Rush: a Unit at once (never the hero on its summon turn).
         s.expect_refused(|s| s.attack(TRILA, "hero"));
         s.attack(TRILA, VANILLA);
         s.expect_in_zone(VANILLA, "graveyard");

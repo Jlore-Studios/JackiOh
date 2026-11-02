@@ -3,15 +3,8 @@
 //!   Base:    "Activate: Tribute this. You have Spell Damage +{spellDamage} this turn." (5)
 //!   Radiant: "Activate: You have Spell Damage +{spellDamage} this turn." (5)
 //!
-//! An Activate (§6.2, R384): in its controller's main phase, the turn it lands included (no
-//! summoning sickness), once a turn. The base face's cost is the card's own Tribute (`tribute_self`,
-//! C #84, M #54), paid first; the Radiant face's has none, so it stays and activates again each turn.
-//! Either way the activator gets a "Spell Damage +N this turn" player modifier (R1180001,
-//! `ModifierKind::SpellDamage`, expiry `thisTurn`), summed with their Units' Spell Damage and any
-//! Spell Damage aura (M+ #9) in the one place §4.4 step 0 reads (`damage::spell_damage_of`); it is the
-//! activator's, the opponent's Spells untouched, it stays when the potion has left, two stack, and the
-//! turn's cleanup ends it. The number is the declared `spellDamage`, read as the ability runs (R386).
-//! Tunes: spellDamage 5 ↑.
+//! Activate in main phase (§6.2, R384): base tributes self (C #84, M #54); Radiant stays on field.
+//! Grants SpellDamage player modifier this turn (R1180001, §4.4 step 0, M+ #9); read via param (R386).
 
 use jackioh_engine::prelude::*;
 
@@ -56,11 +49,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #11 Living Mana Potion — SPEC §8.9 row 11, BUILD M11 row M+ 11: "Activate in your main phase,
-// the turn it lands included (no sickness, R384): it is tributed and your Spells deal 5 more per hit
-// until the turn's cleanup, then not; the opponent's Spells are untouched; it sums with Units' Spell
-// Damage and M+ 9; spellDamage reads through `param()`; radiant 10/2, the Activate keeps it on the
-// field, once a turn, +5 each turn".
+// M+ #11 Living Mana Potion — SPEC §8.9 row 11, BUILD M11 row M+ 11 (R384).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -70,13 +59,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (1) Spell, Pierce: 4 damage to a declared Unit or hero.
     const TRUE_STRIKE: &str = "core-044";
-    /// (2) 3/2, Spell Damage +2.
     const SOLARIUS: &str = "classicplus-038";
-    /// M+ #9, "Aura: Both players have Spell Damage +2".
     const AMPLIFIER: &str = "meditativeplus-009";
-    /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {

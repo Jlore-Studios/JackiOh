@@ -1,9 +1,7 @@
 // BUILD M8 07: P2's #96 My Pawn (§8.5) cancels P1's lethal declaration and lets the §10.7 AI finish it.
 // R44 defines lethal; the fixture excludes armor #84/#1/#73. R99 keeps the trap armed until lethal.
-// R121 makes forced attackers #9/#60 ineligible; attacks here are player-declared. R33/§10.8 hide
-// the face-down trap from seat 1. Use testids and settled/retried waits, never fixed sleeps.
+// R121 makes forced attackers #9/#60 ineligible; attacks here are player-declared.
 // The fixture depends on the §9.4 L6 catalog contract and the §4.2 step-4 trap window (B-1).
-// Lethal uses clicks instead of `cy.attack` because its `cy.settled()` would hide queued AI animation.
 
 import { CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -37,7 +35,7 @@ const GRINDERS: readonly { defId: string; name: string; attack: number; cost: nu
   { defId: catalogId(25), name: nameOf(25), attack: 7, cost: 4 },
 ];
 
-/** SPEC §8's name for card #index, which is what the client prints on a card (BUILD M5-T1). */
+/** SPEC §8's name for card #index, as the client prints it (BUILD M5-T1). */
 function nameOf(index: number): string {
   const name = CARD_NAMES[index];
   if (name === undefined) throw new Error(`no SPEC §8 card #${index}`);
@@ -68,12 +66,12 @@ function handOf(state: GameStateLike, player: PlayerId): { id: string; defId: st
   return peek(state, player).hand ?? [];
 }
 
-/** §3.2: only the top card of a unit pile is active, so that is the one this spec ever clicks. */
+/** §3.2: only a unit pile's top card is active, so it is the one this spec clicks. */
 function unitAt(state: GameStateLike, player: PlayerId, lane: Lane) {
   return (peek(state, player).units ?? [])[lane - 1]?.[0];
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: hand the hotseat device to the seat that has to act. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
@@ -90,7 +88,6 @@ function passTurn(): void {
   });
 }
 
-/** Take turns until `ready` holds, then leave the device on the seat that has to act. */
 function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): void {
   const step = (left: number): void => {
     cy.gameState().then((state) => {
@@ -110,7 +107,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
   });
 
   it("R99/R44 cancels the attack, locks P1 out, animates the AI turn and ends it", () => {
-    // 1. Seat 2 sets My Pawn face-down.
     const myPawn = catalogId(96);
     advanceUntil(
       "p2 holds My Pawn on its own turn",
@@ -121,7 +117,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
 
     // §10.8/R33 hide the face-down trap's id from seat 1, so capture it here.
     cy.instanceAt("p2", "backrow", TRAP_LANE).then((trapId) => {
-      // 2. Seat 1 summons an available grinder.
       advanceUntil("p1 can summon a grinder", (state) => {
         if (state.active !== "p1") return false;
         const mana = peek(state, "p1").mana?.current ?? 0;
@@ -144,7 +139,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
         cy.playByName(grinder.name, { zone: { side: "you", row: "units", lane: GRINDER_LANE } });
 
         cy.instanceAt("p1", "units", GRINDER_LANE).then((attackerId) => {
-          // 3. Below R44 lethal, R99 must leave the trap armed; §4.2 makes the hero the only target.
+          // Below R44 lethal, R99 must leave the trap armed; §4.2 makes the hero the only target.
           const swing = (left: number): void => {
             cy.gameState().then((state2) => {
               expect(state2.result, "the grind did not end the game").to.eq(null);
@@ -187,7 +182,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
           };
           swing(SWING_BUDGET);
 
-          // 4. R44 now reaches lethal; §4.2 fires the trap after exertion.
+          // R44 now reaches lethal; §4.2 fires the trap after exertion.
           advanceUntil("p1 can declare the lethal swing", (s) => {
             if (s.active !== "p1") return false;
             const unit = unitAt(s, "p1", GRINDER_LANE);
@@ -200,7 +195,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             expect(health, "R44: the projected damage now reaches the hero").to.be.at.most(grinder.attack);
             const turn = before.turn;
 
-            // Do not settle `cy.attack`: §4.2's two clicks expose the queued animation.
+            // Clicks, not `cy.attack`: its `cy.settled()` would hide the queued AI animation (§4.2).
             cy.get(ts(cardId(attackerId))).click();
             cy.get(ts(heroId("opponent"))).click();
 
@@ -224,7 +219,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             });
 
             cy.gameState().should((after) => {
-              // The canceled hit never happened.
               expect(heroHealth(after, "p2"), "the canceled attack dealt no damage").to.eq(health);
               expect(after.result, "the canceled swing did not end the game").to.eq(null);
               // §5.1 spends the trap to its owner's graveyard.
@@ -236,7 +230,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
                 (peek(after, "p2").graveyard ?? []).some((card) => card.defId === myPawn),
                 "My Pawn is in its owner's graveyard (§5.1: a Trap goes there after it fires)",
               ).to.eq(true);
-              // The AI ended seat 1's turn.
               expect(after.turn, "the player-turn advanced").to.be.greaterThan(turn);
               expect(after.active, "the turn ended and seat 2 is to act").to.eq("p2");
             });

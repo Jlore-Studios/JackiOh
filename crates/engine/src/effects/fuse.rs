@@ -1,28 +1,15 @@
 //! Fuse as a verb (SPEC §6.3 Fuse, R77, R102; §8.4 #85, §8.5 #99).
 //!
-//! `subsystems/fuse.ts` is R77 in full — the transient definition with both faces fused, the summed
-//! stats, the united keywords and tags, the concatenated scripts, `min(sum, FUSE_COST_CAP)`, the
-//! target instance kept with its zone, damage, exertion, counters and memory, the other ingredients
-//! ceasing to exist with no death, and Craft a Card's fresh `costOverride` 0 hand card. NONE of that
-//! is repeated here and none of it may be: it is eighteen kilobytes of rules with its own test file,
-//! and a second implementation is a second set of rules. This file exists only because `fuse` takes
-//! an `EngineSink` and mutates state, which a card script may not do (CLAUDE.md rule 5), and because
-//! `FuseArgs.ingredients` is `readonly CardInstance[]` while a Discover hands over catalog ids.
+//! The subsystem (`subsystems::fuse`) is R77 in full, and none of it may be repeated here: a second
+//! implementation is a second set of rules. This file exists only because `fuse` takes an `EngineSink`
+//! and mutates state, which a card script may not do (CLAUDE.md rule 5), and because
+//! `FuseArgs.ingredients` takes instances while a Discover hands over catalog ids. The `fused` event,
+//! `state.transientDefs` and the script registration stay the subsystem's.
 //!
-//! AN INGREDIENT THAT WAS NEVER A CARD (§8.5 #99). Craft a Card's ingredients are Discovered
-//! DEFINITIONS: nobody ever saw them on a board, and R77 has them cease to exist the moment the
-//! fusion is made. An ingredient only ever contributes its definition to the fusion, so the
-//! cheapest faithful thing is an instance that sits in no pile at all: `{ z: "gone" }`, which
-//! `@jackioh/shared`'s `Zone` really does offer and which `subsystems/fuse.ts` itself uses for
-//! "ceased to exist" (R11, R86). No zone event fires for it, `findInstance` cannot reach it, and
-//! nothing in `viewFor` lists it, so the ingredient is invisible exactly as #99 requires.
-//!
-//! The `fused` event, `state.transientDefs` and the script registration are all the subsystem's and
-//! are deliberately untouched here.
-//!
-//! Port of `packages/engine/src/effects/fuse.ts`. The prompt answerer TS registered at module scope
-//! (`registerPromptAnswerer(FUSE_ONTO_HOOK, …)`) is the plain `answer_fuse_onto`, which `prompts.rs`
-//! calls by its hook (SURFACE §6.6).
+//! An ingredient that was never a card (§8.5 #99) only contributes its definition, so it is an instance
+//! in no pile, `{ z: "gone" }`, the subsystem's own "ceased to exist" (R11, R86): no zone event fires,
+//! `find_instance` cannot reach it and no view lists it, so it is invisible as #99 requires.
+//! `prompts.rs` calls `answer_fuse_onto` by its hook (SURFACE §6.6).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -45,9 +32,8 @@ use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, PromptKind, Selectio
 use crate::work::{begin_work_cascade, drain_work};
 use crate::zones::{StandingAt, acting_on, is_buried};
 
-/// R77 and R86: an ingredient that is only a definition. It is created in `{ z: "gone" }` — in no
-/// pile, so no zone event fires, nothing can target it and nothing can bring it back — which is the
-/// same zone the subsystem moves a consumed ingredient to.
+/// R77 and R86: an ingredient that is only a definition, made in `{ z: "gone" }` (where the subsystem
+/// moves a consumed one): in no pile, so no zone event fires and nothing can target or return it.
 fn phantom_ingredient(ctx: &mut EffectContext<'_>, def_id: &str, owner: Option<PlayerSpec>) -> CardInstance {
     let player = match owner {
         None => ctx.controller,
@@ -97,7 +83,6 @@ pub struct FuseCardsArgs {
     /// R352: the hand card is made Radiant (#98's radiant Stitching).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
-    // ---- v0.2.0, generation (E23, R469, R470) ----
     /// R470: the kept instance is this card in a hand or a library, which stays where it is (Classic+
     /// #31 Fusion Lab's pick, Classic #78 Radiant's). `targetInstanceId` is the field's spelling.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -118,43 +103,26 @@ pub struct FuseCardsArgs {
     pub random_ingredient: Option<crate::effects::card_scope::CardScope>,
 }
 
-/// §6.3 Fuse per R77, wrapped. The ingredients are named in two ways, in this order: cards that
-/// already exist (`instanceIds`, #85 Unlicensed Experimentation's played permanent) and then
-/// definitions that never were cards (`defIds`, #99 Craft a Card's Discover picks). No Core card
-/// passes both, so the order between the two groups is a convention rather than a rule; within a
-/// group the caller's order is kept, because it is the order the fused name, text and scripts are
-/// concatenated in.
+/// §6.3 Fuse per R77, wrapped. Cards that already exist (`instanceIds`, #85) go in before definitions
+/// that never were cards (`defIds`, #99), a convention since no Core card passes both; each group keeps
+/// the caller's order, the order the fused name, text and scripts are concatenated in.
 ///
-/// ONE FUSION AT A TIME, AND WHY THE LOOP IS IN HERE (R77, §8.4 #85 radiant). Radiant #85 fuses its
-/// played permanent "onto each matching permanent separately", each fusion its own transient
-/// definition. That CANNOT be a card emitting one `fuseCards` per target: the subsystem's
-/// `ceaseToExist` calls `removeFromAnyZone`, so after the first fusion the played card is in
-/// `{ z: "gone" }` and held by no pile — `findInstance` cannot reach it and its id cannot recover
-/// it, so every later call would see one ingredient, fall below `FUSE_MIN_INGREDIENTS` and answer
-/// `null`. The subsystem anticipates exactly this ("an ingredient that already ceased to exist in an
-/// earlier fusion still fuses", because an ingredient only ever contributes its DEFINITION), and the
-/// way to honor it is to resolve the ingredients ONCE and reuse those same objects across the
-/// fusions — which only something holding them can do. Hence `targetInstanceIds` and the loop here.
+/// One fusion per target, looped in here (R77, §8.4 #85 radiant): after the first fusion the played
+/// card is in no pile, so one `fuseCards` per target would leave every later one below
+/// `FUSE_MIN_INGREDIENTS`. So the ingredients are resolved ONCE and reused, as an ingredient only ever
+/// contributes its definition. R86's dropping of gone ids is for pools, not for ids named outright.
 ///
-/// R86 is about POOLS, not about this: it drops ids whose cards are gone when the card said "a
-/// random card you played this turn", so a pool degrades instead of fizzling at random. An
-/// `instanceIds` entry is an instruction the caller named outright, so it is resolved once and then
-/// kept — dropping it mid-loop would turn a deliberate second fusion into a silent no-op.
-///
-/// It fizzles silently and the card still resolves (§6.3): an `instanceIds` entry that never
-/// resolved at all drops out, an empty target list after filtering fuses nothing, and the subsystem
-/// itself answers `null` — changing nothing — for fewer than `FUSE_MIN_INGREDIENTS`, for a target
-/// that is off the field or Immutable (R23), and for a call that names neither a target nor a hand.
+/// It fizzles silently and the card still resolves (§6.3): an unresolved `instanceIds` entry drops out,
+/// and the subsystem changes nothing for fewer than `FUSE_MIN_INGREDIENTS`, a target off the field or
+/// Immutable (R23), or a call that names neither a target nor a hand.
 pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     Effect::new("fuseCards", move |ctx| {
-        // ME-FUSE-RANDOM first: the ingredient is drawn inside `apply` from the match rng, and the
-        // kept card is the target named beside it. Nothing else of this call runs then.
+        // ME-FUSE-RANDOM alone: its ingredient is drawn inside `apply` from the match rng.
         if let Some(scope) = &args.random_ingredient {
             fuse_random_ingredient(ctx, &args, scope);
             return;
         }
-        // Resolved ONCE, before any fusion: these objects are reused for every fusion below, so an
-        // ingredient the first fusion consumed still contributes its definition to the second.
+        // Resolved ONCE: every fusion below reuses these, consumed or not.
         let mut ingredients: Vec<CardInstance> = Vec::new();
         for instance_id in args.instance_ids.iter().flatten() {
             if let Some(found) = find_instance(ctx.sink.state, instance_id) {
@@ -223,7 +191,6 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
 
         // #99's path: no kept instance at all, so one fusion into a hand.
         if target_ids.is_empty() {
-            // `EffectContext` derefs to `EngineSink`, so the subsystem takes the context as it stands.
             fuse(
                 ctx,
                 FuseArgs {
@@ -269,9 +236,7 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
-// Patch v0.2.0: the Fuse variants (docs/classic-sets.md B5 E23; R77, R102, R468–R470).
-// ---------------------------------------------------------------------------------------------
+// The Fuse variants (docs/classic-sets.md B5 E23; R77, R102, R468–R470).
 
 /// B4.1, R387: a random pool never offers the card generating from it — nor, for a fused card, any of
 /// its ingredients (`catalog.selfDefIds`).
@@ -286,30 +251,24 @@ fn pool_for(ctx: &EffectContext<'_>, asked: Option<&CatalogQueryArgs>) -> Vec<&'
 }
 
 /// ME-FUSE-RANDOM (Meditative #47, MD-C20): fuse one card drawn uniformly from `scope` into the
-/// kept target named beside it. The kept card is `targetInstanceId`'s live instance; an Immutable
-/// kept card eats nothing and draws nothing (R23). The pool is the scope's cards minus the kept
-/// card and minus every Immutable card (being eaten changes its text, R23); with none, nothing is
-/// fused and nothing is drawn. A library ingredient goes in as a fresh phantom of its definition —
-/// radiant flag, tuning and enchantments carried — and the library card ceases to exist, so its id
-/// never reaches a view.
+/// live `targetInstanceId`. The pool leaves out the kept card and every Immutable card (being eaten
+/// changes its text, R23); an Immutable kept card or an empty pool fuses and draws nothing. A library
+/// ingredient is a phantom, as `randomIngredient` says.
 fn fuse_random_ingredient(
     ctx: &mut EffectContext<'_>,
     args: &FuseCardsArgs,
     scope: &crate::effects::card_scope::CardScope,
 ) {
-    // The kept card is the target's live instance; without one there is no fusion.
     let Some(kept_id) = args.target_instance_id.clone() else {
         return;
     };
     let Some(kept) = find_instance(ctx.sink.state, &kept_id).cloned() else {
         return;
     };
-    // An Immutable kept card eats nothing and draws nothing (R23).
     if !keepable(ctx.sink.state, &kept) {
         return;
     }
-    // The scope's cards minus the kept card and minus every Immutable one; a card the scope
-    // reaches that has left meanwhile is no ingredient.
+    // A card the scope reaches that has left meanwhile is no ingredient.
     let pool: Vec<CardInstance> = crate::effects::card_scope::cards_in_card_scope(ctx, scope, None)
         .into_iter()
         .map(|entry| entry.card)
@@ -326,9 +285,8 @@ fn fuse_random_ingredient(
     let Some(picked) = ctx.sink.rng.pick(&pool).cloned() else {
         return;
     };
-    // A library ingredient goes in as a fresh phantom of its definition — radiant flag, tuning
-    // and enchantments carried — and the library card ceases to exist, so its id never reaches a
-    // view. A field ingredient goes in as the card standing there.
+    // A library ingredient's phantom carries its radiant flag, tuning and enchantments; a field
+    // ingredient goes in as the card standing there.
     let ingredient = match picked.zone {
         Zone::Library { player } => {
             let mut phantom = new_instance(
@@ -430,16 +388,12 @@ pub struct FuseRandomIntoArgs {
     pub keep_cost: Option<bool>,
 }
 
-/// E23: "fuse a random card into a card in your hand; its cost doesn't change" (Classic+ #31 Fusion
-/// Lab, whose Radiant face fuses "a random Radiant card") and "fuse all cards in your deck with a
-/// random card, they maintain their original cost" (Classic+ #73). For each kept card — the one
-/// `into.target` names, or every card of `into.pile`, read once, a library top down — one random card
-/// of the pool (§5.1 through `catalog.query`, never the running card or its ingredients, B4.1) is fused
-/// into it per R77: the kept card is the instance, keeps its zone and its type, and keeps the cost it
-/// had (R470, `keepCost`, default on); a Radiant pick goes in on its Radiant face (R469). Each fusion is
-/// its own transient definition (R102) and draws its own pick; with no kept card or an empty pool the
-/// effect does nothing and draws nothing (R129). A kept card on the field is R77's `target`; a hand or
-/// library card stays where it is (R470) and its `fused` event is hidden as the card is (§10.8).
+/// E23 (Classic+ #31 Fusion Lab, #73): for each kept card, the one `into.target` names or every card
+/// of `into.pile` read once (a library top down), one random card of the pool (§5.1, never the running
+/// card or its ingredients, B4.1) is fused into it per R77, each its own fusion and draw (R102). The
+/// kept card keeps its zone, its type and by default its cost (R470); a Radiant pick goes in on its
+/// Radiant face (R469); no kept card or an empty pool draws nothing (R129). A hand or library card's
+/// `fused` event is hidden as the card is (§10.8).
 pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
     Effect::new("fuseRandomInto", move |ctx| {
         let kept = kept_cards(ctx, &args.into);
@@ -499,9 +453,7 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // The weapon kit: Equip from a pick (#1841, R1841002; SPEC §6.1 Equip).
-// ---------------------------------------------------------------------------------------------
 
 /// `equipPicks`' `pick`: how each card is picked.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -548,13 +500,11 @@ const EQUIP_PICKS_KEY: &str = "equipPicks";
 /// The Discover's prompt when the card names none.
 const EQUIP_PICK_PROMPT: &str = "Discover a card to Equip";
 
-/// R1841002 (SPEC §6.1 Equip): Equip straight into this Unit from a pick — a Discover of `options`
-/// cards of the pool ("choose between 2" is 2), or a random card of it — `times` times, never
-/// through a hand. Each pick is a fresh copy fused into the unit running the effect as an Equip play
-/// fuses its card (R77, R1086): the unit is the kept instance, and the fused cost is R77's. It is no
-/// play, so the pick's Cry never runs and nothing that counts plays sees it. Each pick is its own
-/// fusion (R102), and a Discover asks for the next once the last is in. Nothing is offered, drawn or
-/// fused when the unit can take no pick (`equip_pool`) or the pool is empty (R129).
+/// R1841002 (SPEC §6.1 Equip): Equip straight into this Unit from a pick, a Discover or a random card
+/// of the pool, `times` times, never through a hand. Each pick is a fresh copy fused in as an Equip play
+/// fuses its card (R77, R1086), at R77's cost; it is no play, so its Cry never runs and nothing counting
+/// plays sees it. Each pick is its own fusion (R102); nothing is offered, drawn or fused when the unit
+/// can take no pick (`equip_pool`) or the pool is empty (R129).
 pub fn equip_picks(args: EquipPicksArgs) -> Effect {
     Effect::new("equipPicks", move |ctx| {
         let times = args.times.unwrap_or(1);
@@ -683,13 +633,11 @@ pub struct FuseGeneratedArgs {
     pub cost_override: Option<i32>,
 }
 
-/// E23: "fuse 3 random AI generated cards and add the result to your hand; it costs (0)" (Classic+
-/// #43 AI Slop; Radiant: "3 random Radiant AI generated cards"). `count` independent picks from the
-/// pool (generated cards may repeat, R60; never the running card or its ingredients, B4.1), fused per
-/// R77 with no target: the shared type, else the first pick's (R102); a Token when every pick is one;
-/// the result a fresh card in the hand, at `handPrice` (default `"free"`, a `costOverride` of 0, R352)
-/// and burned by a full hand (R4). A Radiant pick goes in on its Radiant face (R469). Fewer than two
-/// picks is no fusion, so it draws nothing (R77, R129), and neither does an empty pool.
+/// E23 (Classic+ #43 AI Slop): `count` independent picks from the pool (they may repeat, R60; never
+/// the running card or its ingredients, B4.1), fused per R77 with no target: the shared type, else the
+/// first pick's (R102), a Token when every pick is one; the result a fresh hand card at `handPrice`
+/// (default `"free"`, R352) that a full hand burns (R4). A Radiant pick goes in on its Radiant face
+/// (R469). Fewer than two picks or an empty pool draws nothing (R77, R129).
 pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
     Effect::new("fuseGenerated", move |ctx| {
         // MD-D14: with named pools, one `pool_for` pick from each pool, in order — and if any pool
@@ -789,10 +737,9 @@ fn compare_text(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 /// The controller's cards of the ingredient's type, in the piles named: the field in lane order
-/// (units, the carried Units, then backrow, `zones::acting_on`; the top of a pile only, R13, R446,
-/// R1824000), the hand in hand order, and the library in an order its cards alone decide — name,
-/// definition, face, id — never its own, which is hidden from everyone (§9.1, R310). An Immutable card
-/// is never a Fuse target (R23), and the ingredient itself is not one of its own candidates.
+/// (`zones::acting_on`, the top of a pile only, R13, R446, R1824000), the hand in hand order, and the
+/// library in an order its cards alone decide, never its own, which is hidden (§9.1, R310). Never an
+/// Immutable card (R23), nor the ingredient itself.
 fn fuse_candidates(
     state: &GameState,
     player: PlayerId,
@@ -823,7 +770,7 @@ fn fuse_candidates(
     if piles.contains(&FuseOntoPile::Library) {
         let mut library: Vec<CardInstance> =
             side.library.iter().filter(|&card| fits(card)).cloned().collect();
-        // Stable, as `Array.prototype.sort` is (SURFACE §4.4.1).
+        // A stable sort (SURFACE §4.4.1).
         library.sort_by(|a, b| {
             let left = def_of(Some(state), &a.def_id);
             let right = def_of(Some(state), &b.def_id);
@@ -875,16 +822,12 @@ pub struct FuseOntoYourCardArgs {
     pub otherwise: Option<FuseOntoOtherwise>,
 }
 
-/// E23, Classic #78 Mutate Spell's Radiant face: "fuse it onto a card of yours of its type on your
-/// field, in your hand or in your deck, or exile it if you have none". The card `target` names — on
-/// the field, on the stay the run aimed at (R174) — is the ingredient; the controller picks the card
-/// it is fused onto from their own cards of its type (`fuseCandidates`) in a `target` prompt of their
-/// own, which the other player sees only as open (§10.6, R81): the deck's cards are shown to the
-/// chooser and nobody else (§10.8, as KY's Private Tutor shows library cards). The answer fuses per
-/// R77 onto the pick — kept on the field as R77's target, or in the hand or the deck where it is
-/// (R470) — and the ingredient ceases to exist (R77, R86). With no candidate the ingredient is exiled
-/// (`otherwise: "exile"`, the default) or left alone (`"nothing"`), with no prompt. A prompt splits
-/// the list the effect stands in: the rest is parked and resumes after the answer (R113).
+/// E23, Classic #78 Mutate Spell's Radiant face: the card `target` names (on the field, on the stay the
+/// run aimed at, R174) is fused onto a card of the controller's of its type (`fuse_candidates`), picked
+/// in a `target` prompt the other player sees only as open (§10.6, R81), deck cards shown to the
+/// chooser alone (§10.8). The pick stays where it is (R470) and the ingredient ceases to exist (R86).
+/// With no candidate the ingredient is exiled (`otherwise`'s default) or left alone, with no prompt. A
+/// prompt parks the rest of the list until the answer (R113).
 pub fn fuse_onto_your_card(args: FuseOntoYourCardArgs) -> Effect {
     Effect::new("fuseOntoYourCard", move |ctx| {
         let Some(ingredient) = instance_of(ctx, &args.target) else {
@@ -934,8 +877,7 @@ pub fn fuse_onto_your_card(args: FuseOntoYourCardArgs) -> Effect {
                 radiant: None,
             })
             .collect();
-        // TS `resumeAt({ … })`: the hook and the face as given, and the card's own data, which here is
-        // the ingredient alone (no control key for `work.cardData` to take out).
+        // The card's own data is the ingredient alone (no control key for `work.cardData` to take out).
         let mut data: IndexMap<String, Value> = IndexMap::new();
         data.insert("ingredient".to_string(), Value::String(ingredient.id.clone()));
         let resume = Resume {
@@ -1001,14 +943,12 @@ fn fuse_onto_picked(sink: &mut EngineSink<'_>, ingredient_id: &str, picked: Opti
 
 /// R122: the answer to `fuseOntoYourCard`'s prompt — validated as any prompt's, then the fusion onto
 /// the pick, then what the prompt interrupted (R113). An ingredient no longer on the field, or a pick
-/// that has moved to a pile it may not be kept in, fuses nothing. (TS registered it at module scope
-/// under `FUSE_ONTO_HOOK`; `prompts.rs` calls it by that hook.)
+/// that has moved to a pile it may not be kept in, fuses nothing.
 pub fn answer_fuse_onto(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<(), EngineError> {
     let Some(pending) = sink.state.pending.clone() else {
         return Err(EngineError::new("no prompt is open"));
     };
     why_answer_refused(&pending, answer)?;
-    // TS `resumeOf(pending).data`: a typed `Resume` has every field already, so its data is the data.
     let Some(data) = fuse_onto_data(&pending.resume.data) else {
         return Err(EngineError::new("that prompt carries no card to fuse"));
     };

@@ -2,13 +2,7 @@
 //! (0) Spell, Quickdraw, Mythic, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Add a random card to your hand."
 //!   Radiant: "Add a random Radiant card to your hand."
-//!
-//! Engine: Core #59 Unbiased Immigration's add: `add_random_from_catalog` with a pool that names no
-//! set, so every non-token card of the sets that ship (R380, R1420) and never Training Grounds while it
-//! is held; the card that generated it is never offered (§5.1, R387). The card is hidden from the
-//! opponent (R97); a full hand burns it (§2.4). The Radiant face's card is Radiant (R74). Quickdraw
-//! (R640), the catalog tag, is the `quickdraw` static flag: dealt in the deck, it replaces an opening
-//! draw.
+//! Core #59 add_random_from_catalog from shipped sets (R380, R1420), excluding own def (§5.1, R387), hidden from opponent (R97, §2.4). Radiant is Radiant (R74). Quickdraw flag (R640).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;

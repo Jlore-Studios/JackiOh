@@ -1,6 +1,4 @@
-//! The deploy probes (`src/api/health.rs`, #861): `GET /healthz` answers 200 with the catalog
-//! version and `x-deployed-commit` and never touches the store; `GET /readyz` gives the same
-//! answer, but only once the store answers `select 1`, and until then 503 `unavailable`.
+//! Deploy probes (`src/api/health.rs`, #861): GET /healthz and GET /readyz.
 
 use serde_json::Value;
 

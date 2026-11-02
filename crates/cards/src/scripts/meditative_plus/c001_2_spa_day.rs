@@ -38,10 +38,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #1.2 Spa Day — SPEC §8.9 row 1.2, BUILD M11 row M+ 1.2: "heals its caster's hero 25 past
-// 30 (no cap); shuffles 2 base Love Bombs into its caster's deck, each healing 7 when drawn; a full
-// deck refuses them (R80); heal and bombs read through `param()`; radiant heal 50 and 2 Radiant Love
-// Bombs (14 each)".
+// Meditative+ #1.2 Spa Day — SPEC §8.9 row 1.2, BUILD M11 row M+ 1.2 (R80).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,7 +64,6 @@ mod tests {
         s.state().players.p1.hero.health
     }
 
-    /// M #30.1 Love Bomb's heal on the face given, read through its declared number.
     fn bomb_heal(s: &Scenario, radiant: bool) -> i32 {
         param_value(
             s.state(),

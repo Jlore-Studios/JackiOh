@@ -1,5 +1,5 @@
 // R668: the worker's store for a free game in progress (saveStore.ts), against a minimal IndexedDB
-// fake (jsdom has none): the read at boot, writes mirrored in order, and storage that fails.
+// fake (jsdom has none).
 
 import { describe, expect, it } from "vitest";
 

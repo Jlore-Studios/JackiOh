@@ -1,9 +1,6 @@
-// Prints an `ArtSpec` as a `data:image/svg+xml,…` URI (docs/polish/6-cards.md, Surface A, B3).
-//
-// The document is one <svg viewBox="0 0 100 100"> with no <text>, no <title> and no external
-// reference: the only `url(…)`s point at gradients defined inside it, and nothing uses `href`.
-// It is percent-encoded in full, parentheses and quotes included, so it can sit inside a CSS
-// `url("…")` in any browser and in jsdom's style parser.
+// Prints an `ArtSpec` as a `data:image/svg+xml,…` URI (docs/polish/6-cards.md, Surface A, B3): no
+// <text>, <title>, `href` or external reference (its `url(…)`s are its own gradients), percent-encoded
+// in full so it sits inside a CSS `url("…")` in any browser and in jsdom's style parser.
 //
 // R2715001: given a full-art card's motion (motion.ts), the same picture moves: its layers are tagged
 // by role and a `<style>` after the `<defs>` animates them, with particles over it. Given none, it is
@@ -31,15 +28,12 @@ export const VIGNETTE_START = 0.6;
 export const VIGNETTE_OPACITY = 0.5;
 const DEGREES = Math.PI / 180;
 
-/** The procedural-art memo is cleared once it would pass this many entries. */
 const ART_CACHE_MAX = 512;
 
-/** The accent glyph is quieter than the emblem. */
 export const ACCENT_OPACITY = 0.8;
 /** An ink-drop mote (Book): its tail rises this many radii above its center. */
 export const DROP_TAIL = 2.2;
 
-/** One glyph from EMBLEMS, placed, turned and scaled into the box. */
 function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): string {
   const glyph = EMBLEMS[placed.glyph];
   const scale = placed.size / EMBLEM_BOX;
@@ -53,7 +47,6 @@ function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): s
   );
 }
 
-/** One mote: a round dot, an ink drop (Book) or a square pixel (AI). */
 function moteMarkup(mote: ArtSpec["motes"][number], shape: ArtSpec["moteShape"]): string {
   const paint = `fill="${mote.fill}" opacity="${fmt(mote.opacity)}"`;
   switch (shape) {
@@ -155,17 +148,13 @@ function encodeSvg(svg: string): string {
   return encodeURIComponent(svg).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
-/**
- * `data:image/svg+xml,…`: one <svg viewBox="0 0 100 100">, no <text>, no <title>, no external refs.
- * R2715001: moving as `motion` says, its particles placed by `defId`; the still picture with none.
- */
+/** R2715001: moving as `motion` says, its particles placed by `defId`; the still picture with none. */
 export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId = ""): string {
   return `${DATA_PREFIX}${encodeSvg(artSvg(spec, motion, defId))}`;
 }
 
-// The memo behind `CardArt`: keyed `${defId}|${radiant}|${composition}`, as the Surface fixes, plus
-// the motif (R503), which a card's name fixes as its id fixes the rest. Transient `t-<n>` defs can
-// be minted without bound, so the map is cleared rather than grown. R2715001: a moving picture adds
+// The memo behind `CardArt`, keyed as the Surface fixes plus the motif (R503). Transient `t-<n>` defs
+// can be minted without bound, so the map is cleared rather than grown. R2715001: a moving picture adds
 // `|moving` (a card's motion is fixed by its id, motion.ts), so the still one keeps its key.
 const proceduralCache = new Map<string, string>();
 
@@ -191,10 +180,6 @@ export function proceduralArtUri(
   return uri;
 }
 
-/**
- * R2170000: a Stinkyscape face's picture (stinkyscape.ts), memoised beside the rest. Its key adds
- * the name, which picks the detail inside the card's family, as the motif does above.
- */
 /** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
 export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean): string {
   const key = `starship|${pieces}|${launched}|${radiant}`;
@@ -206,6 +191,7 @@ export function starshipArtUri(pieces: number, launched: boolean, radiant: boole
   return uri;
 }
 
+/** R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. */
 export function stinkyscapeArtUri(
   defId: string,
   name: string | undefined,

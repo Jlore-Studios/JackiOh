@@ -35,11 +35,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #146 Flash Freeze — SPEC §8.10 row S 146, BUILD M12 row S 146: "drawn, it freezes every Unit of
-// both sides and its player draws again; a Unit frozen on its controller's turn thaws at that
-// turn's end, an enemy one at the end of its controller's next turn (R1174000); played from the
-// hand it does the same; radiant only the enemy's Units" (R1867009; the cast-on-draw chain cap is
-// R58/R70's, proven in C+ #36.1's file).
+// S #146 Flash Freeze — SPEC §8.10 row S 146, BUILD M12 row S 146 (#36, R1174000, R1867009, R58,
+// R70).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -62,7 +59,6 @@ mod tests {
         s.card(card).frozen.is_some()
     }
 
-    /// p1 drawing `library` at the start of their turn, an enemy Vanilla on the board.
     fn draw_freeze(library: Vec<Value>) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [TIMMY], "library": library },
@@ -84,7 +80,6 @@ mod tests {
             let theirs = s.unit_at(P2, 1);
             assert!(frozen(&s, &mine));
             assert!(frozen(&s, &theirs));
-            // Cast, it resolved into the graveyard; then you drew again.
             s.expect_in_zone(FREEZE, "graveyard");
             assert_eq!(def_ids(&s.hand(P1)), vec![FILLER, FILLER]);
         }

@@ -1,16 +1,11 @@
 // R1834000: a signed-in account's per-card picks (R1655000) live on the account, and the device's store
 // (`cards/cosmetics.ts`) is their cache. The device's own picks are sent up once, by the first active
-// profile to sign in on it while it holds some (`POST /api/card-picks/upload`, which never overwrites a
-// card the account holds); any other time the account's copy is read. Either answer replaces the
-// device's copy, but for a write made here while it was on its way, which stands and is sent after it,
-// and lists the profile under CARD_PICKS_UPLOADED_KEY: from then on the store holds an account's copy,
-// which is never sent up again, so a pick cleared on another device never comes back from this one's
-// cache, and no profile's copy is sent up as another's. Each write on this page is then sent as the
-// fields it changed (`PUT /api/card-picks`, null clearing one), one request at a time.
-//
-// A failed request throws nothing into React and changes nothing on the device: a failed upload or
-// read lists no profile, so the next sign-in tries again, and a failed send leaves the pick worn here.
-// The screens share one sync per profile, as the settings' does (`settings/accountSync.ts`).
+// profile to sign in on it while it holds some (`POST /api/card-picks/upload` never overwrites a card
+// the account holds); any other time the account's copy is read. Either answer replaces the device's
+// copy, but for a write made here meanwhile, and lists the profile under CARD_PICKS_UPLOADED_KEY: an
+// account's copy is never sent up again, so a pick cleared on another device never comes back from this
+// one's cache. A failed request throws nothing into React, changes nothing here and lists no profile,
+// so the next sign-in tries again.
 
 import { getCardPicks, putCardPick, uploadCardPicks, type CardPicksEntry, type CardPicksResponse, type CardPickPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
@@ -73,7 +68,7 @@ function accountCopy(answer: unknown): Record<string, unknown> {
   return picks;
 }
 
-/** `picks` with `change` made to `defId`'s: a field set to its new value, or dropped where it is null. */
+/** Applies `change` to `picks[defId]` in place: a null field is dropped. */
 function withChange(picks: Record<string, unknown>, defId: string, change: CardPickChange): void {
   const held = picks[defId];
   const next: Record<string, unknown> = isRecord(held) ? { ...held } : {};

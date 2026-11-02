@@ -1,14 +1,5 @@
 // Game.tsx's integration-QA findings: the moves of a view the board is not showing yet, the
 // game-over state (Result.tsx), and animations that played twice.
-//
-// 1. While the animation runner holds a newer view back, the board draws the older one; the newer
-//    view's `legal` used to reach it anyway, so End turn lit up and the hand glowed during the AI's
-//    playback, and a click ended a turn the player had not seen.
-// 2. The result overlay printed the engine's reason slug ("hero-death") in a bare box with no way
-//    on. It now says why in words, keeps the slug in `data-reason`, and offers the route's actions.
-// 3. Animations played twice in a row whenever R97 re-redacted an event the new view's window
-//    shared with the last one (the opponent playing a card it had just drawn): the diff of the two
-//    windows found no overlap and the runner replayed the whole window before the new events.
 
 import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

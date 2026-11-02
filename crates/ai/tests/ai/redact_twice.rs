@@ -4,10 +4,6 @@
 //! definition to read (an opponent's face-down trap keeps the price R351 showed), and on everything
 //! else, so the AI an arena plays decides exactly as the AI of the quality gates does on the true
 //! state.
-//!
-//! Rust only: no TypeScript test ports to this, since the agent protocol is v0.3.0's (part 29). Found
-//! by part 34's `promote --dry-run`, where every decision facing a face-down trap panicked with
-//! `unknown defId "ai:hidden"`.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -56,7 +52,6 @@ fn a_face_down_traps_placeholder_keeps_its_shown_price_when_redacted_again() {
     assert_eq!(text(&twice), text(&once));
 }
 
-/// The AI decides the same on the redacted state as on the true one
 #[test]
 fn the_ai_decides_the_same_on_the_redacted_state_as_on_the_true_one() {
     let state = facing_a_face_down_trap();
@@ -70,7 +65,6 @@ fn the_ai_decides_the_same_on_the_redacted_state_as_on_the_true_one() {
     assert_eq!(on_view, on_truth);
 }
 
-/// Redacting twice is redacting once, for both seats, all through random-policy games
 #[test]
 fn redacting_twice_is_redacting_once_through_random_policy_games() {
     let mut face_down_seen = 0;
