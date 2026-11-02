@@ -1135,6 +1135,9 @@ pub const SHEEP_TRIBUTE_VALUE: i32 = 2;
 
 /// §6.3 Discover: "choose 1 of 3" (`effects::choose`, `effects::last_board`, `subsystems::scorer`).
 pub const DISCOVER_OPTIONS: i32 = 3;
+/// #2646, R2739000: the most options a `mode`, `reward` or `answer` prompt has and is still drawn as
+/// cards (`view_for`'s `optionCount`, and the client's card picker).
+pub const PROMPT_CARD_OPTION_LIMIT: usize = 4;
 /// C+ #29: "It costs (0)", "Each costs (0)" — a `costOverride` (R65) (`effects::last_board`).
 pub const LAST_BOARD_CARD_COST: i32 = 0;
 
