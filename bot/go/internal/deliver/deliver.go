@@ -8,12 +8,13 @@
 // forbidden path, and fast-forward the branch on GitHub.
 //
 // The review rule (`review_rule.py`): a commit ships when its lane's final audit approved it
-// (one strong model for a medium or hard item, one medium model for an easy item), and no
-// model's rejection of it stands. A weak approval never ships anything. Votes are
-// kept per commit, one per review, with the tier of the seat that cast them (`_vote`), from the
-// plan's seats, never from the model job. A pull request whose commit has that gets auto-merge,
-// which merges it once the required CI checks pass; one still short of it waits in
-// `bot:cross-review` for a review run.
+// from a subscription other than the one whose run built it (one medium or strong model for a
+// medium item, one strong model for a hard item, #2748), and no model's rejection of it stands.
+// A weak approval never ships anything. Votes are kept per commit, one per review, with the tier
+// of the seat that cast them and its subscription (`_vote`), and the head's builder's
+// subscription, from the plan's seats and provider, never from the model job. A pull request
+// whose commit has that gets auto-merge, which merges it once the required CI checks pass; one
+// still short of it waits in `bot:cross-review` for a review run.
 //
 // A commit that meets the rule is recorded as cleared (`_clear`). When `main` then leaves it with
 // conflicts, the revision that resolves them carries the clearance (`_carry`) if it started from

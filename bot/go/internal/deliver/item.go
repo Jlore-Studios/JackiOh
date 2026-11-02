@@ -9,7 +9,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/easy"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/human"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
@@ -226,10 +225,9 @@ func (x *Deliverer) planned(number int, status string) {
 // ApplyRating is Deliverer._apply_rating.
 //
 // Label the item with the difficulty its planner rated (#317 part 8), and say so: only
-// when no person set one (`queue.rating_source`), never lower than the bot's own earlier
-// rating, and easy only when the plan's **Files to touch** table holds to the easy rule
-// (`easy.plan_breach`, borderline included) and the rating's `why` admits no doubt
-// (`easy.uncertain_why`, #695). Records `difficulty_by`. Returns the sentence for the
+// when no person set one (`queue.rating_source`), and never lower than the bot's own earlier
+// rating. The ratings are medium and hard since #2748; a retired `easy` (a run planned before
+// it) is medium (`config.as_difficulty`). Records `difficulty_by`. Returns the sentence for the
 // comment.
 func (x *Deliverer) ApplyRating(number int) string {
 	plan := x.resultPlan()
@@ -239,7 +237,7 @@ func (x *Deliverer) ApplyRating(number int) string {
 	if queue.RatingSource(labels, record) == "person" {
 		return ""
 	}
-	if rated.Len() == 0 || !hasString(config.Difficulties, py.Str(rated.Get("difficulty"))) {
+	if rated.Len() == 0 || config.AsDifficulty(py.Str(rated.Get("difficulty"))) == "" {
 		// The planner left its rating line out (a weaker model may): the item routes as medium
 		// anyway, so say so on the thread instead of leaving it unlabelled. An earlier rating
 		// of the bot's own stands, and a later planner may raise this one.
@@ -254,22 +252,10 @@ func (x *Deliverer) ApplyRating(number int) string {
 		return fmt.Sprintf("%s gave no rating, so it is `difficulty:medium`, which is how an unrated "+
 			"item is routed anyway.", who)
 	}
-	wanted := py.Str(rated.Get("difficulty"))
-	earlier := py.OrStr(record.Obj("difficulty_by").Get("difficulty"), "")
+	wanted := config.AsDifficulty(py.Str(rated.Get("difficulty")))
+	earlier := config.AsDifficulty(py.OrStr(record.Obj("difficulty_by").Get("difficulty"), ""))
 	if hasString(config.Difficulties, earlier) && indexOf(config.Difficulties, wanted) < indexOf(config.Difficulties, earlier) {
 		wanted = earlier // a rating stands: nobody lowers it
-	}
-	breach := ""
-	if wanted == "easy" {
-		breach = easy.PlanBreach(py.OrStr(plan.Get("text"), ""), x.Cfg.Easy, x.Cfg.ReviewPaths, x.Cfg.ForbiddenPaths)
-		if breach != "" {
-			wanted = "medium"
-		} else if easy.UncertainWhy(py.OrStr(rated.Get("why"), "")) {
-			// Torn between two means the higher (#695): the planner admitted doubt.
-			breach = fmt.Sprintf("the rating itself was unsure (%s), so borderline easy is medium",
-				py.SliceTo(strings.TrimSpace(py.OrStr(rated.Get("why"), "")), 140))
-			wanted = "medium"
-		}
 	}
 	who, tier := x.planner()
 	x.setDifficulty(number, wanted, labels)
@@ -280,10 +266,11 @@ func (x *Deliverer) ApplyRating(number int) string {
 	if rated.Truthy("why") {
 		why = ": " + py.Str(rated.Get("why"))
 	}
-	said := fmt.Sprintf("Rated `difficulty:%s` by %s%s.", py.Str(rated.Get("difficulty")), who, why)
-	if breach != "" {
-		said += fmt.Sprintf(" The easy rule does not hold (%s), so it is `difficulty:medium`.", breach)
-	} else if rated.Get("difficulty") != wanted {
+	given := py.Str(rated.Get("difficulty"))
+	said := fmt.Sprintf("Rated `difficulty:%s` by %s%s.", given, who, why)
+	if config.AsDifficulty(given) != given {
+		said += fmt.Sprintf(" `difficulty:%s` is retired, so it is `difficulty:%s`.", given, wanted)
+	} else if given != wanted {
 		said += fmt.Sprintf(" It was rated `difficulty:%s` before, and a rating is never lowered.", wanted)
 	}
 	return said
@@ -301,12 +288,13 @@ func indexOf(xs []string, s string) int {
 	return -1
 }
 
-// Leave exactly `difficulty:<difficulty>` on the thread, of the difficulty labels. (Python walks
-// the set of labels in its hash order, which is a process's own; sorted here.)
+// Leave exactly `difficulty:<difficulty>` on the thread, of the difficulty labels, a retired one
+// (`difficulty:easy`) among them. (Python walks the set of labels in its hash order, which is a
+// process's own; sorted here.)
 func (x *Deliverer) setDifficulty(number int, difficulty string, labels map[string]bool) {
 	wanted := "difficulty:" + difficulty
 	for _, name := range sortedKeys(labels) {
-		if config.DifficultyLabels.Has(strings.ToLower(name)) && name != wanted {
+		if _, ok := config.LabelDifficulty(strings.ToLower(name)); ok && name != wanted {
 			x.try(func() { x.GH.RemoveLabel(number, name) })
 		}
 	}
@@ -807,88 +795,6 @@ func (x *Deliverer) builderWorked() bool {
 	return false
 }
 
-// A weak builder's change on an easy item that breaks the easy rule (`easy.change_breach`:
-// too many files or lines, or an off-limits path) is not pushed (#317 part 8): its work is
-// kept for a stronger builder (a build's on its own branch, with no pull request; a
-// revision's on `bot/wip/<pr>`), the item becomes medium (its label, or a floor under a
-// person's label), and it is queued again. True when it did so.
-func (x *Deliverer) easyBreach(number int, kind string) bool {
-	if x.BuildSeat == nil || x.BuildSeat.Tier != "weak" {
-		return false
-	}
-	if x.Difficulty(number) != "easy" {
-		return false
-	}
-	counts := x.bundleCounts()
-	breach := ""
-	if counts.Len() > 0 {
-		breach = easy.ChangeBreach(counts, x.Cfg.Easy)
-	}
-	if breach == "" {
-		return false
-	}
-	var pushed bool
-	if kind == "build" {
-		pushed, _ = x.publish(false)
-	} else {
-		pushed, _ = x.publishWip(number)
-	}
-	issue, pr := stepup.Pair(x.Ctx, number)
-	targets := []int{issue}
-	if pr != nil && *pr != 0 {
-		targets = setOrder(issue, *pr) // `{issue, pr}`, in the order Python's set walks it
-	}
-	for _, target := range targets {
-		labels := x.Labels(target)
-		if queue.RatingSource(labels, x.Record(target)) == "person" {
-			x.remember(target, pyjson.New("difficulty_floor", "medium"))
-		} else {
-			x.setDifficulty(target, "medium", labels)
-			x.remember(target, pyjson.New("difficulty_by", pyjson.New(
-				"difficulty", "medium", "provider", "easy rule", "tier", "",
-				"at", clock.ISO(x.Ctx.Now()), "why", breach)))
-		}
-		if pr != nil && target == *pr {
-			x.remember(target, pyjson.New("difficulty", "medium"))
-		}
-	}
-	x.requeueLabel(number, kind)
-	kept := ""
-	if pushed {
-		if kind == "build" {
-			kept = fmt.Sprintf(" Its work is kept on `%s`", py.Str(x.Plan.Get("branch")))
-		} else {
-			kept = fmt.Sprintf(" Its work is kept on `%s`", queue.WipBranch(number))
-		}
-		kept += ", for it to go on from."
-	}
-	x.GH.CreateComment(number, fmt.Sprintf("Not pushed (%s): %s built it as `difficulty:easy`, but "+
-		"the change breaks the easy rule (%s), so it is `difficulty:medium` now and a medium or "+
-		"stronger model takes it.%s", x.link(), x.BuildSeat.Describe(), breach, kept))
-	return true
-}
-
-// Lines added plus removed per path of the bundle's head against `main`, or, for a
-// fullsend part (#505), against its tree's branch: the parts before it are not its change.
-func (x *Deliverer) bundleCounts() *pyjson.Object {
-	name := x.Result.Get("bundle")
-	branch := py.OrStr(x.Plan.Get("branch"), "")
-	if !pyjson.Truthy(name) || branch == "" || !isFile(outPath(x.OutDir, py.Str(name))) {
-		return pyjson.New()
-	}
-	base := py.OrStr(x.Plan.Get("onto"), x.Cfg.DefaultBranch)
-	var counts *pyjson.Object
-	if _, ok := herr.Catch[*herr.GitError](func() {
-		x.fetch(base, true)
-		local := "deliver/measure/" + branch
-		x.Repo.FetchBundle(outPath(x.OutDir, py.Str(name)), branch, local)
-		counts = x.Repo.Numstat("origin/"+base, local)
-	}); ok {
-		return pyjson.New()
-	}
-	return counts
-}
-
 // One failure of the item's own (`stepup.strike`): True when it was its third, and the
 // item was stepped up (or blocked at hard) instead of ending the way the caller would.
 func (x *Deliverer) strike(number int, why string) bool {
@@ -1061,9 +967,6 @@ func (x *Deliverer) build(number int, status string) {
 		x.Result.Set("reason", "no builder session in the run worked: "+
 			py.OrStr(x.Result.Get("reason"), "no reason recorded"))
 		x.Fail(number, "build")
-		return
-	}
-	if (status == "approved" || status == "built") && x.easyBreach(number, "build") {
 		return
 	}
 	approved := status == "approved"

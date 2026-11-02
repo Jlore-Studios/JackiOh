@@ -187,7 +187,8 @@ func TestDifficulty_NoLabelIsMediumAndTheHardestCounts(t *testing.T) {
 		return out
 	}
 	assertEqual(t, queue.DifficultyOf(of(), ""), "medium")
-	assertEqual(t, queue.DifficultyOf(of(difficultyEasy), ""), "easy")
+	// `difficulty:easy` is retired (#2748): a thread that still carries it is medium.
+	assertEqual(t, queue.DifficultyOf(of(difficultyEasy), ""), "medium")
 	assertEqual(t, queue.DifficultyOf(of("Difficulty:HARD"), ""), "hard")
 	assertEqual(t, queue.DifficultyOf(of(difficultyEasy, difficultyHard), ""), "hard")
 	assertEqual(t, queue.DifficultyOf(of(difficultyEasy, difficultyMedium), ""), "medium")
@@ -195,6 +196,9 @@ func TestDifficulty_NoLabelIsMediumAndTheHardestCounts(t *testing.T) {
 	// A bot PR keeps its issue's difficulty on its record.
 	assertEqual(t, queue.DifficultyOf(of(config.LabelPR), "hard"), "hard")
 	assertEqual(t, queue.DifficultyOf(of(difficultyEasy), "medium"), "medium")
+	assertEqual(t, queue.DifficultyOf(of(config.LabelPR), "easy"), "medium") // an old record's
+	assertEqual(t, config.Difficulties, []string{"medium", "hard"})
+	assertEqual(t, config.MinTier, map[string]string{"medium": "medium", "hard": "strong"}) // nothing at weak
 }
 
 func TestDifficulty_PriorityNeverDecidesWhoMayTakeIt(t *testing.T) {
@@ -210,22 +214,21 @@ func TestDifficulty_PriorityNeverDecidesWhoMayTakeIt(t *testing.T) {
 // The builder: the first free subscription in the usage order with a seat that meets the item's
 // tier, on its weakest such seat.
 
-// With the weaker models off, an easy item goes to claude-3's Sonnet, medium since #317 part 5.
-func TestDifficulty_AnEasyItemIsBuiltWithSonnetOnAClaudeAccount(t *testing.T) {
+// With the medium models off, an item still labelled `difficulty:easy` (retired in #2748) is built
+// as a medium one: on claude-3's Sonnet, medium since #317 part 5, with no step up to say.
+func TestDifficulty_AnItemStillLabelledEasyIsBuiltAsMediumWithSonnet(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_3"),
 		Machine: []string{}})
 	difficultyQueue(gh, ctx, 3, false, difficultyEasy)
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("difficulty")},
-		[]any{"build", "claude-3", "easy"})
+		[]any{"build", "claude-3", "medium"})
 	assertEqual(t, difficultySeats(planned), map[string]any{
 		"plan":   difficultySeat{"claude-3", "opus", "strong"},
 		"build":  difficultySeat{"claude-3", "sonnet", "medium"},
 		"review": difficultySeat{"claude-3", "opus", "strong"}})
-	assertEqual(t, planned.Get("routing"), []any{
-		"#3: stepped up from weak to medium to build it: no weak-tier model " +
-			"(lite-1) is free now"})
+	assertEqual(t, planned.Get("routing"), []any{})
 }
 
 // Sonnet at xhigh is medium (#317 part 5), so claude-3 builds a medium item with it and keeps
@@ -255,18 +258,18 @@ func TestDifficulty_AHardItemTakesAStrongModelOnly(t *testing.T) {
 	assertIn(t, "no subscription can take the queue now", difficultyStr(planned, "reason"))
 }
 
-// For easy items the lanes fill in tier order (#695): the weak model first while it has a lane,
-// the weak one; then the medium models, Muse on its four lanes (#1273), agy on its one and Codex
-// on its one; then the Sonnet seats in usage order, claude-3, claude-7, claude-8, claude-1,
-// claude-4, claude-6 and claude-5 once each, and only then claude-3's second lane (two lanes,
-// uncapped) and claude-8's second (two lanes): with every account's room level, the load balancer
-// gives the next run to one holding none (`plan.balance`); and claude-2 builds only after all of
-// them (`build_last`). Past that every lane is held, and the rest wait.
+// For medium items the lanes fill in tier order (#695): the medium models first, Muse on its four
+// lanes (#1273), agy on its one and Codex on its one; then the Sonnet seats in usage order,
+// claude-3, claude-7, claude-8, claude-1, claude-4, claude-6 and claude-5 once each, and only then
+// claude-3's second lane (two lanes, uncapped) and claude-8's second (two lanes): with every
+// account's room level, the load balancer gives the next run to one holding none
+// (`plan.balance`); and claude-2 builds only after all of them (`build_last`). The weak one takes
+// none (#2748). Past that every lane is held, and the rest wait.
 func TestDifficulty_TheUsageOrder(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Machine: testsupport.AllMachine})
 	for number := 3; number < 21; number++ {
-		difficultyQueue(gh, ctx, number, true, difficultyEasy)
+		difficultyQueue(gh, ctx, number, true)
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			state.Item(s, number).Update(pyjson.New("queued_at", fmt.Sprintf("2026-09-%02dT00:00:00Z", number+10)))
 			return nil
@@ -290,72 +293,17 @@ func TestDifficulty_TheUsageOrder(t *testing.T) {
 		}, "state")
 		order = append(order, []any{planned.Get("provider"), difficultySeatOf(t, planned, "build")[1]})
 	}
-	want := []any{[]any{"lite", "lite-1"}}
+	want := []any{}
 	for range 4 {
 		want = append(want, []any{"muse", "muse-spark-1.3-contributor"})
 	}
-	for _, p := range [][2]string{{"agy", "gemini-3.8-flash-high"}, {"gpt", "gpt-5.6-sol"},
+	for _, p := range [][2]string{{"agy", "gemini-4-argon-high"}, {"gpt", "gpt-5.6-sol"},
 		{"claude-3", "sonnet"}, {"claude-7", "sonnet"}, {"claude-8", "sonnet"}, {"claude-1", "sonnet"},
 		{"claude-4", "sonnet"}, {"claude-6", "sonnet"}, {"claude-5", "sonnet"}, {"claude-3", "sonnet"},
 		{"claude-8", "sonnet"}, {"claude-2", "sonnet"}} {
 		want = append(want, []any{p[0], p[1]})
 	}
 	assertEqual(t, order, want)
-}
-
-// A seat marked `takes_over` stands in for another subscription: with the weak one free it builds
-// nothing, and it never builds a medium item, which its account builds with Opus. No committed
-// seat stands in now (every Claude account switches between its two models), so the test marks
-// claude-4's Sonnet itself.
-func TestDifficulty_ASonnetStandInBuildsOnlyEasyItemsTheWeakOneCannotTake(t *testing.T) {
-	standIn := func(gh *fakes.FakeGitHub, machine []string) *hctx.Context {
-		raw := testsupport.WithWeak(testsupport.RawProviders())
-		raw.Obj("providers").Items(func(name string, v any) bool {
-			provider := pyjson.Obj(v)
-			if provider.Get("login") == "machine" {
-				provider.Set("enabled", slices.Contains(machine, name))
-			}
-			if provider.Get("cli") == "claude" {
-				provider.Set("schedule", pyjson.New("mode", "window", "start", "21:00", "end", "07:00"))
-				provider.Pop("off_hours")
-			}
-			return true
-		})
-		raw.Set("plan_lanes", 0)
-		pyjson.Obj(raw.Obj("providers").Obj("claude-4").List("extra_models")[0]).Set("takes_over", "lite")
-		cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(providers.SecretNames...),
-			Machine: machine})
-		pool := providers.Parse(raw)
-		pool.MaxParallel, pool.MachineParallel = 20, 20
-		replaced := *cfg
-		replaced.Pool = pool
-		return testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: &replaced})
-	}
-	gh := fakes.NewFakeGitHub()
-	ctx := standIn(gh, []string{"lite"})
-	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 59, "claude-7", 57, "claude-7", 67,
-		"claude-1", 51,
-		"claude-1", 58)
-	difficultyQueue(gh, ctx, 3, true, difficultyEasy)
-	assertEqual(t, difficultySeats(flowMake(ctx))["build"], difficultySeat{"lite", "lite-1", "weak"})
-	gh = fakes.NewFakeGitHub()
-	ctx = standIn(gh, []string{"lite"})
-	difficultyBusy(gh, ctx, append([]any{"claude-3", 50, "claude-3", 59, "claude-7", 57, "claude-7", 67,
-		"claude-8", 68, "claude-8", 75, "claude-1", 51,
-		"claude-1", 58},
-		difficultyEach("lite", 60, 66)...)...)
-	difficultyQueue(gh, ctx, 3, true, difficultyEasy)
-	assertEqual(t, difficultySeats(flowMake(ctx))["build"], difficultySeat{"claude-4", "sonnet", "medium"})
-	gh = fakes.NewFakeGitHub()
-	ctx = standIn(gh, []string{})
-	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 59, "claude-7", 57, "claude-7", 67,
-		"claude-8", 68, "claude-8", 75, "claude-1", 51,
-		"claude-1", 58, "claude-6", 71, "claude-5", 70,
-		"claude-2", 53, "claude-2", 56)
-	difficultyQueue(gh, ctx, 3, true, difficultyMedium)
-	assertEqual(t, difficultySeats(flowMake(ctx))["build"], difficultySeat{"claude-4", "opus", "strong"})
-	// A stand-in never reviews: the review rule counts the run's reviewer, Opus.
-	assertEqual(t, ctx.Cfg.Pool.BestSeat(ctx.Cfg.Pool.Get("claude-4"), "medium").Model, "opus")
 }
 
 // Each Claude account runs Opus and Sonnet both: the router puts a medium item on its weakest
@@ -380,16 +328,15 @@ func TestDifficulty_EveryClaudeAccountBuildsAMediumItemOnSonnet(t *testing.T) {
 
 func TestDifficulty_SonnetOnlyWhileClaude1OrClaude3IsOpen(t *testing.T) {
 	// claude-3, claude-7 and claude-8 full (claude-3's two lanes, claude-7's one, claude-8's
-	// three), claude-1 open and the weak one full: claude-1 builds the easy item with Sonnet.
+	// two), claude-1 open and the medium models off: claude-1 builds the medium item with Sonnet.
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Machine: []string{"lite"}})
-	difficultyBusy(gh, ctx, append([]any{"claude-3", 50, "claude-3", 59, "claude-7", 72, "claude-7", 73,
-		"claude-8", 74, "claude-8", 75},
-		difficultyEach("lite", 60, 66)...)...)
-	difficultyQueue(gh, ctx, 3, true, difficultyEasy)
+	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 59, "claude-7", 72, "claude-7", 73,
+		"claude-8", 74, "claude-8", 75)
+	difficultyQueue(gh, ctx, 3, true)
 	assertEqual(t, difficultySeats(flowMake(ctx))["build"], difficultySeat{"claude-1", "sonnet", "medium"})
-	// Neither open and the medium models busy: the weak one builds it, the default, while claude-2
-	// (build_last, kept for planning and review) stays free.
+	// Neither open and the medium models busy: claude-2 (build_last, kept for planning and review)
+	// builds it, on its Sonnet seat, while the weak one, which builds nothing (#2748), stays idle.
 	gh = fakes.NewFakeGitHub()
 	ctx = difficultyCtxFor(gh, difficultyCtxOpts{Machine: testsupport.AllMachine})
 	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 63, "claude-7", 72, "claude-7", 73,
@@ -401,13 +348,6 @@ func TestDifficulty_SonnetOnlyWhileClaude1OrClaude3IsOpen(t *testing.T) {
 	difficultyBusy(gh, ctx, "muse", 54, "muse", 62, "muse", 66, "muse", 67, // Muse has four lanes
 		"gpt", 55)
 	difficultyQueue(gh, ctx, 3, true, difficultyEasy)
-	planned := flowMake(ctx)
-	assertEqual(t, []any{planned.Get("provider"), difficultySeatOf(t, planned, "build")[1]}, []any{"lite", "lite-1"})
-	// Only with all of the weak one's lanes taken does claude-2 build it, on its Sonnet seat: its
-	// Opus stays for planning and review.
-	gh.Threads.Item(3).Set("state", "open")
-	gh.Threads.Item(3).Set("labels", []any{pyjson.New("name", config.LabelBuild), pyjson.New("name", difficultyEasy)})
-	difficultyBusy(gh, ctx, difficultyEach("lite", 56, 62)...)
 	assertEqual(t, difficultySeats(flowMake(ctx))["build"], difficultySeat{"claude-2", "sonnet", "medium"})
 }
 
@@ -428,19 +368,13 @@ func TestDifficulty_Claude2BuildsAMediumItemTheWeakOneMayNot(t *testing.T) {
 }
 
 func TestDifficulty_WithNoModelOfItsTierFreeItStepsUpAndSaysWhy(t *testing.T) {
+	// A model of the item's own tier free: no step up, and nothing to say.
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Machine: []string{"agy"}}) // by day: no Claude, and the weak one off
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Machine: []string{"agy"}}) // by day: no Claude
 	difficultyQueue(gh, ctx, 3, true, difficultyEasy)
 	planned := flowMake(ctx)
-	assertEqual(t, difficultySeats(planned)["build"], difficultySeat{"agy", "gemini-3.8-flash-high", "medium"})
-	assertEqual(t, planned.Get("routing"), []any{
-		"#3: stepped up from weak to medium to build it: no weak-tier model " +
-			"(lite-1) is free now"})
-	routing := []string{}
-	for _, line := range planned.List("routing") {
-		routing = append(routing, pyjson.Str(line))
-	}
-	assertIn(t, "stepped up from weak to medium", difficultyStr(planned, "assignment")+strings.Join(routing, " "))
+	assertEqual(t, difficultySeats(planned)["build"], difficultySeat{"agy", "gemini-4-argon-high", "medium"})
+	assertEqual(t, planned.Get("routing"), []any{})
 	// Medium with only a strong model free steps up to strong: claude-2 by day, whose Sonnet is
 	// switched off for the test, so only its Opus is left.
 	gh = fakes.NewFakeGitHub()
@@ -456,34 +390,40 @@ func TestDifficulty_WithNoModelOfItsTierFreeItStepsUpAndSaysWhy(t *testing.T) {
 }
 
 func TestDifficulty_APersonsPullRequestIsRevisedOnlyWithAReviewerInTheRun(t *testing.T) {
+	// agy may not review here, so it has no reviewer in its run.
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
-		Machine: []string{"lite"}})
-	gh.AddPull(9, "feature/someone", fakes.Pull{Labels: []string{"bot:revise", difficultyEasy}})
-	// Only the weak one is free, and it cannot review: a person's PR gets no review run, so it
-	// waits.
+		Machine: []string{"agy"}})
+	ctx = difficultyWithPool(gh, testsupport.Day, ctx.Cfg, func(p *providers.Pool) {
+		difficultyReplaceProvider(p, "agy", func(a *providers.Provider) {
+			a.Roles = []string{"plan", "build", "fix", "revise"}
+		})
+	})
+	gh.AddPull(9, "feature/someone", fakes.Pull{Labels: []string{"bot:revise"}})
+	// A person's PR gets no review run, so it waits for a builder with a reviewer in its run.
 	assertEqual(t, flowMake(ctx).Get("action"), "none")
-	// The bot's own pull request does get a review run, so the weak one may revise it.
-	gh.AddPull(10, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, "bot:revise", difficultyEasy}})
+	// The bot's own pull request does get a review run, so agy may revise it.
+	gh.AddPull(10, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, "bot:revise"}})
 	planned := flowMake(ctx)
-	assertEqual(t, []any{planned.Get("number"), planned.Get("provider")}, []any{10, "lite"})
+	assertEqual(t, []any{planned.Get("number"), planned.Get("provider")}, []any{10, "agy"})
+	// The weak one builds nothing (#2748), its own PR or a person's.
+	gh = fakes.NewFakeGitHub()
+	ctx = difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
+		Machine: []string{"lite"}})
+	gh.AddPull(10, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, "bot:revise", difficultyEasy}})
+	assertEqual(t, flowMake(ctx).Get("action"), "none")
 }
 
 func TestDifficulty_RevisionsFollowTheBuildingRule(t *testing.T) {
-	// The weak one, weak and `easy_first`, revises an easy pull request first; without it, the
-	// lane's weakest medium seat does: Muse (#695).
-	for _, c := range []struct {
-		machine []string
-		seat    difficultySeat
-	}{
-		{[]string{"lite", "muse"}, difficultySeat{"lite", "lite-1", "weak"}},
-		{testsupport.Machine, difficultySeat{"muse", "muse-spark-1.3-contributor", "medium"}},
-	} {
+	// The lane's weakest medium seat revises a pull request, Muse (#695), one still labelled
+	// `difficulty:easy` too, which is medium; the weak one never does (#2748).
+	for _, machine := range [][]string{{"lite", "muse"}, testsupport.Machine} {
 		gh := fakes.NewFakeGitHub()
-		ctx := difficultyCtxFor(gh, difficultyCtxOpts{Machine: c.machine})
+		ctx := difficultyCtxFor(gh, difficultyCtxOpts{Machine: machine})
 		gh.AddPull(9, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, "bot:revise", difficultyEasy}})
 		planned := flowMake(ctx)
-		assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["build"]}, []any{"revise", c.seat})
+		assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["build"]},
+			[]any{"revise", difficultySeat{"muse", "muse-spark-1.3-contributor", "medium"}})
 		assertEqual(t, difficultySeats(planned)["plan"], nil) // a revision is not planned again
 	}
 }
@@ -524,7 +464,7 @@ func TestDifficulty_WithNoStrongModelFreeAMediumOnePlansInTheSameRun(t *testing.
 }
 
 // A rated medium item is planned by a medium model (#695): with none free on the lane, a medium
-// builder plans it in its own run, as it plans an easy one.
+// builder plans it in its own run, as it plans one still labelled `difficulty:easy` (medium).
 func TestDifficulty_AMediumModelPlansARatedMediumItemInItsRun(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day})
@@ -540,9 +480,9 @@ func TestDifficulty_WithNoPlannerFreeNothingIsBuilt(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
 		Machine: []string{"lite"}})
-	difficultyQueue(gh, ctx, 3, false, difficultyEasy)
+	difficultyQueue(gh, ctx, 3, false)
 	planned := flowMake(ctx)
-	assertEqual(t, planned.Get("action"), "none")
+	assertEqual(t, planned.Get("action"), "none") // the weak one neither plans nor builds
 }
 
 func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
@@ -595,7 +535,8 @@ func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
 		"review": difficultyOne(workReviewer(workApprove))})
 	planned, result = h.night(r)
 	// One lane, one owner (#725): Muse keeps the medium item it planned. Its own review approves,
-	// but the rule still waits for a Strong seat (`bot:cross-review`).
+	// but an approval from the subscription that built it does not ship it (#2748): it waits for
+	// a review run on another subscription (`bot:cross-review`).
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), result.Get("status")},
 		[]any{"build", "muse", "approved"})
 	roles := []string{}
@@ -615,13 +556,13 @@ func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
 
 // ---------------------------------------------------------------------------- ReviewRunTests
 
-// difficultyPull is ReviewRunTests.pull: a bot pull request waiting for a review run.
+// difficultyPull is ReviewRunTests.pull: a bot pull request waiting for a review run. By default
+// gpt built its head and its own reviewer approved it, which does not ship it (#2748).
 func difficultyPull(gh *fakes.FakeGitHub, ctx *hctx.Context, labels []string, votes *pyjson.Object) {
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: append([]string{config.LabelPR, config.LabelCross}, labels...),
 		SHA: "h1"})
 	if votes == nil {
-		votes = pyjson.New("sha", "h1", "builder", "gpt", "approvals", []any{"gpt"},
-			"tiers", pyjson.New("gpt", "medium"))
+		votes = difficultyVotes("gpt", "gpt", "medium")
 	}
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		state.Item(s, 9).Update(pyjson.New("votes", pyjson.DeepCopy(votes)))
@@ -629,6 +570,16 @@ func difficultyPull(gh *fakes.FakeGitHub, ctx *hctx.Context, labels []string, vo
 	}, "state")
 }
 
+// difficultyVotes is head h1's votes: `builtBy`'s run built it (family `family`), and its own
+// reviewer, on `builtBy` at `tier`, approved it.
+func difficultyVotes(builtBy, family, tier string) *pyjson.Object {
+	return pyjson.New("sha", "h1", "builder", family, "built_by", builtBy, "approvals", []any{family},
+		"rejections", []any{}, "tiers", pyjson.New(family, tier),
+		"reviews", []any{pyjson.New("family", family, "tier", tier, "provider", builtBy, "run", "1")})
+}
+
+// A medium item's review run takes a medium seat first (#2748), Muse first in the tier order,
+// never on the subscription that built it; a hard item's takes a strong one, in the usage order.
 func TestDifficulty_StrongFirstInTheUsageOrder(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh)
@@ -638,30 +589,49 @@ func TestDifficulty_StrongFirstInTheUsageOrder(t *testing.T) {
 	difficultyPull(gh, ctx, nil, nil)
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["review"]},
-		[]any{"review", difficultySeat{"claude-3", "opus", "strong"}})
-	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 57, "claude-7", 72, "claude-7", 73,
-		"claude-8", 74, "claude-8", 75, "claude-1", 51,
-		"claude-1", 58)
-	gh.Threads.Item(9).Set("labels", []any{pyjson.New("name", config.LabelPR), pyjson.New("name", config.LabelCross)})
+		[]any{"review", difficultySeat{"muse", "muse-spark-1.3-contributor", "medium"}})
+	gh = fakes.NewFakeGitHub()
+	ctx = difficultyWithPool(gh, testsupport.Night, difficultyCtxFor(gh).Cfg, func(p *providers.Pool) { p.MaxParallel = 20 })
+	difficultyPull(gh, ctx, []string{difficultyHard}, difficultyVotes("claude-3", "claude", "strong"))
+	planned = flowMake(ctx)
+	// claude-3 built it, so its own Opus is not the one: the next in the usage order, claude-7.
+	assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["review"]},
+		[]any{"review", difficultySeat{"claude-7", "opus", "strong"}})
+	difficultyBusy(gh, ctx, "claude-7", 72, "claude-8", 74, "claude-8", 75, "claude-1", 51)
+	gh.Threads.Item(9).Set("labels", []any{pyjson.New("name", config.LabelPR), pyjson.New("name", config.LabelCross),
+		pyjson.New("name", difficultyHard)})
 	assertEqual(t, difficultySeatOf(t, flowMake(ctx), "review")[0], "claude-4")
 }
 
-// A medium item's final audit is Strong-only (#725): with no strong seat free, no review run goes
-// out; with one free, Opus audits.
-func TestDifficulty_AMediumItemWaitsForItsStrongFinal(t *testing.T) {
-	votes := pyjson.New("sha", "h1", "builder", "muse", "approvals", []any{"muse"},
-		"tiers", pyjson.New("muse", "medium"))
+// A medium item's final audit is a medium seat on another subscription (#2748): Muse built it and
+// approved it in its own run, so agy, the next medium model, audits it, and with only Muse on the
+// machine by day nothing may. Votes from before #2748 name no builder subscription and keep the
+// rule they were cast under: they wait for a strong seat, as then.
+func TestDifficulty_AMediumItemsFinalAuditIsAMediumSeatOnAnotherSubscription(t *testing.T) {
+	votes := difficultyVotes("muse", "muse", "medium")
 	gh := fakes.NewFakeGitHub()
-	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day}) // no Claude account by day: nothing may review it
-	difficultyPull(gh, ctx, nil, votes)
-	assertEqual(t, flowMake(ctx).Get("action"), "none")
-	gh = fakes.NewFakeGitHub()
-	ctx = difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, CommittedHours: true}) // claude-3 all day
+	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day}) // no Claude account by day
 	difficultyPull(gh, ctx, nil, votes)
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["review"]},
-		[]any{"review", difficultySeat{"claude-3", "opus", "strong"}})
+		[]any{"review", difficultySeat{"agy", "gemini-4-argon-high", "medium"}})
 	assertEqual(t, planned.Get("approved"), []any{"muse"})
+	gh = fakes.NewFakeGitHub()
+	ctx = difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Machine: []string{"muse"}})
+	difficultyPull(gh, ctx, nil, votes)
+	assertEqual(t, flowMake(ctx).Get("action"), "none") // Muse's other lanes are the same subscription
+	legacy := pyjson.New("sha", "h1", "builder", "muse", "approvals", []any{"muse"},
+		"tiers", pyjson.New("muse", "medium"))
+	gh = fakes.NewFakeGitHub()
+	ctx = difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day})
+	difficultyPull(gh, ctx, nil, legacy)
+	assertEqual(t, flowMake(ctx).Get("action"), "none")
+	gh = fakes.NewFakeGitHub()
+	ctx = difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, CommittedHours: true}) // claude-3 all day
+	difficultyPull(gh, ctx, nil, legacy)
+	planned = flowMake(ctx)
+	assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["review"]},
+		[]any{"review", difficultySeat{"claude-3", "opus", "strong"}})
 }
 
 func TestDifficulty_AHardPullRequestWaitsForStrong(t *testing.T) {
@@ -675,8 +645,7 @@ func TestDifficulty_AHardPullRequestWaitsForStrong(t *testing.T) {
 	assertEqual(t, flowMake(ctx).Get("action"), "none")
 }
 
-// No weak review runs go out at any difficulty (#725): weak builders review themselves in fresh
-// sessions, and a weak approval never ships.
+// No weak review runs go out at any difficulty (#725): a weak approval never ships.
 func TestDifficulty_NoWeakReviewRunsGoOut(t *testing.T) {
 	reviewWithTheWeakOneOnly := func(labels []string, votes *pyjson.Object) *pyjson.Object {
 		gh := fakes.NewFakeGitHub()
@@ -688,28 +657,27 @@ func TestDifficulty_NoWeakReviewRunsGoOut(t *testing.T) {
 	assertEqual(t, reviewWithTheWeakOneOnly([]string{difficultyEasy}, nil).Get("action"), "none")
 	assertEqual(t, reviewWithTheWeakOneOnly(nil, nil).Get("action"), "none")
 	assertEqual(t, reviewWithTheWeakOneOnly([]string{difficultyHard}, nil).Get("action"), "none")
-	// An easy item takes the weakest seat that ships it: medium, not weak.
+	// One still labelled `difficulty:easy` is medium: the weakest seat that ships it is medium.
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{At: testsupport.Day, Env: providersSecrets(),
 		Machine: []string{"lite", "agy"}})
 	difficultyPull(gh, ctx, []string{difficultyEasy}, nil)
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), difficultySeats(planned)["review"]},
-		[]any{"review", difficultySeat{"agy", "gemini-3.8-flash-high", "medium"}})
+		[]any{"review", difficultySeat{"agy", "gemini-4-argon-high", "medium"}})
 }
 
 func TestDifficulty_WhetherTheReviewersSetUpCouldStillShipIt(t *testing.T) {
-	// A strong reviewer ships anything; a medium one ships only an easy item (#725). Anything
-	// weaker never ships, whatever is set up.
+	// A strong reviewer ships anything; a medium one a medium item (#2748). Anything weaker never
+	// ships, whatever is set up.
 	assertTrue(t, reviewrule.Reachable([]string{}, []string{"strong"}, "hard"))
-	assertTrue(t, reviewrule.Reachable([]string{"medium"}, []string{"strong"}, "easy"))
+	assertTrue(t, reviewrule.Reachable([]string{}, []string{"strong"}, "medium"))
 	assertFalse(t, reviewrule.Reachable([]string{}, []string{"medium"}, "hard"))
-	assertFalse(t, reviewrule.Reachable([]string{}, []string{"medium"}, "medium"))
-	assertTrue(t, reviewrule.Reachable([]string{}, []string{"medium"}, "easy"))
-	assertTrue(t, reviewrule.Reachable([]string{"medium"}, []string{"weak"}, "easy")) // already met
-	assertFalse(t, reviewrule.Reachable([]string{"medium"}, []string{"weak"}, "medium"))
-	assertFalse(t, reviewrule.Reachable([]string{}, []string{"weak"}, "easy")) // weak alone never ships it
-	assertFalse(t, reviewrule.Reachable([]string{"weak"}, []string{}, "easy"))
+	assertTrue(t, reviewrule.Reachable([]string{}, []string{"medium"}, "medium"))
+	assertTrue(t, reviewrule.Reachable([]string{"medium"}, []string{"weak"}, "medium")) // already met
+	assertFalse(t, reviewrule.Reachable([]string{"medium"}, []string{"weak"}, "hard"))
+	assertFalse(t, reviewrule.Reachable([]string{}, []string{"weak"}, "medium")) // weak alone never ships it
+	assertFalse(t, reviewrule.Reachable([]string{"weak"}, []string{}, "medium"))
 	assertEqual(t, reviewrule.Who([][2]string{{"muse", "medium"}, {"muse", "medium"}, {"claude", "strong"}}),
 		"`muse` (medium) twice, `claude` (strong)")
 }
@@ -724,47 +692,60 @@ func TestDifficulty_TheRule(t *testing.T) {
 		"", nil, "")
 	rule := d.RuleMet
 
-	reviews := func(pairs ...[2]string) *pyjson.Object {
+	type vote struct{ family, tier, provider string }
+	// reviews is votes of a head `builtBy` built ("" for none recorded, as before #2748).
+	reviews := func(builtBy string, votes ...vote) *pyjson.Object {
 		approvals := []any{}
 		list := []any{}
-		for _, p := range pairs {
-			if !slices.ContainsFunc(approvals, func(a any) bool { return a == p[0] }) {
-				approvals = append(approvals, p[0])
+		for _, v := range votes {
+			if !slices.ContainsFunc(approvals, func(a any) bool { return a == v.family }) {
+				approvals = append(approvals, v.family)
 			}
-			list = append(list, pyjson.New("family", p[0], "tier", p[1]))
+			list = append(list, pyjson.New("family", v.family, "tier", v.tier, "provider", v.provider))
 		}
-		return pyjson.New("approvals", approvals, "reviews", list)
+		out := pyjson.New("approvals", approvals, "reviews", list)
+		if builtBy != "" {
+			out.Set("built_by", builtBy)
+		}
+		return out
 	}
-	strong, gemini, muse, lite := [2]string{"claude", "strong"}, [2]string{"gemini", "medium"},
-		[2]string{"muse", "medium"}, [2]string{"lite", "weak"}
+	opus2, opus3 := vote{"claude", "strong", "claude-2"}, vote{"claude", "strong", "claude-3"}
+	sonnet2 := vote{"claude", "medium", "claude-2"}
+	gemini, muse, lite := vote{"gemini", "medium", "agy"}, vote{"muse", "medium", "muse"},
+		vote{"lite", "weak", "lite"}
+	// #2748: one medium or strong approval ships a medium item, one strong approval a hard one,
+	// each from a subscription other than the builder's; a weak approval never ships.
+	assertTrue(t, rule(reviews("muse", gemini), "medium"))
+	assertTrue(t, rule(reviews("claude-3", sonnet2), "medium")) // another Claude account is another subscription
+	assertTrue(t, rule(reviews("muse", opus2), "medium"))
+	assertFalse(t, rule(reviews("muse", muse), "medium")) // its own lane's, or another lane of Muse's
+	assertFalse(t, rule(reviews("claude-3", opus3), "medium"))
+	assertFalse(t, rule(reviews("muse", lite, lite), "medium"))
+	assertTrue(t, rule(reviews("muse", muse, gemini), "medium"))
+	assertTrue(t, rule(reviews("claude-3", opus3, opus2), "hard"))
+	assertFalse(t, rule(reviews("claude-3", opus3), "hard"))
+	assertFalse(t, rule(reviews("claude-3", gemini, muse, sonnet2), "hard"))
+	// A head no run of the bot's built (a person pushed it): every subscription is another.
+	none := reviews("muse", muse)
+	none.Set("built_by", "")
+	assertTrue(t, rule(none, "medium"))
+	// Votes from before #2748, which name no builder subscription, keep the rule they were cast
+	// under: one strong approval, from any subscription, for a medium or a hard item.
 	for _, difficulty := range []string{"medium", "hard"} {
-		// One strong approval ships; anything weaker, even two medium ones or a weak and a medium
-		// one, does not (#725 keeps Strong-only for Medium/Hard finals).
-		assertTrue(t, rule(reviews(strong), difficulty))
-		assertFalse(t, rule(reviews(gemini, muse), difficulty))
-		assertFalse(t, rule(reviews(muse, muse), difficulty))
-		assertFalse(t, rule(reviews(gemini), difficulty))
-		assertFalse(t, rule(reviews(lite, lite), difficulty))
-		assertFalse(t, rule(reviews(lite, gemini), difficulty))
+		assertTrue(t, rule(reviews("", opus3), difficulty))
+		assertFalse(t, rule(reviews("", gemini, muse), difficulty))
+		assertFalse(t, rule(reviews("", muse, muse), difficulty))
+		assertFalse(t, rule(reviews("", lite, gemini), difficulty))
 	}
-	// An easy item ships on its Medium final audit (#725); a weak approval never does.
-	assertTrue(t, rule(reviews(strong), "easy"))
-	assertTrue(t, rule(reviews(gemini), "easy"))
-	assertTrue(t, rule(reviews(gemini, muse), "easy"))
-	assertTrue(t, rule(reviews(muse, muse), "easy"))
-	assertTrue(t, rule(reviews(lite, gemini), "easy"))
-	assertFalse(t, rule(reviews(lite, lite), "easy"))
-	assertFalse(t, rule(reviews(lite), "easy"))
 	// Votes kept before reviews were counted one by one: one per family.
 	assertFalse(t, rule(pyjson.New("approvals", []any{"gemini", "muse"},
 		"tiers", pyjson.New("gemini", "medium", "muse", "medium")), "hard"))
-	assertTrue(t, rule(pyjson.New("approvals", []any{"gemini", "lite"},
-		"tiers", pyjson.New("gemini", "medium", "lite", "weak")), "easy"))
 	assertFalse(t, rule(pyjson.New("approvals", []any{"gemini", "lite"},
 		"tiers", pyjson.New("gemini", "medium", "lite", "weak")), "medium"))
 	// A rejection stands until its model approves.
 	assertFalse(t, rule(pyjson.New("approvals", []any{"claude"}, "rejections", []any{"gemini"},
 		"tiers", pyjson.New("claude", "strong")), "medium"))
+	assertFalse(t, rule(reviews("muse", gemini).Set("rejections", []any{"claude"}), "medium"))
 	// A vote kept before tiers counts at its family's strongest tier.
 	assertTrue(t, rule(pyjson.New("approvals", []any{"claude"}), "medium"))
 	assertFalse(t, rule(pyjson.New("approvals", []any{"gpt"}), "medium"))
@@ -772,7 +753,8 @@ func TestDifficulty_TheRule(t *testing.T) {
 
 // ---------------------------------------------------------------------------- SelfCheckTests
 
-// A builder whose seat has `self_check` (the weak one) checks its own change before any review.
+// A builder whose seat has `self_check` (the tests' weak one; no committed seat sets it) checks its
+// own change before any review.
 
 type difficultySelfCheck struct {
 	t      *testing.T
@@ -918,33 +900,6 @@ func TestDifficulty_ARevisionChecksItselfToo(t *testing.T) {
 	assertEqual(t, result.Get("status"), "built")
 }
 
-func TestDifficulty_ASelfCheckedBuildWaitsForAReviewRun(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets(), Machine: []string{"lite"},
-		At: testsupport.Day})
-	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, difficultyEasy}})
-	h.ctx.Store.Update(func(s *pyjson.Object) any {
-		state.Item(s, 12).Update(pyjson.New("planned_at", clock.ISO(testsupport.Day)))
-		return nil
-	}, "state")
-	planned, result := h.night(workFake(map[string][]runner.Handler{
-		"build":      difficultyOne(workBuilder(map[string]string{"src/game.txt": "v2\n"})),
-		"self_check": difficultyOne(workReviewer(workApprove))}))
-	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "built"})
-	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
-	pr, _ := pyjson.AsInt(pull.Get("number"))
-	assertFalse(t, pull.Truthy("draft"))
-	assertEqual(t, h.gh.LabelNames(pr), map[string]bool{config.LabelPR: true, config.LabelCross: true,
-		difficultyEasy: true})
-	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	votes := h.ctx.Store.Load().Obj("items").Obj(strconv.Itoa(pr)).Obj("votes")
-	assertEqual(t, []any{votes.Get("builder"), votes.Get("approvals")}, []any{"lite", []any{}})
-	said := h.gh.BotComments(12)
-	comment := said[len(said)-1]
-	assertIn(t, "It checked itself 1 time(s), the last one clean; that is not a review.", comment)
-	assertIn(t, "No model has reviewed it yet", comment)
-	assertIn(t, "No subscription that could give that review is set up", comment)
-}
-
 // ---------------------------------------------------------------------------- ConfigTests
 
 func TestDifficulty_MaxSelfCheckRounds(t *testing.T) {
@@ -975,9 +930,9 @@ func TestDifficulty_StatusAndProvidersShowTiersAndSelfCheck(t *testing.T) {
 func TestDifficulty_PeekShowsTheDifficultyAndEachRolesTier(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh)
-	difficultyQueue(gh, ctx, 3, false, difficultyEasy)
+	difficultyQueue(gh, ctx, 3, false, difficultyEasy) // retired (#2748): it reads as medium
 	look := plan.Peek_(ctx, false, nil, "auto")
-	assertEqual(t, look.Reason, "#3 (easy) is queued to build, for `muse`: plan on "+
+	assertEqual(t, look.Reason, "#3 (medium) is queued to build, for `muse`: plan on "+
 		"`muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` "+
 		"(muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, "+
 		"`muse-spark-1.3-contributor`, medium)")

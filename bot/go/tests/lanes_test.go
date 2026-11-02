@@ -65,13 +65,18 @@ func TestLanes_NoPlannerMeansNoAvoidance(t *testing.T) {
 	assertEqual(t, note, "")
 }
 
-// An easy item goes weak-first even when its medium planner is free (#725): the planner must
-// not spend its lane on weak work.
-func TestLanes_AnEasyBuildStillAvoidsItsPlanner(t *testing.T) {
+// Since #2748 nothing builds at weak, so an item stays with its medium planner, the weak one free
+// or not, and one still rated `easy` (a record from before) is medium.
+func TestLanes_TheWeakOneNeverTakesAnItemFromItsPlanner(t *testing.T) {
 	pool := testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse", "lite"}}).Pool
 	muse, lite := pool.Get("muse"), pool.Get("lite")
-	seat, _ := lanesSeat(pool, []*providers.Provider{muse, lite}, "easy", "muse", "")
-	assertEqual(t, lanesSeatID(t, seat)[0], "lite")
+	for _, difficulty := range []string{"medium", "easy"} {
+		seat, note := lanesSeat(pool, []*providers.Provider{muse, lite}, difficulty, "muse", "")
+		assertEqual(t, lanesSeatID(t, seat), []any{"muse", "medium"})
+		assertIn(t, "one lane, one owner", note)
+	}
+	seat, _ := lanesSeat(pool, []*providers.Provider{lite}, "medium", "", "")
+	assertTrue(t, seat == nil, seat)
 }
 
 // A revision that answers a final audit stays at the auditor's tier or above (#725), so the
@@ -82,17 +87,18 @@ func TestLanes_ARevisionAnsweringAnAuditStaysAtItsTier(t *testing.T) {
 	muse, agy := pool.Get("muse"), pool.Get("agy")
 	seat, _ := lanesSeat(pool, []*providers.Provider{muse, agy, claude}, "medium", "", "strong")
 	assertEqual(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
-	seat, _ = lanesSeat(pool, []*providers.Provider{muse, agy}, "easy", "", "medium")
+	seat, _ = lanesSeat(pool, []*providers.Provider{muse, agy}, "medium", "", "medium")
 	assertEqual(t, lanesSeatID(t, seat)[1], "medium")
 }
 
-func TestLanes_AnEasyBuildTriesTheWeakOneBeforeGpt(t *testing.T) {
-	// The tests' weak subscription is the one weak model; Codex has been medium since
-	// 2026-10-20.
+func TestLanes_AMediumBuildPassesTheWeakOneByForGpt(t *testing.T) {
+	// The tests' weak subscription is the one weak model, which builds nothing (#2748); Codex has
+	// been medium since 2026-10-20.
 	pool := testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse", "lite"}}).Pool
 	gpt, lite := pool.Get("gpt"), pool.Get("lite")
-	seat, _ := lanesSeat(pool, []*providers.Provider{gpt, lite}, "easy", "", "")
-	assertEqual(t, lanesSeatID(t, seat)[0], "lite")
+	seat, note := lanesSeat(pool, []*providers.Provider{gpt, lite}, "medium", "", "")
+	assertEqual(t, lanesSeatID(t, seat), []any{"gpt", "medium"})
+	assertEqual(t, note, "")
 }
 
 func TestLanes_AHardBuildTakesAStrongSeat(t *testing.T) {

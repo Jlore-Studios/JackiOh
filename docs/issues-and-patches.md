@@ -47,15 +47,17 @@ title names none.
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (the codebase pass) is `patch` and `architecture`. The
-`difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; `hard`
-is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`,
+`difficulty:*` labels (`medium`, `hard`: the weakest model tier that may plan, build and approve
+it; `hard` is Claude Opus's alone; `easy` was retired in #2748, and the sweep moved it to `medium`), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
 labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
 retitling or relabeling, because it queues a build.
 
 Every label, with its color and description, is listed once, in `bot/go/internal/config`'s
 `Labels`: the sweep creates one the repository lacks and deletes one it retired
-(`RetiredLabels`), and `harness setup` also restores a changed one.
+(`RetiredLabels`), first moving a retired label whose meaning another carries to that one on every
+open thread (`Relabelled`: the retired easy label to `difficulty:medium`), and `harness setup` also
+restores a changed one.
 
 **Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;
 so does assigning the bot or commenting `/harness build`. `human` hands it to people: triage
@@ -65,11 +67,11 @@ the same way: queue it, and `bot:suggestion` comes off; close it to say no.
 
 **How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until
-then: **easy** only when it is small (at most 10 files and 400 lines), in one crate or app,
-touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfaces, does no engine,
-AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
-is blocked by nothing (`bot/go/internal/easy`); **hard** for engine rules, the AI, design across
-crates, a migration, or about 40 files or more; **medium** for the rest. Triage
+then: **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or
+more; **medium** for the rest. Torn between the two, take the harder. A medium issue is planned,
+built and approved by a medium model (Muse, Gemini, GPT or Sonnet; the approval that ships it from
+a subscription other than the builder's), a hard one by Claude Opus alone. The easy difficulty was
+retired in #2748: an issue that still says easy is medium. Triage
 gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
 (#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
 issue's label (or medium); an issue still waiting for its plan is left to the planner. An agent

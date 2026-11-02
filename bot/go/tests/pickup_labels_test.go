@@ -4,10 +4,12 @@ package tests
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
@@ -71,8 +73,15 @@ func pickupLabelsPicks(gh *fakes.FakeGitHub, ctx *hctx.Context) []int {
 }
 
 // pickupLabelsEveryModel is every_model(): each committed subscription.
+// The weak one is left out: it takes no work at all since #2748.
 func pickupLabelsEveryModel() []*providers.Provider {
-	return testsupport.MakeConfig(testsupport.Config{Env: pickupLabelsAll, Machine: testsupport.AllMachine}).Pool.Ordered()
+	out := []*providers.Provider{}
+	for _, p := range testsupport.MakeConfig(testsupport.Config{Env: pickupLabelsAll, Machine: testsupport.AllMachine}).Pool.Ordered() {
+		if p.Tier != "weak" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // pickupLabelsIssue is gh.add_issue(number, labels=labels).
@@ -227,8 +236,8 @@ func TestPickupLabels_HumanIsNeverSelectedWhateverTheModel(t *testing.T) {
 	for _, provider := range pickupLabelsEveryModel() {
 		gh := fakes.NewFakeGitHub()
 		ctx := pickupLabelsCtx(gh, provider)
-		pickupLabelsIssue(gh, 5, config.LabelBuild, "human", pickupLabelsHigh, "difficulty:easy")
-		pickupLabelsIssue(gh, 6, config.LabelBuild, "difficulty:easy")
+		pickupLabelsIssue(gh, 5, config.LabelBuild, "human", pickupLabelsHigh, "difficulty:medium")
+		pickupLabelsIssue(gh, 6, config.LabelBuild, "difficulty:medium")
 		flowUpdateItem(ctx, 6, pyjson.New("planned_at", "2026-09-20T00:00:00Z"))
 		pickupLabelsQueued(ctx, 5, "2026-09-20T00:00:00Z", "forced", true)
 		planned := plan.Make(ctx, true, nil, "auto", nil)
@@ -337,10 +346,11 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 			created[name] = true
 		}
 	}
-	for _, name := range []string{"human", "difficulty:easy", "difficulty:medium", "difficulty:hard",
+	for _, name := range []string{"human", "difficulty:medium", "difficulty:hard",
 		pickupLabelsHigh, pickupLabelsMedium, pickupLabelsLow} {
 		assertTrue(t, created[name], name)
 	}
+	assertFalse(t, created["difficulty:easy"]) // retired (#2748)
 	again := false
 	for _, name := range config.Labels.Keys() {
 		color, text := repoMetaLabel(t, name)
@@ -354,18 +364,22 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 
 func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
-	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:easy", "Priority:High")
+	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:medium", "Priority:High")
 	planned, result := h.night(workFake(map[string]runner.Handler{
 		"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("priority"), planned.Get("difficulty"), result.Get("status")},
-		[]any{"muse", "high", "easy", "approved"})
+		[]any{"muse", "high", "medium", "approved"})
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
-	// Muse planned, built and reviewed it in the run, and a medium approval ships an easy item with
-	// no further audit (#725).
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:easy", "Priority:High"))
-	_, merging := h.gh.AutoMerge[fmt.Sprintf("PR_%d", pr)]
-	assertTrue(t, merging)
-	assertEqual(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "easy")
+	// Muse planned, built and reviewed it in the run; its own approval does not ship it (#2748),
+	// so it waits for its final audit on another subscription, with the issue's labels.
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium", "Priority:High"))
+	assertEqual(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "medium")
+	// A label still saying `difficulty:easy` is not carried: it is retired, and the sweep labels
+	// the pull request from its issue (medium).
+	d := deliver.NewDeliverer(h.ctx, pyjson.New("action", "build", "provider", "muse"), filepath.Join(h.root, "x"),
+		h.deliverRepo, "", nil, "")
+	pickupLabelsIssue(h.gh, 13, "difficulty:easy", "priority:low")
+	assertEqual(t, d.Carried(13), []string{"priority:low"})
 }
 
 func TestPickupLabels_ADraftPullRequestKeepsThemToo(t *testing.T) {

@@ -4,12 +4,16 @@
 // votes against it (`deliver.py`), and the router uses it to pick a review run's reviewer
 // (`plan.review_seat`), so the two cannot disagree.
 //
-// A commit ships when no model's rejection of it stands and its lane's final audit approved
-// it (#725): one strong model's approval (Opus) for a medium or hard item, one medium
-// model's for an easy item, whose scope the easy rule hard-limits. A strong approval ships
-// an easy item too. Approvals count per review, never per family: each review run, and each
-// run's own adversarial reviewer, casts one. A weak approval never ships anything; it is a
-// finding round, not a vote.
+// A commit ships when no model's rejection of it stands and its lane's final audit approved it
+// (#725, #2748): one approval from a medium or strong model for a medium item, one strong model's
+// (Opus) for a hard item, and either from a subscription other than the one whose run built the
+// commit. The builder's own reviewer, in its run or in a fresh session on its own subscription,
+// still reviews and its findings still count, but its approval does not ship the commit; another
+// of Muse's lanes is the same subscription. Approvals count per review, never per family: each
+// review run, and each run's own adversarial reviewer, casts one. A weak approval never ships
+// anything; it is a finding round, not a vote. A commit whose votes were recorded before #2748
+// names no builder subscription (`built_by`) and keeps the rule it was reviewed under: one strong
+// approval, from any subscription (`Counted`, `Tiers`).
 //
 // A commit that met the rule is recorded as cleared. When `main` then leaves it with conflicts,
 // the clearance carries to the revision that resolves them (`carried`), so no review run is
@@ -20,6 +24,7 @@ package reviewrule
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -27,7 +32,69 @@ import (
 )
 
 // Summary is the rule in one line, for prompts, comments and the status issue.
-var Summary string = "its lane's final audit: a strong model's approval, or a medium model's for an easy item"
+var Summary string = "its lane's final audit (a medium or strong model's approval for a medium item, " +
+	"a strong model's for a hard one, from a subscription other than its builder's)"
+
+// Shipping is the tiers whose approval ships an item of `difficulty`, weakest first (#2748): a
+// medium or strong model's for a medium item, a strong one's for a hard item.
+func Shipping(difficulty string) []string {
+	if difficulty == "hard" {
+		return []string{"strong"}
+	}
+	return []string{"medium", "strong"}
+}
+
+// Recorded is whether `votes` names the subscription whose run built its head (`built_by`, ""
+// for a head no run of the bot's built), as votes written since #2748 do.
+func Recorded(votes *pyjson.Object) bool {
+	_, ok := votes.Get("built_by").(string)
+	return ok
+}
+
+// Tiers is the tiers whose approval of this head would count, weakest first: `Shipping`, or for
+// votes from before #2748 (`Recorded` false) the strong tier alone, the rule they were cast under.
+func Tiers(votes *pyjson.Object, difficulty string) []string {
+	if !Recorded(votes) {
+		return []string{"strong"}
+	}
+	return Shipping(difficulty)
+}
+
+// FromOther is whether a review recorded in `votes` came from a subscription other than the one
+// whose run built the head: its `provider` is not the votes' `built_by`. A head no run of the
+// bot's built (`built_by` "") is every subscription's other.
+func FromOther(votes *pyjson.Object, review *pyjson.Object) bool {
+	builtBy := py.OrStr(votes.Get("built_by"), "")
+	return builtBy == "" || py.OrStr(review.Get("provider"), "") != builtBy
+}
+
+// Counted is the tiers of the head's approvals that count toward the rule, one per review: those
+// from a subscription other than the builder's (`FromOther`). Votes from before #2748, which name
+// no builder subscription, count their strong approvals alone, from any subscription, as they
+// did then (`Tiers`).
+func Counted(votes *pyjson.Object, familyTier func(string) string) []string {
+	found := []string{}
+	reviews, isList := votes.Get("reviews").([]any)
+	if !Recorded(votes) || !isList {
+		for _, a := range Approvals(votes, familyTier) {
+			if a[1] == "strong" {
+				found = append(found, a[1])
+			}
+		}
+		return found
+	}
+	for _, r := range pyjson.Objs(reviews) {
+		if !FromOther(votes, r) {
+			continue
+		}
+		tier := py.OrStr(r.Get("tier"), "")
+		if tier == "" {
+			tier = familyTier(py.OrStr(r.Get("family"), ""))
+		}
+		found = append(found, tier)
+	}
+	return found
+}
 
 // Approvals is each approval of the head as (family, tier), one per review. A record kept
 // before reviews were counted one by one holds one per approving family, at its recorded tier or
@@ -65,18 +132,16 @@ func Approvals(votes *pyjson.Object, familyTier func(string) string) [][2]string
 	return found
 }
 
-// Met is whether approvals at these tiers (one per review) let an item of `difficulty` ship:
-// one strong approval for a medium or hard item, one medium (or strong) approval for an
-// easy item (#725: the Medium audit ships Easy). A weak approval never ships anything.
+// Met is whether approvals at these tiers (one per review, those that count: `Counted`) let an
+// item of `difficulty` ship: one medium or strong approval for a medium item, one strong
+// approval for a hard item (#2748). A weak approval never ships anything.
 func Met(tiers []string, difficulty string) bool {
-	count := map[string]int{}
 	for _, t := range tiers {
-		count[t]++
+		if slices.Contains(Shipping(difficulty), t) {
+			return true
+		}
 	}
-	if difficulty == "easy" {
-		return count["strong"] >= 1 || count["medium"] >= 1
-	}
-	return count["strong"] >= 1
+	return false
 }
 
 // Carried is whether the head carries a cleared commit's clearance across a conflict resolution,
@@ -85,42 +150,25 @@ func Carried(votes *pyjson.Object) bool {
 	return votes.Truthy("carried") && votes.Truthy("approvals")
 }
 
-// Helps is whether one more approval at `tier` brings the head closer to the rule. A strong one
-// always does; a medium one only where it ships (an easy item's final audit); a weak one
-// never does (#725: weak self-review rounds are findings, and no weak review runs go out).
-func Helps(tiers []string, tier string, difficulty string) bool {
-	if tier == "strong" {
-		return true
-	}
-	if tier == "medium" {
-		return difficulty == "easy"
-	}
-	return false
-}
-
-// Reachable is whether reviewers of the `available` tiers could still take the head to the rule:
-// a strong one always can, and a medium one can for an easy item (#725).
+// Reachable is whether reviewers of the `available` tiers (on subscriptions other than the
+// builder's) could still take the head to the rule: a strong one always can, and a medium one
+// can for a medium item (#2748).
 func Reachable(tiers []string, available []string, difficulty string) bool {
 	if Met(tiers, difficulty) {
 		return true
 	}
-	have := map[string]bool{}
-	for _, a := range available {
-		have[a] = true
-	}
-	if have["strong"] {
-		return true
-	}
-	return difficulty == "easy" && have["medium"]
+	return Met(available, difficulty)
 }
 
-// Missing is what the head still waits for, in words: a strong model's final audit, or a medium
-// model's for an easy item (#725).
-func Missing(tiers []string, difficulty string) string {
-	if difficulty == "easy" {
-		return "a medium model's final audit (sooner) or a strong model's (Opus)"
+// Missing is what the head still waits for, in words (`Tiers`).
+func Missing(votes *pyjson.Object, difficulty string) string {
+	switch {
+	case !Recorded(votes):
+		return "one strong model's final audit (Opus)"
+	case difficulty == "hard":
+		return "one strong model's approval (Opus) from a subscription other than its builder's"
 	}
-	return "one strong model's final audit (Opus)"
+	return "one medium or strong model's approval from a subscription other than its builder's"
 }
 
 // Who is "`gemini` (medium), `muse` (medium) twice": the approvals so far, a family's repeats

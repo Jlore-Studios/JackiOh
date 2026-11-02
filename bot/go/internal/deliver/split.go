@@ -36,7 +36,7 @@ import (
 // A fullsend split (#505) first makes the parent's own branch from `main`'s head, the branch
 // its parts land on (`_land_part`), and each part's record says so (`onto`, `part_of`).
 func (x *Deliverer) SplitOut(number int) {
-	tree := splitmod.FromDict(x.Result.Get("tree"), config.Difficulties)
+	tree := splitmod.FromDict(x.Result.Get("tree"), splitmod.Difficulties)
 	mode := py.OrStr(x.Plan.Get("mode"), "split")
 	names := x.Labels(number)
 	if !tree.OK() {
@@ -112,8 +112,8 @@ func (x *Deliverer) SplitOut(number int) {
 				labels = append(labels, label)
 			}
 		}
-		if issue.Difficulty != "" {
-			labels = append(labels, "difficulty:"+issue.Difficulty)
+		if d := config.AsDifficulty(issue.Difficulty); d != "" { // a retired `easy` is medium (#2748)
+			labels = append(labels, "difficulty:"+d)
 		}
 		labels = append(labels, priority...)
 		labels = append(labels, queueLabel)
@@ -208,9 +208,6 @@ func (x *Deliverer) integrationBranch(number int) (string, string) {
 // checks and reviews every part at once.
 func (x *Deliverer) LandPart(number int) {
 	onto, parent := py.Str(x.Plan.Get("onto")), py.MustInt(x.Plan.Get("part_of"))
-	if x.easyBreach(number, "build") {
-		return
-	}
 	sha, problem := x.land(onto, number)
 	own := queue.BranchForIssue(number)
 	parked := ""
@@ -508,9 +505,6 @@ func (x *Deliverer) Revise(number int, status string) {
 		x.holdAutoMerge(0)
 		x.GH.CreateComment(number, "I need a decision before I can revise this.\n\n"+py.Str(question))
 		x.remember(number, pyjson.New("question", py.OrStr(question, "")))
-		return
-	}
-	if (status == "approved" || status == "built") && x.easyBreach(number, "revise") {
 		return
 	}
 	// As the run found it: the source and the clearance `_carry` reads are reset below.

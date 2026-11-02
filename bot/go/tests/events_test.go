@@ -688,7 +688,7 @@ func TestEvents_WhichSubscriptionsAreRunningNow(t *testing.T) {
 		"  - `claude-1` (claude, `opus`): building #37, for 47m, [run](" + runs + "/101).",
 		"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, " +
 			"[run](" + runs + "/102).",
-		"  - `agy` (agy, `gemini-3.8-flash-high`): a suggestion survey, just started, [run](" + runs + "/103).",
+		"  - `agy` (agy, `gemini-4-argon-high`): a suggestion survey, just started, [run](" + runs + "/103).",
 	}, "\n"), text)
 	// A run that ended holds nothing, and its subscription says why it is or is not free.
 	assertNotIn(t, "`gpt` (codex", strings.SplitN(text, "- Subscriptions", 2)[0])

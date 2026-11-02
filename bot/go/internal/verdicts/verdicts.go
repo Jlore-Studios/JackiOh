@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
@@ -62,8 +63,9 @@ func Header(text string, tag string) (any, string) {
 	return value, py.Strip(rest)
 }
 
-// Ratings are the difficulties a planner may rate an item (`config.DIFFICULTIES`).
-var Ratings = []string{"easy", "medium", "hard"}
+// Ratings are the difficulties a planner may rate an item (`config.DIFFICULTIES`): medium or hard
+// since #2748. A retired one (`easy`) is read as what it became (`config.as_difficulty`).
+var Ratings = config.Difficulties
 
 // Rating is a planner's rating, `{"difficulty", "why"}`, from the `<!-- bot: ... -->` line its
 // answer starts with (#317 part 8), and the plan without it. Only a line at the very start counts:
@@ -79,6 +81,9 @@ func Rating(text string) (map[string]string, string) {
 		return nil, source
 	}
 	difficulty := py.Lower(py.Strip(py.OrStr(found.Get("difficulty"), "")))
+	if retired := config.RetiredDifficulties[difficulty]; retired != "" {
+		difficulty = retired
+	}
 	if !slices.Contains(Ratings, difficulty) {
 		return nil, rest
 	}

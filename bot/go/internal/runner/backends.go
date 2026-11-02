@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -392,16 +393,44 @@ var (
 	agyShare = regexp.MustCompile(`^(` + py.DigitClass + `+(?:\.` + py.DigitClass + `+)?)%$`)
 )
 
+// agyEfforts are the efforts agy's model names end in (`gemini-4-argon-high`), which name no line
+// of models (`agyLine`).
+var agyEfforts = []string{"minimal", "low", "medium", "high", "xhigh", "max"}
+
+// agyLine is the words of `model`'s name that name its line of models, its family, version and
+// effort aside: "argon" for `gemini-4-argon-high`, "flash" for `gemini-3.8-flash-high`.
+func agyLine(model string) []string {
+	var words []string
+	for i, word := range strings.Split(strings.ToLower(model), "-") {
+		if i == 0 || word == "" || slices.Contains(agyEfforts, word) ||
+			strings.Trim(word, "0123456789.") == "" {
+			continue
+		}
+		words = append(words, word)
+	}
+	return words
+}
+
 // ParseAgyUsage is agy's `/usage` table as a reading for `model`'s pool. Each row is a pool, a
 // limit, the share left and its reset, tab-separated: `Gemini Models  Weekly Limit Remaining  2%
-// 2026-10-09T17:47:52Z`. A Gemini model draws on the Gemini pool; the Claude and GPT models agy
-// also serves share the other one.
+// 2026-10-09T17:47:52Z`. A Gemini model draws on the Gemini pool, whatever its version or line
+// (`gemini-3.8-flash-high`, `gemini-4-argon-high` since #2748): the rows whose pool starts with
+// "Gemini". The Claude and GPT models agy also serves share the other one. Should the table list
+// more than one Gemini pool for a window, the row whose pool names the model's line (`agyLine`:
+// "Argon") is its own; with none that does, the fullest, so no cap holds on an emptier pool by
+// mistake.
 func ParseAgyUsage(text string, model string) *pyjson.Object {
 	gemini := strings.HasPrefix(strings.ToLower(model), "gemini")
+	line := agyLine(model)
+	type pick struct {
+		named bool
+		used  float64
+	}
 	usage := pyjson.New()
-	for _, line := range py.Splitlines(text) {
+	picked := map[string]pick{}
+	for _, row := range py.Splitlines(text) {
 		var cells []string
-		for _, cell := range agyCells.Split(py.Strip(line), -1) {
+		for _, cell := range agyCells.Split(py.Strip(row), -1) {
 			if py.Strip(cell) != "" {
 				cells = append(cells, py.Strip(cell))
 			}
@@ -425,6 +454,12 @@ func ParseAgyUsage(text string, model string) *pyjson.Object {
 		if strings.Contains(limit, "used") {
 			used = fraction
 		}
+		pool := strings.ToLower(cells[0])
+		named := slices.ContainsFunc(line, func(word string) bool { return strings.Contains(pool, word) })
+		if earlier, ok := picked[window]; ok && (earlier.named && !named || earlier.named == named && earlier.used > used) {
+			continue // another row of the window is the model's own line's, or fuller
+		}
+		picked[window] = pick{named, used}
 		var resets any
 		if len(cells) > 3 && isoUTC.MatchString(cells[3]) {
 			resets = cells[3]
@@ -467,7 +502,7 @@ var AgyCliPollsUsage = true
 //
 // Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
 // told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
-// the job holds no write token. Its model names carry their effort (`gemini-3.8-flash-high`;
+// the job holds no write token. Its model names carry their effort (`gemini-4-argon-high`;
 // `agy models` lists them), and `--effort` passes the same. Its stream carries no usage, so its
 // `/usage` table is read around and during each call (`polls_usage`).
 type AgyCli struct{ cliBase }

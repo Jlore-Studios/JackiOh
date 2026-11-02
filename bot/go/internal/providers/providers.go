@@ -16,8 +16,9 @@
 // `model` with its `tier`, and any `extra_models` (every Claude account runs Sonnet, medium, as well
 // as Opus, strong, and a run switches between them: `work.Worker._switch`). The tier attaches to the model a role runs on, not to the subscription. The
 // top-level `tiers` map lists each tier's models in the order the router tries them, after the
-// subscriptions' own order (`priority`, the usage order). A provider with `self_check` (a weak
-// one) checks its own builds before any review.
+// subscriptions' own order (`priority`, the usage order). Nothing is built at weak since
+// `difficulty:easy` went (#2748), so a weak seat takes no work. A provider with `self_check`
+// checks its own builds before any review.
 //
 // Whether a provider may start a run now is `availability()`; its reading of the state file is
 // `state["providers"][<id>]` (usage readings, a refusal's reset time, minutes spent), which
@@ -271,10 +272,6 @@ type Provider struct {
 	// BuildLast: it builds, fixes and revises only after every other subscription that may
 	// (claude-2, kept for planning and review); it plans and reviews in its `priority` place.
 	BuildLast bool // default: False
-	// EasyFirst: it builds and revises easy items ahead of every other subscription while it has
-	// a free lane (a weak one: it may build nothing harder, so the stronger models are kept for
-	// what only they can).
-	EasyFirst bool // default: False
 	// ExtraModels are other models the subscription can run for a role, each with its own tier.
 	ExtraModels []*ExtraModel // default: ()
 	// OffHours is caps outside its `schedule` window (`{"five_hour": 0.4}`): it may work then
@@ -439,10 +436,6 @@ type ExtraModel struct {
 	Model  string
 	Effort string
 	Tier   string
-	// TakesOver is the subscription this model stands in for (#317 part 9): it builds only easy
-	// items, and only while that subscription cannot take them (off, backed off, or its lanes
-	// full). It plans and reviews nothing. Empty: an ordinary seat.
-	TakesOver string // default: ""
 }
 
 // TierEntry is one model in a tier's preference order (`tiers` in providers.json).
@@ -459,9 +452,6 @@ type Seat struct {
 	SelfCheck bool
 	// Rank is its place in its tier's preference order: the router tries the lowest first.
 	Rank int
-	// TakesOver is the subscription it stands in for (`ExtraModel.takes_over`), or "" for an
-	// ordinary seat.
-	TakesOver string // default: ""
 }
 
 // Family is the property family.
@@ -605,25 +595,13 @@ func (x *Pool) entry(tier string, model string) (int, *TierEntry) {
 // Seats is the models `provider` can run, its main one first.
 func (x *Pool) Seats(provider *Provider) []*Seat {
 	found := []*Seat{}
-	add := func(model, effort, tier string, ownCheck bool, standsIn string) {
+	add := func(model, effort, tier string, ownCheck bool) {
 		rank, _ := x.entry(tier, model)
-		found = append(found, &Seat{provider, model, effort, tier, ownCheck, rank, standsIn})
+		found = append(found, &Seat{provider, model, effort, tier, ownCheck, rank})
 	}
-	add(provider.Model, provider.Effort, provider.Tier, provider.SelfCheck, "")
+	add(provider.Model, provider.Effort, provider.Tier, provider.SelfCheck)
 	for _, m := range provider.ExtraModels {
-		add(m.Model, m.Effort, m.Tier, false, m.TakesOver)
-	}
-	return found
-}
-
-// OwnSeats is `provider`'s seats that plan, review and build anything: every seat but a stand-in
-// (`takes_over`), which builds only the easy items another subscription cannot take.
-func (x *Pool) OwnSeats(provider *Provider) []*Seat {
-	found := []*Seat{}
-	for _, seat := range x.Seats(provider) {
-		if seat.TakesOver == "" {
-			found = append(found, seat)
-		}
+		add(m.Model, m.Effort, m.Tier, false)
 	}
 	return found
 }
@@ -646,7 +624,7 @@ func (x *Pool) Seat(providerID string, model string /* = None */) *Seat {
 // BestSeat is `provider`'s strongest seat at `floor` or above, or None.
 func (x *Pool) BestSeat(provider *Provider, floor string /* = "weak" */) *Seat {
 	var best *Seat
-	for _, s := range x.OwnSeats(provider) {
+	for _, s := range x.Seats(provider) {
 		if !TierAtLeast(s.Tier, floor) {
 			continue
 		}

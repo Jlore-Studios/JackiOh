@@ -1,9 +1,9 @@
 package tests
 
-// test_cross.py: several subscriptions end to end: the review rule (one strong approval, or two
-// medium ones, the same model twice included, or for an easy item a weak and a medium one),
-// review runs, `difficulty:hard`, handoff and the vault, through plan, work and deliver against a
-// real repository and the fake GitHub.
+// test_cross.py: several subscriptions end to end: the review rule (#2748: one medium or strong
+// approval for a medium item, one strong approval for a hard one, from a subscription other than
+// the builder's), review runs, `difficulty:hard`, handoff and the vault, through plan, work and
+// deliver against a real repository and the fake GitHub.
 //
 // It also holds test_cross.py's ALL, timed_builder, next_run, MEDIUM and
 // ReviewRuleTests.build_on_medium, which other files import (crossAll, crossTimedBuilder,
@@ -181,13 +181,14 @@ func crossNextRun(h *flowHarness, runID string) {
 // crossMedium is MEDIUM: each medium subscription's model and family, for the tests that build
 // on one of them.
 var crossMedium = map[string][2]string{"muse": {"muse-spark-1.3-contributor", "muse"},
-	"agy": {"gemini-3.8-flash-high", "gemini"}}
+	"agy": {"gemini-4-argon-high", "gemini"}}
 
 // ---------------------------------------------------------------------------- ReviewRuleTests
 
 // crossBuildOnMedium is ReviewRuleTests.build_on_medium: by day the Claude accounts are closed:
 // Muse, first of the medium models (#317 part 9), or `provider` when it is the only one, plans,
-// builds and reviews it in one run, and its own approval is one medium vote.
+// builds and reviews it in one run, and its own approval is a medium vote from the subscription
+// that built it, which does not ship it (#2748).
 func crossBuildOnMedium(t *testing.T, h *flowHarness, provider string, edits map[string]string) (int, *pyjson.Object) {
 	t.Helper()
 	if provider == "" {
@@ -210,40 +211,41 @@ func crossBuildOnMedium(t *testing.T, h *flowHarness, provider string, edits map
 	return pr, result
 }
 
-// Muse's in-run approval never ships a medium item (#725 keeps Strong-only): the head waits for
-// its Strong final audit, and no medium review run goes out meanwhile.
-func TestCross_AMediumItemWaitsForItsStrongFinal(t *testing.T) {
+// Muse's in-run approval never ships the medium item Muse built (#2748): an approval from the
+// subscription that built it does not count. The head waits for its final audit, a medium model
+// on another subscription first: agy, by day, whose approval ships it, with no Opus gate.
+func TestCross_AMediumItemShipsOnAnotherSubscriptionsMediumAudit(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, result := crossBuildOnMedium(t, h, "", nil)
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMerge, map[string]string{})
 	votes := dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
-	assertEqual(t, votes, pyjson.New("sha", result.Get("head"), "builder", "muse",
+	assertEqual(t, votes, pyjson.New("sha", result.Get("head"), "builder", "muse", "built_by", "muse",
 		"approvals", []any{"muse"}, "rejections", []any{},
 		"tiers", pyjson.New("muse", "medium"),
-		"reviews", []any{pyjson.New("family", "muse", "tier", "medium", "run", "777")}))
-	assertIn(t, "`muse` (medium) approved it, so it waits for one strong model's final audit (Opus)",
-		lastOf(t, h.gh.BotComments(12)))
+		"reviews", []any{pyjson.New("family", "muse", "tier", "medium", "provider", "muse", "run", "777")}))
+	assertIn(t, "`muse` (medium) approved it, but an approval from `muse`, the subscription that built "+
+		"it, does not ship it, so it waits for one medium or strong model's approval from a "+
+		"subscription other than its builder's", lastOf(t, h.gh.BotComments(12)))
 	assertEqual(t, dig(t, h.ctx.Store.Load(), "providers", "muse", "spent", -1, "minutes"), 10.0)
-	// No strong model is free by day: no review run goes out at all.
-	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, planned.Get("action"), "none")
-	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
-	// With a strong seat free, Opus audits, and that ships it.
-	h.committedHours() // claude-3 works all day
+	// By day no Claude account is open, but agy is: a medium model on another subscription.
 	crossNextRun(h, "778")
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), dig(t, planned, "seats", "review", "tier")},
-		[]any{"review", "claude-3", "strong"})
+		[]any{"review", "agy", "medium"})
 	assertEqual(t, []any{review.Get("status"), review.Get("verdict")}, []any{"reviewed", "approve"})
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
+	reviews := []any{}
+	for _, r := range pyjson.Objs(dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes", "reviews")) {
+		reviews = append(reviews, []any{dig(t, r, "family"), dig(t, r, "provider")})
+	}
+	assertEqual(t, reviews, []any{[]any{"muse", "muse"}, []any{"gemini", "agy"}})
 }
 
-// agy builds and its own reviewer approves; with no Strong seat set up, no review run can take
-// it to the rule, so the head waits for a person to merge it (#725: no medium review runs go out
-// for a medium item).
-func TestCross_WithNoStrongSeatSetUpItWaitsForAPerson(t *testing.T) {
+// agy builds and its own reviewer approves; with no other subscription set up, no review run can
+// take it to the rule, so the head waits for a person to merge it (#2748: the builder's own
+// approval does not ship it).
+func TestCross_WithNoOtherSubscriptionSetUpItWaitsForAPerson(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
 		Machine: []string{"agy"}, At: testsupport.Day})
 	pr, _ := crossBuildOnMedium(t, h, "agy", nil)
@@ -265,23 +267,24 @@ func TestCross_ADeliverJobRunAgainDoesNotCountItsReviewTwice(t *testing.T) {
 	d.ReviewSeat = h.cfg.Pool.Seat("agy", "")
 	votes := d.Vote(pr, crossStr(t, result, "head"), true, false, nil) // run 777 again
 	assertEqual(t, len(dig(t, votes, "reviews").([]any)), 1)
-	assertFalse(t, d.RuleMet(votes, "medium"))
+	assertFalse(t, d.RuleMet(votes, "medium")) // and agy built it, so its approval does not ship it
 }
 
-// The weak one builds an easy item and checks itself, which is no review; the lane's Medium
-// final audit then ships it, with no Opus gate (#725). No weak review run goes out.
-func TestCross_AnEasyItemShipsOnItsMediumAudit(t *testing.T) {
+// An item still labelled `difficulty:easy` (retired in #2748) is a medium one: Muse builds it from
+// the plan in its description, and the medium audit of another subscription, agy's, ships it.
+func TestCross_AnItemStillLabelledEasyShipsAsAMediumOne(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
-		Machine: []string{"lite", "agy"}, At: testsupport.Day})
+		Machine: []string{"lite", "muse", "agy"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"},
 		Body: "<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n<!-- /jackioh-bot:plan -->"})
 	planned, result := h.night(workFake(map[string]runner.Handler{
-		"build":      workBuilder(map[string]string{"src/game.txt": "v2\n"}),
-		"self_check": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "built"})
+		"build":  workBuilder(map[string]string{"src/game.txt": "v2\n"}),
+		"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("provider"), planned.Get("difficulty"), result.Get("status")},
+		[]any{"muse", "medium", "approved"})
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	assertIn(t, "a medium model's final audit", lastOf(t, h.gh.BotComments(12)))
-	// The Medium audit approves, and that ships the easy item.
+	assertIn(t, "one medium or strong model's approval from a subscription other than its builder's",
+		lastOf(t, h.gh.BotComments(12)))
 	crossNextRun(h, "778")
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")}, []any{"agy", "medium"})
@@ -292,12 +295,12 @@ func TestCross_AnEasyItemShipsOnItsMediumAudit(t *testing.T) {
 	for _, r := range pyjson.Objs(votes.Get("reviews")) {
 		got = append(got, []any{dig(t, r, "family"), dig(t, r, "tier")})
 	}
-	assertEqual(t, got, []any{[]any{"gemini", "medium"}})
+	assertEqual(t, got, []any{[]any{"muse", "medium"}, []any{"gemini", "medium"}})
 }
 
-func TestCross_OneStrongReviewIsEnough(t *testing.T) {
-	// Only claude-3 is set up: it plans, builds and reviews the item, and its one strong
-	// review ships it (#695).
+// Only claude-3 is set up: it plans, builds and reviews the item, and its own strong review does
+// not ship it (#2748); a second account's Sonnet, a medium model on another subscription, does.
+func TestCross_TheBuildersOwnStrongReviewDoesNotShipIt(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	r := workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
@@ -311,19 +314,34 @@ func TestCross_OneStrongReviewIsEnough(t *testing.T) {
 	}
 	assertEqual(t, got, [][2]string{{"plan", "opus"}, {"build", "sonnet"}, {"review", "opus"}})
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes", "built_by"), "claude-3")
+	assertIn(t, "No subscription that could give that review is set up", lastOf(t, h.gh.BotComments(12)))
+	// claude-2 set up: its Sonnet reviews (medium first; another Claude account is another
+	// subscription), and that ships it.
+	cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_3",
+		"CLAUDE_CODE_OAUTH_TOKEN_2"), Machine: []string{}})
+	cfg.RunID = "778"
+	h.cfg, h.ctx.Cfg = cfg, cfg
+	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("action"), difficultySeatOf(t, planned, "review")},
+		[]any{"review", difficultySeat{"claude-2", "sonnet", "medium"}})
+	assertEqual(t, review.Get("verdict"), "approve")
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes", "tiers"), pyjson.New("claude", "strong"))
 }
 
-func TestCross_AReviewRunPrefersAStrongModel(t *testing.T) {
+// A medium item's review run takes a medium seat on another subscription first (#2748), agy, even
+// with a strong one free.
+func TestCross_AReviewRunOfAMediumItemTakesAMediumSeatFirst(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
-	h.committedHours() // claude-3 works all day: a strong model is free
+	h.committedHours() // claude-3 works all day: a strong model is free too
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"review", "claude-3"})
-	assertEqual(t, dig(t, planned, "seats", "review", "tier"), "strong")
+	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"review", "agy"})
+	assertEqual(t, dig(t, planned, "seats", "review", "tier"), "medium")
 	assertEqual(t, review.Get("verdict"), "approve")
-	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge) // one strong approval is enough
+	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge) // one medium approval is enough
 }
 
 // Usage pauses never reach a verdict, so they never spend one (#725): two rejections, then a
@@ -354,7 +372,7 @@ func TestCross_APauseDoesNotSpendAVerdictRound(t *testing.T) {
 	planned, result = h.night(r)
 	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"agy", "built"})
 	assertEqual(t, crossCount(workRoles(r), "review"), 1)
-	assertIn(t, "Strong final audit", crossStr(t, result, "reason"))
+	assertIn(t, "its final audit on another subscription", crossStr(t, result, "reason"))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	record = crossObj(t, h.ctx.Store.Load(), "items", "12")
@@ -362,11 +380,14 @@ func TestCross_APauseDoesNotSpendAVerdictRound(t *testing.T) {
 }
 
 // A Strong audit's rejection is answered at its own tier (#725): Opus fixes the medium item in
-// its own run, its own reviewer approves, and that ships it.
-func TestCross_AStrongReviseAfterRejectionShips(t *testing.T) {
+// its own run, and its own reviewer approves, which does not ship the fix (#2748: claude-3 built
+// it); a medium audit on another subscription does: Muse's, first in the tier order, since Muse
+// did not build this head.
+func TestCross_AStrongReviseAfterRejectionShipsOnAnotherSubscriptionsAudit(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
-	h.committedHours() // claude-3 works all day: the Strong final can audit
+	h.committedHours() // claude-3 works all day: a strong model is free too
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
+	flowUpdateItem(h.ctx, pr, pyjson.New("review_floor", "strong")) // `/harness review strong`
 	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workChanges("It skips the replay check."))}))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertEqual(t, dig(t, record, "audit_tier"), "strong")
@@ -377,18 +398,24 @@ func TestCross_AStrongReviseAfterRejectionShips(t *testing.T) {
 		[]any{"revise", "claude-3", "approved"})
 	assertEqual(t, crossModels(r), []string{"opus", "opus"})
 	assertIn(t, "It skips the replay check.", r.Calls[0].Prompt)
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
+	assertIn(t, config.LabelCross, h.gh.LabelNames(pr))
+	crossNextRun(h, "779")
+	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")}, []any{"muse", "medium"})
+	assertEqual(t, review.Get("verdict"), "approve")
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
 }
 
 func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
-	h.committedHours() // claude-3 works all day: the Strong final can audit
+	h.committedHours() // claude-3 works all day: a strong model is free too
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workChanges("It skips the replay check."))}))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelRevise, "difficulty:medium"))
 	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "cross_rounds")}, []any{"cross-review", 1})
-	// The revision answers the Strong audit, so it stays with a Strong seat (#725).
+	// The revision answers agy's medium audit, so it stays at medium or above (#725): Muse.
 	// Two failed revisions are strikes two and three (each failed for the item's own sake),
 	// so the third steps it up instead of blocking it for a person.
 	seen := map[string]string{}
@@ -403,7 +430,7 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 	for range 2 {
 		planned, result := h.night(workFake(map[string]runner.Handler{"revise": broken}))
 		assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), result.Get("status")},
-			[]any{"revise", "claude-3", "failed"})
+			[]any{"revise", "muse", "failed"})
 	}
 	assertIn(t, "It skips the replay check.", seen["prompt"])
 	// Three strikes (#317 parts 4 and 8): instead of blocking it for a
@@ -422,7 +449,7 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 
 func TestCross_AReviewOfAHeadThatMovedDoesNotCount(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
-	h.committedHours() // claude-3 works all day: the Strong final can audit
+	h.committedHours() // claude-3 works all day: a strong model is free too
 	pr, _ := crossBuildOnMedium(t, h, "", nil)
 	moved := func(request *runner.RunRequest) *runner.RunResult {
 		// Someone pushes to the branch while the reviewer reads it.
@@ -435,6 +462,8 @@ func TestCross_AReviewOfAHeadThatMovedDoesNotCount(t *testing.T) {
 	assertIn(t, "does not count", lastOf(t, h.gh.BotComments(pr)))
 }
 
+// A hard item is planned, built and reviewed in its run by Opus, and its final audit is Opus on
+// another account (#2748): claude-3's own approval does not ship it, claude-7's does.
 func TestCross_AHardItemIsPlannedAndBuiltByOpus(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
@@ -449,9 +478,17 @@ func TestCross_AHardItemIsPlannedAndBuiltByOpus(t *testing.T) {
 	}
 	assertEqual(t, models, setOf("opus"))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:hard"))
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:hard"))
 	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "difficulty"), "hard")
+	assertIn(t, "one strong model's approval (Opus) from a subscription other than its builder's",
+		lastOf(t, h.gh.BotComments(12)))
+	crossNextRun(h, "778")
+	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("action"), difficultySeatOf(t, planned, "review")},
+		[]any{"review", difficultySeat{"claude-7", "opus", "strong"}})
+	assertEqual(t, review.Get("verdict"), "approve")
+	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
 }
 
 // ---------------------------------------------------------------------------- HandoffTests
@@ -546,7 +583,8 @@ func crossConflicted(h *flowHarness, pr int, main map[string]string) {
 }
 
 // crossClearedPR is ConflictCarryTests.cleared_pr: Muse builds and approves it by day; at night
-// a Strong seat reviews it: the rule is met (#695), and then `main` conflicts with it.
+// agy, a medium model on another subscription, reviews it: the rule is met (#2748), and then
+// `main` conflicts with it.
 func crossClearedPR(t *testing.T, h *flowHarness, edits, main map[string]string) (int, string) {
 	t.Helper()
 	pr, built := crossBuildOnMedium(t, h, "", edits)
@@ -554,11 +592,11 @@ func crossClearedPR(t *testing.T, h *flowHarness, edits, main map[string]string)
 	testsupport.ClockOf(h.ctx).At = testsupport.Night
 	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")},
-		[]any{"claude-3", "strong"})
+		[]any{"agy", "medium"})
 	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertEqual(t, dig(t, record, "cleared", "sha"), built.Get("head"))
-	assertEqual(t, dig(t, record, "cleared", "by"), "`muse` (medium), `claude` (strong)")
+	assertEqual(t, dig(t, record, "cleared", "by"), "`muse` (medium), `gemini` (medium)")
 	crossConflicted(h, pr, main)
 	crossNextRun(h, "779")
 	return pr, crossStr(t, built, "head")
@@ -623,10 +661,10 @@ func TestCross_AConflictOnAClearedChangeShipsOnItsOwnReview(t *testing.T) {
 	assertEqual(t, []any{dig(t, record, "cleared", "sha"), dig(t, record, "cleared", "carried_from")},
 		[]any{result.Get("head"), clearedSHA})
 	assertEqual(t, []any{dig(t, record, "cleared", "by"), dig(t, record, "cleared", "resolved_by")},
-		[]any{"`muse` (medium), `claude` (strong)", "`muse` (medium)"})
+		[]any{"`muse` (medium), `gemini` (medium)", "`muse` (medium)"})
 	comment := lastOf(t, h.gh.BotComments(pr))
-	assertIn(t, "The reviews had cleared this change at `"+clearedSHA[:12]+"` (`muse` (medium), `claude` "+
-		"(strong)). This revision only merged `main` and resolved the conflicts in `src/game.txt`, and its own "+
+	assertIn(t, "The reviews had cleared this change at `"+clearedSHA[:12]+"` (`muse` (medium), `gemini` "+
+		"(medium)). This revision only merged `main` and resolved the conflicts in `src/game.txt`, and its own "+
 		"reviewer approved that, so the clearance carries over and no review run is needed. Auto-merge is on",
 		comment)
 }
@@ -644,7 +682,9 @@ func TestCross_AResolutionThatChangesMoreGoesBackToReview(t *testing.T) {
 	assertNotIn(t, "carried", crossObj(t, record, "votes"))
 	assertEqual(t, dig(t, record, "cleared", "sha"), clearedSHA)
 	assertIn(t, "but that does not carry over: it changed more than the conflicts (`src/extra.txt`). `muse` "+
-		"(medium) approved it, so it waits for one strong model's final audit (Opus)",
+		"(medium) approved it, but an approval from `muse`, the subscription that built it, does not "+
+		"ship it, so it waits for one medium or strong model's approval from a subscription other "+
+		"than its builder's",
 		lastOf(t, h.gh.BotComments(pr)))
 }
 
@@ -662,7 +702,7 @@ func TestCross_ABranchThatMovedAfterTheReviewsDoesNotCarry(t *testing.T) {
 		lastOf(t, h.gh.BotComments(pr)))
 }
 
-// One medium approval, short of the Strong one: the change was never cleared, so its resolution
+// Its builder's own approval, short of the rule: the change was never cleared, so its resolution
 // waits for the review run like any revision.
 func TestCross_AChangeShortOfTheRuleHasNothingToCarry(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
@@ -680,9 +720,10 @@ func TestCross_AChangeShortOfTheRuleHasNothingToCarry(t *testing.T) {
 	assertNotIn(t, "cleared this change", lastOf(t, h.gh.BotComments(pr)))
 }
 
-// The weak one takes an easy revision first, but never a conflict (#317 part 2): nothing reviews
-// in its run, and it committed conflict markers in SPEC §11 again and again (#203, #214, #287).
-// agy takes the conflict, cleared or not, and its own reviewer can carry a clearance.
+// A conflict goes only to a builder with a reviewer in its own run (#317 part 2): the weak one
+// once committed conflict markers in SPEC §11 again and again (#203, #214, #287), and since #2748
+// it takes no revision at all. agy takes the conflict, cleared or not, and its own reviewer can
+// carry a clearance.
 func TestCross_AConflictRevisionGoesToABuilderThatReviewsInItsOwnRun(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day, Cfg: testsupport.MakeConfig(testsupport.Config{
@@ -692,7 +733,7 @@ func TestCross_AConflictRevisionGoesToABuilderThatReviewsInItsOwnRun(t *testing.
 		ctx.Store.Update(func(s *pyjson.Object) any { state.Item(s, 9).Update(fields); return nil }, "state")
 	}
 	update(pyjson.New("kind", "revise", "source", "request"))
-	assertEqual(t, plan.Peek_(ctx, false, nil, "auto").Provider, "lite")
+	assertEqual(t, plan.Peek_(ctx, false, nil, "auto").Provider, "agy")
 	update(pyjson.New("kind", "revise", "source", "conflict"))
 	assertEqual(t, plan.Peek_(ctx, false, nil, "auto").Provider, "agy")
 	update(pyjson.New("cleared", pyjson.New("sha", "abc", "by", "`claude` (strong)")))

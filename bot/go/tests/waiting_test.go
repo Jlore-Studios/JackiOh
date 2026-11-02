@@ -221,5 +221,8 @@ func TestWaiting_TheDifficultyLegendNamesEachTiersModels(t *testing.T) {
 	legend := dashboard.DifficultyLegend(w.ctx.Cfg.Pool)
 	assertIn(t, "🔴 **hard**: a strong model only (Opus)", legend)
 	assertIn(t, "a medium or strong model (muse, agy, gpt, Sonnet, then Opus)", legend)
-	assertIn(t, "any model, the weak ones first (lite)", legend)
+	// No easy row, and the weak one in no row (#2748): it takes no work.
+	assertNotIn(t, "easy", legend)
+	assertNotIn(t, "lite", legend)
+	assertIn(t, "a review run goes to a subscription other than the builder's", legend)
 }

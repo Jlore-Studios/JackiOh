@@ -518,6 +518,7 @@ func TestDashboard_OpenedAndPinnedOnceThenRewrittenInPlace(t *testing.T) {
 	assertIn(t, dashboard.Marker, gh.Threads.Get(number).Str("body"))
 	assertTrue(t, pyjson.Equal(ctx.Store.Load().Get("dashboard"), pyjson.New("issue", number)),
 		"state's dashboard")
+	// Still labelled `difficulty:easy`, which is retired (#2748): it is a medium item.
 	gh.AddIssue(7, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy", "priority:high"}})
 	assertEqual(t, dashboardUpdate(ctx), fmt.Sprintf("rewrote #%d", number))
 	assertEqual(t, dashboardOpened(gh), []int{number}) // no second issue, no second pin
@@ -533,7 +534,7 @@ func TestDashboard_OpenedAndPinnedOnceThenRewrittenInPlace(t *testing.T) {
 	if row == "" {
 		t.Fatalf("no row for #7 in:\n%s", body)
 	}
-	assertIn(t, "| plan, then build | 🟢 easy → medium<br/><sub>a plan first</sub> | "+
+	assertIn(t, "| plan, then build | 🟡 medium → medium<br/><sub>a plan first</sub> | "+
 		"▶️ **starts at the next run** on `claude-1` (`sonnet`, medium) | high |", row)
 }
 

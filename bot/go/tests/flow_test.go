@@ -365,8 +365,23 @@ func TestFlow_SuggestionsWhenIdleUpToTheCap(t *testing.T) {
 
 // ---------------------------------------------------------------------------- FlowTests
 
+// flowTwoAccounts is the flow tests' two subscriptions: claude-1 builds and reviews in its run,
+// and claude-2 gives the final audit, since an approval from the subscription that built a head
+// does not ship it (#2748).
+var flowTwoAccounts = map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN_2"}
+
+// flowAudited is the next run: claude-2's review run of the head claude-1 built, which approves.
+func flowAudited(t *testing.T, h *flowHarness) *pyjson.Object {
+	t.Helper()
+	crossNextRun(h, "778")
+	planned, review := h.night(workFake(map[string]any{"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), review.Get("verdict")},
+		[]any{"review", "claude-2", "approve"})
+	return review
+}
+
 func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "rules v2\n"}),
 		"review": workReviewer(workApprove)})
@@ -379,26 +394,32 @@ func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
 	assertTrue(t, strings.HasPrefix(pull.Str("body"), "Closes #12"), pull.Get("body"))
 	assertIn(t, "Approved on round 1", pull.Str("body"))
 	assertFalse(t, pull.Truthy("draft"))
+	// Its own run's approval does not ship it (#2748): it waits for another subscription's.
+	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
+	assertIn(t, "does not ship it", lastOf(t, h.gh.BotComments(12)))
+	usage := dig(t, h.ctx.Store.Load(), "providers", "claude-1", "usage")
+	assertEqual(t, dig(t, usage, "five_hour", "utilization"), 0.3)
+	flowAudited(t, h)
 	assertIn(t, pull.Str("node_id"), h.gh.AutoMerge)
 	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, "difficulty:medium"))
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelPROpen, "bot:planned", "difficulty:medium"))
-	assertIn(t, "Auto-merge is on", lastOf(t, h.gh.BotComments(12)))
-	usage := dig(t, h.ctx.Store.Load(), "providers", "claude-1", "usage")
-	assertEqual(t, dig(t, usage, "five_hour", "utilization"), 0.3)
+	assertIn(t, "Auto-merge is on", lastOf(t, h.gh.BotComments(pull.Int("number"))))
 }
 
 func TestFlow_AChangeToAReviewPathWaitsForAPerson(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts})
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n", "package.json": "{}\n"}),
 		"review": workReviewer(workApprove)})
 	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "approved")
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	flowAudited(t, h)
 	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
 	assertTrue(t, h.gh.LabelNames(pull.Int("number"))["ready for merge"])
 	assertEqual(t, h.gh.ReviewRequests, []fakes.ReviewRequest{{Number: pull.Int("number"), Logins: []string{"jgoetzmann"}}})
-	said := lastOf(t, h.gh.BotComments(12))
+	said := lastOf(t, h.gh.BotComments(pull.Int("number")))
 	assertIn(t, "package.json", said)
 	assertIn(t, "labelled `ready for merge`: @jgoetzmann, it waits for you to merge it", said)
 	// Back in the queue it is no longer ready: a revision takes the label off.
@@ -407,45 +428,50 @@ func TestFlow_AChangeToAReviewPathWaitsForAPerson(t *testing.T) {
 }
 
 func TestFlow_AnIssueLabelledPersonMergesWaitsForAPerson(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts})
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild, "person merges")})
 	_, result := h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, result.Get("status"), "approved")
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	flowAudited(t, h)
 	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
 	assertEqual(t, h.gh.LabelNames(pull.Int("number")),
 		setOf(config.LabelPR, "person merges", "ready for merge", "difficulty:medium"))
-	assertIn(t, "it is labelled `person merges`", lastOf(t, h.gh.BotComments(12)))
+	assertIn(t, "it is labelled `person merges`", lastOf(t, h.gh.BotComments(pull.Int("number"))))
 }
 
 func TestFlow_AnApprovedPullRequestWithAutoMergeOffIsReadyForMerge(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("auto_merge", false)})
+	h := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts, Overrides: pyjson.New("auto_merge", false)})
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	h.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	flowAudited(t, h)
 	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
 	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, "ready for merge", "difficulty:medium"))
 }
 
 func TestFlow_NoAutoMergeWhileMainIsUnprotected(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts})
 	h.gh.BranchChecks = nil
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
 	h.night(r)
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	flowAudited(t, h)
 	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
-	assertIn(t, "is not protected", lastOf(t, h.gh.BotComments(12)))
-	h2 := newFlowHarness(t)
+	assertIn(t, "is not protected", lastOf(t, h.gh.BotComments(pull.Int("number"))))
+	h2 := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts})
 	h2.gh.BranchChecks = map[string]bool{"rust": true}
 	h2.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	h2.night(workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
+	pull2 := h2.gh.ListPulls("open", "bot/issue-12", 200)[0]
+	flowAudited(t, h2)
 	assertEqual(t, h2.gh.AutoMerge, map[string]string{})
-	assertIn(t, "does not require", lastOf(t, h2.gh.BotComments(12)))
+	assertIn(t, "does not require", lastOf(t, h2.gh.BotComments(pull2.Int("number"))))
 }
 
 func TestFlow_TheNextRunIsChainedWhileWorkRemains(t *testing.T) {
@@ -467,7 +493,8 @@ func TestFlow_TheNextRunIsChainedWhileWorkRemains(t *testing.T) {
 
 func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 	// Twice rejected in the run, the lane's rounds (2 here) are used: the kept work opens a
-	// ready pull request for its Strong final audit instead of drafting for a person.
+	// ready pull request for its final audit on another subscription instead of drafting for a
+	// person.
 	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
@@ -475,7 +502,7 @@ func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 		"review": workReviewer(workChanges("It breaks replay."))})
 	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "built")
-	assertIn(t, "Strong final audit", result.Str("reason"))
+	assertIn(t, "its final audit on another subscription", result.Str("reason"))
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
 	assertFalse(t, pull.Truthy("draft"))
 	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
@@ -483,7 +510,7 @@ func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelPROpen, "bot:planned", "difficulty:medium"))
 	said := lastOf(t, h.gh.BotComments(12))
 	assertIn(t, "Its own reviewer read it 2 time(s) in the run", said)
-	assertIn(t, "one strong model's final audit (Opus)", said)
+	assertIn(t, "one medium or strong model's approval from a subscription other than its builder's", said)
 }
 
 // flowLimited is a call refused for its limit, until `resetAt`.
@@ -685,7 +712,7 @@ func TestFlow_AForcedRunWithNothingQueuedSurveysOnlyWhenDue(t *testing.T) {
 }
 
 func TestFlow_ARevisionRequestIsPushedToThePullRequest(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: flowTwoAccounts})
 	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
 	fakes.Git(h.clone, "fetch", "-q", "origin")
 	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
@@ -699,13 +726,15 @@ func TestFlow_ARevisionRequestIsPushedToThePullRequest(t *testing.T) {
 	assertIn(t, "rename it to rules v2.1", r.Calls[0].Prompt)
 	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
 	assertEqual(t, fakes.Git(h.origin, "show", result.Str("head")+":src/game.txt"), "v2.1")
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelCross)) // claude-1 revised it
+	flowAudited(t, h)
 	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR))
 	assertIn(t, "PR_40", h.gh.AutoMerge)
 }
 
 func TestFlow_ARevisionTheReviewerRejectsGoesToItsFinal(t *testing.T) {
 	// Twice rejected, the lane's rounds (2 here) are used: the kept revision is pushed for its
-	// Strong final audit, merging nothing by itself (#725).
+	// final audit on another subscription, merging nothing by itself (#725, #2748).
 	h := newFlowHarness(t)
 	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
 	fakes.Git(h.clone, "fetch", "-q", "origin")

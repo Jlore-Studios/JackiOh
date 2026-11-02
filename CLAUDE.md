@@ -73,10 +73,10 @@ trap backrow. This file binds every agent, not only Claude.
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
-    it is; `bot/go/internal/easy` holds the easy rule), **hard** for engine rules, the AI, design across
-    crates, a migration, or about 40 files or more. Torn between two, take the harder. The bot never changes
-    your label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner
-    rates it.
+    it is): **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or more,
+    **medium** for the rest. Torn between two, take the harder. The bot never changes your label, so a wrong
+    medium is planned, built and approved by a medium model: when you cannot judge it, leave it off and the
+    planner rates it.
 12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay

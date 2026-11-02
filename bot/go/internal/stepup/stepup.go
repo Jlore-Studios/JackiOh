@@ -9,10 +9,11 @@
 // head that meets the review rule and is green in CI (`clear_if_green`, from the sweep), a merge,
 // or a step up does.
 //
-// At `STEP_UP_AFTER` (3) strikes the bot raises the item's difficulty one step, easy to medium to
-// hard, so a stronger model plans and builds it, and rebuilds its open pull request from `main`
-// rather than revising it again (`rebuild`): #141, #203 and #214 were revised for days, a weak
-// builder committing conflict markers each time, until a person closed them. A difficulty a person set
+// At `STEP_UP_AFTER` (3) strikes the bot raises the item's difficulty one step, medium to hard
+// (`difficulty:easy` went in #2748), so a stronger model plans and builds it, and rebuilds its
+// open pull request from `main` rather than revising it again (`rebuild`): #141, #203 and #214
+// were revised for days, a weak builder committing conflict markers each time, until a person
+// closed them. A difficulty a person set
 // is never replaced: the bot asks instead, and so it does at hard, where there is no step left.
 //
 // `/harness rebuild` rebuilds at once, at the same difficulty.
@@ -271,8 +272,8 @@ func StepUp(ctx *hctx.Context, target int, pr *int, reasons []string, link strin
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			low, isDifficulty := strings.CutPrefix(py.Lower(name), "difficulty:")
-			if isDifficulty && slices.Contains(difficulties, low) && name != wanted {
+			// A retired label (`difficulty:easy`) comes off too.
+			if _, isDifficulty := config.LabelDifficulty(py.Lower(name)); isDifficulty && name != wanted {
 				Try(func() { ctx.GH.RemoveLabel(number, name) })
 			}
 		}

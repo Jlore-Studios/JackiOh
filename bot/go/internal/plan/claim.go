@@ -55,7 +55,8 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 	if assignment.Review != nil {
 		steps = append(steps, fmt.Sprintf("have %s review the change adversarially, up to %s rounds",
 			assignment.Review.Describe(), py.Str(cfg.MaxReviewCycles.GetOr(assignment.Difficulty, 3))))
-		end = "Only an approved change becomes a pull request."
+		end = "Only an approved change becomes a pull request, and it merges once " +
+			reviewrule.Summary + " approved it."
 	} else {
 		end = "No model here reviews it, so the pull request then waits for a review run, until " +
 			reviewrule.Summary + " approved it."
@@ -156,9 +157,8 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		case assignment.Action == "plan":
 			message = fmt.Sprintf("Planning this now%s, on %s (`%s`): it is difficulty:%s. The plan "+
 				"goes into this issue's description, under **Plan**, and the lane's owner builds "+
-				"from it (a medium or hard item stays with its planner; an easy one goes to the "+
-				"weakest weak seat).", RunLink(cfg), assignment.Plan.Describe(), labelNeedsPlan,
-				candidate.Difficulty)
+				"from it (the item stays with its planner when it can build it).", RunLink(cfg),
+				assignment.Plan.Describe(), labelNeedsPlan, candidate.Difficulty)
 		default:
 			message = fmt.Sprintf("Starting work on this now%s: it is difficulty:%s. %s",
 				RunLink(cfg), candidate.Difficulty, startMessage(assignment, cfg))

@@ -29,19 +29,12 @@ func (x *Deliverer) approvals(votes *pyjson.Object) [][2]string {
 	return reviewrule.Approvals(votes, x.Cfg.Pool.FamilyTier)
 }
 
-func tiersOf(approvals [][2]string) []string {
-	tiers := make([]string, len(approvals))
-	for i, a := range approvals {
-		tiers[i] = a[1]
-	}
-	return tiers
-}
-
 // RuleMet is Deliverer._rule_met.
 //
-// A commit ships when its approvals meet the review rule for its difficulty
-// (`review_rule.met`) and no model's rejection of it stands (a model that rejected it and
-// later approved it has withdrawn it).
+// A commit ships when its approvals from subscriptions other than its builder's
+// (`review_rule.counted`) meet the review rule for its difficulty (`review_rule.met`) and no
+// model's rejection of it stands (a model that rejected it and later approved it has withdrawn
+// it).
 func (x *Deliverer) RuleMet(votes *pyjson.Object, difficulty string /* = "medium" */) bool {
 	approvals := py.Each(votes.Get("approvals"))
 	for _, family := range py.Each(votes.Get("rejections")) {
@@ -52,16 +45,18 @@ func (x *Deliverer) RuleMet(votes *pyjson.Object, difficulty string /* = "medium
 	if reviewrule.Carried(votes) {
 		return true
 	}
-	return reviewrule.Met(tiersOf(x.approvals(votes)), difficulty)
+	return reviewrule.Met(reviewrule.Counted(votes, x.Cfg.Pool.FamilyTier), difficulty)
 }
 
 // Vote is Deliverer._vote.
 //
-// Record this run's reviewer's verdict on `head`, with its tier: an approval adds one
-// review (once per run and family), a rejection withdraws that family's approvals of the
-// head. A new
-// head starts afresh: its builder is this run's model when this run built it, and unknown
-// otherwise. `carried` is the clearance a conflict resolution carries to it (`_carry`).
+// Record this run's reviewer's verdict on `head`, with its tier and this run's subscription
+// (`provider`, from the plan job's record): an approval adds one review (once per run and
+// family), a rejection withdraws that family's approvals of the head. A new head starts afresh:
+// its builder is this run's model and subscription (`builder`, `built_by`) when this run built
+// it, and unknown ("") otherwise. Votes on a head recorded before #2748 name no `built_by` and
+// keep the rule they were cast under (`review_rule.tiers`). `carried` is the clearance a conflict
+// resolution carries to it (`_carry`).
 func (x *Deliverer) Vote(pr int, head string, approve bool, builder bool, carried *pyjson.Object /* = None */) *pyjson.Object {
 	family, tier := x.Provider.Family, "weak"
 	if x.ReviewSeat != nil {
@@ -74,12 +69,11 @@ func (x *Deliverer) Vote(pr int, head string, approve bool, builder bool, carrie
 		entry := statemod.Item(state, pr)
 		current := pyjson.Obj(entry.Get("votes")).Copy()
 		if head == "" || current.Get("sha") != head {
-			by := ""
+			by, builtBy := "", ""
 			if builder {
-				by = x.Provider.Family
+				by, builtBy = x.Provider.Family, x.Provider.ID
 			}
-			current = pyjson.New("sha", head, "builder", by, "approvals", []any{}, "rejections", []any{},
-				"tiers", pyjson.New(), "reviews", []any{})
+			current = freshVotes(head, by, builtBy)
 		}
 		reviews, isList := current.Get("reviews").([]any)
 		if !isList {
@@ -101,7 +95,7 @@ func (x *Deliverer) Vote(pr int, head string, approve bool, builder bool, carrie
 			return pyjson.Obj(r).Get("run") == run && pyjson.Obj(r).Get("family") == family
 		})) {
 			// Once per run: a deliver job run again must not count its review twice.
-			review := pyjson.New("family", family, "tier", tier)
+			review := pyjson.New("family", family, "tier", tier, "provider", x.Provider.ID)
 			if run != "" {
 				review.Set("run", run)
 			}
@@ -142,14 +136,14 @@ func (x *Deliverer) approved(pr int, head string, merge bool /* = True */, vote 
 		if x.ReviewSeat != nil {
 			votes = x.Vote(pr, head, true, builder, carried)
 		} else {
-			by := ""
+			by, builtBy := "", ""
 			if builder {
-				by = x.Provider.Family
+				by, builtBy = x.Provider.Family, x.Provider.ID
 			}
-			votes = x.voteReset(pr, head, by)
+			votes = x.voteReset(pr, head, by, builtBy)
 		}
 	} else {
-		votes = x.voteReset(pr, head, "")
+		votes = x.voteReset(pr, head, "", "")
 	}
 	difficulty := x.Difficulty(pr)
 	met := x.RuleMet(votes, difficulty)
@@ -272,7 +266,7 @@ func (x *Deliverer) carryLine(record *pyjson.Object, carry *pyjson.Object, whyNo
 // A change no model in its run could review: its commit has no vote yet, and it waits
 // for a review run.
 func (x *Deliverer) awaitReview(pr int, head string, queueIt bool /* = True */) string {
-	votes := x.voteReset(pr, head, x.Provider.Family)
+	votes := x.voteReset(pr, head, x.Provider.Family, x.Provider.ID)
 	if !queueIt {
 		x.holdAutoMerge(pr)
 		return ""
@@ -293,13 +287,17 @@ func (x *Deliverer) waitForReview(pr int, votes *pyjson.Object, labels map[strin
 	var have string
 	if len(approvals) > 0 {
 		have = reviewrule.Who(approvals) + " approved it"
+		if x.ownApprovals(votes) > 0 {
+			have += fmt.Sprintf(", but an approval from `%s`, the subscription that built it, does "+
+				"not ship it", py.Str(votes.Get("built_by")))
+		}
 	} else if inRun != 0 {
 		have = fmt.Sprintf("Its own reviewer read it %d time(s) in the run without approving "+
 			"it", inRun)
 	} else {
 		have = "No model has reviewed it yet"
 	}
-	need := reviewrule.Missing(tiersOf(approvals), difficulty)
+	need := reviewrule.Missing(votes, difficulty)
 	line := fmt.Sprintf("%s, so it waits for %s (`%s`) before auto-merge turns on.", have, need, config.LabelCross)
 	if !x.reviewerSetUp(votes, difficulty) {
 		line += " No subscription that could give that review is set up, so it waits for " +
@@ -309,35 +307,64 @@ func (x *Deliverer) waitForReview(pr int, votes *pyjson.Object, labels map[strin
 }
 
 // A head no model reviewed (someone pushed during the run, or no model here may
-// review): its votes start empty.
-func (x *Deliverer) voteReset(pr int, head string, builder string /* = "" */) *pyjson.Object {
-	votes := pyjson.New("sha", head, "builder", builder, "approvals", []any{}, "rejections", []any{},
-		"tiers", pyjson.New(), "reviews", []any{})
+// review): its votes start empty, naming the run that built it when one did.
+func (x *Deliverer) voteReset(pr int, head string, builder string /* = "" */, builtBy string /* = "" */) *pyjson.Object {
+	votes := freshVotes(head, builder, builtBy)
 	x.remember(pr, pyjson.New("votes", votes))
 	return votes
 }
 
-// Whether the set-up subscriptions could still give the reviews the head needs
-// (`review_rule.reachable`).
+// freshVotes is a head's votes before any review: who built it, as the family of its model
+// (`builder`) and its subscription (`built_by`, #2748), "" for either when no run of the bot's
+// built it.
+func freshVotes(head string, builder string, builtBy string) *pyjson.Object {
+	return pyjson.New("sha", head, "builder", builder, "built_by", builtBy, "approvals", []any{},
+		"rejections", []any{}, "tiers", pyjson.New(), "reviews", []any{})
+}
+
+// How many of the head's approvals came from the subscription that built it (#2748): they are
+// findings rounds that passed, not votes that ship it.
+func (x *Deliverer) ownApprovals(votes *pyjson.Object) int {
+	if py.OrStr(votes.Get("built_by"), "") == "" {
+		return 0
+	}
+	reviews, _ := votes.Get("reviews").([]any)
+	own := 0
+	for _, r := range pyjson.Objs(reviews) {
+		if !reviewrule.FromOther(votes, r) {
+			own++
+		}
+	}
+	return own
+}
+
+// Whether the set-up subscriptions other than the builder's could still give the reviews the
+// head needs (`review_rule.reachable`), at the tiers whose approval of it counts
+// (`review_rule.tiers`).
 func (x *Deliverer) reviewerSetUp(votes *pyjson.Object, difficulty string) bool {
 	secrets := x.Cfg.Secrets
+	wanted := reviewrule.Tiers(votes, difficulty)
+	builtBy := py.OrStr(votes.Get("built_by"), "")
 	var available []string
 	for _, provider := range x.Cfg.Pool.Ordered() {
 		if !provider.Enabled || !slices.Contains(provider.Roles, "review") {
 			continue
+		}
+		if builtBy != "" && provider.ID == builtBy {
+			continue // its approval does not ship the head (#2748)
 		}
 		if provider.Login != "machine" {
 			if has := secrets.Has(provider.Secret); has != nil && !*has {
 				continue
 			}
 		}
-		for _, seat := range x.Cfg.Pool.OwnSeats(provider) {
-			if !slices.Contains(available, seat.Tier) {
+		for _, seat := range x.Cfg.Pool.Seats(provider) {
+			if slices.Contains(wanted, seat.Tier) && !slices.Contains(available, seat.Tier) {
 				available = append(available, seat.Tier)
 			}
 		}
 	}
-	return reviewrule.Reachable(tiersOf(x.approvals(votes)), available, difficulty)
+	return reviewrule.Reachable(reviewrule.Counted(votes, x.Cfg.Pool.FamilyTier), available, difficulty)
 }
 
 // Carried is Deliverer._carried.

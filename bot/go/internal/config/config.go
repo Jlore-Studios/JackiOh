@@ -148,8 +148,8 @@ var own = []labelDef{
 	{"blocked", "b60205", "The night bot needs a person before it can go on"},
 	{"pr", "c5def5", "A pull request the night bot opened"},
 	{"suggestion", "d4c5f9", "An improvement the night bot suggests; add bot:build to have it built"},
-	{"cross-review", "0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"},
-	{"needs-plan", "1d76db", "Queued for the night bot: a strong model plans it first, into the description"},
+	{"cross-review", "0052cc", "A night bot pull request waiting for its review on a subscription other than its builder's"},
+	{"needs-plan", "1d76db", "Queued for the night bot: a model of its tier plans it first, into the description"},
 	{"planned", "0075ca", "It has a plan: in its description, which the builder starts from"},
 	{"stuck", "d93f0b", "It failed every review round it had: a comment says why, for a person to review"},
 }
@@ -176,7 +176,6 @@ var shared = []labelDef{
 	{"human", "ededed", "People do this: the night bot never queues, plans, builds or labels it"},
 	{"human required", "e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"},
 	{"person merges", "1d76db", "The bot builds it, but a person reviews and merges its pull request"},
-	{"difficulty:easy", "c2e0c6", "Any model may build it, the weakest first"},
 	{"difficulty:medium", "fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"},
 	{"difficulty:hard", "b60205", "Only a strong model (Opus) plans, builds and reviews it"},
 	{"priority:high", "d73a4a", "The night bot picks this up first"},
@@ -361,14 +360,45 @@ var LabelPersonMerges string = "person merges"
 // RetiredLabels are labels the bot used to have: the sweep deletes them from the repository
 // (`sweep._labels`), so nobody puts on one that no longer does anything. #664 took the method
 // labels and `bot:approved` (`bot:build` and `human` hand an issue on), `bot:needs-review` (always
-// beside `ready for merge`), and `large patch` and `Info`, which nothing read.
+// beside `ready for merge`), and `large patch` and `Info`, which nothing read. #2748 took
+// `difficulty:easy` (`Relabelled`).
 var RetiredLabels = []string{"method:manual", "method:use-bot", LabelPrefix + "approved",
-	LabelPrefix + "needs-review", "large patch", "Info"}
+	LabelPrefix + "needs-review", "large patch", "Info", "difficulty:easy"}
+
+// Relabelled is a retired label whose meaning another label carries now: before the sweep deletes
+// it, every open thread that carries it gets the other one in its place (`sweep._labels`), so what
+// it said is kept. `difficulty:easy` is `difficulty:medium` (#2748), and a person's easy label
+// becomes a person's medium label, which the bot never changes.
+var Relabelled = map[string]string{"difficulty:easy": "difficulty:medium"}
 
 // Difficulties: an item's difficulty decides which models may plan, build and review it; no label
 // counts as medium, and with several the hardest counts. Like `human`, these match whatever their
 // case.
-var Difficulties = []string{"easy", "medium", "hard"}
+var Difficulties = []string{"medium", "hard"}
+
+// RetiredDifficulties is a difficulty the bot no longer has and the one it reads as: `easy` went
+// in #2748, so an item whose label, record, plan or rating still says easy is medium.
+var RetiredDifficulties = map[string]string{"easy": "medium"}
+
+// AsDifficulty is the difficulty `name` reads as: itself for one of `Difficulties`, the one a
+// retired difficulty became (`RetiredDifficulties`), or "" for any other name.
+func AsDifficulty(name string) string {
+	if slices.Contains(Difficulties, name) {
+		return name
+	}
+	return RetiredDifficulties[name]
+}
+
+// LabelDifficulty is the difficulty a lowercased `difficulty:*` label reads as (`AsDifficulty`:
+// `difficulty:easy` is medium), and false for any other label.
+func LabelDifficulty(lowered string) (string, bool) {
+	name, ok := strings.CutPrefix(lowered, "difficulty:")
+	if !ok {
+		return "", false
+	}
+	found := AsDifficulty(name)
+	return found, found != ""
+}
 
 // DifficultyLabels is DIFFICULTY_LABELS: label -> difficulty, in DIFFICULTIES's order.
 var DifficultyLabels = difficultyLabels()
@@ -385,7 +415,8 @@ func difficultyLabels() *pyjson.Object {
 var DefaultDifficulty string = "medium"
 
 // MinTier is the weakest tier that may build an item of each difficulty (`providers.TIERS`).
-var MinTier = map[string]string{"easy": "weak", "medium": "medium", "hard": "strong"}
+// Nothing builds at weak since `difficulty:easy` went (#2748): a weak model takes no work.
+var MinTier = map[string]string{"medium": "medium", "hard": "strong"}
 
 // PartFloor is the weakest tier that may build a fullsend part (#505) of any difficulty once its
 // plan meets its plan floor, on a subscription with no seat of the part's own tier (Muse): a part
@@ -394,16 +425,17 @@ var MinTier = map[string]string{"easy": "weak", "medium": "medium", "hard": "str
 var PartFloor string = "medium"
 
 // PlanFloor is the weakest tier whose plan an item of each difficulty builds from (#317 part 6,
-// #695): a medium model plans an easy or medium item, only a strong one a hard one. An item no one
-// has rated yet (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then
-// stands only if it rates the item easy or medium (#317 part 8).
-var PlanFloor = map[string]string{"easy": "medium", "medium": "medium", "hard": "strong"}
+// #695): a medium model plans a medium item, only a strong one a hard one. An item no one has
+// rated yet (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then
+// stands only if it rates the item medium (#317 part 8); one it rates hard goes on to a strong
+// planner. The planning lane offers a medium item to the medium planners first (#2748).
+var PlanFloor = map[string]string{"medium": "medium", "hard": "strong"}
 
 // UnratedPlanFloor is UNRATED_PLAN_FLOOR.
 var UnratedPlanFloor string = "medium"
 
 // StepUpAfter is failures of an item's own (not infra, a usage pause, a halt or a stop) at one
-// difficulty before the bot raises it a step, easy to medium to hard; three more at hard block it
+// difficulty before the bot raises it a step, medium to hard; three more at hard block it
 // (#317 part 8).
 var StepUpAfter int = 3
 
@@ -460,21 +492,6 @@ func NewResolver(path string) *Resolver {
 	return &Resolver{Path: path, TimeoutMinutes: 10}
 }
 
-// EasyRule is the limits of `difficulty:easy` (`harness/easy.py`), from `easy` in
-// `.harness/config.json`: at most `max_files` files and `max_lines` lines added plus removed
-// (`generated` files aside), and nothing under `off_limits`.
-type EasyRule struct {
-	MaxFiles  int      // default: 10
-	MaxLines  int      // default: 400
-	OffLimits []string // default: ()
-	Generated []string // default: ()
-}
-
-// NewEasyRule is EasyRule(): its defaults.
-func NewEasyRule() *EasyRule {
-	return &EasyRule{MaxFiles: 10, MaxLines: 400, OffLimits: []string{}, Generated: []string{}}
-}
-
 // Partner is another bot on the same subscription, and the steps of its workflows that spend it.
 // Workflows maps a workflow to its step prefixes, each value a list of strings.
 type Partner struct {
@@ -505,7 +522,7 @@ type Config struct {
 	JobBudgetMinutes   int
 	MinMinutesForACall int
 	// MaxReviewCycles: review verdict rounds per in-run review loop, by difficulty (#725): a
-	// medium or easy item gets 3 verdicts from its lane owner, then goes to its final audit; a
+	// medium item gets 3 verdicts from its lane owner, then goes to its final audit; a
 	// hard item stays with its Opus owner for up to 10. Only rounds that end in a readable review
 	// verdict count: usage pauses, infra failures, halts and stops keep the work and pause the
 	// count.
@@ -537,8 +554,6 @@ type Config struct {
 	// MaxSelfCheckRounds: self checks a self-checking builder gets before its change goes to
 	// review anyway.
 	MaxSelfCheckRounds int // default: 3
-	// Easy is what `difficulty:easy` allows (`harness/easy.py`).
-	Easy *EasyRule // default: field(default_factory=EasyRule)
 	// Controller: the status loop plans and starts the runs (`controller.py`, #1455): bot-night's
 	// gate and plan jobs run only while no loop is going. The config's `controller`.
 	Controller bool // default: False
@@ -572,7 +587,6 @@ func NewConfig() *Config {
 	return &Config{
 		Resolvers:          []*Resolver{},
 		MaxSelfCheckRounds: 3,
-		Easy:               NewEasyRule(),
 		Backend:            "cli",
 		CLIBins:            map[string]string{},
 		ServerURL:          "https://github.com",

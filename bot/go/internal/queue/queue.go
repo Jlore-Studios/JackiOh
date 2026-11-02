@@ -53,10 +53,9 @@ func modeLabels() []modeLabel {
 }
 
 // difficultyLabel is config.DIFFICULTY_LABELS (`{f"difficulty:{name}": name}`) read for a
-// lowercased label name.
+// lowercased label name, a retired one as what it became (`difficulty:easy` is medium, #2748).
 func difficultyLabel(lowered string) (string, bool) {
-	name, ok := strings.CutPrefix(lowered, "difficulty:")
-	return name, ok && slices.Contains(config.Difficulties, name)
+	return config.LabelDifficulty(lowered)
 }
 
 // stateItem is state.item.
@@ -339,8 +338,8 @@ func labelled(names map[string]bool) []string {
 // and `medium` with neither.
 func DifficultyOf(names map[string]bool, carried string /* = "" */) string {
 	found := labelled(names)
-	if slices.Contains(config.Difficulties, carried) {
-		found = append(found, carried)
+	if d := config.AsDifficulty(carried); d != "" {
+		found = append(found, d)
 	}
 	return hardest(found, config.DefaultDifficulty)
 }
@@ -352,11 +351,11 @@ func LabelledDifficulty(names map[string]bool) string {
 
 // What the state file carries for a thread's difficulty: a bot pull request's issue's
 // (`difficulty`), and a floor the bot raised it to (`difficulty_floor`: the easy rule broken,
-// or three failures under a person's label, #317 part 8), the harder of the two.
+// before #2748 retired it), the harder of the two; a retired difficulty reads as what it became.
 func CarriedDifficulty(record *pyjson.Object) string {
 	var found []string
 	for _, key := range []string{"difficulty", "difficulty_floor"} {
-		if d := py.OrStr(record.Get(key), ""); slices.Contains(config.Difficulties, d) {
+		if d := config.AsDifficulty(py.OrStr(record.Get(key), "")); d != "" {
 			found = append(found, d)
 		}
 	}
@@ -369,7 +368,8 @@ func CarriedDifficulty(record *pyjson.Object) string {
 func RatingSource(names map[string]bool, record *pyjson.Object) string {
 	label := LabelledDifficulty(names)
 	by := record.Obj("difficulty_by")
-	if label != "" && by.Get("difficulty") == label {
+	// A rating from before #2748 may say easy, which reads as medium, as its relabelled label does.
+	if label != "" && config.AsDifficulty(py.OrStr(by.Get("difficulty"), "")) == label {
 		return "bot"
 	}
 	if label != "" {

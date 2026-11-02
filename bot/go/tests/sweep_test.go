@@ -5,6 +5,7 @@ package tests
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sweep"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
@@ -530,6 +532,46 @@ func TestSweep_ARetiredLabelIsDeletedFromEveryThread(t *testing.T) {
 	assertEqual(t, gh.LabelNames(647), setOf("priority:low"))
 }
 
+// `difficulty:easy` is retired (#2748): before the sweep deletes it, every open thread that
+// carries it gets `difficulty:medium` in its place, so a person's easy label is a person's medium
+// label and a bot's rating stays the bot's. A closed thread loses it with the label. One thread
+// GitHub refuses keeps the label in the repository, and the next tick tries again.
+func TestSweep_ARetiredEasyLabelBecomesMediumBeforeItIsDeleted(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	gh.Labels = pyjson.New()
+	for _, name := range append(config.Labels.Keys(), "difficulty:easy") {
+		gh.Labels.Set(name, pyjson.New("name", name))
+	}
+	gh.AddIssue(40, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})            // a person's
+	gh.AddIssue(41, fakes.Issue{Labels: []string{"bot:planned", "difficulty:easy"}})                // the bot's rating
+	gh.AddIssue(42, fakes.Issue{Labels: []string{"human", "difficulty:easy", "difficulty:medium"}}) // both
+	gh.AddIssue(43, fakes.Issue{Labels: []string{"difficulty:easy"}}).Set("state", "closed")
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
+	flowUpdateItem(ctx, 41, pyjson.New("difficulty_by", pyjson.New("difficulty", "easy", "provider", "muse")))
+	refused := true
+	gh.Patch.RemoveLabel = func(number int, name string) {
+		if number == 42 && refused {
+			herr.Raise(&herr.GitHubError{Msg: "refused", Status: 502})
+		}
+		gh.Own().RemoveLabel(number, name)
+	}
+	notes := sweep.Labels(ctx, testsupport.Day)
+	assertIn(t, "#40: `difficulty:easy` is retired, so `difficulty:medium`", notes)
+	assertIn(t, "difficulty:easy", gh.Labels) // #42 still carries it
+	refused = false
+	notes = sweep.Labels(ctx, testsupport.Day)
+	assertIn(t, "deleted the retired label `difficulty:easy`", notes)
+	assertNotIn(t, "difficulty:easy", gh.Labels)
+	assertEqual(t, gh.LabelNames(40), setOf(config.LabelBuild, "difficulty:medium"))
+	assertEqual(t, gh.LabelNames(41), setOf("bot:planned", "difficulty:medium"))
+	assertEqual(t, gh.LabelNames(42), setOf("human", "difficulty:medium"))
+	assertEqual(t, gh.LabelNames(43), setOf())
+	record := func(n int) *pyjson.Object { return ctx.Store.Load().Obj("items").Obj(strconv.Itoa(n)) }
+	assertEqual(t, queue.RatingSource(gh.LabelNames(40), record(40)), "person")
+	assertEqual(t, queue.RatingSource(gh.LabelNames(41), record(41)), "bot")
+	assertEqual(t, queue.DifficultyOf(gh.LabelNames(40), ""), "medium")
+}
+
 func TestSweep_EverySweepRunsIt(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
@@ -591,16 +633,16 @@ func TestSweep_PlannedIssuesAndBotPullsGetADifficulty(t *testing.T) {
 	w.gh.AddIssue(30, fakes.Issue{Labels: []string{"bot:planned"}})     // planned, no rating line
 	w.gh.AddIssue(31, fakes.Issue{Labels: []string{config.LabelBuild}}) // still waiting for its plan
 	w.gh.AddIssue(32, fakes.Issue{Labels: []string{"bot:planned", "human"}})
-	w.gh.AddIssue(33, fakes.Issue{Labels: []string{"bot:planned", "difficulty:easy"}})
-	w.gh.AddPull(34, "bot/issue-33", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue says easy
+	w.gh.AddIssue(33, fakes.Issue{Labels: []string{"bot:planned", "difficulty:hard"}})
+	w.gh.AddPull(34, "bot/issue-33", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue says hard
 	w.gh.AddPull(35, "bot/issue-30", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue had none
 	w.gh.AddPull(36, "feature/x")                                                  // not the bot's
 	notes := sweep.Sweep(w.ctx)
 	assertEqual(t, w.difficulties(30), setOf("difficulty:medium"))
-	assertEqual(t, w.difficulties(31), setOf()) // the planner may still rate it easy
+	assertEqual(t, w.difficulties(31), setOf()) // the planner rates it
 	assertEqual(t, w.difficulties(32), setOf())
-	assertEqual(t, w.difficulties(33), setOf("difficulty:easy"))
-	assertEqual(t, w.difficulties(34), setOf("difficulty:easy"))
+	assertEqual(t, w.difficulties(33), setOf("difficulty:hard"))
+	assertEqual(t, w.difficulties(34), setOf("difficulty:hard"))
 	assertEqual(t, w.difficulties(35), setOf("difficulty:medium"))
 	assertEqual(t, w.difficulties(36), setOf())
 	assertIn(t, "#30: planned with no difficulty, so `difficulty:medium`", notes)

@@ -48,10 +48,13 @@ type Candidate struct {
 	Forced bool
 	// QueuedAt is queued_at.
 	QueuedAt string
-	// `easy`, `medium` or `hard` (`difficulty_of`): which models may plan, build and review it.
+	// `medium` or `hard` (`difficulty_of`): which models may plan, build and review it.
 	Difficulty string // default: DEFAULT_DIFFICULTY
 	// For a review: the family of the model that built the change.
 	Builder string // default: ""
+	// For a review: the subscription whose run built the change ("" when unknown, or recorded
+	// before #2748): its approval does not ship it, so no review run goes to it.
+	BuiltBy string // default: ""
 	// Its pickup tier (`priority_tier`), which comes before everything but `forced`.
 	Priority int // default: NO_PRIORITY
 	// For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
@@ -63,15 +66,16 @@ type Candidate struct {
 	PlannedBy string // default: ""
 	// For a review: the families whose approval the head already has (for the reviewer's prompt).
 	Approved []string // default: ()
-	// For a review: the tier of each approval the head has, one per review (`review_rule`).
-	ApprovalTiers []string // default: ()
+	// For a review: the tiers whose approval of the head would ship it, weakest first
+	// (`review_rule.tiers`): medium then strong for a medium item, strong for a hard one.
+	ReviewTiers []string // default: ()
 	// A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
 	// its revision needs a reviewer in the same run.
 	BotPR bool // default: False
 	// Someone has rated how hard it is (`rated`); an unrated build is rated when it is planned.
 	Rated bool // default: True
 	// A revision queued because `main` left the pull request with conflicts: only a builder
-	// with its own reviewer in the run takes it, never a weak one (#317 part 2).
+	// with its own reviewer in the run takes it (#317 part 2).
 	Conflict bool // default: False
 	// For a review: the weakest tier a person asked to review it (`/harness review strong`).
 	ReviewFloor string // default: ""
@@ -94,7 +98,7 @@ type Candidate struct {
 func NewCandidate(number int, kind string, title string, forced bool, queuedAt string) *Candidate {
 	return &Candidate{Number: number, Kind: kind, Title: title, Forced: forced, QueuedAt: queuedAt,
 		Difficulty: config.DefaultDifficulty, Priority: NoPriority, Approved: []string{},
-		ApprovalTiers: []string{}, Rated: true}
+		ReviewTiers: []string{}, Rated: true}
 }
 
 // The last commit of a bot pull request that met the review rule, as deliver recorded it
@@ -131,8 +135,8 @@ func PlanOf(record *pyjson.Object, thread *pyjson.Object, kind string, mode stri
 	return pyjson.New("planned", false, "plan_tier", "", "planned_by", "")
 }
 
-// The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for an
-// easy or medium item, strong for a hard one, and medium to rate and plan an item nobody has
+// The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for a
+// medium item, strong for a hard one, and medium to rate and plan an item nobody has
 // rated or planned yet. One planned but never rated (a plan from before ratings, or a planner
 // that gave none) still needs a plan from its difficulty's floor.
 func PlanFloor(candidate *Candidate) string {
@@ -154,8 +158,7 @@ func PlanMeets(candidate *Candidate) bool {
 }
 
 // The Needs plan stage: a build with no plan yet, or one whose plan came from a model
-// weaker than its difficulty's plan floor (a medium plan for a hard item). A weak builder,
-// which cannot plan, builds only from a plan that meets its floor.
+// weaker than its difficulty's plan floor (a medium plan for a hard item).
 func NeedsPlan(candidate *Candidate) bool {
 	return candidate.Kind == "build" && !PlanMeets(candidate)
 }
@@ -561,15 +564,14 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				c.Difficulty = DifficultyOf(names, CarriedDifficulty(record))
 			}
 			c.Builder = py.OrStr(votes.Get("builder"), "")
+			c.BuiltBy = py.OrStr(votes.Get("built_by"), "")
 			c.Priority = PriorityTier(names)
 			plan := PlanOf(record, thread, kind, mode)
 			c.Planned, c.PlanTier, c.PlannedBy = plan.Bool("planned"), plan.Str("plan_tier"), plan.Str("planned_by")
 			for _, family := range pyjson.List(votes.Get("approvals")) {
 				c.Approved = append(c.Approved, py.Str(family))
 			}
-			for _, approval := range reviewrule.Approvals(votes, ctx.Cfg.Pool.FamilyTier) {
-				c.ApprovalTiers = append(c.ApprovalTiers, approval[1])
-			}
+			c.ReviewTiers = reviewrule.Tiers(votes, c.Difficulty)
 			c.BotPR = names[labelPR]
 			c.Rated = kind != "build" || Rated(names, record)
 			c.Conflict = kind == "revise" && record.Get("source") == "conflict"

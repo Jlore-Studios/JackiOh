@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # Revise pull request #$number
 
 You are the builder for a revision of pull request #$number of `$repo`, on its branch `$branch`
@@ -8,8 +8,9 @@ You are the builder for a revision of pull request #$number of `$repo`, on its b
 - `ci`: the repository's CI failed on the pull request.
 - `conflict`: `main` moved and the branch no longer merged cleanly. The harness has merged `main`
   into the branch and left the conflicted files with their markers for you.
-- `cross-review`: a review run (a strong model, or a medium one of another family) read the
-  change and found blocking problems. They are listed under "What was asked"; answer each one.
+- `cross-review`: a review run (the final audit, on a subscription other than the builder's: a
+  medium or strong model for a medium item, a strong one for a hard item) read the change and
+  found blocking problems. They are listed under "What was asked"; answer each one.
 
 ## The pull request
 

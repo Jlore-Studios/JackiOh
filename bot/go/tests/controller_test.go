@@ -534,17 +534,18 @@ func TestController_TheLoopDeliversARunItStartedWithinATickOfItsWorkEnding(t *te
 	scratch := filepath.Join(h.root, "scratch")
 	notes := controller.Deliver(ctx, scratch)
 	assertEqual(t, notes, []string{fmt.Sprintf("delivered build #12 on claude-1 (run %s): approved", runID)})
-	// The same delivery the run's own deliver job made: the branch and an auto-merging pull
-	// request.
+	// The same delivery the run's own deliver job made: the branch and a pull request waiting for
+	// its final audit on another subscription (#2748: claude-1's own approval does not ship it).
 	result := switchResult(t, filepath.Join(h.root, "out"))
 	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
 	pulls := h.gh.ListPulls("open", "bot/issue-12", 200)
 	assertEqual(t, len(pulls), 1)
 	pull := pulls[0]
 	_, merging := h.gh.AutoMerge[pyjson.Str(pull.Get("node_id"))]
-	assertTrue(t, merging, pull.Get("node_id"))
+	assertFalse(t, merging, pull.Get("node_id"))
 	number, _ := pyjson.AsInt(pull.Get("number"))
 	assertIn(t, config.LabelPR, h.gh.LabelNames(number))
+	assertIn(t, config.LabelCross, h.gh.LabelNames(number))
 	record := ctx.Store.Load().Obj(plan.Deliveries).Obj(runID)
 	assertEqual(t, []any{record.Get("done"), record.Get("tries"), record.Get("status")}, []any{true, 1, "approved"})
 	// Delivered once only; the scratch clone is gone; the run is over.

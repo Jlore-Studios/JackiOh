@@ -11,7 +11,6 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/easy"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gates"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -1013,7 +1012,7 @@ func (x *Worker) planning() {
 		"base", x.BaseSHA, "thread", x.Plan.GetOr("thread", ""),
 		"branch_state", x.branchState(), "gate_list", x.GateList(),
 		"difficulty", py.OrStr(x.Plan.Get("difficulty"), "medium"),
-		"rating", x.ratingAsk(), "easy_rule", x.easyRule(),
+		"rating", x.ratingAsk(), "difficulty_rule", x.difficultyRule(),
 		"plan_words", py.Thousands(issueplan.PlanWords), "plan_chars", py.Thousands(issueplan.PlanChars),
 		"draft_file", PlanDraftFile,
 	)) + x.HandoffText(false)
@@ -1069,15 +1068,14 @@ func (x *Worker) ratingAsk() string {
 			"that, and give no rating line. If the rule below says it is harder, say so " +
 			"under **Open questions**."
 	}
-	line := "    <!-- bot: {\"difficulty\": \"easy\", \"why\": \"one line: the rule's line you were " +
-		"least sure of, and why it holds\"} -->"
+	line := "    <!-- bot: {\"difficulty\": \"medium\", \"why\": \"one line: the rule's line that " +
+		"decides it, and why\"} -->"
 	ask := "Rate how hard it is, by the rule below. The very first line of your answer is a " +
 		"single HTML comment carrying JSON, with nothing before it, then the plan:\n\n" +
-		line + "\n\n`difficulty` is `easy`, `medium` or `hard`. The rating decides who " +
-		"builds it: an easy item goes to the weakest model free, which may be unable to " +
-		"fill gaps, resolve a hard conflict, or judge what it cannot see. When in doubt " +
-		"between easy and medium, rate medium: a borderline easy costs a weak builder's " +
-		"failed run, while a medium plan still builds fast."
+		line + "\n\n`difficulty` is `medium` or `hard`. The rating decides who builds and " +
+		"approves it: a medium item goes to a medium model, and a medium model's approval from " +
+		"another subscription ships it; a hard item goes to Opus alone. When in doubt between " +
+		"the two, rate hard."
 	if x.ratingSource() == "bot" {
 		by := ""
 		if rating.Truthy("by") {
@@ -1089,10 +1087,9 @@ func (x *Worker) ratingAsk() string {
 	return ask
 }
 
-func (x *Worker) easyRule() string {
-	rule := x.Cfg.Easy
-	return pyTemplate(easy.Rule).safeSubstitute(map[string]string{
-		"max_files": strconv.Itoa(rule.MaxFiles), "max_lines": strconv.Itoa(rule.MaxLines)})
+// The rule the planner rates by (`DifficultyRule`), its number filled in.
+func (x *Worker) difficultyRule() string {
+	return pyTemplate(DifficultyRule).safeSubstitute(map[string]string{"hard_files": strconv.Itoa(HardFiles)})
 }
 
 // A round the reviewer sent back, built on `built_on`. On a lane with two models,
@@ -1655,8 +1652,9 @@ func (x *Worker) lastCheckpoint() {
 	}
 }
 
-// SecondReview is a review run: the lane's final audit (#725). A model reads a bot pull request
-// (a strong one for a medium or hard item, the weakest shipping seat for an easy one).
+// SecondReview is a review run: the lane's final audit (#725). A model on a subscription other
+// than the builder's reads a bot pull request (a medium one first for a medium item, a strong one
+// for a hard item, #2748).
 // Nothing is built or pushed: the verdict goes
 // to `deliver`, which merges once the approvals for the same commit meet the review rule
 // (`review_rule.py`), or asks for a revision at the auditor's tier.
@@ -1738,7 +1736,7 @@ func (x *Worker) Split() {
 		fullsend = pyFormat(split.FullsendNotes, map[string]any{"branch": x.planItem("branch")})
 	}
 	values.Set("fullsend", fullsend)
-	values.Set("easy_rule", x.easyRule())
+	values.Set("difficulty_rule", x.difficultyRule())
 	values.Set("max_issues", split.MaxIssues)
 	prompt := x.Render("split", values) + x.HandoffText(false)
 	head := x.Wt.Head()
@@ -1748,7 +1746,7 @@ func (x *Worker) Split() {
 	}
 	result := x.Call("plan", prompt, x.Wt.Cwd, true, why, false)
 	x.resetTo(head)
-	tree := split.Parse(redact.Redact(result.Text, nil), []string{"easy", "medium", "hard"})
+	tree := split.Parse(redact.Redact(result.Text, nil), split.Difficulties)
 	x.Result.Set("tree", tree.ToDict())
 	if !tree.OK() {
 		problems := or(strings.Join(tree.Problems, "; "), "no tree")

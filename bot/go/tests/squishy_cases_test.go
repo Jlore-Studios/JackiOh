@@ -324,7 +324,8 @@ func TestSquishyCases_SplitOpensLinkedSubIssuesSquishyBuilds(t *testing.T) {
 	// Its type labels as far as the repository has them, never a reserved one, then the parent's
 	// priority, its difficulty and Squishy's queue label.
 	assertEqual(t, gh.LabelNames(engine), setOf("patch", "difficulty:hard", "priority:high", "squishy:build"))
-	assertEqual(t, gh.LabelNames(client), setOf("patch", "difficulty:easy", "priority:high", "squishy:build"))
+	// The split rated it `easy`, which is retired (#2748): it opens as medium.
+	assertEqual(t, gh.LabelNames(client), setOf("patch", "difficulty:medium", "priority:high", "squishy:build"))
 	body := gh.GetIssue(client).Str("body")
 	assertIn(t, fmt.Sprintf("Blocked by #%d.", engine), body)
 	assertIn(t, "Part of #40, split by Squishy", body)

@@ -5,12 +5,13 @@
 //
 // Each role runs on the seat `plan` gave it (`plan["seats"]`: a model and its tier on this
 // subscription): a planning session first when the item has no plan yet, the builder and its
-// fixes, and the run's own adversarial reviewer. A builder whose seat has `self_check` (a weak one)
-// checks its own change before any review: build, checks, a self check by a fresh session of the same
-// model, and on findings a fix and the checks and the self check again, up to
+// fixes, and the run's own adversarial reviewer, whose findings count but whose approval does not
+// ship the change (#2748: that is a review run's, on another subscription). A builder whose seat
+// has `self_check` checks its own change before any review: build, checks, a self check by a fresh
+// session of the same model, and on findings a fix and the checks and the self check again, up to
 // `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
 // seat of at least medium to review in the run (only weak ones) ends with the change built, for a
-// review run to judge; a weak model reviews only in a review run, and only an easy item.
+// review run to judge.
 //
 // A fullsend part (#505, `plan["onto"]`) is one builder pass from its tree's branch and nothing
 // more (`_part`): its tree's reconcile, an ordinary build of the parent on that branch, runs the
@@ -164,6 +165,27 @@ var SwitchAsk = "\n\n## Your model\n\nThis run's lane can run {models}, and this
 
 // PlanCut is PLAN_CUT.
 var PlanCut = "\n\n…(the plan was cut here; the planner wrote more)"
+
+// HardFiles is how many changed files make an item hard by their number alone (`DifficultyRule`;
+// CLAUDE.md rule 11 and docs/issues-and-patches.md, How hard it is, say "about 40").
+var HardFiles = 40
+
+// DifficultyRule is the rule a planner rates an item by (#2748: medium or hard, `difficulty:easy`
+// retired), as the plan and split prompts read it (`$difficulty_rule`). `$hard_files` is
+// `HardFiles`.
+var DifficultyRule = "" +
+	"An item is **hard** if any line below holds; otherwise it is **medium**.\n" +
+	"\n" +
+	"1. **Engine rules:** the rules or the resolution loop (`crates/engine/src/`).\n" +
+	"2. **The AI:** its decisions or its search (`crates/ai/src/`).\n" +
+	"3. **Design across crates:** a change several crates or apps must agree on, beyond a call\n" +
+	"   site or a test.\n" +
+	"4. **A migration:** a database migration (`crates/server/migrations/`), or moving data or\n" +
+	"   state between shapes.\n" +
+	"5. **Big:** about $hard_files files or more changed in all, the tests included.\n" +
+	"\n" +
+	"Torn between the two, take the harder: rate **hard**. A medium item is planned, built and\n" +
+	"approved by a medium model (Muse, Gemini, GPT or Sonnet); a hard one by Opus alone."
 
 // SelfCheckContext is SELF_CHECK_CONTEXT.
 var SelfCheckContext = "This is a self check, not a review. You are the same model that built\n" +
@@ -476,7 +498,7 @@ func NewWorker(cfg *config.Config, plan *pyjson.Object, runner any, repoDir stri
 	x.PlanSeat = x.seat(seats, "plan")
 	x.SelfCheck = seats != nil && seats.Truthy("self_check")
 	x.MainSeat = main
-	own := cfg.Pool.OwnSeats(x.Provider)
+	own := cfg.Pool.Seats(x.Provider)
 	tiers := map[string]bool{}
 	for _, seat := range own {
 		tiers[seat.Tier] = true
@@ -570,7 +592,7 @@ func (x *Worker) SeatFor(role string) *providers.Seat {
 }
 
 // CyclesCap is in-run review verdict rounds for this item's difficulty (#725): 3 for a medium
-// or easy item, then it goes to its final audit; 10 for a hard one, which stays with Opus.
+// item, then it goes to its final audit; 10 for a hard one, which stays with Opus.
 func (x *Worker) CyclesCap() int {
 	return py.MustInt(x.Cfg.MaxReviewCycles.GetOr(x.Difficulty(), 3))
 }
@@ -590,18 +612,14 @@ func (x *Worker) roundsSpent() int {
 }
 
 // The run used every verdict round with this owner (#725): a hard item stays
-// unapproved, for the strike path; a medium or easy item's kept work goes to its lane's
-// final audit (Strong for medium, Medium for easy).
+// unapproved, for the strike path; a medium item's kept work goes to its lane's final audit,
+// on another subscription (#2748).
 func (x *Worker) roundsOut(total int) (string, string) {
 	if x.Difficulty() == "hard" {
 		return "not_approved", fmt.Sprintf("no approval after %d review cycles", total)
 	}
-	final := "its Medium final audit"
-	if x.Difficulty() == "medium" {
-		final = "its Strong final audit"
-	}
 	return "built", fmt.Sprintf("used its %d review rounds with this owner; the work is kept for %s",
-		total, final)
+		total, "its final audit on another subscription")
 }
 
 // Difficulty is the item's difficulty as this run knows it: the planner's rating when it rated
@@ -625,7 +643,7 @@ func (x *Worker) Difficulty() string {
 	return found
 }
 
-// difficultyIndex is `list(MIN_TIER).index(d)`: easy, medium, hard.
+// difficultyIndex is `list(MIN_TIER).index(d)`: medium, hard.
 func difficultyIndex(d string) int {
 	for i, name := range config.Difficulties {
 		if name == d {

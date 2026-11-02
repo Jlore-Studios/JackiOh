@@ -467,8 +467,8 @@ func Report(ctx *hctx.Context) string {
 		working += fmt.Sprintf(" (no run is going for %s any more; the next plan requeues it)", ended)
 	}
 	lines = append(lines, working+".")
-	lines = append(lines, fmt.Sprintf("- **Needs plan** (rated and planned first, into the description: an easy or "+
-		"unrated item by a medium or strong model, the rest by a strong one): "+
+	lines = append(lines, fmt.Sprintf("- **Needs plan** (rated and planned first, into the description: a medium or "+
+		"unrated item by a medium model first, then a strong one; a hard item by a strong one): "+
 		"%s.", numbers(labelled(config.LabelNeedsPlan, &no))))
 	lines = append(lines, fmt.Sprintf("- Queued to build: %s; "+
 		"to revise: %s; "+
@@ -508,10 +508,10 @@ func Report(ctx *hctx.Context) string {
 	lines = append(lines, fmt.Sprintf("- Up to %s build and review rounds "+
 		"per item (%s for a hard one), after a "+
 		"plan on the planning lane (or by its builder when none is free), which goes "+
-		"into the issue's description, by a medium or strong model for an easy, medium "+
+		"into the issue's description, by a medium model first for a medium "+
 		"or unrated item and a strong one for a hard item; the planner rates an "+
 		"unrated item. "+
-		"An item's `difficulty:easy|medium|hard` (medium until rated) sets the weakest "+
+		"An item's `difficulty:medium|hard` (medium until rated) sets the weakest "+
 		"tier that may build it, and three failures of its own raise it a step. A "+
 		"change merges once "+
 		"%s approved it. A self-checking builder "+

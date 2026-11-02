@@ -28,8 +28,8 @@ import (
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/easy"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
@@ -98,7 +98,7 @@ func PlanNeeds(plan string, forbidden []string) string {
 		}
 		return words
 	}
-	paths := easy.PlanPaths(text)
+	paths := issueplan.FilesToTouch(text)
 	all := len(paths) > 0
 	for _, path := range paths {
 		all = all && git.Matches(path, forbidden)

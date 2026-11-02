@@ -205,7 +205,7 @@ func TestProviders_TheCommittedFile(t *testing.T) {
 	want := map[string][]any{
 		"claude-3": both(), "claude-1": both(), "claude-4": both(), "claude-5": both(),
 		"claude-6": both(), "claude-7": both(), "claude-8": both(),
-		"agy":      {[]any{"gemini-3.8-flash-high", "medium", false}},
+		"agy":      {[]any{"gemini-4-argon-high", "medium", false}},
 		"muse":     {[]any{"muse-spark-1.3-contributor", "medium", false}},
 		"gpt":      {[]any{"gpt-5.6-sol", "medium", false}},
 		"claude-2": both(),
@@ -214,8 +214,8 @@ func TestProviders_TheCommittedFile(t *testing.T) {
 	for id, list := range want {
 		assertEqual(t, seats[id], list, id)
 	}
-	// No committed subscription is weak since #2129: an easy item goes to the medium models
-	// first. The tests hold the weak tier's rules to one of their own (`support.WEAK`).
+	// No committed subscription is weak since #2129, and since #2748 a weak seat takes no work.
+	// The tests hold the weak tier's rules to one of their own (`support.WEAK`).
 	weak, ok := pool.Tiers.Lookup("weak")
 	assertTrue(t, ok, "tiers has no weak")
 	assertEqual(t, len(weak.([]*providers.TierEntry)), 0)
@@ -226,27 +226,11 @@ func TestProviders_TheCommittedFile(t *testing.T) {
 		}
 		return out
 	}
-	assertEqual(t, models("medium"), []string{"muse-spark-1.3-contributor", "gemini-3.8-flash-high",
+	// agy runs Gemini 4 Argon since #2748, a medium model in every role.
+	assertEqual(t, models("medium"), []string{"muse-spark-1.3-contributor", "gemini-4-argon-high",
 		"gpt-5.6-sol", "sonnet"})
-	// Every Claude account switches between its Opus and its Sonnet as the work needs: no seat on
-	// them only stands in for another subscription.
-	takesOver := map[string][]string{}
-	for _, p := range pool.Ordered() {
-		if p.CLI != "claude" {
-			continue
-		}
-		list := []string{}
-		for _, s := range pool.Seats(p) {
-			list = append(list, s.TakesOver)
-		}
-		takesOver[p.ID] = list
-	}
-	wantOver := map[string][]string{}
-	for _, name := range []string{"claude-1", "claude-2", "claude-3", "claude-4", "claude-5",
-		"claude-6", "claude-7", "claude-8"} {
-		wantOver[name] = []string{"", ""}
-	}
-	assertEqual(t, takesOver, wantOver)
+	assertEqual(t, []any{pool.Get("agy").Effort, pool.Get("agy").Roles},
+		[]any{"high", []string{"plan", "build", "fix", "revise", "review", "suggest"}})
 	assertEqual(t, models("strong"), []string{"opus"})
 	kind := reflect.TypeOf(providers.Provider{})
 	for range pool.Ordered() {
@@ -303,8 +287,10 @@ func TestProviders_TierMistakesAreErrors(t *testing.T) {
 	broken(func(r *pyjson.Object) { r.Delete("tiers") }, "expected an object")
 	broken(update("claude-2", "extra_models", []any{pyjson.New("model", "sonnet", "tier", "weak")}),
 		"tiers lists it under medium")
+	// A stand-in seat (`takes_over`) built only easy items, which went in #2748.
 	broken(update("claude-2", "extra_models", []any{pyjson.New("model", "sonnet", "tier", "medium",
-		"takes_over", "nobody")}), "which is not another provider")
+		"takes_over", "claude-1")}), "unknown keys takes_over")
+	broken(update("gpt", "easy_first", true), "unknown keys easy_first")
 	broken(update("claude-2", "extra_models", []any{pyjson.New("tier", "weak")}), "needs a model")
 	broken(update("gpt", "difficult", true), "unknown keys difficult")
 	broken(update("gpt", "self_review", true), "unknown keys self_review")
@@ -557,40 +543,33 @@ func TestProviders_ByDayTheFirstFreeSubscriptionWithItsSecretBuilds(t *testing.T
 
 // The tests' weak subscription (`support.WEAK`, as the weak seat was until #2129) logs in on the
 // machine, works any hour with no caps, is weak and checks its own builds. It is last in the usage
-// order, but an easy item goes to it first while it has a free lane (`easy_first`), planned by a
-// free medium or strong model on its own run.
-func TestProviders_AWeakSubscriptionTakesEasyItemsFirstAndNothingHarder(t *testing.T) {
+// order, and since #2748 it takes no work: nothing is built at weak, so a medium item, and one
+// still labelled `difficulty:easy`, which reads as medium, goes to a medium model, and with only
+// the weak one on, nothing starts.
+func TestProviders_AWeakSubscriptionTakesNoWork(t *testing.T) {
 	pool := ts.MakeConfig(ts.Config{Machine: ts.AllMachine}).Pool
 	lite := pool.Get(ts.Weak)
 	assertEqual(t, []any{lite.CLI, lite.Family, lite.Login, lite.RunsOn},
 		[]any{"codex", "lite", "machine", "night-vm-lite"})
 	assertEqual(t, []any{lite.Schedule.Mode, lite.Limits.Mode}, []any{"always", "none"})
-	assertEqual(t, []any{lite.Tier, lite.SelfCheck, lite.EasyFirst}, []any{"weak", true, true})
+	assertEqual(t, []any{lite.Tier, lite.SelfCheck}, []any{"weak", true})
 	assertEqual(t, pool.Priority[len(pool.Priority)-1], ts.Weak)
-	// Unplanned, the weak one cannot take it: it builds only from a plan. By day no strong model
-	// is free (the Claude accounts keep to the night here), so Muse plans it in its own run and
-	// builds it.
+	// By day no strong model is free (the Claude accounts keep to the night here), so Muse plans
+	// it in its own run and builds it, easy label or not.
+	for _, labels := range [][]string{{config.LabelBuild, "difficulty:easy"}, {config.LabelBuild}} {
+		gh := fakes.NewFakeGitHub()
+		gh.AddIssue(3, fakes.Issue{Labels: labels})
+		planned := flowMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
+		assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("difficulty")},
+			[]any{"build", "muse", "medium"})
+		assertIn(t, "#3 needs a plan", planned.Get("housekeeping"))
+	}
+	// With only the weak one on, a planned item waits: the weak one builds nothing.
 	gh := fakes.NewFakeGitHub()
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
-	planned := flowMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
-	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", "muse"})
-	assertIn(t, "#3 needs a plan", planned.Get("housekeeping"))
-	// A medium item passes the weak one by.
-	gh = fakes.NewFakeGitHub()
-	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})
-	planned = flowMake(providersCtxFor(gh, providersCtx{At: ts.Day, Machine: ts.AllMachine}))
-	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", "muse"})
-	// With nothing else free, the weak one builds an easy item another model already planned.
-	gh = fakes.NewFakeGitHub()
-	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
 	ctx := providersCtxFor(gh, providersCtx{At: ts.Day, Machine: []string{ts.Weak}})
-	assertEqual(t, flowMake(ctx).Get("action"), "none") // no planner is free
-	// A medium model's plan is enough for an easy item (#317 part 6), and the weak one builds it.
 	flowUpdateItem(ctx, 3, pyjson.New("planned_at", clock.ISO(ts.Day), "planned_tier", "medium"))
-	planned = flowMake(ctx)
-	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", ts.Weak})
-	assertEqual(t, planned.Obj("seats").Get("self_check"), true)
-	assertEqual(t, planned.Obj("seats").Get("review"), nil) // weak reviews only in a review run
+	assertEqual(t, flowMake(ctx).Get("action"), "none")
 }
 
 // `off_from`: from that day (Central time) a subscription takes no new work, forced or not, and
@@ -1161,14 +1140,21 @@ func TestProviders_MuseWorksFourItemsAtOnce(t *testing.T) {
 	assertTrue(t, three.WithRun(6, "muse", "plan", false).Full(muse))
 }
 
-// `lanes: 6`: the weak one takes more items while it holds some (six runners carry its label); a
-// seventh waits on its lanes. The night box's limit of six counts every subscription's runs, so
-// with another one there the weak one gets fewer.
+// `lanes: 6`: a subscription takes more items while it holds some (six runners carry its label);
+// a seventh waits on its lanes. The night box's limit of six counts every subscription's runs,
+// so with another one there it gets fewer. Muse, given six lanes and no fill-ins here, stands for
+// such a subscription: the weak one, which had six, builds nothing since #2748.
 func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
+	sixLanes := func(gh *fakes.FakeGitHub, machine []string) *hctx.Context {
+		ctx := providersCtxFor(gh, providersCtx{At: ts.Day, Env: providersSecrets(), Machine: machine})
+		return difficultyWithPool(gh, ts.Day, ctx.Cfg, func(p *providers.Pool) {
+			difficultyReplaceProvider(p, "muse", func(m *providers.Provider) { m.Lanes, m.FillIn = 6, nil })
+		})
+	}
 	gh := fakes.NewFakeGitHub()
 	items := []int{3, 4, 5, 6, 7, 8, 9}
 	for _, n := range items {
-		gh.AddIssue(n, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}}) // the weak one's
+		gh.AddIssue(n, fakes.Issue{Labels: []string{config.LabelBuild}})
 	}
 	planAll := func(ctx *hctx.Context) {
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -1178,9 +1164,9 @@ func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
 			return nil
 		}, "state")
 	}
-	ctx := providersCtxFor(gh, providersCtx{At: ts.Day, Env: providersSecrets(), Machine: []string{"lite"}})
+	ctx := sixLanes(gh, []string{"muse", "lite"})
 	planAll(ctx)
-	assertEqual(t, []any{ctx.Cfg.Pool.Get("lite").Lanes, ctx.Cfg.Pool.MachineParallel}, []any{6, 6})
+	assertEqual(t, []any{ctx.Cfg.Pool.Get("muse").Lanes, ctx.Cfg.Pool.MachineParallel}, []any{6, 6})
 	taken := []any{}
 	var planned *pyjson.Object
 	for range 7 {
@@ -1195,23 +1181,23 @@ func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
 	}
 	want := []any{}
 	for _, n := range items[:6] {
-		want = append(want, []any{n, "lite"})
+		want = append(want, []any{n, "muse"})
 	}
 	assertEqual(t, taken, want)
-	assertIn(t, "`lite` is busy", planned.Get("reason"))
+	assertIn(t, "`muse` is busy", planned.Get("reason"))
 	lanes := plan.ReadLanes(ctx, ctx.Store.Load())
-	assertEqual(t, []any{lanes.Count("lite"), lanes.OnMachine(ctx.Cfg.Pool)}, []any{6, 6})
-	// With GPT holding a machine run, the weak one takes five and waits for room on the box.
+	assertEqual(t, []any{lanes.Count("muse"), lanes.OnMachine(ctx.Cfg.Pool)}, []any{6, 6})
+	// With GPT holding a machine run, Muse takes five and waits for room on the box.
 	gh = fakes.NewFakeGitHub()
 	for _, n := range items {
-		gh.AddIssue(n, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})
+		gh.AddIssue(n, fakes.Issue{Labels: []string{config.LabelBuild}})
 	}
-	ctx = providersCtxFor(gh, providersCtx{At: ts.Day, Env: providersSecrets(), Machine: []string{"lite", "gpt"}})
+	ctx = sixLanes(gh, []string{"muse"})
 	planAll(ctx)
 	gh.AddIssue(40, fakes.Issue{Labels: []string{config.LabelWorking}})
 	providersRun(gh, "40", "in_progress")
 	flowUpdateItem(ctx, 40, pyjson.New("run_id", "40", "provider", "gpt"))
-	lites := 0
+	muses := 0
 	for range 7 {
 		planned = flowMake(ctx)
 		if pyjson.Equal(planned.Get("action"), "none") {
@@ -1220,27 +1206,26 @@ func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
 		n := planned.Int("number")
 		providersRun(gh, strconv.Itoa(n), "in_progress")
 		flowUpdateItem(ctx, n, pyjson.New("run_id", strconv.Itoa(n)))
-		if pyjson.Equal(planned.Get("provider"), "lite") {
-			lites++
+		if pyjson.Equal(planned.Get("provider"), "muse") {
+			muses++
 		}
 	}
-	assertEqual(t, lites, 5)
-	assertIn(t, "`lite` waits for room on the machine (6 at once)", planned.Get("reason"))
+	assertEqual(t, muses, 5)
+	assertIn(t, "`muse` waits for room on the machine (6 at once)", planned.Get("reason"))
 }
 
-func TestProviders_AnEasyAuditGoesToAMediumModel(t *testing.T) {
-	// No weak review runs go out (#725): an easy item's weak approval is answered by the weakest
-	// seat that ships it, medium.
+func TestProviders_AMediumAuditGoesToAMediumModelOfAnotherSubscription(t *testing.T) {
+	// No weak review runs go out (#725), and gpt's own approval does not ship the head gpt built
+	// (#2748): the weakest seat that ships it, medium, on another subscription, Muse, audits it.
 	gh := fakes.NewFakeGitHub()
-	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR, config.LabelCross,
-		"difficulty:easy"}, SHA: "h1"})
+	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR, config.LabelCross}, SHA: "h1"})
 	ctx := providersCtxFor(gh, providersCtx{At: ts.Day})
-	flowUpdateItem(ctx, 9, pyjson.New("votes", pyjson.New("sha", "h1", "builder", "gpt",
-		"approvals", []any{"gpt"})))
+	flowUpdateItem(ctx, 9, pyjson.New("votes", pyjson.New("sha", "h1", "builder", "gpt", "built_by", "gpt",
+		"approvals", []any{"gpt"}, "reviews", []any{pyjson.New("family", "gpt", "tier", "medium", "provider", "gpt")})))
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("head"),
 		planned.Get("builder")}, []any{"review", "muse", "h1", "gpt"})
-	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelWorking, "difficulty:easy"))
+	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelWorking))
 }
 
 // claude-1 is spent like any other subscription now: no gate wait for quiet, so the gate's word

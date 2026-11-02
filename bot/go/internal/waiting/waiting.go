@@ -28,6 +28,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
 )
 
 // TIER_WORDS: what each tier may take, said once above the queue: the router tries the weakest
@@ -35,7 +36,7 @@ import (
 var TierWords = map[string]string{"weak": "any model", "medium": "a medium or strong model", "strong": "a strong model"}
 
 // DIFFICULTY_MARK
-var DifficultyMark = map[string]string{"easy": "🟢", "medium": "🟡", "hard": "🔴", "unrated": "⚪"}
+var DifficultyMark = map[string]string{"medium": "🟡", "hard": "🔴", "unrated": "⚪"}
 
 // tierRank is providers.TIER_RANK (`{name: rank for rank, name in enumerate(TIERS)}`): the rank,
 // and whether `tier` has one.
@@ -133,7 +134,7 @@ func TierNames(pool *providers.Pool, tier string) string {
 	for _, entry := range pool.TierEntries(tier) {
 		var owners []*providers.Provider
 		for _, p := range pool.Ordered() {
-			if slices.ContainsFunc(pool.OwnSeats(p), func(s *providers.Seat) bool { return s.Model == entry.Model }) {
+			if slices.ContainsFunc(pool.Seats(p), func(s *providers.Seat) bool { return s.Model == entry.Model }) {
 				owners = append(owners, p)
 			}
 		}
@@ -191,10 +192,18 @@ func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lan
 // (step, tier, why): what the next run does to `c`, the weakest tier that may do it
 // (`plan.assign`, `plan.review_seat`), and why that tier is not its difficulty's own.
 func Need(c *queue.Candidate) (string, string, string) {
+	difficulty := config.AsDifficulty(c.Difficulty)
 	if c.Kind == "review" {
-		tier, why := "strong", "its final audit"
-		if c.Difficulty == "easy" {
-			tier, why = "medium", ""
+		// The weakest tier whose approval ships it (#2748): medium for a medium item, on
+		// another subscription than its builder's; strong for a hard one, or for votes cast
+		// before #2748 (`review_rule.tiers`).
+		tiers := c.ReviewTiers
+		if len(tiers) == 0 {
+			tiers = reviewrule.Shipping(difficulty)
+		}
+		tier, why := tiers[0], ""
+		if tier == "strong" {
+			why = "its final audit"
 		}
 		if r, ok := tierRank(c.ReviewFloor); ok && r > rank(tier) {
 			tier, why = c.ReviewFloor, fmt.Sprintf("a person asked for a %s review", c.ReviewFloor)
@@ -208,7 +217,7 @@ func Need(c *queue.Candidate) (string, string, string) {
 		}
 		return "plan", queue.PlanFloor(c), why
 	}
-	tier, why := config.MinTier[c.Difficulty], ""
+	tier, why := config.MinTier[difficulty], ""
 	if c.Kind == "build" && c.Part && queue.PlanMeets(c) && rank(tier) > rank(config.PartFloor) {
 		tier, why = config.PartFloor, "a fullsend part, built from its plan"
 	}
@@ -531,6 +540,9 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	}
 	var able []*providers.Provider
 	for _, p := range pool.Ordered() {
+		if step == "review" && c.BuiltBy != "" && p.ID == c.BuiltBy {
+			continue // its builder's subscription: its approval does not ship it (#2748)
+		}
 		if slices.Contains(p.Roles, role) && pool.BestSeat(p, tier) != nil {
 			able = append(able, p)
 		}
@@ -548,6 +560,9 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	}
 	if tier == "strong" {
 		wanted += fmt.Sprintf(" (%s)", TierNames(pool, tier))
+	}
+	if step == "review" && c.BuiltBy != "" {
+		wanted += fmt.Sprintf(" on a subscription other than `%s`, which built it", c.BuiltBy)
 	}
 	var soonestAt time.Time
 	soonestID, haveSoonest := "", false

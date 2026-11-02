@@ -8,18 +8,20 @@ and limits ([Subscriptions](#subscriptions)). Up to eight runs go at once on Git
 have, and, apart from those, up to six on the bot's own machines, the AWS boxes: neither waits on
 the other. (The AI's two training
 lanes run on a box of their own, outside the harness: [`machine/`](machine/README.md#the-training-box).)
-Every model has a tier (weak,
-medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
-build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
-each item first (a strong one for hard items) and rates an item nobody rated, under a
-strict [easy rule](#the-easy-rule); one subscription owns the item end to end (a medium or
-hard item stays with its planner), builds it,
-runs the repository's checks, and reviews itself in a fresh adversarial session, going round
-until its lane's verdict rounds run out or its reviewer approves. Then the lane's final audit
-(a Strong seat for medium and hard items, a medium one for easy items) reviews, fixes and
-pushes. Three failures of an item's own raise its difficulty a step and rebuild it from
-`main` ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into `main` once CI passes and its lane's final audit approved the
-same commit: one strong model for a medium or hard item, one medium model for an easy item. When it has nothing to do, it proposes
+Every model has a tier (medium
+or strong; a weak one takes no work) and every item a difficulty (medium or hard), which decides
+who may plan, build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium model
+plans a medium or unrated item first (a strong one only when no medium one can take it now; a
+strong one alone for hard items) and rates an item nobody rated, by [how hard it
+is](#how-hard-it-is); one subscription owns the item end to end (it stays with its planner),
+builds it, runs the repository's checks, and reviews itself in a fresh adversarial session, going
+round until its lane's verdict rounds run out or its reviewer approves. That approval does not
+ship it: the lane's final audit, on a subscription other than the builder's (a medium seat first
+for a medium item, Opus for a hard one), reviews, fixes and pushes. Three failures of an item's own
+raise its difficulty a step and rebuild it from `main` ([Rating, strikes and the step
+up](#rating-strikes-and-the-step-up)). A change merges itself into `main` once CI passes and its
+lane's final audit approved the same commit from another subscription: one medium or strong model
+for a medium item, one strong model for a hard item. When it has nothing to do, it proposes
 improvements to the game as issues, at most ten open at a time.
 
 It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
@@ -44,16 +46,16 @@ flowchart TD
     GA["gate (no write token)<br/>work a free subscription can take?"]
     GA -- "the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
-    PL --> PN["planner (medium or strong; strong for hard)<br/>rates an unrated item, writes the plan"]
+    PL --> PN["planner (medium first; strong for hard)<br/>rates an unrated item, writes the plan"]
     PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner"]
     B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests"]
-    G -- "a weak builder" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
+    G -- "a self_check builder (none now)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
     SC --> R
     G --> R["adversarial reviewer<br/>the run's own lane reviewer, a fresh session"]
     R -- "blocking findings or red checks<br/>(3 verdict rounds, 10 for hard)" --> F["the same owner<br/>fixes the findings"]
     F --> G
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
-    D -- "not enough approvals yet" --> X["review run = the final audit (bot:cross-review)<br/>strong for medium/hard, medium first for easy"]
+    D -- "its own subscription's approval only" --> X["review run = the final audit (bot:cross-review)<br/>another subscription: medium first for medium, Opus for hard"]
     X -- "approved" --> CI
     PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
@@ -93,11 +95,14 @@ another pass to answer it. Auto-merge waits for that pass.
 Add **`--force`** to `build`, `revise` or `suggest` to start now, on a subscription outside its
 hours if need be (its usage caps still hold). A forced item stays forced until it is done.
 
-Label an issue **`difficulty:easy`**, **`difficulty:medium`** or **`difficulty:hard`** to say
-how hard it is ([Difficulty and tiers](#difficulty-and-tiers)); with none, the planner rates it
-under [the easy rule](#the-easy-rule), and it counts as medium until then. `difficulty:hard` keeps
-it for strong models: planning, building, every revision and the approval that ships it. A label you set is never
-changed by the bot.
+Label an issue **`difficulty:medium`** or **`difficulty:hard`** to say how hard it is
+([Difficulty and tiers](#difficulty-and-tiers)); with none, the planner rates it by [how hard it
+is](#how-hard-it-is), and it counts as medium until then. `difficulty:hard` keeps it for strong
+models: planning, building, every revision and the approval that ships it. A label you set is never
+changed by the bot. `difficulty:easy` is retired (#2748): the sweep moves it to
+`difficulty:medium` on every open thread before it deletes the label, so a person's easy label
+becomes a person's medium label, and a thread, record or rating that still says easy reads as
+medium.
 
 ### Priority and `human`
 
@@ -176,7 +181,7 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    labelled `human` or the other bot's, one a run holds, or one with a pull request of the bot's
    open is left to finish on `main`, and the reconcile waits for it to close too.
 2. **The parts.** A part is a queued issue like any other, with its own difficulty and its own
-   plan from a model of its plan floor (a strong one above easy), which the planning lane writes
+   plan from a model of its plan floor (a strong one for a hard part), which the planning lane writes
    for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
    record, the subscriptions whose strongest seat is weakest take it first, and one with no seat
    of its difficulty's tier may build it on a medium seat (`config.PartFloor`): Muse builds a
@@ -361,12 +366,12 @@ in place of the `bot:*` ones.
 | Label | Meaning |
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
-| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium or strong model's for an easy, medium or unrated item, a strong one's for a hard item), which goes into its description; the planner rates an unrated item |
+| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium model's first, else a strong one's, for a medium or unrated item; a strong one's for a hard item), which goes into its description; the planner rates an unrated item |
 | `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
 | `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
 | `bot:tree` | a fullsend parent whose parts the bot opened and watches; once they have all closed, the sweep queues its reconcile |
 | `bot:revise` | a pull request waiting for a revision |
-| `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
+| `bot:cross-review` | a bot pull request waiting for its final audit, a review run on a subscription other than its builder's, before auto-merge: one medium or strong model for a medium item, one strong model for a hard one |
 | `bot:working` | a run holds it right now |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
@@ -374,7 +379,7 @@ in place of the `bot:*` ones.
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1) |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
-| `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
+| `difficulty:medium`, `difficulty:hard` | the weakest tier that may plan, build and approve it: medium, strong. A person may set one; otherwise the planner rates the item, by [how hard it is](#how-hard-it-is), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts. `difficulty:easy` is retired (#2748): the sweep moves it to `difficulty:medium` on every open thread, then deletes it (`config.Relabelled`), and until then it reads as medium |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
 | `person merges` | the bot builds and reviews it, but a person merges its pull request: the pull request carries the label from its issue, and the reviews' approval labels it `ready for merge` instead of turning auto-merge on (#839; the weekly hygiene issue carries it) |
@@ -444,7 +449,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1, on three lanes (since 2026-10-27) | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-sol` at `xhigh` (`gpt-5.6-terra` until 2026-10-20); medium, and weak only from 2026-10-11 to 2026-10-20, on Terra | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
-| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
+| `agy` | Antigravity (`agy`), `gemini-4-argon-high` (Gemini 4 Argon) at `high` since #2748 (`gemini-3.8-flash-high` before), medium in every role; the name must be confirmed with `agy models` on the box, on agy 1.4.3 or later, and must answer headless (`agy -p`) | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes of its own (three on the Muse box, one on the night box), and in gpt's or agy's lane on the night box while that one cannot start work, six at most (`fill_in`; [`machine/README.md`](machine/README.md#the-muse-box)); Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
@@ -471,18 +476,21 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
-  carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
-- `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)).
+  carry their effort (`gemini-4-argon-high`; `agy models` lists them), and `effort` matches it.
+  agy's usage is the row of `agy -p /usage` for the pool its model draws on, found by the pool's
+  name, not the model's: a Gemini model reads the rows whose pool starts with "Gemini"; with
+  several Gemini pools for a window, the one naming the model's line ("Argon"), else the fullest
+  (`runner.ParseAgyUsage`). On the box, check that Argon's quota shows on such a row.
+- `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)). A
+  weak seat takes no work since #2748: no difficulty is built at weak.
 - `extra_models`: other models the subscription runs for a role, each with its `model`, `effort`
   and `tier`. Every Claude account runs Sonnet at `xhigh` (medium, #317) beside Opus, and
-  switches between them as the work needs ([below](#switching-between-opus-and-sonnet)). An
-  extra model may carry `takes_over: "<id>"`, making it a stand-in for that subscription: it
-  builds only easy items, only while that one cannot take them (off, backed off, or its lanes
-  full), and never plans or reviews. No committed seat uses it now.
+  switches between them as the work needs ([below](#switching-between-opus-and-sonnet)). (The
+  stand-ins, `takes_over`, and `easy_first` built only easy items and went with them in #2748.)
 - `fix_effort`: the effort a fix pass runs at (`high` on the Claude accounts), which answers named
   findings and needs less thought than the build; empty runs it at the seat's own.
-- `self_check: true`: its builds check themselves before any review (a weak builder;
-  [the self-check loop](#the-self-check-loop)). No subscription sets it now.
+- `self_check: true`: its builds check themselves before any review
+  ([the self-check loop](#the-self-check-loop)). No subscription sets it now.
 - `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
   or `machine`, a login made once on the machine in that subscription's own home, which never
   leaves it. agy logs in only on the machine.
@@ -525,9 +533,9 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
     (`providers.StartReason`, `providers.FreesAt`).
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
-    many (Muse has four, on one login, and claude-8 three): each run takes its own reading before
-    it starts and watches it during every call, so two of them pass a cap by at most one
-    reading's worth.
+    many, its planning runs among them (Muse has four, on one login, and claude-8 two): each run
+    takes its own reading before it starts and watches it during every call, so two of them pass
+    a cap by at most one reading's worth.
   - **A hard cap** (`hard_cap`, below) is the one cap nothing lifts or raises, and a run going on
     stops a point under it, so even the call it stops ends at it at most.
   - **A refusal** parks the subscription until the reset its message names ("resets in
@@ -619,29 +627,27 @@ nothing):
 | Tier | Models |
 |---|---|
 | strong | Claude Opus, on every Claude account |
-| medium | Muse, Gemini through agy, Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
-| weak | none since #2129: an easy item goes to the medium models first |
+| medium | Muse, Gemini 4 Argon through agy (since #2748; Gemini 3.8 Flash before), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
+| weak | none since #2129, and since #2748 a weak seat takes no work: nothing is built at weak |
 
-Every item has a difficulty, from its labels: `difficulty:easy`, `difficulty:medium` or
-`difficulty:hard`. A person may set one; otherwise the planner rates the item when it plans it
-([below](#rating-strikes-and-the-step-up)), and until then it counts as medium. With several, the
-hardest counts. A bot pull request keeps its issue's. The difficulty sets the weakest tier that
-may build it, and the weakest whose plan it builds from (`config.PlanFloor`, #317):
+Every item has a difficulty, from its labels: `difficulty:medium` or `difficulty:hard`
+(`difficulty:easy` is retired and reads as medium, #2748). A person may set one; otherwise the
+planner rates the item when it plans it ([below](#rating-strikes-and-the-step-up)), and until then
+it counts as medium. With several, the hardest counts. A bot pull request keeps its issue's. The
+difficulty sets the weakest tier that may build it, and the weakest whose plan it builds from
+(`config.PlanFloor`, #317):
 
 | Difficulty | Plan written by | Builds it | Approvals it needs |
 |---|---|---|---|
-| easy | medium or strong | weak or stronger | one medium (the final audit; a strong one ships it too) |
-| medium | medium or strong | medium or stronger, planner preferred | one strong (the final audit) |
-| hard | strong only | strong only, planner and builder the same | one strong |
-| (unrated) | medium or strong, who rates it | as medium | as medium |
+| medium | a medium model first (any of them), a strong one only when no medium one can take it now | medium or stronger, planner preferred | one medium or strong, from a subscription other than the builder's (the final audit) |
+| hard | strong only | strong only, planner and builder the same | one strong, from another account than the builder's |
+| (unrated) | as medium, who rates it | as medium | as medium |
 
 **The usage order** (`priority`) is the owner's, and it is the tie-break inside a tier, not
 across tiers: each difficulty has its own lane, and the weakest tier that may build the item
-takes it first (weak models take the easy items while they have a free lane, then medium; medium
-items pass the weak models by; hard items go only to strong models). One lane, one owner
-(#725): a medium or hard item stays with the subscription that planned it when that one can
-build it, so planner and builder are the same; an easy item still goes weak-first, since its
-medium planner must not spend its lane building what a weak seat builds. Inside a tier, after the
+takes it first (medium items go to the medium models first; hard items go only to strong
+models). One lane, one owner (#725): an item stays with the subscription that planned it when
+that one can build it, so planner and builder are the same. Inside a tier, after the
 load balancer (below), the owner's order holds: spend claude-3 (any hour, no caps), claude-7
 (held to half its 5-hour session from 10:00 to 01:00 and to 70% of it from 01:00 to 10:00, with
 no weekly cap), claude-8 (any hour, up to 85% of its 5-hour session, no weekly cap) and
@@ -650,9 +656,7 @@ then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half t
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week, 80% and all of it from Sunday 17:00 until its week resets); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back
 mostly for planning and reviewing, last. For building alone, claude-2 is `build_last`: it
-builds only when no other subscription that may is free. A weak subscription with `easy_first`
-(none now) may build only easy items, so it takes them ahead of everyone while it has a free
-lane, and the stronger models keep the medium and hard items only they may build. A fullsend part, once
+builds only when no other subscription that may is free. A fullsend part, once
 planned, goes first to the medium subscriptions (Muse first), which may build it whatever its
 difficulty ([Fullsend](#fullsend)). (There is no training
 lane in the harness any more, and no `training` label: the AI's training lanes ran as services on
@@ -672,7 +676,7 @@ reading all free, a refusal not yet over none (`providers.Room`). Room goes in s
 ones go by the runs they hold now, the fewest first, and only then by the usage order. So with
 nothing read yet each account gets one run before claude-3 gets its second, and an account at
 80% of its week waits behind one at 10%. The tier order (Muse before agy before Codex before
-Sonnet), `easy_first`, `build_last` and one lane, one owner all come before it, and it
+Sonnet), `build_last` and one lane, one owner all come before it, and it
 starts nothing the caps would not: it only orders the subscriptions that may start now.
 `"balance": false` puts the usage order back on its own.
 
@@ -682,15 +686,19 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   planner on the **planning lane** plans those first, so a subscription never plans and builds
   the same item: `plan_lanes` runs, which take none of a subscription's own lanes, so it plans
   while it builds, up to as many items at once as its `lanes`. Each still holds a runner: a slot
-  on the machine, or one of `max_parallel`'s lanes on GitHub's runners (#1455). The planning lane takes the easy items first (a weak builder waits on those),
-  then fullsend parts (Muse builds those, [Fullsend](#fullsend)), then the rest in the usual
-  order, ahead of every build. Each
-  subscription offers its strongest free seat; the strong ones go first, within a tier the one
-  planning least, and an item takes the first that meets its floor (a medium planner takes only
-  easy and unrated items). A subscription with usage caps plans only while it holds nothing else,
-  and builds nothing while it plans. The planner reads the task and the code, writes nothing but its
-  draft ([handing work over](#the-self-check-loop)), and must leave a weak builder no gap to fill
-  (`bot/prompts/plan.md`): the files to touch by path (the
+  on the machine, or one of `max_parallel`'s lanes on GitHub's runners (#1455). The planning lane
+  takes fullsend parts first (Muse builds those, [Fullsend](#fullsend)), then the rest in the
+  usual order, ahead of every build. Each subscription offers every free seat of at least medium
+  (a Claude account its Sonnet and its Opus), and an item takes the weakest that meets its floor
+  (#2748): a medium or unrated item a medium planner first, Muse, agy, Codex, then the Claude
+  accounts' Sonnet, by the tier order and the load balancer, and a strong one (Opus) only when no
+  medium planner can take it now, so nothing stalls; a hard item a strong planner only. A medium
+  planner that rates the item hard hands it on: the item goes back to the Needs plan stage for a
+  strong planner. A subscription with usage caps counts its planning runs against its own `lanes`,
+  as its builds do: with one lane it plans only while it holds nothing else, and builds nothing
+  while it plans; Muse plans while a lane of its four is free. The planner reads the task and the
+  code, writes nothing but its draft ([handing work over](#the-self-check-loop)), and must leave a
+  weaker builder no gap to fill (`bot/prompts/plan.md`): the files to touch by path (the
   **Files to touch** table, which the harness reads), the steps in order, the tests and commands,
   and a checklist for done, in under 2,500 words (`issueplan.PlanWords`; the harness keeps the
   first 30,000 characters, `PlanChars`, #208). Its plan goes into the issue's description, in a
@@ -699,25 +707,23 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   builds it. A person (or a session they run) can also write the plan: put it in the description
   between `<!-- jackioh-bot:plan -->` and `<!-- /jackioh-bot:plan -->`. With no planning run of the
   bot's on record, that section counts as a strong plan, so the item leaves the Needs plan stage
-  and the bot does not plan over it (`queue.PlanOf`). A weak builder, which cannot plan, builds
-  only from a plan that meets its floor. When no planner is free on the lane and a builder whose own
+  and the bot does not plan over it (`queue.PlanOf`). A builder builds only from a plan that meets
+  its item's floor. When no planner is free on the lane and a builder whose own
   strongest seat meets the floor takes an unplanned item, it plans it first in its own run; that
   plan goes into the description too, and when its rating puts the item beyond that run's
   builder or planner, the run stops after planning and the item goes back to the queue, rated. A
   revision is not planned again. The ten-minute sweep keeps `bot:needs-plan` in step, so an
   unrated issue is in the stage within one pass.
-- **Building, fixing, revising.** The lane's owner builds it end to end: an
-  easy item goes to a weak model while it has a free lane, else to a medium
-  one in the usage order; a medium item stays with its planner when that one can build it, else
-  takes the first free medium seat; a hard item takes a strong seat only, planner and builder
-  the same. Every Claude account builds an
-  easy or medium item with Sonnet and a hard one with Opus, and its run may switch between the two
+- **Building, fixing, revising.** The lane's owner builds it end to end: a medium item stays with
+  its planner when that one can build it, else takes the first free medium seat; a hard item
+  takes a strong seat only, planner and builder the same. Every Claude account builds a medium
+  item with Sonnet and a hard one with Opus, and its run may switch between the two
   ([below](#switching-between-opus-and-sonnet)). When that is above the item's tier (none of that
   tier is free), the run's log says so and why, and claude-2 only builds when everyone
   else is busy. A revision that
-  resolves a conflict with `main` goes only to a builder with a real reviewer in the run, never
-  to a weak one (#317): SPEC §11 and the rulings index conflict on nearly every merge, and the
-  weak builder committed markers there again and again (#203, #214, #287). A fix pass runs at `fix_effort`.
+  resolves a conflict with `main` goes only to a builder with a real reviewer in the run (#317):
+  SPEC §11 and the rulings index conflict on nearly every merge, and a weak builder (before
+  #2129) committed markers there again and again (#203, #214, #287). A fix pass runs at `fix_effort`.
 - **Conflicts the harness resolves itself.** Before any builder sees a merge of `main`, the
   work job settles the conflicted files `resolvers` in the config names
   ([`go/internal/resolve/`](go/internal/resolve/)): `spec/INDEX.md` takes `main`'s version (the daily
@@ -734,23 +740,26 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   A revision that answers a final audit stays at the auditor's tier or above, so the auditor
   fixes and pushes it.
 - **Reviewing in the run.** Every builder reviews its own change in a fresh adversarial session
-  of its lane's reviewer, never an approval from its own context: a medium or strong builder's
-  own strongest seat of at least medium reads the change cold; a weak builder's own model does
-  the same in a findings-only self check, which never approves. A medium or easy item gets up
-  to 3 such verdict rounds (`max_review_cycles`), then its kept work goes to its final audit;
-  a hard item stays with Opus for up to 10. Only rounds that end in a readable verdict count:
+  of its lane's reviewer, never an approval from its own context: the builder's own strongest
+  seat of at least medium reads the change cold. Its findings count, and it must approve before
+  the change is pushed, but its approval does not ship the change (#2748): that is the final
+  audit's, on another subscription. A medium item gets up to 3 such verdict rounds
+  (`max_review_cycles`), then its kept work goes to its final audit; a hard item stays with Opus
+  for up to 10. Only rounds that end in a readable verdict count:
   usage pauses, infra failures, halts and stops keep the work and pause the count, across runs
   too. Before a
   review, the run merges `main` again when it moved and merges cleanly, and runs the checks on the
   merged head, so what is approved still merges.
 - **Review runs.** They are the lane's final audit, and they go before every build and revision,
-  whatever their priority, since they unblock merges. A medium or hard item waits for a strong
-  seat (Opus); an easy item takes the weakest seat that ships it (medium first, saving the Opus
-  gate). No weak review runs go out. A family that has not
-  approved the commit yet goes before one that has (the same model may review it twice),
-  and a stand-in seat reviews nothing. `/harness review strong` (or `medium`) asks for a review run of
-  a bot pull request's head at that tier or stronger, and no revision. A strong approval ships a
-  medium or hard item; a medium one ships an easy item, whose scope the easy rule hard-limits.
+  whatever their priority, since they unblock merges. They never go to the subscription whose
+  run built the head (#2748; another of Muse's lanes is Muse). A medium item takes the weakest
+  seat that ships it, a medium one first, by the tier order (Muse, agy, Codex, then the Claude
+  accounts' Sonnet, the load balancer among those), then a strong one; a hard item waits for a
+  strong seat (Opus) on another account. No weak review runs go out. A family that has not
+  approved the commit yet goes before one that has (the same model may review it twice).
+  `/harness review strong` (or `medium`) asks for a review run of a bot pull request's head at
+  that tier or stronger, and no revision. A medium or strong approval ships a medium item, a
+  strong one a hard item, each from another subscription than the builder's.
 
 ### Switching between Opus and Sonnet
 
@@ -776,51 +785,41 @@ record names the model that built it, the result lists every switch (`switches`)
 the run leaves says when and why it switched. A lane with one model (Muse, agy, Codex) never
 switches.
 
-### The easy rule
+### How hard it is
 
-`difficulty:easy` is the only difficulty a weak model may build, so "easy" means "something a
-weak model finishes" (`go/internal/easy/`, written from what the weak builder did here until #2129:
-it could not resolve the conflicts in SPEC §11 and the rulings index, could not hold a big change
-together, could not plan, ran no tests where it worked, and could not judge what it could not see; its clean merges were all 7–15 files and
-under about 500 lines). An item is easy only if every line holds; if any fails, or the rater cannot
-tell, it is medium at least:
+The difficulties are medium and hard (#2748 retired `difficulty:easy`, once the only difficulty a
+weak model might build; there have been no weak models since #2129, and only 4 of the last 250
+planned items were rated easy). The planner rates by this rule, which its prompt holds word for
+word (`work.DifficultyRule`, its number `work.HardFiles`):
 
-1. **Small:** at most 10 files and 400 lines added plus removed (`easy` in `.harness/config.json`).
-2. **One place:** one crate or app, its own tests aside.
-3. **None of the conflict hot spots:** `SPEC.md` and the spec's notes (`spec/`: no new ruling),
-   `BUILD.md`.
-4. **None of the shared surfaces:** `wire/events.rs`, `script.rs`, `state.rs`, `effects/mod.rs`
-   in `crates/engine/src/`.
-5. **No rules or data work:** nothing in `crates/engine/src/` or `crates/ai/src/`, no catalog,
-   patch or card script change, no migration.
-6. **No review-only or forbidden path,** and no new dependency.
-7. **Checked by a unit test** in the same crate or app; no e2e change, nothing judged by eye.
-8. **No decisions left:** the plan names every file, change and test.
-9. **Stands alone:** blocked by nothing open.
+An item is **hard** if any of these holds, and **medium** otherwise:
 
-The harness holds a rating to it twice, trusting nothing the model said. **At rating**, deliver
-reads the plan's **Files to touch** table: more than `max_files` files, or one under `off_limits`,
-`review_paths` or `forbidden_paths`, makes it medium, and the comment names the line that failed
-(`easy.PlanBreach`). **At delivery**, a weak builder's change on an easy item is measured
-(`git diff --numstat` against `main`): one past `max_files` or `max_lines`, or touching an
-`off_limits` path, is not pushed (`easy.ChangeBreach`). Its work is kept (a build's on its own
-branch, a revision's on `bot/wip/<pr>`), the item becomes medium (its label, or a floor under a
-person's label, `difficulty_floor`), and a medium or stronger model takes it.
+1. **Engine rules:** the rules or the resolution loop (`crates/engine/src/`).
+2. **The AI:** its decisions or its search (`crates/ai/src/`).
+3. **Design across crates:** a change several crates or apps must agree on.
+4. **A migration:** a database migration, or moving data or state between shapes.
+5. **Big:** about 40 files or more changed in all, the tests included.
+
+Torn between the two, take the harder. A medium item is planned, built and approved by a medium
+model (Muse, Gemini, GPT or Sonnet, the approval from a subscription other than the builder's);
+a hard one by Opus alone. The harness still reads the plan's **Files to touch** table
+(`issueplan.FilesToTouch`): a plan that lists only paths the bot may not change goes to the people
+([`human required`](#priority-and-human)).
 
 ### Rating, strikes and the step up
 
 - **Rating** (#317 part 8). The planner of an item no person rated starts its answer with
-  `<!-- bot: {"difficulty": "easy|medium|hard", "why": "…"} -->`, judged by the easy rule, which
-  its prompt holds word for word. Deliver labels the item, records `difficulty_by`, and comments,
-  for example "Rated `difficulty:easy` by `muse` (medium): …. Cleared and queued to build" or
-  "… A strong model plans `difficulty:medium` work, so one plans it next". A rating is never
-  lowered (a strong planner may raise one, never lower it), a person's label is never replaced
-  (the planner is told not to rate it), and an easy rating whose plan breaks the rule is medium.
-  A plan with no rating line is medium, the bot's own rating, so a later planner may raise it
-  (#735). Triage gives no difficulty beyond its form's answer; the sweep labels what is left bare
-  (`sweep.difficultyLabels`): a planned issue with none gets medium, and a bot pull request its
-  issue's label, or medium. An issue still waiting for its plan is left to the planner, which may
-  rate it easy.
+  `<!-- bot: {"difficulty": "medium|hard", "why": "…"} -->`, judged by [how hard it
+  is](#how-hard-it-is). Deliver labels the item, records `difficulty_by`, and comments, for
+  example "Rated `difficulty:medium` by `muse` (medium): …. Cleared and queued to build" or
+  "… A strong model plans `difficulty:hard` work, so one plans it next". A rating is never
+  lowered (a strong planner may raise one, never lower it), and a person's label is never
+  replaced (the planner is told not to rate it). A rating of `easy` (a planner that still gives
+  one, or a run planned before #2748) is medium. A plan with no rating line is medium, the bot's
+  own rating, so a later planner may raise it (#735). Triage gives no difficulty beyond its
+  form's answer; the sweep labels what is left bare (`sweep.difficultyLabels`): a planned issue
+  with none gets medium, and a bot pull request its issue's label, or medium. An issue still
+  waiting for its plan is left to the planner, which rates it.
 - **Strikes** (`go/internal/stepup/`). A run that failed for the item's own sake is a strike: a
   failed run, a build or revision its reviewer would not approve, a review run that rejected its
   head, a head a CI fix pushed that CI still fails, a run that died. Infra, a usage pause, a halt or a stop is
@@ -828,7 +827,7 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   resets them: a head that meets the review rule and is green in CI (the ten-minute sweep checks,
   and a merge counts), or a step up, does.
 - **The step up.** At three strikes (`config.StepUpAfter`) the bot raises the item one step
-  (easy to medium to hard), comments why, sends it back to the Needs plan stage when its plan's
+  (medium to hard), comments why, sends it back to the Needs plan stage when its plan's
   tier no longer meets the new floor, and, when a pull request is open, rebuilds it: the pull
   request closes, its branch is kept as `bot/old/issue-<n>-<date>`, and the issue is queued to
   build again from `main`, with the old pull request and what went wrong named in the new build's
@@ -838,13 +837,20 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   request.
 
 **The review rule** (`go/internal/reviewrule/`). A commit ships when no model's rejection of it
-stands and its lane's final audit approved it (#725): one strong model's approval for a medium
-or hard item, one medium model's for an easy item (a strong one ships it too). A weak approval
-never ships anything: weak builders review themselves in findings-only self checks, and no weak
-review runs go out.
+stands and its lane's final audit approved it from a subscription other than the one whose run
+built it (#725, #2748): one medium or strong model's approval for a medium item (no Opus audit,
+no size limit), one strong model's (Opus) for a hard item. The builder's own reviewer, in its run
+or in a fresh session on the builder's own subscription, still reviews and its findings still
+count, but its approval does not ship the commit; another of Muse's lanes is the same
+subscription, while Sonnet on another Claude account is another. A weak approval never ships
+anything, and no weak review runs go out.
 - Votes are kept per commit, one per review (each review run, and each run's own reviewer, is
   one; a deliver job run again does not count its review twice), with the tier of the model that
-  cast them, from the plan job's own record of who ran, never from the model job.
+  cast them and its subscription (`provider`), and the subscription whose run built the commit
+  (`built_by`, "" when no run of the bot's did, a person's push say), from the plan job's own
+  record of who ran, never from the model job. Votes recorded before #2748 name no `built_by`
+  and keep the rule they were cast under: one strong approval, from any subscription
+  (`reviewrule.Counted`, `reviewrule.Tiers`).
 - A change still short of the rule is labelled `bot:cross-review`, and a review run reads it from
   scratch. The reviewer reads the change but installs and runs nothing: it holds another
   subscription's login, which the builder's code must never run beside. CI runs every check.
@@ -872,8 +878,10 @@ review runs go out.
   turns on for the new commit, which is cleared in turn. That holds only when the revision
   started from the cleared commit and changed nothing but the files the merge left conflicted.
   The deliver job checks that itself: it redoes the merge of the cleared commit and `main` with
-  git and compares the new commit with it, trusting nothing the model job says. A builder with
-  its own reviewer in the run takes such a revision first (a weak builder has none). A revision that
+  git and compares the new commit with it, trusting nothing the model job says. This path is
+  unchanged by #2748: the resolution's own run's reviewer carries the clearance, whichever
+  subscription built it. A builder with its own reviewer in the run takes such a revision first.
+  A revision that
   changes anything more, a branch someone pushed to after the reviews, or a change still short of
   the rule when the conflict came goes back under the rule, and the comment on the pull request
   says why.
@@ -882,14 +890,14 @@ review runs go out.
   loop again if that builder checks itself), which goes round the same way. A rejection stands
   against that commit until the same model approves it or the commit changes. Each rejection is a
   strike, so after three the item steps up and is rebuilt ([above](#rating-strikes-and-the-step-up)).
-- Whenever the rule is not met, auto-merge is off, even if an earlier strong approval had turned
+- Whenever the rule is not met, auto-merge is off, even if an earlier approval had turned
   it on for an older commit. A review of a commit that moved in the meantime does not count.
-- If no subscription that could give the missing review is set up, the change waits in
-  `bot:cross-review` until one is, or until you merge it yourself.
+- If no subscription other than the builder's that could give the missing review is set up, the
+  change waits in `bot:cross-review` until one is, or until you merge it yourself.
 
 ### The self-check loop
 
-A builder with `self_check` (a weak builder; none now) checks its own change before any reviewer sees it: build,
+A builder with `self_check` (none now; the weak builder was one until #2129) checks its own change before any reviewer sees it: build,
 the repository's checks, then a **self check**, a fresh session of the same model allowed to read
 and run things but not edit, told to find every reason its own change should not ship, in the
 review's prompt and verdict format. If it flags anything (or a check this change turned red), the
@@ -900,7 +908,7 @@ anyway, with the self check's open findings attached for the auditor, except for
 (#317): a change still holding one gets one more fix pass, and if a marker is left it ends not
 approved and nothing is pushed. Deliver greps the bundle's changed files for markers itself too,
 and refuses a push that holds one. A clean self check is never an approval and never counts toward
-the review rule: it is the weak lane's substitute for an in-run reviewer. Every other builder
+the review rule: it was the weak lane's substitute for an in-run reviewer. Every other builder
 reviews its own change in its own run, in a fresh session of its lane's reviewer;
 its pull request opens ready, not a draft.
 
@@ -1133,9 +1141,9 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 
 ## Safety
 
-- **Two gates before `main`.** Adversarial reviewers approve the change: one strong model, or two
-  medium ones (the same model may give both, the second in a run of its own), or for an easy item
-  a weak and a medium one. Then
+- **Two gates before `main`.** Adversarial reviewers approve the change: the builder's own in-run
+  reviewer, then its final audit on a subscription other than the builder's, one medium or strong
+  model for a medium item, one strong model for a hard item (#2748). Then
   every CI check must pass before auto-merge merges anything. The deliver job turns auto-merge on
   only after reading `main`'s branch protection and finding every check in `required_checks`
   there. If protection is missing, it leaves the pull request for a person.
@@ -1237,7 +1245,7 @@ days.
 | see each subscription | `/harness status`, or `harness providers` in `bot/` |
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
-| set how hard an item is | label it `difficulty:easy`, `difficulty:medium` or `difficulty:hard` (Opus only), or leave it to the planner's rating ([the easy rule](#the-easy-rule)) |
+| set how hard an item is | label it `difficulty:medium` or `difficulty:hard` (Opus only), or leave it to the planner's rating ([how hard it is](#how-hard-it-is)) |
 | hand an issue to people or to the bot | label it `human` or `bot:build` ([Triage](#triage)) |
 | build one of the bot's suggestions | comment `approve` on it, or label it `bot:build`, as any issue; `reject` closes it |
 | start a failing pull request over from `main` | `/harness rebuild` on it or its issue; three strikes do it by themselves, a step up ([below](#rating-strikes-and-the-step-up)) |
@@ -1377,7 +1385,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the Go module) |
 | `go/internal/git/`, `go/internal/gates/` | worktrees, commits, bundles, pushes; the repository's checks |
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |
-| `go/internal/easy/`, `go/internal/stepup/` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
+| `go/internal/stepup/` | strikes, the step up and the rebuild (#317); `go/internal/easy/`, the easy rule's checks on a plan and a change, went with `difficulty:easy` in #2748 |
 | `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
 | `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |

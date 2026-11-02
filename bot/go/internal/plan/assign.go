@@ -154,33 +154,21 @@ func seatKey(seat *providers.Seat) []any { return []any{tierRank[seat.Tier], sea
 // the tier; with a note when that seat is above the tier, saying why (none of that tier is
 // free, or the tier order puts this one first). Among subscriptions whose seat is the same
 // model (the Claude accounts' Sonnet or Opus), the load balancer (`spread`) goes before the
-// usage order. One lane, one owner (#725): a medium or
-// hard item stays with the subscription that planned it (`avoid`) when that one can build
-// it, so planner and builder are the same; an easy item still goes weak-first, since its
-// planner (medium) must not spend its lane building what a weak seat builds. A revision
-// that answers a final audit (`audit_tier`) stays at the auditor's tier or above, so the
-// auditor fixes and pushes it.
+// usage order. One lane, one owner (#725): an item stays with the subscription that planned it
+// (`avoid`) when that one can build it, so planner and builder are the same. A revision that
+// answers a final audit (`audit_tier`) stays at the auditor's tier or above, so the auditor
+// fixes and pushes it.
 //
 // A fullsend `part` (#505), whose plan is on record by now, goes first to the subscriptions
 // whose strongest seat is weakest, and one with no seat of its tier may build it on a seat of
 // `PART_FLOOR`: Muse builds a hard part from Opus's plan, and the strong models keep to the
 // planning and to the reconcile that checks and reviews every part.
 func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty string, part bool /* = False */, avoid string /* = "" */, auditTier string /* = "" */, spread Balance /* = None */) (*providers.Seat, string) {
-	floor := config.MinTier[difficulty]
+	floor := config.MinTier[config.AsDifficulty(difficulty)]
 	if auditTier != "" && rankOr(auditTier, -1) > rankOr(floor, -1) {
 		floor = auditTier
 	}
-	free := map[string]bool{}
-	for _, provider := range offered {
-		free[provider.ID] = true
-	}
-
 	builds := func(provider *providers.Provider, seat *providers.Seat) bool {
-		// A stand-in (`takes_over`, a Sonnet seat for a weak one) builds only an easy item, and only
-		// while the subscription it stands in for cannot take it (#317 part 9).
-		if seat.TakesOver != "" && (difficulty != "easy" || free[seat.TakesOver]) {
-			return false
-		}
 		if providers.TierAtLeast(seat.Tier, floor) {
 			return true
 		}
@@ -206,19 +194,14 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		}
 		return 0
 	}
-	// One lane, one owner (#725): a medium or hard item stays with the subscription that
-	// planned it when that one can build it; an easy item still goes first to an `easy_first`
-	// subscription (its medium planner must not spend its lane on weak work), and a
-	// `build_last` one (claude-2) after the rest.
-	ownerFirst := (difficulty == "medium" || difficulty == "hard") && !part && auditTier == "" &&
+	// One lane, one owner (#725): an item stays with the subscription that planned it when that
+	// one can build it, and a `build_last` one (claude-2) goes after the rest.
+	ownerFirst := !part && auditTier == "" &&
 		slices.ContainsFunc(offered, func(p *providers.Provider) bool {
 			return p.ID == avoid && !p.BuildLast && len(buildingSeats(p)) > 0
 		})
-	others := filter(offered, func(p *providers.Provider) bool { return p.ID != avoid })
-	fallback := avoid != "" && difficulty == "easy" &&
-		!slices.ContainsFunc(others, func(p *providers.Provider) bool { return len(buildingSeats(p)) > 0 })
-	base := others
-	if fallback || ownerFirst {
+	base := filter(offered, func(p *providers.Provider) bool { return p.ID != avoid })
+	if ownerFirst {
 		base = offered
 	}
 	order := py.SortedBy(base, func(provider *providers.Provider) []any {
@@ -230,8 +213,7 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		if place < 0 {
 			place = len(pool.Priority)
 		}
-		return []any{weakestKey(provider), !(provider.EasyFirst && difficulty == "easy"), strength,
-			provider.BuildLast, spread.place(provider.ID), place}
+		return []any{weakestKey(provider), strength, provider.BuildLast, spread.place(provider.ID), place}
 	})
 	if ownerFirst {
 		owned := filter(order, func(p *providers.Provider) bool { return p.ID == avoid })
@@ -254,8 +236,6 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		prefix := ""
 		if ownerFirst && provider.ID == avoid {
 			prefix = fmt.Sprintf("its planner `%s` keeps it: one lane, one owner. ", avoid)
-		} else if fallback && provider.ID == avoid {
-			prefix = fmt.Sprintf("its planner `%s` also builds it: no other lane seat is free. ", avoid)
 		}
 		if !providers.TierAtLeast(seat.Tier, floor) {
 			return seat, prefix + fmt.Sprintf("a fullsend part, built on %s from its plan: its "+
@@ -291,17 +271,19 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 	return nil, ""
 }
 
-// LanePlanners is the planning lane's planners: the strongest seat of each subscription that
-// may plan now (at least medium), the strong ones first, and within a tier the one holding the
-// fewest plans first, then the usage order. A planning run takes none of its subscription's
-// lanes, so a subscription plans while it builds, as many items at once as it has lanes, but it
-// takes a runner: a slot on the machine (`machine_full`), or one of GitHub's lanes
-// (`Lanes.free`, #1455). Planning comes first, so the strong
-// models write the plans the medium ones build from before they build themselves. One the quiet
-// check guards, or one with caps, plans only when it holds nothing else. Which item a planner
-// may take is the item's plan floor (`queue.plan_floor`): a medium one plans only easy or
-// unrated items. A plan is no short call (an Opus planner spent 20 minutes on #37), so like a
-// build it starts only `start_headroom` under each cap.
+// LanePlanners is the planning lane's planners: every seat of at least medium of each subscription
+// that may plan now (a Claude account offers its Sonnet and its Opus), the strong ones first, and
+// within a tier the one holding the fewest plans first, then the load balancer's and the usage
+// order. `Pairs` gives each item the weakest that meets its plan floor (`queue.plan_floor`), so a
+// medium or unrated item goes to a medium planner first (Muse, agy, GPT, Sonnet, in the tier
+// order; #2748) and to a strong one only when none can take it now, and a hard item to a strong
+// one only. A planning run takes none of its subscription's lanes, so a subscription plans while
+// it builds, as many items at once as it has lanes, but it takes a runner: a slot on the machine
+// (`machine_full`), or one of GitHub's lanes (`Lanes.free`, #1455). One the quiet check guards,
+// or one with caps, counts its planning runs against its own lanes (`Lanes.used`), as its builds
+// do: with one lane it plans only while it holds nothing else, and Muse plans while a lane of its
+// four is free. A plan is no short call (an Opus planner spent 20 minutes on #37), so like a build
+// it starts only `start_headroom` under each cap.
 func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced bool, quietOK string) []*providers.Seat {
 	if lanes.PlanFree() <= 0 {
 		return nil
@@ -309,17 +291,18 @@ func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced 
 	cfg := ctx.Cfg
 	var seats []*providers.Seat
 	for _, provider := range cfg.Pool.Ordered() {
-		seat := cfg.Pool.BestSeat(provider, "medium")
-		if seat == nil || !slices.Contains(provider.Roles, "plan") {
+		own := filter(cfg.Pool.Seats(provider), func(seat *providers.Seat) bool {
+			return providers.TierAtLeast(seat.Tier, "medium")
+		})
+		if len(own) == 0 || !slices.Contains(provider.Roles, "plan") {
 			continue
 		}
 		planning := lanes.PlanningBy(provider.ID)
 		if planning >= provider.Lanes {
 			continue
 		}
-		if (provider.QuietCheck || pyjson.Truthy(provider.Limits.Stops())) &&
-			(planning != 0 || lanes.Count(provider.ID) != 0) {
-			continue // one run at a time on a guarded or capped subscription (`Lanes.full`)
+		if (provider.QuietCheck || pyjson.Truthy(provider.Limits.Stops())) && lanes.Full(provider) {
+			continue // a guarded or capped subscription: its plans take its own lanes (`Lanes.used`)
 		}
 		if MachineFull(cfg.Pool, provider, lanes) || FillInFull(cfg.Pool, provider, lanes) {
 			continue
@@ -332,7 +315,7 @@ func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced 
 		}
 		if providers.Availability(provider, state, ctx.Now(), cfg.Timezone, cfg.Secrets,
 			forced, true) == "" {
-			seats = append(seats, seat)
+			seats = append(seats, own...)
 		}
 	}
 	return py.SortedBy(Ranked(cfg.Pool, seats, Balance_(ctx, state, lanes)), func(seat *providers.Seat) []any {
@@ -350,24 +333,27 @@ func RunReviewer(pool *providers.Pool, provider *providers.Provider, difficulty 
 	return pool.BestSeat(provider, "medium")
 }
 
-// ReviewSeat is a review run's reviewer: the lane's final audit (#725). A medium or hard item
-// waits for a strong seat (Opus); an easy item takes the weakest free seat that ships it
-// (medium, then strong). No weak review runs go out: weak builders review themselves in fresh
-// sessions, and a weak approval never ships. Within a tier, a family that has not approved the
-// head yet goes before one that has (the same model may review it twice), then the load
-// balancer's order (`spread`, `ranked`). A stand-in seat (`takes_over`) reviews nothing.
+// ReviewSeat is a review run's reviewer: the lane's final audit (#725), never on the subscription
+// whose run built the head (`candidate.built_by`), whose approval would not ship it (#2748). It
+// tries the tiers whose approval ships the head (`review_rule.tiers`), weakest first: a medium
+// item takes a medium seat first (Muse, agy, GPT, Sonnet), then a strong one; a hard item waits
+// for a strong seat (Opus) on another account. No weak review runs go out: a weak approval never
+// ships. Within a tier, a family that has not approved the head yet goes before one that has (the
+// same model may review it twice), then the tier's own order (Muse before agy before GPT before
+// Sonnet, as builds go), then the load balancer's order (`spread`, `ranked`).
 func ReviewSeat(pool *providers.Pool, offered []*providers.Provider, candidate *queue.Candidate, spread Balance /* = None */) *providers.Seat {
 	var seats []*providers.Seat
 	for _, provider := range offered {
-		seats = append(seats, pool.OwnSeats(provider)...)
+		if candidate.BuiltBy != "" && provider.ID == candidate.BuiltBy {
+			continue // its builder's subscription: its approval does not ship it
+		}
+		seats = append(seats, pool.Seats(provider)...)
 	}
-	// An easy item takes the weakest seat that ships it (medium first, saving the Opus gate);
-	// a medium or hard one waits for strong (#725). A person asking `/harness review <tier>`
-	// gets that tier first.
-	tiers := []string{"strong"}
-	if candidate.Difficulty == "easy" {
-		tiers = []string{"medium", "strong"}
+	tiers := slices.Clone(candidate.ReviewTiers)
+	if len(tiers) == 0 {
+		tiers = reviewrule.Shipping(config.AsDifficulty(candidate.Difficulty))
 	}
+	// A person asking `/harness review <tier>` gets that tier first.
 	if (candidate.ReviewFloor == "medium" || candidate.ReviewFloor == "strong") &&
 		!slices.Contains(tiers, candidate.ReviewFloor) {
 		tiers = append([]string{candidate.ReviewFloor}, tiers...)
@@ -376,12 +362,9 @@ func ReviewSeat(pool *providers.Pool, offered []*providers.Provider, candidate *
 		if candidate.ReviewFloor != "" && !providers.TierAtLeast(tier, candidate.ReviewFloor) {
 			continue // a person asked for this tier or stronger (`/harness review strong`)
 		}
-		if candidate.ReviewFloor == "" && !reviewrule.Helps(candidate.ApprovalTiers, tier, candidate.Difficulty) {
-			continue // a person's explicit request reviews at any tier
-		}
 		found := Ranked(pool, filter(seats, func(seat *providers.Seat) bool { return seat.Tier == tier }), spread)
 		found = py.SortedBy(found, func(seat *providers.Seat) []any { // stable: keeps the order
-			return []any{slices.Contains(candidate.Approved, seat.Family())}
+			return []any{slices.Contains(candidate.Approved, seat.Family()), seat.Rank}
 		})
 		if len(found) > 0 {
 			return found[0]
@@ -413,7 +396,7 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 	if candidate.Kind == "build" && !queue.PlanMeets(candidate) {
 		// It has no plan its difficulty may build from (#317 part 6): the planning lane writes one
 		// (the Needs plan stage), or a builder whose own seat meets the plan floor plans it first
-		// in its run. A builder that cannot plan (a weak one) waits for the plan.
+		// in its run. A builder that cannot plan waits for the plan.
 		builders = filter(builders, func(p *providers.Provider) bool {
 			return slices.Contains(p.Roles, "plan") && pool.BestSeat(p, floor) != nil
 		})
@@ -421,9 +404,9 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 	if candidate.Kind == "revise" && (!candidate.BotPR || candidate.Conflict) {
 		// A person's pull request never gets a review run: its reviewer must be in this run. A
 		// conflict with `main` lands in SPEC §11 and the rulings index nearly every time, which a
-		// weak builder resolves badly (#203, #214, #287): only a builder with a real reviewer
-		// in its own run takes one (a weak builder's findings-only self review does not count,
-		// #317 part 2), and none at all may wait for one.
+		// weak builder resolved badly (#203, #214, #287): only a builder with a real reviewer
+		// in its own run takes one (a findings-only self check does not count, #317 part 2), and
+		// none at all may wait for one.
 		builders = filter(builders, func(p *providers.Provider) bool {
 			return RunReviewer(pool, p, candidate.Difficulty) != nil
 		})
@@ -492,18 +475,19 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 			-difficultyIndex(c.Difficulty), c.QueuedAt, c.Number}
 	})
 	// The Needs plan stage first: a planner on the planning lane, which takes no build lane,
-	// plans the items a builder that cannot plan (a weak one) waits on before the rest, then the
-	// fullsend parts a medium subscription (Muse) builds from their plans, each by a model that
-	// meets its plan floor (medium for an easy, medium or unrated item, strong for a hard one).
+	// plans the fullsend parts a medium subscription (Muse) builds from their plans before the
+	// rest, each by a model that meets its plan floor (medium for a medium or unrated item,
+	// strong for a hard one).
 	var planning []Pair
 	planners := LanePlanners(ctx, state, lanes, force, quietOK)
 	if len(planners) > 0 {
 		needing := py.SortedBy(filter(order, queue.NeedsPlan), func(c *queue.Candidate) []any {
-			return []any{!(force || c.Forced), c.Difficulty != "easy", !c.Part}
+			return []any{!(force || c.Forced), !c.Part}
 		})
 		for _, candidate := range needing {
-			// The lane's weakest planner that meets its floor (#695): a medium seat plans an
-			// easy or medium item, a strong one a hard item.
+			// The lane's weakest planner that meets its floor (#695, #2748): a medium seat plans
+			// a medium or unrated item, a strong one only when no medium one can now, and a
+			// strong one a hard item.
 			fitting := py.SortedBy(filter(planners, func(s *providers.Seat) bool {
 				return providers.TierAtLeast(s.Tier, queue.PlanFloor(candidate))
 			}), func(s *providers.Seat) []any {

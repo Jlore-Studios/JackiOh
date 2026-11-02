@@ -140,7 +140,7 @@ func limits(raw any, where string) *Limits {
 var providerKeys = []string{"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
 	"limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
 	"self_check", "extra_models", "off_from", "off_reason", "usage_since",
-	"lanes", "build_last", "easy_first", "off_hours", "fix_effort",
+	"lanes", "build_last", "off_hours", "fix_effort",
 	"review_effort", "start_headroom", "fill_in", "last_hour", "late_week", "hard_cap"}
 
 // tier is _tier.
@@ -170,13 +170,13 @@ func extraModels(raw any, effort string, where string) []*ExtraModel {
 		if !ok || !entry.Truthy("model") {
 			configError("%s[%d]: needs a model and a tier", where, i)
 		}
-		if unknown := unknownKeys(entry, []string{"model", "effort", "tier", "note", "takes_over"}); len(unknown) > 0 {
+		if unknown := unknownKeys(entry, []string{"model", "effort", "tier", "note"}); len(unknown) > 0 {
 			configError("%s[%d]: unknown keys %s", where, i, strings.Join(unknown, ", "))
 		}
 		model := py.Str(entry.Get("model"))
 		modelEffort := py.Str(entry.GetOr("effort", effort))
 		modelTier := tier(entry.Get("tier"), fmt.Sprintf("%s[%d].tier", where, i))
-		found = append(found, &ExtraModel{model, modelEffort, modelTier, py.OrStr(entry.Get("takes_over"), "")})
+		found = append(found, &ExtraModel{model, modelEffort, modelTier})
 	}
 	return found
 }
@@ -418,7 +418,6 @@ func provider(name string, raw any) *Provider {
 	p.FillIn = fillIn(obj.Get("fill_in"), where+".fill_in")
 	p.SelfCheck = pyjson.Truthy(obj.GetOr("self_check", false))
 	p.BuildLast = pyjson.Truthy(obj.GetOr("build_last", false))
-	p.EasyFirst = pyjson.Truthy(obj.GetOr("easy_first", false))
 	p.OffHours = offHours(obj.Get("off_hours"), where+".off_hours")
 	p.FixEffort = py.OrStr(obj.Get("fix_effort"), "")
 	p.ReviewEffort = py.OrStr(obj.Get("review_effort"), "")
@@ -557,14 +556,6 @@ func Parse(raw any) *Pool {
 	planLanes := py.MustInt(obj.GetOr("plan_lanes", 0))
 	if planLanes < 0 {
 		configError("%s: plan_lanes must be 0 or more", ProvidersPath)
-	}
-	for _, p := range all {
-		for _, extra := range p.ExtraModels {
-			if extra.TakesOver != "" && (!providers.Has(extra.TakesOver) || extra.TakesOver == p.ID) {
-				configError("%s: %s's %s takes over %s, which is not another provider",
-					ProvidersPath, p.ID, extra.Model, py.Repr(extra.TakesOver))
-			}
-		}
 	}
 	balance, ok := obj.GetOr("balance", false).(bool)
 	if !ok {

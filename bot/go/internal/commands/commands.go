@@ -597,7 +597,7 @@ func helpTable() string {
 		"\n" +
 		"Anything else after `{slash}` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.\n" +
 		"After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.\n" +
-		"Add `--force` (level 3) to {forced} to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.\n" +
+		"Add `--force` (level 3) to {forced} to start now, outside a subscription's hours if need be. Label an issue `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.\n" +
 		"Labels do the same as the verbs: `{prefix}build` on an issue, `{prefix}revise` on a PR; assigning @{bot} queues the thread.\n" +
 		"An issue is mine (my `{prefix}…` labels) or people's, never both: `human` keeps me off it, and `human required` is my hand-over when I find I cannot do it (I take my labels off, unassign myself, assign you and say what a person must do). Take either label off to hand it back, then `{slash} build`.\n" +
 		"On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.\n"

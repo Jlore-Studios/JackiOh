@@ -143,7 +143,10 @@ func Sweep(ctx *hctx.Context) []string {
 // one in `config.RETIRED_LABELS` it still has, once each time those lists change
 // (`labels_synced`, their fingerprint, in the state file), so a tick normally reads nothing. A
 // label a person deleted comes back with the next change to the list, or with
-// `harness setup`.
+// `harness setup`. A retired label whose meaning another one carries (`config.RELABELLED`:
+// `difficulty:easy` is `difficulty:medium`, #2748) is first moved to that one on every open
+// thread that carries it, so deleting it loses nothing: a person's easy label becomes a person's
+// medium label. One the move could not finish stays, and the next tick tries again.
 func Labels(ctx *hctx.Context, since time.Time) []string {
 	specs := config.LabelSpecs()
 	sorted := append([]config.LabelSpec(nil), specs...)
@@ -169,6 +172,14 @@ func Labels(ctx *hctx.Context, since time.Time) []string {
 		}
 	}
 	for _, name := range config.RetiredLabels {
+		if replacement, ok := config.Relabelled[name]; ok {
+			moved, failed := relabel(ctx, name, replacement)
+			notes = append(notes, moved...)
+			if failed {
+				refused = true
+				continue
+			}
+		}
 		var deleted bool
 		if exc, ok := herr.Catch[*herr.GitHubError](func() { deleted = ctx.GH.DeleteLabel(name) }); ok {
 			refused = true
@@ -181,6 +192,32 @@ func Labels(ctx *hctx.Context, since time.Time) []string {
 		ctx.Store.Update(func(s *pyjson.Object) any { s.Set("labels_synced", want); return nil }, "labels synced")
 	}
 	return notes
+}
+
+// relabel moves `name` to `replacement` on every open issue and pull request that carries it, and
+// says so per thread. Whether a thread could not be moved, so `name` must stay for now.
+func relabel(ctx *hctx.Context, name string, replacement string) ([]string, bool) {
+	notes, failed := []string{}, false
+	var threads []*pyjson.Object
+	if exc, ok := herr.Catch[*herr.GitHubError](func() { threads = ctx.GH.ListIssues(name, "open", 300, "") }); ok {
+		return []string{fmt.Sprintf("could not list the threads labelled `%s`: %s", name, py.SliceTo(exc.Error(), 200))}, true
+	}
+	for _, thread := range threads {
+		number := py.MustInt(py.Item(thread, "number"))
+		if exc, ok := herr.Catch[*herr.GitHubError](func() {
+			if !queue.LabelNames(thread)[replacement] {
+				ctx.GH.AddLabels(number, []string{replacement})
+			}
+			ctx.GH.RemoveLabel(number, name)
+		}); ok {
+			failed = true // one GitHub refuses never stops the rest
+			notes = append(notes, fmt.Sprintf("#%d: could not move `%s` to `%s`: %s", number, name,
+				replacement, py.SliceTo(exc.Error(), 200)))
+			continue
+		}
+		notes = append(notes, fmt.Sprintf("#%d: `%s` is retired, so `%s`", number, name, replacement))
+	}
+	return notes, failed
 }
 
 // needsPlan is _needs_plan: every queued item with no plan its difficulty may build from, an
@@ -251,8 +288,8 @@ func issueTypes(ctx *hctx.Context, since time.Time) []string {
 // rating line leaves the item bare, and a pull request copies its issue's label only when the
 // issue has one. A pull request takes its issue's label (`bot/issue-<n>`) and an issue takes
 // medium, recorded as the bot's own rating so a later planner may still raise it. An issue still
-// waiting for its plan is left to the planner, which may rate it easy. A `human` thread, and a
-// person's label, are never touched.
+// waiting for its plan is left to the planner, which rates it. A `human` thread, and a person's
+// label, are never touched.
 func difficultyLabels(ctx *hctx.Context, since time.Time) []string {
 	notes := []string{}
 	// The issues API lists pull requests too, without their branch: take those from the pulls.

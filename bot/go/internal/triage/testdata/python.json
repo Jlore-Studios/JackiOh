@@ -769,7 +769,7 @@
   ["### A\n\nfoo\n \n### B\nbar\n", []],
   ["### A\n\nfoo ### B\n\nbar", []],
   ["### A\n\nfoo\n \n### B\n\nbar", []],
-  ["### Difficulty\n\nEasy, a guess\n\n### priority\n\nHIGH\n", ["difficulty:easy", "priority:high"]],
+  ["### Difficulty\n\nEasy, a guess\n\n### priority\n\nHIGH\n", ["difficulty:medium", "priority:high"]],
   ["### Difficulty (a guess)\n\nNot sure\n\n### Priority\n\nNo priority\n\n### Who does it\n\nDecide later", []],
   ["### Difficulty\n\nmedium\n### Difficulty again\n\nhard", ["difficulty:medium"]],
   ["### Priority\n\nmedium\n\n### Priority\n\nhigh", ["priority:high"]],
