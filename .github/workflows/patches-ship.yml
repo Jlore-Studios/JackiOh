@@ -191,7 +191,8 @@ jobs:
     permissions:
       contents: read
       issues: write
-      # `gh pr close`: a log whose commits are on main already.
+      # `gh pr close`, and the unlock and lock around its comment: a log whose commits are on main
+      # already.
       pull-requests: write
       # `gh run list` and `gh workflow run`: the ship again, once its issue is closed.
       actions: write
@@ -249,7 +250,12 @@ jobs:
                 [ -n "$on_head" ] || { echo "::error::#$number: $head's technical log reads as empty"; exit 1; }
                 missing=$(comm -23 <(printf '%s\n' "$on_head") <(printf '%s\n' "$on_main"))
                 if [ -z "$missing" ]; then
+                  # The night bot opened it, so it is locked (lock-conversations.yml), and this job's
+                  # token cannot comment on a locked thread: unlock, close with the comment, lock again.
+                  # If the close fails, the hourly sweep locks it again.
+                  gh api -X DELETE "repos/$REPO/issues/$number/lock" --silent
                   gh pr close "$number" --repo "$REPO" --comment "Every commit this pull request logs is on main's technical log already, so it has nothing left to land."
+                  gh api -X PUT "repos/$REPO/issues/$number/lock" --silent
                   echo "#$number: its commits are on main; closed"
                   continue
                 fi
