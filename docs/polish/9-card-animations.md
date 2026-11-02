@@ -64,14 +64,52 @@ Each motif plays in four beats, each a fixed fraction of the entry's duration D,
 ### Parameters
 
 - **palette:** the card's flavor's look (`FLAVOR_LOOKS`, `flavorLookOf`, a Chaos card's pick per
-  instance) by default, or a flavor the entry names (`palette: "Fire"`). #2792 adds
-  `"<Flavor>/<sub-look>"`.
+  instance) by default, or a flavor the entry names (`palette: "Fire"`). A palette may name a
+  sub-look, `palette: "Tech/rocket"`, which changes no card's `flavor` (#2792).
 - **scale:** `FX_MOTIF_RARITY_SCALE[rarity] × (1 + min(cost, FX_MOTIF_COST_CAP) × FX_MOTIF_SCALE_PER_COST)`,
   at most `FX_MOTIF_SCALE_MAX`, times the effects intensity (`FX_INTENSITY_SCALE`). An X cost counts
   as `FX_MOTIF_X_COST`, an Embiggen cost as its base. It scales every burst's count, every shot's
   density and the shake (`FX_MOTIF_TRAUMA[motif] × scale`, at most 1).
 - **anchors:** the events' own targets (`targetFor`, as the event rows find them), their lanes and
   sides (`placeOf`), and the source: a damage's source card on the board, else the caster's hero.
+
+### Sub-looks
+
+A sub-look is a presentation-only variant of its flavor's look (#2792, `FLAVOR_SUB_LOOKS`): a
+card's entry picks one with `palette: "<Flavor>/<sub-look>"`, and any other card keeps its
+flavor's base look, which the event rows always draw.
+
+| Flavor | Sub-look | Particle | For |
+|---|---|---|---|
+| Physical | steel | shard | armor and iron |
+| Physical | wind | dust | speed and gusts |
+| Physical | sport | confetti | athletes |
+| Physical | blade | frost | swords and knives |
+| Beast | felinor | sparkle | Felinors and cats |
+| Beast | swarm | ember | wasps, hornets, scarabs, moths |
+| Beast | wool | smoke | sheep |
+| Dark | blood | blood | life stolen and blood prices |
+| Dark | shadow | smoke | stealth |
+| Dark | curse | arcane | hexes, doom, Locks |
+| Nerd | ink | blood | writing and archives |
+| Nerd | chalk | dust | classrooms |
+| Nerd | pixel | circuit | games and screens |
+| Tech | laser | spark | guns |
+| Tech | rocket | exhaust | Stinkyscape's ships |
+| Tech | starfield | star | its space and stations |
+| Tech | hologram | sparkle | AI and displays |
+| Tech | glitch | circuit | viruses and hacks |
+| Hustle | jade | shard | the CN jade line |
+| Hustle | cash | confetti | paychecks and taxes |
+| Hustle | ore | crumb | Stinkyscape's resources |
+
+A set pass picks a sub-look only for a card whose name or art sits squarely in that line; any
+other card keeps its flavor's base look, which the event rows always draw.
+
+The new canvas presets (#2792, drawn in code in `fx/presets.ts` and `fx/sprites.ts`) are `leaf`
+(Nature's base particle), `circuit` (Tech's base particle, reused by Nerd/pixel), `crumb`
+(Snack's base particle, reused by Hustle/ore), `star` (Tech/starfield) and `exhaust`
+(Tech/rocket).
 
 ## The tables
 
@@ -167,10 +205,10 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
-at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry names a motif,
-as that card's play through the real board's effects layer. "Play as a set piece" plays the same card
-as the fixture set piece (R2785000): its play's entry holds the board for `SET_PIECE_HOLD_MS`, scaled
-and capped as every set piece, until a tap, a click or Space skips it.
+or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry
+names a motif, as that card's play through the real board's effects layer. "Play as a set piece" plays
+the same card as the fixture set piece (R2785000): its play's entry holds the board for
+`SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
 
 ## Set pieces
 

@@ -27,6 +27,11 @@ const PRESETS: readonly FxPreset[] = [
   "confetti",
   "blood",
   "frost",
+  "leaf",
+  "circuit",
+  "crumb",
+  "star",
+  "exhaust",
 ];
 
 const BOX = { x: 100, y: 120, width: 90, height: 126 };
@@ -196,6 +201,16 @@ describe("B25 every particle dies within FX_MAX_PARTICLE_LIFE_MS", () => {
     for (const preset of PRESETS) ps.emit(preset, 0, 0, opts(5, "area"));
     ps.step(5_000);
     expect(ps.alive()).toBe(0);
+  });
+
+  it("#2792 leaf, circuit, crumb, star and exhaust stay within the cap and die by FX_MAX_PARTICLE_LIFE_MS", () => {
+    for (const preset of ["leaf", "circuit", "crumb", "star", "exhaust"] as const) {
+      const ps = system(40);
+      expect(ps.emit(preset, 145, 183, opts(360, "area", 3)), preset).toBe(40);
+      expect(ps.alive(), preset).toBe(40);
+      run(ps, FX_MAX_PARTICLE_LIFE_MS);
+      expect(ps.alive(), preset).toBe(0);
+    }
   });
 });
 

@@ -483,36 +483,32 @@ describe("B32 /practice shows setup to anyone", () => {
     expect((screen.getByTestId(T.deck) as HTMLSelectElement).value).toBe("preset:humans");
   });
 
-  it("B32 a saved setup that is not JSON falls back to easy", async () => {
-    window.localStorage.setItem(PRACTICE_SETUP_KEY, "{not json");
-    renderRoute(routeHost());
-    await settle({ ticks: 10 });
-
-    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
-    expect(screen.getByTestId(T.easy)).toBeChecked();
-  });
-
-  it("B32 a saved setup naming no real difficulty falls back to easy", async () => {
-    window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "nightmare", deck: "random" }));
-    renderRoute(routeHost());
-    await settle({ ticks: 10 });
-
-    expect(screen.getByTestId(T.easy)).toBeChecked();
-    expect(screen.getByTestId(T.hard)).not.toBeChecked();
-  });
-
-  it("B32 a localStorage that throws still renders setup on easy", async () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("site data is blocked");
-    });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("site data is blocked");
-    });
-    renderRoute(routeHost());
-    await settle({ ticks: 10 });
-
-    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
-    expect(screen.getByTestId(T.easy)).toBeChecked();
+  it("B32 a saved setup that cannot be read falls back to easy", async () => {
+    const unreadable = [
+      () => window.localStorage.setItem(PRACTICE_SETUP_KEY, "{not json"),
+      () =>
+        window.localStorage.setItem(
+          PRACTICE_SETUP_KEY,
+          JSON.stringify({ difficulty: "nightmare", deck: "random" }),
+        ),
+      () => {
+        vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+          throw new Error("site data is blocked");
+        });
+        vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new Error("site data is blocked");
+        });
+      },
+    ];
+    for (const spoil of unreadable) {
+      spoil();
+      renderRoute(routeHost());
+      await settle({ ticks: 10 });
+      expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+      expect(screen.getByTestId(T.easy)).toBeChecked();
+      expect(screen.getByTestId(T.hard)).not.toBeChecked();
+      cleanup();
+    }
   });
 
   it("B32 an active signed-in account with saved decks also gets saved:1..3", async () => {
@@ -524,6 +520,7 @@ describe("B32 /practice shows setup to anyone", () => {
     });
     expect(loadDecks).toHaveBeenCalledWith("tok-1");
     expect(deckOptions()).toEqual(expect.arrayContaining(["random", ...PRESET_VALUES]));
+    expect(screen.queryByTestId(T.deckHint)).toBeNull();
   });
 
   it("offers each saved deck from GET /api/decks by its name, in the saved list's order", async () => {
@@ -614,22 +611,16 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(window.location.pathname).toBe("/decks");
   });
 
-  it("B32 a pending account gets no saved decks", async () => {
-    const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
-    renderRoute(routeHost(), { account: readyAccount("pending"), loadDecks });
-    await settle({ ticks: 10 });
+  it("B32 a pending or banned account gets no saved decks", async () => {
+    for (const status of ["pending", "banned"] as const) {
+      const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
+      renderRoute(routeHost(), { account: readyAccount(status), loadDecks });
+      await settle({ ticks: 10 });
 
-    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
-    expect(savedOptions()).toEqual([]);
-  });
-
-  it("B32 a banned account gets no saved decks", async () => {
-    const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
-    renderRoute(routeHost(), { account: readyAccount("banned"), loadDecks });
-    await settle({ ticks: 10 });
-
-    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
-    expect(savedOptions()).toEqual([]);
+      expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+      expect(savedOptions()).toEqual([]);
+      cleanup();
+    }
   });
 
   it("B32 an active account that has saved no deck gets no saved options", async () => {
@@ -808,17 +799,6 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     expect(held).toHaveTextContent(/Try again in \d+ s/);
     fireEvent.click(held);
     expect(retry).toHaveBeenCalledTimes(1);
-  });
-
-  it("an active account with saved decks gets them and no hint", async () => {
-    renderRoute(routeHost(), {
-      account: readyAccount("active"),
-      loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))),
-    });
-    await waitFor(() => {
-      expect(savedOptions()).toHaveLength(3);
-    });
-    expect(hint()).toBeNull();
   });
 });
 

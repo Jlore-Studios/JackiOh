@@ -475,6 +475,7 @@ describe("scripts/ci-scope.sh", () => {
       "scripts/promote-production.sh",
       "apps/web/src/net/promote-production.test.ts",
       ".github/workflows/promote-production.yml",
+      ".github/workflows/super.yml",
       "package.json",
       "apps/web/package.json",
       "pnpm-lock.yaml",

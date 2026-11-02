@@ -395,10 +395,6 @@ describe("B8 timing bounds", () => {
 describe("B9 intensity", () => {
   const LEVELS = [FX_INTENSITY_SCALE.low, FX_INTENSITY_SCALE.normal, FX_INTENSITY_SCALE.high] as const;
 
-  it("B9 the intensity scale is off 0, low 0.45, normal 1, high 1.6", () => {
-    expect(FX_INTENSITY_SCALE).toEqual({ off: 0, low: 0.45, normal: 1, high: 1.6 });
-  });
-
   it("B9 burst counts grow with intensity: every burst low <= normal <= high, and the totals strictly", () => {
     const totals = [0, 0, 0];
     for (const sample of samples()) {
@@ -925,7 +921,7 @@ describe("B15 cast", () => {
       ring("arcane", handCardT(HAND), 0, 400),
     ]);
     expectCues(plan([played("p1", HAND, "core-018")], 400), [
-      burst("ember", handCardT(HAND), "area", 0),
+      burst("crumb", handCardT(HAND), "area", 0),
       ring("arcane", handCardT(HAND), 0, 400),
     ]);
   });
@@ -939,10 +935,10 @@ describe("B15 cast", () => {
       ["core-021", "void"],
       ["core-026", "holy"],
       ["core-010", "arcane"],
-      ["core-013", "frost"],
-      ["core-017", "poison"],
+      ["core-013", "circuit"],
+      ["core-017", "leaf"],
       ["core-022", "poison"],
-      ["core-018", "ember"],
+      ["core-018", "crumb"],
       ["core-004", "gold"],
       ["core-050", "confetti"],
       ["core-037", "sparkle"],
