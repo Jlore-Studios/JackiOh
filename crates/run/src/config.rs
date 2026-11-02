@@ -2,7 +2,7 @@
 //! `docs/dungeon-run.md` that sets it. The mode has no spec section yet: a number here is the plan's,
 //! and one the plan marks a strawman is to be tuned.
 
-use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH};
+use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, LIBRARY_CAP};
 use jackioh_engine::wire::PrintedRarity;
 
 use crate::{RunByFight, RunNodeKind, RunTier};
@@ -135,6 +135,9 @@ pub const RUN_PACK_SIZE: usize = 8;
 pub const RUN_KEEP: usize = 3;
 /// DR6: the most cards of a pack anyone keeps.
 pub const RUN_KEEP_MAX: usize = 5;
+/// DR6, R2701000: the most cards a run deck holds, the engine's library cap, so every fight's setup
+/// is one the engine starts. A card a full deck would gain is not gained.
+pub const RUN_DECK_MAX: usize = LIBRARY_CAP as usize;
 
 /// DR7: a campfire's heal, in percent of the run's max HP.
 pub const RUN_CAMPFIRE_HEAL_PERCENT: i32 = 30;

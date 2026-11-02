@@ -38,6 +38,7 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_PACK_SIZE` | The cards an opened pack shows, before passives add more | [[§15.7]] |
 | `RUN_KEEP` | The cards of an opened pack the player keeps, before passives add more | [[§15.7]] |
 | `RUN_KEEP_MAX` | The most cards of a pack anyone keeps | [[§15.7]] |
+| `RUN_DECK_MAX` | The most cards a run deck holds, the engine's `LIBRARY_CAP` ([[R2701000]]) | [[§15.7]] |
 | `RUN_CAMPFIRE_HEAL_PERCENT` | A campfire's heal, in percent of the run's max HP | [[§15.8]] |
 | `RUN_CAMPFIRE_REMOVE` | The cards a campfire removes | [[§15.8]] |
 | `RUN_SHOP_CARDS` | The cards a shop sells | [[§15.8]] |
@@ -188,7 +189,8 @@ A won fight pays in this order.
 **Third, four packs:** the beaten enemy's deck with its boss cards, a random one, a set's, and one of a card type, tag or rarity (a random pack when the pool lacks one).
 
 - The player opens one. It shows up to `RUN_PACK_SIZE` cards plus the passives', never a card the deck holds.
-- The player keeps exactly `RUN_KEEP` plus the passives', at most `RUN_KEEP_MAX` and at most what it shows. With a Skip passive they may keep none, for its Coins.
+- The player keeps exactly `RUN_KEEP` plus the passives', at most `RUN_KEEP_MAX`, at most what it shows and at most the room left in the deck. With a Skip passive they may keep none, for its Coins.
+- The run deck holds at most `RUN_DECK_MAX` cards, the engine's library cap, so every fight starts ([[R2701000]]). A card a full deck would gain, from a pack, a shop or an event, is not gained.
 
 **Last, extraction:** after a mini-boss, one card of the deck or none, never the last card. After the final boss, one held artifact or none, never an Unobtainable one, and the run is won.
 
@@ -198,7 +200,7 @@ What is extracted leaves the run at once and is unlocked for future starting dec
 
 **Shop:** stock rolls on entry: `RUN_SHOP_CARDS` open-pool cards the deck lacks, at `RUN_CARD_PRICE` by rarity, and up to `RUN_SHOP_ARTIFACTS` artifacts at `RUN_ARTIFACT_PRICE`. Until the player leaves, they may:
 
-- buy each item once;
+- buy each item once, a card only while the deck has room ([[R2701000]]);
 - remove a card for `RUN_REMOVE_PRICE` Coins, never the last;
 - make a card Radiant for `RUN_RADIANT_TICKETS`;
 - buff a card for `RUN_BUFF_TICKETS`;
@@ -213,7 +215,7 @@ Discounts cut Coin prices only, and a price the run cannot pay is refused.
 - buff a card;
 - or remove `RUN_CAMPFIRE_REMOVE` different cards, leaving at least one.
 
-**Event** (placeholder stories): an option may change HP, Coins and Tickets, add a random open-pool card the deck lacks, or give an artifact. It is refused if HP would fall below 1 or it costs more than the run holds. Healing stops at the max.
+**Event** (placeholder stories): an option may change HP, Coins and Tickets, add a random open-pool card the deck lacks (none to a full deck, [[R2701000]]), or give an artifact. It is refused if HP would fall below 1 or it costs more than the run holds. Healing stops at the max.
 
 **Chest,** on entry: `RUN_CHEST_COINS`, `RUN_CHEST_TICKETS`, and an artifact at `RUN_CHEST_ARTIFACT_PERCENT`.
 

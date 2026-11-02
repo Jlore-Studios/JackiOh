@@ -27,14 +27,14 @@ use serde::{Deserialize, Serialize};
 use crate::config::{
     RUN_ACT_FIGHTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE, RUN_BUFF_TICKETS,
     RUN_CAMPFIRE_HEAL_PERCENT, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE, RUN_CHEST_ARTIFACT_PERCENT,
-    RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE, RUN_ENEMY_HEALTH,
-    RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS, RUN_MAX_HP,
-    RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROW_WIDTH_MAX,
-    RUN_ROW_WIDTH_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE,
-    RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT,
-    RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS,
-    RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX,
-    RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
+    RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE,
+    RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS,
+    RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE,
+    RUN_ROW_WIDTH_MAX, RUN_ROW_WIDTH_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT,
+    RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING,
+    RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS,
+    RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS,
+    RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
 };
 
 // Content: data the caller passes in
@@ -1191,6 +1191,11 @@ fn in_deck(state: &RunState, id: &str) -> bool {
     state.deck.iter().any(|d| d.id == id)
 }
 
+/// R2701000: the cards the deck may still gain before it holds `RUN_DECK_MAX`.
+fn deck_room(state: &RunState) -> usize {
+    RUN_DECK_MAX.saturating_sub(state.deck.len())
+}
+
 fn spend_coins(state: &mut RunState, price: i32) -> Result<(), String> {
     if price > state.coins {
         return Err(format!("{price} Coins needed, {} held", state.coins));
@@ -1322,6 +1327,7 @@ fn keep_count(state: &RunState, content: &RunContent, shown: usize) -> usize {
     (RUN_KEEP + usize::try_from(more).unwrap_or(0))
         .min(RUN_KEEP_MAX)
         .min(shown)
+        .min(deck_room(state))
 }
 
 fn roll_shop(state: &RunState, content: &RunContent, rng: &mut Rng) -> Vec<RunShopItem> {
@@ -1600,10 +1606,13 @@ fn apply(
             if item.sold {
                 return Err("sold already".into());
             }
-            if let RunShopGood::Card { id } = &item.good
-                && in_deck(state, id)
-            {
-                return Err(format!("{id} is in the deck already"));
+            if let RunShopGood::Card { id } = &item.good {
+                if in_deck(state, id) {
+                    return Err(format!("{id} is in the deck already"));
+                }
+                if deck_room(state) == 0 {
+                    return Err(format!("the deck is full at {RUN_DECK_MAX} cards"));
+                }
             }
             spend_coins(state, discounted(state, content, item.price))?;
             item.sold = true;
@@ -1700,7 +1709,7 @@ fn apply(
             spend_coins(state, (-option.coins).max(0))?;
             spend_tickets(state, (-option.tickets).max(0))?;
             earn(state, option.coins.max(0), option.tickets.max(0));
-            if option.card {
+            if option.card && deck_room(state) > 0 {
                 let open: Vec<&RunPoolCard> = open_pool(content).filter(|c| !in_deck(state, &c.id)).collect();
                 if let Some(card) = rng.pick(&open) {
                     state.deck.push(RunCard {

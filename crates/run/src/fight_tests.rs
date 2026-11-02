@@ -1,12 +1,12 @@
 //! DR14 part B on the real catalog: the run's content, a fight's setup and a fight's report.
 
 use super::*;
-use crate::config::{RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
+use crate::config::{RUN_DECK_MAX, RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
 use jackioh_engine::catalog::{deckable, registered_catalog};
-use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap};
+use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap, LIBRARY_CAP};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
 use jackioh_engine::replay::ReplayInput;
-use jackioh_engine::state::{CreateGameOptions, create_recorded_game};
+use jackioh_engine::state::{CreateGameOptions, SetupKind, create_recorded_game, validate_setup};
 use jackioh_engine::wire::{
     Action, ActionBody, CustomCard, DeckMark, PerPlayerOpt, PlayerId, Rarity, SHIPPED_SETS, Selection,
 };
@@ -407,5 +407,124 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
         "tierPoints",
     ] {
         assert!(json.get(key).is_some(), "{key}");
+    }
+}
+
+/// The engine's verdict on a fight's setup, as `createGame` would take it.
+fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
+    let options = CreateGameOptions {
+        seed: setup.seed.clone(),
+        decks: (setup.human_deck.clone(), setup.enemy_deck.clone()),
+        handicaps: Some(PerPlayerOpt {
+            p1: Some(setup.human_handicap),
+            p2: Some(setup.enemy_handicap),
+        }),
+        deck_marks: Some(PerPlayerOpt {
+            p1: Some(setup.human_marks.clone()),
+            p2: None,
+        }),
+        ..Default::default()
+    };
+    validate_setup(
+        &options,
+        registered_catalog(),
+        &Default::default(),
+        SetupKind::New,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[test]
+fn r2701000_a_run_deck_stops_at_the_engines_library_cap_so_every_fight_starts() {
+    // R2701000: a run deck holds at most `RUN_DECK_MAX`, the engine's `LIBRARY_CAP`, the most a
+    // handicapped deck may hold; a card a full deck would gain is not gained.
+    let content = catalog_content();
+    assert_eq!(RUN_DECK_MAX, usize::try_from(LIBRARY_CAP).unwrap());
+    let mut state = fight_at(&content, 0);
+    let more: Vec<RunCard> = content
+        .pool
+        .iter()
+        .filter(|c| !is_boss_card(c) && !in_deck(&state, &c.id))
+        .take(RUN_DECK_MAX + 1 - state.deck.len())
+        .map(|c| RunCard {
+            id: c.id.clone(),
+            radiant: false,
+            buffs: 0,
+        })
+        .collect();
+    state.deck.extend(more);
+    assert_eq!(state.deck.len(), RUN_DECK_MAX + 1);
+    // Without the cap a fight could not start: the engine refuses a deck past its library cap.
+    let error = engine_takes(&run_fight_setup(&state, &content).unwrap()).unwrap_err();
+    assert!(error.contains("deckSize"), "{error}");
+    let extra = state.deck.pop().unwrap().id;
+    assert_eq!(engine_takes(&run_fight_setup(&state, &content).unwrap()), Ok(()));
+
+    // A pack keeps only what the deck has room for: none when full, fewer when nearly full.
+    let reward = |state: &RunState| {
+        let mut at = state.clone();
+        at.phase = RunPhase::Reward {
+            artifact: None,
+            packs: vec![RunPackKind::Random],
+        };
+        run_reduce(&at, &content, &RunAction::OpenPack { index: 0 }).unwrap()
+    };
+    let full = reward(&state);
+    assert!(matches!(&full.phase, RunPhase::Pack { cards, keep: 0 } if !cards.is_empty()));
+    let kept = run_reduce(&full, &content, &RunAction::Keep { cards: Vec::new() }).unwrap();
+    assert_eq!(kept.deck.len(), RUN_DECK_MAX);
+    let mut nearly = state.clone();
+    nearly.deck.truncate(RUN_DECK_MAX - 2);
+    assert!(matches!(reward(&nearly).phase, RunPhase::Pack { keep: 2, .. }));
+
+    // A shop refuses a card to a full deck, and takes it once there is room.
+    let mut shop = state.clone();
+    shop.coins = 500;
+    shop.phase = RunPhase::Shop {
+        stock: vec![RunShopItem {
+            good: RunShopGood::Card { id: extra },
+            price: 1,
+            sold: false,
+        }],
+    };
+    let refusal = run_reduce(&shop, &content, &RunAction::Buy { index: 0 }).unwrap_err();
+    assert!(refusal.contains("full"), "{refusal}");
+    assert_eq!(
+        run_reduce(
+            &with_deck_of(&shop, &nearly),
+            &content,
+            &RunAction::Buy { index: 0 }
+        )
+        .unwrap()
+        .deck
+        .len(),
+        RUN_DECK_MAX - 1
+    );
+
+    // An event's card is not gained by a full deck, while the rest of the option is paid.
+    let event = content
+        .events
+        .iter()
+        .find_map(|e| e.options.iter().position(|o| o.card).map(|i| (e.id.clone(), i)))
+        .expect("an event gives a card");
+    let mut at_event = state.clone();
+    at_event.coins = 500;
+    at_event.phase = RunPhase::Event { id: event.0 };
+    let chose = run_reduce(&at_event, &content, &RunAction::Choose { index: event.1 }).unwrap();
+    assert_eq!(chose.deck, state.deck);
+    let gained = run_reduce(
+        &with_deck_of(&at_event, &nearly),
+        &content,
+        &RunAction::Choose { index: event.1 },
+    )
+    .unwrap();
+    assert_eq!(gained.deck.len(), RUN_DECK_MAX - 1);
+}
+
+/// `at` holding `deck`'s cards.
+fn with_deck_of(at: &RunState, deck: &RunState) -> RunState {
+    RunState {
+        deck: deck.deck.clone(),
+        ..at.clone()
     }
 }
