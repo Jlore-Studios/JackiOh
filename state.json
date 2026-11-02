@@ -13812,6 +13812,10 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-11-02T04:12:25Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-2` (claude, opus) rejected it: `apps/web/src/game/ActivateControl.test.tsx:269`: The R384 test 'the inline mode picker opens, headed by the card' expects the modal's text to contain 'The Power"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
