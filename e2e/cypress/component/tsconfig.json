@@ -29,6 +29,7 @@
       "@jackioh/cards/chinese-terms.json": ["../../../crates/cards/chinese-terms.json"],
       "@jackioh/ai": ["../../../apps/web/src/wire/ai.ts"],
       "@jackioh/ai/config": ["../../../apps/web/src/wire/ai.ts"],
+      "@jackioh/run": ["../../../apps/web/src/wire/run.ts"],
       "@jackioh/server-config": ["../../../apps/web/src/wire/serverConfig.ts"]
     }
   },
