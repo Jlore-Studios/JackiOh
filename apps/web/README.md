@@ -421,8 +421,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
                         collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
                         tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
-                        group as before (R633), beside the owned list from GET /api/cosmetics
-                        (collection/CosmeticsPanel.tsx), with no defaults of every card, so a card with no pick
+                        group as before (R633), with no list of what the account owns (R2731000) and no
+                        defaults of every card, so a card with no pick
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
@@ -436,7 +436,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
                         POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
                         collection/
-                        holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
+                        holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
