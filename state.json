@@ -14138,11 +14138,13 @@
         "by": "`claude` (strong)",
         "sha": "589fa00c528490a627cce4fac7366510d03fb498"
       },
+      "closed_at": "2026-11-02T20:12:42Z",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-11-02T18:23:35Z",
       "issue": 2847,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
