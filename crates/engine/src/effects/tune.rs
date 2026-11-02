@@ -21,7 +21,8 @@
 //! drawn, the price and the Cry being spent (R1748000), nor a Tribute, paid as the card was played
 //! (R2261000). An Upgrade's keyword comes from R21's pool for a Unit, is Indestructible or Immutable
 //! for a Field Spell (R2436000), and Pierce or Lifesteal for a Spell or a Field Spell that deals damage
-//! (`CardDef.deals_damage`, R1748001). The plague row is R1748002's.
+//! (`CardDef.deals_damage`, R1748001). In a hand it may also be Cloaked for a Unit, a Spell or a Field
+//! Spell (R2727000), or take Crater off (R2727001). The plague row is R1748002's.
 //!
 //! R442: the draw is the row first, uniformly among the rows that can change the card, then the item
 //! within the row (which keyword, which number), uniformly, and for a stats row the split k in 0–4. A
@@ -50,10 +51,10 @@ use serde_json::{Value, json};
 
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
-    TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_REMOVES, TUNE_COST_CAP, TUNE_COST_FLOOR,
-    TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS, TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS,
-    TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE, TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL,
-    TUNE_X_STEP,
+    TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_HAND_KEYWORDS, TUNE_BUFF_HAND_REMOVES,
+    TUNE_BUFF_REMOVES, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS,
+    TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
+    TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
@@ -278,9 +279,10 @@ const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 /// R2657005, it adds Crater to a Unit, a Field Spell, a Trap or a Field Trap in a hand that lacks it
 /// (`TUNE_NERF_HAND_KEYWORDS`). An Upgrade adds one R21 keyword a Unit lacks (`tuning.addKeywords`),
 /// R1748001 one a Spell or a Field Spell lacks of its own (`non_unit_candidates`), and R2657005 Flashback
-/// to any card that lacks it (`TUNE_BUFF_ANY_KEYWORDS`); or it removes Can't attack or Can't Defend
-/// the card has of its own (`TUNE_BUFF_REMOVES`). A Vanilla card's text is gone, and an added keyword
-/// would be text, so nothing is added to one.
+/// to any card that lacks it (`TUNE_BUFF_ANY_KEYWORDS`), and last, R2727000, Cloaked to a Unit, a Spell or
+/// a Field Spell in a hand (`buff_hand_candidates`); or it removes Can't attack or Can't Defend the card
+/// has of its own (`TUNE_BUFF_REMOVES`), and in a hand Crater (`TUNE_BUFF_HAND_REMOVES`, R2727001). A
+/// Vanilla card's text is gone, and an added keyword would be text, so nothing is added to one.
 fn keyword_row(
     state: &GameState,
     card: &CardInstance,
@@ -294,9 +296,13 @@ fn keyword_row(
             .collect();
         (own, nerf_candidates(state, card))
     } else {
+        let in_hand = matches!(card.zone, crate::wire::Zone::Hand { .. });
         let own: Vec<Keyword> = card_keywords(state, card)
             .into_iter()
-            .filter(|keyword| TUNE_BUFF_REMOVES.contains(&keyword.kind()))
+            .filter(|keyword| {
+                TUNE_BUFF_REMOVES.contains(&keyword.kind())
+                    || (in_hand && TUNE_BUFF_HAND_REMOVES.contains(&keyword.kind()))
+            })
             .collect();
         let add = if card.vanilla {
             Vec::new()
@@ -310,6 +316,7 @@ fn keyword_row(
                 non_unit_candidates(state, card, &held)
             };
             add.extend(lacking(&held, TUNE_BUFF_ANY_KEYWORDS));
+            add.extend(buff_hand_candidates(state, card, &held));
             add
         };
         (own, add)
@@ -358,6 +365,22 @@ fn nerf_candidates(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
         return Vec::new();
     }
     lacking(&keywords_now(state, card), TUNE_NERF_HAND_KEYWORDS)
+}
+
+/// R2727000: the keywords a Buff may add to a Unit, a Spell or a Field Spell while it is in a hand and lacks
+/// them of its own (`TUNE_BUFF_HAND_KEYWORDS`): Cloaked, which acts only from a hand (R2577000). Never
+/// to a Trap or a Field Trap, which no Cloaked sets (R783004).
+fn buff_hand_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]) -> Vec<Keyword> {
+    if !matches!(card.zone, crate::wire::Zone::Hand { .. }) {
+        return Vec::new();
+    }
+    if !matches!(
+        card_type_of(state, card),
+        CardType::Unit | CardType::Spell | CardType::FieldSpell
+    ) {
+        return Vec::new();
+    }
+    lacking(held, TUNE_BUFF_HAND_KEYWORDS)
 }
 
 /// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: Indestructible and
