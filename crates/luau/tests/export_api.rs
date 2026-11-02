@@ -601,6 +601,7 @@ mod generator {
             Ballot,
             RollKind,
             RollResult,
+            HookKind,
             FleeOpponent,
             ReplacementMoment,
             ReplacementWhere,

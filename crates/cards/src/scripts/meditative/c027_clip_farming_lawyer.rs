@@ -177,10 +177,19 @@ mod tests {
                 plain.end_turn();
 
                 assert_eq!(s.state().rng_cursor, plain.state().rng_cursor);
+                // R2783000: the Lawyer's end-of-turn hook still ran and fizzled, so its marker is the
+                // one event the vanilla's game lacks.
+                let marker = |event: &&GameEvent| event.event_type() == GameEventType::HookResolving;
                 let types = |s: &Scenario| -> Vec<String> {
-                    s.events().iter().map(|event| event.event_type().to_string()).collect()
+                    s.events()
+                        .iter()
+                        .filter(|event| !marker(event))
+                        .map(|event| event.event_type().to_string())
+                        .collect()
                 };
                 assert_eq!(types(&s), types(&plain));
+                assert_eq!(s.events().iter().filter(marker).count(), 1);
+                assert_eq!(plain.events().iter().filter(marker).count(), 0);
                 assert!(unlocked(s.events()).is_empty());
                 assert!(coins_in_hand(&s).is_empty());
             }
