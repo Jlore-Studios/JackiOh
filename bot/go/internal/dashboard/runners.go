@@ -69,6 +69,7 @@ var Workflows = map[string]string{
 		"reviewed), deliver",
 	"bot-status.yml": "this issue's loop: rewrites it, sweeps, plans and starts night runs, " +
 		"delivers them",
+	"cf-spend.yml":    "daily: an issue once Cloudflare's usage spend is on course past its alert",
 	"ci-duration.yml": "after CI, an issue for any job over seven minutes",
 	"ci.yml":          "CI: the five required checks on a pull request; everything on a push to main",
 	"claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 " +

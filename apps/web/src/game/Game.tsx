@@ -131,8 +131,9 @@ export type GameProps = {
   /** R2211000: on a `replay` board, the open prompt is drawn read-only (Prompt's `readOnly`). */
   replayPrompt?: boolean;
   /**
-   * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction and its
-   * count, which the lesson teaches, where every other game's says only who goes first (Prompt.tsx).
+   * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction, its count
+   * and its panel, which the lesson teaches, where every other game's is its cards alone and says
+   * who goes first only in its accessible name (Prompt.tsx, #2738).
    */
   lesson?: boolean;
   /**

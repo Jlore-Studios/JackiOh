@@ -212,6 +212,12 @@ jobs:
             echo "::error::PRODUCTION_SUPABASE_SECRET_KEY is not set: JackiOh-Production -> Project Settings -> API Keys -> a secret key"
             exit 1
           fi
+          # A secret key (sb_secret_…) or a legacy service_role JWT (eyJ…): never the publishable key, or
+          # whatever else was on the clipboard when the secret was set.
+          case "$PRODUCTION_SUPABASE_SECRET_KEY" in
+            sb_secret_* | eyJ*) ;;
+            *) echo "::error::PRODUCTION_SUPABASE_SECRET_KEY is not a Supabase secret key (sb_secret_…): set it again from JackiOh-Production -> Project Settings -> API Keys"; exit 1 ;;
+          esac
           if [ "$PRODUCTION_SUPABASE_SECRET_KEY" = "$(jq -r '.SUPABASE_SECRET_KEY // empty' "$RUNNER_TEMP/render.json")" ]; then
             echo "::error::PRODUCTION_SUPABASE_SECRET_KEY is staging's key, not JackiOh-Production's"
             exit 1

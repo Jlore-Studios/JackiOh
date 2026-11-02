@@ -25,6 +25,7 @@ enforces rules and never sees hidden information.** In practice:
   both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
+  A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -143,7 +144,7 @@ The view says so: a seat that still owes sees its own `pending` mulligan, one th
 present for exactly that window.
 
 - The picker (`Prompt.tsx`) keeps its testids (`prompt-modal` with `data-prompt-kind="mulligan"`,
-  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the count,
+  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the cards,
   `mulligan-opponent-status` (`data-ready="true|false"`) says "Opponent is choosing…" or holds
   `mulligan-opponent-ready`, "Opponent is ready".
 - After Ready, until the game starts: `mulligan-waiting`, "Waiting for your opponent…", with the
@@ -441,9 +442,13 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); a locked tile or strip item a held
-                        Rare, Epic or Legendary cosmetic token covers offers it in place (collection/TokenOffer.tsx,
-                        POST /api/tokens/redeem-cosmetic, R1953001, R2728000), and ownership is read again;
+                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
+                        R2730000). Only there does a locked item a held token covers offer the token
+                        (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
+                        POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
+                        POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
+                        the collection is read again;
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
@@ -499,9 +504,9 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         `GET /api/packs`' price (`POST /api/packs/buy`), each shelved as a PackObject that
                         flies into the held count when bought, the button disabled with the shortfall shown
                         when the wallet (`GET /api/wallet`) is short; the token picker shows both token
-                        bars as filling bars and the cycle's next step (`GET /api/tokens`), a card token browsing
-                        unowned cards (`POST /api/tokens/redeem-card`) and the cosmetic tokens held, with a
-                        link to the Collection, where they are spent on a locked cosmetic (R1953001); the
+                        bars as filling bars and the cycle's next step (`GET /api/tokens`),
+                        the tokens held, with a link to the Collection, where each is spent from a locked
+                        item's preview (R1953001, R2730000); the
                         cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the

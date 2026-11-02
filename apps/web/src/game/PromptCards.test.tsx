@@ -390,7 +390,8 @@ describe("#492 one card picker, front and center, for every short choice", () =>
     const modal = screen.getByTestId("prompt-modal");
     expect(modal).toHaveAttribute("data-prompt-kind", "embiggen");
     expect(modal).toHaveAttribute("data-prompt-layout", "cards");
-    expect(modal.querySelector(".prompt-title-source")?.textContent).toBe(nameOf(AURA));
+    expect(modal.querySelector(".prompt-title")).toBeNull();
+    expect(modal.getAttribute("aria-label")).toBe(`${nameOf(AURA)}: Play the normal or the Embiggened version?`);
 
     const normal = screen.getByTestId("prompt-option-false");
     const bigger = screen.getByTestId("prompt-option-true");

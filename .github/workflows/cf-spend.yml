@@ -1,0 +1,130 @@
+# Warns before Cloudflare's usage bill runs away. Cloudflare has no spend cap: past what the Workers
+# Paid plan includes, every container hour and request is billed (docs/deploy-cloudflare.md section 6).
+# Its own budget alerts (Notifications -> Budget Alert) email the owner; this opens an issue, labelled
+# `human`, so it is seen in the repository as well. Once a day it reads the current billing period's
+# usage-based charges, the Billable Usage dashboard's figures (`GET /accounts/{id}/billable-usage`,
+# which Cloudflare fills once a day for the day before), and opens the issue once the period's spend,
+# or its projection (the spend so far spread over the whole period), reaches ALERT_DOLLARS. The plan's
+# own $5 is not usage and never counts. One issue at a time: while it is open, a run that finds the
+# spend still that high adds nothing.
+#
+# Needs CLOUDFLARE_BILLING_TOKEN, an API token with the account's Billing: Read and nothing else (My
+# Profile -> API Tokens -> Create Custom Token). While it is unset the run says so and is green; a
+# request that fails fails its run, so a broken check is seen rather than silent.
+name: cf spend
+
+on:
+  schedule:
+    - cron: "23 15 * * *"
+  workflow_dispatch:
+
+env:
+  # promote-production.yml's and deploy-staging.yml's account.
+  CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
+  # The issue opens once the period's usage spend, or its projection, reaches this many dollars: about
+  # what both sites' `basic` containers would cost if neither ever slept, which the ten-minute sleep
+  # (apps/edge) keeps far below.
+  ALERT_DOLLARS: "15"
+  # A projection counts only once this many days of the period have usage behind them; before then a
+  # single busy first day would project a month of it.
+  PROJECT_AFTER_DAYS: "3"
+
+permissions:
+  issues: write
+
+concurrency:
+  group: cf-spend
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: warn when Cloudflare's usage spend nears its alert
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: read the billing period's usage, and open an issue when it is near the alert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CLOUDFLARE_BILLING_TOKEN: ${{ secrets.CLOUDFLARE_BILLING_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CLOUDFLARE_BILLING_TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_BILLING_TOKEN is not set, so Cloudflare's spend is not read"
+            exit 0
+          fi
+
+          response=$(curl -sS --retry 3 --max-time 60 -w '\n%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_BILLING_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/billable-usage")
+          status=${response##*$'\n'}
+          body=${response%$'\n'*}
+          if [ "$status" != 200 ] || [ "$(jq -r '.success // false' <<<"$body" 2>/dev/null)" != true ]; then
+            echo "::error::billable-usage answered $status: $(jq -c '.errors // .' <<<"$body" 2>/dev/null || head -c 300 <<<"$body")"
+            exit 1
+          fi
+
+          # Every row is one service's charge for one charge period of the billing period.
+          summary=$(jq -c '.result // [] | {
+              rows: length,
+              spent: (map(.BilledCost // 0) | add // 0),
+              currency: (.[0].BillingCurrency // "USD"),
+              start: (map(.BillingPeriodStart) | min),
+              through: (map(.ChargePeriodEnd) | max),
+              services: (group_by(.ServiceName) | map({name: .[0].ServiceName, cost: (map(.BilledCost // 0) | add)}) | sort_by(-.cost))
+            }' <<<"$body")
+          rows=$(jq -r .rows <<<"$summary")
+          if [ "$rows" -eq 0 ]; then
+            echo "No usage-based charges yet this billing period" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          spent=$(jq -r .spent <<<"$summary")
+          currency=$(jq -r .currency <<<"$summary")
+          start=$(date -ud "$(jq -r .start <<<"$summary")" +%F)
+          through=$(date -ud "$(jq -r .through <<<"$summary")" +%s)
+          start_s=$(date -ud "$start" +%s)
+          end=$(date -ud "$start 1 month" +%F)
+          end_s=$(date -ud "$end" +%s)
+
+          # spent, projected, days behind it, over (1 or 0), each to two places.
+          read -r spent projected days over < <(awk -v s="$spent" -v a="$ALERT_DOLLARS" -v k="$PROJECT_AFTER_DAYS" \
+            -v t0="$start_s" -v t="$through" -v t1="$end_s" 'BEGIN {
+              days = (t - t0) / 86400
+              p = (days >= k) ? s * (t1 - t0) / (t - t0) : s
+              printf "%.2f %.2f %.1f %d\n", s, p, days, (s >= a || p >= a) ? 1 : 0
+            }')
+          line="Cloudflare usage from $start to $(date -ud "@$through" +%F): $spent $currency, on course for $projected $currency by $end ($days days of usage behind it); the alert is at $ALERT_DOLLARS $currency"
+          echo "$line" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$over" -eq 0 ]; then
+            exit 0
+          fi
+
+          export TITLE="Cloudflare: this billing period's usage spend is on course for over \$$ALERT_DOLLARS"
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"Cloudflare: this billing period\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ -n "$open" ]; then
+            echo "#$open is open already"
+            exit 0
+          fi
+
+          services=$(jq -r '.services[] | [.name, .cost] | @tsv' <<<"$summary" |
+            awk -F '\t' -v c="$currency" '{ printf "| %s | %.2f %s |\n", $1, $2, c }')
+          body=$(printf '%s\n' \
+            "Cloudflare's usage-based charges for the billing period that started on $start are **$spent $currency so far, on course for $projected $currency by $end**, past the $ALERT_DOLLARS $currency alert. The Workers Paid plan's own \$5 is not counted. Cloudflare has no spend cap, so this keeps growing until something changes." \
+            "" \
+            "| Service | So far |" \
+            "|---|---|" \
+            "$services" \
+            "" \
+            "Where to look: the account's Billable Usage dashboard (Manage Account -> Billing -> Billable Usage) for the days that grew, then Workers & Pages -> \`jackioh\` or \`jackioh-staging\` -> Metrics and Logs for what kept a container awake. A container sleeps after ten idle minutes (\`SLEEP_AFTER\`, \`apps/edge/src/index.ts\`), so one awake all day has a caller: an open tab's presence beat, a monitor, or traffic to \`/api\` or \`/ws\`." \
+            "" \
+            "One of these, then close this issue:" \
+            "- Stop what keeps a container awake, or lower \`instance_type\` or \`max_instances\` in \`wrangler.jsonc\` (docs/deploy-cloudflare.md section 6)." \
+            "- Or accept the spend, and raise \`ALERT_DOLLARS\` in \`.github/workflows/cf-spend.yml\`." \
+            "" \
+            "A run that finds the spend still this high after the issue is closed opens a new one." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/cf-spend.yml\`._")
+          url=$(gh issue create --repo "$REPO" --title "$TITLE" --label human --body "$body")
+          echo "opened $url"
