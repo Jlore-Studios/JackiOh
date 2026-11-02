@@ -18,7 +18,7 @@
 
 import {
   DR, DRUMS, GM, KIT, MOTIF_CELL, RHYTHMS,
-  alterOf, arp, bass, bend, cc, chordAt, chordPitches, comp, createSong, drums, instrument, line, melody, note, pad, pulse, pump, roots, section,
+  alterOf, arp, bass, bend, cc, chordAt, chordPitches, comp, createSong, drums, instrument, line, melody, note, pad, pulse, pump, roll, roots, section, sectionIn, swell,
 } from "./compose.mjs";
 import { TONIC, key, pitch, rng, seedOf, voicing } from "./theory.mjs";
 
@@ -153,6 +153,8 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
   instrument(song, 4, GM.acBass, { volume: 82, pan: 64, reverb: 25 });
   instrument(song, 5, GM.strings, { volume: 70, pan: 64, reverb: 65 });
   instrument(song, 6, danger ? GM.cello : GM.accordion, { volume: danger ? 90 : 66, pan: 36, reverb: 40 });
+  // The match builds' tense passages (below) swell on tremolo strings; the low-health build keeps its own.
+  if (!danger) instrument(song, 7, GM.tremolo, { volume: 82, pan: 76, reverb: 60 });
   instrument(song, DRUMS, KIT.standard, { volume: 86, reverb: 30 });
 
   const lute = { ch: 2, step: danger ? 0.25 : 0.5, pattern: danger ? [0, 2, 3, 2] : [0, 2, 3, 4, 3, 2, 1, 2], center: 55, vel: danger ? 46 : 54 };
@@ -203,6 +205,13 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
   pad(s5, { ch: 5, center: 60, vel: 36 });
   melody(s5, { ch: 1, rhythms: RHYTHMS.epic, range: [0, 8], vel: 66, motifBars: [0], start: 2, seed: 5 });
   pulse(s5, { ch: 6, step: 0.5, octave: -2, vel: 56 });
+  if (!danger) {
+    // A moment of tension (the owner's audition, round 2): tremolo strings swell through the
+    // breakdown and toms gather into the next section.
+    pad(s5, { ch: 7, center: 57, vel: 54 });
+    swell(s5, { ch: 7, lo: 36 });
+    roll(s5, 7, { n: DR.tomLo, from: 2, step: 0.25, v0: 40, v1: 86 });
+  }
   if (danger) {
     drums(s5, { pattern: [[0, DR.tomLo, 60], [2, DR.tomLo, 50], [3, DR.tomMid, 44], [3.5, DR.tomMid, 44]] });
   }
@@ -228,6 +237,25 @@ function tavern({ id, tonic, mode, bpm, A, B, lead, second, danger = false }) {
   else pad(s7, { ch: 6, center: 60, vel: 30, every: 2 });
 
   if (!danger) {
+    // The tense passage before the closing reprise (the owner's audition, round 2): the parallel
+    // minor, tremolo strings swelling over a driving bass, toms gathering into a roll, and one
+    // stopped hit that hands over to the reprise.
+    const stop = 7 * 4 + 3;
+    const t = sectionIn(song, "body", 8, ["i", "VI", "iv", "V+", "i", "VI", ["iv", "VII"], "V+"], key(tonic, "minor"));
+    pad(t, { ch: 7, center: 57, vel: 66 });
+    swell(t, { ch: 7, lo: 48 });
+    cc(t, 7, stop + 0.5, 11, 0);
+    cc(t, 7, t.beats - 0.01, 11, 127);
+    arp(t, { ch: 2, step: 0.25, pattern: [0, 2, 3, 2], center: 55, vel: 50, until: stop });
+    pulse(t, { ch: 4, step: 0.5, octave: -2, vel: 80, accent: [1, 0.75], until: stop });
+    melody(t, { ch: 0, rhythms: RHYTHMS.epic, range: [2, 9], vel: 84, motifBars: [0, 4], start: 4, seed: 9 });
+    drums(t, { pattern: [[0, DR.tomLo, 62], [1.5, DR.tomLo, 44], [2, DR.tomLo, 56], [3, DR.tomMid, 48], [3.5, DR.tomMid, 52], ...[0.5, 1.5, 2.5, 3.5].map((x) => [x, DR.shaker, 34])], skip: (bar) => bar >= 6 });
+    roll(t, 6, { n: DR.tomLo, step: 0.5, v0: 50, v1: 80 });
+    roll(t, 7, { n: DR.floorTom, to: 3, step: 0.25, v0: 70, v1: 110 });
+    drums(t, { pattern: [[3, DR.crash, 90], [3, DR.kick, 104]], skip: (bar) => bar !== 7 });
+    comp(t, { ch: 5, hits: [[3, 1, 1]], center: 60, vel: 92, from: stop, until: stop + 1 });
+    comp(t, { ch: 2, hits: [[3, 1, 1]], center: 55, vel: 84, from: stop, until: stop + 1 });
+
     // The faster in-game tempo shortens the loop, so the match builds reprise the opening once
     // more instead of ending on s7.
     const s8 = section(song, "body", 8, A);

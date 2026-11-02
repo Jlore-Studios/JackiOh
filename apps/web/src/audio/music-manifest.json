@@ -15,27 +15,27 @@
       "handoff": null
     },
     "tavern-1": {
-      "hash": "11f05b9875db2e56",
-      "bytes": 1465547,
+      "hash": "3c1ec621bcb917c0",
+      "bytes": 1643909,
       "bpm": 110,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 143.136364,
+      "duration": 160.590909,
       "loopStart": 3,
-      "loopEnd": 142.636364,
+      "loopEnd": 160.090909,
       "handoff": null
     },
     "tavern-2": {
-      "hash": "4d13636401bf5418",
-      "bytes": 1391385,
+      "hash": "08e5a3b87ca5cba8",
+      "bytes": 1560457,
       "bpm": 116,
       "beatsPerBar": 4,
       "loop": true,
       "intro": 0,
-      "duration": 135.913793,
+      "duration": 152.465517,
       "loopStart": 3,
-      "loopEnd": 135.413793,
+      "loopEnd": 151.965517,
       "handoff": null
     },
     "tavern-danger": {
