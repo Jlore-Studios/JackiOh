@@ -13963,11 +13963,8 @@
     "what": "build #2704 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-02T00:33:16Z",
-    "notes": [
-      "delivered build #2728 on claude-8 (run 41355497338): interrupted",
-      "delivered build #2715 on claude-8 (run 41354648966): interrupted"
-    ],
+    "at": "2026-11-02T00:41:04Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14672,7 +14669,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T00:33:16Z",
+  "loop_tick": "2026-11-02T00:41:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
