@@ -125,7 +125,7 @@ describe("R631 the menu theme and the board's music", () => {
     expect(player.requests.at(-1)).toEqual({ track: "menu", opponentTurn: false });
   });
 
-  it("R631 the next match plays the station's other in-game track", () => {
+  it("R631 the next match plays the station's next in-game track", () => {
     const first = render(<Game view={baseView()} legal={[]} onAction={() => undefined} />);
     expect(player.requests.at(-1)?.track).toBe("tavern-1");
     first.unmount();

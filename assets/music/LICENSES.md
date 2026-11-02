@@ -25,6 +25,10 @@ and needs no outside license:
   Legendary or Mythic, has a few bars of its own (`intro-<card id>`), composed the same way: the
   motif per card, derived from its id, set and tags, and hand-tuned for the Mythics (from their
   themes, retired since R822000) and the best-known Legendaries. Each is a sting that plays once and ends on a faded tail.
+- **Further station tracks.** Past each station's first track, the in-game tracks were auditioned:
+  the agent composed candidates from different corners of each station's genre
+  (`gen-music.mjs --candidates`), the owner kept some and asked for changes to others, and the kept
+  scores moved into `tracks.mjs`. They are made the same way as every other track.
 
 Rejected sources:
 
@@ -41,20 +45,30 @@ attribution is required when they play in the game.
 | Track | File | What it is | Length |
 | --- | --- | --- | --- |
 | `menu` | `apps/web/public/audio/music/menu.m4a` | Main menu theme: the JackiOh motif in full, flute and oboe over lute, harp, strings and horns | 160.0 s |
-| `tavern-1` | `apps/web/public/audio/music/tavern-1.m4a` | Tavern in-game track 1 (D major): flute and fiddle, lute, harp, hand percussion | 143.5 s |
-| `tavern-2` | `apps/web/public/audio/music/tavern-2.m4a` | Tavern in-game track 2 (G mixolydian): fiddle and recorder, lute, accordion | 132.7 s |
+| `tavern-1` | `apps/web/public/audio/music/tavern-1.m4a` | Tavern in-game track 1 (D major): flute and fiddle, lute, harp, hand percussion, with a tense passage in D minor on tremolo strings | 160.6 s |
+| `tavern-2` | `apps/web/public/audio/music/tavern-2.m4a` | Tavern in-game track 2, a sea shanty in 6/8 (D minor): accordion calls the theme, voices answer, stomps, a storm before the last chorus | 147.5 s |
+| `tavern-3` | `apps/web/public/audio/music/tavern-3.m4a` | Tavern in-game track 3, a caravanserai (E phrygian dominant): sitar, shanai, oud-like guitar, darbuka, a pedal passage on tremolo strings | 151.2 s |
 | `tavern-danger` | `apps/web/public/audio/music/tavern-danger.m4a` | Tavern low-health track (D minor): faster, cello pulse, busier percussion | 123.5 s |
 | `tavern-start` | `apps/web/public/audio/music/tavern-start.m4a` | Tavern match-start sting | 10.0 s |
-| `edm-1` | `apps/web/public/audio/music/edm-1.m4a` | EDM in-game track 1 (A minor): saw lead, square plucks, pads, side-chained bass | 123.5 s |
-| `edm-2` | `apps/web/public/audio/music/edm-2.m4a` | EDM in-game track 2 (D minor) | 127.9 s |
+| `edm-1` | `apps/web/public/audio/music/edm-1.m4a` | EDM in-game track 1 (D minor): saw lead, square plucks, pads, side-chained bass | 131.5 s |
+| `edm-2` | `apps/web/public/audio/music/edm-2.m4a` | EDM in-game track 2, liquid drum & bass (F minor): broken beat, detuned reese bass, electric piano, pads | 126.3 s |
+| `edm-3` | `apps/web/public/audio/music/edm-3.m4a` | EDM in-game track 3, synthwave (E minor): gated snare, octave synth bass, polysynth, synth-brass lead | 132.7 s |
+| `edm-4` | `apps/web/public/audio/music/edm-4.m4a` | EDM in-game track 4, halftime (C minor): wobbling growl bass, sub, bells, orchestra hits | 126.9 s |
+| `edm-5` | `apps/web/public/audio/music/edm-5.m4a` | EDM in-game track 5, orchestral trap (G harmonic minor): 808 kit and gliding bass, flute, bells, pizzicato | 126.9 s |
 | `edm-danger` | `apps/web/public/audio/music/edm-danger.m4a` | EDM low-health track (A minor): faster, rolling bass, busier hats | 127.4 s |
 | `edm-start` | `apps/web/public/audio/music/edm-start.m4a` | EDM match-start sting | 8.9 s |
 | `lofi-1` | `apps/web/public/audio/music/lofi-1.m4a` | Lo-fi in-game track 1 (F major): electric piano, vibraphone, brushed drums, tape wow and crackle | 132.3 s |
 | `lofi-2` | `apps/web/public/audio/music/lofi-2.m4a` | Lo-fi in-game track 2 (B-flat major) | 126.3 s |
+| `lofi-3` | `apps/web/public/audio/music/lofi-3.m4a` | Lo-fi in-game track 3, boom-bap (E dorian): chopped organ stabs, hard swung drums, jazz guitar, alto sax | 126.3 s |
+| `lofi-4` | `apps/web/public/audio/music/lofi-4.m4a` | Lo-fi in-game track 4, rain (D-flat lydian): kalimba, music box, celesta over pads, mostly drumless | 126.9 s |
+| `lofi-5` | `apps/web/public/audio/music/lofi-5.m4a` | Lo-fi in-game track 5, vapor (A-flat major): FM electric piano, synth pads, a slow deep tape wow | 126.6 s |
+| `lofi-6` | `apps/web/public/audio/music/lofi-6.m4a` | Lo-fi in-game track 6, bossa (G major): nylon guitar on the bossa rhythm, rim clave, soft flute and clarinet | 133.5 s |
+| `lofi-7` | `apps/web/public/audio/music/lofi-7.m4a` | Lo-fi in-game track 7, jazzhop (E-flat major): acoustic piano ninths, walking upright, tenor sax | 134.4 s |
 | `lofi-danger` | `apps/web/public/audio/music/lofi-danger.m4a` | Lo-fi low-health track (F minor): muted trumpet, a low pulse | 123.5 s |
 | `lofi-start` | `apps/web/public/audio/music/lofi-start.m4a` | Lo-fi match-start sting | 11.3 s |
 | `epic-1` | `apps/web/public/audio/music/epic-1.m4a` | Epic Orchestral in-game track 1 (D minor): string ostinato, horns, choir, timpani | 134.4 s |
-| `epic-2` | `apps/web/public/audio/music/epic-2.m4a` | Epic Orchestral in-game track 2 (G minor) | 128.7 s |
+| `epic-2` | `apps/web/public/audio/music/epic-2.m4a` | Epic Orchestral in-game track 2, a battle in 5/4 (E minor): taiko, staccato strings, horn calls, choir | 130.8 s |
+| `epic-3` | `apps/web/public/audio/music/epic-3.m4a` | Epic Orchestral in-game track 3, a requiem (C phrygian): choir, church organ, trombone and tuba, bells | 136.8 s |
 | `epic-danger` | `apps/web/public/audio/music/epic-danger.m4a` | Epic Orchestral low-health track (D minor): driving ostinato, brass, timpani | 123.5 s |
 | `epic-start` | `apps/web/public/audio/music/epic-start.m4a` | Epic Orchestral match-start sting | 10.7 s |
 | `victory` | `apps/web/public/audio/music/victory.m4a` | Victory sting and results loop | 29.9 s |
