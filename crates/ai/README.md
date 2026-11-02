@@ -425,7 +425,8 @@ and any human seat the server hands it after a disconnect (§13.8).
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
+pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame;
+pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody>;
 ```
 
@@ -460,7 +461,7 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI
   never concedes (R188), so it neither offers nor confirms a team's concede.
-- `duos_gate` plays the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
+- `duos_gate_game` plays game n of the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
   (seeds `${series}:${n}`) or a team on the 1v1 gates' greedy baseline (#1760): `duos_greedy_action`
   plays each seat's own duel with `greedy_action`, never passes, and draws only on its seat's stream
   (seeds `${series}:greedy:${n}`). A matchup passes at its opponent's floor, `DUOS_GATE_WIN_FLOOR`

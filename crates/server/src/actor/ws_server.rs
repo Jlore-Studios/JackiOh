@@ -33,9 +33,10 @@ use crate::actor::registry::AttachError;
 use crate::api::http::{
     ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address, upgrade_profile,
 };
+use crate::api::rematch::in_rematch_window;
 use crate::app::{App, browser_origins, now_ms};
 use crate::config::{
-    DEFAULT_TRUSTED_PROXY_HOPS, REMATCH_OFFER_TTL_MS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
+    DEFAULT_TRUSTED_PROXY_HOPS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
     WS_MAX_CONNECTIONS_PER_ADDRESS, WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
 use crate::db::store::{MatchStatus, Profile};
@@ -436,9 +437,7 @@ async fn seats_finished_match(
         return Ok(false);
     }
     // R1285000: check rematch window against REMATCH_OFFER_TTL_MS.
-    let in_window = match_row
-        .finished_at
-        .is_some_and(|finished_at| now_ms() - finished_at <= REMATCH_OFFER_TTL_MS);
+    let in_window = in_rematch_window(match_row.finished_at, now_ms());
     Ok(in_window && (match_row.players.0 == profile_id || match_row.players.1 == profile_id))
 }
 
