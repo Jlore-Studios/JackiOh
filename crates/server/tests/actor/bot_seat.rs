@@ -26,6 +26,7 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::store::{NewBot, PlayerSettingsLimits, PlayerSettingsMergeInput, StoreError};
 use jackioh_server::economy::store::CardPicks;
+use jackioh_server::ranked::ladder::Ladder;
 
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
@@ -511,7 +512,7 @@ async fn r1452_r610_bot_match_rated_by_r610() {
     let result = q!(m.app, results_get_by_match(MATCH_ID)).expect("the result");
     assert_eq!(result.winner_profile_id.as_deref(), Some(BOT));
     // R610: the bot's own rating moved, on its own row, and the person's moved the other way.
-    let bot = q!(m.app, ranked_bot(BOT)).expect("the bot's R610 row");
+    let bot = q!(m.app, ranked_bot(BOT, Ladder::Constructed)).expect("the bot's R610 row");
     assert_eq!(bot.games, 1);
     assert!(bot.glicko.rating > 1000.0, "the bot won: {}", bot.glicko.rating);
     let person = q!(m.app, profiles_get_by_id(PERSON)).expect("the person");

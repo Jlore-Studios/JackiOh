@@ -4,6 +4,8 @@
 // pending account, which that route refuses (403 `account_pending`), is shown from the gate's
 // `/api/auth/me` read, with the way on: an invite code. The username is R1435's and R1436's; the
 // shop lives on `/shop` (#1580, R1580000); this screen links no other menu (R1646000).
+// R2778000: the rank, season record and badges show for Constructed, then All Random, each its own
+// `GET /api/ranked` read.
 
 import {
   useEffect,
@@ -56,6 +58,10 @@ export const accountTestid = {
   /** R2255000: this season's ranked win–loss–draw record, under the rank line; absent at 0 games. */
   seasonRecord: "account-season-record",
   badges: "account-badges",
+  /** R2778000: the All Random ladder's rank line, season record and badges, under the Constructed ones above. */
+  randomRank: "account-random-rank",
+  randomSeasonRecord: "account-random-season-record",
+  randomBadges: "account-random-badges",
   leaderboard: "account-leaderboard",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
@@ -182,12 +188,59 @@ export type AccountRouteProps = {
   me?: MeResponse;
 };
 
+/** R2778000: one ladder's rank line, season record (R2255000) and badges (R607), with the test ids it is drawn under. */
+function LadderRank({
+  rank,
+  testids,
+}: {
+  rank: OwnRankResponse;
+  testids: { rank: string; seasonRecord: string; badges: string };
+}): ReactElement {
+  return (
+    <>
+      <p data-testid={testids.rank}>
+        <Username name={rank.username} /> · <RankCrest rank={rank.rank} size="large" />{" "}
+        {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
+        <StreakFlame streak={rank.streak} size="large" />
+      </p>
+      {/* R2255000: the season's ranked record, labeled apart from the all-time Record below; none at 0 games. */}
+      {rank.record.games > 0 ? (
+        <p data-testid={testids.seasonRecord}>
+          {t("This season (ranked): {wins}–{losses}–{draws}", {
+            wins: rank.record.wins,
+            losses: rank.record.losses,
+            draws: rank.record.draws,
+          })}
+        </p>
+      ) : null}
+      <p data-testid={testids.badges}>
+        {rank.badges.length === 0 ? (
+          t("No season best yet — finish placements to earn one.")
+        ) : (
+          <>
+            {t("Season best:")}
+            {rank.badges.map((badge, index) => (
+              <span key={badge.seasonId}>
+                {index === 0 ? " " : t(", ")}
+                <RankCrest badge={badge} size="large" />{" "}
+                {t("{rank} · Season {season}", { rank: rankCaption(badge), season: badge.seasonId })}
+              </span>
+            ))}
+          </>
+        )}
+      </p>
+    </>
+  );
+}
+
 export default function AccountRoute({ token, me }: AccountRouteProps): ReactElement {
   const pending = me !== undefined && me.profile.status === "pending";
   const username = me?.username;
   const leaving = useSigningOut();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
+  // R2778000: the All Random ladder's, read beside it.
+  const [randomRank, setRandomRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [manageOpen, setManageOpen] = useState(false);
@@ -208,6 +261,11 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
     getOwnRank(token)
       .then((next) => {
         if (!canceled) setRank(next);
+      })
+      .catch(() => undefined);
+    getOwnRank(token, "random")
+      .then((next) => {
+        if (!canceled) setRandomRank(next);
       })
       .catch(() => undefined);
     return () => {
@@ -277,37 +335,24 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               <h3 className="account-heading">{t("Rank")}</h3>
               {rank !== null ? (
                 <>
-                  <p data-testid={accountTestid.rank}>
-                    <Username name={rank.username} /> · <RankCrest rank={rank.rank} size="large" />{" "}
-                    {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
-                    <StreakFlame streak={rank.streak} size="large" />
-                  </p>
-                  {/* R2255000: the season's ranked record, labeled apart from the all-time Record below; none at 0 games. */}
-                  {rank.record.games > 0 ? (
-                    <p data-testid={accountTestid.seasonRecord}>
-                      {t("This season (ranked): {wins}–{losses}–{draws}", {
-                        wins: rank.record.wins,
-                        losses: rank.record.losses,
-                        draws: rank.record.draws,
-                      })}
-                    </p>
+                  <h4 className="account-heading">{t("Constructed")}</h4>
+                  <LadderRank
+                    rank={rank}
+                    testids={{ rank: accountTestid.rank, seasonRecord: accountTestid.seasonRecord, badges: accountTestid.badges }}
+                  />
+                  {randomRank !== null ? (
+                    <>
+                      <h4 className="account-heading">{t("All Random")}</h4>
+                      <LadderRank
+                        rank={randomRank}
+                        testids={{
+                          rank: accountTestid.randomRank,
+                          seasonRecord: accountTestid.randomSeasonRecord,
+                          badges: accountTestid.randomBadges,
+                        }}
+                      />
+                    </>
                   ) : null}
-                  <p data-testid={accountTestid.badges}>
-                    {rank.badges.length === 0 ? (
-                      t("No season best yet — finish placements to earn one.")
-                    ) : (
-                      <>
-                        {t("Season best:")}
-                        {rank.badges.map((badge, index) => (
-                          <span key={badge.seasonId}>
-                            {index === 0 ? " " : t(", ")}
-                            <RankCrest badge={badge} size="large" />{" "}
-                            {t("{rank} · Season {season}", { rank: rankCaption(badge), season: badge.seasonId })}
-                          </span>
-                        ))}
-                      </>
-                    )}
-                  </p>
                   <div className="account-actions">
                     <a
                       className="button-secondary"
