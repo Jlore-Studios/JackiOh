@@ -10,7 +10,7 @@
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
 //    for a Drawn vs not drawn the server withholds until both its sides reach the floor (R654, R2427000).
 //  - URL search params for shareable views.
-//  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
+//  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a full-art card's art as the viewer picks it (R2756000), a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 //  - Patch bar (R1973002): a picker of the newest patches with enough games, and the patch before and after
@@ -31,7 +31,9 @@ import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
+import { FULL_ART_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
+import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
@@ -108,6 +110,23 @@ function tokensOf(def: CardDef): CardDef[] {
 }
 
 /**
+ * R2756000: the arts a card's drill-down offers: its normal face, then each tier it has a full art of, commonest
+ * first (a listed token's are its parent's, R2655002); none for a card without full art.
+ */
+function artsOf(defId: string): DrillDownArt[] {
+  if (!isFullArtCard(defId)) return [];
+  const tiers = FULL_ARTS_OF_CARD.get(fullArtSource(defId));
+  return ["normal", ...FULL_ART_TIERS.filter((tier) => tiers?.has(tier) === true)];
+}
+
+/** R2756000: `art` as the full-art pick `FullArtShown` takes for `defId`'s faces: `false` for the normal face, else that tier's (R2655000). */
+function artPick(defId: string, art: DrillDownArt): boolean | string {
+  const source = fullArtSource(defId);
+  const id = art === "normal" ? undefined : FULL_ARTS_OF_CARD.get(source)?.get(art);
+  return id === undefined ? false : fullArtPickOf(source, id);
+}
+
+/**
  * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
  * at, from the response's patch list; a server without one names the version before.
  */
@@ -142,6 +161,12 @@ type SortColumn =
   | "normalWinRate"
   | "playRate";
 type SortDirection = "asc" | "desc";
+
+/** R2756000: the art the drill-down's faces print: the normal face, or one of the card's full arts by tier. */
+type DrillDownArt = "normal" | FullArtTier;
+
+/** R2756000: each art choice's button, in English, put through `t()` where it is drawn as `SORT_LABELS` are. */
+const ART_LABELS: Record<DrillDownArt, string> = { normal: "No full art", Epic: "Epic", Legendary: "Legendary", Mythic: "Mythic" };
 
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
@@ -270,6 +295,10 @@ export default function StatsRoute(): ReactElement {
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
+  // R2756000: the drill-down's art, kept from card to card as Show Radiant is; null until the viewer picks one,
+  // when the faces print what the Full-art cards setting says.
+  const [drillDownArt, setDrillDownArt] = useState<DrillDownArt | null>(null);
+  const { fullArt: fullArtSetting } = useCardSettings();
 
   // R1966000: the Sets tab's patch, every set's cards unfiltered, and its previous patch's for the change.
   const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
@@ -604,6 +633,9 @@ export default function StatsRoute(): ReactElement {
   const drillDownRadiantFace =
     drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
+  // R2756000: the arts offered and the one the faces print: the one picked, else the setting's Epic or the normal face.
+  const drillDownArts = drillDownDef ? artsOf(drillDownDef.id) : [];
+  const shownArt: DrillDownArt = drillDownArt ?? (fullArtSetting ? "Epic" : "normal");
 
   return (
     <CardDefsProvider defs={CATALOG}>
@@ -1523,22 +1555,45 @@ export default function StatsRoute(): ReactElement {
               <div className="stats-drilldown-body">
                 {drillDownDef && drillDownFace && (
                   <div className="stats-drilldown-cards">
-                    <div className="stats-drilldown-faces">
-                      <figure className="stats-drilldown-face">
-                        <div className="stats-drilldown-card-preview">
-                          <CardFace face={drillDownFace} layout="full" />
+                    {/* R2756000: the faces print the art picked. FullArtShown decides only an own copy's face (R1834000), so they
+                        are drawn as one; nothing else here reads OwnCopy (no inspect overlay, and CardFace's cosmetics follow
+                        `worn`, left false). The page has no FullArtOwned above it, so every tier counts as owned, as in the Almanac
+                        (R1313000). No pick is written. */}
+                    <OwnCopy own>
+                      <FullArtShown defId={fullArtSource(drillDownDef.id)} pick={artPick(drillDownDef.id, shownArt)}>
+                        <div className="stats-drilldown-faces">
+                          <figure className="stats-drilldown-face">
+                            <div className="stats-drilldown-card-preview">
+                              <CardFace face={drillDownFace} layout="full" />
+                            </div>
+                            {drillDownRadiantFace && <figcaption className="stats-drilldown-caption">{t("Normal")}</figcaption>}
+                          </figure>
+                          {drillDownRadiantFace && (
+                            <figure className="stats-drilldown-face" data-testid={statsTestid.drillDownRadiantFace}>
+                              <div className="stats-drilldown-card-preview">
+                                <CardFace face={drillDownRadiantFace} layout="full" />
+                              </div>
+                              <figcaption className="stats-drilldown-caption">{t("Radiant")}</figcaption>
+                            </figure>
+                          )}
                         </div>
-                        {drillDownRadiantFace && <figcaption className="stats-drilldown-caption">{t("Normal")}</figcaption>}
-                      </figure>
-                      {drillDownRadiantFace && (
-                        <figure className="stats-drilldown-face" data-testid={statsTestid.drillDownRadiantFace}>
-                          <div className="stats-drilldown-card-preview">
-                            <CardFace face={drillDownRadiantFace} layout="full" />
-                          </div>
-                          <figcaption className="stats-drilldown-caption">{t("Radiant")}</figcaption>
-                        </figure>
-                      )}
-                    </div>
+                      </FullArtShown>
+                    </OwnCopy>
+                    {drillDownArts.length > 0 && (
+                      <div className="stats-drilldown-actions" role="group" aria-label={t("Full art")} data-testid={statsTestid.drillDownArt}>
+                        {drillDownArts.map((art) => (
+                          <button
+                            key={art}
+                            type="button"
+                            className="stats-drilldown-action"
+                            aria-pressed={shownArt === art}
+                            onClick={() => setDrillDownArt(art)}
+                          >
+                            {t(ART_LABELS[art])}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"

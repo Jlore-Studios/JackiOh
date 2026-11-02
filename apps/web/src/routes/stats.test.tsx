@@ -9,6 +9,9 @@ import userEvent from "@testing-library/user-event";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readCardPicks } from "../cards/cosmetics.ts";
+import { FULL_ART_TIERS } from "../cards/fullArt.ts";
+import { writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { rememberRead } from "../net/readCache.ts";
@@ -1211,13 +1214,16 @@ describe("the card drill-down dialog", () => {
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
+    // R2756000: core-001 is a full-art card, so its art buttons come first, before Show Radiant.
+    const arts = within(screen.getByTestId(statsTestid.drillDownArt)).getAllByRole("button");
+    expect(arts).toHaveLength(FULL_ART_TIERS.length + 1);
     expect(close).toHaveFocus();
 
-    for (const next of [radiant, almanac, retry, close]) {
+    for (const next of [...arts, radiant, almanac, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, almanac, radiant, close]) {
+    for (const previous of [retry, almanac, radiant, ...[...arts].reverse(), close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -1311,6 +1317,72 @@ describe("the drill-down's card preview", () => {
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByTestId(statsTestid.drillDownRadiantFace)).toBeNull();
     expect(dialog.querySelectorAll(".cf")).toHaveLength(1);
+  });
+
+  it("R2756000 a full-art card's breakdown offers No full art and each tier, opens on the setting's Epic, and prints the art picked on both faces, writing no pick", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
+    const art = (name: string): HTMLElement => within(picker).getByRole("button", { name });
+    const face = (): Element | null => dialog.querySelector(".stats-drilldown-faces .cf");
+    expect(within(picker).getAllByRole("button").map((button) => button.textContent)).toEqual(["No full art", "Epic", "Legendary", "Mythic"]);
+    expect(art("Epic")).toHaveAttribute("aria-pressed", "true");
+    expect(art("No full art")).toHaveAttribute("aria-pressed", "false");
+    expect(face()?.getAttribute("data-full-art-tier")).toBe("Epic");
+
+    fireEvent.click(art("Legendary"));
+    expect(art("Legendary")).toHaveAttribute("aria-pressed", "true");
+    expect(art("Epic")).toHaveAttribute("aria-pressed", "false");
+    expect(face()?.getAttribute("data-full-art-tier")).toBe("Legendary");
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    fireEvent.click(art("Mythic"));
+    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
+    expect(faces).toHaveLength(2);
+    for (const each of faces) expect(each.getAttribute("data-full-art-tier")).toBe("Mythic");
+
+    fireEvent.click(art("No full art"));
+    for (const each of dialog.querySelectorAll(".stats-drilldown-faces .cf")) expect(each.hasAttribute("data-full-art")).toBe(false);
+
+    // A preview: no pick is written, since every write of one is sent to the account (R1834000).
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+  });
+
+  it("R2756000 with the Full-art cards setting off the breakdown opens on No full art and still prints a tier picked, and a card without full art offers no choice", async () => {
+    writeCardSettings({ fullArt: false });
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
+    expect(within(picker).getByRole("button", { name: "No full art" })).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.hasAttribute("data-full-art")).toBe(false);
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Epic" }));
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
+
+    // core-003 has no full art: its breakdown offers no choice.
+    cleanup();
+    at("/stats?card=core-003");
+    render(<StatsRoute />);
+    await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.drillDownArt)).toBeNull();
+  });
+
+  it("R2756000 the art picked stays picked when the breakdown is closed and opened again", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    fireEvent.click(within(screen.getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" }));
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.click(screen.getByText("Spark Pup"));
+    const dialog = screen.getByRole("dialog");
+    expect(within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" })).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Mythic");
   });
 
   it("links the card to its detail in the Almanac, and follows the link in place", async () => {
