@@ -2,15 +2,13 @@
 //!
 //! Base: "Recruit 3 Units costing 1 or less"; Radiant: "2 or less". A cell that changes only a number
 //! changes only that number (§8 Conventions), so the count stays 3 and only the cost ceiling moves.
-//! A Spell's script hangs off `cry`, the on-resolve hook of a Spell and the Cry of a permanent (§10.9).
+//! A Spell's script hangs off `cry`, its on-resolve hook (§10.9).
 //!
-//! §6.3: the engine's `recruit` is one top-down scan, so "Recruit 3" is three in order. A card a scan
-//! cannot place is never removed from the library (`summon_existing` looks for the zone first), so a
-//! full board stops the recruiting and the library's order is otherwise untouched.
+//! §6.3: the engine's `recruit` is one top-down scan, so "Recruit 3" is three in order; a card a scan
+//! cannot place stays in the library, so a full board stops the recruiting.
 //! R64: no named zone takes the leftmost empty, unlocked, unreserved zone of its row.
 //! R1: Recruit never fires a Cry, which is why #12 Duplicating Felinors cannot fill a board for 2 mana.
-//! R65: the filter reads each def's cost out of play (`matches_filter` via `query_cost`).
-//! The `type: "Unit"` filter matters as well as the cost: `recruit` would take any permanent.
+//! R65: the filter reads each def's cost out of play; its `type: "Unit"` keeps out other permanents.
 //! Tunes: costLimit 1 ↑ (Radiant 2); units 3 ↑ (R1748003). Through v0.4.4b the count was printed, not
 //! declared; `script_v0_4_4b` keeps that (R767000).
 
@@ -19,17 +17,15 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-069";
 
-/// §8.3: "Recruit 3", the same on both faces, as v0.4.4b printed it before it was the declared
-/// `units` (R1748003).
+/// §8.3's "Recruit 3" as v0.4.4b printed it, before it was the declared `units` (R1748003).
 const RECRUITS: i32 = 3;
 
 fn units_costing(max: i32) -> RecruitFilter {
     json_as(json!({ "type": "Unit", "costRange": { "max": max } }))
 }
 
-/// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
-/// the face that is running. The count is the declared number `units` (R1748003), or the printed 3
-/// when `declared` is off.
+/// The declared number `costLimit` (R386), read off the running face; the count is the declared
+/// `units`, or the printed 3 when `declared` is off.
 fn call_to_arms(declared: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -56,8 +52,7 @@ pub fn script_v0_4_4b() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #69 Call to Arms — SPEC §8.3, BUILD M4-T4: "Three top-down recruits of cost ≤1, library order
-// otherwise kept, stops when the board fills; radiant ≤2".
+// #69 Call to Arms — SPEC §8.3, BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -67,7 +62,7 @@ mod tests {
 
     const CALL: &str = "core-069"; // Spell, cost 2.
 
-    // The library fixtures. Costs are the printed ones (R65: read out of play).
+    // The library fixtures, at their printed costs (R65).
     const TIMMY: &str = "core-011"; // Unit, cost 1, 3/3 — no Cry.
     const VANILLA: &str = "core-008"; // Unit, cost 1, 3/3 Immutable — no Cry.
     const DEFENDER: &str = "core-003"; // Unit, cost 1, 1/1 Divine Shield + Reborn — no Cry.
@@ -78,13 +73,11 @@ mod tests {
     const SPELL: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — never a Recruit candidate (§6.3).
     const RUSH_TOKEN: &str = "core-t-rush"; // Unit token, cost 1 — a card that leaves a library only by a draw (R11).
 
-    /// R82: a turn left with only end, concede and offer-draw auto-ends, and `reduce` checks that after
-    /// EVERY action, so a play that empties the hand and leaves no unit hands the turn over and the
-    /// numbers under test move. Every scenario below therefore keeps one free 0-cost Spell in p1's
-    /// hand: never played, it only keeps one legal action on the turn.
+    /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
+    /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
+    /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {
         crate::register_all();
         let mut opts = opts;
@@ -166,8 +159,7 @@ mod tests {
             }));
             s.play(CALL, json!({}));
 
-            // Top down: the Spell is not a permanent, Menace costs 3, Timmy is the first match, the Trap is
-            // not a Unit, Mr. Vanilla is the second, Pointmaster costs 2, the Right-house defender is third.
+            // Top down, past the Spell, Menace (cost 3), the Trap and Pointmaster (cost 2).
             assert_eq!(unit_ids(&s), row([Some(TIMMY), Some(VANILLA), Some(DEFENDER), None, None]));
         }
 
@@ -212,8 +204,8 @@ mod tests {
             }));
             s.play(CALL, json!({}));
 
-            // Two free zones, three scans: the first two recruit, the third finds Timmy but no zone, so it
-            // does nothing and leaves him in the library (`summon_existing` looks for the zone first).
+            // Two free zones, three scans: the third finds Timmy but no zone (`summon_existing` looks
+            // for the zone first), so he stays in the library.
             assert_eq!(
                 unit_ids(&s),
                 row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(DEFENDER), Some(VANILLA)])
@@ -224,15 +216,14 @@ mod tests {
         #[test]
         fn r688_a_locked_unit_zone_takes_a_recruit_once_no_unlocked_zone_is_open() {
             let mut s = board(json!({ "p1": { "hand": [CALL], "library": [TIMMY, VANILLA, DEFENDER] } }));
-            // §3.2 Lock is a zone flag; the harness exposes no setter (reported as a harness gap).
+            // §3.2 Lock is a zone flag; the harness exposes no setter.
             s.state_mut().players.p1.locks.units[0] = true;
             s.state_mut().players.p1.locks.units[1] = true;
             s.state_mut().players.p1.locks.units[3] = true;
             s.state_mut().players.p1.locks.units[4] = true;
             s.play(CALL, json!({}));
 
-            // The first scan takes the one open unlocked zone (lane 3); with none left, the next scans
-            // take the leftmost empty Locked lanes (R688 prefers unlocked, then fills Locked).
+            // R688 prefers the one unlocked zone (lane 3), then fills the leftmost Locked ones.
             assert_eq!(unit_ids(&s), row([Some(VANILLA), Some(DEFENDER), Some(TIMMY), None, None]));
             assert!(def_ids(&s.pile(P1, "library")).is_empty());
         }
@@ -243,7 +234,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([Some(TOKEN_MAKER), None, None, None, None]));
-            // A Rush Token would have taken lane 2; §6.3 Summon fires no Cry, which is R1's whole point.
+            // A Rush Token would have taken lane 2 (R1).
             assert!(!unit_ids(&s).contains(&Some("core-t-rush".to_string())));
         }
 

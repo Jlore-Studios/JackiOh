@@ -1,48 +1,35 @@
 // What a face in play prints where the card in play and the card as printed part ways (SPEC §10.10).
+// The collection prints the catalog definition, both faces in full; a game prints the card as the view
+// says it stands (R243), and three cards differ there:
+// - #98 Heroic Power prints only the power it rolled as it arrived (R43, R151, R752), read off the
+//   view's `power` (a hand card's `CardView.power`, a backrow card's `HeroPowerView`), name and X.
+// - A Call to Chaos card (Core #95, Classic+ #73, Meditative #95) reads "???" in play: what it does is
+//   rolled when it resolves (§8 #95); the collection prints the real text for deckbuilding. The Classic+
+//   and Meditative Radiant faces read "!!!" for their three effects (docs/classic-sets.md B7 #73).
+// - A unit a Vanilla took the text of (§6.3, R115) prints that its text is gone: the definition still
+//   names the keywords and scripts it lost, and the view says so (`UnitView.vanilla`, R243).
 //
-// A card in the collection is its catalog definition, both faces printed in full. A card in a game
-// is the card as the view says it stands (R243), and three cards print something else there:
-//
-// - #98 Heroic Power rolled one of thirteen powers as it arrived (R43, R151, R752). In play its text is
-//   that power alone, read off the view's `power` (a hand card's `CardView.power`, a backrow card's
-//   `HeroPowerView`), with its name and its X; the collection keeps the list of thirteen.
-// - A card with the Call to Chaos tag (Core #95, Classic+ #73, Meditative #95) reads "???" in play.
-//   What it does is rolled when it resolves (§8 #95), and the game keeps it a mystery; the collection
-//   prints the real text, so a player building a deck can still read it. The Classic+ and Meditative
-//   Editions' Radiant faces read "!!!", as the Classic+ Edition's designer wrote it
-//   (docs/classic-sets.md B7 #73), one mystery for three effects.
-// - A unit a Vanilla took the text of (§6.3, R115) prints that its text is gone: the definition the
-//   client reads still names the keywords and scripts it no longer has, and the view says so
-//   (`UnitView.vanilla`, R243).
-//
-// Presentation only (CLAUDE.md rule 7): every word here is the card's §8 text or says what the view
-// already says. `POWER_WORDS` is keyed by the power's name as the view carries it and written from
-// §8 #98's clauses, base and radiant, the way `game/modeText.ts` words a "Choose one" option;
-// `inPlay.test.ts` holds it to the engine's own table so the two cannot drift apart.
+// Presentation only (CLAUDE.md rule 7). `POWER_WORDS` is keyed by the power's name in the view and
+// written from §8 #98's clauses; `inPlay.test.ts` holds it to the engine's own table.
 
 import type { Tag } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 
-/** §8 #98, the one card whose text in play is the power it rolled. */
 export const HEROIC_POWER_ID = "core-098";
 
 /** §5: the tag whose cards read {@link CONCEALED_TEXT} in play (#95 Call to Chaos). */
 export const CONCEALED_TAG: Tag = "Call to Chaos";
 
-/** What a concealed card's rules box reads in play. */
 export const CONCEALED_TEXT = "???";
 
-/** Classic+ #73's and Meditative #95's Radiant faces in play (the designer's "!!!", three effects at once). */
 export const CONCEALED_TEXT_LOUD = "!!!";
 
-/** The concealed faces that read something other than {@link CONCEALED_TEXT}, by id and face. */
 const CONCEALED_OVERRIDES: Readonly<Record<string, { radiant?: string }>> = {
   "classicplus-073": { radiant: CONCEALED_TEXT_LOUD },
   "meditative-095": { radiant: CONCEALED_TEXT_LOUD },
 };
 
-/** What a concealed card's face reads in play: "???", or its own override. */
 export function concealedText(defId: string, radiant: boolean): string {
   const override = CONCEALED_OVERRIDES[defId];
   return (radiant ? override?.radiant : undefined) ?? CONCEALED_TEXT;
@@ -119,12 +106,10 @@ export function powerTitle(power: RolledPower, radiant: boolean): string {
 }
 
 /**
- * A Heroic Power's text in play (R752): its keyword line, then the one power it rolled — its name,
- * then on a line of its own its Activate and X and its words, R366's layout — with the card's
- * numbers (`{shot}`, `{ping}`, …) filled in from `values`. Only the rolled power shows, so the other twelve add no
- * clutter. Null for a name this table does not know, which leaves the printed text in place.
- * `translate` (R711000): the power's name and words in the reader's language, for a face drawn in it;
- * the English is what the glossary's terms are found in, so it is never translated.
+ * A Heroic Power's text in play (R752, R366's layout): its keyword line, the rolled power's name, then on
+ * its own line its Activate, X and words, `{…}` numbers filled from `values`. Null for a name this table
+ * does not know, which leaves the printed text in place. `translate` (R711000): name and words in the
+ * reader's language; the English is what the glossary's terms are found in, so it is never translated.
  */
 export function powerText(
   power: RolledPower,
@@ -147,7 +132,6 @@ export function powerText(
   return keywordLine === "" ? clause : `${keywordLine}\n${clause}`;
 }
 
-/** Whether a card with these tags reads {@link CONCEALED_TEXT} in play. */
 export function concealedInPlay(tags: readonly Tag[]): boolean {
   return tags.includes(CONCEALED_TAG);
 }

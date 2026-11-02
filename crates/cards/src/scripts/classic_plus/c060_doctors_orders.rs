@@ -10,7 +10,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-060";
 
-/// TS `cardDef("classicplus-059").id`.
 const APPLE: &str = "classicplus-059";
 
 fn doctors_orders(radiant: bool) -> Script {
@@ -42,11 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #60 Doctors Orders — SPEC §8.7 row 60, BUILD M9 Classic+ row C+ 60: "A Field Spell with no stats
-// (R421): one Activate (balance patch 1: the Cry and the start-of-turn trigger became one Activate,
-// once) adds an All Purpose Apple (C+ #59) to your hand, burned when the hand is full; no Cry, nothing
-// at either start of turn; it needs an open backrow zone to play; the count reads through `param()`;
-// radiant the Apple is Radiant".
+// C+ #60 Doctors Orders — SPEC §8.7 row 60, BUILD M9 Classic+ row C+ 60.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -72,7 +67,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `inHand({ radiant?, fillers?, backrow? })`.
     fn in_hand(radiant: bool, fillers: Option<usize>, backrow: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ORDERS, "radiant": radiant })];
         hand.extend((0..fillers.unwrap_or(1)).map(|_| json!(FILLER)));

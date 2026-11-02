@@ -1,6 +1,6 @@
 // The real-art delivery convention (R660, ART.md): what a file in `apps/web/public/art/` must be for
 // the manifest to list it. Pure: it reads bytes it is handed, so convention.test.ts can hold the real
-// directory to it and prove each refusal on bytes made up in the test. Nothing in the bundle calls it.
+// directory to it. Nothing in the bundle calls it.
 
 import { artFileName, type ArtManifest } from "./manifest.ts";
 
@@ -39,7 +39,6 @@ function tagAt(bytes: Uint8Array, offset: number): string {
   return String.fromCharCode(...bytes.subarray(offset, offset + TAG_LENGTH));
 }
 
-/** A little-endian unsigned number of `count` bytes at `offset`. */
 function littleEndian(bytes: Uint8Array, offset: number, count: number): number {
   let value = 0;
   for (let i = count - 1; i >= 0; i -= 1) value = value * (1 << BYTE_BITS) + (bytes[offset + i] ?? 0);
@@ -85,8 +84,7 @@ export function artFileProblem(bytes: Uint8Array): string | null {
 
 /**
  * Every way the art directory and the manifest disagree with each other, the catalog or the
- * convention: a line for an id the catalog lacks or naming no face, a listed file that is missing or
- * breaks the convention, and a file no line lists. Empty when an artist's delivery is complete.
+ * convention. Empty when an artist's delivery is complete.
  */
 export function artDeliveryProblems(
   manifest: ArtManifest,

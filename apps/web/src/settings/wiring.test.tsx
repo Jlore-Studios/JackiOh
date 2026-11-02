@@ -1,10 +1,6 @@
-// The settings panel as the integration branch wires it (docs/polish/reference.md, "Who owns what"):
-// task 7's panel mounts task 1's effects speed and intensity, task 6's animated foil and task 2's
-// audio controls through SETTINGS_SLOTS, beside its own drag, confirm, hover and motion switches.
-// Every control writes its owner's store, which persists it, and the surface that reads that store
-// changes at once, on a board already on screen behind the panel. "Reset to defaults" resets every
-// store the panel shows. Two settings are one switch each across two stores: "Hover previews" also
-// gates task 6's enlarged preview, and "Reduce motion" also stops task 1's effects layer.
+// The settings panel as the integration branch wires it (docs/polish/reference.md, "Who owns what"): every
+// control writes its owner's store and the surface reading it changes at once, on a board behind the
+// panel. "Hover previews" also gates task 6's enlarged preview, "Reduce motion" task 1's effects layer.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -105,11 +101,11 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["visuals", "card-full-art"],
+      ["visuals", "card-set-watermarks"],
       ["visuals", "card-opponent-cosmetics"],
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);
-    // Every slot's store has a reset.
     for (const slot of SETTINGS_SLOTS) {
       expect(typeof slot.reset, slot.id).toBe("function");
     }
@@ -153,7 +149,6 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
         `${id} follows the built-in switch`,
       ).toBeTruthy();
     }
-    // Every control has an accessible name, including the task-owned ones.
     expect(screen.getByRole("slider", { name: "Effects speed" })).toBe(slider("setting-fxSpeed"));
     expect(screen.getByRole("combobox", { name: "Effects intensity" })).toBe(select("setting-fxIntensity"));
     expect(screen.getByRole("switch", { name: "Animated foil" })).toBe(toggle("setting-animatedFoil"));
@@ -284,6 +279,35 @@ describe("every setting persists and applies live, on a board already on screen"
     });
     expect(readCardSettings().opponentCosmetics).toBe(true);
     expect(toggle("setting-opponentCosmetics").checked).toBe(true);
+  });
+
+  it("R2718000 Set watermarks is a visuals switch, on by default, that takes every watermark off at once; its reset turns it back on", () => {
+    const core = CATALOG["core-002"];
+    if (core === undefined) throw new Error("the catalog has no core-002");
+    render(
+      <>
+        <CardFace face={faceModel({ defId: core.id, def: core, radiant: false })} layout="full" />
+        <SettingsPanel onClose={noop} />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
+    const toggled = toggle("setting-setWatermarks");
+    expect(screen.getByRole("switch", { name: "Set watermarks" })).toBe(toggled);
+    expect(toggled.checked).toBe(true);
+    expect(document.querySelector(".cf .card-text > .cf-watermark")).not.toBeNull();
+
+    fireEvent.click(toggled);
+    expect(readCardSettings().setWatermarks).toBe(false);
+    expect(stored(CARD_SETTINGS_KEY)).toMatchObject({ setWatermarks: false });
+    expect(document.querySelector(".cf-watermark")).toBeNull();
+    expect(document.querySelector(".cf .card-text")).not.toBeNull();
+
+    act(() => {
+      SETTINGS_SLOTS.find((slot) => slot.id === "card-set-watermarks")?.reset?.();
+    });
+    expect(readCardSettings().setWatermarks).toBe(true);
+    expect(toggle("setting-setWatermarks").checked).toBe(true);
+    expect(document.querySelector(".cf .card-text > .cf-watermark")).not.toBeNull();
   });
 
   it("audio: a volume, mute and voice lines write task 2's store, which the engine hears", () => {

@@ -8,14 +8,8 @@
 //!
 //! The fixed pair (B9, B11) is the one the design names: p2's hand #2 Bigot and #11 Tempo Timmy
 //! against #53 Reno and #20 Pointmaster, a face-down #41 Sheepish against a face-down #60 Bear
-//! Honeypot, different p2 libraries, a reordered p1 library and different seeds. The mutation
-//! property (fast-check) generalises it to random mutations of random real games.
-//!
-//! Port of `packages/ai/test/observe.test.ts`. fast-check has no Rust twin among the workspace's
-//! crates (SURFACE §2), so the property runs its 150 cases from a seeded `Rng` (stream
-//! `observe-property:185`, TS's `seed: 185`) and does not shrink. `REAL_STATES`, a module constant in
-//! TS, is computed once per test binary (`OnceLock`). TS's per-test `{ timeout }` has no `cargo test`
-//! twin.
+//! Honeypot. The mutation property generalises it to random mutations of random real games: with no
+//! property-test crate in the workspace (SURFACE §2), its 150 cases run from a seeded `Rng`.
 
 use std::sync::OnceLock;
 
@@ -26,10 +20,6 @@ use super::support::{
     AI, act, ai_options, ai_pool, card_by_id, clone, dealt_game, det, every_card, face_down_pool, is_legal,
     js, random_decks, random_policy_states, trap_pool,
 };
-
-// ---------------------------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------------------------
 
 fn p1_side() -> Value {
     json!({
@@ -59,7 +49,6 @@ fn p2_b() -> Value {
     })
 }
 
-/// TS's `{ ...base, ...over }` on two JSON objects.
 fn spread(base: Value, over: Value) -> Value {
     let mut out = base;
     if let (Some(target), Value::Object(extra)) = (out.as_object_mut(), over) {
@@ -70,7 +59,6 @@ fn spread(base: Value, over: Value) -> Value {
     out
 }
 
-/// TS's `build(seed, p2, p1 = P1_SIDE)`; the default is passed explicitly.
 fn build(seed: &str, p2: Value, p1: Value) -> GameState {
     jackioh_cards::register_all();
     scenario(json!({ "seed": seed, "p1": p1, "p2": p2 }))
@@ -109,12 +97,10 @@ fn is_hidden_backrow(state: &GameState, card: &CardInstance, seat: PlayerId) -> 
 }
 
 /// B9's mutation: rewrite everything `seat` may not know and nothing else. The opponent's hand and
-/// library get new identities (and Radiant flags) and a new order, every backrow card the seat
-/// cannot read gets another Trap that shows the same cost (R351: the seat reads that much, since patch
-/// v0.1.1 gave #85 a cost of its own) and leaves the seat's view unchanged (R403, R602: a live
-/// face-down aura shows on the board), or, when it is no Trap (a Unit set face down), another card of
-/// the pool on the same terms, the seat's own library is reordered, and seed, cursor and the nonce log
-/// are replaced.
+/// library get new identities, Radiant flags and order; a backrow card the seat cannot read gets another
+/// Trap (another card of the pool, if it is no Trap) that shows the same cost (R351, #85's own included)
+/// and leaves the seat's view unchanged; the seat's own library is reordered; seed, cursor and the nonce
+/// log are replaced.
 fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     let mut out = clone(state);
     let mut rng = create_rng(&format!("observe-mutate:{seed}"), 0);
@@ -139,8 +125,7 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
             // R403, R602: a face-down trap with no reveal condition is live, so a trap of the same cost
             // can still change what the seat reads off the board (an aura over its units; C #88 Siphon
             // Squad's sleeps until it is revealed, R1149000). That is not hidden from it, so the swap
-            // must leave the seat's view as it was. The card's own def always does, so there is always
-            // a card to pick.
+            // must leave the seat's view as it was.
             let shown = effective_cost(&out, &card, Default::default());
             let original = card.def_id.clone();
             let seen = view_without_events(&out, seat);
@@ -228,7 +213,6 @@ fn real_states() -> &'static [GameState] {
     })
 }
 
-/// A fresh real game, as TS's `beginGame(createGame({ seed, decks: randomDecks(seed) })).state`.
 fn real_game(seed: &str) -> GameState {
     jackioh_cards::register_all();
     let created = create_game(&CreateGameArgs {
@@ -244,14 +228,9 @@ fn sorted(mut items: Vec<String>) -> Vec<String> {
     items
 }
 
-// ---------------------------------------------------------------------------------------------
-// B9: redact
-// ---------------------------------------------------------------------------------------------
-
 mod redact_b9 {
     use super::*;
 
-    /// R185 B9: two states differing only in p2's hidden hand, face-down trap, library, p1's library order and the seed redact to one hash
     #[test]
     fn r185_b9_two_states_differing_only_in_p2s_hidden_hand_face_down_trap_library_p1s_library_order_and_the_seed_redact_to_one_hash()
      {
@@ -260,7 +239,6 @@ mod redact_b9 {
         assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 
-    /// R185 B9: redact does not mutate its input
     #[test]
     fn r185_b9_redact_does_not_mutate_its_input() {
         let (a, _) = pair();
@@ -288,7 +266,6 @@ mod redact_b9 {
         );
     }
 
-    /// R185 B9: the hidden set is the opponent's hand and library plus the backrow the seat cannot read
     #[test]
     fn r185_b9_the_hidden_set_is_the_opponents_hand_and_library_plus_the_backrow_the_seat_cannot_read() {
         let (a, _) = pair();
@@ -302,7 +279,6 @@ mod redact_b9 {
         assert_eq!(sorted(got), sorted(expected.into_iter().collect()));
     }
 
-    /// R185 B9: hidden cards become placeholders; every public field, the seat's hand and the seed-free history stay
     #[test]
     fn r185_b9_hidden_cards_become_placeholders_every_public_field_the_seats_hand_and_the_seed_free_history_stay()
      {
@@ -323,7 +299,6 @@ mod redact_b9 {
             );
             assert_eq!(card.as_ref().map(|card| card.radiant), Some(false), "{id}");
         }
-        // p2's hand is re-ordered by numeric id, which erases the true order.
         let hand_ids: Vec<i64> = public.players[PlayerId::P2]
             .hand
             .iter()
@@ -332,7 +307,6 @@ mod redact_b9 {
         let mut ascending = hand_ids.clone();
         ascending.sort();
         assert_eq!(hand_ids, ascending);
-        // Public cards and the seat's own hand are untouched.
         let def_ids = |cards: &[CardInstance]| -> Vec<String> {
             cards.iter().map(|card| card.def_id.clone()).collect()
         };
@@ -360,7 +334,6 @@ mod redact_b9 {
         );
     }
 
-    /// R185 B9: with nothing in the opponent's hand, library or face-down backrow, nothing is hidden
     #[test]
     fn r185_b9_with_nothing_in_the_opponents_hand_library_or_face_down_backrow_nothing_is_hidden() {
         let state = build(
@@ -376,7 +349,6 @@ mod redact_b9 {
         }
     }
 
-    /// R185 B9: the seat's own face-down trap is not hidden from it
     #[test]
     fn r185_b9_the_seats_own_face_down_trap_is_not_hidden_from_it() {
         let state = build(
@@ -405,7 +377,6 @@ mod redact_b9 {
         );
     }
 
-    /// R185 B9: the opponent's Field Spell is public even when it is not flagged face-up
     #[test]
     fn r185_b9_the_opponents_field_spell_is_public_even_when_it_is_not_flagged_face_up() {
         let state = build(
@@ -431,7 +402,6 @@ mod redact_b9 {
         );
     }
 
-    /// R185 B9: the opponent's open prompt reaches the seat with no options
     #[test]
     fn r185_b9_the_opponents_open_prompt_reaches_the_seat_with_no_options() {
         jackioh_cards::register_all();
@@ -459,7 +429,6 @@ mod redact_b9 {
             public.pending.as_ref().map(|pending| pending.options.len()),
             Some(0)
         );
-        // The seat's own prompt keeps its options: seen from p2 nothing is removed.
         assert_eq!(
             js(redact(&state, PlayerId::P2)
                 .pending
@@ -468,7 +437,6 @@ mod redact_b9 {
         );
     }
 
-    /// R266 B9: while both mulligans are open, the opponent's sealed answer and its options reach the seat as nothing
     #[test]
     fn r266_b9_while_both_mulligans_are_open_the_opponents_sealed_answer_and_its_options_reach_the_seat_as_nothing()
      {
@@ -481,7 +449,6 @@ mod redact_b9 {
         let kept_all = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep: everything });
         let kept_none = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep: Vec::new() });
 
-        // Whatever p2 kept, the seat's state is the same: only that p2 has answered (R265, R266).
         assert_eq!(
             hash_state(&redact(&kept_none, AI)),
             hash_state(&redact(&kept_all, AI))
@@ -495,7 +462,6 @@ mod redact_b9 {
             public.mulligan.as_ref().map(|open| open.p2.prompt.options.len()),
             Some(0)
         );
-        // The seat's own mulligan keeps its options, and it answers it without waiting.
         assert_eq!(
             js(public
                 .mulligan
@@ -600,7 +566,6 @@ mod redact_b9 {
         );
         assert!(!kept_all.work.is_empty());
 
-        // The seat is asked now, and what it may know is the same whatever p2 kept.
         assert_eq!(
             hash_state(&redact(&kept_none, AI)),
             hash_state(&redact(&kept_all, AI))
@@ -616,7 +581,6 @@ mod redact_b9 {
     #[test]
     fn r185_b9_a_card_in_the_seats_own_library_that_was_minted_for_the_opponents_deck_r73_is_hidden_too() {
         let mut state = clone(&real_game("observe-r73"));
-        // #87's library swap, reduced to its effect on two cards: they now sit in p1's library.
         let mut moved: Vec<CardInstance> = state.players[PlayerId::P2].library.drain(..2).collect();
         for card in &mut moved {
             card.zone = Zone::Library { player: PlayerId::P1 };
@@ -647,7 +611,6 @@ mod redact_b9 {
         }
     }
 
-    /// R312 a card in the seat's own library it was never shown is hidden, so what it is cannot move a decision
     #[test]
     fn r312_a_card_in_the_seats_own_library_it_was_never_shown_is_hidden_so_what_it_is_cannot_move_a_decision()
      {
@@ -690,7 +653,6 @@ mod redact_b9 {
         }
     }
 
-    /// R185 B9: a different public unit on the opponent's field changes the redacted hash
     #[test]
     fn r185_b9_a_different_public_unit_on_the_opponents_field_changes_the_redacted_hash() {
         let a = build("observe-a", p2_a(), p1_side());
@@ -702,7 +664,6 @@ mod redact_b9 {
         assert_ne!(hash_state(&redact(&c, AI)), hash_state(&redact(&a, AI)));
     }
 
-    /// R185 B9: a face-up backrow card is readable, so its identity changes the redacted hash
     #[test]
     fn r185_b9_a_face_up_backrow_card_is_readable_so_its_identity_changes_the_redacted_hash() {
         let a = build(
@@ -724,7 +685,6 @@ mod redact_b9 {
         assert_ne!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 
-    /// R185 B9: the seat's own hand is known, so a different own hand changes the redacted hash
     #[test]
     fn r185_b9_the_seats_own_hand_is_known_so_a_different_own_hand_changes_the_redacted_hash() {
         let a = build("observe-a", p2_a(), p1_side());
@@ -736,7 +696,6 @@ mod redact_b9 {
         assert_ne!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 
-    /// R185 B9: the seat knows its own library's contents, so different contents change the redacted hash
     #[test]
     fn r185_b9_the_seat_knows_its_own_librarys_contents_so_different_contents_change_the_redacted_hash() {
         let a = build("observe-a", p2_a(), p1_side());
@@ -751,7 +710,6 @@ mod redact_b9 {
         assert_ne!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 
-    /// R185 B9: the opponent's hand size is public, so one more hidden card changes the redacted hash
     #[test]
     fn r185_b9_the_opponents_hand_size_is_public_so_one_more_hidden_card_changes_the_redacted_hash() {
         let a = build("observe-a", p2_a(), p1_side());
@@ -763,7 +721,6 @@ mod redact_b9 {
         assert_ne!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 
-    /// R185 B9: from the other seat the same two states are not alike (p2 reads its own hand)
     #[test]
     fn r185_b9_from_the_other_seat_the_same_two_states_are_not_alike_p2_reads_its_own_hand() {
         let (a, b) = pair();
@@ -773,13 +730,11 @@ mod redact_b9 {
         );
     }
 
-    /// R185 B9: property: any mutation of what the seat cannot know leaves the redacted hash unchanged
     #[test]
     fn r185_b9_property_any_mutation_of_what_the_seat_cannot_know_leaves_the_redacted_hash_unchanged() {
         let (fixed, _) = pair();
         let mut bases: Vec<(&GameState, Vec<PlayerId>)> = vec![(&fixed, vec![AI])];
         bases.extend(real_states().iter().map(|state| (state, PLAYER_IDS.to_vec())));
-        // fast-check's `{ numRuns: 150, seed: 185 }` over `nat(bases - 1)`, `nat(1)` and `integer()`.
         let mut runs = create_rng("observe-property:185", 0);
         for _ in 0..150 {
             let base_at = runs.int(bases.len() as i32) as usize;
@@ -788,7 +743,6 @@ mod redact_b9 {
             let (base, seats) = &bases[base_at];
             let seat = seats[seat_at % seats.len()];
             let mutated = mutate_hidden(base, seat, mutation);
-            // The mutation really changed the true state (the seed alone guarantees it).
             assert_ne!(hash_state(&mutated), hash_state(base));
             assert_eq!(
                 hash_state(&redact(&mutated, seat)),
@@ -798,24 +752,16 @@ mod redact_b9 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// B10: no information is lost
-// ---------------------------------------------------------------------------------------------
-
 mod determinize_loses_nothing_the_seat_can_see_b10 {
     use super::*;
 
-    /// R185 B10: viewFor of a determinized redaction equals the true view, events aside, from both seats
     #[test]
     fn r185_b10_view_for_of_a_determinized_redaction_equals_the_true_view_events_aside_from_both_seats() {
-        // R434: a finished game shows both hands to both seats, which redaction hides by design and no
-        // decision reads (`aiToAct` is false once the game is over), so B10 holds over games in progress.
         let states = real_states();
         assert!(states.iter().filter(|state| state.result.is_none()).count() > 20);
         for (at, state) in states.iter().enumerate() {
             // R434: a finished game's view shows the opponent's hand in full, which a redaction cannot
-            // keep. No seat is to act in one, so the AI never determinizes it; a sampled game that happens
-            // to end on a sampled step is not a state this check is about.
+            // keep. No seat is to act in one, so the AI never determinizes it.
             if state.result.is_some() {
                 continue;
             }
@@ -834,7 +780,6 @@ mod determinize_loses_nothing_the_seat_can_see_b10 {
         }
     }
 
-    /// R185 B10: the fixed scenario's view survives redaction and determinization
     #[test]
     fn r185_b10_the_fixed_scenarios_view_survives_redaction_and_determinization() {
         let (a, _) = pair();
@@ -843,14 +788,9 @@ mod determinize_loses_nothing_the_seat_can_see_b10 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// B11: the same decision
-// ---------------------------------------------------------------------------------------------
-
 mod decide_cannot_see_hidden_cards_b11 {
     use super::*;
 
-    /// R185 B11: decide gives deep-equal decisions for the fixed pair under the same AI rng
     #[test]
     fn r185_b11_decide_gives_deep_equal_decisions_for_the_fixed_pair_under_the_same_ai_rng() {
         let (a, b) = pair();
@@ -864,7 +804,6 @@ mod decide_cannot_see_hidden_cards_b11 {
         }
     }
 
-    /// R185 B11: decide gives deep-equal decisions for random mutations of real states
     #[test]
     fn r185_b11_decide_gives_deep_equal_decisions_for_random_mutations_of_real_states() {
         let candidates: Vec<&GameState> = real_states()
@@ -886,10 +825,6 @@ mod decide_cannot_see_hidden_cards_b11 {
         }
     }
 }
-
-// ---------------------------------------------------------------------------------------------
-// R2102000: the lethal hint cannot see hidden cards either
-// ---------------------------------------------------------------------------------------------
 
 mod lethal_hint_r2102000 {
     use super::*;
@@ -917,14 +852,9 @@ mod lethal_hint_r2102000 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// B12: determinize
-// ---------------------------------------------------------------------------------------------
-
 mod determinize_b12 {
     use super::*;
 
-    /// B12: every card the seat can read keeps its id, def, zone, Radiant flag, damage and buffs
     #[test]
     fn b12_every_card_the_seat_can_read_keeps_its_id_def_zone_radiant_flag_damage_and_buffs() {
         let (a, _) = pair();
@@ -941,7 +871,6 @@ mod determinize_b12 {
         }
     }
 
-    /// B12: readable cards survive determinization in real mid-game states, from both seats
     #[test]
     fn b12_readable_cards_survive_determinization_in_real_mid_game_states_from_both_seats() {
         for (at, state) in real_states().iter().take(12).enumerate() {
@@ -1074,19 +1003,15 @@ mod determinize_b12 {
             for def_id in &samples {
                 assert!(traps.contains(def_id), "seed {k}: {def_id}");
             }
-            // In lane order: the three unseen (1) traps fill the first three lanes that show (1).
             assert_eq!(
                 sorted(samples[..3].to_vec()),
                 vec!["core-018", "core-060", "core-071"],
                 "seed {k}"
             );
-            // Lane 4 shows (1) with no unseen (1) left, so it falls back to the pool's only unseen trap.
             assert_eq!(samples[3], "core-085", "seed {k}");
-            // Lane 5, showing (2) with nothing unseen left, takes any card of the pool.
         }
     }
 
-    /// B12: with more hidden cards than the pool, every card is used before any repeat, and nothing throws
     #[test]
     fn b12_with_more_hidden_cards_than_the_pool_every_card_is_used_before_any_repeat_and_nothing_throws() {
         jackioh_cards::register_all();
@@ -1123,7 +1048,6 @@ mod determinize_b12 {
         }
     }
 
-    /// B12: a state with nothing hidden comes through determinization card for card
     #[test]
     fn b12_a_state_with_nothing_hidden_comes_through_determinization_card_for_card() {
         let state = build(
@@ -1140,7 +1064,6 @@ mod determinize_b12 {
         }
     }
 
-    /// B12: the seat's own library keeps its contents; only its order may change
     #[test]
     fn b12_the_seats_own_library_keeps_its_contents_only_its_order_may_change() {
         let (a, _) = pair();
@@ -1158,7 +1081,6 @@ mod determinize_b12 {
         );
     }
 
-    /// B12: the determinized seed is the AI's own, never the match's
     #[test]
     fn b12_the_determinized_seed_is_the_ais_own_never_the_matchs() {
         let (a, _) = pair();
@@ -1174,7 +1096,6 @@ mod determinize_b12 {
         }
     }
 
-    /// B12: determinize is pure given its rng, and different rngs give different worlds
     #[test]
     fn b12_determinize_is_pure_given_its_rng_and_different_rngs_give_different_worlds() {
         let (a, _) = pair();
@@ -1201,7 +1122,6 @@ mod determinize_b12 {
     /// B12: a hidden hand or library slot never samples an excluded card (#98's memory, R43)
     #[test]
     fn b12_a_hidden_hand_or_library_slot_never_samples_an_excluded_card_98s_memory_r43() {
-        // Freshly dealt: p2's four-card hand and sixteen-card library are all hidden from p1.
         let state = dealt_game("observe-b12-exclude");
         let excluded: IndexSet<String> = query(&Default::default())
             .iter()
@@ -1270,7 +1190,6 @@ mod r1176000_placeholder_is_not_in_chinese {
             let placeholder = card_by_id(&public, id).expect("the placeholder");
             assert_eq!(placeholder.chinese, None, "{id}");
         }
-        // Translating the hidden cards changes nothing the seat may know.
         let (b, _) = pair();
         assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }

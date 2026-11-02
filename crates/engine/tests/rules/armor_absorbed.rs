@@ -1,13 +1,7 @@
-//! What Armor takes off a hit, reported (patch v0.3.X, docs/meditative-set.md M8, MN05; SPEC §4.4,
-//! §6.1's Armor and Pierce rows, §10.3, §10.8).
-//!
-//! R1360: the `damage` event carries the Armor's part of the hit, `absorbed`: a unit's Armor or a
-//! hero's at step 2, never a hero's divisors or cap, 0 under Pierce, the Armor of the hero a
-//! redirected hit lands on, and a Trample excess's own. It is left off the wire at 0 (D14).
-//!
-//! R1361: a hit the Armor takes whole is reported by `damageAbsorbed`, and R63's zero rule still holds
-//! for every rule that reads damage: no `damage`, no on-damage trigger, no trap, no kill credit, no
-//! Poisonous, no Lifesteal and no Trample excess come of it (the quest half is in `quests.rs`, the
+//! What Armor takes off a hit, reported (docs/meditative-set.md M8, MN05; SPEC §4.4, §6.1's Armor and
+//! Pierce rows, §10.3, §10.8). R1360: the `damage` event carries the Armor's part of the hit, `absorbed`,
+//! left off the wire at 0 (D14). R1361: a hit the Armor takes whole is reported by `damageAbsorbed`, and
+//! R63's zero rule still holds for every rule that reads damage (the quest half is in `quests.rs`, the
 //! fatigue half, R1362, in the cards' `turn_stages.rs`).
 
 use jackioh_engine::effects::{heal, plague};
@@ -25,7 +19,6 @@ fn game(seed: &str) -> GameState {
     new_game(seed, None)
 }
 
-/// A fresh sink over `state`, its rng at the state's cursor as `reduce` builds it.
 fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -38,7 +31,6 @@ enum Aim<'a> {
     Hero(PlayerId),
 }
 
-/// One damage instance on the sink, each card read as it stands now; the amount it dealt.
 fn hit(sink: &mut EngineSink, source: Option<&str>, aim: Aim<'_>, amount: i32, flags: Option<Value>) -> i32 {
     let source = source.map(|id| live(sink.state, id));
     let target = match aim {
@@ -58,7 +50,6 @@ fn hit(sink: &mut EngineSink, source: Option<&str>, aim: Aim<'_>, amount: i32, f
     )
 }
 
-/// One hit on a sink of its own: what it dealt, and every event it emitted, as JSON.
 fn hit_alone(
     state: &mut GameState,
     source: Option<&str>,
@@ -122,7 +113,7 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
             ]
         );
 
-        // D14: a hit no Armor touched reads on the wire exactly as it did before the field existed.
+        // D14: a hit no Armor touched carries no `absorbed` on the wire.
         let (_, events) = hit_alone(&mut state, None, Aim::Hero(P1), 4, None);
         assert_eq!(
             events,
@@ -161,7 +152,7 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
         grant(&mut state, &piercer.id, Keyword::Pierce);
         let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
 
-        // A unit's Pierce, read through the layers (R346): the 5 lands whole, and no `absorbed` rides it.
+        // A unit's Pierce, read through the layers (R346): the 5 lands whole.
         let (dealt, events) = hit_alone(&mut state, Some(&piercer.id), Aim::Unit(&wall.id), 5, None);
         assert_eq!(dealt, 5);
         assert_eq!(
@@ -209,8 +200,7 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
         state.players.p2.hero.health = 5;
         state.players.p1.hero.armor = 1;
         let (dealt, events) = hit_alone(&mut state, None, Aim::Hero(P2), 12, None);
-        // 12 − 3 = 9 would bring p2 to 0, so Final Gambit's shape sends the hit on to p1 as a new
-        // instance from the same source (E9), through p1's Armor 1: p2's Armor took nothing that landed.
+        // 12 − 3 = 9 would bring p2 to 0: Final Gambit sends it to p1 as a new instance (E9), via Armor 1.
         assert_eq!(dealt, 11);
         let typed = json_events(&events);
         assert_eq!(
@@ -262,7 +252,6 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
     }
 }
 
-/// The JSON `hit_alone` returns, read back as events.
 fn json_events(events: &[Value]) -> Vec<GameEvent> {
     events.iter().map(|event| json_as(event.clone())).collect()
 }
@@ -296,8 +285,7 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
                 source.def_id
             );
         }
-        // None of steps 5 to 9 ran: nothing dealt, no Lifesteal heal (step 8), no Poisonous mark
-        // (step 7), no Trample excess on p2's hero (step 9), and no kill credit (R42).
+        // None of steps 5 to 9 ran, and no kill credit was given (R42).
         let now = live(&state, &wall.id);
         assert_eq!(now.damage, 0);
         assert_eq!(now.marked_destroyed, None);
@@ -602,7 +590,6 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
         let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // Armor 7
         let seq = state.next_seq;
         with_sink(&mut state, |sink| {
-            // A hit the Armor takes whole: reported, and the frontier takes nothing.
             assert_eq!(hit(sink, None, Aim::Unit(&wall.id), 3, None), 0);
             settle(sink, Default::default());
             assert_eq!(sink.state.next_seq, seq);
@@ -613,8 +600,7 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
             assert_eq!(sink.state.next_seq, seq + 1);
         });
 
-        // R1362: an absorbed fatigue draw's `fatigue` and its report take two numbers, as the `fatigue`
-        // and R240's `damage` of 0 did.
+        // R1362: an absorbed fatigue draw's `fatigue` and its report take two numbers, as R240's pair would.
         let mut state = game("r1362-seq");
         state.players.p1.library = Vec::new();
         state.players.p1.hero.armor = 3;

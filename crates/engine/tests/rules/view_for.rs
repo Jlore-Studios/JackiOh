@@ -1,14 +1,9 @@
-//! `viewFor(state, playerId)` — the one window a player has onto a match (SPEC §10.8, BUILD M3-T6).
+//! `view_for` — the one window a player has onto a match (SPEC §10.8, BUILD M3-T6).
 //!
 //! The centerpiece is the hidden-information proof: a board where p2 holds a full hand, a full
 //! library and face-down traps, serialized for p1, must name none of it. The forbidden list is
 //! derived from the state itself, so the proof cannot quietly stop proving when fixtures change.
-//!
-//! The rest of §10.8 is the positive half, plus R33's two halves: a face-down trap follows its
-//! *controller*, and a Field Trap that has fired is public to both. R97: the event stream is
-//! filtered like the zones it reports on, redacted to `"hidden"`, never truncated, and judged by
-//! where a card sits *now*. The Trap, Field Trap and "secret" definitions live here, not in a
-//! shared fixture (BUILD §0, CLAUDE.md).
+//! The Trap, Field Trap and "secret" definitions live here, not in a shared fixture (BUILD §0, CLAUDE.md).
 
 use jackioh_engine::effects::steal::steal;
 use jackioh_engine::testkit::*;
@@ -149,7 +144,6 @@ fn with_sink<T>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> T)
     f(&mut sink)
 }
 
-/// Apply one effect, the controller defaulting to p1.
 fn run(state: &mut GameState, effect: &Effect, options: HookOptions) {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events: Vec<GameEvent> = Vec::new();
@@ -376,7 +370,6 @@ mod view_for_10_8_m3_t6 {
         assert_eq!(view.events.len(), 1);
         assert_eq!(view.events[0].event_type(), GameEventType::Drawn);
 
-        // p2's own view is the mirror: p2 reads p2's hand, and p1's hand is the count there.
         let their_view = view_for(&state, PlayerId::P2);
         assert_eq!(
             own_hand(&their_view)
@@ -417,7 +410,6 @@ mod view_for_10_8_m3_t6 {
             ]),
         );
         assert_eq!(own_hand(&view).len(), mine.len());
-        // A count and nothing else: no array, no ids, no defs (§10.8).
         assert_eq!(
             view.opponent.hand,
             HandView::Count {
@@ -495,7 +487,6 @@ mod view_for_10_8_m3_t6 {
                 &json_of(&own.exile),
                 json!([{ "instanceId": my_exile.id, "defId": my_exile.def_id, "radiant": false, "cost": 1 }]),
             );
-            // The opponent's piles too: nothing about a graveyard or an exile pile is hidden.
             assert_eq!(
                 other
                     .graveyard
@@ -540,7 +531,6 @@ mod view_for_10_8_m3_t6 {
 
         let mine = json_of(view_for(&state, PlayerId::P1));
         let theirs = json_of(view_for(&state, PlayerId::P2));
-        // The opponent reads the cost and nothing else; the controller reads the same number.
         let cost = effective_cost(&state, &live(&state, &trap.id), Default::default());
         assert_eq!(
             mine["opponent"]["backrow"][0],
@@ -794,7 +784,6 @@ mod view_for_10_8_m3_t6 {
                 "defId": revealed.def_id,
             }])
         );
-        // The rest of the library stays hidden from the chooser too.
         for card in &rest {
             assert!(!serialized(&mine).contains(&quoted(&card.id)));
         }
@@ -916,7 +905,6 @@ mod view_for_10_8_m3_t6 {
                 _ => -1,
             })
             .collect();
-        // The tail of the stream, in the order it happened.
         assert_eq!(
             current,
             (0..VIEW_EVENT_LIMIT)
@@ -989,7 +977,7 @@ mod view_for_10_8_m3_t6 {
         );
     }
 
-    /// `drawnFor`: the one `drawn` naming `player` in `viewer`'s events, serialized.
+    /// The one `drawn` naming `player` in `viewer`'s events, serialized.
     fn drawn_for(state: &GameState, viewer: PlayerId, player: PlayerId) -> Value {
         let events = view_for(state, viewer).events;
         // Redacted, not truncated: both draws are still in the stream for both viewers.
@@ -1023,7 +1011,6 @@ mod view_for_10_8_m3_t6 {
             ],
         }];
 
-        // While the card sits in p2's hand, p1 gets the cue and neither id.
         assert_eq!(
             drawn_for(&state, PlayerId::P1, PlayerId::P2),
             json!({ "type": "drawn", "player": "p2", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID })
@@ -1033,7 +1020,6 @@ mod view_for_10_8_m3_t6 {
             drawn_for(&state, PlayerId::P1, PlayerId::P1),
             json!({ "type": "drawn", "player": "p1", "instanceId": mine.id, "defId": mine.def_id })
         );
-        // And the owner reads their own draw, as the hand rule says.
         expect_match(
             &drawn_for(&state, PlayerId::P2, PlayerId::P2),
             json!({ "instanceId": theirs.id, "defId": theirs.def_id }),
@@ -1248,12 +1234,10 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
             }]
         );
 
-        // The mirror view agrees: each seat sees the same two lists, swapped.
         let theirs = view_for(&state, PlayerId::P2);
         assert_eq!(theirs.you.modifiers, view.opponent.modifiers);
         assert_eq!(theirs.opponent.modifiers, view.you.modifiers);
 
-        // `{ id, label }` and no more: no kind, no amount, no expiry, no source.
         for modifier in view.you.modifiers.iter().chain(view.opponent.modifiers.iter()) {
             let mut keys = keys_of(&json_of(modifier));
             keys.sort();
@@ -1271,7 +1255,7 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
     #[test]
     fn r169_r48_say_so_on_the_badge_while_the_modifier_is_installed_but_not_yet_live() {
         let mut state = game("modifiers-dormant");
-        // The turn #77 was played: `mana.modifierIsLive` is false, so the discount does nothing yet.
+        // The turn #77 was played: `modifier_is_live` is false, so the discount does nothing yet.
         let turn = state.turn;
         install(
             &mut state,

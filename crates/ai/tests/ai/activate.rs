@@ -1,15 +1,5 @@
-//! Activate abilities in the AI's search (docs/classic-sets.md B3.2, R384). `candidate_actions` puts an
-//! `activate` in the same tier as a play and Heroic Power's `activatePower` (R43), round-robin by source
-//! instance and ordered by the ability's mana price, so the beam and the lethal solver try abilities as
-//! early as plays. Activate N and ♾️ need nothing of their own: the AI re-plans after every action, so a
-//! second use is simply the next decision's candidate. Every board below is built from the real Classic
-//! cards (`crates/cards/src/scripts/classic/`); one test-only card carries a mana price, which no
-//! Classic ability has yet.
-//!
-//! Port of `packages/ai/test/activate.test.ts`. TS's per-test `{ timeout: PUZZLE_TIMEOUT }` (120 s)
-//! has no `cargo test` twin and is dropped. TS registered the test-only card for the whole file at
-//! import; the registries' override is per thread here, so every test installs it first
-//! (`install_pricey`).
+//! Activate abilities in search (docs/classic-sets.md B3.2, R384). `candidate_actions` puts `activate`
+//! in the same tier as plays and Heroic Power (R43), round-robin by source instance and ordered by mana.
 
 use jackioh_ai::{AiOptions, DecisionReason, Prices, action_key, candidate_actions, decide};
 use jackioh_engine::testkit::{
@@ -69,8 +59,8 @@ fn pricey() -> Script {
     }
 }
 
-/// C #21 Turtinator as it was before patch v0.3.10 (#831) made its Activate once a turn: the same card
-/// with an Activate ♾️, which no shipped Tribute card has now. A token, like `PRICEY`.
+/// C #21 Turtinator with an Activate ♾️ in place of its once-a-turn one (#831), which no shipped Tribute
+/// card has. A token, like `PRICEY`.
 const TURTINATOR_INFINITE: &str = "ai-test-turtinator-infinite";
 
 fn turtinator_infinite_def() -> CardDef {
@@ -119,7 +109,7 @@ fn install_pricey() {
     register_scripts(scripts);
 }
 
-/// TS `findIndex`: the first index the test holds at, or -1.
+/// The first index the test holds at, or -1.
 fn index_where(candidates: &[ActionBody], test: impl Fn(&ActionBody) -> bool) -> i64 {
     candidates.iter().position(test).map_or(-1, |at| at as i64)
 }
@@ -285,9 +275,8 @@ mod b3_2_activations_are_first_class_candidates {
     fn b3_2_an_activate_infinite_ability_is_used_again_in_the_same_turn_while_each_use_is_good_and_the_turn_still_ends()
      {
         install_pricey();
-        // Two Pointmasters (7/1, First Strike) face an Activate ♾️ Turtinator (Turtinator's Activate is
-        // once a turn since patch v0.3.10), Gary the Gambler and Jewelosco Scarab
-        // (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
+        // Two Pointmasters (7/1, First Strike) face an Activate ♾️ Turtinator, Gary the Gambler and Jewelosco
+        // Scarab (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
         // Turtinator pings one dead. Two uses, then the turn ends. Both libraries hold cards, so no
         // fatigue race (R82's auto-ended turns of an empty side) makes throwing Turtinator away a win.
         let run = run_puzzle(
@@ -378,7 +367,7 @@ mod b3_2_rule_10_heroic_powers_power_is_an_activate_the_ai_decides_like_any_othe
             ]
         );
         assert_eq!(action_key(&candidates[1]), action_key(&shot));
-        // R752: the alias is no longer listed; the power is the card's Activate ability.
+        // R752: the alias is not listed; the power is the card's Activate ability.
         assert!(
             !candidates
                 .iter()

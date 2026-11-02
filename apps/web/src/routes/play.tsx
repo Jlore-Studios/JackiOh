@@ -1,13 +1,9 @@
 // Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
 // R1372, R640002). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
-// Room links only prefill, the queue's readout stays on the mode tiles and the games line under them,
-// and rank never exposes its hidden rating. R915005: a deck naming a custom card (or a trio holding
-// one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
-// R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
-// R1578000: /play is the hub every play mode starts from, online first: the queue, its setup and the
-// rank are the primary panel, the other ways to play are three smaller links beside it, and a visitor
-// with no account sees the same screen with a sign-in where the online panel's controls would be.
-// R1646000: the Card creator is not one of them; the Collection's Card builder door leads to it.
+// Room links only prefill, and rank never exposes its hidden rating. R915005: a deck naming a custom
+// card (or a trio holding one) plays only in practice, so the pickers show it off and never pick it.
+// R1075000: the host cancels a room nobody has joined. R1578000: /play is the hub every play mode
+// starts from, online first (R1646000: the Card creator is not one; the Collection leads to it).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -65,7 +61,6 @@ import "./lobby.css";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
-/** Unit conversion, not configuration. */
 const SECONDS_PER_MINUTE = 60;
 
 /** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
@@ -81,12 +76,10 @@ export const playTestid = {
   status: "play-status",
   error: "play-error",
   practice: "play-practice",
-  /** R1578000: the hub's screen, its primary online panel and the nav of the other ways to play. */
   screen: "play-screen",
   online: "play-online",
   ways: "play-ways",
   together: "play-together",
-  /** R1578000: a visitor with no account is offered sign-in where the online panel's controls would be. */
   signIn: "play-sign-in",
   modeBo1: "play-mode-bo1",
   modeBo3: "play-mode-bo3",
@@ -94,7 +87,6 @@ export const playTestid = {
   deckSelect: "play-deck-select",
   trioSelect: "play-trio-select",
   verdict: "play-choice-verdict",
-  /** R505, R640002: the last hour's games, under the mode tiles; each tile carries its own wait. */
   recentGames: "play-recent-games",
   decksLink: "play-decks-link",
   seriesLink: "play-series-link",
@@ -102,7 +94,6 @@ export const playTestid = {
   duosLink: "play-duos-link",
   copyRoomCode: "play-copy-room-code",
   copyRoomLink: "play-copy-room-link",
-  /** R1075000: the room ticket's Cancel. */
   cancelRoom: "play-cancel-room",
   searching: "play-searching",
   rank: "play-rank",
@@ -128,7 +119,6 @@ export function playModeTestid(mode: QueueMode): string {
   return MODE_TESTID[mode];
 }
 
-/** R640002: the expected wait on a mode's tile. */
 export function playWaitTestid(mode: QueueMode): string {
   return `play-wait-${mode}`;
 }
@@ -248,10 +238,7 @@ export function defaultDeck(decks: readonly SavedDeck[], remembered: string | nu
   );
 }
 
-/**
- * The remembered trio if it is still saved, else the first trio with three decks, else the first;
- * never one holding a deck that plays only in practice (R915005).
- */
+/** Never one holding a deck that plays only in practice. */
 export function defaultTrio(
   trios: readonly SavedTrio[],
   remembered: string | null,
@@ -372,10 +359,7 @@ export function roomLinkStatus(mode: QueueMode): string {
 
 // The status line
 
-/**
- * What the line under the header says, kept as a description and worded at render: a sentence kept
- * as text would stay in the language it was said in when the reader switches.
- */
+/** The line under the header, worded at render so a language switch rewords it. */
 type Status =
   | { kind: "queued"; mode: QueueMode }
   | { kind: "queueEnded" }
@@ -388,10 +372,7 @@ type Status =
 
 // Pairing watch
 
-/**
- * Uses `liveGameOf` so pairing navigation matches the rest of the client. R1566000: a co-op game is
- * no pairing; the hub's refusal links it.
- */
+/** `liveGameOf`, as the rest of the client. R1566000: a co-op game is no pairing; the refusal links it. */
 export function pairTargetOf(me: {
   currentMatchId: string | null;
   currentSeriesId?: string | null;
@@ -402,11 +383,8 @@ export function pairTargetOf(me: {
 export { MATCH_FOUND_STATUS };
 
 /**
- * Polls while waiting and reports a pairing once before navigating. R897000: while waiting in a
- * queue, and the server says the ticket is gone `QUEUE_ENDED_AFTER_READS` reads in a row,
- * reports the ended queue once instead, so an expired ticket ends the wait with a way back in.
- * A room wait never ends this way: its host holds no queue ticket, so `queued` is always false
- * there.
+ * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
+ * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead.
  */
 function useLobbyWatch(
   token: string,
@@ -452,9 +430,8 @@ function useLobbyWatch(
             return;
           }
           if (!waiting) return;
-          // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a
-          // wait, and a failed read leaves the count alone. Room waits never count: their host
-          // holds no ticket, so `false` there says nothing about anyone being gone.
+          // Explicit `false` only (`undefined` never ends a wait). Room waits never count: their
+          // host holds no ticket, so `false` there says nothing about anyone being gone.
           if (me.queued === false && queueWait) {
             endedReads.current += 1;
             if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
@@ -664,7 +641,6 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
   );
 }
 
-/** R1578000: the ways to play beside online play, each one a link to the screen that starts it. */
 type Way = { href: string; testid: string; name: string };
 
 function waysToPlay(): readonly Way[] {
@@ -725,7 +701,6 @@ export function queuedStatus(mode: QueueMode): string {
   );
 }
 
-/** The sentence a status description reads as, in the reader's language now. */
 function statusWords(status: Status): string {
   switch (status.kind) {
     case "queued":
@@ -747,7 +722,6 @@ function statusWords(status: Status): string {
   }
 }
 
-/** R1578000: a visitor with no account sees the hub's other ways to play, and no read leaves the page. */
 function SignedOutPlay(): ReactElement {
   useLocale();
   return (
@@ -842,10 +816,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
       navigate(target);
     }, MATCH_FOUND_NAV_DELAY_MS);
   }, []);
-  // R897000: a queue the server no longer holds ends the wait with a way back in: the
-  // existing Find-a-match button is the rejoin path. Only a queue wait can end this way: this
-  // tab remembers exactly the waits Find-a-match started, never a room's, and a stale room from
-  // an earlier wait does not stop a later queue from ending.
+  // R897000: Find-a-match is the way back into a queue the server no longer holds. This tab
+  // remembers only the waits Find-a-match started, so a stale room cannot stop a queue from ending.
   const queueWait = useQueued() !== null;
   const onQueueEnded = useCallback((): void => {
     forgetQueued();
@@ -870,8 +842,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     };
   }, [token]);
 
-  // R1075000: a reload loses the ticket with the page, so a lobby that opened idle (no queue wait,
-  // no room link) asks for the host's open rooms and shows the newest again. A failed read changes nothing.
+  // R1075000: a reload loses the ticket with the page, so a lobby that opened idle asks for the
+  // host's open rooms and shows the newest again.
   const opensIdle = rejoined === null && link === null;
   useEffect(() => {
     if (!opensIdle) return;
@@ -902,7 +874,6 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     });
   }, [data, mode, deckShown, trioShown]);
 
-  // R767 link hints apply only once.
   useEffect(() => {
     forgetRoomLink();
   }, []);
@@ -911,8 +882,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
   const trioSelect = useRef<HTMLSelectElement>(null);
   const joinSubmit = useRef<HTMLButtonElement>(null);
   const focusPending = useRef(link !== null && rejoined === null);
-  // R2094000: a chat Join on a room link pressed on this very screen arrives as a new query without
-  // remounting, so it is adopted here as the opened link is above, unless the lobby is queued or found.
+  // R2094000: a chat Join pressed on this screen arrives as a new query without remounting, so it
+  // is adopted here, unless the lobby is queued or found.
   const search = useSearch();
   // Counts adopted links, so the focus below waits for the mode they chose to render.
   const [adopted, setAdopted] = useState(0);
@@ -950,7 +921,6 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
       });
   }
 
-  /** Routes immediate pair answers through the found-status flow. */
   function follow(answer: { matchId: string | null; seriesId: string | null }): boolean {
     if (typeof answer.matchId === "string" && answer.matchId.length > 0) {
       goFound(paths.match(answer.matchId));
@@ -970,7 +940,6 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
       const result = await enqueue(token, chosen);
       if (follow(result)) return;
       setWaiting(true);
-      // R765 queue state follows the player across routes.
       rememberQueued(chosen.mode);
       refreshPopulation();
       // R505, R640002: the status names the queue, never its readout.

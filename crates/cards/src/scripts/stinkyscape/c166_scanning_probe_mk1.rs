@@ -51,7 +51,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #166 Scanning Probe Mk1 — SPEC §8.10 row S 166, BUILD M12 row S 166: "one roll: a Radiant Anomaly Found! below 5, a plain one below 25, else nothing seen and the next scan's bands 6 and 24; a full hand burns the find; radiant Lucky 1, two rolls, the best kept" (R1855003).
+// S #166 Scanning Probe Mk1 — SPEC §8.10 row S 166, BUILD M12 row S 166. (R1855003).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::anomaly_chances;
@@ -65,10 +65,8 @@ mod tests {
     const OTHER_PROBE: &str = "stinkyscape-167";
     const ANOMALY: &str = "stinkyscape-t-anomaly-found";
     const FILLER: &str = "core-005";
-    /// The games a rate is counted over.
     const SEEDS: u32 = 400;
 
-    /// P1's main phase with `hand` and `misses` earlier misses.
     fn setup(seed: &str, hand: Value, misses: Option<i32>) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
@@ -80,12 +78,10 @@ mod tests {
         s
     }
 
-    /// The Anomaly Found! cards in P1's hand.
     fn finds(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id == ANOMALY).collect()
     }
 
-    /// One scan with the probe on `radiant`'s face after `misses` misses: what it found, if anything.
     fn scan(seed: &str, radiant: bool, misses: Option<i32>) -> (Option<bool>, Option<i32>) {
         let mut s = setup(seed, json!([{ "def": PROBE, "radiant": radiant }]), misses);
         s.play(PROBE, json!({}));
@@ -97,8 +93,6 @@ mod tests {
         )
     }
 
-    /// Over the seeds on `radiant`'s face from no misses: (Radiant finds, plain finds), each miss
-    /// checked to count one.
     fn rates(radiant: bool) -> (u32, u32) {
         let (mut shiny, mut plain) = (0, 0);
         for seed in 0..SEEDS {
@@ -177,7 +171,6 @@ mod tests {
         #[test]
         fn r1855003_one_roll_finds_a_radiant_one_at_5_percent_and_a_plain_one_at_20() {
             let (shiny, plain) = rates(false);
-            // 400 × 5% is 20 and 400 × 20% is 80; each window is over three standard deviations wide.
             assert!((6..=36).contains(&shiny), "{shiny} Radiant finds in {SEEDS}");
             assert!((56..=106).contains(&plain), "{plain} plain finds in {SEEDS}");
         }
@@ -189,7 +182,6 @@ mod tests {
         #[test]
         fn r1855003_lucky_1_rolls_twice_and_keeps_the_best() {
             let (shiny, plain) = rates(true);
-            // Two rolls: a find on 1 − 0.75² = 43.75% (175 in 400), a Radiant one on 1 − 0.95² = 9.75% (39).
             assert!((145..=205).contains(&(shiny + plain)), "{} finds in {SEEDS}", shiny + plain);
             assert!((21..=58).contains(&shiny), "{shiny} Radiant finds in {SEEDS}");
         }

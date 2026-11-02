@@ -1,9 +1,6 @@
 // A card face as a patch left it: the collection's printed face (CardFace with no `inPlay`, SPEC
-// §10.10), drawn from that version's snapshot rather than the current catalog, so an old cost, old
-// stats and old words print as they were (R388).
-//
-// cards/ is imported by path, not through its barrel: the barrel re-exports the detail view, which
-// holds the History section, which holds this face, and a path import keeps that loop out.
+// §10.10), drawn from that version's snapshot (R388). cards/ is imported by path, not through its
+// barrel, whose detail view holds the History section that holds this face: an import loop.
 
 import type { ReactElement } from "react";
 

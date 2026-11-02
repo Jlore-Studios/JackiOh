@@ -2,11 +2,9 @@
 //! "Charge, First Strike". §8's Engine cell is "Keywords only", so there is nothing to script.
 //!
 //! The radiant cell lists keywords without "Plus", so it is the radiant form's COMPLETE keyword list
-//! (§8 Conventions, "Reading a Radiant cell"): Rush is gone and Charge replaces it — §4.1's two
-//! sickness lifts, Rush for unit targets only and Charge for units and the hero. Both faces' keyword
-//! lists are printed in `catalog.json` (verified: base `[Rush, First Strike]`, radiant
-//! `[Charge, First Strike]`) and §10.4 layer 1 reads them off the running face, so re-granting them
-//! here would double them up. An empty Script is the whole card.
+//! (§8 Conventions, "Reading a Radiant cell"): Charge replaces Rush (§4.1). Both faces' lists are
+//! printed in `catalog.json` and §10.4 layer 1 reads them off the running face, so re-granting them
+//! here would double them up.
 
 use jackioh_engine::prelude::*;
 
@@ -18,21 +16,14 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #11 Tempo Timmy (SPEC §8.1, BUILD M4-T4 row 11): "Attacks a unit on summon turn, not the hero;
-// kills a 3-health unit unharmed; radiant may hit the hero".
+// #11 Tempo Timmy (SPEC §8.1, BUILD M4-T4 row 11).
 //
-// The card scripts nothing, so every clause here is a keyword behaving: §4.1's two sickness lifts
-// (Rush for unit targets only, Charge for units and the hero) and §4.3 step 1's First Strike.
-//
-// HARNESS GAP: `SideSetup.hand` is `string[]`, so a RADIANT card cannot be seeded in a hand, and a
-// radiant Cry or a radiant summoning-sick body can only be reached by playing one. Until `hand`
-// takes `{ def, radiant }` the radiant tests set the flag on the hand instance themselves; see
-// `play_radiant` below.
+// The card scripts nothing, so every clause is a keyword: §4.1's Rush and Charge, §4.3's First Strike.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// HARNESS GAP (see the header): make the hand copy radiant, then play it.
+    /// Makes the hand copy radiant, then plays it.
     fn play_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
         let id = s.card(card).id.clone();
         match find_instance_mut(s.state_mut(), &id) {
@@ -68,9 +59,8 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
-                    // Mr. Vanilla is a 4/4 at 3 health with no First Strike of its own, so §4.3's step 1
-                    // decides the exchange: Timmy's 3 lands first, the defender has fallen and "deals
-                    // nothing" back.
+                    // Mr. Vanilla, a 4/4 at 3 health with no First Strike, falls to Timmy's 3 first and
+                    // deals nothing back (§4.3 step 1).
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
                 }));
                 s.play("core-011", json!({}));

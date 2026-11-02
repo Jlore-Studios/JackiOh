@@ -1,5 +1,5 @@
 // R915004: a custom card's script that failed did nothing, and the board says so beside the board,
-// naming the card from the view's own definitions, until it is dismissed or another replaces it.
+// naming the card from the view's own definitions.
 
 import type { CardDef, GameEvent } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -51,7 +51,6 @@ describe("R915004 the board shows a custom card's script failure", () => {
     fireEvent.click(screen.getByTestId(scriptFailedTestid.dismiss));
     expect(screen.queryByTestId(scriptFailedTestid.notice)).toBeNull();
 
-    // The next failure brings it back, with its own reason.
     rerender(
       <Game
         view={viewWith([...START, failed("cry failed on line 3: boom"), failed("death ran out of its budget")])}

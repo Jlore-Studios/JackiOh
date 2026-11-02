@@ -1,7 +1,6 @@
-// The build's static pages (`apps/web/static-pages.ts`): each public page's own title, canonical link,
-// description and text, written from the data the app reads, so a card or a patch added to it needs no
-// edit here. `writeStaticPages` is called on a temp directory with the source `index.html`, so no test
-// needs a full build.
+// The build's static pages (`apps/web/static-pages.ts`), written from the data the app reads, so a card or
+// a patch added to it needs no edit here. `writeStaticPages` runs on a temp directory with the source
+// `index.html`, so no test needs a full build.
 
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -71,13 +70,11 @@ function writeAll(
   return outDir;
 }
 
-/** One written page's HTML, as text and as a document. */
 function read(outDir: string, path: string): { html: string; doc: Document } {
   const html = readFileSync(join(outDir, path, "index.html"), "utf8");
   return { html, doc: new DOMParser().parseFromString(html, "text/html") };
 }
 
-/** Writes every page for this data and returns a reader of one page's HTML, as text and as a document. */
 function build(
   cards: CardDefs,
   patches: readonly Patch[],

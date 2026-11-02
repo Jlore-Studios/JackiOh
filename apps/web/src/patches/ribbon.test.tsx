@@ -1,6 +1,5 @@
 // R1383: the newest set's "New" ribbon. The window is counted in patches.json's own order, never from
-// a version string or a date, so a fixture log of five patches proves it without the real history;
-// the real history proves it against what shipped (Classic+ in v0.2.0).
+// a version string or a date; the real history checks it against what shipped (Classic+ in v0.2.0).
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -44,7 +43,7 @@ describe("R1383 the window of the New ribbon", () => {
     expect(at).toBeGreaterThan(0);
     const wear = (offset: number): string | null => ribbonSet(PATCH_LOG, PATCH_LOG[at + offset]?.version ?? "", CATALOG, "Classic+");
     expect([wear(-1), wear(0), wear(1), wear(2)]).toEqual([null, "Classic+", "Classic+", null]);
-    // No set is in its window in this build, and the constant is the same answer.
+    // No set is in its window in this build.
     expect(ribbonSet(PATCH_LOG, CATALOG_VERSION, CATALOG, "Classic+")).toBeNull();
     expect(NEW_RIBBON_SET).toBe(ribbonSet(PATCH_LOG, CATALOG_VERSION, CATALOG));
   });

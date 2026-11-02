@@ -1,11 +1,7 @@
 //! Test-only cards for the Starship (SPEC §6.1 Starship Piece and Starship, §6.2 When launched, §6.3
 //! Launch; R1852000–R1852007): a fixture definition of the Dormant Starship under the id the engine
 //! summons (`DORMANT_STARSHIP_DEF_ID`), Starship Pieces in the shapes Stinkyscape will print, and the
-//! cards that kill, steal, discard, equip, stack onto and launch them through the engine's own verbs.
-//! No shipped card is a piece yet (the real Dormant Starship and its pieces come with the set), so the
-//! engine never imports `crates/cards` for this.
-//!
-//! Ids are prefixed `ss-` and indexed from 18520, so they collide with no other fixture file's.
+//! cards that kill, steal, discard, equip, stack onto and launch them. Ids `ss-…` from 18520.
 
 #![allow(non_upper_case_globals)]
 
@@ -86,12 +82,11 @@ pub static hull: LazyLock<CardDef> = LazyLock::new(|| {
     card.name = "Dormant Starship (Starship fixture)".to_string();
     card
 });
-/// A 2/3 Human piece: "Starship Piece. When launched: deal 2 damage to the enemy hero."
+/// A Human piece: "Starship Piece. When launched: deal 2 damage to the enemy hero."
 pub static booster: LazyLock<CardDef> =
     LazyLock::new(|| piece("booster", 18521, (2, 3), json!([]), json!(["Human"])));
-/// A 1/1 piece: "Starship Piece. Cry: deal 1 damage to a Unit." — a Cry that needs a target.
+/// "Starship Piece. Cry: deal 1 damage to a Unit.": a Cry that needs a target.
 pub static gunner: LazyLock<CardDef> = LazyLock::new(|| piece("gunner", 18522, (1, 1), json!([]), json!([])));
-/// A 1/1 Felinor piece with Reborn.
 pub static phoenix: LazyLock<CardDef> = LazyLock::new(|| {
     piece(
         "phoenix",
@@ -101,10 +96,9 @@ pub static phoenix: LazyLock<CardDef> = LazyLock::new(|| {
         json!(["Felinor"]),
     )
 });
-/// A 1/2 piece with Equip.
 pub static plate: LazyLock<CardDef> =
     LazyLock::new(|| piece("plate", 18524, (1, 2), json!([{ "kind": "Equip" }]), json!([])));
-/// A 1/1 Equip Unit that is no piece.
+/// An Equip Unit that is no piece.
 pub static clamp: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "ss-clamp",
@@ -116,7 +110,7 @@ pub static clamp: LazyLock<CardDef> = LazyLock::new(|| {
         json!([]),
     )
 });
-/// A 2/2 Stack Unit: "Stack. Cry: deal 3 damage to the enemy hero."
+/// "Stack. Cry: deal 3 damage to the enemy hero."
 pub static lander: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "ss-lander",
@@ -129,36 +123,36 @@ pub static lander: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// A Spell: "Deal 1 damage to every Unit."
+/// "Deal 1 damage to every Unit."
 pub static quake: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-quake", 18527, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Spell: "Deal 5 damage to a Unit."
+/// "Deal 5 damage to a Unit."
 pub static bolt: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-bolt", 18528, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Spell: "Discard your hand."
+/// "Discard your hand."
 pub static dump: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-dump", 18529, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Spell: "Take control of every enemy Unit."
+/// "Take control of every enemy Unit."
 pub static grab: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-grab", 18530, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Spell: "Your Starship launch costs (0)." (#144 Prepare For Liftoff's text.)
+/// "Your Starship launch costs (0)." (#144 Prepare For Liftoff's text.)
 pub static liftoff: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-liftoff", 18531, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Spell: "Add to your hand a copy of each Starship Piece your launched Starship holds." (#137.4 Space
+/// "Add to your hand a copy of each Starship Piece your launched Starship holds." (#137.4 Space
 /// Doctrine's read of the memory.)
 pub static salvage: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-salvage", 18532, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Spell: "Awaken your Dormant Starship." — a launch by an effect.
+/// "Awaken your Dormant Starship.": a launch by an effect.
 pub static ignition: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-ignition", 18533, "Spell", 0, (0, 0), json!([]), json!([])));
-/// A Trap: "Reveals when either player launches a Starship. Deal 2 damage to the enemy hero."
+/// "Reveals when either player launches a Starship. Deal 2 damage to the enemy hero."
 /// (#131 Spacerace Stimulus's reveal.)
 pub static countdown: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-countdown", 18534, "Trap", 0, (0, 0), json!([]), json!([])));
-/// A 1/1 Stack Unit piece: "Stack. Starship Piece." — a piece that buries a card.
+/// "Stack. Starship Piece.": a piece that buries a card.
 pub static pod: LazyLock<CardDef> =
     LazyLock::new(|| piece("pod", 18535, (1, 1), json!([{ "kind": "Stack" }]), json!([])));
-/// A Spell: "Return every Unit to its owner's hand." — a bounce that reaches a launched Starship.
+/// "Return every Unit to its owner's hand.": a bounce that reaches a launched Starship.
 pub static recall: LazyLock<CardDef> =
     LazyLock::new(|| def("ss-recall", 18536, "Spell", 0, (0, 0), json!([]), json!([])));
 
@@ -167,11 +161,10 @@ fn embiggen(mut card: CardDef) -> CardDef {
     card.cost = CardCost::Embiggen { base: 1, embiggen: 2 };
     card
 }
-/// A 1/1 Unit, (1) or Embiggened (2): "Embiggened (2): Starship Piece and Equip." (#129 Missile Pod's
-/// lend, R1878001.)
+/// "Embiggened (2): Starship Piece and Equip." (#129 Missile Pod's lend, R1878001.)
 pub static lender: LazyLock<CardDef> =
     LazyLock::new(|| embiggen(def("ss-lender", 18537, "Unit", 1, (1, 1), json!([]), json!([]))));
-/// A 2/2 Unit, (1) or Embiggened (2), that is no piece at either price.
+/// No piece at either price.
 pub static brute: LazyLock<CardDef> =
     LazyLock::new(|| embiggen(def("ss-brute", 18538, "Unit", 1, (2, 2), json!([]), json!([]))));
 
@@ -179,11 +172,8 @@ pub static brute: LazyLock<CardDef> =
 pub const LAUNCHED_DAMAGE: i32 = 2;
 /// What the gunner's Cry deals the Unit it picks.
 pub const CRY_DAMAGE: i32 = 1;
-/// What the lander's Cry deals the enemy hero.
 pub const LANDER_DAMAGE: i32 = 3;
-/// What the countdown trap deals the enemy hero.
 pub const TRAP_DAMAGE: i32 = 2;
-/// What the bolt deals the Unit it picks.
 pub const BOLT_DAMAGE: i32 = 5;
 
 fn to_enemy_hero(amount: i32) -> Effect {
@@ -361,7 +351,6 @@ pub static STARSHIP_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_starship_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

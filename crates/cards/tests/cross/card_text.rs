@@ -1,20 +1,5 @@
-//! R366: the words and the shape every card's printed text uses (patch v0.1.1, issue #27: "Card text
-//! should be short, neatly formatted, and use consistent terminology").
-//!
-//! The checks are the ruling's, one by one: the library is the deck and a tribute a Tribute; an
-//! embiggen card's Embiggened version is "Embiggened (N): …" (R1175000; "Paid (N): …" until issue
-//! #1175); the printed keywords lead the text as one
-//! comma-separated list on a line of their own; each labeled ability starts a line of its own; and
-//! every other line is sentences that end with a full stop. Patch v0.2.0 turned the cost words round
-//! (R432, issue #40): "(N) Cost" is the noun ("a (1) Cost or less card", "(4)+ Cost cards") and
-//! "costs (N)" the verb ("costs (1) less", "costs (0)"). Every face is read with its `params` filled
-//! in (B3.4 rule 5), as a player reads it. Text is presentation (CLAUDE.md rule 7): no rule reads it,
-//! which is why the proof is a scan of the catalog rather than a game.
-//!
-//! Port of `packages/cards/test/card-text.test.ts`. There is no regex crate in a pure crate (SURFACE
-//! §3), so each regular expression the TS wrote is a small hand-written matcher below, named after it
-//! and checked against it at the bottom of the file. The patch history (`readSnapshot`,
-//! `readPatches`) is compiled in with `include_str!` (a pure crate's tests read no files).
+//! R366: words and shape of printed card text (issue #27, #40, #1175, R432, R1175000, B3.4 rule 5;
+//! CLAUDE.md rule 7). Hand-written matchers over catalog text (pure crate, SURFACE §3).
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, catalog_json, chinese_json, chinese_terms_json};
@@ -49,8 +34,6 @@ fn faces_of(cards: &[&'static CardDef]) -> Vec<Face> {
         .collect()
 }
 
-/// How a printed keyword reads in the text: "Armor 7", "Lucky 1", "Brittle 4", the Bread Token's
-/// "Armor X", and "Spell Damage +2" (E6 prints the plus).
 fn keyword_label(keyword: &Keyword) -> String {
     let Some(n) = keyword.n() else {
         return keyword.kind().as_str().to_string();
@@ -93,9 +76,7 @@ pub(super) const LABELS: &[&str] = &[
 
 /// R746 (issue #354): Bounce is a permanent's return from the field (R692). These faces return a card
 /// to hand from anywhere else (a Spell after it resolves or at the end of the turn, a card from the
-/// graveyard or exile) and say "Return … to hand", as they did before patch v0.2.10. Core #37
-/// Gravedigger's base face joined them in #911: it said "Add a random card from your graveyard to
-/// your hand", the one graveyard return that did not say "Return".
+/// graveyard or exile) and say "Return … to hand", Core #37 Gravedigger's base face among them (#911).
 const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "core-023 base",
     "core-023 radiant",
@@ -122,26 +103,16 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "traininggrounds-049 radiant",
 ];
 
-// ---------------------------------------------------------------------------------------------
-// The regular expressions, by hand. Every pattern is ASCII, so the text is scanned as bytes: a
-// non-ASCII character's bytes are never a word character and never equal a pattern byte, which is
-// what JS's non-Unicode `\b`, `\d` and `[^.\n]` read them as too. `/i` lowers ASCII only, which keeps
-// every byte offset where it was.
-// ---------------------------------------------------------------------------------------------
-
-/// `\w`: a word character for `\b`.
 fn is_word(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
-/// `\b` at byte `at` of `text`.
 fn boundary(text: &[u8], at: usize) -> bool {
     let before = at > 0 && text.get(at - 1).is_some_and(|b| is_word(*b));
     let after = text.get(at).is_some_and(|b| is_word(*b));
     before != after
 }
 
-/// The text as the pattern reads it: lowered for `/i`, as is otherwise.
 fn folded(text: &str, insensitive: bool) -> String {
     if insensitive {
         text.to_ascii_lowercase()
@@ -150,8 +121,6 @@ fn folded(text: &str, insensitive: bool) -> String {
     }
 }
 
-/// Every byte offset at which `needle` starts in `text`, overlapping matches included (a regex scans
-/// from every position, where `match_indices` skips past each match).
 fn every_start(text: &str, needle: &str) -> Vec<usize> {
     let mut out = Vec::new();
     let mut from = 0;
@@ -163,7 +132,6 @@ fn every_start(text: &str, needle: &str) -> Vec<usize> {
     out
 }
 
-/// `/\b<phrase>\b/` (with `/i` when `insensitive`): the phrase standing as whole words.
 fn has_words(text: &str, phrase: &str, insensitive: bool) -> bool {
     let hay = folded(text, insensitive);
     let needle = folded(phrase, insensitive);
@@ -173,7 +141,6 @@ fn has_words(text: &str, phrase: &str, insensitive: bool) -> bool {
         .any(|at| boundary(bytes, at) && boundary(bytes, at + needle.len()))
 }
 
-/// `/\b<phrase>/`: the phrase with a word boundary before it only.
 fn has_word_start(text: &str, phrase: &str, insensitive: bool) -> bool {
     let hay = folded(text, insensitive);
     let needle = folded(phrase, insensitive);
@@ -183,22 +150,18 @@ fn has_word_start(text: &str, phrase: &str, insensitive: bool) -> bool {
         .any(|at| boundary(bytes, at))
 }
 
-/// `/<phrase>/i` anywhere.
 fn has_text(text: &str, phrase: &str) -> bool {
     text.to_ascii_lowercase().contains(&phrase.to_ascii_lowercase())
 }
 
-/// `/librar(y|ies)/i`.
 fn says_library(text: &str) -> bool {
     has_text(text, "library") || has_text(text, "libraries")
 }
 
-/// `/sacrific/i`.
 fn says_sacrifice(text: &str) -> bool {
     has_text(text, "sacrific")
 }
 
-/// The start of the run of bytes `class` takes that ends at `end` (exclusive).
 fn run_start(bytes: &[u8], end: usize, class: impl Fn(u8) -> bool) -> usize {
     let mut start = end;
     while start > 0 && class(bytes[start - 1]) {
@@ -207,7 +170,6 @@ fn run_start(bytes: &[u8], end: usize, class: impl Fn(u8) -> bool) -> usize {
     start
 }
 
-/// `/\b\d+-cost\b/i`.
 fn digits_dash_cost(text: &str) -> bool {
     let hay = text.to_ascii_lowercase();
     let bytes = hay.as_bytes();
@@ -217,7 +179,6 @@ fn digits_dash_cost(text: &str) -> bool {
     })
 }
 
-/// `/\bcost(s|ing)? \d/i`.
 fn cost_then_digit(text: &str) -> bool {
     let hay = text.to_ascii_lowercase();
     let bytes = hay.as_bytes();
@@ -233,12 +194,10 @@ fn cost_then_digit(text: &str) -> bool {
     })
 }
 
-/// `/\(\S+\)\+? cost\b/`: a bracketed number, then the noun "cost" in lowercase.
 fn bracket_then_lowercase_cost(text: &str) -> bool {
     let bytes = text.as_bytes();
     for (open, _) in text.match_indices('(') {
         let mut at = open + 1;
-        // `\S+` runs over every non-whitespace character; any `)` inside that run may close it.
         while at < bytes.len() && !bytes[at].is_ascii_whitespace() {
             if bytes[at] == b')' && at > open + 1 {
                 let after = &text[at + 1..];
@@ -256,7 +215,6 @@ fn bracket_then_lowercase_cost(text: &str) -> bool {
     false
 }
 
-/// `/\b[A-Za-z]+-cost\b/`: a kind of cost written as one hyphenated word ("odd-cost").
 fn word_dash_cost(text: &str) -> bool {
     let bytes = text.as_bytes();
     every_start(text, "-cost").into_iter().any(|at| {
@@ -265,7 +223,6 @@ fn word_dash_cost(text: &str) -> bool {
     })
 }
 
-/// `/\(paid \d/i`.
 fn paid_then_digit(text: &str) -> bool {
     let hay = text.to_ascii_lowercase();
     every_start(&hay, "(paid ").into_iter().any(|at| {
@@ -276,7 +233,6 @@ fn paid_then_digit(text: &str) -> bool {
     })
 }
 
-/// Where `return` or `returns` ends when it stands as a word at `at` (`/\breturns?\b/`), if it does.
 fn return_word_end(bytes: &[u8], at: usize) -> Option<usize> {
     if !boundary(bytes, at) {
         return None;
@@ -289,14 +245,12 @@ fn return_word_end(bytes: &[u8], at: usize) -> Option<usize> {
     }
 }
 
-/// The first byte at or after `from` that `stop` takes, or the end.
 fn segment_end(bytes: &[u8], from: usize, stop: impl Fn(u8) -> bool) -> usize {
     (from..bytes.len())
         .find(|at| stop(bytes[*at]))
         .unwrap_or(bytes.len())
 }
 
-/// `/\breturns?\b[^.\n]*\bto\b[^.\n]*\bhand\b/i`.
 fn return_to_hand_in_a_sentence(text: &str) -> bool {
     let hay = text.to_ascii_lowercase();
     let bytes = hay.as_bytes();
@@ -317,7 +271,6 @@ fn return_to_hand_in_a_sentence(text: &str) -> bool {
     })
 }
 
-/// `/\breturn\b[^.\n]*\bto your hand\b/i`.
 fn return_to_your_hand(text: &str) -> bool {
     let hay = text.to_ascii_lowercase();
     let bytes = hay.as_bytes();
@@ -334,8 +287,6 @@ fn return_to_your_hand(text: &str) -> bool {
     })
 }
 
-/// `/\breturns? [^.]*\bto <tail>\b/i` for each `tail` (`hand`, or the owner's or your hand): a Return
-/// that reaches a hand before the sentence's full stop (a line break does not end it).
 fn returns_then_to(text: &str, tails: &[&str]) -> bool {
     let hay = text.to_ascii_lowercase();
     let bytes = hay.as_bytes();
@@ -365,7 +316,6 @@ fn returns_then_to(text: &str, tails: &[&str]) -> bool {
     })
 }
 
-/// `/\bBounced?\b/`.
 fn says_bounce_or_bounced(text: &str) -> bool {
     let bytes = text.as_bytes();
     every_start(text, "Bounce").into_iter().any(|at| {
@@ -381,7 +331,6 @@ fn says_bounce_or_bounced(text: &str) -> bool {
     })
 }
 
-/// `/\b(at the (start|end)( and end)? of your turn|(start|end) of your turn)\b/i`.
 fn your_turn_trigger(text: &str) -> bool {
     [
         "at the start of your turn",
@@ -404,7 +353,6 @@ fn is_tribute_or_echo_count(item: &str) -> bool {
         .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
 
-/// `/\.["”]?$/`.
 fn ends_with_a_full_stop(line: &str) -> bool {
     line.ends_with('.') || line.ends_with(".\"") || line.ends_with(".\u{201d}")
 }
@@ -499,7 +447,6 @@ fn failures(face: &Face) -> Vec<String> {
     if has_words(text, "End your turn", true) {
         out.push("writes \"End your turn\", not \"End the turn\"".to_string());
     }
-    // Return sends a card to its owner's hand, so no Return face names "your" hand (Add keeps it).
     if return_to_your_hand(text) {
         out.push("writes \"to your hand\", not \"to hand\"".to_string());
     }
@@ -519,8 +466,6 @@ fn failures(face: &Face) -> Vec<String> {
             out.push(format!("does not lead with its keyword {label}"));
         }
     }
-    // Every other line is sentences, each ending with a full stop, and a labeled ability ("Death:",
-    // "Aura:", "Embiggened (4):") starts a line of its own.
     for (at, line) in lines.iter().enumerate() {
         if at == 0 && has_list {
             if line.ends_with('.') {
@@ -544,18 +489,13 @@ fn failures(face: &Face) -> Vec<String> {
     out
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1302 (MD-B13, ME-CN): a face printed in Chinese (Meditative #32's Radiant face, and every face of
 // the Chinese table, `chinese.rs`) is R366's shape in Chinese punctuation: the keyword list is joined
 // with "，" on a line of its own with no full stop, a labeled ability ("战吼：") starts a sentence of
-// its own, every other line ends with "。", and a cost stays "(N)". No ASCII "." "," ";" or ":" is
-// written, and no full-width bracket.
-// ---------------------------------------------------------------------------------------------
+// its own, every other line ends with "。", and a cost stays "(N)".
 
 /// R988: a character that punctuates a Chinese face: CJK punctuation (U+3000–U+303F) and the
-/// full-width forms (U+FF00–U+FFEF: "，", "："). The element glyphs are unified ideographs
-/// (U+3400–U+4DBF, U+4E00–U+9FFF), not punctuation, so an English face that names them is not
-/// punctuated in Chinese.
+/// full-width forms (U+FF00–U+FFEF: "，", "：").
 pub(super) fn is_cjk_punctuation(c: char) -> bool {
     matches!(c, '\u{3000}'..='\u{303f}' | '\u{ff00}'..='\u{ffef}')
 }
@@ -565,8 +505,6 @@ pub(super) fn chinese_terms() -> Value {
     serde_json::from_str(chinese_terms_json()).expect("crates/cards/chinese-terms.json is JSON")
 }
 
-/// How a printed keyword reads in Chinese text: its word with the number written on ("护甲7",
-/// "幸运1"), the Bread Token's "护甲X" and "法术伤害+2", as `keyword_label` reads the English.
 pub(super) fn chinese_keyword_label(keyword: &Keyword, terms: &Value) -> String {
     let word = terms["keywords"][keyword.kind().as_str()]
         .as_str()
@@ -589,7 +527,6 @@ fn is_chinese_tribute_or_echo_count(item: &str) -> bool {
         .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
 }
 
-/// `/。[”」]?$/`.
 fn ends_with_a_chinese_full_stop(line: &str) -> bool {
     line.ends_with('。') || line.ends_with("。”") || line.ends_with("。」")
 }
@@ -641,8 +578,6 @@ pub(super) fn cjk_failures(text: &str, keywords: &[Keyword]) -> Vec<String> {
         if !ends_with_a_chinese_full_stop(line) {
             out.push(format!("does not end the line \"{line}\" with \"。\""));
         }
-        // A label opens its ability: at a line's start or after another label's words ("战吼和回合开始
-        // 时：", C+ #7's "Cry and start of turn:"), never after a sentence that ended on the line.
         for label in &ability_labels {
             for (index, _) in line.match_indices(label) {
                 if line[..index].ends_with(['。', '；']) {
@@ -667,19 +602,12 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
-// ---------------------------------------------------------------------------------------------
-// The patch history (B4.2, R388, R646), as `scripts/patches-io.ts` read it: `crates/cards/patches/`
-// compiled in.
-// ---------------------------------------------------------------------------------------------
+// The patch history (B4.2, R388, R646): `crates/cards/patches/`, compiled in.
 
-/// One catalog entry as a snapshot holds it: its fields in the file's order.
 type Entry = IndexMap<String, Value>;
 
-/// TS `Catalog = Record<string, Record<string, unknown>>`: a whole catalog, by id, in file order.
 type Catalog = IndexMap<String, Entry>;
 
-/// Every shipped snapshot (`patches/<version>.json`), compiled in. A patch shipped after this file
-/// was written has no row here until one is added; `read_snapshot` names it when a test asks.
 const SNAPSHOTS: &[(&str, &str)] = &[
     ("v0.1.0", include_str!("../../patches/v0.1.0.json")),
     ("v0.1.0b", include_str!("../../patches/v0.1.0b.json")),
@@ -705,10 +633,8 @@ const SNAPSHOTS: &[(&str, &str)] = &[
     ("v0.2.5e", include_str!("../../patches/v0.2.5e.json")),
 ];
 
-/// `patches/patches.json`: every shipped patch in ship order.
 const PATCHES_JSON: &str = include_str!("../../patches/patches.json");
 
-/// TS `readSnapshot(version)`: the whole catalog as that patch left it.
 fn read_snapshot(version: &str) -> Catalog {
     match SNAPSHOTS.iter().find(|(shipped, _)| *shipped == version) {
         Some((_, raw)) => serde_json::from_str(raw)
@@ -717,7 +643,6 @@ fn read_snapshot(version: &str) -> Catalog {
     }
 }
 
-/// TS `readPatches().map((patch) => patch.version)`: every shipped version, in ship order.
 fn shipped_versions() -> Vec<String> {
     let patches: Vec<Value> = serde_json::from_str(PATCHES_JSON).expect("patches.json is a list of patches");
     patches
@@ -726,17 +651,14 @@ fn shipped_versions() -> Vec<String> {
         .collect()
 }
 
-/// TS `CATALOG`, read the way a snapshot is: the current catalog.json, its fields in file order.
 fn current_catalog() -> Catalog {
     serde_json::from_str(catalog_json()).expect("catalog.json is a catalog")
 }
 
-/// TS `JSON.stringify(x)`: the top level in its own order, every nested object canonical.
 fn stringify<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_string(value).expect("a catalog entry serializes")
 }
 
-/// `entry[face]`, an object.
 fn face_of<'a>(entry: &'a Entry, face: &str) -> &'a Map<String, Value> {
     match entry.get(face).and_then(Value::as_object) {
         Some(object) => object,
@@ -744,8 +666,6 @@ fn face_of<'a>(entry: &'a Entry, face: &str) -> &'a Map<String, Value> {
     }
 }
 
-/// `{ ...object, [key]: value }` where `value` may be `undefined` (then the key is gone, which is how
-/// `toEqual` reads an undefined property).
 fn set_or_remove<K: Into<String>>(object: &mut IndexMap<String, Value>, key: K, value: Option<&Value>) {
     let key = key.into();
     match value {
@@ -758,7 +678,6 @@ fn set_or_remove<K: Into<String>>(object: &mut IndexMap<String, Value>, key: K, 
     }
 }
 
-/// The same on a nested face object.
 fn set_or_remove_in(object: &mut Map<String, Value>, key: &str, value: Option<&Value>) {
     match value {
         Some(value) => {
@@ -770,7 +689,6 @@ fn set_or_remove_in(object: &mut Map<String, Value>, key: &str, value: Option<&V
     }
 }
 
-/// `{ ...card, base: { ...card.base, text: "" }, radiant: { ...card.radiant, text: "" } }`.
 fn without_text(card: &Entry) -> Entry {
     let mut out = card.clone();
     for face in ["base", "radiant"] {
@@ -781,8 +699,6 @@ fn without_text(card: &Entry) -> Entry {
     out
 }
 
-/// `{ ...current, base: { ...current.base, <fields>: prior.base.<field> }, radiant: { … } }`: the
-/// current card with the named face fields put back as the prior card printed them.
 fn restore_face_fields(current: &Entry, prior: &Entry, fields: &[&str]) -> Entry {
     let mut out = current.clone();
     for face in ["base", "radiant"] {
@@ -796,12 +712,10 @@ fn restore_face_fields(current: &Entry, prior: &Entry, fields: &[&str]) -> Entry
     out
 }
 
-/// `entry[face][field]`.
 fn face_field<'a>(entry: &'a Entry, face: &str, field: &str) -> Option<&'a Value> {
     face_of(entry, face).get(field)
 }
 
-/// `entry[face].text`, for a card the catalog holds.
 fn face_text(catalog: &Catalog, id: &str, face: &str) -> String {
     catalog
         .get(id)
@@ -811,7 +725,7 @@ fn face_text(catalog: &Catalog, id: &str, face: &str) -> String {
         .to_string()
 }
 
-/// TS: `shipped ? readSnapshot(version) : CATALOG` — a patch pending until `patches ship` promotes it
+/// readSnapshot(version) : CATALOG` — a patch pending until `patches ship` promotes it
 /// (R646) is the current catalog until then, its snapshot after.
 fn after_patch(version: &str) -> (bool, Catalog) {
     let shipped = shipped_versions().iter().any(|shipped| shipped == version);
@@ -883,7 +797,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             })
         };
         let inside = "does not start \"Death:\" on a line of its own";
-        // Quoted in double quotes, the label first and the full stop inside: the granted card's text.
         assert_eq!(
             check("Cry: Summon a random (1) Cost Unit. It gains \"Death: Add 1 random Book to your hand.\""),
             Vec::<String>::new()
@@ -892,7 +805,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             check("Cry: Summon a Unit. It gains \u{201c}Death: Draw 1.\u{201d}"),
             Vec::<String>::new()
         );
-        // Unquoted, after a closing quote, or in single quotes, it is the card's own and starts a line.
         assert!(
             check("Cry: Summon a Unit. Death: Draw 1.")
                 .iter()
@@ -1066,8 +978,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 differing_cards.push(id.clone());
             }
         }
-        // Seventeen cards gain the Plague tag and nothing else; Exile moves its threshold, Blade Storm
-        // gains its Whirlwind ref, Adaptive Growth its numbers, Chaos Machine its lines of code.
         let expected_fields: &[(&str, &[&str])] = &[
             ("core-091", &["tags"]),
             ("classic-010", &["params"]),
@@ -1125,7 +1035,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         );
     }
 
-    /// The eighteen Field Spells patch v0.2.3 Animated and patch v0.2.5 put back.
     const ANIMATED_IN_V0_2_3: &[&str] = &[
         "core-014",
         "core-033",
@@ -1203,7 +1112,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                         "{id} {face} prints Animated"
                     );
                 }
-                // Nothing else on the card moves: normalizing the eight Animated fields restores the prior card.
                 assert_eq!(
                     restore_face_fields(
                         current_card,
@@ -1238,7 +1146,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                     face_field(current_card, "radiant", "text").and_then(Value::as_str),
                     Some("The first Unit you stack onto this becomes Radiant and is fused into it.")
                 );
-                // Only the two texts and the script's loc move.
                 let mut restored = restore_face_fields(current_card, prior_card, &["text"]);
                 set_or_remove(&mut restored, "loc", prior_card.get("loc"));
                 assert_eq!(restored, *prior_card, "only text and loc differ on {id}");
@@ -1304,7 +1211,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                     .contains("aim at enemies when they harm and at your side when they help.")
             );
         }
-        // Book of Heal and New Wraps move only their script's loc.
         for id in ["classic-003", "classicplus-010"] {
             let prior_card = &before[id];
             let mut restored = after[id].clone();
@@ -1475,7 +1381,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                     "{id} {face} printed Animated"
                 );
             }
-            // Nothing else on the card moves: restoring the eight Animated fields restores the snapshot.
             assert_eq!(
                 restore_face_fields(
                     current_card,
@@ -1517,7 +1422,6 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             .map(|(id, _)| id.clone())
             .collect();
         assert_eq!(sorted(changed), strings(&["classic-087", "core-099"]));
-        // Craft a Card: the Radiant face keeps its three Discovers and loses "Draw 1"; the base face is as it was.
         let craft_before = &before["core-099"];
         assert_eq!(
             face_text(&after, "core-099", "radiant"),
@@ -1632,18 +1536,14 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1175000 (issue #1175): a card with two prices is an embiggen card. Played at the cheaper price it is
 // its normal version; at the dearer one, its Embiggened cost, it is its Embiggened version, and its
 // text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …".
-// ---------------------------------------------------------------------------------------------
 
 mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     use super::*;
     use jackioh_engine::CardCost;
 
-    /// The label an embiggen card's Embiggened version starts its line with, "Embiggened (4):", its
-    /// Embiggened cost in it; none for a card with one price.
     fn embiggened_label(card: &CardDef) -> Option<String> {
         match card.cost {
             CardCost::Embiggen { embiggen, .. } => Some(format!("Embiggened ({embiggen}):")),
@@ -1745,7 +1645,6 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
             .map(described)
             .collect();
         assert_eq!(wrong, Vec::<String>::new());
-        // The detector refuses the retired label and passes the new one.
         let dummy_card = entries()[0];
         let check = |text: &str| -> Vec<String> {
             failures(&Face {
@@ -1778,7 +1677,6 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
 mod r1857003_five_labels_the_stinkyscape_set_prints {
     use super::*;
 
-    /// The five, with their Chinese (`chinese-terms.json`'s `labels`).
     const STINKYSCAPE_LABELS: &[(&str, &str)] = &[
         ("Activate 3:", "激活3："),
         ("Activate 4:", "激活4："),
@@ -1802,7 +1700,6 @@ mod r1857003_five_labels_the_stinkyscape_set_prints {
         for (label, chinese) in STINKYSCAPE_LABELS {
             assert!(LABELS.contains(label), "LABELS has no {label}");
             assert_eq!(terms["labels"][*label].as_str(), Some(*chinese), "{label}");
-            // A label opens its own line, in English ...
             assert_eq!(
                 check(&format!("Aura: Draw 1.\n{label} Draw 2.")),
                 Vec::<String>::new()
@@ -1812,7 +1709,6 @@ mod r1857003_five_labels_the_stinkyscape_set_prints {
                 vec![format!("does not start \"{label}\" on a line of its own")],
                 "{label}"
             );
-            // ... and in Chinese.
             assert_eq!(
                 cjk_failures(&format!("光环：抽一张牌。\n{chinese}抽两张牌。"), &[]),
                 Vec::<String>::new()
@@ -1893,7 +1789,6 @@ mod patch_v0_2_9_wording_issue_44 {
 mod r1302_a_face_printed_in_chinese {
     use super::*;
 
-    /// A face of `card` that prints `text`, as `faces_of` builds one.
     fn face(id: &str, text: &str, keywords: Vec<Keyword>) -> Face {
         Face {
             card: &CATALOG[id],
@@ -1908,14 +1803,12 @@ mod r1302_a_face_printed_in_chinese {
         // Meditative #32's Radiant face (docs/meditative-set.md, #32), the first printed in Chinese.
         let printed = "随机一项效果：准备好学中文；将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)；召唤{units}个随机的光辉中国单位。";
         assert_eq!(failures(&face("core-005", printed, vec![])), Vec::<String>::new());
-        // The keyword list leads, joined with "，" and with no full stop; a label opens its line.
         let lead = "嘲讽，护甲7\n亡语：抽一张牌。";
         let keywords = vec![Keyword::Taunt, Keyword::Armor { n: 7 }];
         assert_eq!(
             failures(&face("core-005", lead, keywords.clone())),
             Vec::<String>::new()
         );
-        // C+ #7's "Cry and start of turn:": a label after another label's words is still its opening.
         assert_eq!(
             cjk_failures("战吼和回合开始时：召唤一个单位。", &[]),
             Vec::<String>::new()
@@ -1964,8 +1857,6 @@ mod r1302_a_face_printed_in_chinese {
         for face in &faces {
             assert_eq!(failures(face), Vec::<String>::new(), "{}", face.text);
         }
-        // And a punctuated face still reads as Chinese, glyphs or not: an ASCII comma fails the
-        // Chinese punctuation, never the English list.
         assert!(
             failures(&face("core-005", "抽一张牌,水。", vec![]))
                 .iter()
@@ -1974,8 +1865,6 @@ mod r1302_a_face_printed_in_chinese {
     }
 }
 
-/// The hand-written matchers against the regular expressions they stand for, on the cases that tell
-/// a near miss from a match (not in the TS file, which had the regex engine).
 mod the_hand_written_patterns_read_as_their_regular_expressions {
     use super::*;
 
@@ -2040,12 +1929,10 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
 mod r1320_players_read_nerf_and_buff_issue_543 {
     use super::*;
 
-    /// `/degrad|upgrad/i` anywhere: the old words in any form ("Degrade", "upgraded", "Upgrades").
     fn says_degrade_or_upgrade(text: &str) -> bool {
         has_text(text, "degrad") || has_text(text, "upgrad")
     }
 
-    /// The faces patch v0.3.4 renamed, each with the words it prints now.
     const RENAMED: &[(&str, FaceKind, &[&str])] = &[
         ("classicplus-008", FaceKind::Base, &["Nerf"]),
         ("classicplus-008", FaceKind::Radiant, &["Nerf"]),

@@ -1,10 +1,7 @@
 // R437: a mark branded onto a card (#50 K-Pop Fanatic's pending steal on its target).
-//
-// The `marked` event (via `markEventOf`, cards/marks.ts) says a mark came onto a card or left it. As
-// it comes, a sigil in the mark's colors slams on and fades into the board's lasting aura
-// (cards/CardMarks.tsx); as it goes, the color puffs away. Colors come from the palette table the
-// aura reads, so the two always match.
-//
+// As a `marked` event (`markEventOf`, cards/marks.ts) brings a mark, its sigil fades into the board's
+// lasting aura (cards/CardMarks.tsx); its colors come from the palette table the aura reads, so the two
+// always match.
 // R202: a card the viewer may not read is the sentinel, so nothing plays. R200: the sigil lasts
 // D + FX_BRAND_TAIL_MS (≤ T) and the burst lands at FX_BRAND_SLAM_AT of the entry.
 

@@ -1,7 +1,6 @@
 // R768000: a replay whose source is not in hand yet: the online match a result screen has just
 // shown, whose length is known only once its first page is in (`openOnlineMatchReplay`). One load
-// per mount and per Try again (#1568), then it hands the source to the player; a failure says why,
-// with the way back.
+// per mount and per Try again (#1568); a failure says why, with the way back.
 
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
@@ -36,7 +35,6 @@ export default function OpenedReplay({ load, onLeave, ...player }: OpenedReplayP
     return () => {
       canceled = true;
     };
-    // One load per mount and per Try again.
   }, [attempt]);
 
   if (source !== null) return <ReplayPlayer source={source} onLeave={onLeave} {...player} />;

@@ -1,9 +1,9 @@
-//! One VM per thread (#442 L8). Each thread builds its sandbox the first time it calls a hook and
-//! keeps it, with each card's compiled chunk cached by card id. A hook call runs its card's chunk
-//! afresh, so the module, and every module-level local in it, starts new on every call, then calls
-//! `module[face][hook]` with `ctx`, a userdata that lives for that call only. A hook may call a reader
-//! that runs another card's hook: the thread's VM and `Lua::scope` both take a nested call, which
-//! draws on the budget of the call it is nested in, up to `LUAU_HOOK_DEPTH` calls deep (L5).
+//! One VM per thread (#442 L8). Each thread builds its sandbox the first time it calls a hook and keeps
+//! it, with each card's compiled chunk cached by card id. A hook call runs its card's chunk afresh, so the
+//! module, and every module-level local in it, starts new on every call, then calls `module[face][hook]`
+//! with `ctx`, a userdata that lives for that call only. A hook may call a reader that runs another card's
+//! hook: the nested call draws on the budget of the call it is nested in, up to `LUAU_HOOK_DEPTH` calls
+//! deep (L5).
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -21,9 +21,9 @@ use crate::sandbox::{
 };
 use crate::{Face, LuauError, Site};
 
-/// The hooks a face may declare. `start_of_game` is not among them: only cards that
-/// stay in Rust use it (L14), so a face naming it fails to load like any other
-/// unknown key, instead of loading and never firing.
+/// The hooks a face may declare. `start_of_game` is not among them: only cards that stay in Rust use it
+/// (L14), so a face naming it fails to load like any other unknown key, instead of loading and never
+/// firing.
 pub const HOOKS: [&str; 31] = [
     "cry",
     "death",
@@ -58,12 +58,10 @@ pub const HOOKS: [&str; 31] = [
     "cryDeathExtra",
 ];
 
-/// Named sub-hooks a face may declare beside its hooks: the functions closure-taking
-/// effect verbs call back by name (`after_state_check`, `draw_while`, `for_each_card`,
-/// `with_kill_credit`, `choose_target_where`'s `where`, and the generic aura's `applies` predicate).
-/// A second use of one verb in the same face appends `_2`, `_3`, … (`each_cards_2`),
-/// since one face holds two `for_each_card`s with different closures (Classic #39).
-/// Anything else unknown is still a load error, so a misspelled hook stays one.
+/// Named sub-hooks a face may declare beside its hooks: the functions closure-taking effect verbs call
+/// back by name. A second use of one verb in the same face appends `_2`, `_3`, … (`each_cards_2`), since
+/// one face holds two `for_each_card`s with different closures (Classic #39). Anything else unknown is
+/// still a load error, so a misspelled hook stays one.
 pub const SUB_HOOKS: [&str; 8] = [
     "after_check",
     "draw_more",
@@ -75,8 +73,7 @@ pub const SUB_HOOKS: [&str; 8] = [
     "admits",
 ];
 
-/// Whether a face key is a named sub-hook: one of `SUB_HOOKS`, optionally with a
-/// `_<n>` suffix for a second use of the verb in the same face.
+/// Whether a face key is a named sub-hook: one of `SUB_HOOKS`, optionally with a `_<n>` suffix.
 pub fn is_sub_hook(name: &str) -> bool {
     SUB_HOOKS.iter().any(|base| {
         *base == name
@@ -134,18 +131,18 @@ pub struct CardDecl {
 pub(crate) struct Vm {
     /// Card id to its loaded chunk, in a Lua table, so the cache needs no interior mutability.
     pub(crate) chunks: Table,
-    /// #913: the environment a custom card's chunk runs in: `Card`, the sandbox's globals behind it,
-    /// and a `require` that refuses (the kit is all a custom card sees, K4). Read-only.
+    /// #913: the read-only environment a custom card's chunk runs in: `Card`, the sandbox's globals and
+    /// a `require` that refuses (the kit is all a custom card sees, K4).
     pub(crate) kit_env: Table,
-    /// R915002: each custom card's scripts by its chunk name (`custom::chunk_name`: id and source
-    /// digest), built once on this thread. Compiled scripts only, never game state (CLAUDE.md rule 4).
+    /// R915002: each custom card's scripts by its chunk name (id and source digest), built once on this
+    /// thread: compiled scripts only, never game state.
     pub(crate) custom: Cell<IndexMap<String, Arc<CardScripts>>>,
     pub(crate) sandbox: Sandbox,
 }
 
-// CLAUDE.md rule 4's one exception in this crate (#442 L8): a VM per thread, which keeps only the
-// loaded chunks between calls. It holds no game state: every hook call runs its chunk afresh, so what a
-// hook returns depends only on its context, on any thread.
+// CLAUDE.md rule 4's one exception in this crate (#442 L8): a VM per thread, which keeps only the loaded
+// chunks between calls. It holds no game state: every hook call runs its chunk afresh, so what a hook
+// returns depends only on its context, on any thread.
 thread_local! {
     pub(crate) static VM: Vm = Vm::new();
 }
@@ -187,15 +184,15 @@ impl Vm {
         Ok(chunk)
     }
 
-    /// The card's module, built by running its chunk: on every call (L8).
+    /// The card's module, built by running its chunk on every call (L8).
     fn module(&self, card: &str, bytecode: &[u8]) -> mlua::Result<Table> {
         self.chunk(card, bytecode)?.call::<Table>(())
     }
 }
 
 /// #913: the card kit's environment: the kit runs once, as host code, in the sandbox's globals (where
-/// `require("@jackioh")` answers), and hands back `Card`; a custom card's chunk then sees `Card` and
-/// the globals, and a `require` that says why it refuses.
+/// `require("@jackioh")` answers), and hands back `Card`; a custom card's chunk then sees `Card` and the
+/// globals, and a `require` that says why it refuses.
 fn kit_env(sandbox: &Sandbox) -> mlua::Result<Table> {
     let lua = &sandbox.lua;
     let bytecode = crate::compiler()
@@ -243,9 +240,9 @@ pub(crate) fn cache_custom(name: String, scripts: Arc<CardScripts>) {
     })
 }
 
-/// #913: whether a custom card's compiled chunk loads as a card's module: it runs (`Card { … }`'s
-/// own checks with it) and answers a table with a `base` table. The error is Luau's, which names the
-/// line. Nothing is leaked: the chunk is cached under its name as any card's is.
+/// #913: whether a custom card's compiled chunk loads as a card's module: it runs (`Card { … }`'s own
+/// checks with it) and answers a table with a `base` table. The error is Luau's, which names the line.
+/// Nothing is leaked: the chunk is cached under its name as any card's is.
 pub(crate) fn check_custom_module(name: &str, bytecode: &[u8]) -> Result<(), String> {
     VM.with(|vm| {
         let site = Site {
@@ -269,8 +266,8 @@ pub(crate) fn check_custom_module(name: &str, bytecode: &[u8]) -> Result<(), Str
     })
 }
 
-/// A hook call in flight on the interrupt's budget and under the memory cap, left when the call
-/// ends, a panic included.
+/// A hook call in flight on the interrupt's budget and under the memory cap, left when the call ends, a
+/// panic included.
 struct BudgetGuard<'l> {
     lua: &'l Lua,
     _cap: MemoryCap<'l>,
@@ -287,11 +284,10 @@ impl<'l> BudgetGuard<'l> {
         }
     }
 
-    /// What `call` returns, unless the call is nested deeper than `LUAU_HOOK_DEPTH`, which it is
-    /// never made, or the budget ran out during it: a hook that caught its stop with `pcall` and
-    /// returned is stopped all the same. An outermost call first collects the VM's garbage when the VM
-    /// holds more than `LUAU_MEMORY_COLLECT_BYTES`, and a call that ran out of memory fails naming
-    /// its card.
+    /// What `call` returns, unless the call is nested deeper than `LUAU_HOOK_DEPTH`, which it is never
+    /// made, or the budget ran out during it: a hook that caught its stop with `pcall` and returned is
+    /// stopped all the same. An outermost call first collects the VM's garbage when the VM holds more
+    /// than `LUAU_MEMORY_COLLECT_BYTES`, and a call that ran out of memory fails naming its card.
     fn run<T>(&self, site: Site, call: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
         let depth = self
             .lua
@@ -361,10 +357,9 @@ pub(crate) fn with_vm<T>(
             let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
             budget.run(site, || {
                 let module = vm.module(site.card, bytecode)?;
-                // The face's table; a `radiant = "base"` module holds a string under `radiant`,
-                // so those runs read the base table, which `load_card` requires (#464 gap 14: a
-                // shared adapter serves each run from its own face's table, and named sub-hooks
-                // resolve where the run runs).
+                // A `radiant = "base"` module holds a string under `radiant`, so those runs read the
+                // base table, which `load_card` requires (#464 gap 14: a shared adapter serves each run
+                // from its own face's table, and named sub-hooks resolve where the run runs).
                 let face: Table = match module.raw_get::<Value>(site.face.key()) {
                     Ok(Value::Table(table)) => table,
                     _ => module.raw_get(Face::Base.key())?,
@@ -507,7 +502,6 @@ fn read_face_decl(card: &'static str, face: Face, table: &Table) -> Result<FaceD
                     value.type_name()
                 )));
             }
-            // A named sub-hook: called back by name, never adapted into `Script`.
         } else {
             return Err(refused(format!(
                 "{} declares {name:?}, which is not a hook",

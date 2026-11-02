@@ -1,12 +1,4 @@
-//! `DELETE /api/account` (`src/api/auth.rs`): a player deletes their own account.
-//!
-//! The route is authenticated like every other (`user`, so a pending account can leave too), answers
-//! 204 with no body when the account is gone, and the API's one error shape otherwise. What the
-//! delete does to each table is `tests/sql/06_account_deletion.sql` and `tests/store/contract.rs`;
-//! here: who may call it, what it refuses, and the order of its two deletes.
-//!
-//! Only the Supabase provider deletes users, so the route is driven through it against the scripted
-//! GoTrue of `super::auth`; the "cannot delete" case goes through the fixture auth.
+//! `DELETE /api/account`: player account deletion route (204 on success, table cascade, provider call order).
 
 use std::sync::Arc;
 

@@ -13,8 +13,7 @@
 //! turn): a copy (R57) of the last face-up card its controller played (`last_face_up_played`, R451: casts
 //! count, R70; a face-down Trap never; the AI generated cards passed over), on the face it was played,
 //! a Chinese one Chinese (R1300), added to their hand with `add_to_hand`'s `costMod` of `surcharge`, not
-//! capped; a full hand burns it (§2.4); nothing before a play. Radiant: the copy Radiant. Tunes:
-//! surcharge 1 ↓ (Radiant 1).
+//! capped; a full hand burns it (§2.4); nothing before a play.
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -99,10 +98,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #18.2 BALTHASAR — SPEC §8.10 row S 18.2, BUILD M12 row S 18.2: "Start of turn: votes only while your
-// hero's health is under half its starting health; Activate: a copy of your last played card in hand at
-// (1) more, none before a play, burned at a full hand; surcharge reads through `param()`; radiant: the
-// copy Radiant" (R1866002).
+// S #18.2 BALTHASAR — SPEC §8.10 row S 18.2, BUILD M12 row S 18.2 (R1866002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -116,7 +112,6 @@ mod tests {
     const FILLER: &str = "core-016"; // Hit Job: inert in a hand.
     const BEAR: &str = "core-060"; // (1) Trap, set face-down.
 
-    /// BALTHASAR (Radiant on `radiant`) in p1's backrow, p1 holding `hand`, on p1's turn.
     fn table(radiant: bool, hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": hand, "backrow": [{ "def": BALTHASAR, "radiant": radiant }], "library": filler(4) },
@@ -124,7 +119,6 @@ mod tests {
         }))
     }
 
-    /// The votes BALTHASAR casts at p1's start of turn, p1's hero at `health` (and `handicap` on its seat).
     fn votes_at_start(health: i32, handicap: Option<Handicap>) -> usize {
         let mut s = scenario(json!({
             "active": "p2",
@@ -163,12 +157,10 @@ mod tests {
         s.activate(balthasar.as_str(), json!({ "ability": "copy" }));
     }
 
-    /// The cards of p1's hand of this definition.
     fn held(s: &Scenario, def_id: &str) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id == def_id).collect()
     }
 
-    /// p1 plays a Mr. Vanilla (Radiant on `radiant`), then activates; the one copy in hand.
     fn copied_after_a_play(face: bool, played_radiant: bool) -> (Scenario, CardInstance) {
         let mut s = table(face, json!([{ "def": VANILLA, "radiant": played_radiant }, FILLER]));
         s.play(VANILLA, json!({}));
@@ -230,7 +222,6 @@ mod tests {
 
         #[test]
         fn r1866002_a_full_hand_burns_the_copy() {
-            // Ten cards after the turn's draw, the Mr. Vanilla played on the turn before.
             let mut hand = vec![json!(VANILLA)];
             hand.extend((0..9).map(|_| json!(FILLER)));
             let mut s = table(false, json!(hand));

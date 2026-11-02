@@ -1,16 +1,14 @@
 // R2127000: the browser's Back, and Android's back gesture, close the topmost open sheet or dialog
 // before they leave the screen. Each overlay a player dismisses is a layer while it is open
 // (`useBackLayer`), newest on top; a prompt and the mulligan never are. Where the browser has
-// `CloseWatcher` the top layer holds one, and Escape keeps to the layers' own keys. Elsewhere the
-// first layer pushes one history entry copying the address, and a Back off it closes the top layer.
-// A layer closed another way leaves the entry spent: the next layer reuses it, a move takes its
-// place, Back steps on past it and Forward onto it steps back. None of it reaches the leave guard
+// `CloseWatcher` the top layer holds one; elsewhere the first layer pushes one history entry copying
+// the address, which a layer closed another way leaves spent. None of it reaches the leave guard
 // (R1754000) or a view transition (R2117000). Nothing reads the window at load: Vite's config loader
 // imports `navigate.ts`, which imports this.
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 
-/** R2127000: the key in `history.state` that marks the layers' entry; it holds the address of the entry under it. */
+/** The `history.state` key that marks the layers' entry; it holds the address of the entry under it. */
 const BACK_ENTRY = "jackiohBackEntry";
 
 /** What is used of the browser's `CloseWatcher`, which lib.dom does not declare. */
@@ -20,11 +18,10 @@ type Layer = { close: () => void; closable: () => boolean };
 
 /** The open layers, oldest first. */
 const layers: Layer[] = [];
-/** The top layer's close watcher, where the browser has them. */
 let held: { layer: Layer; watcher: Watcher } | null = null;
 /**
- * The layers' entry while it is the current one, live or spent: its address and the address of the
- * entry under it, the same until a replacing move takes the entry over (`moveOverBackEntry`).
+ * The layers' entry while current, live or spent: its address and the one under it, the same until a
+ * replacing move takes it over (`moveOverBackEntry`).
  */
 let entry: { at: string; under: string } | null = null;
 /** The next `popstate` is this module's own step back off a copied entry that Back or Forward landed on. */
@@ -48,7 +45,6 @@ function watcherClass(): WatcherClass | null {
   return typeof found === "function" ? (found as WatcherClass) : null;
 }
 
-/** Gives the top layer what answers Back: a close watcher, or the one entry. */
 function sync(): void {
   const top = layers.at(-1);
   const Made = watcherClass();
@@ -173,9 +169,8 @@ function openLayer(layer: Layer): () => void {
 }
 
 /**
- * R2127000: while the calling overlay is mounted it is the top layer until another opens, and Back
- * calls `close`, the same close its Close button makes, so the focus goes back. While `closable` is
- * false Back closes nothing and leaves the layer on top.
+ * R2127000: the mounted overlay is the top layer until another opens; Back calls `close`, as its Close
+ * button does, so the focus goes back. While `closable` is false Back closes nothing.
  */
 export function useBackLayer(close: () => void, closable = true): void {
   const latest = useRef({ close, closable });

@@ -1,12 +1,10 @@
-//! Patch v0.2.0's prompt kinds (docs/classic-sets.md B5 E17, E18): `number`, `answer`, `cell`,
+//! The prompt kinds (docs/classic-sets.md B5 E17, E18): `number`, `answer`, `cell`,
 //! `reward`, `pick`, a `mode` prompt the other player holds, and the other player's hand as a prompt's
-//! options. For each one this file proves what the brief asks of a prompt: what `promptAnswers` lists,
-//! what `whyAnswerRefused` refuses, what `viewFor` shows the chooser and — R97, R177 — that the other
+//! options. For each one this file proves what the brief asks of a prompt: what `prompt_answers` lists,
+//! what `why_answer_refused` refuses, what `viewFor` shows the chooser and — R97, R177 — that the other
 //! seat learns only that a prompt is open and whose it is; that a timeout answers it with R79's AI
-//! policy; that a paused state survives `JSON.parse(JSON.stringify(...))` and answers exactly as the
+//! policy; that a paused state survives a JSON round trip and answers exactly as the
 //! original does; and that a game through it replays from its log (§9.2, §9.3).
-//!
-//! Port of `packages/engine/test/prompt-kinds.test.ts`.
 
 use jackioh_engine::effects::{ANSWER_OPTION_IDS, choose_from_hand};
 use jackioh_engine::testkit::*;
@@ -28,7 +26,6 @@ fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -65,7 +62,7 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
-/// The selection an `answer` action carries (TS `answer.selection`).
+/// The selection an `answer` action carries.
 fn selection_of(action: &ActionBody) -> Vec<Selection> {
     match action {
         ActionBody::Answer { selection, .. } => selection.clone(),
@@ -73,7 +70,6 @@ fn selection_of(action: &ActionBody) -> Vec<Selection> {
     }
 }
 
-/// `whyAnswerRefused(pending, { playerId, choiceId: pending.id, selection })`.
 fn refusal(pending: &PendingChoice, player: PlayerId, selection: Vec<Selection>) -> Option<String> {
     let answer = AnswerInput {
         player_id: player,
@@ -85,7 +81,7 @@ fn refusal(pending: &PendingChoice, player: PlayerId, selection: Vec<Selection>)
         .map(|why| why.to_string())
 }
 
-/// `answerKeys(state, ...keys)` over keys held as owned strings.
+/// `answer_keys` over keys held as owned strings.
 fn answer_all(state: &mut GameState, keys: &[String]) {
     let keys: Vec<&str> = keys.iter().map(String::as_str).collect();
     answer_keys(state, &keys);
@@ -228,7 +224,6 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         answer_keys(&mut state, &[format!("instance:{}", gone.id).as_str()]);
         assert_eq!(ids(&state.players.p2.hand), std::slice::from_ref(&kept.id));
         assert_eq!(ids(&state.players.p2.graveyard), std::slice::from_ref(&gone.id));
-        // Three choices, then no more.
         assert!(state.pending.is_none());
     }
 
@@ -271,7 +266,6 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         cast_now(&mut state, &pickle().id, P1, false);
         let before = state.pending.as_ref().expect("Pickle's first choice").id.clone();
         state = act(&state, input(json!({ "type": "timeout", "playerId": "p2" })));
-        // It answered that one prompt: the next choice is open, still theirs, and the turn is still p1's.
         assert_ne!(
             state.pending.as_ref().map(|pending| pending.id.clone()),
             Some(before)
@@ -345,7 +339,7 @@ mod e18_the_number_kind {
                 .map(|n| vec![n.to_string()])
                 .collect::<Vec<_>>()
         );
-        // TS `act` throws on a refusal: the reducer refuses a number the list does not hold.
+        // The reducer refuses a number the list does not hold.
         let refused =
             input(json!({ "type": "play", "playerId": "p1", "instanceId": card.id, "modes": ["11"] }))
                 .with_nonce("pk-glitch-11");
@@ -384,7 +378,7 @@ mod e18_the_number_kind {
     }
 }
 
-/// The first four answer letters (TS `ANSWER_OPTION_IDS.slice(0, 4)`).
+/// The first four answer letters.
 fn four_letters() -> Vec<String> {
     ANSWER_OPTION_IDS[..4].iter().map(|id| id.to_string()).collect()
 }

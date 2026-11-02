@@ -1,9 +1,7 @@
 // Spec 48: lesson 5, the final exam, from the path to a replay-verified win by following the coach through
-// the UI (SPEC §9.10; R2205000, R2205002, R2205003). A player who has won the four lessons before it finds
-// it open; its human deck holds the set's Legendary and Mythic cards and plays with no pool hold; the
-// discoveries it shows reach the Field Guide; the win ends the tutorial. Reduced motion keeps the coach
-// fresh without changing a rule. The flow stays generic, as spec 22's does, so the lesson's content
-// may change while following the coach still wins.
+// the UI (SPEC §9.10; R2205000, R2205002, R2205003). Reduced motion keeps the coach fresh without
+// changing a rule. The flow stays generic, as spec 22's does, so the lesson's content may change while
+// following the coach still wins.
 
 import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION, timeouts } from "../../support/config.ts";
 import {
@@ -122,7 +120,7 @@ describe("48 — tutorial lesson 5, the final exam, played to a win by following
         });
       });
 
-      // The Field Guide, from the path: what the exam found is there with its rule.
+      // The Field Guide: what the exam found is there with its rule.
       cy.visit(PRACTICE_PATH);
       cy.get(ts(FIELD_GUIDE_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).click();
       cy.get(ts(FIELD_GUIDE)).should("be.visible");

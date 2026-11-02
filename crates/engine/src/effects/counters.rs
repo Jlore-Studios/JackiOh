@@ -1,8 +1,7 @@
 //! Counters on an instance and locks on a zone (§6.3). Plague Counters live on the instance and R78
 //! clears them when the card leaves the field; a Lock lives on the zone and outlives every occupant.
-//! The Plague Counter rules themselves — what a placement is, the multiplier, the report — are
-//! `crate::plague`'s (R471); the placement verbs are `super::plague`'s. R429's play count, which rides
-//! the card through every zone, is raised here too (`raise_times_played`, R1185001).
+//! The Plague Counter rules are `crate::plague`'s (R471). R429's play count, which rides the card
+//! through every zone, is raised here too (R1185001).
 
 use serde::{Deserialize, Serialize};
 
@@ -22,10 +21,9 @@ pub struct PlagueArgs {
     pub amount: i32,
 }
 
-/// #91 Fed Fauci: add Plague Counters to a permanent, any number of them — one placement (R471, so a
-/// card that multiplies what is placed on it multiplies this, and "whenever Plague Counters are placed
-/// on this" answers it). A negative amount takes them off and the count floors at 0; R78 resets the
-/// counter when the card leaves the field.
+/// #91 Fed Fauci: add Plague Counters to a permanent as one placement (R471: a multiplier on the card
+/// multiplies it, "whenever Plague Counters are placed on this" answers it). A negative amount takes
+/// them off, flooring at 0.
 pub fn plague(args: PlagueArgs) -> Effect {
     Effect::new("plague", move |ctx| {
         let this = TargetSpec::SelfCard;
@@ -94,7 +92,6 @@ fn zone_for(ctx: &EffectContext<'_>, spec: &ZoneSpec) -> Option<ZoneSlot> {
                 lane: *lane,
             })
         }
-        // The live card: where it stands now.
         ZoneSpec::SelfCard => ctx.live_self().and_then(|card| slot_of(ctx.state, card)),
         ZoneSpec::Chosen { index } => {
             let card = instance_of(ctx, &TargetSpec::Chosen { index: *index })?;
@@ -110,9 +107,8 @@ pub struct LockArgs {
     pub zone: ZoneSpec,
 }
 
-/// §3.2 Lock: the zone accepts no summons until something unlocks it. The current occupant is
-/// unaffected and the lock persists after it leaves. Nothing in Core unlocks a zone; B5 E20's Unlock
-/// (`unlock` below, `effects::locks::unlock_all`) does.
+/// §3.2 Lock: the zone accepts no summons until something unlocks it (B5 E20's `unlock`). The current
+/// occupant is unaffected and the lock persists after it leaves.
 pub fn lock(args: LockArgs) -> Effect {
     Effect::new("lock", move |ctx| {
         let Some(slot) = zone_for(ctx, &args.zone) else {
@@ -137,9 +133,8 @@ pub struct UnlockArgs {
     pub zone: ZoneSpec,
 }
 
-/// B5 E20: a Locked zone accepts summons again (event `unlocked`). A zone that is not Locked is left
-/// as it is, with no event. Its occupant is unaffected, and a card whose return a Lock stopped (an
-/// animated card's home, B3.1 rule 6) goes back at its next chance.
+/// B5 E20: a Locked zone accepts summons again. Its occupant is unaffected, and a card whose return a
+/// Lock stopped (an animated card's home, B3.1 rule 6) goes back at its next chance.
 pub fn unlock(args: UnlockArgs) -> Effect {
     Effect::new("unlock", move |ctx| {
         let Some(slot) = zone_for(ctx, &args.zone) else {
@@ -198,14 +193,10 @@ fn owned_copies(state: &GameState, player: PlayerId, def_id: &str) -> Vec<CardIn
     out
 }
 
-/// R1185001 (M+ #1.1 Base Camp: "Every Reach the Summit you own goes up N Ascent levels"): R429's play
-/// count goes up by `amount` on every card of `defId` the player owns, in every zone, as that many
-/// plays would have raised it — only on a card whose script counts its plays (`countsPlays`, M #8's
-/// Ascent level, R840). Nothing is played, so nothing resolves and nothing wins: a level of 10 or more
-/// wins when the card is next played (R850). A copy made later starts at 0 (R57). Each card reports its
-/// new count with `numberChanged` ("timesPlayed"), hidden where the card is (R97: a hand card from the
-/// other player, a deck card from both, `card_scope::unreadable_by`). An `amount` of 0 or less does
-/// nothing.
+/// R1185001 (M+ #1.1 Base Camp): R429's play count goes up by `amount` on every card of `defId` the
+/// player owns, in every zone, as that many plays would raise it, on a card that counts its plays (M #8,
+/// R840). Nothing is played, so nothing wins: a level of 10 or more wins when next played (R850). A
+/// later copy starts at 0 (R57); each reports `numberChanged`, hidden where the card is (R97).
 pub fn raise_times_played(args: RaiseTimesPlayedArgs) -> Effect {
     Effect::new("raiseTimesPlayed", move |ctx| {
         if args.amount <= 0 {

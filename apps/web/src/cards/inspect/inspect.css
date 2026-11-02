@@ -137,6 +137,30 @@
   white-space: pre-line;
 }
 
+/* R2718000: a full-art card's watermark (setMark.ts), centred behind the words its panel holds, in
+   the ink for this dark ground. The panel is its own stacking context, so -1 lays the mark over the
+   panel's ground and under every word; it takes no pointer and never moves. 88% is
+   WATERMARK_SIZE_PCT. */
+.inspect-printed[data-watermark],
+.inspect-rules[data-watermark] {
+  position: relative;
+  isolation: isolate;
+}
+
+.inspect-watermark {
+  position: absolute;
+  z-index: -1;
+  top: 6%;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 88%;
+  max-width: none;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* ---- References (R279): the cards a hovered face names, beside it ---------------------------- */
 
 .inspect-refs {

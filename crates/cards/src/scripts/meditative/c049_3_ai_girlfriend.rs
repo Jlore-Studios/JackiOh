@@ -27,7 +27,6 @@ fn girlfriend() -> Script {
             let Some(facts) = after_attacked_of(&*ctx) else {
                 return vec![];
             };
-            // MD-C26: Nerf the attacker only if it is still on the field.
             if !facts.attacker_survived {
                 return vec![];
             }
@@ -121,7 +120,6 @@ mod tests {
         s
     }
 
-    /// The ids the game Nerfed, in order.
     fn nerfed(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -190,7 +188,6 @@ mod tests {
 
                 s.start_turn();
 
-                // One forced combat each, lane order, the 0-attack Can't attack Virus included.
                 let expected: Vec<(String, String)> =
                     order.into_iter().map(|id| (id, girlfriend.clone())).collect();
                 assert_eq!(forced(&s), expected);
@@ -300,8 +297,6 @@ mod tests {
 
                 s.start_turn();
 
-                // Both attacked; the survivor is Nerfed once, the one that died to the
-                // strike-back is not.
                 assert_eq!(nerfed(&s), vec![tough.id]);
                 assert!(s.unit(P2, 2).is_none());
                 let _ = weak;

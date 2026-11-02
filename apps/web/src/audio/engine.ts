@@ -1,13 +1,8 @@
-// The Web Audio engine (docs/polish/2-sound.md, "engine.ts"; B1–B11, B46–B53).
-//
-// Created inside a user gesture for autoplay. Music ducks under voice and selected effects (R631);
-// voice ducks effects and lane cues pan through a stereo panner (R669).
-//
-// Nothing is scheduled on an inactive context: its frozen clock would start every cue on resume.
-//
-// `setBusy(true)` holds background voice work outside animation bursts (B58), avoiding R82's delayed
-// auto-ended turn; requested lines are never held.
-//
+// The Web Audio engine (docs/polish/2-sound.md, "engine.ts"; B1–B11, B46–B53), created inside a user
+// gesture for autoplay. Music ducks under voice and selected effects (R631); voice ducks effects and lane
+// cues pan (R669). Nothing is scheduled on an inactive context: its frozen clock would start every cue on
+// resume. `setBusy(true)` holds background voice work outside animation bursts (B58), avoiding R82's
+// delayed auto-ended turn; requested lines are never held.
 // CARD EFFECTS (R655) guard by bank name. `playPickup` plays the effect, then a priority line after
 // CARD_EFFECT_DELAY_MS; a nearby repeat does nothing and a later one fades the prior effect.
 
@@ -68,7 +63,6 @@ export type SpeechPort = {
   cancel(): void;
 };
 
-/** window.speechSynthesis + SpeechSynthesisUtterance (lang "en-US"), or null when either is missing (jsdom). */
 export function browserSpeechPort(): SpeechPort | null {
   const w = window as unknown as {
     speechSynthesis?: SpeechSynthesis;
@@ -108,10 +102,8 @@ export function browserSpeechPort(): SpeechPort | null {
   };
 }
 
-/** Where the page's visibility comes from: the document and the page's hide/show events, or a test's. */
 export type LifecyclePort = { visible(): boolean; subscribe(listener: () => void): () => void };
 
-/** The page's lifecycle, or null when `document`/`window` are missing (jsdom without a harness). */
 export function browserLifecycle(): LifecyclePort | null {
   if (typeof document === "undefined" || typeof window === "undefined") return null;
   return {
@@ -180,9 +172,8 @@ type Span = { offsetS: number; lengthS: number };
 const spans = new WeakMap<AudioBuffer, Span>();
 
 /**
- * Where the speech in a rendered line starts and ends. `say` pads a line with silence and AAC adds
- * encoder priming, which played whole would hold the one voice channel for nothing. A buffer with no
- * sample above the threshold is played whole.
+ * Where the speech in a rendered line starts and ends: `say`'s padding and AAC's encoder priming would
+ * hold the one voice channel for nothing. A buffer with no sample above the threshold plays whole.
  */
 export function audibleSpan(buffer: AudioBuffer): Span {
   const cached = spans.get(buffer);
@@ -232,7 +223,6 @@ type VoiceLine = {
   delayMs: number;
 };
 
-/** The line holding the one voice channel. */
 type VoiceChannel = {
   line: VoiceLine;
   phase: "loading" | "waiting" | "playing" | "speaking";
@@ -269,10 +259,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   let entries: PlayedCue[] = [];
   const lastSfxAt = new Map<SfxId, number>();
-  /** R655: a card effect's retrigger guard, by its bank name. */
   const lastEffectAt = new Map<string, number>();
   let sfxEnds: number[] = [];
-  /** R655: when the last pick-up was accepted, and the gain of its effect, which the next one fades. */
   let lastPickupAt: number | null = null;
   let pickupEffect: GainNode | null = null;
   /** Compressed bytes per key, for the page's lifetime (a failed fetch is kept as null). */
@@ -311,7 +299,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     timers.add(id);
   }
 
-  /* ----- state ----- */
+  /* state */
 
   function state(): AudioState {
     if (factory === null || broken) return "unsupported";
@@ -328,7 +316,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return ctx !== null && ctx.state === "running";
   }
 
-  /* ----- graph ----- */
+  /* graph */
 
   function applySettings(s: AudioSettings): void {
     if (ctx === null || buses === null || disposed) return;
@@ -373,7 +361,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /** Builds a new context, mix and settings subscription, after there is none. */
   function createFresh(): void {
     const make = factory;
     if (make === null) return;
@@ -417,7 +404,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     playSilentFrame(ctx);
   }
 
-  /** The page went hidden or came back: cut the voice while hidden; rebuild and pump on return. */
   function onLifecycle(): void {
     try {
       if (disposed) return;
@@ -436,10 +422,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /**
-   * R631: dips the music bus for `lengthS` from `startAt` (context time), when `duckMusic` is on.
-   * Overlapping ducks hold the dip until the last of them ends.
-   */
+  /** R631: dips the music bus for `lengthS` from `startAt`; overlapping ducks hold until the last ends. */
   function duck(startAt: number, lengthS: number): void {
     if (ctx === null || buses === null || !readAudioSettings().duckMusic) return;
     const gain = buses.musicDuck.gain;
@@ -450,10 +433,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     gain.setTargetAtTime(1, duckUntil, MUSIC_DUCK_RELEASE_TC_S);
   }
 
-  /**
-   * R669: dips the effects for a voice line's `lengthS` from `startAt` (context time), so the line
-   * is heard over the board. Overlapping lines hold the dip until the last of them ends.
-   */
+  /** R669: dips the effects for a voice line's `lengthS` from `startAt`, held as `duck` holds. */
   function duckSfx(startAt: number, lengthS: number): void {
     if (ctx === null || buses === null) return;
     const gain = buses.sfxDuck.gain;
@@ -464,7 +444,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     gain.setTargetAtTime(1, sfxDuckUntil, SFX_DUCK_RELEASE_TC_S);
   }
 
-  /** R669: sfx enters the effects bus directly or through a stereo panner. */
   function sfxInput(c: AudioContext, b: Mix, pan: number | undefined): { input: AudioNode; extra: AudioNode | null } {
     if (pan === undefined || pan === 0 || !Number.isFinite(pan)) {
       return { input: b.sfx, extra: null };
@@ -475,7 +454,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return { input: panner, extra: panner };
   }
 
-  /* ----- log ----- */
+  /* log */
 
   function pushLog(entry: PlayedCue): void {
     entries.push(entry);
@@ -489,7 +468,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     line.entry = next;
   }
 
-  /* ----- gate ----- */
+  /* gate */
 
   function accepting(): boolean {
     if (ctx === null || buses === null || disposed) return false;
@@ -499,7 +478,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return true;
   }
 
-  /* ----- sfx ----- */
+  /* sfx */
 
   function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
     try {
@@ -518,8 +497,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       }
 
       // A field tap is a fidget surface: every physical tap gets its own crunch, even in a burst
-      // faster than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still
-      // disconnect through the normal delayed cleanup below.
+      // faster than the retrigger guard.
       const rapid = RAPID_SFX.has(id);
       const last = lastSfxAt.get(id);
       if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
@@ -549,7 +527,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /* ----- card effects (R655) ----- */
+  /* card effects (R655) */
 
   /**
    * Schedules a card's effect for a hook. false: refused (nothing logged). null: accepted while the
@@ -641,7 +619,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /* ----- voice files ----- */
+  /* voice files */
 
   function fetchCached(key: VoiceKey): Promise<ArrayBuffer | null> {
     const cached = bytes.get(key);
@@ -657,7 +635,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return pending;
   }
 
-  /** The decoded line, from the cache (and moved to its most recent end) or fetched and decoded. */
   function load(key: VoiceKey): Promise<AudioBuffer | null> {
     const cached = decoded.get(key);
     if (cached !== undefined) {
@@ -685,7 +662,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return pending;
   }
 
-  /** Whether a voice line could be heard at all: no point loading one otherwise. */
   function voiceWanted(): boolean {
     const s = readAudioSettings();
     return !s.muted && s.voiceOn;
@@ -696,7 +672,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return !busy && !disposed && voiceWanted();
   }
 
-  /** Starts prefetch requests up to VOICE_PREFETCH_CONCURRENCY while background work may run. */
   function pumpPrefetch(): void {
     const rest = prefetchRest;
     if (rest === null) return;
@@ -723,9 +698,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     });
   }
 
-  /* ----- voice channel ----- */
+  /* voice channel */
 
-  /** Tells the `speaking` subscribers when the channel has gone from free to held or back. */
   function notifySpeaking(): void {
     const held = channel !== null;
     if (held === spoke) return;
@@ -754,7 +728,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return true;
   }
 
-  /** Frees the channel if `ch` still holds it, and hands it to the next waiting line. */
   function release(ch: VoiceChannel): void {
     if (channel !== ch) return;
     // Held across the hand-over: the next waiting line takes the channel before anyone is told.
@@ -768,7 +741,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     release(ch);
   }
 
-  /** Takes the channel from its line: a line that had not started yet is dropped, one speaking fades out. */
   function cut(ch: VoiceChannel): void {
     if (channel !== ch) return;
     // Not `setChannel`: a cut is followed by the line that cut in (`begin`) or by `silenceVoice`,
@@ -782,7 +754,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /** Mute or voice lines off: nothing speaks and nothing waits. */
   function silenceVoice(): void {
     if (channel !== null) cut(channel);
     for (const line of waiting) setOutcome(line, "dropped");
@@ -790,7 +761,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     notifySpeaking();
   }
 
-  /** Whether a line of priority `rank` takes the channel from the one holding it. */
   function cutsIn(rank: VoicePriority, held: VoicePriority): boolean {
     // R655: a pick-up answers the viewer's own hand, so it also cuts off the last pick-up's line.
     return rank > held || rank === VOICE_PRIORITY.pickup;
@@ -917,9 +887,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     startFile(ch, buffer);
   }
 
-  /** Gives the channel to `line`. */
   function begin(line: VoiceLine): void {
-    // A timer that fires while the page is hidden must not take the channel.
     if (!accepting()) return;
     const ch: VoiceChannel = {
       line,
@@ -1046,7 +1014,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /* ----- lifetime ----- */
+  /* lifetime */
 
   function dispose(): void {
     if (disposed) return;

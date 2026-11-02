@@ -100,11 +100,12 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     const legend = planFx(entry([fired("core-085")]), p1, env());
     const rays = legend.find((c) => c.kind === "rays");
     expect(rays).toMatchObject({ tone: "legendary", at: { kind: "testid", testid: "zone-you-backrow-3" } });
-    // The other seat reads a Cloaked card's reveal at its activated, centred where its firing flips.
+    // The other seat reads a Cloaked card's reveal at its firing too (R2734000), centred where it flips.
     const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c61", defId: "meditative-008", ability: "reveal" };
-    const theirs = entranceEntries(planEntries([reveal, fired("hidden")], p2, false), resolve, { reduced: false, speed: 1, seen: new Set() });
-    const at = theirs[0];
+    const theirs = entranceEntries(planEntries([reveal, fired("meditative-008")], p2, false), resolve, { reduced: false, speed: 1, seen: new Set() });
+    const at = theirs.find((e) => e.entrance !== undefined);
     if (at === undefined) throw new Error("no entry");
+    expect(at.events.some((e) => e.type === "trapFired")).toBe(true);
     expect(takeoverOf(planFx(at, p2, env()))?.at).toEqual({ kind: "testid", testid: "zone-opponent-backrow-3" });
     // The sentinel's firing, and a Field Trap firing again, make no entrance.
     expect(planFx(entry([fired("hidden")], p2), p2, env()).some((c) => c.kind === "rays" || c.kind === "takeover")).toBe(false);

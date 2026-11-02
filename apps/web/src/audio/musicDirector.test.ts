@@ -1,8 +1,7 @@
-// R631 (SPEC §10.11 "Music"): the game's music director. It follows the viewer's own view, starts a
-// station switch at the moment R204 gives a card's cast line and only for a card the viewer can read,
-// and opens a match on its sting. R822000: no card plays a theme.
-// R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it; R2722002: a
-// hidden card's at its reveal.
+// R631 (SPEC §10.11 "Music"): the game's music director follows the viewer's own view, switches station
+// at the moment R204 gives a readable card's cast line, and opens a match on its sting. R822000: no card
+// plays a theme. R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it;
+// R2722002: a hidden card's at its reveal.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -321,10 +320,8 @@ describe("R2722002 a hidden card opens its intro as it reveals, never as it is s
       ? { type: "cardPlayed", player: "p1", instanceId: "c60", defId: KNOWLEDGE_BREAKER, costPaid: 1, formerId: "c56" }
       : { type: "cardPlayed", player: "p1", instanceId: "hidden", defId: "hidden", costPaid: 1 };
   const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c60", defId: KNOWLEDGE_BREAKER, ability: "reveal" };
-  const fired = (seat: "p1" | "p2"): GameEvent =>
-    seat === "p1"
-      ? { type: "trapFired", instanceId: "c60", defId: KNOWLEDGE_BREAKER, controller: "p1", row: "backrow", lane: 2 }
-      : { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p1", row: "backrow", lane: 2 };
+  // R2734000: the firing names the card to both seats once it stands face-up, as the reveal does.
+  const fired: GameEvent = { type: "trapFired", instanceId: "c60", defId: KNOWLEDGE_BREAKER, controller: "p1", row: "backrow", lane: 2 };
   const viewOf = (seat: "p1" | "p2"): PlayerView => midGame({ viewer: seat, active: "p1" });
 
   it("R2722002 a Cloaked set opens nothing on either seat, whatever the card's own kind", () => {
@@ -338,18 +335,25 @@ describe("R2722002 a hidden card opens its intro as it reveals, never as it is s
     }
   });
 
-  it("R2722002 a Cloaked reveal opens its intro once: at its trapFired for its controller, at its activated reveal for the other seat", () => {
+  it("R2722002 a Cloaked reveal opens its intro once, at the firing each seat's view names, never at its activated", () => {
     for (const seat of ["p1", "p2"] as const) {
       const r = rig();
       const view = viewOf(seat);
       r.director.onView(view);
       r.director.onEvent(set(seat), view);
       r.director.onEvent(reveal, view);
-      expect(r.intros, `${seat} at the activated`).toEqual(seat === "p1" ? [] : ["intro-meditative-045"]);
-      r.director.onEvent(fired(seat), view);
+      expect(r.intros, `${seat} at the activated`).toEqual([]);
+      r.director.onEvent(fired, view);
       r.director.onEvent({ type: "animated", player: "p1", instanceId: "c60", defId: KNOWLEDGE_BREAKER, backrowLane: 2, unitLane: 2 }, view);
       expect(r.intros, seat).toEqual(["intro-meditative-045"]);
     }
+    // A firing a seat reads as the sentinel opens nothing there.
+    const r = rig();
+    const view = viewOf("p2");
+    r.director.onView(view);
+    r.director.onEvent(reveal, view);
+    r.director.onEvent({ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p1", row: "backrow", lane: 2 }, view);
+    expect(r.intros).toEqual([]);
   });
 
   it("R2722002 a Cloaked card destroyed unrevealed opens nothing", () => {
@@ -420,6 +424,15 @@ describe("R1350 a Legendary's or a Mythic's intro", () => {
     r.director.onEvent(fuse, view);
     r.director.onEvent(fuse, view);
     expect(r.intros).toEqual(["intro-core-096", "intro-classicplus-074"]);
+  });
+
+  it("R2734000 an opponent's Trap the view names opens its intro on the other seat too", () => {
+    // The viewer is p1: p2's My Pawn fired, and the view names it as on its controller's seat.
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent({ type: "trapFired", instanceId: "t9", defId: MY_PAWN, controller: "p2", row: "backrow", lane: 2 }, view);
+    expect(r.intros).toEqual(["intro-core-096"]);
   });
 
   it("R2657001 a Field Trap firing again opens nothing, even for a director that never heard its first firing", () => {

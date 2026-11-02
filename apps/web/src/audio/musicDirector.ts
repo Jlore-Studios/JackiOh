@@ -1,12 +1,13 @@
 // The music director (SPEC §10.11, R631; musicPlan.ts) follows one board and only the viewer's own
 // screen (R203). It applies after the board settles and switches stations at readable cards' R204
-// moments; a Trap counts at its first firing, and a Cloaked card at its reveal, never its set (R2722002). No card plays a theme (R822000): a readable Legendary's
-// or Mythic's intro (R1350) is its music, and R1351 stops it on result, hand-over, dynamic off or exit.
+// moments; a hidden card counts as it reveals, never as it is set (R2722002). No card plays a theme
+// (R822000): a readable Legendary's or Mythic's intro (R1350) is its music, and R1351 stops it on
+// result, hand-over, dynamic off or exit.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
 
-import { firstReveal, isFaceDownSet, otherSeatReveal } from "../game/entrance.ts";
+import { firstReveal, isFaceDownSet } from "../game/entrance.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { HIDDEN_DEF_ID, MUSIC_LOW_HEALTH_FRACTION } from "./constants.ts";
 import type { MusicRequest } from "./music.ts";
@@ -50,10 +51,8 @@ export type MusicDirectorOptions = {
   rotation?: (first: PlayerView) => number;
 };
 
-/** The viewer's hero at or under this is at low health. */
 export const LOW_HEALTH_AT = Math.floor(HERO_HEALTH * MUSIC_LOW_HEALTH_FRACTION);
 
-/** The rotation each match took, by its first view. */
 const rotations = new WeakMap<PlayerView, number>();
 
 /**
@@ -69,12 +68,10 @@ export function rotationFor(first: PlayerView): number {
 }
 
 /**
- * The card a cast names and who cast it, at R204's moments: a unit or spell's play, a trap's first
- * firing, and (R2722002) a Cloaked card's Activate: Reveal on the seat that is not its controller's,
- * which reads no `trapFired` it can name. `fired` remembers the hidden cards that have revealed this
- * match, by instance, so a reveal opens its card's intro once on each seat.
+ * The card a cast names and who cast it, at R204's moments (a trap's at its first firing, `fired`);
+ * R2722002: a Cloaked card's at its firing too, never at its face-down set.
  */
-function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>, viewer: PlayerId): { defId: string; player: PlayerId } | null {
+function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { defId: string; player: PlayerId } | null {
   if (event.type === "cardPlayed") {
     // A trap's play is its set, face down: it is cast when it fires. R2722002: so is a Cloaked card's
     // set (its fresh id's `formerId`, or the sentinel), whatever its own kind.
@@ -86,10 +83,6 @@ function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>, vie
     if (!firstReveal(event) || fired.has(event.instanceId)) return null;
     fired.add(event.instanceId);
     return { defId: event.defId, player: event.controller };
-  }
-  if (otherSeatReveal(event, viewer) && !fired.has(event.instanceId)) {
-    fired.add(event.instanceId);
-    return { defId: event.defId, player: event.player };
   }
   return null;
 }
@@ -119,7 +112,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   const fired = new Set<string>();
   /** R1350: the Units whose own play was heard, so their `summoned` opens nothing again (R204). */
   const playedUnits = new Set<string>();
-  /** R1350: the intros already asked to be fetched ahead. */
   const preloaded = new Set<string>();
   let lowHealth = false;
   let opponentTurn = false;
@@ -173,7 +165,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       if (disposed) return;
       latest = view;
       if (viewer === null) {
-        // The match's first view: its rotation, a fresh station memory, and the sting (dynamic only).
         rotation = rotationOf(view);
         sink.resetResume();
         read(view);
@@ -202,7 +193,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
 
     onEvent(event, view) {
       if (disposed || viewer === null || view.viewer !== viewer) return;
-      const cast = castOf(event, lines, fired, view.viewer);
+      const cast = castOf(event, lines, fired);
       if (cast !== null && event.type === "cardPlayed" && entryFor(lines, cast.defId)?.kind === "unit") playedUnits.add(event.instanceId);
       if (!settings().dynamicMusic) return;
       // R1350: the card's intro first, so the station it may switch to comes in under it.

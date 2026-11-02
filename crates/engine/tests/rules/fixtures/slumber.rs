@@ -1,9 +1,6 @@
 //! Test-only cards for Dormant (SPEC §6.1, §6.2 "When this awakens", §6.3 Awaken, R1839000–R1839003):
-//! the Dormant Units Stinkyscape will print, in their shapes, and the cards that try to reach them
-//! through the engine's own verbs. No shipped card is Dormant yet (Stinkyscape's two Imprisoned Units
-//! and its Dormant Starship come with the set), so the engine never imports `crates/cards` for this.
-//!
-//! Ids are prefixed `sl-` and indexed from 18390, so they collide with no other fixture file's.
+//! the Dormant Units Stinkyscape will print, in their shapes, and the cards that try to reach them.
+//! Ids `sl-…` from 18390, so they collide with no other fixture file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -45,9 +42,8 @@ fn def(index: u32, name: &str, type_: &str, cost: i32, stats: (i32, i32), keywor
     }))
 }
 
-/// A 3/3 Taunt Unit, Stinkyscape's Imprisoned shape: "Dormant for 2 turns. Aura: your other Units have
-/// +1 Attack. Start of turn: deal 1 damage to the enemy hero. When this awakens, deal 3 damage to the
-/// enemy hero."
+/// Stinkyscape's Imprisoned: "Dormant for 2 turns. Aura: your other Units have +1 Attack. Start of
+/// turn: deal 1 damage to the enemy hero. When this awakens, deal 3 damage to the enemy hero."
 pub static imprisoned: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         18390,
@@ -58,52 +54,50 @@ pub static imprisoned: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Taunt" }]),
     )
 });
-/// A 4/4 Unit, the Dormant Starship's shape: "Dormant. Activate: pay (3) to awaken. Activate: deal 1
-/// damage to the enemy hero."
+/// The Dormant Starship: "Dormant. Activate: pay (3) to awaken. Activate: deal 1 damage to the enemy hero."
 pub static starship: LazyLock<CardDef> =
     LazyLock::new(|| def(18391, "starship", "Unit", 0, (4, 4), json!([])));
-/// A 2/2 Unit: "Dormant for 1 turn. Cry: deal 2 damage to the enemy hero, then give this +2/+2."
+/// "Dormant for 1 turn. Cry: deal 2 damage to the enemy hero, then give this +2/+2."
 pub static napper: LazyLock<CardDef> = LazyLock::new(|| def(18392, "napper", "Unit", 0, (2, 2), json!([])));
-/// A 1/1 Unit: "Aura: every Unit has +1/+1."
+/// "Aura: every Unit has +1/+1."
 pub static banner: LazyLock<CardDef> = LazyLock::new(|| def(18393, "banner", "Unit", 0, (1, 1), json!([])));
-/// A 1/1 Stack Unit: "Stack. Cry: the cards beneath this become copies of it" (Classic+ #4's shape).
+/// "Stack. Cry: the cards beneath this become copies of it" (Classic+ #4).
 pub static copycat: LazyLock<CardDef> =
     LazyLock::new(|| def(18394, "copycat", "Unit", 0, (1, 1), json!([{ "kind": "Stack" }])));
 
-/// A Spell: "Deal 2 damage to a Unit."
+/// "Deal 2 damage to a Unit."
 pub static snipe: LazyLock<CardDef> = LazyLock::new(|| def(18395, "snipe", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Deal 1 damage to every Unit."
+/// "Deal 1 damage to every Unit."
 pub static quake: LazyLock<CardDef> = LazyLock::new(|| def(18396, "quake", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Destroy every Unit."
+/// "Destroy every Unit."
 pub static wipe: LazyLock<CardDef> = LazyLock::new(|| def(18397, "wipe", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Exile every Unit."
+/// "Exile every Unit."
 pub static void: LazyLock<CardDef> = LazyLock::new(|| def(18398, "void", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Return every Unit to its controller's hand."
+/// "Return every Unit to its controller's hand."
 pub static flood: LazyLock<CardDef> = LazyLock::new(|| def(18399, "flood", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Freeze every Unit."
+/// "Freeze every Unit."
 pub static frost: LazyLock<CardDef> = LazyLock::new(|| def(18400, "frost", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Give every Unit +1/+1."
+/// "Give every Unit +1/+1."
 pub static cheer: LazyLock<CardDef> = LazyLock::new(|| def(18401, "cheer", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Take control of every enemy Unit."
+/// "Take control of every enemy Unit."
 pub static heist: LazyLock<CardDef> = LazyLock::new(|| def(18402, "heist", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Transform each enemy Unit into a Big Body" — each named by its id, read off the board.
+/// "Transform each enemy Unit into a Big Body" — each named by its id, read off the board.
 pub static morph: LazyLock<CardDef> = LazyLock::new(|| def(18403, "morph", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Allure: steal the enemy Units at the start of your next turn" (§6.3 Allure).
+/// "Allure: steal the enemy Units at the start of your next turn" (§6.3 Allure).
 pub static lure: LazyLock<CardDef> = LazyLock::new(|| def(18404, "lure", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Deal damage to the enemy hero equal to the number of Units you control."
+/// "Deal damage to the enemy hero equal to the number of Units you control."
 pub static census: LazyLock<CardDef> = LazyLock::new(|| def(18405, "census", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Fill your board with Plain Bodies."
+/// "Fill your board with Plain Bodies."
 pub static swarm: LazyLock<CardDef> = LazyLock::new(|| def(18406, "swarm", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Awaken every card on your field" — the `awaken` verb from another card, each named by id.
+/// "Awaken every card on your field" — the `awaken` verb from another card, each named by id.
 pub static rouse: LazyLock<CardDef> = LazyLock::new(|| def(18407, "rouse", "Spell", 0, (0, 0), json!([])));
-/// A Spell: "Summon an Imprisoned" — a Dormant card arriving by a summon.
+/// "Summon an Imprisoned" — a Dormant card arriving by a summon.
 pub static call: LazyLock<CardDef> = LazyLock::new(|| def(18408, "call", "Spell", 0, (0, 0), json!([])));
 
 /// The ability the Starship keeps while it is Dormant (R1839002).
 pub const LAUNCH: &str = "launch";
 /// The Starship's other ability, off while it is Dormant.
 pub const ZAP: &str = "zap";
-/// What the Starship's launch costs.
 pub const LAUNCH_MANA: i32 = 3;
 /// What the Imprisoned's awakening deals the enemy hero.
 pub const AWAKENING_DAMAGE: i32 = 3;
@@ -140,7 +134,6 @@ fn ability(id: &str, cost: Option<ActivationCost>, run: Hook) -> ActivationDecl 
     }
 }
 
-/// "+1 Attack to the other Units its controller controls."
 fn other_friendly_attack_aura() -> AuraHook {
     aura_hook(|a| {
         let controller = a.self_.controller;
@@ -159,7 +152,6 @@ fn other_friendly_attack_aura() -> AuraHook {
     })
 }
 
-/// "+1/+1 to every Unit."
 fn every_unit_aura() -> AuraHook {
     aura_hook(|_a| {
         vec![AuraEntry {
@@ -363,7 +355,6 @@ pub static SLUMBER_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_slumber_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

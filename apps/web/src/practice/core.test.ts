@@ -1,11 +1,9 @@
 // The practice core, for real: B34, B35, B38 and B39 of docs/polish/3-ai.md, and R187 / R188.
 //
-// Everything here drives the REAL `createPracticeCore` — the engine, the card scripts and the AI
-// the worker runs — with a frozen clock (`now: () => 0`, so the wall-clock cap never fires and every
-// decision is a pure function of the node budget) and the quality gates' smaller budget, so a whole
-// game fits a test. The only door into the true state is `debug`, which a dev core answers; every
-// assertion about what the page receives compares a response with `viewFor` / `legalActions` of
-// that state, which is CLAUDE.md rule 7 stated as a test.
+// It drives the REAL `createPracticeCore` with a frozen clock (`now: () => 0`, so every decision is a
+// pure function of the node budget) and the gates' smaller budget, so a whole game fits a test. The only
+// door into the true state is `debug`; comparing a response with its `viewFor` / `legalActions` is
+// CLAUDE.md rule 7 stated as a test.
 
 import { describe, expect, it } from "vitest";
 
@@ -47,9 +45,7 @@ import type {
 } from "./protocol.ts";
 import { snapshotOf } from "../test/fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // the driver
-// ---------------------------------------------------------------------------------------------
 
 const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 
@@ -60,7 +56,6 @@ type Exchange = { request: PracticeRequest; response: PracticeResponse };
 
 type Driver = {
   core: PracticeCore;
-  /** Stamps the next id, hands the request to the core and returns its answer. */
   send(body: PracticeRequestBody): PracticeResponse;
   exchanges: Exchange[];
 };
@@ -109,15 +104,11 @@ function keepAll(snapshot: PracticeSnapshot): ActionBody | null {
   return { type: "mulligan", keep: pending.options.map((option) => option.key) };
 }
 
-/** The engine's own reason for refusing `body` from `seat` on `state`, or undefined if it accepts. */
 function engineRefusal(state: GameState, body: ActionBody, seat: PlayerId): string | undefined {
   return reduce(state, { ...body, playerId: seat, nonce: "test:probe" } as Action).error;
 }
 
-/**
- * One step of a practice game: the AI's step when it owes one, else the human by §10.7's random
- * policy on the true state (read through `debug`). Null once nobody has anything to do.
- */
+/** The AI's step when it owes one, else the human by §10.7's random policy on the true state. */
 function step(d: Driver, human: PlayerId, rng: Rng, last: PracticeSnapshot): PracticeResponse | null {
   if (last.view.result !== null) return null;
   if (last.aiToAct) return d.send({ type: "aiStep" });
@@ -126,10 +117,7 @@ function step(d: Driver, human: PlayerId, rng: Rng, last: PracticeSnapshot): Pra
   return d.send({ type: "act", action: body });
 }
 
-/**
- * Drive the game until the human stands in its own main phase with no prompt open: the AI by
- * `aiStep`, the human's prompts by keeping the whole mulligan or taking the first legal answer.
- */
+/** Drive the game until the human stands in its own main phase with no prompt open. */
 function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): PracticeSnapshot {
   let last = from;
   for (let n = 0; n < WALK_CAP; n += 1) {
@@ -155,11 +143,9 @@ function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): Pra
 }
 
 /**
- * B34, for one response: the snapshot holds exactly four keys (with `lastBoard` once the game is
- * over, and `lethal` while R2102000's hint is lit), `view` and `legal` are the human's `viewFor` /
- * `legalActions` of the true state, `aiToAct` is the AI's, `lethal` is the human's `lethalHint`,
- * and no AI hand or library instance id that the human's own view does not already name appears
- * anywhere in the response.
+ * B34, for one response: the snapshot holds exactly its four keys (`lastBoard` once over, `lethal`
+ * while R2102000's hint is lit), each the true state's, and no AI hand or library id that the human's
+ * own view does not already name appears anywhere in it.
  */
 function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai: PlayerId): void {
   const snapshot = snapshotOf(response);
@@ -195,9 +181,7 @@ function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai:
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B34: what the main thread receives (rule 7)
-// ---------------------------------------------------------------------------------------------
 
 describe("B34 the core answers with the human's view and nothing else", () => {
   it("B34 `started` is { id, type, snapshot, defs, aiSeat } with the AI on the other seat", () => {
@@ -240,7 +224,6 @@ describe("B34 the core answers with the human's view and nothing else", () => {
       last = snapshotOf(response);
     }
 
-    // The walk exercised both sides of the boundary: the AI acted and so did the human.
     const log = debugOf(d).log;
     expect(log.some((action) => action.playerId === "p1")).toBe(true);
     expect(log.some((action) => action.playerId === "p2")).toBe(true);
@@ -363,9 +346,7 @@ describe("B34 the core answers with the human's view and nothing else", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the named practice decks, and the catalog the setup previews them with
-// ---------------------------------------------------------------------------------------------
 
 describe("the named practice decks are real decks, and the setup can preview them", () => {
   it("every preset is DECK_SIZE distinct non-token Core cards, none of them on the AI's shadow ban", () => {
@@ -413,9 +394,7 @@ describe("the named practice decks are real decks, and the setup can preview the
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B35: refusals and the log
-// ---------------------------------------------------------------------------------------------
 
 describe("B35 a human action is either refused with the engine's reason or logged as h<n>", () => {
   it("B35 an action other than a mulligan while the mulligans are open is refused with the engine's reason; hash and log are unchanged", () => {
@@ -574,11 +553,8 @@ describe("B35 a human action is either refused with the engine's reason or logge
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R265: both mulligans are open at once, and either seat answers first
-// ---------------------------------------------------------------------------------------------
 
-/** The human's hand as its own view lists it, by instance id. */
 function handOf(snapshot: PracticeSnapshot): string[] {
   const hand = snapshot.view.you.hand;
   return Array.isArray(hand) ? hand.map((card) => card.instanceId) : [];
@@ -604,10 +580,9 @@ function humanAnswersFirst(d: Driver, started: PracticeSnapshot): PracticeSnapsh
 }
 
 /**
- * The seed an R265 run plays. Turn 1 is p1's, and R82 ends it at once when p1 has nothing to play on it.
- * Seated p1, the human turns that off (`holdTurns`, R345), so the run plays `prefix` itself. Seated p2,
- * the AI holds turn 1 and keeps R82 on, so the run plays the first seed under `prefix` on which `begin`,
- * the run's own two answers, reaches turn 1 (#2569).
+ * The seed an R265 run plays. R82 ends turn 1 at once when p1 has nothing to play: seated p1, the human
+ * turns that off (`holdTurns`, R345), so the run plays `prefix`; seated p2, the AI keeps R82 on, so the
+ * run plays the first seed under `prefix` on which `begin` reaches turn 1 (#2569).
  */
 function r265Seed(prefix: string, human: PlayerId, begin: (d: Driver, started: PracticeSnapshot) => PracticeSnapshot): string {
   if (human === "p1") return prefix;
@@ -732,9 +707,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Issue #1113: the AI's test-only pool
-// ---------------------------------------------------------------------------------------------
 
 describe("the AI deck is dealt with aiBanned when set, and the live shadow ban when absent", () => {
   it("a game started with aiBanned deals the AI that deck", () => {
@@ -764,9 +737,7 @@ describe("the AI deck is dealt with aiBanned when set, and the live shadow ban w
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B38: a practice game replays exactly (R187)
-// ---------------------------------------------------------------------------------------------
 
 const SEAT_BY_DIFFICULTY: Record<Difficulty, PlayerId> = { easy: "p2", medium: "p1", hard: "p2" };
 
@@ -877,9 +848,7 @@ describe("R187 B38 a practice game folds from (seed, decks, handicaps, log) to i
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B39: the AI declines a draw at once (R188)
-// ---------------------------------------------------------------------------------------------
 
 describe("B39 a draw offer is declined by the AI's next step", () => {
   it("R188 B39 the human's offerDraw makes aiToAct true, and the next aiStep answers answerDraw { accept: false }", { timeout: 120_000 }, () => {
@@ -925,9 +894,7 @@ describe("B39 a draw offer is declined by the AI's next step", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R508: the human's last practice board (R417, Classic+ #29 Portal to the Past)
-// ---------------------------------------------------------------------------------------------
 
 describe("R508 a practice game's last board", () => {
   /** A free game walked by the random policy until the field holds a card, then conceded. */
@@ -985,9 +952,7 @@ describe("R508 a practice game's last board", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1705005: a lesson's human seat plays its fixed deck under TUTORIAL_HUMAN
-// ---------------------------------------------------------------------------------------------
 
 describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () => {
   it("R1705005 a lesson seats the human under TUTORIAL_HUMAN", () => {
@@ -1014,9 +979,7 @@ describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () =>
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R433: the random deck is dealt, not built
-// ---------------------------------------------------------------------------------------------
 
 /** How many cards the human's own library list names (R310), the unknown ones aside. */
 function listedCount(snapshot: PracticeSnapshot): number {
@@ -1085,9 +1048,7 @@ describe("R433 practice's fresh random deck lists only the cards the human has b
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1373: the Random deck, more cards from the newest set
-// ---------------------------------------------------------------------------------------------
 
 describe("R1373 practice's Random deck with more cards from the newest set", () => {
   /** How many of `deck`'s cards are of the newest set that ships (R1371). */
@@ -1162,9 +1123,7 @@ describe("R1373 practice's Random deck with more cards from the newest set", () 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R668: a free game in progress is kept in the worker's store and folds back after a reload
-// ---------------------------------------------------------------------------------------------
 
 describe("R668 the practice save and resume", () => {
   /** A game walked `steps` requests in, on a core that keeps its saves in `saves`. */

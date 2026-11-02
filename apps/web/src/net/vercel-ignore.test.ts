@@ -1,8 +1,7 @@
 // scripts/vercel-ignore.sh, run the way vercel.json runs it (its `ignoreCommand`), in a throwaway git
 // repo: Vercel deploys on the last push, only when the push can change what the site serves, and on
-// main only once MIN_GAP_SECONDS have passed since the last build.
-// Exit 1 builds, exit 0 skips, and every doubt must build: a skipped deploy that should have run
-// leaves production stale, while an extra build costs one deployment.
+// main only once MIN_GAP_SECONDS have passed since the last build. Exit 1 builds, exit 0 skips, and
+// every doubt must build: a wrongly skipped deploy leaves production stale, an extra build costs one.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -27,11 +26,9 @@ let base = "";
 /** The committer date of every git call, in seconds since the epoch; `commit` moves it on. */
 let now = Date.UTC(2026, 0, 1) / 1000;
 
-/** Where the throwaway repo lives: the checkout's own ignored `.cache/`, not the machine's shared temp
- * directory, and with git's background upkeep off, so nothing but this file touches it while it runs
- * (#1016: on main at 67811e0 a `git add` failed mid-test because, from git 2.54, the first case's
- * commits start a detached repack whose prune-packed removed the objects/xx directory the add had
- * just made). */
+/** The throwaway repo lives in the checkout's ignored `.cache/`, not the shared temp directory, with git's
+ * background upkeep off, so nothing but this file touches it (#1016: from git 2.54 a commit can start a
+ * detached repack whose prune-packed removes the objects/xx directory a `git add` has just made). */
 const SCRATCH = join(ROOT, ".cache");
 
 function git(...args: string[]): string {
@@ -43,7 +40,6 @@ function git(...args: string[]): string {
   }).trim();
 }
 
-/** Commits what is staged, `after` seconds after the commit before it (a day unless a test says). */
 function commit(message: string, after = DAY): string {
   now += after;
   git("commit", "-q", "-m", message);
@@ -66,7 +62,6 @@ function commits(...pushes: string[][]): void {
 /** `remote` stands in for the repository on GitHub, where rule 2a reads the countdown issue's tags. */
 type Env = { ref?: string; message?: string; env?: string; previous?: string | null; remote?: string };
 
-/** Whether Vercel would build, running ignoreCommand in `cwd` with the variables Vercel sets. */
 function builds({ ref = "main", message = "A change", env = "preview", previous = base, remote }: Env = {}, cwd = repo): boolean {
   const vars: Record<string, string> = {
     PATH: process.env.PATH ?? "",
@@ -231,7 +226,6 @@ describe("scripts/vercel-ignore.sh", () => {
     // A changed the bundle and its build never ran (the daily cap); B only touched the bot.
     commits(["crates/engine/src/a.rs"], ["bot/harness/b.py"]);
     expect(builds()).toBe(true);
-    // Once A is the last build, B alone is skipped.
     const built = git("rev-parse", "HEAD~1");
     expect(builds({ previous: built })).toBe(false);
   });
@@ -269,8 +263,7 @@ describe("scripts/vercel-ignore.sh", () => {
     expect(builds({ previous: "" })).toBe(true);
     expect(builds({ previous: "0".repeat(40) })).toBe(true);
     expect(builds({ previous: "not-a-commit" })).toBe(true);
-    // Nothing changed since the last build (a redeploy of the same commit, which rule 4's wait does
-    // not skip either).
+    // A redeploy of the same commit, which rule 4's wait does not skip either.
     expect(builds({ previous: git("rev-parse", "HEAD") })).toBe(true);
     // The last build is not an ancestor of this commit (a preview from another branch). Every file
     // between the two is a skippable one, so only the ancestry check can make this a build.
@@ -305,7 +298,6 @@ describe("scripts/vercel-ignore.sh", () => {
   });
 
   describe("rule 2a, the countdown issue's Vercel commands, as tags on GitHub", () => {
-    /** A bare repository standing in for GitHub, with the tags it is given pointing at commits of `repo`. */
     function github(tags: Record<string, string>): string {
       const remote = mkdtempSync(join(SCRATCH, "vercel-remote-"));
       execFileSync("git", ["init", "-q", "--bare", remote]);
@@ -341,7 +333,6 @@ describe("scripts/vercel-ignore.sh", () => {
       writeFileSync(join(repo, "crates/engine/src/a.rs"), "changed\n");
       git("add", "-A");
       const asked = commit("soon after", MIN_GAP_SECONDS - 60);
-      // Without the tag, the wait skips it.
       expect(builds({ previous: built })).toBe(false);
       expect(builds({ previous: built, remote: remote({}) })).toBe(false);
       // The tag on it, or on a commit before a newer one, builds it now.

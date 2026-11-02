@@ -20,7 +20,7 @@ import { createFxMemory } from "../fx/memory.ts";
 import type { FxCue, FxRaysCue, FxTakeoverCue } from "../fx/types.ts";
 import { entranceEntries, newEventsSince, planEntries, type AnimationEntry, type EntranceResolver } from "./animations.ts";
 import { lookupFromDefs } from "./catalog.ts";
-import { firstReveal, isFaceDownSet, otherSeatReveal } from "./entrance.ts";
+import { firstReveal, isFaceDownSet } from "./entrance.ts";
 
 const SEATS = ["p1", "p2"] as const;
 /** Meditative #45 Knowledge Breaker (Legendary; its Aura lends Units Cloaked), #99 Paranoia (lends Spells Cloaked). */
@@ -158,13 +158,13 @@ const isGrand = (defId: string): boolean => rarityOf(defId) === "Legendary" || r
 
 /**
  * The Legendary and Mythic cards a seat's own new events name at an entrance's moment: a face-up play
- * (no set), a Unit summoned face-up, a first firing it reads, or a Cloaked reveal by the other player.
+ * (no set), a Unit summoned face-up, or a first firing it reads (a Trap's or a Cloaked card's).
  */
-function namedGrand(fresh: readonly GameEvent[], viewer: PlayerId): string[] {
+function namedGrand(fresh: readonly GameEvent[]): string[] {
   return fresh.flatMap((event) => {
     if (event.type === "cardPlayed" && !isFaceDownSet(event) && resolve(event.defId)?.type !== "Trap" && resolve(event.defId)?.type !== "Field Trap") return [event.defId];
     if (event.type === "summoned" && event.row === "units" && event.defId !== "hidden") return [event.defId];
-    if (firstReveal(event) || otherSeatReveal(event, viewer)) return [event.defId];
+    if (firstReveal(event)) return [event.defId];
     return [];
   }).filter(isGrand);
 }
@@ -253,7 +253,7 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
     for (const { label, heard } of actions) {
       for (const viewer of SEATS) {
         const seen = heard[viewer];
-        const named = namedGrand(seen.fresh, viewer);
+        const named = namedGrand(seen.fresh);
         const where = `${label} on ${viewer}`;
         // Every intro, entrance sting, entrance, ray and takeover is a card this seat's own events name.
         for (const id of seen.intros) expect(named.map((d) => `intro-${d}`), where).toContain(id);
@@ -273,9 +273,6 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
     expect(must(cracker).heard.p2.play.length).toBeGreaterThan(0);
     expect(must(breaker).heard.p2.play).toEqual(must(cracker).heard.p2.play);
     expect(must(summit).heard.p2.play).toEqual(must(cracker).heard.p2.play);
-    // A real Trap's firing names it to its controller alone: the other seat's is rarity-neutral (the
-    // sting is the Common Unit's own play that fires it).
-    expect(grandCues(trap.fire.p2)).toEqual(["sfx:sting"]);
   });
 
   it("R2722002 the reveal plays the full entrance on both seats", () => {
@@ -289,9 +286,11 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
       );
       expect(grandCues(cloaked.reveals.cracker[viewer]), `Toe Cracker on ${viewer}`).toEqual(["sfx:sting"]);
     }
-    // The Legendary Trap's first firing on its controller's seat: its intro, its entrance and its rays.
-    // (Its sting is the Common Unit's play that fires it.)
-    expect(grandCues(trap.fire.p1)).toEqual(["intro:intro-core-085", "sfx:entrance", "entrance:legendary:false", "rays:legendary", "sfx:sting"].sort());
+    // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro, its
+    // entrance and its rays. (Its sting is the Common Unit's play that fires it.)
+    for (const viewer of SEATS) {
+      expect(grandCues(trap.fire[viewer]), `the Trap on ${viewer}`).toEqual(["intro:intro-core-085", "sfx:entrance", "entrance:legendary:false", "rays:legendary", "sfx:sting"].sort());
+    }
   });
 });
 

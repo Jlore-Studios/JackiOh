@@ -1,14 +1,5 @@
-//! The picks an account makes for one card of its own (`src/api/card_picks.rs`, SPEC §14.2,
-//! R1834000, R1834001).
-//!
-//! The questions here are the routes' own: that they are three active routes, that each reads and
-//! writes the caller's own picks and nobody else's, that a `PUT` changes only the keys it names and
-//! refuses an id of another kind or one the account does not own, and that the device's one-time
-//! upload never overwrites a card the account holds and keeps an id this build does not know. What
-//! the store does with the rows is `tests/store/contract.rs`'s; RLS is the SQL suites'.
-//!
-//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
-//! caller is `e2e-p1`, the other account `e2e-p2` and the pending one `e2e-pending`.
+//! Card picks per account (`src/api/card_picks.rs`, SPEC §14.2, R1834000, R1834001).
+//! Verifies account isolation, PUT partial updates, validation, and upload idempotence.
 
 use std::sync::Arc;
 

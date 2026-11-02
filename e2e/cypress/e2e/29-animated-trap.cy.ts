@@ -1,8 +1,6 @@
-// BUILD M9-T12 `29-animated-trap.cy.ts`: P2's Tesla animates during P1's turn (R383).
-// #77 Professor Curvature triggers it; #8 Mr. Vanilla arrives later and is not hit (R831007), and
-// #11 Tempo Timmy triggers it while #62 Friend of Felinors fills the unit row.
-// Read each seat's DOM only (CLAUDE.md rule 7): P1 cannot identify a set Tesla (R33), and Lifesteal
-// can heal beyond 30 (R19). An animated Tesla remains in place (R383).
+// BUILD M9-T12: P2's Tesla animates during P1's turn (R383).
+// #77 triggers it; #8 arrives later and is not hit (R831007); #11 triggers it while #62 fills the unit row.
+// Read each seat's DOM only (CLAUDE.md rule 7).
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -27,7 +25,6 @@ const HERO_HEALTH = 30;
 /** Tesla animates into its own lane when open (R383). */
 const TESLA_LANE = 3;
 
-/** BUILD M5-T3: act from the required hotseat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     if (handle.seat !== player) cy.handOver();
@@ -89,7 +86,7 @@ describe("BUILD M9 29: an Animated Field Trap fires on the opponent's turn and b
         ensureSeat("p1");
         cy.handCardByName("Mr. Vanilla").then((vanilla) => {
           cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 2 } });
-          // R831007: Tesla zaps only the Unit that revealed it (patch v0.3.10).
+          // R831007: Tesla zaps only the Unit that revealed it.
           cy.get(ts(zoneId("you", "units", 2))).find(ts(cardId(vanilla))).should("exist");
           cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
           cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH + TESLA_DAMAGE)).should("exist");

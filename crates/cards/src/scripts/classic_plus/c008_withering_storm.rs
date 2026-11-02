@@ -72,10 +72,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// SPEC §8.7 row 8: degrades {cards} (5, patch v0.3.10; 4 before) different changeable cards in opponent's deck (R60,
-// R386), all of them when fewer, none when none and then no random number is drawn (R129);
-// padded with `none` cues (R569, R440).
-// Degraded events stay unread while in deck (R177, R311).
+// C+ #8 Withering Storm — SPEC §8.7 row 8 (R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

@@ -1,18 +1,11 @@
 //! SPEC §11's rulings whose ruling is a number or a named switch, asserted against `config.rs`
 //! (CLAUDE.md rule 9): the "decide" rows R1, R4, R5, R14, R26 and R39 among them, and R2's turn cap.
-//! Ported from `packages/engine/test/rulings.test.ts` (part 28, #133), which held one `it` per §11
-//! row. Only its `expect(config.X)` assertions live on here, one test per row, named after it.
-//!
-//! The rest of that file is gone on purpose:
-//! - its index of proofs (`provenIn(n, files)`) is each ruling note's `proven_in` front matter in
-//!   `spec/rulings/R<nnnn>.md`, and `cargo jackioh spec check` holds what its completeness test held;
-//! - its 23 pins on other files' source text (SQL migrations, `actor.ts`, `codes.ts`, …) and its
-//!   reads of `apps/server/src/config.ts` constants are dropped (#133): the server's own tests prove
-//!   those rulings by behavior, and the notes name them.
+//! One test per row, named after it (#133). A ruling's proofs are its note's `proven_in`
+//! (`spec/rulings/R<nnnn>.md`, held by `cargo jackioh spec check`); the rulings the server owns are
+//! proved by the server's own tests, and the notes name them.
 //!
 //! Every value is compared through its JSON form where its Rust type is a struct or an enum (the
-//! form `export_config` hands the web, SURFACE §5.1), so the assertion reads exactly as the TS one
-//! did.
+//! form `export_config` hands the web, SURFACE §5.1).
 
 use std::collections::BTreeSet;
 

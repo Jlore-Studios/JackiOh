@@ -34,12 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #15 Conjure Rush Token — SPEC §8.7 row 15, BUILD M9 Classic+ row C+ 15: "Summons Core's Rush Token
-// (3/3 Rush) into your leftmost open zone with one random keyword from R21's pool it lacks (never Rush
-// again); a full board summons nothing and draws nothing (R129); the keyword count reads through
-// `param()`; radiant 3 Rush Tokens, fewer on a nearly full board, each with its own random keyword".
-
-/// `describe("C+ #15 Conjure Rush Token")`.
+// C+ #15 Conjure Rush Token — SPEC §8.7 row 15, BUILD M9 Classic+ row C+ 15, R21, R129.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,7 +78,6 @@ mod tests {
         assert_eq!(distinct.len(), keys.len());
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -99,7 +93,6 @@ mod tests {
             assert!(s.stats(&token).keywords.iter().map(keyword_key).any(|key| key == "Rush"));
         }
 
-        /// R21 it gains one random keyword from the pool, never Rush again, across seeds
         #[test]
         fn r21_it_gains_one_random_keyword_from_the_pool_never_rush_again_across_seeds() {
             let mut seen: IndexSet<String> = IndexSet::new();
@@ -113,11 +106,9 @@ mod tests {
                 assert!(!keys.iter().any(|key| key == "Rush"));
                 seen.extend(keys);
             }
-            // The roll is random: two dozen seeds land on more than one keyword.
             assert!(seen.len() > 1);
         }
 
-        /// R64 R129 a full board summons nothing and draws nothing from the rng
         #[test]
         fn r64_r129_a_full_board_summons_nothing_and_draws_nothing_from_the_rng() {
             let mut s = scenario(json!({
@@ -132,7 +123,6 @@ mod tests {
             s.expect_in_zone(CARD, "graveyard");
         }
 
-        /// R386 the keyword count reads through param: an Upgrade gives two, and a Degrade never goes below one
         #[test]
         fn r386_the_keyword_count_reads_through_param_an_upgrade_gives_two_and_a_degrade_never_goes_below_one() {
             let mut up = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
@@ -167,11 +157,9 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
-        /// summons three Rush Tokens, each with its own random keyword
         #[test]
         fn summons_three_rush_tokens_each_with_its_own_random_keyword() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": CARD, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
@@ -195,7 +183,6 @@ mod tests {
             }
         }
 
-        /// R21 each token rolls its own keyword: across seeds the three do not always share one
         #[test]
         fn r21_each_token_rolls_its_own_keyword_across_seeds_the_three_do_not_always_share_one() {
             let mut differ = 0;
@@ -228,7 +215,6 @@ mod tests {
             assert_eq!(s.unit(P1, 5).map(|unit| unit.def_id).as_deref(), Some(RUSH_TOKEN));
         }
 
-        /// R386 an Upgrade gives each of the three two keywords
         #[test]
         fn r386_an_upgrade_gives_each_of_the_three_two_keywords() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": CARD, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));

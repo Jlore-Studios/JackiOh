@@ -12,8 +12,6 @@ const GAMES: i32 = 15;
 
 /// The cards whose text names the Legendary or Mythic card it makes, so no pool is drawn: a named
 /// card reaches its hand or deck under the hold (R2201001), as a named card does under R1420's gate.
-/// The sweep deals none of them, so what it finds is a pool's draw. Each is a deckable card whose
-/// script names a Legendary or Mythic id outright for a fixed add, read one by one.
 const NAMES_A_HELD_CARD: &[&str] = &[
     "stinkyscape-008", // Conjure Rosemary Triscuit: "Shuffle a Wardrum into your deck."
     "stinkyscape-095", // Vanguard Coalition: "Add a Scornboi, Ocean Tsunami, Tylannt, … to your hand."
@@ -23,7 +21,6 @@ const NAMES_A_HELD_CARD: &[&str] = &[
 ];
 const MAX_ACTIONS: usize = 3000;
 
-/// Every card a deck may hold but the held rarities, sorted.
 fn unheld_pool() -> Vec<String> {
     let mut ids: Vec<String> = CATALOG
         .iter()
@@ -39,8 +36,6 @@ fn unheld_pool() -> Vec<String> {
     ids
 }
 
-/// The Legendary and Mythic definitions the state names anywhere: an instance's `defId`, or a
-/// prompt option's `mode:<defId>`.
 fn held_named(state: &GameState) -> Vec<String> {
     let text = serde_json::to_string(state).expect("the state serializes");
     let mut named: Vec<String> = Vec::new();
@@ -59,8 +54,6 @@ fn held_named(state: &GameState) -> Vec<String> {
     named
 }
 
-/// A random-policy game, p1 under `TUTORIAL_HUMAN` with or without the hold: the held cards it named
-/// at any step, and the step that first named each.
 fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
     let pool = unheld_pool();
     let human = TUTORIAL_HUMAN.deck_size as usize;
@@ -85,7 +78,6 @@ fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
     .state;
     let mut policy = create_rng(&format!("r2201001-policy-{n}"), 0);
     let mut seen: Vec<(String, usize)> = Vec::new();
-    // What a named card's play made (a generated Conjure Rosemary Triscuit's Wardrum): no pool's draw.
     let mut named_made: Vec<String> = Vec::new();
     let mut steps = 0;
     while state.result.is_none() && steps < MAX_ACTIONS {
@@ -102,8 +94,6 @@ fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
         if let Some(error) = &result.error {
             panic!("{seed}: refused: {error}");
         }
-        // A named card played inside the step but not by its action: the autopilot's play in the
-        // turn another seat's answer starts.
         let names_one = names_one
             || result.events.iter().any(|event| {
                 matches!(event, GameEvent::CardPlayed { def_id, .. }
@@ -133,7 +123,6 @@ mod r2201001_a_held_lesson_shows_no_legendary_or_mythic_card {
         for n in 1..=GAMES {
             let held = sweep(n, true);
             assert!(held.is_empty(), "game {n} under the hold showed {held:?}");
-            // The same game unheld, until one shows a held card.
             if unheld_shown == 0 && !sweep(n, false).is_empty() {
                 unheld_shown += 1;
             }

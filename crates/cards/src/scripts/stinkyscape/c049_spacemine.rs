@@ -44,10 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #49 Spacemine — SPEC §8.10 row 49, BUILD M12 row S 49: "its Death deals its Attack
-// as it died, buffs included (R89), to one random enemy, hero or Unit; at 0 Attack nothing (R63);
-// then a copy fuses into its owner's Dormant Starship (R1852000); targets reads through `param()`;
-// radiant 10/2 and two different random enemies, one when only one stands".
+// Stinkyscape #49 Spacemine — SPEC §8.10 row 49, BUILD M12 row S 49 (R1852000, R63, R89).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,12 +58,10 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    /// Destroys `victim` with Hit Job.
     fn destroy(s: &mut Scenario, victim: &CardInstance) {
         s.play(HIT_JOB, json!({ "targets": pick::instance(victim) }));
     }
 
-    /// The amounts of the `damage` events from `source`, in order.
     fn hits_from(s: &Scenario, source: &str) -> Vec<i32> {
         s.events()
             .iter()
@@ -81,7 +76,6 @@ mod tests {
             .collect()
     }
 
-    /// The targets of the `damage` events from `source`, in order.
     fn targets_of(s: &Scenario, source: &str) -> Vec<String> {
         s.events()
             .iter()
@@ -106,7 +100,6 @@ mod tests {
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [SPACEMINE], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
             }));
-            // A +2 Attack buff before it dies: the hit is 5 + 2.
             let me = s.card(SPACEMINE).clone();
             s.card_mut(SPACEMINE).buffs.attack += 2;
             let mine = s.card(SPACEMINE).clone();
@@ -195,7 +188,6 @@ mod tests {
             let mine = me.clone();
             destroy(&mut s, &mine);
 
-            // 10/2: one hit of 10 on each of two different enemies.
             assert_eq!(hits_from(&s, &me.id), vec![10, 10]);
             let targets = targets_of(&s, &me.id);
             let mut unique = targets.clone();
@@ -220,7 +212,6 @@ mod tests {
             let mine = me.clone();
             destroy(&mut s, &mine);
 
-            // No enemy Unit stands, so the one hit lands on the enemy hero.
             assert_eq!(hits_from(&s, &me.id), vec![10]);
             s.expect_health(PlayerId::P2, 20);
         }

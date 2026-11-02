@@ -58,10 +58,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #20.1 Lil' Kenny — SPEC §8.9 row 20.1, §7, R1184003, BUILD M11 row M+ 20.1: "summoned
-// with X = 3 it is 3/3 with no keyword; X = 4 Rush; 8 also Divine Shield; 12 First Strike; 16 Cleave;
-// 20 Lifesteal; 30 Indestructible; a +10 buff gives no keyword; Vanilla keeps X/X and drops them;
-// radiant 2X/2X with the same thresholds on X". Each Kenny is summoned as M+ #20 summons one.
+// Meditative+ #20.1 Lil' Kenny — SPEC §8.9 row 20.1, §7, R1184003, BUILD M11 row M+ 20.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,9 +72,6 @@ mod tests {
 
     use KeywordKind::{Cleave, DivineShield, FirstStrike, Indestructible, Lifesteal, Rush};
 
-    /// A Lil' Kenny summoned with X = `x` as M+ #20 summons one: the Competition cast (Radiant on
-    /// `radiant`), `x` questions answered right, then Stop (none after the last). p2's field holds
-    /// `enemies`.
     fn kenny(x: i32, radiant: bool, hand: &[&str], enemies: &[&str]) -> Scenario {
         let mut cards = vec![json!({ "def": COMPETITION, "radiant": radiant })];
         cards.extend(hand.iter().map(|id| json!(id)));
@@ -115,7 +109,6 @@ mod tests {
             .unwrap_or_else(|| panic!("a Lil' Kenny"))
     }
 
-    /// Keyword kinds in one order, so two lists compare as sets.
     fn sorted(kinds: &[KeywordKind]) -> Vec<String> {
         let mut names: Vec<String> = kinds.iter().map(|kind| format!("{kind:?}")).collect();
         names.sort();
@@ -130,7 +123,6 @@ mod tests {
         (view.attack, view.health, sorted(&kinds))
     }
 
-    /// The attacks the Kenny may declare now.
     fn kenny_attacks(s: &Scenario) -> usize {
         let id = the_kenny(s).id;
         legal_actions(s.state(), P1)

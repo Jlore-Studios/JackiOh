@@ -1,9 +1,7 @@
 // The Collection screen's cosmetics (#1579, R1579000): what the account owns. The playmat, backdrop
-// and card back are equipped from preview tiles (`AccountCosmeticTiles.tsx`), and a card's foil,
-// finish, border and full art from the card itself, in the Cards section (R1655000). R1953001: the
-// selects of the defaults every card wore until it picked its own are gone, so a card with no pick of
-// its own wears its kind's default. The list renders `GET /api/cosmetics` and decides nothing
-// (CLAUDE.md rule 7); `collection.ts` holds what it lists and the words it says.
+// and card back are equipped from tiles (`AccountCosmeticTiles.tsx`), a card's own from the card in
+// the Cards section (R1655000); a card with no pick of its own wears its kind's default (R1953001).
+// It renders `GET /api/cosmetics` and decides nothing (CLAUDE.md rule 7).
 
 import type { ReactElement } from "react";
 

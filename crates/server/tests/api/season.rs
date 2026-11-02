@@ -1,6 +1,4 @@
-//! Seasons (SPEC §9.12, R609): the season a patch plays in, and the soft reset that opens one.
-//!
-//! Port of `apps/server/test/ranked/season.test.ts` (part 18).
+//! Ranked season boundaries and soft resets (SPEC §9.12, §4.4.9, R609).
 
 use indexmap::IndexMap;
 use jackioh_server::config::{RATING_DEVIATION_START, SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};

@@ -1,7 +1,6 @@
-// The emote pool and the dealt hand on the client (R1340–R1343). The deal is the engine's
-// (`crates/engine/src/wire/emotes.rs`), reached over WASM; what this file proves is that the
-// client's hand-kept copy of the pool and the hand's shape (`src/wire/emotes.ts`) agree with the
-// Rust ones, that the WASM deal is the server's, and how a frame's hand is read.
+// The emote pool and the dealt hand on the client (R1340–R1343): the client's hand-kept copy of the
+// pool and the hand's shape (`src/wire/emotes.ts`) agree with the Rust ones
+// (`crates/engine/src/wire/emotes.rs`), and the WASM deal is the server's.
 
 import { describe, expect, it } from "vitest";
 
@@ -13,8 +12,8 @@ import type { EmoteId as GeneratedEmoteId } from "../wire/generated/EmoteId.ts";
 import { dealEmoteHands } from "./deal.ts";
 import { DEFAULT_EMOTE_HAND, handFor, isEmoteHand } from "./hand.ts";
 
-// R1340: the hand-kept TypeScript union and the one ts-rs writes from Rust's `EmoteId` are the same
-// set of strings, or this file does not typecheck.
+// R1340: the hand-kept union and the one ts-rs writes from Rust's `EmoteId` are the same set of
+// strings, or this file does not typecheck.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const POOL_TYPES_AGREE: Same<EmoteId, GeneratedEmoteId> = true;
 

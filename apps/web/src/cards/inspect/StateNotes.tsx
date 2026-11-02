@@ -1,10 +1,7 @@
-// A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8). A hover
-// preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
-// read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
-// quest line (B5 E33, R404) and a staged quest's stages (R1854000), what a copier copies (B5 E14, R511), why the viewer's own unit cannot
-// attack now (R849000), why a card in hand cannot be played now (R979000) and the counts cards on the
-// field keep on a unit (R2321000). `LocLine` is E36's
-// meta line.
+// A face in play's states in words beside an inspect overlay's face (SPEC §10.8), where no badge
+// tooltip can be hovered: the tuned ribbon (R386, R1320), badges (R385, E39, R383), quests (B5 E33,
+// R404; stages R1854000), copies (B5 E14, R511), why it cannot attack (R849000) or be played
+// (R979000) now, and field counts (R2321000). `LocLine` is E36's meta line.
 
 import type { ReactElement } from "react";
 
@@ -20,9 +17,8 @@ import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
 /** R404: the glyphs of a quest and of an aura its line holds; R511: of a copier's note. */
 const QUEST_GLYPH = "⚑";
-/** R1854000: a stage's mark by its state — done, open now, still to come. */
 const STAGE_GLYPH: Readonly<Record<"done" | "current" | "upcoming", string>> = { done: "✓", current: "▸", upcoming: "·" };
-/** R1854000: a stage's state in words, beside its glyph for a reader that has no sight of it. */
+/** A stage's state in words, for a reader that cannot see its glyph. */
 const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string>> = {
   done: "done",
   current: "now",
@@ -30,12 +26,10 @@ const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string
 };
 const AURA_GLYPH = "✦";
 const COPY_GLYPH = "“";
-/** R849000: the glyph of a unit's reason for not attacking. */
 const ATTACK_REASON_GLYPH = "⊘";
-/** R979000: the glyph of a hand card's reason for not playing, the attack reason's sibling. */
+/** R979000: the attack reason's sibling. */
 const PLAY_REASON_GLYPH = "⊘";
 
-/** R511: "Copying: Book of Knowledge", "Copying: Book of Knowledge (Radiant)". */
 export function copyingWords(copying: { name: string; radiant: boolean }): string {
   return copying.radiant ? t("Copying: {name} (Radiant)", { name: copying.name }) : t("Copying: {name}", { name: copying.name });
 }

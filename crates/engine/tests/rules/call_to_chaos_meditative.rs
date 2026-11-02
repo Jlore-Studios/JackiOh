@@ -1,10 +1,8 @@
 //! Meditative #95 Call to Chaos (Meditative Edition)'s table (`subsystems/call_to_chaos_meditative.rs`),
-//! rolled by Core #95's subsystem (R28, R87, R423, R436): each of the ten entries against fixture pools,
-//! the third edition in the Call to Chaos pool since its set shipped in v0.3.5 (R1240, R1420), the
-//! rest-of-game entry and its cap (R1241), the hand fusion and `add_to_hand { copyOf }` (R1242), the
-//! Acclaimed pool (R1243), Bounce then Nerf (R1244), `shuffle_into { memory }` through JSON (R1246) and
-//! the Radiant's three different entries in list order (R423). The real card's test covers the same
-//! cases against the real catalog.
+//! rolled by Core #95's subsystem (R28, R87, R423, R436), on fixture pools: the third edition in the pool
+//! (R1240, R1420), the rest-of-game entry and its cap (R1241), the hand fusion and `add_to_hand { copyOf }`
+//! (R1242), the Acclaimed pool (R1243), Bounce then Nerf (R1244), `shuffle_into { memory }` through JSON
+//! (R1246) and the Radiant's three different entries in list order.
 
 use jackioh_engine::catalog::query;
 use jackioh_engine::effects::add_to_hand::{AddToHandArgs, add_to_hand};
@@ -58,7 +56,6 @@ fn register(med_cry: Option<Hook>, other_cry: Option<Hook>) {
     register_scripts(registered);
 }
 
-/// A main phase on p1's turn, empty hands and an empty p1 deck.
 fn game(seed: &str, med_cry: Option<Hook>, other_cry: Option<Hook>) -> GameState {
     let mut state = new_game(seed, None);
     register(med_cry, other_cry);
@@ -71,7 +68,6 @@ fn game(seed: &str, med_cry: Option<Hook>, other_cry: Option<Hook>) -> GameState
     state
 }
 
-/// `{ table: CHAOS_MED_EFFECTS }`.
 fn med_table() -> CallToChaosArgs {
     CallToChaosArgs {
         table: Some(CHAOS_MED_EFFECTS),
@@ -134,7 +130,6 @@ fn labels_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<Strin
         .collect()
 }
 
-/// A seed whose roll (base or Radiant) the predicate accepts.
 fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> String {
     jackioh_engine::testkit::seed_where(tag, |seed| {
         accept(&names_of(&roll_chaos_effects(
@@ -145,7 +140,6 @@ fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> S
     })
 }
 
-/// One field of every event of a type, as JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -160,7 +154,7 @@ fn strings_of(values: &[Value]) -> Vec<String> {
         .collect()
 }
 
-/// TS `Array.prototype.indexOf`: -1 when absent.
+/// -1 when absent.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -169,7 +163,6 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .unwrap_or(-1)
 }
 
-/// The live card.
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
@@ -190,7 +183,6 @@ fn chaos_pool() -> Vec<String> {
     )
 }
 
-/// The defs a list of events played, in order.
 fn played(events: &[GameEvent]) -> Vec<String> {
     strings_of(&field_of(events, GameEventType::CardPlayed, "defId"))
 }
@@ -232,8 +224,6 @@ mod r1240_meditative_95s_table {
         );
     }
 
-    /// Until the release the third edition joined the pool only while its set was previewed; the set
-    /// shipped in v0.3.5, so the pool holds all three editions in every game.
     #[test]
     fn r1240_the_call_to_chaos_pool_holds_all_three_editions_since_the_meditative_set_shipped() {
         game("pool", None, None);
@@ -423,8 +413,7 @@ mod r1241_the_rest_of_game_entry {
     fn r1241_from_the_casters_next_turn_each_start_of_turn_casts_a_random_call_to_chaos_as_a_new_chain() {
         let recast = || hook(|_ctx| vec![cast_random_call_to_chaos()]);
         let mut state = begin_game(&new_game("eternal-turns", None)).state;
-        // Every edition's stand-in recasts, the Meditative one included: it is in the pool since its
-        // set shipped in v0.3.5 (R1240).
+        // Every edition's stand-in recasts, the Meditative one included: it is in the pool (R1240).
         register(Some(recast()), Some(recast()));
         for player in [P1, P2] {
             let keep = ids_of(&state.players[player].hand);
@@ -812,8 +801,7 @@ mod r874000_the_fusion_cap {
             );
             held *= 1 + CHAOS_MED_FUSE_COPIES as usize;
         }
-        // The next fusion would hold `held`, past the cap: it is not made, so the entry does nothing,
-        // and the hand, its prices and the transient definitions stay as they were.
+        // The next fusion would hold `held`, past the cap: not made; hand, prices and transient defs stay.
         let hand = state.players.p1.hand.clone();
         let defs = state.transient_defs.len();
         let events = run(&mut state, entry("fuse"), None);

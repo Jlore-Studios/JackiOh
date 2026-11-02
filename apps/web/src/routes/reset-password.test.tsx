@@ -213,8 +213,6 @@ describe("B31 with a recovery session", () => {
   });
 });
 
-// B31: password visibility.
-
 describe("B31 show and hide", () => {
   beforeEach(() => {
     holdRecoverySession(RECOVERY, EMAIL);
@@ -551,9 +549,7 @@ describe("B31 a password past the provider's byte limit", () => {
   });
 });
 
-
 // R194: renew a recovery session that expires while the form is open.
-
 describe("R194 a recovery session that runs out while the form is open", () => {
   /** Provider rejects an expired token, then grants a refresh. */
   function renewingProvider(

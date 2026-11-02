@@ -6,7 +6,7 @@ import type { Action, PlayerId } from "@jackioh/shared";
 
 import type { LastBoardCard, PracticeReplaySummary, PracticeStartConfig } from "./protocol.ts";
 
-/** R668: worker-only start state, action log, AI cursor, catalog version and state hash for resuming. */
+/** R668: the worker-only state a game in progress resumes from. */
 export type PracticeSave = {
   catalog: string;
   /** R1371000: the scheme `catalog` is named by; a save kept before the version retcon has none. */
@@ -17,7 +17,6 @@ export type PracticeSave = {
   hash: string;
 };
 
-/** R768: a finished free game kept for its replay. Worker-side only: the log names the AI's hidden cards. */
 /**
  * R767000: the setup a kept game was dealt, as `createGame` had it, so a game played on an older
  * catalog version folds under that version without dealing it again from this build's catalog.
@@ -31,7 +30,6 @@ export type PracticeReplaySetup = {
 
 export type PracticeReplay = {
   catalog: string;
-  /** R1371000: the scheme `catalog` is named by; a game kept before the version retcon has none. */
   versions?: number;
   config: PracticeStartConfig;
   /** R767000: absent on a game kept before setups were (it folds only on its own catalog version). */

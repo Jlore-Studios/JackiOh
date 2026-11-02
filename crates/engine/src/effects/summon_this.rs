@@ -4,8 +4,6 @@
 //! row (R64), summoning sick for the turn it arrives on (§4.1), and nothing at all when that row is
 //! full. Only a card in a hand or a library moves: a trigger that has left those zones by the time it
 //! resolves has nothing to summon.
-//!
-//! Port of `packages/engine/src/effects/summonThis.ts`.
 
 use serde_json::json;
 
@@ -18,7 +16,6 @@ use crate::wire::ZoneName;
 /// B5 E26: summon the card running the script out of its hand or its library (no Cry, R64).
 pub fn summon_this() -> Effect {
     Effect::new("summonThis", |ctx| {
-        // TS read the live `ctx.self`: the zone the card stands in now.
         let zone = ctx.live_self().map(|me| me.zone.z());
         if zone != Some(ZoneName::Hand) && zone != Some(ZoneName::Library) {
             return;

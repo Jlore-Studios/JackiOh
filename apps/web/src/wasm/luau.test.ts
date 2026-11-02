@@ -105,7 +105,6 @@ describe("R915009 a practice game with a custom card runs on the Luau module", (
     if (opened === null) throw new Error("no seed in 40 deals the custom card into the opening hand");
     expect(opened.view.defs?.[BURNER.id]?.set, "the view hands the page the card's definition").toBe("Custom");
 
-    // The mulligans, keeping everything; then the human's main phase, the AI acting when it owes.
     let last = opened;
     for (let step = 0; step < 60; step += 1) {
       const { view } = last;
@@ -136,13 +135,11 @@ describe("R915009 a practice game with a custom card runs on the Luau module", (
     expect(after.view.opponent.hero.health).toBe(before - 3);
     expect(after.view.events.some((event) => event.type === "scriptFailed")).toBe(false);
 
-    // The AI takes its turn on the same module.
     const ended = snapshotOf(await send({ type: "act", action: { type: "endTurn" } }));
     let ai = ended;
     for (let step = 0; step < 40 && ai.aiToAct; step += 1) ai = snapshotOf(await send({ type: "aiStep" }));
     expect(ai.view.result === null || ai.view.result !== undefined).toBe(true);
 
-    // The log folds back to the same game, the custom card with it; the normal module will not.
     const debug = await send({ type: "debug" });
     if (debug.type !== "debug") throw new Error("a dev core answers debug");
     const { decks, handicaps, log, dealt, hash, customCards } = debug.debug;
@@ -180,7 +177,6 @@ describe("R2102000 the lethal hint on the Luau module", () => {
     }
     expect(last.view.turn, "the human's first main phase, before the AI has set anything").toBe(1);
     expect(luauModuleInUse()).toBe(true);
-    // No board yet, and the AI on its full health: no lethal, and the snapshot says none.
     expect("lethal" in last).toBe(false);
 
     // The same state with the AI on 3: Burner's 3 to the face, played through its Luau script, wins.

@@ -1,32 +1,18 @@
 //! `jackioh_engine`: the JackiOh rules (SPEC.md), the wire types every layer shares and the deck
-//! validator, pure and seeded (CLAUDE.md rule 4, SURFACE §3). Port of `packages/engine/src/index.ts`,
-//! `packages/shared/src/index.ts` (as `wire`) and `packages/validator/src/index.ts` (as `validator`).
+//! validator, pure and seeded (CLAUDE.md rule 4, SURFACE §3). Module tree: SURFACE §1, §4.1, §6, §16.
 //!
-//! Module tree (SURFACE §1, §6), written once by part 1: one module per
-//! `packages/engine/src/<camelName>.ts`, snake_cased (SURFACE §4.1). A Wave 1 part fills module files
-//! and never edits this one; a module it wishes existed goes under `GAPS` in its notes (SURFACE §16).
+//! Re-exports (SURFACE §6.1, §8): every top-level module and `wire` are re-exported whole, so
+//! `crate::<name>` (and the testkit's `pub use crate::*`) names every engine item; a name two modules
+//! both define is only an error where someone names it through the root. `effects`, `subsystems` and
+//! `validator` stay modules (`jackioh_engine::validator::validate_deck`).
 //!
-//! Re-exports (SURFACE §6.1, §8):
-//!
-//! - Every top-level module is re-exported whole (`pub use reduce::*;` …), the ones
-//!   `packages/engine/src/index.ts` re-exported and the ones it did not, so `crate::<name>` (and the
-//!   testkit's `pub use crate::*`) names every engine item, as SURFACE §8 needs. TS kept every name
-//!   it exported from these files distinct; Rust keeps that contract, and a name two modules both
-//!   define is only an error where someone names it through the root.
-//! - `wire` (← `@jackioh/shared`) is re-exported whole too, so `jackioh_engine::GameEvent` works.
-//! - `effects` and `subsystems` stay modules (TS `export * as effects`, `export * as subsystems`).
-//! - `validator` stays a module (TS `@jackioh/validator` was its own package, and its
-//!   `validateDeck` is not `state.ts`'s): `jackioh_engine::validator::validate_deck`.
-//!
-//! Three names are defined twice in TS and resolved here explicitly, in `@jackioh/engine`'s favor,
-//! because that is what a TS import from `@jackioh/engine` meant: `UnitView` is `layers`' (§10.4's
-//! layered stats; the view's is `wire::UnitView`), `HeroView` is `query`'s (`heroOf`'s answer; the
-//! view's is `wire::HeroView`), and `PlayAction` is `play_choices`' (`play_steps` has its own).
+//! Three names defined twice resolve explicitly at the root: `UnitView` is `layers`' (§10.4's layered
+//! stats; the view's is `wire::UnitView`), `HeroView` is `query`'s (the view's is `wire::HeroView`),
+//! and `PlayAction` is `play_choices`' (`play_steps` has its own).
 
-// The wire types (← packages/shared/src).
 pub mod wire;
 
-// The engine (← packages/engine/src), alphabetical.
+// The engine, alphabetical.
 pub mod alt_play;
 pub mod animated;
 pub mod announce;
@@ -118,7 +104,6 @@ pub mod win_rates;
 pub mod work;
 pub mod zones;
 
-// The deck validator (← packages/validator/src/index.ts).
 pub mod validator;
 
 // What a card script may name (SURFACE §7.1).
@@ -212,7 +197,7 @@ pub use win_rates::*;
 pub use work::*;
 pub use zones::*;
 
-// Defined twice in TS; `@jackioh/engine`'s meaning wins at the root (see the header).
+// Names two modules define: these win at the root (see the header).
 pub use layers::UnitView;
 pub use play_choices::PlayAction;
 pub use query::HeroView;

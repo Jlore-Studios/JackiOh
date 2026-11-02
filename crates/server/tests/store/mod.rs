@@ -1,4 +1,4 @@
-//! The server's ported tests: `apps/server/test/db/*.test.ts`: the store contract, migrations and CLIs, part 20.
+//! Store contract, migrations and CLI tests.
 //! Written once by part 1 (SURFACE §1).
 
 pub mod balance_watch;

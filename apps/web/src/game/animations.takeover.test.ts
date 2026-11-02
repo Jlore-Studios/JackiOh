@@ -121,21 +121,21 @@ describe("R2722001 a readable Mythic's entrance holds its entry for the takeover
 
 describe("R2722002 a hidden card's entrance at its reveal", () => {
   it("R2722002 a Mythic Trap's first firing and a Cloaked Mythic's reveal take it on each seat that reads them, anchored on the flipped zone", () => {
-    // A Trap: its controller reads its first firing, the other seat the sentinel; a firing again is no reveal.
+    // A Trap: each seat whose view names its first firing (R2734000); a sentinel firing and a firing again are no reveal.
     const [trap] = plan([fired("trap-mythic", "b1")]);
     expect(trap?.entrance).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-you-backrow-3" });
+    expect(plan([fired("trap-mythic", "b1")], p2)[0]?.entrance).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-opponent-backrow-3" });
     expect(plan([fired("hidden", "hidden")], p2)[0]?.entrance).toBeUndefined();
     expect(plan([fired("trap-mythic", "b1", true)])[0]?.entrance).toBeUndefined();
     expect(plan([fired("trap-legend", "b2")])[0]?.entrance).toMatchObject({ tier: "legendary", holdMs: 0 });
 
-    // A Cloaked Unit, Spell and Field Spell: `activated` names it on both seats, then its firing.
+    // A Cloaked Unit, Spell and Field Spell: `activated` names it on both seats, then its firing, where each seat enters it.
     for (const defId of ["unit-mythic", "spell-mythic", "field-mythic"]) {
-      const own = plan([revealed(defId), fired(defId, "c61")]);
-      expect(own[0]?.entrance, `${defId} on its controller's seat, at the activated`).toBeUndefined();
-      expect(own[1]?.entrance, `${defId} on its controller's seat`).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-you-backrow-3" });
-      const theirs = plan([revealed(defId), fired("hidden", "hidden")], p2);
-      expect(theirs[0]?.entrance, `${defId} on the other seat`).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-opponent-backrow-3" });
-      expect(theirs[1]?.entrance).toBeUndefined();
+      for (const [view, zone] of [[p1, "zone-you-backrow-3"], [p2, "zone-opponent-backrow-3"]] as const) {
+        const entries = plan([revealed(defId), fired(defId, "c61")], view);
+        expect(entries[0]?.entrance, `${defId} for ${view.viewer}, at the activated`).toBeUndefined();
+        expect(entries[1]?.entrance, `${defId} for ${view.viewer}`).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: zone });
+      }
     }
   });
 });

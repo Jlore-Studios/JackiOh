@@ -1,7 +1,5 @@
-// Small cue builders shared by the v0.2.0 recipes (castOnDraw and per-card in cardFx.ts, the brand in
-// brand.ts, Call to Chaos in chaos.ts). They build plain data exactly as `cues.ts` builds its own, so
-// a cue from here is bounded by R200 the same way: a ring lasts min(FX_RING_MS, D − delay + T), rays
-// (D − delay) + FX_RAYS_TAIL_MS, and a burst's particles live at most FX_MAX_PARTICLE_LIFE_MS.
+// Small cue builders shared by the recipes outside `cues.ts` (cardFx.ts, brand.ts, chaos.ts and others).
+// They build plain data exactly as `cues.ts` builds its own, so a cue from here is bounded by R200 the same way.
 
 import { FX_MAX_TAIL_MS, FX_RAYS_TAIL_MS, FX_RING_MS } from "./constants.ts";
 import type { FxAnchor, FxBurstCue, FxCue, FxPoint, FxPreset, FxRayTone, FxRingCue, FxRaysCue, FxShakeCue, FxSpread } from "./types.ts";
@@ -37,7 +35,6 @@ export function raysCue(D: number, tone: FxRayTone, at: FxAnchor, delayMs: numbe
   return { kind: "rays", tone, at, delayMs, durationMs: D - delayMs + FX_RAYS_TAIL_MS };
 }
 
-/** A shake of `min(1, base × intensity)` at `delayMs`, or nothing when that is not above 0. */
 export function shakeCues(intensity: number, base: number, delayMs: number): FxCue[] {
   const trauma = Math.min(1, base * intensity);
   if (!(trauma > 0)) return [];
