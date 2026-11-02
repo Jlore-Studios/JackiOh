@@ -688,6 +688,10 @@ type Config struct {
 	// HoldExempt: the subscriptions an item never waits for (`hold_exempt`): one of them that
 	// cannot take its item hands it off at once.
 	HoldExempt []string // default: ()
+	// SpotCheckEvery: every how many merged medium bot pull requests one gets the after-merge
+	// spot-check (#2748, section 5; `internal/spotcheck`). The config's `spot_check_every`; 0,
+	// when it is left out, samples none.
+	SpotCheckEvery int // default: 0
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`

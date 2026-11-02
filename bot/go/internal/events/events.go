@@ -30,6 +30,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stepup"
@@ -836,12 +837,64 @@ func DropWip(ctx *hctx.Context, number int) {
 	}, fmt.Sprintf("wip #%d closed", number))
 }
 
-// OnPullClosed is on_pull_closed.
+// OnPullClosed is on_pull_closed. A bot pull request merged into the default branch is counted
+// for the after-merge spot-check too (`SpotCheckMerge`).
 func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 	pull := payload.Obj("pull_request")
 	if !queue.LabelNames(pull)[config.LabelPR] {
 		return []string{"ignored: not a bot pull request"}
 	}
+	notes := onPullClosed(ctx, pull)
+	if said := SpotCheckMerge(ctx, pull); said != "" {
+		notes = append(notes, said)
+	}
+	return notes
+}
+
+// SpotCheckMerge counts a merged bot pull request for the after-merge spot-check (#2748, section
+// 5; `spotcheck.Merged`): every `spot_check_every`th medium one merged into the default branch,
+// none of a follow-up issue's, is queued for a strong model's review of the change as it merged.
+// What it queued, or "".
+func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
+	cfg := ctx.Cfg
+	if !cfg.SpotChecks() || !pull.Truthy("merged") || !pyjson.Equal(pull.Obj("base").Get("ref"), cfg.DefaultBranch) {
+		return ""
+	}
+	number := py.MustInt(py.Item(pull, "number"))
+	state := ctx.Store.Load()
+	record := state.Obj("items").Obj(strconv.Itoa(number)).Copy()
+	issue := 0
+	if linked := threads.LinkedIssue(pull); linked != nil {
+		issue = *linked
+	}
+	difficulty := queue.DifficultyOf(queue.LabelNames(pull), py.OrStr(record.Get("difficulty"), ""))
+	followUp := false
+	if issue != 0 {
+		thread := pyjson.New()
+		herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(issue) })
+		issueRecord := state.Obj("items").Obj(strconv.Itoa(issue))
+		followUp = spotcheck.IsFollowUp(issueRecord, py.OrStr(thread.Get("body"), ""))
+		if queue.IsFullsend(queue.ModeOf(queue.LabelNames(thread)), issueRecord) {
+			difficulty = "hard" // a fullsend tree's reconcile is a strong model's (#505)
+		}
+	}
+	merge := spotcheck.Merge{PR: number, Issue: issue, Title: py.OrStr(pull.Get("title"), ""),
+		SHA: py.OrStr(pull.Get("merge_commit_sha"), ""), Head: py.OrStr(pull.Obj("head").Get("sha"), ""),
+		Difficulty: difficulty, FollowUp: followUp, Record: record}
+	var queued *pyjson.Object
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		queued = spotcheck.Merged(s, merge, cfg.SpotCheckEvery, ctx.Now())
+		return nil
+	}, fmt.Sprintf("spot-check count #%d", number))
+	if queued == nil {
+		return ""
+	}
+	return fmt.Sprintf("#%d is medium merge %d, so it is queued for an after-merge spot-check (one in %d)",
+		number, py.MustInt(queued.Get("n")), cfg.SpotCheckEvery)
+}
+
+// onPullClosed is on_pull_closed's own work on a closed bot pull request.
+func onPullClosed(ctx *hctx.Context, pull *pyjson.Object) []string {
 	issue := threads.LinkedIssue(pull)
 	number := py.MustInt(py.Item(pull, "number"))
 	ctx.Store.Update(func(s *pyjson.Object) any {
@@ -979,6 +1032,20 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 	}
 	answer := queue.QueueRevise(ctx, number, ctx.Cfg.BotLogin, false, "ci", false,
 		pyjson.New("ci_run_id", run.Get("id"), "ci_sha", sha, "ci_fixes", fixes+1), nil)
+	// The last approver owns the merge (#2748, section 4): the subscription whose approval shipped
+	// this head fixes it, ahead of its new work (`plan.Pairs`), held for it a while or handed off
+	// as any owner's work (`plan.Owning`). Its fix is a new head, which another subscription
+	// approves (`reviewrule`).
+	owner := py.OrStr(record.Get("merge_owner"), "")
+	if owner != "" && pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			plan.Own(s, number, owner, fmt.Sprintf("its approval shipped `%s`, and the last approver "+
+				"owns the merge, so it fixes what CI found", py.SliceTo(sha, 12)), ctx.Now())
+			return nil
+		}, fmt.Sprintf("ci fix #%d is %s's", number, owner))
+		answer += fmt.Sprintf(" `%s`, whose approval shipped this head, owns the merge, so it fixes "+
+			"it first; the fix is a new commit, which another subscription reviews.", owner)
+	}
 	ctx.GH.CreateComment(number, fmt.Sprintf("%s (%s). %s", failed, link, answer))
 	return fmt.Sprintf("#%d: queued a CI fix", number)
 }

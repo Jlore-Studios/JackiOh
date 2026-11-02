@@ -1,16 +1,21 @@
-<!-- version: 3 -->
+<!-- version: 4 -->
 # Revise pull request #$number
 
 You are the builder for a revision of pull request #$number of `$repo`, on its branch `$branch`
 (base `$base`). Why this revision was asked for: **$source**.
 
 - `request`: a trusted person asked for changes in a comment or a review.
-- `ci`: the repository's CI failed on the pull request.
+- `ci`: the repository's CI failed on the pull request, or `main`'s merge queue took it out red.
+  The subscription whose approval shipped the head owns the merge, so you, on it, fix it.
 - `conflict`: `main` moved and the branch no longer merged cleanly. The harness has merged `main`
   into the branch and left the conflicted files with their markers for you.
 - `cross-review`: a review run (the final audit, on a subscription other than the builder's: a
   medium or strong model for a medium item, a strong one for a hard item) read the change and
-  found blocking problems. They are listed under "What was asked"; answer each one.
+  found blocking problems. They are listed under "What was asked"; answer each one. The auditor
+  fixes its own findings: you run on the subscription whose audit found them.
+
+Whatever the source, your commit is a new head: your own approval of it does not ship it, and a
+final audit on another subscription reviews it before it merges.
 
 ## The pull request
 
@@ -35,7 +40,10 @@ Read the whole change before editing: `git diff $base...HEAD`.
 - `request`: answer each point at its file and line. Where a request is wrong or out of scope,
   change nothing for it and say why in your report.
 - `ci`: find the real cause in the log. When the failure is not this branch's doing (a flaky test,
-  a breakage already on `main`), change nothing and say so plainly with the evidence.
+  a breakage already on `main`), change nothing and say so plainly with the evidence. Never skip,
+  ignore or disable a test, or weaken a check, to get green (CLAUDE.md rule 12): a red check you
+  cannot fix honestly is reported, not hidden. After three CI fixes the harness stops and asks a
+  person.
 - `conflict`: resolve every marker so both `main`'s change and this branch's change survive with
   their meaning. Remove every marker. Do not stage, commit or abort the merge: the harness does.
   A ruling of this branch whose number `main` took meanwhile takes the next number free in its
@@ -50,8 +58,8 @@ Read the whole change before editing: `git diff $base...HEAD`.
   `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- spec` and every other file the merge left
   conflicted, and make sure it prints nothing. A change that still holds a marker is never
   delivered.
-- `cross-review`: check each finding against the code and SPEC first; the second reviewer can be
-  wrong. Fix what holds, and answer what does not with the evidence in your report.
+- `cross-review`: check each finding against the code and SPEC first; the audit can be wrong,
+  yours included. Fix what holds, and answer what does not with the evidence in your report.
 
 Keep the pull request's scope. Run what proves your change before you stop.
 

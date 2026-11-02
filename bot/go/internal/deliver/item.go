@@ -99,6 +99,11 @@ func (x *Deliverer) Item() {
 }
 
 func (x *Deliverer) deliverItem(number int) {
+	if x.Plan.Get("action") == "review" && x.Plan.Truthy("spot_check") {
+		// An after-merge spot-check: its pull request is closed by its merge (#2748).
+		x.SpotCheck(number, x.lateStop(number, py.Str(x.Result.Get("status"))))
+		return
+	}
 	thread := x.GH.GetIssue(number)
 	if thread.Get("state") != "open" {
 		x.closed(number, thread)
@@ -566,7 +571,6 @@ func (x *Deliverer) requeueLabel(number int, kind string) {
 // result at all (its runner died or timed out), it may be this item too: it goes to the back
 // of the queue, and two in a row block it.
 func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) {
-	x.Chain = false
 	reason := py.OrStr(x.Result.Get("reason"), NoResult)
 	now := clock.ISO(x.Ctx.Now())
 	label := requeue
@@ -576,17 +580,7 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 			label = config.LabelRevise
 		}
 	}
-	// A failure that was not the subscription's (an install red on untouched main, a push
-	// GitHub refused) backs it off but does not lengthen its streak.
-	escalate := !x.Result.Truthy("infra_scope")
-	var streak []int
-	x.Ctx.Store.Update(func(s *pyjson.Object) any {
-		streak = append(streak, providers.NoteInfra(s, x.Provider.ID, reason, x.Ctx.Now(), escalate))
-		return nil
-	}, "infra "+x.Provider.ID)
-	if escalate && len(streak) > 0 {
-		x.askAboutInfra(streak[len(streak)-1], reason)
-	}
+	x.noteInfra(reason)
 	where := fmt.Sprintf("on `%s`", x.Provider.ID)
 	if !x.Result.Truthy("no_result") {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), label)
@@ -615,6 +609,24 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 	queue.SetStateLabel(x.Ctx, number, x.Labels(number), label)
 	x.GH.CreateComment(number, fmt.Sprintf("The run working on this died %s (%s): %s. It is back in "+
 		"the queue, behind the others.", where, x.link(), reason))
+}
+
+// noteInfra is a run that could not work, on its subscription's record: it is left alone for a
+// while (`providers.INFRA_BACKOFFS`), a person is asked once the streak is long enough
+// (`askAboutInfra`), and no run is chained after this one.
+func (x *Deliverer) noteInfra(reason string) {
+	x.Chain = false
+	// A failure that was not the subscription's (an install red on untouched main, a push
+	// GitHub refused) backs it off but does not lengthen its streak.
+	escalate := !x.Result.Truthy("infra_scope")
+	var streak []int
+	x.Ctx.Store.Update(func(s *pyjson.Object) any {
+		streak = append(streak, providers.NoteInfra(s, x.Provider.ID, reason, x.Ctx.Now(), escalate))
+		return nil
+	}, "infra "+x.Provider.ID)
+	if escalate && len(streak) > 0 {
+		x.askAboutInfra(streak[len(streak)-1], reason)
+	}
 }
 
 // Keep what a run that did not finish made: a build's on its own branch, a revision's

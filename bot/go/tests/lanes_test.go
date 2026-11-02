@@ -89,14 +89,19 @@ func TestLanes_TheWeakOneNeverTakesAnItemFromItsPlanner(t *testing.T) {
 	assertTrue(t, seat == nil, seat)
 }
 
-// A revision that answers a final audit stays at the auditor's tier or above (#725), so the
-// auditor fixes and pushes it.
-func TestLanes_ARevisionAnsweringAnAuditStaysAtItsTier(t *testing.T) {
+// A revision that answers a final audit is its auditor's own fix (#2748, section 4): the audit
+// made the auditor's subscription its owner, which fixes it on its seat of the audit's tier, though
+// Muse comes first in the medium tier's order. Handed off (no owner now), it goes to the item's own
+// tier, as any owner's work does (#725 kept it at the auditor's tier for anyone).
+func TestLanes_AnAuditorFixesAtItsAuditsTierAndAHandoffAtTheItems(t *testing.T) {
 	pool := testsupport.MakeConfig().Pool
 	claude := pool.Get("claude-3")
 	muse, agy := pool.Get("muse"), pool.Get("agy")
-	seat, _ := lanesSeat(pool, []*providers.Provider{muse, agy, claude}, "medium", "", "strong")
+	seat, note := lanesSeat(pool, []*providers.Provider{muse, agy, claude}, "medium", "claude-3", "strong")
 	assertEqual(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
+	assertIn(t, "its owner `claude-3` keeps it: one lane, one owner", note)
+	seat, _ = lanesSeat(pool, []*providers.Provider{muse, agy, claude}, "medium", "", "strong")
+	assertEqual(t, lanesSeatID(t, seat), []any{"muse", "medium"})
 	seat, _ = lanesSeat(pool, []*providers.Provider{muse, agy}, "medium", "", "medium")
 	assertEqual(t, lanesSeatID(t, seat)[1], "medium")
 }

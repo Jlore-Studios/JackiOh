@@ -8,6 +8,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -169,6 +170,14 @@ func (x *Deliverer) approved(pr int, head string, merge bool /* = True */, vote 
 func (x *Deliverer) clear_(pr int, head string, votes *pyjson.Object) {
 	who := reviewrule.Who(x.approvals(votes))
 	entry := pyjson.New("sha", head, "at", clock.ISO(x.Ctx.Now()), "by", who)
+	// The last approver owns the merge (#2748, section 4): this run's approval met the rule, so a
+	// red check or the merge queue's failure on this head comes back to its subscription
+	// (`events.fixCI`), and the after-merge spot-check knows whose approval shipped it.
+	approver := pyjson.New("provider", x.Provider.ID, "family", x.Provider.Family)
+	if x.ReviewSeat != nil {
+		approver.Set("family", x.ReviewSeat.Family()).Set("model", x.ReviewSeat.Model).Set("tier", x.ReviewSeat.Tier)
+	}
+	entry.Set("approver", approver)
 	// The item's strikes end once this head is green in CI too (#316): the sweep sees that
 	// (`sweep._green_heads`), and a merge does (`events.on_pull_closed`).
 	if carried, ok := votes.Get("carried").(*pyjson.Object); ok {
@@ -176,7 +185,7 @@ func (x *Deliverer) clear_(pr int, head string, votes *pyjson.Object) {
 		entry.Set("resolved_by", who)
 		entry.Set("carried_from", py.OrStr(carried.Get("from"), ""))
 	}
-	x.remember(pr, pyjson.New("cleared", entry))
+	x.remember(pr, pyjson.New("cleared", entry, "merge_owner", x.Provider.ID))
 }
 
 // Carry is Deliverer._carry.
@@ -465,9 +474,19 @@ func (x *Deliverer) SecondReview(number int, status string) {
 	x.remember(number, pyjson.New("cross_rounds", rounds, "last_findings", findings, "source", "cross-review",
 		"kind", "revise", "queued_at", clock.ISO(x.Ctx.Now()), "failures", 0,
 		"audit_tier", x.auditTier()))
+	// The auditor fixes its own findings (#2748, section 4): its subscription owns the fix, which
+	// a revision of its own makes, ahead of its new work (`plan.Pairs`), held for it a while or
+	// handed off as any owner's work (`plan.Owning`). That run builds the new head, so its own
+	// approval does not ship it: another subscription audits the fix.
+	x.Ctx.Store.Update(func(s *pyjson.Object) any {
+		planmod.Own(s, number, x.Provider.ID, fmt.Sprintf("its final audit of `%s` asked for changes, "+
+			"and the auditor fixes its own findings", py.SliceTo(head, 12)), x.Ctx.Now())
+		return nil
+	}, fmt.Sprintf("audit fix #%d is %s's", number, x.Provider.ID))
 	x.GH.CreateComment(number, fmt.Sprintf("Second review (%s): %s found blocking "+
-		"problems, so a revision is queued to answer them.\n\n"+
-		"%s", x.link(), who, x.findingsMd()))
+		"problems, so it fixes them itself: a revision is queued for `%s`, which owns the fix. "+
+		"That fix is a new commit, which a final audit on another subscription reviews before it "+
+		"merges.\n\n%s", x.link(), who, x.Provider.ID, x.findingsMd()))
 }
 
 // The pull request's head as git sees it on origin now (the API can lag a push).

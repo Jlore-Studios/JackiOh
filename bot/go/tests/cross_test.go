@@ -415,7 +415,9 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelRevise, "difficulty:medium"))
 	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "cross_rounds")}, []any{"cross-review", 1})
-	// The revision answers agy's medium audit, so it stays at medium or above (#725): Muse.
+	// agy's audit asked for changes, so agy owns the fix and revises it itself (#2748), though Muse,
+	// which built the head, comes first in the medium tier's order.
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", "12", "owner"), "agy")
 	// Two failed revisions are strikes two and three (each failed for the item's own sake),
 	// so the third steps it up instead of blocking it for a person.
 	seen := map[string]string{}
@@ -430,7 +432,7 @@ func TestCross_FindingsSendItBackAndItStopsAfterThree(t *testing.T) {
 	for range 2 {
 		planned, result := h.night(workFake(map[string]runner.Handler{"revise": broken}))
 		assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), result.Get("status")},
-			[]any{"revise", "muse", "failed"})
+			[]any{"revise", "agy", "failed"})
 	}
 	assertIn(t, "It skips the replay check.", seen["prompt"])
 	// Three strikes (#317 parts 4 and 8): instead of blocking it for a

@@ -16,6 +16,12 @@
 // whose commit has that gets auto-merge, which merges it once the required CI checks pass; one
 // still short of it waits in `bot:cross-review` for a review run.
 //
+// A final audit that asks for changes makes the auditor's subscription the owner of the fix, which
+// it makes in a revision of its own, and that new head goes to another subscription's audit; the
+// subscription whose approval ships a head is its merge owner, which a CI fix goes to first
+// (#2748, section 4). An after-merge spot-check's verdict is recorded, and its findings open one
+// follow-up issue (`SpotCheck`, section 5).
+//
 // A commit that meets the rule is recorded as cleared (`_clear`). When `main` then leaves it with
 // conflicts, the revision that resolves them carries the clearance (`_carry`) if it started from
 // that commit, its own run's reviewer approved it, and git shows it changed nothing beyond the files

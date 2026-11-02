@@ -930,6 +930,40 @@ func (x *Worker) baseWorktree() *git.Git {
 	return x.BaseWt
 }
 
+// prepareMerged is `prepare` for an after-merge spot-check (#2748, section 5): the worktree at the
+// commit that merged the pull request into the default branch (the plan's `merge_sha`), on a
+// local branch of its own, and that commit's first parent as the base, so the review's diff is
+// the change exactly as it merged. Nothing is merged, installed or run, and nothing is pushed.
+func (x *Worker) prepareMerged() {
+	number := py.MustInt(x.planItem("number"))
+	merged := py.OrStr(x.Plan.Get("merge_sha"), "")
+	fetchRef(x.Repo, x.Cfg.DefaultBranch, true)
+	sha := ""
+	if merged != "" {
+		sha = x.Repo.Rev(merged)
+	}
+	parent := ""
+	if sha != "" {
+		parent = x.Repo.Rev(sha + "^")
+	}
+	if parent == "" {
+		herr.Raise(&py.Error{Type: "RuntimeError", Msg: fmt.Sprintf("the commit that merged #%d (`%s`) "+
+			"is not on origin", number, first12(merged))})
+	}
+	x.BaseRef = parent
+	x.BaseSHA = parent
+	x.StartSHA = sha
+	x.Wt = git.WorktreeAdd(x.Repo, filepath.Join(x.WorkDir, fmt.Sprintf("item-%d", number)),
+		fmt.Sprintf("bot-spot-check-%d", number), sha)
+	x.excludeNotes()
+	x.seedNotes()
+	x.Result.Set("branch", py.OrStr(x.Plan.Get("branch"), ""))
+	x.Result.Set("base", x.BaseSHA)
+	x.Result.Set("start", x.StartSHA)
+	x.Step("start", fmt.Sprintf("the commit that merged #%d into `%s`", number, x.Cfg.DefaultBranch),
+		pyjson.New("outcome", "at `"+first12(sha)+"`, against its parent `"+first12(parent)+"`"))
+}
+
 // review is `self._review(...)` as the run calls it: through ReviewFunc when a test replaced it.
 func (x *Worker) review(cycle int, report *verdicts.BuildReport, results []*gates.GateResult, previous []*verdicts.Finding, context string, maxCycles *int, role string) *verdicts.Review {
 	if x.ReviewFunc != nil {
@@ -964,7 +998,11 @@ func (x *Worker) Review(cycle int, report *verdicts.BuildReport, results []*gate
 			previousFindings = x.findingsText(previous, "Blocking findings")
 		}
 	}
-	prompt := x.Render("review", pyjson.New(
+	template := "review"
+	if x.Plan.Truthy("spot_check") {
+		template = "spotcheck" // a merged change: it blocks nothing (#2748, section 5)
+	}
+	prompt := x.Render(template, pyjson.New(
 		"number", x.planItem("number"), "repo", x.Cfg.Repo, "cycle", cycle,
 		"max_cycles", cycles, "branch", x.planItem("branch"),
 		"base", x.BaseSHA, "thread", x.Plan.GetOr("thread", ""),
@@ -1658,12 +1696,22 @@ func (x *Worker) lastCheckpoint() {
 // for a hard item, #2748).
 // Nothing is built or pushed: the verdict goes
 // to `deliver`, which merges once the approvals for the same commit meet the review rule
-// (`review_rule.py`), or asks for a revision at the auditor's tier.
+// (`review_rule.py`), or makes the auditor's subscription the owner of a revision that fixes what
+// it found, which another subscription audits in turn (#2748).
 // Nothing is installed or run either: the reviewer holds another subscription's login, and
 // the builder's code (a postinstall script, a test) must not run beside it. CI runs every
 // check on the pull request before it can merge.
+//
+// An after-merge spot-check (#2748, section 5; the plan's `spot_check`) is the same review of a
+// pull request that has merged: the worktree is the commit that merged it, its base that
+// commit's first parent (`prepareMerged`), and its prompt is `spotcheck`, since it blocks nothing.
 func (x *Worker) SecondReview() {
-	x.prepare(false, false)
+	spot := x.Plan.Truthy("spot_check")
+	if spot {
+		x.prepareMerged()
+	} else {
+		x.prepare(false, false)
+	}
 	x.Check()
 	seat := x.SeatFor("review")
 	builder := py.OrStr(x.Plan.Get("builder"), "an unknown model")
@@ -1678,10 +1726,22 @@ func (x *Worker) SecondReview() {
 	}
 	context := "This is a review run. `" + builder + "` built this change; you are `" +
 		x.Provider.Family + "` on `" + seat.Model + "` (" + seat.Tier + " tier). It merges once " +
-		reviewrule.Summary + " approved the same commit. " + soFar + " Dependencies are " +
+		reviewrule.Summary + " approved the same commit. " + soFar + " If you find blocking " +
+		"problems, your own subscription fixes them in a revision of its own (the auditor fixes " +
+		"its own findings), and a final audit on another subscription reviews that fix, so write " +
+		"each finding as you would want it to fix it: where, what, and the evidence. Dependencies are " +
 		"not installed in this run and you " +
 		"should not run the branch's code: read it. CI runs every check on the pull " +
 		"request before it can merge."
+	if spot {
+		context = "This is an after-merge spot-check. `" + builder + "` built this change and it " +
+			"merged into `" + x.Cfg.DefaultBranch + "` on " + py.OrStr(x.Plan.Get("approver"), "one approval") +
+			", which is not evidence: judge it from scratch. You are `" + x.Provider.Family + "` on `" +
+			seat.Model + "` (" + seat.Tier + " tier). You block nothing and revert nothing: your " +
+			"blocking findings become one follow-up issue, built as a new change from `" +
+			x.Cfg.DefaultBranch + "`. Dependencies are not installed in this run and you should not " +
+			"run the change's code: read it."
+	}
 	if notes := strings.TrimSpace(py.OrStr(x.Plan.Get("review_notes"), "")); notes != "" {
 		context += "\n\nA person asked for this review (`" + config.Slash + " review`) with " +
 			"these notes:\n\n" + prompts.Data(notes, "Their notes")

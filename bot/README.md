@@ -18,11 +18,15 @@ took it up last; a cut-off item waits for it up to an hour, [Ownership and the
 hold](#ownership-and-the-hold)), builds it, runs the repository's checks, and reviews itself in a
 fresh adversarial session, going round until its lane's verdict rounds run out or its reviewer
 approves. That approval does not ship it: the lane's final audit, on a subscription other than
-the builder's (a medium seat first for a medium item, Opus for a hard one), reviews, fixes and
-pushes. Three failures of an item's own raise its difficulty a step and rebuild it from `main`
+the builder's (a medium seat first for a medium item, Opus for a hard one), reviews it; when it
+finds blocking problems, the auditor's own subscription owns the fix and makes it in a revision of
+its own, and a second final audit on another subscription reviews that fix. Three failures of an item's own raise its difficulty a step and rebuild it from `main`
 ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into
 `main` once CI passes and its lane's final audit approved the same commit from another
 subscription: one medium or strong model for a medium item, one strong model for a hard item.
+The last approver owns the merge: a red check or the merge queue's failure comes back to its
+subscription first. Opus spot-checks every 5th merged medium change, blocking nothing, and opens a
+follow-up issue for what it finds ([The after-merge spot-check](#the-after-merge-spot-check)).
 When it has nothing to do, it proposes improvements to the game as issues, at most ten open at a
 time.
 
@@ -58,12 +62,16 @@ flowchart TD
     F --> G
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
     D -- "its own subscription's approval only" --> X["review run = the final audit (bot:cross-review)<br/>another subscription: medium first for medium, Opus for hard"]
-    X -- "approved" --> CI
+    X -- "blocking findings" --> XF["a revision on the subscription that owns it:<br/>the auditor's own fix, or the merge owner's CI fix;<br/>a new head"]
+    XF -- "another subscription audits the fix" --> X
+    X -- "approved: the last approver owns the merge" --> CI
     PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
   D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
-  CI -- "red (after one re-run)" --> E
+  CI -- "red (after one re-run), or out of the merge queue" --> E
+  E -- "a CI fix, the merge owner's first" --> XF
+  M -- "every 5th medium merge" --> SP["after-merge spot-check: Opus on another subscription;<br/>blocks nothing, findings open a follow-up issue"]
 ```
 
 ## Giving it work
@@ -85,8 +93,11 @@ To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`
 It also revises its own pull requests without being asked: when CI fails twice on the same
 commit (it re-runs the failed jobs once first, in case the failure was flaky), and when `main`
 moves on and leaves the branch with conflicts (once the reviews approved a change, resolving its
-conflicts takes no review run again: [the review rule](#difficulty-and-tiers)). After three
-tries at fixing CI on one pull request
+conflicts takes no review run again: [the review rule](#difficulty-and-tiers)). A CI fix goes
+first to the subscription whose approval shipped the head (the last approver owns the merge,
+#2748), ahead of its new work and held for it a while like any owner's work; its fix is a new commit,
+which another subscription reviews before it merges, and no test is ever skipped or disabled to get
+green (CLAUDE.md rule 12). After three tries at fixing CI on one pull request
 it stops and labels it `bot:blocked`. Asking for a revision turns auto-merge off until the
 revision lands. It can revise a pull request a person opened too, as long as the branch is in this
 repository. It never turns on auto-merge for someone else's pull request.
@@ -397,8 +408,8 @@ in place of the `bot:*` ones.
 | `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
 | `bot:tree` | a fullsend parent whose parts the bot opened and watches; once they have all closed, the sweep queues its reconcile |
 | `bot:revise` | a pull request waiting for a revision |
-| `bot:cross-review` | a bot pull request waiting for its final audit, a review run on a subscription other than its builder's, before auto-merge: one medium or strong model for a medium item, one strong model for a hard one |
-| `bot:planning`, `bot:splitting`, `bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling` | the live labels (#2748): a run holds it right now, exactly one of them, by the kind of run: a planning run, a fullsend split (or one of Squishy's splits), a fresh build (a fullsend part or a one-shot too), a revision of a pull request, a revision whose cause is a red CI run or the merge queue (`source` `ci`), a review run, and the build of a fullsend parent whose parts have landed (its reconcile). The claim puts it on (`config.LiveRun`) and keeps it in the item's record (`live`), and deliver takes it off. They replace `bot:working`, which is retired: a thread that still carries it is held as ever (`config.HeldLabels`, `config.IsLive`), and the sweep moves it to the live label of the run its record names before it deletes the label |
+| `bot:cross-review` | a bot pull request waiting for its final audit, a review run on a subscription other than its builder's, before auto-merge: one medium or strong model for a medium item, one strong model for a hard one. An audit that asks for changes queues `bot:revise` for the auditor's own subscription, which owns the fix (#2748) |
+| `bot:planning`, `bot:splitting`, `bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling` | the live labels (#2748): a run holds it right now, exactly one of them, by the kind of run: a planning run, a fullsend split (or one of Squishy's splits), a fresh build (a fullsend part or a one-shot too), a revision of a pull request, a revision whose cause is a red CI run or the merge queue (`source` `ci`), a review run (an [after-merge spot-check](#the-after-merge-spot-check)'s too, on the merged pull request it reads), and the build of a fullsend parent whose parts have landed (its reconcile). The claim puts it on (`config.LiveRun`) and keeps it in the item's record (`live`), and deliver takes it off. They replace `bot:working`, which is retired: a thread that still carries it is held as ever (`config.HeldLabels`, `config.IsLive`), and the sweep moves it to the live label of the run its record names before it deletes the label |
 | `bot:waiting` | beside `bot:build` or `bot:revise`: held for its owner (#2748): only the 5-hour session of the subscription that owns it keeps that one from taking it, and it can start again within `hold_minutes` (60), so no other subscription takes it meanwhile. The bot's one comment on the thread says for whom, until when and why, and the commands that release it (`/harness handoff …`); the planner and the sweep take the label off once the owner can start (the owner takes it next) or the hold runs out (anyone may), and so does any step that takes the item out of the queue ([Ownership and the hold](#ownership-and-the-hold)) |
 | `bot:merging` | a bot pull request whose auto-merge the bot turned on: approved, and in CI or `main`'s merge queue (#2748). It comes off when auto-merge goes off (a revision, a hold, `/harness stop`, a block after its CI fixes), when it merges or closes, and in the sweep once nothing keeps it merging (closed, or open with auto-merge off and out of the queue). A pull request a person merges (`ready for merge`) never carries it |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
@@ -780,8 +791,10 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   over a builder's resolution. In the two weeks to 2026-10-28, 169 of the 328 merges the bots
   left conflicted held only `spec/INDEX.md` and `spec/11-rulings.md` (which the daily fold now
   keeps branches off), and 27 more only those and the golden traces.
-  A revision that answers a final audit stays at the auditor's tier or above: its owner keeps it
-  when it has a seat of that tier, and otherwise that tier fixes and pushes it.
+  A revision that answers a final audit is the auditor's own fix (#2748): the audit made the
+  auditor's subscription the item's owner, which fixes it on its seat of the audit's tier, ahead of
+  its new work; handed off (its owner cannot take it and no hold keeps it), it goes to the item's
+  own tier or above, as any owner's work does.
 - **Reviewing in the run.** Every builder reviews its own change in a fresh adversarial session
   of its lane's reviewer, never an approval from its own context: the builder's own strongest
   seat of at least medium reads the change cold. Its findings count, and it must approve before
@@ -803,7 +816,21 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   yet goes before one that has (the same model may review it twice). `/harness review strong` (or
   `medium`) asks for a review run of a bot pull request's head at that tier or stronger, and no
   revision. A medium or strong approval ships a medium item, a strong one a hard item, each from
-  another subscription than the builder's.
+  another subscription than the builder's. **The auditor fixes its own findings** (#2748): a review
+  run installs and runs nothing, since it holds another subscription's login ([Safety](#safety)),
+  so when it asks for changes, deliver makes the auditor's subscription the owner of the fix
+  (`plan.Own`, its `owner_why` says so) and queues the revision, which that subscription makes in
+  a normal revision run of its own, ahead of its new work ([Ownership and the
+  hold](#ownership-and-the-hold)); a capped auditor's fix is held for it or handed off as any
+  owner's work. The fix is a new head built on the auditor's subscription, so its own approval
+  never ships it: a second final audit on another subscription of the item's tier does. **The last
+  approver owns the merge**: the subscription whose approval shipped the head is recorded on the
+  pull request (`merge_owner`, and `cleared`'s `approver`), and while the pull request waits for CI
+  and the merge queue (`bot:merging`) no lane is held: the harness watches by events. A red check
+  or the merge queue's failure on that head queues the CI fix with the merge owner as its owner
+  (`events.fixCI`), and its fix is another new head that another subscription approves. An
+  [after-merge spot-check](#the-after-merge-spot-check) goes after every other review run, since it
+  unblocks nothing.
 
 ### Ownership and the hold
 
@@ -816,10 +843,13 @@ subscription built.
 - **The owner** of an item is the subscription that planned it, or took it up last: each claim of
   a planning run, a build or a revision records it on the item's record (`owner`, `owner_since`,
   `owner_why`; a bot pull request's revisions answer to its issue's, `queue.OwnerItem`), and a
-  record from before reads its planner (`planned_by_id`). A review run never changes it, and a
-  fullsend part keeps its own routing ([Fullsend](#fullsend)). Its builds, continuations and
-  revisions go to it first (`plan.BuilderSeat`), a revision that answers a final audit too when
-  it has the auditor's tier, and so does a plan it was cut off in, on the planning lane. A
+  record from before reads its planner (`planned_by_id`). A review run's claim never changes it,
+  and a fullsend part keeps its own routing ([Fullsend](#fullsend)). Two deliveries do (#2748,
+  section 4; `plan.Own`): a final audit that asks for changes makes the auditor's subscription the
+  owner of its fix, and a red check or the merge queue's failure on a head the reviews cleared
+  makes the subscription whose approval shipped it (the merge owner) the owner of the CI fix. Its builds,
+  continuations and revisions go to it first (`plan.BuilderSeat`, the auditor's fix on its seat of
+  the audit's tier), and so does a plan it was cut off in, on the planning lane. A
   `build_last` owner (claude-2) keeps nothing: it builds only after every other.
 - **The hold.** When the owner cannot take its item now only because of its 5-hour session (its
   reading over or within `start_headroom` of the 5-hour cap in force, or a refusal on that window,
@@ -963,8 +993,14 @@ anything, and no weak review runs go out.
   is cancelled (ci.yml's `queue-cancel-*`), and when the queue took a cleared head out
   (`events.OnQueueCI`, on `gh-readonly-queue/main/pr-<n>-<sha>`) it gets a CI fix with that
   run's logs at once, with no re-run: its own CI passed, so what failed is nearly always what it
-  and the newer `main` do together. The fix merges `main` first and is reviewed like any revision,
-  under the same cap as any CI fix, and its auto-merge queues it again at the back. One still in
+  and the newer `main` do together. The last approver owns the merge (#2748): this CI fix, like one
+  for a red check on the pull request, goes first to the subscription whose approval shipped the
+  head (`merge_owner`), ahead of its new work and with the hold's rules; nothing holds a lane while
+  CI and the queue run, since the harness watches them by events (`events.OnQueueCI`, the CI-twice
+  rule, the sweep). The fix merges `main` first and is reviewed like any revision (its own
+  approval does not ship it: another subscription's does), under the same cap as any CI fix (three,
+  `max_failures`, then `bot:blocked`), with no test skipped or disabled to get green, and its
+  auto-merge queues it again at the back. One still in
   the queue was built again without a failing pull request ahead of it, and a held pull request or
   a head that moved is left alone. One the queue took out with no failed build (a conflict with a
   pull request ahead, the queue's timeout) goes back in from the housekeeping pass, once for each
@@ -986,15 +1022,49 @@ anything, and no weak review runs go out.
   changes anything more, a branch someone pushed to after the reviews, or a change still short of
   the rule when the conflict came goes back under the rule, and the comment on the pull request
   says why.
-- Blocking findings queue a revision at the auditor's tier or above, so the auditor fixes
-  and pushes it (through the self-check
-  loop again if that builder checks itself), which goes round the same way. A rejection stands
+- Blocking findings make the auditor's subscription the owner of the fix (#2748): it makes the
+  fix itself, in a revision run of its own, on its seat of the audit's tier (through the self-check
+  loop again if that builder checks itself), ahead of its new work, and held for it or handed off at
+  the item's own tier like any owner's work. The fix is a new commit its own run built, so the
+  fixer's approval never ships it: it goes round the same way, to a second final audit on another
+  subscription. A rejection stands
   against that commit until the same model approves it or the commit changes. Each rejection is a
   strike, so after three the item steps up and is rebuilt ([above](#rating-strikes-and-the-step-up)).
 - Whenever the rule is not met, auto-merge is off, even if an earlier approval had turned
   it on for an older commit. A review of a commit that moved in the meantime does not count.
 - If no subscription other than the builder's that could give the missing review is set up, the
   change waits in `bot:cross-review` until one is, or until you merge it yourself.
+
+### The after-merge spot-check
+
+A medium item ships on one medium model's approval, with no Opus audit (#2748, section 5). What that
+misses is measured after the fact ([`go/internal/spotcheck/`](go/internal/spotcheck/)): before the
+change, Opus asked for changes on 25% of the commits a medium model had approved.
+
+- **The sample.** Every 5th medium bot pull request merged into `main` (`spot_check_every` in
+  `.harness/config.json`; 0 checks none, and Squishy's is 0) is queued for one. It is a counter
+  in the state file (`spot_checks`' `count`, counted when GitHub reports the merge,
+  `events.SpotCheckMerge`), never a draw. A hard item's pull request is not counted (Opus approved
+  it), nor is a fullsend reconcile's, nor a follow-up issue's own (its record's `spot_check_of`, or
+  the marker its body opens with), so a follow-up never samples itself.
+- **The review.** A review run by a strong model (Opus), on a subscription other than the one whose
+  run built the head, and other than the one whose approval shipped it while another is free
+  (`plan.ReviewSeat`). It reads the change as it merged: the worktree is the commit that merged the
+  pull request, against its first parent (`work.Worker.SecondReview`'s `prepareMerged`), with a
+  prompt of its own (`bot/prompts/spotcheck.md`), and like any review run it installs and runs
+  nothing. Review runs still go before builds, but a spot-check after every other review run, since
+  it unblocks nothing. While it runs, the merged pull request carries `bot:reviewing`, so its lane
+  counts; a run that dies puts the check back in the queue, and the third failed try records it
+  `failed`.
+- **The verdict blocks nothing and reverts nothing.** An approval records `clean`. Blocking
+  findings open one follow-up issue, `Patch: follow-up to #<pr> from the after-merge spot-check`,
+  with the findings and their evidence in its body, labelled `bot:build` and `difficulty:medium`
+  (the bot's own rating, so a planner may raise it), and a comment on the pull request links it;
+  the check records `findings`.
+- **The record.** Every check stays in the state file (`spot_checks`' `checks`, the newest 100
+  finished): the pull request and its issue, the merged commit, who built it and who approved it
+  with their model families, the reviewer, the verdict, how many findings and the follow-up issue,
+  for the usage history (#2749) to chart the miss rate per family.
 
 ### The self-check loop
 
@@ -1302,7 +1372,11 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
    a conflict marker. Only then does it push
    (never with force) and open or update the pull request. It turns on auto-merge only when the
    review rule holds, no review-only path changed and `main`'s protection requires every CI
-   check, with the pull request's title (and number) as the squash commit's title; otherwise the change waits for a review run (`bot:cross-review`) or for you. A change
+   check, with the pull request's title (and number) as the squash commit's title, and records
+   the approving subscription as the merge owner; otherwise the change waits for a review run
+   (`bot:cross-review`) or for you. A review run that asks for changes makes its own subscription
+   the owner of the fix and queues the revision; an after-merge spot-check records its verdict and
+   opens its follow-up issue ([The after-merge spot-check](#the-after-merge-spot-check)). A change
    the reviewer never approved becomes a draft PR labelled `bot:blocked`, with the findings, the
    rounds it really took and why it stopped, and never merges by itself. It records the subscription's usage, minutes and model tokens (each run's input, output and cached tokens and USD cost, #695), keeps a refreshed
    login and a handoff, appends the run to its item's journal ([handing work
@@ -1313,7 +1387,11 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 
 - **Two gates before `main`.** Adversarial reviewers approve the change: the builder's own in-run
   reviewer, then its final audit on a subscription other than the builder's, one medium or strong
-  model for a medium item, one strong model for a hard item (#2748). Then
+  model for a medium item, one strong model for a hard item (#2748). An audit's findings are fixed
+  by the auditor's own subscription in a revision run of its own (a review run installs and runs
+  nothing, as it holds another subscription's login), and that fix is a new head, which another
+  subscription's audit must approve in turn: no subscription's approval ever ships a head its own
+  run built (but Squishy's, alone in its pool). Then
   every CI check must pass before auto-merge merges anything. The deliver job turns auto-merge on
   only after reading `main`'s branch protection and finding every check in `required_checks`
   there. If protection is missing, it leaves the pull request for a person.
@@ -1462,7 +1540,8 @@ what it built, as before #2748 ([the review rule](#difficulty-and-tiers)). Nor i
 hold an item from, so Squishy holds nothing for an owner (`hold_minutes: 0` in
 `.squishy/config.json`, [Ownership and the hold](#ownership-and-the-hold)), and its item waits in
 the queue for its account as it always did; `/squishy handoff [medium|hard|human]` works as the
-night bot's does.
+night bot's does. Its one account audits and fixes its own changes, as the auditor's subscription
+does on the night bot, and it spot-checks nothing after a merge (`spot_check_every: 0`).
 
 **Its modes.** Each is a command, or a label beside its queue label:
 
@@ -1544,7 +1623,8 @@ on Python 3.12 and 3.13, and runs actionlint over
 every workflow. It runs when a pull request touches what the suite reads (the bot, its
 switches, `.github/`, `.claude/`, the scripts, the training lanes' prompts and loop, the issue and patch
 conventions, the toolchain), on every push to `main`, and whenever the job that decides fails (#1455). The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
-`review` and `suggest` (the self check runs `review` with a header saying it is a self check),
+`review`, `spotcheck` (the after-merge spot-check's review) and `suggest` (the self check runs
+`review` with a header saying it is a self check),
 Squishy's `oneshot` and `split` (which both bots' fullsend splits with too), and `reconcile`, the
 first prompt of a fullsend reconcile. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or
 `.github/workflows/`, so changes there come from people. Squishy's own cases run in a process
@@ -1570,6 +1650,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/git/`, `go/internal/gates/` | worktrees, commits, bundles, pushes; the repository's checks |
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |
 | `go/internal/stepup/` | strikes, the step up and the rebuild (#317); `go/internal/easy/`, the easy rule's checks on a plan and a change, went with `difficulty:easy` in #2748 |
+| `go/internal/spotcheck/` | the after-merge spot-check (#2748): the count of medium merges, every 5th queued for Opus's review of the merged change, and the record of each check's verdict, findings and follow-up issue |
 | `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
 | `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |

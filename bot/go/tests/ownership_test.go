@@ -545,19 +545,19 @@ func TestOwnership_TheHandoffCommandIsReadAndListed(t *testing.T) {
 	assertIn(t, "| `handoff [medium\\|hard\\|human]` |", text)
 }
 
-// A revision that answers a final audit goes to its owner first too, when the owner has the
-// auditor's tier; one without it gives way to that tier (phase D of #2748 refines who fixes an
-// audit's findings).
-func TestOwnership_ARevisionAnsweringAnAuditStaysWithItsOwner(t *testing.T) {
+// A revision that answers a final audit goes to its owner, the auditor (#2748, section 4), on its
+// seat of the audit's tier. An owner without that tier (a record from before the auditor owned its
+// fix, when the builder did) cannot take it, so it is handed off at the item's own tier.
+func TestOwnership_ARevisionAnsweringAnAuditIsItsAuditorsAndAHandoffIsAtTheItemsTier(t *testing.T) {
 	pool := testsupport.MakeConfig().Pool
 	claude1, claude3, muse := pool.Get("claude-1"), pool.Get("claude-3"), pool.Get("muse")
-	// claude-3 comes first in the usage order, but claude-1 owns the item.
+	// claude-3 comes first in the usage order, but claude-1 audited the item and owns its fix.
 	seat, note := plan.BuilderSeat(pool, []*providers.Provider{muse, claude3, claude1}, "medium", false,
 		"claude-1", "strong", nil)
 	assertEqual(t, lanesSeatID(t, seat), []any{"claude-1", "strong"})
 	assertIn(t, "its owner `claude-1` keeps it: one lane, one owner", note)
 	seat, _ = plan.BuilderSeat(pool, []*providers.Provider{muse, claude3}, "medium", false, "muse", "strong", nil)
-	assertEqual(t, lanesSeatID(t, seat), []any{"claude-3", "strong"})
+	assertEqual(t, lanesSeatID(t, seat), []any{"claude-3", "medium"})
 }
 
 // An item queued to start now (`--force`) waits for nobody: it goes to whoever can take it.

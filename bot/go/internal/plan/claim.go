@@ -68,8 +68,12 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 // live label (`config.LiveRun`: `bot:planning`, `bot:building`, `bot:fixing-ci`, …, #2748), which
 // its record keeps as `live`. A planning run, a build or a revision makes its subscription the
 // item's owner (`takeOver`, #2748), and ends any hold on it (its `bot:waiting` goes with the
-// queue's label). nil when the thread is closed, or a pull request from a fork.
+// queue's label). nil when the thread is closed, or a pull request from a fork. An after-merge
+// spot-check, of a pull request closed by its merge, is claimed apart (`claimSpotCheck`).
 func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment) *pyjson.Object {
+	if candidate.SpotCheck {
+		return claimSpotCheck(ctx, candidate, assignment)
+	}
 	cfg := ctx.Cfg
 	provider := assignment.Provider
 	number, kind := candidate.Number, candidate.Kind

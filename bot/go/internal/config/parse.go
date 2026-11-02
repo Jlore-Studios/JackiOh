@@ -399,6 +399,10 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 		raiseConfig("hold_minutes: must be 0 (no hold) or more")
 	}
 	c.HoldExempt = mustStrs(raw.GetOr("hold_exempt", optional.Get("hold_exempt")))
+	c.SpotCheckEvery = py.MustInt(raw.GetOr("spot_check_every", optional.Get("spot_check_every")))
+	if c.SpotCheckEvery < 0 {
+		raiseConfig("spot_check_every: must be 0 (no spot-check) or more")
+	}
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
 		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))

@@ -109,23 +109,28 @@ func TestWaiting_AHardItemWaitsForAStrongModelAndSaysWhichFreesFirst(t *testing.
 	assertIn(t, `<b>muse</b><br/>⚪ idle<br/>nothing queued is for it`, body)
 }
 
-func TestWaiting_ARevisionThatAnswersAStrongAuditWaitsForStrong(t *testing.T) {
+// A revision that answers a strong audit is its auditor's to fix (#2748, section 4): owned by the
+// auditor, it waits for it, held while its 5-hour refusal is short. With no owner it is shown at
+// the item's tier, which is the weakest that may take it, and Muse takes it at the next run.
+func TestWaiting_ARevisionThatAnswersAStrongAuditWaitsForItsAuditor(t *testing.T) {
 	w := newWaitingQueue()
 	w.gh.AddPull(9, "bot/issue-3", fakes.Pull{Title: "Fix it", Labels: []string{config.LabelPR, config.LabelRevise}})
 	pool := w.ctx.Cfg.Pool
 
 	flowUpdate(w.ctx, func(s *pyjson.Object) {
-		state.Item(s, 9).Update(pyjson.New("audit_tier", "strong"))
+		state.Item(s, 9).Update(pyjson.New("audit_tier", "strong", "issue", 3))
+		state.Item(s, 3).Update(pyjson.New("owner", "claude-3", "owner_why", "its final audit asked for changes"))
 		waitingClaudeRefused(s, pool)
 	}, "seed")
 	row := waitingRow(t, w.explain(), 9)
-	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"revise", "medium", "strong"})
-	assertEqual(t, row.TierWhy, "it answers a strong reviewer's audit")
+	assertEqual(t, []string{row.Step, row.Difficulty, row.Tier}, []string{"revise", "medium", "medium"})
+	assertEqual(t, row.TierWhy, "")
 	assertTrue(t, row.Starts == nil, "row.starts is not None")
-	// Without the audit, Muse (medium) takes it at the next run, and says so.
+	assertIn(t, "⏸️ held for `claude-3` until 22:15", row.Waiting)
+	// Released, Muse (medium) takes it at the next run, and says so.
 	flowUpdate(w.ctx, func(s *pyjson.Object) {
-		state.Item(s, 9).Update(pyjson.New("audit_tier", ""))
-	}, "no audit")
+		state.Item(s, 3).Update(pyjson.New("owner", ""))
+	}, "released")
 	explained := w.explain()
 	row = waitingRow(t, explained, 9)
 	if row.Starts == nil {

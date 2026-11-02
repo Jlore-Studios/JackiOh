@@ -599,3 +599,17 @@ func TestSquishyCases_ItsSectionOfTheStatisticsIssue(t *testing.T) {
 	assertIn(t, "`squishy-run.yml` workflow runs", text)
 	assertIn(t, "**Its pull requests merged** (0)", text)
 }
+
+// Squishy spot-checks nothing after a merge (`spot_check_every`: 0, #2748): its medium merges are
+// not even counted.
+func TestSquishyCases_ItSpotChecksNoMergedChange(t *testing.T) {
+	squishyCasesModule(t)
+	w := newSquishyCasesWorld(t)
+	assertEqual(t, w.cfg.SpotCheckEvery, 0)
+	assertFalse(t, w.cfg.SpotChecks())
+	for n := 1; n <= 5; n++ {
+		spotCheckClose(w.gh, w.ctx, n, true, "difficulty:medium")
+	}
+	count, prs := spotCheckCount(t, w.ctx)
+	assertEqual(t, []any{count, prs}, []any{0, []int{}})
+}

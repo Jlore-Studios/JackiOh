@@ -5,9 +5,11 @@ package plan
 // An item's owner is the subscription that planned it, or took it up last: a claim records it on
 // the item's record (`owner`, `owner_since`, `owner_why`; a bot pull request's on its issue's,
 // `queue.OwnerItem`), and a record from before owners were kept reads its `planned_by_id`
-// (`queue.OwnerOf`). A build, a continuation and a revision (one that answers a final audit too)
-// go to the owner first (`BuilderSeat`); a review run never does, and a fullsend part keeps its
-// own routing. When the owner cannot take its item now:
+// (`queue.OwnerOf`). A final audit that asks for changes makes the auditor's subscription the
+// owner of its fix, and the last approver owns the merge, so a CI fix goes to it (`Own`; #2748,
+// section 4). A build, a continuation and a revision go to the owner first (`BuilderSeat`); a
+// review run never does, and a fullsend part keeps its own routing. When the owner cannot take
+// its item now:
 //
 //   - its 5-hour window alone keeps it (`providers.FiveHourWait`: over or within `start_headroom`
 //     of its 5-hour cap in force, or refused on that window) and it can start again within
@@ -147,8 +149,8 @@ func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *
 
 // cannotTake is why `provider` could not take `c` even when free, or "": no role for it, a
 // `build_last` subscription (claude-2), which builds after every other and so keeps nothing, no
-// seat of the tier it needs (its difficulty's, or a final audit's it answers), or no reviewer of
-// its own for a revision that needs one in its run.
+// seat of the tier it needs (its difficulty's, or, for the auditor that owns its fix, the tier of
+// the audit it answers), or no reviewer of its own for a revision that needs one in its run.
 func cannotTake(pool *providers.Pool, provider *providers.Provider, c *queue.Candidate) string {
 	floor := config.MinTier[config.AsDifficulty(c.Difficulty)]
 	if c.Kind == "revise" && rankOr(c.AuditTier, -1) > rankOr(floor, -1) {
@@ -401,6 +403,18 @@ func writeHoldComment(ctx *hctx.Context, number int, body string, create bool) {
 // thread: whoever takes it up next owns it (`Claim`). `why` goes on record as `owner_why`.
 func Release(s *pyjson.Object, number int, why string, at time.Time) {
 	hstate.Item(s, queue.OwnerItem(s, number)).Update(pyjson.New("owner", "",
+		"owner_since", clock.ISO(at), "owner_why", py.SliceTo(why, 300)))
+	hstate.Item(s, number).Pop("hold")
+}
+
+// Own makes `providerID` the owner of thread `number`'s item (`queue.OwnerItem`), with `why`, and
+// ends any hold on the thread: an auditor whose final audit asked for changes owns the fix
+// (`deliver.SecondReview`), and the last approver owns the merge, so a red check or the merge
+// queue's failure comes back to it (`events.fixCI`; #2748, section 4). Its revision then goes to
+// it first, as its own work (`Pairs`), held for it a while (`Owning`) or handed off as any
+// owner's.
+func Own(s *pyjson.Object, number int, providerID string, why string, at time.Time) {
+	hstate.Item(s, queue.OwnerItem(s, number)).Update(pyjson.New("owner", providerID,
 		"owner_since", clock.ISO(at), "owner_why", py.SliceTo(why, 300)))
 	hstate.Item(s, number).Pop("hold")
 }

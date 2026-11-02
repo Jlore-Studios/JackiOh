@@ -374,8 +374,8 @@ func (x *Deliverer) rounds() (int, string) {
 	return py.MustInt(py.Or(x.Result.Get("verdict_rounds"), 0)), py.OrStr(x.Result.Get("round_tier"), "")
 }
 
-// The tier of the seat that just reviewed this pull request (#725): a revision that
-// answers its findings stays at that tier, so the auditor fixes and pushes it.
+// The tier of the seat that just reviewed this pull request (#725): the auditor, which owns the
+// revision that answers its findings (#2748), fixes and pushes it on its seat of that tier.
 func (x *Deliverer) auditTier() string {
 	seats := x.Plan.Obj("seats")
 	tier := ""
@@ -559,9 +559,11 @@ func (x *Deliverer) Revise(number int, status string) {
 		fixed.Set("ci_fixed_head", py.OrStr(x.Result.Get("head"), ""))
 	}
 	rounds, roundTier := x.rounds()
+	// The audit it answered, if any, is answered: a later revision (a CI fix, a person's request)
+	// answers no audit's tier (#2748).
 	x.remember(number, pyjson.New("feedback_since", started, "failures", 0, "source", "", "last_findings", []any{},
 		"question", "", "verdict_rounds", rounds, "round_tier", roundTier,
-		"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})).Update(fixed))
+		"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{}), "audit_tier", "").Update(fixed))
 	note := ""
 	if !pushed && approved {
 		note = "\n\nI changed nothing: the reviewer agreed no change was needed."

@@ -38,6 +38,12 @@
 //   - **a review run** (`bot:cross-review`): the lane's final audit, never on the subscription
 //     that built the head. A medium item takes a medium seat first, a hard item waits for a strong
 //     seat (Opus). No weak review runs go out. What counts is the review rule (`review_rule.py`).
+//     An audit that asks for changes makes its own subscription the owner of the fix, and the
+//     approval that ships a head makes its subscription the owner of the merge, whose CI fixes go
+//     to it first (`Own`, #2748).
+//   - **an after-merge spot-check** (`spotcheck`, #2748): a review run of a merged medium change, on
+//     a strong seat of neither its builder's subscription nor, while another is free, its
+//     approver's, after every other review run and before the builds.
 //   - **a conflict on a cleared change** (a bot PR whose commit met the rule, then conflicted with
 //     `main`): a builder with its own reviewer in the run first, since that review carries the
 //     clearance to the resolution (`deliver._carry`) and no review run follows.

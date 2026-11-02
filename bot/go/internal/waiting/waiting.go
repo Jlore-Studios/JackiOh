@@ -30,6 +30,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 )
 
 // TIER_WORDS: what each tier may take, said once above the queue: the router tries the weakest
@@ -195,6 +196,9 @@ func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lan
 // (`plan.assign`, `plan.review_seat`), and why that tier is not its difficulty's own.
 func Need(c *queue.Candidate) (string, string, string) {
 	difficulty := config.AsDifficulty(c.Difficulty)
+	if c.SpotCheck {
+		return "review", spotcheck.Tier, "an after-merge spot-check" // #2748, section 5
+	}
 	if c.Kind == "review" {
 		// The weakest tier whose approval ships it (#2748): medium for a medium item, on
 		// another subscription than its builder's; strong for a hard one, or for votes cast
@@ -224,9 +228,9 @@ func Need(c *queue.Candidate) (string, string, string) {
 		tier, why = config.PartFloor, "a fullsend part, built from its plan"
 	}
 	if c.Kind == "revise" {
-		if r, ok := tierRank(c.AuditTier); ok && r > rank(tier) {
-			tier, why = c.AuditTier, fmt.Sprintf("it answers a %s reviewer's audit", c.AuditTier)
-		}
+		// A revision that answers a final audit is the auditor's own fix (#2748, section 4): its
+		// subscription owns it and fixes it at the audit's tier, but handed off it goes to the
+		// item's own tier, which is the weakest that may do it.
 		if (!c.BotPR || c.Conflict) && rank(tier) < rank("medium") {
 			tier = "medium"
 			if c.Conflict {
@@ -424,7 +428,8 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 }
 
 // lessByPlanner is the key `(c.number not in starts, not c.forced, c.kind != "review",
-// c.priority, KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty), c.queued_at, c.number)`.
+// c.spot_check, c.priority, KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty), c.queued_at,
+// c.number)`.
 func lessByPlanner(a, b *queue.Candidate, starts *pyjson.Object) bool {
 	aStarts, bStarts := starts.Has(strconv.Itoa(a.Number)), starts.Has(strconv.Itoa(b.Number))
 	if aStarts != bStarts {
@@ -435,6 +440,9 @@ func lessByPlanner(a, b *queue.Candidate, starts *pyjson.Object) bool {
 	}
 	if aReview, bReview := a.Kind == "review", b.Kind == "review"; aReview != bReview {
 		return aReview
+	}
+	if a.SpotCheck != b.SpotCheck {
+		return b.SpotCheck // after the other review runs (#2748)
 	}
 	if a.Priority != b.Priority {
 		return a.Priority < b.Priority

@@ -16,6 +16,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 	hstate "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 )
 
@@ -298,6 +299,16 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		}
 		if !eqStr(thread.Get("state"), "open") { // closed meanwhile: nothing to requeue
 			queue.SetStateLabel(ctx, number, queue.LabelNames(thread), "")
+			if spotcheck.Running(state, number) {
+				// An after-merge spot-check's run died (#2748): the check goes back in the queue,
+				// a try spent.
+				ctx.Store.Update(func(s *pyjson.Object) any {
+					spotcheck.Requeue(s, number, "its run ended without finishing", ctx.Cfg.MaxFailures, ctx.Now())
+					return nil
+				}, fmt.Sprintf("spot-check #%d requeued", number))
+				notes = append(notes, fmt.Sprintf("requeued the spot-check of #%d from a dead run", number))
+				continue
+			}
 			notes = append(notes, fmt.Sprintf("#%d was closed; its dead run's label is gone", number))
 			continue
 		}

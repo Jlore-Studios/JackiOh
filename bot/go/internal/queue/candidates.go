@@ -14,6 +14,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 )
 
 // PRIORITY_TIERS: the pickup tiers by label (#90). A thread with none of them is in tier 2.
@@ -85,8 +86,9 @@ type Candidate struct {
 	// For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
 	// checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
 	Part bool // default: False
-	// For a revision: the tier of the final audit it answers (#725), so the auditor's tier
-	// fixes and pushes it ("" when no audit has asked for changes yet).
+	// For a revision: the tier of the final audit it answers (#725), at which its owner, the
+	// auditor's subscription, fixes and pushes it (#2748; "" when no audit has asked for changes
+	// since the last revision landed).
 	AuditTier string // default: ""
 	// Review verdict rounds already used on the item in the current owner's hands (#725).
 	RoundsUsed int // default: 0
@@ -106,6 +108,13 @@ type Candidate struct {
 	// `paused`), or left its unfinished work or draft (`handoff` of kind `work` or `draft`, or a
 	// revision's `wip`). With its owner, its own work goes before new builds (`plan.Pairs`).
 	Continues bool // default: False
+	// For a review: an after-merge spot-check (#2748, section 5; `spotcheck`) of a merged pull
+	// request, queued in the state file and not by a label. It goes on a strong seat, after every
+	// other review run, and blocks nothing.
+	SpotCheck bool // default: False
+	// For a spot-check: the subscription whose approval shipped the head, which reviews it only
+	// when no other strong seat is free ("" when none is on record).
+	ApprovedBy string // default: ""
 }
 
 // NewCandidate is Candidate(number, kind, title, forced, queued_at) with its defaults.
@@ -642,6 +651,27 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			}
 		}
 	}
+	// The after-merge spot-checks (#2748, section 5): a review run each of a merged pull request,
+	// queued in the state file (`spotcheck.Pending`), since a closed thread is in no label's list.
+	for _, entry := range spotcheck.Pending(s) {
+		number := py.MustInt(py.Or(entry.Get("pr"), 0))
+		if _, isFound := found[number]; isFound || number == 0 {
+			continue
+		}
+		c := NewCandidate(number, "review", entry.Str("title"), false, entry.Str("queued_at"))
+		c.SpotCheck = true
+		c.Difficulty = config.AsDifficulty(entry.Str("difficulty"))
+		if c.Difficulty == "" {
+			c.Difficulty = config.DefaultDifficulty
+		}
+		c.Builder = entry.Obj("builder").Str("family")
+		c.BuiltBy = entry.Obj("builder").Str("provider")
+		c.ApprovedBy = entry.Obj("approver").Str("provider")
+		c.ReviewTiers = []string{spotcheck.Tier}
+		c.BotPR = true
+		found[number] = c
+		order = append(order, number)
+	}
 	waiting := map[int][]int{}
 	if len(builds) > 0 {
 		waiting = WaitsFor(ctx, builds)
@@ -690,8 +720,8 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	return queue
 }
 
-// candidateLess is the key `(not c.forced, c.priority, KIND_ORDER[c.kind], c.queued_at,
-// c.number)`.
+// candidateLess is the key `(not c.forced, c.priority, KIND_ORDER[c.kind], c.spot_check,
+// c.queued_at, c.number)`.
 func candidateLess(a, b *Candidate) bool {
 	if a.Forced != b.Forced {
 		return a.Forced
@@ -701,6 +731,9 @@ func candidateLess(a, b *Candidate) bool {
 	}
 	if KindOrder[a.Kind] != KindOrder[b.Kind] {
 		return KindOrder[a.Kind] < KindOrder[b.Kind]
+	}
+	if a.SpotCheck != b.SpotCheck {
+		return b.SpotCheck // a spot-check after the other review runs (#2748)
 	}
 	if a.QueuedAt != b.QueuedAt {
 		return a.QueuedAt < b.QueuedAt
