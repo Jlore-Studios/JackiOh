@@ -14178,6 +14178,8 @@
       "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-02T07:22:10Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "41405972275",
       "runs_on": "ubuntu-latest",
