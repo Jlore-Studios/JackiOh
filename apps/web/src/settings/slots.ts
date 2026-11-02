@@ -15,6 +15,7 @@ import {
   FxControls,
   LanguageSelect,
   OpponentCosmeticsSwitch,
+  SetWatermarksSwitch,
   VibrationSwitch,
 } from "./controls.tsx";
 
@@ -60,6 +61,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(FullArtSwitch),
     reset: () => {
       writeCardSettings({ fullArt: CARD_SETTINGS_DEFAULTS.fullArt });
+    },
+  },
+  {
+    section: "visuals",
+    id: "card-set-watermarks",
+    render: () => createElement(SetWatermarksSwitch),
+    reset: () => {
+      writeCardSettings({ setWatermarks: CARD_SETTINGS_DEFAULTS.setWatermarks });
     },
   },
   {
