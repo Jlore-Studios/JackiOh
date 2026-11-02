@@ -13070,6 +13070,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-02T13:53:45Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-7` (claude, opus) rejected it: `crates/ai/src/duos.rs:521`: The new own-use hurdle compares two absolute evaluations from two different duels (`mate_best`, the teammate's whole position in due"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
