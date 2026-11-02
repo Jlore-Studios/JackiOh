@@ -74,7 +74,7 @@ var Workflows = map[string]string{
 	"claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 " +
 		"Central",
 	"code-audit.yml":         "every three days: the code audit's issue for the night bot",
-	"db-size.yml":            "twice a day: an issue once production's database nears its Supabase plan's cap",
+	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
 	"deploy-staging.yml":     "deploys main to staging after every green CI run on main",
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",

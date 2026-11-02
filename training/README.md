@@ -309,8 +309,9 @@ from-selfplay <shards>… --out <file>` files each game of an export that still 
 catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
 and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
 `learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
-records' counts go into the totals and no row is kept per game, so production's database grows with
-the patches and not the games. Runs follow one another, so an export comes about every two days; a
+records' counts go into the totals and no row is kept per game, so staging's database (JackiOh-Staging,
+where the development lanes file; production's holds live games alone) grows with the patches and not
+the games. Runs follow one another, so an export comes about every two days; a
 patch shipped between two has none until the next. `.github/workflows/gather.yml` plays `GATHER_GAMES`
 (2,000) games of each patch as it ships, on the PC, and files them the same way, but only while the
 repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about 3 MB of

@@ -13,7 +13,7 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 | Worker | `jackioh-staging` (`wrangler.jsonc` `env.staging`) | `jackioh` (`wrangler.jsonc`'s top level) |
 | Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, once a day by the countdown issue (`promote-production.yml`) |
 | Game server | one `jackioh-staging-server` container | one `jackioh-server` container |
-| Database and sign-in | Supabase `exmjdaswedxhnzmpzqrq` | Supabase `exmjdaswedxhnzmpzqrq` until production gets its own project (section 8) |
+| Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project), where the development lanes file too | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi`: live games only (section 8) |
 | Routing and headers | `apps/web/public/_redirects` and `_headers`, `wrangler.jsonc` | the same |
 
 Each site is one Worker at one origin (`apps/edge/README.md`). Every path but `/api/*` and `/ws/*` is
@@ -142,11 +142,11 @@ pnpm exec wrangler secret put DATABASE_URL --config ../../wrangler.jsonc --env s
 pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env staging
 ```
 
-The values are the ones Render's `jackioh-server` holds now (Environment), with one change:
-`DATABASE_URL` is Supabase's **session pooler** URI (Supabase -> Connect -> Session pooler), which works
-over IPv4. The direct host is IPv6-only, and a container's outbound IPv6 is not something to depend
-on. `CODE_PEPPER` must stay the same value while the two sites share a database, or no invite code
-minted before redeems. Copy `DEV_PROFILE_IDS` if Render has it. A secret reaches a container when it
+Staging's values are the ones Render's `jackioh-server` holds now (Environment), since staging keeps
+the project production used (JackiOh-Staging, section 8), with one change: `DATABASE_URL` is
+Supabase's **session pooler** URI (Supabase -> Connect -> Session pooler), which works over IPv4. The
+direct host is IPv6-only, and a container's outbound IPv6 is not something to depend on. Copy
+`DEV_PROFILE_IDS` if Render has it. Production's are set in step 6, from its own project. A secret reaches a container when it
 starts, so after setting them run **deploy staging** by hand (Actions -> deploy staging -> Run
 workflow).
 
@@ -158,9 +158,15 @@ workflow).
    Client Secret as the GitHub repository secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`
    (the secret is shown once).
 3. Write `infra/terraform.tfvars` with the team's addresses, `staging_team_emails = ["...", "..."]`,
-   then `terraform -chdir=infra plan` and `apply` (`infra/README.md`; the Cloudflare token there needs
-   Access: Apps and Policies, Edit). It adds `staging.jackioh.com` to `jackioh-staging`, the Access
-   application and its two policies, and staging's `/login` to Supabase's Redirect URLs.
+   then `terraform -chdir=infra plan` and `apply`, both with
+   `-target=cloudflare_workers_custom_domain.staging_jackioh_com
+   -target=cloudflare_zero_trust_access_application.staging` (`infra/README.md`; the Cloudflare token
+   there needs Access: Apps and Policies, Edit). It adds `staging.jackioh.com` to `jackioh-staging`,
+   and the Access application and its two policies. The rest waits for step 6: until then production
+   signs in on the project that becomes staging's, and `infra/supabase.tf` would move that project's
+   Site URL to staging. So add `https://staging.jackioh.com/login` to that project's Redirect URLs by
+   hand (Authentication -> URL Configuration), leaving its Site URL and `https://jackioh.com/login`
+   as they are; step 6's full apply puts it to the file.
 
 ### Step 5: Verify staging
 
@@ -182,12 +188,20 @@ Replace `$SITE` with `https://staging.jackioh.com`. A browser asks for an Access
 
 ### Step 6: Production
 
-1. Step 3's secrets for `--env=""`, with the same values Render holds.
-2. Actions -> promote production -> Run workflow, with **redeploy** ticked. This deploys `production`
+1. Step 3's secrets for `--env=""`, from JackiOh-Production (Project Settings -> API Keys, and its
+   own session pooler URI), with the `CODE_PEPPER` and `DEV_PROFILE_IDS` Render holds: the copy
+   keeps every invite code's hash and every account's id, so the same pepper and ids still fit.
+2. Copy the data into JackiOh-Production (section 8, The copy), straight before the next item: Render
+   writes to the old project until the redeploy, so anything a player saves between the two stays
+   on staging.
+3. Actions -> promote production -> Run workflow, with **redeploy** ticked. This deploys `production`
    as it is to the `jackioh` Worker and its container, and checks the live site.
-3. Verify as in step 5 against `https://jackioh.com` (no Access). The site and the server now share
-   an origin; nothing calls `jackioh-server.onrender.com` any more.
-4. Comment `/resume` on the countdown issue.
+4. Verify as in step 5 against `https://jackioh.com` (no Access). The site and the server now share
+   an origin; nothing calls `jackioh-server.onrender.com` any more. Sign in with an account made
+   before the copy: its password works, its collection and decks are there.
+5. `terraform -chdir=infra plan`, then `apply`, untargeted: the first full one (`infra/README.md`, The
+   first import). Only now may staging's project lose `https://jackioh.com` as its Site URL.
+6. Comment `/resume` on the countdown issue.
 
 ### Step 7: Turn Render and Vercel off
 
@@ -246,8 +260,10 @@ Only once step 6 has run cleanly for a day or so, and with the owners' say-so (C
 The Workers Paid plan is $5 a month. Static files cost nothing. A container is billed for memory
 and disk while it is awake, and for CPU while it works: about $7 a month on top of the plan for one
 `basic` container awake all month, far less when it sleeps, and the plan's included usage covers
-the first hours. Staging's container sleeps whenever the team is away. Supabase's free plan and
-GitHub Actions (a public repository) cost nothing. The levers are `SLEEP_AFTER`
+the first hours. Staging's container sleeps whenever the team is away. Supabase is the Pro plan, $25
+a month for the organization (jlore-studios), whose compute credit covers one project's smallest
+instance; the second project's instance is billed on top, and each project's disk past 8 GB
+(`db-size.yml` warns before then). GitHub Actions (a public repository) costs nothing. The levers are `SLEEP_AFTER`
 (`apps/edge/src/index.ts`) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its site's
 server awake through its presence beat.
 
@@ -267,28 +283,56 @@ server awake through its presence beat.
 - **Containers are in beta** on Cloudflare: limits and behaviour can change; read their changelog
   when something surprises you.
 
-## 8. Next: production's own database
+## 8. Production's own database
 
-The plan is for production to move to a Supabase project of its own, and staging to keep the
-current one. Until then the two sites share it: an account, a deck or an invite code made on
-staging is a real row production sees.
+Each site has a Supabase project of its own, both in the jlore-studios organization, in `us-east-2`
+(Ohio) beside the containers:
 
-**What it means for players.** Every account, collection, deck and invite code lives in the current
-project, which becomes staging's, behind Access. Production on a new project starts empty: every
-player signs up again, unless the data is copied over first (a `pg_dump` of the `public`, `app` and
-`auth` schemas restored into the new project before the switch, with production on `/hold`). Decide
-that before step 3 below.
+| | Staging | Production |
+| --- | --- | --- |
+| Project | JackiOh-Staging, `exmjdaswedxhnzmpzqrq`: the original project, which production used until the move | JackiOh-Production, `fuzpvmjdejvbjcarypyi`, made on 2026-11-01 |
+| Named in | `apps/web/.env.staging`, `wrangler.jsonc` `env.staging`, `infra/supabase.tf` | `apps/web/.env.production`, `wrangler.jsonc`'s top level, `infra/supabase.tf` |
+| Card statistics | the development lanes' (`gather.yml`, `learn.yml`'s import, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | live games only |
+| Read by | `db-size.yml` through `STATS_IMPORT_DATABASE_URL` | `winrates-refresh.yml` and `db-size.yml` through `STATS_DATABASE_URL`, a read-only login |
 
-1. Supabase -> New project, in `us-east-2` (Ohio), beside the container. Set it up as
-   `docs/architecture.md` §10 steps 1 and 2 say (email confirmations, SMTP, the email templates, MFA,
-   and each OAuth provider wanted). The server migrates and seeds the new database on its first boot.
-2. In the repo, in one pull request: the new project's URL and publishable key in
-   `apps/web/.env.production`; its URL as production's `SUPABASE_URL` in `wrangler.jsonc`; and in
-   `infra/supabase.tf`, a second `supabase_settings` resource for the new project (`site_url`
-   `https://jackioh.com`, `uri_allow_list` its `/login`), with the current project's `site_url` moved to
-   `https://staging.jackioh.com` and its list to staging's `/login` alone.
-3. `/hold` the countdown issue, set production's secrets to the new project (step 3 above:
-   `SUPABASE_SECRET_KEY`, `DATABASE_URL`, and a fresh `CODE_PEPPER`), merge, `terraform apply`, then
-   promote production with **redeploy** and verify as in step 5.
-4. Mint production's first invite codes against the new database (`docs/architecture.md` §10, step
-   7), and check a fresh account: it owns 50 cards and holds 100 Jlore once it redeems.
+`apps/web/src/net/env-production.test.ts` fails when the two builds name one project, or when a
+build's project is not its own server's `SUPABASE_URL`.
+
+**Setting up JackiOh-Production,** once, before section 4's step 6: Authentication as
+`docs/architecture.md` §10 steps 1 and 2 say (email confirmations, SMTP, the email templates, MFA,
+and each OAuth provider wanted, whose callback is now this project's); the Site URL and Redirect URLs
+are `infra/supabase.tf`'s. Settings live per project, so none comes over with the data. The new
+project has its own signing keys, so every player signs in once more after the switch, with the same
+password. `STATS_DATABASE_URL` moves to a read-only login on this project, made as `training/learn.md`
+makes `stats_importer` but granted only `select`.
+
+**The copy,** at section 4's step 6 with production on `/hold`: Supabase's own way between projects,
+the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the empty production
+project, both through their session pooler URIs as `postgres`, held in a file outside the repository
+(`chmod 600`) and never pasted anywhere:
+
+```
+supabase db dump --db-url "$STAGING_DB_URL" -f roles.sql --role-only
+supabase db dump --db-url "$STAGING_DB_URL" -f schema.sql
+supabase db dump --db-url "$STAGING_DB_URL" -f data.sql --use-copy --data-only \
+  -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
+  -x public.game_record_batches
+psql "$PRODUCTION_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -f roles.sql -f schema.sql \
+  -c 'set session_replication_role = replica' -f data.sql
+```
+
+The five tables left out hold the card statistics; only their live rows come over, `\copy (select *
+from public.<table> where source = 'live')` out of staging and `\copy public.<table> from` into
+production for `game_records`, `card_totals`, `game_totals` and `record_totals`. `game_record_batches`
+holds only the development imports' batches, so none of it comes. Then Advisors -> Security on the new
+project (row-level security is on for every `public` table, as on staging), and the counts of
+`profiles`, `matches` and `auth.users` on both sides, which must agree.
+
+**What production's figures lose.** §9.11's publication gate pads a patch's public figures with
+development games until it has `PUBLIC_STATS_MIN_LIVE_GAMES` live games. With the development lanes
+filing into staging, production holds none, so its `/stats` shows live games alone from the first
+game (`not enough games` until a card has `CARD_STATS_MIN_SAMPLE`), and `winrates-refresh.yml`'s
+provisional refresh (R2386000) has nothing to pad with. Copying the development rows of the three
+totals tables as well (leave their `-x` off) keeps the padding for the patches already gathered, and
+not for later ones. Whether production should read development figures at all is the owner's call;
+the gate itself is unchanged either way, and only finds no development games to pad with.

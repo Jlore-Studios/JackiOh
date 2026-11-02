@@ -45,7 +45,8 @@
   // The server's settings that are not secrets (crates/server/README.md, Environment).
   "vars": {
     "PUBLIC_ORIGINS": "https://jackioh.com",
-    "SUPABASE_URL": "https://exmjdaswedxhnzmpzqrq.supabase.co",
+    // JackiOh-Production; staging's below is JackiOh-Staging (docs/deploy-cloudflare.md section 8).
+    "SUPABASE_URL": "https://fuzpvmjdejvbjcarypyi.supabase.co",
     "TRUSTED_PROXY_HOPS": "1",
     "LADDER_BOTS": "on"
   },

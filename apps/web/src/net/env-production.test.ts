@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
 import { connectSources } from "../../static-pages.ts";
@@ -30,11 +31,18 @@ const PUBLIC = [
   "VITE_AUTH_OAUTH_PROVIDERS",
 ];
 
-/** Each build's file and the address it is served from. */
+/**
+ * Each build's file, the address it is served from, its Supabase project and the wrangler.jsonc
+ * environment its server runs in. Production and staging have a project each (docs/deploy-cloudflare.md
+ * section 8): JackiOh-Production and JackiOh-Staging, the original one.
+ */
 const BUILDS = [
-  { file: ".env.production", site: "https://jackioh.com" },
-  { file: ".env.staging", site: "https://staging.jackioh.com" },
+  { file: ".env.production", site: "https://jackioh.com", supabase: "https://fuzpvmjdejvbjcarypyi.supabase.co", env: null },
+  { file: ".env.staging", site: "https://staging.jackioh.com", supabase: "https://exmjdaswedxhnzmpzqrq.supabase.co", env: "staging" },
 ] as const;
+
+type Vars = { vars?: Record<string, string> };
+const wrangler = JSON5.parse<Vars & { env?: Record<string, Vars> }>(readFileSync(join(ROOT, "wrangler.jsonc"), "utf8"));
 
 function entries(file: string): [string, string][] {
   return readFileSync(join(WEB, file), "utf8")
@@ -47,7 +55,7 @@ function entries(file: string): [string, string][] {
     });
 }
 
-for (const { file, site } of BUILDS) {
+for (const { file, site, supabase } of BUILDS) {
   describe(`apps/web/${file}`, () => {
     it("holds only public VITE_ settings, and nothing shaped like a secret", () => {
       for (const [key, value] of entries(file)) {
@@ -65,7 +73,7 @@ for (const { file, site } of BUILDS) {
       // wrangler.jsonc sends /api/* and /ws/* to the server, on the address the site is served from.
       expect(values["VITE_SERVER_HTTP_URL"]).toBe(site);
       expect(values["VITE_SERVER_WS_URL"]).toBe(`wss://${new URL(site).host}/ws/match`);
-      expect(values["VITE_SUPABASE_URL"]).toBe("https://exmjdaswedxhnzmpzqrq.supabase.co");
+      expect(values["VITE_SUPABASE_URL"]).toBe(supabase);
       // The publishable key, which Supabase makes to ship to browsers; a secret key fails the test above.
       expect(values["VITE_SUPABASE_PUBLISHABLE_KEY"]).toMatch(/^sb_publishable_[A-Za-z0-9_-]+$/u);
     });
@@ -83,6 +91,20 @@ for (const { file, site } of BUILDS) {
     });
   });
 }
+
+describe("the two builds' Supabase projects", () => {
+  it("are two, so nothing staging writes reaches a player's account", () => {
+    const [production, staging] = BUILDS.map(({ file }) => Object.fromEntries(entries(file))["VITE_SUPABASE_URL"]);
+    expect(production).not.toBe(staging);
+  });
+
+  it("are each its own server's, in wrangler.jsonc: the server checks sign-ins against the project the page signed in with", () => {
+    for (const { file, env } of BUILDS) {
+      const vars = (env === null ? wrangler : wrangler.env?.[env])?.vars ?? {};
+      expect(vars["SUPABASE_URL"], file).toBe(Object.fromEntries(entries(file))["VITE_SUPABASE_URL"]);
+    }
+  });
+});
 
 describe("the staging build", () => {
   it("sets every key the production file sets, so none of production's values reaches staging", () => {
