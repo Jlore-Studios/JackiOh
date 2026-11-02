@@ -308,25 +308,25 @@ jobs:
         env:
           WORKERS_DEV: ${{ steps.deploy.outputs.url }}
         run: |
-          for site in "$SITE" ${WORKERS_DEV:+"$WORKERS_DEV"}; do
+          for address in "$SITE" ${WORKERS_DEV:+"$WORKERS_DEV"}; do
             # The new version can take a few seconds to reach every edge.
             # The settings land in whichever chunk holds src/net/auth.ts, so every script index.html
             # loads or preloads is read.
             for attempt in 1 2 3 4 5 6; do
-              scripts=$(curl -fsS "$site/" | grep -oE '/assets/[A-Za-z0-9_.-]+\.js' | sort -u || true)
+              scripts=$(curl -fsS "$address/" | grep -oE '/assets/[A-Za-z0-9_.-]+\.js' | sort -u || true)
               found=
               for script in $scripts; do
-                if curl -fsS "$site$script" | grep -q 'sb_publishable_'; then found=$script; break; fi
+                if curl -fsS "$address$script" | grep -q 'sb_publishable_'; then found=$script; break; fi
               done
-              if [ -n "$found" ]; then echo "$site: sign-in is configured ($found)"; break; fi
-              if [ "$attempt" = 6 ]; then echo "::error::$site does not serve a bundle with sign-in configured"; exit 1; fi
+              if [ -n "$found" ]; then echo "$address: sign-in is configured ($found)"; break; fi
+              if [ "$attempt" = 6 ]; then echo "::error::$address does not serve a bundle with sign-in configured"; exit 1; fi
               sleep 10
             done
-            status=$(curl -s -o /dev/null -w '%{http_code}' "$site/decks")
-            [ "$status" = 200 ] || { echo "::error::$site/decks answered $status, not 200"; exit 1; }
-            curl -sI "$site/decks" | grep -qi '^content-security-policy:' || { echo "::error::$site sends no Content-Security-Policy"; exit 1; }
-            status=$(curl -s -o /dev/null -w '%{http_code}' "$site/not-a-page")
-            [ "$status" = 404 ] || { echo "::error::$site/not-a-page answered $status, not 404"; exit 1; }
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$address/decks")
+            [ "$status" = 200 ] || { echo "::error::$address/decks answered $status, not 200"; exit 1; }
+            curl -sI "$address/decks" | grep -qi '^content-security-policy:' || { echo "::error::$address sends no Content-Security-Policy"; exit 1; }
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$address/not-a-page")
+            [ "$status" = 404 ] || { echo "::error::$address/not-a-page answered $status, not 404"; exit 1; }
           done
 
       - name: wait for the server on this commit
