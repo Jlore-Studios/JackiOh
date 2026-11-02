@@ -229,7 +229,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "fracture":
       case "walls":
       case "brand":
-      case "shield": {
+      case "shield":
+      case "takeover": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };

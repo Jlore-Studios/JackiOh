@@ -6,13 +6,14 @@
 // the board turns into `data-animating="<eventType>"`. The effects layer (`apps/web/src/fx`,
 // docs/polish/1-animations.md) decorates this stream and paces nothing (R200).
 
-import type { GameEvent, GameEventType, PlayerId, PlayerView, Zone } from "@jackioh/shared";
+import type { CardType, GameEvent, GameEventType, PlayerId, PlayerView, Zone } from "@jackioh/shared";
 
 import type { FxDescriptor } from "../fx/types.ts";
 import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
+import { firstReveal, isFaceDownSet } from "./entrance.ts";
 import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
 import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
@@ -952,6 +953,8 @@ export type AnimationEntry = {
   sweep?: Sweep;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
+  /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
+  entrance?: EntryEntrance;
 };
 
 /**
@@ -1017,6 +1020,96 @@ export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamReso
   });
 }
 
+/* ----- R2722001, R2722002: a Legendary's or a Mythic's entrance, and a Mythic's takeover ----- */
+
+/**
+ * R2722001: how long the queue holds a readable Mythic's entrance before the entry's motion starts:
+ * the takeover's beat, which the effects layer draws inside the entry (it holds nothing itself, R200).
+ * One per action, scaled by the effects speed, and none under reduced motion or with the effects off.
+ */
+export const TAKEOVER_HOLD_MS = 1_000;
+
+/**
+ * R2722001: a Legendary's or a Mythic's entrance in an entry, on a seat that can read the card.
+ * `reveal`: a hidden card making it as it reveals (R2722002). `anchor`: the element it centres on,
+ * the zone that flipped for a reveal (R154), or null when the entry's board draws none. `holdMs`:
+ * the takeover's beat, inside the entry's `durationMs` and ahead of its motion (0 for every other).
+ */
+export type EntryEntrance = {
+  tier: "mythic" | "legendary";
+  instanceId: string;
+  defId: string;
+  player: PlayerId;
+  reveal: boolean;
+  anchor: string | null;
+  holdMs: number;
+};
+
+/** R2722001: the public catalog's type and rarity (a token's printed one) of a readable card, or null. */
+export type EntranceResolver = (defId: string) => { type: CardType; rarity: string | undefined } | null;
+
+/** The wait inside an entry before its motion starts: a slam's anticipation and a takeover's hold. */
+export function leadMs(entry: Pick<AnimationEntry, "slam" | "entrance">): number {
+  return (entry.slam?.anticipationMs ?? 0) + (entry.entrance?.holdMs ?? 0);
+}
+
+const isTrapType = (type: CardType): boolean => type === "Trap" || type === "Field Trap";
+
+/**
+ * R2722002: the card `event` makes its entrance for on the seat it was planned for, or null: a
+ * face-up play of a Unit or Spell (never a set, never a Trap's), a Unit put onto the field without a
+ * play, or a hidden card's first firing the seat reads. Every one names its card in the seat's own
+ * event (R202).
+ */
+function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: string; defId: string; player: PlayerId; reveal: boolean } | null {
+  switch (event.type) {
+    case "cardPlayed": {
+      if (isFaceDownSet(event)) return null;
+      const info = resolve(event.defId);
+      return info === null || isTrapType(info.type) ? null : { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
+    }
+    case "summoned":
+      return event.row === "units" && event.defId !== HIDDEN_ID ? { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false } : null;
+    case "trapFired":
+      return firstReveal(event) ? { instanceId: event.instanceId, defId: event.defId, player: event.controller, reveal: true } : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * R2722001: gives each entry where a readable Legendary or Mythic card makes its entrance its
+ * `entrance`, once per play or reveal (`seen`, kept by the queue across actions, so a played Unit's
+ * `summoned` in a batch after a prompt adds none, while its next play enters again). The first Mythic of the call (one action) also takes the
+ * takeover's hold, added to its entry and pinned against the burst budget; every other takes none.
+ */
+export function entranceEntries(
+  entries: readonly AnimationEntry[],
+  resolve: EntranceResolver,
+  opts: { reduced: boolean; speed: number; seen: Set<string> },
+): AnimationEntry[] {
+  let held = false;
+  return entries.map((entry) => {
+    for (const event of entry.events) {
+      const card = entranceAt(event, resolve);
+      // A face-up play is always a fresh entrance, as its intro is (R1350): a card bounced and played
+      // again keeps its id but enters again. Its own `summoned`, a reveal or a firing enter once.
+      if (card === null || (event.type !== "cardPlayed" && opts.seen.has(card.instanceId))) continue;
+      const rarity = resolve(card.defId)?.rarity;
+      if (rarity !== "Legendary" && rarity !== "Mythic") continue;
+      opts.seen.add(card.instanceId);
+      const tier = rarity === "Mythic" ? "mythic" : "legendary";
+      // A played Unit lands in the zone its own summoned names in the same entry: the entrance centres there.
+      const landing = entry.events.find((e) => e.type === "summoned" && e.row === "units" && e.instanceId === card.instanceId);
+      const anchor = targetFor(landing ?? event, entry.view);
+      const holdMs = tier === "mythic" && !held && !opts.reduced && entry.durationMs > 0 ? scaleForSpeed(TAKEOVER_HOLD_MS, opts.speed) : 0;
+      if (holdMs > 0) held = true;
+      return { ...entry, entrance: { tier, ...card, anchor, holdMs }, durationMs: entry.durationMs + holdMs };
+    }
+    return entry;
+  });
+}
+
 export function pileTestid(pile: Pile): string {
   if (pile.pile === "library") return animTestid.library(pile.side);
   return pile.pile === "graveyard" ? animTestid.graveyard(pile.side) : animTestid.exile(pile.side);
@@ -1027,7 +1120,8 @@ export function pileTestid(pile: Pile): string {
  * is a batch of coins or dice whose suspense is the point (R2652001).
  */
 function pinned(entry: AnimationEntry): boolean {
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.type === "rolled";
+  // R2722001: a takeover's hold is the action's one capped beat, never squeezed.
+  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.type === "rolled" || (entry.entrance?.holdMs ?? 0) > 0;
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
@@ -1262,10 +1356,12 @@ export type AnimationQueueOptions = {
   /** A cast's own segment of the budget (issue #124, `CAST_BUDGET_MS`). */
   castBudgetMs?: number;
   minEntryMs?: number;
-  /** Read at every enqueue (R201). */
-  settings?: () => Pick<FxSettings, "speed" | "motion">;
+  /** Read at every enqueue (R201). An `intensity` of "off" takes no takeover's hold (R2722001). */
+  settings?: () => Pick<FxSettings, "speed" | "motion"> & Partial<Pick<FxSettings, "intensity">>;
   /** #185: the tier a landing Unit slams at, read at every enqueue. Absent: nothing slams. */
   slamOf?: SlamResolver;
+  /** R2722001: a readable card's type and rarity, for its entrance and a Mythic's takeover. Absent: none. */
+  entranceOf?: EntranceResolver;
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
@@ -1383,6 +1479,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
   let current: AnimationEntry | null = null;
   /** The plays still resolving, across batches (issue #124): a cast can come in the batch after a prompt. */
   const plays = createPlayTracker();
+  /** R2722001: the cards whose entrance this queue has made, so each makes it once. */
+  const entered = new Set<string>();
   /** Bumped by `drain`/`reset` so a timer already in flight cannot resurrect a cleared queue. */
   let epoch = 0;
   let owed = false;
@@ -1478,10 +1576,14 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
       const planned = planEntries(events, view, reduced, plays);
       const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
-      const entries = slammed.map((entry) => {
+      const scaled = slammed.map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });
+      const entries =
+        options.entranceOf === undefined
+          ? scaled
+          : entranceEntries(scaled, options.entranceOf, { reduced: reduced || settings.intensity === "off", speed: settings.speed, seen: entered });
       if (entries.length > 0) queue.push(...entries);
       owed = true;
       const speed = normalizeSpeed(settings.speed);
@@ -1515,6 +1617,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       current = null;
       owed = false;
       plays.clear();
+      entered.clear();
       notify();
       signal({ kind: "reset" });
     },
