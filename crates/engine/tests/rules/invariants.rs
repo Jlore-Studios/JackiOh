@@ -240,6 +240,7 @@ fn destroyed_by(instance_id: &str, killer_id: &str) -> GameEvent {
         max_health: 1,
         killer_id: Some(killer_id.to_string()),
         radiant: None,
+        via: None,
     }
 }
 

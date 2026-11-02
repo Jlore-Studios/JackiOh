@@ -158,7 +158,8 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
         assert_eq!(
             events,
             vec![
-                json!({ "type": "damage", "sourceId": piercer.id, "targetId": wall.id, "amount": 5, "combat": false })
+                // R2783001: and it says Pierce took it past the Armor.
+                json!({ "type": "damage", "sourceId": piercer.id, "targetId": wall.id, "amount": 5, "combat": false, "via": "Pierce" })
             ]
         );
 
@@ -175,7 +176,7 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
         assert_eq!(
             events,
             vec![
-                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 4, "combat": false })
+                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 4, "combat": false, "via": "Pierce" })
             ]
         );
 
@@ -246,7 +247,8 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
             events,
             vec![
                 json!({ "type": "damage", "sourceId": source.id, "targetId": target.id, "amount": 3, "combat": false, "absorbed": 1 }),
-                json!({ "type": "damage", "sourceId": source.id, "targetId": "hero-p2", "amount": 4, "combat": false, "absorbed": 2 }),
+                // R2783001: the excess says it is Trample's.
+                json!({ "type": "damage", "sourceId": source.id, "targetId": "hero-p2", "amount": 4, "combat": false, "absorbed": 2, "via": "Trample" }),
             ]
         );
     }
@@ -507,6 +509,7 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
                     target_id: wall.id.clone(),
                     absorbed: 3,
                     combat: false,
+                    via: None,
                 },
                 GameEvent::Damage {
                     source_id: Some(source.id.clone()),
@@ -514,6 +517,7 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
                     amount: 1,
                     combat: false,
                     absorbed: 7,
+                    via: None,
                 },
             ],
         });
@@ -552,6 +556,7 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
             amount: 2,
             combat: true,
             absorbed: 4,
+            via: None,
         };
         assert_eq!(
             hit.as_rules_read(),
@@ -561,6 +566,7 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
                 amount: 2,
                 combat: true,
                 absorbed: 0,
+                via: None,
             }
         );
         // R63: a hit Armor took whole is, to the rules, a hit of 0, which nothing answers.
@@ -569,6 +575,7 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
             target_id: "hero-p1".into(),
             absorbed: 3,
             combat: false,
+            via: None,
         };
         assert_eq!(
             report.as_rules_read(),
@@ -578,6 +585,7 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
                 amount: 0,
                 combat: false,
                 absorbed: 0,
+                via: None,
             }
         );
         let other = GameEvent::DrawOffered { player: P1 };

@@ -9,7 +9,9 @@ import type { FengShuiOutcome } from "./FengShuiOutcome";
 import type { FleeOpponent } from "./FleeOpponent";
 import type { GameOverReason } from "./GameOverReason";
 import type { GlitchOutcome } from "./GlitchOutcome";
+import type { HookKind } from "./HookKind";
 import type { Keyword } from "./Keyword";
+import type { KeywordKind } from "./KeywordKind";
 import type { LibraryOverflowOutcome } from "./LibraryOverflowOutcome";
 import type { ManaSpentFor } from "./ManaSpentFor";
 import type { PlayedFrom } from "./PlayedFrom";
@@ -103,7 +105,26 @@ exitsFrom?: number,
  * not `player`; the game record credits a Created card to it (§9.11). Engine bookkeeping: no
  * rule reads it and a view never forwards it.
  */
-creator?: PlayerId, } | { "type": "damage", sourceId: string | null, targetId: string, amount: number, combat: boolean, absorbed?: number, } | { "type": "healthLost", player: PlayerId, amount: number, } | { "type": "healed", targetId: string, amount: number, } | { "type": "divineShieldLost", instanceId: string, } | { "type": "destroyed", instanceId: string, defId: string, owner: PlayerId, 
+creator?: PlayerId, 
+/**
+ * R2783001: the keyword behind this event — Reborn's return (§6.1) — for the client's cue; the
+ * engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No rule reads it
+ * (`as_rules_read`), and a view that hides the card hides it too (R97).
+ */
+via?: KeywordKind, } | { "type": "damage", sourceId: string | null, targetId: string, amount: number, combat: boolean, absorbed?: number, 
+/**
+ * R2783001: the keyword behind this event — Cleave's neighbour hit, a Trample excess, the strike
+ * First Strike moved ahead, or a hit Pierce took past the Armor its target had — for the client's
+ * cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No rule reads
+ * it (`as_rules_read`), and a view that hides the card hides it too (R97).
+ */
+via?: KeywordKind, } | { "type": "healthLost", player: PlayerId, amount: number, } | { "type": "healed", targetId: string, amount: number, 
+/**
+ * R2783001: the keyword behind this event — Lifesteal's heal (§4.4 step 8) — for the client's cue;
+ * the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No rule reads it
+ * (`as_rules_read`), and a view that hides the card hides it too (R97).
+ */
+via?: KeywordKind, } | { "type": "divineShieldLost", instanceId: string, } | { "type": "destroyed", instanceId: string, defId: string, owner: PlayerId, 
 /**
  * The player who controlled it as it died. R172: a stolen unit dies as its controller's, though
  * it goes to its owner's graveyard — Classic #14 Shadowstep's "your Units" reads this.
@@ -113,7 +134,14 @@ controller: PlayerId, attack: number, maxHealth: number, killerId: string | null
  * R89: set when the unit died on its Radiant face (C+ #12.8 Frostspatula's memory, R409).
  * Only ever `Some(true)`.
  */
-radiant?: true, } | { "type": "enteredGraveyard", instanceId: string, defId: string, owner: PlayerId, } | { "type": "exiled", instanceId: string, defId: string, owner: PlayerId, } | { "type": "bounced", instanceId: string, defId: string, owner: PlayerId, } | { "type": "burned", instanceId: string, defId: string, owner: PlayerId, } | { "type": "fatigue", player: PlayerId, count: number, amount: number, } | { "type": "libraryOverflow", player: PlayerId, instanceId: string, defId: string, outcome: LibraryOverflowOutcome, 
+radiant?: true, 
+/**
+ * R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
+ * First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
+ * client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No
+ * rule reads it (`as_rules_read`), and a view that hides the card hides it too (R97).
+ */
+via?: KeywordKind, } | { "type": "enteredGraveyard", instanceId: string, defId: string, owner: PlayerId, } | { "type": "exiled", instanceId: string, defId: string, owner: PlayerId, } | { "type": "bounced", instanceId: string, defId: string, owner: PlayerId, } | { "type": "burned", instanceId: string, defId: string, owner: PlayerId, } | { "type": "fatigue", player: PlayerId, count: number, amount: number, } | { "type": "libraryOverflow", player: PlayerId, instanceId: string, defId: string, outcome: LibraryOverflowOutcome, 
 /**
  * R316: set when the refused card is Radiant (#33's Radiant face makes every copy Radiant, a
  * Radiant CN-Virus copies Radiant), so the board shows the face it would have had. It is the
@@ -171,7 +199,13 @@ carried?: true, } | { "type": "deanimated", player: PlayerId, instanceId: string
 /**
  * Always "field".
  */
-zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "scriptFailed", player: PlayerId, instanceId: string | null, defId: string, message: string, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
+zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, 
+/**
+ * R2783001: the keyword behind this event — the route of the hit Armor took, as on `damage` — for
+ * the client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5).
+ * No rule reads it (`as_rules_read`), and a view that hides the card hides it too (R97).
+ */
+via?: KeywordKind, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "scriptFailed", player: PlayerId, instanceId: string | null, defId: string, message: string, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
 /**
  * Set when the card bought is Radiant (a Radiant lot, R1853001). It is the card's, so a view
  * that hides the card hides this too (R97). Only ever `Some(true)`.
@@ -180,4 +214,9 @@ radiant?: true, credits: number, } | { "type": "marketSold", player: PlayerId, i
 /**
  * Set when the card sold is Radiant. Only ever `Some(true)`.
  */
-radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, };
+radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, } | { "type": "hookResolving", sourceId: string, defId: string, controller: PlayerId, hook: HookKind, 
+/**
+ * R2783000, R177: the seats that could not read the card where it stood as the hook began.
+ * Engine bookkeeping: the view uses it and never forwards it.
+ */
+hiddenFrom?: Array<PlayerId>, };

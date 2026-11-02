@@ -81,6 +81,7 @@ pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
         arrived_during: None,
         exits_from: None,
         creator: None,
+        via: None,
     });
     // R783010: a Crater Unit Locks the zone it re-entered.
     crate::crater::lock_on_arrival(sink, &card.id);

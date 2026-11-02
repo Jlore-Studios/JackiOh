@@ -261,7 +261,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         assert_eq!(stealing.state.players.p1.hero.health, 23);
         assert_eq!(
             json_of(events_of_type(stealing.events, GameEventType::Healed)),
-            json!([{ "type": "healed", "targetId": "hero-p1", "amount": 3 }])
+            json!([{ "type": "healed", "targetId": "hero-p1", "amount": 3, "via": "Lifesteal" }])
         );
     }
 

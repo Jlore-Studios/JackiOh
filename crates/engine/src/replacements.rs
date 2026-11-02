@@ -816,6 +816,7 @@ pub fn answer_targeting(
             arrived_during: None,
             exits_from: None,
             creator: None,
+            via: None,
         });
         // R783010: a Crater Joro Locks the zone it was summoned into.
         crate::crater::lock_on_arrival(sink, &card.id);

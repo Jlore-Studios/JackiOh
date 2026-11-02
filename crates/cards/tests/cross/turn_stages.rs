@@ -791,6 +791,7 @@ fn absorbed_fatigue_report() -> GameEvent {
         target_id: "hero-p2".to_string(),
         absorbed: 1,
         combat: false,
+        via: None,
     }
 }
 

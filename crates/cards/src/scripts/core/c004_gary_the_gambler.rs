@@ -323,7 +323,8 @@ mod tests {
         }
 
         /// R2652001, R1361, R68: a report is answered by nothing and takes no number from
-        /// `next_seq`, so the play's numbers are the ones every other event of it took.
+        /// `next_seq`, so the play's numbers are the ones every other event of it took; nor does the
+        /// marker of its Cry (R2783000).
         #[test]
         fn r2652001_the_reports_take_no_number_from_the_trigger_loop() {
             crate::register_all();
@@ -333,7 +334,9 @@ mod tests {
             let numbered = s
                 .last_events()
                 .iter()
-                .filter(|event| event.event_type() != GameEventType::Rolled)
+                .filter(|event| {
+                    !matches!(event.event_type(), GameEventType::Rolled | GameEventType::HookResolving)
+                })
                 .count() as u32;
             assert_eq!(batches(&s).len(), 2);
             assert_eq!(s.state().next_seq - before, numbered);

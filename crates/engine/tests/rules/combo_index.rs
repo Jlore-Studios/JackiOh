@@ -621,7 +621,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         );
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::Healed)),
-            json!([{ "type": "healed", "targetId": "hero-p1", "amount": 8 }])
+            json!([{ "type": "healed", "targetId": "hero-p1", "amount": 8, "via": "Lifesteal" }])
         );
 
         // §4.4 step 8 heals by the amount dealt, so Armor cuts the heal with the hit.

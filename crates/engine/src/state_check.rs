@@ -23,8 +23,8 @@ use crate::state::{
     CardInstance, GameState, Resume, WorkItem, active_first, find_instance, find_instance_mut,
 };
 use crate::wire::{
-    AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row,
-    Winner, Zone, ZoneName, ZoneRef, has_keyword,
+    AttackHealth, GameEvent, GameOverReason, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position,
+    Row, Winner, Zone, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
@@ -478,6 +478,8 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             arrived_during: None,
             exits_from: None,
             creator: None,
+            // R2783001: the body is Reborn's return.
+            via: Some(KeywordKind::Reborn),
         };
         sink.events.push(event);
         // R783010: a Crater body Locks the zone it came back into.
@@ -548,6 +550,10 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         };
 
         let paused = resume_at.take();
+        // R2783000: the Death's first run is marked before any of its effects; a resumed one has been.
+        if paused.is_none() {
+            crate::hook_marks::mark_hook(sink, &snapshot, snapshot.controller, HookKind::Death);
+        }
         let plan = plan_for(pass, snapshot.controller);
         let mut data: IndexMap<String, Value> = IndexMap::new();
         data.insert(
@@ -730,6 +736,13 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     }
 
     for mut card in read {
+        // R2783001: the keyword its death came by, recorded in this action; a Sacrifice comes by none.
+        let via = sink
+            .frontier
+            .get_mut()
+            .death_via
+            .shift_remove(&card.snapshot.id)
+            .filter(|_| cause != DeathCause::Sacrificed);
         let landed = crate::zones::move_to_zone(
             sink.state,
             &mut card.unit,
@@ -815,6 +828,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             // R89: its face as it died, which a unit token that has ceased to exist can no longer tell
             // (C+ #12.8 Frostspatula remembers what it killed by definition and face, R409).
             radiant: if card.snapshot.radiant { Some(true) } else { None },
+            via,
         });
     }
 
@@ -1035,6 +1049,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
 
         if dying.is_empty() {
+            // R2783001: nothing died, so no keyword recorded for a death says how anything died.
+            sink.frontier.get_mut().death_via.clear();
             // R850: the settled game-end point — a hero at 0 loses first, then a held win wins.
             if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
@@ -1067,6 +1083,9 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             crate::zones::exile_to_pile(sink, card);
         }
         let mut collected = collect(sink, &remaining, DeathCause::Collected);
+        // R2783001: a keyword recorded for a unit this pass did not collect (a "would die" replacement
+        // spared it) says nothing of a later death; one a Death hook's hit records is the next pass's.
+        sink.frontier.get_mut().death_via.clear();
 
         // Step 2: heroes.
         if hero_check(sink) {
