@@ -6,7 +6,9 @@
 // that card shows its preview and picks nothing: a lot is read, not bought.
 // The play-time choices (R81) the set adds are a card's modes, picked in a "Choose one" before the play is sent (#617),
 // each the same sheet under the same checks: #22 Mind Games' secret (ME-SECRET), #22.1 Fortify Mind's guess at it, and
-// #98 Showdown's lane. The Created status (ME-CREATED, R943) of a card in hand draws no mark on its face (R2647000).
+// #98 Showdown's lane. A short Choose one is bare choice cards alone (#2738), with no title and so no card to hold;
+// Showdown's list of five keeps its title, which the hold reads. The Created status (ME-CREATED, R943) of a card in
+// hand draws no mark on its face (R2647000).
 // The mount is mobile-ux.cy.tsx's, with the real catalog (the market draws its lots from it); the block editor's meters
 // and face are the engine's own `craftPreview`, so the WebAssembly module loads first.
 
@@ -96,8 +98,11 @@ type Kind = {
   legal: readonly ActionBody[];
   /** A play-time choice opens from a tap on this hand card. */
   open?: string;
-  /** The card face a hold reads, and the name its preview must show. */
-  card: { selector: string; name: string };
+  /**
+   * The card face a hold reads, and the name its preview must show. A short Choose one is bare
+   * choice cards alone (#2738): no title, so no card to hold.
+   */
+  card?: { selector: string; name: string };
 };
 
 const HAND = "h1";
@@ -117,7 +122,8 @@ function choice(kind: string, defId: string, modes: readonly string[], shows = "
     view: () => baseView({ you: emptySide("p1", { hand: [card({ instanceId: HAND, defId, cost: 2 })] }) }),
     legal: modes.map((mode): ActionBody => ({ type: "play", instanceId: HAND, modes: [mode] })),
     open: ts(testid.handCard(HAND)),
-    card: { selector: `${PROMPT} ${ts("prompt-title-source")}`, name: cardName(defId) },
+    // A short Choose one is bare cards alone (#2738): no title to hold. A list keeps it.
+    ...(shows === "discover" ? {} : { card: { selector: `${PROMPT} ${ts("prompt-title-source")}`, name: cardName(defId) } }),
   };
 }
 
@@ -243,6 +249,11 @@ describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", 
         openSheet(entry);
         cy.document().should((doc) => {
           expect(sheetProblems(doc, phone.width, phone.height, label)).to.deep.equal([]);
+          if (entry.card === undefined) {
+            // A short Choose one is its choice cards alone (#2738): no title over them.
+            expect(doc.querySelector(`${PROMPT} .prompt-title`)).to.eq(null);
+            return;
+          }
           const face = doc.querySelector<HTMLElement>(entry.card.selector);
           expect(face, `${label}: the card it shows`).to.not.eq(null);
           if (face === null) return;
@@ -253,15 +264,18 @@ describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", 
         });
       });
 
-      it(`MN09 R2617000 a hold on the ${label}'s card shows its preview on the screen while the finger is down, and picks nothing`, () => {
-        cy.viewport(phone.width, phone.height);
-        openSheet(entry);
-        hold(entry.card.selector, (preview) => {
-          expect(preview.textContent ?? "", `${label}: the preview reads the card`).to.contain(entry.card.name);
-          expectOnScreen(preview, phone.width, label);
+      if (entry.card !== undefined) {
+        const held = entry.card;
+        it(`MN09 R2617000 a hold on the ${label}'s card shows its preview on the screen while the finger is down, and picks nothing`, () => {
+          cy.viewport(phone.width, phone.height);
+          openSheet(entry);
+          hold(held.selector, (preview) => {
+            expect(preview.textContent ?? "", `${label}: the preview reads the card`).to.contain(held.name);
+            expectOnScreen(preview, phone.width, label);
+          });
+          cy.wrap(sent).should("deep.equal", []);
         });
-        cy.wrap(sent).should("deep.equal", []);
-      });
+      }
     }
   }
 });

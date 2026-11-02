@@ -7,9 +7,10 @@
 //! `duos_passes` reads of the teammate only its own side, so an opponent's hidden card never reaches a
 //! decision.
 //!
-//! The gate (B32): `duos_gate` plays the Easy AI team against a `DuosOpponent` (#1760); a refused
-//! action, a fallback (#1385) or a caught panic (#1429) fails it. Pure and seeded (CLAUDE.md rule 4):
-//! a budget counts `reduce` calls, every stream is seeded from the game's seed and its seat.
+//! The gate (B32): each of its games (`duos_gate_game`, summed by `duos_gate_report`) plays the Easy
+//! AI team against a `DuosOpponent` (#1760); a refused action, a fallback (#1385) or a caught panic
+//! (#1429) fails it. Pure and seeded (CLAUDE.md rule 4): a budget counts `reduce` calls, every stream
+//! is seeded from the game's seed and its seat.
 
 use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -736,12 +737,6 @@ pub struct DuosGateGame {
 /// both going first (team A is P1 in both duels) and with The Coin.
 pub fn duos_gate_subject(n: usize) -> Team {
     if n % 2 == 1 { Team::A } else { Team::B }
-}
-
-/// B32: games 1..=games of the series `seed`, the Easy AI team against `opponent`.
-pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport {
-    let played: Vec<DuosGateGame> = (1..=games).map(|n| duos_gate_game(n, seed, opponent)).collect();
-    duos_gate_report(opponent, &played)
 }
 
 /// The report a run of these games against `opponent` makes; games against another opponent are left

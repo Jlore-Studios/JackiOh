@@ -14,7 +14,6 @@ use std::sync::Arc;
 use serde::Serialize;
 use serde_json::{Value, json};
 use unicode_normalization::UnicodeNormalization;
-use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::api::collection::caller_profile;
 use crate::api::http::{
@@ -26,7 +25,7 @@ use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
 use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError};
 use crate::social::friends::are_friends;
 use crate::social::{created, iso, no_content, not_found, param, refused};
-use crate::username::is_blocked;
+use crate::username::{is_blocked, is_mark};
 
 /// S7's `ChatMessage`: `from` and `to` are profile ids; `read` is whether its recipient has read it.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -238,10 +237,6 @@ pub async fn purge(app: &App) -> Result<i64, StoreError> {
 }
 
 // The word filter (B53): the usernames' filter (R1433), read over a message's words
-
-fn is_mark(ch: char) -> bool {
-    ch.general_category_group() == GeneralCategoryGroup::Mark
-}
 
 /// Whether the filter refuses this word: the usernames' filter (R1433) over its NFKC form, look-alike
 /// letters and digits read back both ways as in a name. A word with no letter is never matched, so a

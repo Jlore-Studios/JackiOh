@@ -82,7 +82,7 @@ jackioh/
     ai/                        jackioh-ai: the practice opponent (§9.9); generation.json, the training lanes' record
     wasm/                      jackioh-wasm: the engine, cards, AI and validator as WebAssembly for apps/web
     server/                    jackioh-server: the HTTP API and the match actors, one binary
-      Dockerfile               the image Render runs (render.yaml)
+      Dockerfile               the image the Cloudflare container runs (wrangler.jsonc)
       migrations/              profiles, invite_codes, code_attempts, cards, collection, collection_grants, loadouts,
                                loadout_decks, loadout_deck_cards, tickets, matches, match_actions, results, decks, trios,
                                series, tutorial_progress, game_records, …; compiled into the binary
@@ -166,6 +166,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `TUNE_COST_STEP` / `TUNE_ATTACK_FLOOR` / `TUNE_HEALTH_FLOOR` | 1 / 0 / 1: a cost change's size, and the floors a stats change stops at | §6.3, R386 |
 | `TUNE_HARMFUL_KEYWORDS` | Can't attack, Brittle, Untributable, Can't Defend, Crater: keywords a Nerf never removes | §6.3, R386, R442, R1220, R2657005 |
 | `TUNE_BUFF_REMOVES` / `TUNE_BUFF_ANY_KEYWORDS` / `TUNE_NERF_HAND_KEYWORDS` | Can't attack and Can't Defend, which a Buff may remove / Flashback, which a Buff may add to any card / Crater, which a Nerf may add to a Unit, Field Spell or Trap in a hand | §6.3, R2657005 |
+| `TUNE_BUFF_HAND_KEYWORDS` / `TUNE_BUFF_HAND_REMOVES` | Cloaked, which a Buff may add to a Unit, Spell or Field Spell in a hand / Crater, which a Buff may remove from a card in a hand | §6.3, R2727000, R2727001 |
 | `MIN_PLAGUE_PAYMENT` / `PLAGUE_TOKEN_MANA` | 1 / 1: a play paid with Plague Counters spends at least one, each paying (1) | §6.3 Play, R454; C #74 |
 | `PLAGUE_MULTIPLIER_NONE` | 1: a card's Plague placement multiplier when it declares none | §6.3, R471 |
 | `RANDOM_CAST_CHAIN_CAP` | 20: casts one random cast and the casts inside it may make | §6.3 Cast, R452 |

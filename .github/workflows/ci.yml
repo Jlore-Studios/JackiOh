@@ -19,12 +19,13 @@
 #              training lane's ai/* branch, the training gate (README §8); and, when infra/ changed,
 #              its Terraform's fmt and validate (#1708), in the checks job.
 #   web        the two WASM modules, side by side, and the e2e client on them, each built once for
-#              the run; typecheck and eslint; the web's unit tests in quarters, without the audio, fx
-#              and asset tests; and promote-production.test.ts in a job of its own, only when what
-#              it tests changed. None of these jobs runs Cypress, so none downloads its binary.
+#              the run; typecheck and eslint, of the Worker in front of the server (apps/edge) too;
+#              the web's and the Worker's unit tests in quarters, without the audio, fx and asset
+#              tests; and promote-production.test.ts in a job of its own, only when what it tests
+#              changed. None of these jobs runs Cypress, so none downloads its binary.
 #   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
 #              the release jackioh-server, in two shards that each boot their own server.
-#   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, each
+#   db         sql, the store contract and the deploy rehearsal against a real Postgres, each
 #              only when the pull request touches what it tests (scripts/ci-scope.sh's `db_sql`,
 #              `db_store` and `db_deploy`); a skip passes.
 #   bot selftest  the harness's suite (bot/go: gofmt, go vet, go test), its binary's start under both
@@ -468,14 +469,14 @@ jobs:
   # reaches): `jackioh` in 159 s, `jackioh-server` in 152. The engine, the cards and the AI keep
   # Cargo.toml's opt-level 3, so every game played on these binaries runs as fast as before: fuzz
   # 200 took 37 s against 34, the classifier's 8 self-play games 100 s against 103, their logs byte
-  # for byte the same. The server alone builds the engine without `testkit`, as Render's image does;
-  # that feature adds only test seams, which nothing sets outside a test. Each binary keeps a Rust
-  # cache of its own (`cache-key`), or the two would share one entry that the first to finish
+  # for byte the same. The server alone builds the engine without `testkit`, as the deploy image
+  # does; that feature adds only test seams, which nothing sets outside a test. Each binary keeps a
+  # Rust cache of its own (`cache-key`), or the two would share one entry that the first to finish
   # writes. The checks run on `jackioh` in their own job, so a failed check never keeps the binaries
-  # from e2e smoke. Without Cargo.toml's thin LTO: these binaries serve e2e and the checks, never
-  # production (Render builds the server's image from crates/server/Dockerfile), and the link-time
-  # pass over every dependency was most of a minute. Each `--config` stays one unquoted word: the
-  # build step splits BUILD on spaces.
+  # from e2e smoke. Without Cargo.toml's thin LTO: these binaries serve e2e and the checks, never a
+  # deploy (wrangler builds the server's image from crates/server/Dockerfile, in
+  # promote-production.yml and deploy-staging.yml), and the link-time pass over every dependency was
+  # most of a minute. Each `--config` stays one unquoted word: the build step splits BUILD on spaces.
   rust-build:
     name: rust (release build ${{ matrix.binary }})
     needs: changes
@@ -978,7 +979,7 @@ jobs:
           rust: "false"
       # Before the module is unpacked, so its generated JavaScript is never linted.
       - name: eslint
-        run: pnpm exec eslint apps/web e2e
+        run: pnpm exec eslint apps/web apps/edge e2e
       - uses: actions/download-artifact@v4
         with:
           name: web-build
@@ -987,6 +988,9 @@ jobs:
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: typecheck the web
         run: pnpm --dir apps/web typecheck
+      # On Cloudflare's runtime types, not the DOM's (apps/edge/tsconfig.json).
+      - name: typecheck the Worker
+        run: pnpm --dir apps/edge typecheck
       - name: typecheck the e2e specs and the component specs
         run: pnpm --dir e2e typecheck && pnpm --dir e2e typecheck:component
 
@@ -997,7 +1001,8 @@ jobs:
   # card until its assets are rendered.
   # promote-production.test.ts runs in `web (promote-production)` below. The tests that sweep many
   # games (the tutorial lessons' other deals and random players) play their first game here and the
-  # rest daily (src/test/daily.ts).
+  # rest daily (src/test/daily.ts). The Worker's tests (vitest project `edge`, apps/edge) are dealt
+  # out with the web's.
   web-unit:
     name: web (unit ${{ matrix.shard }}/${{ strategy.job-total }})
     needs: [changes, web-build]
@@ -1023,7 +1028,7 @@ jobs:
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: vitest
         run: >-
-          pnpm exec vitest run --project web --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          pnpm exec vitest run --project web --project edge --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'
           --exclude '**/src/net/promote-production.test.ts'
 
@@ -1283,11 +1288,11 @@ jobs:
   #                    triggers, the SECURITY DEFINER boundaries, the unique indexes (V17).
   #   store contract   the store contract suite against PgStore, as `cargo test` runs it against the
   #                    fake (V16).
-  #   deploy rehearsal Render's deploy before it happens: the Docker image on render.yaml's settings,
-  #                    migrating as a role that is not a superuser, as Supabase's is not, then a
-  #                    production boot held to the readiness probe and the free instance's memory
-  #                    (V22). Migration 0013 passed every superuser suite and then failed Render's
-  #                    deploy: this is the suite that would have caught it.
+  #   deploy rehearsal the deploy before it happens: the server's Docker image on its production
+  #                    settings, migrating as a role that is not a superuser, as Supabase's is not,
+  #                    then a production boot held to the readiness probe and the container's
+  #                    memory (V22). Migration 0013 passed every superuser suite and then failed
+  #                    Render's deploy: this is the suite that would have caught it.
   # Per pull request only when it touches what they test (scripts/ci-scope.sh's `db`); daily in
   # super.yml regardless. The rehearsal runs as jobs of its own, below.
   db-suite:

@@ -140,8 +140,11 @@ export const MUSIC_TURN_TC_S = 0.3;
 export const MUSIC_DUCK_GAIN = 0.6;
 export const MUSIC_DUCK_ATTACK_TC_S = 0.03;
 export const MUSIC_DUCK_RELEASE_TC_S = 0.25;
-/** The effects the music ducks under, besides every voice line. */
-export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "entrance", "victory", "defeat"];
+/**
+ * The effects the music ducks under, besides every voice line. R2722000 took the `entrance` sting
+ * out: it plays beside a Legendary's or a Mythic's intro, which the duck would dip under it.
+ */
+export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "victory", "defeat"];
 /** The field's taps (game/SandSurface.tsx TAP_SFX, #1954): every press sounds, past SFX_RETRIGGER_MS and SFX_MAX_VOICES. */
 export const RAPID_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["sand", "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"]);
 /** Focus: how fast the music fades out when the page is hidden or blurred, and back. */
@@ -157,9 +160,10 @@ export const MUSIC_BYTES_MAX = 8;
  * R1352 raised it from 24 MiB for the card intros: the shipped sets' 58 take about 3.1 MB, and the
  * Meditative set's 22 come with its release, at the same encoding. Raised again from 28 MiB when the
  * owner's auditions gave each station three to seven in-game tracks (about 40.5 MiB on disk), with
- * room left for the card intros later sets bring.
+ * room left for the card intros later sets bring, and by R2722000 from 42 MiB for the intros'
+ * fanfares, about half as long again.
  */
-export const MUSIC_BUDGET_BYTES = 42 * 1024 * 1024;
+export const MUSIC_BUDGET_BYTES = 49 * 1024 * 1024;
 
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
@@ -192,8 +196,13 @@ export const SHEEP_DEF_IDS: readonly string[] = ["core-t-sheep"];
 export const BLEAT_DELAY_MS = 120;
 
 // A Legendary's or a Mythic's intro (MN04)
-/** R1350: the bed (every other track the music plays) under a card's intro, for the intro's span. */
-export const MUSIC_INTRO_DUCK_GAIN = 0.35;
+/**
+ * R1350, R2722000: the bed (every other track the music plays) under a card's intro, for the intro's
+ * span: low enough that the other music drops away (0.35 until R2722000).
+ */
+export const MUSIC_INTRO_DUCK_GAIN = 0.12;
+/** R2722000: an intro's own gain on the music bus, so it sits above the sound effects around it. */
+export const MUSIC_INTRO_GAIN = 1.4;
 /** R1350: how fast the bed dips as an intro starts, and comes back as its music ends (about three of these). */
 export const MUSIC_INTRO_DUCK_ATTACK_TC_S = 0.04;
 export const MUSIC_INTRO_DUCK_RELEASE_TC_S = 0.15;
@@ -206,7 +215,12 @@ export const MUSIC_INTRO_BYTES_MAX = 12;
 export const MUSIC_INTRO_DECODED_MAX = 4;
 /**
  * R1352: an intro's music runs at least this long to its last bar line, and its whole file at most
- * MUSIC_INTRO_MAX_S (scripts/music/tracks.mjs INTRO_SPAN_S).
+ * MUSIC_INTRO_MAX_S (scripts/music/tracks.mjs INTRO_SPAN_S; R2722000 raised it from 6 s, INTRO_MAX_S).
  */
 export const MUSIC_INTRO_MIN_S = 3;
-export const MUSIC_INTRO_MAX_S = 6;
+export const MUSIC_INTRO_MAX_S = 12;
+/**
+ * R2722000: a Legendary's whole file runs at most this, and every Mythic's longer (tracks.mjs
+ * INTRO_LEGENDARY_MAX_S), so a Mythic's entrance always outlasts a Legendary's.
+ */
+export const MUSIC_INTRO_LEGENDARY_MAX_S = 9;

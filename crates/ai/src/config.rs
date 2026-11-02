@@ -81,7 +81,7 @@ pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize = AI_BUDGET.lethal_nodes;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
-/// baseline, `duos.rs`'s `duos_gate`.
+/// baseline, `duos.rs`'s `duos_gate_game`.
 pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 
 /// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
@@ -417,11 +417,13 @@ pub struct EvalWeights {
     pub slumber_waiting_share: f64,
     /// R2424000: the share of what a unit's Death leaves its controller (`evaluate::death_price`) that
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
-    /// killing a unit whose Death pays its owner is worth less than its body.
+    /// killing a unit whose Death pays its owner is worth less than its body. R2687000: `material` adds
+    /// the same share for each backrow card the seat can read, either side's, outside its Brittle share.
     pub death: f64,
-    /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
-    /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
-    /// seat can read, either side's, and `unit_worth` adds for each unit on the field.
+    /// R2477000, R2565000, R2689000: the share of what a card's turn hooks give its controller
+    /// (`evaluate::turn_hook_price`: one firing of each, its start-of-turn and end-of-turn hooks' once
+    /// for each time its controller's turn runs them) that `material` adds for each backrow card the seat
+    /// can read, either side's, and `unit_worth` adds for each unit on the field.
     pub turn_hook: f64,
     /// R2564000: the share of what one use of a unit's Activate gives its controller
     /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units
@@ -611,8 +613,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
-/// R2424000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two per field
-/// unit with a Death, three or four per own hand Unit with one.
+/// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
+/// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
+/// or four per own hand Unit with one.
 pub const AI_DEATH_PROBE_NODES: usize = 24;
 
 /// R2477000, R2565000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`)

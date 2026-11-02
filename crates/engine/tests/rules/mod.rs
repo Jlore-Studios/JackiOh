@@ -28,6 +28,7 @@ pub mod autopilot;
 pub mod backrow_death;
 pub mod backrow_piles;
 pub mod balance_2657;
+pub mod balance_2727;
 pub mod blueprint;
 pub mod board_history;
 pub mod brittle;

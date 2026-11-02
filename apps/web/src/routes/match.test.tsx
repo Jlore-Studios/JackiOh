@@ -169,13 +169,13 @@ describe("the networked board", () => {
       view: baseView({
         viewer: "p1",
         active: "p1",
-        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-001" })] }),
+        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-002" })] }),
       }),
       legal: [{ type: "endTurn" }],
     });
 
     expect(screen.getByTestId("hand-card-h-1378").querySelector(".card-name")?.textContent).toBe(
-      registeredCatalog()["core-001"]?.name,
+      registeredCatalog()["core-002"]?.name,
     );
     expect(requests.mock.calls.map(([url]) => String(url)).filter((url) => /\/api\/catalog$/u.test(url))).toEqual([]);
   });
@@ -304,11 +304,11 @@ describe("withoutToken", () => {
   /** Printing the URL raw would put a live bearer token on screen and in the DOM. */
   it("strips the access token from the socket URL it displays", () => {
     const withToken =
-      "wss://jackioh-server.onrender.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
+      "wss://jackioh.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
     const shown = withoutToken(withToken);
     expect(shown).not.toContain("SECRET");
     expect(shown).not.toContain("token=");
-    expect(shown).toContain("wss://jackioh-server.onrender.com/ws/match");
+    expect(shown).toContain("wss://jackioh.com/ws/match");
   });
 
   it("returns an unparseable value unchanged rather than throwing", () => {

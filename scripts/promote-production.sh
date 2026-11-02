@@ -1,63 +1,49 @@
 #!/usr/bin/env bash
-# Merges main into production (Cloudflare) through a pull request, holds or hurries Vercel's builds of
-# main (staging), and keeps the one issue that counts down to the next merge and shows the queue.
-# .github/workflows/promote-production.yml runs it; docs/deploy-cloudflare.md is the plan and the
-# runbook. apps/web/src/net/promote-production.test.ts holds it in place, against a throwaway
-# repository and a stand-in for `gh`.
+# Merges main into production through a pull request, and keeps the one issue that counts down to the
+# next merge and shows the queue. .github/workflows/promote-production.yml runs it, and its `deploy`
+# job then puts what production holds on jackioh.com: the site and its game server, together
+# (wrangler.jsonc). docs/deploy-cloudflare.md is the plan and the runbook.
+# apps/web/src/net/promote-production.test.ts holds it in place, against a throwaway repository and a
+# stand-in for `gh`.
+#
+# Staging is not this script's: deploy-staging.yml deploys every commit of main whose push-to-main CI
+# passed, by itself, and nothing here holds or hurries it.
 #
 # The countdown issue. One issue labeled RELEASE_LABEL stays open for good. It says "Merging to
 # production in N hours", lists what main has that is not live yet (the queue, below), and carries,
-# in a hidden comment, the time (`due`), whether it is on hold (`held`), the last comment it has read
-# (`last`), and Vercel's hold (`vercel_held`) and delay (`vercel_until`). When a merge goes out it
-# says so in a comment and counts down to the next; it is never closed and opened again. Anyone with
-# write access comments on it:
+# in a hidden comment, the time (`due`), whether it is on hold (`held`) and the last comment it has
+# read (`last`). When a merge goes out it says so in a comment and counts down to the next; it is
+# never closed and opened again. Anyone with write access comments on it:
 #   /hold [why]            nothing merges until /resume
 #   /resume                lifts the hold; a merge already overdue goes out at the next check
 #   /delay <n>[h|d]        moves the merge n hours (or days) later, at most MAX_DELAY_HOURS a time
 #   /fast-forward          merges now, past a hold
-# Each takes a target as its first word: none (or `production`, `prod`, `cloudflare`) is
-# production's, `vercel` (or `staging`) is Vercel's, and `both` (or `all`) is both. So `/hold vercel`
-# stops Vercel building main, `/delay vercel 3h` stops it for 3 hours, `/resume vercel` lifts either,
-# and `/fast-forward vercel` builds main's newest commit on Vercel now, past its hold and the hour.
+# A first word `production` (or `prod`, `cloudflare`) is allowed and changes nothing. One that names
+# staging (`staging`, or `vercel`, which was staging once) is refused: staging is not held from
+# here, and read as the reason it would hold production instead.
 # Every check also brings the title's "in N hours" up to date, so it counts down hour by hour.
 # Each command gets a +1 reaction, or a confused one when it was refused (not from a collaborator, or
 # not understood). The next merge time is the first RELEASE_HOUR in RELEASE_TZ (10:00 AM Central,
 # through daylight saving) at least MIN_GAP_HOURS ahead, and every time it shows is in that zone ("CT").
 #
-# Vercel. Vercel builds main by itself, at most once an hour (scripts/vercel-ignore.sh), so its hold
-# and its fast-forward are two tags that script reads from GitHub at every build: STAGING_HOLD_TAG
-# while Vercel is held or delayed (main builds nothing), and STAGING_FAST_FORWARD_TAG on the commit of
-# main it is to build now, past the hour. A fast-forward, and the end of a hold or a delay, also asks
-# Vercel to build at once through its deploy hook (VERCEL_DEPLOY_HOOK_URL, docs/deploy-cloudflare.md,
-# step 7); without the hook, the next push to main builds it.
+# The queue. The issue's body lists every commit of main (by its pull request) that is not live in
+# production, newest first, with its push-to-main CI and where it stands: the next merge (production
+# takes main up to its newest commit whose CI passed), waiting for CI, or held.
 #
-# The queue. The issue's body lists every commit of main (by its pull request) that is not live on
-# both Vercel and Cloudflare, newest first, with its push-to-main CI and where it stands on each: live,
-# the next merge (production takes main up to its newest commit whose CI passed), waiting for CI,
-# queued (Vercel's next build) or held. What Vercel serves is its newest successful deployment for
-# main's builds, as its GitHub app reports them (environment VERCEL_ENVIRONMENT).
+# A catalog bump waits for the countdown like any other change. Production's site and server ship
+# together from production, so the bundle and the server always agree on the catalog version (SPEC
+# §9.4, R105); when Render deployed the server from main on every push, a bump went out at once to
+# keep the two together, and that fast path is gone with it.
 #
 # What runs it, and what each does (EVENT is github.event_name):
 #   schedule, issue_comment, workflow_run
-#                            a check: first the catalog fast path (below), then read the new commands,
-#                            put Vercel's tags where they say, merge when due and not on hold, say so
-#                            on the issue and count down to the next. workflow_run is a green CI run on
+#                            a check: read the new commands, merge when due and not on hold, say so on
+#                            the issue and count down to the next. workflow_run is a green CI run on
 #                            main; it is here because GitHub has not started this repository's scheduled
 #                            runs (CLAUDE.md, the night bot), so the first green push after the issue's
 #                            time is what merges, and the cron is a second chance, not the mechanism.
-#   catalog fast path        part of every check. The commit CI just passed (workflow_run), or the
-#                            newest green one, merges at once when it changes render.yaml's
-#                            CATALOG_VERSION. Render deploys crates/server from main on every push and
-#                            the bundle compiles the catalog version in, so a catalog left a day
-#                            behind would refuse every deck save and queue in production (SPEC §9.4,
-#                            R105). It ignores the hold and leaves the countdown's time alone. It
-#                            waits, as the scheduled merge does, while the live server (SERVER_URL)
-#                            serves another catalog than the one it would bring: a client ahead of a
-#                            server Render could not deploy refuses as much (`server_behind`).
-#   workflow_dispatch        by hand, for INPUT_TARGET: production (the default) merges the newest green
-#                            commit of main, or INPUT_SHA, at once, hold or no hold, and when it merged
-#                            something the countdown starts over; vercel fast-forwards Vercel, past its
-#                            hold; both does both.
+#   workflow_dispatch        by hand: merges the newest green commit of main, or INPUT_SHA, at once,
+#                            hold or no hold, and when it merged something the countdown starts over.
 #
 # The merge. The candidate is a commit of main whose push-to-main CI run passed (the newest, unless
 # one is named). It is pushed as promote/<date>-<sha>, a pull request into production is opened with
@@ -68,22 +54,23 @@
 # the candidate is pushed as production, with no pull request.
 #
 # When production moves it writes `promoted=true` to GITHUB_OUTPUT, which is what starts the workflow's
-# `deploy` job (GitHub Actions builds and deploys production; Cloudflare builds nothing).
+# `deploy` job (GitHub Actions builds production, the bundle and the server's image, and deploys both
+# with wrangler; Cloudflare builds nothing).
 #
 # It talks to GitHub through `gh` and to git through the checkout's own credentials: the workflow
 # checks out main with its whole history. Two tokens. What moves production (the push of the
 # promote branch, its pull request, the merge, the branch's deletion) goes out as PROMOTE_TOKEN, and
-# the checkout pushes with the same one (Vercel's two tags too): whenever main changed a file under
-# .github/workflows since production, GitHub refuses that ref update from the Actions token
-# ("refusing to allow a GitHub App to create or update workflow ... without `workflows` permission"),
-# and no `permissions:` entry can grant it. The workflow passes BOT_GITHUB_TOKEN, which has the
-# `workflow` scope (bot/README.md). Everything else (the countdown issue, its comments, reactions and
-# the label) stays on GH_TOKEN, the Actions token, whose writes start no workflow, so the night bot
-# never sees the issue. The bot's pull request starts no loop either: CI runs on it as on any pull
-# request, but a pull request's CI never starts promote-production.yml (only a push to main's does),
-# the push of a promote branch, of production or of a tag starts nothing (every workflow's `push`
-# names branches), and the bot's harness ignores its own events. Needs GNU or BSD coreutils only for
-# `date +%s`; the clock arithmetic is plain seconds and jq does the formatting.
+# the checkout pushes with the same one: whenever main changed a file under .github/workflows since
+# production, GitHub refuses that ref update from the Actions token ("refusing to allow a GitHub App
+# to create or update workflow ... without `workflows` permission"), and no `permissions:` entry can
+# grant it. The workflow passes BOT_GITHUB_TOKEN, which has the `workflow` scope (bot/README.md).
+# Everything else (the countdown issue, its comments, reactions and the label) stays on GH_TOKEN, the
+# Actions token, whose writes start no workflow, so the night bot never sees the issue. The bot's
+# pull request starts no loop either: CI runs on it as on any pull request, but a pull request's CI
+# never starts promote-production.yml or deploy-staging.yml (only a push to main's does), the push of
+# a promote branch or of production starts nothing (every workflow's `push` names branches), and the
+# bot's harness ignores its own events. Needs GNU or BSD coreutils only for `date +%s`; the clock
+# arithmetic is plain seconds and jq does the formatting.
 
 # The backticks in the printf formats below are Markdown for GitHub, not command substitutions.
 # shellcheck disable=SC2016
@@ -107,16 +94,9 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 : "${MERGE_ATTEMPTS:=4}"
 : "${MERGE_RETRY_SECONDS:=5}"
 : "${PROMOTE_TOKEN:=${GH_TOKEN:-}}"
-# Vercel: the two tags scripts/vercel-ignore.sh reads (keep them equal), the GitHub deployment
-# environment its builds of main report to, the app that reports them, and its deploy hook.
-: "${STAGING_HOLD_TAG:=vercel-hold}"
-: "${STAGING_FAST_FORWARD_TAG:=vercel-fast-forward}"
-: "${VERCEL_ENVIRONMENT:=Production}"
-: "${VERCEL_BOT:=vercel[bot]}"
-: "${VERCEL_DEPLOY_HOOK_URL:=}"
-# The live server, whose GET /api/catalog (R163) says the catalog it serves (`server_behind`); empty
-# skips that check.
-: "${SERVER_URL:=}"
+# The patch history whose newest entry names the catalog version a commit ships (crates/cards/build.rs
+# compiles the same entry into the server and the bundle).
+: "${PATCHES_JSON:=crates/cards/patches/patches.json}"
 REPO=$GITHUB_REPOSITORY
 SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/null}
 
@@ -144,9 +124,10 @@ run_link() { [ -n "${GITHUB_RUN_ID:-}" ] && echo "([run](${GITHUB_SERVER_URL:-ht
 
 # --- git -------------------------------------------------------------------------------------
 
+# The catalog version commit $1 ships, for the pull request and the issue: its PATCHES_JSON's newest
+# entry, or nothing when it has none.
 catalog() {
-  git show "$1:render.yaml" 2>/dev/null | awk '$1 == "-" && $2 == "key:" { k = $3; next }
-    k == "CATALOG_VERSION" && $1 == "value:" { gsub(/"/, "", $2); print $2; exit }' || true
+  git show "$1:$PATCHES_JSON" 2>/dev/null | jq -r '.[-1].version // empty' 2>/dev/null || true
 }
 has_production() { git rev-parse --verify -q origin/production >/dev/null; }
 # What moves production goes out as PROMOTE_TOKEN (the header says why); the git push uses the
@@ -158,7 +139,7 @@ push_ref() {
   if git push origin "$1" 2>"$err"; then rm -f "$err"; return 0; fi
   fail "Could not push $1: $(tr '\n' ' ' <"$err" | cut -c1-600). When main has changed .github/workflows since production, only a token with the workflow scope may move it: the BOT_GITHUB_TOKEN secret (bot/README.md, 'Setting it up'), which promote-production.yml checks out with."
 }
-# production moved: the workflow's `deploy` job builds it and puts it on Cloudflare only then.
+# production moved: the workflow's `deploy` job builds it and deploys it only then.
 moved() { echo "promoted=true" >> "${GITHUB_OUTPUT:-/dev/null}"; }
 
 newest_green() {
@@ -192,27 +173,6 @@ must_wait() {
   echo "::notice::Not merging ${1:0:12} yet: main has changed .github/workflows since it (newest $(git rev-parse --short origin/main)), and GitHub refuses this token a push of workflow files that differ from main's. When CI passes on main's newest commit, that run merges it."
 }
 
-# The catalog version the live server serves, or "" when it does not answer. A sleeping free
-# Render instance takes about 50 s to wake, hence the minute.
-served_catalog() {
-  curl -fsS -m 60 "$SERVER_URL/api/catalog" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true
-}
-# True (and RESULT=waiting) when commit $1 would move production to a catalog the live server does not
-# serve yet. The bundle compiles its catalog version in and the server refuses a deck save or a queue
-# from a client on another (SPEC §9.4, R105), so a client ahead of a server Render has not deployed
-# (out of build pipeline minutes, a failed build or boot: deploy-watch.yml's issue) would refuse every
-# one. The next check tries again. A run by hand merges anyway: it is the way past this.
-server_behind() {
-  local want served
-  [ -n "$SERVER_URL" ] && [ "$EVENT" != workflow_dispatch ] || return 1
-  want=$(catalog "$1")
-  [ "$want" != "$(catalog origin/production)" ] || return 1
-  served=$(served_catalog)
-  [ "$served" != "$want" ] || return 1
-  RESULT=waiting
-  echo "::warning::Not merging ${1:0:12} yet: it moves production to catalog $want, and the live server ($SERVER_URL) serves ${served:-nothing (it did not answer)}. Render has not deployed it: deploy-watch.yml's issue says why. The first check after the server serves $want merges it; running promote production by hand merges it now."
-}
-
 # Merges commit $1 of main into production. $2 says why (for the pull request and the issue's
 # comment). Sets RESULT to merged, created, uptodate or waiting, and for a merge PR_NUMBER, COUNT, CANDIDATE,
 # CATALOG and WHY.
@@ -236,7 +196,6 @@ promote() {
     return 0
   fi
   must_wait "$cand" && return 0
-  server_behind "$cand" && return 0
   base=$(git merge-base "$current" "$cand") || fail "production and $cand share no history."
   git diff --quiet "$base" "$current" || fail "production has diverged: it carries changes that are not on main (git diff ${base:0:12} ${current:0:12}). Not merging; see docs/deploy-cloudflare.md, 'production has diverged'."
 
@@ -244,7 +203,7 @@ promote() {
   branch="promote/$(date -u +%Y%m%d)-${cand:0:7}"
   body=$(mktemp)
   {
-    echo "Merges \`main\` into \`production\`, which Cloudflare builds and deploys."
+    echo "Merges \`main\` into \`production\`, which this workflow then builds and deploys: the site and its server, together."
     echo
     echo "- Newest green commit of main: \`${cand:0:12}\`"
     echo "- Catalog: $CATALOG"
@@ -292,104 +251,6 @@ promote() {
     "${cand:0:12}" "$WHY" "$pr" "$CATALOG" "$COUNT" >> "$SUMMARY"
 }
 
-# A catalog bump is promoted ahead of the schedule and past any hold. $1 is the commit CI passed, or
-# empty for the newest green one. Does nothing when production does not exist yet (the first merge
-# creates it) or when the commit does not change the catalog.
-catalog_gate() {
-  local cand=$1 current issue
-  [ -n "$cand" ] || cand=$(newest_green)
-  [ -n "$cand" ] || return 0
-  cand=$(vet "$cand")
-  has_production || return 0
-  current=$(git rev-parse origin/production)
-  git merge-base --is-ancestor "$cand" "$current" && return 0
-  if [ "$(catalog "$current")" = "$(catalog "$cand")" ]; then
-    echo "No catalog change ($(catalog "$cand")); this waits for the scheduled merge."
-    return 0
-  fi
-  promote "$cand" "a catalog bump to $(catalog "$cand"), which is never held"
-  [ "$RESULT" != waiting ] || return 0
-  issue=$(the_issue)
-  if [ -n "$issue" ] && [ "$RESULT" = merged ]; then
-    gh issue comment "$issue" --body "Catalog $CATALOG could not wait: it was merged to production ahead of schedule in #$PR_NUMBER. The scheduled merge above still stands for everything else. $(run_link)"
-  fi
-}
-
-# --- Vercel (staging) ------------------------------------------------------------------------
-
-# The commit tag $1 names on origin, or nothing.
-tag_at() { git ls-remote origin "refs/tags/$1" 2>/dev/null | awk '{ print $1; exit }' || true; }
-
-# VERCEL_LIVE: the commit of main Vercel serves, its newest deployment for main's builds (as its
-# GitHub app reports them) whose latest status is a success; empty when none can be read. Read once.
-load_vercel() {
-  local id sha
-  [ -z "${VERCEL_LOADED:-}" ] || return 0
-  VERCEL_LOADED=1 VERCEL_LIVE=
-  while read -r id sha; do
-    [ -n "$id" ] || continue
-    if [ "$(gh api "repos/$REPO/deployments/$id/statuses?per_page=1" --jq '.[0].state // ""' 2>/dev/null || true)" = success ]; then
-      VERCEL_LIVE=$sha
-      break
-    fi
-  done < <(gh api "repos/$REPO/deployments?environment=$VERCEL_ENVIRONMENT&per_page=10" \
-    --jq ".[] | select(.creator.login == \"$VERCEL_BOT\") | \"\\(.id) \\(.sha)\"" 2>/dev/null || true)
-  if [ -n "$VERCEL_LIVE" ] && ! git merge-base --is-ancestor "$VERCEL_LIVE" origin/main 2>/dev/null; then
-    VERCEL_LIVE=
-  fi
-}
-
-# Points tag $1 at commit $2, or deletes it when $2 is empty. A failure is said in STAGING_SAID, not
-# fatal: Vercel's tags never stop production's merge.
-staging_tag() {
-  local err
-  err=$(mktemp)
-  if git push -q origin "${2:++$2}:refs/tags/$1" 2>"$err"; then rm -f "$err"; return 0; fi
-  echo "::error::Could not move the $1 tag: $(tr '\n' ' ' <"$err" | cut -c1-600)" >&2
-  STAGING_SAID="Could not move the \`$1\` tag that Vercel's builds read, so Vercel is as it was: $(tr '\n' ' ' <"$err" | cut -c1-300)"
-  rm -f "$err"
-  return 1
-}
-
-# Has Vercel build main's newest commit now (STAGING_WHY says why): the fast-forward tag on it, so
-# scripts/vercel-ignore.sh builds it past the hour, then the deploy hook, which starts the build.
-# STAGING_SAID says what happened, for the issue.
-staging_build() {
-  local head
-  head=$(git rev-parse origin/main)
-  load_vercel
-  if [ -n "$VERCEL_LIVE" ] && git merge-base --is-ancestor "$head" "$VERCEL_LIVE"; then
-    STAGING_SAID="Vercel already serves \`${head:0:7}\`, main's newest commit ($STAGING_WHY)."
-    return 0
-  fi
-  staging_tag "$STAGING_FAST_FORWARD_TAG" "$head" || return 0
-  if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
-    STAGING_SAID="Vercel builds \`${head:0:7}\`, main's newest commit, at the next push to \`main\`, past the hour between its builds ($STAGING_WHY). This workflow cannot start the build itself: the \`VERCEL_DEPLOY_HOOK_URL\` secret is not set (docs/deploy-cloudflare.md, step 7)."
-  elif curl -fsS -X POST -o /dev/null "$VERCEL_DEPLOY_HOOK_URL"; then
-    STAGING_SAID="Vercel is building \`${head:0:7}\`, main's newest commit, past the hour between its builds ($STAGING_WHY). It is on jackioh.vercel.app once the build finishes."
-  else
-    STAGING_SAID="Vercel's deploy hook refused the request, so Vercel builds \`${head:0:7}\` at the next push to \`main\` instead ($STAGING_WHY). Check the \`VERCEL_DEPLOY_HOOK_URL\` secret (docs/deploy-cloudflare.md, step 7)."
-  fi
-}
-
-# Puts the hold tag where the state says (held, or delayed until vuntil), and builds when asked
-# (STAGING_WHY) or when a hold or a delay has just ended. A delay that has run out ends here.
-staging_sync() {
-  local paused=0 tagged
-  if [ "$vuntil" -gt 0 ] && [ "$(now)" -ge "$vuntil" ]; then vuntil=0; fi
-  if [ "$vheld" = 1 ] || [ "$vuntil" -gt 0 ]; then paused=1; fi
-  tagged=$(tag_at "$STAGING_HOLD_TAG")
-  if [ "$paused" = 1 ] && [ -z "$tagged" ]; then
-    if staging_tag "$STAGING_HOLD_TAG" "$(git rev-parse origin/main)"; then echo "Vercel is on hold: main builds nothing."; fi
-  elif [ "$paused" = 0 ] && [ -n "$tagged" ]; then
-    if staging_tag "$STAGING_HOLD_TAG" ""; then
-      echo "Vercel's hold is over."
-      [ -n "$STAGING_WHY" ] || STAGING_WHY="its hold is over"
-    fi
-  fi
-  if [ -n "$STAGING_WHY" ] && [ "$paused" = 0 ] && [ -z "$STAGING_SAID" ]; then staging_build; fi
-}
-
 # --- the queue -------------------------------------------------------------------------------
 
 # "#1533 Patch: the stats drill-down's card ...", from a squash commit's "(#1533)" or a merge
@@ -420,51 +281,37 @@ ci_cell() {
   esac
 }
 
-# QUEUE, the body's queue: what main has that is not live on both Vercel and Cloudflare, newest first.
+# QUEUE, the body's queue: what main has that production does not, newest first.
 refresh_queue() {
-  local prod green c n=0 more=0 on_p on_v rows='' vcell pcell
-  load_vercel
+  local prod green c n=0 more=0 rows='' cell
   prod=$(git rev-parse -q --verify origin/production || true)
   green=$(newest_green || true)
   RUNS=$(gh run list --workflow ci.yml --branch main --event push --limit 200 --json headSha,status,conclusion \
     --jq '.[] | "\(.headSha) \(.status) \(.conclusion)"' 2>/dev/null || true)
   while read -r c; do
-    on_p=0 on_v=0
-    if [ -n "$prod" ] && git merge-base --is-ancestor "$c" "$prod"; then on_p=1; fi
-    if [ -n "$VERCEL_LIVE" ] && git merge-base --is-ancestor "$c" "$VERCEL_LIVE"; then on_v=1; fi
-    if [ "$on_p" = 1 ] && { [ "$on_v" = 1 ] || [ -z "$VERCEL_LIVE" ]; }; then break; fi
+    if [ -n "$prod" ] && git merge-base --is-ancestor "$c" "$prod"; then break; fi
     if [ "$n" -ge "$LISTED_COMMITS" ]; then more=1; break; fi
     n=$((n + 1))
-    if [ -z "$VERCEL_LIVE" ]; then vcell="?"
-    elif [ "$on_v" = 1 ]; then vcell="🟢 live"
-    elif [ "$vheld" = 1 ] || [ "$vuntil" -gt 0 ]; then vcell="held"
-    else vcell="queued"; fi
-    if [ "$on_p" = 1 ]; then pcell="🟢 live"
-    elif [ -n "$green" ] && git merge-base --is-ancestor "$c" "$green"; then
-      if [ "$held" = 1 ]; then pcell="held"; else pcell="next merge"; fi
-    else pcell="waits for CI"; fi
-    rows+="| $(row_label "$c") | $(ci_cell "$c") | $vcell | $pcell |"$'\n'
+    if [ -n "$green" ] && git merge-base --is-ancestor "$c" "$green"; then
+      if [ "$held" = 1 ]; then cell="held"; else cell="next merge"; fi
+    else cell="waits for CI"; fi
+    rows+="| $(row_label "$c") | $(ci_cell "$c") | $cell |"$'\n'
   done < <(git rev-list --first-parent origin/main)
 
   QUEUE=$'\n### Queue\n\n'
   if [ -n "$prod" ]; then
-    QUEUE+="Cloudflare serves \`main\` as of \`$(git rev-parse --short "$(git rev-parse -q --verify "$prod^2" || echo "$prod")")\`"
+    QUEUE+="Production serves \`main\` as of \`$(git rev-parse --short "$(git rev-parse -q --verify "$prod^2" || echo "$prod")")\`."
   else
-    QUEUE+="Cloudflare serves nothing yet"
-  fi
-  if [ -n "$VERCEL_LIVE" ]; then
-    QUEUE+="; Vercel serves \`$(git rev-parse --short "$VERCEL_LIVE")\`."
-  else
-    QUEUE+="; what Vercel serves could not be read (its deployments on GitHub)."
+    QUEUE+="Production serves nothing yet."
   fi
   if [ "$n" = 0 ]; then
-    QUEUE+=$' Everything on `main` is live on both.\n'
+    QUEUE+=$' Everything on `main` is live.\n'
     return 0
   fi
-  QUEUE+=" Not live on both yet, newest first: $n"
+  QUEUE+=" Not live yet, newest first: $n"
   [ "$more" = 0 ] || QUEUE+=" (and older)"
-  QUEUE+=$'. The next merge takes `main` up to its newest commit whose CI passed; Vercel builds `main` as it is.\n\n'
-  QUEUE+=$'| Pull request | CI | Vercel (staging) | Cloudflare (production) |\n| --- | --- | --- | --- |\n'
+  QUEUE+=$'. The next merge takes `main` up to its newest commit whose CI passed.\n\n'
+  QUEUE+=$'| Pull request | CI | Production |\n| --- | --- | --- |\n'
   QUEUE+=$rows
 }
 
@@ -496,43 +343,34 @@ next_due() {
   echo "$t"
 }
 
-# The issue's state lives in globals: due, held, last, vheld and vuntil, and its title and body as
-# GitHub has them. A fresh countdown:
-fresh_state() { due=$(next_due "$(now)") held=0 last=0 vheld=0 vuntil=0; }
+# The issue's state lives in globals: due, held and last, and its title and body as GitHub has them.
+# A fresh countdown:
+fresh_state() { due=$(next_due "$(now)") held=0 last=0; }
 
 title_for() {
-  local when hours vercel=''
+  local when hours
   when=$(stamp "$due")
-  if [ "$vheld" = 1 ]; then vercel=" · Vercel on hold"
-  elif [ "$vuntil" -gt 0 ]; then vercel=" · Vercel held until $(stamp "$vuntil")"; fi
-  if [ "$held" = 1 ]; then echo "Merging to production: on hold (was due $when)$vercel"; return; fi
+  if [ "$held" = 1 ]; then echo "Merging to production: on hold (was due $when)"; return; fi
   hours=$(( (due - $(now) + 1800) / 3600 ))
-  if [ "$hours" -le 0 ]; then echo "Merging to production at the next check ($when)$vercel"
-  elif [ "$hours" -eq 1 ]; then echo "Merging to production in 1 hour ($when)$vercel"
-  else echo "Merging to production in $hours hours ($when)$vercel"; fi
+  if [ "$hours" -le 0 ]; then echo "Merging to production at the next check ($when)"
+  elif [ "$hours" -eq 1 ]; then echo "Merging to production in 1 hour ($when)"
+  else echo "Merging to production in $hours hours ($when)"; fi
 }
 
 body_for() {
-  printf '<!-- promote-production due=%s held=%s last=%s vercel_held=%s vercel_until=%s -->\n' "$due" "$held" "$last" "$vheld" "$vuntil"
+  printf '<!-- promote-production due=%s held=%s last=%s -->\n' "$due" "$held" "$last"
   if [ "$held" = 1 ]; then
     printf '**Production: on hold.** `main` will not merge into `production` until someone comments `/resume`. It was due %s.\n' "$(stamp "$due")"
   else
-    printf '**Production:** `main` merges into `production`, which is what Cloudflare serves, at **%s**, through a pull request.\n' "$(stamp "$due")"
+    printf '**Production:** `main` merges into `production`, which is what players are served (the site and its server, together), at **%s**, through a pull request.\n' "$(stamp "$due")"
   fi
-  printf '\n'
-  if [ "$vheld" = 1 ]; then
-    printf '**Vercel (staging): on hold.** It builds nothing from `main` until someone comments `/resume vercel`.\n'
-  elif [ "$vuntil" -gt 0 ]; then
-    printf '**Vercel (staging): delayed.** It builds nothing from `main` until %s, then builds `main` as it is then.\n' "$(stamp "$vuntil")"
-  else
-    printf '**Vercel (staging)** builds `main` by itself, at most once an hour.\n'
-  fi
+  printf '\n**Staging** deploys every commit of `main` whose CI passed, by itself (`deploy-staging.yml`): nothing here holds it.\n'
   printf '%s' "$QUEUE"
   cat <<'TEXT'
 
 ### Commands
 
-Comment here to change either. Only people with write access are heard; a command gets a 👍, or a 😕 when it was refused.
+Comment here to change it. Only people with write access are heard; a command gets a 👍, or a 😕 when it was refused.
 
 | Comment | Effect |
 | --- | --- |
@@ -541,13 +379,10 @@ Comment here to change either. Only people with write access are heard; a comman
 TEXT
   printf '| `/delay 3h`, `/delay 2d` | Moves the merge later by that long, at most %s hours at a time. Past the time already, it counts from the comment. |\n' "$MAX_DELAY_HOURS"
   printf '| `/fast-forward` | Merges now, past a hold. |\n'
-  printf '| `/hold vercel`, `/delay vercel 3h`, `/resume vercel` | Vercel builds nothing from `main` until `/resume vercel` (or for that long), then builds `main` as it is. |\n'
-  printf '| `/fast-forward vercel` | Vercel builds the newest commit of `main` now, past its hold and the hour between its builds. |\n'
-  printf '| `/fast-forward both` | Both at once; `both` goes with every command. |\n'
   printf '\nThe title counts down: every check (hourly, and on every green CI run on `main`) brings its hours, and the queue, up to date.\n'
   cat <<'TEXT'
 
-This issue stays open: when a merge goes out it says so below and counts down to the next. A change to the card catalog (`CATALOG_VERSION` in `render.yaml`) is the exception: the server already runs it, so it merges as soon as CI passes and the live server serves it, and a hold does not stop it. For anything else urgent, comment `/fast-forward`, or run *promote production* from the Actions tab: either merges the newest green commit at once.
+This issue stays open: when a merge goes out it says so below and counts down to the next. A change to the card catalog waits like any other: production's site and server go out together, so they always agree on it. For anything urgent, comment `/fast-forward`, or run *promote production* from the Actions tab: either merges the newest green commit at once.
 
 Plan: `docs/deploy-cloudflare.md`. Written by `scripts/promote-production.sh`; the first line is its state, so leave it be.
 TEXT
@@ -578,6 +413,8 @@ settle() {
   gh issue comment "$1" --body "$msg The next merge is at $(stamp "$due"). $(run_link)"
 }
 
+# A state line written while Vercel was staging also carries `vercel_held` and `vercel_until`; it
+# reads the same, and the next save writes it without them.
 load_issue() {
   local m info
   info=$(try gh issue view "$1" --json title,body)
@@ -592,10 +429,6 @@ load_issue() {
   due=${m#*due=}; due=${due%% *}
   held=${m#*held=}; held=${held%% *}
   last=${m#*last=}
-  # An issue written before Vercel's commands has no Vercel state: not held.
-  vheld=$(grep -o 'vercel_held=[01]' <<<"$body" | head -n1 | cut -d= -f2 || true)
-  vuntil=$(grep -o 'vercel_until=[0-9]*' <<<"$body" | head -n1 | cut -d= -f2 || true)
-  vheld=${vheld:-0} vuntil=${vuntil:-0}
 }
 save_issue() { # issue
   local f want text
@@ -620,10 +453,9 @@ save_issue() { # issue
 }
 react() { gh api -X POST "repos/$REPO/issues/comments/$1/reactions" -f content="$2" --silent >/dev/null || true; }
 
-# Reads the comments on issue $1 newer than `last` and applies each command to the state: due and
-# held for production, vheld and vuntil for Vercel, and STAGING_WHY for a Vercel fast-forward.
+# Reads the comments on issue $1 newer than `last` and applies each command to due and held.
 apply_commands() {
-  local line id cmdline cmd arg first rest target n unit hours at base
+  local line id cmdline cmd arg first rest n unit hours at base
   while IFS= read -r line; do
     id=$(jq -r .id <<<"$line")
     [ "$id" -gt "$last" ] || continue
@@ -638,13 +470,16 @@ apply_commands() {
       react "$id" confused
       continue
     fi
-    # The target, when the first word names one; what follows it is the reason or the length.
-    target=production
+    # A first word naming production changes nothing; one naming staging is refused (the header
+    # says why). What follows is the reason or the length.
     read -r first rest <<<"$arg"
     case $(tr '[:upper:]' '[:lower:]' <<<"$first") in
-      vercel | staging) target=vercel arg=$rest ;;
       production | prod | cloudflare) arg=$rest ;;
-      both | all) target=both arg=$rest ;;
+      staging | vercel)
+        echo "Comment $id: /$cmd $first refused: staging deploys every green commit of main by itself (deploy-staging.yml), and this issue holds production only."
+        react "$id" confused
+        continue
+        ;;
     esac
     at=$(jq -r '.at | fromdateiso8601' <<<"$line")
     hours=0
@@ -659,29 +494,19 @@ apply_commands() {
           continue
         fi
       else
-        echo "Comment $id: /delay needs a number of hours or days, like '/delay 3h' or '/delay vercel 3h'."
+        echo "Comment $id: /delay needs a number of hours or days, like '/delay 3h' or '/delay 2d'."
         react "$id" confused
         continue
       fi
     fi
-    if [ "$target" != vercel ]; then
-      case $cmd in
-        hold) held=1 ;;
-        resume | release | unhold) held=0 ;;
-        # Due the moment it was written, and no longer held: this same check merges.
-        fast-forward) [ "$at" -ge "$due" ] || due=$at; held=0 ;;
-        # Past the time already, it counts from the comment.
-        delay) base=$due; [ "$at" -le "$base" ] || base=$at; due=$((base + hours * 3600)) ;;
-      esac
-    fi
-    if [ "$target" != production ]; then
-      case $cmd in
-        hold) vheld=1 ;;
-        resume | release | unhold) vheld=0 vuntil=0 ;;
-        fast-forward) vheld=0 vuntil=0 STAGING_WHY="/fast-forward" ;;
-        delay) base=$vuntil; [ "$at" -le "$base" ] || base=$at; vuntil=$((base + hours * 3600)) ;;
-      esac
-    fi
+    case $cmd in
+      hold) held=1 ;;
+      resume | release | unhold) held=0 ;;
+      # Due the moment it was written, and no longer held: this same check merges.
+      fast-forward) [ "$at" -ge "$due" ] || due=$at; held=0 ;;
+      # Past the time already, it counts from the comment.
+      delay) base=$due; [ "$at" -le "$base" ] || base=$at; due=$((base + hours * 3600)) ;;
+    esac
     react "$id" '+1'
   done < <(gh api "repos/$REPO/issues/$1/comments" --paginate \
     --jq '.[] | {id, login: .user.login, bot: (.user.type == "Bot"), assoc: .author_association, at: .created_at, body} | tojson')
@@ -689,12 +514,11 @@ apply_commands() {
 
 # --- the events ------------------------------------------------------------------------------
 
-# Why Vercel is to build now and what came of it (staging_sync, staging_build), and the queue.
-STAGING_WHY='' STAGING_SAID='' QUEUE=''
+# The queue, which refresh_queue writes.
+QUEUE=''
 
 check() {
   local issues issue n cand
-  catalog_gate "${RUN_SHA:-}"
   issues=$(open_issues)
   if [ -z "$issues" ]; then
     fresh_state
@@ -709,8 +533,6 @@ check() {
 
   load_issue "$issue"
   apply_commands "$issue"
-  staging_sync
-  [ -z "$STAGING_SAID" ] || gh issue comment "$issue" --body "$STAGING_SAID $(run_link)"
   refresh_queue
   save_issue "$issue"
 
@@ -729,30 +551,17 @@ check() {
 }
 
 manual() {
-  local cand issue target=${INPUT_TARGET:-production}
-  case $target in
-    production | vercel | both) ;;
-    *) fail "The target must be production, vercel or both, not '$target'." ;;
-  esac
+  local cand issue
   issue=$(the_issue)
   if [ -n "$issue" ]; then load_issue "$issue"; else fresh_state; fi
 
-  if [ "$target" != production ]; then
-    vheld=0 vuntil=0 STAGING_WHY="a manual run"
-    staging_sync
-    echo "$STAGING_SAID"
-    [ -z "$issue" ] || gh issue comment "$issue" --body "$STAGING_SAID $(run_link)"
-  fi
-
-  if [ "$target" != vercel ]; then
-    cand=$(vet "${INPUT_SHA:-}")
-    promote "$cand" "a manual run" "$issue"
-    [ "$RESULT" != waiting ] || fail "Nothing merged: main's newest commit changes .github/workflows and its CI has not passed yet, and GitHub refuses this workflow's token a push of workflow files that differ from main's. Run this again once CI on main is green."
-    # A merge by hand starts the countdown over.
-    if [ "$RESULT" != uptodate ]; then
-      if [ -n "$issue" ]; then settle "$issue"; return 0; fi
-      due=$(next_due "$(now)") held=0
-    fi
+  cand=$(vet "${INPUT_SHA:-}")
+  promote "$cand" "a manual run" "$issue"
+  [ "$RESULT" != waiting ] || fail "Nothing merged: main's newest commit changes .github/workflows and its CI has not passed yet, and GitHub refuses this workflow's token a push of workflow files that differ from main's. Run this again once CI on main is green."
+  # A merge by hand starts the countdown over.
+  if [ "$RESULT" != uptodate ]; then
+    if [ -n "$issue" ]; then settle "$issue"; return 0; fi
+    due=$(next_due "$(now)") held=0
   fi
 
   refresh_queue

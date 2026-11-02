@@ -44,8 +44,9 @@ var (
 	Heading = "### 🃏 Which set's cards win most"
 )
 
-// API is production's server (`render.yaml`), whose public card statistics are read.
-var API = "https://jackioh-server.onrender.com"
+// API is production's server, behind jackioh.com's Worker at the site's own origin (`wrangler.jsonc`),
+// whose public card statistics are read.
+var API = "https://jackioh.com"
 
 // How often the figures are read, and how soon a failed read is tried again.
 var (

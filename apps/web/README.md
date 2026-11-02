@@ -25,6 +25,7 @@ enforces rules and never sees hidden information.** In practice:
   both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
+  A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -32,7 +33,7 @@ variable over weight, Latin subset, self-hosted in `public/fonts` with their lic
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
-(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
+(`public/_headers`, held by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
 The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark beside it or under it,
 the stacked logo and the mark alone each on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
@@ -143,7 +144,7 @@ The view says so: a seat that still owes sees its own `pending` mulligan, one th
 present for exactly that window.
 
 - The picker (`Prompt.tsx`) keeps its testids (`prompt-modal` with `data-prompt-kind="mulligan"`,
-  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the count,
+  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the cards,
   `mulligan-opponent-status` (`data-ready="true|false"`) says "Opponent is choosing…" or holds
   `mulligan-opponent-ready`, "Opponent is ready".
 - After Ready, until the game starts: `mulligan-waiting`, "Waiting for your opponent…", with the
@@ -272,16 +273,25 @@ which the engine sets on the viewer's own hand cards only and never at 0.
 ## Commands
 
 ```
-pnpm --dir apps/web dev          # vite dev server on :5173
-pnpm --dir apps/web build        # production build
-pnpm --dir apps/web build:e2e    # the build e2e drives: development mode, so window.__jackioh stays
-pnpm --dir apps/web typecheck    # tsc -p apps/web/tsconfig.json
-pnpm --dir apps/web test         # vitest (jsdom)
+pnpm --dir apps/web dev            # vite dev server on :5173
+pnpm --dir apps/web build          # production build, from .env.production
+pnpm --dir apps/web build:staging  # staging's: the same build with .env.staging's values over it
+pnpm --dir apps/web build:e2e      # the build e2e drives: development mode, so window.__jackioh stays
+pnpm --dir apps/web typecheck      # tsc -p apps/web/tsconfig.json
+pnpm --dir apps/web test           # vitest (jsdom)
 ```
 
-`dev`, `build`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre` scripts), which
-needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
-so run one of them (or the script) once first.
+`dev`, `build`, `build:staging`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre`
+scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
+generated `.d.ts`, so run one of them (or the script) once first.
+
+Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
+puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a
+variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,
+`public/_headers` sends the security headers, and the build fills its CSP's `connect-src` with its
+own hosts (`static-pages.ts` `connectSources`): `'self'`, its `VITE_SUPABASE_URL` and `wss://` on
+its own host, since the server shares the site's origin. `scripts/check-production-bundle.mjs`
+(`--staging` for staging's) refuses a bundle that would deploy without its settings or that CSP.
 
 The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
 `scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
@@ -432,9 +442,13 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); a locked tile or strip item a held
-                        Rare, Epic or Legendary cosmetic token covers offers it in place (collection/TokenOffer.tsx,
-                        POST /api/tokens/redeem-cosmetic, R1953001, R2728000), and ownership is read again;
+                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
+                        R2730000). Only there does a locked item a held token covers offer the token
+                        (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
+                        POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
+                        POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
+                        the collection is read again;
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
@@ -490,9 +504,9 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         `GET /api/packs`' price (`POST /api/packs/buy`), each shelved as a PackObject that
                         flies into the held count when bought, the button disabled with the shortfall shown
                         when the wallet (`GET /api/wallet`) is short; the token picker shows both token
-                        bars as filling bars and the cycle's next step (`GET /api/tokens`), a card token browsing
-                        unowned cards (`POST /api/tokens/redeem-card`) and the cosmetic tokens held, with a
-                        link to the Collection, where they are spent on a locked cosmetic (R1953001); the
+                        bars as filling bars and the cycle's next step (`GET /api/tokens`),
+                        the tokens held, with a link to the Collection, where each is spent from a locked
+                        item's preview (R1953001, R2730000); the
                         cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
@@ -529,7 +543,7 @@ legality comes from the `legal` array its socket sends (rule 7). Every screen he
 active account, and asks for one the way `/play` does.
 
 ```
-routes (net/navigate.ts paths, and both vercel.json route tables):
+routes (net/navigate.ts paths, and public/_redirects):
   /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
                          (accept, decline, cancel), the blocked players (unblock), the add form by
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
@@ -822,8 +836,11 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
-  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
-  with a one-second faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
+  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral
+  fanfare: a riser into the first downbeat, a Mythic's own motif (brass and choir, picked by its id), the melody under
+  brass, tremolo strings, trombone and an orchestra hit, and an ending held to the bar line, all FluidR3's (no other
+  SoundFont). A Legendary's file runs at most 9 s and every Mythic's longer, to 12 s at most. It renders as a sting
+  with a 1.2 s faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
   (`post.loudnessOverFile`); a track without those fields renders exactly as before. A Legendary or Mythic added to a
   set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a license row:
   `music-assets.test.ts` refuses a shipped one without them.
