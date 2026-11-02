@@ -33,9 +33,9 @@ use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned}
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
     ACTION_PANICKED_MESSAGE, ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage,
-    SocketErrorCode, ack_message, aim_relay_message, card_loadouts_message, clock_message,
-    emote_relay_message, encode, error_message, loadouts_message, parse_client_message, portraits_message,
-    prompt_for_opponent, prompt_for_you, view_message,
+    SocketErrorCode, ack_message, aim_relay_message, card_loadouts_message, choice_hover_relay_message,
+    clock_message, emote_relay_message, encode, error_message, loadouts_message, parse_client_message,
+    portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
 use crate::actor::registry::panic_text;
 use crate::actor::telemetry::{self, Recorder};
@@ -250,6 +250,38 @@ fn empty_aim_slot() -> AimSlot {
     }
 }
 
+/// R2739001: one seat's choice-hover relay (see `Core::hovers`), `AimSlot`'s shape.
+struct HoverSlot {
+    /// Newest index received: `None` if none, `Some(None)` if the hover ended.
+    pending: Option<Option<i32>>,
+    timer: Option<Timer>,
+    last_at: Option<i64>,
+    /// What the opponent was last told, so a repeat is never sent and an answered prompt, a seat that
+    /// leaves or the game's end has its outline cleared.
+    relayed: Option<i32>,
+    /// The id of the seat's own prompt the index points into, so a hover never outlives it.
+    prompt: Option<String>,
+}
+
+fn empty_hover_slot() -> HoverSlot {
+    HoverSlot {
+        pending: None,
+        timer: None,
+        last_at: None,
+        relayed: None,
+        prompt: None,
+    }
+}
+
+/// R2739001: the id of the prompt `player` holds now, or `None`.
+fn open_prompt_of(state: &EngineState, player: PlayerId) -> Option<&str> {
+    state
+        .pending
+        .as_ref()
+        .filter(|pending| pending.player_id == player)
+        .map(|pending| pending.id.as_str())
+}
+
 /// The actor's in-memory state (§9.2) and the append-only log's bookkeeping (§9.3).
 struct Core {
     state: EngineState,
@@ -277,6 +309,8 @@ struct Core {
     emotes_blocked: bool,
     /// R738: each seat's aim relay.
     aims: PerPlayer<AimSlot>,
+    /// R2739001: each seat's choice-hover relay.
+    hovers: PerPlayer<HoverSlot>,
     /// R679: set once a Glitch voided the match; nothing more is sent, written or attached.
     voided: bool,
     /// Nothing left to record; a rebuilt actor still `live` heals its missing result on arming (§9.5).
@@ -527,6 +561,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
         emotes_blocked: false,
         aims: PerPlayer::new(empty_aim_slot(), empty_aim_slot()),
+        hovers: PerPlayer::new(empty_hover_slot(), empty_hover_slot()),
         voided: false,
         finished: matches!(match_row.status, MatchStatus::Finished),
         jlore_capped: PerPlayer::new(false, false),
@@ -967,6 +1002,9 @@ impl MatchActor {
 
         {
             let mut core = self.lock();
+            // R2739001: a hover on a prompt the change answered or replaced is cleared before the view
+            // that shows it gone.
+            self.end_stale_hovers(&mut core);
             for player in PLAYERS {
                 self.push_view(&mut core, player);
             }
@@ -1127,9 +1165,10 @@ impl MatchActor {
             core.finished = true;
             core.finished_at = Some(at);
             self.shared.clock.stop();
-            // R738: no aim outlives the game.
+            // R738, R2739001: no aim or choice hover outlives the game.
             for player in PLAYERS {
                 self.end_aim(&mut core, player);
+                self.end_hover(&mut core, player);
             }
             // R639000: under the lock that ends the game, so a bot never reads as gone while the
             // result is written and then as present again.
@@ -1863,6 +1902,7 @@ impl MatchActor {
             }
             Ok(ClientMessage::Emote(emote)) => self.relay_emote(&mut core, home, emote.emote),
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
+            Ok(ClientMessage::ChoiceHover(hover)) => self.receive_hover(&mut core, player, hover.index),
             Ok(ClientMessage::Action(action)) => {
                 let now = now_ms();
                 if !core.guards[home].action_allowed(now) {
@@ -1978,6 +2018,105 @@ impl MatchActor {
         self.send(core, player.opponent(), &aim_relay_message(player, None));
     }
 
+    // The opponent's choice hover (R2739001)
+
+    /// R2739001: a hover on an option of the seat's own open prompt, relayed to the opponent with
+    /// `receive_aim`'s coalescing, at most once per `AIM_RELAY_INTERVAL_MS` per seat. One while the
+    /// seat holds no prompt is dropped silently; nothing is answered.
+    fn receive_hover(&self, core: &mut Core, player: PlayerId, index: Option<i32>) {
+        if core.finished || core.stopped {
+            return;
+        }
+        let open = open_prompt_of(&core.state, player).map(str::to_string);
+        if core.hovers[player].prompt != open {
+            self.end_hover(core, player);
+            core.hovers[player].prompt = open;
+        }
+        let slot = &mut core.hovers[player];
+        if slot.prompt.is_none() {
+            return;
+        }
+        slot.pending = Some(index);
+        if slot.timer.is_some() {
+            return;
+        }
+        let wait = match slot.last_at {
+            None => -1,
+            Some(last_at) => last_at + AIM_RELAY_INTERVAL_MS - now_ms(),
+        };
+        if wait <= 0 {
+            self.flush_hover(core, player);
+            return;
+        }
+        let actor = Arc::downgrade(&self.shared);
+        slot.timer = Some(after(wait, move |id| {
+            let Some(shared) = actor.upgrade() else { return };
+            let actor = MatchActor { shared };
+            let mut core = actor.lock();
+            if core.hovers[player].timer.as_ref().map(Timer::id) != Some(id) {
+                return;
+            }
+            if let Some(timer) = core.hovers[player].timer.take() {
+                timer.fired();
+            }
+            actor.flush_hover(&mut core, player);
+        }));
+    }
+
+    /// Relays the seat's pending hover, checked against the state as it stands NOW: an index into a
+    /// prompt no longer open, or one the opponent's view draws no back for (`hover_is_shown`), is
+    /// dropped silently, and the opponent's outline cleared instead if it showed one. A repeat of what
+    /// the opponent was last told is not sent again.
+    fn flush_hover(&self, core: &mut Core, player: PlayerId) {
+        let Some(index) = core.hovers[player].pending.take() else {
+            return;
+        };
+        if core.finished || core.stopped {
+            return;
+        }
+        let receiver = player.opponent();
+        let current = core.hovers[player].prompt.as_deref() == open_prompt_of(&core.state, player);
+        let shown = index.filter(|index| {
+            current
+                && hover_is_shown(
+                    *index,
+                    player,
+                    &engine::view_for(self.shared.pinned, &core.state, receiver),
+                )
+        });
+        if shown == core.hovers[player].relayed {
+            return;
+        }
+        core.hovers[player].last_at = Some(now_ms());
+        core.hovers[player].relayed = shown;
+        self.send(core, receiver, &choice_hover_relay_message(player, shown));
+    }
+
+    /// An answered prompt, a seat that leaves or a match that ends takes its outline with it.
+    fn end_hover(&self, core: &mut Core, player: PlayerId) {
+        let slot = &mut core.hovers[player];
+        if let Some(timer) = slot.timer.take() {
+            timer.cancel();
+        }
+        slot.pending = None;
+        slot.prompt = None;
+        if slot.relayed.is_none() {
+            return;
+        }
+        slot.relayed = None;
+        self.send(core, player.opponent(), &choice_hover_relay_message(player, None));
+    }
+
+    /// R2739001: ends each seat's hover whose prompt the state no longer holds open for it.
+    fn end_stale_hovers(&self, core: &mut Core) {
+        for player in PLAYERS {
+            let prompt = core.hovers[player].prompt.as_deref();
+            if prompt.is_some() && prompt != open_prompt_of(&core.state, player) {
+                self.end_hover(core, player);
+            }
+        }
+    }
+
     fn on_socket_gone(&self, home: PlayerId) {
         {
             let mut core = self.lock();
@@ -1990,9 +2129,11 @@ impl MatchActor {
             if core.stopped || core.finished {
                 return;
             }
-            // R738: the aim of the seat this account plays (R677) ends with its socket.
+            // R738, R2739001: the aim and the choice hover of the seat this account plays (R677) end
+            // with its socket.
             let player = playing(&core, home);
             self.end_aim(&mut core, player);
+            self.end_hover(&mut core, player);
             tracing::info!(event = "match.socket.closed", matchId = %self.match_id_str(), player = %player, home = %home);
         }
         self.enqueue(Task::Disconnect { home });
@@ -2223,6 +2364,9 @@ impl MatchActor {
                 if let Some(timer) = core.aims[player].timer.take() {
                     timer.cancel();
                 }
+                if let Some(timer) = core.hovers[player].timer.take() {
+                    timer.cancel();
+                }
                 if let Some(timer) = core.bot_long_turn[player].take() {
                     timer.cancel();
                 }
@@ -2361,6 +2505,20 @@ fn end_is_public(end: &AimEnd, view: &PlayerView) -> bool {
             };
             i64::from(*lane) <= side.locks.row(*row).len() as i64
         }
+    }
+}
+
+/// R2739001, R2739000: whether `view` draws a back at `index` for `sender`'s open card picker: the
+/// prompt is the sender's, its view carries the option count, and the index is under it.
+pub fn hover_is_shown(index: i32, sender: PlayerId, view: &PlayerView) -> bool {
+    match &view.pending {
+        Some(PendingView::Elsewhere(elsewhere)) => {
+            elsewhere.pending_for == sender
+                && elsewhere
+                    .option_count
+                    .is_some_and(|count| (0..count).contains(&index))
+        }
+        _ => false,
     }
 }
 

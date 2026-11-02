@@ -4,10 +4,12 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexSet;
-use jackioh_engine::view_for::{HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDDEN_POSITION};
+use jackioh_engine::view_for::{
+    HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDDEN_POSITION, other_seats_option_count,
+};
 use jackioh_engine::{
     ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
-    PendingChoice, PlayerId, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
+    PendingChoice, PlayerId, PromptOption, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
     announced_face_down_to, backrow_is_public, effective_cost, find_def, find_instance, find_instance_mut,
     handicap_of, mulligan_prompt_for, unclamped_attack, unit_view,
 };
@@ -466,6 +468,20 @@ fn without_answer_key(resume: &mut Resume) {
     resume.data.shift_remove(ANSWER_KEY);
 }
 
+/// R2739000, R185: an option of the opponent's prompt that names nothing, its key and its mode empty, so
+/// the redaction keeps how many a card picker offers and none of what it offers.
+fn blank_option() -> PromptOption {
+    PromptOption {
+        key: String::new(),
+        label: String::new(),
+        selection: Selection::Mode {
+            option: String::new(),
+        },
+        cost: None,
+        radiant: None,
+    }
+}
+
 /// R266, R185: redacts setup's owed mulligan (R224, R265) sealed answers and returned cards (R151).
 fn scrub_owed_mulligan(resume: &mut Resume, opp: PlayerId) {
     if resume.hook != SETUP_WORK {
@@ -775,13 +791,15 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
     }
 
-    // Step 7: the opponent's prompt shows that it is open and whose it is, nothing more (R81). The
+    // Step 7: the opponent's prompt shows that it is open and whose it is, nothing more (R81), but for
+    // the count of a card picker the seat's view shows (R2739000), kept as that many blank options. The
     // same goes for its mulligan while both are open (R265, R266): that it has answered is public,
     // and what it was offered and what it kept are not.
     if let Some(pending) = next.pending.as_mut()
         && pending.player_id == opp
     {
-        pending.options = Vec::new();
+        let shown = other_seats_option_count(state, seat).unwrap_or(0);
+        pending.options = (0..shown).map(|_| blank_option()).collect();
     }
     if let Some(open) = next.mulligan.as_mut() {
         let theirs = &mut open[opp];

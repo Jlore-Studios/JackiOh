@@ -638,7 +638,8 @@ mod tests {
                     labels(&s),
                     vec!["Discard 1 card", "Exile the bottom 1 card of your deck", "Your opponent draws 1 card"]
                 );
-                assert_eq!(js(&s.view(P1))["pending"], json!({ "forYou": false, "pendingFor": "p2" }));
+                // R2739000: the asker is told how many choices, never which.
+                assert_eq!(js(&s.view(P1))["pending"], json!({ "forYou": false, "pendingFor": "p2", "optionCount": 3 }));
             }
 
             #[test]

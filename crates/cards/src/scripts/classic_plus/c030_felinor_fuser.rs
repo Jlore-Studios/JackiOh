@@ -386,12 +386,14 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(FUSER, json!({}));
-                assert_eq!(js(&s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1" }));
+                // R2739000: a Discover of catalog cards shows the other seat how many, never which.
+                assert_eq!(js(&s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 }));
                 for option in offered(&open(&s)) {
                     assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(&option));
                 }
                 s.answer(json!(offered(&open(&s)).first().cloned().unwrap_or_default()));
-                assert_eq!(js(&s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1" }));
+                let count = open(&s).options.len();
+                assert_eq!(js(&s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1", "optionCount": count }));
             }
 
             #[test]

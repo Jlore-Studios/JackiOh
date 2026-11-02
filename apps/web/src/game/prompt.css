@@ -1235,3 +1235,28 @@
     min-height: 224px;
   }
 }
+
+/* --- the opponent's card picker, face down (R2739000, R2739001) --- */
+
+/* OpponentChoice.tsx: the other seat's Discover, one back per option, laid out as the bare picker above,
+   over the waiting notice's lighter dim (the board is still the thing to watch). */
+.prompt-scrim:has(> .prompt-opponent-choice) {
+  background: color-mix(in srgb, var(--pal-wood-950) 30%, transparent);
+}
+
+/* The back fills its option's box, as a face fills a card option's; it takes no hit (`.prompt` above). */
+.prompt-card.prompt-card--back {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--pal-slate-700);
+}
+
+/* R2739001: the back under the opponent's pointer, outlined as R738 marks the card they aim with
+   (opponentAim.css `.opponent-aim-origin`), and still, so Reduce Motion draws it the same. */
+.prompt-card--back[data-hovered] {
+  border-color: color-mix(in srgb, var(--pal-ember-500) 90%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--pal-ember-500) 90%, transparent),
+    0 0 14px color-mix(in srgb, var(--pal-ember-500) 25%, transparent);
+}

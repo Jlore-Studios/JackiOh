@@ -1636,6 +1636,14 @@ fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -
     Some((pending.resume.def_id.clone(), pending.resume.radiant))
 }
 
+/// R2739000: the `optionCount` `viewer`'s view gives the prompt the other seat holds, or `None`. The AI's
+/// redaction (R185) keeps that many blank options where it drops the other seat's, so a world's view
+/// counts what the true one does.
+pub fn other_seats_option_count(state: &GameState, viewer: PlayerId) -> Option<i32> {
+    let pending = state.pending.as_ref().filter(|pending| pending.player_id != viewer)?;
+    shown_option_count(state, viewer, pending)
+}
+
 /// R2739000: how many cards the other seat's card picker offers, for the seat not holding it, or
 /// `None` (§10.6's bare notice). Only a picker the client draws as cards (a Discover, or a short
 /// `mode`, `reward` or `answer`), asked by a card this viewer may read, whose script does not read its

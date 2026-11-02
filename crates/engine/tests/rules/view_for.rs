@@ -1466,3 +1466,302 @@ mod r2646000_prompt_source {
         assert_eq!(own_options(&view_for(&state, PlayerId::P1)).source_def_id, None);
     }
 }
+
+// R2739000: the other seat learns how many cards a card picker offers, never what, and only when the
+// count hides nothing
+
+mod r2739000_the_other_seats_option_count {
+    use super::*;
+    use jackioh_engine::config::PROMPT_CARD_OPTION_LIMIT;
+    use jackioh_engine::prompts::ANSWER_STOP_KEY;
+
+    /// A prompt of `kind` for `player`, asked by `resume`'s card, offering `options`.
+    fn ask(
+        state: &mut GameState,
+        player: PlayerId,
+        kind: PromptKind,
+        options: Vec<PromptOption>,
+        resume: Resume,
+    ) {
+        with_sink(state, |sink| {
+            open_prompt(
+                sink,
+                OpenPromptArgs {
+                    player,
+                    kind,
+                    aim: None,
+                    prompt: "Choose one".to_string(),
+                    options,
+                    min: None,
+                    max: None,
+                    budget: None,
+                    owner: None,
+                    resume,
+                },
+            )
+        });
+    }
+
+    /// The resume of the card `card` asking, on its base face.
+    fn asked_by(card: &CardInstance) -> Resume {
+        Resume {
+            def_id: card.def_id.clone(),
+            instance_id: Some(card.id.clone()),
+            ..inert_resume()
+        }
+    }
+
+    fn modes(names: &[&str]) -> Vec<PromptOption> {
+        names.iter().map(|name| mode_option(name)).collect()
+    }
+
+    fn instance_option(card: &CardInstance) -> PromptOption {
+        PromptOption {
+            key: format!("instance:{}", card.id),
+            label: card.def_id.clone(),
+            selection: Selection::Instance {
+                instance_id: card.id.clone(),
+            },
+            cost: None,
+            radiant: None,
+        }
+    }
+
+    /// The other seat's view of p1's prompt, as JSON.
+    fn seen_by_p2(state: &GameState) -> Value {
+        json_of(&view_for(state, PlayerId::P2).pending)
+    }
+
+    /// A public asking card: p2's own graveyard, which both seats read (§10.8).
+    fn public_asker(state: &mut GameState, d: &Defs) -> CardInstance {
+        put_in_pile(state, &d.public_field.id, PlayerId::P2, ZoneName::Graveyard)
+    }
+
+    #[test]
+    fn r2739000_a_discover_shows_the_other_seat_its_count() {
+        let d = defs();
+        let mut state = game("count-discover");
+        let card = public_asker(&mut state, &d);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            modes(&["ember-lark", "frost-hare", "tide-owl"]),
+            asked_by(&card),
+        );
+        assert_eq!(
+            seen_by_p2(&state),
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 })
+        );
+        let text = serialized(&view_for(&state, PlayerId::P2));
+        for option in ["ember-lark", "frost-hare", "tide-owl"] {
+            assert!(!text.contains(option), "{option} reached the other seat");
+        }
+    }
+
+    #[test]
+    fn r2739000_a_short_choose_one_shows_its_count_a_long_one_none() {
+        let d = defs();
+
+        let mut state = game("count-mode-short");
+        let card = public_asker(&mut state, &d);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Mode,
+            modes(&["burn", "freeze"]),
+            asked_by(&card),
+        );
+        assert_eq!(
+            seen_by_p2(&state),
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 2 })
+        );
+
+        // A quest's rewards are a card picker as a Choose one is (R404).
+        let mut state = game("count-reward");
+        let card = public_asker(&mut state, &d);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Reward,
+            modes(&["a", "b", "c", "d"]),
+            asked_by(&card),
+        );
+        assert_eq!(seen_by_p2(&state)["optionCount"], json!(PROMPT_CARD_OPTION_LIMIT));
+
+        // Past the limit the chooser's client lists the options, so the other seat sees today's notice.
+        let mut state = game("count-mode-long");
+        let card = public_asker(&mut state, &d);
+        let long: Vec<String> = (0..=PROMPT_CARD_OPTION_LIMIT)
+            .map(|at| format!("mode-{at}"))
+            .collect();
+        let long: Vec<&str> = long.iter().map(String::as_str).collect();
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Mode,
+            modes(&long),
+            asked_by(&card),
+        );
+        assert_eq!(seen_by_p2(&state), json!({ "forYou": false, "pendingFor": "p1" }));
+    }
+
+    #[test]
+    fn r2739000_a_hidden_asker_or_option_shows_no_count() {
+        let d = defs();
+        let bare = json!({ "forYou": false, "pendingFor": "p1" });
+
+        // The asking card is in the chooser's hand, which the other seat may not read (R81).
+        let mut state = game("count-hidden-asker");
+        let card = in_hand(&mut state, &d.secret_hand[0].id, PlayerId::P1, 1).remove(0);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            modes(&["a", "b", "c"]),
+            asked_by(&card),
+        );
+        assert_eq!(seen_by_p2(&state), bare);
+
+        // A Discover out of the chooser's library: how many matched is the library's secret (§10.8).
+        let mut state = game("count-library");
+        let card = public_asker(&mut state, &d);
+        let ids: Vec<String> = d.secret_library[..2].iter().map(|def| def.id.clone()).collect();
+        let library = set_library(&mut state, PlayerId::P1, &ids);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            library.iter().map(instance_option).collect(),
+            asked_by(&card),
+        );
+        assert_eq!(seen_by_p2(&state), bare);
+
+        // A pick out of the chooser's hand, as a `hand` prompt and as a Discover.
+        for kind in [PromptKind::Hand, PromptKind::Discover] {
+            let mut state = game("count-hand");
+            let card = public_asker(&mut state, &d);
+            let hand = in_hand(&mut state, &d.secret_hand[1].id, PlayerId::P1, 2);
+            ask(
+                &mut state,
+                PlayerId::P1,
+                kind,
+                hand.iter().map(instance_option).collect(),
+                asked_by(&card),
+            );
+            assert_eq!(seen_by_p2(&state), bare, "{kind:?}");
+        }
+
+        // A prompt no card asked.
+        let mut state = game("count-no-asker");
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            modes(&["a", "b", "c"]),
+            inert_resume(),
+        );
+        assert_eq!(seen_by_p2(&state), bare);
+
+        // A card that has since changed definition, as R2646000's source.
+        let mut state = game("count-changed-asker");
+        let card = public_asker(&mut state, &d);
+        let resume = Resume {
+            def_id: d.stack_top.id.clone(),
+            ..asked_by(&card)
+        };
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            modes(&["a", "b", "c"]),
+            resume,
+        );
+        assert_eq!(seen_by_p2(&state), bare);
+
+        // A script that reads its options off a hidden zone says so, and shows no count.
+        let mut state = game("count-secret-script");
+        let card = public_asker(&mut state, &d);
+        let mut scripts = registered_scripts();
+        scripts.insert(
+            d.public_field.id.clone(),
+            CardScripts {
+                base: Script {
+                    secret_option_counts: true,
+                    ..Script::default()
+                },
+                radiant: Script::default(),
+            },
+        );
+        register_scripts(scripts);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Mode,
+            modes(&["a", "b"]),
+            asked_by(&card),
+        );
+        assert_eq!(seen_by_p2(&state), bare);
+
+        // Cards both seats read, the chooser's own graveyard, do show their count.
+        let mut state = game("count-graveyard");
+        let card = public_asker(&mut state, &d);
+        let piles: Vec<CardInstance> = d.secret_library[..2]
+            .iter()
+            .map(|def| put_in_pile(&mut state, &def.id, PlayerId::P1, ZoneName::Graveyard))
+            .collect();
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            piles.iter().map(instance_option).collect(),
+            asked_by(&card),
+        );
+        assert_eq!(
+            seen_by_p2(&state),
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 2 })
+        );
+    }
+
+    #[test]
+    fn r2739000_the_chooser_never_gets_option_count() {
+        let d = defs();
+        let mut state = game("count-chooser");
+        let card = public_asker(&mut state, &d);
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Discover,
+            modes(&["a", "b", "c"]),
+            asked_by(&card),
+        );
+        assert_eq!(own_options(&view_for(&state, PlayerId::P1)).options.len(), 3);
+        assert!(!serialized(&view_for(&state, PlayerId::P1)).contains("optionCount"));
+    }
+
+    #[test]
+    fn r2739000_an_answer_counts_its_letters_not_its_stop() {
+        let d = defs();
+        let mut state = game("count-answer");
+        let card = public_asker(&mut state, &d);
+        let mut options = modes(&["a", "b", "c"]);
+        options.push(PromptOption {
+            key: ANSWER_STOP_KEY.to_string(),
+            label: "Stop".to_string(),
+            selection: Selection::None,
+            cost: None,
+            radiant: None,
+        });
+        ask(
+            &mut state,
+            PlayerId::P1,
+            PromptKind::Answer,
+            options,
+            asked_by(&card),
+        );
+        assert_eq!(
+            seen_by_p2(&state),
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 })
+        );
+    }
+}
