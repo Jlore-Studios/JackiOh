@@ -165,7 +165,9 @@ read what it changes (`scripts/ci-scope.sh`, whose header says what turns each o
 newly reads from outside its crate goes in the script's map in the same pull request, and a path joins its
 skip list (a pull request of only those paths skips every job but `bot selftest`) only with proof that
 nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A push to `main` runs everything. Everything slow
-or statistical runs daily in `super.yml`, whose header lists it. A test moves there
+or statistical runs daily in `super.yml`, whose header lists it, and on every pull request into `production`:
+production moves only by hand (`/promote` on the `production merge` issue) and merges only once that run
+passes (`docs/deploy-cloudflare.md` §2.1). A test moves there
 (`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test
 keeps its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does,
 `ci.yml`'s the five-minute budget of every job.

@@ -18,7 +18,7 @@ import type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "./cards/tables.ts";
 import { FX_CAST_ON_DRAW_TRAUMA } from "./constants.ts";
 import { ENTRANCES, entranceEvent } from "./entrances.ts";
-import { FLAVOR_LOOKS } from "./flavors.ts";
+import { FLAVOR_LOOKS, paletteLook } from "./flavors.ts";
 import { flavorLookOf } from "./flavorSource.ts";
 import { motifScale, type MotifSpec } from "./motifs/build.ts";
 import { motifReplaces, planMotif } from "./motifs/index.ts";
@@ -90,7 +90,7 @@ export function planCardMotif(entry: AnimationEntry, view: PlayerView, env: FxPl
   const type = (CATALOG[play.defId] ?? view.defs?.[play.defId])?.type;
   const hook = card.hooks[type === "Unit" ? "cry" : "cast"];
   if (hook === undefined || !isDrawnMotif(hook.motif)) return null;
-  const look = hook.palette !== undefined ? FLAVOR_LOOKS[hook.palette] : (flavorLookOf(play.defId, play.instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK]);
+  const look = (hook.palette !== undefined ? paletteLook(hook.palette) : undefined) ?? flavorLookOf(play.defId, play.instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
   const spec: MotifSpec = { motif: hook.motif, look, scale: motifScale(play.defId, view, env.intensity), row: hook.row ?? "replace" };
   const cues = planMotif(spec, entry, view, env);
   if (cues.length === 0) return null;

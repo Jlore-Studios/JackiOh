@@ -1320,6 +1320,18 @@ describe("the drill-down's card preview", () => {
     expect(preview).toMatch(/aspect-ratio:\s*5\s*\/\s*7/);
   });
 
+  it("stretches the details column to the body's width on a phone, so the loading skeleton draws its rows", () => {
+    // In the phone's column the body centers its items, which shrank the details column to its
+    // content and left the skeleton's rows (`width: 100%` of it) no room for their lines.
+    const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const phone = /@media\s*\(max-width:\s*640px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
+    expect(body).toMatch(/flex-direction:\s*column/);
+    expect(body).toMatch(/align-items:\s*center/);
+    const details = /\.stats-drilldown-details\s*\{([^}]*)\}/.exec(phone)?.[1] ?? "";
+    expect(details).toMatch(/align-self:\s*stretch/);
+  });
+
   it("shows the Radiant face beside the normal one on Show Radiant, and only the normal one again on a second press", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);

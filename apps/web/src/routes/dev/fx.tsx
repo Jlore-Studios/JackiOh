@@ -1,20 +1,22 @@
 // R2784000: `/dev/fx`, the motif gallery and the review surface of every card-animation pass
 // (docs/polish/9-card-animations.md). Over the fixture board it plays any drawn motif in any flavor's
-// palette at any gallery scale, through a director of its own as the stat showcase's, and any card's
-// table entry as that card's play through the real board's effects layer. Dev only: chunks.tsx loads it
-// behind DEV_ONLY, so a production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
+// palette or sub-look at any gallery scale, through a director of its own as the stat showcase's, and
+// any card's table entry as that card's play through the real board's effects layer, or as the fixture
+// set piece (R2785000), its play holding the board for the set piece's beat until a tap, a click or
+// Space. Dev only: chunks.tsx loads it behind DEV_ONLY, so a production build leaves it out and serves
+// a 404 here, as at `/dev/hotseat`.
 
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
-import type { Flavor, PlayerView } from "@jackioh/shared";
+import type { PlayerView } from "@jackioh/shared";
 
 import { boardShakeSink, resolveAnchor } from "../../fx/anchors.ts";
 import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
 import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
-import { FLAVOR_LOOKS } from "../../fx/flavors.ts";
+import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
-import { cardFixtureEvents, galleryCues } from "../../fx/motifs/gallery.ts";
+import { cardFixtureEvents, galleryCues, galleryPlayId, gallerySetPiece } from "../../fx/motifs/gallery.ts";
 import { FX_DRAWN_MOTIFS, isDrawnMotif, type DrawnMotif } from "../../fx/motifs/names.ts";
 import { useFxSettings } from "../../fx/settings.ts";
 import { createSurface } from "../../fx/surface.ts";
@@ -33,9 +35,8 @@ export const fxGalleryTestid = {
   card: "fx-gallery-card",
   play: "fx-gallery-play",
   playCard: "fx-gallery-play-card",
+  playSetPiece: "fx-gallery-play-set-piece",
 } as const;
-
-export const FLAVORS = Object.keys(FLAVOR_LOOKS) as Flavor[];
 
 /** Every card whose table entry names a drawn motif on its play, with that motif. */
 export function galleryCards(): { defId: string; name: string; motif: DrawnMotif }[] {
@@ -70,12 +71,15 @@ export default function FxGallery(): ReactElement {
   const cards = useMemo(() => galleryCards(), []);
   const [settings] = useFxSettings();
   const [motif, setMotif] = useState<DrawnMotif>(FX_DRAWN_MOTIFS[0]);
-  const [palette, setPalette] = useState<Flavor>("Fire");
+  const [palette, setPalette] = useState<FxPalette>("Fire");
   const [scale, setScale] = useState<number>(1);
   const [defId, setDefId] = useState<string>(cards[0]?.defId ?? "");
   // Each card play is a new view whose events the board has not seen, so its effects layer plays them.
   const [shown, setShown] = useState<PlayerView>(base);
   const plays = useRef(0);
+  // R2785000: the play the fixture set piece claims, the last one played as a set piece.
+  const [setPieceId, setSetPieceId] = useState<string | null>(null);
+  const setPieceOf = useMemo(() => (setPieceId === null ? undefined : gallerySetPiece(setPieceId)), [setPieceId]);
 
   const director = useRef<FxDirector | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -107,17 +111,18 @@ export default function FxGallery(): ReactElement {
   const playMotif = (): void => {
     director.current?.play(galleryCues(motif, palette, scale, base, intensity, settings.speed));
   };
-  const playCard = (): void => {
+  const playCard = (asSetPiece: boolean): void => {
     const card = cards.find((candidate) => candidate.defId === defId);
     if (card === undefined) return;
     plays.current += 1;
+    setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
     setShown(withEvents(base, cardFixtureEvents(card.defId, card.motif, base, plays.current)));
   };
 
   return (
     <CatalogContext.Provider value={lookup}>
       <div className="app-shell app-shell--wide" data-testid={fxGalleryTestid.root}>
-        <Game view={shown} legal={[]} onAction={noop} />
+        <Game view={shown} legal={[]} onAction={noop} setPieceOf={setPieceOf} />
         <div className="fx-layer" data-fx="on" aria-hidden="true">
           <canvas ref={canvasRef} className="fx-canvas" />
           <div ref={domRef} className="fx-dom" />
@@ -147,10 +152,16 @@ export default function FxGallery(): ReactElement {
           </label>
           <label style={ROW}>
             Palette
-            <select data-testid={fxGalleryTestid.palette} value={palette} onChange={(event) => setPalette(event.target.value as Flavor)}>
-              {FLAVORS.map((flavor) => (
-                <option key={flavor} value={flavor}>
-                  {flavor}
+            <select
+              data-testid={fxGalleryTestid.palette}
+              value={palette}
+              onChange={(event) => {
+                if (isPalette(event.target.value)) setPalette(event.target.value);
+              }}
+            >
+              {FX_PALETTES.map((name) => (
+                <option key={name} value={name}>
+                  {name}
                 </option>
               ))}
             </select>
@@ -178,8 +189,11 @@ export default function FxGallery(): ReactElement {
               ))}
             </select>
           </label>
-          <button type="button" data-testid={fxGalleryTestid.playCard} onClick={playCard}>
+          <button type="button" data-testid={fxGalleryTestid.playCard} onClick={() => playCard(false)}>
             Play card
+          </button>
+          <button type="button" data-testid={fxGalleryTestid.playSetPiece} onClick={() => playCard(true)}>
+            Play as a set piece
           </button>
         </form>
       </div>

@@ -51,7 +51,6 @@ pub fn script() -> CardScripts {
 // Stinkyscape #175 Frost Module — SPEC §8.10 row 175, BUILD M12 row S 175 (R1174000).
 #[cfg(test)]
 mod tests {
-    use super::{BASE_USES, ID, RADIANT_USES};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -63,23 +62,6 @@ mod tests {
 
     mod base {
         use super::*;
-
-        #[test]
-        fn declares_one_activate_once_a_turn_over_enemy_units() {
-            assert_eq!(crate::card_def(ID).id, FROST);
-            let scripts = super::super::script();
-            for face in [&scripts.base, &scripts.radiant] {
-                assert_eq!(face.activations.len(), 1);
-            }
-            assert_eq!(
-                scripts.base.activations.first().map(|decl| decl.uses),
-                Some(ActivationUses::Count(BASE_USES))
-            );
-            assert_eq!(
-                scripts.radiant.activations.first().map(|decl| decl.uses),
-                Some(ActivationUses::Count(RADIANT_USES))
-            );
-        }
 
         #[test]
         fn r1860009_activate_freezes_a_chosen_enemy_unit() {

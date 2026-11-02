@@ -289,6 +289,8 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   useLayoutEffect(() => {
     if (queue === undefined) return undefined;
     const onSignal = (signal: RunnerSignal): void => {
+      // R2785000: a skipped set piece starts the next entry, whose `start` releases what waits for it.
+      if (signal.kind === "skip") return;
       // R2789000: a still entry (reduced motion) is for the effects layer's callouts alone.
       if (signal.kind === "still") return;
       if (signal.kind === "start") {

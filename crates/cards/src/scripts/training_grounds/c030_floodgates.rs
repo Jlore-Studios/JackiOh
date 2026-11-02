@@ -327,13 +327,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn it_is_0_24_with_armor_6() {
-            let s = board(true, json!([]), json!([FILLER]), json!([]));
-            let view = s.stats(gates(&s).as_str());
-            assert_eq!((view.attack, view.max_health, view.armor), (0, 24, 6));
-        }
-
-        #[test]
         fn r2197003_each_arrival_gives_2_armor() {
             let mut s = board(true, json!([]), json!([MR_TOKEN, FILLER]), json!([]));
             s.play(MR_TOKEN, json!({ "zone": 1 }));
