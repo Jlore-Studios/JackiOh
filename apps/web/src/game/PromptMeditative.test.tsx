@@ -1,6 +1,6 @@
-// #617 (MN09): the play-time choices the Meditative set adds read on any screen. A "Choose one" is
-// words, not faces, so the card being played is read from its name in the title; and #98 Showdown's
-// five lanes say which lane each one is.
+// #617 (MN09): the play-time choices the Meditative set adds read on any screen. A list of five or
+// more keeps its title, so the card being played is read from its name in it (a short Choose one is
+// bare cards alone, #2738); and #98 Showdown's five lanes say which lane each one is.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -55,16 +55,16 @@ describe("#617 the Meditative play-time choices", () => {
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", modes: ["lane-2"] });
   });
 
-  it("#617 R2617000 a touch held on the card's name in a Choose one shows its preview and picks nothing", () => {
+  it("#617 R2617000 a touch held on the card's name over a list of choices (Showdown's lanes) shows its preview and picks nothing", () => {
     vi.useFakeTimers();
-    const onAction = renderChoice("meditative-022", ["greed", "attack", "defend"]);
+    const onAction = renderChoice("meditative-098", LANES);
     const source = screen.getByTestId("prompt-title-source");
-    expect(source).toHaveTextContent(CATALOG["meditative-022"]?.name ?? "meditative-022");
+    expect(source).toHaveTextContent(CATALOG["meditative-098"]?.name ?? "meditative-098");
     fireEvent.pointerDown(source, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS);
     });
-    expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(CATALOG["meditative-022"]?.name ?? "meditative-022");
+    expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(CATALOG["meditative-098"]?.name ?? "meditative-098");
     fireEvent.pointerUp(source, { pointerType: "touch", pointerId: 1 });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     fireEvent.click(source);
