@@ -14192,23 +14192,15 @@
           "muse"
         ],
         "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/collection/collection.ts"
-          ],
-          "from": "8e60bff3b45dce3dfc5203612a22b7f79481fcad",
-          "main": "ffafa76b1a51e5670bd24d7d2d7f63fe2c608229"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "41391994718",
+            "run": "41401329121",
             "tier": "medium"
           }
         ],
-        "sha": "8027fc54d9e902e6a526ecbfa406e09b48840fdc",
+        "sha": "36178d3e0b4f3472c4e09e10bf7f11845bb41a3d",
         "tiers": {
           "muse": "medium"
         }
