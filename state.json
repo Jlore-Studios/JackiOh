@@ -12906,6 +12906,8 @@
       }
     },
     "2701": {
+      "action": "build",
+      "asks": [],
       "closeout": true,
       "failures": 0,
       "forced": false,
@@ -12915,9 +12917,14 @@
         "bot/issue-2705"
       ],
       "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-02T05:03:45Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:a63e1470-1793596770",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-02T05:19:49Z",
       "stop_requested": false,
+      "taken_asks": [],
       "tree": {
         "adopted": true,
         "at": "2026-11-01T18:44:20Z",
@@ -14742,9 +14749,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T05:05:27Z",
+    "at": "2026-11-02T05:19:49Z",
     "url": "",
-    "what": "revise #2770 on muse"
+    "what": "build #2701 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-02T05:11:54Z",
