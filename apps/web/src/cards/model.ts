@@ -523,9 +523,14 @@ export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIB
   return [ALL_TRIBES, ...printed.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
 
-/** `data-foil` on `.cf`. The CSS never animates it under `prefers-reduced-motion: reduce` whatever this says. */
-export function foilFor(face: FaceModel, animatedFoil: boolean): "animated" | "static" | "none" {
-  if (face.rarity !== "Mythic" && !face.radiant) return "none";
+/**
+ * `data-foil` on `.cf`: a Radiant face carries foil, and a Mythic one while the viewer's Rarity
+ * foil setting is on (R2721000), animated while the player's `animatedFoil` setting is on and
+ * still while it is off. The CSS never animates it under `prefers-reduced-motion: reduce`
+ * whatever this says.
+ */
+export function foilFor(face: FaceModel, animatedFoil: boolean, rarityFoil: boolean): "animated" | "static" | "none" {
+  if (!face.radiant && !(rarityFoil && face.rarity === "Mythic")) return "none";
   return animatedFoil ? "animated" : "static";
 }
 
