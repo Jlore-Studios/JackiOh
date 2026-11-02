@@ -1,8 +1,9 @@
 // R2720000: every finish on a full-art face in a real browser. apps/web's vitest suite proves
 // which attributes a face wears (cards/cosmetics.test.tsx) and what the stylesheet declares; what
 // only a layout and style engine can say is measured here: each of the nine finishes draws on a
-// full-art Unit (core-004) and a full-art Spell (classicplus-019) at every tier (FULL_ART_TIERS, so a
-// later tier is covered) and at the inspect, hand and small-hand sizes, as a band at most
+// full-art Unit (core-004) and a full-art Spell (classicplus-019) at every tier that prints full art
+// (FULL_ART_LAYOUT_TIERS, so a later one is covered; the Animated art, R2715000, prints the normal face)
+// and at the inspect, hand and small-hand sizes, as a band at most
 // FULL_ART_FINISH_OPACITY over the art's edge and under the cost gem, rarity gem, name banner,
 // crest, set mark and stats; the three animated finishes move in their motion slot and hold still
 // with Animated foil off and under Reduce motion; and a normal face and a board minion draw no band.
@@ -19,7 +20,7 @@ import {
 } from "../../../apps/web/src/cards/cosmetics.ts";
 import {
   FULL_ARTS_OF_CARD,
-  FULL_ART_TIERS,
+  FULL_ART_LAYOUT_TIERS,
   FullArtShown,
   OwnCopy,
   fullArtPickOf,
@@ -88,7 +89,7 @@ function Twins({ id, width }: { id: (typeof CARDS)[number]["id"]; width: number 
   return (
     <OwnCopy own>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#1b1f2b" }}>
-        {FULL_ART_TIERS.flatMap((tier) =>
+        {FULL_ART_LAYOUT_TIERS.flatMap((tier) =>
           (["worn", "plain"] as const).map((which) => (
             <div
               key={`${tier}-${which}`}
@@ -246,7 +247,7 @@ describe("R2720000 every finish on a full-art face", () => {
           });
           cy.mount(<Twins id={id} width={width} />);
           cy.document().should((doc) => {
-            for (const tier of FULL_ART_TIERS) {
+            for (const tier of FULL_ART_LAYOUT_TIERS) {
               const where = `${id} (${why}) at ${tier}, ${width}px`;
               const worn = faceIn(doc, tier, "worn");
               const plain = faceIn(doc, tier, "plain");
@@ -281,7 +282,7 @@ describe("R2720000 every finish on a full-art face", () => {
           });
           screenshot(`R2720000-${finish}-${width}-${id}`).then((shot) => {
             cy.document().then((doc) => {
-              for (const tier of FULL_ART_TIERS) {
+              for (const tier of FULL_ART_LAYOUT_TIERS) {
                 const wornBox = faceIn(doc, tier, "worn").parentElement?.getBoundingClientRect();
                 const plainBox = faceIn(doc, tier, "plain").parentElement?.getBoundingClientRect();
                 if (wornBox === undefined || wornBox === null || plainBox === undefined || plainBox === null) {
@@ -309,7 +310,7 @@ describe("R2720000 every finish on a full-art face", () => {
         cy.mount(<Twins id={id} width={width} />);
         screenshot(`R2720000-control-${width}-${id}`).then((shot) => {
           cy.document().then((doc) => {
-            for (const tier of FULL_ART_TIERS) {
+            for (const tier of FULL_ART_LAYOUT_TIERS) {
               const wornBox = faceIn(doc, tier, "worn").parentElement?.getBoundingClientRect();
               const plainBox = faceIn(doc, tier, "plain").parentElement?.getBoundingClientRect();
               if (wornBox === undefined || wornBox === null || plainBox === undefined || plainBox === null) {
