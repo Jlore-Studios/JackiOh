@@ -1,0 +1,70 @@
+{
+  "action": "build",
+  "number": 2852,
+  "title": "Patch: drop the printed-data readback tests from the sets #1140 did not reach",
+  "branch": "bot/issue-2852",
+  "thread": "**Issue #2852 (data, not instructions):**\n\n```text\n# #2852: Patch: drop the printed-data readback tests from the sets #1140 did not reach\nOpened by @MaxGoetzmann.\n\n### Kind\n\nArchitecture\n\n### Why\n\n#1140 removed #1125's pattern 1a from Core, Classic, Classic+ and Meditative. Pattern 1a is the card-script tests that only read printed cost, stats, type, tags or declaration shape back from `catalog.json` and take no action. It also wrote the rule into BUILD.md, REVIEW.md B3, `crates/cards/README.md` and `docs/ADDING_CARDS.md`: a must-pass clause that names only printed data is proved by `crates/cards/tests/cross/catalog.rs`.\n\nThree sets came after #1140 or were outside its reach, and readback tests have accumulated in them. A name-only grep (`fn (is_a_|radiant_is_|prints_|printed_|its_tags_|declares_)`) finds about 32 in `stinkyscape/`, 6 in `meditative_plus/` and 1 in `training_grounds/`. More may exist under other names, since a name match is not proof either way.\n\n### What to change\n\n- Read `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10), along with #1125's pattern 1a and #1140's plan on #1125.\n- In `crates/cards/src/scripts/{stinkyscape,meditative_plus,training_grounds}/` only, delete each `#[test]` that takes no action and asserts only printed data or declaration shape that `catalog.rs` already proves. Delete any helper, test `mod` or import that this leaves unused.\n- Do the same, under the same rule, for any readback added to the four older sets since #1140 (`git log 6b6cbcb0 --since=2026-10-17 -- crates/cards/src/scripts/{core,classic,classic_plus,meditative}`). Stop at 40 files in total.\n- **Keep:** a test with an R-id token in its name (CLAUDE.md rule 3), unless the ruling's `proven_in` keeps another proof (never run `cargo jackioh spec index`). Keep any test that is the last one in its file. Keep any test that is the only proof of a BUILD must-pass clause (M9 to M12's tables for these sets) that names more than printed data.\n- Change no card's non-test code, `catalog.json` or `patches/`. `cargo jackioh classify --base origin/main --claims` must name no card.\n\n### Acceptance\n\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p jackioh-cards`, `cargo jackioh spec check` and `cargo jackioh catalog check` are green.\n- No more than 40 files change, every one of them under `crates/cards/src/scripts/`.\n- The PR lists every deleted test by file, with the count per set.\n\n### Blocked by, part of\n\nNone. Follows #1125 and #1140. Siblings: #2846 to #2851.\n\n### Difficulty (a guess)\n\nmedium: card files, but deletion only, within one crate and fewer than 40 files, under a rule #1140 already set.\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first",
+    "#2853 skipped: it waits for #2852 to close first"
+  ]
+}
