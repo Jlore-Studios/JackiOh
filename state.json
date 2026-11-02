@@ -25733,7 +25733,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-02T01:23:44Z",
     "last_run": "2026-11-01T14:02:17Z",
     "provider": null,
     "requested": false,
