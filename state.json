@@ -25681,11 +25681,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-11-02T00:48:58Z",
-    "last_run": "2026-11-02T00:48:58Z",
-    "provider": "claude-5",
+    "idle_since": "2026-11-02T00:15:54Z",
+    "last_run": "2026-11-01T14:02:17Z",
+    "provider": null,
     "requested": false,
-    "run_id": "41369175187",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
