@@ -15040,6 +15040,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-02T07:13:41Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "41405003937",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
