@@ -1243,6 +1243,35 @@ fn r1723000_a_card_the_teammate_can_play_after_its_own_best_play_is_passed() {
     assert_eq!(duos_passes(&state, A1), vec![big]);
 }
 
+// R2827000: the Duos AI passes a card it can play itself when its teammate does clearly more with it
+
+#[test]
+fn r2827000_passes_a_playable_card_whose_teammate_wins_with_it() {
+    let seed = "duos-ai-playable-pass";
+    let (mut state, _big, stab) = winning_pass_state(seed);
+    set_mana(&mut state, A1, cost(STAB));
+    assert!(
+        can_play(&state.duels[0], PlayerId::P1, &stab),
+        "A1 can play the Stab itself"
+    );
+    assert_eq!(duos_passes(&state, A1).first(), Some(&stab));
+}
+
+#[test]
+fn r2827000_keeps_a_playable_card_the_teammate_gains_nothing_from() {
+    let seed = "duos-ai-playable-keep";
+    let mut state = round_one(seed, None);
+    let ids = set_hand(&mut state, A1, &[ONE_DROP]);
+    set_mana(&mut state, A1, cost(ONE_DROP));
+    set_hand(&mut state, A2, &[ONE_DROP]);
+    set_mana(&mut state, A2, cost(ONE_DROP));
+    assert!(
+        can_play(&state.duels[0], PlayerId::P1, &ids[0]),
+        "A1 can play it itself"
+    );
+    assert!(duos_passes(&state, A1).is_empty());
+}
+
 // #1760: the Duos gate's greedy team plays each seat's duel with the 1v1 greedy baseline
 
 /// What the 1v1 `greedy_action` alone answers for `seat` in its own duel.
