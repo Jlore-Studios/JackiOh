@@ -14844,7 +14844,7 @@
       }
     },
     "2808": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-11-02T06:02:45Z",
@@ -14862,9 +14862,9 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "run_id": "41396186601",
+      "run_id": "pending:6837887c-1793599467",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-02T05:48:46Z",
+      "started_at": "2026-11-02T06:04:44Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14933,9 +14933,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T05:50:18Z",
+    "at": "2026-11-02T06:04:44Z",
     "url": "",
-    "what": "revise #2773 on muse"
+    "what": "build #2808 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-02T05:56:49Z",
