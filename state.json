@@ -12632,14 +12632,21 @@
       "stop_requested": false
     },
     "2800": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-02T05:06:26Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:c028c6f8-1793650258",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-02T20:11:17Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2801": {
       "failures": 0,
@@ -14217,9 +14224,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T20:02:29Z",
+    "at": "2026-11-02T20:11:17Z",
     "url": "",
-    "what": "review #2841 on claude-6"
+    "what": "plan #2800 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-02T20:00:55Z",
