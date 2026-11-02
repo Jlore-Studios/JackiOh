@@ -11860,13 +11860,13 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
-      "provider": "claude-2",
+      "provider": "claude-8",
       "queued_at": "2026-11-02T13:37:29Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "41433952455",
+      "run_id": "pending:3876531f-1793626748",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-02T11:05:16Z",
+      "started_at": "2026-11-02T13:39:23Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -13082,9 +13082,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T13:38:55Z",
+    "at": "2026-11-02T13:39:23Z",
     "url": "",
-    "what": "plan #2789 on claude-4"
+    "what": "build #2739 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-02T13:24:34Z",
