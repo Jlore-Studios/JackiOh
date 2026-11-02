@@ -449,18 +449,21 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   wrapper's own fallback picked it (`decide` answered nothing the seat may send) or `decide` itself
   fell back (`DecisionReason::Fallback`); `sim_panics` and `first_sim_panic` are the panics `decide`'s
   search caught and the first one's message (#1429).
-- `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
-  and its teammate can (a round seat that has not ended, can afford it and has a place for it: an
-  open zone of its row or, failing that, any play of it the engine lists, onto a Stack, into the
-  backrow with Flying, onto an Equip host or a stack base, or into a zone its Tribute frees), when
-  the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
-  seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
-  rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
-  on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
-  An immediate pass is named only when it is worth it (R1723000): the teammate's best follow-up with
-  the card, also tried after the teammate's own best play, beats its best without it by more than the
-  card's `hand_card_value` in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost`
-  and `DUOS_PASS_MIN_GAIN`.
+- `duos_passes` names the hand cards to pass now, best first: a card its teammate can play this
+  turn whether or not the seat can play it itself (a round seat that has not ended, can afford it
+  and has a place for it: an open zone of its row or, failing that, any play of it the engine
+  lists, onto a Stack, into the backrow with Flying, onto an Equip host or a stack base, or into a
+  zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
+  teammate can afford next turn and the seat cannot; never more than the passes left or the
+  teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
+  (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe), ties by cost then
+  hand order; free-pass next-turn cards keep cost order. An immediate pass is named only when it is
+  worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
+  own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
+  hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
+  seat can play itself is named only when that gain also beats what the seat's own best bounded play
+  of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against
+  the other's.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
