@@ -13663,26 +13663,30 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
-          "muse",
-          "claude"
+          "muse"
         ],
         "builder": "muse",
+        "carried": {
+          "by": "`muse` (medium), `claude` (strong)",
+          "conflicts": [
+            "apps/web/src/fx/motifs/gallery.ts",
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "apps/web/src/routes/dev/fx.tsx",
+            "docs/polish/9-card-animations.md"
+          ],
+          "from": "02ce72bae680bb2b1a81446505da291ba5633580",
+          "main": "ee9a7b97ac6813f1268233550cf21bfda2120279"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "41485717299",
+            "run": "41518811702",
             "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "41515516767",
-            "tier": "strong"
           }
         ],
-        "sha": "02ce72bae680bb2b1a81446505da291ba5633580",
+        "sha": "56c9bd1bfd3a71c17a0723b5ac852539b2ce9b8a",
         "tiers": {
-          "claude": "strong",
           "muse": "medium"
         }
       }
