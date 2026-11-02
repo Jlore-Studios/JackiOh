@@ -13499,7 +13499,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-02T16:28:13Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:b15be255-1793636989",
+      "run_id": "41482118478",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
