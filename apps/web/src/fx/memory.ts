@@ -37,6 +37,8 @@ function put<V>(map: Map<string, V>, key: string, value: V, limit: number): void
 export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   const casters = new Map<string, PlayerId>();
   const traps = new Map<string, FxTrapZone>();
+  // R2789000: the targets each readable attacker declared since the turn began (Windfury's second attack, Cleave's origin).
+  const attacks = new Map<string, string[]>();
   let recent: GameEvent[] = [];
   let resolving: (FxPlay & { seen: Partial<Record<GameEvent["type"], number>> })[] = [];
   let castOnDraw = new WeakSet<GameEvent>();
@@ -76,6 +78,10 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
           if (event.instanceId !== HIDDEN_ID) {
             put(traps, event.instanceId, { player: event.controller, row: event.row, lane: event.lane }, limit);
           }
+        } else if (event.type === "attackDeclared") {
+          if (event.attackerId !== HIDDEN_ID) put(attacks, event.attackerId, [...(attacks.get(event.attackerId) ?? []), event.targetId], limit);
+        } else if (event.type === "turnStarted") {
+          attacks.clear();
         }
       }
     },
@@ -94,9 +100,16 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
     castOnDraw(event: GameEvent): boolean {
       return castOnDraw.has(event);
     },
+    recent(): readonly GameEvent[] {
+      return [...recent];
+    },
+    attacksThisTurn(attackerId: string): readonly string[] {
+      return [...(attacks.get(attackerId) ?? [])];
+    },
     clear(): void {
       casters.clear();
       traps.clear();
+      attacks.clear();
       recent = [];
       resolving = [];
       castOnDraw = new WeakSet<GameEvent>();
