@@ -13705,37 +13705,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-02T13:53:45Z",
+      "feedback_since": "2026-11-02T19:46:55Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2827,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The new own-use hurdle compares two absolute evaluations from two different duels (`mate_best`, the teammate's whole position in duel 1, against `own`, the seat's whole position in duel 0), so whether a playable card is passed depends on which duel is going better, not on what the card does in either one.",
-          "evidence": "`own_use_score` returns `evaluate(own_probe, seat_player, \u2026)` after the play, and `mate_best` is `evaluate(&receiving, mate, \u2026)`. `evaluate` (crates/ai/src/evaluate.rs:1871-1990) is a full-position score: `hero_side(seat) - hero_side(opp) + board - threat + pressure + closing - race`, where board is material minus the opponent's material and race is enemy health. Subtracting one duel's score from the other's mostly measures the difference between the two boards. If the seat is well ahead (the issue's own example, 'played for little on its own full board'), `own` stays above the teammate's score even when the teammate gains a lot, so the motivating pass is never made. If the seat is behind, the hurdle always clears, leaving only R1723000's check, and that check prices keeping the card at `hand_card_value`, not at what playing it is worth. A losing seat would then hand away a play that saves its own duel, which is exactly the over-passing the issue warned of. A meaningful hurdle compares gains: (`mate_best` \u2212 the teammate's baseline) against (`own` \u2212 the seat's probe value without the play).",
-          "severity": "blocking",
-          "where": "crates/ai/src/duos.rs:521"
-        },
-        {
-          "claim": "No test exercises the new hurdle: deleting the `Some(own) => gain.min(\u2026)` branch leaves every test green, and `r2827000_keeps_a_playable_card_the_teammate_gains_nothing_from` passes on the base code too.",
-          "evidence": "On the base, `passes_of` skipped any card in `playable`, so A1's playable ONE_DROP was never a candidate and `duos_passes` was empty, which is what the test asserts. On the branch it stays empty because of R1723000's check, not the new one: A2's baseline already plays its own ONE_DROP, so `mate_best - baseline_value` is about 0 and `gain` is negative from `keep + price + DUOS_PASS_MIN_GAIN` alone. `r2827000_passes_\u2026` wins the teammate the game (`w.win`), which clears both checks. So no test has R1723000 passing while the own-use check withholds, and the acceptance item about margin behaviour is not covered for the new code path.",
-          "severity": "blocking",
-          "where": "crates/ai/tests/ai/duos.rs:1261"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-11-02T16:50:46Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "41513131222",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-02T19:46:55Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
