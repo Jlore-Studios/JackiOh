@@ -149,6 +149,19 @@ export const FX_MOTIF_CENTER_LANE = 3;         // nova: the lane a one-sided bla
 export const FX_MOTIF_TRAUMA = { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 } as const;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R2789000: the combat keyword beats (fx/motifs/beats.ts). A callout is the keyword's icon over the unit; a
+// hit's beats start FX_BEAT_STAGGER_MS apart (a later one at most FX_BEAT_STAGGER_MAX of D in), at most
+// FX_CALLOUTS_PER_HIT of them each with a callout. The fractions are of D, the lengths in ms, and all of it
+// lies inside the entry (R200).
+export const FX_CALLOUT_MS = 600;
+export const FX_CALLOUTS_PER_HIT = 2;
+export const FX_BEAT_STAGGER_MS = 60;
+export const FX_BEAT_STAGGER_MAX = 0.5;
+export const FX_BEAT_TRAUMA = 0.25;
+export const FX_FIRST_STRIKE_BREAK_AT = 0.4;   // the dying defender's counter-blow breaks off this far into the entry…
+export const FX_FIRST_STRIKE_BREAK_REACH = 0.6; // …this many card heights toward the attacker
+export const FX_PIERCE_REACH = 0.8;            // a Pierce's spear line runs this many card heights past each edge
+export const FX_FLYING_LUNGE_LIFT = 0.18;      // a Flying attacker's lunge scales up this much more, over the lane
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;

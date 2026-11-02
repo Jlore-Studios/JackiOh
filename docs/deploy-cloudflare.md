@@ -122,7 +122,11 @@ the dropping of staging's keep-alive, one `step` a run, so no secret passes thro
 value goes from Render's `jackioh-server` or a repository secret straight to where it is used. It
 needs only `RENDER_API_KEY` and `CLOUDFLARE_API_TOKEN`, which the repository holds, and for production
 `PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key and
-session pooler URI, with its password). The commands below are what it does, for doing it by hand.
+session pooler URI). The URI may keep Supabase's `[YOUR-PASSWORD]`, with the password itself in
+`PRODUCTION_DB_PASSWORD`, which, when set, replaces any password the URI holds; the workflow
+percent-encodes it. Step `check-production` writes nothing and says whether those secrets are a secret
+key and an address that reaches JackiOh-Production. The commands below are what it does, for doing it
+by hand.
 
 ### Step 1: Hold production, then merge
 

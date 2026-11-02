@@ -1,6 +1,6 @@
 // The effects layer's contract (docs/polish/1-animations.md, Surface S1).
 
-import type { CardType, GameEvent, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
+import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
 
 /** A point in fractions of a box's width and height. */
@@ -93,6 +93,11 @@ export type FxRaysCue = { kind: "rays"; tone: FxRayTone; at: FxAnchor; delayMs: 
 export type FxSheenCue = { kind: "sheen"; at: FxAnchor; delayMs: number; durationMs: number };
 /** A card BACK flying between two anchors. It never carries a card identity (R202). */
 export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs: number; durationMs: number };
+/**
+ * R2789000: a combat keyword's icon popping over `at` for `durationMs` (the shared callout of the keyword
+ * beats, fx/motifs/callout.ts). `still` draws it as a static icon, for reduced motion.
+ */
+export type FxCalloutCue = { kind: "callout"; keyword: KeywordKind; at: FxAnchor; delayMs: number; durationMs: number; still?: true };
 export type FxArrowsCue = { kind: "arrows"; direction: "up" | "down"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxBannerCue = { kind: "banner"; text: string; tone: FxBannerTone; delayMs: number; durationMs: number };
 export type FxResultCue = { kind: "result"; outcome: FxOutcome; text: string; delayMs: number; durationMs: number };
@@ -173,6 +178,8 @@ export type FxLungeCue = {
   durationMs: number;
   /** #1442: a Ranged attacker fires from where it stands. */
   still?: true;
+  /** R2789000: a Flying attacker's lunge arcs over the lane. */
+  arc?: true;
 };
 
 export type FxCanvasCue = FxBurstCue | FxProjectileCue | FxShotCue | FxCrackCue | FxRingCue;
@@ -181,6 +188,7 @@ export type FxDomCue =
   | FxRaysCue
   | FxSheenCue
   | FxGhostCue
+  | FxCalloutCue
   | FxArrowsCue
   | FxBannerCue
   | FxResultCue
@@ -266,6 +274,10 @@ export type FxMemory = {
   resolving(): FxPlay | undefined;
   /** R502: whether this very `cardPlayed` (the object remembered) was a cast on draw. */
   castOnDraw(event: GameEvent): boolean;
+  /** R2789000: the last FX_MEMORY_RECENT events, the planned entry's last. */
+  recent(): readonly GameEvent[];
+  /** R2789000: the targets `attackerId` declared attacks on since the last `turnStarted`, oldest first. */
+  attacksThisTurn(attackerId: string): readonly string[];
   clear(): void;
 };
 

@@ -368,7 +368,7 @@ fn plan(
 
     // 4. Forced: a throwaway world lists the candidates without touching options.rng. Every
     // determinization of this decision starts from the same public state, so the read-only part
-    // of the determinization (the pools, what the opponent has shown, each side's face-down
+    // of the determinization (the pools, what each side has shown, each side's face-down
     // grants) is computed once (det_ground) and handed to each.
     let ground = det_ground(&public, seat);
     let probe = determinize_on(

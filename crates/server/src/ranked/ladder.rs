@@ -132,6 +132,45 @@ pub enum GameResult {
     Draw,
 }
 
+/// R2778000: the two ranked ladders a season holds, each with its own hidden rating, placements,
+/// rank, floor, peaks, streak, record and Jlorious: Constructed (the Best of 1 and Conquest queues)
+/// and All Random. A ranked game moves only its own mode's ladder. On the wire and in the database
+/// it is `constructed` or `random`.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum Ladder {
+    #[default]
+    Constructed,
+    Random,
+}
+
+impl Ladder {
+    /// Both ladders, Constructed first.
+    pub const ALL: [Ladder; 2] = [Ladder::Constructed, Ladder::Random];
+
+    /// The literal the wire and the database hold.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Ladder::Constructed => "constructed",
+            Ladder::Random => "random",
+        }
+    }
+
+    /// `?ladder=` as a read takes it: `random` is All Random, and anything else (or nothing) is
+    /// Constructed, the ladder every read answered before R2778000.
+    pub fn parse(raw: Option<&str>) -> Ladder {
+        match raw.map(|value| value.trim().to_lowercase()).as_deref() {
+            Some("random") => Ladder::Random,
+            _ => Ladder::Constructed,
+        }
+    }
+
+    /// The literal read back, or `None` for one no ladder names.
+    pub fn from_literal(text: &str) -> Option<Ladder> {
+        Ladder::ALL.into_iter().find(|ladder| ladder.as_str() == text)
+    }
+}
+
 /// One player's season on the ladder: the store's `season_ranks` row (R605). `ladder` is null until
 /// the placements are played. `floor` is the Grape tier the player has reached this season (its index
 /// in `GRAPE_TIERS`), which the ladder never drops below (R607); `peak_ladder` and `peak_jlorious` are
@@ -141,6 +180,9 @@ pub enum GameResult {
 pub struct SeasonRank {
     pub season_id: String,
     pub profile_id: String,
+    /// R2778000: the ladder the row is on; a player holds one row per ladder per season.
+    #[serde(default)]
+    pub format: Ladder,
     /// Rated games played this season, placements included.
     pub games: i32,
     pub wins: i32,
@@ -165,11 +207,13 @@ pub struct Standing {
     pub rating: f64,
 }
 
-/// A season row before its first game.
+/// A season row before its first game, on the Constructed ladder (R2778000: set `format` for the
+/// other).
 pub fn fresh_rank(season_id: &str, profile_id: &str, at: i64) -> SeasonRank {
     SeasonRank {
         season_id: season_id.to_string(),
         profile_id: profile_id.to_string(),
+        format: Ladder::Constructed,
         games: 0,
         wins: 0,
         losses: 0,
