@@ -14437,6 +14437,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2781": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-02T02:58:43Z",
+      "issue": 2579,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
