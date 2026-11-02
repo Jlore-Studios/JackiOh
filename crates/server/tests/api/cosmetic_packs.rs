@@ -13,7 +13,7 @@ use jackioh_server::config::{
     COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX,
     PACK_FLOORED_SLOT, SPEND_BUSY_RETRY_AFTER_MS,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
+use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, shipped};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase, buy_chase_once,
@@ -239,6 +239,7 @@ fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
         default: false,
         starter: false,
         chase: rarity.is_chase(),
+        jlorious: false,
         card: None,
     }
 }
@@ -1284,6 +1285,42 @@ async fn r1833000_a_full_shard_bar_buys_a_new_chase_and_the_openings_replay() {
         (bought[0].card_id.as_deref(), bought[0].cosmetic_id.as_str()),
         (None, chase.as_str())
     );
+}
+
+#[tokio::test]
+async fn r2755000_a_full_shard_bar_cannot_buy_the_jlorious_card_back() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    nearly_full(&app).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+
+    // Mythic as it is, only reaching Jlorious grants it: the full bar is refused and stays full.
+    let before = ledger(&app).await;
+    let (status, _, answer) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/chase",
+        Some(&token),
+        json!({ "cosmeticId": JLORIOUS_CARD_BACK }),
+    )
+    .await;
+    assert_eq!(
+        (status, answer["error"]["code"].clone()),
+        (409, json!("conflict")),
+        "{answer}"
+    );
+    assert!(!owns_cosmetic(&app, None, JLORIOUS_CARD_BACK).await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    assert_eq!(ledger(&app).await.cosmetics.len(), before.cosmetics.len());
 }
 
 #[tokio::test]

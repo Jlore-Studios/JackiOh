@@ -463,6 +463,7 @@ mod tests {
             default,
             starter,
             chase: false,
+            jlorious: false,
             card: None,
         }
     }

@@ -134,6 +134,15 @@ describe("#1309 the shop model", () => {
       "chase-foil",
     ]);
   });
+
+  it("R2755000 never offers the Jlorious card back, Mythic as it is, owned or not", () => {
+    const quantities = quantitiesOf(collectionOf());
+    const nothing = ownedCosmeticsOf({ cards: [], account: [] });
+    const shipped = chaseCandidates(nothing, quantities).map((entry) => entry.id);
+    expect(shipped).not.toContain("card-back-jlorious");
+    // The shipped Mythic card back that drops is still offered beside it.
+    expect(shipped).toContain("card-back-nebula");
+  });
 });
 
 /** The shop's reads, answered from the fixtures unless a test says otherwise. */

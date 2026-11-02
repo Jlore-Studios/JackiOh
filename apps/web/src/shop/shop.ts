@@ -25,6 +25,8 @@ export type RegistryCosmetic = {
   readonly default: boolean;
   readonly starter: boolean;
   readonly chase: boolean;
+  /** R2755000: owned only by reaching Jlorious; the registry writes it only where it is true. */
+  readonly jlorious?: boolean | undefined;
   readonly card?: string | undefined;
 };
 
@@ -175,8 +177,10 @@ export function ownedThere(cosmeticId: string, cardId: string | null, owned: Own
 }
 
 /**
- * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000), the account
- * does not own, a per-card one for a card it owns (the server's `buy_chase`).
+ * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000) but never the
+ * Jlorious card back, which only reaching Jlorious grants (R2755000), the account does not own, a
+ * per-card one for a card it owns (the server's `buy_chase`). `registry` defaults to the shipped
+ * one; a test passes its own.
  */
 export function chaseCandidates(
   owned: OwnedCosmeticsResponse,
@@ -185,7 +189,7 @@ export function chaseCandidates(
 ): RegistryCosmetic[] {
   return registry.filter((cosmetic) => {
     if (cosmetic.default || cosmetic.starter) return false;
-    if (cosmeticTier(cosmetic.rarity) < cosmeticTier("Legendary")) return false;
+    if (cosmetic.jlorious === true || cosmeticTier(cosmetic.rarity) < cosmeticTier("Legendary")) return false;
     const fits = fittingCards(cosmetic, quantities);
     if (fits === null) return !owned.account.includes(cosmetic.id);
     return fits.some((cardId) => !ownedThere(cosmetic.id, cardId, owned));

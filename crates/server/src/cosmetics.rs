@@ -180,6 +180,11 @@ pub struct Cosmetic {
     /// tier drops one (§14.6).
     #[serde(default)]
     pub chase: bool,
+    /// R2755000: owned only by reaching Jlorious (§9, R608). No roll, pack, token, Chase Shard bar,
+    /// dev fill or ladder bot's wardrobe offers it, whatever its rarity, so it is never a chase; a
+    /// rated game grants it to each person it leaves Jlorious ([`JLORIOUS_CARD_BACK`]).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub jlorious: bool,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000). A card
     /// has at most one full art of each rarity (R2655000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -229,10 +234,18 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
             )),
             (_, None) => {}
         }
-        if cosmetic.chase != cosmetic.rarity.is_chase() {
+        // R1333000: a chase is exactly a Legendary or Mythic cosmetic, but a Jlorious one, which
+        // nothing drops (R2755000).
+        if cosmetic.chase != (cosmetic.rarity.is_chase() && !cosmetic.jlorious) {
             out.push(format!(
-                "the cosmetic {id:?} is {} and its chase mark is {}, but a cosmetic is a chase exactly when it is Legendary or Mythic",
+                "the cosmetic {id:?} is {} and its chase mark is {}, but a cosmetic is a chase exactly when it is Legendary or Mythic and not Jlorious",
                 cosmetic.rarity, cosmetic.chase
+            ));
+        }
+        // R2755000: a Jlorious cosmetic is an account cosmetic every account must earn.
+        if cosmetic.jlorious && (cosmetic.kind.is_per_card() || cosmetic.default || cosmetic.starter) {
+            out.push(format!(
+                "the Jlorious cosmetic {id:?} is a per-card cosmetic, a default or a starter, which only reaching Jlorious may grant"
             ));
         }
         if cosmetic.kind == CosmeticKind::FullArt && cosmetic.default {
@@ -411,23 +424,30 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
         .collect()
 }
 
-/// The account cosmetics a duplicate's global roll may drop (R1661001): the playmats, backdrops, card
-/// backs and hero portraits neither default nor starter, in registry order, each at
-/// `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000).
+/// The account cosmetics a duplicate's global roll may drop (R1661001): the playmats, backdrops,
+/// card backs and hero portraits that are neither a default nor a starter, in the registry's order.
+/// Every one is `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000); on the shipped
+/// registry they are the five portraits but vanilla (R1827000), then #1833's six playmats, six
+/// backdrops and six card backs (R1833000), its first Legendary and Mythic account cosmetics among
+/// them. A Jlorious one is never among them (R2755000).
 pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
-        .filter(|cosmetic| !cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter)
+        .filter(|cosmetic| {
+            !cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious
+        })
         .cloned()
         .collect()
 }
 
-/// The cosmetics a cosmetic pack may drop (R1306000): every entry neither default nor starter, in
-/// registry order. A full art drops on its card alone (R1313000).
+/// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
+/// not a default or a starter, in the registry's order. A chase drops when a slot lands on its
+/// tier (R1333000), and one that names a card, a full art, drops on that card alone (R1313000). A
+/// Jlorious one never drops (R2755000).
 pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
-        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter)
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious)
         .cloned()
         .collect()
 }
@@ -443,6 +463,10 @@ pub fn is_id_of(kind: CosmeticKind, id: &str) -> bool {
 
 /// What a full art's registry id starts with (R2655000), so a card pick's `fullArt` text names one.
 pub const FULL_ART_ID_PREFIX: &str = "full-art-";
+
+/// R2755000: the card back a rated game grants each person it leaves Jlorious, and nothing else
+/// grants (`Cosmetic::jlorious`).
+pub const JLORIOUS_CARD_BACK: &str = "card-back-jlorious";
 
 /// What a portrait's registry id starts with: `portrait-` and its `PortraitId` (R1827000).
 pub const PORTRAIT_ID_PREFIX: &str = "portrait-";
@@ -490,6 +514,7 @@ mod tests {
             default,
             starter: true,
             chase: false,
+            jlorious: false,
             card: None,
         }
     }
@@ -594,14 +619,19 @@ mod tests {
     /// R2655000: how many full arts #2655 appends after #1833's 36.
     const R2655000_NEW: usize = 6 * 2 + 15 * 3;
 
-    /// The shipped registry before #1833 (R1833000): all but its 36 and #2655's 57.
+    /// R2755000: the one entry #2755 appends after #2655's, the Jlorious card back.
+    const R2755000_NEW: usize = 1;
+
+    /// The shipped registry before #1833: every entry but #2755's one, #2655's 57 before it and
+    /// #1833's 36 before them (R1833000).
     fn before_r1833000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        &cosmetics[..cosmetics.len() - R2655000_NEW - R1833000_NEW.len()]
+        &cosmetics[..cosmetics.len() - R2755000_NEW - R2655000_NEW - R1833000_NEW.len()]
     }
 
-    /// The 57 #2655 appends, last in the registry (R2655000).
+    /// The 57 #2655 appends, last in the registry but for #2755's one (R2655000).
     fn r2655000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        &cosmetics[cosmetics.len() - R2655000_NEW..]
+        let end = cosmetics.len() - R2755000_NEW;
+        &cosmetics[end - R2655000_NEW..end]
     }
 
     /// R2655001: the 21 full-art cards (six portrait cards, R1017001, and #2655's fifteen) and their slugs.
@@ -642,8 +672,13 @@ mod tests {
                 1,
                 "{kind:?}'s defaults"
             );
+            // Three since #1295 and #1297, and six more since #1833 (R1833000), the Jlorious card
+            // back aside (R2755000).
             assert_eq!(
-                of_kind.iter().filter(|cosmetic| !cosmetic.default).count(),
+                of_kind
+                    .iter()
+                    .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+                    .count(),
                 9,
                 "{kind:?}'s items"
             );
@@ -665,7 +700,10 @@ mod tests {
                 "{kind:?}'s defaults"
             );
             assert_eq!(
-                of_kind.iter().filter(|cosmetic| !cosmetic.default).count(),
+                of_kind
+                    .iter()
+                    .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+                    .count(),
                 9,
                 "{kind:?}'s items"
             );
@@ -1079,7 +1117,7 @@ mod tests {
             assert_eq!(
                 problems(&cosmetics),
                 vec![format!(
-                    "the cosmetic \"foil-wrong\" is {rarity} and its chase mark is {chase}, but a cosmetic is a chase exactly when it is Legendary or Mythic"
+                    "the cosmetic \"foil-wrong\" is {rarity} and its chase mark is {chase}, but a cosmetic is a chase exactly when it is Legendary or Mythic and not Jlorious"
                 )]
             );
         }
@@ -1364,8 +1402,8 @@ mod tests {
      {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
-        // #1833's 72, and #2655's 57 after them (R2655000).
-        assert_eq!(cosmetics.len(), 72 + R2655000_NEW);
+        // #1833's 72, #2655's 57 after them (R2655000) and #2755's one last (R2755000).
+        assert_eq!(cosmetics.len(), 72 + R2655000_NEW + R2755000_NEW);
         // Appended after every earlier entry, the portraits last among those, so none moves.
         let earlier = before_r1833000(&cosmetics);
         assert_eq!(
@@ -1588,5 +1626,69 @@ mod tests {
             registry().len(),
             shipped().map(|cosmetics| cosmetics.len()).unwrap_or(0)
         );
+    }
+
+    #[test]
+    fn r2755000_the_jlorious_card_back_ships_last_mythic_and_no_pool_offers_it() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let back = cosmetics.last().unwrap_or_else(|| panic!("an empty registry"));
+        assert_eq!(back.id, JLORIOUS_CARD_BACK);
+        assert_eq!(back.kind, CosmeticKind::CardBack);
+        assert_eq!(back.rarity, CosmeticRarity::Mythic);
+        assert!(back.jlorious && !back.chase && !back.starter && !back.default);
+        // The only Jlorious cosmetic, and neither a duplicate's global roll nor a cosmetic pack
+        // offers it.
+        assert_eq!(cosmetics.iter().filter(|cosmetic| cosmetic.jlorious).count(), 1);
+        assert!(
+            global_cosmetics(&cosmetics)
+                .iter()
+                .all(|cosmetic| cosmetic.id != JLORIOUS_CARD_BACK)
+        );
+        assert!(
+            cosmetic_pack_cosmetics(&cosmetics)
+                .iter()
+                .all(|cosmetic| cosmetic.id != JLORIOUS_CARD_BACK)
+        );
+    }
+
+    #[test]
+    fn r2755000_a_jlorious_cosmetic_is_never_a_chase_a_default_a_starter_or_per_card() {
+        let jlorious = Cosmetic {
+            rarity: CosmeticRarity::Mythic,
+            starter: false,
+            jlorious: true,
+            ..entry("card-back-earned", CosmeticKind::CardBack, false)
+        };
+        let mut cosmetics = defaults();
+        cosmetics.push(jlorious.clone());
+        assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
+        // Its rarity is the chase tier's, but nothing drops it, so a chase mark is refused.
+        let mut chased = defaults();
+        chased.push(Cosmetic {
+            chase: true,
+            ..jlorious.clone()
+        });
+        assert_eq!(problems(&chased).len(), 1, "{:?}", problems(&chased));
+        for wrong in [
+            Cosmetic {
+                starter: true,
+                ..jlorious.clone()
+            },
+            Cosmetic {
+                kind: CosmeticKind::Foil,
+                id: "foil-earned".to_owned(),
+                ..jlorious.clone()
+            },
+        ] {
+            let mut cosmetics = defaults();
+            cosmetics.push(wrong.clone());
+            assert!(
+                problems(&cosmetics)
+                    .iter()
+                    .any(|problem| problem.contains("only reaching Jlorious may grant")),
+                "{wrong:?}: {:?}",
+                problems(&cosmetics)
+            );
+        }
     }
 }
