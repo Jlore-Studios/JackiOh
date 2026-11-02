@@ -49,6 +49,7 @@ const KEEP: Record<string, string[]> = {
   "game/drag/drag.css": ["0.7s", "0.8s"], // loops
   "game/facedown.css": ["9s", "4.8s"], // loops
   "game/highlights.css": ["1.8s", "1.4s"], // loops
+  "game/lanePick.css": ["1.6s"], // loop
   "game/market.css": ["3.2s"], // loop
   "game/notices.css": ["5s"], // the draw toast's hold
   "game/reveal.css": ["70ms"], // the deal's stagger
