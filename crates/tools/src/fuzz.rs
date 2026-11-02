@@ -102,7 +102,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
     I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, malformed_actions, malformed_answers,
-    preview_every_set, set_ships,
+    preview_every_set, prompt_blocked_action, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
@@ -1698,6 +1698,8 @@ pub(crate) const MALFORMED_ANSWER_PROBE: &str = "malformed-answer";
 
 pub(crate) const MALFORMED_ACTION_PROBE: &str = "malformed-action";
 
+pub(crate) const PROMPT_OPEN_PROBE: &str = "prompt-open";
+
 /// The probes' stride: every state in the test sweep, every PROBE_GATE_STRIDE-th otherwise.
 pub fn probe_stride() -> usize {
     if is_whole_suite_sweep() {
@@ -1741,7 +1743,8 @@ fn judge_probe(state: &GameState, result: &ReduceResult, owed: Option<&[GameEven
 }
 
 /// Probes on one state (#1386), never logged: reused nonce, wrong seat (unless answering mulligan, R265),
-/// malformed prompt answers (#1574), and malformed actions (#1694), each owed a refusal.
+/// malformed prompt answers (#1574), a non-answer action while a non-mulligan prompt is open (#2829),
+/// and malformed actions (#1694), each owed a refusal.
 fn probe_state(
     state: &GameState,
     player: PlayerId,
@@ -1774,6 +1777,16 @@ fn probe_state(
         if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
             return Some(format!(
                 "{MALFORMED_ANSWER_PROBE} probe after step {step}: {seat} sent the {variant} answer to the open prompt, and it {wrong}"
+            ));
+        }
+    }
+    // #2829: while a non-mulligan prompt is open the seat's non-answer action is owed the same
+    // refusal (§9.3, R79); the mulligan path stays as it is (R265-R266).
+    if let Some((variant, seat, body)) = prompt_blocked_action(state, player) {
+        let forged = Action::new(body, seat, format!("fuzz-probe-{step}"));
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
+            return Some(format!(
+                "{PROMPT_OPEN_PROBE} probe after step {step}: {seat} sent the {variant} while a prompt was open, and it {wrong}"
             ));
         }
     }
@@ -3608,7 +3621,10 @@ pub(crate) mod tests {
 
     mod fuzz_probe_stage {
         use super::*;
-        use jackioh_engine::testkit::{ANSWERED_MULLIGAN_ACTION, UNDEALT_KEEP_ACTION};
+        use jackioh_engine::testkit::{
+            ANSWERED_MULLIGAN_ACTION, PROMPT_OPEN_END_TURN_ACTION, PROMPT_OPEN_PLAY_ACTION,
+            UNDEALT_KEEP_ACTION,
+        };
 
         /// A reducer that ignores who sent an action and answers for the seat the game waits on.
         pub(super) fn seatless(state: &GameState, action: &Action) -> ReduceResult {
@@ -3695,6 +3711,127 @@ pub(crate) mod tests {
         #[test]
         fn a_reducer_that_takes_a_malformed_play_fails_the_malformed_action_probe() {
             assert_caught(forgiving, MALFORMED_ACTION_PROBE);
+        }
+
+        /// A reducer that accepts the prompt-open probe's forged actions, which the real game
+        /// refuses (§9.3, R79): a `Play` or `EndTurn` sent while a non-mulligan prompt is open.
+        fn takes_prompt_open_plays(state: &GameState, action: &Action) -> ReduceResult {
+            if state
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.kind != jackioh_engine::PromptKind::Mulligan)
+                && matches!(action.body, ActionBody::Play { .. } | ActionBody::EndTurn)
+                && action.nonce.starts_with("fuzz-probe-")
+            {
+                return ReduceResult {
+                    state: state.clone(),
+                    events: Vec::new(),
+                    error: None,
+                };
+            }
+            reduce(state, action)
+        }
+
+        #[test]
+        fn a_reducer_that_accepts_a_play_while_a_prompt_is_open_fails_the_prompt_open_probe() {
+            // Seed 2's game opens a prompt, as the malformed-answer test above relies on.
+            assert_caught_at(2, takes_prompt_open_plays, PROMPT_OPEN_PROBE);
+        }
+
+        #[test]
+        fn a_play_or_end_turn_sent_while_a_prompt_is_open_is_refused_with_the_state_kept() {
+            register_all();
+            let _preview = preview_every_set();
+            // Drive real games to an open non-mulligan prompt, tracking the last logged action.
+            let mut found = None;
+            for seed in 2..=20 {
+                let mut state = begin_game(&create_game(&CreateGameOptions {
+                    seed: format!("jackioh-fuzz-{seed}"),
+                    decks: decks_for_seed(seed),
+                    ..CreateGameOptions::default()
+                }))
+                .state;
+                let mut policy = Rng::new(&format!("jackioh-probe-test-{seed}"), 0);
+                let mut last: Option<Action> = None;
+                let mut last_events: Vec<GameEvent> = Vec::new();
+                for step in 0..200 {
+                    if let Some(pending) = &state.pending
+                        && pending.kind != jackioh_engine::PromptKind::Mulligan
+                    {
+                        let player = seat_to_act(&state).unwrap_or(state.active);
+                        let Some(chosen) = subsystems::choose_action(&state, player, &mut policy) else {
+                            break;
+                        };
+                        found = Some((state, player, chosen, last, last_events, step));
+                        break;
+                    }
+                    if state.result.is_some() {
+                        break;
+                    }
+                    let player = seat_to_act(&state).unwrap_or(state.active);
+                    let Some(chosen) = subsystems::choose_action(&state, player, &mut policy) else {
+                        break;
+                    };
+                    let action = Action::new(chosen, player, format!("probe-test-{seed}-{step}"));
+                    let result = reduce(&state, &action);
+                    if result.error.is_some() {
+                        break;
+                    }
+                    last_events = result.events.clone();
+                    state = result.state;
+                    last = Some(action);
+                }
+                if found.is_some() {
+                    break;
+                }
+            }
+            let Some((state, player, chosen, last, last_events, step)) = found else {
+                panic!("no seed opened a non-mulligan prompt");
+            };
+            let holder = state.pending.as_ref().expect("a prompt is open").player_id;
+            assert_eq!(player, holder);
+
+            // The helper forges a play naming a held card when the holder holds one, else end turn.
+            let (variant, seat, _) =
+                prompt_blocked_action(&state, player).expect("a non-mulligan prompt is open");
+            assert_eq!(seat, holder);
+            if state.players[holder].hand.is_empty() {
+                assert_eq!(variant, PROMPT_OPEN_END_TURN_ACTION);
+            } else {
+                assert_eq!(variant, PROMPT_OPEN_PLAY_ACTION);
+            }
+
+            // Both bodies are refused with no events and a byte-identical state, prompt or no card.
+            let play = ActionBody::Play {
+                instance_id: state.players[holder]
+                    .hand
+                    .first()
+                    .map(|held| held.id.clone())
+                    .unwrap_or_else(|| "prompt-open-probe-no-card".to_string()),
+                zone: None,
+                x: None,
+                embiggen: None,
+                equip: None,
+                tributes: None,
+                targets: None,
+                modes: None,
+                plague: None,
+                face_down: None,
+            };
+            for (nth, body) in [play, ActionBody::EndTurn].into_iter().enumerate() {
+                let result = reduce(
+                    &state,
+                    &Action::new(body, holder, format!("probe-test-forged-{nth}")),
+                );
+                assert!(result.error.is_some(), "a non-answer while prompted is refused");
+                assert!(result.events.is_empty(), "a refused probe emits no events");
+                assert_eq!(result.state, state, "a refused probe keeps the state");
+                assert_eq!(judge_probe(&state, &result, None), None);
+            }
+
+            // And the real engine passes the extended gate at that step.
+            let last = last.as_ref().map(|logged| (logged, last_events.as_slice()));
+            assert_eq!(probe_state(&state, player, &chosen, last, step, reduce), None);
         }
 
         #[test]
