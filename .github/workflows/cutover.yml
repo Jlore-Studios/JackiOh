@@ -431,6 +431,9 @@ jobs:
           EMAIL_DOMAIN: jackioh.com
           EMAIL_FROM: no-reply@jackioh.com
           EMAIL_NAME: JackiOh
+          # Supabase's own mailer holds a project to 2 an hour; with SMTP of its own, Supabase's usual
+          # 30, inside Resend's free 100 a day.
+          EMAIL_PER_HOUR: "30"
           # The sending-only key this step makes; an earlier run's, by the same name, is deleted.
           KEY_NAME: supabase-smtp
         run: |
@@ -502,9 +505,9 @@ jobs:
             -d "$(jq -n --arg n "$KEY_NAME" --arg d "$id" '{name: $n, permission: "sending_access", domain_id: $d}')" | jq -r .token)
           echo "::add-mask::$key"
           case "$key" in re_*) ;; *) echo "::error::Resend made no key"; exit 1 ;; esac
-          jq -n --arg pass "$key" --arg from "$EMAIL_FROM" --arg name "$EMAIL_NAME" \
+          jq -n --arg pass "$key" --arg from "$EMAIL_FROM" --arg name "$EMAIL_NAME" --argjson hour "$EMAIL_PER_HOUR" \
             '{smtp_host: "smtp.resend.com", smtp_port: "465", smtp_user: "resend", smtp_pass: $pass,
-              smtp_admin_email: $from, smtp_sender_name: $name}' > "$RUNNER_TEMP/smtp.json"
+              smtp_admin_email: $from, smtp_sender_name: $name, rate_limit_email_sent: $hour}' > "$RUNNER_TEMP/smtp.json"
           for ref in "$PRODUCTION_REF" "$STAGING_REF"; do
             supabase -X PATCH "https://api.supabase.com/v1/projects/$ref/config/auth" --data-binary "@$RUNNER_TEMP/smtp.json" > /dev/null
             supabase "https://api.supabase.com/v1/projects/$ref/config/auth" \
