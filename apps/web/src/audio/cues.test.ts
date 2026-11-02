@@ -737,6 +737,12 @@ describe("R203: audio reveals no more than the screen", () => {
     expect(voices(redacted, opponentSeat)).toEqual([]);
     expect(shape(redacted, opponentSeat)).toEqual([sfx("play")]);
   });
+
+  it("R2734000 the other seat hears a fired trap's sting and its cast line once its view names it", () => {
+    // p1's trap fires; on p2's seat the event names it wherever it lies public, as on p1's.
+    const opponentSeat = ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
+    expect(shape(trapFired(TRAP, "p1"), opponentSeat)).toEqual([sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
+  });
 });
 
 // B21: amounts

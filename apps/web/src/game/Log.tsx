@@ -4,8 +4,8 @@
 // Every line is built from the event payload plus public board data, and card identities that are
 // only in the view by accident are not printed: `drawn`, `addedToHand` and `shuffledIn` carry a
 // `defId` for the animation layer, so this log says "drew a card", and a redaction slip upstream
-// cannot turn into a leak on screen. A line never prints an id, and the R154 sentinel reads as "a
-// face-down trap". `cardResolved` gets no line: it is bookkeeping.
+// cannot turn into a leak on screen. A line never prints an id, and a `trapFired` sentinel (R763,
+// R2734000) reads as "a face-down trap". `cardResolved` gets no line: it is bookkeeping.
 
 import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
 
@@ -381,7 +381,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
     case "locked":
       return t("{whose} {zone} was locked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "trapFired":
-      // R154: the other seat reads the sentinel, and a sentinel is not a name.
+      // R2734000: named on both seats where public; the sentinel (R763) is not a name.
       if (event.defId === HIDDEN_CARD) return t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) });
       // R2657001: a face-up Field Trap firing again reveals nothing, so its line says only that it triggered.
       return event.again === true

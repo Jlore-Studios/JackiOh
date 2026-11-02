@@ -1262,13 +1262,8 @@ mod r97_r177_the_replacement_events_in_both_views {
                     json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": trap.id })
                 ]
             );
-            // `trapFired` names the trap to its controller only, as every firing does; the other seat reads
-            // the card where it went, its owner's graveyard.
-            let fired = if viewer == P2 {
-                gambit.id.clone()
-            } else {
-                "hidden".to_string()
-            };
+            // R2734000: `trapFired` names the trap to both seats, as it lies in its owner's graveyard.
+            let fired = gambit.id.clone();
             assert_eq!(
                 field_of(events, GameEventType::TrapFired, "defId"),
                 vec![json!(fired)]

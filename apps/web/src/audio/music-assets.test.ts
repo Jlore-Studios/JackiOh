@@ -70,7 +70,7 @@ describe("R631 the rendered music", () => {
     expect(total).toBeLessThanOrEqual(MUSIC_BUDGET_BYTES);
   });
 
-  it("R631 gives every station two in-game tracks, a low-health track and a match-start sting, and has the shared tracks", () => {
+  it("R631 gives every station at least two in-game tracks, a low-health track and a match-start sting, and has the shared tracks", () => {
     for (const station of MUSIC_STATIONS) {
       expect(stationTracks(station).length, station).toBeGreaterThanOrEqual(2);
       expect(MUSIC_MANIFEST.files[dangerTrack(station)]?.loop, `${station} danger`).toBe(true);

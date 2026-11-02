@@ -11,6 +11,8 @@ export const SCALES = {
   harmonic: [0, 2, 3, 5, 7, 8, 11],
   phrygian: [0, 1, 3, 5, 7, 8, 10],
   lydian: [0, 2, 4, 6, 7, 9, 11],
+  /** Phrygian dominant (hijaz): phrygian with a major third, the fifth mode of harmonic minor. */
+  phrygianDominant: [0, 1, 4, 5, 7, 8, 10],
 };
 
 /** MIDI note numbers of the tonics used, octave 4 (C4 = 60). */

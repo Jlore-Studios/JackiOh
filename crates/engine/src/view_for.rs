@@ -2113,7 +2113,11 @@ fn redact_event(
         | GameEventType::Discarded
         | GameEventType::Drawn
         // R1843000: a vote names its card as the card itself is named, a face-down voter hidden.
-        | GameEventType::VoteCast => {
+        | GameEventType::VoteCast
+        // R2734000 (amending R154, R763): a fired trap is named as the card itself is, on both seats. It is
+        // face-up from its firing until it leaves the field (`traps::fire_trap`, `replacements::fire`), so it
+        // reads wherever it lies public. `row`, `lane` and `controller` always travel (§10.10).
+        | GameEventType::TrapFired => {
             if !hidden(&instance) {
                 return event.clone();
             }
@@ -2173,18 +2177,6 @@ fn redact_event(
             };
             hide(&mut shown, &["instanceId", "defId"]);
             shown.insert("zone".to_string(), shown_zone);
-            rebuild(shown)
-        }
-
-        // R154: the seat decides, not R97: a fired Trap is in a public graveyard or face-up, so
-        // `may_read` would hand the opponent the card on the event that announces its flip. Only the
-        // controller reads `instanceId` and `defId`; `row`, `lane` and `controller` always travel, so
-        // the flip animates in the right zone (§10.10). R763: to its controller it follows R97 as well.
-        GameEventType::TrapFired => {
-            if text_at(&shown, "controller") == viewer.as_str() && !hidden(&instance) {
-                return event.clone();
-            }
-            hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
 
