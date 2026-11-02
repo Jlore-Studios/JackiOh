@@ -22,7 +22,7 @@ use jackioh_server::config::{
     BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS, BOT_STRENGTHS,
     CosmeticFit, CosmeticOwnership, CosmeticWear, PersonaName,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, owns, registry};
+use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, owns, registry};
 use jackioh_server::db::store::{BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, ProfileCreateInput};
 use jackioh_server::economy::store::{
     CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, EconomyLedger, EconomyReason, OwnedCosmetics,
@@ -95,6 +95,7 @@ fn test_registry() -> Vec<Cosmetic> {
         default: false,
         starter: false,
         chase: false,
+        jlorious: false,
         card: None,
     };
     let mut cosmetics = registry().to_vec();
@@ -293,6 +294,24 @@ static EVERYONE_OWNS: CosmeticFit = CosmeticFit {
         },
     ],
 };
+
+#[test]
+fn r2755000_no_bot_wears_the_jlorious_card_back_however_widely_owned() {
+    let long_ago = NOW - BOT_COSMETIC_MIN_AGE_DAYS * DAY - 30 * DAY;
+    let widely = |cosmetic: &str| CosmeticOwners {
+        cosmetic_id: cosmetic.to_string(),
+        card_id: None,
+        owners: BOT_COSMETIC_MIN_OWNERS * 100,
+        first_granted_at: Some(long_ago),
+    };
+    // A bot is never Jlorious (R640000), so it could not have earned it; the Mythic back that drops
+    // stays eligible beside it.
+    let owners = vec![widely(JLORIOUS_CARD_BACK), widely("card-back-nebula")];
+    assert_eq!(
+        eligible(registry(), &owners, NOW),
+        vec![holding("card-back-nebula", None)]
+    );
+}
 
 #[test]
 fn r1834005_nothing_below_the_owner_floor_or_too_young() {

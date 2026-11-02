@@ -1040,6 +1040,14 @@ until no server on the code before R2615000 could be serving, since that code re
 overlaps. `tests/sql/22_social.sql` checks that the column and its grant are gone and that the file
 re-applies.
 
+Migration 0074 adds the Jlorious card back (R2755000): its `cosmetics` row, as 0057 wrote the
+portraits' before `seed-catalog` runs, and `jlorious` among `cosmetic_grants`' reasons, the grant a rated
+game writes to each person it leaves Jlorious (`api/ranked.rs`, `commit_ranked_game`). It grants the
+back once to every person whose season row holds a Jlorious peak, an `account_cosmetics` row each with
+its `cosmetic_grants` row on no card, reason `jlorious` and ref `jlorious:0074`, passing over one who
+owns it and every ladder bot. `tests/sql/41_jlorious_card_back.sql` checks the row, the reason and the
+grant over people of its own, and that the file re-applies.
+
 ## Tests
 
 ```
