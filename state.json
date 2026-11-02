@@ -14921,23 +14921,8 @@
     "what": "revise #2773 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-02T05:44:35Z",
-    "notes": [
-      "#2808 needs a plan",
-      "delivered review #2807 on claude-2 (run 41394839748): reviewed",
-      "delivered build #2701 on claude-1 (run 41393386710): interrupted",
-      "delivered revise #2770 on muse (run 41391994718): approved",
-      "delivered build #2689 on claude-3 (run 41388618647): approved",
-      "delivered revise #2773 on muse (run 41382045590): approved",
-      "delivered build #2762 on claude-4 (run 41380497619): approved",
-      "started plan #2808 on claude-4 (run 41396186601)",
-      "started revise #2772 on claude-3 (run 41396233904)",
-      "started revise #2807 on claude-2 (run 41396281980)",
-      "started revise #2773 on muse (run 41396331836)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 49%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-02T09:40:00Z; it takes reviews only; it can start a build or a plan again in 1h 09m; `claude-8` is busy; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-02T08:00:00Z; it can start a build or a plan again in 2h 09m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 91%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-02T09:00:00Z; it can start a build or a plan again in 3h 09m; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 148h 09m; `claude-2` is busy",
-      "pruned 2 plan file(s) older than 7 days",
-      "#2808: typed it Bug"
-    ],
+    "at": "2026-11-02T05:56:49Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15642,7 +15627,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T05:44:35Z",
+  "loop_tick": "2026-11-02T05:56:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
