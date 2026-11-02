@@ -54,7 +54,7 @@ use crate::db::store::{
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
 };
 use crate::ranked::glicko2::Glicko;
-use crate::ranked::ladder::SeasonRank;
+use crate::ranked::ladder::{Ladder, SeasonRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
 use crate::username::username_key;
 
@@ -408,6 +408,9 @@ impl FakeData {
             rating: number("rating").unwrap_or(RATING_START),
             rating_deviation: number("ratingDeviation").unwrap_or(RATING_DEVIATION_START),
             rating_volatility: number("ratingVolatility").unwrap_or(RATING_VOLATILITY_START),
+            random_rating: number("randomRating").unwrap_or(RATING_START),
+            random_rating_deviation: number("randomRatingDeviation").unwrap_or(RATING_DEVIATION_START),
+            random_rating_volatility: number("randomRatingVolatility").unwrap_or(RATING_VOLATILITY_START),
             in_match_id: text("inMatchId"),
             created_at: input.get("createdAt").and_then(Value::as_i64).unwrap_or(0),
         };
@@ -850,6 +853,9 @@ pub fn profiles_create(f: &mut FakeTx<'_>, input: &ProfileCreateInput) -> Result
         rating: input.rating,
         rating_deviation: RATING_DEVIATION_START,
         rating_volatility: RATING_VOLATILITY_START,
+        random_rating: input.rating,
+        random_rating_deviation: RATING_DEVIATION_START,
+        random_rating_volatility: RATING_VOLATILITY_START,
         in_match_id: None,
         created_at: input.at,
     };
@@ -876,15 +882,35 @@ pub fn profiles_set_status(
     Ok(())
 }
 
-pub fn profiles_set_glicko(f: &mut FakeTx<'_>, profile_id: &str, glicko: &Glicko) -> Result<(), StoreError> {
+/// R603: one profile's hidden rating on `ladder` after a rated game (R2778000).
+pub fn profiles_set_glicko(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    ladder: Ladder,
+    glicko: &Glicko,
+) -> Result<(), StoreError> {
     call(f, "profiles.setGlicko")?;
     let Some(row) = profile_of(f.tables(), profile_id) else {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     };
-    row.rating = glicko.rating;
-    row.rating_deviation = glicko.deviation;
-    row.rating_volatility = glicko.volatility;
+    set_glicko_on(row, ladder, glicko);
     Ok(())
+}
+
+/// R2778000: writes `glicko` over the profile's triple on `ladder`.
+fn set_glicko_on(row: &mut Profile, ladder: Ladder, glicko: &Glicko) {
+    match ladder {
+        Ladder::Constructed => {
+            row.rating = glicko.rating;
+            row.rating_deviation = glicko.deviation;
+            row.rating_volatility = glicko.volatility;
+        }
+        Ladder::Random => {
+            row.random_rating = glicko.rating;
+            row.random_rating_deviation = glicko.deviation;
+            row.random_rating_volatility = glicko.volatility;
+        }
+    }
 }
 
 pub fn profiles_username_tag_for(
@@ -3481,7 +3507,10 @@ pub fn ranked_create_season(f: &mut FakeTx<'_>, season: &Season) -> Result<bool,
     Ok(true)
 }
 
-pub fn ranked_rated_players(f: &mut FakeTx<'_>) -> Result<Vec<ResetPlayer>, StoreError> {
+/// R609: every profile that has played a rated game, with its hidden rating on `ladder`: the soft
+/// reset's input. Bots are not profiles and are never in it. R2778000: a rated game on either ladder
+/// counts.
+pub fn ranked_rated_players(f: &mut FakeTx<'_>, ladder: Ladder) -> Result<Vec<ResetPlayer>, StoreError> {
     call(f, "ranked.ratedPlayers")?;
     let tables = f.tables();
     let mut ids: IndexSet<String> = IndexSet::new();
@@ -3497,11 +3526,7 @@ pub fn ranked_rated_players(f: &mut FakeTx<'_>) -> Result<Vec<ResetPlayer>, Stor
         .filter_map(|profile_id| {
             let profile = tables.profiles.iter().find(|row| row.id == profile_id)?;
             Some(ResetPlayer {
-                glicko: Glicko {
-                    rating: profile.rating,
-                    deviation: profile.rating_deviation,
-                    volatility: profile.rating_volatility,
-                },
+                glicko: profile.glicko(ladder),
                 profile_id,
             })
         })
@@ -3510,25 +3535,32 @@ pub fn ranked_rated_players(f: &mut FakeTx<'_>) -> Result<Vec<ResetPlayer>, Stor
     Ok(players)
 }
 
-pub fn ranked_reset_ratings(f: &mut FakeTx<'_>, changes: &[ResetChange]) -> Result<(), StoreError> {
+/// R609: writes a soft reset's ratings on `ladder`.
+pub fn ranked_reset_ratings(
+    f: &mut FakeTx<'_>,
+    ladder: Ladder,
+    changes: &[ResetChange],
+) -> Result<(), StoreError> {
     call(f, "ranked.resetRatings")?;
     let tables = f.tables();
     for change in changes {
         let Some(profile) = profile_of(tables, &change.profile_id) else {
             continue;
         };
-        profile.rating = change.after.rating;
-        profile.rating_deviation = change.after.deviation;
-        profile.rating_volatility = change.after.volatility;
+        set_glicko_on(profile, ladder, &change.after);
     }
     Ok(())
 }
 
 /// R640000: a ladder bot's row carries the bot's own rating (R610), as Postgres's join reads it,
-/// and is marked `bot`.
-pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
+/// and is marked `bot`. R2778000: the rows and ratings of `ladder`.
+pub fn ranked_standings(
+    f: &mut FakeTx<'_>,
+    season_id: &str,
+    ladder: Ladder,
+) -> Result<Vec<SeasonStanding>, StoreError> {
     call(f, "ranked.standings")?;
-    Ok(season_standings(f.tables(), season_id, |_| true))
+    Ok(season_standings(f.tables(), season_id, ladder, |_| true))
 }
 
 /// `ranked_standings` cut to `profile_ids`' rows and every row from `min_ladder` up (#2022), as
@@ -3536,11 +3568,12 @@ pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<Seaso
 pub fn ranked_standings_subset(
     f: &mut FakeTx<'_>,
     season_id: &str,
+    ladder: Ladder,
     profile_ids: &[String],
     min_ladder: i32,
 ) -> Result<Vec<SeasonStanding>, StoreError> {
     call(f, "ranked.standingsSubset")?;
-    Ok(season_standings(f.tables(), season_id, |row| {
+    Ok(season_standings(f.tables(), season_id, ladder, |row| {
         profile_ids.contains(&row.profile_id) || row.ladder.is_some_and(|ladder| ladder >= min_ladder)
     }))
 }
@@ -3550,22 +3583,28 @@ pub fn ranked_standings_subset(
 fn season_standings(
     tables: &FakeTables,
     season_id: &str,
+    ladder: Ladder,
     keep: impl Fn(&SeasonRank) -> bool,
 ) -> Vec<SeasonStanding> {
     let mut rows: Vec<SeasonStanding> = tables
         .season_ranks
         .iter()
-        .filter(|row| row.season_id == season_id)
+        .filter(|row| row.season_id == season_id && row.format == ladder)
         .filter(|row| keep(row))
         .filter_map(|row| {
             let profile = tables.profiles.iter().find(|p| p.id == row.profile_id)?;
             let bot = profile.kind == ProfileKind::Bot;
             let own = bot
-                .then(|| tables.bots.iter().find(|rating| rating.bot_id == profile.id))
+                .then(|| {
+                    tables
+                        .bots
+                        .iter()
+                        .find(|rating| rating.bot_id == profile.id && rating.format == ladder)
+                })
                 .flatten();
             Some(SeasonStanding {
                 rank: row.clone(),
-                rating: own.map_or(profile.rating, |rating| rating.glicko.rating),
+                rating: own.map_or(profile.glicko(ladder).rating, |rating| rating.glicko.rating),
                 bot,
             })
         })
@@ -3578,12 +3617,13 @@ pub fn ranked_rank(
     f: &mut FakeTx<'_>,
     season_id: &str,
     profile_id: &str,
+    ladder: Ladder,
 ) -> Result<Option<SeasonRank>, StoreError> {
     call(f, "ranked.rank")?;
     Ok(f.tables()
         .season_ranks
         .iter()
-        .find(|rank| rank.season_id == season_id && rank.profile_id == profile_id)
+        .find(|rank| rank.season_id == season_id && rank.profile_id == profile_id && rank.format == ladder)
         .cloned())
 }
 
@@ -3603,17 +3643,16 @@ pub fn ranked_ranks_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<Seaso
         .filter(|row| row.profile_id == profile_id)
         .cloned()
         .collect();
-    rows.sort_by_key(|a| started(&a.season_id));
+    rows.sort_by_key(|a| (started(&a.season_id), a.format == Ladder::Random));
     Ok(rows)
 }
 
 pub fn ranked_put_rank(f: &mut FakeTx<'_>, row: &SeasonRank) -> Result<(), StoreError> {
     call(f, "ranked.putRank")?;
     let rows = &mut f.tables().season_ranks;
-    match rows
-        .iter_mut()
-        .find(|rank| rank.season_id == row.season_id && rank.profile_id == row.profile_id)
-    {
+    match rows.iter_mut().find(|rank| {
+        rank.season_id == row.season_id && rank.profile_id == row.profile_id && rank.format == row.format
+    }) {
         None => rows.push(row.clone()),
         Some(existing) => {
             // Same merge as Postgres' upsert: a note_peak_jlorious that landed since the writer
@@ -3633,16 +3672,16 @@ pub fn ranked_put_rank(f: &mut FakeTx<'_>, row: &SeasonRank) -> Result<(), Store
 pub fn ranked_note_peak_jlorious(
     f: &mut FakeTx<'_>,
     season_id: &str,
+    ladder: Ladder,
     profile_id: &str,
     position: i64,
 ) -> Result<(), StoreError> {
     let position = i32::try_from(position).unwrap_or(i32::MAX);
     call(f, "ranked.notePeakJlorious")?;
-    let Some(row) = f
-        .tables()
-        .season_ranks
-        .iter_mut()
-        .find(|rank| rank.season_id == season_id && rank.profile_id == profile_id)
+    let Some(row) =
+        f.tables().season_ranks.iter_mut().find(|rank| {
+            rank.season_id == season_id && rank.profile_id == profile_id && rank.format == ladder
+        })
     else {
         return Ok(());
     };
@@ -3653,15 +3692,23 @@ pub fn ranked_note_peak_jlorious(
     Ok(())
 }
 
-pub fn ranked_bot(f: &mut FakeTx<'_>, bot_id: &str) -> Result<Option<BotRating>, StoreError> {
+/// R610: a bot's rating on `ladder` (R2778000), or `None` before its first rated game there.
+pub fn ranked_bot(f: &mut FakeTx<'_>, bot_id: &str, ladder: Ladder) -> Result<Option<BotRating>, StoreError> {
     call(f, "ranked.bot")?;
-    Ok(f.tables().bots.iter().find(|bot| bot.bot_id == bot_id).cloned())
+    Ok(f.tables()
+        .bots
+        .iter()
+        .find(|bot| bot.bot_id == bot_id && bot.format == ladder)
+        .cloned())
 }
 
 pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreError> {
     call(f, "ranked.putBot")?;
     let rows = &mut f.tables().bots;
-    match rows.iter().position(|row| row.bot_id == bot.bot_id) {
+    match rows
+        .iter()
+        .position(|row| row.bot_id == bot.bot_id && row.format == bot.format)
+    {
         None => rows.push(bot.clone()),
         Some(at) => rows[at] = bot.clone(),
     }
@@ -3678,11 +3725,13 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
         .iter()
         .filter_map(|bot| {
             let profile = tables.profiles.iter().find(|row| row.id == bot.profile_id)?;
-            let rating = tables
-                .bots
-                .iter()
-                .find(|row| row.bot_id == bot.profile_id)
-                .map_or(RATING_START, |row| row.glicko.rating);
+            let rating = |ladder: Ladder| {
+                tables
+                    .bots
+                    .iter()
+                    .find(|row| row.bot_id == bot.profile_id && row.format == ladder)
+                    .map_or(RATING_START, |row| row.glicko.rating)
+            };
             Some(BotRow {
                 profile_id: bot.profile_id.clone(),
                 strength: bot.strength,
@@ -3696,7 +3745,8 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 trio_catalog_version: bot.trio_catalog_version.clone(),
                 created_at: profile.created_at,
                 retired_at: bot.retired_at,
-                rating,
+                rating: rating(Ladder::Constructed),
+                random_rating: rating(Ladder::Random),
                 in_match_id: profile.in_match_id.clone(),
                 grinding: bot.grinding,
                 grind_wins: bot.grind_wins,
@@ -3738,6 +3788,9 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         rating: RATING_START,
         rating_deviation: RATING_DEVIATION_START,
         rating_volatility: RATING_VOLATILITY_START,
+        random_rating: RATING_START,
+        random_rating_deviation: RATING_DEVIATION_START,
+        random_rating_volatility: RATING_VOLATILITY_START,
         in_match_id: None,
         created_at: bot.created_at,
     });
@@ -3757,20 +3810,28 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         grind_wins: 0,
         cosmetics: None,
     });
-    let rating = BotRating {
-        bot_id: bot.profile_id.clone(),
-        glicko: Glicko {
-            rating: bot.seed_rating,
-            deviation: RATING_DEVIATION_START,
-            volatility: RATING_VOLATILITY_START,
-        },
-        games: 0,
-        updated_at: now,
-        ai_generation: None,
-    };
-    match tables.bots.iter().position(|row| row.bot_id == rating.bot_id) {
-        None => tables.bots.push(rating),
-        Some(at) => tables.bots[at] = rating,
+    // R2778000: the seed rating on both ladders.
+    for ladder in Ladder::ALL {
+        let rating = BotRating {
+            bot_id: bot.profile_id.clone(),
+            format: ladder,
+            glicko: Glicko {
+                rating: bot.seed_rating,
+                deviation: RATING_DEVIATION_START,
+                volatility: RATING_VOLATILITY_START,
+            },
+            games: 0,
+            updated_at: now,
+            ai_generation: None,
+        };
+        match tables
+            .bots
+            .iter()
+            .position(|row| row.bot_id == rating.bot_id && row.format == ladder)
+        {
+            None => tables.bots.push(rating),
+            Some(at) => tables.bots[at] = rating,
+        }
     }
     Ok(())
 }

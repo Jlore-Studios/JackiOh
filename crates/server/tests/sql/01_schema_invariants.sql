@@ -1206,8 +1206,9 @@ end $$;
 -- 0064), never a Filter over the season, and the asked ids an Index Cond. Without 0064 the planner
 -- walks season_ranks_profile_idx whole and filters. The probe is pg.rs's query with its binds as
 -- literals: 36 is jlorious_floor(), Mythic Grape's index 4 x RANK_DIVISIONS_PER_TIER 3 x
--- RANK_PIPS_PER_DIVISION 3. Rolled back, rows and column statistics; ANALYZE's in-place pg_class
--- counts stay, and no later file plans a query.
+-- RANK_PIPS_PER_DIVISION 3. R2778000: the probe reads the All Random ladder, `format` between the
+-- season and the ladder in 0076's rebuilt index. Rolled back, rows and column statistics; ANALYZE's
+-- in-place pg_class counts stay, and no later file plans a query.
 begin;
 insert into public.seasons (id, patch_version, started_at) values ('check-21', 'check-21.0', now());
 insert into auth.users (id, email, email_confirmed_at)
@@ -1218,6 +1219,13 @@ insert into public.season_ranks (season_id, profile_id, games, wins, losses, dra
          null, null, now()
     from auth.users u
    where u.email like 'check-21-%';
+-- R2778000 (0076): each row on both ladders, as the split left every player of the season.
+insert into public.season_ranks (season_id, profile_id, format, games, wins, losses, draws, ladder, floor,
+                                 streak, peak_ladder, peak_jlorious, updated_at)
+  select season_id, profile_id, 'random', games, wins, losses, draws, ladder, floor, streak,
+         peak_ladder, peak_jlorious, updated_at
+    from public.season_ranks
+   where season_id = 'check-21';
 analyze public.season_ranks;
 do $$
 declare
@@ -1227,16 +1235,20 @@ declare
   line      text;
 begin
   select string_agg(profile_id::text, ',') into asked
-    from (select profile_id from public.season_ranks where season_id = 'check-21' and ladder < 36
+    from (select profile_id from public.season_ranks
+           where season_id = 'check-21' and format = 'constructed' and ladder < 36
            order by profile_id limit 2) as two;
   probe := format(
-    'select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
-            r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
-            coalesce(b.rating, p.rating) as rating, p.kind
+    'select r.season_id, r.profile_id, r.format, r.games, r.wins, r.losses, r.draws, r.ladder,
+            r.floor, r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+            coalesce(b.rating, case when r.format = ''random'' then p.random_rating else p.rating end)
+              as rating,
+            p.kind
        from public.season_ranks r
        join public.profiles p on p.id = r.profile_id
-       left join public.bot_ratings b on p.kind = ''bot'' and b.bot_id = p.id::text
-      where r.season_id = ''check-21''::text
+       left join public.bot_ratings b
+         on p.kind = ''bot'' and b.bot_id = p.id::text and b.format = r.format
+      where r.season_id = ''check-21''::text and r.format = ''random''::text
         and (r.profile_id = any(''{%s}''::uuid[]) or r.ladder >= 36)
       order by r.profile_id', asked);
   -- Local to this file's transaction, which the rollback below ends.

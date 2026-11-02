@@ -204,7 +204,9 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
 or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry
-names a motif, as that card's play through the real board's effects layer.
+names a motif, as that card's play through the real board's effects layer. "Play as a set piece" plays
+the same card as the fixture set piece (R2785000): its play's entry holds the board for
+`SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
 
 ## Examples
 
@@ -232,3 +234,4 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
 - #2782's full text, with its 27 motif names and section 4's table layout, is not in the
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
+- `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.

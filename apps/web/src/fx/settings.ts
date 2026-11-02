@@ -1,5 +1,5 @@
-// The viewer's effects settings (docs/polish/1-animations.md, Surface S3): speed (R201, R435), intensity
-// and a motion override, kept per browser under `FX_SETTINGS_KEY`; the runner reads `getFxSettings()`
+// The viewer's effects settings (docs/polish/1-animations.md, Surface S3): speed (R201, R435), intensity,
+// a motion override and Big moments (R2785000), kept per browser under `FX_SETTINGS_KEY`; the runner reads `getFxSettings()`
 // at every enqueue. Storage is optional and nothing here throws on it. Every value read back is
 // normalized field by field, so a stale or hand-edited entry can never leave R201's range.
 
@@ -9,12 +9,15 @@ import { FX_INTENSITY_SCALE, FX_SETTINGS_KEY, FX_SPEED_DEFAULT, FX_SPEED_MAX, FX
 
 export type FxIntensity = "off" | "low" | "normal" | "high";
 export type FxMotion = "system" | "reduce";
-export type FxSettings = { speed: number; intensity: FxIntensity; motion: FxMotion };
+/** R2785000: how long a set piece holds the game: its whole beat, a short one, or none. */
+export type FxBigMoments = "full" | "short" | "off";
+export type FxSettings = { speed: number; intensity: FxIntensity; motion: FxMotion; bigMoments: FxBigMoments };
 
 export const DEFAULT_FX_SETTINGS: FxSettings = {
   speed: FX_SPEED_DEFAULT,
   intensity: "normal",
   motion: "system",
+  bigMoments: "full",
 };
 Object.freeze(DEFAULT_FX_SETTINGS);
 
@@ -34,6 +37,10 @@ function normalizeMotion(motion: unknown): FxMotion {
   return motion === "system" || motion === "reduce" ? motion : DEFAULT_FX_SETTINGS.motion;
 }
 
+function normalizeBigMoments(value: unknown): FxBigMoments {
+  return value === "full" || value === "short" || value === "off" ? value : DEFAULT_FX_SETTINGS.bigMoments;
+}
+
 export function normalizeFxSettings(raw: unknown): FxSettings {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return DEFAULT_FX_SETTINGS;
   const record = raw as Record<string, unknown>;
@@ -41,6 +48,7 @@ export function normalizeFxSettings(raw: unknown): FxSettings {
     speed: normalizeSpeed(record.speed),
     intensity: normalizeIntensity(record.intensity),
     motion: normalizeMotion(record.motion),
+    bigMoments: normalizeBigMoments(record.bigMoments),
   };
 }
 
