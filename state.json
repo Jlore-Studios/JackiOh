@@ -13931,6 +13931,10 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-11-02T17:09:22Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-5` (claude, opus) rejected it: `task`: The acceptance asks the PR to give each file's case counts before and after, and one line per deleted case naming the test that still covers"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
