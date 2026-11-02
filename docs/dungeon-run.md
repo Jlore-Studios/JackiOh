@@ -138,7 +138,8 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 2. **An artifact:** a 10% chance after a normal fight, 25% after an elite, always after a mini-boss (one of
    its strong ones) and after the final boss (its own).
 3. **Four packs:** the beaten enemy's deck, a random one, one of a set and one of a type, tag or rarity.
-   You open one and keep 3 of its cards. Artifacts let you skip a pack or keep more.
+   You open one and keep 3 of its cards. Artifacts let you skip a pack or keep more. The deck never
+   holds more than the engine's library cap, so a full deck keeps fewer, buys and gains none (R2701000).
 4. **Extraction:** after a mini-boss, one card of your deck; after the final boss, one artifact you hold,
    never the boss's own. It leaves the run at once and is unlocked forever.
 
@@ -318,6 +319,7 @@ export type RunRecord = {
 };
 export type Dungeon = {
   content: RunContent;
+  customCards: CustomCard[];              // the pool's custom cards: the run's kept copy while it stands (B21; the reconcile's)
   progress: DungeonProgress;
   run: RunState | null;
   startedAt: number | null;               // Date.now() when the run started, for the timer

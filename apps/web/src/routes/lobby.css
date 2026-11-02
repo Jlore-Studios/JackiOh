@@ -792,10 +792,10 @@
   gap: 12px;
 }
 
-/* The other ways to play: plainer and smaller than the online panel, one tile each. */
+/* The other ways to play: plainer and smaller than the online panel, one tile each, two to a row. */
 .tavern.play-screen.play-hub .play-ways {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 

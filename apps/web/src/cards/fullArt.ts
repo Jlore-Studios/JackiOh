@@ -3,36 +3,69 @@
 // (`FULL_ART_GATED`) only the viewer's own copy of an owned full art prints it (`FullArtOwned`), else all count as owned.
 // R2655000: three tiers (`FullArtTier`); R2655002: a token in `fullArtTokens.json` prints its parent's. CLAUDE.md rule 7.
 // R2723000: in the viewer's own hand it keeps only the cost gem and a Unit's attack and health (CardFace's `ownHand`).
+// R2715000: a fourth, the Animated art (`animated-<slug>`, tier "Animated"), prints the normal face with its art moving
+// (R2715001) and no full art (`printsFullArt`); a pick of `true` still names the still Epic.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
 import { ECONOMY_LIVE } from "@jackioh/server-config";
 
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
-import { OwnershipContext, TheirCopyContext, ownsCosmetic, useCardPicks, type CardOwnership, type OwnedByCard } from "./cosmetics.ts";
+import { FULL_ART_MOTION, type ArtMotion } from "./art/motion.ts";
+import {
+  ANIMATED_ART_ID_PREFIX,
+  OwnershipContext,
+  TheirCopyContext,
+  ownsCosmetic,
+  useCardPicks,
+  type CardOwnership,
+  type Cosmetic,
+  type OwnedByCard,
+} from "./cosmetics.ts";
 import fullArtTokens from "./fullArtTokens.json";
 import type { FaceModel } from "./model.ts";
 import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
 import { getStored } from "../net/storage.ts";
 
-/** R2655000: a full art's tier, the cosmetics' own rarity scale's: the still Epic, the animated Legendary, the signed Mythic. */
-export type FullArtTier = "Epic" | "Legendary" | "Mythic";
+/**
+ * R2655000: a full art's tier, the cosmetics' own rarity scale's: the still Epic, the animated
+ * Legendary, the signed Mythic; R2715000: and the Animated art, an Epic that prints the normal face.
+ */
+export type FullArtTier = "Epic" | "Legendary" | "Mythic" | "Animated";
 
-/** R2655000: the tiers, commonest first, as the registry lists each card's full arts. */
-export const FULL_ART_TIERS: readonly FullArtTier[] = ["Epic", "Legendary", "Mythic"];
+/** R2655000, R2715000: the tiers, as the registry lists each card's full arts (the Animated art appended last). */
+export const FULL_ART_TIERS: readonly FullArtTier[] = ["Epic", "Legendary", "Mythic", "Animated"];
 
-function isFullArtTier(rarity: string): rarity is FullArtTier {
-  return (FULL_ART_TIERS as readonly string[]).includes(rarity);
+/** R2655000: the tiers that print full art, the face's whole layout (`printsFullArt`). */
+export const FULL_ART_LAYOUT_TIERS: readonly FullArtTier[] = ["Epic", "Legendary", "Mythic"];
+
+/** R2715000: the order the Collection's card view offers a card's tiers in, after "No full art". */
+export const FULL_ART_STRIP_TIERS: readonly FullArtTier[] = ["Animated", "Epic", "Legendary", "Mythic"];
+
+/**
+ * R2655000, R2715000: the tier a registry entry is: "Animated" for an Epic `animated-` full art, its
+ * rarity for any other full art of a layout tier, and null for anything else.
+ */
+export function fullArtTierOfEntry(cosmetic: Cosmetic): FullArtTier | null {
+  if (cosmetic.kind !== "fullArt") return null;
+  if (cosmetic.id.startsWith(ANIMATED_ART_ID_PREFIX)) return cosmetic.rarity === "Epic" ? "Animated" : null;
+  return (FULL_ART_LAYOUT_TIERS as readonly string[]).includes(cosmetic.rarity) ? (cosmetic.rarity as FullArtTier) : null;
+}
+
+/** R2715000: whether a face at `tier` prints full art: every tier but the Animated art, whose face is the normal one. */
+export function printsFullArt(tier: FullArtTier | null): boolean {
+  return tier !== null && tier !== "Animated";
 }
 
 /** R2655000: each full-art card's full arts, by tier, from the registry's `fullArt` entries. */
 export const FULL_ARTS_OF_CARD: ReadonlyMap<string, ReadonlyMap<FullArtTier, string>> = (() => {
   const out = new Map<string, Map<FullArtTier, string>>();
   for (const cosmetic of COSMETICS) {
-    if (cosmetic.kind !== "fullArt" || !isFullArtTier(cosmetic.rarity)) continue;
+    const tier = fullArtTierOfEntry(cosmetic);
+    if (tier === null || cosmetic.kind !== "fullArt") continue;
     const tiers = out.get(cosmetic.card) ?? new Map<FullArtTier, string>();
-    tiers.set(cosmetic.rarity, cosmetic.id);
+    tiers.set(tier, cosmetic.id);
     out.set(cosmetic.card, tiers);
   }
   return out;
@@ -59,6 +92,11 @@ export const FULL_ART_TOKEN_PARENT: ReadonlyMap<string, string> = new Map(
 /** R2655002: the card whose full art `defId` prints: a listed token's parent, else the card itself. */
 export function fullArtSource(defId: string): string {
   return FULL_ART_TOKEN_PARENT.get(defId) ?? defId;
+}
+
+/** R2715001: the moving art `defId` draws (motion.ts): its full-art card's, a listed token's parent's, or none. */
+export function artMotionOf(defId: string): ArtMotion | null {
+  return FULL_ART_MOTION[fullArtSource(defId)] ?? null;
 }
 
 /**
@@ -89,7 +127,7 @@ export function fullArtTierOf(defId: string, pick: boolean | string | null | und
   return null;
 }
 
-/** R2655000: the pick that wears the full art `id` on `defId`: `true` for its Epic, as the store has always held it, and the id for a Legendary or a Mythic. */
+/** R2655000: the pick that wears the full art `id` on `defId`: `true` for its Epic, as the store has always held it, and the id for a Legendary, a Mythic or (R2715000) an Animated art. */
 export function fullArtPickOf(defId: string, id: string): boolean | string {
   return FULL_ART_OF_CARD.get(defId) === id ? true : id;
 }
@@ -201,7 +239,7 @@ export function useFullArtTier(defId: string, worn: boolean = false): FullArtTie
   return tier !== null && ownsFullArt(owned, source, own, tier) ? tier : null;
 }
 
-/** Whether a copy of `defId` prints full art at all, at any tier (`useFullArtTier`). */
+/** Whether a copy of `defId` prints full art at all, at any tier (`useFullArtTier`) but the Animated art's (R2715000). */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
-  return useFullArtTier(defId, worn) !== null;
+  return printsFullArt(useFullArtTier(defId, worn));
 }
