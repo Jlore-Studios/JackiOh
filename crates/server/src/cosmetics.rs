@@ -229,7 +229,7 @@ pub struct Cosmetic {
 }
 
 /// R2725001: one clause of an offer. It takes a non-token card of the catalog when each field it fills lists
-/// the card's type, rarity, set and id; a field left empty takes any.
+/// the card's type, rarity, set and id, a field left empty taking any, and `except` does not name it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OfferClause {
@@ -241,6 +241,10 @@ pub struct OfferClause {
     pub sets: Vec<SetName>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub cards: Vec<String>,
+    /// R2725003: the cards the clause never takes, whatever its other fields take: where the look cannot
+    /// show, as the Animated augment on a Legacy card, whose picture never moves (R2724000).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub except: Vec<String>,
 }
 
 impl OfferClause {
@@ -250,6 +254,7 @@ impl OfferClause {
             && (self.rarities.is_empty() || self.rarities.contains(&def.rarity))
             && (self.sets.is_empty() || self.sets.contains(&def.set))
             && (self.cards.is_empty() || self.cards.iter().any(|card| card == id))
+            && !self.except.iter().any(|card| card == id)
     }
 }
 
@@ -375,7 +380,10 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
         // default or a starter; no other kind has an offer, and an offer's card is a card of the catalog.
         if let Some(prefix) = cosmetic.kind.id_prefix() {
             if !id.starts_with(prefix) {
-                out.push(format!("the {:?} {id:?} does not start with {prefix:?}", cosmetic.kind));
+                out.push(format!(
+                    "the {:?} {id:?} does not start with {prefix:?}",
+                    cosmetic.kind
+                ));
             }
             if cosmetic.offer.is_empty() {
                 out.push(format!("the {:?} {id:?} has no offer", cosmetic.kind));
@@ -392,9 +400,15 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
                 cosmetic.kind
             ));
         }
-        for card in cosmetic.offer.iter().flat_map(|clause| &clause.cards) {
+        for card in cosmetic
+            .offer
+            .iter()
+            .flat_map(|clause| clause.cards.iter().chain(&clause.except))
+        {
             if !shipped_defs().get(card).is_some_and(|def| !def.is_token()) {
-                out.push(format!("the offer of {id:?} names {card:?}, which is no card of the catalog"));
+                out.push(format!(
+                    "the offer of {id:?} names {card:?}, which is no card of the catalog"
+                ));
             }
         }
         // R1333000: a chase is exactly a Legendary or Mythic cosmetic, but a Jlorious one, which
@@ -834,10 +848,21 @@ mod tests {
     const R2715000_NEW: usize = 21;
 
     /// R2725000: the version and the two augments #2725 appends after #2715's 21, last in the registry.
+    /// R2725003: Legacy: Duplicating Felinors, a Rare Unit whose Legacy picture never moves (R2724000).
+    const LEGACY_DUPLICATING_FELINORS: &str = "traininggrounds-044";
+
     const R2725000_NEW: [(&str, CosmeticKind, CosmeticRarity); 3] = [
-        (VERSION_FULL_ART_ID, CosmeticKind::Version, CosmeticRarity::Legendary),
+        (
+            VERSION_FULL_ART_ID,
+            CosmeticKind::Version,
+            CosmeticRarity::Legendary,
+        ),
         (AUGMENT_ANIMATED_ID, CosmeticKind::Augment, CosmeticRarity::Epic),
-        (AUGMENT_SIGNATURE_ID, CosmeticKind::Augment, CosmeticRarity::Mythic),
+        (
+            AUGMENT_SIGNATURE_ID,
+            CosmeticKind::Augment,
+            CosmeticRarity::Mythic,
+        ),
     ];
 
     /// The shipped registry before #1833: every entry but #2725's three, #2715's 21 before them, #2755's
@@ -1213,9 +1238,21 @@ mod tests {
         );
         for cosmetic in new {
             // Earned, per card, offered, naming no card; a chase exactly at Legendary and Mythic.
-            assert!(!cosmetic.default && !cosmetic.starter && !cosmetic.jlorious, "{}", cosmetic.id);
-            assert!(cosmetic.kind.is_per_card() && cosmetic.kind.is_offered(), "{}", cosmetic.id);
-            assert!(cosmetic.card.is_none() && !cosmetic.offer.is_empty(), "{}", cosmetic.id);
+            assert!(
+                !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious,
+                "{}",
+                cosmetic.id
+            );
+            assert!(
+                cosmetic.kind.is_per_card() && cosmetic.kind.is_offered(),
+                "{}",
+                cosmetic.id
+            );
+            assert!(
+                cosmetic.card.is_none() && !cosmetic.offer.is_empty(),
+                "{}",
+                cosmetic.id
+            );
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
         }
         // Nothing before them is a version or an augment, or has an offer.
@@ -1226,8 +1263,14 @@ mod tests {
         );
         assert!(!CosmeticKind::PICKED.contains(&CosmeticKind::Version));
         assert!(!CosmeticKind::DEFAULTED.contains(&CosmeticKind::Augment));
-        assert_eq!(serde_json::to_string(&CosmeticKind::Version).ok().as_deref(), Some("\"version\""));
-        assert_eq!(serde_json::to_string(&CosmeticKind::Augment).ok().as_deref(), Some("\"augment\""));
+        assert_eq!(
+            serde_json::to_string(&CosmeticKind::Version).ok().as_deref(),
+            Some("\"version\"")
+        );
+        assert_eq!(
+            serde_json::to_string(&CosmeticKind::Augment).ok().as_deref(),
+            Some("\"augment\"")
+        );
 
         // The check refuses a missing offer, a bad prefix, an offer on a foil, a card, a starter and an
         // offer naming no card of the catalog.
@@ -1303,6 +1346,17 @@ mod tests {
             },
             "the offer of \"version-a\" names \"core-999\", which is no card of the catalog",
         );
+        refused(
+            Cosmetic {
+                offer: vec![OfferClause {
+                    rarities: vec![Rarity::Legendary],
+                    except: vec!["core-998".to_owned()],
+                    ..OfferClause::default()
+                }],
+                ..version("version-a")
+            },
+            "the offer of \"version-a\" names \"core-998\", which is no card of the catalog",
+        );
         let unknown = r#"{"cosmetics":[{"id":"version-a","kind":"version","name":"A","rarity":"Rare","default":false,"offer":[{"colours":["Red"]}]}]}"#;
         assert!(parse(unknown).is_err_and(|error| error.contains("unknown field")));
     }
@@ -1313,7 +1367,10 @@ mod tests {
         use jackioh_engine::SHIPPED_SETS;
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let defs = shipped_defs();
-        let offered_kinds: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.kind.is_offered()).collect();
+        let offered_kinds: Vec<&Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.kind.is_offered())
+            .collect();
         assert_eq!(offered_kinds.len(), R2725000_NEW.len());
         for cosmetic in offered_kinds {
             let on: Vec<&str> = defs
@@ -1321,22 +1378,44 @@ mod tests {
                 .map(String::as_str)
                 .filter(|card| offered(cosmetic, Some(card)))
                 .collect();
-            assert!(on.len() >= VERSION_OFFER_MIN_CARDS, "{}: {} cards", cosmetic.id, on.len());
+            assert!(
+                on.len() >= VERSION_OFFER_MIN_CARDS,
+                "{}: {} cards",
+                cosmetic.id,
+                on.len()
+            );
             for set in SHIPPED_SETS {
                 let in_set = on.iter().filter(|card| defs[**card].set == set).count();
-                assert!(in_set >= VERSION_OFFER_MIN_PER_SET, "{} on {set}: {in_set}", cosmetic.id);
+                assert!(
+                    in_set >= VERSION_OFFER_MIN_PER_SET,
+                    "{} on {set}: {in_set}",
+                    cosmetic.id
+                );
             }
             // Never a token, never every card, and every one of the 21 with retired full arts.
             assert!(on.iter().all(|card| !defs[*card].is_token()), "{}", cosmetic.id);
-            assert!(on.len() < defs.values().filter(|def| !def.is_token()).count(), "{}", cosmetic.id);
+            assert!(
+                on.len() < defs.values().filter(|def| !def.is_token()).count(),
+                "{}",
+                cosmetic.id
+            );
             for (card, _) in R2655001_CARDS {
                 assert!(on.contains(&card), "{} on {card}", cosmetic.id);
             }
             // Nowhere for no card or an id the catalog does not hold.
             assert!(!offered(cosmetic, None) && !offered(cosmetic, Some("core-999")));
+            // R2725003: Animated never on a Legacy card, whose picture never moves (R2724000); the version and
+            // Signature there as on any Rare Unit.
+            assert_eq!(
+                offered(cosmetic, Some(LEGACY_DUPLICATING_FELINORS)),
+                cosmetic.id != AUGMENT_ANIMATED_ID,
+                "{}",
+                cosmetic.id
+            );
         }
         // A full art on its own card alone; any other kind anywhere.
-        let full_art = full_art_of(&cosmetics, "core-008").unwrap_or_else(|| panic!("Mr. Vanilla's full art"));
+        let full_art =
+            full_art_of(&cosmetics, "core-008").unwrap_or_else(|| panic!("Mr. Vanilla's full art"));
         assert!(offered(full_art, Some("core-008")) && !offered(full_art, Some("core-022")));
         let foil = cosmetics
             .iter()
@@ -1347,13 +1426,16 @@ mod tests {
         // check_pick refuses a version or an augment the card is not offered before it reads ownership, and
         // a card's pick may name the version where it is offered.
         let owned = OwnedCosmetics {
-            cards: [("core-002", VERSION_FULL_ART_ID), ("core-022", AUGMENT_ANIMATED_ID)]
-                .into_iter()
-                .map(|(card, id)| crate::economy::store::CardCosmetic {
-                    card_id: card.to_owned(),
-                    cosmetic_id: id.to_owned(),
-                })
-                .collect(),
+            cards: [
+                ("core-002", VERSION_FULL_ART_ID),
+                ("core-022", AUGMENT_ANIMATED_ID),
+            ]
+            .into_iter()
+            .map(|(card, id)| crate::economy::store::CardCosmetic {
+                card_id: card.to_owned(),
+                cosmetic_id: id.to_owned(),
+            })
+            .collect(),
             account: Vec::new(),
         };
         let check = |kind, id: &str, card: &str| check_pick(&cosmetics, &owned, kind, id, Some(card));
@@ -1365,7 +1447,10 @@ mod tests {
             check(CosmeticKind::Version, VERSION_FULL_ART_ID, "core-022"),
             Err(PickRefusal::NotOwned)
         );
-        assert_eq!(check(CosmeticKind::Augment, AUGMENT_ANIMATED_ID, "core-022"), Ok(()));
+        assert_eq!(
+            check(CosmeticKind::Augment, AUGMENT_ANIMATED_ID, "core-022"),
+            Ok(())
+        );
         assert_eq!(
             check(CosmeticKind::Version, AUGMENT_ANIMATED_ID, "core-022"),
             Err(PickRefusal::WrongKind)
@@ -1381,7 +1466,10 @@ mod tests {
         assert_eq!(named("core-022"), Some(VERSION_FULL_ART_ID));
         assert_eq!(named("core-002"), None);
         // `true` still names a full-art card's retired still Epic alone.
-        assert_eq!(full_art_picked(&cosmetics, "core-022", &FullArtPick::On(true)), None);
+        assert_eq!(
+            full_art_picked(&cosmetics, "core-022", &FullArtPick::On(true)),
+            None
+        );
     }
 
     #[test]
@@ -1418,7 +1506,11 @@ mod tests {
                 for (id, _, _) in R2725000_NEW {
                     let entry = by_id(id);
                     // Owned on its own card exactly where implied, and never on another card.
-                    assert_eq!(owns(entry, Some(card), &owned), implied.contains(&id), "{held} → {id}");
+                    assert_eq!(
+                        owns(entry, Some(card), &owned),
+                        implied.contains(&id),
+                        "{held} → {id}"
+                    );
                     assert_eq!(row_owns(&held, id), implied.contains(&id), "{held} → {id}");
                     assert!(!owns(entry, Some("core-022"), &owned), "{held} → {id} elsewhere");
                     assert_eq!(

@@ -24,8 +24,8 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, now_ms, ok_of, str
 use crate::app::App;
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
 use crate::cosmetics::{
-    self, ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal, VERSION_ID_PREFIX,
-    full_art_of, is_slug, owns,
+    self, ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal,
+    VERSION_ID_PREFIX, full_art_of, is_slug, owns,
 };
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
@@ -147,7 +147,12 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
         full_art_pick_of,
         "a boolean or a full-art id",
     )?;
-    let augments = change_of(&req.body, AUGMENTS_KEY, augments_pick_of, "an array of augment ids")?;
+    let augments = change_of(
+        &req.body,
+        AUGMENTS_KEY,
+        augments_pick_of,
+        "an array of augment ids",
+    )?;
 
     // R2378000: the account's turn first, so a burst waits here holding no database
     // connection, not on the economy lock below.
@@ -168,8 +173,14 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
             .map_err(|refusal| bad_request(refusal.message(FULL_ART_SETTING)))?;
     }
     for id in augments.iter().flatten().flatten() {
-        cosmetics::check_pick(cosmetics::registry(), &owned, CosmeticKind::Augment, id, Some(&card_id))
-            .map_err(|refusal| bad_request(refusal.message(AUGMENTS_KEY)))?;
+        cosmetics::check_pick(
+            cosmetics::registry(),
+            &owned,
+            CosmeticKind::Augment,
+            id,
+            Some(&card_id),
+        )
+        .map_err(|refusal| bad_request(refusal.message(AUGMENTS_KEY)))?;
     }
     let held = tx.economy_card_picks_get(&profile.id).await?;
     let mut picks = held
@@ -205,7 +216,9 @@ fn is_id_shape(id: &str) -> bool {
 /// full art's a boolean or a well-shaped id (R2655000), the augments a list of distinct augment ids (R2725000).
 fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
     let refused = || {
-        bad_request("every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt?, augments? }")
+        bad_request(
+            "every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt?, augments? }",
+        )
     };
     let fields: &Map<String, Value> = entry.as_object().ok_or_else(refused)?;
     let card_id = fields

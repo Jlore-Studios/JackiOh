@@ -6,7 +6,7 @@
 // and off the words, a Radiant face keeps its gold frame and its art's Radiant paint under every look, and under
 // Reduce motion nothing moves.
 //
-// Each face is the viewer's own copy (`OwnCopy`) shown in a look by `FullArtShown`, as the Collection's preview
+// Each face is the viewer's own copy (`worn`, below an `OwnCopy`) shown in a look by `FullArtShown`, as the Collection's preview
 // shows one, so the looks stand side by side with no pick written. No `FullArtOwned` is mounted, so every cosmetic
 // counts as owned where it is offered, as in practice.
 
@@ -62,7 +62,7 @@ function Faces({ width }: { width: number }) {
             [false, true].map((radiant) => (
               <div key={`${id}-${look.name}-${String(radiant)}`} data-face={`${id}-${look.name}-${radiant ? "radiant" : "base"}`} style={{ width, height: heightFor(width), flex: "none" }}>
                 <FullArtShown defId={id} pick={look.pick} augments={look.augments}>
-                  <CardFace face={faceModel({ defId: id, def: CATALOG[id] as CardDef, radiant })} layout="full" />
+                  <CardFace face={faceModel({ defId: id, def: CATALOG[id] as CardDef, radiant })} layout="full" worn />
                 </FullArtShown>
               </div>
             )),

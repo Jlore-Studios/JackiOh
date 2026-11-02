@@ -1057,6 +1057,15 @@ card's pick may keep its Animated art, the Epic `animated-<slug>` beside its sti
 Every row 0072's check took, it takes. `tests/sql/42_animated_art.sql` checks the id kept, the shapes
 refused and the re-apply.
 
+Migration 0076 adds `augments` to `card_cosmetic_picks` (R2725000) and rewrites no row: the augment ids
+(`augment-…`, Animated and Signature) a card layers on the version it wears, NULL for none.
+`card_cosmetic_picks_augments_check` holds the list to one id or more, each `augment-` and a slug of at
+most 40 characters, none NULL; `card_cosmetic_picks_full_art_id_check` widens again to take a version's id
+(`version-…`, the Full art version `version-full-art` first), still only beside `full_art = true`; and
+`card_cosmetic_picks_some_check` counts an augments list as a pick. Nothing is granted: a retired full art
+owns the version and augments it combines where the server reads it (R2725002), never as a row.
+`tests/sql/43_card_versions.sql` checks the column, the ids kept, the shapes refused and the re-apply.
+
 ## Tests
 
 ```

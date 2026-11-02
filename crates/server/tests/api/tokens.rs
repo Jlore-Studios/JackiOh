@@ -15,7 +15,8 @@ use jackioh_server::config::{
     ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_PRICE_JLORE, SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{
-    AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause, VERSION_FULL_ART_ID,
+    AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
+    VERSION_FULL_ART_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -1347,11 +1348,9 @@ async fn r2715000_r2725002_an_epic_token_buys_the_animated_augment_unless_a_reti
         redeem(json!({ "token": "Epic", "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card })).await;
     assert_eq!(status, 200, "{answer}");
     assert!(
-        ledger(&app)
-            .await
-            .cosmetics
-            .iter()
-            .any(|row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == AUGMENT_ANIMATED_ID)
+        ledger(&app).await.cosmetics.iter().any(
+            |row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == AUGMENT_ANIMATED_ID
+        )
     );
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);

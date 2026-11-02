@@ -613,11 +613,22 @@ async fn r2725000_an_owned_version_and_augments_round_trip_and_reach_the_other_s
     );
     // R1834002, R1834004: what the match freezes is what the other seat, a watcher and a replay are shown:
     // the version and the augments it owns there, in the registry's order.
-    let (status, _) = put(&app, TOKEN, json!({ "cardId": OFFERED, "fullArt": "version-full-art" })).await;
+    let (status, _) = put(
+        &app,
+        TOKEN,
+        json!({ "cardId": OFFERED, "fullArt": "version-full-art" }),
+    )
+    .await;
     assert_eq!(status, 200);
     let mut tx = app.db.begin(Some(&profile)).await.expect("a store transaction");
-    let owned = tx.economy_cosmetics_get(&profile).await.expect("economy.cosmetics.get");
-    let picks = tx.economy_card_picks_get(&profile).await.expect("economy.cardPicks.get");
+    let owned = tx
+        .economy_cosmetics_get(&profile)
+        .await
+        .expect("economy.cosmetics.get");
+    let picks = tx
+        .economy_card_picks_get(&profile)
+        .await
+        .expect("economy.cardPicks.get");
     tx.commit().await.expect("commit");
     let loadout = freeze_loadout(
         registry(),

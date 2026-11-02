@@ -10,8 +10,9 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { CardFace } from "./CardFace.tsx";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import {
@@ -530,7 +531,7 @@ describe("R2725000 a card's version and augments on its face", () => {
    */
   const CARDS = ["classicplus-012", "stinkyscape-154", "core-022", "core-083"] as const;
   /** Every look of part 1: each version, with no augment, either and both. */
-  const LOOKS: readonly (readonly [false | string, readonly string[]])[] = [false, VERSION_FULL_ART_ID].flatMap((version) =>
+  const LOOKS: readonly (readonly [false | string, readonly string[]])[] = ([false, VERSION_FULL_ART_ID] as const).flatMap((version) =>
     [[], [AUGMENT_ANIMATED_ID], [AUGMENT_SIGNATURE_ID], [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]].map((augments) => [version, augments] as const),
   );
 
@@ -590,6 +591,64 @@ describe("R2725000 a card's version and augments on its face", () => {
     expect(off.getAttribute("data-art-motion")).toBe("static");
     expect(off.getAttribute("data-full-art-motion")).toBe("static");
   });
+
+  /** R2725001: the cards offered the Full art version and the Animated augment, and each offered card by its set. */
+  const OFFERED_FULL_ART = COSMETIC_OFFERS[VERSION_FULL_ART_ID] ?? [];
+  const OFFERED_ANIMATED = new Set(COSMETIC_OFFERS[AUGMENT_ANIMATED_ID] ?? []);
+  const OFFERED_BY_SET = new Map<string, string[]>();
+  for (const id of new Set([...OFFERED_FULL_ART, ...OFFERED_ANIMATED])) {
+    const set = CATALOG[id]?.set ?? "";
+    OFFERED_BY_SET.set(set, [...(OFFERED_BY_SET.get(set) ?? []), id]);
+  }
+
+  it("R2725001 the Full art version and the Animated augment are offered in every set that ships", () => {
+    expect(OFFERED_FULL_ART.length).toBeGreaterThan(FULL_ART_CARDS.size);
+    expect([...OFFERED_BY_SET.keys()].sort()).toEqual([...SHIPPED_SETS].sort());
+  });
+
+  /** How many offered cards one test draws (six faces each), so that no test nears the timeout on a loaded runner. */
+  const OFFERED_CARDS_PER_TEST = 12;
+  for (const [set, ids] of OFFERED_BY_SET) {
+    for (let from = 0; from < ids.length; from += OFFERED_CARDS_PER_TEST) {
+      const some = ids.slice(from, from + OFFERED_CARDS_PER_TEST);
+      it(`R2725001 every ${set} card offered the Full art version or the Animated augment, ${some[0] ?? ""} to ${some.at(-1) ?? ""}, draws it, base and Radiant, apart from its normal face`, () => {
+        drawsEveryOfferedLook(some);
+      });
+    }
+  }
+
+  /** R2725001: each of `ids` draws its normal face, and the Full art version and the Animated augment where offered. */
+  function drawsEveryOfferedLook(ids: readonly string[]): void {
+    const fullArt = OFFERED_FULL_ART;
+    const animated = OFFERED_ANIMATED;
+    for (const id of ids) {
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        writeCardVersion(id, false, []);
+        const normal = faceIn(id, radiant);
+        const normalMarkup = normal.outerHTML;
+        const stillPicture = pictureOf(normal);
+        expect(normal.getAttribute("data-full-art"), where).toBeNull();
+        cleanup();
+        if (fullArt.includes(id)) {
+          writeCardVersion(id, VERSION_FULL_ART_ID, []);
+          const full = faceIn(id, radiant);
+          expect(full.getAttribute("data-full-art"), where).toBe("true");
+          expect(full.getAttribute("data-version"), where).toBe(VERSION_FULL_ART_ID);
+          expect(full.outerHTML, where).not.toBe(normalMarkup);
+          cleanup();
+        }
+        if (animated.has(id)) {
+          writeCardVersion(id, false, [AUGMENT_ANIMATED_ID]);
+          const moving = faceIn(id, radiant);
+          expect(moving.getAttribute("data-art-motion"), where).toBe("animated");
+          expect(pictureOf(moving), where).toContain("art-m-");
+          expect(pictureOf(moving), where).not.toBe(stillPicture);
+          cleanup();
+        }
+      }
+    }
+  }
 
   it('R2725004 a Radiant face keeps data-radiant-face and data-art-variant="radiant" under every look; a base face has neither', () => {
     for (const id of CARDS) {

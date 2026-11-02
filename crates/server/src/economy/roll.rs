@@ -791,7 +791,12 @@ mod tests {
     }
 
     /// The rows of every cosmetic of `droppable` at `rarity` but `except`, held on `card`.
-    fn holding_all_but(droppable: &[Cosmetic], rarity: CosmeticRarity, except: &str, card: &str) -> Vec<CardCosmetic> {
+    fn holding_all_but(
+        droppable: &[Cosmetic],
+        rarity: CosmeticRarity,
+        except: &str,
+        card: &str,
+    ) -> Vec<CardCosmetic> {
         droppable
             .iter()
             .filter(|cosmetic| cosmetic.rarity == rarity && cosmetic.id != except)
@@ -804,7 +809,11 @@ mod tests {
         use crate::cosmetics::{AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID, registry};
         let droppable = pack_cosmetics(registry());
         // R2725000: the retired full arts drop nowhere.
-        assert!(droppable.iter().all(|cosmetic| cosmetic.kind != CosmeticKind::FullArt));
+        assert!(
+            droppable
+                .iter()
+                .all(|cosmetic| cosmetic.kind != CosmeticKind::FullArt)
+        );
         // League of Losers with every other Mythic per-card cosmetic held on it: its Mythic duplicate drops the
         // Signature augment, which it is offered, a chase no account is granted.
         let card = "classicplus-019";
@@ -828,7 +837,8 @@ mod tests {
             }
         );
         // Its Legendary roll drops the Full art version, unless its retired animated full art owns it.
-        let held_legendaries = holding_all_but(&droppable, CosmeticRarity::Legendary, VERSION_FULL_ART_ID, card);
+        let held_legendaries =
+            holding_all_but(&droppable, CosmeticRarity::Legendary, VERSION_FULL_ART_ID, card);
         assert_eq!(
             duplicate_grant(
                 card,
@@ -871,7 +881,11 @@ mod tests {
         // Animated augment, which no account is granted. Its retired Animated art no longer drops (R2725000).
         let card = "classicplus-019";
         let held_epics = holding_all_but(&droppable, CosmeticRarity::Epic, AUGMENT_ANIMATED_ID, card);
-        assert!(droppable.iter().all(|cosmetic| cosmetic.id != "animated-league-of-losers"));
+        assert!(
+            droppable
+                .iter()
+                .all(|cosmetic| cosmetic.id != "animated-league-of-losers")
+        );
         let mut rng = Rng::new("r2715000-animated", 0);
         assert_eq!(
             duplicate_grant(card, CosmeticRarity::Epic, &droppable, &held_epics, &mut rng),

@@ -171,7 +171,10 @@ impl SeatLoadout {
             CosmeticKind::Foil => &self.foil,
             CosmeticKind::Finish => &self.finish,
             CosmeticKind::Border => &self.border,
-            CosmeticKind::FullArt | CosmeticKind::Portrait | CosmeticKind::Version | CosmeticKind::Augment => "",
+            CosmeticKind::FullArt
+            | CosmeticKind::Portrait
+            | CosmeticKind::Version
+            | CosmeticKind::Augment => "",
         }
     }
 
@@ -183,7 +186,10 @@ impl SeatLoadout {
             CosmeticKind::Foil => self.foil = id,
             CosmeticKind::Finish => self.finish = id,
             CosmeticKind::Border => self.border = id,
-            CosmeticKind::FullArt | CosmeticKind::Portrait | CosmeticKind::Version | CosmeticKind::Augment => {}
+            CosmeticKind::FullArt
+            | CosmeticKind::Portrait
+            | CosmeticKind::Version
+            | CosmeticKind::Augment => {}
         }
     }
 
@@ -326,7 +332,9 @@ pub fn freeze_loadout(
         if let Some(picks) = own {
             entry.augments = registry
                 .iter()
-                .filter(|cosmetic| cosmetic.kind == CosmeticKind::Augment && picks.augments.contains(&cosmetic.id))
+                .filter(|cosmetic| {
+                    cosmetic.kind == CosmeticKind::Augment && picks.augments.contains(&cosmetic.id)
+                })
                 .filter(|cosmetic| {
                     check_pick(registry, owned, CosmeticKind::Augment, &cosmetic.id, Some(card)).is_ok()
                 })
@@ -921,12 +929,19 @@ mod tests {
             &cards(&[cube, bigot, vanilla]),
         );
         // The owned version, and only the owned, known augments, once each, in the registry's order.
-        assert_eq!(loadout.card(cube), Some(&pick(cube, version(), &[AUGMENT_ANIMATED_ID])));
+        assert_eq!(
+            loadout.card(cube),
+            Some(&pick(cube, version(), &[AUGMENT_ANIMATED_ID]))
+        );
         // Not offered: nothing of its own, so the card is left out.
         assert_eq!(loadout.card(bigot), None);
         assert_eq!(
             loadout.card(vanilla),
-            Some(&pick(vanilla, version(), &[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]))
+            Some(&pick(
+                vanilla,
+                version(),
+                &[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]
+            ))
         );
         // A legacy pick freezes as it did before #2725: `true` for the still Epic, its id for another, with no
         // augment, and the setting alone never prints a version.

@@ -183,7 +183,11 @@ fn placements<'p>(cosmetic: &Cosmetic, pool: &'p [PoolCard], holdings: &Cosmetic
     pool.iter()
         .filter(|card| offered(cosmetic, Some(&card.id)))
         .filter(|card| {
-            let held = |id: &str| holdings.card_cosmetics.contains(&(card.id.clone(), id.to_string()));
+            let held = |id: &str| {
+                holdings
+                    .card_cosmetics
+                    .contains(&(card.id.clone(), id.to_string()))
+            };
             !held(&cosmetic.id) && !implying(&card.id, &cosmetic.id).any(held)
         })
         .map(|card| card.id.as_str())

@@ -91,7 +91,6 @@ fn collectable_cards(app: &App) -> Vec<&str> {
         .collect()
 }
 
-
 /// `POST /api/dev/xp` with `{ setId, xp }`: 200 `{ track }`, the track after the grant.
 pub async fn give_xp(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = dev_caller(app, &req)?;

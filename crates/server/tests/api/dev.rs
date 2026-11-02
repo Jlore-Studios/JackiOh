@@ -10,8 +10,8 @@ use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use jackioh_server::cosmetics::{
-    ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK, VERSION_ID_PREFIX, offered,
-    shipped,
+    ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK, VERSION_ID_PREFIX,
+    offered, shipped,
 };
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
@@ -479,7 +479,12 @@ async fn r2725001_dev_fill_grants_each_version_on_every_offered_card() {
             .filter(|(_, id)| *id == cosmetic.id)
             .map(|(card, _)| *card)
             .collect();
-        assert!(!on.is_empty() && on.len() < cards.len(), "{}: {}", cosmetic.id, on.len());
+        assert!(
+            !on.is_empty() && on.len() < cards.len(),
+            "{}: {}",
+            cosmetic.id,
+            on.len()
+        );
     }
     ok(&app, "/api/dev/fill", &dev, json!({})).await;
     let held = holdings(&app, DEV).await;
@@ -487,7 +492,9 @@ async fn r2725001_dev_fill_grants_each_version_on_every_offered_card() {
         .cosmetics
         .cards
         .iter()
-        .filter(|row| row.cosmetic_id.starts_with(VERSION_ID_PREFIX) || row.cosmetic_id.starts_with(AUGMENT_ID_PREFIX))
+        .filter(|row| {
+            row.cosmetic_id.starts_with(VERSION_ID_PREFIX) || row.cosmetic_id.starts_with(AUGMENT_ID_PREFIX)
+        })
         .map(|row| (row.card_id.as_str(), row.cosmetic_id.as_str()))
         .collect();
     let mut expected = expected;

@@ -15,8 +15,8 @@ use jackioh_server::config::{
     SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{
-    AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OfferClause, VERSION_FULL_ART_ID,
-    shipped,
+    AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OfferClause,
+    VERSION_FULL_ART_ID, shipped,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
@@ -978,10 +978,22 @@ async fn r1306002_a_chase_cosmetic_is_allowed_and_the_route_buys_the_shipped_reg
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     let before = everything(&app).await;
     for (body, status) in [
-        (json!({ "cosmeticId": "foil-cracked-ice", "cardId": cards[0] }), 409),
-        (json!({ "cosmeticId": "finish-gilded-edge", "cardId": cards[0] }), 409),
-        (json!({ "cosmeticId": VERSION_FULL_ART_ID, "cardId": "core-004" }), 409),
-        (json!({ "cosmeticId": "full-art-gary-the-gambler-signed", "cardId": "core-004" }), 400),
+        (
+            json!({ "cosmeticId": "foil-cracked-ice", "cardId": cards[0] }),
+            409,
+        ),
+        (
+            json!({ "cosmeticId": "finish-gilded-edge", "cardId": cards[0] }),
+            409,
+        ),
+        (
+            json!({ "cosmeticId": VERSION_FULL_ART_ID, "cardId": "core-004" }),
+            409,
+        ),
+        (
+            json!({ "cosmeticId": "full-art-gary-the-gambler-signed", "cardId": "core-004" }),
+            400,
+        ),
     ] {
         let (got, _, answer) = call(
             &app,
@@ -1643,7 +1655,11 @@ async fn r2655000_r2725001_the_chase_refuses_an_unoffered_card_and_a_retired_ful
             400,
             Some("that cosmetic is not offered on that card"),
         ),
-        (json!({ "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card }), 409, None),
+        (
+            json!({ "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card }),
+            409,
+            None,
+        ),
     ] {
         let (got, answer) = chase(body.clone()).await;
         assert_eq!(got, status, "{body}: {answer}");
