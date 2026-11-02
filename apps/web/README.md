@@ -40,7 +40,9 @@ The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark 
 the stacked logo and the mark alone each on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
 the repository's `photos/logo`, which no build reads. `scripts/brand-logo.py` draws them all, outlining
 the wordmark from the self-hosted Alegreya, so no SVG needs a font; run it by hand and commit what it
-writes.
+writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws whatever a filter touches
+at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
+no screen shows, still use filters).
 
 The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
@@ -315,7 +317,7 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
-(`fx/motifs/`) in any flavor's palette at any gallery scale, and any card whose entry in its set's
+(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
 effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),

@@ -23,6 +23,7 @@ gold over a #3a1f0c edge. The colors are the palette's (src/palette.css) and the
     jackioh-icon.*          the mark on the tavern's dark wood, opaque, for app and avatar icons
 """
 
+import itertools
 import json
 import random
 import subprocess
@@ -93,20 +94,38 @@ DEFS = """
   <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
     <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.45"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
   </radialGradient>
-  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-    <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0e0905" flood-opacity="0.55"/>
-  </filter>
-  <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
-    <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0e0905" flood-opacity="0.65"/>
-  </filter>
 </defs>"""
+
+# The two shadows: a card's on what is under it, and the J's, the star's and the wordmark's on their card.
+SHADOW_INK = "#0e0905"
+SHADOW = dict(dy=14, sd=16, opacity=0.55)
+LIFT = dict(dy=6, sd=5, opacity=0.65)
+SHADOW_STEPS = 6
+_shape_ids = itertools.count()
+
+def shaded(shape, paint, edge, dy, sd, opacity):
+    """`shape` (a tag and its geometry, as `path d="…"`) painted with `paint` over a soft drop shadow
+    `dy` below it, about `sd` wide and `opacity` dark; `edge` is the width of the stroke `paint` draws.
+
+    No SVG filter: WebKit draws whatever a filter touches at 1x and scales it up, so feDropShadow
+    left the whole logo fuzzy on a phone. The shadow is the shape again, SHADOW_STEPS times, each a
+    wider stroke at a share of `opacity`: they add up to `opacity` under the shape and thin out over
+    about two `sd` past its edge, all of it vector. The geometry is written once and reused."""
+    sid = f"s{next(_shape_ids)}"
+    alpha = 1 - (1 - opacity) ** (1 / SHADOW_STEPS)
+    layers = "".join(f'<use href="#{sid}" stroke-width="{edge + 3.2 * sd * (i + 0.5) / SHADOW_STEPS:.1f}"/>'
+                     for i in range(SHADOW_STEPS))
+    return (f'<defs><{shape} id="{sid}"/></defs>'
+            f'<g transform="translate(0 {dy})" fill="{SHADOW_INK}" stroke="{SHADOW_INK}" stroke-linejoin="round">'
+            + layers.replace("<use ", f'<use opacity="{alpha:.3f}" ') +
+            f'</g><use href="#{sid}" {paint}/>')
 
 def card(cx, cy, w, h, angle, face):
     x, y = cx - w / 2, cy - h / 2
     rx = w * 0.11
     inset = w * 0.055
-    body = [f'<g transform="rotate({angle} {cx} {cy})" filter="url(#shadow)">',
-            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rx}" fill="url(#{face})"/>']
+    body = [f'<g transform="rotate({angle} {cx} {cy})">',
+            shaded(f'rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rx}"', f'fill="url(#{face})"', w * 0.045, **SHADOW)]
     if face == "back":
         body.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rx}" fill="url(#stripes)"/>')
         r = w * 0.34
@@ -122,13 +141,19 @@ def card(cx, cy, w, h, angle, face):
 def svg(w, h, inner):
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}">{DEFS}\n{inner}\n</svg>\n'
 
+def j_and_star(jd, j_size, star_d, star_r):
+    """The gold J (path `jd`, `j_size` tall) and its star (path `star_d`, `star_r` across), each lifted off the card."""
+    return (shaded(f'path d="{jd}"', f'fill="url(#gold)" stroke="#2b1800" stroke-width="{j_size*0.019}" '
+                   'stroke-linejoin="round" paint-order="stroke"', j_size * 0.019, **LIFT) +
+            shaded(f'path d="{star_d}"', f'fill="#fff6d6" stroke="#f0c04a" stroke-width="{star_r*0.06}" '
+                   'stroke-linejoin="round"', star_r * 0.06, **LIFT))
+
 def front_card(fcx, fcy, ang, W, H, j_size, star_dx, star_dy, star_r):
     jd, _ = centered_text("J", j_size, fcx - W * 0.027, fcy + H * 0.045)
     return (card(fcx, fcy, W, H, ang, "face") +
             f'<g transform="rotate({ang} {fcx} {fcy})">'
             f'<circle cx="{fcx}" cy="{fcy}" r="{W*0.48}" fill="url(#glow)"/>'
-            f'<path d="{jd}" fill="url(#gold)" stroke="#2b1800" stroke-width="{j_size*0.019}" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/>'
-            f'<path d="{star(fcx + star_dx, fcy + star_dy, star_r, star_r*0.215)}" fill="#fff6d6" stroke="#f0c04a" stroke-width="{star_r*0.06}" stroke-linejoin="round" filter="url(#lift)"/>'
+            + j_and_star(jd, j_size, star(fcx + star_dx, fcy + star_dy, star_r, star_r*0.215), star_r) +
             '</g>')
 
 def card_back_art():
@@ -140,8 +165,7 @@ def card_back_art():
     jd, _ = centered_text("J", 760, cx - W * 0.027, cy + H * 0.045)
     return svg(W, H,
                f'<circle cx="{cx}" cy="{cy}" r="{W * 0.46}" fill="url(#glow)"/>'
-               f'<path d="{jd}" fill="url(#gold)" stroke="#2b1800" stroke-width="{760 * 0.019}" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/>'
-               f'<path d="{star(cx + W * 0.25, cy - H * 0.27, W * 0.16, W * 0.16 * 0.215)}" fill="#fff6d6" stroke="#f0c04a" stroke-width="{W * 0.16 * 0.06}" stroke-linejoin="round" filter="url(#lift)"/>')
+               + j_and_star(jd, 760, star(cx + W * 0.25, cy - H * 0.27, W * 0.16, W * 0.16 * 0.215), W * 0.16))
 
 def mark_group():
     """Two fanned cards: a face-down trap behind, and in front a face with the gold J and its star."""
@@ -169,8 +193,8 @@ def app_icon():
 
 def wordmark(x0, baseline, size):
     d, b = text_path("JackiOh", size, x0, baseline, tracking=22, wght=700)
-    return (f'<path d="{d}" fill="url(#wordGold)" stroke="#3a1f0c" stroke-width="{size*0.02}" stroke-linejoin="round" '
-            f'paint-order="stroke" filter="url(#lift)"/>'), b
+    return shaded(f'path d="{d}"', f'fill="url(#wordGold)" stroke="#3a1f0c" stroke-width="{size*0.02}" '
+                  'stroke-linejoin="round" paint-order="stroke"', size * 0.02, **LIFT), b
 
 def logo_horizontal():
     """The mark, then the wordmark, on one line."""
