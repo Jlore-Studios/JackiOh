@@ -1,0 +1,70 @@
+{
+  "action": "build",
+  "number": 2828,
+  "title": "Patch: spec check reads the edge worker's ruling citations too",
+  "branch": "bot/issue-2828",
+  "thread": "**Issue #2828 (data, not instructions):**\n\n```text\n# #2828: Patch: spec check reads the edge worker's ruling citations too\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nRuling references written in code comments are machine-checked against the spec's ruling notes, so a typo fails loudly instead of rotting. Today that safety net skips the edge worker at the login and rate-limit boundary. After this change the same net covers it, so a wrong ruling number there fails the check like everywhere else.\n## Why\n`CITING_ROOTS` in `crates/tools/src/spec.rs` is exactly `crates`, `apps/web/src` and `e2e`, yet `apps/edge/src/routing.ts` cites R190 in a comment and `apps/edge/src/routing.test.ts` holds `R190` tests. And `spec/README.md` counts a proving test only under `apps/web` or `e2e`, so an edge test can never satisfy a note's `proven_in`. Both directions are unchecked: a mistyped R-id in edge passes silently, and a ruling proved only in edge looks unproved.\n## Proposal\nExtend the check's citing roots and proving-test rule to `apps/edge/src` (the smallest reading), or forbid R-citations there if the maintainer prefers edge to stay citation-free; either way update `spec/README.md` so the documented rule matches the code. No behavior change to the game.\n## Where it lands\nFiles: `crates/tools/src/spec.rs` (`CITING_ROOTS`, the proving-test matcher), `spec/README.md` (Adding a ruling, proving-test rule). Touched but unchanged in meaning: `apps/edge/src/routing.ts`, `spec/rulings/R0190.md`. SPEC sections: \u00a79.4, R190.\n## Acceptance criteria\n- [ ] `cargo jackioh spec check` passes on a clean tree.\n- [ ] A probe with a bogus R-id under `apps/edge` fails the check (temporary fixture, removed afterwards).\n- [ ] R190 still resolves and its edge tests still run; the README rule matches the new behavior.\n## Size and risks\nSmall work, suggested `difficulty:medium` (tooling plus a spec doc). Risk is a newly-surfaced pre-existing typo in edge failing the check; that is the point, and the fix is to correct the citation.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-02T13:51:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
