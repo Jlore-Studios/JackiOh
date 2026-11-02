@@ -1,0 +1,71 @@
+{
+  "action": "plan",
+  "number": 2783,
+  "title": "Patch: events say why: the keyword behind a damage, heal or death, and a marker as each card hook resolves",
+  "branch": "bot/issue-2783",
+  "thread": "**Issue #2783 (data, not instructions):**\n\n```text\n# #2783: Patch: events say why: the keyword behind a damage, heal or death, and a marker as each card hook resolves\nOpened by @MaxGoetzmann.\n\n## What it does\n\nToday the client can't tell *why* something happened on the board, so keyword and card animations have nothing to key on (#2782).\n\n- **The cause of a hit is missing.** Cleave's extra hits are plain `Damage { combat: true }` events (`crates/engine/src/combat.rs`, `fn cleave`). Nothing says First Strike resolved first, a Trample overflow reached the hero, Lifesteal healed, or Reborn brought a unit back.\n  - `apps/web/src/fx/cues.ts` already guesses Poisonous from the view (`sourceIsPoisonous`), which is fragile.\n- **Card hooks are unmarked.** No event marks a card's Cry, Death, turn trigger, Whenever trigger or Activate as it resolves.\n  - A play has `cardPlayed` \u2026 `cardResolved` around it (`apps/web/src/fx/memory.ts`), but a Death or a Start-of-turn trigger has nothing.\n  - So a card's own triggered animation can't anchor.\n\nThis part adds presentation-only tags to the event stream. No rule changes.\n\n### Shape (a suggestion; read the spec and `work.rs`'s header first)\n\n- **`via` on the events a keyword causes.** Add an optional `via: Option<Keyword>` to `GameEvent::Damage`, `DamageAbsorbed`, `Healed`, `Destroyed` and `Summoned`, serialized only when set.\n  - The engine sets it at the verb that applies the keyword, never in a card script (CLAUDE.md rule 5): Cleave's adjacent hits, Trample's overflow to the hero, Pierce, Lifesteal's heal, Poisonous's destroy, Reborn's summon.\n  - Include the others the builder finds in `combat.rs` and the keyword code.\n- **First Strike.** The client must be able to show the attacker striking first, and the counter-blow not coming because the defender died.\n  - Either a `via: FirstStrike` on the first hit plus a marker that the counter was skipped, or a small `combatStep` field. Pick one and rule it.\n- **A hook marker.** A new `GameEvent::HookResolving { source_id, def_id, controller, hook }`, with `hook` one of `Cry | Death | StartOfTurn | EndOfTurn | Whenever | Activate`.\n  - It is emitted once, just before the hook's effects apply. A hook that fizzles emits it anyway; say so in the ruling.\n- **Hidden information (CLAUDE.md rule 7, `view_for`).** A marker whose source the viewer can't read is redacted the way R154/R763 redact a firing Trap. A face-down Trap's or Cloaked card's hook must not name the card.\n  - This decision needs a ruling note in this issue's block, with a `view_for` test named after it.\n- **The client tables are total**, so they need new rows:\n  - `ANIMATIONS` in `apps/web/src/game/animations.ts`: a 0-duration row for `hookResolving`;\n  - `SOUND_CUES` in `apps/web/src/audio/cues.ts`: a silent row.\n- **The RNG and the outcome are unchanged.** The cursor and the draw sequence stay exactly the same. The golden trace changes only by the new event and fields, re-recorded once.\n\n## Acceptance\n\n- [ ] Each of these sets `via` and has a test in `crates/engine/tests/`: Cleave's adjacent `damage`, Trample's overflow `damage` to the hero, Pierce, Lifesteal's `healed`, Poisonous's `destroyed`, Reborn's `summoned` and the First Strike marker. Test names cite the ruling.\n- [ ] `hookResolving` is emitted for a Cry, a Death, a Start of turn, an End of turn, a Whenever and an Activate, each with a fixture-script test. A hook that fizzles still emits it, as ruled.\n- [ ] A ruling note (lowest free in this issue's block) decides when the marker is emitted and how it is redacted. A `view_for` test proves the opponent never learns a face-down Trap's or Cloaked card's identity from it. `cargo jackioh spec check` passes, and the \u00a711 paragraph is in `spec/pending/<this issue>.md`.\n- [ ] The event-count test is bumped, `apps/web/src/wire/` is regenerated and committed, and the new web rows compile.\n- [ ] `cargo jackioh golden check` passes after one re-record, `cargo jackioh fuzz --seeds 200` passes, and a round-tripped state replays identically.\n- [ ] `cargo jackioh classify --base origin/main --claims` passes before you push: no card plays differently.\n- [ ] `crates/engine/README.md` and `docs/v0.3.0/SURFACE.md` describe the new fields and event.\n\n## Blocked by, part of\n\nNothing blocks it. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2783: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2770: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first",
+    "#2757 skipped: it waits for #2738 to close first",
+    "#2784 skipped: it waits for #2722 to close first",
+    "#2785 skipped: it waits for #2722 to close first",
+    "#2786 skipped: it waits for #2784 to close first",
+    "#2787 skipped: it waits for #2784 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783, #2784 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2792 skipped: it waits for #2784 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2784, #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2784, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
