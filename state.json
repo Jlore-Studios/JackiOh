@@ -13042,6 +13042,13 @@
     "2827": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-02T16:42:33Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 5 and the new-ruling bar fail, but the hard bar I was least sure of (the AI's search in crates/ai/src/) does not: this only reuses the bounded pass probes around decide/beam/lethal without touching them, in 6 files."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
