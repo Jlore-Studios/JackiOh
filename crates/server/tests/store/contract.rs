@@ -10870,7 +10870,7 @@ mod cosmetic_loadouts {
     }
 
     /// R2715000: a card's full-art pick keeps a card's Animated art's id as written (migration
-    /// 0074 widens 0072's check on `full_art_id` to `animated-…`), through a put and an upload, and
+    /// 0075 widens 0072's check on `full_art_id` to `animated-…`), through a put and an upload, and
     /// a put of `true` takes it away.
     async fn r2715000_card_picks_keep_an_animated_art_id(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;

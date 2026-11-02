@@ -133,12 +133,15 @@ async fn r1833000_an_existing_account_owns_none_of_the_36() {
     own(&app, &profile, Some("core-008"), "full-art-mr-vanilla").await;
     own(&app, &profile, None, "portrait-gary").await;
     // #1833's 36: the picked kinds' entries that are neither a default nor a starter, every earlier
-    // one of those kinds being a starter (R1833000).
+    // one of those kinds being a starter (R1833000), and #2755's Jlorious card back aside (R2755000).
     let new: Vec<String> = shipped()
         .expect("the shipped registry")
         .into_iter()
         .filter(|cosmetic| {
-            CosmeticKind::PICKED.contains(&cosmetic.kind) && !cosmetic.default && !cosmetic.starter
+            CosmeticKind::PICKED.contains(&cosmetic.kind)
+                && !cosmetic.default
+                && !cosmetic.starter
+                && !cosmetic.jlorious
         })
         .map(|cosmetic| cosmetic.id)
         .collect();

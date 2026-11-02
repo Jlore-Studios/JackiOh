@@ -974,8 +974,9 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
   /** The non-default entries of the kinds a player picks, as `[id, kind]`. */
   const PICKED = COSMETICS.filter((cosmetic) => !cosmetic.default && cosmetic.kind !== "fullArt" && cosmetic.kind !== "portrait");
 
-  it("R1833000 every non-default foil, finish, border, table, field and card back has a rule that styles it", () => {
-    expect(PICKED.length).toBe(6 * 9);
+  it("R1833000 R2755000 every non-default foil, finish, border, table, field and card back has a rule that styles it", () => {
+    // Nine of each kind, and the Jlorious card back (R2755000).
+    expect(PICKED.length).toBe(6 * 9 + 1);
     for (const { id, kind } of PICKED) {
       switch (kind) {
         case "foil":
@@ -1148,7 +1149,10 @@ describe("R2655003 the full-art tiers' motion", () => {
 
 describe("R1953001 the chases move everywhere, and a card wears its own picks or the defaults", () => {
   /** Every Legendary and Mythic entry of the registry, the starters among them, so a new one is walked too. */
-  const CHASES = COSMETICS.filter((cosmetic) => cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic");
+  /** Legendary and Mythic, but the Jlorious card back, which nothing drops (R2755000). */
+  const CHASES = COSMETICS.filter(
+    (cosmetic) => (cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic") && !("jlorious" in cosmetic),
+  );
   /** A Common card the catalog has, which wears every cosmetic foil (no rarity foil of its own). */
   const CARD = "core-004";
   const GATE = ':root:not([data-reduce-motion="true"]) ';
@@ -1233,6 +1237,17 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
     // A sample of what is no chase holds still.
     writeCardSettings({ animatedFoil: true });
     expect(motion(<CosmeticLook id="foil-holo-sweep" cardId={CARD} />)).toBe("static");
+  });
+
+  it("R2755000 the Jlorious card back, Mythic and no chase, draws the J★ card and moves as a chase back does", () => {
+    const back = COSMETICS.find((cosmetic) => cosmetic.id === "card-back-jlorious");
+    expect(back).toMatchObject({ kind: "cardBack", rarity: "Mythic", chase: false, jlorious: true });
+    expect(isChaseCosmetic("card-back-jlorious")).toBe(false);
+    expect(animates(cosmeticsCss, '.cf-back[data-card-back="card-back-jlorious"] ')).toBe(true);
+    // The emblem draws the art on the card, and the pile, which has no emblem, takes it in its look.
+    const flat = cosmeticsCss.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
+    expect(flat).toContain('.cf-back[data-card-back="card-back-jlorious"] .cf-back-emblem { height: 86%; aspect-ratio: 82 / 112; opacity: 1; background: url("/brand/jackioh-card-back.svg")');
+    expect(flat).toContain('.pile[data-card-back="card-back-jlorious"] { --card-back-look: url("/brand/jackioh-card-back.svg")');
   });
 
   it("R1953001 a card with no pick of its own draws its kind's default though the synced settings hold another foil, finish and border", () => {

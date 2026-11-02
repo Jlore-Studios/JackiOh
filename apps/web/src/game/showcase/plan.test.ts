@@ -203,6 +203,14 @@ describe("issue #1493 trap reveals are held up", () => {
     ]);
   });
 
+  it("R2734000 an opponent's trap the view names is held up by its definition on the other seat", () => {
+    // p1 is the viewer, so this is the other seat's view of p2's trap, named as `viewFor` now names it.
+    const named = fired("p2", "b41", "core-041");
+    expect(showcasePlays([named], withEvents(view, [named])).map((item) => item.play)).toEqual([
+      { player: "p2", defId: "core-041", instanceId: "b41", radiant: false, set: false, trapReveal: { ordinal: 1, total: 1 } },
+    ]);
+  });
+
   it("issue #1493 preserves R154 and R763 redaction in a trap reveal popup", () => {
     const hidden: GameEvent = { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 2 };
     const items = showcasePlays([hidden], withEvents(view, [hidden]));

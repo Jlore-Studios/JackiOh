@@ -215,7 +215,11 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let mut cosmetics_written = 0;
-    for cosmetic in cosmetics.iter().filter(|cosmetic| !cosmetic.default) {
+    // R2755000: the Jlorious card back too is left out, which only reaching Jlorious grants.
+    for cosmetic in cosmetics
+        .iter()
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+    {
         let targets: Vec<Option<&str>> = if per_card(cosmetic.kind) {
             cards.iter().copied().map(Some).collect()
         } else if cosmetic.kind == CosmeticKind::FullArt {

@@ -1,4 +1,4 @@
--- A card pick keeps a card's Animated art (migration 0074, SPEC §14.2; R2715000; issue #2715).
+-- A card pick keeps a card's Animated art (migration 0075, SPEC §14.2; R2715000; issue #2715).
 -- Runs after 40_full_art_tiers.sql; profile 1 (11111111-…) exists by then, and
 -- 34_cosmetic_loadouts.sql holds the table's columns, RLS and grants.
 \set ON_ERROR_STOP on
@@ -35,7 +35,7 @@ declare
                 values (%L, 'core-004', false, 'animated-gary-the-gambler')$q$, p1)]];
   i int;
 begin
-  -- The constraint is there, and it is 0074's, so the refusals below are its own.
+  -- The constraint is there, and it is 0075's, so the refusals below are its own.
   select pg_get_constraintdef(oid)
     into v_text
     from pg_constraint
@@ -45,7 +45,7 @@ begin
     raise exception 'FAIL (R2715000): card_cosmetic_picks_full_art_id_check is missing';
   end if;
   if position('animated' in v_text) = 0 then
-    raise exception 'FAIL (R2715000): card_cosmetic_picks_full_art_id_check is not 0074''s: %', v_text;
+    raise exception 'FAIL (R2715000): card_cosmetic_picks_full_art_id_check is not 0075''s: %', v_text;
   end if;
 
   -- An Animated art's id beside a switch that is on is kept as written, beside a still one's.
@@ -75,9 +75,9 @@ end $$;
 
 rollback;
 
-\echo '### R2715000: 0074 re-applies and keeps the widened check ###'
+\echo '### R2715000: 0075 re-applies and keeps the widened check ###'
 begin;
-\i /tmp/0074_animated_art.sql
+\i /tmp/0075_animated_art.sql
 do $$
 declare
   p1 constant uuid := '11111111-1111-1111-1111-111111111111';
@@ -87,10 +87,10 @@ begin
   begin
     insert into public.card_cosmetic_picks (profile_id, card_id, full_art, full_art_id)
     values (p1, 'core-004', true, 'animated-Mr');
-    raise exception 'FAIL (R2715000): after re-applying 0074, animated-Mr was accepted';
+    raise exception 'FAIL (R2715000): after re-applying 0075, animated-Mr was accepted';
   exception when check_violation then
     null;
   end;
-  raise notice 'OK (R2715000): 0074 re-applies, and its check still keeps an animated art id and refuses a bad one';
+  raise notice 'OK (R2715000): 0075 re-applies, and its check still keeps an animated art id and refuses a bad one';
 end $$;
 rollback;

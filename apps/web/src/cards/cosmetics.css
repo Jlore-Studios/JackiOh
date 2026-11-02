@@ -583,6 +583,31 @@
     radial-gradient(circle at 50% 50%, #2a1260, #0a0620 75%);
 }
 
+/* R2755000: the Jlorious card back is the J★ card itself, the logo's front card: its violet field,
+   and its gold J and star (public/brand/jackioh-card-back.svg, a card's shape) drawn by the emblem in
+   place of its rings and star, so it breathes as the chase backs' emblems move. The deck pile has no
+   emblem: its look carries the J, sized by height so the pill fits it. */
+.cf-back[data-card-back="card-back-jlorious"],
+.pile[data-card-back="card-back-jlorious"] {
+  --jlorious-field: radial-gradient(circle at 50% 42%, #3a2f6e, #241c44 55%, var(--pal-slate-900));
+  --card-back-look: var(--jlorious-field);
+}
+
+.pile[data-card-back="card-back-jlorious"] {
+  --card-back-look: url("/brand/jackioh-card-back.svg") center / auto 86% no-repeat, var(--jlorious-field);
+}
+
+.cf-back[data-card-back="card-back-jlorious"] .cf-back-emblem {
+  height: 86%;
+  aspect-ratio: 82 / 112;
+  opacity: 1;
+  background: url("/brand/jackioh-card-back.svg") center / contain no-repeat;
+}
+
+.cf-back[data-card-back="card-back-jlorious"] :is(.cf-back-emblem > *, .card-back-mark) {
+  display: none;
+}
+
 .cf-back:is(
     [data-card-back="card-back-lacquer"],
     [data-card-back="card-back-starfield"],
@@ -592,7 +617,8 @@
     [data-card-back="card-back-tarot"],
     [data-card-back="card-back-dragon-scale"],
     [data-card-back="card-back-clockwork"],
-    [data-card-back="card-back-nebula"]
+    [data-card-back="card-back-nebula"],
+    [data-card-back="card-back-jlorious"]
   ) {
   background: var(--card-back-look);
 }
@@ -606,7 +632,8 @@
     [data-card-back="card-back-tarot"],
     [data-card-back="card-back-dragon-scale"],
     [data-card-back="card-back-clockwork"],
-    [data-card-back="card-back-nebula"]
+    [data-card-back="card-back-nebula"],
+    [data-card-back="card-back-jlorious"]
   ) {
   background:
     linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)),
@@ -897,6 +924,11 @@
   :root:not([data-reduce-motion="true"]) .cf-back[data-card-back="card-back-nebula"] .cf-back-emblem {
     will-change: transform, opacity;
     animation: cosmetic-back-orbit 14s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-back[data-card-back="card-back-jlorious"] .cf-back-emblem {
+    will-change: transform, opacity;
+    animation: cosmetic-back-breathe 4s ease-in-out infinite;
   }
 
   :root:not([data-reduce-motion="true"]) .cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-art-frame > .cf-art {

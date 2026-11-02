@@ -16,7 +16,7 @@ use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
-use jackioh_server::cosmetics::{ANIMATED_ART_ID_PREFIX, CosmeticKind, shipped};
+use jackioh_server::cosmetics::{ANIMATED_ART_ID_PREFIX, CosmeticKind, JLORIOUS_CARD_BACK, shipped};
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
@@ -470,7 +470,7 @@ async fn r1300000_giving_jlore_adds_it_marked_dev() {
 // ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
-async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
+async fn r1300000_r2755000_fill_grants_every_card_and_every_cosmetic_but_the_jlorious_back_marked_dev() {
     let (app, dev, _other) = dev_app().await;
     let cards = collectable(&app);
     let registry = shipped().expect("the registry parses");
@@ -494,7 +494,11 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     let mut account_cosmetics: Vec<String> = registry
         .iter()
         .filter(|cosmetic| {
-            !cosmetic.default && !per_card(cosmetic.kind) && cosmetic.kind != CosmeticKind::FullArt
+            !cosmetic.default
+                && !per_card(cosmetic.kind)
+                && cosmetic.kind != CosmeticKind::FullArt
+                // R2755000: only reaching Jlorious grants it.
+                && !cosmetic.jlorious
         })
         .map(|cosmetic| cosmetic.id.clone())
         .collect();
@@ -533,6 +537,7 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     );
     assert_eq!(held.cosmetics.cards.len(), on_cards);
     assert_eq!(held.cosmetics.account, account_cosmetics);
+    assert!(!held.cosmetics.account.iter().any(|id| id == JLORIOUS_CARD_BACK));
     // No default: every account owns those with no row (§14.2).
     assert!(
         held.cosmetics.cards.iter().all(|owned| {

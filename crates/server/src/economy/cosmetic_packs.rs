@@ -559,9 +559,11 @@ pub async fn buy_chase_once(
     if bar < CHASE_SHARD_PACKS {
         return Err(conflict("the Chase Shard bar is not full"));
     }
-    if !cosmetic.rarity.is_chase() {
+    // The registry's chase mark, a Legendary or Mythic cosmetic's but a Jlorious one's, which only
+    // reaching Jlorious grants (R2755000).
+    if !cosmetic.chase {
         return Err(conflict(
-            "the Chase Shard bar buys only a Legendary or Mythic cosmetic",
+            "the Chase Shard bar buys only a chase: a Legendary or Mythic cosmetic, but the Jlorious one",
         ));
     }
     if !choice.fits {
@@ -705,6 +707,7 @@ mod tests {
             default: false,
             starter: false,
             chase: rarity.is_chase(),
+            jlorious: false,
             card: None,
         }
     }

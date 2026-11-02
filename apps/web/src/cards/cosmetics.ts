@@ -210,7 +210,7 @@ function isPickText(value: unknown): value is string {
 /** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
 const FULL_ART_ID_PREFIX = "full-art-";
 
-/** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0074). */
+/** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
 export const ANIMATED_ART_ID_PREFIX = "animated-";
 
 /** R2655000: a card's full-art pick as stored: a boolean, or a full art's id (R2715000: an Animated art's among them), known or not. */

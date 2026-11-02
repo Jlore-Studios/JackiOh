@@ -369,6 +369,15 @@ describe("R1350 a Legendary's or a Mythic's intro", () => {
     expect(r.intros).toEqual(["intro-core-096", "intro-classicplus-074"]);
   });
 
+  it("R2734000 an opponent's Trap the view names opens its intro on the other seat too", () => {
+    // The viewer is p1: p2's My Pawn fired, and the view names it as on its controller's seat.
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent({ type: "trapFired", instanceId: "t9", defId: MY_PAWN, controller: "p2", row: "backrow", lane: 2 }, view);
+    expect(r.intros).toEqual(["intro-core-096"]);
+  });
+
   it("R2657001 a Field Trap firing again opens nothing, even for a director that never heard its first firing", () => {
     const r = rig();
     const view = midGame();

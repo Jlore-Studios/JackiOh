@@ -135,6 +135,7 @@ export const COSMETICS = [
   {"id":"full-art-j-jungle-explorer","kind":"fullArt","name":"J-lease J-Jungle EX-plorer full art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"classicplus-075"},
   {"id":"full-art-j-jungle-explorer-animated","kind":"fullArt","name":"J-lease J-Jungle EX-plorer animated full art","rarity":"Legendary","default":false,"starter":false,"chase":true,"card":"classicplus-075"},
   {"id":"full-art-j-jungle-explorer-signed","kind":"fullArt","name":"J-lease J-Jungle EX-plorer signed full art","rarity":"Mythic","default":false,"starter":false,"chase":true,"card":"classicplus-075"},
+  {"id":"card-back-jlorious","kind":"cardBack","name":"Jlorious","rarity":"Mythic","default":false,"starter":false,"chase":false,"jlorious":true},
   {"id":"animated-big-d-fender","kind":"fullArt","name":"Big D-fender animated art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"core-001"},
   {"id":"animated-gary-the-gambler","kind":"fullArt","name":"Gary the Gambler animated art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"core-004"},
   {"id":"animated-mr-vanilla","kind":"fullArt","name":"Mr. Vanilla animated art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"core-008"},

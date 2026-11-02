@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0074: a card pick keeps a card's Animated art (SPEC §14.2;
+-- Migration 0075: a card pick keeps a card's Animated art (SPEC §14.2;
 -- R2715000; issue #2715)
 -- ============================================================================
 -- Serves SPEC §14.2: every full-art card has a fourth full art, its Animated
@@ -16,7 +16,7 @@
 --
 -- No row is rewritten: every row 0072's check took, this one takes.
 --
--- Apply order: ... -> 0072 (full_art_id) -> 0073 -> 0074 (this file).
+-- Apply order: ... -> 0072 (full_art_id) -> 0073 -> 0074 -> 0075 (this file).
 -- This file only replaces that check. Safe to re-apply:
 -- drop-constraint-if-exists then add.
 -- ============================================================================

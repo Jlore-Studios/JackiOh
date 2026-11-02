@@ -23,6 +23,7 @@ pub(crate) fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         default: false,
         starter: false,
         chase: rarity.is_chase(),
+        jlorious: false,
         card: None,
     }
 }

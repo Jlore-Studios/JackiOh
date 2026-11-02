@@ -866,11 +866,13 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
             .map(|cosmetic| {
                 let mut row = serde_json::to_value(cosmetic).expect("a cosmetic serializes");
                 row["chase"] = json!(false);
-                // `starter` is the registry's, not a column (R1301002), and R1313000:
+                // `starter` is the registry's, not a column (R1301002), and so is `jlorious`, which
+                // the server reads from the registry alone (R2755000); and R1313000:
                 // `public.cosmetics` keeps no card, since a full art's card is the `card_id` of its
                 // ownership row.
                 if let Some(fields) = row.as_object_mut() {
                     fields.remove("starter");
+                    fields.remove("jlorious");
                     fields.remove("card");
                 }
                 row

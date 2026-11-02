@@ -1031,7 +1031,7 @@ Migration 0072 adds `full_art_id` to `card_cosmetic_picks` (R2655000) and rewrit
 the full art a card's pick wears (its Epic, Legendary or Mythic), kept as written beside `full_art =
 true`; a row with the switch on and no id is the card's Epic, as every row before 0072 means it.
 `card_cosmetic_picks_full_art_id_check` holds the id to the switch being on and to a `full-art-…` slug
-of at most 40 characters (0074 widens it to an `animated-…` one too). The store reads the two columns
+of at most 40 characters (0075 widens it to an `animated-…` one too). The store reads the two columns
 as one `FullArtPick` (`true`, `false` or the id). `tests/sql/40_full_art_tiers.sql` checks the id kept
 and the shapes refused.
 
@@ -1041,10 +1041,18 @@ until no server on the code before R2615000 could be serving, since that code re
 overlaps. `tests/sql/22_social.sql` checks that the column and its grant are gone and that the file
 re-applies.
 
-Migration 0074 widens 0072's `card_cosmetic_picks_full_art_id_check` (R2715000) and rewrites no row: a
+Migration 0074 adds the Jlorious card back (R2755000): its `cosmetics` row, as 0057 wrote the
+portraits' before `seed-catalog` runs, and `jlorious` among `cosmetic_grants`' reasons, the grant a rated
+game writes to each person it leaves Jlorious (`api/ranked.rs`, `commit_ranked_game`). It grants the
+back once to every person whose season row holds a Jlorious peak, an `account_cosmetics` row each with
+its `cosmetic_grants` row on no card, reason `jlorious` and ref `jlorious:0074`, passing over one who
+owns it and every ladder bot. `tests/sql/41_jlorious_card_back.sql` checks the row, the reason and the
+grant over people of its own, and that the file re-applies.
+
+Migration 0075 widens 0072's `card_cosmetic_picks_full_art_id_check` (R2715000) and rewrites no row: a
 card's pick may keep its Animated art, the Epic `animated-<slug>` beside its still Epic, so the id is a
 `full-art-…` or an `animated-…` slug of at most 40 characters, still only beside `full_art = true`.
-Every row 0072's check took, it takes. `tests/sql/41_animated_art.sql` checks the id kept, the shapes
+Every row 0072's check took, it takes. `tests/sql/42_animated_art.sql` checks the id kept, the shapes
 refused and the re-apply.
 
 ## Tests
