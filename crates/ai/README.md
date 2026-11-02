@@ -42,8 +42,10 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
 (R185): `redact` blanks what the seat may not know (the opponent's hand (its Resources among it,
 R2250000) and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
-them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
-it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
+them (its option reads the view's `Face-down card`, R177), its own library's order, the cards in
+it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
+as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
+prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
 hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
