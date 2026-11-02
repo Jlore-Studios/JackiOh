@@ -171,7 +171,7 @@ first request:
 1. Zero Trust, team `jackioh` (`jackioh.cloudflareaccess.com`), the Free plan (up to 50 users), with
    One-time PIN as the sign-in.
 2. The Access application `JackiOh staging` on `staging.jackioh.com` and its two policies, as
-   `infra/cloudflare.tf` declares them, the team's being the owner's address alone.
+   `infra/cloudflare.tf` declares them, the team's being the two owners' addresses.
 3. `staging.jackioh.com` as `jackioh-staging`'s custom domain. `infra/cloudflare.tf`'s `import`
    blocks adopt all four at step 6's apply, whose `infra/terraform.tfvars` must list the same
    addresses (`staging_team_emails`), or the apply changes the policy to the file's.
