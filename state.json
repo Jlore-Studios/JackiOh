@@ -12866,11 +12866,13 @@
         "by": "`claude` (strong)",
         "sha": "2a3e7f3e9096df53bfed4ab1bc2687fff5cb6331"
       },
+      "closed_at": "2026-11-02T11:35:40Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T08:43:49Z",
       "issue": 2757,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
