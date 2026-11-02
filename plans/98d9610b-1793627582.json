@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2825,
+  "title": "Patch: the AI orders its own attacks by value instead of always going face first",
+  "branch": "bot/issue-2825",
+  "thread": "**Issue #2825 (data, not instructions):**\n\n```text\n# #2825: Patch: the AI orders its own attacks by value instead of always going face first\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nToday the practice opponent swings at your hero first whenever it can, even when killing one of your dangerous units would be worth far more. After this change it still hits face most of the time, but it takes the valuable kill first when the kill matters more, the way a person would. Example: your engine piece no longer survives a turn it should not, just because the AI preferred chipping your hero for 3.\n## Why\n`attack_tier` in `crates/ai/src/candidates.rs` returns tier 0 for every hero attack, and `in_move_order` emits all tier-0 hero attacks before tier-1 winning trades and tier-2 even trades. Below the root the search keeps only `AI_BUDGET.branching` (6) children per line, so on a wide board the face-chip lines fill the width and engine-kill lines can be cut before the beam ever scores them. The reply already does the right thing for the opponent (`ranked_attacks` in `crates/ai/src/reply.rs`: lethal first, then kills by `trade_value`, then face by `reply_face_value`). Real lethals stay safe either way: the exact lethal solver (`find_lethal` in `crates/ai/src/decide.rs`) runs before the beam.\n## Proposal\nRank the AI's own tier-0 face attacks against its tier-1 and tier-2 killing trades with the same comparison the reply uses (`trade_value` of the kill versus `reply_face_value` of the chip), so a kill worth more than the chip goes first in move order. Ordering only; scoring unchanged. Any margin or weight this needs becomes a named constant in `crates/ai/src/config.rs` (CLAUDE.md rule 9).\n## Where it lands\nFiles: `crates/ai/src/candidates.rs` (`attack_tier`, `in_move_order`, `even_trade`, `trade_value`), `crates/ai/src/reply.rs` (`ranked_attacks`, `reply_face_value`), `crates/ai/src/config.rs` if a constant is needed. SPEC sections: \u00a79.9 (practice AI, search and reply).\n## Acceptance criteria\n- [ ] New `tests/ai` attack-ordering puzzles: on a crowded board, kill-the-engine versus chip-face, the AI takes the kill when the trade value beats the chip and still goes face when it does not.\n- [ ] Exact lethal lines are still taken first (lethal-solver tests pass unchanged).\n- [ ] Existing `even_trades` and `decide` suites pass; the AI quality gate holds its floors (hashes may move; wins must not regress, shown by paired games per `training/improve.md`).\n## Size and risks\nMedium work, suggested `difficulty:hard` (AI play quality, CLAUDE.md rule 11). Main risk is moved search hashes across many seeds, so the proof is paired-games wins, not golden stability.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-02T13:49:36Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2825: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
