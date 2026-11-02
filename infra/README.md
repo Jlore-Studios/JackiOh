@@ -10,7 +10,7 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 | Host | Owned here | File | Left to |
 | --- | --- | --- | --- |
 | Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, and `www.jackioh.com` once it serves); the Access application and policies that keep staging to the team | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
-| Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL and Redirect URLs | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
+| Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL, Redirect URLs and leaked-password protection | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
 | GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), and the `production` ruleset | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores) |
 
 Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
@@ -99,8 +99,8 @@ from.
 4. **Plan.** `init`, then `plan`. It reads `Plan: 4 to import, 1 to add, 2 to change, 0 to
    destroy`. The one add is the `production` ruleset, and the two changes are the two
    `supabase_settings`: an import reads every Supabase setting into the state, and the first apply
-   drops all but the Site URL and the Redirect URLs from it. Production's sends the two values its
-   project was set up with; staging's moves its project's Site URL from `https://jackioh.com` to
+   drops all but the Site URL, the Redirect URLs and leaked-password protection from it, and turns
+   that protection on in both. Production's sends the URLs its project was set up with; staging's moves its project's Site URL from `https://jackioh.com` to
    `https://staging.jackioh.com` and takes `https://jackioh.com/login` off its list, so apply it only
    once production runs on its own project (`docs/deploy-cloudflare.md` section 4, step 6). Any other change
    means a file differs from the host. Make the file say what the host says, and when the host is the one that is wrong,

@@ -328,11 +328,9 @@ holds only the development imports' batches, so none of it comes. Then Advisors 
 project (row-level security is on for every `public` table, as on staging), and the counts of
 `profiles`, `matches` and `auth.users` on both sides, which must agree.
 
-**What production's figures lose.** §9.11's publication gate pads a patch's public figures with
-development games until it has `PUBLIC_STATS_MIN_LIVE_GAMES` live games. With the development lanes
-filing into staging, production holds none, so its `/stats` shows live games alone from the first
-game (`not enough games` until a card has `CARD_STATS_MIN_SAMPLE`), and `winrates-refresh.yml`'s
-provisional refresh (R2386000) has nothing to pad with. Copying the development rows of the three
-totals tables as well (leave their `-x` off) keeps the padding for the patches already gathered, and
-not for later ones. Whether production should read development figures at all is the owner's call;
-the gate itself is unchanged either way, and only finds no development games to pad with.
+**Production's figures count live games alone** (R1933000, the owner's decision of 2026-11-01).
+§9.11's publication gate pads a patch's public figures with development games until it has
+`PUBLIC_STATS_MIN_LIVE_GAMES` live games; production holds none, so its `/stats` shows live games
+from the first game (`not enough games` until a card has `CARD_STATS_MIN_SAMPLE`), and
+`winrates-refresh.yml`'s provisional refresh (R2386000) waits for live games too. That is why the
+copy leaves the development rows behind. Staging's site still reads both.

@@ -1,4 +1,5 @@
-# Supabase: Authentication's Site URL and Redirect URLs of each site's project, and nothing else.
+# Supabase: Authentication's Site URL, Redirect URLs and leaked-password check of each site's project,
+# and nothing else.
 # The schema belongs to the migrations, which `jackioh-server release` applies, and the keys are
 # secrets (the Workers' `wrangler secret put` values, apps/edge/README.md).
 #
@@ -21,15 +22,21 @@ locals {
 # player to the other site, where the account does not exist (and an OAuth sign-in there would fail
 # anyway, its PKCE verifier being in the storage of the origin that started it).
 #
-# `auth` names only these two keys, and the provider then reads and writes only them. An import reads
-# every setting into state, so the first apply narrows the state to these two and sends Supabase the
-# two values (README.md, The first import).
+# Leaked-password protection (`password_hibp_enabled`, Pro plan): a sign-up or a new password is
+# checked against HaveIBeenPwned's list of breached passwords and refused when it is on it. Only the
+# first five characters of the password's SHA-1 hash leave Supabase (k-anonymity). The client says
+# why (`weakPasswordPwned` in apps/web/src/net/auth.ts). An existing password is never checked.
+#
+# `auth` names only these three keys, and the provider then reads and writes only them. An import
+# reads every setting into state, so the first apply narrows the state to these three and sends
+# Supabase the three values (README.md, The first import).
 resource "supabase_settings" "production" {
   project_ref = local.supabase_production_ref
 
   auth = jsonencode({
-    site_url       = "https://jackioh.com"
-    uri_allow_list = "https://jackioh.com/login"
+    site_url              = "https://jackioh.com"
+    uri_allow_list        = "https://jackioh.com/login"
+    password_hibp_enabled = true
   })
 }
 
@@ -37,8 +44,9 @@ resource "supabase_settings" "staging" {
   project_ref = local.supabase_staging_ref
 
   auth = jsonencode({
-    site_url       = "https://staging.jackioh.com"
-    uri_allow_list = "https://staging.jackioh.com/login"
+    site_url              = "https://staging.jackioh.com"
+    uri_allow_list        = "https://staging.jackioh.com/login"
+    password_hibp_enabled = true
   })
 }
 

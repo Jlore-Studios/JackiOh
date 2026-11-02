@@ -5,7 +5,7 @@
 // public half of the environment contract, and the hosts it names must be ones its build's CSP lets
 // the page reach.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -103,6 +103,28 @@ describe("the two builds' Supabase projects", () => {
       const vars = (env === null ? wrangler : wrangler.env?.[env])?.vars ?? {};
       expect(vars["SUPABASE_URL"], file).toBe(Object.fromEntries(entries(file))["VITE_SUPABASE_URL"]);
     }
+  });
+});
+
+describe("R1933000 production's card statistics hold live games alone", () => {
+  const WORKFLOWS = join(ROOT, ".github/workflows");
+  const text = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
+  const workflows = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
+
+  it("files development records only from the development lanes, through staging's STATS_IMPORT_DATABASE_URL", () => {
+    const importers = workflows.filter((file) => text(file).includes("jackioh-server stats-import"));
+    expect(importers.sort()).toEqual(["gather.yml", "learn.yml"]);
+    for (const file of importers) {
+      const secrets = [...text(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
+      expect(secrets.length, file).toBeGreaterThan(0);
+      expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL"]));
+    }
+  });
+
+  it("reads production through STATS_DATABASE_URL, which no workflow imports through", () => {
+    const readers = workflows.filter((file) => /\bSTATS_DATABASE_URL\b/u.test(text(file)));
+    expect(readers.sort()).toEqual(["db-size.yml", "winrates-refresh.yml"]);
+    for (const file of readers) expect(text(file), file).not.toContain("stats-import");
   });
 });
 
