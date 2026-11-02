@@ -325,6 +325,22 @@ pub fn cloaked_mourner() -> CardDef {
     unit(7863, "cloaked-mourner", 1, 1, 1, json!([{ "kind": "Cloaked" }]))
 }
 
+/// A Cloaked 1/1 Unit token: set face-down it is still the unit token it was printed as (R11, R2855000).
+pub fn cloaked_token() -> CardDef {
+    json_as(spread(
+        serde_json::to_value(unit(
+            7870,
+            "cloaked-token",
+            1,
+            1,
+            1,
+            json!([{ "kind": "Cloaked" }]),
+        ))
+        .expect("a def serializes"),
+        json!({ "token": true, "rarity": "Token" }),
+    ))
+}
+
 pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         ranged(),
@@ -367,6 +383,7 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         plague_field(),
         cloaked_mourner(),
         cloaked_field_trap(),
+        cloaked_token(),
     ]
 });
 
