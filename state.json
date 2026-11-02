@@ -11840,6 +11840,7 @@
     "2739": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -11860,7 +11861,7 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "claude-2",
-      "queued_at": "2026-11-01T19:37:30Z",
+      "queued_at": "2026-11-02T13:37:29Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "41433952455",
