@@ -100,6 +100,26 @@ fn attack_flags(poisonous: bool) -> Option<DamageFlags> {
     })
 }
 
+/// R2783001: `flags` with `via` for the hit's route, the flags as they are with none.
+fn with_via(flags: Option<DamageFlags>, via: Option<KeywordKind>) -> Option<DamageFlags> {
+    match via {
+        None => flags,
+        Some(_) => Some(DamageFlags {
+            via,
+            ..flags.unwrap_or_default()
+        }),
+    }
+}
+
+/// R2783001: the unit `id` fell to the strike First Strike moved ahead (§4.3 step 1), so it struck
+/// nothing back, which its `destroyed` says. One the hit marked for exile (R1124) has no `destroyed`.
+fn note_first_strike_kill(sink: &mut EngineSink<'_>, id: &str) {
+    let dies = find_instance(sink.state, id).is_some_and(|card| card.marked_exiled != Some(true));
+    if dies {
+        crate::damage::note_death_via(sink, id, KeywordKind::FirstStrike);
+    }
+}
+
 fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
     Resume {
         def_id: String::new(),
@@ -624,13 +644,15 @@ fn cleave(
                 source: Some(attacker.clone()),
                 target: DamageTarget::Unit { instance: neighbour },
                 amount,
-                flags: attack_flags(poisonous),
+                // R2783001: each neighbour hit is Cleave's.
+                flags: with_via(attack_flags(poisonous), Some(KeywordKind::Cleave)),
             },
         );
     }
 }
 
-/// The attacker's hit and its Cleave, with the attacker read as it stands when it strikes.
+/// The attacker's hit and its Cleave, with the attacker read as it stands when it strikes. `via` is
+/// the main hit's route (R2783001: First Strike's), never its Cleave's.
 fn strike(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -638,6 +660,7 @@ fn strike(
     hit: i32,
     cleave_amount: i32,
     poisonous: bool,
+    via: Option<KeywordKind>,
 ) {
     let source = live_or(sink.state, attacker);
     deal_damage(
@@ -646,14 +669,21 @@ fn strike(
             source: Some(source),
             target: target.clone(),
             amount: hit,
-            flags: attack_flags(poisonous),
+            flags: with_via(attack_flags(poisonous), via),
         },
     );
     let source = live_or(sink.state, attacker);
     cleave(sink, &source, target, cleave_amount, poisonous);
 }
 
-fn strike_back(sink: &mut EngineSink<'_>, defender: &CardInstance, attacker: &CardInstance, attack: i32) {
+/// The defender's strike back; `via` as on `strike`.
+fn strike_back(
+    sink: &mut EngineSink<'_>,
+    defender: &CardInstance,
+    attacker: &CardInstance,
+    attack: i32,
+    via: Option<KeywordKind>,
+) {
     let source = live_or(sink.state, defender);
     let target = live_or(sink.state, attacker);
     deal_damage(
@@ -662,7 +692,7 @@ fn strike_back(sink: &mut EngineSink<'_>, defender: &CardInstance, attacker: &Ca
             source: Some(source),
             target: DamageTarget::Unit { instance: target },
             amount: attack,
-            flags: combat_flags(),
+            flags: with_via(combat_flags(), via),
         },
     );
 }
@@ -703,7 +733,7 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
 
     // §4.3: when the defender is a hero, only the attacker deals damage.
     let Some(defender) = defender else {
-        strike(sink, &attacker, target, attack, attack, false);
+        strike(sink, &attacker, target, attack, attack, false, None);
         return;
     };
 
@@ -721,7 +751,7 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     // R783000: a Ranged attacker's strike lands alone — no strike back, a First Strike one included —
     // unless the defender is Ranged too. Its Cleave splashes as ever (R783001).
     if !takes_strike_back(sink.state, &attacker, &defender) {
-        strike(sink, &attacker, target, hit, attack, bonus.poisonous);
+        strike(sink, &attacker, target, hit, attack, bonus.poisonous, None);
         return;
     }
 
@@ -735,25 +765,31 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     );
 
     // Step 1: one First Strike hits alone, and the other side answers in step 2 only if it survives.
+    // R2783001: that strike says First Strike, and a death it caused says that nothing struck back.
+    let first = Some(KeywordKind::FirstStrike);
     if attacker_first && !defender_first {
-        strike(sink, &attacker, target, hit, attack, bonus.poisonous);
-        if !has_fallen_now(sink.state, &defender.id) {
-            strike_back(sink, &defender, &attacker, strike_back_attack);
+        strike(sink, &attacker, target, hit, attack, bonus.poisonous, first);
+        if has_fallen_now(sink.state, &defender.id) {
+            note_first_strike_kill(sink, &defender.id);
+        } else {
+            strike_back(sink, &defender, &attacker, strike_back_attack, None);
         }
         return;
     }
     if defender_first && !attacker_first {
-        strike_back(sink, &defender, &attacker, strike_back_attack);
-        if !has_fallen_now(sink.state, &attacker.id) {
-            strike(sink, &attacker, target, hit, attack, bonus.poisonous);
+        strike_back(sink, &defender, &attacker, strike_back_attack, first);
+        if has_fallen_now(sink.state, &attacker.id) {
+            note_first_strike_kill(sink, &attacker.id);
+        } else {
+            strike(sink, &attacker, target, hit, attack, bonus.poisonous, None);
         }
         return;
     }
 
     // Two First Strikers strike simultaneously in step 1, two ordinary units in step 2, and either
     // way the first death does not cancel the exchange (R59).
-    strike(sink, &attacker, target, hit, attack, bonus.poisonous);
-    strike_back(sink, &defender, &attacker, strike_back_attack);
+    strike(sink, &attacker, target, hit, attack, bonus.poisonous, None);
+    strike_back(sink, &defender, &attacker, strike_back_attack, None);
 }
 
 // §4.2 step 4: the trap window between the declaration and the damage (R44, R100, R113, R117)

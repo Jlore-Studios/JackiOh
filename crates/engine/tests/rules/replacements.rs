@@ -479,7 +479,7 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         assert_eq!(
             events_json(&first.events, GameEventType::Damage),
             vec![
-                json!({ "type": "damage", "sourceId": moon.id, "targetId": "hero-p1", "amount": 5, "combat": false })
+                json!({ "type": "damage", "sourceId": moon.id, "targetId": "hero-p1", "amount": 5, "combat": false, "via": "Pierce" })
             ]
         );
         assert!(events_json(&first.events, GameEventType::Healed).is_empty());

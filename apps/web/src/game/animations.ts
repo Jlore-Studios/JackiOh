@@ -885,6 +885,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "roll" },
     target: () => testid.banner,
   },
+  // Issue #2783 (R2783000): a card's hook begins to resolve. A marker for #2782's cues to anchor on;
+  // the hook's own events animate, so it resolves instantly on an existing keyframe, as `emoted` does.
+  hookResolving: {
+    animation: "jk-loss-pop",
+    durationMs: 0,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.controller)),
+  },
 };
 
 /**
