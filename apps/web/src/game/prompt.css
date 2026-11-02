@@ -1244,9 +1244,13 @@
   background: color-mix(in srgb, var(--pal-wood-950) 30%, transparent);
 }
 
-/* The back fills its option's box, as a face fills a card option's; it takes no hit (`.prompt` above). */
+/* The back fills its option's box, as a face fills a card option's; it takes no hit (`.prompt` above). The
+   back is laid over the box (cards.css `.cf-back`, `inset: 0`), so nothing inside grows it as a face grows a
+   card option: the box keeps a card's 5:7 itself (`.cf-option`), or a phone's option box (--card-h tall)
+   draws a squat back. */
 .prompt-card.prompt-card--back {
   position: relative;
+  aspect-ratio: 5 / 7;
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--pal-slate-700);

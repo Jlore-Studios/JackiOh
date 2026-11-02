@@ -4,6 +4,10 @@
 // card picker sends its hovered option once per change, and null when the pointer or focus leaves or the
 // picker closes. A mulligan, a replay's picker and a play's own picker send nothing.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -125,6 +129,15 @@ describe("R2739000 the other seat's card picker, face down", () => {
     expect(screen.getByRole("status")).toHaveTextContent(WAITING_NAME);
     expect(screen.queryByTestId("opponent-choice")).toBeNull();
     expect(document.querySelector(".cf-back")).toBeNull();
+  });
+
+  // jsdom lays nothing out, so the sheet is read: the back is laid over its box (`.cf-back`, `inset: 0`)
+  // and grows nothing, so without a shape of its own a phone's option box (--card-h tall) drew it squat.
+  it("R2739000 a back keeps a card's 5:7 at every width", () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "prompt.css"), "utf8");
+    const start = css.indexOf(".prompt-card.prompt-card--back {");
+    expect(start).toBeGreaterThan(-1);
+    expect(css.slice(start, css.indexOf("}", start))).toContain("aspect-ratio: 5 / 7;");
   });
 });
 

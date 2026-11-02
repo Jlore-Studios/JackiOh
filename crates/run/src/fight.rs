@@ -161,9 +161,9 @@ impl Tally {
                 } if side_of(target_id, before, after) == Some(human.opponent()) => {
                     self.damage_dealt += amount;
                 }
-                GameEvent::Healed { target_id, amount }
-                    if side_of(target_id, before, after) == Some(human) =>
-                {
+                GameEvent::Healed {
+                    target_id, amount, ..
+                } if side_of(target_id, before, after) == Some(human) => {
                     self.healing_done += amount;
                 }
                 // A turn's draw or a card's: the opening deal has no `turnDraw`, and a fatigue draw
