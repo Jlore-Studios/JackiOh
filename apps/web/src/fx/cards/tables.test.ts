@@ -1,11 +1,12 @@
 // R2784000: every set's effects table (fx/cards/<set>.json5) held to the catalog: every card, tokens
 // included, in catalog order, one line each under its own name, Stinkyscape split in two at 091; and
 // the loader's errors, each naming its file and card. R502, R670: the seven former `CARD_FX` cards are
-// `{ bespoke }` entries.
+// `{ bespoke }` entries. R2787000: an entry's `aura`, and the ten Field Spells that wear one.
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "../../wire/cards.ts";
+import { AURA_LOOK_NAMES, AURA_SCOPES } from "../aura/looks.ts";
 import { FX_MOTIF_NAMES } from "../motifs/names.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, parseFxCardTable, type FxCardFile } from "./tables.ts";
 
@@ -133,5 +134,60 @@ describe("R2784000 the per-set effects tables", () => {
     };
     expect(Object.keys(examples)).toHaveLength(12);
     for (const [defId, entry] of Object.entries(examples)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
+  });
+
+  it("R2787000 an aura parses alone or beside hooks, and an unknown look, scope, palette or field, or a zone aura off the field, fails", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    expect(parse(`"core-014": { aura: { look: "storm", scope: "side" } }`).get("core-014")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "storm", scope: "side" } });
+    expect(parse(`"core-035": { cast: { motif: "bolt" }, aura: { look: "ember", palette: "Fire", scope: "side" } }`).get("core-035")).toEqual({
+      kind: "hooks",
+      hooks: { cast: { motif: "bolt" } },
+      aura: { look: "ember", palette: "Fire", scope: "side" },
+    });
+    expect(parse(`"core-035": { cast: { motif: "bolt" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: { cast: { motif: "bolt" } } });
+    for (const look of AURA_LOOK_NAMES) {
+      for (const scope of AURA_SCOPES) {
+        expect(parse(`"core-018": { aura: { look: "${look}", scope: "${scope}" } }`).get("core-018"), `${look} ${scope}`).toEqual({ kind: "hooks", hooks: {}, aura: { look, scope } });
+      }
+    }
+    says(`"core-014": { aura: "storm" }`, /^fx\/cards\/test\.json5: core-014: aura must be \{ look, palette\?, scope \}$/);
+    says(`"core-014": { aura: { look: "storm", scope: "side", speed: 2 } }`, /core-014: unknown field "speed" in aura$/);
+    says(`"core-014": { aura: { look: "sparkle", scope: "side" } }`, /core-014: unknown aura look "sparkle"$/);
+    says(`"core-014": { aura: { scope: "side" } }`, /core-014: unknown aura look "undefined"$/);
+    says(`"core-014": { aura: { look: "storm", scope: "deck" } }`, /core-014: unknown aura scope "deck"$/);
+    says(`"core-014": { aura: { look: "storm", palette: "Plaid", scope: "side" } }`, /core-014: unknown palette "Plaid" in aura$/);
+    says(`"core-035": { aura: { look: "ember", scope: "zone" } }`, /core-035: a zone aura stands in a zone; this card is a Spell, whose aura is side or board$/);
+    says(`"core-035": { aura: { look: "ember", scope: "lane" } }`, /core-035: a lane aura stands in a zone; this card is a Spell, whose aura is side or board$/);
+    expect(parse(`"core-035": { aura: { look: "ember", scope: "side" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "ember", scope: "side" } });
+    expect(parse(`"core-035": { aura: { look: "ember", scope: "board" } }`).get("core-035")?.kind).toBe("hooks");
+    says(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "side" } }`, /core-021: a bespoke entry holds nothing else/);
+    says(`"core-035": {}`, /core-035: names no hook/);
+  });
+
+  it("R2787000 the ten example Field Spells across the sets wear their auras", () => {
+    const examples = {
+      "core-014": { look: "storm", scope: "side" },
+      "core-046": { look: "void", scope: "board" },
+      "classic-042": { look: "toxic", scope: "board" },
+      "classic-075": { look: "holy", scope: "side" },
+      "classicplus-034": { look: "frost", palette: "Tech", scope: "lane" },
+      "meditative-040": { look: "bloom", scope: "board" },
+      "meditativeplus-009": { look: "arcane", scope: "board" },
+      "stinkyscape-046": { look: "storm", scope: "lane" },
+      "stinkyscape-155": { look: "ember", scope: "zone" },
+      "traininggrounds-019": { look: "bloom", scope: "zone" },
+    };
+    expect(Object.keys(examples)).toHaveLength(10);
+    const files = new Set<string>();
+    for (const [defId, aura] of Object.entries(examples)) {
+      expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
+      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "hooks", hooks: {}, aura });
+      const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
+      if (file !== undefined) files.add(file.file);
+    }
+    expect(files.size).toBe(FX_CARD_FILES.length);
   });
 });

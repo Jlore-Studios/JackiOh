@@ -149,6 +149,19 @@ export const FX_MOTIF_CENTER_LANE = 3;         // nova: the lane a one-sided bla
 export const FX_MOTIF_TRAUMA = { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 } as const;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
+// AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
+// all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS
+// with a burst (px/s, decaying by AURA_BURST_DECAY per second) and out over AURA_FADE_OUT_MS; the layer
+// remembers the source of at most AURA_SOURCES_LIMIT modifiers (oldest evicted).
+export const AURA_MAX_PER_ZONE = 2;
+export const AURA_MOTES_PER_AURA = 24;
+export const AURA_PARTICLE_SHARE = 0.25;
+export const AURA_FADE_IN_MS = 600;
+export const AURA_FADE_OUT_MS = 500;
+export const AURA_BURST_SPEED = 220;
+export const AURA_BURST_DECAY = 4;
+export const AURA_SOURCES_LIMIT = 64;
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;

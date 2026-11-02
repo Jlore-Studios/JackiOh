@@ -128,6 +128,15 @@ const S2 = {
   FX_MOTIF_CENTER_LANE: 3,
   FX_MOTIF_TRAUMA: { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 },
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
+  // Issue #2787: the auras (R2787000).
+  AURA_MAX_PER_ZONE: 2,
+  AURA_MOTES_PER_AURA: 24,
+  AURA_PARTICLE_SHARE: 0.25,
+  AURA_FADE_IN_MS: 600,
+  AURA_FADE_OUT_MS: 500,
+  AURA_BURST_SPEED: 220,
+  AURA_BURST_DECAY: 4,
+  AURA_SOURCES_LIMIT: 64,
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },
