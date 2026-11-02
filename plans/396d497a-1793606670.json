@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 2757,
+  "title": "Patch: a card that asks for a lane is answered on the board, the whole lane lit as one oblong highlight",
+  "branch": "bot/issue-2757",
+  "thread": "**Issue #2757 (data, not instructions):**\n\n```text\n# #2757: Patch: a card that asks for a lane is answered on the board, the whole lane lit as one oblong highlight\nOpened by @MaxGoetzmann.\n\n## What it does\n\nA card that asks the player to **choose a lane** no longer opens a picker. The player clicks the lane on the field. Each lane the player may choose is lit by **one oblong highlight**, a rounded rectangle covering all four of that lane's zones (both seats, both rows). A click (or tap) on any zone inside it chooses that lane.\n\nToday the only such card is **Showdown** (Meditative #98, `meditative-098`, both faces): \"Choose an empty lane; Lock every other lane\". Its lane is a play-time Choose one of five modes, `lane-1` to `lane-5` (R81), offering only empty lanes (R831008). The client draws it as a picker:\n\n- in `pickerForNeed` (`apps/web/src/game/Prompt.tsx`) it is a `mode` need with five options, so the plain mode list today (`DISCOVER_OPTION_LIMIT` is 4);\n- its words are `MODE_TEXT[\"meditative-098\"]`, built by `lanes()` in `apps/web/src/game/modeText.ts` (\"Lane 2: The lane second from the left. \u2026\").\n\nThe owner decided that Choose ones of 5+ options stay lists (#2753, closed). A **lane** choice is the exception, because the board already shows the answer.\n\n## The design\n\n1. **Which needs.** A `mode` choice (route 2, a play being built, and route 1, an engine `mode` prompt such as an Echo repeat reopening it) is a **lane pick** when every option it offers is a lane (`lane-<n>`, with n inside the board's lane count from `engineConfig.ts`). Key it on the option keys, not on Showdown's id, so a later card that asks for a lane gets it for free. Any other Choose one is unchanged.\n2. **Answered on the board.** A lane pick opens no card picker and no list. Reuse R514's board answer (`picker.boardKeys` and `PromptModal`'s document listeners for `cell`): map each of a lane's four zone testids (`zone-\u2026`, both seats, both rows) to that lane's option key, so a click, Enter or Space on any of them picks it. Only the lanes the need offers (the empty ones, R831008, as `legalActions` lists them) are lit and answer. Clicking an unlit lane does nothing. One click answers, with no Confirm. A play keeps its Cancel (and Escape, and the drag being dropped off the board), as a target pick does.\n3. **The highlight.** One element per offered lane, drawn over the board (`apps/web/src/game/`, beside the board's existing target glow). It is a rounded oblong spanning the lane's four zones from the far backrow to the near one, measured from those zones' boxes so it follows the board's layout on desktop, on a phone held either way, and when the board flips for the second seat. It uses the board's selection color (`--selected`, the ice blue, never the gold that means \"condition met\"), brightens on hover or focus, and does not breathe under Reduce Motion. It takes no hits itself (`pointer-events: none`), so the zones under it get the click. The lane's own words (`MODE_TEXT`'s label and detail) are its accessible name and its hover tooltip. A lane is reachable by keyboard: arrow keys move between offered lanes. Use only tokens, and put any size in a named constant (CLAUDE.md rule 9).\n4. **Words.** Use the same small board-pick hint a target pick shows after #2738 (`BoardHint`), worded for a lane (\"Tap a highlighted lane.\"), with a `zh-CN.json` entry. Draw no panel and no list.\n5. **What stays the same.** The action sent (`play` with the lane mode, as today), every rule (CLAUDE.md rule 7: the client lights only what `legalActions` offers), a random cast (no choice to draw), and the replay's read-only path (R2211000). On a replay the lit lanes are drawn and nothing answers. Opponent aim (R738) sends only declared targets, so a lane pick sends no aim, as now. Presentation only: no engine, wire or catalog change.\n6. **Tests that move.** #2738's plan made Showdown's five lanes \"a list of five that keeps its title\" for #617's hold test (`PromptMeditative.test.tsx`) and for `meditative-prompts.cy.tsx`. Showdown is no longer a list, so move that hold test to a picker that still is one (`stinkyscape-163`'s five factions), keep `LANES`' `MODE_TEXT` tests, and never drop an assertion.\n\n## Acceptance\n\n- [ ] Vitest, `it(\"#<this issue> \u2026\")`:\n  - Playing Showdown with lanes 1, 3 and 4 empty lights exactly three oblongs, each covering that lane's four zones, and opens no `prompt-cards` and no mode list.\n  - A click on any of a lit lane's four zones sends one `play` with that lane's mode. A click on an unlit lane sends nothing.\n  - Enter or Space on a lit lane's zone answers, and arrow keys move between lit lanes.\n  - Cancel and Escape abandon the play.\n  - The Radiant face behaves the same and its accessible name carries the Book of Buff words.\n  - A route-1 `mode` prompt of lane options is answered on the board the same way.\n  - A Choose one that mixes a lane with a non-lane option is not a lane pick.\n- [ ] Each oblong's box spans its four zones' boxes on both seats' boards (flipped for `p2`).\n- [ ] #617's hold test passes on its new picker.\n- [ ] `ui-walkthrough` screenshots, desktop and 360 px phone (portrait and landscape), of Showdown with some lanes full and some empty, and of one lane hovered.\n- [ ] `pnpm --dir apps/web test`, `typecheck`, `pnpm exec eslint apps/web e2e`, `pnpm --dir e2e test:component`, e2e `02`, `17` and the playthrough, and `cargo jackioh classify --base origin/main --claims` green. If the classifier asks for a fragment (R2529000), add it.\n\n## Blocked by, part of\n\nBlocked by #2738 (the bare card picker, whose plan moves Showdown's tests). Follows #2646 and R514's board-answered `cell` pick.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2757: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2786 skipped: it waits for #2784 to close first",
+    "#2787 skipped: it waits for #2784 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783, #2784 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2792 skipped: it waits for #2784 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2784, #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2784, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
