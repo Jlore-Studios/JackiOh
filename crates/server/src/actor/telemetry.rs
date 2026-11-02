@@ -337,10 +337,14 @@ pub async fn note_rematch(app: &App, match_id: &str, seat: PlayerId, made: bool)
     }
 }
 
-/// R1442: each player's ladder tier now (seat order, `MatchRow.players`), or `None` when the read
-/// fails, which is logged.
-pub async fn ladder_tiers_or_none(app: &App, players: &(String, String)) -> Option<PerPlayer<RankTier>> {
-    match crate::api::ranked::ladder_tiers(app, players).await {
+/// R1442: each player's ladder tier now (seat order, `MatchRow.players`) on the match's ladder
+/// (R2778000), or `None` when the read fails, which is logged.
+pub async fn ladder_tiers_or_none(
+    app: &App,
+    match_id: &str,
+    players: &(String, String),
+) -> Option<PerPlayer<RankTier>> {
+    match crate::api::ranked::ladder_tiers(app, match_id, players).await {
         Ok((p1, p2)) => Some(PerPlayer::new(p1, p2)),
         Err(error) => {
             tracing::warn!(event = "telemetry.tiers_failed", message = %error);

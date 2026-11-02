@@ -155,6 +155,7 @@ function openTicket(mode: QueueMode): EnqueueResponse {
 function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   return {
     season: "v0.2",
+    ladder: "constructed",
     profileId: "5d0c7a1e-0b9f-4c55-9a3e-6f2d8b1c4e70",
     username: "Max#3",
     rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
@@ -400,6 +401,33 @@ describe("R661 the lobby's rank", () => {
     const box = screen.getByRole("region", { name: "Find a match" });
     expect(within(box).queryByTestId(playTestid.rank)).toBeNull();
     expect(within(box).queryByTestId(playTestid.leaderboard)).toBeNull();
+  });
+
+  it("R2778000 shows the rank of the picked mode's ladder and links that ladder's board", async () => {
+    vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
+      ladder === "random"
+        ? rankBody({ ladder: "random", rank: { tier: "golden", division: 2, pips: 0, pipsPerDivision: 3, floor: "golden" } })
+        : rankBody(),
+    );
+    await renderLobby();
+
+    const constructed = await screen.findByTestId(playTestid.rank);
+    expect(constructed).toHaveAttribute("data-ladder", "constructed");
+    expect(constructed).toHaveTextContent("Constructed · Normal Grape III");
+    expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", paths.leaderboard);
+
+    pickMode("random");
+    await waitFor(() => expect(screen.getByTestId(playTestid.rank)).toHaveAttribute("data-ladder", "random"));
+    expect(screen.getByTestId(playTestid.rank)).toHaveTextContent("All Random · Golden Grape II");
+    expect(vi.mocked(getOwnRank)).toHaveBeenLastCalledWith(TOKEN, "random");
+    expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", `${paths.leaderboard}?ladder=random`);
+
+    // Best of 1 and Conquest share the Constructed ladder, so moving between them reads nothing again.
+    pickMode("bo3");
+    await waitFor(() => expect(screen.getByTestId(playTestid.rank)).toHaveAttribute("data-ladder", "constructed"));
+    const reads = vi.mocked(getOwnRank).mock.calls.length;
+    pickMode("bo1");
+    expect(vi.mocked(getOwnRank).mock.calls.length).toBe(reads);
   });
 
   it("R661 puts R612's words on placements and a Jlorious position too, and never a rating", async () => {

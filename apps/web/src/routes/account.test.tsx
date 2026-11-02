@@ -71,6 +71,7 @@ function profileBody(over: Partial<Parameters<typeof Object.assign>[0]> = {}) {
 function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   return {
     season: "v0.2",
+    ladder: "constructed",
     profileId: "p1",
     username: "Max#3",
     rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
@@ -164,6 +165,31 @@ describe("the account screen", () => {
     expect(within(badges).getByRole("img", { name: "Normal Grape II · v0.1" })).toBeInTheDocument();
     expect(screen.getByTestId("account-leaderboard")).toHaveAttribute("href", "/leaderboard");
     expect(screen.queryByTestId("account-rating")).toBeNull();
+  });
+
+  it("R2778000 shows the Constructed ladder's rank and then the All Random one's, each read on its own", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
+      ladder === "random"
+        ? rankBody({
+            ladder: "random",
+            rank: { tier: "golden", division: 1, pips: 2, pipsPerDivision: 3, floor: "golden" },
+            record: { games: 3, wins: 3, losses: 0, draws: 0 },
+            badges: [],
+          })
+        : rankBody(),
+    );
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(accountTestid.rank)).toHaveTextContent("Normal Grape III");
+    const random = await screen.findByTestId(accountTestid.randomRank);
+    expect(random).toHaveTextContent("Max#3 · Golden Grape I · Season v0.2");
+    expect(screen.getByTestId(accountTestid.randomSeasonRecord)).toHaveTextContent("This season (ranked): 3–0–0");
+    expect(screen.getByTestId(accountTestid.randomBadges)).toHaveTextContent(/no season best yet/i);
+    expect(screen.getByTestId(accountTestid.seasonRecord)).toHaveTextContent("7–2–1");
+    expect(screen.getByRole("heading", { name: "Constructed" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All Random" })).toBeInTheDocument();
+    expect(vi.mocked(getOwnRank)).toHaveBeenCalledWith(TOKEN, "random");
   });
 
   it("says so when no season best has been earned yet", async () => {
@@ -381,9 +407,11 @@ describe("the account screen", () => {
     render(<AccountRoute token={TOKEN} />);
 
     expect(await screen.findByTestId(accountTestid.record)).toHaveTextContent("7–2–1");
-    expect(getOwnRank).toHaveBeenCalledTimes(1);
+    // R2778000: one read per ladder, both failed.
+    expect(getOwnRank).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("heading", { name: "Rank" })).toBeInTheDocument();
     expect(screen.queryByTestId(accountTestid.rank)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.randomRank)).toBeNull();
     expect(screen.queryByTestId(accountTestid.badges)).toBeNull();
     expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
