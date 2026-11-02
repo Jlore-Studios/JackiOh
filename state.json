@@ -14053,6 +14053,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "close #2857 by hand; nothing in the repository needs fixing. #2834's checks went red because `main`, merged into the PR's test commit, did not compile at the time (`crates/run/src/fight.rs:164`, E0027, from #2821). #2842 (6b6cbcb01) has fixed that on `main`. Once the issue is closed, the `watch` job in `.github/workflows/patches-ship.yml` ships again from the current `main`, and that promotion supersedes #2834. Do not use \"Re-run failed jobs\" on #2834.",
       "run_id": "41507659150",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-02T19:11:37Z",
