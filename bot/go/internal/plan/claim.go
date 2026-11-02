@@ -36,7 +36,7 @@ func providerFields(ctx *hctx.Context, provider *providers.Provider) *pyjson.Obj
 }
 
 // startMessage is what a build or revision run says it does, by who runs each role.
-func startMessage(assignment *Assignment, cfg *config.Config) string {
+func startMessage(assignment *Assignment, cfg *config.Config, chained bool) string {
 	var steps []string
 	if assignment.Plan != nil {
 		steps = append(steps, "plan it on "+assignment.Plan.Describe())
@@ -52,7 +52,14 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 			cfg.MaxSelfCheckRounds))
 	}
 	var end string
-	if assignment.Review != nil {
+	if assignment.Review != nil && chained {
+		// Its own review run on this subscription reviews it (#2748, 2026-11-02).
+		steps = append(steps, fmt.Sprintf("open the pull request, so CI starts, and hand this lane to "+
+			"its own review run, where %s reviews the change adversarially and fixes what it finds, up "+
+			"to %s rounds", assignment.Review.Describe(),
+			py.Str(cfg.MaxReviewCycles.GetOr(assignment.Difficulty, 3))))
+		end = "It merges once " + reviewrule.Summary + " approved it."
+	} else if assignment.Review != nil {
 		steps = append(steps, fmt.Sprintf("have %s review the change adversarially, up to %s rounds",
 			assignment.Review.Describe(), py.Str(cfg.MaxReviewCycles.GetOr(assignment.Difficulty, 3))))
 		end = "Only an approved change becomes a pull request, and it merges once " +
@@ -101,6 +108,8 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	// (The Python's `who = provider.describe()` is never read, so it is left out.)
 	var planned *pyjson.Object
 	var message string
+	// A run that changes code hands its lane to its own review run (#2748, 2026-11-02).
+	chains := false
 	if kind == "build" {
 		planned = pyjson.New(
 			"action", assignment.Action,
@@ -141,6 +150,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				}
 			}
 		}
+		chains = Chains(cfg, candidate, assignment, names, record, planned.Truthy("children"))
 		if record.Truthy("onto") {
 			// A fullsend part (#505): it lands on its tree's branch, not `main`.
 			planned.Set("onto", py.Str(record.Get("onto")))
@@ -160,7 +170,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			message = fmt.Sprintf("Starting work on this now%s: the reconcile of this fullsend "+
 				"tree. Every part has closed, so this run merges them on `%s`, follows fullsend's "+
 				"reconcile and makes every check green, for one pull request into `main`. %s",
-				RunLink(cfg), py.Str(planned.Get("branch")), startMessage(assignment, cfg))
+				RunLink(cfg), py.Str(planned.Get("branch")), startMessage(assignment, cfg, chains))
 		case candidate.Mode == "fullsend":
 			message = fmt.Sprintf("Splitting this now for fullsend%s, on %s: one session reads it "+
 				"and the code and answers with parts that each own their files. When the run ends I "+
@@ -187,7 +197,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			message = fmt.Sprintf("Starting a one-shot build of this now%s, on %s, with fullsend: a "+
 				"spec first, then many agents writing its parts at once, each in its own worktree "+
 				"and branch, reconciled against tests written from the spec. %s",
-				RunLink(cfg), assignment.Build.Describe(), startMessage(assignment, cfg))
+				RunLink(cfg), assignment.Build.Describe(), startMessage(assignment, cfg, chains))
 		case assignment.Action == "plan":
 			message = fmt.Sprintf("Planning this now%s, on %s (`%s`): it is difficulty:%s. The plan "+
 				"goes into this issue's description, under **Plan**, and the lane's owner builds "+
@@ -195,7 +205,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				assignment.Plan.Describe(), labelNeedsPlan, candidate.Difficulty)
 		default:
 			message = fmt.Sprintf("Starting work on this now%s: it is difficulty:%s. %s",
-				RunLink(cfg), candidate.Difficulty, startMessage(assignment, cfg))
+				RunLink(cfg), candidate.Difficulty, startMessage(assignment, cfg, chains))
 		}
 	} else {
 		pull := ctx.GH.GetPull(number)
@@ -239,6 +249,16 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			message = fmt.Sprintf("Starting a review now%s, on %s. `%s` built the change; it merges "+
 				"once %s approved the same commit.", RunLink(cfg), assignment.Review.Describe(),
 				builder, reviewrule.Summary)
+			if candidate.OwnReview {
+				ownReviewPlan(planned, record)
+				message = fmt.Sprintf("Starting its own review run now%s, on `%s`, whose run built it: %s "+
+					"reviews the change adversarially in a fresh session, reads its CI, and %s fixes what "+
+					"it finds in the same run, then a fresh review again, up to %s rounds. Once it "+
+					"approves, I mark the pull request ready and turn auto-merge on: it merges once %s "+
+					"approved the same commit and CI passes.", RunLink(cfg), provider.ID,
+					assignment.Review.Describe(), assignment.Build.Describe(),
+					py.Str(cfg.MaxReviewCycles.GetOr(candidate.Difficulty, 3)), reviewrule.Summary)
+			}
 		} else {
 			source := py.OrStr(record.Get("source"), "request")
 			feedback := threads.PullFeedback(ctx.GH, ctx.Trust, number, cfg.BotLogin,
@@ -255,6 +275,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				}
 				feedback += "\n\n" + prompts.Data(strings.Join(lines, "\n"), "The second review's blocking findings")
 			}
+			chains = Chains(cfg, candidate, assignment, names, record, false)
 			planned = pyjson.New(
 				"action", "revise",
 				"number", number,
@@ -269,7 +290,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				"issue_number", intOrNone(issueNumber),
 			)
 			message = fmt.Sprintf("Starting a revision now%s, because of: %s. %s",
-				RunLink(cfg), source, startMessage(assignment, cfg))
+				RunLink(cfg), source, startMessage(assignment, cfg, chains))
 			if names[labelPR] && queue.Carries(record) {
 				// The work job tells its builder and reviewer; deliver decides from git alone.
 				planned.Set("cleared", queue.Cleared(record))
@@ -289,10 +310,13 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	planned.Set("seats", assignment.Seats())
 	planned.Set("routing", pyjson.ListOf(assignment.Notes))
 	planned.Set("assignment", assignment.Describe())
-	if kind == "build" || kind == "revise" {
-		// Verdict rounds the item already used in its current owner's hands (#725).
+	if kind == "build" || kind == "revise" || candidate.OwnReview {
+		// Verdict rounds the item already used in its current owner's hands (#725), across runs.
 		planned.Set("rounds_used", candidate.RoundsUsed)
 		planned.Set("round_tier", candidate.RoundTier)
+	}
+	if chains {
+		planned.Set("own_review_next", true)
 	}
 	if kind == "review" && record.Truthy("self_check_findings") {
 		planned.Set("self_check_findings", record.Get("self_check_findings"))
@@ -345,6 +369,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		if kind != "review" {
 			// The subscription that takes it up owns it (#2748); a held item waits no more.
 			takeOver(state, number, provider.ID, assignment, ctx.Now())
+			entry.Pop("hold")
+		}
+		if reserved := queue.OwnReviewOf(entry); candidate.OwnReview && reserved != nil {
+			// Its own review run takes it up (#2748): the lane its build reserved is this run's now.
+			reserved.Set("claimed", true).Set("claimed_at", clock.ISO(ctx.Now()))
 			entry.Pop("hold")
 		}
 		taken = asks.Take(entry)
@@ -456,4 +485,40 @@ func CILogs(ctx *hctx.Context, runID any) string {
 		text = "(no failed job found)"
 	}
 	return prompts.Data(text, "CI run "+py.Str(runID))
+}
+
+// Chains is whether the run `assignment` makes of `candidate` hands its lane to the change's own
+// review run (#2748, the owner's decision of 2026-11-02; `own_review_run`): a build or a revision
+// on a subscription with a reviewer of its own, of a bot pull request (a revision a person asked
+// for, an auditor's fix, a CI fix, a conflict), whose deliver opens or pushes the pull request and
+// reserves the lane for that run. A fullsend tree's reconcile (`reconcile`) chains as any hard
+// build does. Not a fullsend part (no review per part), a split (no pull request), a person's pull
+// request (its reviewer must be in the run), or a conflict on a cleared change, whose own run's
+// review carries its clearance (`deliver.Carry`).
+func Chains(cfg *config.Config, candidate *queue.Candidate, assignment *Assignment, names map[string]bool,
+	record *pyjson.Object, reconcile bool) bool {
+	if !cfg.OwnReviewRun || assignment.Review == nil || candidate.Part {
+		return false
+	}
+	switch candidate.Kind {
+	case "build":
+		if strings.HasPrefix(candidate.Mode, "split") || (candidate.Mode == "fullsend" && !reconcile) {
+			return false
+		}
+		return assignment.Action == "build"
+	case "revise":
+		return names[config.LabelPR] && !queue.Carries(record)
+	}
+	return false
+}
+
+// ownReviewPlan puts into an own review run's plan what its build left on the pull request's record
+// (`own_review`): the head it pushed, the checks it ran on it, who built it, and why it ran.
+func ownReviewPlan(planned *pyjson.Object, record *pyjson.Object) {
+	reserved := queue.OwnReviewOf(record)
+	planned.Set("own_review", true)
+	planned.Set("built_head", py.OrStr(reserved.Get("head"), ""))
+	planned.Set("built_gates", py.Or(reserved.Get("gates"), []any{}))
+	planned.Set("built_by", reserved.Str("provider"))
+	planned.Set("source", py.OrStr(reserved.Get("source"), "build"))
 }

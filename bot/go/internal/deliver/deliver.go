@@ -17,6 +17,11 @@
 // whose commit has that gets auto-merge, which merges it once the required CI checks pass; one
 // still short of it waits in `bot:cross-review` for a review run.
 //
+// With `own_review_run` (#2748, 2026-11-02; `ownreview.go`) a build or revision that changes code
+// pushes it, opens its pull request as a draft and hands its lane to the change's own review run on
+// the same subscription (`handOn`); that run's approval is the one its votes record (`OwnReview`),
+// which marks the pull request ready and turns auto-merge on.
+//
 // A final audit that asks for changes makes the auditor's subscription the owner of the fix, which
 // it makes in a revision of its own, whose own run's reviewer's approval ships it (2026-11-02); the
 // subscription whose approval ships a head is its merge owner, which a CI fix goes to first
@@ -136,6 +141,9 @@ type Deliverer struct {
 	Chain      bool
 	// RatingNote is `self.rating_note`: the sentence `_item` had from `_apply_rating`, "" before.
 	RatingNote string
+	// OwnReviewPR is the pull request whose own review run this build or revision reserved
+	// (`handOn`, #2748), 0 for none: its handoff and session go on there.
+	OwnReviewPR int
 }
 
 // NewDeliverer is Deliverer(...).

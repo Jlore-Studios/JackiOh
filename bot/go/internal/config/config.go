@@ -699,6 +699,14 @@ type Config struct {
 	// subscription that built it (#2748, section 2). The config's `fullsend_send_backs`; 0, when
 	// it is left out, sends none back.
 	FullsendSendBacks int // default: 0
+	// OwnReviewRun: a run that changes code hands its lane to its own review run on the same
+	// subscription, which reviews, fixes and approves it (#2748, 2026-11-02; `ownreview.go`). The
+	// config's `own_review_run`; off when it is left out, as Squishy's is: one run builds, checks
+	// and reviews.
+	OwnReviewRun bool // default: False
+	// OwnReviewReserveMinutes: how long the lane stays reserved for that own review run once the
+	// build delivered (`own_review_reserve_minutes`, 30 when it is left out).
+	OwnReviewReserveMinutes int // default: 30
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`

@@ -116,6 +116,13 @@ func (x *Deliverer) deliverItem(number int) {
 		x.planned(number, status)
 		return
 	}
+	if x.ownReviewDelivery() {
+		x.OwnReview(number, status) // a change's own review run (#2748, 2026-11-02)
+		if status != "infra" && status != "interrupted" && status != "failed" {
+			x.settle(number)
+		}
+		return
+	}
 	if action == "review" {
 		x.SecondReview(number, status)
 		if status != "infra" && status != "interrupted" && status != "failed" {
@@ -378,6 +385,9 @@ func (x *Deliverer) planIntoIssue(number int, who string) bool {
 // pushed, no pull request opens, and nothing queues it again.
 func (x *Deliverer) closed(number int, thread *pyjson.Object) {
 	queue.SetStateLabel(x.Ctx, number, queue.LabelNames(thread), "")
+	if queue.OwnReviewOf(x.Record(number)) != nil {
+		x.dropOwnReview(number)
+	}
 	if thread.Has("pull_request") {
 		x.dropWip(number)
 	}
@@ -469,6 +479,10 @@ func (x *Deliverer) keepHandoff(number int) {
 			entry.Pop("handoff")
 		} else {
 			entry.Set("handoff", kept)
+		}
+		if pr := x.OwnReviewPR; pr != 0 && pr != number && kept != nil {
+			// Its own review run, on its pull request, goes on from its notes (#2748).
+			statemod.Item(state, pr).Set("handoff", kept.Copy())
 		}
 		return nil
 	}
@@ -1007,6 +1021,9 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	approved := status == "approved"
 	built := status == "built" // no model in the run could review it: a review run will
+	// Built and checked for its own review run on this subscription (#2748, 2026-11-02): its pull
+	// request opens as a draft, which CI runs on, and is marked ready once that review approves it.
+	chained := built && x.chained()
 	pushed, problem := x.publish(approved)
 	if strings.HasPrefix(problem, "the push was refused") {
 		x.Result.Set("status", "infra")
@@ -1045,7 +1062,7 @@ func (x *Deliverer) build(number int, status string) {
 		x.Fail(number, "build")
 		return
 	}
-	body := x.pullBody(number, approved)
+	body := x.pullBody(number, approved, chained)
 	// A title the title check passes (#187): the builder's, else the issue's.
 	title := triage.PullTitle(py.OrStr(x.Result.Get("title"), ""), py.OrStr(x.Plan.Get("title"), ""))
 	if title == "" {
@@ -1053,10 +1070,10 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	pull := x.openPull()
 	if pull == nil {
-		pull = x.createPull(title, branch, body, !(approved || built))
+		pull = x.createPull(title, branch, body, !(approved || built) || chained)
 	} else {
 		x.GH.UpdatePull(py.MustInt(pull.Get("number")), pyjson.New("title", title, "body", body))
-		if (approved || built) && pull.Truthy("draft") {
+		if (approved || built) && !chained && pull.Truthy("draft") {
 			x.try(func() { x.GH.MarkReady(py.Str(pull.Get("node_id"))) })
 		}
 	}
@@ -1094,9 +1111,12 @@ func (x *Deliverer) build(number int, status string) {
 		if pr != 0 {
 			head := py.OrStr(x.Result.Get("head"), "")
 			var rule string
-			if approved {
+			switch {
+			case approved:
 				rule = x.approved(pr, head, mergeNote == "", true, true, nil)
-			} else {
+			case chained && mergeNote == "":
+				rule = x.handOn(pr, head) // its own review run is next (#2748)
+			default:
 				rule = x.awaitReview(pr, head, mergeNote == "")
 			}
 			if mergeNote == "" {
@@ -1105,10 +1125,13 @@ func (x *Deliverer) build(number int, status string) {
 		}
 		cycles := pyLen(py.Or(x.Result.Get("cycles"), []any{}))
 		var said string
-		if approved {
+		switch {
+		case approved:
 			said = fmt.Sprintf("Its adversarial reviewer, %s, approved it on round %d of %d.",
 				x.ReviewSeat.Describe(), cycles, x.CyclesCap())
-		} else {
+		case chained:
+			said = x.checksSaid()
+		default:
 			said = x.selfCheckSaid()
 		}
 		if approved {

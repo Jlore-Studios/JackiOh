@@ -7,6 +7,11 @@
 // subscription): a planning session first when the item has no plan yet, the builder and its
 // fixes, and the run's own adversarial reviewer, whose findings count and whose approval at the
 // item's tier ships the change (2026-11-02, #2748; without it, a review run's final audit does).
+// With `own_review_run` (the night bot's) that review is a run of its own: a build or revision
+// builds and runs the checks, fixes the ones it turned red, and stops (`ChainsReview`), and the
+// change's own review run, the next run on the same subscription, starts from the head it pushed,
+// reviews it in fresh adversarial sessions with the pull request's CI (`ci.go`), and fixes what it
+// finds in the same run (`OwnReview`).
 // A builder whose seat has `self_check` checks its own change before any review: build, checks, a
 // self check by a fresh session of the same model, and on findings a fix and the checks and the
 // self check again, up to `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
@@ -38,6 +43,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/disk"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gates"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/memory"
@@ -423,6 +429,11 @@ type Worker struct {
 	// last run on this subscription kept (`session.go`, #2748); nil keeps and resumes none.
 	Sessions *Sessions
 	session  sessionState
+	// GH reads the pull request's CI in an own review run (#2748, `ci.go`), with the job's own
+	// read-only token; nil reads none.
+	GH gh.Client
+	// ciRead is what the last CI reading found (`ciRed`), for the round's record and the reviewer.
+	ciRead string
 
 	sigMu sync.Mutex
 	sigCh chan os.Signal
@@ -1035,7 +1046,7 @@ func (x *Worker) WriteResult(checkpoint bool /* = False */) string {
 // step and the deliver job run whatever happens to this one (`if: always()`), and the
 // run's own end writes over it. A build or a revision only: nothing else has work to keep.
 func (x *Worker) checkpoint() {
-	if x.Wt == nil || x.isDying() || !x.planIn("action", "build", "revise") {
+	if x.Wt == nil || x.isDying() || !(x.planIn("action", "build", "revise") || x.OwnReviewRun()) {
 		return
 	}
 	err := herr.Try(func() {
@@ -1219,6 +1230,8 @@ func (x *Worker) Run() *pyjson.Object {
 				x.planRun()
 			case action == "build" || action == "revise":
 				x.Item()
+			case action == "review" && x.OwnReviewRun():
+				x.OwnReview() // a change's own review run (#2748, 2026-11-02)
 			case action == "review":
 				x.SecondReview()
 			default:

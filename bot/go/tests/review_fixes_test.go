@@ -209,7 +209,7 @@ func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 		CommittedHours: true, // the Strong final can audit
 		Overrides: pyjson.New("gates", []any{pyjson.New("name", "rules exist", "run", "true", "timeout_minutes", 1)},
 			"install", pyjson.New("run", "pwd >> "+log, "timeout_minutes", 1),
-			"max_review_cycles", 2)})
+			"max_review_cycles", 2, "own_review_run", false)}) // the build reviews itself, as the harness's do
 	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
 	builds := strings.Count(readText(t, log), "\n")

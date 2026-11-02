@@ -16,13 +16,15 @@ import (
 )
 
 // goesOn is whether the item's own next run could take a session of this run up (#2748): a
-// revision's pull request stays open for the next revision, and an unfinished build or plan is
-// built or planned again. A build that opened its pull request, split or landed as a part, a
-// reconcile that sent parts back (its next run starts afresh once they land), and a finished
-// plan, hand the work on to another item or another kind of call.
+// revision's pull request stays open for the next revision, as it does for an own review run's
+// (2026-11-02), and an unfinished build or plan is built or planned again. A build that opened its
+// pull request (but for one that handed its lane to its own review run, whose session goes on on
+// the pull request, `OwnReviewPR`), split or landed as a part, a reconcile that sent parts back
+// (its next run starts afresh once they land), and a finished plan, hand the work on to another
+// item or another kind of call.
 func goesOn(action, status string) bool {
 	switch action {
-	case "revise":
+	case "revise", "review":
 		return true
 	case "plan":
 		return status != "planned"
@@ -39,13 +41,27 @@ func goesOn(action, status string) bool {
 // run's `work` artifact: this job checks its shape (it cannot open it) and records only a pointer
 // to it as the item's `session` (the run and artifact that hold it, and what it is), so nothing
 // session-sized is ever committed to the state branch. A session another subscription kept goes
-// once a run of the item here delivers (the work changed hands); a review run takes no work over
-// and changes nothing. A closed item keeps none. What it did goes into the result's `session`,
-// for the journal.
+// once a run of the item here delivers (the work changed hands); a final audit takes no work over
+// and changes nothing. An own review run (#2748, 2026-11-02) is a builder's run on the subscription
+// that built the change: its session (its last fix pass's) is kept on the pull request for that
+// item's next run there, a CI fix or a revision, as a revision's is; and a build that handed its
+// lane to its own review run keeps its own on the pull request (`OwnReviewPR`), which the item's
+// runs carry on from then. A closed item keeps none. What it did goes into the result's
+// `session`, for the journal.
 func (x *Deliverer) keepSession(number int) {
 	action := py.OrStr(x.Plan.Get("action"), "")
-	if action != "plan" && action != "build" && action != "revise" {
+	if action == "review" && !x.ownReviewDelivery() {
 		return
+	}
+	if action != "plan" && action != "build" && action != "revise" && action != "review" {
+		return
+	}
+	if pr := x.OwnReviewPR; pr != 0 && pr != number {
+		// The work goes on on its pull request: the issue's own pointer says where it no longer is.
+		if x.Record(number).Obj("session").Len() > 0 {
+			x.dropSession(number, fmt.Sprintf("#%d's work goes on on #%d", number, pr))
+		}
+		number = pr
 	}
 	session := x.Result.Obj("session")
 	text := ""
@@ -84,7 +100,7 @@ func (x *Deliverer) keepSession(number int) {
 			record = nil
 		}
 		status := py.Str(x.Result.Get("status"))
-		if !goesOn(action, status) {
+		if !goesOn(action, status) && x.OwnReviewPR == 0 {
 			if record.Len() > 0 {
 				x.dropSession(number, fmt.Sprintf("this %s ended %s", action, status))
 			}

@@ -274,7 +274,8 @@ func TestFullsendRework_TheReconcileSendsAPartBackToItsBuilderAndRunsAgain(t *te
 
 // A part goes back at most `fullsend_send_backs` times (1 for the night bot): a reconcile that
 // names one past it is told so, and fixes it itself in the same run, which then goes through its
-// checks and review as any reconcile does. With 0 none goes back at all.
+// checks and hands its lane to its own review run as any reconcile does (#2748, 2026-11-02). With 0
+// none goes back at all.
 func TestFullsendRework_APartGoesBackOnlyUpToTheCap(t *testing.T) {
 	assertEqual(t, testsupport.MakeConfig().FullsendSendBacks, 1)
 	world := fullsendLandedWorld(t, nil)
@@ -290,9 +291,10 @@ func TestFullsendRework_APartGoesBackOnlyUpToTheCap(t *testing.T) {
 	assertEqual(t, planned.Get("send_backs"), []any{
 		pyjson.New("part", fullsendClient, "title", "Part 2: the client", "built_by", "muse", "sent_backs", 0)})
 	assertNotIn(t, "- #41 (", r.Calls[0].Prompt)
-	assertEqual(t, workRoles(r), []string{"build", "fix", "review"})
+	assertEqual(t, workRoles(r), []string{"build", "fix"})
 	assertIn(t, "These parts cannot be sent back now", r.Calls[1].Prompt)
-	assertEqual(t, []any{result.Get("status"), result.Get("send_back_refused")}, []any{"approved", []any{fullsendRules}})
+	assertEqual(t, []any{result.Get("status"), result.Get("review_next"), result.Get("send_back_refused")},
+		[]any{"built", "own", []any{fullsendRules}})
 	assertEqual(t, world.gh.GetIssue(fullsendRules).Get("state"), "closed")
 	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", strconv.Itoa(fullsendRules), "send_backs"), 1)
 	assertEqual(t, crossInt(t, lastOf(t, world.gh.ListPulls("all", fullsendOnto, 200)), "number") > 0, true)
@@ -302,22 +304,26 @@ func TestFullsendRework_APartGoesBackOnlyUpToTheCap(t *testing.T) {
 	assertEqual(t, plan.SendBackable(&none, fullsendParent), []any{})
 }
 
-// The reconcile's pull request is hard, so it ships only on a strong approval: its own run's
+// The reconcile's pull request is hard, so it ships only on a strong approval: its own review run's
 // reviewer, Opus on the reconcile's own Claude account in a fresh adversarial session, gives it
-// (2026-11-02, #2748), and auto-merge turns on with no review run. A medium approval of it would
-// ship nothing, and a review run of it, should one be asked for, is strong.
+// (2026-11-02, #2748): the reconcile builds and checks, hands its lane to that run, and auto-merge
+// turns on once it approves, with no final audit. A medium approval of it would ship nothing, and a
+// review run of it, should one be asked for, is strong.
 func TestFullsendRework_TheReconcileShipsOnItsOwnLanesOpusApproval(t *testing.T) {
 	world := fullsendLandedWorld(t, crossAll)
-	planned, result := world.run(workFake(map[string]runner.Handler{
+	planned, built := world.run(workFake(map[string]runner.Handler{
 		"build":  fullsendBuilder(map[string]string{"src/game.txt": "the rules and the client\n"}, nil),
 		"review": workReviewer(workApprove)}))
 	reconciler := planned.Str("provider")
 	assertTrue(t, strings.HasPrefix(reconciler, "claude-"), reconciler)
-	assertEqual(t, []any{planned.Get("number"), dig(t, planned, "seats", "build", "model"),
-		dig(t, planned, "seats", "review", "provider"), dig(t, planned, "seats", "review", "model"),
-		dig(t, planned, "seats", "review", "tier"), result.Get("status")},
-		[]any{fullsendParent, "opus", reconciler, "opus", "strong", "approved"})
+	assertEqual(t, []any{planned.Get("number"), dig(t, planned, "seats", "build", "model"), built.Get("status"),
+		built.Get("review_next")}, []any{fullsendParent, "opus", "built", "own"})
 	pr := crossPullOf(t, world.gh, fullsendOnto)
+	assertIn(t, config.LabelOwnReview, world.gh.LabelNames(pr))
+	reviewed, result := world.run(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{reviewed.Get("number"), reviewed.Get("own_review"), dig(t, reviewed, "seats", "review", "provider"),
+		dig(t, reviewed, "seats", "review", "model"), dig(t, reviewed, "seats", "review", "tier"), result.Get("status")},
+		[]any{pr, true, reconciler, "opus", "strong", "approved"})
 	record := crossObj(t, world.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertEqual(t, []any{record.Get("difficulty"), dig(t, record, "votes", "built_by"), dig(t, record, "votes", "sha")},
 		[]any{"hard", reconciler, result.Get("head")})

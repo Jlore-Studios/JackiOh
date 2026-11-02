@@ -82,8 +82,12 @@ type Ownership struct {
 // package's rules above). It changes nothing.
 func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *Lanes, force bool, quietOK string) *Ownership {
 	cfg := ctx.Cfg
-	if c.Owner == "" || c.Kind == "review" || (c.Kind == "build" && c.Part && !c.SentBack) {
+	if c.Owner == "" || (c.Kind == "review" && !c.OwnReview) || (c.Kind == "build" && c.Part && !c.SentBack) {
 		return &Ownership{} // a part its reconcile sent back is its builder's, as owned work is
+	}
+	if c.OwnReview {
+		// Its own review run (#2748, 2026-11-02) takes the lane its build reserved for it.
+		lanes = lanes.Without(c.Number)
 	}
 	own := &Ownership{Owner: c.Owner}
 	provider := cfg.Pool.Get(c.Owner)
@@ -95,7 +99,7 @@ func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *
 		own.Gone = why
 		return own
 	}
-	role := RoleOf[c.Kind]
+	role := RoleFor(c)
 	forced := force || c.Forced
 	if queue.NeedsPlan(c) && slices.ContainsFunc(LanePlanners(ctx, state, lanes, forced, quietOK),
 		func(seat *providers.Seat) bool {
@@ -153,6 +157,19 @@ func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *
 // the audit it answers), or no reviewer of its own for a revision that needs one in its run.
 func cannotTake(pool *providers.Pool, provider *providers.Provider, c *queue.Candidate) string {
 	floor := config.MinTier[config.AsDifficulty(c.Difficulty)]
+	if c.OwnReview {
+		// Its own review run: the lane that built it reviews it and fixes what it finds, so it needs
+		// both roles and a seat at the item's tier; `build_last` keeps it too, as it built it.
+		for _, role := range []string{"review", "revise"} {
+			if !slices.Contains(provider.Roles, role) {
+				return fmt.Sprintf("its builder `%s` takes no %s", provider.ID, role)
+			}
+		}
+		if pool.BestSeat(provider, floor) == nil {
+			return fmt.Sprintf("its builder `%s` has no %s seat to review it on", provider.ID, floor)
+		}
+		return ""
+	}
 	if c.Kind == "revise" && rankOr(c.AuditTier, -1) > rankOr(floor, -1) {
 		floor = c.AuditTier
 	}
@@ -268,7 +285,7 @@ func HeldNote(ctx *hctx.Context, held map[int]*Hold) string {
 // or whose owner can no longer be waited for, is released to anyone. Returns what it did.
 func SyncHolds(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, force bool, quietOK string) []string {
 	notes := []string{}
-	if !ctx.Cfg.Holds() && !anyHold(state) {
+	if !ctx.Cfg.Holds() && !anyHold(state) && len(queue.OwnReviewsWaiting(state)) == 0 {
 		return notes
 	}
 	var q []*queue.Candidate
@@ -276,7 +293,7 @@ func SyncHolds(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, force bool
 		return []string{"could not keep the holds: " + exc.Error()}
 	}
 	for _, c := range q {
-		if c.Kind == "review" {
+		if c.Kind == "review" && !c.OwnReview {
 			continue
 		}
 		record := recordOf(state, strconv.Itoa(c.Number))
@@ -288,6 +305,14 @@ func SyncHolds(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, force bool
 			switch {
 			case own.Hold != nil:
 				note = holdOn(ctx, c, own.Hold, kept, active)
+			case c.OwnReview && !own.Free:
+				// Its own review run cannot start, and nothing holds it for its lane: it goes to its
+				// final audit on another subscription instead (#2748, 2026-11-02).
+				why := own.Gone
+				if why == "" {
+					why = fmt.Sprintf("its builder `%s` cannot take it", c.Owner)
+				}
+				note = HandOffOwnReview(ctx, c.Number, why, c.Difficulty)
 			case c.Waiting || active:
 				note = holdOff(ctx, c, own)
 			}
@@ -354,6 +379,9 @@ func holdOff(ctx *hctx.Context, c *queue.Candidate, own *Ownership) string {
 	if why == "" {
 		why = "it has no owner any more"
 	}
+	if c.OwnReview {
+		return HandOffOwnReview(ctx, number, why, c.Difficulty)
+	}
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		Release(s, number, "released from its hold: "+why, now)
 		return nil
@@ -367,6 +395,19 @@ func holdOff(ctx *hctx.Context, c *queue.Candidate, own *Ownership) string {
 func heldText(ctx *hctx.Context, c *queue.Candidate, h *Hold) string {
 	slash := config.Slash
 	now := ctx.Now()
+	if c.OwnReview {
+		return fmt.Sprintf("⏸️ **Its own review is held for `%s`**, the subscription whose run built "+
+			"it, until about %s (in %s), as `%s` cannot start before then: %s. Its lane reviews it, "+
+			"fixes what it finds and approves it, so no other subscription takes it meanwhile. If `%s` "+
+			"still cannot start by %s (`hold_minutes`: %d), it goes to its final audit on another "+
+			"subscription instead.\n\n"+
+			"To release it now (level 2):\n"+
+			"- `%s handoff`: to its final audit, on any subscription that may review it at "+
+			"difficulty:%s;\n"+
+			"- `%s handoff human`: to people: labelled `%s`, my labels off, and I unassign myself.",
+			h.Owner, Clock(ctx, h.Until), clock.HumanDelta(h.Until.Sub(now)), h.Owner, h.Why, h.Owner,
+			Clock(ctx, h.Ends), ctx.Cfg.HoldMinutes, slash, c.Difficulty, slash, config.LabelHuman)
+	}
 	return fmt.Sprintf("⏸️ **Held for `%s`**, the subscription that owns this, until about %s (in %s), "+
 		"as `%s` cannot start before then: %s. No other subscription takes it meanwhile, so `%s` goes "+
 		"on from where its work stands. If `%s` still cannot start by %s (`hold_minutes`: %d), anyone "+
@@ -477,6 +518,27 @@ func Handoff(ctx *hctx.Context, number int, by string, args string) string {
 	}
 	if other := queue.Owner(thread); other != nil {
 		return queue.OwnerReply(number, other)
+	}
+	if record := recordOf(ctx.Store.Load(), strconv.Itoa(number)); queue.OwnReviewWaits(record) && to != "human" {
+		// Its own review run has not started (#2748): released from its lane, it goes to its final
+		// audit, on another subscription that may review it first.
+		from := queue.OwnReviewOf(record).Str("provider")
+		if to != "" {
+			setPersonsDifficulty(ctx, number, names, to)
+		}
+		difficulty := queue.DifficultyOf(queue.LabelNames(ctx.GH.GetIssue(number)), queue.CarriedDifficulty(record))
+		HandOffOwnReview(ctx, number, "released by @"+by, difficulty)
+		return fmt.Sprintf("Released from `%s`: its own review goes to its final audit instead (`%s`), on "+
+			"another subscription that may review it at difficulty:%s first, whose approval ships it.",
+			from, config.LabelCross, difficulty)
+	}
+	if queue.OwnReviewWaits(recordOf(ctx.Store.Load(), strconv.Itoa(number))) {
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			hstate.Item(s, number).Pop(queue.OwnReviewKey) // to people: no run of the bot's reviews it
+			return nil
+		}, fmt.Sprintf("own review #%d dropped", number))
+		queue.SetStateLabel(ctx, number, names, "")
+		names = queue.LabelNames(ctx.GH.GetIssue(number))
 	}
 	if live := queue.LiveLabelOn(names); live != "" {
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -621,4 +683,48 @@ func handToPeople(ctx *hctx.Context, number int) []string {
 		handover.Labels = []string{config.LabelHuman}
 	}
 	return triage.Apply(ctx.GH, number, handover)
+}
+
+// RoleFor is the role a subscription must allow to take `c` (`RoleOf`), and whose start rule holds
+// for it: an own review run reviews and fixes what it finds, so it starts as a revision does, only
+// `start_headroom` under each cap.
+func RoleFor(c *queue.Candidate) string {
+	if c.OwnReview {
+		return "revise"
+	}
+	return RoleOf[c.Kind]
+}
+
+// HandOffOwnReview hands thread `number`'s own review run (#2748, 2026-11-02) off to its final audit:
+// its builder's subscription cannot take it (`why`), and no hold keeps it for that one. The
+// reservation goes, the pull request is marked ready (CI ran on its draft) and queued for a review
+// run (`bot:cross-review`), whose reviewer goes on another subscription of the item's tier first
+// (`ReviewSeat`) and whose approval ships it, and the hold's comment, or a new one, says so. The
+// item's owner is released, as a hold that runs out releases it. Returns what it did.
+func HandOffOwnReview(ctx *hctx.Context, number int, why string, difficulty string) string {
+	thread := ctx.GH.GetIssue(number)
+	names := queue.LabelNames(thread)
+	now := ctx.Now()
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		record := hstate.Item(s, number)
+		record.Pop(queue.OwnReviewKey)
+		record.Set("queued_at", clock.ISO(now))
+		Release(s, number, "its own review was handed off to its final audit: "+why, now)
+		return nil
+	}, fmt.Sprintf("own review #%d handed off", number))
+	queue.SetStateLabel(ctx, number, names, config.LabelCross)
+	herr.Catch[*herr.GitHubError](func() {
+		if pull := ctx.GH.GetPull(number); pull.Truthy("draft") && pull.Truthy("node_id") {
+			ctx.GH.MarkReady(py.Str(pull.Get("node_id")))
+		}
+	})
+	body := fmt.Sprintf("▶️ **Its own review is handed off**: %s. It goes to its final audit instead "+
+		"(`%s`): a review run on another subscription that may review difficulty:%s first, whose "+
+		"approval ships it.", why, config.LabelCross, difficulty)
+	if py.MustInt(py.Or(recordOf(ctx.Store.Load(), strconv.Itoa(number)).Get("waiting_comment"), 0)) != 0 {
+		writeHoldComment(ctx, number, body, false)
+	} else {
+		ctx.GH.CreateComment(number, body)
+	}
+	return fmt.Sprintf("#%d: its own review goes to its final audit: %s", number, why)
 }

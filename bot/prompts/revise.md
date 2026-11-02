@@ -1,4 +1,4 @@
-<!-- version: 5 -->
+<!-- version: 6 -->
 # Revise pull request #$number
 
 You are the builder for a revision of pull request #$number of `$repo`, on its branch `$branch`
@@ -14,9 +14,10 @@ You are the builder for a revision of pull request #$number of `$repo`, on its b
   blocking problems. They are listed under "What was asked"; answer each one. The auditor fixes its
   own findings: you run on the subscription whose audit found them.
 
-Whatever the source, your commit is a new head, and your run's own adversarial reviewer
-approving it ships it (a medium or strong model for a medium item, a strong one for a hard item).
-Without that approval it goes to a final audit before it merges.
+Whatever the source, your commit is a new head, and your lane's own adversarial reviewer
+approving it ships it (a medium or strong model for a medium item, a strong one for a hard item):
+in this run, or in the own review run your lane runs next, which fixes what it finds. Without that
+approval it goes to a final audit before it merges.
 
 ## The pull request
 

@@ -832,10 +832,19 @@ func QueueRevise(ctx *hctx.Context, number int, by string, force bool /* = False
 			ctx.Cfg.Repo)
 	}
 	names := LabelNames(pull)
-	if config.IsLive(names) {
+	waits := OwnReviewWaits(recordOf(ctx.Store.Load(), number))
+	if config.IsLive(names) && !waits {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am revising #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
+	}
+	if waits {
+		// Its own review run has not started (#2748): the revision goes first, and chains an own
+		// review run of its own.
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			stateItem(s, number).Pop(OwnReviewKey)
+			return nil
+		}, fmt.Sprintf("own review #%d gives way", number))
 	}
 	SetStateLabel(ctx, number, names, config.LabelRevise)
 	botPR := names[config.LabelPR]
@@ -879,10 +888,18 @@ func QueueReview(ctx *hctx.Context, number int, by string, floor string /* = "" 
 	if !names[config.LabelPR] {
 		return fmt.Sprintf("#%d is not a pull request I opened; review runs are for mine only.", number)
 	}
-	if config.IsLive(names) {
+	waits := OwnReviewWaits(recordOf(ctx.Store.Load(), number))
+	if config.IsLive(names) && !waits {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
+	}
+	if waits {
+		// Its own review run has not started (#2748): the review asked for takes its place.
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			stateItem(s, number).Pop(OwnReviewKey)
+			return nil
+		}, fmt.Sprintf("own review #%d gives way", number))
 	}
 	SetStateLabel(ctx, number, names, config.LabelCross)
 
@@ -939,7 +956,15 @@ func Stop(ctx *hctx.Context, number int, by string) string {
 	thread := ctx.GH.GetIssue(number)
 	names := LabelNames(thread)
 	working := config.IsLive(names)
-	SetStateLabel(ctx, number, names, LiveLabelOn(names))
+	// A pull request whose own review run has not started yet (#2748) carries `bot:reviewing` with
+	// no run behind it: it leaves the queue, and its reservation goes.
+	reserved := OwnReviewWaits(recordOf(ctx.Store.Load(), number))
+	if reserved {
+		working = false
+		SetStateLabel(ctx, number, names, "")
+	} else {
+		SetStateLabel(ctx, number, names, LiveLabelOn(names))
+	}
 	if thread.Has("pull_request") && names[config.LabelPR] {
 		herr.Catch[*herr.GitHubError](func() { HoldMerge(ctx, ctx.GH.GetPull(number)) })
 	}
@@ -949,6 +974,9 @@ func Stop(ctx *hctx.Context, number int, by string) string {
 		record.Set("stop_requested", true).Set("stopped_by", by).Set("stopped_at", clock.ISO(ctx.Now())).
 			Set("forced", false).Set("pending_request", false)
 		record.Pop("hold") // out of the queue, it waits for no owner (its `bot:waiting` is off)
+		if reserved {
+			record.Pop(OwnReviewKey)
+		}
 		// Asks still waiting will never be answered; a run's own are settled when it stops.
 		dropped = asks.PopWaiting(record)
 		return nil

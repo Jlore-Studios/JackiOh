@@ -20,6 +20,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
 )
 
@@ -517,6 +518,19 @@ func Report(ctx *hctx.Context) string {
 		"to revise: %s; "+
 		"for a review run: %s.", numbers(labelled(config.LabelBuild, &no)),
 		numbers(labelled(config.LabelRevise, &yes)), numbers(labelled(config.LabelCross, &yes))))
+	var reviews []string // waiting for their own review run (#2748, 2026-11-02)
+	for _, number := range queue.OwnReviewsWaiting(state) {
+		reserved := queue.OwnReviewOf(state.Obj("items").Obj(strconv.Itoa(number)))
+		line := fmt.Sprintf("#%d on `%s`", number, reserved.Str("provider"))
+		if until := clock.ParseISOValue(reserved.Get("until")); until.After(ctx.Now()) {
+			line += " (its lane kept until " + plan.Clock(ctx, until) + ")"
+		}
+		reviews = append(reviews, line)
+	}
+	if len(reviews) > 0 {
+		lines = append(lines, fmt.Sprintf("- Waiting for their own review run (`%s`): %s.",
+			config.LabelOwnReview, strings.Join(reviews, "; ")))
+	}
 	var owners []string // held for their owners (#2748), as the planner or the sweep last found them
 	for _, issue := range labelled(config.LabelWaiting, nil) {
 		line := "#" + py.Str(issue.Get("number"))

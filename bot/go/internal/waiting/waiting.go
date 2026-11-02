@@ -199,6 +199,11 @@ func Need(c *queue.Candidate) (string, string, string) {
 	if c.SpotCheck {
 		return "review", spotcheck.Tier, "an after-merge spot-check" // #2748, section 5
 	}
+	if c.OwnReview {
+		// Its own review run (#2748, 2026-11-02): on the subscription whose run built it, at the
+		// item's tier, which its lane reviews and fixes at.
+		return "review", config.MinTier[difficulty], fmt.Sprintf("its own review run, on `%s`", c.Owner)
+	}
 	if c.Kind == "review" {
 		// The weakest tier whose approval ships it (#2748), on any subscription, its builder's
 		// included (2026-11-02): medium for a medium item; strong for a hard one, or for votes
@@ -552,6 +557,9 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 		if step == "review" && c.SpotCheck && c.BuiltBy != "" && p.ID == c.BuiltBy {
 			continue // a spot-check never goes to its builder's subscription (#2748)
 		}
+		if c.OwnReview && p.ID != c.Owner {
+			continue // its own review run is its builder's lane's alone (2026-11-02)
+		}
 		if slices.Contains(p.Roles, role) && pool.BestSeat(p, tier) != nil {
 			able = append(able, p)
 		}
@@ -572,6 +580,9 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	}
 	if step == "review" && c.SpotCheck && c.BuiltBy != "" {
 		wanted += fmt.Sprintf(" on a subscription other than `%s`, which built it", c.BuiltBy)
+	}
+	if c.OwnReview {
+		wanted += fmt.Sprintf(" on `%s`, whose run built it (its own review run)", c.Owner)
 	}
 	var soonestAt time.Time
 	soonestID, haveSoonest := "", false

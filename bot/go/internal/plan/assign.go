@@ -35,6 +35,10 @@ type Assignment struct {
 	// Why the item leaves its owner for this subscription, when it does (`Owning`'s `Gone`): the
 	// claim records it as the new owner's `owner_why` (#2748).
 	OwnerWhy string // default: ""
+	// A review run that is the change's own review (#2748, 2026-11-02): on the subscription whose
+	// run built it, its reviewer (`Review`, its strongest seat at or above the item's tier) reviews
+	// and its builder (`Build`) fixes what it finds, in the same run.
+	OwnReview bool // default: False
 }
 
 // SelfCheck is plan.Assignment.self_check.
@@ -404,6 +408,9 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 	}
 
 	spread := Balance_(ctx, state, lanes)
+	if candidate.Kind == "review" && candidate.OwnReview {
+		return ownReviewer(ctx, state, candidate, lanes.Without(candidate.Number), forced, quietOK)
+	}
 	if candidate.Kind == "review" {
 		seat := ReviewSeat(pool, free("review"), candidate, spread)
 		if seat == nil {
@@ -493,6 +500,32 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 		Build: builder, Review: reviewer, Notes: notes, RunsOn: runsOn}
 }
 
+// ownReviewer is who takes `candidate`'s own review run (#2748, 2026-11-02): the subscription whose
+// run built the change (`candidate.Owner`), when it may start a run as long as a revision now
+// (`RoleFor`), in the lane its build reserved for it (`lanes` has let that go): its strongest seat at
+// or above the item's tier reviews (Opus for a hard item), and its weakest seat at that tier fixes
+// what the review finds, as its builds do. nil when it cannot (`Owning` then holds it for it or
+// hands it off to a final audit).
+func ownReviewer(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate, lanes *Lanes, forced bool, quietOK string) *Assignment {
+	pool := ctx.Cfg.Pool
+	provider := pool.Get(candidate.Owner)
+	if provider == nil || cannotTake(pool, provider, candidate) != "" ||
+		!Usable(ctx, state, provider, lanes, RoleFor(candidate), forced, quietOK) {
+		return nil
+	}
+	floor := config.MinTier[config.AsDifficulty(candidate.Difficulty)]
+	reviewer := pool.BestSeat(provider, floor)
+	builder, _ := BuilderSeat(pool, []*providers.Provider{provider}, candidate.Difficulty, false, "", "", nil)
+	if reviewer == nil || builder == nil {
+		return nil
+	}
+	notes := []string{fmt.Sprintf("#%d: its own review run: `%s`, whose run built it, reviews it on %s "+
+		"and fixes what it finds on %s", candidate.Number, provider.ID, reviewer.Describe(), builder.Describe())}
+	return &Assignment{Provider: provider, Action: "review", Difficulty: candidate.Difficulty,
+		Build: builder, Review: reviewer, Notes: notes, OwnReview: true,
+		RunsOn: RunnerFor(ctx, state, provider, lanes, RoleFor(candidate))}
+}
+
 // Pair is one item `pairs` yields, with who takes it on which seats.
 type Pair struct {
 	Candidate  *queue.Candidate
@@ -574,13 +607,18 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 		}
 	}
 	var found []Pair
-	if lanes.Free() > 0 || lanes.MachineFree() > 0 {
-		for _, candidate := range order {
-			if assignment := Assign(ctx, state, candidate, lanes, force, quietOK); assignment != nil &&
-				!elsewhere(candidate, assignment) {
-				handedOff(candidate, assignment, owning[candidate.Number])
-				found = append(found, Pair{candidate, assignment})
-			}
+	for _, candidate := range order {
+		room := lanes
+		if candidate.OwnReview {
+			room = lanes.Without(candidate.Number) // the lane its build reserved for it (#2748)
+		}
+		if room.Free() <= 0 && room.MachineFree() <= 0 {
+			continue
+		}
+		if assignment := Assign(ctx, state, candidate, lanes, force, quietOK); assignment != nil &&
+			!elsewhere(candidate, assignment) {
+			handedOff(candidate, assignment, owning[candidate.Number])
+			found = append(found, Pair{candidate, assignment})
 		}
 	}
 	planning = py.SortedBy(planning, func(pair Pair) []any { return []any{!(force || pair.Candidate.Forced)} })
@@ -593,7 +631,7 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	ownWork := func(pair Pair) bool {
 		c, own := pair.Candidate, owning[pair.Candidate.Number]
 		return own.Owner != "" && pair.Assignment.Provider.ID == own.Owner &&
-			(c.Kind == "revise" || c.Continues || c.WasHeld || c.SentBack)
+			(c.Kind == "revise" || c.Continues || c.WasHeld || c.SentBack || c.OwnReview)
 	}
 	var out, own, plans, rest []Pair
 	for _, pair := range planning {

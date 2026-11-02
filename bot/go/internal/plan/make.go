@@ -219,7 +219,7 @@ var PruneEvery = 24 * time.Hour
 // ShedWhenClosed is SHED_WHEN_CLOSED: what a closed thread's record sheds at once: the bulky
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
-	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment"}
+	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep
@@ -294,11 +294,21 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		if runID != "" && runID == ctx.Cfg.RunID {
 			continue
 		}
+		open := eqStr(thread.Get("state"), "open")
+		if queue.OwnReviewWaits(record) && open {
+			continue // its own review run has not started (#2748): it waits in the state file's queue
+		}
 		if RunStatus(ctx, runID) != "dead" {
 			continue
 		}
-		if !eqStr(thread.Get("state"), "open") { // closed meanwhile: nothing to requeue
+		if !open { // closed meanwhile: nothing to requeue
 			queue.SetStateLabel(ctx, number, queue.LabelNames(thread), "")
+			if queue.OwnReviewOf(record) != nil {
+				ctx.Store.Update(func(s *pyjson.Object) any {
+					hstate.Item(s, number).Pop(queue.OwnReviewKey)
+					return nil
+				}, fmt.Sprintf("own review #%d closed", number))
+			}
 			if spotcheck.Running(state, number) {
 				// An after-merge spot-check's run died (#2748): the check goes back in the queue,
 				// a try spent.
@@ -313,7 +323,15 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			continue
 		}
 		var wanted string
-		if eqStr(record.Get("kind"), "review") {
+		ownReview := queue.OwnReviewOf(record) != nil
+		if ownReview {
+			// Its own review run died (#2748): its lane takes it up again, as its own work.
+			wanted = config.LabelOwnReview
+			ctx.Store.Update(func(s *pyjson.Object) any {
+				queue.RequeueOwnReview(hstate.Item(s, number), ctx.Now())
+				return nil
+			}, fmt.Sprintf("own review #%d requeued", number))
+		} else if eqStr(record.Get("kind"), "review") {
 			wanted = config.LabelCross
 		} else if thread.Has("pull_request") {
 			wanted = labelRevise

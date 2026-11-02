@@ -366,6 +366,30 @@ func TestSquishyCases_ItsOwnApprovalShipsWithNoOtherSubscription(t *testing.T) {
 		"claude-squishy")
 }
 
+// Squishy keeps its one-run flow (`own_review_run: false`, #2748): its build reviews itself in
+// the same run and opens its pull request ready, with no own review run after it.
+func TestSquishyCases_ItKeepsItsOneRunFlow(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertFalse(t, world.cfg.OwnReviewRun)
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	r := workFake(map[string]runner.Handler{
+		"build": func(request *runner.RunRequest) *runner.RunResult {
+			writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+			return runner.NewRunResult(true, squishyCasesDone)
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }})
+	planned, result := world.run(r)
+	assertFalse(t, planned.Has("own_review_next"))
+	assertEqual(t, []any{result.Get("status"), result.Has("review_next")}, []any{"approved", false})
+	assertIn(t, "review", workRoles(r))
+	pull := world.gh.ListPulls("open", "squishy/issue-12", 200)[0]
+	assertEqual(t, pull.Get("draft"), false)
+	assertNotIn(t, "squishy:reviewing", world.gh.LabelNames(pull.Int("number")))
+	assertEqual(t, len(queue.OwnReviewsWaiting(world.ctx.Store.Load())), 0)
+	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+}
+
 // ------------------------------------------------------------------ SplitCases
 
 // squishyCasesSplit is SplitCases.split(mode, tree=TREE): a big issue in `mode`, and the planner's

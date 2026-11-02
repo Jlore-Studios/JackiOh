@@ -623,6 +623,9 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	worker = work.NewWorker(cfg, planned, run, cfg.Root, args.WorkDir, out,
 		MakeProbe(ctx, item, provider, func() time.Time { return worker.LastHour }),
 		keepLogin, nil, nil, nil, nil)
+	// An own review run reads its pull request's CI with the job's own read-only token (#2748,
+	// `work/ci.go`): the CI workflow's runs and jobs, which `actions: read` covers.
+	worker.GH = ctx.GH
 	if login != nil {
 		// A Claude account keeps its own session, and resumes the one the item's last run on it
 		// kept (#2748), out of that run's `work` artifact (the job's token has `actions: read`);

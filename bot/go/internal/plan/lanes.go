@@ -14,6 +14,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 )
 
 // Lanes is the runs that hold work now: item number (0 for a suggestion survey) -> provider id.
@@ -43,6 +44,9 @@ type Lanes struct {
 	Shared       int             // default: 0
 	Filling      map[int]bool    // default: field(default_factory=set)
 	InForce      map[string]int  // default: field(default_factory=dict)
+	// Reserved are the items whose lane is reserved for their own review run (#2748,
+	// `queue.OwnReviewReserved`): held by no run yet, but by the subscription it is for.
+	Reserved map[int]bool // default: field(default_factory=set)
 }
 
 // LanesInForce is how many lanes each subscription may hold for a run that starts now, by id
@@ -187,9 +191,10 @@ func (x *Lanes) RoomFor(providerID string) bool {
 	return x.Free() > 0
 }
 
-// AnyRoom is plan.Lanes.any_room.
+// AnyRoom is plan.Lanes.any_room: a lane is free somewhere, or one is reserved for an own review
+// run that has not started (#2748), which that run takes.
 func (x *Lanes) AnyRoom() bool {
-	return x.Free() > 0 || x.MachineFree() > 0 || x.PlanFree() > 0
+	return x.Free() > 0 || x.MachineFree() > 0 || x.PlanFree() > 0 || len(x.Reserved) > 0
 }
 
 // PlanFree is plan.Lanes.plan_free.
@@ -220,7 +225,47 @@ func (x *Lanes) WithRun(number int, providerID string, action string, filling bo
 	}
 	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
 		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
-		InForce: x.InForce}
+		InForce: x.InForce, Reserved: without(x.Reserved, number)}
+}
+
+// without is `set - {number}`.
+func without(set map[int]bool, number int) map[int]bool {
+	out := make(map[int]bool, len(set))
+	for n := range set {
+		if n != number {
+			out[n] = true
+		}
+	}
+	return out
+}
+
+// Without is these lanes with item `number`'s run, or the lane reserved for it, let go: what an own
+// review run (#2748) finds when it takes up the lane its build reserved for it.
+func (x *Lanes) Without(number int) *Lanes {
+	if _, held := x.Held[number]; !held {
+		return x
+	}
+	held := make(map[int]string, len(x.Held))
+	for n, p := range x.Held {
+		if n != number {
+			held[n] = p
+		}
+	}
+	planning := make(map[int]bool, len(x.Planning))
+	for n := range x.Planning {
+		if n != number {
+			planning[n] = true
+		}
+	}
+	fills := make(map[int]bool, len(x.Filling))
+	for n := range x.Filling {
+		if n != number {
+			fills[n] = true
+		}
+	}
+	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
+		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
+		InForce: x.InForce, Reserved: without(x.Reserved, number)}
 }
 
 // Describe is plan.Lanes.describe.
@@ -240,6 +285,9 @@ func (x *Lanes) Describe() string {
 		part := fmt.Sprintf("#%d with `%s`", n, p)
 		if x.Planning[n] {
 			part += " (planning)"
+		}
+		if x.Reserved[n] {
+			part += " (reserved for its own review)"
 		}
 		parts = append(parts, part)
 	}
@@ -305,7 +353,10 @@ func WorkingThreads(ctx *hctx.Context) []*pyjson.Object {
 }
 
 // ReadLanes is the lanes held by runs that are still going. A run that ended without
-// delivering holds nothing: housekeeping requeues its item.
+// delivering holds nothing: housekeeping requeues its item. A pull request whose build handed its
+// lane to its own review run (#2748, `queue.OwnReviewReserved`) holds that lane for the
+// subscription it is reserved for until the reservation runs out, so no other item takes it in
+// between; the own review run itself takes it (`Lanes.Without`).
 func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	pool := ctx.Cfg.Pool
 	machine := map[string]bool{}
@@ -316,11 +367,19 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	}
 	lanes := &Lanes{Limit: pool.MaxParallel, Held: map[int]string{}, Planning: map[int]bool{},
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
-		Filling: map[int]bool{}, InForce: LanesInForce(ctx, state)}
+		Filling: map[int]bool{}, InForce: LanesInForce(ctx, state), Reserved: map[int]bool{}}
 	lanes.Shared = OthersOnGithub(ctx)
 	for _, thread := range WorkingThreads(ctx) {
 		number := py.MustInt(thread.Get("number"))
 		record := recordOf(state, strconv.Itoa(number))
+		if queue.OwnReviewWaits(record) {
+			// Waiting for its own review run: no run holds it, but its lane may be reserved.
+			if eqStr(thread.Get("state"), "open") && queue.OwnReviewReserved(record, ctx.Now()) {
+				lanes.Held[number] = queue.OwnReviewOf(record).Str("provider")
+				lanes.Reserved[number] = true
+			}
+			continue
+		}
 		if RunAlive(ctx, record.Get("run_id")) {
 			lanes.Held[number] = py.OrStr(record.Get("provider"), providers.LegacyProvider)
 			if eqStr(record.Get("action"), "plan") {

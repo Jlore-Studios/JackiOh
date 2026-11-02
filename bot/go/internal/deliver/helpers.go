@@ -162,7 +162,7 @@ func (x *Deliverer) findingsMd() string {
 	return strings.Join(lines, "\n")
 }
 
-func (x *Deliverer) pullBody(number int, approved bool) string {
+func (x *Deliverer) pullBody(number int, approved bool, chained bool) string {
 	cycles := objList(x.Result.Get("cycles"))
 	review := pyjson.Obj(x.Result.Get("review"))
 	report := py.OrStr(x.Result.Get("report"), "_The builder wrote no description._")
@@ -182,6 +182,12 @@ func (x *Deliverer) pullBody(number int, approved bool) string {
 				parts = append(parts, fmt.Sprintf("- `%s`: %s", py.Str(f.Get("where")), py.Str(f.Get("claim"))))
 			}
 		}
+	} else if chained {
+		// Its own review run on this subscription reviews it next (#2748, 2026-11-02).
+		parts = append(parts, fmt.Sprintf("### Its own review\n\nBuilt and checked on `%s`. This is "+
+			"a draft while its own review run, on the same subscription, reviews it adversarially and "+
+			"fixes what it finds (up to %d rounds); CI runs on it meanwhile. Once that review approves "+
+			"it, it is marked ready and auto-merge turns on.", x.Provider.ID, x.CyclesCap()))
 	} else {
 		parts = append(parts, fmt.Sprintf("### Not approved\n\n%s, so this is a draft "+
 			"and will not merge by itself.", x.notApprovedHead()))

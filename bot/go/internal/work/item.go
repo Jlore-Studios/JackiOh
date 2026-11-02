@@ -1410,6 +1410,86 @@ func (x *Worker) Item() {
 		x.finish()
 		return
 	}
+	x.rounds(conflicts, false)
+}
+
+// ChainsReview is: this build or revision hands its lane to the change's own review run (#2748,
+// 2026-11-02; the plan's `own_review_next`, `plan.Chains`): it builds and runs the checks, fixes the
+// ones it turned red (up to `CheckFixRounds`), and reviews nothing itself.
+func (x *Worker) ChainsReview() bool {
+	return x.Plan.Truthy("own_review_next") && x.planIn("action", "build", "revise")
+}
+
+// OwnReviewRun is: this run is a change's own review run (#2748, 2026-11-02; the plan's
+// `own_review`), on the subscription whose run built it: the change's adversarial review loop,
+// moved out of its build into a run of its own.
+func (x *Worker) OwnReviewRun() bool {
+	return x.Plan.Truthy("own_review") && x.planIn("action", "review")
+}
+
+// OwnReview is a change's own review run (#2748, the owner's decision of 2026-11-02): its build
+// pushed it and handed its lane to this run, on the same subscription. Its first round builds
+// nothing: a fresh adversarial session of the lane's reviewer (the subscription's strongest seat at
+// or above the item's tier, Opus for a hard item) reviews the head as the build left it, with the
+// checks that build ran on it and the pull request's CI on it (`ciRed`: a red required check is a
+// finding). Blocking findings go to a fix pass of the lane's builder in this run, then the checks
+// and a fresh review again, as a build's review loop did, up to the item's verdict rounds
+// (`max_review_cycles`), counted across runs. This run runs on the builder's own login, so it
+// installs and runs the branch's code as its build did; a final audit on another subscription
+// still runs nothing (`SecondReview`).
+func (x *Worker) OwnReview() {
+	x.prepare(false, false)
+	x.Result.Set("own_review", true)
+	if x.roundsSpent() >= x.CyclesCap() {
+		status, reason := x.roundsOut(x.roundsSpent())
+		x.Result.Set("status", status)
+		x.Result.Set("reason", reason)
+		x.lastCheckpoint()
+		x.finish()
+		return
+	}
+	x.rounds(nil, true)
+}
+
+// handedPass is an own review run's first round: no builder session, the head its build pushed.
+// Its report is the pull request's description, which holds that build's, and its record names
+// who built it.
+func (x *Worker) handedPass(cycle int) (*verdicts.BuildReport, *pyjson.Object) {
+	by := py.OrStr(x.Plan.Get("built_by"), x.Provider.ID)
+	x.Step("handed", "the head its build pushed, for its own review run", pyjson.New(
+		"outcome", "at `"+first12(x.Wt.Head())+"`, built on `"+by+"`"))
+	entry := pyjson.New(
+		"n", cycle,
+		"builder", pyjson.New("role", "handed", "ok", true, "turns", 0, "minutes", 0.0,
+			"status", "done", "error", "", "timed_out", false, "model", by, "tier", "",
+			"changed", false),
+	)
+	return &verdicts.BuildReport{Status: "done", Title: py.OrStr(x.Plan.Get("title"), ""),
+		Body: py.OrStr(x.Plan.Get("pull"), "")}, entry
+}
+
+// builtGates is the checks the build ran on the head it handed on, when this run starts from that
+// head: its own review's first round judges them rather than run them again (nil otherwise).
+func (x *Worker) builtGates() []*gates.GateResult {
+	if py.OrStr(x.Plan.Get("built_head"), "") != x.StartSHA || x.Wt.Head() != x.StartSHA {
+		return nil
+	}
+	var out []*gates.GateResult
+	for _, g := range pyjson.Objs(x.Plan.Get("built_gates")) {
+		out = append(out, &gates.GateResult{
+			Name: py.Str(g.Get("name")), Run: py.Str(g.Get("run")), OK: g.Truthy("ok"),
+			ExitCode: g.Int("exit_code"), Seconds: g.Float("seconds"), Tail: py.OrStr(g.Get("tail"), ""),
+			PreExisting: g.Truthy("pre_existing"), Skipped: py.OrStr(g.Get("skipped"), ""),
+			Inconclusive: g.Truthy("inconclusive")})
+	}
+	return out
+}
+
+// rounds is a build's, a revision's or an own review run's rounds: a builder pass (none in an own
+// review's first round, `handed`, nor in a harness merge), the path guard and the checks, then the
+// run's own adversarial review, until it approves or the verdict rounds run out. A build or revision
+// that hands its lane to its own review run (`ChainsReview`) stops after the checks instead.
+func (x *Worker) rounds(conflicts []string, handed bool) {
 	findings := []*verdicts.Finding{}
 	for _, f := range pyjson.List(x.Plan.Get("previous_findings")) {
 		findings = append(findings, finding(f))
@@ -1427,7 +1507,10 @@ func (x *Worker) Item() {
 	laneVerdicts := 0
 	x.Result.Set("round_tier", ownerTier)
 	x.Result.Set("verdict_rounds", used)
-	mergeOnly := x.MergeOnly(conflicts)
+	mergeOnly := !handed && x.MergeOnly(conflicts)
+	chained := x.ChainsReview()
+	checkFixes := 0
+	after := "review"
 	cycle := 0
 	for {
 		cycle++
@@ -1439,18 +1522,22 @@ func (x *Worker) Item() {
 		}
 		builtOn := x.BuildSeat
 		harnessRound := mergeOnly && cycle == 1
+		handedRound := handed && cycle == 1
 		var built *verdicts.BuildReport
 		var entry *pyjson.Object
-		if harnessRound {
+		switch {
+		case harnessRound:
 			built, entry = x.mergePass(cycle)
-		} else {
+		case handedRound:
+			built, entry = x.handedPass(cycle)
+		default:
 			var role, prompt, why string
 			if cycle == 1 {
 				role, prompt = x.FirstPrompt(conflicts)
 				why = x.FirstWhy(role, conflicts)
 			} else {
 				role, prompt = "fix", x.fixPrompt(cycle, findings, failures, "Blocking findings")
-				why = fixWhy(fmt.Sprintf("round %d's review", cycle-1), findings)
+				why = fixWhy(fmt.Sprintf("round %d's %s", cycle-1, after), findings)
 			}
 			built, entry = x.buildPass(cycle, role, prompt, why)
 		}
@@ -1458,7 +1545,7 @@ func (x *Worker) Item() {
 		if built == nil {
 			return
 		}
-		if cycle == 1 && !harnessRound && built.Status == "send_back" && x.reconciles() {
+		if cycle == 1 && !harnessRound && !handedRound && built.Status == "send_back" && x.reconciles() {
 			// A reconcile that sends parts back to their builders ends here (#2748, `sendBack`).
 			if x.sendBack(built) {
 				return
@@ -1479,15 +1566,43 @@ func (x *Worker) Item() {
 			return
 		}
 		x.Check()
-		results = x.checks()
+		if found := x.builtGates(); handedRound && found != nil {
+			results = found // the checks its build ran on this head
+			entry.Set("gates_from", "its build")
+		} else {
+			results = x.checks()
+		}
 		entry.Set("gates", gateDicts(results))
-		if x.SelfCheck && !harnessRound {
+		if x.SelfCheck && !harnessRound && !handedRound {
 			var checked *verdicts.BuildReport
 			checked, results, guard, openSelfCheck = x.selfCheckLoop(cycle, entry, report, results, guard)
 			if checked == nil {
 				return
 			}
 			report = checked
+		}
+		if chained {
+			// Its own review run reviews it (#2748, 2026-11-02): this run fixes only the checks it
+			// turned red, up to `CheckFixRounds` passes, then hands the change on as it stands.
+			after = "checks"
+			findings = append([]*verdicts.Finding{}, guard...)
+			failures = gates.FailuresText(results)
+			if failures != "" {
+				findings = append(findings, newFinding("blocking", "checks", "Checks this change "+
+					"turned red must pass.", "the harness's gate run"))
+			}
+			if len(findings) > 0 && checkFixes < CheckFixRounds {
+				checkFixes++
+				continue
+			}
+			reason := "built and checked; its own review run, on this subscription, reviews it next"
+			if len(findings) > 0 {
+				reason += fmt.Sprintf(", with %d finding(s) of its checks still open", len(findings))
+			}
+			x.Result.Set("status", "built")
+			x.Result.Set("reason", reason)
+			x.Result.Set("review_next", "own")
+			break
 		}
 		if x.ReviewSeat == nil {
 			// No seat here reviews in the run (a weak one only in a review run): a review
@@ -1537,6 +1652,14 @@ func (x *Worker) Item() {
 			entry.Set("caught_up", x.BaseSHA)
 			guard = Guard(x)
 		}
+		var redCI []*verdicts.Finding
+		ciFailures := ""
+		if handed {
+			// Its own review run reads the pull request's CI on the head it reviews (#2748).
+			redCI, ciFailures = x.ciRed(x.Wt.Head())
+			entry.Set("ci", x.ciRecord(redCI))
+			context = x.withEarlier(context, findings, x.ownReviewNote(cycle, redCI))
+		}
 		review = x.review(cycle, report, results, findings, context, nil, "review")
 		entry.Set("review", review.ToDict())
 		if !review.Readable {
@@ -1546,20 +1669,24 @@ func (x *Worker) Item() {
 		}
 		laneVerdicts++
 		x.Result.Set("verdict_rounds", used+laneVerdicts)
-		if review.Approved() && gates.Green(results) && len(guard) == 0 {
+		if review.Approved() && gates.Green(results) && len(guard) == 0 && len(redCI) == 0 {
 			x.ApprovedSHA = review.ReviewedSHA
 			x.Result.Set("status", "approved")
 			x.Result.Set("reason", "the reviewer approved and every check passed")
 			break
 		}
-		findings = append(append([]*verdicts.Finding{}, guard...), review.Blocking()...)
+		after = "review"
+		findings = append(append(append([]*verdicts.Finding{}, guard...), review.Blocking()...), redCI...)
 		failures = gates.FailuresText(results)
+		if ciFailures != "" {
+			failures = strings.TrimSpace(failures + "\n\n" + ciFailures)
+		}
 		if len(findings) == 0 && failures != "" {
 			findings = []*verdicts.Finding{newFinding("blocking", "checks", "Checks this change "+
 				"turned red must pass.", "the harness's gate run")}
 		}
-		if !harnessRound {
-			x.sentBack(cycle, builtOn) // a rejected harness merge is no builder's round
+		if !harnessRound && !handedRound {
+			x.sentBack(cycle, builtOn) // a rejected harness merge, or the head handed on, is no builder's round
 		}
 		if laneVerdicts+used >= x.CyclesCap() {
 			status, reason := x.roundsOut(laneVerdicts + used)

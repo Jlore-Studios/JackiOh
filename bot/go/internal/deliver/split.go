@@ -647,6 +647,8 @@ func (x *Deliverer) Revise(number int, status string) {
 		return
 	}
 	approved := status == "approved"
+	// Pushed for its own review run on this subscription (#2748, 2026-11-02), auto-merge off.
+	chained := status == "built" && botPR && x.chained()
 	pushed, problem := x.publish(approved)
 	if problem != "" {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
@@ -705,7 +707,9 @@ func (x *Deliverer) Revise(number int, status string) {
 			if target == "" {
 				target = nowHead
 			}
-			if !approved {
+			if chained && !waiting {
+				rule = x.handOn(number, target) // its own review run is next (#2748)
+			} else if !approved {
 				rule = x.awaitReview(number, target, !waiting)
 			} else {
 				if pull.Truthy("draft") && !waiting {
@@ -720,9 +724,12 @@ func (x *Deliverer) Revise(number int, status string) {
 		}
 	}
 	var said string
-	if approved {
+	switch {
+	case approved:
 		said = x.ReviewSeat.Describe() + " reviewed it adversarially and approved it"
-	} else {
+	case chained:
+		said = x.checksSaid()
+	default:
 		said = x.selfCheckSaid()
 	}
 	done := "done"

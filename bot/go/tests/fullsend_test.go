@@ -585,10 +585,21 @@ func TestFullsend_TheReconcileOpensOnePullIntoMain(t *testing.T) {
 	assertIn(t, fmt.Sprintf("# Reconcile fullsend tree #%d", fullsendParent), prompts[0])
 	assertIn(t, fmt.Sprintf("`origin/bot/issue-%d`", fullsendClient), prompts[0])
 	assertIn(t, ".claude/skills/fullsend/SKILL.md", prompts[0])
-	assertEqual(t, result.Get("status"), "approved")
+	// The reconcile builds and checks; its own review run reviews it (#2748, 2026-11-02), so its
+	// pull request opens as a draft, which CI runs on.
+	assertEqual(t, []any{result.Get("status"), result.Get("review_next")}, []any{"built", "own"})
 	assertEqual(t, len(created), 1)
-	assertEqual(t, []any{created[0].Get("head"), created[0].Get("base")}, []any{fullsendOnto, "main"})
+	assertEqual(t, []any{created[0].Get("head"), created[0].Get("base"), created[0].Get("draft")},
+		[]any{fullsendOnto, "main", true})
 	assertIn(t, fmt.Sprintf("Closes #%d", fullsendParent), crossStr(t, created[0], "body"))
 	// The pull request holds the parts that landed and the reconcile's own change.
 	assertEqual(t, fakes.Git(world.origin, "show", "refs/heads/"+fullsendOnto+":src/game.txt"), "rules A and B")
+	// Its own review run, Opus on the reconcile's own account (a hard item), approves it.
+	reviewed, verdict := world.run(workFake(map[string]runner.Handler{"review": crossAnswer(fullsendApprove)}))
+	pr := crossPullOf(t, world.gh, fullsendOnto)
+	assertEqual(t, []any{reviewed.Get("action"), reviewed.Get("number"), reviewed.Get("provider"),
+		dig(t, reviewed, "seats", "review", "model"), verdict.Get("status")},
+		[]any{"review", pr, planned.Get("provider"), "opus", "approved"})
+	assertIn(t, fmt.Sprintf("PR_%d", pr), world.gh.AutoMerge)
+	assertEqual(t, world.gh.GetPull(pr).Get("draft"), false)
 }

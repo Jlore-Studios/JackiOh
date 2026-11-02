@@ -114,6 +114,8 @@
   "spot_check_every": 5,
   "fullsend_adopt": true,
   "fullsend_send_backs": 1,
+  "own_review_run": true,
+  "own_review_reserve_minutes": 30,
   "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
     { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },

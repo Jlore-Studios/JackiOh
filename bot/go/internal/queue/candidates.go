@@ -120,6 +120,12 @@ type Candidate struct {
 	// For a spot-check: the subscription whose approval shipped the head, which reviews it only
 	// when no other strong seat is free ("" when none is on record).
 	ApprovedBy string // default: ""
+	// For a review: the change's own review run (#2748, 2026-11-02; `own_review_run`): a run of
+	// the subscription whose run built the head (its `Owner`, `BuiltBy`), which reviews the change,
+	// fixes what it finds and approves it, queued in the state file (`OwnReviewsWaiting`). It goes
+	// to that subscription alone, as its own work (`plan.Pairs`), held for it a while or handed off
+	// as a final audit (`plan.Owning`).
+	OwnReview bool // default: False
 }
 
 // NewCandidate is Candidate(number, kind, title, forced, queued_at) with its defaults.
@@ -693,6 +699,18 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 		found[number] = c
 		order = append(order, number)
 	}
+	// The own review runs (#2748, 2026-11-02): each pull request whose build handed its lane to its
+	// own review, queued in the state file (`own_review`), since its `bot:reviewing` keeps it out of
+	// every label's list.
+	for _, number := range OwnReviewsWaiting(s) {
+		if _, isFound := found[number]; isFound {
+			continue
+		}
+		if c := ownReviewCandidate(ctx, s, number, human, others); c != nil {
+			found[number] = c
+			order = append(order, number)
+		}
+	}
 	waiting := map[int][]int{}
 	if len(builds) > 0 {
 		waiting = WaitsFor(ctx, builds)
@@ -739,6 +757,54 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	}
 	sort.SliceStable(queue, func(i, j int) bool { return candidateLess(queue[i], queue[j]) })
 	return queue
+}
+
+// ownReviewCandidate is the own review run thread `number` waits for, or nil when its thread is
+// closed, no bot pull request, people's, the other bot's or stopped (a stop drops the reservation
+// too, `Stop`). `human` and `others` take the threads left out for those reasons, as Candidates'
+// lists do.
+func ownReviewCandidate(ctx *hctx.Context, s *pyjson.Object, number int, human, others map[int]string) *Candidate {
+	var thread *pyjson.Object
+	if _, failed := herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(number) }); failed {
+		return nil
+	}
+	names := LabelNames(thread)
+	record := recordOf(s, number)
+	if thread.Get("state") != "open" || !thread.Has("pull_request") || !names[config.LabelPR] ||
+		record.Truthy("stop_requested") {
+		return nil
+	}
+	if IsHuman(names) {
+		human[number] = KeptBy(names)
+		return nil
+	}
+	if other := Owner(thread); other != nil {
+		others[number] = other.Name
+		return nil
+	}
+	reserved := OwnReviewOf(record)
+	queuedAt := py.OrStr(reserved.Get("since"), py.OrStr(record.Get("queued_at"), ""))
+	c := NewCandidate(number, "review", py.Str(thread.GetOr("title", "")), record.Truthy("forced"), queuedAt)
+	c.OwnReview = true
+	c.Difficulty = DifficultyOf(names, CarriedDifficulty(record))
+	votes := record.Obj("votes")
+	c.Builder = py.OrStr(votes.Get("builder"), "")
+	c.BuiltBy = reserved.Str("provider")
+	c.Owner = reserved.Str("provider")
+	c.Priority = PriorityTier(names)
+	c.ReviewTiers = reviewrule.Shipping(c.Difficulty)
+	c.BotPR = true
+	// Its rounds go on from its build's (`own_review`'s `rounds_used`, #725).
+	c.RoundsUsed = py.MustInt(py.Or(reserved.Get("rounds_used"), py.Or(record.Get("verdict_rounds"), 0)))
+	c.RoundTier = py.OrStr(reserved.Get("round_tier"), py.OrStr(record.Get("round_tier"), ""))
+	c.Waiting = names[config.LabelWaiting]
+	hold := record.Obj("hold")
+	c.WasHeld = hold != nil
+	if c.Waiting && hold != nil && !hold.Truthy("lifted") {
+		c.HoldSince = py.OrStr(hold.Get("since"), "")
+	}
+	c.Continues = Continues(record)
+	return c
 }
 
 // candidateLess is the key `(not c.forced, c.priority, KIND_ORDER[c.kind], c.spot_check,

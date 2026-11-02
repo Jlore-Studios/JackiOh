@@ -47,6 +47,13 @@ type flowHarnessOpts struct {
 	CommittedPlanLanes bool
 	// Overrides is the rest of **cfg_overrides: config.json keys, in order.
 	Overrides *pyjson.Object
+	// Chain keeps the committed `own_review_run` (#2748, 2026-11-02): a build hands its lane to its
+	// own review run, a second night of the harness (tests/own_review_test.go). Without it the
+	// harness builds, checks and reviews in one run (`own_review_run: false`), Squishy's flow and
+	// the night bot's for a conflict on a cleared change and a person's pull request, which the
+	// tests of everything else the review loop does (switches, rounds, sessions, wip, the review
+	// rule, ...) pin as they did before the chain.
+	Chain bool
 }
 
 // flowPlanArgs is plan.make's keyword arguments, which night passes on; a zero field is the
@@ -108,6 +115,9 @@ func newFlowHarness(t *testing.T, opts ...flowHarnessOpts) *flowHarness {
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
 	maps.Copy(env, o.Env)
 	overrides := pyjson.New("gates", workGates, "install", workInstall(), "max_review_cycles", 2)
+	if !o.Chain {
+		overrides.Set("own_review_run", false)
+	}
 	if o.Overrides != nil {
 		overrides.Update(o.Overrides)
 	}
@@ -140,8 +150,10 @@ func (h *flowHarness) night(r any, args ...flowPlanArgs) (*pyjson.Object, *pyjso
 	planned := flowMake(h.ctx, args...)
 	out := filepath.Join(h.root, fmt.Sprintf("out-%d", flowOuts(h.root)))
 	if !pyjson.Equal(planned.Get("action"), "none") {
-		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
-			nil, nil, nil).Run()
+		worker := work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
+			nil, nil, nil)
+		worker.GH = h.gh // an own review run reads its pull request's CI here (#2748)
+		worker.Run()
 		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	}
 	result := pyjson.New()

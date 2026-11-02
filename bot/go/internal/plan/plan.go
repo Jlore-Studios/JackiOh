@@ -35,7 +35,11 @@
 //   - **review** in the run: the run's own strongest seat of at least medium, in a fresh
 //     adversarial session; its findings count, and its approval at the item's tier ships the
 //     change (2026-11-02, #2748: a medium or strong one for a medium item, a strong one for a hard
-//     item, Opus on the same account).
+//     item, Opus on the same account). With `own_review_run` (the night bot's) a run that changes
+//     code reviews nothing itself (`Chains`): its deliver reserves its lane for the change's own
+//     review run, on the same subscription (`ownReviewer`: its strongest seat at or above the
+//     item's tier), which goes to it alone as its own work, held for it a while or handed off as a
+//     final audit (`Owning`, `HandOffOwnReview`).
 //   - **a review run** (`bot:cross-review`): the lane's final audit, when the run's own reviewer
 //     did not approve it, on another subscription of the tier when one is free and else on the
 //     builder's own. A medium item takes a medium seat first, a hard item waits for a strong
