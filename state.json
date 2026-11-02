@@ -14001,6 +14001,13 @@
     "2855": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-02T19:45:24Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the fix changes an engine rule in crates/engine/src/zones.rs (R11 for set tokens) and the monitor in crates/engine/src/testkit, adding a ruling, besides web CSS and an e2e spec; the rule rates engine rules work hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
