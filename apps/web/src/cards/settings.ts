@@ -5,7 +5,8 @@
 // R1834004: `opponentCosmetics` on, an opponent's cards and side wear the loadout their seat froze
 // when the match began (game/wearer.ts); off, the defaults, on a live, watched or replayed board alike.
 // R2721000: `rarityFoil`, off by default, gives a Mythic face its rarity foil (model.ts foilFor).
-// R2718000: `setWatermarks` (setMark.ts) stays on the device (`DEVICE_CARD_SETTINGS`), never the account.
+// R2718000, R2721000: `setWatermarks` (setMark.ts) and `rarityFoil` stay on the device
+// (`DEVICE_CARD_SETTINGS`), never the account.
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
@@ -76,8 +77,8 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
   },
 ];
 
-/** R2718000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
-export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks"];
+/** R2718000, R2721000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
+export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks", "rarityFoil"];
 
 const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "setWatermarks", "rarityFoil"];
 

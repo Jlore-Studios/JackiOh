@@ -278,10 +278,35 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cards"]);
-    // R2721000's rarityFoil rides the cards group like the other account-kept settings; only setWatermarks stays on the device.
-    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
     expect(sent["cards"]?.values).not.toHaveProperty("setWatermarks");
-    expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks"]);
+    expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks", "rarityFoil"]);
+  });
+
+  it("R2721000 Rarity foil stays on the device: the account's copy never turns it on, turning it on sends nothing, and the cards group never carries it", async () => {
+    const api = fakeApi({ cards: { at: T0 - 2_000, values: { animatedFoil: false, rarityFoil: true } } });
+    start(api);
+    await settleSyncs();
+    // The account's copy took what the account keeps, and left the device's own at its default.
+    expect(readCardSettings().animatedFoil).toBe(false);
+    expect(readCardSettings().rarityFoil).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+
+    await pass(1_000);
+    writeCardSettings({ rarityFoil: true });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);
+    expect(readCardSettings().rarityFoil).toBe(true);
+    expect(api.save).not.toHaveBeenCalled();
+
+    // Another card setting still goes up, and Rarity foil does not ride with it.
+    writeCardSettings({ hoverPreviews: false });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS);
+    expect(api.save).toHaveBeenCalledTimes(1);
+    const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
+    expect(Object.keys(sent)).toEqual(["cards"]);
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(sent["cards"]?.values).not.toHaveProperty("rarityFoil");
+    expect(readCardSettings().rarityFoil).toBe(true);
   });
 
   it("R1295000 the card cosmetics go up as their own group and come back on a new device", async () => {
