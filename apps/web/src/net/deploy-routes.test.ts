@@ -23,7 +23,7 @@ type VercelConfig = {
 const config = JSON.parse(readFileSync(WEB_CONFIG, "utf8")) as VercelConfig;
 
 function sourceRegex(source: string): RegExp {
-  const listed = /^\/\(([a-z|-]+)\)\{\/\}\?$/u.exec(source);
+  const listed = /^\/\(([a-z|/-]+)\)\{\/\}\?$/u.exec(source);
   if (listed !== null) return new RegExp(`^/(${listed[1] ?? ""})/?$`, "u");
   const byId = /^\/\(([a-z|-]+)\)\/\(\[\^\/\]\+\)\{\/\}\?$/u.exec(source);
   if (byId !== null) return new RegExp(`^/(${byId[1] ?? ""})/([^/]+)/?$`, "u");
@@ -85,6 +85,8 @@ describe("vercel.json", () => {
       "/loginx",
       "/almanac/extra",
       "/login/extra",
+      "/dungeon/extra",
+      "/dungeon/stats/extra",
       "/match",
       "/match/",
       "/match/a/b",
