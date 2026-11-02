@@ -13174,7 +13174,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-2",
-      "question": "",
+      "question": "CI on #2831 fails because `main` (d044c4a46) does not build: `crates/run/src/fight.rs:164` matches `GameEvent::Healed { target_id, amount }`, but #2832 added a `via` field to `Healed` (E0027). Nothing on this branch causes it, since the branch changes no file under `crates/`. Should `main` get its own fix (`GameEvent::Healed { target_id, amount, .. }` in `crates/run/src/fight.rs`), after which this PR only needs `main` merged in and CI re-run? Or may this PR carry that one-line fix, which is outside its scope?",
       "queued_at": "2026-11-02T15:45:12Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
