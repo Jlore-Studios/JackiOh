@@ -12420,6 +12420,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-02T12:46:25Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `apps/web/src/fx/motifs/board.ts:123`: shift draws rotation paths that contradict the spec's rotation topology (R14). It wraps each unit along its own row (lane "
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
