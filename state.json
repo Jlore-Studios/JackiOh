@@ -13012,6 +13012,7 @@
     "2705": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13025,8 +13026,10 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "",
       "last_findings": [],
       "onto": "bot/issue-2701",
+      "parked_on": "bot/issue-2705",
       "part_of": 2701,
       "pending_request": false,
       "planned_at": "2026-11-01T20:06:58Z",
@@ -13034,6 +13037,7 @@
       "planned_by_id": "gpt",
       "planned_tier": "medium",
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-01T18:44:33Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
