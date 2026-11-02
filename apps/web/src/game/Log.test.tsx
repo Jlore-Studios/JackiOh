@@ -620,6 +620,14 @@ describe("#552 the log reads as English on the Meditative cards' events", () => 
     ).toEqual([`Your trap ${nameOf("core-018")} fired`, `Your ${nameOf("core-018")} triggered`, `The opponent's ${nameOf("classic-005")} triggered`]);
   });
 
+  it("R2734000 an opponent's trap the view names is logged by its name", () => {
+    expect(
+      lines(
+        withEvents(baseView(), [{ type: "trapFired", instanceId: "b41", defId: "core-041", controller: "p2", row: "backrow", lane: 2 }]),
+      ),
+    ).toEqual([`The opponent's trap ${nameOf("core-041")} fired`]);
+  });
+
   it("R880 a craft prompt reads as a card to craft", () => {
     expect(lines(withEvents(baseView(), [{ type: "promptOpened", player: "p2", choiceId: "ch1", kind: "craft" }]))).toEqual([
       "Opponent must choose a card to craft",

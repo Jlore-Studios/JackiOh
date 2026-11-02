@@ -169,9 +169,11 @@ export const MUSIC_BYTES_MAX = 8;
 /**
  * §10.11's cap on the rendered music, counted in whole disk blocks (gen-music.mjs BUDGET_BYTES).
  * R1352 raised it from 24 MiB for the card intros: the shipped sets' 58 take about 3.1 MB, and the
- * Meditative set's 22 come with its release, at the same encoding.
+ * Meditative set's 22 come with its release, at the same encoding. Raised again from 28 MiB when the
+ * owner's auditions gave each station three to seven in-game tracks (about 40.5 MiB on disk), with
+ * room left for the card intros later sets bring.
  */
-export const MUSIC_BUDGET_BYTES = 28 * 1024 * 1024;
+export const MUSIC_BUDGET_BYTES = 42 * 1024 * 1024;
 
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */

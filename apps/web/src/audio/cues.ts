@@ -548,8 +548,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   rotated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   swapped: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   locked: { sfx: "lock", cues: () => [sfx("lock")] },
-  // R203 + R154: only the controller's seat reads the trap, so only it hears the cast line. R17's
-  // play-reactive traps fire on the very play they answer, so the line cuts in on that play's line.
+  // R203 + R2734000: each seat whose view names the trap hears its cast line; the sentinel gets the
+  // sting alone. R17's play-reactive traps fire on the very play they answer, so the line cuts in on
+  // that play's line.
   // R2657001: a face-up Field Trap firing again reveals nothing, so it gives an activation's shimmer,
   // with no sting and no line (it spoke when it revealed).
   trapFired: {

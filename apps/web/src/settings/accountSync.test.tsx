@@ -16,7 +16,7 @@ import {
   writeCardPick,
   writeCosmetics,
 } from "../cards/cosmetics.ts";
-import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
+import { DEVICE_CARD_SETTINGS, readCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { getFxSettings, resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import type { PlayerSettingsAccountCopy, PlayerSettingsGroup } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
@@ -260,6 +260,32 @@ describe("R634 after the load, each change is sent as it happens", () => {
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent).sort()).toEqual(["cards", "fx"]);
     expect(sent["fx"]?.at).toBeLessThan(sent["cards"]?.at ?? 0);
+  });
+
+  it("R2718000 Set watermarks stays on the device: the account's copy never sets it, turning it off sends nothing, and the cards group never carries it", async () => {
+    const api = fakeApi({ cards: { at: T0 - 2_000, values: { animatedFoil: false, setWatermarks: false } } });
+    start(api);
+    await settleSyncs();
+    // The account's copy took what the account keeps, and left the device's own alone.
+    expect(readCardSettings().animatedFoil).toBe(false);
+    expect(readCardSettings().setWatermarks).toBe(true);
+    expect(api.save).not.toHaveBeenCalled();
+
+    await pass(1_000);
+    writeCardSettings({ setWatermarks: false });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);
+    expect(readCardSettings().setWatermarks).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+
+    // Another card setting still goes up, and the device's own does not ride with it.
+    writeCardSettings({ hoverPreviews: false });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS);
+    expect(api.save).toHaveBeenCalledTimes(1);
+    const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
+    expect(Object.keys(sent)).toEqual(["cards"]);
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(sent["cards"]?.values).not.toHaveProperty("setWatermarks");
+    expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks"]);
   });
 
   it("R1295000 the card cosmetics go up as their own group and come back on a new device", async () => {

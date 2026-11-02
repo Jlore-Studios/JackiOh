@@ -54,7 +54,7 @@ pub enum JloreReason {
 
 /// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, and a pack
 /// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5), the Chase Shard bar
-/// buying (§14.6) and the launch's reset (§14.12).
+/// buying (§14.6), the launch's reset (§14.12) and reaching Jlorious (R2755000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EconomyReason {
@@ -70,6 +70,9 @@ pub enum EconomyReason {
     /// Migration 0050's reset of every existing account's economy (R1310002), and migration
     /// 0057's grant of the portraits (R1827000); no server path writes it.
     Launch,
+    /// R2755000: the Jlorious card back, granted by the rated game that left its person Jlorious,
+    /// or by migration 0074 to each person who had held Jlorious before.
+    Jlorious,
 }
 
 /// What an inventory row counts (§14.3, §14.5, §14.6). A set's card pack is keyed by its set, the

@@ -84,11 +84,15 @@ pub fn fit_for(fits: &'static [CosmeticFit], age_days: i64) -> &'static Cosmetic
 /// R1834005: the non-starters a bot may own as of `now`, sorted: each held, where it is held, by at
 /// least `BOT_COSMETIC_MIN_OWNERS` people (`owners`, `economy_cosmetic_owners`), and first granted
 /// to one at least `BOT_COSMETIC_MIN_AGE_DAYS` before `now`. A cosmetic of no kind a loadout wears
-/// (a portrait) and one no grant dates are never eligible.
+/// (a portrait) and one no grant dates are never eligible, nor is a Jlorious one, which a bot,
+/// never Jlorious (R640000), could not have earned (R2755000).
 pub fn eligible(registry: &[Cosmetic], owners: &[CosmeticOwners], now: i64) -> Vec<Holding> {
     let shipped_by = now - BOT_COSMETIC_MIN_AGE_DAYS * MS_PER_DAY;
     let worn = |cosmetic: &Cosmetic| {
-        cosmetic.kind != CosmeticKind::Portrait && !cosmetic.default && !cosmetic.starter
+        cosmetic.kind != CosmeticKind::Portrait
+            && !cosmetic.default
+            && !cosmetic.starter
+            && !cosmetic.jlorious
     };
     let mut out: Vec<Holding> = owners
         .iter()

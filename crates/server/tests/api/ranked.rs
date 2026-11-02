@@ -463,6 +463,87 @@ mod r610_bots {
 }
 
 // ---------------------------------------------------------------------------
+// R2755000 the Jlorious card back
+// ---------------------------------------------------------------------------
+
+mod r2755000_the_jlorious_card_back {
+    use super::*;
+    use jackioh_server::cosmetics::JLORIOUS_CARD_BACK;
+    use jackioh_server::economy::store::EconomyReason;
+
+    use super::r640000_bots_on_the_ladder::seed_placed_bot;
+
+    /// The Jlorious card back's ledger rows of `profile_id`: each one's reason and reference.
+    async fn backs(app: &App, profile_id: &str) -> Vec<(EconomyReason, Option<String>)> {
+        let mut tx = app.db.begin(Some(profile_id)).await.expect("begin");
+        let ledger = tx.economy_ledger_get(profile_id).await.expect("the ledger");
+        tx.commit().await.expect("commit");
+        ledger
+            .cosmetics
+            .into_iter()
+            .filter(|row| row.cosmetic_id == JLORIOUS_CARD_BACK)
+            .map(|row| (row.reason, row.reference))
+            .collect()
+    }
+
+    /// R608's season: m-high, A and m-low in Mythic Grape, golden rated above them all but Golden
+    /// Grape, and B below; no peak yet.
+    async fn r608_season(app: &App) {
+        let mythic = tier_bottom(4);
+        seed_placed(app, "m-high", 1900.0, mythic, json!({})).await;
+        seed_placed(app, "m-low", 1500.0, mythic + 2, json!({})).await;
+        seed_placed(app, "golden", 2500.0, tier_bottom(3) + 8, json!({})).await;
+        seed_placed(app, A, 1400.0, mythic + 1, json!({})).await;
+        seed_placed(app, B, 1300.0, tier_bottom(1), json!({})).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2755000_the_game_that_leaves_people_jlorious_grants_each_the_card_back_once() {
+        let app = test_app().await;
+        r608_season(&app).await;
+        // A beats B into Jlorious #2; m-high (#1) and m-low (#3) are Jlorious beside them, bystanders
+        // whose first peak this game writes.
+        rate(&app, game("j-1", [player(A), player(B)], Some(0), 1)).await;
+        let granted = vec![(EconomyReason::Jlorious, Some("j-1".to_string()))];
+        for jlorious in [A, "m-high", "m-low"] {
+            assert_eq!(backs(&app, jlorious).await, granted, "{jlorious}");
+        }
+        // The loser, and golden, rated highest but not in Mythic Grape: nothing.
+        assert!(backs(&app, B).await.is_empty());
+        assert!(backs(&app, "golden").await.is_empty());
+
+        // Jlorious again after the next game: owned already, so nothing more is written.
+        rate(&app, game("j-2", [player(A), player(B)], Some(0), 2)).await;
+        assert_eq!(backs(&app, A).await, granted);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2755000_a_ladder_bot_never_gets_it_and_the_economy_off_grants_nothing() {
+        // R640000: a Mythic bot rated above everyone stays Mythic Grape, so it never owns it.
+        let app = test_app().await;
+        r608_season(&app).await;
+        seed_placed_bot(&app, "bot-mythic", 3000.0, tier_bottom(4) + 3).await;
+        rate(&app, game("j-1", [player(A), player(B)], Some(0), 1)).await;
+        rate(&app, game("j-2", [bot("bot-mythic"), player(B)], Some(0), 2)).await;
+        assert!(backs(&app, "bot-mythic").await.is_empty());
+        assert!(!backs(&app, A).await.is_empty());
+
+        // §14.12: while the economy is off, A still reaches Jlorious and its peak, and owns nothing.
+        let mut off = test_app().await;
+        Arc::get_mut(&mut off)
+            .expect("the test app has no second handle yet")
+            .economy_live = false;
+        r608_season(&off).await;
+        rate(&off, game("j-1", [player(A), player(B)], Some(0), 1)).await;
+        assert_eq!(
+            to_json(&q!(off, ranked_rank(&season(), A)))["peakJlorious"],
+            json!(2)
+        );
+        assert!(backs(&off, A).await.is_empty());
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R608 Jlorious through the server
 // ---------------------------------------------------------------------------
 
@@ -607,7 +688,7 @@ mod r640000_bots_on_the_ladder {
     }
 
     /// `seed_placed` for a ladder bot.
-    async fn seed_placed_bot(app: &App, bot_id: &str, rating: f64, ladder: i32) {
+    pub(super) async fn seed_placed_bot(app: &App, bot_id: &str, rating: f64, ladder: i32) {
         seed_bot(app, bot_id, rating).await;
         put_rank(
             app,

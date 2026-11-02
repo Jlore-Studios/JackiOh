@@ -933,7 +933,7 @@ mod r113_r383_b3_1_a_pause_inside_an_animated_traps_firing {
     }
 
     #[test]
-    fn r383_hidden_information_the_opponent_reads_the_flips_zone_only_then_the_animated_card_in_full_the_prompt_is_its_controllers_alone()
+    fn r383_r2734000_hidden_information_the_opponent_reads_the_fired_trap_in_its_zone_then_the_animated_card_in_full_the_prompt_is_its_controllers_alone()
      {
         let (state, trap) = paused("animated-pause-view");
         let opponent_view = view_for(&state, P1);
@@ -943,9 +943,11 @@ mod r113_r383_b3_1_a_pause_inside_an_animated_traps_firing {
             .and_then(|list| list.last())
             .cloned()
             .unwrap_or(Value::Null);
+        // Paused inside its firing (R113), the trap stands face-up in its zone (R33), public to both
+        // seats, so its `trapFired` names it to the opponent too (R2734000).
         expect_match(
             &last,
-            json!({ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "row": "backrow", "lane": 1 }),
+            json!({ "instanceId": trap, "defId": asker.id, "row": "backrow", "lane": 1 }),
         );
         assert_eq!(
             json_of(&opponent_view.pending),

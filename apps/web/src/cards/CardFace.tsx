@@ -71,6 +71,13 @@
 // its art, a finish and a border, each on its own attribute apart from the rarity foil
 // (cosmetics.ts, cosmetics.css). Every other face, and a face wearing the defaults, carries none.
 //
+// R2718000: every face with a rules box prints its set's watermark behind the words, its set mark
+// (R503) large, faint and in one ink, centred in the box (`.cf-watermark`, an `img` with no text,
+// setMark.ts `watermarkOf`, setmark.css), blank boxes included. Glitch, a face with no box (compact,
+// full art) and a set with no symbol (Boss, Boss-X, Custom) print none, and the Set watermarks
+// setting turns them all off. It sits under the text and takes no pointer, so the box's text keeps
+// its contrast and its tooltip; a face too small for the box hides it with the box.
+//
 // R2521009: a Resource's full face prints what it sells for on the face shown, "Credits: 2–5"
 // (`.cf-text-credits`, the model's `credits`), as a line under its text, in hand, in the inspect
 // views, the Almanac and the deck builder alike, since each draws this face.
@@ -94,7 +101,7 @@ import { FullArtSignature } from "./FullArtSignature.tsx";
 import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
-import { setMarkOf } from "./setMark.ts";
+import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
 import { questFaceText } from "./questFace.ts";
@@ -351,6 +358,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
+  // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
+  const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
   // R1017001: a full-art card fills its full face with its art, and prints no words.
   const fullArt = full && showsFullArt(face, fullArtOn);
   // R2655000: a Legendary or Mythic full art moves, and a Mythic signs the card's name.
@@ -440,6 +449,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             data-short={short !== null ? "true" : undefined}
             data-less={less ? "true" : undefined}
           >
+            {watermark !== null && (
+              <img className="cf-watermark" data-watermark={watermark.kind} src={watermark.src} alt="" aria-hidden="true" draggable={false} />
+            )}
             {face.inPlay && face.starship != null ? (
               // R2249000: a Starship lists its pieces in place of its text.
               <StarshipPieces list={face.starship.list} />

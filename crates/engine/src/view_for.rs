@@ -2279,7 +2279,11 @@ fn redact_event(
         | GameEventType::Discarded
         | GameEventType::Drawn
         // R1843000: a vote names its card as the card itself is named, a face-down voter hidden.
-        | GameEventType::VoteCast => {
+        | GameEventType::VoteCast
+        // R2734000 (amending R154, R763): a fired trap is named as the card itself is, on both seats. It is
+        // face-up from its firing until it leaves the field (`traps::fire_trap`, `replacements::fire`), so it
+        // reads wherever it lies public. `row`, `lane` and `controller` always travel (§10.10).
+        | GameEventType::TrapFired => {
             if !hidden(&instance) {
                 return event.clone();
             }
@@ -2344,26 +2348,6 @@ fn redact_event(
             };
             hide(&mut shown, &["instanceId", "defId"]);
             shown.insert("zone".to_string(), shown_zone);
-            rebuild(shown)
-        }
-
-        // R154: the one identity R97's "judged by where the card sits now" cannot decide, so the row
-        // names the seat instead — the controller reads `instanceId` and `defId`, the other player
-        // reads the sentinel. Firing a Trap consumes it into its owner's graveyard (a public pile) or
-        // leaves a Field Trap face-up, so `may_read` would call every fired trap public and hand the
-        // opponent the card's identity on the event that announces the flip. The animation needs the
-        // opposite: §10.10's `trapFired` row flips a card back in the right lane, and §10.8 gives a
-        // face-down trap no instance id to hang that on. `row`, `lane` and `controller` are not
-        // identity and always travel, which is the whole point of the row — the opponent animates the
-        // flip in the right zone without being told which card it was.
-        //
-        // R763: to its controller it follows R97, so a fired trap since shuffled into a library, or
-        // taken into the other player's hand, is the sentinel there too.
-        GameEventType::TrapFired => {
-            if text_at(&shown, "controller") == viewer.as_str() && !hidden(&instance) {
-                return event.clone();
-            }
-            hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
 
