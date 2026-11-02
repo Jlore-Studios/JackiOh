@@ -88,6 +88,9 @@ when that is):
 - comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
   of the request.
 
+An issue with open sub-issues that is queued so is built as [fullsend](#fullsend), its sub-issues
+its parts, and the bot says so on it (#2748).
+
 To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`** or
 **`/harness revise <notes>`** on it, submit a review that requests changes, or add **`bot:revise`**.
 It also revises its own pull requests without being asked: when CI fails twice on the same
@@ -193,7 +196,12 @@ blind to the others, reconciled at the end (#505). It suits a big issue that spl
 touching different files. Squishy has the same mode, `squishy:fullsend` ([Squishy](#squishy)).
 
 1. **The split.** A fullsend item counts as `difficulty:hard`, whatever its label says, so a
-   strong model takes it. Its first run splits it as Squishy's `split` does (`prompts/split.md`,
+   strong model (Opus) takes it, and its split goes first among the builds, as a `priority:high`
+   item does (#2748; `queue.Candidates`): its parts wait on it. No label changes for that, so a
+   person's priority label stays as it is, and the queue (`waiting`) and the status issue show it
+   as high. Nothing reviews or revises a split: its one session answers with the parts, not a
+   change, and deliver opens them; an answer that cannot be used is a failed run, tried again up
+   to `max_failures`. Its first run splits it as Squishy's `split` does (`prompts/split.md`,
    `go/internal/split/`), told also that the parts land on one branch and are reconciled there
    (`split.FullsendNotes`): vertical slices, no file in two parts, `blocked_by` only where one
    part reads another's code, and no "make it green" part. Deliver then makes the issue's own
@@ -207,6 +215,18 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    `part_of`, queues any that was not queued, and labels the parent `bot:tree`. A sub-issue
    labelled `human` or the other bot's, one a run holds, or one with a pull request of the bot's
    open is left to finish on `main`, and the reconcile waits for it to close too.
+
+   **A queued parent** (#2748, `fullsend_adopt` in `.harness/config.json`). An issue queued for
+   a plain build (`bot:build` by a label, an issue form, an assignment, `/harness build` or an
+   `approve`) that has open sub-issues is adopted the same way by itself (`queue.QueuedParent`,
+   `queue.AutoAdopt`), with a comment that says so, and that `/harness stop` stops it and its parts.
+   The request paths adopt it when they answer, and the claim of a queued build does when it finds
+   one (a form's `bot:build` reaches the queue with no event), before anything is planned or built.
+   Never a `human`, `human required` or `tracking` issue, never the other bot's (Squishy's), never
+   one that is a sub-issue itself (some tree's part, or a piece of a tracker: trees never nest), and
+   never one with a pull request of the bot's open or a run holding it; those are built as asked. To
+   have a parent built as one issue, remove its sub-issues before you queue it. Squishy adopts none
+   by itself (`fullsend_adopt` off).
 2. **The parts.** A part is a queued issue like any other, with its own difficulty and its own
    plan from a model of its plan floor (a strong one for a hard part), which the planning lane writes
    for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
@@ -226,13 +246,38 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    ever has a pull request.
 3. **The reconcile.** Nothing builds the parent while a part is open: `/harness fullsend`,
    `bot:build` and the queue all leave it alone. When the last part closes, the sweep queues its
-   reconcile, an ordinary build of the parent on the integration branch, by a strong model again,
-   whose first prompt is `prompts/reconcile.md`. It merges the parked branches, follows
+   reconcile, an ordinary build of the parent on the integration branch, by a strong model again
+   (Opus: it is hard, and a Claude account's switch to Sonnet never goes under that), whose first
+   prompt is `prompts/reconcile.md`.
+
+   **It first judges each part** against its sub-issue and the issue's "Done when". Small problems
+   (a seam, a name, a missing case, a red test, a collision) it always fixes itself. A part that is
+   largely wrong (it built something else, misses most of its sub-issue, or must be rewritten) it
+   may send back to the subscription that built it (#2748: Muse rebuilds what Muse built), at most
+   `fullsend_send_backs` times per part (1; Squishy's is 0). Its prompt lists the parts that may
+   still go back and who built each (`plan.SendBackable`: the part's `built_by`, which deliver
+   writes when it lands, or its owner then); past the cap a part is not listed, and the reconcile
+   fixes it. It sends them back with a `send_back` line (`{"status": "send_back", "send_back":
+   [{"part": 41, "findings": "…"}]}`, `verdicts.BuildReport`) and stops there: the run ends
+   `sent_back` with nothing of its own kept (`work.Worker.sendBack`), and deliver
+   (`deliver.SendBack`), checking each part against the state again, reopens it, makes the
+   subscription that built it its owner (`owner_why`: sent back by the reconcile), keeps the
+   findings on its record (`sent_back`) and its count (`send_backs`), and queues it as a part build
+   onto the integration branch. The part goes to that subscription first, held for it or handed off
+   by [the owner's rules](#ownership-and-the-hold), and its builder reads the findings first, with
+   its earlier change already in its worktree. The parent goes back to waiting for its parts
+   (`bot:tree` alone), and when they have closed the sweep queues the reconcile again. A reconcile
+   that names only parts that may not go back is told so and fixes them in the same run.
+
+   Otherwise it merges the parked branches, follows
    fullsend's Phases 3 to 6 in its one worktree (classify the damage, one winner per collision
    and the losers deleted, green with the code losing to a test by default, then the cull), and
    checks the issue's "Done when". Then it goes through the checks and the adversarial review like
    any build, and deliver opens one pull request from the integration branch into `main`, which
-   closes the issue under [the review rule](#difficulty-and-tiers) and auto-merge.
+   closes the issue under [the review rule](#difficulty-and-tiers) and auto-merge. That pull
+   request is hard whatever the issue's label says (its record's `difficulty`), so its final audit
+   is a strong model's, and on a subscription other than the reconcile's, whose run built the head:
+   Opus on another Claude account.
 
 Why it is built this way:
 
@@ -246,6 +291,10 @@ Why it is built this way:
   parent.
 - **One label per bot** (`bot:fullsend`, `squishy:fullsend`), so each issue has one owner
   (`queue.Owner`).
+- **A part goes back to its builder, once.** A part that is largely wrong costs the reconcile
+  more than its builder, which knows its plan and its slice; small problems are cheaper fixed in
+  place, and a cap keeps a part from going round. Nothing of a reconcile that sends parts back
+  ships: the next one merges and fixes on the branch as it then is.
 - **Medium builders, strong planners and a strong reconcile.** A part is one blind pass whose
   every flaw the reconcile's build, checks and review must clear anyway, so its builder may be a
   tier under its difficulty once a strong model has planned it: the strong models spend their
@@ -258,7 +307,9 @@ without its parts: their work stays on the old branch, kept as `bot/old/issue-<n
 branches stay on GitHub after the reconcile; delete them once its pull request has merged. A
 comment left on a part while it is built gets no pass of its own, since the part closes when it
 lands; say it on the parent, whose thread the reconcile reads. The status issue shows a queued
-fullsend item without a kind, and the statistics count its runs as splits and builds.
+fullsend item without a kind, and the statistics count its runs as splits and builds. A parent
+queued for a plain build that has open sub-issues is adopted unasked: `/harness stop` on it stops
+its parts too.
 
 ## No request is lost
 
@@ -406,7 +457,7 @@ in place of the `bot:*` ones.
 | `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium model's first, else a strong one's, for a medium or unrated item; a strong one's for a hard item), which goes into its description; the planner rates an unrated item |
 | `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
 | `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
-| `bot:tree` | a fullsend parent whose parts the bot opened and watches; once they have all closed, the sweep queues its reconcile |
+| `bot:tree` | a fullsend parent whose parts the bot opened or adopted and watches, and again while a part its reconcile sent back is built (#2748); once they have all closed, the sweep queues its reconcile |
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for its final audit, a review run on a subscription other than its builder's, before auto-merge: one medium or strong model for a medium item, one strong model for a hard one. An audit that asks for changes queues `bot:revise` for the auditor's own subscription, which owns the fix (#2748) |
 | `bot:planning`, `bot:splitting`, `bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling` | the live labels (#2748): a run holds it right now, exactly one of them, by the kind of run: a planning run, a fullsend split (or one of Squishy's splits), a fresh build (a fullsend part or a one-shot too), a revision of a pull request, a revision whose cause is a red CI run or the merge queue (`source` `ci`), a review run (an [after-merge spot-check](#the-after-merge-spot-check)'s too, on the merged pull request it reads), and the build of a fullsend parent whose parts have landed (its reconcile). The claim puts it on (`config.LiveRun`) and keeps it in the item's record (`live`), and deliver takes it off. They replace `bot:working`, which is retired: a thread that still carries it is held as ever (`config.HeldLabels`, `config.IsLive`), and the sweep moves it to the live label of the run its record names before it deletes the label |
@@ -844,10 +895,12 @@ subscription built.
   a planning run, a build or a revision records it on the item's record (`owner`, `owner_since`,
   `owner_why`; a bot pull request's revisions answer to its issue's, `queue.OwnerItem`), and a
   record from before reads its planner (`planned_by_id`). A review run's claim never changes it,
-  and a fullsend part keeps its own routing ([Fullsend](#fullsend)). Two deliveries do (#2748,
-  section 4; `plan.Own`): a final audit that asks for changes makes the auditor's subscription the
-  owner of its fix, and a red check or the merge queue's failure on a head the reviews cleared
-  makes the subscription whose approval shipped it (the merge owner) the owner of the CI fix. Its builds,
+  and a fullsend part keeps its own routing ([Fullsend](#fullsend)) until its reconcile sends it
+  back. Three deliveries do (#2748, `plan.Own`): a final audit that asks for changes makes the
+  auditor's subscription the owner of its fix, a red check or the merge queue's failure on a head
+  the reviews cleared makes the subscription whose approval shipped it (the merge owner) the owner
+  of the CI fix (section 4), and a fullsend reconcile that sends a part back makes the subscription
+  that built the part its owner (section 2). Its builds,
   continuations and revisions go to it first (`plan.BuilderSeat`, the auditor's fix on its seat of
   the audit's tier), and so does a plan it was cut off in, on the planning lane. A
   `build_last` owner (claude-2) keeps nothing: it builds only after every other.
@@ -1551,7 +1604,7 @@ does on the night bot, and it spot-checks nothing after a merge (`spot_check_eve
 | `squishy:oneshot` | `/squishy oneshot` | the whole issue in one run with [fullsend](../.claude/skills/fullsend/SKILL.md): a spec first, then builders and spec-testers at once, each in its own git worktree and branch (`squishy/oneshot-<n>/<slice>`), merged back and reconciled against the tests, then the checks and the review as for any build (`prompts/oneshot.md`). Every phase is a commit, so a run that is cut off resumes from its last phase on the issue's branch. It builds the ordinary way, and says why, when fullsend does not fit. `.fullsend/` never ships |
 | `squishy:split` | `/squishy split` | one Opus session reads the issue and the code and answers with sub-issues (`prompts/split.md`, `go/internal/split/`); deliver opens them as GitHub sub-issues of the issue, linked by "blocked by", each with its plan as its **Plan** section, its difficulty and the parent's priority, queued as `squishy:build` |
 | `squishy:split-bot` | `/squishy split bot` | the same, queued for the night bot as `bot:build`; a Plan section counts as a strong plan, so the night bot builds them without planning again |
-| `squishy:fullsend` | `/squishy fullsend` | the night bot's [fullsend](#fullsend), under Squishy's names: parts Squishy builds onto `squishy/issue-<n>`, each a run of its own with no pull request, then one reconcile run and one pull request into `main`. Where `oneshot` runs fullsend's builders as agents inside one run, here each part is a run, so no single run has to hold the whole issue |
+| `squishy:fullsend` | `/squishy fullsend` | the night bot's [fullsend](#fullsend), under Squishy's names: parts Squishy builds onto `squishy/issue-<n>`, each a run of its own with no pull request, then one reconcile run and one pull request into `main`. It adopts no queued parent by itself and its reconcile sends no part back (`fullsend_adopt` off, `fullsend_send_backs` 0, #2748), though its split goes first among its builds too. Where `oneshot` runs fullsend's builders as agents inside one run, here each part is a run, so no single run has to hold the whole issue |
 
 A split leaves the parent labelled `squishy:tree` with a checklist. When every sub-issue has
 closed, the sweep queues its close-out: the same session checks the parent's "Done when" against

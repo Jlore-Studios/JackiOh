@@ -440,8 +440,22 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 	if candidate.Kind == "revise" {
 		auditTier = candidate.AuditTier
 	}
-	builder, note := BuilderSeat(pool, builders, candidate.Difficulty,
-		candidate.Part && queue.PlanMeets(candidate), avoid, auditTier, spread)
+	var builder *providers.Seat
+	var note string
+	if candidate.Kind == "build" && candidate.SentBack && candidate.Owner != "" {
+		// A part its tree's reconcile sent back goes to the subscription that built it first, its
+		// owner (#2748, section 2): Muse rebuilds what Muse built.
+		own := filter(builders, func(p *providers.Provider) bool { return p.ID == candidate.Owner })
+		if builder, note = BuilderSeat(pool, own, candidate.Difficulty, queue.PlanMeets(candidate), "", "",
+			spread); builder != nil {
+			note = py.Strip(fmt.Sprintf("its builder `%s` builds it again: its tree's reconcile sent it "+
+				"back. %s", candidate.Owner, note))
+		}
+	}
+	if builder == nil {
+		builder, note = BuilderSeat(pool, builders, candidate.Difficulty,
+			candidate.Part && queue.PlanMeets(candidate), avoid, auditTier, spread)
+	}
 	if builder == nil {
 		return nil
 	}
@@ -576,7 +590,7 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	ownWork := func(pair Pair) bool {
 		c, own := pair.Candidate, owning[pair.Candidate.Number]
 		return own.Owner != "" && pair.Assignment.Provider.ID == own.Owner &&
-			(c.Kind == "revise" || c.Continues || c.WasHeld)
+			(c.Kind == "revise" || c.Continues || c.WasHeld || c.SentBack)
 	}
 	var out, own, plans, rest []Pair
 	for _, pair := range planning {

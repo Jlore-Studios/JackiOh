@@ -403,6 +403,11 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	if c.SpotCheckEvery < 0 {
 		raiseConfig("spot_check_every: must be 0 (no spot-check) or more")
 	}
+	c.FullsendAdopt = pyjson.Truthy(raw.GetOr("fullsend_adopt", optional.Get("fullsend_adopt")))
+	c.FullsendSendBacks = py.MustInt(raw.GetOr("fullsend_send_backs", optional.Get("fullsend_send_backs")))
+	if c.FullsendSendBacks < 0 {
+		raiseConfig("fullsend_send_backs: must be 0 (none sent back) or more")
+	}
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
 		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))

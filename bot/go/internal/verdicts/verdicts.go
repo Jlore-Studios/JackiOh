@@ -91,7 +91,46 @@ func Rating(text string) (map[string]string, string) {
 		"why": py.SliceTo(strings.Join(py.Split(py.OrStr(found.Get("why"), "")), " "), 300)}, rest
 }
 
-// BuildReport is verdicts.BuildReport. Status is "done", "blocked" or "unknown".
+// SendBack is one part a fullsend reconcile sends back to the subscription that built it (#2748,
+// section 2): the part's issue number and what is wrong with it, for its rebuild's prompt.
+type SendBack struct {
+	Part     int
+	Findings string
+}
+
+// SendBackChars is how much of one part's findings is kept.
+var SendBackChars int = 4000
+
+// sendBacks is a reconcile's `"send_back"` list, `[{"part": 41, "findings": "…"}, …]`: each part
+// once (its first entry), a number or `#41`, with findings, at most `MaxFindings` of them.
+func sendBacks(raw any) []SendBack {
+	out := []SendBack{}
+	entries, ok := raw.([]any)
+	if !ok {
+		return out
+	}
+	seen := map[int]bool{}
+	for _, entry := range entries {
+		o, ok := entry.(*pyjson.Object)
+		if !ok || len(out) >= MaxFindings {
+			continue
+		}
+		part, err := py.Int(o.Get("part"))
+		if text, isText := o.Get("part").(string); isText {
+			part, err = py.Int(strings.TrimPrefix(py.Strip(text), "#"))
+		}
+		findings := py.SliceTo(py.Strip(py.OrStr(o.Get("findings"), "")), SendBackChars)
+		if err != nil || part <= 0 || seen[part] || findings == "" {
+			continue
+		}
+		seen[part] = true
+		out = append(out, SendBack{part, findings})
+	}
+	return out
+}
+
+// BuildReport is verdicts.BuildReport. Status is "done", "blocked", "send_back" (a fullsend
+// reconcile sending parts back, with at least one in `SendBack`) or "unknown".
 type BuildReport struct {
 	Status   string
 	Title    string
@@ -104,6 +143,9 @@ type BuildReport struct {
 	// #793): a change to a path the bot may not touch, a secret, a dashboard or an account
 	// (`human.py`).
 	HumanRequired bool // default: False
+	// SendBack: the parts a fullsend reconcile sends back to their builders (`"send_back"`, with
+	// the status `send_back`, #2748); empty for any other answer.
+	SendBack []SendBack // default: ()
 }
 
 // BuildReport_ is verdicts.build_report.
@@ -111,17 +153,21 @@ func BuildReport_(text string) *BuildReport {
 	value, rest := Header(text, "bot")
 	found, ok := value.(*pyjson.Object)
 	if !ok {
-		return &BuildReport{Status: "unknown", Body: rest}
+		return &BuildReport{Status: "unknown", Body: rest, SendBack: []SendBack{}}
 	}
 	status := py.Lower(py.Str(found.GetOr("status", "")))
-	if status != "done" && status != "blocked" {
+	sent := []SendBack{}
+	if status == "send_back" {
+		sent = sendBacks(found.Get("send_back"))
+	}
+	if status != "done" && status != "blocked" && (status != "send_back" || len(sent) == 0) {
 		status = "unknown"
 	}
 	title := py.SliceTo(strings.Join(py.Split(py.Str(found.GetOr("title", ""))), " "), 200)
 	question := py.SliceTo(py.Strip(py.Str(found.GetOr("question", ""))), 4000)
 	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(py.OrStr(found.Get("next_model"), "")), "`")), 40)
 	human := status == "blocked" && found.Get("human_required") == true
-	return &BuildReport{status, title, question, rest, nextModel, human}
+	return &BuildReport{status, title, question, rest, nextModel, human, sent}
 }
 
 // Finding is verdicts.Finding.

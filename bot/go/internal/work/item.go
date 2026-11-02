@@ -634,6 +634,11 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 			py.OrStr(plan.Get("previous_why"), "it kept failing") + kept + ". Start from " +
 			"`main`, learn from what went wrong, and do not repeat it.\n\n"
 	}
+	if sent := pyjson.Obj(plan.Get("sent_back")); plan.Truthy("onto") && sent.Len() > 0 {
+		previous += pyFormat(SentBackNote, map[string]any{"parent": plan.Get("part_of"),
+			"onto": x.planItem("onto")}) + "\n\n" +
+			prompts.Data(py.OrStr(sent.Get("findings"), ""), "The reconcile's findings") + "\n\n"
+	}
 	if prior := plan.Get("previous_findings"); pyjson.Truthy(prior) {
 		var findings []*verdicts.Finding
 		for _, f := range pyjson.List(prior) {
@@ -685,6 +690,7 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 		}
 		values.Set("children", x.planItem("children"))
 		values.Set("parked", parkedText)
+		values.Set("send_back", x.sendBackText())
 		prompt = x.Render("reconcile", values)
 	} else {
 		prompt = x.Render("build", values)
@@ -1451,6 +1457,21 @@ func (x *Worker) Item() {
 		appendTo(x.Result, "cycles", entry)
 		if built == nil {
 			return
+		}
+		if cycle == 1 && !harnessRound && built.Status == "send_back" && x.reconciles() {
+			// A reconcile that sends parts back to their builders ends here (#2748, `sendBack`).
+			if x.sendBack(built) {
+				return
+			}
+			// None it named may go back: it fixes them itself, in one more pass before the checks.
+			fixed, fixEntry := x.buildPass(cycle, "fix", x.fixPrompt(cycle,
+				[]*verdicts.Finding{x.refusedFinding(built)}, "", "Blocking findings"),
+				"the parts it named cannot be sent back")
+			entry.Set("fix", fixEntry.Get("builder"))
+			if fixed == nil {
+				return
+			}
+			built = fixed
 		}
 		report = built
 		guard := Guard(x)

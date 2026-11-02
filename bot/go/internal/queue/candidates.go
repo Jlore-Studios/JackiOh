@@ -86,6 +86,10 @@ type Candidate struct {
 	// For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
 	// checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
 	Part bool // default: False
+	// For a part: its tree's reconcile sent it back (#2748, section 2; its record's `sent_back`),
+	// so it goes to its owner, the subscription that built it, first (`plan.Assign`), as owned
+	// work does.
+	SentBack bool // default: False
 	// For a revision: the tier of the final audit it answers (#725), at which its owner, the
 	// auditor's subscription, fixes and pushes it (#2748; "" when no audit has asked for changes
 	// since the last revision landed).
@@ -538,11 +542,12 @@ func sortedKeys(set map[int]bool) []int {
 // plan counts at this one. Either queue label queues either kind of thread: an issue builds
 // and a pull request revises. A queue label is the request, so a thread that failed before and
 // was labelled again is taken again. A thread labelled `human`, `human required` or `tracking` is
-// left out, whatever model would take it, and so are a fullsend issue whose parts are still open
-// (`open_parts`, #505),
+// left out, whatever model would take it, and so are a fullsend issue whose parts (its open
+// sub-issues) are still open (#505),
 // forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
 // each with a line in `skipped` when the caller keeps one, and in `held_back` (number -> why)
-// when the caller keeps that (the status issue's queue).
+// when the caller keeps that (the status issue's queue). A fullsend issue with no sub-issue yet
+// is its split, which goes first among the builds, as `priority:high` does (#2748).
 func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None */, heldBack map[int]string /* = None */) []*Candidate {
 	found := map[int]*Candidate{}
 	var order []int            // found's insertion order
@@ -586,15 +591,24 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			if kind == "build" {
 				mode = ModeOf(names)
 			}
+			split := false
 			if kind == "build" && IsFullsend(mode, record) {
-				var parts []int
-				if _, ok := herr.Catch[*herr.GitHubError](func() { parts = OpenParts(ctx, number) }); ok {
+				var children []*pyjson.Object
+				parts := []int{}
+				if _, ok := herr.Catch[*herr.GitHubError](func() { children = ctx.GH.ListSubIssues(number) }); ok {
 					parts = []int{number} // unread: wait for the next pickup rather than race them
+				}
+				for _, child := range children {
+					if child.Get("state") == "open" {
+						parts = append(parts, numberOf(child))
+					}
 				}
 				if len(parts) > 0 {
 					parted[number] = parts
 					continue
 				}
+				// No sub-issue at all: the run splits it (`plan.Claim`'s `children`), not reconciles.
+				split = mode == "fullsend" && len(children) == 0
 			}
 			votes := record.Obj("votes")
 			if votes == nil {
@@ -615,6 +629,11 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			c.Builder = py.OrStr(votes.Get("builder"), "")
 			c.BuiltBy = py.OrStr(votes.Get("built_by"), "")
 			c.Priority = PriorityTier(names)
+			if split {
+				// A fullsend split goes first among the builds, as a `priority:high` item does
+				// (#2748, section 2): its parts wait on it. No label changes; a person's stays.
+				c.Priority = min(c.Priority, PriorityTiers[config.LabelPriorityHigh])
+			}
 			plan := PlanOf(record, thread, kind, mode)
 			c.Planned, c.PlanTier, c.PlannedBy = plan.Bool("planned"), plan.Str("plan_tier"), plan.Str("planned_by")
 			for _, family := range pyjson.List(votes.Get("approvals")) {
@@ -629,6 +648,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			}
 			c.Mode = mode
 			c.Part = kind == "build" && mode == "" && IsPart(record)
+			c.SentBack = c.Part && record.Truthy("sent_back")
 			if kind == "revise" {
 				c.AuditTier = py.OrStr(record.Get("audit_tier"), "")
 			}

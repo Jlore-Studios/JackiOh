@@ -82,8 +82,8 @@ type Ownership struct {
 // package's rules above). It changes nothing.
 func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *Lanes, force bool, quietOK string) *Ownership {
 	cfg := ctx.Cfg
-	if c.Owner == "" || c.Kind == "review" || (c.Kind == "build" && c.Part) {
-		return &Ownership{}
+	if c.Owner == "" || c.Kind == "review" || (c.Kind == "build" && c.Part && !c.SentBack) {
+		return &Ownership{} // a part its reconcile sent back is its builder's, as owned work is
 	}
 	own := &Ownership{Owner: c.Owner}
 	provider := cfg.Pool.Get(c.Owner)
@@ -155,6 +155,9 @@ func cannotTake(pool *providers.Pool, provider *providers.Provider, c *queue.Can
 	floor := config.MinTier[config.AsDifficulty(c.Difficulty)]
 	if c.Kind == "revise" && rankOr(c.AuditTier, -1) > rankOr(floor, -1) {
 		floor = c.AuditTier
+	}
+	if c.Kind == "build" && c.Part && queue.PlanMeets(c) && pool.BestSeat(provider, floor) == nil {
+		floor = config.PartFloor // a part's builder may be a tier under it (`BuilderSeat`)
 	}
 	switch {
 	case !slices.Contains(provider.Roles, RoleOf[c.Kind]):

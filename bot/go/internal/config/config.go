@@ -692,6 +692,13 @@ type Config struct {
 	// spot-check (#2748, section 5; `internal/spotcheck`). The config's `spot_check_every`; 0,
 	// when it is left out, samples none.
 	SpotCheckEvery int // default: 0
+	// FullsendAdopt: a queued parent with open sub-issues is adopted as a fullsend tree by itself
+	// (#2748, section 2; `fullsend.go`). The config's `fullsend_adopt`; off when it is left out.
+	FullsendAdopt bool // default: False
+	// FullsendSendBacks: how many times a fullsend reconcile may send one part back to the
+	// subscription that built it (#2748, section 2). The config's `fullsend_send_backs`; 0, when
+	// it is left out, sends none back.
+	FullsendSendBacks int // default: 0
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`

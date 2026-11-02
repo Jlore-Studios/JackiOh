@@ -41,7 +41,7 @@ func (x *Deliverer) lateStop(number int, status string) string {
 		return "stopped"
 	}
 	switch status {
-	case "approved", "built", "not_approved", "blocked", "part":
+	case "approved", "built", "not_approved", "blocked", "part", "sent_back":
 		if state.Truthy("halted") || x.Ctx.RepoHalted() {
 			x.Result.Set("status", "interrupted")
 			x.Result.Set("interrupt", "halt")
@@ -144,6 +144,10 @@ func (x *Deliverer) deliverItem(number int) {
 	if status == "split" && (strings.HasPrefix(mode, "split") || mode == "fullsend") {
 		x.SplitOut(number)
 		x.settle(number)
+		return
+	}
+	if status == "sent_back" && mode == "fullsend" {
+		x.SendBack(number) // the reconcile sent parts back to their builders (#2748)
 		return
 	}
 	if status == "part" {
@@ -427,7 +431,9 @@ func (x *Deliverer) closeAsks(number int) {
 func (x *Deliverer) keepHandoff(number int) {
 	status := py.Str(x.Result.Get("status"))
 	handoff, isDict := x.Result.Get("handoff").(*pyjson.Object)
-	finished := status == "approved" || status == "reviewed" || status == "split" || status == "part"
+	// A reconcile that sent parts back hands nothing on: the next one starts afresh once they land.
+	finished := status == "approved" || status == "reviewed" || status == "split" || status == "part" ||
+		status == "sent_back"
 	if !finished && !isDict {
 		return
 	}
@@ -1056,9 +1062,15 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	pr := py.MustInt(py.Or(pull.Get("number"), 0))
 	if pr != 0 {
+		difficulty := x.Difficulty(number)
+		if x.Plan.Get("mode") == "fullsend" {
+			// A fullsend tree's reconcile is a strong model's (#505), and so are its final audit and
+			// its revisions (#2748): its pull request carries hard, whatever the issue's label says.
+			difficulty = "hard"
+		}
 		x.GH.AddLabels(pr, append([]string{config.LabelPR}, x.Carried(number)...))
 		x.remember(pr, pyjson.New("issue", number, "feedback_since", started, "failures", 0, "kind", "revise",
-			"difficulty", x.Difficulty(number),
+			"difficulty", difficulty,
 			"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})))
 	}
 	issueLabels := x.Labels(number)

@@ -17,8 +17,9 @@ import (
 
 // goesOn is whether the item's own next run could take a session of this run up (#2748): a
 // revision's pull request stays open for the next revision, and an unfinished build or plan is
-// built or planned again. A build that opened its pull request, split or landed as a part, and
-// a finished plan, hand the work on to another item or another kind of call.
+// built or planned again. A build that opened its pull request, split or landed as a part, a
+// reconcile that sent parts back (its next run starts afresh once they land), and a finished
+// plan, hand the work on to another item or another kind of call.
 func goesOn(action, status string) bool {
 	switch action {
 	case "revise":
@@ -27,7 +28,7 @@ func goesOn(action, status string) bool {
 		return status != "planned"
 	}
 	switch status {
-	case "approved", "built", "split", "part", "planned":
+	case "approved", "built", "split", "part", "planned", "sent_back":
 		return false
 	}
 	return true

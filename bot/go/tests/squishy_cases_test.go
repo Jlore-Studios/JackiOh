@@ -496,6 +496,39 @@ func TestSquishyCases_FullsendLandsOnSquishysBranch(t *testing.T) {
 	assertEqual(t, world.gh.ListPulls("all", "", 200), []*pyjson.Object{})
 }
 
+// Squishy adopts no queued parent by itself and its reconcile sends no part back (#2748:
+// `fullsend_adopt` false, `fullsend_send_backs` 0): its fullsend tree's reconcile is told to fix
+// every part itself, and a parent queued with open sub-issues is built as it was asked.
+func TestSquishyCases_ItAdoptsNoQueuedParentAndSendsNoPartBack(t *testing.T) {
+	squishyCasesModule(t)
+	world, _ := squishyCasesSplit(t, "fullsend")
+	assertEqual(t, []any{world.cfg.FullsendAdopt, world.cfg.FullsendSendBacks, world.cfg.SendsBack()},
+		[]any{false, 0, false})
+	for _, part := range []int{41, 42} {
+		world.gh.UpdateIssue(part, pyjson.New("state", "closed"))
+	}
+	assertEqual(t, sweep.Trees(world.ctx, testsupport.Night), []string{"#40: its parts have all closed; queued its reconcile"})
+	prompts := []string{}
+	build := func(request *runner.RunRequest) *runner.RunResult {
+		prompts = append(prompts, request.Prompt)
+		writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "all of it\n")
+		return runner.NewRunResult(true, squishyCasesDone)
+	}
+	planned, _ := world.run(workFake(map[string]runner.Handler{"build": build,
+		"review": func(*runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
+	assertEqual(t, []any{planned.Get("number"), planned.Get("send_backs"), planned.Get("send_back_cap")},
+		[]any{40, []any{}, 0})
+	assertIn(t, "No part can be sent back now (this bot sends no part back): fix every part yourself", prompts[0])
+	world.gh.AddIssue(50, fakes.Issue{Title: "A tracker"})
+	world.gh.AddIssue(51)
+	world.gh.AddSubIssue(50, world.gh.GetIssue(51).Int("id"))
+	reply := world.ask(50, "/squishy build")[0]
+	assertIn(t, "Queued #50", reply)
+	assertNotIn(t, "adopted", reply)
+	assertEqual(t, world.gh.LabelNames(50), setOf("squishy:build"))
+	assertNotIn(t, "onto", world.ctx.Store.Load().Obj("items").Obj("51"))
+}
+
 func TestSquishyCases_TheNightBotsFullsendIsLeftAlone(t *testing.T) {
 	squishyCasesModule(t)
 	world := newSquishyCasesWorld(t)

@@ -332,16 +332,15 @@ func IsPart(record *pyjson.Object) bool {
 	return parent != 0 && record.Get("onto") == BranchForIssue(parent)
 }
 
-// The sub-issues of issue `number` still open: while a fullsend tree has any, its parts are
-// still landing on its branch, and nothing builds the issue itself (#505).
-func OpenParts(ctx *hctx.Context, number int) []int {
-	parts := []int{}
-	for _, child := range ctx.GH.ListSubIssues(number) {
-		if child.Get("state") == "open" {
-			parts = append(parts, numberOf(child))
-		}
+// PartBuilder is the subscription whose run built fullsend part `record` (#2748, section 2), the
+// one its tree's reconcile may send it back to: its `built_by`, which deliver writes when the part
+// lands (`deliver.LandPart`), or, for one landed before that was kept, its owner then (the
+// subscription that took its build up). "" for none.
+func PartBuilder(record *pyjson.Object) string {
+	if builder := py.OrStr(record.Get("built_by"), ""); builder != "" {
+		return builder
 	}
-	return parts
+	return py.OrStr(record.Get("owner"), "")
 }
 
 func refs(numbers []int) string {
@@ -537,6 +536,19 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 			return PartsReply(number, parts)
 		}
 	}
+	if asked == "" {
+		// A plain build of a parent with open sub-issues is a fullsend tree's (#2748, section 2).
+		if record.Len() == 0 {
+			record = recordOf(ctx.Store.Load(), number)
+		}
+		children, unread := QueuedParent(ctx, issue, record)
+		if unread != "" {
+			return fmt.Sprintf("#%d's sub-issues could not be read (%s), so I queued nothing.", number, unread)
+		}
+		if len(children) > 0 {
+			return AutoAdopt(ctx, number, names, children, by)
+		}
+	}
 	if mode != nil && len(modes) > 0 {
 		names = SetMode(ctx, number, names, *mode)
 	}
@@ -658,6 +670,9 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	}
 	names = SetMode(ctx, number, names, "")
 	SetStateLabel(ctx, number, names, "")
+	if names[config.LabelNeedsPlan] {
+		ctx.GH.RemoveLabel(number, config.LabelNeedsPlan) // a tree's parts are planned, not it
+	}
 	if labelTree := config.LabelTree; !names[labelTree] {
 		ctx.GH.AddLabels(number, []string{labelTree})
 	}
@@ -682,6 +697,51 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 			"waits for them to close too: %s.", branch, strings.Join(kept, ", "))
 	}
 	return said
+}
+
+// QueuedParent is the sub-issues of `issue`, queued for a plain build (`record` its state), when
+// this bot adopts it as a fullsend tree by itself (#2748, section 2; `fullsend_adopt`): one of
+// them is open, and `issue` is an open issue the bot may build that is no tree already, no part
+// or sub-issue of another (trees never nest: a sub-issue is built as it is asked), and has no
+// pull request of mine open and no run holding it. None (nil) for any other issue, and `unread`
+// when its sub-issues could not be read. A `human` or `tracking` issue, and the other bot's
+// (Squishy's), are never adopted. The request paths (`QueueBuild`) and the claim of a queued
+// build (`plan.Claim`, which a label an issue form or triage put on reaches without an event) ask
+// it; only the claim's question costs a call per plain build, and GitHub's `sub_issues_summary`
+// spares it for an issue with no sub-issue at all.
+func QueuedParent(ctx *hctx.Context, issue *pyjson.Object, record *pyjson.Object) ([]*pyjson.Object, string) {
+	names := LabelNames(issue)
+	if !ctx.Cfg.FullsendAdopt || !slices.Contains(config.Modes, "fullsend") || issue.Has("pull_request") ||
+		issue.Get("state") != "open" || IsHuman(names) || Owner(issue) != nil || config.IsLive(names) ||
+		names[config.LabelTree] || names[config.LabelPROpen] || IsFullsend("", record) || IsPart(record) ||
+		ParentOf(issue) != 0 {
+		return nil, ""
+	}
+	if summary := issue.Obj("sub_issues_summary"); summary != nil && py.MustInt(py.Or(summary.Get("total"), 0)) == 0 {
+		return nil, ""
+	}
+	var children []*pyjson.Object
+	if exc, ok := herr.Catch[*herr.GitHubError](func() {
+		children = ctx.GH.ListSubIssues(numberOf(issue))
+	}); ok {
+		return nil, py.SliceTo(exc.Error(), 200)
+	}
+	if !slices.ContainsFunc(children, func(child *pyjson.Object) bool { return child.Get("state") == "open" }) {
+		return nil, ""
+	}
+	return children, ""
+}
+
+// AutoAdopt is `Adopt` for a queued parent (`QueuedParent`, #2748): its open sub-issues become its
+// fullsend parts as `fullsend` would make them, and the reply says it was done unasked and how to
+// stop it.
+func AutoAdopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyjson.Object, by string) string {
+	return fmt.Sprintf("#%d was queued with open sub-issues, so I adopted it as a fullsend tree "+
+		"by itself (#2748), as `%s fullsend` would. ", number, config.Slash) +
+		Adopt(ctx, number, names, children, by) +
+		fmt.Sprintf(" To stop it, comment `%s stop` here: it and its parts leave the queue. A "+
+			"queued parent with open sub-issues is always built this way; to have one built as a "+
+			"single issue, remove its sub-issues before you queue it.", config.Slash)
 }
 
 // The squash commit's title: the pull request's, as GitHub writes it for a pull request of

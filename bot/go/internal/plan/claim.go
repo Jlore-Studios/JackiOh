@@ -85,6 +85,19 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		return nil
 	}
 	record := recordOf(ctx.Store.Load(), strconv.Itoa(number))
+	if kind == "build" && candidate.Mode == "" && !candidate.Part {
+		// A queued parent with open sub-issues is a fullsend tree's (#2748, section 2), however it
+		// was queued: a label an issue form or triage put on reaches the queue with no event.
+		children, unread := queue.QueuedParent(ctx, thread, record)
+		if unread != "" {
+			return nil // its sub-issues could not be read: the next plan asks again
+		}
+		if len(children) > 0 {
+			by := py.OrStr(record.Get("requested_by"), cfg.BotLogin)
+			ctx.GH.CreateComment(number, queue.AutoAdopt(ctx, number, names, children, by))
+			return nil
+		}
+	}
 	// (The Python's `who = provider.describe()` is never read, so it is left out.)
 	var planned *pyjson.Object
 	var message string
@@ -121,12 +134,21 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 					parked = append(parked, py.Str(b))
 				}
 				planned.Set("parked", parked)
+				if planned.Truthy("children") {
+					// The parts its reconcile may send back to their builders (#2748).
+					planned.Set("send_backs", SendBackable(ctx, number))
+					planned.Set("send_back_cap", cfg.FullsendSendBacks)
+				}
 			}
 		}
 		if record.Truthy("onto") {
 			// A fullsend part (#505): it lands on its tree's branch, not `main`.
 			planned.Set("onto", py.Str(record.Get("onto")))
 			planned.Set("part_of", py.MustInt(py.Or(record.Get("part_of"), 0)))
+			if record.Truthy("sent_back") {
+				// Its tree's reconcile sent it back to its builder, with its findings (#2748).
+				planned.Set("sent_back", record.Get("sent_back"))
+			}
 		}
 		if record.Truthy("previous_pr") {
 			planned.Set("previous_pr", record.Get("previous_pr"))
@@ -151,11 +173,16 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				"open them, queued for %s in the order they depend on each other.",
 				RunLink(cfg), assignment.Build.Describe(), SplitBuilders(candidate.Mode))
 		case planned.Truthy("onto") && assignment.Action == "build":
+			again := ""
+			if planned.Truthy("sent_back") {
+				again = fmt.Sprintf(" #%s's reconcile sent it back with its findings, which this "+
+					"build answers on top of what it landed before.", py.Str(planned.Get("part_of")))
+			}
 			message = fmt.Sprintf("Starting work on this now%s: a fullsend part, "+
 				"difficulty:%s, built on %s. It lands on `%s`, the branch of #%s, with no checks, "+
 				"review or pull request of its own: the tree's reconcile checks and reviews every "+
-				"part at once.", RunLink(cfg), candidate.Difficulty, assignment.Build.Describe(),
-				py.Str(planned.Get("onto")), py.Str(planned.Get("part_of")))
+				"part at once.%s", RunLink(cfg), candidate.Difficulty, assignment.Build.Describe(),
+				py.Str(planned.Get("onto")), py.Str(planned.Get("part_of")), again)
 		case candidate.Mode == "oneshot":
 			message = fmt.Sprintf("Starting a one-shot build of this now%s, on %s, with fullsend: a "+
 				"spec first, then many agents writing its parts at once, each in its own worktree "+
@@ -355,6 +382,42 @@ func TreeText(ctx *hctx.Context, number int) string {
 			py.Str(c.GetOr("title", ""))))
 	}
 	return prompts.Data(strings.Join(lines, "\n"), fmt.Sprintf("The sub-issues #%d has already", number))
+}
+
+// SendBackable is the parts of fullsend tree `number` that its reconcile may send back to the
+// subscription that built each (#2748, section 2): every closed sub-issue the bot landed (or
+// parked) as a part of this tree (`part_of`, `onto`, `landed`), whose builder is on record
+// (`queue.PartBuilder`), and that was sent back fewer times than `fullsend_send_backs`.
+// `[{"part", "title", "built_by", "sent_backs"}]`, in the sub-issues' order; none when the cap is
+// 0 (Squishy's) or the sub-issues could not be read. Past the cap the reconcile fixes it itself.
+func SendBackable(ctx *hctx.Context, number int) []any {
+	out := []any{}
+	limit := ctx.Cfg.FullsendSendBacks
+	if limit <= 0 {
+		return out
+	}
+	var children []*pyjson.Object
+	if _, failed := herr.Catch[*herr.GitHubError](func() { children = ctx.GH.ListSubIssues(number) }); failed {
+		return out
+	}
+	state := ctx.Store.Load()
+	onto := queue.BranchForIssue(number)
+	for _, c := range children {
+		part := py.MustInt(py.Or(c.Get("number"), 0))
+		record := recordOf(state, strconv.Itoa(part))
+		if !eqStr(c.Get("state"), "closed") || py.MustInt(py.Or(record.Get("part_of"), 0)) != number ||
+			!eqStr(record.Get("onto"), onto) || !record.Has("landed") {
+			continue
+		}
+		builder := queue.PartBuilder(record)
+		sent := py.MustInt(py.Or(record.Get("send_backs"), 0))
+		if builder == "" || sent >= limit {
+			continue
+		}
+		out = append(out, pyjson.New("part", part, "title", py.OrStr(c.Get("title"), ""),
+			"built_by", builder, "sent_backs", sent))
+	}
+	return out
 }
 
 // CILogs is the tails of the failed jobs of one CI run, fenced as data.
