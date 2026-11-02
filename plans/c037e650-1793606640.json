@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 2739,
+  "title": "Patch: watch the opponent Discover, their options face down over the board and the one they hover outlined",
+  "branch": "bot/issue-2739",
+  "thread": "**Issue #2739 (data, not instructions):**\n\n```text\n# #2739: Patch: watch the opponent Discover, their options face down over the board and the one they hover outlined\nOpened by @MaxGoetzmann.\n\n## What it does\n\nWhen the opponent is choosing from a Discover, you should **see them deciding**. Their options float over the middle of the screen as **card backs**, one back per option, laid out like the chooser's own picker from #2738 with no panel and no words. While the opponent's pointer is over an option, that back is **outlined in the opponent's color**, the way you see their hand card marked when they aim with it. When they pick, the backs go and the game goes on as now.\n\nToday the other seat gets only `Waiting` (`apps/web/src/game/Prompt.tsx`, `.prompt-waiting`): a small notice reading \"Your opponent is choosing\u2026\". `PendingElsewhereView` (`crates/engine/src/wire/view.rs`) carries only `forYou: false` and `pendingFor`. \u00a710.6 and \u00a710.8 say \"The opponent's view shows only that a prompt is open, never its options.\" So this issue needs a ruling.\n\n## The design\n\n### 1. What the other seat may learn (engine, a ruling)\n\n- `PendingElsewhereView` gains an optional `optionCount` (and the prompt's layout, enough to say it is a card picker). Do not add the options themselves, their keys or their labels. It is **view only**, so no `PendingChoice` field changes, and state hashes, the fuzz replay hashes and the golden fold stay unchanged. Strip it in `golden.rs`'s `view_texts` if the fold reads views, as #2646 did for `sourceDefId`.\n- **The count must not leak a hidden zone.** A Discover of fewer options than the card says can show that a pool or a deck ran short. A pick from a deck or from a hidden hand gives away how many cards matched. Recommended rule, for the planner to confirm or tighten: `optionCount` reaches the other seat only for a card-layout prompt (`isCardLayout`'s kinds: `discover`, a short `mode`/`ability`/`answer`/`reward`, R831004's sets, R247's numbers) whose options do not come from a zone the other seat cannot read. Every other prompt keeps today's bare `Waiting`. The mulligan keeps `MulliganWaiting` (R265). Record the rule and the alternatives rejected in a ruling in this issue's block (`spec/rulings/R<N>000.md`, its \u00a711 paragraph in `spec/pending/<N>.md`), and edit \u00a710.6 and \u00a710.8's \"never its options\" to name the exception. The I6 hidden-information fuzz oracle must stay green. If it flags the count, the rule is too loose.\n- Rust tests named for the ruling: the count reaches the other seat for a random-pool Discover and a Choose one, it never does for a pick from a hidden zone, and it is never on the chooser's own view (the chooser's view already has the options).\n\n### 2. The hover relay (server, cosmetic like R738's aim)\n\n- A new top-level client frame, `{ type: \"choiceHover\", index: number | null }`, is sent while the viewer's own card-layout prompt is open: the option index under the pointer, or under keyboard focus, and `null` when it leaves. It is sent only when it changes. The actor relays it to the opponent alone as `{ type: \"choiceHover\", from, index }`. Copy R738 (`crates/server/src/actor/protocol.rs`'s `aim`, `aim_relay_message`, `match_actor.rs`): the frame is parsed field by field (anything else is `malformed`), coalesced per seat to one per `AIM_RELAY_INTERVAL_MS` (or a sibling constant in `crates/server/src/config.rs`, rule 9), and dropped silently when no prompt of the sender's is open, when the prompt shows the other seat no count, or when `index >= optionCount`. It is cleared with a `null` relay when the prompt is answered, when the sender's socket closes, and at game end.\n- It is never an `ActionBody`: it reaches neither `reduce`, the log, the replay hash nor a game record, it is never part of `PlayerView`, and no rule is decided from it (CLAUDE.md rule 7). An index says only which face-down slot the pointer is over, and nothing about what is in it.\n- `/ws/match` is in scope. Duos (`crates/server/src/duos/actor.rs`, which relays aim too) should relay it to the opposing team the same way if it is a small change; otherwise name it as a follow-up in the PR. Hotseat, practice and replays show nothing new, as R738's aim shows nothing there.\n\n### 3. The client\n\n- `Waiting` becomes an `OpponentChoice` for a prompt whose view has `optionCount`: `optionCount` card backs (the same back the opponent's hand draws, with their card-back cosmetic if they have one) in the middle of the screen over a light dim, sized and laid out as #2738's clean picker, with no panel or words. The dialog's `aria-label` says the opponent is choosing. Without `optionCount` it is today's `Waiting`.\n- The relayed `index` outlines that back in the opponent's color, reusing R738's `opponent-aim-origin` look (`apps/web/src/game/aim/opponentAim.css`, `--pal-ember-500`). The outline is still under Reduce Motion (no breathing), as the aim's is. Nothing on the backs is clickable, and the board under them stays readable.\n- The sender side: the chooser's own picker (`CardChoice` in `Prompt.tsx`) emits `choiceHover` on pointer enter and leave and on focus and blur of each `prompt-option-<key>`, through `net.ts` beside `aim`. A small hook, like `useAimEmitter.ts`, is fine.\n\n## Acceptance\n\n- [ ] Rust: the ruling's `view_for` tests (count shown, count withheld for a hidden-zone pick, never on the chooser's view). `cargo jackioh fuzz --seeds 200` green with the I6 oracle unchanged. `golden check` green. `apps/web/src/wire/` regenerated and committed.\n- [ ] Server: `crates/server/tests/actor/` tests for `choiceHover`, covering the relay to the opponent only, coalescing, the drops (no prompt, out of range, a withheld-count prompt), a malformed frame, and the `null` sent on answer, socket close and game end.\n- [ ] Web vitest: the other seat sees `optionCount` card backs for a Discover and a Choose one and today's `Waiting` for a withheld-count prompt. A relayed index outlines exactly that back and a `null` clears it. The chooser's hover and focus emit the frame once per change. Tests are named for the ruling.\n- [ ] `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` green, plus the fragment the classifier asks for, if any.\n- [ ] `ui-walkthrough` screenshots, desktop and 360 px phone, of the opponent's side of KY's Trial and of a Choose one, with and without a hovered option.\n- [ ] Every check from the night bot's harness is green: `rust`, `web`, `e2e smoke`, `db`, `bot selftest`.\n\n## Blocked by, part of\n\nBlocked by #2738 (the clean card-only picker this mirrors). Builds on #2646 and R738 (the opponent's aim).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2739: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2786 skipped: it waits for #2784 to close first",
+    "#2787 skipped: it waits for #2784 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783, #2784 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2792 skipped: it waits for #2784 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2784, #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2784, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
