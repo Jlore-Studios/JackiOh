@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::zones::is_locked;
 
 use super::fixtures::catalog::spell_def;
-use super::fixtures::harness::{act, act_result, both, events_of_type, put, set_library, slot};
+use super::fixtures::harness::{act, act_result, apply_now, both, events_of_type, put, set_library, slot};
 use super::fixtures::keywords_783::{
     cloak_units, cloaked_unit, crater_field, crater_trap, crater_unit, plain_spell, plain_unit,
     register_keywords_783,
@@ -131,28 +131,6 @@ fn play_into(state: &GameState, id: &str, row: &str, lane: i32) -> ReduceResult 
             "playerId": "p1",
         }),
     )
-}
-
-/// Apply one effect for p1 and settle, as a resolving card's would.
-fn apply_now(state: &mut GameState, effect: Effect) {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        {
-            let mut ctx = make_context(
-                &mut sink,
-                None,
-                HookOptions {
-                    controller: Some(P1),
-                    ..Default::default()
-                },
-            );
-            (effect.apply)(&mut ctx);
-        }
-        settle(&mut sink, SettleOptions::default());
-    }
-    state.rng_cursor = rng.cursor();
 }
 
 /// How many zones on the board are Locked.
