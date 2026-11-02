@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2826,
+  "title": "Patch: determinize samples each side's hidden cards against that side's shown cards",
+  "branch": "bot/issue-2826",
+  "thread": "**Issue #2826 (data, not instructions):**\n\n```text\n# #2826: Patch: determinize samples each side's hidden cards against that side's shown cards\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nTo decide, the practice opponent imagines the hidden cards by dealing them from the catalog minus the cards already seen. Today it uses one shared seen-list built only from the opponent's shown cards, even when guessing its own future draws. After the fix, each side's hidden cards are guessed against what that side has shown. Example: in a one-copy deck, the AI stops imagining a future draw of a card that is already sitting on its own board.\n## Why\n`det_ground` in `crates/ai/src/determinize.rs` builds a single `seen` set from cards owned by the opponent only, and step 5 samples the seat's own library placeholders against that same set. Two skews follow: the seat's own visible cards are never excluded from its own library sampling, so a world can hold two copies of a card the seat already shows, impossible under one copy per deck (SPEC \u00a72.6, `MAX_COPIES`); and opponent-shown cards are wrongly excluded from the seat's own library, though one seat's shuffle says nothing about the other's. Adjacent to #2811 (own-deck redaction in `redact`) but a different file and mechanism: that one fixed what the seat is shown, this one fixes what it imagines.\n## Proposal\nBuild per-side seen sets (opponent-visible for opponent zones, seat-visible for the seat's own library) in `det_ground` and sample each zone against its side's set in steps 4 and 5, keeping the rng stream order so determinism is preserved. Pure function of public state plus rng, as today.\n## Where it lands\nFiles: `crates/ai/src/determinize.rs` (`det_ground`, `determinize` steps 4 and 5, `sample_def`). SPEC sections: \u00a79.9 and R185 (determinization), \u00a72.6 (one copy per deck).\n## Acceptance criteria\n- [ ] New determinize tests: a placeholder never samples a def id its own side already shows (one-copy invariant), and the seat's library may still sample an id only the opponent showed.\n- [ ] Existing determinize suites (shown-cost, aura, traps) pass unchanged.\n- [ ] AI gate holds its floors at smoke size.\n## Size and risks\nSmall work, suggested `difficulty:hard` (AI internals). Risk is low: the change is local to sampling pools, and hashes moving slightly is expected and covered by the gate.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-02T13:49:18Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2826: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
