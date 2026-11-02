@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 2789,
+  "title": "Patch: combat keyword beats: Cleave, First Strike, Trample, Pierce, Lifesteal, Windfury, Poisonous, Ranged and Flying",
+  "branch": "bot/issue-2789",
+  "thread": "**Issue #2789 (data, not instructions):**\n\n```text\n# #2789: Patch: combat keyword beats: Cleave, First Strike, Trample, Pierce, Lifesteal, Windfury, Poisonous, Ranged and Flying\nOpened by @MaxGoetzmann.\n\n## What it does\n\nToday a Cleave, a First Strike or a Trample looks like any other hit, so players can't see *why* a fight went the way it did. This part gives each combat keyword a **Beat**, #2782's smallest tier: at most about 400 ms at speed 1, inside the entry it decorates, never holding the game.\n\nThe beats key on the `via` keyword and the First Strike marker that #2783 adds to the event stream. Each one may show a **callout**: the keyword's icon from `apps/web/src/cards/keywordVisuals.ts` pops over the unit for `FX_CALLOUT_MS`. Build the callout once, as a shared cue, for this part and the other keyword parts of #2782.\n\n| Keyword | Beat |\n|---|---|\n| **Cleave** | The attacker's blow continues as a wide arc across the adjacent lanes, then hits each adjacent unit (the `via: Cleave` damages) with a smaller splat. |\n| **First Strike** | A quick-draw glint on the attacker. It hits *first*, alone, and if the defender dies its counter-blow visibly never comes (its lunge starts and breaks off, or is shown as a cancelled ghost). A survivor's counter lands after a clear beat. |\n| **Trample** | The overflow damage (`via: Trample`) carries on past the dead unit as a trail to the hero, with a second splat there. |\n| **Pierce** | The hit goes through, with a spear line drawn through the defender. |\n| **Lifesteal** | Red motes stream from the damage back to the controller's hero, landing with the `healed` splat. |\n| **Windfury** | An after-image of the first attack as the second one starts. |\n| **Poisonous** | Keep today's look (`sourceIsPoisonous` in `apps/web/src/fx/cues.ts`), now keyed on `via: Poisonous` instead of guessed from the view. |\n| **Ranged** | Keep the flavor shots (`apps/web/src/fx/shots.ts`), plus a callout. |\n| **Flying** | The attacker's lunge arcs over the lane instead of along it. |\n\n### Rules for every beat\n\n- **Built from motifs.** Use #2784's motif framework and its cue helpers. Add no new rendering tech.\n- **Several keywords on one hit.** Each fires its beat, staggered by `FX_BEAT_STAGGER_MS`, with at most `FX_CALLOUTS_PER_HIT` callouts.\n- **Speed and motion.** The speed setting scales every beat. Under reduced motion a beat keeps its callout, as a static icon, and drops its motion.\n- **R202.** A beat shows nothing the view hides.\n\n## Acceptance\n\n- [ ] Each of the 9 keywords has a beat with a vitest that pins its cues for a fixture event stream built from #2783's events. Each test asserts R200 (inside the entry, tail within `FX_MAX_TAIL_MS`).\n- [ ] Poisonous is keyed on `via`, and `sourceIsPoisonous`'s guess is removed.\n- [ ] First Strike, when the defender dies, shows no counter-blow landing. When the defender lives, it shows the counter after the beat (tested).\n- [ ] The shared callout cue exists, with `FX_CALLOUT_MS` and `FX_CALLOUTS_PER_HIT`, and is used here.\n- [ ] A component pixel spec (`e2e/cypress/component/`) captures Cleave's arc and First Strike's cancelled counter mid-flight.\n- [ ] Speed scaling, reduced motion (callout only) and intensity `off` (nothing) are tested.\n- [ ] Every number is a named constant (CLAUDE.md rule 9).\n- [ ] Web typecheck, tests and eslint pass, and the hotseat smoke settles.\n\n## Blocked by, part of\n\nBlocked by #2784 and #2783. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2789: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
