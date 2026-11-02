@@ -6,6 +6,7 @@
 //! 3. Printed costs read out of play (R65; 0 for X-cost, base for embiggen; #7, #30, #51, #94).
 //! 4. Ascending §5 index order set by set; seeded RNG replays identically (§9.3, R58, R60).
 //! 5. Registered catalog cards only; transient defs never generate.
+//!
 //! Scripts reach it through `use crate::query::*;`: [`query`], [`pool`], [`query_cost`], [`TRAP_TYPES`].
 
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, SetName};

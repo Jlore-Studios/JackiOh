@@ -5,6 +5,7 @@
 //!   * hand: only `handTriggers` (#89 Corpse Eater);
 //!   * graveyard: only the end-of-turn return of a spell flagged when played (#23, #24, #31, R68);
 //!   * library, exile, resolving zone, dormant under a Stack: nothing (R13).
+//!
 //! A card in a hand or graveyard that answered every hook would change the board silently (#58 Rush
 //! Token Farm summoning from a hand, #64 Gifted Program making plays Radiant), so the tests assert the
 //! board, each with a second half: the same card on the field or in the backrow must fire. Fixtures are
