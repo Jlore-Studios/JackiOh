@@ -600,6 +600,7 @@ func (x *Worker) FirstWhy(role string, conflicts []string) string {
 
 // FirstPrompt is work.Worker._first_prompt: the first builder pass's role and prompt.
 func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
+	x.session.conflicts = conflicts // for a resumed builder's prompt (`session.go`)
 	plan := x.Plan
 	number := x.planItem("number")
 	if x.planItem("action") == "revise" {

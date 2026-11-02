@@ -546,6 +546,10 @@ type Config struct {
 	UploadTranscripts    bool
 	Install              *Gate
 	Gates                []*Gate
+	// ResumeSessions: a run on a Claude account keeps its own session and the next run of the
+	// item on the same account resumes it (`internal/sessions`, #2748). The config's
+	// `resume_sessions`; off when it is left out.
+	ResumeSessions bool // default: False
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`

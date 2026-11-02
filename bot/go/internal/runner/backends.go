@@ -71,6 +71,10 @@ func (x *ClaudeCli) Argv(request *RunRequest, systemFile string) []string {
 	if len(request.DisallowedTools) > 0 {
 		argv = append(argv, "--disallowed-tools", strings.Join(request.DisallowedTools, ","))
 	}
+	if request.Resume != "" {
+		// Its own earlier session, restored where Claude Code files it (`internal/sessions`).
+		argv = append(argv, "--resume", request.Resume)
+	}
 	return argv
 }
 
@@ -98,6 +102,7 @@ func (x *ClaudeCli) Run(request *RunRequest) *RunResult {
 		r.ExitCode, r.Turns, r.DurationS = launch.code, turns(result), launch.elapsed
 		r.Error, r.Usage, r.Tokens, r.CostUSD = "stopped mid-call: "+launch.stopped, usage, tokens, cost
 		r.Extra = pyjson.New("usage_stop", launch.stopped)
+		r.SessionID = stream.session
 		return r
 	}
 	if launch.timedOut {
@@ -105,6 +110,7 @@ func (x *ClaudeCli) Run(request *RunRequest) *RunResult {
 		r.ExitCode, r.Turns, r.DurationS = ExitTimeout, turns(result), launch.elapsed
 		r.Error = "timed out after " + strconv.Itoa(request.TimeoutS) + "s"
 		r.Usage, r.Tokens, r.CostUSD, r.TimedOut = usage, tokens, cost, true
+		r.SessionID = stream.session
 		return r
 	}
 	code := launch.code
@@ -135,6 +141,7 @@ func (x *ClaudeCli) Run(request *RunRequest) *RunResult {
 	r := NewRunResult(!isError && code == 0, text)
 	r.ExitCode, r.Turns, r.DurationS, r.Error = code, turns(result), launch.elapsed, errText
 	r.Usage, r.Tokens, r.CostUSD, r.ResetAt = usage, tokens, cost, resetAt
+	r.SessionID = stream.session
 	return r
 }
 
@@ -185,7 +192,9 @@ func NewCodexCli(binary string, login *logins.Login /* = None */, popen Popen /*
 	return x
 }
 
-// Argv is CodexCli.argv.
+// Argv is CodexCli.argv. Every call is a fresh session: Codex's own resume (`codex exec resume
+// <id>`, of a session it files under $CODEX_HOME/sessions) would go here, with its capture beside
+// Claude's in `work.NewSessions`; #2748 resumes only Claude's sessions for now.
 func (x *CodexCli) Argv(request *RunRequest, lastMessage string) []string {
 	argv := []string{x.Binary, "exec", "--json", "--skip-git-repo-check", "--cd", request.Cwd,
 		"--model", request.Model, "--sandbox", "workspace-write",
@@ -522,7 +531,8 @@ func (x *AgyCli) ReadUsage(model string) *pyjson.Object {
 	return AgyUsage(x.Binary, model, x.Env(), nil)
 }
 
-// Argv is AgyCli.argv.
+// Argv is AgyCli.argv. Every call is a fresh session: a resume flag, if `agy --help` on the box
+// shows one, would go here (#2748 resumes only Claude's sessions for now).
 func (x *AgyCli) Argv(request *RunRequest) []string {
 	argv := []string{x.Binary, "--output-format", "stream-json", "--dangerously-skip-permissions",
 		"--disable-slash-commands", "--model", request.Model}

@@ -79,6 +79,7 @@ func (x *Deliverer) Item() {
 	}
 	x.deliverItem(number)
 	x.keepHandoff(number)
+	x.keepSession(number) // a Claude run's own session, for its next run there (#2748)
 	x.journal(number)
 	x.closeAsks(number)
 }

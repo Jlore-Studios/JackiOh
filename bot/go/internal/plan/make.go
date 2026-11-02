@@ -15,6 +15,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	hstate "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 )
 
@@ -263,8 +264,9 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 		s.Set("pruned", pyjson.New("at", clock.ISO(now), "dropped", len(gone), "shed", len(shed)))
 		return nil
 	}, "prune")
-	return []string{fmt.Sprintf("pruned the state file: dropped %d closed item(s), lightened %d",
-		len(gone), len(shed))}
+	dropped := sessions.Prune(ctx, openNow) // the Claude sessions kept for closed items (#2748)
+	return append([]string{fmt.Sprintf("pruned the state file: dropped %d closed item(s), lightened %d",
+		len(gone), len(shed))}, dropped...)
 }
 
 // Housekeeping requeues items a dead run left working; queues a revision for conflicted bot
