@@ -398,7 +398,7 @@ refresh_queue() {
 
 ensure_label() {
   gh label create "$RELEASE_LABEL" --color 5319e7 --force \
-    --description "Production: the issue that promotes main, and its pull requests (promote-production.yml)" >/dev/null
+    --description "The merge of main into production (promote-production.yml)" >/dev/null
 }
 open_issues() {
   gh issue list --state open --label "$RELEASE_LABEL" --limit 100 --json number --jq 'map(.number) | sort | .[]'
