@@ -20230,12 +20230,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-02T04:10:00Z",
-          "utilization": 0.33
+          "utilization": 0.53
         },
-        "observed_at": "2026-11-01T23:36:47Z",
+        "observed_at": "2026-11-02T00:56:23Z",
         "seven_day": {
           "resets_at": "2026-11-02T09:00:00Z",
-          "utilization": 0.88
+          "utilization": 0.91
         },
         "status": "allowed_warning"
       }
