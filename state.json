@@ -15297,15 +15297,29 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/net/build-wasm-cache.test.ts",
+            "apps/web/src/net/cloudflare-config.test.ts",
+            "apps/web/src/net/deploy-routes.test.ts",
+            "apps/web/vercel.json",
+            "crates/wasm/README.md",
+            "scripts/build-wasm.sh",
+            "vercel.json"
+          ],
+          "from": "07fad4776b343ee07cdc25efd591f2505760db9b",
+          "main": "34fad70edf181e233b6e9e59015f257b1bc396c3"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41398634534",
+            "run": "41414025960",
             "tier": "strong"
           }
         ],
-        "sha": "07fad4776b343ee07cdc25efd591f2505760db9b",
+        "sha": "056fc58df215d64a1eddfd7c3fe21f7f530f5bc6",
         "tiers": {
           "claude": "strong"
         }
