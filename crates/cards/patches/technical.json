@@ -4074,5 +4074,40 @@
     "commit": "348e9a04dc2304d250257d30f5691710c599d557",
     "title": "Merge pull request #2763 from Jlore-Studios/claude/zen-bell-tzduzo",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f352fd991b6ce41cc794f242e1903d29e5cd7cc6",
+    "pr": 2759,
+    "title": "compact comments, stale files and long local names to cut the token footprint",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "b2c1635fee6d6dad5172958281e0e83d6274e994",
+    "pr": 2768,
+    "title": "patches log: ff76fd6..3bee38b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "bf1bd62fec5f9f059efea3e5e8793e3a855bcfd7",
+    "pr": 2766,
+    "title": "drop the Owned list from the Collection's Cosmetics section",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "e31cc3f7dfd49e2b4c4496f1ca7793f5962e6c5b",
+    "pr": 2769,
+    "title": "Stats Card Clarity",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c1f09b960b022d4792f6fb797a8e65b806e6bc7b",
+    "pr": 2780,
+    "title": "patches ship: v0.5.10g",
+    "kind": "app"
   }
 ]
