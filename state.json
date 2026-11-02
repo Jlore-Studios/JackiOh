@@ -14180,7 +14180,10 @@
       "feedback_since": "2026-11-02T01:39:43Z",
       "issue": 2715,
       "kind": "revise",
+      "queued_at": "2026-11-02T03:13:31Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
