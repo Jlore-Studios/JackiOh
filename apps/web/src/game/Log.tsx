@@ -595,6 +595,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
     case "translated":
       // R1301: only the language the card is shown in changed; its face says so.
       return null;
+    case "hookResolving":
+      // R2783000: a marker for the animations; the hook's own effects log as their own lines.
+      return null;
   }
 }
 

@@ -299,6 +299,7 @@ fn summon_onto(
         arrived_during: None,
         exits_from: None,
         creator,
+        via: None,
     });
     // R783010: a Crater Unit Locks the zone it was summoned into, before its Cry.
     crate::crater::lock_on_arrival(ctx, &placed.id);

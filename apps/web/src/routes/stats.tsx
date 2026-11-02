@@ -15,7 +15,7 @@ import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
-import { FULL_ART_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
+import { FULL_ART_STRIP_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
@@ -95,12 +95,13 @@ function tokensOf(def: CardDef): CardDef[] {
 
 /**
  * R2756000: the arts a card's drill-down offers: its normal face, then each tier it has a full art of, commonest
- * first (a listed token's are its parent's, R2655002); none for a card without full art.
+ * first (a listed token's are its parent's, R2655002); none for a card without full art. R2715000: in the
+ * Collection's order, the Animated art first.
  */
 function artsOf(defId: string): DrillDownArt[] {
   if (!isFullArtCard(defId)) return [];
   const tiers = FULL_ARTS_OF_CARD.get(fullArtSource(defId));
-  return ["normal", ...FULL_ART_TIERS.filter((tier) => tiers?.has(tier) === true)];
+  return ["normal", ...FULL_ART_STRIP_TIERS.filter((tier) => tiers?.has(tier) === true)];
 }
 
 /** R2756000: `art` as the full-art pick `FullArtShown` takes for `defId`'s faces: `false` for the normal face, else that tier's (R2655000). */
@@ -150,7 +151,13 @@ type SortDirection = "asc" | "desc";
 type DrillDownArt = "normal" | FullArtTier;
 
 /** R2756000: each art choice's button, in English, put through `t()` where it is drawn as `SORT_LABELS` are. */
-const ART_LABELS: Record<DrillDownArt, string> = { normal: "No full art", Epic: "Epic", Legendary: "Legendary", Mythic: "Mythic" };
+const ART_LABELS: Record<DrillDownArt, string> = {
+  normal: "No full art",
+  Animated: "Animated",
+  Epic: "Epic",
+  Legendary: "Legendary",
+  Mythic: "Mythic",
+};
 
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",

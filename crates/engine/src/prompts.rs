@@ -1045,6 +1045,25 @@ fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
         return true;
     };
 
+    // R2783000: a hook's first run is marked before any of its effects, outside its run's R136 window
+    // (`make_context` opens it after). A parked tail or a named step is the same run continued: none.
+    if paused.is_none()
+        && resume.step.is_empty()
+        && let Some(kind) = crate::hook_marks::hook_kind_of(&resume.hook)
+    {
+        match instance.as_ref() {
+            Some(card) => {
+                let controller = options.controller.unwrap_or(card.controller);
+                crate::hook_marks::mark_hook(sink, card, controller, kind);
+            }
+            None => {
+                if let Some(controller) = options.controller {
+                    crate::hook_marks::mark_cardless_hook(sink, &resume.def_id, controller, kind);
+                }
+            }
+        }
+    }
+
     let targets = options
         .targets
         .clone()

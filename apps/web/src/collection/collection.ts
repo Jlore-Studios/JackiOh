@@ -9,6 +9,7 @@ import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } 
 
 import { readerName } from "../cards/chinese.ts";
 import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
+import { FULL_ART_STRIP_TIERS, fullArtTierOfEntry } from "../cards/fullArt.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
@@ -165,7 +166,7 @@ export type StripGroup = { kind: StripKind; items: StripItem[] };
 /**
  * R1655000: what a card may wear, by kind: the registry's foils, finishes and borders (the default
  * first), and the face with no full art then the card's own (R2655000: its Epic, Legendary and
- * Mythic), the kind absent where it has none.
+ * Mythic; R2715000: its Animated art first, `FULL_ART_STRIP_TIERS`), the kind absent where it has none.
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
   const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
@@ -178,11 +179,13 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
       owned: canEquip(defId, cosmetic.id),
     })),
   }));
-  const fullArts: StripItem[] = COSMETICS.flatMap((cosmetic): StripItem[] =>
-    cosmetic.kind === "fullArt" && cosmetic.card === defId
-      ? [{ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }]
-      : [],
-  );
+  const place = (cosmetic: Cosmetic): number => {
+    const tier = fullArtTierOfEntry(cosmetic);
+    return tier === null ? FULL_ART_STRIP_TIERS.length : FULL_ART_STRIP_TIERS.indexOf(tier);
+  };
+  const fullArts: StripItem[] = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt" && cosmetic.card === defId)
+    .sort((a, b) => place(a) - place(b))
+    .map((cosmetic) => ({ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }));
   if (fullArts.length > 0) {
     groups.push({
       kind: "fullArt",

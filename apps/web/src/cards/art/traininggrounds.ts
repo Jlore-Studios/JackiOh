@@ -12,6 +12,7 @@ import type { CardType, Tag } from "@jackioh/shared";
 
 import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
+import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
 import { artSpec, type ArtSpec, type SkyScheme } from "./procedural.ts";
 import { compositionFor, mixHex, RADIANT_PALETTE, themeFor, turnHue } from "./themes.ts";
@@ -919,8 +920,15 @@ function rays(seed: number): string {
   return out.join("");
 }
 
-/** The SVG document a Training Grounds face draws, unencoded. */
-export function trainingGroundsSvg(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
+/** The SVG document a Training Grounds face draws, unencoded; R2715001: moving as `motion` says. */
+export function trainingGroundsSvg(
+  defId: string,
+  name: string | undefined,
+  tags: readonly Tag[],
+  type: CardType,
+  radiant: boolean,
+  motion: ArtMotion | null = null,
+): string {
   const subject = yardSubject(defId, name, tags, type);
   const seed = hashId(defId);
   const based = drift(seed, subject, FAMILY_PAINTS[subject.family]);
@@ -936,10 +944,12 @@ export function trainingGroundsSvg(defId: string, name: string | undefined, tags
   return (
     SVG_OPEN +
     `<defs>${defs.join("")}</defs>` +
-    yard +
+    motionStyle(motion, CENTER_ORIGIN) +
+    moving("back", yard, motion) +
     (radiant ? rays(seed) : "") +
     ellipse(SUBJECT_X, SUBJECT_Y + 40, 30, 4.5, "#000000", { opacity: 0.2 }) +
-    group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn) +
+    moving("subject", group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn), motion) +
+    particleMarkup(motion, defId) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
   );

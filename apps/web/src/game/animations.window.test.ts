@@ -5,14 +5,14 @@
 // windows carry can read differently in each.
 //
 // The games are real (`audio/test/realGame.ts`, through `engine.real.ts` as the client reaches the engine), and every
-// action is checked on both seats: the runner must be handed exactly the events that action produced, as the very
-// objects the new view carries, and nothing it has already been given. R318's sweep does the same over games built to
+// action is checked on both seats: the runner must be handed exactly the events that action produced that the seat
+// reads (`readBy`), as the very objects the new view carries, and nothing it has already been given. R318's sweep does the same over games built to
 // reach §2.4's three overflows, which the dev decks rarely do.
 
 import { describe, expect, it } from "vitest";
 
 import { DECK_SIZE, HUMAN_HANDICAP, LIBRARY_CAP, type Handicap } from "@jackioh/engine/config";
-import { setShips, type ActionBody, type CardDef, type GameEventType, type PlayerId, type PlayerView } from "@jackioh/shared";
+import { setShips, type ActionBody, type CardDef, type GameEvent, type GameEventType, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "./animations.ts";
 import { byIndex, printedCost } from "./decks.ts";
@@ -41,6 +41,21 @@ function rewrittenInOverlap(before: PlayerView, after: PlayerView, produced: num
   return tail.filter((event, i) => JSON.stringify(event) !== JSON.stringify(after.events[i])).length;
 }
 
+/**
+ * How many of an action's `events` `seat`'s view carries: all but the ones the engine withholds from it
+ * (`view_for::withheld_rolls`), a face-down card's `rolled` batch to the other seat (R2652000) and the `hookResolving`
+ * marker of a card the seat could not read (R2783000), each unless that trap's own `trapFired` follows in the action.
+ */
+function readBy(events: readonly GameEvent[], seat: PlayerId): number {
+  return events.filter((event, at) => {
+    let card: string;
+    if (event.type === "rolled" && event.faceDown === true && event.player !== seat) card = event.instanceId;
+    else if (event.type === "hookResolving" && event.hiddenFrom?.includes(seat) === true) card = event.sourceId;
+    else return true;
+    return events.slice(at + 1).some((later) => later.type === "trapFired" && later.instanceId === card);
+  }).length;
+}
+
 type Miss = { game: number; action: number; seat: PlayerId; produced: number; handed: number };
 
 describe("newEventsSince against the engine's own views", () => {
@@ -62,9 +77,10 @@ describe("newEventsSince against the engine's own views", () => {
         if (body === undefined) break;
 
         const before = { p1: game.view("p1"), p2: game.view("p2") };
-        const produced = game.act(who, body).length;
+        const events = game.act(who, body);
         for (const seat of ["p1", "p2"] as const) {
           const after = game.view(seat);
+          const produced = readBy(events, seat);
           const handed = newEventsSince(before[seat].events, after.events);
           const expected = after.events.slice(after.events.length - produced);
           checked += 1;
@@ -173,9 +189,10 @@ describe("R318 the overflow events against the engine's own views", () => {
         for (const seat of ["p1", "p2"] as const) {
           const after = game.view(seat);
           const fresh = newEventsSince(before[seat].events, after.events);
-          const expected = after.events.slice(after.events.length - events.length);
+          const read = readBy(events, seat);
+          const expected = after.events.slice(after.events.length - read);
           if (fresh.length !== expected.length || fresh.some((event, i) => event !== expected[i])) {
-            misses.push({ label: setup.label, game: setup.seed, action, seat, produced: events.length, handed: fresh.length });
+            misses.push({ label: setup.label, game: setup.seed, action, seat, produced: read, handed: fresh.length });
           }
           for (const event of fresh) {
             if (!OVERFLOWS.includes(event.type)) continue;
