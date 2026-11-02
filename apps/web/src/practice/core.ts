@@ -25,6 +25,11 @@
 // after the end, so it cannot help the human play (rule 7). A resumed game claims on the seed it began on
 // (R1303001) and decides under PRACTICE_AI_CLOCK_MS like any other, since the server does not re-run the
 // AI's moves.
+//
+// Run fights (DR14, R2706000): a config with `run` is a dungeon run's fight, its setup's seed, decks,
+// handicaps and the human's deck marks replacing the free game's deal. It brings no last board and leaves
+// none, is never saved or kept, and once it is over answers `runReport`: the run's `FightOver`, folded
+// from its setup and log by `runFightReport`, never the log itself.
 
 import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import {
@@ -55,10 +60,12 @@ import {
 } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, lethalHint, type SearchBudget } from "@jackioh/ai";
 import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
+import type { RunFightSetup } from "@jackioh/run";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_LETHAL_HINT_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { lessonById, lessonHandicaps } from "../tutorial/lessons.ts";
+import { runFightReport } from "../wasm/index.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeReplay, PracticeReplaySetup, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
 import { randomDeckLean } from "./protocol.ts";
@@ -114,6 +121,8 @@ type PracticeGame = {
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
   /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none. */
   dealt?: PlayerId[];
+  /** R2706000: a run fight's deck marks as `createGame` had them, the human's seat only; absent when none. */
+  deckMarks?: Partial<Record<PlayerId, RunFightSetup["humanMarks"]>>;
   state: GameState;
   log: Action[];
   rng: Rng;
@@ -169,6 +178,8 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
 /**
  * §9.10, R291: a lesson's fixed decks, the tutorial handicap on the AI (R290) and `TUTORIAL_HUMAN` on the
  * human, whose fixed deck is smaller than `DECK_SIZE` (R1705005); or a free game's (§9.9), none on the human.
+ * R2706000: a dungeon run's fight plays its setup's two decks and two handicaps, whatever `deck` and
+ * `difficulty` say.
  */
 function decksAndHandicap(config: PracticeStartConfig): {
   humanDeck: string[];
@@ -176,6 +187,14 @@ function decksAndHandicap(config: PracticeStartConfig): {
   handicap: Handicap;
   humanHandicap?: Handicap;
 } {
+  if (config.run !== undefined) {
+    return {
+      humanDeck: [...config.run.humanDeck],
+      aiDeck: [...config.run.enemyDeck],
+      handicap: { ...config.run.enemyHandicap },
+      humanHandicap: { ...config.run.humanHandicap },
+    };
+  }
   if (config.lesson !== undefined) {
     const lesson = lessonById(config.lesson);
     if (lesson === undefined) throw new Error(`unknown tutorial lesson "${config.lesson}"`);
@@ -204,11 +223,16 @@ function decksAndHandicap(config: PracticeStartConfig): {
  * deck is never counted dealt: no view shows its seat, and R185's redaction would hide its own library.
  */
 function dealtSeats(config: PracticeStartConfig): PlayerId[] {
+  // R2706000: a run deck is built over the run, not dealt, whatever `deck` says.
+  if (config.run !== undefined) return [];
   const dealt = config.deck.kind === "random" || config.deck.kind === "try";
   return config.lesson === undefined && dealt ? [config.humanSeat] : [];
 }
 
-function startGame(config: PracticeStartConfig): PracticeGame {
+function startGame(asked: PracticeStartConfig): PracticeGame {
+  // R2706000: a run fight plays on its setup's seed (the run's, row and column: DR14 B9), whatever
+  // the config's own says, so everything below, the AI's stream included, reads that one.
+  const config: PracticeStartConfig = asked.run === undefined ? asked : { ...asked, seed: asked.run.seed };
   const aiSeat = opponentOf(config.humanSeat);
   const { humanDeck, aiDeck, handicap, humanHandicap } = decksAndHandicap(config);
   const decks: [string[], string[]] = config.humanSeat === "p1" ? [humanDeck, aiDeck] : [aiDeck, humanDeck];
@@ -217,11 +241,17 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     ...(humanHandicap === undefined ? {} : { [config.humanSeat]: { ...humanHandicap } }),
   };
   // R508: the human's last board, on a free game only; the AI's seat never has one. R923000: a sandbox
-  // game brings none.
-  const board = config.lesson === undefined && config.sandbox !== true ? (config.lastBoard ?? []) : [];
+  // game brings none, and R2706000: nor does a run fight, a game of its own kind.
+  const board = config.lesson === undefined && config.sandbox !== true && config.run === undefined ? (config.lastBoard ?? []) : [];
   const lastBoards: [LastBoardCard[], LastBoardCard[]] | undefined =
     board.length === 0 ? undefined : config.humanSeat === "p1" ? [[...board], []] : [[], [...board]];
   const dealt = dealtSeats(config);
+  // R2706000: the run deck's Radiant and buffed cards, at the human's seat; none, no key, so a game
+  // without marks is created and hashes as before (DR14 B3).
+  const deckMarks: PracticeGame["deckMarks"] =
+    config.run === undefined || config.run.humanMarks.length === 0
+      ? undefined
+      : { [config.humanSeat]: config.run.humanMarks.map((mark) => ({ ...mark })) };
 
   // `createGame` throws on an illegal deck and `beginGame` reports a refusal: no game, and "failed".
   const created = createGame({
@@ -230,6 +260,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     handicaps,
     ...(lastBoards === undefined ? {} : { lastBoards }),
     ...(dealt.length === 0 ? {} : { dealt }),
+    ...(deckMarks === undefined ? {} : { deckMarks }),
     // R923000: the one game whose dev tools the engine takes.
     ...(config.sandbox === true ? { sandbox: true } : {}),
     // R915006: the custom cards the human's deck names, which only the Luau module runs (R915009).
@@ -245,6 +276,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     handicaps,
     ...(lastBoards === undefined ? {} : { lastBoards }),
     ...(dealt.length === 0 ? {} : { dealt }),
+    ...(deckMarks === undefined ? {} : { deckMarks }),
     state: begun.state,
     log: [],
     rng: createRng(`${config.seed}:ai`),
@@ -322,9 +354,10 @@ function snapshotOf(game: PracticeGame, now: number): PracticeSnapshot {
   const human = humanSeatNow(game);
   const result = game.state.result;
   // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none,
-  // and R923000: a sandbox game, whose board its tools built, leaves none either.
+  // and R923000: a sandbox game, whose board its tools built, leaves none either, nor does R2706000's
+  // run fight.
   const keepsBoard =
-    result !== null && result.reason !== "voided" && game.config.lesson === undefined && game.config.sandbox !== true;
+    result !== null && result.reason !== "voided" && game.config.lesson === undefined && game.config.sandbox !== true && game.config.run === undefined;
   return {
     view: viewFor(game.state, human),
     legal: legalActions(game.state, human),
@@ -472,13 +505,16 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     throw new Error(`the AI owes an action and the engine accepts none of its legal ones (${lastRefusal})`);
   }
 
-  /** R768: a free game that has just ended is kept; a lesson, or a game Glitch voided (R679), is not. */
+  /**
+   * R768: a free game that has just ended is kept; a lesson, or a game Glitch voided (R679), is not, nor
+   * is R2706000's run fight, which the run records itself.
+   */
   function keepFinished(active: PracticeGame): void {
     const result = active.state.result;
     if (active.kept || result === null) return;
     active.kept = true;
     const saves = env.saves;
-    if (saves === undefined || active.config.lesson !== undefined || result.reason === "voided") return;
+    if (saves === undefined || active.config.lesson !== undefined || result.reason === "voided" || active.config.run !== undefined) return;
     const kept = saves.readReplays();
     const endSeat = humanSeatNow(active);
     const replay: PracticeReplay = {
@@ -589,6 +625,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       ...(active.config.lesson === undefined ? {} : { lesson: active.config.lesson }),
       ...(active.lastBoards === undefined ? {} : { lastBoards: JSON.parse(JSON.stringify(active.lastBoards)) as [LastBoardCard[], LastBoardCard[]] }),
       ...(active.dealt === undefined ? {} : { dealt: [...active.dealt] }),
+      ...(active.deckMarks === undefined ? {} : { deckMarks: JSON.parse(JSON.stringify(active.deckMarks)) as PracticeGame["deckMarks"] }),
       ...(active.config.sandbox === true ? { sandbox: true } : {}),
       ...(hasCustomCards(active.config) ? { customCards: JSON.parse(JSON.stringify(active.config.customCards)) as CustomCard[] } : {}),
     };
@@ -608,13 +645,34 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     };
   }
 
+  /**
+   * DR14, R2706000: a finished run fight as the run reads it, `runFightReport` over the game's setup
+   * and log for the seat the human ended in (R677). The log never crosses: the page gets the run's
+   * action, or its refusal.
+   */
+  function runReportOf(id: number, active: PracticeGame): PracticeResponse {
+    if (active.config.run === undefined) throw new Error("this practice game is not a dungeon run's fight");
+    if (active.state.result === null) throw new Error("a fight is reported only once it is over");
+    const game: FoldInput = {
+      seed: active.config.seed,
+      decks: [[...active.decks[0]], [...active.decks[1]]],
+      handicaps: JSON.parse(JSON.stringify(active.handicaps)) as Partial<Record<PlayerId, Handicap>>,
+      ...(active.deckMarks === undefined ? {} : { deckMarks: active.deckMarks }),
+      ...(hasCustomCards(active.config) ? { customCards: active.config.customCards } : {}),
+      log: JSON.parse(JSON.stringify(active.log)) as Action[],
+    };
+    const report = runFightReport(game, humanSeatNow(active));
+    return "action" in report ? { id, type: "runReport", action: report.action } : { id, type: "runReport", error: report.error };
+  }
+
   function started(id: number, active: PracticeGame): PracticeResponse {
-    env.saves?.write(saveOf(active));
+    // R2706000: a run fight is never saved, and leaves the free game's save as it was.
+    if (active.config.run === undefined) env.saves?.write(saveOf(active));
     return { id, type: "started", snapshot: snapshotOf(active, env.now()), defs: registeredCatalog(), aiSeat: active.aiSeat };
   }
 
   function snapshotResponse(id: number, active: PracticeGame): PracticeResponse {
-    env.saves?.write(saveOf(active));
+    if (active.config.run === undefined) env.saves?.write(saveOf(active));
     keepFinished(active);
     return { id, type: "snapshot", snapshot: snapshotOf(active, env.now()) };
   }
@@ -662,6 +720,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       }
       case "claim":
         return { id: request.id, type: "claim", claim: claimOf(current()) };
+      case "runReport":
+        return runReportOf(request.id, current());
     }
   }
 

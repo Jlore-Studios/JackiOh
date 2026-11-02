@@ -28,6 +28,8 @@ import {
 
 import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
+import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor, type FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
@@ -162,9 +164,12 @@ function isPickText(value: unknown): value is string {
 /** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
 const FULL_ART_ID_PREFIX = "full-art-";
 
-/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id, known or not. */
+/** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
+export const ANIMATED_ART_ID_PREFIX = "animated-";
+
+/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id (R2715000: an Animated art's among them), known or not. */
 function isFullArtPick(value: unknown): value is boolean | string {
-  return typeof value === "boolean" || (isPickText(value) && value.startsWith(FULL_ART_ID_PREFIX));
+  return typeof value === "boolean" || (isPickText(value) && (value.startsWith(FULL_ART_ID_PREFIX) || value.startsWith(ANIMATED_ART_ID_PREFIX)));
 }
 
 function normalizeStoredPicks(raw: unknown): StoredCardPicks {
@@ -610,6 +615,18 @@ function useFoilSlot(wanted: boolean): boolean {
     () => false,
   );
   return wanted && holds;
+}
+
+/**
+ * R2715001: whether a face's moving art may move now: it wants to (CardFace: an Animated, Legendary or
+ * Mythic face, full layout, Animated foil on, not a lazy grid face), neither the Reduce motion setting
+ * nor the system asks for reduced motion, and it holds one of the foil's slots. Its hooks run on every
+ * face.
+ */
+export function useArtMotion(wanted: boolean): boolean {
+  const panel = useSetting("reduceMotion");
+  const system = useOsReducedMotion();
+  return useFoilSlot(wanted && !panel && !system);
 }
 
 /** The attributes a face wears for its cosmetics: none at all for the defaults. */
