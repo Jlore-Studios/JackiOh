@@ -166,7 +166,9 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
 at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry names a motif,
-as that card's play through the real board's effects layer.
+as that card's play through the real board's effects layer. "Play as a set piece" plays the same card
+as the fixture set piece (R2785000): its play's entry holds the board for `SET_PIECE_HOLD_MS`, scaled
+and capped as every set piece, until a tap, a click or Space skips it.
 
 ## Examples
 
