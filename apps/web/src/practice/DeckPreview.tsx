@@ -4,7 +4,7 @@
 
 import { useMemo, type ReactElement } from "react";
 
-import type { CardCost, CardDef, CardDefs } from "@jackioh/shared";
+import type { CardDef, CardDefs } from "@jackioh/shared";
 
 import { TryAgainButton } from "../auth/AccountError.tsx";
 import { faceModel, useInspectTrigger } from "../cards/index.ts";
@@ -12,17 +12,11 @@ import { readerName } from "../cards/chinese.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { practiceTestid } from "./testids.ts";
+import { printedPrice } from "../game/deckbuilder/filters.ts";
 
 /** The curve's columns, Hearthstone's way: one per cost up to the last, which holds the rest. */
 const CURVE_COLUMNS = ["0", "1", "2", "3", "4", "5+"] as const;
 type CurveColumn = (typeof CURVE_COLUMNS)[number] | "X";
-
-/** The cost the preview prints: an X cost is "X", an embiggen card its base cost (§5.1). */
-function printedCost(cost: CardCost): number | "X" {
-  if (cost === "X") return "X";
-  if (typeof cost === "number") return cost;
-  return cost.base;
-}
 
 function columnOf(cost: number | "X"): CurveColumn {
   if (cost === "X") return "X";
@@ -36,7 +30,7 @@ function previewCards(ids: readonly string[], defs: CardDefs): PreviewCard[] {
   const cards = ids.map((id): PreviewCard => {
     const def: CardDef | undefined = defs[id];
     if (def === undefined) return { id, name: id, type: "", cost: 0 };
-    return { id, name: readerName(def), type: def.type, cost: printedCost(def.cost), def };
+    return { id, name: readerName(def), type: def.type, cost: printedPrice(def.cost), def };
   });
   // Cheapest first, X last, then by name: the order a deck list reads in.
   const rank = (cost: number | "X"): number => (cost === "X" ? Number.POSITIVE_INFINITY : cost);

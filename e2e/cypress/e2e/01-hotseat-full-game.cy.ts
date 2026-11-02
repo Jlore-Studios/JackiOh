@@ -1,6 +1,7 @@
 // BUILD M8: a seeded hotseat game completes through the UI; its final hash matches replay (V19).
 // `jackioh replay` (§12) hashes the browser's recorded actions: a match proves them accepted in order (M5-T3).
-// Fixture decks are choice-free, so play and attack open no `PendingChoice` (R81).
+// Fixture decks are choice-free, so play and attack open no `PendingChoice` (R81). The seed is
+// overridable for §4's 20-seed run.
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -13,8 +14,9 @@ import {
   zoneId,
 } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Row } from "../../support/types.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 
-/** BUILD M8's seed; `--expose seed=…` overrides it for §4's 20-seed nightly sweep. */
+/** BUILD M8's seed; `--expose seed=…` overrides it for the nightly sweep. */
 const SEED = seedFor("01-hotseat");
 
 /** §2.5 / R2 cap player turns; allow slack for `turnAutoEnded`. */
@@ -56,15 +58,6 @@ function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
     // Cypress treats bare `null` as the current subject, so wrap the answer.
     return cy.wrap(found ?? null, { log: false });
-  });
-}
-
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
-      undefined,
-    );
-    if (handle.seat !== player) cy.handOver();
   });
 }
 

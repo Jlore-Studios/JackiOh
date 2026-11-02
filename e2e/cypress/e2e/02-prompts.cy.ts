@@ -19,6 +19,7 @@ import {
   zoneId,
 } from "../../support/testids.ts";
 import type { GameStateLike, PlayerId, PromptKind } from "../../support/types.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 
 const SEEDS = {
   mulligan: seedFor("02-mulligan-0"),
@@ -56,15 +57,6 @@ function pendingOptions(): Cypress.Chainable<NonNullable<PendingPeek["options"]>
     const options = pending?.options ?? [];
     expect(options, "the open choice offers options").to.not.have.length(0);
     return cy.wrap(options, { log: false });
-  });
-}
-
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
-      undefined,
-    );
-    if (handle.seat !== player) cy.handOver();
   });
 }
 

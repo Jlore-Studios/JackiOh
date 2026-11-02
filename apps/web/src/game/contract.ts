@@ -133,6 +133,16 @@ export const testid = {
   marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
 } as const;
 
+/** The CSS selector for the element whose testid is `id`, its quotes and backslashes escaped. */
+export function testidSelector(id: string): string {
+  return `[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`;
+}
+
+/** The page's element whose testid is `id`, or null. */
+export function byTestid(id: string): Element | null {
+  return document.querySelector(testidSelector(id));
+}
+
 /**
  * R384, R510, R1751000: the `ability` an Activate control names. Under R1751000, board Activate
  * controls on cards with multiple abilities target `{ on: "activate", instanceId }` (without ability)

@@ -16,6 +16,8 @@ export const patchTestid = {
   technicalLog: "patch-technical-log",
   /** One patch, `data-version` its version. */
   patch: "patch-entry",
+  /** #2681: a patch's artwork, `data-version` its version, `data-major` "true" for a major's. */
+  releaseArt: "patch-release-art",
   /** A patch's player note (R724001). */
   note: "patch-note",
   /** One heading of a player note, `data-section` its key. */

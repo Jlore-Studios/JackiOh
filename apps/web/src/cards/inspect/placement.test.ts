@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { PREVIEW_MARGIN_PX } from "./constants.ts";
 import { placePreview, type Rect } from "./index.ts";
+import { rectOf } from "./placement.ts";
 
 type Size = { width: number; height: number };
 type Side = "right" | "left" | "above" | "below";
@@ -86,6 +87,14 @@ const CASES: Case[] = [
     side: "below",
   },
 ];
+
+describe("rectOf", () => {
+  it("is an element's box on screen, as a plain rect (#2160)", () => {
+    const element = document.createElement("div");
+    element.getBoundingClientRect = () => ({ left: 10, top: 20, width: 30, height: 40, right: 40, bottom: 60, x: 10, y: 20, toJSON: () => ({}) });
+    expect(rectOf(element)).toEqual({ left: 10, top: 20, width: 30, height: 40 });
+  });
+});
 
 describe("placePreview: the side (B27)", () => {
   for (const c of CASES) {

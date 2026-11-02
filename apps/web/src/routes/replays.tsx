@@ -35,8 +35,8 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
-import { messageOf } from "../together/session.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { messageOf } from "../net/errors.ts";
 
 import "./replays.css";
 

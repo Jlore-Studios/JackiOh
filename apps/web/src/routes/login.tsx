@@ -40,6 +40,7 @@ import {
   adoptSession,
   assuranceLevel,
   authConfig,
+  authMessageOf,
   exchangeAuthCode,
   oauthProviders,
   refreshSession,
@@ -277,11 +278,6 @@ function runningInterval(entry: PendingAddress | null): { address: string; deadl
   if (entry === null) return null;
   const deadline = deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, entry.at);
   return deadline > Date.now() ? { address: entry.address, deadline } : null;
-}
-
-/** Only our own sentences reach the screen; anything that is not an `AuthError` is a fault. */
-function messageOf(cause: unknown): string {
-  return cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service;
 }
 
 /** True once `active` has held for `GATE_SLOW_NOTICE_SECONDS`, as the gate's own slow notice. */
@@ -611,7 +607,7 @@ export default function LoginRoute(): ReactElement {
         setCheckRound((round) => round + 1);
       })
       .catch((cause: unknown) => {
-        setCodeError(messageOf(cause));
+        setCodeError(authMessageOf(cause));
         document.getElementById("login-code")?.focus();
       })
       .finally(() => {
@@ -642,7 +638,7 @@ export default function LoginRoute(): ReactElement {
         codeCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
       })
       .catch((cause: unknown) => {
-        setError(messageOf(cause));
+        setError(authMessageOf(cause));
       })
       .finally(() => {
         setBusy(false);
@@ -663,7 +659,7 @@ export default function LoginRoute(): ReactElement {
         signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
-        setCodeError(messageOf(cause));
+        setCodeError(authMessageOf(cause));
         document.getElementById("login-code")?.focus();
       })
       .finally(() => {
@@ -680,7 +676,7 @@ export default function LoginRoute(): ReactElement {
     setError(null);
     setOauthFailed(false);
     startOAuthSignIn(provider).catch((cause: unknown) => {
-      setError(messageOf(cause));
+      setError(authMessageOf(cause));
       setBusy(false);
     });
   }
@@ -736,7 +732,7 @@ export default function LoginRoute(): ReactElement {
         resendCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
       })
       .catch((cause: unknown) => {
-        setError(messageOf(cause));
+        setError(authMessageOf(cause));
       })
       .finally(() => {
         setResendBusy(false);
@@ -856,7 +852,7 @@ export default function LoginRoute(): ReactElement {
           resendCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
         })
         .catch((cause: unknown) => {
-          setError(messageOf(cause));
+          setError(authMessageOf(cause));
         })
         .finally(done);
       return;
@@ -870,7 +866,7 @@ export default function LoginRoute(): ReactElement {
           resetCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
         })
         .catch((cause: unknown) => {
-          setError(messageOf(cause));
+          setError(authMessageOf(cause));
         })
         .finally(done);
       return;
@@ -885,7 +881,7 @@ export default function LoginRoute(): ReactElement {
         signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
-        setError(messageOf(cause));
+        setError(authMessageOf(cause));
         // The resend link and the confirm-first hint below are for an address.
         if (byUsername) return;
         // An unconfirmed address reads as `credentials` (R160), so resend is offered after any

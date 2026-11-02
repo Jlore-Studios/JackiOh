@@ -50,6 +50,7 @@ import { duelOf, seatLabel, teamOf, teammateOf } from "./seats.ts";
 import { playPingSound } from "./sounds.ts";
 import { spotOfTarget } from "./spots.ts";
 import { duosTestid } from "./testids.ts";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 import "./duos.css";
 
 export type DuosBoardProps = {
@@ -76,20 +77,13 @@ function ignore(): void {}
 
 /** R2095000: the Both boards choice, kept per device. */
 function readBoth(): boolean {
-  try {
-    return window.localStorage.getItem(DUOS_BOTH_KEY) === "1";
-  } catch {
-    return false;
-  }
+  return getStored(DUOS_BOTH_KEY) === "1";
 }
 
 function storeBoth(both: boolean): void {
-  try {
-    if (both) window.localStorage.setItem(DUOS_BOTH_KEY, "1");
-    else window.localStorage.removeItem(DUOS_BOTH_KEY);
-  } catch {
-    // Blocked storage: the choice lasts as long as the page does.
-  }
+  // Blocked storage: the choice lasts as long as the page does.
+  if (both) setStored(DUOS_BOTH_KEY, "1");
+  else removeStored(DUOS_BOTH_KEY);
 }
 
 /** `Date.now()` as of this render, re-rendered as the next live ping's PING_SHOW_MS runs out, so it goes on time. */

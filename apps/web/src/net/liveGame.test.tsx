@@ -21,6 +21,7 @@ import {
 } from "./liveGame.ts";
 import { navigate, paths } from "./navigate.ts";
 import { signIn } from "../test/stubServer.ts";
+import { setVisibility } from "../test/setup.ts";
 
 vi.mock("./navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./navigate.ts")>();
@@ -149,10 +150,6 @@ describe("R765 the live game an account read names", () => {
   it("a woken page reads the live game again at once, never overlapping", async () => {
     vi.useFakeTimers();
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     try {
       const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
       const account = ready(me("m-1"));
@@ -160,10 +157,11 @@ describe("R765 the live game an account read names", () => {
       await advance(POLL_MS);
       expect(read).toHaveBeenCalledTimes(1);
 
-      show("hidden");
+      // A hidden tab reads nothing; a visible one reads once.
+      setVisibility("hidden");
       await flush();
       expect(read).toHaveBeenCalledTimes(1);
-      show("visible");
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(2);
 
@@ -174,10 +172,10 @@ describe("R765 the live game an account read names", () => {
           answer = resolve;
         }),
       );
-      show("visible");
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(3);
-      show("visible");
+      setVisibility("visible");
       window.dispatchEvent(new Event("online"));
       await flush();
       expect(read).toHaveBeenCalledTimes(3);
@@ -193,7 +191,8 @@ describe("R765 the live game an account read names", () => {
       expect(read).toHaveBeenCalledTimes(4);
       expect(result.current).toBeNull();
 
-      show("visible");
+      // With no game left it no longer listens.
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(4);
     } finally {
@@ -325,10 +324,6 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
   it("a woken page reads the queue follow again at once, then follows the pairing", async () => {
     vi.useFakeTimers();
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     try {
       signIn();
       rememberQueued("bo1");
@@ -337,10 +332,10 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
       await flush();
       expect(read).toHaveBeenCalledTimes(1);
 
-      show("hidden");
+      setVisibility("hidden");
       await flush();
       expect(read).toHaveBeenCalledTimes(1);
-      show("visible");
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(2);
 
@@ -354,7 +349,7 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
       window.dispatchEvent(new Event("online"));
       await flush();
       expect(read).toHaveBeenCalledTimes(3);
-      show("visible");
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(3);
       answer(me(null));
@@ -362,7 +357,7 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
 
       // Paired while the tab slept.
       read.mockResolvedValue(me("m-9"));
-      show("visible");
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(4);
       expect(screen.getByTestId("found")).toHaveTextContent(MATCH_FOUND_STATUS);
@@ -370,7 +365,8 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
       await advance(MATCH_FOUND_NAV_DELAY_MS);
       expect(navigate).toHaveBeenCalledWith("/match/m-9");
 
-      show("visible");
+      // Out of the queue it listens no more.
+      setVisibility("visible");
       await flush();
       expect(read).toHaveBeenCalledTimes(4);
     } finally {

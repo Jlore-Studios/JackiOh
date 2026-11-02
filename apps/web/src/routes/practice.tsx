@@ -103,6 +103,7 @@ import { createCoachTracker, silentScript, type CoachTracker } from "../tutorial
 import { TutorialHud } from "../tutorial/TutorialHud.tsx";
 import { TutorialPath } from "../tutorial/TutorialPath.tsx";
 import { TutorialResult } from "../tutorial/TutorialResult.tsx";
+import { getStored, setStored } from "../net/storage.ts";
 
 /** The dev handle exists only outside a production build, like `window.__jackioh`. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -203,7 +204,7 @@ type StoredSetup = { difficulty?: Difficulty; deck?: string; leanSet?: LeanPick 
 
 function readStoredSetup(): StoredSetup {
   try {
-    const raw = window.localStorage.getItem(PRACTICE_SETUP_KEY);
+    const raw = getStored(PRACTICE_SETUP_KEY);
     if (raw === null) return {};
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
@@ -226,15 +227,12 @@ function readStoredSetup(): StoredSetup {
 }
 
 function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, lean: LeanPick | null): void {
-  try {
-    window.localStorage.setItem(
-      PRACTICE_SETUP_KEY,
-      // R1373, R924000: the pick only when there is one; a setup without it reads as none.
-      JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(lean === null ? {} : { leanSet: lean }) }),
-    );
-  } catch {
-    // Remembering the setup is a convenience; a refusal costs nothing.
-  }
+  // Remembering the setup is a convenience; a refusal costs nothing.
+  setStored(
+    PRACTICE_SETUP_KEY,
+    // R1373, R924000: the pick only when there is one; a setup without it reads as none.
+    JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(lean === null ? {} : { leanSet: lean }) }),
+  );
 }
 
 function configFor(choice: PracticeSetupChoice, params: PracticeParams): PracticeStartConfig {

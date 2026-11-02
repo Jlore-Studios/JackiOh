@@ -62,6 +62,7 @@ import {
   withOpening,
 } from "./packs.ts";
 import PackObject from "./PackObject.tsx";
+import { messageOf } from "../net/errors.ts";
 import "./packs.css";
 
 /** The scene shakes nothing: the pack is not the board. */
@@ -370,11 +371,6 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   );
 }
 
-/** What a failed request says: the server's words, else the error's. */
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
 type SceneState = { pack: string; left: number };
 
 /**
@@ -423,7 +419,7 @@ export default function PackOpening({
           // R2125000: a read that fails behind kept packs leaves them and says nothing; only a first visit says why.
           const kept = cachedRead<PacksResponse>(token, keptPaths.packs);
           if (kept === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setInfo(kept);
             setLoadError(null);
@@ -460,7 +456,7 @@ export default function PackOpening({
           onChanged?.();
         },
         (cause: unknown) => {
-          setOpenError(wordsOf(cause));
+          setOpenError(messageOf(cause));
         },
       )
       .finally(() => {

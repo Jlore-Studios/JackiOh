@@ -214,6 +214,11 @@ export class AuthError extends Error {
   }
 }
 
+/** What an auth screen shows for a failure: only our own sentences, so anything not an `AuthError` is a fault. */
+export function authMessageOf(cause: unknown): string {
+  return cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service;
+}
+
 // Classifying a refusal
 
 /** A refresh token or access token the provider no longer honors. */

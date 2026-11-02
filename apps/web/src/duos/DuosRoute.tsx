@@ -33,6 +33,7 @@ import DuosReplay from "./DuosReplay.tsx";
 import { duelOf } from "./seats.ts";
 import { useDuosMatch, type DuosClockReading, type DuosConnection } from "./socket.ts";
 import { duosTestid } from "./testids.ts";
+import { messageOf } from "../net/errors.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
@@ -147,7 +148,7 @@ function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
         setStatus(fresh);
         if (fresh.matchId !== null) goToMatch(fresh.matchId);
       } catch (cause) {
-        setRefusal(cause instanceof Error ? cause.message : String(cause));
+        setRefusal(messageOf(cause));
       } finally {
         inFlight.current = false;
         setOffering(false);

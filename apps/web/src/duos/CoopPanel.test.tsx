@@ -14,6 +14,7 @@ import type { Friend } from "../net/social.ts";
 import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { COOP_DECK_KEY, CoopPanel, defaultCoopDeck } from "./CoopPanel.tsx";
 import { COOP_ROOM_POLL_MS } from "./config.ts";
+import { setVisibility } from "../test/setup.ts";
 
 const SLOW = { timeout: 5_000 } as const;
 /** SPEC S6/S8 give the host's wait for the guest no interval; the host's way on comes well inside this. */
@@ -252,10 +253,6 @@ describe("B60 creating a room", () => {
     "a woken page reads the co-op room again at once, and a joined room still takes the host to the game",
     async () => {
       const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-      const show = (state: "hidden" | "visible"): void => {
-        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-        document.dispatchEvent(new Event("visibilitychange"));
-      };
       // The host's own poll ticks on nothing, so only a wake can read the room again.
       const interval = window.setInterval.bind(window);
       vi.spyOn(window, "setInterval").mockImplementation(((handler: TimerHandler, ms?: number, ...args: unknown[]) =>
@@ -270,13 +267,13 @@ describe("B60 creating a room", () => {
         }, SLOW);
         await flush();
 
-        show("hidden");
+        setVisibility("hidden");
         await flush();
         expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(1);
 
         // Wakes that land together are one read.
-        show("visible");
-        show("visible");
+        setVisibility("visible");
+        setVisibility("visible");
         window.dispatchEvent(new Event("online"));
         await waitFor(() => {
           expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
@@ -286,7 +283,7 @@ describe("B60 creating a room", () => {
         expect(window.location.pathname).toBe("/together");
 
         room.guestJoined = true;
-        show("visible");
+        setVisibility("visible");
         await waitFor(() => {
           expect(window.location.pathname).toBe("/duos/dm-5");
         }, SLOW);

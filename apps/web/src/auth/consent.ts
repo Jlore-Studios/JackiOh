@@ -11,6 +11,7 @@ import {
   MIN_ACCOUNT_AGE_YEARS,
 } from "@jackioh/server-config";
 import { addressKey } from "./cooldown.ts";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 
 /** R757000: set once an answer under the minimum age refused sign-up on this device. */
 export const SIGNUP_REFUSED_KEY = "jackioh.signup.refused";
@@ -61,55 +62,31 @@ export function birthMonths(): number[] {
   return Array.from({ length: MONTHS_PER_YEAR }, (_, index) => index + 1);
 }
 
-function read(key: string): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(key: string, value: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // Blocked storage: the server still checks the age at the first sign-in.
-  }
-}
-
-function remove(key: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(key);
-  } catch {
-    // Storage is unavailable.
-  }
-}
-
+/** R757000: this device refused a sign-up under the minimum age. */
 export function signUpRefusedHere(): boolean {
-  return read(SIGNUP_REFUSED_KEY) !== null;
+  return getStored(SIGNUP_REFUSED_KEY) !== null;
 }
 
 /** R757000: remember on this device that sign-up was refused. Holds no age and no date. */
 export function refuseSignUpHere(): void {
-  write(SIGNUP_REFUSED_KEY, "1");
-  remove(SIGNUP_CONSENT_KEY);
+  // Blocked storage: the server still checks the age at the first sign-in.
+  setStored(SIGNUP_REFUSED_KEY, "1");
+  // The answer that was being held, if any, goes with it.
+  removeStored(SIGNUP_CONSENT_KEY);
 }
 
 /** R757000, R757001: hold the sign-up form's answer until the account first signs in. */
 export function holdSignUpConsent(consent: SignUpConsent): void {
-  write(SIGNUP_CONSENT_KEY, JSON.stringify({ ...consent, at: Date.now() }));
+  setStored(SIGNUP_CONSENT_KEY, JSON.stringify({ ...consent, at: Date.now() }));
 }
 
 /** R757000, R757001: drop the held answer, once the server has answered it. */
 export function forgetSignUpConsent(): void {
-  remove(SIGNUP_CONSENT_KEY);
+  removeStored(SIGNUP_CONSENT_KEY);
 }
 
 function freshHeld(): SignUpConsent | null {
-  const raw = read(SIGNUP_CONSENT_KEY);
+  const raw = getStored(SIGNUP_CONSENT_KEY);
   if (raw === null) return null;
   let value: unknown;
   try {
@@ -134,7 +111,7 @@ function freshHeld(): SignUpConsent | null {
 
 /** R757000: a held answer past its time, or unreadable, is dropped. Called as the app starts. */
 export function dropStaleSignUpConsent(): void {
-  if (read(SIGNUP_CONSENT_KEY) !== null && freshHeld() === null) remove(SIGNUP_CONSENT_KEY);
+  if (getStored(SIGNUP_CONSENT_KEY) !== null && freshHeld() === null) removeStored(SIGNUP_CONSENT_KEY);
 }
 
 /** R757000, R757001: the held answer for `email`. Only a stale one is dropped, so a render may call this. */

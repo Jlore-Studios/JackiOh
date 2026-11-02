@@ -6,6 +6,7 @@
 // when the match began (game/wearer.ts); off, the defaults, on a live, watched or replayed board alike.
 
 import { useSyncExternalStore } from "react";
+import { setStored } from "../net/storage.ts";
 
 export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean; opponentCosmetics: boolean };
 
@@ -71,15 +72,6 @@ function readRaw(): string | null | undefined {
   }
 }
 
-function writeRaw(raw: string): boolean {
-  try {
-    window.localStorage.setItem(CARD_SETTINGS_KEY, raw);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** Parsed settings with every missing or mistyped key taken from the defaults. */
 function parse(raw: string): CardSettings {
   let data: unknown;
@@ -114,7 +106,7 @@ export function writeCardSettings(patch: Partial<CardSettings>): CardSettings {
     const value = patch[key];
     if (typeof value === "boolean") next[key] = value;
   }
-  fallback = writeRaw(JSON.stringify(next)) ? null : { value: next, raw: readRaw() };
+  fallback = setStored(CARD_SETTINGS_KEY, JSON.stringify(next)) ? null : { value: next, raw: readRaw() };
   for (const listener of [...listeners]) listener();
   return next;
 }

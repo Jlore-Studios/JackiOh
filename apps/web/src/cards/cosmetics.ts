@@ -29,6 +29,7 @@ import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/gener
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor, type FaceModel } from "./model.ts";
+import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
 
 export type CosmeticKind = (typeof COSMETIC_KINDS)[number];
 /** R1297000: the kinds a card wears, and the kinds a deck carries (the registry's order). */
@@ -81,17 +82,10 @@ export function normalizeCosmetics(raw: unknown): CardCosmetics {
   return out;
 }
 
-function defaultStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
+/** Absent, throwing or unparsable storage gives the defaults. */
 function load(): CardCosmetics {
   try {
-    const text = defaultStorage()?.getItem(COSMETICS_SETTINGS_KEY) ?? null;
+    const text = getStored(COSMETICS_SETTINGS_KEY);
     return text === null ? { ...DEFAULT_CARD_COSMETICS } : normalizeCosmetics(JSON.parse(text));
   } catch {
     return { ...DEFAULT_CARD_COSMETICS };
@@ -99,11 +93,8 @@ function load(): CardCosmetics {
 }
 
 function persist(picks: CardCosmetics): void {
-  try {
-    defaultStorage()?.setItem(COSMETICS_SETTINGS_KEY, JSON.stringify(picks));
-  } catch {
-    // Quota, private mode or blocked storage: the picks still hold in memory for this page.
-  }
+  // Quota, private mode or blocked storage: the picks still hold in memory for this page.
+  setStored(COSMETICS_SETTINGS_KEY, JSON.stringify(picks));
 }
 
 let current: CardCosmetics | null = null;
@@ -203,7 +194,7 @@ type CardPicksState = { stored: Map<string, StoredCardPicks>; resolved: Map<stri
 /** What storage holds of every card's picks, as written: absent, throwing or unparsable storage holds none. */
 function readStoredCardPicks(): Record<string, unknown> {
   try {
-    const text = defaultStorage()?.getItem(CARD_PICKS_SETTINGS_KEY) ?? null;
+    const text = getStored(CARD_PICKS_SETTINGS_KEY);
     const parsed: unknown = text === null ? null : JSON.parse(text);
     if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
   } catch {
@@ -289,7 +280,7 @@ export function useCardPicks(defId: string): CardPicks {
  * read. After a failed write the picks live in memory alone, and what storage holds would forget them.
  */
 function currentCardPicks(): { written: Record<string, unknown>; state: CardPicksState } {
-  if (defaultStorage() !== null && !cardPicksUnsaved) {
+  if (localStorageOrNull() !== null && !cardPicksUnsaved) {
     const written = readStoredCardPicks();
     return { written, state: cardPicksFrom(written) };
   }
@@ -301,7 +292,6 @@ function currentCardPicks(): { written: Record<string, unknown>; state: CardPick
  * fields this client knows of `defId`'s entry, so a newer client's kinds are kept.
  */
 function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void): void {
-  const storage = defaultStorage();
   const { written, state } = currentCardPicks();
   cardPicksState = state;
   const before = state.stored.get(defId) ?? {};
@@ -324,12 +314,8 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
   }
   if (Object.keys(entry).length === 0) delete written[defId];
   else written[defId] = entry;
-  try {
-    storage?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(written));
-    cardPicksUnsaved = storage === null;
-  } catch {
-    cardPicksUnsaved = true;
-  }
+  // Quota, private mode or blocked storage: the picks still hold in memory for this page.
+  cardPicksUnsaved = !setStored(CARD_PICKS_SETTINGS_KEY, JSON.stringify(written));
   for (const listener of [...cardPicksListeners]) listener();
   const sent: Record<string, string | boolean | null> = {};
   for (const field of changed) sent[field] = picks[field] ?? null;
@@ -375,13 +361,8 @@ export function replaceAllCardPicks(picks: Readonly<Record<string, unknown>>): v
     }
   }
   cardPicksState = next;
-  const storage = defaultStorage();
-  try {
-    storage?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(Object.fromEntries(next.stored)));
-    cardPicksUnsaved = storage === null;
-  } catch {
-    cardPicksUnsaved = true;
-  }
+  // Quota, private mode or blocked storage: the picks still hold in memory for this page.
+  cardPicksUnsaved = !setStored(CARD_PICKS_SETTINGS_KEY, JSON.stringify(Object.fromEntries(next.stored)));
   for (const listener of [...cardPicksListeners]) listener();
 }
 

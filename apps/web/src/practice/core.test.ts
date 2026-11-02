@@ -43,6 +43,7 @@ import type {
   PracticeSnapshot,
   PracticeStartConfig,
 } from "./protocol.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 // the driver
 
@@ -80,11 +81,6 @@ function driver(env: PracticeCoreEnv = ENV): Driver {
 
 function config(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {
   return { seed: "core-test", difficulty: "easy", humanSeat: "p2", deck: { kind: "random" }, ...over };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 function debugOf(d: Driver): PracticeDebug {

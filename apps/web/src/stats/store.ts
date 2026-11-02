@@ -14,7 +14,7 @@ import {
   type PlayerStats,
 } from "./model.ts";
 import { isRecord } from "../wire/json.ts";
-import { localStorageOrNull } from "../net/storage.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 let snapshot: PlayerStats | null = null;
 
@@ -82,7 +82,7 @@ export function parsePlayerStats(raw: unknown): PlayerStats {
 
 function loadStored(): PlayerStats {
   try {
-    const raw = localStorageOrNull()?.getItem(PLAYER_STATS_KEY) ?? null;
+    const raw = getStored(PLAYER_STATS_KEY);
     return raw === null ? EMPTY_STATS : parsePlayerStats(raw);
   } catch {
     return EMPTY_STATS;
@@ -90,11 +90,8 @@ function loadStored(): PlayerStats {
 }
 
 function persist(stats: PlayerStats): void {
-  try {
-    localStorageOrNull()?.setItem(PLAYER_STATS_KEY, JSON.stringify({ v: PLAYER_STATS_VERSION, ...stats }));
-  } catch {
-    // Keep the in-memory value.
-  }
+  // Storage unavailable: the in-memory value stays.
+  setStored(PLAYER_STATS_KEY, JSON.stringify({ v: PLAYER_STATS_VERSION, ...stats }));
 }
 
 function notify(): void {

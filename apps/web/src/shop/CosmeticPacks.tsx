@@ -60,16 +60,14 @@ import {
   shopTestid,
   type RegistryCosmetic,
 } from "./shop.ts";
+import { messageOf } from "../net/errors.ts";
 import "./shop.css";
 
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
 /**
- * `revision` counts the page's asks to read again (another panel changed the account); `onChanged` tells
- * the page an opening or a chase changed it. `registry` is what the chase choice reads, the shipped one
- * unless a test passes its own (no shipped Legendary or Mythic is buyable yet).
+ * The panel. `revision` is how many times the page has asked it to read again (another panel
+ * changed the account); `onChanged` tells the page an opening or a chase changed it. `registry` is
+ * the cosmetics the chase choice reads, the shipped one unless a test passes its own (no shipped
+ * Legendary or Mythic is buyable yet).
  */
 export default function CosmeticPacks({
   token,
@@ -126,7 +124,7 @@ export default function CosmeticPacks({
           const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
           const keptOwned = cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics);
           if (keptInfo === undefined || keptCollection === undefined || keptOwned === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setInfo(keptInfo);
             setCollection(keptCollection);
@@ -158,12 +156,12 @@ export default function CosmeticPacks({
             setOwned(nextOwned);
           },
           (cause: unknown) => {
-            setError(wordsOf(cause));
+            setError(messageOf(cause));
           },
         );
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);
@@ -182,7 +180,7 @@ export default function CosmeticPacks({
         onChanged?.();
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);

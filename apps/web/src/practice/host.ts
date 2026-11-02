@@ -6,6 +6,7 @@ import { loadWasm, useLuauModule } from "../wasm/index.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
+import { messageOf } from "../net/errors.ts";
 
 export type PracticeHost = {
   request(body: PracticeRequestBody): Promise<PracticeResponse>;
@@ -23,10 +24,6 @@ const CLOSED_MESSAGE = "the practice game was closed";
 
 function failed(id: number, message: string): PracticeResponse {
   return { id, type: "failed", message };
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 function withId(body: PracticeRequestBody, id: number): PracticeRequest {

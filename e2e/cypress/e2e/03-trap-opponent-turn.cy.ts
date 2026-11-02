@@ -14,7 +14,8 @@ import {
   ts,
   zoneId,
 } from "../../support/testids.ts";
-import type { PlayerId, Side } from "../../support/types.ts";
+import type { Side } from "../../support/types.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 
 const SEED = seedFor("03-sheep-19");
 
@@ -39,16 +40,6 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 /** BUILD M5-T4 stat hooks. */
 const attackIs = (n: number): string => `[data-attack="${n}"]`;
 const healthIs = (n: number): string => `[data-health="${n}"]`;
-
-/** BUILD M5-T3: hand the hotseat to the actor. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
-      undefined,
-    );
-    if (handle.seat !== player) cy.handOver();
-  });
-}
 
 /** R82 can auto-end a turn, so advance by the §10.1 turn counter. */
 function advanceToTurn(turn: number, budget = 8): void {

@@ -9,6 +9,7 @@ import { useSyncExternalStore } from "react";
 import { isRecord } from "../wire/json.ts";
 import { AUDIO_SETTINGS_KEY, MUSIC_STATIONS } from "./constants.ts";
 import type { AudioSettings, MusicStation } from "./types.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = Object.freeze({
   master: 0.8,
@@ -78,16 +79,8 @@ function parseStored(text: string): Readonly<AudioSettings> {
   }
 }
 
-function readStoredText(): string | null {
-  try {
-    return window.localStorage.getItem(AUDIO_SETTINGS_KEY);
-  } catch {
-    return null;
-  }
-}
-
 function loadFromStorage(): Readonly<AudioSettings> {
-  const text = readStoredText();
+  const text = getStored(AUDIO_SETTINGS_KEY);
   return text === null ? DEFAULT_AUDIO_SETTINGS : parseStored(text);
 }
 
@@ -115,11 +108,8 @@ export function writeAudioSettings(patch: Partial<AudioSettings>): AudioSettings
   }
   const next = Object.freeze(parseAudioSettings(merged));
   cache = next;
-  try {
-    window.localStorage.setItem(AUDIO_SETTINGS_KEY, JSON.stringify(next));
-  } catch {
-    // Storage is unavailable or full: the change still holds for this page.
-  }
+  // Storage that refuses it (unavailable or full): the change still holds for this page.
+  setStored(AUDIO_SETTINGS_KEY, JSON.stringify(next));
   notify(next);
   return next;
 }
@@ -130,7 +120,7 @@ function installStorageListener(): void {
     const key = (event as StorageEvent).key;
     // A null key is `localStorage.clear()` in another tab; any other key is not ours.
     if (key != null && key !== AUDIO_SETTINGS_KEY) return;
-    const text = readStoredText();
+    const text = getStored(AUDIO_SETTINGS_KEY);
     const next = text === null ? DEFAULT_AUDIO_SETTINGS : parseStored(text);
     cache = next;
     notify(next);

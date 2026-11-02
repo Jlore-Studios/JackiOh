@@ -44,10 +44,10 @@ import {
   trioPracticeOnly,
 } from "./challengeChoice.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";
-import { messageOf } from "./session.ts";
 import { reloadSocial, useSocialPoll } from "./socialPoll.ts";
 import { challengeToastTestid } from "./testids.ts";
 import { MODE_WORDS, Named } from "./words.tsx";
+import { messageOf } from "../net/errors.ts";
 
 import "./together.css";
 

@@ -40,6 +40,7 @@ import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
+import { messageOf } from "../net/errors.ts";
 
 type Loaded = {
   catalog: CatalogSnapshot;
@@ -198,7 +199,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
         if (canceled || kept !== null) return;
         setScreen({
           kind: "error",
-          message: cause instanceof Error ? cause.message : String(cause),
+          message: messageOf(cause),
         });
       });
 

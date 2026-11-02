@@ -5,6 +5,7 @@ import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 
 import type { SeatLoadouts } from "../cards/loadouts.ts";
 import { t } from "../i18n/i18n.ts";
+import { messageOf } from "../net/errors.ts";
 
 /**
  * One replay, a page of steps at a time. `total` is the listing's `steps`: step 0 and one per accepted
@@ -50,7 +51,7 @@ export const REPLAY_FAILURE_TEXT: Record<Exclude<ReplayFailureReason, "error">, 
 
 export function replayFailureOf(cause: unknown): ReplayFailure {
   if (cause instanceof ReplayFailure) return cause;
-  return new ReplayFailure("error", cause instanceof Error ? cause.message : String(cause));
+  return new ReplayFailure("error", messageOf(cause));
 }
 
 export function replayFailureText(failure: ReplayFailure): string {

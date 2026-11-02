@@ -31,6 +31,7 @@ import type {
   PracticeSnapshot,
   PracticeStartConfig,
 } from "./protocol.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 // the driver (core.test.ts's, at the browser's budget)
 
@@ -57,11 +58,6 @@ function driver(env: PracticeCoreEnv = ENV): Driver {
       return response;
     },
   };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 function debugOf(d: Driver): PracticeDebug {

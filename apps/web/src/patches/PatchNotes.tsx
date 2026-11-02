@@ -2,7 +2,7 @@
 // their faces. Patches sit in their release line, the newest open (R724000), each with its player
 // note, never its record's source or notes (R724001). Public patch data only (CLAUDE.md rule 7).
 
-import { useId, useRef, useState, type ReactElement } from "react";
+import { useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
@@ -15,12 +15,13 @@ import { CardDefsProvider } from "../cards/refContext.tsx";
 import { formatDay, t } from "../i18n/i18n.ts";
 import { Skeleton, useShownAfterDelay } from "../skeleton/Skeleton.tsx";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
-import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
+import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD, RELEASE_ART_MAJOR_CYCLE_SECONDS } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
 import { cardCount, countsLine, currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
-import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, type Release } from "./releases.ts";
+import { releaseArtPath } from "./releaseArt.ts";
+import { NOTE_SECTIONS, RELEASES, majors, playerTitle, releaseGroups, technicalLines, type Release } from "./releases.ts";
 import type { Patch, PlayerNote } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -248,16 +249,41 @@ function TechnicalLog({ lines }: { lines: readonly string[] }): ReactElement | n
 
 const NO_LINES: readonly string[] = [];
 
+/**
+ * #2681: a patch's artwork (releaseArt.ts), decorative: the title above it names the patch. A major
+ * loads its `still` file, and patches.css moves the image while the system and the app's Reduce motion
+ * allow it: an image's own SVG cannot see the app's setting. Every other patch's file does not move.
+ */
+function ReleaseArtwork({ patch, major }: { patch: Patch; major: boolean }): ReactElement {
+  return (
+    <div className="patch__art" style={major ? ({ "--patch-art-cycle": `${String(RELEASE_ART_MAJOR_CYCLE_SECONDS)}s` } as CSSProperties) : undefined}>
+      <img
+        className="patch__art-img"
+        src={releaseArtPath(patch.version, major ? "still" : "animated")}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+        data-testid={patchTestid.releaseArt}
+        data-version={patch.version}
+        data-major={major ? "true" : "false"}
+      />
+    </div>
+  );
+}
+
 function PatchEntry({
   patch,
   patches,
   technical,
+  major,
   initiallyOpen,
   onOpen,
 }: {
   patch: Patch;
   patches: readonly Patch[];
   technical: readonly string[];
+  major: boolean;
   initiallyOpen: boolean;
   onOpen: OpenCard;
 }): ReactElement {
@@ -277,6 +303,7 @@ function PatchEntry({
           </time>
         </p>
       </header>
+      <ReleaseArtwork patch={patch} major={major} />
       <PlayerNoteView note={patch.player} />
       <TechnicalLog lines={technical} />
       {patch.changes.length === 0 ? (
@@ -358,6 +385,7 @@ function ReleaseBubble({
   patches,
   technical,
   opened,
+  majorVersions,
   initiallyOpen,
   onOpen,
 }: {
@@ -366,6 +394,8 @@ function ReleaseBubble({
   patches: readonly Patch[];
   technical: ReadonlyMap<string, readonly string[]>;
   opened: ReadonlySet<string>;
+  /** #2681, R1369000: the versions of the history that are majors. */
+  majorVersions: ReadonlySet<string>;
   initiallyOpen: boolean;
   onOpen: OpenCard;
 }): ReactElement {
@@ -413,6 +443,7 @@ function ReleaseBubble({
                     patch={patch}
                     patches={patches}
                     technical={technical.get(patch.version) ?? NO_LINES}
+                    major={majorVersions.has(patch.version)}
                     initiallyOpen={opened.has(patch.version)}
                     onOpen={onOpen}
                   />
@@ -437,6 +468,8 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   const log = useLoaded("technical", () => source.technical());
   const technical = technicalLines(log.status === "ready" ? log.value : []);
   const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));
+  const majorFlags = majors(patches);
+  const majorVersions = new Set(patches.filter((_patch, at) => majorFlags[at] === true).map((patch) => patch.version));
   return (
     <CardDefsProvider defs={defs.status === "ready" ? (defs.value ?? NO_DEFS) : NO_DEFS}>
       <ol className="patch-sets">
@@ -448,6 +481,7 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
               patches={patches}
               technical={technical}
               opened={opened}
+              majorVersions={majorVersions}
               initiallyOpen={at < RELEASES_OPEN_ON_LOAD}
               onOpen={setOpenId}
             />

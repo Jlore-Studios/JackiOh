@@ -12,7 +12,8 @@ import type { LeanPick } from "@jackioh/shared";
 
 import { namesCustomCard } from "../creator/useCustomCards.ts";
 import { t } from "../i18n/i18n.ts";
-import type { ModeChoice, QueueMode, SavedDeck, SavedTrio } from "../net/api.ts";
+import { isQueueMode, type ModeChoice, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export const CHALLENGE_CHOICE_KEY = "jackioh.challenge.choice";
 
@@ -82,13 +83,13 @@ export function choiceOf(
 export function readChallengeChoice(): StoredChallengeChoice {
   const none: StoredChallengeChoice = { mode: "bo1", deckId: null, trioId: null };
   try {
-    const raw = window.localStorage.getItem(CHALLENGE_CHOICE_KEY);
+    const raw = getStored(CHALLENGE_CHOICE_KEY);
     if (raw === null) return none;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return none;
     const { mode, deckId, trioId } = parsed as { mode?: unknown; deckId?: unknown; trioId?: unknown };
     return {
-      mode: mode === "bo1" || mode === "bo3" || mode === "random" ? mode : none.mode,
+      mode: isQueueMode(mode) ? mode : none.mode,
       deckId: typeof deckId === "string" ? deckId : null,
       trioId: typeof trioId === "string" ? trioId : null,
     };
@@ -108,9 +109,6 @@ export function rememberChallengeChoice(choice: ModeChoice, setsMode: boolean): 
     deckId: choice.mode === "bo1" ? choice.deckId : before.deckId,
     trioId: choice.mode === "bo3" ? choice.trioId : before.trioId,
   };
-  try {
-    window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify(next));
-  } catch {
-    // Remembering the pick is a convenience; a refusal costs nothing.
-  }
+  // Remembering the pick is a convenience; a refusal costs nothing.
+  setStored(CHALLENGE_CHOICE_KEY, JSON.stringify(next));
 }

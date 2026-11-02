@@ -8,6 +8,7 @@
 import type { PlayerView, Row } from "@jackioh/shared";
 
 import { testid, type Side } from "../game/contract.ts";
+import { placeOf } from "../game/drag/targets.ts";
 import type { PingTarget } from "../net/duos.ts";
 
 /** A pingable place on a board, as the board names it: lanes 1-based, as its zone testids count. */
@@ -27,10 +28,7 @@ export const SPOT_SELECTOR = [
   `[data-testid^="${ZONE_PREFIX}"][data-side][data-row][data-lane]`,
 ].join(", ");
 
-function sideOfAttr(value: string | null): Side | null {
-  return value === "you" || value === "opponent" ? value : null;
-}
-
+/** The spot the element is, or is inside; null for anything else on the page. */
 export function spotOfElement(element: Element | null): BoardSpot | null {
   const hit = element?.closest(SPOT_SELECTOR) ?? null;
   if (hit === null) return null;
@@ -41,11 +39,8 @@ export function spotOfElement(element: Element | null): BoardSpot | null {
   }
   if (id === testid.hero("you")) return { at: "hero", side: "you" };
   if (id === testid.hero("opponent")) return { at: "hero", side: "opponent" };
-  const side = sideOfAttr(hit.getAttribute("data-side"));
-  const row = hit.getAttribute("data-row");
-  const lane = Number(hit.getAttribute("data-lane"));
-  if (side === null || (row !== "units" && row !== "backrow") || !Number.isInteger(lane) || lane < 1) return null;
-  return { at: "zone", side, row, lane };
+  const place = placeOf(hit);
+  return place === null ? null : { at: "zone", ...place };
 }
 
 export function spotTestid(spot: BoardSpot): string {

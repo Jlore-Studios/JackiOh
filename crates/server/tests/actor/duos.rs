@@ -31,7 +31,7 @@ use jackioh_server::economy::rewards::{GameMode, game_xp};
 use jackioh_server::economy::store::{JloreGrant, JloreReason};
 
 use super::ws_server::encode_query;
-use crate::support::deps::{call, empty_test_app, record_logs};
+use crate::support::deps::{add_user, call, empty_test_app, record_logs};
 use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
 use crate::support::store::{Account, account, fake, uuid};
 

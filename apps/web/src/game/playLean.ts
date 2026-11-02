@@ -8,6 +8,7 @@
 // "newest" when on, until the first pick is written.
 
 import { LEAN_NEWEST, isLeanPick, type LeanPick } from "@jackioh/shared";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 
 export const PLAY_LEAN_SET_KEY = "jackioh.play.leanSet";
 
@@ -17,20 +18,12 @@ export const PLAY_LEAN_NEWEST_KEY = "jackioh.play.leanNewest";
 export const NO_LEAN = "";
 
 export function readPlayLean(): LeanPick | null {
-  try {
-    const stored = window.localStorage.getItem(PLAY_LEAN_SET_KEY);
-    if (stored !== null) return isLeanPick(stored) ? stored : null;
-    return window.localStorage.getItem(PLAY_LEAN_NEWEST_KEY) === "true" ? LEAN_NEWEST : null;
-  } catch {
-    return null;
-  }
+  const stored = getStored(PLAY_LEAN_SET_KEY);
+  if (stored !== null) return isLeanPick(stored) ? stored : null;
+  return getStored(PLAY_LEAN_NEWEST_KEY) === "true" ? LEAN_NEWEST : null;
 }
 
 export function writePlayLean(pick: LeanPick | null): void {
-  try {
-    window.localStorage.setItem(PLAY_LEAN_SET_KEY, pick ?? NO_LEAN);
-    window.localStorage.removeItem(PLAY_LEAN_NEWEST_KEY);
-  } catch {
-    // Remembering the pick is a convenience; a refusal costs nothing.
-  }
+  // Remembering the pick is a convenience; a refusal costs nothing.
+  if (setStored(PLAY_LEAN_SET_KEY, pick ?? NO_LEAN)) removeStored(PLAY_LEAN_NEWEST_KEY);
 }

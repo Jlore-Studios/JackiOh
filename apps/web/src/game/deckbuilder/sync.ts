@@ -35,6 +35,7 @@ import {
 import { isRecord } from "../../wire/json.ts";
 import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
 import { deckVersionsFrom } from "./deckHistory.ts";
+import { messageOf } from "../../net/errors.ts";
 
 // The shapes
 
@@ -366,7 +367,7 @@ function failureOf(cause: unknown): Failure {
     const unknownDeck = status === HTTP_CONFLICT && isRecord(details) && details.unknownDeck === true;
     return { kind: "refused", message: cause.message, unknownDeck };
   }
-  return { kind: "transient", message: cause instanceof Error ? cause.message : String(cause) };
+  return { kind: "transient", message: messageOf(cause) };
 }
 
 // The store

@@ -12,7 +12,7 @@ import {
   heroId,
   ts,
 } from "../../support/testids.ts";
-import type { PlayerId } from "../../support/types.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 
 const SEED = seedFor("04-combat-1604");
 
@@ -21,16 +21,6 @@ const healthIs = (n: number): string => `[data-health="${n}"]`;
 const maxHealthIs = (n: number): string => `[data-max-health="${n}"]`;
 const armorIs = (n: number): string => `[data-armor="${n}"]`;
 const keywordIs = (keyword: string): string => `[data-keyword="${keyword}"]`;
-
-/** BUILD M5-T3: hand the hotseat to the actor. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
-      undefined,
-    );
-    if (handle.seat !== player) cy.handOver();
-  });
-}
 
 /** Reach a §10.1 player-turn. */
 function advanceToTurn(turn: number, budget = 12): void {

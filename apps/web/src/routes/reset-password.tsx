@@ -19,9 +19,9 @@ import { resetTestid } from "../auth/testids.ts";
 import { confirmProblem, newPasswordProblem } from "../auth/validation.ts";
 import { t } from "../i18n/i18n.ts";
 import {
-  AUTH_MESSAGES,
   AuthError,
   adoptSession,
+  authMessageOf,
   refreshSession,
   sessionNearExpiry,
   updatePassword,
@@ -215,7 +215,7 @@ export default function ResetPasswordRoute(): ReactElement {
         navigate(paths.landing);
       })
       .catch((cause: unknown) => {
-        setError(cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service);
+        setError(authMessageOf(cause));
         if (cause instanceof AuthError && cause.failure === "linkExpired") setLinkSpent(true);
       })
       .finally(() => {

@@ -9,6 +9,7 @@ import { loadWasm, useLuauModule } from "../wasm/index.ts";
 import { createPracticeCore } from "./core.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeResponse } from "./protocol.ts";
+import { messageOf } from "../net/errors.ts";
 
 type PracticeWorkerScope = {
   onmessage: ((event: MessageEvent<PracticeRequest>) => void) | null;
@@ -28,7 +29,7 @@ const core = createPracticeCore({
 /** A load that fails is answered on every request as a failure: there is no game without the engine. */
 const engine: Promise<string | null> = loadWasm().then(
   () => null,
-  (cause: unknown) => `the practice engine could not be loaded: ${cause instanceof Error ? cause.message : String(cause)}`,
+  (cause: unknown) => `the practice engine could not be loaded: ${messageOf(cause)}`,
 );
 
 /** Both boot reads at once. Neither ever rejects. */
@@ -52,7 +53,7 @@ scope.onmessage = (event) => {
       try {
         await useLuauModule(luau);
       } catch (cause) {
-        const message = cause instanceof Error ? cause.message : String(cause);
+        const message = messageOf(cause);
         scope.postMessage({ id: request.id, type: "failed", message: `the custom cards' engine could not be loaded: ${message}` });
         return;
       }

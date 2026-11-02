@@ -3,7 +3,7 @@
 
 import { useSyncExternalStore } from "react";
 import { isRecord } from "../wire/json.ts";
-import { localStorageOrNull } from "../net/storage.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export type Settings = {
   dragToPlay: boolean;
@@ -78,9 +78,7 @@ export function parseSettings(raw: unknown): Settings {
 
 function loadStored(): Settings {
   try {
-    const storage = localStorageOrNull();
-    if (storage === null) return DEFAULT_SETTINGS;
-    const raw = storage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = getStored(SETTINGS_STORAGE_KEY);
     if (raw === null) return DEFAULT_SETTINGS;
     return Object.freeze(parseSettings(raw));
   } catch {
@@ -89,11 +87,8 @@ function loadStored(): Settings {
 }
 
 function persist(settings: Settings): void {
-  try {
-    localStorageOrNull()?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  } catch {
-    // Keep in-memory settings.
-  }
+  // Storage that fails leaves the in-memory settings.
+  setStored(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }
 
 function applyToDocument(settings: Settings): void {

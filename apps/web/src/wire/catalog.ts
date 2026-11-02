@@ -5,7 +5,6 @@
 // Script and Effect types live in engine/src/script.ts: they need GameState, which lives in the engine.
 
 export type PlayerId = "p1" | "p2";
-export const PLAYER_IDS = ["p1", "p2"] as const;
 
 export function opponentOf(player: PlayerId): PlayerId {
   return player === "p1" ? "p2" : "p1";

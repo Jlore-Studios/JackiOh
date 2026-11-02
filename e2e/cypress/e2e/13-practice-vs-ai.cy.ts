@@ -6,7 +6,6 @@ import { AI_DIFFICULTY } from "../../../apps/web/src/wire/engineConfig.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
   ACTION_ERROR,
-  ANIMATING,
   BOARD,
   END_TURN,
   GAME,
@@ -31,19 +30,19 @@ import {
   PRACTICE_START,
   PRACTICE_THINKING,
   PROMPT,
-  PROMPT_SUBMIT,
   RESULT_OVERLAY,
   cardId,
   handCountId,
   manaId,
   practiceDifficultyId,
   promptOf,
-  promptOptionId,
   ts,
   zoneId,
 } from "../../support/testids.ts";
 import { expectLastTurnGif, spyOnDownloads, stepForwardAndBack } from "../../support/replays.ts";
 import type { Action, Lane, PlayerId } from "../../support/types.ts";
+import { keepWholeHand, reachHumanTurn, settledThroughAiTurn } from "../../support/practice.ts";
+import { preferReducedMotion } from "../../support/tutorial.ts";
 
 /** The seed the replay, reload and save games below derive theirs from (`${SEED}:replay`, …). */
 const SEED = seedFor("13-practice-t");
@@ -59,9 +58,6 @@ const HUMAN_TURNS = 1;
 
 /** The worker loads engine, card scripts, and AI before its first answer. */
 const BOOT_TIMEOUT = 60_000;
-
-/** Bound rare cast-on-draw prompts (R58). */
-const PROMPT_BUDGET = 10;
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -158,24 +154,6 @@ function installRecorder(win: Cypress.AUTWindow): void {
   });
 }
 
-/** Reduce motion so the recorder observes every drawn view. */
-function preferReducedMotion(win: Cypress.AUTWindow): void {
-  const real = win.matchMedia.bind(win);
-  win.matchMedia = (query: string): MediaQueryList => {
-    if (query.replace(/\s+/g, "") !== "(prefers-reduced-motion:reduce)") return real(query);
-    return {
-      matches: true,
-      media: query,
-      onchange: null,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      dispatchEvent: () => false,
-    } as unknown as MediaQueryList;
-  };
-}
-
 function recorder(): Cypress.Chainable<Recorder> {
   return cy.window({ log: false }).then((win) => {
     const found = (win as unknown as PracticeWindow).__practiceRecorder;
@@ -213,84 +191,10 @@ function visitPractice(url: string, options: { reducedMotion?: boolean; download
   });
 }
 
-const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
-
-function isPicked($option: JQuery<HTMLElement>): boolean {
-  const marked = $option.closest("[aria-pressed], [data-selected]");
-  const element = marked.length > 0 ? marked : $option;
-  return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
-}
-
-/** The AI can take whole turns between board settlements. */
-function settledThroughAiTurn(): void {
-  cy.get(ANIMATING, { timeout: timeouts.game, log: false }).should("not.exist");
-}
-
-/** R9: select every mulligan card, then confirm. */
-function keepWholeHand(): void {
-  cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
-  cy.get(promptOf("mulligan")).within(() => {
-    cy.get(ANY_PROMPT_OPTION).each(($option) => {
-      if (isPicked($option)) return;
-      cy.wrap($option, { log: false }).click();
-    });
-    cy.get(ts(PROMPT_SUBMIT)).click();
-  });
-  settledThroughAiTurn();
-}
-
-function answerFirstOption(): void {
-  cy.get(PROMPT).first().within(() => {
-    cy.get(ANY_PROMPT_OPTION).first().click();
-  });
-  cy.get("body").then(($body) => {
-    const submit = $body.find(ts(PROMPT_SUBMIT));
-    if (submit.length > 0 && !submit.is(":disabled")) cy.wrap(submit.first()).click();
-  });
-  settledThroughAiTurn();
-}
-
 function opponentSide(): Cypress.Chainable<string> {
   return cy.document({ log: false }).then((doc) => {
     const sample = sampleOf(doc);
     return JSON.stringify({ max: sample.opponentMax, hand: sample.opponentHand, units: sample.opponentUnits });
-  });
-}
-
-type Waited = "turn" | "prompt" | "over";
-
-function waitForHuman(): Cypress.Chainable<Waited> {
-  return cy
-    .get("body", { timeout: timeouts.game })
-    .should(($body) => {
-      const board = $body.find(ts(BOARD));
-      const endTurn = $body.find(ts(END_TURN));
-      const myTurn =
-        board.attr("data-active") === "you" &&
-        board.attr("data-phase") === "main" &&
-        endTurn.length > 0 &&
-        !endTurn.is(":disabled");
-      const prompt = $body.find(PROMPT).length > 0;
-      const over = $body.find(ts(RESULT_OVERLAY)).length > 0;
-      expect(myTurn || prompt || over, "the human's main phase, a prompt for the human, or a result").to.eq(true);
-    })
-    .then(($body): Waited => {
-      if ($body.find(ts(RESULT_OVERLAY)).length > 0) return "over";
-      if ($body.find(PROMPT).length > 0) return "prompt";
-      return "turn";
-    });
-}
-
-function reachHumanTurn(prompts = PROMPT_BUDGET): void {
-  waitForHuman().then((waited) => {
-    expect(waited, "the game is still on when the human is due to act").to.not.eq("over");
-    if (waited === "prompt") {
-      expect(prompts, "the human's prompts run out").to.be.greaterThan(0);
-      answerFirstOption();
-      reachHumanTurn(prompts - 1);
-      return;
-    }
-    cy.settled();
   });
 }
 
@@ -375,7 +279,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     });
 
     opponentSide().then((beforeTheAiTurn) => {
-      keepWholeHand();
+      keepWholeHand(BOOT_TIMEOUT);
       reachHumanTurn();
       cy.get(ts(ACTION_ERROR)).should("not.exist");
       opponentSide().then((afterTheAiTurn) => {
@@ -479,7 +383,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
       .should("have.attr", "data-difficulty", "hard")
       .and("have.attr", "data-ai-seat", "p1");
-    keepWholeHand();
+    keepWholeHand(BOOT_TIMEOUT);
     reachHumanTurn();
 
     recorder().then((recorded) => {
@@ -534,7 +438,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   it("R668 a reload in the middle of a game picks it up on the same state", () => {
     visitPractice(practiceUrl(`${SEED}:reload`, "medium", "p2"), { reducedMotion: true });
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
-    keepWholeHand();
+    keepWholeHand(BOOT_TIMEOUT);
     reachHumanTurn();
 
     practiceHandle()
@@ -565,7 +469,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   it("R765 Save and leave keeps the game for the menu's banner, Resume picks it up on the same state, and Leave without saving keeps nothing", () => {
     visitPractice(practiceUrl(`${SEED}:save`, "medium", "p2"), { reducedMotion: true });
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
-    keepWholeHand();
+    keepWholeHand(BOOT_TIMEOUT);
     reachHumanTurn();
 
     practiceHandle()

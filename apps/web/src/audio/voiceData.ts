@@ -37,6 +37,7 @@ import rawCardAudio from "./card-audio.json5?raw";
 import rawManifest from "./voice-manifest.json";
 import voiceTextJson from "./voice-text.json";
 import { isRecord } from "../wire/json.ts";
+import { messageOf } from "../net/errors.ts";
 
 /* Parsing */
 
@@ -442,7 +443,7 @@ export function parseCardAudioText(source: string, catalog: CatalogTypes, voiceT
   try {
     raw = JSON5.parse(source);
   } catch (err) {
-    fail("(syntax)", err instanceof Error ? err.message : String(err));
+    fail("(syntax)", messageOf(err));
   }
   const twice = duplicateKeyPath(source);
   if (twice !== null) fail(twice, "written twice in one object (only the last would count)");

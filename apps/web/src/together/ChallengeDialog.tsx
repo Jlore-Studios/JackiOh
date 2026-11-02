@@ -37,9 +37,9 @@ import {
 } from "./challengeChoice.ts";
 import { followChallenge } from "./follow.ts";
 import { tabStops, useModalKeys } from "./modalKeys.ts";
-import { attempt, messageOf } from "./session.ts";
 import { challengeModeTestid, togetherTestid } from "./testids.ts";
 import { CHALLENGE_MODES, MODE_WORDS, Named } from "./words.tsx";
+import { attempt, messageOf } from "../net/errors.ts";
 
 type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
 

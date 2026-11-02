@@ -1,11 +1,13 @@
 // Vitest setup. jsdom lacks `matchMedia`, which the animation table needs (BUILD M5-T4); each test
 // starts on an empty read cache (R2125000: never on another's kept answers). The Rust engine
 // (docs/v0.3.0/SURFACE.md §10.3) loads synchronously from the bytes `scripts/build-wasm.sh` (run by
-// `pretest`) writes, as jsdom cannot fetch a file URL, before any test file is imported.
+// `pretest`) writes, as jsdom cannot fetch a file URL, before any test file is imported. A test imports
+// from here the page-state switches (`setReducedMotion`, `setVisibility`) and `readSheet` (a stylesheet
+// as text).
 
 import "@testing-library/jest-dom/vitest";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
@@ -23,6 +25,28 @@ export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 /** Flip `prefers-reduced-motion` for a test. Always reset it in an `afterEach`. */
 export function setReducedMotion(on: boolean): void {
   reducedMotion = on;
+}
+
+/**
+ * Turn the page `hidden` or `visible` for a test, as a tab switch does (#2160): `visibilityState`
+ * reads `state` and `visibilitychange` fires. A test that calls it saves the property's descriptor
+ * first and puts it back after.
+ */
+export function setVisibility(state: "hidden" | "visible"): void {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
+/**
+ * A stylesheet's text, by its path from apps/web (`src/game/animations.css`), whether vitest runs
+ * from apps/web or from the repository root (#2160). Vitest stubs CSS imports, so a test reads it.
+ */
+export function readSheet(fromWeb: string): string {
+  for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
+    const path = resolve(process.cwd(), candidate);
+    if (existsSync(path)) return readFileSync(path, "utf8");
+  }
+  throw new Error(`${fromWeb} not found from ${process.cwd()}`);
 }
 
 function matches(query: string): boolean {

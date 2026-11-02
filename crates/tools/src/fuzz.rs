@@ -16,13 +16,12 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I5 and I8 (summoning sickness and exertion,
-//! R171, and nothing after game over, R216) hold on the state each action is chosen in and on the state it
-//! produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal actions, §10.8)
-//! holds for both seats on every state, setup's included: every state under `cargo test`, every
-//! I6_GATE_STRIDE-th under the gate. I8 (no unlisted attack, switch or activation `reduce` accepts, §4.1,
-//! §4.2, §10.2) runs on every state under `cargo test`, every I8_GATE_STRIDE-th under the gate and
-//! `--handicap`.
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I12 hold on every applicable state or action
+//! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
+//! shadows chosen switches and declared attacks through each turn and stint (R49, R636). Only the costly
+//! I6 (no card a seat may not read in its view or legal actions, §10.8) and I8 (no unlisted attack, switch
+//! or activation `reduce` accepts, §4.1, §4.2, §10.2) are sampled: every state under `cargo test`, every
+//! I6_GATE_STRIDE-th or I8_GATE_STRIDE-th under the gate and `--handicap`.
 //!
 //! And after every action, GROWTH (#1254): the gate weighs it by the events `reduce` returned, the largest
 //! number on any card instance and the instances in play, prints each measure's heaviest actions (one per
@@ -79,7 +78,7 @@
 //! Hard a second start-of-turn draw with its own cast-on-draw chain, hand-cap check and fatigue step
 //! (R183). This wave plays the same random-policy games with one seat handicapped, rotating by seed over
 //! Medium and Hard and over both seats, through the gate's own loop (`GameSetup` names the streams and
-//! the handicaps, `run_seed` plays and checks), under the same checks: invariants (I1–I8), growth
+//! the handicaps, `run_seed` plays and checks), under the same checks: invariants (I1–I12), growth
 //! weighing, probes and the serialization checkpoint, with a log that folds back, handicaps included,
 //! to the live hash. A failure names its tier and seat in the example line and prints both decks.
 //!

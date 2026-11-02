@@ -21,6 +21,7 @@ import {
   type LessonScript,
   type StepOutcome,
 } from "./coach.ts";
+import { aimsAtOwnSide, bestPlay } from "./advice.ts";
 import { lessonById, type TutorialLesson } from "./lessons.ts";
 import { scriptFor } from "./scripts/index.ts";
 import { heroTargetId, myMain, mulliganOpen } from "./steps.ts";
@@ -84,19 +85,7 @@ function isPlay(action: ActionBody): action is Extract<ActionBody, { type: "play
   return action.type === "play";
 }
 
-function hitsOwnSide(view: PlayerView, action: Extract<ActionBody, { type: "play" }>): boolean {
-  const own = new Set<string>();
-  for (const unit of view.you.units) if (unit !== null) own.add(unit.instanceId);
-  for (const card of view.you.backrow) if (card !== null && !card.faceDown) own.add(card.instanceId);
-  return (action.targets ?? []).some(
-    (target) =>
-      (target.pick === "instance" && own.has(target.instanceId)) ||
-      (target.pick === "hero" && target.player === view.viewer) ||
-      (target.pick === "zone" && target.player === view.viewer && target.row === "backrow"),
-  );
-}
-
-/** Beginner fallback: play safely, then attack and end. */
+/** Beginner fallback: keep, resolve prompts, play safely, then attack and end. */
 export function autopilot(ctx: CoachCtx): ActionBody | null {
   const { view, legal } = ctx;
   if (mulliganOpen(view)) {
@@ -110,11 +99,7 @@ export function autopilot(ctx: CoachCtx): ActionBody | null {
   }
   if (!myMain(ctx)) return null;
 
-  const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
-  const costOf = (instanceId: string): number => hand.find((card) => card.instanceId === instanceId)?.cost ?? 0;
-  const plays = legal.filter(isPlay).filter((action) => !hitsOwnSide(view, action));
-  plays.sort((a, b) => costOf(b.instanceId) - costOf(a.instanceId));
-  const play = plays[0];
+  const play = bestPlay(ctx);
   if (play !== undefined) return play;
 
   const hero = heroTargetId(view, "opponent");
@@ -166,7 +151,7 @@ export function reckless(ctx: CoachCtx): ActionBody | null {
   const cardOf = (instanceId: string) => hand.find((card) => card.instanceId === instanceId);
   const plays = legal
     .filter(isPlay)
-    .filter((action) => !hitsOwnSide(view, action))
+    .filter((action) => !aimsAtOwnSide(ctx, action))
     .filter((action) => {
       const card = cardOf(action.instanceId);
       return card === undefined || !protective(ctx.defOf?.(card.defId));

@@ -13,11 +13,13 @@ import {
   buyChase,
   buyPack,
   getPacks,
+  isQueueMode,
   openCosmeticPack,
   openPack,
   redeemCardToken,
   redeemCode,
   redeemCosmeticToken,
+  roomModeOf,
 } from "./api.ts";
 import { spendOutNow } from "./spending.ts";
 import { jsonResponse } from "../test/stubServer.ts";
@@ -58,6 +60,20 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe("isQueueMode", () => {
+  it("names the three queue modes and nothing else (#2160)", () => {
+    for (const mode of ["bo1", "bo3", "random"]) expect(isQueueMode(mode)).toBe(true);
+    for (const value of ["bo5", "", "BO1", null, undefined, 1, { mode: "bo1" }]) expect(isQueueMode(value)).toBe(false);
+  });
+
+  it("is what roomModeOf reads a mode-mismatch refusal's mode with", () => {
+    const refusal = (mode: unknown): ApiRequestError => new ApiRequestError(409, { code: "conflict", message: "", details: { mode } });
+    expect(roomModeOf(refusal("bo3"))).toBe("bo3");
+    expect(roomModeOf(refusal("bo5"))).toBeNull();
+    expect(roomModeOf(new Error("conflict"))).toBeNull();
+  });
 });
 
 describe("R2124000 a spend runs once", () => {

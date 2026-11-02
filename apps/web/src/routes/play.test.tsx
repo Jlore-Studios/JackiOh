@@ -57,6 +57,7 @@ import PlayRoute, {
   queuedStatus,
   roomLinkStatus,
 } from "./play.tsx";
+import { setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -246,10 +247,6 @@ describe("the lobby's match watch", () => {
 
   it("a woken page reads the wait again at once, and a hidden tab reads nothing", async () => {
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     /** Lets a read that has been answered reach its handler and clear its in-flight mark. */
     const settled = async (): Promise<void> => {
       await act(async () => {
@@ -264,11 +261,11 @@ describe("the lobby's match watch", () => {
       });
       await settled();
 
-      show("hidden");
+      setVisibility("hidden");
       await settled();
       expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
 
-      show("visible");
+      setVisibility("visible");
       await waitFor(() => {
         expect(vi.mocked(getMe)).toHaveBeenCalledTimes(2);
       });
@@ -277,7 +274,7 @@ describe("the lobby's match watch", () => {
 
       // Paired while the tab slept: the wake finds the match and takes the player there.
       vi.mocked(getMe).mockResolvedValue(me("match-42"));
-      show("visible");
+      setVisibility("visible");
       expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
       await waitFor(
         () => {

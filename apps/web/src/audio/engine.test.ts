@@ -33,7 +33,14 @@ import {
   SFX_DUCK_RELEASE_TC_S,
   SFX_VOICE_DUCK_GAIN,
 } from "./constants.ts";
-import { audibleSpan, createAudioEngine, getAudioEngine, setAudioEngineForTests, type AudioEngineOptions } from "./engine.ts";
+import {
+  audibleSpan,
+  createAudioEngine,
+  fetchAudioBytes,
+  getAudioEngine,
+  setAudioEngineForTests,
+  type AudioEngineOptions,
+} from "./engine.ts";
 import { LIMITER } from "./mix.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { SFX, SFX_IDS } from "./sfx.ts";
@@ -233,6 +240,21 @@ afterEach(() => {
 });
 
 /* B1 and B3: before a gesture, and with no Web Audio at all */
+
+describe("fetchAudioBytes", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reads a file's bytes, and a refusal throws naming who asked (#2160)", async () => {
+    const bytes = new ArrayBuffer(4);
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.resolve(new Response(bytes, { status: 200 }))));
+    expect((await fetchAudioBytes("/a.ogg")).byteLength).toBe(4);
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.resolve(new Response(null, { status: 404 }))));
+    await expect(fetchAudioBytes("/a.ogg")).rejects.toThrow("audio: GET /a.ogg answered 404");
+    await expect(fetchAudioBytes("/m.ogg", "music")).rejects.toThrow("music: GET /m.ogg answered 404");
+  });
+});
 
 describe("B1 nothing exists before the first gesture", () => {
   it("B1 builds no AudioContext, refuses every cue and logs nothing until unlock()", async () => {

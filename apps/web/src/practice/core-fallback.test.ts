@@ -11,6 +11,7 @@ import type { ActionBody, PlayerId } from "@jackioh/shared";
 
 import { createPracticeCore } from "./core.ts";
 import type { PracticeDebug, PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeSnapshot } from "./protocol.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 type Mode = "real" | "null" | "throw" | "illegal" | "concede";
 
@@ -58,11 +59,6 @@ function driver(): Driver {
       return core.handle({ id, ...body } as PracticeRequest);
     },
   };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 function debugOf(d: Driver): PracticeDebug {

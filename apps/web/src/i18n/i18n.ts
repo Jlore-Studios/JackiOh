@@ -11,6 +11,7 @@
 // Never call `t()` at module scope: it would freeze the language the module loaded in.
 
 import { useSyncExternalStore } from "react";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 
 /** A plural entry: `other` always, and the CLDR categories the language needs (`one`, `few`, …). */
 export type PluralEntry = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
@@ -248,11 +249,8 @@ export function countLocaleVisit(): void {
 
 /** A language change: the count starts again and the button is back (R1916000). */
 function restartLocaleVisits(): void {
-  try {
-    window.localStorage.setItem(LOCALE_VISITS_STORAGE_KEY, "0");
-  } catch {
-    // Storage is unavailable: nothing was counted.
-  }
+  // Storage that is unavailable counted nothing.
+  setStored(LOCALE_VISITS_STORAGE_KEY, "0");
   setSettled(false);
 }
 
@@ -266,19 +264,12 @@ export function useLocaleSettled(): boolean {
 }
 
 function readStored(): Locale | null {
-  try {
-    return parseLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
-  } catch {
-    return null;
-  }
+  return parseLocale(getStored(LOCALE_STORAGE_KEY));
 }
 
 function persist(locale: Locale): void {
-  try {
-    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
-  } catch {
-    // Storage is unavailable or full: the choice still holds for this page.
-  }
+  // Storage that is unavailable or full: the choice still holds for this page.
+  setStored(LOCALE_STORAGE_KEY, locale);
 }
 
 async function apply(locale: Locale, remember: boolean): Promise<Locale> {
@@ -327,11 +318,7 @@ export function initLocale(): Promise<Locale> {
 
 /** Forgets this device's choice, back to what a first visit picks, and starts the count again (R1916000): the settings panel's reset. */
 export function resetLocale(): Promise<Locale> {
-  try {
-    window.localStorage.removeItem(LOCALE_STORAGE_KEY);
-  } catch {
-    // Storage is unavailable: nothing was kept.
-  }
+  removeStored(LOCALE_STORAGE_KEY);
   restartLocaleVisits();
   return initLocale();
 }

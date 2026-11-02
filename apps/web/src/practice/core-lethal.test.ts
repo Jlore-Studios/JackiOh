@@ -12,7 +12,8 @@ import { PRACTICE_LETHAL_HINT_CLOCK_MS } from "./config.ts";
 import { createPracticeCore } from "./core.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
-import type { PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
+import type { PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeStartConfig } from "./protocol.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 type Mode = "real" | "yes" | "throw";
 
@@ -50,11 +51,6 @@ function driver(now = 0): Driver {
       return core.handle({ id, ...body } as PracticeRequest);
     },
   };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 function config(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {

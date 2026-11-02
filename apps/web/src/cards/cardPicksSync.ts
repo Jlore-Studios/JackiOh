@@ -7,11 +7,9 @@
 // one's cache. A failed request throws nothing into React, changes nothing here and lists no profile,
 // so the next sign-in tries again.
 
-import { useEffect, useRef } from "react";
-
 import { getCardPicks, putCardPick, uploadCardPicks, type CardPicksEntry, type CardPicksResponse, type CardPickPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { SETTINGS_SYNC_GRACE_MS } from "../settings/accountSync.ts";
+import { SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
 import { isRecord } from "../wire/json.ts";
 import {
   readAllCardPicks,
@@ -20,6 +18,7 @@ import {
   type CardPickChange,
   type StoredCardPicks,
 } from "./cosmetics.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 /** R1834000: the profiles whose account copy has replaced this device's picks, a JSON list of profile ids. */
 export const CARD_PICKS_UPLOADED_KEY = "jackioh.cosmetics.cards.uploaded.v1";
@@ -47,7 +46,7 @@ export type CardPicksAccountSync = {
 /** The profiles listed under CARD_PICKS_UPLOADED_KEY; none where storage is missing, blocked or unparsable. */
 function uploadedProfiles(): string[] {
   try {
-    const raw: unknown = JSON.parse(window.localStorage.getItem(CARD_PICKS_UPLOADED_KEY) ?? "[]");
+    const raw: unknown = JSON.parse(getStored(CARD_PICKS_UPLOADED_KEY) ?? "[]");
     return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : [];
   } catch {
     return [];
@@ -55,11 +54,8 @@ function uploadedProfiles(): string[] {
 }
 
 function markUploaded(profileId: string): void {
-  try {
-    window.localStorage.setItem(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
-  } catch {
-    // Storage refused: the next sign-in may send the picks again, which overwrites nothing on the account.
-  }
+  // Storage that refuses it: the next sign-in may send the picks again, which overwrites nothing on the account.
+  setStored(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
 }
 
 /** The account's answer as the store's input, card id to picks; an answer of another shape is a failed request. */
@@ -208,21 +204,7 @@ function attach(profileId: string, token: () => string, api: () => CardPicksAcco
 
 /** R1834000: an active account's per-card picks are kept level with this device's, on every gated screen. */
 export function useCardPicksAccountSync(account: Account, api: CardPicksAccountApi = cardPicksAccountApi): void {
-  const active = account.kind === "ready" && account.me.profile.status === "active";
-  const profileId = active ? account.me.profile.id : null;
-  const token = useRef<string>("");
-  token.current = active ? account.token : "";
-  const requests = useRef(api);
-  requests.current = api;
-
-  useEffect(() => {
-    if (profileId === null) return;
-    return attach(
-      profileId,
-      () => token.current,
-      () => requests.current,
-    );
-  }, [profileId]);
+  useAccountSync(account, api, attach);
 }
 
 /** Test seam: a new page, with no sync running. */

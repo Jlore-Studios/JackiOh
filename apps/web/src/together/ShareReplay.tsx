@@ -14,8 +14,8 @@ import { paths } from "../net/navigate.ts";
 import { getFriends, getReplayShares, shareReplay, unshareReplay, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { attempt, messageOf } from "./session.ts";
 import { shareTestid } from "./testids.ts";
+import { attempt, messageOf } from "../net/errors.ts";
 
 import "./together.css";
 

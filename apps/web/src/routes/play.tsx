@@ -31,6 +31,7 @@ import {
   getOpenRooms,
   getOwnRank,
   getPopulation,
+  isQueueMode,
   joinRoom,
   roomModeOf,
   type ModeChoice,
@@ -53,7 +54,8 @@ import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { deckPracticeOnly, practiceOnlyLabel, trioPracticeOnly } from "../together/challengeChoice.ts";
-import { attempt, messageOf } from "../together/session.ts";
+import { attempt, messageOf } from "../net/errors.ts";
+import { getStored, setStored } from "../net/storage.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -150,13 +152,9 @@ const LOADOUT_INVALID = "loadout_invalid";
 
 type StoredChoice = { mode?: QueueMode; deckId?: string; trioId?: string };
 
-function isQueueMode(value: unknown): value is QueueMode {
-  return value === "bo1" || value === "bo3" || value === "random";
-}
-
 function readStoredChoice(): StoredChoice {
   try {
-    const raw = window.localStorage.getItem(PLAY_CHOICE_KEY);
+    const raw = getStored(PLAY_CHOICE_KEY);
     if (raw === null) return {};
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
@@ -172,11 +170,8 @@ function readStoredChoice(): StoredChoice {
 }
 
 function writeStoredChoice(choice: StoredChoice): void {
-  try {
-    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify(choice));
-  } catch {
-    // Remembering the choice is a convenience; a refusal costs nothing.
-  }
+  // Remembering the choice is a convenience; a refusal costs nothing.
+  setStored(PLAY_CHOICE_KEY, JSON.stringify(choice));
 }
 
 // Lobby reads

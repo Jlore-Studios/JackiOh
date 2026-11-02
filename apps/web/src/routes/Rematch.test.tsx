@@ -13,6 +13,7 @@ import { navigate, paths } from "../net/navigate.ts";
 import { rematchOffer, rematchStatus, type RematchOfferResponse, type RematchStatusResponse } from "../net/api.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
 import RematchButtons, { RematchWatcher, rematchTestid } from "./Rematch.tsx";
+import { setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -313,10 +314,6 @@ describe("RematchWatcher", () => {
 
   it("a woken page reads the rematch status again at once, with no second read while one is pending", async () => {
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     /** Lets an answered read reach its handler and clear its in-flight mark. */
     const settled = async (): Promise<void> => {
       await act(async () => {
@@ -334,7 +331,7 @@ describe("RematchWatcher", () => {
       expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(1);
 
       // The mount's read is still out: neither kind of wake adds one.
-      show("visible");
+      setVisibility("visible");
       window.dispatchEvent(new Event("online"));
       await settled();
       expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(1);
@@ -344,7 +341,7 @@ describe("RematchWatcher", () => {
       expect(vi.mocked(navigate)).not.toHaveBeenCalled();
 
       // A hidden tab reads nothing; the network coming back reads once.
-      show("hidden");
+      setVisibility("hidden");
       await settled();
       expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(1);
       window.dispatchEvent(new Event("online"));
@@ -356,7 +353,7 @@ describe("RematchWatcher", () => {
 
       // The offers met while the tab slept: the wake finds the game and takes the seat there.
       vi.mocked(rematchStatus).mockResolvedValue(statusOf({ youOffered: 1, opponentOffer: 1, matchId: "match-9" }));
-      show("visible");
+      setVisibility("visible");
       await waitFor(() => {
         expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.match("match-9"));
       });

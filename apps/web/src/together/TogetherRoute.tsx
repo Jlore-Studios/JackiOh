@@ -44,10 +44,11 @@ import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
-import { attempt, messageOf, usePolled } from "./session.ts";
+import { usePolled } from "./session.ts";
 import { noteFriends, reloadSocial, useSocialPoll } from "./socialPoll.ts";
 import { togetherTestid } from "./testids.ts";
 import { MODE_WORDS, Named } from "./words.tsx";
+import { attempt, messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
 import "../routes/lobby.css";

@@ -26,14 +26,14 @@ import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { nextStepWords, shopTestid, tokenPoolIds, unownedCards } from "./shop.ts";
+import { messageOf } from "../net/errors.ts";
 import "../game/deckbuilder/deckbuilder.css";
 import "./shop.css";
 
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
-/** `revision` counts the page's asks to read again; `onChanged` tells it a redemption changed the account. */
+/**
+ * The panel. `revision` is how many times the page has asked it to read again (another panel
+ * changed the account); `onChanged` tells the page a redemption changed it.
+ */
 export default function TokenPicker({
   token,
   revision = 0,
@@ -75,7 +75,7 @@ export default function TokenPicker({
           const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
           const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
           if (keptBars === undefined || keptCollection === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setBars(keptBars);
             setCollection(keptCollection);
@@ -103,12 +103,12 @@ export default function TokenPicker({
             setCollection(next);
           },
           (cause: unknown) => {
-            setError(wordsOf(cause));
+            setError(messageOf(cause));
           },
         );
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);

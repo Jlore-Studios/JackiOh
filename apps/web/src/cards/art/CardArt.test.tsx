@@ -10,6 +10,7 @@ import type { CardDef } from "@jackioh/shared";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { CardDefsProvider } from "../refContext.tsx";
 import { CardArt, artUrl, themeFor, type ArtManifest, type ArtShape, type CardArtProps } from "./index.ts";
+import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 
 afterEach(cleanup);
 
@@ -213,5 +214,26 @@ describe("R503: CardArt draws the card's motif", () => {
     const art = renderArt("classic-036", { manifest: { "classic-036": { base: true } }, name: "Burn" });
     expect(art.getAttribute("data-art")).toBe("real");
     expect(art.hasAttribute("data-art-motif")).toBe(false);
+  });
+});
+
+describe("#2681: proceduralCardArtUri", () => {
+  it("#2681 proceduralCardArtUri matches CardArt's generated source for every art family", () => {
+    // Core's (R503), Stinkyscape's (R2170000), Training Grounds' own (R2202000) and a Legacy card's, which
+    // wears its Core card's picture read by the Core card's name (R2511000).
+    const ids = ["core-002", "classic-036", "stinkyscape-001", "traininggrounds-001", "traininggrounds-041"];
+    for (const id of ids) {
+      const card = def(id);
+      for (const radiant of [false, true]) {
+        const art = renderArt(id, { manifest: {}, name: card.name, radiant });
+        expect(art.getAttribute("data-art"), id).toBe("procedural");
+        expect(backgroundOf(art), `${id} ${radiant ? "radiant" : "base"}`).toContain(proceduralCardArtUri(card, radiant));
+        cleanup();
+      }
+    }
+    // The families really differ, so the loop above compares four different pictures per face.
+    const uris = new Set(ids.map((id) => proceduralCardArtUri(def(id), false)));
+    expect(uris.size).toBe(ids.length - 1);
+    expect(proceduralCardArtUri(def("traininggrounds-041"), true)).toBe(proceduralCardArtUri(def("core-002"), true));
   });
 });

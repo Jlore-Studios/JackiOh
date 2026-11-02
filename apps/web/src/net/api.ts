@@ -1022,6 +1022,11 @@ export async function putPlayerSettings(
 
 export type QueueMode = "bo1" | "bo3" | "random";
 
+/** Whether an untrusted value (a stored pick, a link, a server answer) names a queue mode. */
+export function isQueueMode(value: unknown): value is QueueMode {
+  return value === "bo1" || value === "bo3" || value === "random";
+}
+
 /**
  * What a queue ticket or a room is made with. `leanSet` is the "More cards from" pick for the dealt
  * deck (R1372, R924000), sent only when there is one: the server resolves "newest" and deals.
@@ -1106,7 +1111,7 @@ export function roomModeOf(error: unknown): QueueMode | null {
   const details = error.details;
   if (typeof details !== "object" || details === null) return null;
   const mode = (details as { mode?: unknown }).mode;
-  return mode === "bo1" || mode === "bo3" || mode === "random" ? mode : null;
+  return isQueueMode(mode) ? mode : null;
 }
 
 // The Conquest series (SPEC §9.5, R330–R336). The server's projection for the caller: the other

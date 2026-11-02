@@ -1,105 +1,40 @@
-// The card presentation module's one public door (docs/polish/6-cards.md, Surface).
-// Everything outside `src/cards/` imports from here. Inside `src/cards/`, files import each other
-// by path and never through this barrel, so it cannot create an import cycle.
+// The card presentation module's barrel (docs/polish/6-cards.md, Surface): only the names code outside
+// `src/cards/` takes through it, which may also import a `cards/` module by path. Inside `src/cards/`,
+// files import each other by path, never through this barrel, so it cannot create an import cycle.
 
 export { ALL_TRIBES, faceModel } from "./model.ts";
-export type { FaceCost, FaceModel, FaceSource, FaceStats, FaceText, InPlay, StatTone } from "./model.ts";
+export type { FaceModel, InPlay } from "./model.ts";
 
-// The three marks on a face's text (SPEC §10.10): the Radiant diff (R277), references (R279) and,
-// through FaceModel.values, what a formula comes to now (R280).
-export { markedText, radiantMarks } from "./radiantDiff.ts";
-export type { TextRange } from "./radiantDiff.ts";
-export { findRefs, namesOf } from "./refs.ts";
-export type { RefMatch } from "./refs.ts";
-export { CardDefsProvider, RefsInteractive, useDefResolver } from "./refContext.tsx";
-export type { DefResolver } from "./refContext.tsx";
-export { CardRef, REF_TOOLTIP_TESTID } from "./CardRef.tsx";
+export { CardDefsProvider } from "./refContext.tsx";
 export { TERM_TOOLTIP_TESTID, TermTips } from "./TermTip.tsx";
-export { RulesText } from "./RulesText.tsx";
 
 // What a face in play prints where play and print part ways (SPEC §10.10).
-export {
-  CONCEALED_TAG,
-  CONCEALED_TEXT,
-  CONCEALED_TEXT_LOUD,
-  HEROIC_POWER_ID,
-  POWER_WORDS,
-  VANILLA_TEXT,
-  concealedInPlay,
-  concealedText,
-  powerText,
-  powerTitle,
-} from "./inPlay.ts";
+export { CONCEALED_TEXT, POWER_WORDS, VANILLA_TEXT } from "./inPlay.ts";
 export type { RolledPower } from "./inPlay.ts";
 
-export {
-  ASCENT_LABEL,
-  LONG_FACES,
-  MORE,
-  SHORT_FORMS,
-  SUMMIT_DEF_ID,
-  ascentLevelOf,
-  cutText,
-  faceLines,
-  overLimit,
-  shortFormOf,
-  summitShortText,
-} from "./shortText.ts";
-export type { ShortForm, TextLimit } from "./shortText.ts";
+export { LONG_FACES, ascentLevelOf } from "./shortText.ts";
 
 export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";
-export type { GlossaryEntry, GlossaryTermId, StatusTermId, TriggerTermId, VerbTermId } from "./glossary.ts";
 
-export { glossaryFor, termsIn, tokenizeRules } from "./rules.ts";
-export type { RulesToken } from "./rules.ts";
+export { FACE_ASPECT } from "./constants.ts";
 
-export { nameTier, textTier, useFitText } from "./fit.ts";
-export type { LengthTier } from "./fit.ts";
-
-export {
-  FACE_ASPECT,
-  FACE_TEXT_LIMIT,
-  FACE_TEXT_MIN_HEIGHT_PX,
-  FIT_MIN,
-  REF_HOVER_DELAY_MS,
-  REF_PANEL_FACE_HEIGHT_PX,
-  REF_TOOLTIP_HEIGHT_PX,
-  FIT_STEPS,
-  NAME_TIER_MAX,
-  PREVIEW_TEXT_LIMIT,
-  TEXT_TIER_MAX,
-  TIER_SCALE,
-} from "./constants.ts";
-
+// E21: a backrow pile's depth, which game/Backrow.tsx draws beside the card.
 export { PileDepth } from "./CardStates.tsx";
 
-// #124: the card wheel and the Stack pile sheet around it.
-export { default as CardWheel, wheelTestid, WHEEL_SWIPE_PX } from "./wheel/CardWheel.tsx";
-export type { CardWheelProps, WheelItem } from "./wheel/CardWheel.tsx";
-export {
-  default as StackSheet,
-  STACK_NOTES,
-  STACK_TITLE,
-  STACK_UNKNOWN_NAME,
-  stackItems,
-  stackTestid,
-} from "./wheel/StackSheet.tsx";
-export type { StackSheetProps } from "./wheel/StackSheet.tsx";
-
 export { CardFace, faceText } from "./CardFace.tsx";
-export type { CardFaceProps, RulesBox } from "./CardFace.tsx";
+export { RulesText } from "./RulesText.tsx";
 export { MinionFace } from "./MinionFace.tsx";
-export type { MinionFaceProps } from "./MinionFace.tsx";
 export { CardBack } from "./CardBack.tsx";
 export { Icon } from "./icons.tsx";
 export type { IconName } from "./icons.tsx";
 
 // R370, R371: the words a face-down backrow card is drawn with.
-export { FACE_DOWN_HINT, FACE_DOWN_TAG, FACE_DOWN_TITLE, REVEAL_AT_LABEL, REVEAL_AT_NOTE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
+export { FACE_DOWN_TAG, REVEAL_AT_LABEL, REVEAL_AT_NOTE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
 
-export { ART_MANIFEST, CardArt, artUrl } from "./art/index.ts";
-export type { ArtManifest, ArtShape } from "./art/index.ts";
+// Slice A: art.
+export { CardArt } from "./art/index.ts";
 
+// Slice C: inspect.
 export {
   CardDetail,
   CardListPreview,
@@ -114,12 +49,8 @@ export {
   INSPECT_FACE_DOWN,
   INSPECT_FACE_DOWN_COST,
   INSPECT_FACE_RADIANT,
-  INSPECT_GLOSSARY,
   INSPECT_HOVER,
   INSPECT_PRINTED,
-  INSPECT_REFS,
-  INSPECT_FLAVOUR,
-  INSPECT_ARTIST,
   INSPECT_LIST_BACK,
   INSPECT_LIST_CARD,
   INSPECT_LIST_COUNT,
@@ -128,30 +59,12 @@ export {
   INSPECT_LIST_MORE,
   INSPECT_LIST_SHEET,
   INSPECT_NOTE,
-  INSPECT_SCRIM,
   INSPECT_SHEET,
   INSPECT_KEY_SHORTCUT,
   isInspectKey,
   useInspectTrigger,
 } from "./inspect/index.ts";
-export type {
-  CardDetailProps,
-  CardListEntry,
-  CardListProps,
-  InspectBindings,
-  InspectOptions,
-  InspectOverlayState,
-  InspectRenderSubject,
-  InspectSubject,
-} from "./inspect/index.ts";
+export type { CardListEntry, InspectOverlayState, InspectRenderSubject, InspectSubject } from "./inspect/index.ts";
 
-export {
-  CARD_SETTINGS_DEFAULTS,
-  CARD_SETTINGS_FIELDS,
-  CARD_SETTINGS_KEY,
-  readCardSettings,
-  subscribeCardSettings,
-  useCardSettings,
-  writeCardSettings,
-} from "./settings.ts";
-export type { CardSettings } from "./settings.ts";
+// Slice C: card settings, which task 7's panel mounts at integration.
+export { CARD_SETTINGS_DEFAULTS, useCardSettings, writeCardSettings } from "./settings.ts";

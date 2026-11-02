@@ -74,6 +74,7 @@ import type {
   PracticeSnapshot,
   PracticeStartConfig,
 } from "./protocol.ts";
+import { messageOf } from "../net/errors.ts";
 
 export type PracticeCoreEnv = {
   /**
@@ -132,10 +133,6 @@ function isForbiddenAiAction(action: ActionBody): boolean {
   // sandbox's tools are the human's alone (`legalActions` never lists one; this gate holds it twice).
   if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote" || action.type === "sandbox") return true;
   return action.type === "answerDraw" && action.accept;
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /**
