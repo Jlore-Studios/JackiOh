@@ -13348,16 +13348,25 @@
       }
     },
     "2838": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "c0b979042a1e1e2bbd4edd1770090fa9048cc7a1": 1
       },
+      "ci_run_id": 41477094505,
+      "ci_sha": "c0b979042a1e1e2bbd4edd1770090fa9048cc7a1",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T14:24:25Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2788,
       "kind": "revise",
-      "queued_at": "2026-11-02T16:00:10Z",
+      "pending_request": false,
+      "queued_at": "2026-11-02T16:13:26Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
