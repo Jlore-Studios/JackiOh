@@ -15092,11 +15092,11 @@
     "what": "revise #2815 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-02T07:21:23Z",
+    "at": "2026-11-02T07:29:39Z",
     "notes": [
-      "delivered revise #2770 on muse (run 41401329121): approved",
-      "delivered revise #2807 on claude-2 (run 41396281980): approved",
-      "started review #2770 on claude-7 (run 41405972275)",
+      "delivered review #2770 on claude-7 (run 41405972275): reviewed",
+      "delivered review #2815 on claude-3 (run 41405003937): reviewed",
+      "started revise #2815 on muse (run 41406860105)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -15804,7 +15804,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T07:21:23Z",
+  "loop_tick": "2026-11-02T07:29:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
