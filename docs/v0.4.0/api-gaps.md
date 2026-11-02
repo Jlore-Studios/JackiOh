@@ -2,14 +2,14 @@
 
 > **Superseded for official cards by v0.5.0 ([#902](https://github.com/Jlore-Studios/JackiOh/issues/902)):** every official card is a Rust script again ([README.md](README.md) §8). This list is kept as the record of the port, and for the Luau host custom cards use.
 
-Part 6 of 29 (#448): what `cargo jackioh luau surface` lists (all 447 catalog
+Part 6 of 29 (#448): the engine API the card scripts called (all 447 catalog
 cards, Meditative included; 45 hook types, 176 verbs, 151 readers, 4 pools, 2
 unclassified names) minus what the Luau API binds — and, for each leftover, why it
 waits and which cards stay in Rust because of it. The batches read this to know
 what they can port and what they must leave.
 
-Regenerate the input with `cargo jackioh luau surface --json` (printed, never
-committed). Surface names are Rust names; the Luau spelling mangles `::` to `_`
+`cargo jackioh luau surface`, which listed that API card by card, was retired by #2579; the numbers here are part 6's.
+Names here are Rust names; the Luau spelling mangles `::` to `_`
 (`subsystems::activation_paid` is `ctx:subsystems_activation_paid(...)`).
 
 Part 28 (#464) fixed fifteen gaps (the last section). #442's reconcile brought
@@ -17,7 +17,7 @@ the file up to date with batches 11–19 (parts 19–27), which ran on the fixed
 API: every card they ported is off the lists below, and the gaps they found are
 "Open gaps the batches found after part 28". Each status was checked against
 `crates/luau/src/` by grep. The counts (hooks, verbs, readers, cards per name)
-are still part 6's: `luau surface` was not re-run for this update. Which
+are still part 6's. Which
 cards stay in Rust, and why, is `README.md` §4; this file is the API's side.
 
 ## Verbs: no gaps
@@ -324,9 +324,9 @@ forms — `PORTING.md` §5's first reason no longer holds for them.
 5. **`given_lucky_on`** (`ctx:given_lucky_on(card)`;
    `gap5_6_7_9_12_readers_events_config_chance_and_nil`). Granted-only Lucky
    (R1438); takes an id string or an instance table. Example:
-   `if ctx:given_lucky_on(ctx:live_self()) > 0 then ... end`. `cargo jackioh
-   luau surface` counts a bare function name passed as a value, so
-   `map_or(0, given_lucky_on)` is reported.
+   `if ctx:given_lucky_on(ctx:live_self()) > 0 then ... end`. Part 6's survey
+   counted a bare function name passed as a value, so
+   `map_or(0, given_lucky_on)` was reported.
 6. **The action's events reader** (`ctx:events()`; same test). This script's
    own window onto the action's events (R136), `events[events_from..]`;
    `ctx:events_from()` names its start. Example: `for _, e in ipairs(ctx:events()) do ... end`.
