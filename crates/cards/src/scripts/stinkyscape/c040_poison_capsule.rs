@@ -4,7 +4,6 @@
 //! "End of turn: Deal {damage} damage to all enemies for each Plague Counter on this."
 //! (damage 1; R1860001, R1860002).
 //!
-//! Engine: Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned
 //! first if they have none (R1852000). Cry (R1): R689's placement, `place_plague_tokens`: the
 //! counters all on the one permanent a single prompt names, either side, face-down cards included,
 //! this one among them; on another permanent they do nothing for it. End of turn (R62): one hit of
@@ -51,11 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #40 Poison Capsule — SPEC §8.10 row 40, BUILD M12 row S 40: "Cry asks one permanent
-// and places 2 Plague Counters on it (R689), this one or another; at its controller's end of turn
-// the enemy hero and every enemy Unit take one hit of 1 per counter on it; with none on it,
-// nothing; counters on another permanent add nothing; counters and damage read through `param()`;
-// radiant 4/4 and 4 counters".
+// Stinkyscape #40 Poison Capsule — SPEC §8.10 row 40, BUILD M12 row S 40 (R689).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,7 +64,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    /// The amounts of the `damage` events from `source`, in order.
     fn hits_from(s: &Scenario, source: &str) -> Vec<i32> {
         s.events()
             .iter()
@@ -138,7 +132,6 @@ mod tests {
             let me = s.card(CAPSULE).id.clone();
             s.end_turn();
 
-            // One hit of 2 on each of the two enemy Units and the enemy hero, nothing else.
             assert_eq!(hits_from(&s, &me), vec![2, 2, 2]);
             s.expect_health(PlayerId::P2, 28);
             assert_eq!(s.unit(PlayerId::P2, 1).expect("lane 1").damage, 2);
@@ -177,7 +170,6 @@ mod tests {
             let me = s.card(CAPSULE).id.clone();
             s.end_turn();
 
-            // The 9 foreign counters change nothing: one hit of 2 per enemy.
             assert_eq!(hits_from(&s, &me), vec![2, 2]);
             s.expect_health(PlayerId::P2, 28);
         }
@@ -197,7 +189,6 @@ mod tests {
             assert_eq!(s.card(CAPSULE).counters.plague, Some(counters));
 
             s.end_turn();
-            // One hit of counters × damage on the enemy Unit and the enemy hero.
             assert_eq!(hits_from(&s, &me), vec![counters * damage; 2]);
         }
     }

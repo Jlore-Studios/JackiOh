@@ -1,7 +1,5 @@
 // R2098000: a glossary term in a card's text shows its glossary line where the face takes the
-// pointer. A mouse or pen resting on it shows the tooltip and leaving hides it; a touch held on
-// it shows it too, while an ordinary tap still reaches the card, and the term's long press takes
-// over from the card's. Where the surface allows a control the term is a tab stop.
+// pointer (TermTip.tsx).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -103,7 +101,6 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
     expect(term).toHaveAttribute("data-tip", "pointer");
     expect(term).not.toHaveAttribute("tabindex");
 
-    // An ordinary tap reaches the card and opens nothing.
     fireEvent.pointerDown(term, TOUCH);
     advance(TAP_MS);
     fireEvent.pointerUp(term, TOUCH);

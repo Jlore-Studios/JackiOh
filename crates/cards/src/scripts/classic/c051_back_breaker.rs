@@ -66,7 +66,6 @@ mod tests {
         json!([VANILLA, VANILLA])
     }
 
-    /// The side's keys with `spare()`'s laid over them.
     fn with_spare(side: Value) -> Value {
         let mut out = side;
         if let (Some(fields), Some(over)) = (out.as_object_mut(), spare().as_object()) {

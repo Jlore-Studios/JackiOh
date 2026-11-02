@@ -3,9 +3,8 @@
 //! deck) and `chinese` (anywhere). With `scope` and `same: true`, `transform_random` replaces every
 //! card of the scope with new cards of one shared definition — drawn from the definitions every old
 //! card could take — each in its place (R31, R671; an Immutable hand card too, R35), each a card
-//! generated into a hand or a deck for its own R673 Glitch roll. Without them it draws exactly as
-//! before; an empty scope draws nothing (R129). The `arrives` rider is proved with `enters_hand`
-//! (R925).
+//! generated into a hand or a deck for its own R673 Glitch roll. An empty scope draws nothing (R129).
+//! The `arrives` rider is proved with `enters_hand` (R925).
 
 use jackioh_engine::config::{GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR};
 use jackioh_engine::effects::{transform, transform_random};
@@ -13,23 +12,10 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::spell_def;
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, live, put, run_effect, set_library, slot};
-use crate::rules::fixtures::instance_data::{body, instance_game, stoic};
+use crate::rules::fixtures::harness::{in_hand, live, put, run_as_p1 as run, set_library, slot};
+use crate::rules::fixtures::instance_data::{body, instance_main_phase as game, stoic};
 
 const P1: PlayerId = PlayerId::P1;
-
-fn game(seed: &str) -> GameState {
-    let mut state = instance_game(seed, None);
-    state.turn = 5;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state
-}
-
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
-}
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("a card")
@@ -63,7 +49,6 @@ mod r921_transform_riders_md_b10 {
         assert!(defs.iter().all(|def| *def == defs[0]), "{defs:?}");
         assert!(defs[0] == plain.id || defs[0] == body.id);
         for card in hand {
-            // New instances, Radiant, costing (0), in place.
             assert!(!before.contains(&card.id));
             assert!(card.radiant);
             assert_eq!(card.cost_override, Some(0));
@@ -183,8 +168,7 @@ mod r921_transform_riders_md_b10 {
 
     #[test]
     fn r921_each_held_replacement_rolls_glitch_on_its_own() {
-        // One shared draw, three independent Glitch rolls: over seeds, Glitch replacements and
-        // shared-definition replacements both occur — and in a mixed hand every non-Glitch card is
+        // One shared draw, three independent Glitch rolls: in a mixed hand every non-Glitch card is
         // the one shared definition.
         let mut saw_glitch = false;
         let mut saw_shared = false;

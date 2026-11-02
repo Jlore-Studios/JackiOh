@@ -2,9 +2,7 @@
 //
 // Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts): the hand's
 // `attack`, `health` and `power`, `UnitView.vanilla`, `HeroView.powers` and `PlayerView.defs` are
-// what hidden-information.test.ts and vanilla-and-positions.test.ts pin the engine to carrying. The
-// board, a prompt, the showcase and the log render them; the deck builder's detail view renders
-// the catalog alone.
+// what hidden-information.test.ts and vanilla-and-positions.test.ts pin the engine to carrying.
 
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type GameEvent, type HeroPowerView, type PlayerView } from "@jackioh/shared";
@@ -61,7 +59,7 @@ function text(root: Element, selector: string): string {
   return root.querySelector(selector)?.textContent ?? "";
 }
 
-/* ------------------------------------------------------------------------------ match-made cards */
+/* match-made cards */
 
 describe("R243 a fused card says what it is: name, text, tags, keywords and stats, never a blank face", () => {
   // #99 Craft a Card's result in hand, and #85's fusion of a played unit onto one on the field.
@@ -168,7 +166,7 @@ describe("R243 a fused card says what it is: name, text, tags, keywords and stat
   });
 });
 
-/* ------------------------------------------------------------------------- stats that move in hand */
+/* stats that move in hand */
 
 describe("R243 a hand card shows the stats it has now", () => {
   it("a Corpse Eater that has fed in hand shows its grown attack and health, toned as a buff (#89)", () => {
@@ -190,7 +188,7 @@ describe("R243 a hand card shows the stats it has now", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------- #98 Heroic Power */
+/* #98 Heroic Power */
 
 describe("R752 a Heroic Power in play prints the one power it rolled", () => {
   it("in hand: only the rolled power, its name and its X, and the card's (0) on the gem", () => {
@@ -230,7 +228,7 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------- #95 Call to Chaos */
+/* #95 Call to Chaos */
 
 describe("Call to Chaos reads ??? in play and its real text in the collection", () => {
   it("in hand its rules box is ???, and its preview holds no printed text beside it", () => {
@@ -255,7 +253,7 @@ describe("Call to Chaos reads ??? in play and its real text in the collection", 
   });
 });
 
-/* --------------------------------------------------------------------------------------- Vanilla */
+/* Vanilla */
 
 describe("R243 a Vanilla unit is marked, and its preview says its text is gone", () => {
   it("the minion wears the Vanilla stamp and its preview prints the lost text only as printed", () => {

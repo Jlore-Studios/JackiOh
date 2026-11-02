@@ -1,13 +1,7 @@
-//! R1176000 (issue #1176): every card in Chinese is CN. A card instance whose `chinese` flag is set
-//! (R1300: `translate`, the `chinese` riders, a copy of a Chinese card, a crafted Fuse of one) has the
-//! CN tag wherever an instance's tags are read: `query::tags_of` adds it, so every reader sees it
-//! (scopes, targets, plays counted by tag), and the view lists it as the card's tags. A card is CN
-//! once, however many ways it is. Catalog pools read definitions and never see it. The tag follows the
-//! flag: a copy that keeps the flag keeps it, a Transform's new card has neither, and a Fuse that keeps
-//! an instance keeps that card's own language (R1300), so another ingredient's translation does not
-//! make it CN. A replay of a game played before the rule, in which a Chinese card was played or read
-//! by its tags, misses its final hash and is refused as `rules_changed` (R767000), never shown as
-//! another game.
+//! R1176000 (issue #1176): every card in Chinese is CN. An instance whose `chinese` flag is set (R1300)
+//! has the CN tag wherever its tags are read (`query::tags_of` adds it), the view included; catalog
+//! pools read definitions and never see it. A replay from before the rule that read the tag misses its
+//! final hash and is refused as `rules_changed` (R767000), never shown as another game.
 
 use jackioh_engine::effects::{destroy_all, grant_tag, summon_copy, transform, upgrade};
 use jackioh_engine::play_counts::record_play;
@@ -17,25 +11,14 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_effect, set_library, slot};
-use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game, translator};
+use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_as_p1 as run, set_library, slot};
+use crate::rules::fixtures::instance_data::{
+    body, brittle_trap, instance_game, instance_main_phase as game, translator,
+};
 use crate::rules::fixtures::scripts::cn_virus;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-
-fn game(seed: &str) -> GameState {
-    let mut state = instance_game(seed, None);
-    state.turn = 5;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state
-}
-
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
-}
 
 /// Show the card in Chinese, as `translate` does.
 fn translate_card(state: &mut GameState, id: &str) {
@@ -123,7 +106,6 @@ mod r1176000_every_card_in_chinese_is_cn {
         let english = put(&mut state, &body.id, slot(P1, Row::Units, 2), json!({}));
         translate_card(&mut state, &translated.id);
 
-        // A target declaration that bars CN refuses the translated unit and offers the other.
         let declarer = first(in_hand(&mut state, &plain.id, P1, 1));
         let decl = TargetDecl::target(
             1,
@@ -150,7 +132,6 @@ mod r1176000_every_card_in_chinese_is_cn {
         record_play(&mut state, P1, &chinese_play);
         assert_eq!(played_this_game_with_tag(&state, P1, Tag::Cn), 1);
 
-        // A card scope with `tags: [CN]` reaches the translated unit only.
         let events = run(
             &mut state,
             upgrade(json_as(
@@ -166,7 +147,6 @@ mod r1176000_every_card_in_chinese_is_cn {
             .collect();
         assert_eq!(upgraded, vec![translated.id.clone()]);
 
-        // A board scope with `notTags: [CN]` spares it and marks the other.
         run(
             &mut state,
             destroy_all(json_as(
@@ -270,8 +250,7 @@ mod r1176000_every_card_in_chinese_is_cn {
             let mut sink = EngineSink::new(state, &mut events, &mut rng);
             fuse(&mut sink, args)
         };
-        // A Fuse that keeps an English card keeps its language: a Chinese ingredient does not make
-        // it CN.
+        // A Fuse that keeps an English card keeps its language, a Chinese ingredient or not.
         let kept = live(&state, &new_card.id);
         let mut chinese = new_instance(&mut state, &plain.id, P1, Zone::Gone { player: P1 });
         chinese.chinese = Some(true);
@@ -306,13 +285,10 @@ mod r1176000_every_card_in_chinese_is_cn {
 mod r1176000_r767000_a_game_from_before_the_rule {
     use super::*;
 
-    /// The build's catalog version, and the one the game below records.
     const BUILD: &str = "v-cn";
 
-    /// A game from a deck of one translator and the vanilla fixtures against the vanilla fixtures,
-    /// each seat taking its first legal play, then its first attack, then the end of its turn, until a
-    /// card in Chinese has been played (`None` if the game ends first): its state, and its seed, decks
-    /// and log as a replay's input.
+    /// A game from a deck of one translator and the vanilla fixtures, each seat taking its first legal
+    /// choice, until a card in Chinese has been played (`None` if the game ends first).
     fn played(seed: &str) -> Option<(GameState, ReplayInput)> {
         let mut mine = vec![translator.id.clone()];
         mine.extend(vanilla_deck(DECK_SIZE - 1, 1));
@@ -331,8 +307,7 @@ mod r1176000_r767000_a_game_from_before_the_rule {
                     .find(|action| types.contains(&action.action_type()))
                     .cloned()
             };
-            // Every play there is before the turn ends, so the translator and the cards after it
-            // are played; a prompt or the mulligan is answered with its first option.
+            // Every play before the turn ends, so the translator gets played; prompts take option one.
             let chosen = first_of(&[ActionType::Mulligan, ActionType::Answer, ActionType::Play])
                 .or_else(|| first_of(&[ActionType::Attack]))
                 .or_else(|| first_of(&[ActionType::EndTurn]))
@@ -372,12 +347,10 @@ mod r1176000_r767000_a_game_from_before_the_rule {
             catalog_version: BUILD.to_string(),
             final_hash: hash.to_string(),
         };
-        // Recorded under the rule, the fold reaches its hash and the replay opens.
         assert!(matches!(
             replay_open(&input, &record(&hash_state(&live)), BUILD),
             ReplayOpen::Ready { .. }
         ));
-        // Recorded before it, the fold misses the hash: refused as `rules_changed`, never shown.
         assert_eq!(
             replay_open(&input, &record(&recorded_before), BUILD),
             ReplayOpen::Refused {

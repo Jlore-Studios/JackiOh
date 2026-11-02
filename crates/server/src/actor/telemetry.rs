@@ -1,23 +1,14 @@
-//! Play telemetry (SPEC §9.11, R1442): how people play an online match — how long each move took,
-//! the emotes they sent and how the match ended for each seat — for the ladder bots (#636) to copy.
+//! Play telemetry (SPEC §9.11, R1442): move durations, emotes, and endings for ladder bots (#636).
 //!
-//! The actor keeps a `Recorder` beside its state and feeds it as the match runs: every logged
-//! action (`on_action`), every push of the views that follows one (`on_pushed`) and every emote it
-//! relays (`on_emote`). Nothing is written while the match runs. Once the result has committed,
-//! `finish` hands over the whole match's rows and `record` writes them in one transaction; a write
-//! that fails is logged and dropped, and never costs the result (as R376's game records are kept
-//! apart from it). The rows are keyed so a second write of the same match changes nothing.
+//! The actor feeds `Recorder` during the match (`on_action`, `on_pushed`, `on_emote`).
+//! On commit, `finish` collects rows and `record` writes them in one transaction; failures are
+//! logged and dropped (like R376 game records). Keyed so repeat writes are no-ops.
 //!
-//! A move's think time runs from the push of the view that made it the seat's move to the move, in
-//! the server's own clock: the delay the opponent sees. The match's opening counts from the match's
-//! creation. A server action (a clock's expiry) and `setAutoEndTurn` (a preference, R345) make no
-//! row. The seat a row names is the seat the account BEGAN the match in (R677).
+//! Think time runs from view push to action arrival in server time. Server actions and
+//! `setAutoEndTurn` (R345) make no row. Seat names the account's initial seat (R677).
 //!
-//! `replay` builds the same recorder from a match's action log alone, the log's `at` stamps
-//! standing in for the pushes: a rebuilt actor carries on from it, and `timing-backfill` folds the
-//! logs still held into the action timings the live path would have written (with no clock and no
-//! rank bucket, which the log does not hold). Rule 7 holds throughout: `legal_actions` and the AI's
-//! evaluation read the true state here on the server, and nothing here reaches a socket.
+//! `replay` rebuilds recorder from the log alone. `legal_actions` and evaluations read true
+//! state on the server without reaching sockets.
 
 use serde::{Deserialize, Serialize};
 
@@ -94,23 +85,16 @@ pub struct Recorder {
     /// By engine seat: when the seat began to owe the move it owes now (the push that made it so),
     /// or `None` while it owes nothing.
     owed_since: PerPlayer<Option<i64>>,
-    /// When the views were last pushed.
     pushed_at: i64,
     /// The seat whose prompt was open at the last push, so a prompt newly put to a seat that already
     /// owed a move starts its think time afresh.
     prompted: Option<PlayerId>,
-    /// The action `on_action` saw, until its push: its engine seat, whether it was a decision, and
-    /// the last event it produced.
     pending: Option<(PlayerId, bool, Option<GameEventType>)>,
-    /// The last game event a push showed, and when.
     last_event: Option<(GameEventType, i64)>,
-    /// By engine seat: the turn of the seat's last decision.
     acted_turn: PerPlayer<Option<i32>>,
-    /// By home seat: when the account last emoted.
     last_emote_at: PerPlayer<Option<i64>>,
     timings: Vec<ActionTimingRow>,
     emotes: Vec<EmoteEventRow>,
-    /// By home seat.
     signals: PerPlayer<MatchSignalRow>,
 }
 
@@ -270,10 +254,8 @@ impl Recorder {
     }
 }
 
-/// The recorder a match's log builds on its own: the opening folded from the row as the registry
-/// folds it (`dealt` must be the registry's for the match's mode, R258, or this is another game),
-/// then each logged action as `on_action` and its push at the action's own `at`. A row the engine
-/// refuses is skipped, as `fold` skips it. Answers the recorder and how many rows were refused.
+/// Builds the recorder from the action log alone (R258). Skipped rows mirror `fold`.
+/// Returns the recorder and refused row count.
 pub fn replay(
     pinned: Pinned,
     match_row: &MatchRow,
@@ -302,8 +284,7 @@ pub fn replay(
     replay_from(pinned, recorder, state, log)
 }
 
-/// `replay` carried on from `recorder` as it stood on `state`, over the rows after it: how a rebuild
-/// resumes a checkpoint's recorder (#1169), pinned again to the match's catalog.
+/// Resumes a checkpoint's recorder (#1169) over remaining log rows.
 pub fn replay_from(
     pinned: Pinned,
     mut recorder: Recorder,

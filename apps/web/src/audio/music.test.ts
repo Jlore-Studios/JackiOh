@@ -1,8 +1,6 @@
 // R631 (SPEC §10.11 "Music"): the music player, on the real engine over the strict fake Web Audio
-// context. Changes wait for a bar line and crossfade; a sting hands off on its last bar line; the
-// opponent's turn is a mix; a station track resumes; nothing is scheduled on a stopped context; and
-// the engine ducks the music under voice lines and the big effects. R1350, R1351: a card's intro on
-// top of the music, the duck under it, and what cuts it.
+// context: bar-line changes, a sting's handoff, the opponent's turn mix, resume, a stopped context and
+// the engine's ducks. R1350, R1351: a card's intro on top of the music, the duck under it, what cuts it.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -218,9 +216,7 @@ describe("R631 changes land on a bar line and crossfade", () => {
     await settle();
     const bar = MUSIC_LEAD_S + 4;
     const [old, next, again] = voices(r.audio).map((v) => v.source);
-    // The in-game track is called off before it is ever heard.
     expect(next?.stopTime).toBeLessThanOrEqual(next?.startTime ?? 0);
-    // The new copy starts exactly where the old one is at the bar line, and the two crossfade.
     expect(again?.startTime).toBeCloseTo(bar, 9);
     expect(again?.startOffset).toBeCloseTo(bar - MUSIC_LEAD_S, 9);
     expect(old?.stopTime).toBeGreaterThan(bar + MUSIC_FADE_S);
@@ -287,7 +283,6 @@ describe("R631 a sting hands off", () => {
     await settle();
     const [sting, follower, danger] = voices(r.audio);
     expect(sting?.source.stopTime).toBeNull();
-    // The follower is called off before its start, so it never sounds.
     expect(follower?.source.stopTime).toBeLessThanOrEqual(follower?.source.startTime ?? 0);
     expect(danger?.source.startTime).toBeCloseTo(MUSIC_LEAD_S + 6, 9);
   });
@@ -483,7 +478,6 @@ describe("R631 the engine ducks the music", () => {
 });
 
 describe("R1350 a card's intro on top of the music", () => {
-  /** The engine's music bus: what the player's chain feeds. */
   function busOf(r: Rig): FakeNode {
     const out = r.engine.musicOutput();
     if (out === null) throw new Error("no music bus");
@@ -529,7 +523,6 @@ describe("R1350 a card's intro on top of the music", () => {
     expect(clip?.source.loop).toBe(false);
     expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
     expect(r.player.intro()).toBe("intro-a");
-    // The track goes on under it.
     expect(voices(r.audio)).toHaveLength(1);
     expect(voices(r.audio)[0]?.source.stopTime).toBeNull();
     expect(r.player.current()).toBe("tavern-1");
@@ -562,7 +555,6 @@ describe("R1350 a card's intro on top of the music", () => {
     expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
     writeAudioSettings({ music: 0.5 });
     await settle();
-    // Nothing was saved up: an intro asked for unheard is gone.
     expect(r.player.intro()).toBeNull();
     r.player.playIntro("intro-a");
     await settle();
@@ -640,7 +632,6 @@ describe("R1351 what cuts an intro short", () => {
     await settle();
     expect(introGains(r)).toHaveLength(1);
     expect(started(r)).toEqual(["tavern-1", "intro-a"]);
-    // Once it is over, the card played again opens it again.
     r.audio.advance(5);
     r.player.playIntro("intro-a");
     await settle();
@@ -726,10 +717,8 @@ describe("background: the OS closes the context mid-game (issue #2034)", () => {
 
     const after = r.audio;
     expect(after).not.toBe(before);
-    // The wanted track restarts on the new context, through the music chain …
     expect(voices(after)).toHaveLength(1);
     expect(started(r)).toEqual(["tavern-1", "tavern-1"]);
-    // … and the focus target ends back at 1.
     const focus = focusGainOf(after);
     expect(focus.param("gain").targets().at(-1)?.value).toBe(1);
     expect(after.violations).toEqual([]);
@@ -752,13 +741,11 @@ describe("background: the OS closes the context mid-game (issue #2034)", () => {
     r.engine.unlock();
     await settle();
 
-    // The resume is a cancel plus a ramp to 1 over MUSIC_FOCUS_TC_S at the resumed clock …
     const events = focus.param("gain").events;
     const cancel = events.at(-2);
     const ramp = events.at(-1);
     expect(cancel).toMatchObject({ method: "cancelScheduledValues", time: r.audio.currentTime });
     expect(ramp).toMatchObject({ method: "setTargetAtTime", value: 1, time: r.audio.currentTime, timeConstant: MUSIC_FOCUS_TC_S });
-    // … never a jump straight to full volume.
     expect(events.filter((e) => (e.method === "setValueAtTime" || e.method === "linearRampToValueAtTime") && e.value === 1)).toEqual([]);
     expect(r.audio.violations).toEqual([]);
   });

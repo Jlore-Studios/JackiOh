@@ -1,7 +1,5 @@
 //! Two small gifts a Classic+ card gives its own side (SPEC §8.7): Armor its hero keeps for the rest of
 //! the game (C+ #46 Felinor Flagbearer) and a discount on a random card of a hand (C+ #49 Jay Fungus).
-//!
-//! Port of `packages/engine/src/effects/perks.ts`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -23,9 +21,8 @@ pub struct GainHeroArmorArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// C+ #46: "Your hero gains +N Armor for the rest of the game" — §4.4 step 2's per-hit reduction, kept on
-/// the hero itself (`hero.armor`), so it outlasts the card that gave it and stacks with every other
-/// source (`damage::hero_armor_of`, R124). The view carries the hero's Armor; no event of its own.
+/// C+ #46: §4.4 step 2's per-hit reduction kept on the hero itself, so it outlasts the card that gave
+/// it and stacks with every other source (`damage::hero_armor_of`, R124). No event of its own.
 pub fn gain_hero_armor(args: GainHeroArmorArgs) -> Effect {
     Effect::new("gainHeroArmor", move |ctx| {
         let amount = args.amount.max(0);
@@ -47,10 +44,9 @@ pub struct DiscountRandomInHandArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// C+ #49: "A random card in your hand costs (N) less" — `costMod` −N on one card drawn uniformly from
-/// the hand cards it can make cheaper: cost above 0 now (R65's `effective_cost`) and not an X-cost card
-/// (R65: modifiers never reach X). None such is nothing to do, so nothing is drawn (R129). The cost
-/// floors at 0 when read (§2.3); `set_cost_mod` reports it under R177's sentinel to the other seat.
+/// C+ #49: −N on one hand card drawn uniformly from those it can make cheaper (cost above 0 now, not
+/// X-cost: R65); with none, nothing is drawn (R129). The cost floors at 0 when read (§2.3), and
+/// `set_cost_mod` reports it under R177's sentinel to the other seat.
 pub fn discount_random_in_hand(args: DiscountRandomInHandArgs) -> Effect {
     Effect::new("discountRandomInHand", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

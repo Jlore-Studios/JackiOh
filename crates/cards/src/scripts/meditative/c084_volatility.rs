@@ -5,15 +5,13 @@
 //! Engine: NEW: ME-TUNEMULT (R1160) — a static flag `tuneMultiplier`, read off the card's running
 //! face wherever it is (field, hand, deck), by which each Buff or Nerf application on this card is
 //! scaled: still one application and one draw, with the change N times as large. "Twice" and
-//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier. Patch v0.3.10
-//! (#831) made it 1/1 and gave both faces "Cry: Buff this": one Upgrade of itself, which its own
-//! multiplier then doubles (triples on the Radiant face).
+//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-084";
 
-/// Patch v0.3.10 (#831): "Cry: Buff this", one Buff on itself, which its own multiplier scales.
+/// "Cry: Buff this" (#831): one Buff on itself, which its own multiplier scales.
 fn buff_this() -> Hook {
     hook(|_ctx| vec![upgrade(json_as(json!({ "target": { "of": "self" } })))])
 }
@@ -45,11 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #84 Volatility — SPEC §8.8 row 84, BUILD M10 row M 84: "One Buff on it is one draw whose change
-// is doubled (MD-E7): a cost row of two steps (never below (0)), a stat split of twice the total,
-// two keywords, X +2; a Nerf likewise doubled, never removing a harmful keyword; still one
-// `upgraded` or `degraded` event; in hand and deck too; a +2/+2 stat buff and KY's Constant are not
-// doubled; radiant 6/6, Buffs tripled and Nerfs normal". Patch v0.3.10: 1/1 → 2/2, and its Cry Buffs it.
+// M #84 Volatility — SPEC §8.8 row 84, BUILD M10 row M 84.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -441,7 +435,7 @@ mod tests {
         #[test]
         fn r1160_kys_constant_is_not_doubled() {
             // KY's Constant sets a random number on a hand card to 3: Volatility's numbers are its
-            // cost (1) and its 1/1 (patch v0.3.10), and the one picked goes to 3 outright, not twice as far.
+            // cost (1) and its 1/1, and the one picked goes to 3 outright, not twice as far.
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "vol-constant",

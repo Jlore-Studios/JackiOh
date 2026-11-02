@@ -559,9 +559,9 @@ func TestDifficulty_APlanningRunHandsItsPlanToTheBuilder(t *testing.T) {
 		[]any{"plan", "muse", "planned"})
 	calls := []any{}
 	for _, c := range planner.Calls {
-		calls = append(calls, []any{c.Role, c.Model, c.ReadOnly})
+		calls = append(calls, []any{c.Role, c.Model})
 	}
-	assertEqual(t, calls, []any{[]any{"plan", "muse-spark-1.3-contributor", true}})
+	assertEqual(t, calls, []any{[]any{"plan", "muse-spark-1.3-contributor"}})
 	record := h.ctx.Store.Load().Obj("items").Obj("12")
 	assertEqual(t, record.Obj("handoff").Get("kind"), "plan")
 	assertIn(t, "Rules v2", pyjson.Str(record.Obj("handoff").Get("notes")))
@@ -845,9 +845,9 @@ func TestDifficulty_ACleanFirstSelfCheck(t *testing.T) {
 	result := s.worker(r).Run()
 	calls := []any{}
 	for _, c := range r.Calls {
-		calls = append(calls, []any{c.Role, c.Model, c.ReadOnly})
+		calls = append(calls, []any{c.Role, c.Model})
 	}
-	assertEqual(t, calls, []any{[]any{"build", "lite-1", false}, []any{"self_check", "lite-1", true}})
+	assertEqual(t, calls, []any{[]any{"build", "lite-1"}, []any{"self_check", "lite-1"}})
 	assertIn(t, "This is a self check, not a review", r.Calls[1].Prompt)
 	// The weak one has no seat that may review: the change goes to a review run, never approved.
 	assertEqual(t, result.Get("status"), "built")

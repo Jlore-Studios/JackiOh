@@ -135,4 +135,5 @@ export const COSMETICS = [
   {"id":"full-art-j-jungle-explorer","kind":"fullArt","name":"J-lease J-Jungle EX-plorer full art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"classicplus-075"},
   {"id":"full-art-j-jungle-explorer-animated","kind":"fullArt","name":"J-lease J-Jungle EX-plorer animated full art","rarity":"Legendary","default":false,"starter":false,"chase":true,"card":"classicplus-075"},
   {"id":"full-art-j-jungle-explorer-signed","kind":"fullArt","name":"J-lease J-Jungle EX-plorer signed full art","rarity":"Mythic","default":false,"starter":false,"chase":true,"card":"classicplus-075"},
+  {"id":"card-back-jlorious","kind":"cardBack","name":"Jlorious","rarity":"Mythic","default":false,"starter":false,"chase":false,"jlorious":true},
 ] as const;

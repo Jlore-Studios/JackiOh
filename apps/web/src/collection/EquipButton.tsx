@@ -1,10 +1,7 @@
-// R1955000: a pack opening's reveal equips the cosmetic a slot just granted. Pressing Equip writes what
-// the Collection's pickers write today (`CardCosmeticsView`'s `equip` for a card's foil, finish, border
-// and full art, `AccountCosmeticTiles` for a playmat, backdrop or card back) and makes no request: the
-// server already settled the grant, and the client only records the viewer's pick (CLAUDE.md rule 7).
-// A portrait is a deck's pick (R641, R1827000), so it has no button. R2655000: a full art's Equip picks
-// that tier on its card (`fullArtPickOf`: `true` for its Epic, the id for a Legendary or a Mythic). What
-// is worn is still decided by the wear path (cards/cosmetics.ts, ownedFullArt.ts), never here.
+// R1955000: a pack opening's reveal equips the cosmetic a slot just granted, writing what the
+// Collection's pickers write with no request: the server settled the grant (CLAUDE.md rule 7). A
+// portrait is a deck's pick (R641, R1827000), so it has no button. R2655000: a full art's Equip picks
+// that tier on its card (`fullArtPickOf`). The wear path decides what is worn.
 
 import type { ReactElement } from "react";
 
@@ -26,7 +23,6 @@ import { fullArtIdOf, fullArtPickOf } from "../cards/fullArt.ts";
 import { t } from "../i18n/i18n.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
-/** What Equip writes for a granted cosmetic: a card's slot pick, a card's full art, or an account pick. */
 export type EquipTarget =
   | { store: "card"; cardId: string; kind: CardSlotKind; id: CosmeticId }
   | { store: "fullArt"; cardId: string; id: CosmeticId }
@@ -43,7 +39,6 @@ export function equipTarget(cosmeticId: string, cardId: string | null): EquipTar
   return account === undefined ? null : { store: "account", kind: account, id: found.id };
 }
 
-/** Whether the stores hold `target`'s pick already. */
 function holds(target: EquipTarget, account: CardCosmetics, card: CardPicks): boolean {
   switch (target.store) {
     case "card":

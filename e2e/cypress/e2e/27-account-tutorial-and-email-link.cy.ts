@@ -1,6 +1,5 @@
 // Account tutorial sync and email-link landing (SPEC §9.10; R320–R324, including R323).
 // Progress only grows, so each test records a newer Show choice and asserts containment.
-// BUILD M8: await intercepted requests rather than fixed waits; selectors come from `support/testids.ts`.
 
 import { accounts, server, timeouts, TUTORIAL_PROGRESS_VERSION } from "../../support/config.ts";
 import { TUTORIAL_HIDE, TUTORIAL_PATH, TUTORIAL_PATH_HIDDEN, TUTORIAL_SHOW, ts, tutorialLessonId } from "../../support/testids.ts";

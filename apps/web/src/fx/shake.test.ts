@@ -1,5 +1,4 @@
 // docs/polish/1-animations.md, behavior B30: the trauma shake (S5, after Eiserloh's GDC 2016 talk).
-// Trauma lives in [0, 1] and decays linearly; the offset is trauma² times smooth, seeded noise.
 
 import { describe, expect, it } from "vitest";
 

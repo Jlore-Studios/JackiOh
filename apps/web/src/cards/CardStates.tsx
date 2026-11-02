@@ -68,9 +68,7 @@ export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement
   );
 }
 
-/** B5 E21: show a backrow pile's buried depth without naming a face-down top card.
- * A press opens the pile wheel so stacking order is clear.
- */
+/** B5 E21: a backrow pile's buried depth, never naming a face-down top card; a press opens the pile wheel. */
 export function PileDepth({
   buried,
   top,

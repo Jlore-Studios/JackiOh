@@ -2,9 +2,7 @@
 //! Lane Eater), the zone a permanent was just played into (Classic #84 Lockdown, Classic+ #34 Memory
 //! Leak), a random zone not already Locked (Classic+ #34), the firing trap's own zone (Classic+ #1 Doom
 //! Shroom), and Unlock (Classic+ #77 Anti-Softlock) and a random Locked zone's Unlock (Meditative #27
-//! Clip-Farming Lawyer, R900) — each played through `reduce`, replayed, and read from both seats. Fixtures: `fixtures/field.ts`.
-//!
-//! Port of `packages/engine/test/effects-locks.test.ts`.
+//! Clip-Farming Lawyer, R900). Fixtures: `fixtures/field.rs`.
 
 use jackioh_engine::effects::counters::{lock, unlock};
 use jackioh_engine::effects::locks::{
@@ -18,15 +16,13 @@ use crate::rules::fixtures::field::{
 };
 use crate::rules::fixtures::harness::{Bench, act_result, events_of_type, in_hand, put, slot};
 
-/// What TS's `play` returns: the state after the play, its events, and the played card's id.
 struct Played {
     state: GameState,
     events: Vec<GameEvent>,
     id: String,
 }
 
-/// TS `play(state, defId, zone?, { radiant })`: a card of `defId` put in p1's hand (Radiant when asked),
-/// p1's mana flushed, and the card played through `reduce` into `zone` when one is named.
+/// `def_id` played from p1's hand (Radiant when asked, mana flushed) through `reduce`, into `zone` if named.
 fn play(state: &mut GameState, def_id: &str, zone: Option<(Row, i32)>, radiant: bool) -> Played {
     let Some(card) = in_hand(state, def_id, PlayerId::P1, 1).into_iter().next() else {
         panic!("no card");
@@ -66,7 +62,6 @@ fn locked_zones(state: &GameState) -> Vec<String> {
     zones
 }
 
-/// `effect.apply(makeContext(sink, self, { controller: "p1" }))`.
 fn apply_as_p1(bench: &mut Bench, state: &mut GameState, effect: Effect, self_: Option<&CardInstance>) {
     let mut engine = bench.sink(state);
     let mut ctx = make_context(
@@ -80,7 +75,6 @@ fn apply_as_p1(bench: &mut Bench, state: &mut GameState, effect: Effect, self_: 
     (effect.apply)(&mut ctx);
 }
 
-/// `cardAt(state, ref)?.id`.
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
 }
@@ -404,7 +398,6 @@ mod b5_e20_unlock {
     }
 }
 
-/// R900: Unlock one random Locked zone (Meditative #27 Clip-Farming Lawyer)
 mod r900_unlock_a_random_locked_zone_meditative_27 {
     use super::*;
 

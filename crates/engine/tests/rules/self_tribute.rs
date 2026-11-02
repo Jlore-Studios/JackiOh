@@ -1,11 +1,8 @@
 // Two card-specific additions of Classic #88 Siphon Squad (R403), proved through fixture scripts:
-//   - §10.4 layer 5's "an aura that sets attack to a value applies after every other layer"
-//     (`StatMod.setAttack`, the Radiant face's "Enemy Units have 0 Attack");
-//   - "When …, Tribute this", a condition every state check reads, the one right after the card arrives
-//     included (`Script.tributeWhen`, read in `stateCheck.ts`), which reaches a face-down card too.
-// The aura itself sleeps while the card is face-down and works once it is revealed (R1487000).
-//
-// Port of `packages/engine/test/self-tribute.test.ts`.
+// §10.4 layer 5's "an aura that sets attack to a value applies after every other layer"
+// (`StatMod::set_attack`), and "When …, Tribute this" (`Script::tribute_when`), which every state
+// check reads, the one right after the card arrives and a face-down card's included. The aura itself
+// sleeps while the card is face-down and works once it is revealed (R1487000).
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;

@@ -1,20 +1,18 @@
-// GitHub releases: the Patch notes page in Markdown, one release per shipped version. A release
-// reads as its patch reads on the page (R724000, R724001): its player note under the page's headings,
-// the technical log's lines players read for it (R1369000) and its cards as the page lists them, each
-// changed card with what changed; a release line's major also carries the line's summary and
-// technical changes. `.github/workflows/releases.yml` publishes them through
-// `apps/web/scripts/github-releases.ts`.
+// GitHub releases: the Patch notes page in Markdown, one release per shipped version, each reading as
+// its patch reads on the page (R724000, R724001), with the technical log's lines players read for it
+// (R1369000). `.github/workflows/releases.yml` publishes them through `apps/web/scripts/github-releases.ts`.
 //
-// A version production's patches.json holds is a release. One only main holds is a pre-release: it
-// is on staging until the next production merge (docs/deploy-cloudflare.md). Every tag is the
-// commit that brought the patch to main, as `shipped.json` records it (R646), so the releases sit
-// in the order and on the days the patches shipped. Public data only (CLAUDE.md rule 7).
+// A version only main's patches.json holds, not production's, is a pre-release: it is on staging until
+// the next production merge (docs/deploy-cloudflare.md). Every tag is the commit that brought the patch
+// to main, as `shipped.json` records it (R646), so the releases sit in the order and on the days the
+// patches shipped. Public data only (CLAUDE.md rule 7).
 
 import type { TextRange } from "../cards/radiantDiff.ts";
 import { changeSummary } from "./ChangeList.tsx";
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import type { CardDelta, FieldChange } from "./diff.ts";
 import { cardCount, countsLine, patchCards, type PatchCards } from "./history.ts";
+import { releaseArtPath } from "./releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, type NoteSection, type Release } from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
@@ -170,6 +168,9 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
   }
   const tier = patch.tier === undefined ? [] : [TIER_NAME[patch.tier]];
   out.push([`**${patch.date}**`, markdownText(placed.release.name), ...tier].join(" · "));
+  // #2681: the patch's artwork, served by the host the footer names (a staging build has it before production does).
+  const site = live ? sites.production : sites.staging;
+  out.push(`![${markdownText(`${patch.version}: ${playerTitle(patch)}, release artwork`)}](${site}${releaseArtPath(patch.version, "animated")})`);
   if (placed.major) out.push(...lineSection(placed.release));
   for (const { key, heading } of NOTE_SECTIONS) out.push(...lines(heading, SECTION_ICON[key], patch.player?.[key] ?? []));
   out.push(...lines("Technical changes", TECHNICAL_ICON, technical));
@@ -193,7 +194,6 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
       );
     }
   }
-  const site = live ? sites.production : sites.staging;
   out.push("---", `<sub>Every patch, card by card: Patch notes on ${link(site, sites.patchNotes)}</sub>`);
   return `${out.join("\n\n")}\n`;
 }

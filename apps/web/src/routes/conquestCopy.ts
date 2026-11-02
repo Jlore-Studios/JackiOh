@@ -3,29 +3,18 @@
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "@jackioh/server-config";
 
 import { t } from "../i18n/i18n.ts";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 
 export const CONQUEST_EXPLAINER_STORAGE_KEY = "jackioh.conquest.explainer.v1";
 
 export function isExplainerDismissed(): boolean {
-  try {
-    if (typeof window === "undefined" || !window.localStorage) return false;
-    return window.localStorage.getItem(CONQUEST_EXPLAINER_STORAGE_KEY) === "true";
-  } catch {
-    return false;
-  }
+  return getStored(CONQUEST_EXPLAINER_STORAGE_KEY) === "true";
 }
 
 export function setExplainerDismissed(dismissed = true): void {
-  try {
-    if (typeof window === "undefined" || !window.localStorage) return;
-    if (dismissed) {
-      window.localStorage.setItem(CONQUEST_EXPLAINER_STORAGE_KEY, "true");
-    } else {
-      window.localStorage.removeItem(CONQUEST_EXPLAINER_STORAGE_KEY);
-    }
-  } catch {
-    // Ignore storage errors in restricted environments
-  }
+  // Storage errors in restricted environments are ignored.
+  if (dismissed) setStored(CONQUEST_EXPLAINER_STORAGE_KEY, "true");
+  else removeStored(CONQUEST_EXPLAINER_STORAGE_KEY);
 }
 
 // English with `{name}` for the numbers, so each sentence is one dictionary entry (#711, R711000).

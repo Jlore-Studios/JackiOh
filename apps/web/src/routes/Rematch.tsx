@@ -15,6 +15,7 @@ import {
   type RematchStatusResponse,
   type RematchStakes,
 } from "../net/api.ts";
+import { messageOf } from "../net/errors.ts";
 
 export const rematchTestid = {
   offer: "rematch-offer",
@@ -98,7 +99,6 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
 
-  // Hide offers until the server confirms an open opponent socket.
   if (connection !== "open" || status === null || !status.opponentHere) return null;
 
   const random = status.mode === "random";
@@ -120,7 +120,7 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
         }
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(messageOf(cause));
     } finally {
       setOffering(null);
     }

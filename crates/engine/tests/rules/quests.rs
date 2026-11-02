@@ -1,6 +1,6 @@
 //! The quests subsystem (docs/classic-sets.md B5 E33; SPEC §8.6 row 90, §10.1, §10.6, §10.8; R404),
 //! through the quest fixture cards, so the engine half of Classic #90 In Too Deep stands without the
-//! cards crate: goals, completion at the state check, the reward prompt, Radiant paths, JSON pause, replay, views.
+//! cards crate.
 
 use serde::Serialize;
 
@@ -34,7 +34,6 @@ fn four_mana() -> ManaState {
     }
 }
 
-/// p1's main phase on turn 3 with 4 mana each side, the quest fixtures registered.
 fn quest_board(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     register_quest_fixtures();
@@ -135,7 +134,6 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .collect()
 }
 
-/// The card view of a face-up backrow card as `viewer` is shown it.
 fn shown_to(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Option<PublicBackrowView> {
     let view = view_for(state, viewer);
     let side = if view.you.player == card.controller {
@@ -488,8 +486,7 @@ mod e33_quests_each_goal_counted_and_not_counted {
             state: mut s1, card, ..
         } = goal(&mut state, "damageToEnemies", P1);
         let blocked = play_new(&mut s1, &bolt().id, P1, &[target.id.as_str()]);
-        // R63, R1361: the Armor took the bolt whole, which is reported and is no damage instance, so
-        // the quest that counts damage to enemies has nothing to count.
+        // R63, R1361: an Armor that takes the bolt whole is no damage instance, so there is nothing to count.
         assert_eq!(
             events_of_type(&blocked.events, GameEventType::DamageAbsorbed).len(),
             1
@@ -514,7 +511,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         assert!(find_instance(&fight.state, &token.id).is_none());
         assert_eq!(progress_of(&fight.state, &card, ONLY_QUEST), 3);
 
-        // The opponent's bolt on p1's hero, on the opponent's turn.
         in_hand(&mut fight.state, &plain.id, P1, 1);
         let mut turn = end_turn(&fight.state);
         let theirs = play_new(&mut turn.state, &bolt().id, P2, &["hero-p1"]);
@@ -900,7 +896,7 @@ mod e33_quests_the_tree_radiant_face_every_reward_every_path {
             json!({ "active": ["kill", "board"], "progress": { "kill": 0 }, "done": ["draws"], "auras": [], "waiting": [] }),
         );
         // The first check of the play finds 3 permanents ("board"), and the death it collects then
-        // completes "kill": "both" granted by each, "mana" opened once, "hand" drawing 2 and opening "fresh".
+        // completes "kill".
         let plain_id = plain.id.clone();
         set_library(&mut state, P1, &[plain_id.as_str(); 4]);
         let step = play_new(&mut state, &slay().id, P1, &[foe.id.as_str()]);

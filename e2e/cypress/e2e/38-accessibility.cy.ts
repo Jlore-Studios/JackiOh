@@ -1,19 +1,10 @@
 // 38 — the accessibility check: axe-core over every route and both boards (issue #757, WCAG 2.2 AA).
-//
-// Key assertion (issue #757): "axe reports no serious or critical violation on the routes listed
-// above, a spec keeps it that way". Each test opens one route, waits for its screen (and, on a board,
-// for the animations to settle), and runs `expectNoBlockingViolations` (support/a11y.ts): WCAG 2.0,
-// 2.1 and 2.2 A and AA rules, failing on any serious or critical violation not listed with its reason
-// in support/axe-exceptions.ts, and on a listed one that no longer fires. One more test plays a card
-// by keyboard alone, since drag to play has no keyboard path and click-click is the one that must.
-//
-// #1561 added the routes that came after #757 (`/creator`, `/replays`, `/together`, `/collection`)
-// and runs every route again at BUILD M5-T1's phone size, 390x844, whose labels end in " (phone)" so
-// an exception in axe-exceptions.ts holds at one width only.
-//
-// Daily only: the super run plays every spec file, while a pull request's `e2e smoke` plays only
-// SMOKE in scripts/shard-specs.mjs, which does not hold 38. Networked: the signed-in routes need
-// `E2E=1 cargo run --release -p jackioh-server`. Every wait is a retried DOM assertion.
+// `expectNoBlockingViolations` (support/a11y.ts) fails on a serious or critical violation not listed with its
+// reason in support/axe-exceptions.ts, and on a listed one that no longer fires. Drag to play has no keyboard
+// path and click-click must, so one test plays a card by keyboard alone. Every route runs again at the phone
+// size (#1561), whose labels end in " (phone)" so an exception holds at one width only. Daily only: a pull
+// request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38. Networked: the
+// signed-in routes need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
@@ -47,10 +38,7 @@ const BOOT_TIMEOUT = 60_000;
 
 const SEED = seedFor("38-accessibility");
 
-/**
- * BUILD M5-T1's two sizes: the Cypress config's 1280x720, whose labels are the routes as #757 named
- * them, and the phone's 390x844, whose labels say so.
- */
+/** BUILD M5-T1's two sizes; the desktop's labels are the routes as #757 named them. */
 const VIEWPORTS = [
   { label: "desktop", width: 1280, height: 720, suffix: "" },
   { label: "phone", width: 390, height: 844, suffix: " (phone)" },
@@ -74,10 +62,9 @@ function practiceUrl(seed: string): string {
 }
 
 /**
- * Wait until the card pool's first card has drawn its face. A pool card draws its face only once the
- * browser reports it near the screen (PoolGrid's PoolFace, #2303), a frame or more after the pool
- * shows, and since #2301 the Almanac's pool shows before any face does: axe run before then meets
- * bare buttons, and the `.db-card` exceptions in axe-exceptions.ts read as stale.
+ * A pool card draws its face only once the browser reports it near the screen (PoolFace, #2303), and the Almanac's
+ * pool shows before any face does (#2301): axe run before then meets bare buttons, and the `.db-card` exceptions
+ * in axe-exceptions.ts read as stale.
  */
 function poolFacesDrawn(): void {
   cy.get(`${ts(CARD_POOL)} .db-card-face`, { timeout: timeouts.view })
@@ -87,7 +74,6 @@ function poolFacesDrawn(): void {
     });
 }
 
-/** Open `path` signed out, wait for `root`, and check it. */
 function checkPublic(route: string, path: string, root: string): void {
   cy.visit(path);
   cy.get(ts(root), { timeout: timeouts.view }).should("be.visible");
@@ -95,10 +81,9 @@ function checkPublic(route: string, path: string, root: string): void {
 }
 
 /**
- * The code screen and the consent screen as a pending account meets them, drawn for p1. Spec 10
- * redeems the pending fixture, which stays active until the server restarts (R144), and the daily run
- * can put both specs in one shard; so p1's own read of the account is made to say pending (no match,
- * no series), and `owes` adds what it owes. The screens draw only from that read (CLAUDE.md rule 7).
+ * Spec 10 redeems the pending fixture, active until the server restarts (R144), and the daily run can put
+ * both specs in one shard; so p1's own read of the account is made to say pending, and `owes` adds what it
+ * owes. The screens draw only from that read (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
   cy.intercept("GET", "**/api/auth/me", (req) => {
@@ -116,7 +101,6 @@ function asPending(owes: Record<string, boolean> = {}): void {
   });
 }
 
-/** Open `path` as `account`, wait for `root`, and check it. */
 function checkSignedIn(route: string, account: ReturnType<typeof accounts.p1>, path: string, root: string): void {
   cy.visitAs(account, path);
   cy.get(ts(root), { timeout: timeouts.view }).should("be.visible");

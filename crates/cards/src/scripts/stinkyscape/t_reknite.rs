@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-reknite — SPEC §7, BUILD M12 row S T-reknite: "played from the hand at (0), its caster's hero has
-// +1 Armor through the opponent's turn, gone at their next start of turn; armor reads through
-// `param()`; radiant +2". Tagged Resource and Token (issue #2521).
+// S T-reknite — SPEC §7, BUILD M12 row S T-reknite. Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::damage::hero_armor_of;

@@ -1,8 +1,5 @@
-// #37, Global Cosmetic: "make it more evident when a zone is locked". A Locked zone is drawn with a
-// padlock (LockIcon.tsx), and a card dragged onto one it cannot go into is refused with a blocked X
-// where it landed (BlockedMark.tsx) rather than silently snapping back.
-//
-// Driven through `<Game/>` the way drag-layer.test.tsx drives it: jsdom has no
+// #37: a Locked zone shows a padlock (LockIcon.tsx), and a card dragged onto one it cannot go into is
+// refused with a blocked X where it landed (BlockedMark.tsx), not a silent snap back. jsdom has no
 // `document.elementsFromPoint`, so each test stubs it with the element the pointer is "over".
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
@@ -49,7 +46,6 @@ function over(...stack: Element[]): void {
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
 
-/** Lifts `source`, moves over `stack`, and releases there. */
 function dragTo(source: string, ...stack: Element[]): void {
   over(el(source));
   fireEvent.pointerDown(el(source), { pointerId: POINTER, button: 0, clientX: START.x, clientY: START.y });
@@ -93,7 +89,6 @@ describe("#37 a card dropped on a Locked zone is refused with a blocked X", () =
 
     expect(onAction).not.toHaveBeenCalled();
     expect(el("drag-blocked")).toHaveAttribute("data-zone", "zone-you-units-3");
-    // The drag itself is over: no ghost, no arrow.
     expect(screen.queryByTestId("drag-ghost")).toBeNull();
     expect(document.documentElement).not.toHaveAttribute("data-dragging");
   });

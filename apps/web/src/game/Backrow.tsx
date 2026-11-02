@@ -1,24 +1,12 @@
 // One backrow occupant (BUILD M5-T1): a public card, a face-down card, or nothing.
 //
-// `BackrowView` is the union that decides it, and the narrowing on `faceDown` is the whole
-// privacy story: a `{ faceDown: true }` entry carries no `instanceId`, no `defId` and no type
-// (SPEC §10.8, R33), so the back cannot render a name even by accident and cannot carry a
-// `card-<instanceId>` testid. Such a zone is reportable only as a `zone` click, which is correct:
-// there is nothing else the viewer is allowed to know about it. Since v0.1.1 the view gives it a
-// cost, which the back shows as a gem, and its hover and sheet say what it is (R370).
-//
-// The viewer's own face-down trap is a public card to them (R33), and the view marks it
-// `unrevealed` so the face can say the other player sees only a back (R371).
-//
-// B5 E21: a backrow zone may hold a pile, and the view counts the cards beneath its top
-// (`buried`, a count and never an identity, on a face-up card and on a face-down one alike, read
-// defensively as the cost is). The zone shows the depth beside the card, as a unit pile does.
-//
-// R471: a face-down card's Plague Counters (`plague`) ride its back; its controller reads them off
-// `counters`, as on any face-up card.
-//
-// R1297000, R1834004: a face-down card's back wears the card back of the seat whose zone it lies in,
-// which is all the view says of it (B16).
+// `BackrowView`'s `faceDown` narrowing is the privacy story: a `{ faceDown: true }` entry carries no
+// `instanceId`, `defId` or type (SPEC §10.8, R33), so the back cannot render a name or a
+// `card-<instanceId>` testid, and reports only a `zone` click. The view gives it a cost, shown as a
+// gem (R370). The viewer's own face-down trap is a public card the view marks `unrevealed` (R371).
+// B5 E21: a pile's `buried` count (never an identity) shows as depth beside the card.
+// R471: a face-down card's Plague Counters (`plague`) ride its back.
+// R1297000, R1834004: a face-down back wears the card back of the seat whose zone it lies in (B16).
 
 import type { ReactElement } from "react";
 
@@ -62,7 +50,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
         };
 
   if (entry.faceDown) {
-    // R370: read defensively, so a view without the cost draws the back as it always did.
+    // R370: read defensively, so a view without the cost draws the back.
     const cost = "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
     // R437, R33: a marked face-down card's back carries its mark (read through marks.ts, as defensively).
     const marks = marksOf(entry);

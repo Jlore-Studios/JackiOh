@@ -1,7 +1,6 @@
 // The discovery coach through the REAL practice core (harness.ts), and the reckless player's choices:
-// R2205000 and R2205001. A fixture script of moments runs on lesson 1's deal, apart from its own coach,
-// and the reckless player attacks into everything and plays nothing protective; every lesson's own
-// suite (scripts/testkit.ts) plays each lesson under it to the human's win.
+// R2205000 and R2205001. A fixture script of moments runs on lesson 1's deal, apart from its own coach;
+// every lesson's own suite (scripts/testkit.ts) plays each lesson under the reckless player to the human's win.
 
 import { describe, expect, it } from "vitest";
 
@@ -20,7 +19,6 @@ const LESSON = "basics";
 const lesson = lessonById(LESSON);
 if (lesson === undefined) throw new Error(`no lesson "${LESSON}"`);
 
-/** Three moments: afford a card, hit the hero, and win; each moves on when the view shows it found. */
 const MOMENTS: LessonScript = {
   lessonId: LESSON,
   teaches: ["mana", "play-unit", "attack-hero", "winning"],

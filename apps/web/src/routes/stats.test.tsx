@@ -1,4 +1,4 @@
-// Tests for the public statistics page (SPEC §9.11, R654).
+// The public statistics page (SPEC §9.11, R654).
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -9,6 +9,9 @@ import userEvent from "@testing-library/user-event";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readCardPicks } from "../cards/cosmetics.ts";
+import { FULL_ART_TIERS } from "../cards/fullArt.ts";
+import { writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { rememberRead } from "../net/readCache.ts";
@@ -457,11 +460,9 @@ describe("R654 public statistics route", () => {
     const nameHeader = screen.getByRole("columnheader", { name: /Name/i });
     expect(nameHeader).toHaveAttribute("aria-sort", "none");
 
-    // Click to sort ascending by name
     await user.click(nameHeader);
     expect(nameHeader).toHaveAttribute("aria-sort", "ascending");
 
-    // Press Enter to toggle sort direction
     fireEvent.keyDown(nameHeader, { key: "Enter" });
     expect(nameHeader).toHaveAttribute("aria-sort", "descending");
   });
@@ -487,7 +488,6 @@ describe("R654 public statistics route", () => {
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Click on Spark Pup row
     const sparkRow = screen.getByText("Spark Pup");
     await user.click(sparkRow);
 
@@ -497,7 +497,6 @@ describe("R654 public statistics route", () => {
     expect(await screen.findByText("Win rate by turn played")).toBeInTheDocument();
     expect(await screen.findByText("Co-played cards (synergy)")).toBeInTheDocument();
 
-    // Close modal
     const closeBtn = screen.getByTestId(statsTestid.drillDownClose);
     await user.click(closeBtn);
     expect(screen.queryByTestId(statsTestid.drillDownModal)).not.toBeInTheDocument();
@@ -515,7 +514,6 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("67%")).toBeInTheDocument();
     expect(screen.getByText("Big D-fender")).toBeInTheDocument();
 
-    // Table does not expose Elo or rating
     const table = screen.getByTestId(statsTestid.playersTable);
     expect(within(table).queryByText(/elo/i)).not.toBeInTheDocument();
     expect(within(table).queryByText(/rating/i)).not.toBeInTheDocument();
@@ -691,7 +689,6 @@ describe("R654 public statistics route", () => {
     const page = await screen.findByTestId(statsTestid.screen, undefined, SLOW);
     await screen.findByTestId(statsTestid.summaryTiles, undefined, SLOW);
 
-    // R2325000: no banner and no reading notes even while the source is provisional.
     expect(screen.queryByTestId("stats-provisional-banner")).toBeNull();
     expect(screen.queryByText("Provisional statistics")).toBeNull();
     expect(screen.queryByText("How to read these statistics")).toBeNull();
@@ -701,13 +698,11 @@ describe("R654 public statistics route", () => {
     expect(page.textContent).not.toContain("Data source");
     expect(page.textContent).not.toContain("AI games + live games (provisional)");
     expect(page.textContent).not.toMatch(/AI development|publication gate|cleared gate|\blive\b/i);
-    // The patch's games still show, once, with no live count beside them (R661).
     const tiles = screen.getByTestId(statsTestid.summaryTiles);
     expect(within(tiles).getAllByText("1,200")).toHaveLength(1);
     expect(tiles).toHaveTextContent("Games on patch 0.2.0");
     expect(page.textContent).not.toContain("412");
 
-    // The drill-down names no gate either (R661).
     await user.click(await screen.findByText("Spark Pup"));
     const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
     expect(modal.textContent).not.toMatch(/gate/i);
@@ -720,7 +715,6 @@ describe("R654 public statistics route", () => {
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Drawn vs not drawn column header is shown by default, right after When drawn's
     const headers = screen.getAllByRole("columnheader").map((th) => th.textContent ?? "");
     const drawnAt = headers.findIndex((text) => /When drawn/i.test(text));
     expect(headers[drawnAt + 1]).toMatch(/Drawn vs not drawn/i);
@@ -738,11 +732,9 @@ describe("R654 public statistics route", () => {
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(3);
 
-    // Toggle Drawn vs not drawn off: the column header leaves
     await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
     expect(screen.queryByRole("columnheader", { name: /Drawn vs not drawn/i })).not.toBeInTheDocument();
 
-    // Toggle it back on: the column header returns
     await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
     expect(screen.getByRole("columnheader", { name: /Drawn vs not drawn/i })).toBeInTheDocument();
   });
@@ -768,7 +760,7 @@ describe("R654 public statistics route", () => {
     const deltaHeader = screen.getByRole("columnheader", { name: /Drawn vs not drawn/i });
     expect(deltaHeader).toHaveAttribute("aria-sort", "none");
 
-    // Click to sort descending: Spark Pup (+25%) first, then Aqua Warden (-15%), then Lava Hound (< minSample)
+    // Lava Hound, under the floor, sorts last either way.
     await user.click(deltaHeader);
     expect(deltaHeader).toHaveAttribute("aria-sort", "descending");
 
@@ -777,7 +769,6 @@ describe("R654 public statistics route", () => {
     expect(rows[1]).toHaveTextContent("Aqua Warden");
     expect(rows[2]).toHaveTextContent("Lava Hound");
 
-    // Click again to toggle to ascending: Aqua Warden (-15%) first, then Spark Pup (+25%), then Lava Hound
     await user.click(deltaHeader);
     expect(deltaHeader).toHaveAttribute("aria-sort", "ascending");
 
@@ -812,7 +803,6 @@ describe("R654 public statistics route", () => {
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(3);
 
-    // Sort by Radiant descending: Spark Pup (70%) > Aqua Warden (40%) > Lava Hound (—)
     await user.click(radiantHeader);
     expect(radiantHeader).toHaveAttribute("aria-sort", "descending");
 
@@ -821,7 +811,6 @@ describe("R654 public statistics route", () => {
     expect(rows[1]).toHaveTextContent("Aqua Warden");
     expect(rows[2]).toHaveTextContent("Lava Hound");
 
-    // Sort by Radiant ascending: Aqua Warden (40%) > Spark Pup (70%) > Lava Hound (—)
     await user.click(radiantHeader);
     expect(radiantHeader).toHaveAttribute("aria-sort", "ascending");
 
@@ -855,7 +844,6 @@ describe("R654 public statistics route", () => {
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Filter by keyword: "Taunt"
     const keywordSelect = screen.getByLabelText(/Filter by keyword/i);
     await user.selectOptions(keywordSelect, "Taunt");
 
@@ -866,7 +854,6 @@ describe("R654 public statistics route", () => {
     expect(screen.queryByText("Spark Pup")).not.toBeInTheDocument();
     expect(screen.queryByText("Prem Panther")).not.toBeInTheDocument();
 
-    // Reset filter to All keywords
     await user.selectOptions(keywordSelect, "");
     rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
     expect(rows).toHaveLength(4);
@@ -884,7 +871,6 @@ describe("R654 public statistics route", () => {
     expect(sortSelect).toHaveValue("winRate");
     expect(sortDirBtn).toHaveTextContent("↓");
 
-    // Change sort select to "name"
     await user.selectOptions(sortSelect, "name");
     expect(sortSelect).toHaveValue("name");
     // defaultDirection for name is asc
@@ -892,12 +878,10 @@ describe("R654 public statistics route", () => {
     const nameHeader = screen.getByRole("columnheader", { name: /Name/i });
     expect(nameHeader).toHaveAttribute("aria-sort", "ascending");
 
-    // Toggle direction button
     await user.click(sortDirBtn);
     expect(sortDirBtn).toHaveTextContent("↓");
     expect(nameHeader).toHaveAttribute("aria-sort", "descending");
 
-    // Clicking a table header updates the select control
     const gamesHeader = within(screen.getByTestId(statsTestid.cardsTable)).getByRole("columnheader", { name: /^Games/ });
     await user.click(gamesHeader);
     expect(sortSelect).toHaveValue("games");
@@ -911,7 +895,6 @@ describe("R654 public statistics route", () => {
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
 
-    // Column toggles are visible in table view
     expect(screen.getByText("Columns:")).toBeInTheDocument();
 
     const viewGridBtn = screen.getByTestId(statsTestid.viewGrid);
@@ -920,7 +903,6 @@ describe("R654 public statistics route", () => {
     expect(viewTableBtn).toHaveAttribute("aria-pressed", "true");
     expect(viewGridBtn).toHaveAttribute("aria-pressed", "false");
 
-    // Switch to Grid view
     await user.click(viewGridBtn);
 
     expect(viewGridBtn).toHaveAttribute("aria-pressed", "true");
@@ -928,14 +910,11 @@ describe("R654 public statistics route", () => {
     expect(screen.getByTestId(statsTestid.cardsGrid)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsTable)).not.toBeInTheDocument();
 
-    // Column toggles are hidden in grid view
     expect(screen.queryByText("Columns:")).not.toBeInTheDocument();
 
-    // Verify grid cards render figures
     const gridItems = screen.getByTestId(statsTestid.cardsGrid).querySelectorAll("li.stats-grid-item");
     expect(gridItems).toHaveLength(3);
 
-    // Switch back to Table view
     await user.click(viewTableBtn);
     expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
@@ -1211,13 +1190,16 @@ describe("the card drill-down dialog", () => {
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
+    // R2756000: core-001 is a full-art card, so its art buttons come first, before Show Radiant.
+    const arts = within(screen.getByTestId(statsTestid.drillDownArt)).getAllByRole("button");
+    expect(arts).toHaveLength(FULL_ART_TIERS.length + 1);
     expect(close).toHaveFocus();
 
-    for (const next of [radiant, almanac, retry, close]) {
+    for (const next of [...arts, radiant, almanac, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, almanac, radiant, close]) {
+    for (const previous of [retry, almanac, radiant, ...[...arts].reverse(), close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -1313,6 +1295,72 @@ describe("the drill-down's card preview", () => {
     expect(dialog.querySelectorAll(".cf")).toHaveLength(1);
   });
 
+  it("R2756000 a full-art card's breakdown offers No full art and each tier, opens on the setting's Epic, and prints the art picked on both faces, writing no pick", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
+    const art = (name: string): HTMLElement => within(picker).getByRole("button", { name });
+    const face = (): Element | null => dialog.querySelector(".stats-drilldown-faces .cf");
+    expect(within(picker).getAllByRole("button").map((button) => button.textContent)).toEqual(["No full art", "Epic", "Legendary", "Mythic"]);
+    expect(art("Epic")).toHaveAttribute("aria-pressed", "true");
+    expect(art("No full art")).toHaveAttribute("aria-pressed", "false");
+    expect(face()?.getAttribute("data-full-art-tier")).toBe("Epic");
+
+    fireEvent.click(art("Legendary"));
+    expect(art("Legendary")).toHaveAttribute("aria-pressed", "true");
+    expect(art("Epic")).toHaveAttribute("aria-pressed", "false");
+    expect(face()?.getAttribute("data-full-art-tier")).toBe("Legendary");
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    fireEvent.click(art("Mythic"));
+    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
+    expect(faces).toHaveLength(2);
+    for (const each of faces) expect(each.getAttribute("data-full-art-tier")).toBe("Mythic");
+
+    fireEvent.click(art("No full art"));
+    for (const each of dialog.querySelectorAll(".stats-drilldown-faces .cf")) expect(each.hasAttribute("data-full-art")).toBe(false);
+
+    // A preview: no pick is written, since every write of one is sent to the account (R1834000).
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+  });
+
+  it("R2756000 with the Full-art cards setting off the breakdown opens on No full art and still prints a tier picked, and a card without full art offers no choice", async () => {
+    writeCardSettings({ fullArt: false });
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
+    expect(within(picker).getByRole("button", { name: "No full art" })).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.hasAttribute("data-full-art")).toBe(false);
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Epic" }));
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
+
+    // core-003 has no full art: its breakdown offers no choice.
+    cleanup();
+    at("/stats?card=core-003");
+    render(<StatsRoute />);
+    await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.drillDownArt)).toBeNull();
+  });
+
+  it("R2756000 the art picked stays picked when the breakdown is closed and opened again", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    fireEvent.click(within(screen.getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" }));
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.click(screen.getByText("Spark Pup"));
+    const dialog = screen.getByRole("dialog");
+    expect(within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" })).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Mythic");
+  });
+
   it("links the card to its detail in the Almanac, and follows the link in place", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
@@ -1351,7 +1399,6 @@ describe("the drill-down's card preview", () => {
 });
 
 describe("R1966000 the Sets tab", () => {
-  /** A card row: `wins` of `games`, in `set`. */
   function row(id: string, name: string, set: string, wins: number, games: number) {
     return {
       ...MOCK_CARD_STATS_PROVISIONAL.cards[0]!,
@@ -1729,7 +1776,6 @@ describe("R2089000 the Created cards", () => {
     // The 8 Radiant seats are below R654's floor: no 75%.
     expect(within(row).queryByText("75%")).toBeNull();
 
-    // The deck table has no row for it.
     const deck = screen.getByTestId(statsTestid.cardsTable);
     expect(within(deck).queryByText("Rush Token")).toBeNull();
     expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
@@ -1796,7 +1842,6 @@ describe("R2370000 the Tokens toggle", () => {
   /** A Created copy of a deck card: no token. */
   const COPY = created("core-001", "Spark Pup", 30, 0.5, 0, null);
 
-  /** Answers the card statistics with `body`, and anything else with nothing. */
   function serveCards(body: unknown): void {
     vi.stubGlobal(
       "fetch",

@@ -68,10 +68,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// S 173 Abandoned Spice Tower — SPEC §8.10 row 173, BUILD M12 row S 173: "its Activate deals 4 to its
-// controller's hero and tributes it, and its Death adds 3 Spices to the hand, a full hand burning the
-// rest; it never attacks or switches to Defense; spices and selfDamage read through `param()`; radiant
-// 0/16 and Radiant Spices, the damage kept".
+// S 173 Abandoned Spice Tower — SPEC §8.10 row 173, BUILD M12 row S 173.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

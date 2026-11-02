@@ -1,6 +1,5 @@
-// #936 S6/S8: `net/duos.ts`, one fetch wrapper per Duos co-op route. Each test asserts what goes on
-// the wire (method, path, JSON body) and what comes back: the parsed answer, or the repo's
-// `ApiRequestError` carrying the refusal's status and code (B33, B34, B41, B42).
+// #936 S6/S8: `net/duos.ts`, one fetch wrapper per Duos co-op route: what each sends, and the parsed
+// answer or the `ApiRequestError` carrying the refusal's status and code (B33, B34, B41, B42).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

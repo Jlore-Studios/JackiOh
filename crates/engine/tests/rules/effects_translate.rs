@@ -1,32 +1,19 @@
 //! ME-CN's verb and flag (docs/meditative-set.md, group B's Systems, ME-CN; MD-B11, MD-B12): `translate`
 //! shows a card in Chinese from now on, over a named card or a card scope. The flag is presentation
-//! only (R1300): Immutable does not stop it, nothing removes it, a copy keeps it and a Transform's new
-//! card is without it. It is public as the card is (R1301): on every view of a card the viewer may
-//! read and on no hidden one, and `translated` reaches both players only where both read the card.
+//! only (R1300) and public as the card is (R1301): on every view the viewer may read, on no hidden one.
 
 use jackioh_engine::effects::{add_library_copies, shuffle_into, summon_copy, transform, translate};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_effect, set_library, slot};
-use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game, stoic, translator};
+use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_as_p1 as run, set_library, slot};
+use crate::rules::fixtures::instance_data::{
+    body, brittle_trap, instance_main_phase as game, stoic, translator,
+};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-
-fn game(seed: &str) -> GameState {
-    let mut state = instance_game(seed, None);
-    state.turn = 5;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state
-}
-
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
-}
 
 fn translate_id(id: &str) -> Effect {
     translate(json_as(json!({ "instanceId": id })))
@@ -138,7 +125,7 @@ mod r1300_the_flag_and_its_verb {
         for card in cards {
             assert_eq!(card.chinese, Some(true), "{} {}", card.id, card.def_id);
         }
-        // The Spell itself was resolving, in neither pile, so it stays as it was.
+        // The resolving Spell was in neither pile, so it stays as it was.
         assert_eq!(live(&state, &spell.id).chinese, None);
         assert!(
             !result
@@ -413,7 +400,7 @@ mod r1301_who_sees_it {
             sent(&mut state, events.clone(), P2),
             json!([{ "type": "translated", "instanceId": unit.id }])
         );
-        // Bounced since, the card is in its owner's hand, which only its owner reads (R97).
+        // Bounced since, it is in its owner's hand, which only the owner reads (R97).
         let mut moving = live(&state, &unit.id);
         move_to_zone(
             &mut state,

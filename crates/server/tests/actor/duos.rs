@@ -1,23 +1,5 @@
-//! B35–B42 (#936, `.fullsend/SPEC.md` S6) through `GET /ws/duos`: the hello view, applied and
-//! illegal actions, the AI seats, the disconnect takeover, the round clock, the mulligan clock, pings
-//! (relayed to the teammate only, shape-checked, rate-limited, never in a view or the replay), the
-//! end of a game and the per-match replay, which a finished game has (§13.9). Where a test reads
-//! what was logged while the game is live, it reads the store's log.
-//!
-//! The real router is served over in-memory pipes (`MemoryListener`, as `actor/heartbeat.rs` does,
-//! since real TCP races a paused clock), so the upgrade, the auth (an offered subprotocol, R1379000)
-//! and the frames are the wire's. Each client is a small RFC 6455 client whose reader task answers
-//! the server's pings and stamps every text frame with the paused clock's instant. A match is made
-//! the way players make one:
-//! `POST /api/duos/rooms`, then the join; its seats' decks are dealt at random (`random: true`) over
-//! the real catalog, and the AI plays B1 and B2.
-//!
-//! The quiet window. Once both AI seats have answered their mulligans (each human sees
-//! `own.mulligan.opponentReady` and `teammate.mulligan.opponentReady`), nothing is owed by the AI
-//! and nothing moves until a human acts or `DUOS_MULLIGAN_CLOCK_MS` runs out: the tests that assert
-//! that something did NOT happen run there.
-//!
-//! The WebSocket harness and the account helpers are `pub(super)`: `actor/watch.rs` uses them.
+//! B35–B42 (#936, `.fullsend/SPEC.md` S6) through `GET /ws/duos`: views, clocks, replay (§13.9).
+//! Router served over in-memory pipes; bearer subprotocol (R1379000).
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -40,7 +22,7 @@ use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, JLORE_COOP_LOSS,
     JLORE_GAMES_DAILY_CAP, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS,
     MATCH_SERVER_ACTION_RETRY_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
-    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
+    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS, WATCH_HELLO_INTERVAL_MS,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
@@ -51,7 +33,7 @@ use jackioh_server::economy::store::{JloreGrant, JloreReason};
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
 use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
-use crate::support::store::{fake, uuid};
+use crate::support::store::{Account, account, fake, uuid};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -82,9 +64,7 @@ const NO_STATUS: u16 = 1005;
 /// RFC 6455's policy violation: what a socket past its malformed budget is closed with (R835002).
 const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
-// ---------------------------------------------------------------------------------------------
 // Time and numbers
-// ---------------------------------------------------------------------------------------------
 
 /// Lets every task woken at this instant run.
 pub(super) async fn settle() {
@@ -129,9 +109,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The app served over in-memory pipes
-// ---------------------------------------------------------------------------------------------
 
 /// The listener `axum::serve` accepts from: each pipe a test sends is a connection.
 struct MemoryListener(mpsc::UnboundedReceiver<DuplexStream>);
@@ -184,8 +162,7 @@ impl Served {
             .0
     }
 
-    /// The upgrade of `path_and_query` over a new pipe, offering `protocols` (none when empty);
-    /// panics unless the server answers 101. Answers the client and the protocol the server echoed.
+    /// Upgrades path_and_query over new pipe, asserting 101 response.
     pub(super) async fn connect_offering(
         &self,
         path_and_query: &str,
@@ -230,9 +207,7 @@ impl Served {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A WebSocket client
-// ---------------------------------------------------------------------------------------------
 
 #[derive(Default)]
 struct Inbox {
@@ -441,46 +416,14 @@ impl WsClient {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Accounts and requests
-// ---------------------------------------------------------------------------------------------
-
-/// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.
-pub(super) struct Account {
-    pub(super) id: String,
-    pub(super) name: String,
-    pub(super) token: String,
-}
-
-/// An active account, username `base#n`.
-pub(super) async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    let id = uuid(n);
-    let user_id = format!("user-{n}");
-    let tag = i64::from(n);
-    fake(app).lock().await.seed_profile(json!({
-        "id": id,
-        "userId": user_id,
-        "status": "active",
-        "username": base,
-        "usernameTag": tag,
-        "usernamePrompted": true,
-    }));
-    let token = add_user(app, &user_id, &format!("{user_id}@example.test"), true);
-    Account {
-        id,
-        name: format!("{base}#{tag}"),
-        token,
-    }
-}
 
 pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
     (status, body)
 }
 
-// ---------------------------------------------------------------------------------------------
 // A Duos match and its frames
-// ---------------------------------------------------------------------------------------------
 
 fn hello(match_id: &str) -> Value {
     json!({ "type": "hello", "matchId": match_id })
@@ -832,9 +775,7 @@ impl Duos {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B35 — hello, applied and refused actions
-// ---------------------------------------------------------------------------------------------
 
 mod b35_the_socket {
     use super::*;
@@ -1048,9 +989,7 @@ mod b35_the_socket {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B36 — the AI seats act
-// ---------------------------------------------------------------------------------------------
 
 mod b36_the_ai_seats {
     use super::*;
@@ -1073,13 +1012,7 @@ mod b36_the_ai_seats {
         );
     }
 
-    /// The first view of `round` or later `a1` has had since frame `from`, waited for up to `within`
-    /// while the people play along as a person at the table does: each answers a prompt it holds
-    /// (the first answer offered), else ends its turn once its legal actions hold that. A prompt a
-    /// person holds waits for that person, on a clock of its own (DUOS_PROMPT_CLOCK_MS, §13.3), and
-    /// a duel whose new active player is a person's seat gives that person the round seat (§13.3,
-    /// R456: a turn cut short as it begins): neither is a step of the AI's. `acted` counts the
-    /// people's actions by the instant they were taken, so the views they caused are told apart.
+    /// First view of round reached by a1 (DUOS_PROMPT_CLOCK_MS, §13.3, R456).
     async fn round_reached(
         a1: &WsClient,
         a2: &WsClient,
@@ -1169,9 +1102,7 @@ mod b36_the_ai_seats {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B37 — a human gone past the grace
-// ---------------------------------------------------------------------------------------------
 
 mod b37_the_disconnect_takeover {
     use super::*;
@@ -1252,9 +1183,7 @@ mod b37_the_disconnect_takeover {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B38 — the round clock
-// ---------------------------------------------------------------------------------------------
 
 mod b38_the_round_clock {
     use super::*;
@@ -1319,9 +1248,7 @@ mod b38_the_round_clock {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B39 — pings
-// ---------------------------------------------------------------------------------------------
 
 mod b39_pings {
     use super::*;
@@ -1571,9 +1498,7 @@ mod b39_pings {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B40, B41, B42, B11 — the log and the replay, the end of a game and the live route
-// ---------------------------------------------------------------------------------------------
 
 mod b40_b42_the_log_the_replay_and_the_end {
     use super::*;
@@ -1722,9 +1647,7 @@ mod b40_b42_the_log_the_replay_and_the_end {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1483000 — a capped co-op seat is told on its own view
-// ---------------------------------------------------------------------------------------------
 
 mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
     use super::*;
@@ -1835,9 +1758,7 @@ mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // #1657 — a co-op seat's view carries what the result paid its own person
-// ---------------------------------------------------------------------------------------------
 
 mod a_coop_seat_is_sent_its_own_pay {
     use super::*;
@@ -1951,9 +1872,7 @@ mod a_coop_seat_is_sent_its_own_pay {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §13.2, R268 — the mulligan clock keeps a person's hand
-// ---------------------------------------------------------------------------------------------
 
 mod r268_the_mulligan_clock {
     use super::*;
@@ -2010,9 +1929,7 @@ mod r268_the_mulligan_clock {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B37, B38 — a move the AI decided under one hold is not played under another
-// ---------------------------------------------------------------------------------------------
 
 mod b37_b38_the_ais_hold {
     use super::*;
@@ -2038,9 +1955,7 @@ mod b37_b38_the_ais_hold {
             ms(DUOS_AI_STEP_DELAY_MS),
         );
 
-        // A1 drops so that its grace runs out half a step before round 1's clock: the AI takes A1
-        // over outright, the clock then hands it A1's turn's end, and the AI's first move for A1,
-        // a step after the grace, is decided while it still plays A1 outright.
+        // A1 drops: grace expires before round clock and AI takes over.
         let dropped = opened_at + round_clock - grace - step / 2;
         tokio::time::sleep_until(dropped).await;
         a1.hang_up().await;
@@ -2081,9 +1996,7 @@ mod b37_b38_the_ais_hold {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §9.1 — repeated hellos coalesce (R835001's rule)
-// ---------------------------------------------------------------------------------------------
 
 mod hello_coalescing {
     use super::*;
@@ -2127,9 +2040,85 @@ mod hello_coalescing {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
+// R2686000 — a person's later hellos are answered once per interval, as a watcher's are
+
+mod r2686000_player_hello_limit {
+    use super::*;
+
+    /// A script's burst of hellos on one socket, each sent after the previous reply had arrived.
+    const HELLO_BURST: usize = 10;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2686000_duos_hellos_are_answered_once_per_interval_actions_continue_and_a_new_generation_answers_at_once()
+     {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        h.ai_mulligans_answered(&a1).await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let interval = ms(WATCH_HELLO_INTERVAL_MS);
+        let from = a1.received();
+
+        // Ten hellos on one socket, each sent after the last had been run and answered, so each would
+        // cost its own view were only R835001's coalescing of queued hellos holding them: one is
+        // answered, and the socket stays open.
+        let started = Instant::now();
+        for _ in 0..HELLO_BURST {
+            a1.send_json(hello(&h.match_id)).await;
+            settle().await;
+            actor.idle().await;
+            settle().await;
+        }
+        assert_eq!(a1.of_type_since(from, "view").len(), 1, "{:?}", a1.frames());
+        assert_eq!(a1.close_code(), None);
+        assert_eq!(Instant::now(), started, "the clock stood still for the burst");
+
+        // The hello that comes a moment short of the interval is dropped, the one at it answered.
+        tokio::time::advance(interval - Duration::from_millis(1)).await;
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(a1.of_type_since(from, "view").len(), 1);
+        tokio::time::advance(Duration::from_millis(1)).await;
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(a1.of_type_since(from, "view").len(), 2);
+        assert_eq!(a1.close_code(), None);
+
+        // The gate is closed again, and an action is neither delayed nor refused by it.
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        let before = Instant::now();
+        h.keep(&a1, "keep-r2686000").await;
+        assert_eq!(Instant::now(), before, "the ack came without the clock moving");
+
+        // A reattach is a new socket generation: its first later hello is answered at once, however
+        // recent the old socket's last answer, and its second, so soon after, is not.
+        let revived = h.seat(&h.host).await;
+        settle().await;
+        let seen = revived.received();
+        revived.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(
+            revived.of_type_since(seen, "view").len(),
+            1,
+            "{:?}",
+            revived.frames()
+        );
+        revived.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(revived.of_type_since(seen, "view").len(), 1);
+        assert_eq!(revived.close_code(), None);
+    }
+}
+
 // B40, §9.1 — a rebuild, and none for a socket that holds no seat
-// ---------------------------------------------------------------------------------------------
 
 mod b40_the_rebuild {
     use super::*;
@@ -2164,9 +2153,7 @@ mod b40_the_rebuild {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1398000 — a finished co-op match's socket reopens only inside the rematch window
-// ---------------------------------------------------------------------------------------------
 
 /// With no actor in memory, a seat's hello reopens a finished match only within
 /// `REMATCH_OFFER_TTL_MS` of its `ended_at` (R1285000's window): past it the seat is not found
@@ -2281,9 +2268,7 @@ mod r1398000_the_end_screen_window {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1047000 — the hard ceiling (§9.5)
-// ---------------------------------------------------------------------------------------------
 
 mod r1047000_the_ceiling {
     use super::*;
@@ -2339,22 +2324,14 @@ mod r1047000_the_ceiling {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1253000 — a live action the engine panics on
-// ---------------------------------------------------------------------------------------------
 
-/// R1253000: a live co-op `reduce` that panics changes nothing, is answered `internal` once and kept
-/// under its nonce, and is filed for the night bot; a server action (the AI's move or the ceiling's)
-/// that panics ends the match at once as the ceiling's draw (R1047001), since the AI would make the
-/// same move again on the same state.
+/// R1253000: live co-op action panic handling (R1047001).
 mod r1253000_a_live_coop_action_the_engine_panics_on {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    /// Round 1 open with both people seated, and the first `play` A1 may make. Every play of a card of
-    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`. The guest
-    /// brings the cheap deck too: a random deal could hold a Cast-on-draw autopilot (M+ #18, R1183002)
-    /// that plays A2's first turn, and a panicking card in it, before anyone has acted.
+    /// Round 1 open with both people seated, and first play by A1 panicking (M+ #18, R1183002).
     async fn opened() -> (Duos, WsClient, WsClient, Arc<AtomicUsize>, Value) {
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
@@ -2506,9 +2483,7 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R835000, R835002 — the 1v1 socket's abuse guards, on the co-op socket
-// ---------------------------------------------------------------------------------------------
 
 mod r835000_r835002_the_abuse_guards {
     use super::*;
@@ -2681,15 +2656,11 @@ mod r835000_r835002_the_abuse_guards {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1379000 — the credential on the handshake
-// ---------------------------------------------------------------------------------------------
 
 mod r1379000_the_credential_on_the_handshake {
-    //! R1379000: a co-op seat offers its token as a `jackioh.bearer.` subprotocol beside
-    //! `jackioh.v1`, and `jackioh.v1` is all the server answers with. No usable credential is R148's
-    //! 4401, a renewed token seats what the refused one could not (R1115000), and the previous day's
-    //! client's `?token=` is read only when no credential is offered.
+    //! R1379000: co-op seat offers token as `jackioh.bearer.` subprotocol; answered `jackioh.v1`.
+    //! Missing credential is R148 4401; renewed token seats (R1115000); `?token=` fallback kept.
     use super::*;
 
     #[tokio::test(start_paused = true)]
@@ -2779,6 +2750,53 @@ mod r2478000_co_op_and_watch_upgrades_count_against_the_accounts_budget {
                 "{path}"
             );
             assert!(client.of_type("view").is_empty(), "{path}: {:?}", client.frames());
+        }
+    }
+}
+
+mod an_account_that_is_not_active_is_refused_the_co_op_and_watch_sockets {
+    //! §9.4's gate on `/ws/duos` and `/ws/watch`, as on `/ws/match` (`ws_server.rs`): a pending or
+    //! banned account's upgrade is answered `forbidden` with the gate's own words and closed with
+    //! R148's 4403, before any hello is read.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_pending_or_banned_accounts_co_op_or_watch_upgrade_is_closed_with_4403() {
+        let app = empty_test_app().await;
+        let served = serve(&app);
+        for (n, status, message) in [
+            (1u32, "pending", "redeem an invite code to activate this account"),
+            (2, "banned", "this account is banned"),
+        ] {
+            let user_id = format!("user-{n}");
+            fake(&app).lock().await.seed_profile(json!({
+                "id": uuid(n),
+                "userId": user_id,
+                "status": status,
+            }));
+            let token = add_user(&app, &user_id, &format!("{user_id}@example.test"), true);
+            for path in [DUOS_PATH, WATCH_PATH] {
+                let client = served.connect(path, &token).await;
+                let (_, _, refusal) = client
+                    .wait_for(0, PROMPTLY, |frame| {
+                        frame["type"] == "error" && frame["code"] == "forbidden"
+                    })
+                    .await
+                    .unwrap_or_else(|| panic!("{status} {path}: no forbidden: {:?}", client.frames()));
+                assert_eq!(refusal["message"], message, "{status} {path}");
+                assert_eq!(
+                    client.wait_closed(PROMPTLY).await,
+                    Some(WS_CLOSE.forbidden),
+                    "{status} {path}"
+                );
+                assert!(
+                    client.of_type("view").is_empty(),
+                    "{status} {path}: {:?}",
+                    client.frames()
+                );
+            }
         }
     }
 }

@@ -20,7 +20,6 @@ pub const ID: &str = "classic-081";
 /// the activation resolves, a prompt the `resume` step answers (R831009).
 const MODES: [&str; 3] = ["heal", "draw", "reduce"];
 
-/// The resume step of the third mode's hand pick.
 const REDUCE_STEP: &str = "reduce";
 
 pub fn script() -> CardScripts {
@@ -69,17 +68,12 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 6, 2 and 2 are its declared numbers.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
 }
 
-// C #81 The Power to Thrive — SPEC §8.6 row 81, BUILD M9 Classic row C 81: "Activate, once per turn
-// (R384), the mode carried in the `activate` action: heal your hero 3 (no cap, R19), draw 1, or a card of
-// your hand costs (1) less (patch v0.3.10); usable the turn it is played; a second activation that turn is
-// refused; not a play; radiant: heal 6, draw 2, or (2) less; its tuned numbers (heal, draw, discount) read
-// through `param()` (R386)".
+// C #81 The Power to Thrive — SPEC §8.6 row 81, BUILD M9 Classic row C 81 (R384, R19, R386).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -126,8 +120,6 @@ mod tests {
         modes
     }
 
-    /// TS `standing(radiantFace = false, extra = {})`; `extra` holds the optional `health`, `library`
-    /// (a count) and `hand`.
     fn standing(radiant_face: bool, extra: Value) -> Scenario {
         let hand = extra["hand"].as_array().cloned().unwrap_or_else(|| vec![json!(ANCHOR)]);
         let library = extra["library"].as_u64().map(|n| n as usize).unwrap_or(4);
@@ -138,7 +130,6 @@ mod tests {
         }))
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -149,7 +140,6 @@ mod tests {
             assert_eq!(offered_modes(&s), ["draw", "heal", "reduce"]);
         }
 
-        /// heal: your hero 3
         #[test]
         fn heal_your_hero_3() {
             let mut s = standing(false, json!({}));
@@ -166,7 +156,6 @@ mod tests {
             s.expect_health(P1, 33);
         }
 
-        /// draw: 1
         #[test]
         fn draw_1() {
             let mut s = standing(false, json!({}));
@@ -189,7 +178,6 @@ mod tests {
             assert!(s.state().pending.is_none());
             assert_eq!(s.card(&filler).cost_mod, -1);
             assert_eq!(s.card(ANCHOR).cost_mod, 0);
-            // No mana gained, as the old third mode did.
             s.expect_mana(P1, 4);
         }
 
@@ -284,11 +272,9 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
-        /// heal 6, draw 2, or (2) off a card in your hand
         #[test]
         fn heal_6_draw_2_or_2_off_a_card_in_your_hand() {
             let mut healed = standing(true, json!({}));

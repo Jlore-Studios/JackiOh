@@ -6,19 +6,16 @@
 //!          exiled this way. Each costs ({discount}) less."
 //! Engine:
 //! - **Count, then exile** (Frozen Wastes' pattern, C+ #12.6): the count is the permanents the exile's
-//!   own scope names that this player controls (R1142) — the tops of unit piles and every backrow
-//!   card, face-down ones included, a stolen enemy card included and this player's card the opponent
-//!   controls left out. Then `exile_all` over the same scope: exile ignores Indestructible and runs no
-//!   Death (§6.3). A unit token counts, though it ceases to exist instead of reaching exile (R11); a
-//!   card dormant under a Stack is not on the field (R13), so it is neither exiled nor counted and
-//!   resumes; a Unit immune to Spells is in neither (B5 E35).
+//!   own scope names that this player controls (R1142), face-down ones included. Then `exile_all`
+//!   over the same scope: exile ignores Indestructible and runs no Death (§6.3). A unit token counts,
+//!   though it ceases to exist instead of reaching exile (R11); a card dormant under a Stack is not on
+//!   the field (R13); a Unit immune to Spells is in neither (B5 E35).
 //! - **The cards:** `add_random_from_catalog` from `{ tags: ["CN"] }`, one per counted permanent:
 //!   non-token CN cards of every set that ships (R380, R1420), never this card (R387), repeats allowed
 //!   (R60); the hand cap burns the overflow (§2.4). The Radiant face's are Radiant and cost `discount`
 //!   less (`costMod`; an X card ignores it, R65).
 //! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag, and a card in Chinese has
-//!   it (R1176000). The count and the exile read
-//!   one scope, so a card that a tribal-hate immunity keeps out of the scope is kept out of both.
+//!   it (R1176000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -62,11 +59,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78: "Exiles every non-CN permanent
-// on both sides and rows (face-down and Indestructible ones too, no Death); then adds one random
-// non-token CN card for each permanent of yours it exiled (R1142), a unit token counting and a card
-// dormant under a Stack neither exiled nor counted; the hand cap burns the overflow; radiant the cards
-// are Radiant and cost (2) less each, the discount read through `param()`".
+// M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78.
 #[cfg(test)]
 mod tests {
     use super::ID;

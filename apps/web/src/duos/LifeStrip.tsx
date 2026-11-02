@@ -1,16 +1,9 @@
-// The life strip and the teammate strip (#936 B61, B63), on the Duos board's rail. Both read the
-// `DuosView` and nothing else (CLAUDE.md rule 7): life is public, so both teams' own HP and pools are
-// in it (B23), and the teammate's mana, hand and whether they have ended are the team's own.
-//
-// THE LIFE STRIP. One row per team, the seat's own first: each seat's own HP (`duos-own-hp`, the
-// seat on `data-seat`) and the team's pool (`duos-pool`, the team on `data-team`). A seat whose own
-// HP is spent (B13) no longer has a bar of its own: it reads "On the pool", and the pool, which now
-// takes its hits, is marked as carrying it (`data-carrying`). Within a row the seat in this board's
-// duel comes first, so the first `duos-own-hp` is always the viewer's own.
-//
-// THE TEAMMATE STRIP (`duos-teammate-strip`): their HP, mana, hand count and whether they have ended
-// their turn this round, always, whichever board the portal shows; and, from the route, whether
-// their socket is up and the AI is playing for them meanwhile (B37).
+// The life strip and the teammate strip (#936 B61, B63), on the Duos board's rail, read from the
+// `DuosView` alone (CLAUDE.md rule 7): life is public (B23), and the teammate's mana, hand and ended
+// flag are the team's own. A seat whose own HP is spent (B13) reads "On the pool", and the pool, which
+// now takes its hits, is marked as carrying it. Within a row the seat in this board's duel comes first,
+// so the first `duos-own-hp` is the viewer's. The teammate strip also shows whether their socket is up
+// and the AI is playing for them meanwhile (B37).
 
 import type { ReactElement } from "react";
 

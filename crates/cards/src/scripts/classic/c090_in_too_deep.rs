@@ -58,7 +58,6 @@ const QUESTS_V0_4_0F: QuestNumbers = QuestNumbers {
     stats: 10,
 };
 
-/// One quest of the tree.
 fn quest(id: &str, text: &str, goal: QuestGoal, rewards: &[&str]) -> QuestDef {
     QuestDef {
         id: id.to_string(),
@@ -68,7 +67,6 @@ fn quest(id: &str, text: &str, goal: QuestGoal, rewards: &[&str]) -> QuestDef {
     }
 }
 
-/// One reward of the tree.
 fn reward(id: &str, text: &str, next: Option<&str>) -> QuestRewardDef {
     QuestRewardDef {
         id: id.to_string(),
@@ -167,16 +165,13 @@ fn in_too_deep_quests(numbers: QuestNumbers) -> QuestBook {
     }
 }
 
-/// The aura rewards, held on the instance while the card stands (`subsystems.holdQuestAura`).
 const GRAVEYARD_AURA: &str = "L";
 const INDESTRUCTIBLE_AURA: &str = "M";
 
-// The continuations a reward that asks re-enters.
 const TARGET_DAMAGE_STEP: &str = "rewardB";
 const BOUNCE_STEP: &str = "rewardF";
 const DISCARD_STEP: &str = "rewardG";
 const REWARD_STEP: &str = "reward";
-/// The deferred reward-G discard's step, re-entered at the start of the opponent's next turn.
 const REWARD_G_DEFERRED_STEP: &str = "rewardGDeferred";
 /// The deferred reward G's path, re-entered behind its discard while this card keeps its stay (R174).
 const REWARD_G_PATH_STEP: &str = "rewardGPath";
@@ -245,8 +240,6 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
         "I" => vec![recruit(Default::default())],
         "J" => vec![next_turn_mana(json_as(json!({ "amount": REWARD_MANA })))],
         "K" => {
-            // "The deck" is every card of it: the bottom card, again and again, until none is left (a
-            // library never holds more than LIBRARY_CAP).
             vec![exile_bottom_of_library(json_as(json!({ "player": "enemy", "count": LIBRARY_CAP })))]
         }
         GRAVEYARD_AURA | INDESTRUCTIBLE_AURA => vec![subsystems::hold_quest_aura(id)],
@@ -254,8 +247,6 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
     }
 }
 
-/// The quest a reward leads to, opened once (`openQuest` passes over a quest ever opened). The paths
-/// are the same on every version's tree.
 fn path_of(id: &str) -> Vec<Effect> {
     let book = in_too_deep_quests(QUESTS);
     let next = subsystems::quest_reward_of(&book, id).and_then(|reward| reward.next.clone());
@@ -265,7 +256,6 @@ fn path_of(id: &str) -> Vec<Effect> {
     }
 }
 
-/// The quest this card's own `questCompleted` names, or `None` for another card's report.
 fn completed_here(ctx: &EffectContext<'_>, event: &GameEvent, numbers: QuestNumbers) -> Option<QuestDef> {
     let GameEvent::QuestCompleted {
         instance_id, quest, ..
@@ -280,7 +270,6 @@ fn completed_here(ctx: &EffectContext<'_>, event: &GameEvent, numbers: QuestNumb
     subsystems::quest_def_of(&book, quest).cloned()
 }
 
-/// The reward prompt's options: each reward's id under its caption, the same on every version's tree.
 fn reward_options(quest: &QuestDef) -> Vec<Value> {
     let book = in_too_deep_quests(QUESTS);
     quest
@@ -336,7 +325,6 @@ fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
         quests: Some(in_too_deep_quests(numbers)),
         triggers: vec![quest_completed(radiant, defer_g, numbers)],
         resume: IndexMap::from([
-            // The base face's chosen reward, then its path.
             (
                 REWARD_STEP,
                 hook(move |ctx| match chosen_options(ctx).into_iter().next() {
@@ -374,7 +362,6 @@ fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
                 }),
             ),
         ]),
-        // Reward M: your Units have Indestructible while this stands.
         aura: Some(aura_hook(|a| {
             if subsystems::held_quest_auras(a.self_).iter().any(|id| id == INDESTRUCTIBLE_AURA) {
                 let controller = a.self_.controller;
@@ -440,48 +427,30 @@ mod tests {
 
     const ITD: &str = "classic-090";
 
-    /// Spell 1: draw 2, heal your hero 2
     const STOCKPILE: &str = "core-005";
     /// Spell 1: no hit against an empty enemy exile (R63), then draw 1
     const CURSE: &str = "classic-001";
-    /// Spell 3: destroy target Unit
     const HIT_JOB: &str = "core-016";
-    /// Spell 4: destroy all permanents
     const NETHER: &str = "core-088";
-    /// Spell 1: 3 damage to a target
     const LUNAR: &str = "core-035";
-    /// Spell 1: Pierce, 4 damage, exile this
     const TRUE_STRIKE: &str = "core-044";
-    /// Spell 4: exile target permanent and a random card of the enemy deck
     const COLLATERAL: &str = "core-034";
-    /// Spell 1: destroy target backrow card, Lock its zone
     const MAGIC_JAMMED: &str = "core-036";
-    /// Spell 2: exile every card in your deck that costs (2) or less
     const EUGENICS: &str = "core-042";
-    /// 4/4
     const VANILLA: &str = "core-008";
-    /// 3/3 Rush, First Strike
     const TIMMY: &str = "core-011";
-    /// 9/9 Taunt
     const MENACE: &str = "core-019";
-    /// 1/1, Cry: summon a Rush Token
     const TOKEN_MAKER: &str = "core-015";
-    /// cast on draw: take 1 damage
     const VIRUS: &str = "core-090-1";
     const RUSH_TOKEN: &str = "core-t-rush";
 
     /// The cards a side holds so §2.5 never ends a turn on its own.
     const SPARE_HAND: [&str; 3] = [CURSE, STOCKPILE, TIMMY];
     const SPARE_LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
-    /// Spell 4: steal target enemy permanent
     const MIND_CONTROL: &str = "core-049";
-    /// Field Spell 3
     const MANA_WELL: &str = "core-006";
-    /// Field Spell 2
     const GIFTED: &str = "core-064";
-    /// Trap: fuse the opponent's played permanent onto one of yours of its type
     const EXPERIMENT: &str = "core-085";
-    /// Field Spell: Indestructible; Activate: Tribute this
     const LOCKDOWN: &str = "classic-084";
     /// C+ #54 Book of Books, (1) Spell: add 2 random Books to your hand, each costing (0)
     const BOOK_OF_BOOKS: &str = "classicplus-054";
@@ -500,7 +469,6 @@ mod tests {
         }
     }
 
-    /// No side setup here names a key SPARE has as well, so the order of the spread does not matter.
     fn spare(extra: Value) -> Value {
         let mut side = json!({ "hand": SPARE_HAND, "library": SPARE_LIBRARY });
         merge_into(&mut side, extra);
@@ -517,7 +485,6 @@ mod tests {
         subsystems::quest_memory_of(s.card(ITD))
     }
 
-    /// The quest line as JSON.
     fn line_json(memory: &subsystems::QuestMemory) -> Value {
         json!({
             "active": memory.active,
@@ -530,28 +497,23 @@ mod tests {
 
     use crate::matches_object;
 
-    /// TS `expect(line(s)).toMatchObject(pattern)`.
     fn expect_line_matches(s: &Scenario, pattern: Value) {
         let memory = line_json(&must(line(s), "a quest line"));
         assert!(matches_object(&memory, &pattern), "quest line {memory} does not match {pattern}");
     }
 
-    /// TS `expect(line(s)).toEqual(want)`.
     fn expect_line_equals(s: &Scenario, want: Value) {
         assert_eq!(line_json(&must(line(s), "a quest line")), want);
     }
 
-    /// TS `line(s)?.progress`.
     fn progress_of(s: &Scenario) -> Value {
         json!(must(line(s), "a quest line").progress)
     }
 
-    /// TS `line(s)?.active`.
     fn active_of(s: &Scenario) -> Vec<String> {
         must(line(s), "a quest line").active
     }
 
-    /// Write the quest line a path through the tree would have left (see the header).
     fn set_line(s: &mut Scenario, memory: Value) {
         let mut line = json!({ "active": [], "progress": {}, "done": [], "auras": [], "waiting": [] });
         merge_into(&mut line, memory);
@@ -562,19 +524,16 @@ mod tests {
             .insert(subsystems::QUEST_MEMORY_KEY.to_string(), line);
     }
 
-    /// Quest `id` open with its count at `progress` (TS's defaults: `progress = 0`, `extra = {}`).
     fn on_quest(s: &mut Scenario, id: &str, progress: i32, extra: Value) {
         let mut memory = json!({ "active": [id], "progress": { id: progress } });
         merge_into(&mut memory, extra);
         set_line(s, memory);
     }
 
-    /// The Curse's draw on a deck of spares: one action, so one state check after it.
     fn any_action(s: &mut Scenario) {
         s.play(CURSE, json!({}));
     }
 
-    /// The In Too Deep card view as `viewer` is shown it.
     fn shown(s: &Scenario, viewer: PlayerId) -> PublicBackrowView {
         let view = s.view(viewer);
         let card = s.card(ITD);
@@ -593,14 +552,12 @@ mod tests {
         panic!("{viewer} is not shown In Too Deep");
     }
 
-    /// TS `shown(s, viewer).quest?.open.map((quest) => quest.id)`.
     fn open_ids(s: &Scenario, viewer: PlayerId) -> Option<Vec<String>> {
         shown(s, viewer)
             .quest
             .map(|quest| quest.open.iter().map(|open| open.id.clone()).collect())
     }
 
-    /// TS `shown(s, viewer).quest?.open[0]`, as JSON (null when absent).
     fn first_open(s: &Scenario, viewer: PlayerId) -> Value {
         json!(shown(s, viewer).quest.and_then(|quest| quest.open.first().cloned()))
     }
@@ -630,12 +587,10 @@ mod tests {
         s.state().pending.as_ref().map(|pending| pending.kind)
     }
 
-    /// `{ pick: "instance", instanceId }`.
     fn instance_pick(instance_id: &str) -> Value {
         json!({ "pick": "instance", "instanceId": instance_id })
     }
 
-    /// The first `destroyed` event's owner and controller.
     fn destroyed_sides(events: &[GameEvent]) -> Option<(PlayerId, PlayerId)> {
         events.iter().find_map(|event| match event {
             GameEvent::Destroyed { owner, controller, .. } => Some((*owner, *controller)),
@@ -643,7 +598,6 @@ mod tests {
         })
     }
 
-    /// Whether `legalActions` offers `player` a play of the card `instance_id`.
     fn offers_play_of(s: &Scenario, player: PlayerId, instance_id: &str) -> bool {
         legal_actions(s.state(), player)
             .iter()
@@ -752,7 +706,6 @@ mod tests {
             #[test]
             fn quest_1_lives_in_the_quest_line_not_the_card_text_the_static_face_names_no_quest() {
                 crate::register_all();
-                // Balance patch 1: the first quest appears on the card face only after it is played.
                 let def = crate::card_def(ITD);
                 assert!(!def.base.text.contains("Quest:"));
                 assert!(!def.radiant.text.contains("Quest:"));
@@ -796,7 +749,6 @@ mod tests {
                             "auras": [],
                         })
                     );
-                    // `questProgressed` names the public card in both views.
                     let reports: Vec<String> = s
                         .view(viewer)
                         .events
@@ -832,7 +784,6 @@ mod tests {
                     .map(|option| option.label.clone())
                     .collect();
                 assert_eq!(labels, vec!["Heal your hero 6", "Deal 3 damage to a target"]);
-                // `legalActions` offers the two answers to the prompt's holder and none to the other seat.
                 let answers: Vec<Vec<Selection>> = legal_actions(s.state(), P1)
                     .into_iter()
                     .filter_map(|action| match action {
@@ -911,7 +862,6 @@ mod tests {
                     "p2": spare(json!({})),
                 }));
                 s.play(STOCKPILE, json!({}));
-                // Stockpile healed 2; A heals 6.
                 s.answer(json!("A"));
                 s.expect_health(P1, 28);
                 expect_line_matches(&s, json!({ "active": ["2"], "done": ["1"] }));
@@ -933,7 +883,6 @@ mod tests {
                 s.play(STOCKPILE, json!({}));
                 s.answer(json!("B"));
                 assert_eq!(pending_kind(&s), Some(PromptKind::Target));
-                // Quest 3 waits for the reward to finish.
                 assert!(active_of(&s).is_empty());
                 let foe = must(s.unit(P2, 1), "the enemy unit");
                 s.answer(json!(foe.id));
@@ -958,7 +907,6 @@ mod tests {
                 let timmy = must(s.unit(P1, 1), "Timmy");
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&timmy.id)] }));
                 assert_eq!(progress_of(&s), json!({ "2": 0 }));
-                // Twisting Nether destroys both enemy permanents (a token among them) and leaves In Too Deep.
                 s.play(NETHER, json!({}));
                 s.expect_in_zone(ITD, "field");
                 assert_eq!(completed_in(s.last_events()), vec!["2"]);
@@ -1000,7 +948,6 @@ mod tests {
                 }));
                 on_quest(&mut s, "2", 2, json!({}));
                 any_action(&mut s);
-                // The Curse has drawn and gone to the graveyard: four cards lie there, three in hand.
                 assert_eq!([s.hand(P1).len(), s.pile(P1, "graveyard").len()], [3, 4]);
                 s.answer(json!("C"));
                 let back: IndexSet<String> = s
@@ -1025,7 +972,6 @@ mod tests {
                 }));
                 on_quest(&mut s, "2", 2, json!({}));
                 any_action(&mut s);
-                // The Curse itself reached the graveyard before the reward: two cards lie there now.
                 s.answer(json!("C"));
                 let hand = def_ids(&s.hand(P1));
                 assert!(hand.iter().any(|id| id == MENACE));
@@ -1046,7 +992,6 @@ mod tests {
                 let foe = must(s.unit(P2, 1), "Menace");
                 assert_eq!(pending_kind(&s), Some(PromptKind::Target));
                 assert!(active_of(&s).is_empty());
-                // One answer puts all three on the pick: no second prompt opens.
                 s.answer(json!(foe.id));
                 assert_eq!(s.card(&foe).counters.plague, Some(3));
                 expect_line_matches(&s, json!({ "active": ["5"], "done": ["2"] }));
@@ -1072,8 +1017,6 @@ mod tests {
             #[test]
             fn r60_reward_e_a_random_unit_of_yours_gets_3_3_then_quest_6_with_none_nothing_and_quest_6_still_opens() {
                 crate::register_all();
-                // Two small Units (their totals stay under quest 6's 13 after the +3/+3), a Mana Well and
-                // In Too Deep.
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD, MANA_WELL], "field": [TIMMY, TOKEN_MAKER] })),
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -1097,7 +1040,6 @@ mod tests {
                 assert!(ours.contains(&buffed_id));
                 expect_line_matches(&s, json!({ "active": ["6"], "done": ["3"] }));
 
-                // No Unit of yours: four backrow permanents complete quest 3, and E buffs nothing.
                 let mut none = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD, MANA_WELL, GIFTED, LOCKDOWN] })),
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -1206,7 +1148,6 @@ mod tests {
             #[test]
             fn r16_reward_g_with_one_card_in_the_opponents_hand_discards_that_one() {
                 crate::register_all();
-                // No deck to draw from, so the one card stays the only card to discard.
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [MENACE], "library": [] },
@@ -1241,8 +1182,6 @@ mod tests {
                 s.answer(json!("G"));
                 assert!(s.state().pending.is_none());
                 s.end_turn();
-                // Their hand is empty when the delayed stage runs, before their turn's draw: nothing
-                // to discard and nothing asked, and G's path opens all the same.
                 assert!(s.state().pending.is_none());
                 let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![VANILLA]);
@@ -1261,7 +1200,6 @@ mod tests {
                     on_quest(&mut s, "4", 1, json!({}));
                     any_action(&mut s);
                     s.answer(json!("G"));
-                    // The old script asked at once; the open prompt parks G's path behind it.
                     let pending = must(s.state().pending.clone(), "the discard prompt");
                     assert_eq!(pending.kind, PromptKind::Hand);
                     assert_eq!(pending.player_id, P2);
@@ -1272,7 +1210,6 @@ mod tests {
                     s.answer(json!([first.id, second.id]));
                     let left = def_ids(&s.hand(P2));
                     assert_eq!(left, vec![MENACE]);
-                    // The answer drained the queue, so the parked path opened quest 8.
                     expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
                 });
             }
@@ -1286,9 +1223,6 @@ mod tests {
                 }));
                 on_quest(&mut s, "5", QUESTS.damage, json!({}));
                 any_action(&mut s);
-                // The reward choice is the controller's own prompt, so it opens at once. G's
-                // discard is the opponent's choice while p1 is active, so answering G opens
-                // nothing yet, and neither quest 8 nor quest 9 opens with it.
                 s.answer(json!("G"));
                 assert!(s.state().pending.is_none());
                 s.end_turn();
@@ -1303,7 +1237,6 @@ mod tests {
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
                 let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
-                // G's path opened with the answer, exactly once; H's path was never chosen.
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["5"] }));
             }
 
@@ -1325,8 +1258,6 @@ mod tests {
                     },
                 }));
                 on_quest(&mut s, "5", QUESTS.damage - 1, json!({}));
-                // p2 attacks into p1's unit on their own turn: the strike back is p1's cards
-                // dealing the completing damage, so the opponent is active throughout.
                 let timmy = must(s.unit(P2, 1), "Timmy").clone();
                 let vanilla = must(s.unit(P1, 1), "Vanilla").clone();
                 s.attack(&timmy, &vanilla);
@@ -1354,7 +1285,6 @@ mod tests {
                 any_action(&mut s);
                 s.answer(json!("G"));
                 assert!(s.state().pending.is_none());
-                // While G waits, reward F (its quest line set as a later path would have left it)
                 // bounces In Too Deep itself, and it is played again: a new stay on quest 1 (R78).
                 on_quest(&mut s, "4", 1, json!({}));
                 s.play(STOCKPILE, json!({}));
@@ -1449,7 +1379,6 @@ mod tests {
                     &first_open(&s, P1),
                     &json!({ "id": "6", "progress": 9, "goal": 13 })
                 ));
-                // 9 and a 3/3 is 12, a total short of 13.
                 s.play(TIMMY, json!({}));
                 assert!(completed_in(s.last_events()).is_empty());
                 s.play(VANILLA, json!({}));
@@ -1472,7 +1401,6 @@ mod tests {
                 on_quest(&mut s, "6", 0, json!({}));
                 s.play(CURSE, json!({}));
                 s.answer(json!("I"));
-                // The Curse drew the top Stockpile; the Recruit passes the next one over for the Vanilla.
                 assert_eq!(must(s.unit(P1, 3), "the recruit").def_id, VANILLA);
                 let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![STOCKPILE, MENACE]);
@@ -1532,11 +1460,9 @@ mod tests {
                     "p2": spare(json!({ "field": [VANILLA, RUSH_TOKEN] })),
                 }));
                 on_quest(&mut s, "8", 0, json!({}));
-                // True Strike exiles itself as it resolves: 1.
                 let token = must(s.unit(P2, 2), "the token");
                 s.play(TRUE_STRIKE, json!({ "targets": [instance_pick(&token.id)] }));
                 assert_eq!(progress_of(&s), json!({ "8": 1 }));
-                // Collateral Damage exiles the Vanilla and a card of p2's deck: 3.
                 let vanilla = must(s.unit(P2, 1), "Vanilla");
                 s.play(COLLATERAL, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(completed_in(s.last_events()), vec!["8"]);
@@ -1553,7 +1479,6 @@ mod tests {
                 on_quest(&mut s, "8", 0, json!({}));
                 let token = must(s.unit(P2, 1), "the token");
                 s.play(COLLATERAL, json!({ "targets": [instance_pick(&token.id)] }));
-                // The token ceased to exist; the deck card did enter exile.
                 assert_eq!(progress_of(&s), json!({ "8": 1 }));
             }
 
@@ -1598,7 +1523,6 @@ mod tests {
                 milled.play(EUGENICS, json!({}));
                 assert!(milled.pile(P1, "library").is_empty());
                 assert_eq!(progress_of(&milled), json!({ "9": 0 }));
-                // A fatigue draw takes no card either.
                 milled.play(CURSE, json!({}));
                 assert!(must(line(&milled), "a quest line").done.is_empty());
             }
@@ -1659,13 +1583,11 @@ mod tests {
                     .expect("a seed whose Book of Books adds a Book of Stats");
                 assert_eq!(s.card(&stats).cost_override, Some(0));
 
-                // Reward L, as the reward L test above earns it.
                 on_quest(&mut s, "9", 1, json!({}));
                 any_action(&mut s);
                 s.answer(json!("L"));
                 expect_line_matches(&s, json!({ "auras": ["L"] }));
 
-                // Played from the hand at its (0), the Book reaches the graveyard as the printed (1) Book.
                 let unit = must(s.unit(P1, 1), "p1's unit").id;
                 let mana = s.state().players[P1].mana.current;
                 s.play(&stats, json!({ "targets": [instance_pick(&unit)] }));
@@ -1676,8 +1598,6 @@ mod tests {
                 assert_eq!((lying.cost_mod, lying.cost_override), (0, None));
                 assert!(offers_play_of(&s, P1, &stats.id));
 
-                // Each replay from the graveyard pays (1) and lands it there at (1) again: as many replays as
-                // there is mana, and then none.
                 let mut replays = 0;
                 while offers_play_of(&s, P1, &stats.id) {
                     assert!(replays < mana, "the Book was replayed past the mana it costs");
@@ -1718,7 +1638,6 @@ mod tests {
                 }));
                 let menace = must(s.unit(P1, 1), "Menace");
                 assert!(has_keyword(&s.stats(&menace).keywords, KeywordKind::Taunt));
-                // The line as reward M leaves it (the reward itself: quest 10's test).
                 set_line(&mut s, json!({ "active": [], "done": ["10"], "auras": ["M"] }));
                 assert!(has_keyword(&s.stats(&menace).keywords, KeywordKind::Indestructible));
                 assert!(!has_keyword(&s.stats(&menace).keywords, KeywordKind::Taunt));
@@ -1814,13 +1733,11 @@ mod tests {
                     "p2": { "field": [VANILLA], "hand": [HIT_JOB, STOCKPILE], "library": SPARE_LIBRARY },
                 }));
                 on_quest(&mut s, "2", 1, json!({}));
-                // p2 destroys its own unit: an enemy permanent of p1's, destroyed by anything.
                 let vanilla = must(s.unit(P2, 1), "Vanilla");
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(s.state().active, P2);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:C", "mode:D"]);
                 assert_eq!(json!(s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1" }));
-                // The reports name the public card in the other player's view too.
                 let reports: Vec<String> = s
                     .view(P2)
                     .events
@@ -1899,7 +1816,6 @@ mod tests {
                         &mut log,
                     );
                 }
-                // Quickdraw put it in p1's opening hand.
                 let card = must(
                     state.players.p1.hand.iter().find(|card| card.def_id == ITD).cloned(),
                     "In Too Deep in the opening hand",
@@ -1910,7 +1826,6 @@ mod tests {
                     &mut n,
                     &mut log,
                 );
-                // Two of p1's turn draws complete quest 1.
                 let mut turn = 0;
                 while turn < 4 && state.pending.is_none() {
                     let active = state.active;
@@ -1961,7 +1876,6 @@ mod tests {
                 }));
                 s.play(STOCKPILE, json!({}));
                 assert!(!prompt_opened_for_a_reward(s.events()));
-                // A has healed (Stockpile 2 + A 6); B asks.
                 s.expect_health(P1, 28);
                 assert_eq!(pending_kind(&s), Some(PromptKind::Target));
                 assert!(active_of(&s).is_empty());
@@ -1975,7 +1889,6 @@ mod tests {
             fn r404_a_quest_reached_by_two_paths_opens_once_and_a_reward_two_completed_quests_offer_d_is_granted_by_each() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    // Small Units, so the +3/+3 does not complete quest 6 as well.
                     "p1": spare(json!({
                         "backrow": [radiant_itd(), MANA_WELL],
                         "field": [TIMMY, TOKEN_MAKER],
@@ -1983,11 +1896,8 @@ mod tests {
                     })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
-                // Quests 2 and 3 open, as quest 1's Radiant rewards leave them; quest 2 at its goal, and quest 3
-                // met by the board (In Too Deep, a Mana Well and two Units).
                 set_line(&mut s, json!({ "active": ["2", "3"], "progress": { "2": 2 }, "done": ["1"] }));
                 any_action(&mut s);
-                // Quest 2: C (two graveyard cards), D (three placements on one pick); quest 3: D again, E.
                 let foe = must(s.unit(P2, 1), "Menace");
                 let mut placements = 0;
                 while s.state().pending.is_some() {
@@ -2007,7 +1917,6 @@ mod tests {
                 );
                 let memory = must(line(&s), "the line");
                 assert_eq!(memory.done, vec!["1", "2", "3"]);
-                // 4 and 5 from quest 2's rewards, 6 from quest 3's; 5 opened once.
                 assert_eq!(memory.active, vec!["4", "5", "6"]);
             }
 
@@ -2034,7 +1943,6 @@ mod tests {
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
                 let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
-                // H's path opened at the trigger, G's behind the deferred prompt.
                 expect_line_matches(
                     &s,
                     json!({ "active": ["9", "8"], "done": ["1", "2", "5"], "progress": { "9": 0 } }),

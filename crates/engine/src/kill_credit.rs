@@ -2,13 +2,10 @@
 //! kill its attack makes to Classic+ #19.5 Bot Loser, whose "After this destroys a Unit" then fires.
 //!
 //! R42's killer is set the moment a hit dooms its victim (`damage::credit_killer`), and it is what the
-//! `destroyed` event names and every kill trigger reads. A credit moves that name: while one is in
-//! force on the striking unit, its lethal hit on the named victim names the paired unit instead.
-//! Nothing else about the hit changes — its source is still the striker. The record is plain JSON in
-//! the striker's `memory` (under a key no card script writes), written and cleared around one effect by
-//! `effects/kill_credit.rs`, and R78's reset takes it off a unit that leaves the field.
-//!
-//! Port of `packages/engine/src/killCredit.ts`.
+//! `destroyed` event names and every kill trigger reads. A credit in force on the striker names the
+//! paired unit instead for its lethal hit on the named victim; the hit's source is still the striker.
+//! The record is plain JSON in the striker's `memory` (a key no card script writes), written and cleared
+//! around one effect by `effects/kill_credit.rs`, and R78's reset takes it off a unit leaving the field.
 
 use serde::{Deserialize, Serialize};
 

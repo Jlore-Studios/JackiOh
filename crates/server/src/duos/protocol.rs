@@ -1,21 +1,10 @@
-//! The `/ws/duos` frames (fullsend SPEC S6, B35, B39), as `actor/protocol.rs` is `/ws/match`'s.
+//! The `/ws/duos` frames (fullsend SPEC S6, B35, B39).
+//! Client: `hello`, `action`, `ping`. Server: `view`, `ack`, `error`, `clock`, `teammate`, `ping`.
 //!
-//! Client to server: `hello` (which match), `action` (a nonce and a `DuosActionBody`) and `ping`.
-//! Server to client: `view` (the seat's `DuosView` and, beside it, that same seat's legal actions),
-//! `ack`, `error`, `clock`, `teammate` and `ping`.
-//!
-//! Parsing is total and rebuilds every field it keeps. A `duel` body is the 1v1 action union, so it
-//! goes through the 1v1 parser (`actor::protocol::parse_client_message`) itself: the same whitelist,
-//! the same refusal of the server-only types (R79's `timeout`, `disconnectExpired`, `ceilingReached`,
-//! R1127's `emote`) and of a smuggled `playerId`, and the same nonce rules (R270: a nonce starting
-//! `srv-` is the server's), and one more: a nonce starting `duos:` is the engine's own, the one its
-//! round's close reaches the duels under (`DUOS_NONCE_PREFIX`), which the engine refuses from a seat
-//! too. The seat is never the client's: the actor stamps the authenticated one.
-//!
-//! A ping is cosmetic, like an emote or an aim (R643, R738): a top-level frame, never an action, so it
-//! never reaches the reducer, the log, a replay or a view (B39). Its shape is checked here; whether
-//! its hand target names the sender's own side and a card that is there is the actor's call, against
-//! the live state.
+//! A `duel` body parses through `actor::protocol::parse_client_message`: refuses server-only types
+//! (R79: `timeout`, `disconnectExpired`, `ceilingReached`; R1127: `emote`), smuggled `playerId`,
+//! server nonces (R270: `srv-`), and `duos:` nonces (`DUOS_NONCE_PREFIX`).
+//! Pings are cosmetic (R643, R738), never logged or viewed (B39).
 
 use serde::Serialize;
 use serde_json::{Map, Value, json};
@@ -27,14 +16,12 @@ use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
 
 pub use crate::actor::protocol::encode;
 use crate::actor::protocol::{
-    ClientMessage, MAX_FRAME_BYTES, MAX_NONCE_LENGTH, MalformedMessage, SERVER_NONCE_PREFIX, SocketErrorCode,
+    ClientMessage, MAX_FRAME_BYTES, MalformedMessage, SocketErrorCode, client_nonce, is_int, is_player_id,
     parse_client_message,
 };
 use crate::economy::rewards::GameEconomy;
 
-// ---------------------------------------------------------------------------
 // Pings (S6, B39, B64)
-// ---------------------------------------------------------------------------
 
 /// S6's `PingKind`.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -101,9 +88,7 @@ pub struct PingTarget {
     pub index: Option<usize>,
 }
 
-// ---------------------------------------------------------------------------
 // Client -> server
-// ---------------------------------------------------------------------------
 
 /// A frame a co-op socket may send.
 #[derive(Debug)]
@@ -123,27 +108,13 @@ fn malformed(reason: impl Into<String>) -> MalformedMessage {
     }
 }
 
-/// A JSON number with no fraction, as the 1v1 parser reads one (JS reads `3.0` as 3).
-fn whole(value: Option<&Value>) -> Option<f64> {
-    let number = value?.as_f64()?;
-    (number.is_finite() && number.fract() == 0.0).then_some(number)
-}
-
-/// A whole number in `0..below`.
+/// A whole number in `0..below`, read as the 1v1 parser reads one (JS reads `3.0` as 3).
 fn index_under(value: Option<&Value>, below: usize) -> Option<usize> {
-    let number = whole(value)?;
+    let number = is_int(value)?;
     if number < 0.0 || number >= below as f64 {
         return None;
     }
     Some(number as usize)
-}
-
-fn side_of(value: Option<&Value>) -> Option<PlayerId> {
-    match value?.as_str()? {
-        "p1" => Some(PlayerId::P1),
-        "p2" => Some(PlayerId::P2),
-        _ => None,
-    }
 }
 
 /// The two duels (S2: duel 0 is A1 against B1, duel 1 A2 against B2).
@@ -152,7 +123,7 @@ const DUELS: usize = 2;
 fn parse_target(value: &Value) -> Option<PingTarget> {
     let record = value.as_object()?;
     let duel = u8::try_from(index_under(record.get("duel"), DUELS)?).ok()?;
-    let side = side_of(record.get("side"))?;
+    let side = is_player_id(record.get("side"))?;
     let zones = |count: i32| usize::try_from(count).unwrap_or(0);
     let (at, lane, index) = match record.get("at")?.as_str()? {
         "hero" => (PingAt::Hero, None, None),
@@ -182,20 +153,10 @@ fn parse_target(value: &Value) -> Option<PingTarget> {
     })
 }
 
-/// R270 and §9.8's nonce rules, as the 1v1 parser holds them, and the Duos wrapper's own namespace.
+/// R270 and §9.8's nonce rules, the 1v1 parser's own (`client_nonce`), and the Duos wrapper's own
+/// namespace.
 fn check_nonce(value: Option<&Value>) -> Result<String, MalformedMessage> {
-    let nonce = match value.and_then(Value::as_str) {
-        Some(nonce) if !nonce.is_empty() => nonce,
-        _ => return Err(malformed("every action carries a client nonce (SPEC §9.3)")),
-    };
-    if nonce.encode_utf16().count() > MAX_NONCE_LENGTH {
-        return Err(malformed("that nonce is too long"));
-    }
-    if nonce.starts_with(SERVER_NONCE_PREFIX) {
-        return Err(malformed(format!(
-            r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
-        )));
-    }
+    let nonce = client_nonce(value)?;
     if nonce.starts_with(DUOS_NONCE_PREFIX) {
         return Err(malformed(format!(
             r#"a nonce starting "{DUOS_NONCE_PREFIX}" is the round's own"#
@@ -284,9 +245,7 @@ pub fn parse_duos_message(text: &str) -> Result<DuosClientMessage, MalformedMess
     }
 }
 
-// ---------------------------------------------------------------------------
 // Server -> client
-// ---------------------------------------------------------------------------
 
 /// S6's `graceDeadlines`: each person's disconnect grace, epoch ms, or null.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -299,19 +258,9 @@ pub struct GraceDeadlines {
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DuosServerMessage {
-    /// B23, B35: the seat's own `duos_view_for` and `duos_legal_actions` for that same seat, read off
-    /// one state, so the array is always true of the view it travels with.
-    ///
-    /// `jlore_capped` is the receiving seat's own flag: true once the match has ended and the daily
-    /// cap (`JLORE_GAMES_DAILY_CAP`) held back some or all of that seat's Jlore for it
-    /// (R1483000). It is the seat's own economy, so a seat never gets the teammate's; false is left
-    /// off the frame.
-    ///
-    /// `economy` is what the result's write paid the receiving seat's person (#1657), as the 1v1
-    /// `view` carries it (`actor::protocol::ServerMessage::View`): set once the result is written,
-    /// carried by every view of that seat from then on, never the teammate's. A write that finds the
-    /// result already there pays nothing and an actor rebuilt on a finished match has nothing to
-    /// send, so their frames leave it off.
+    /// B23, B35: the seat's own view and legal actions. `jlore_capped` indicates whether
+    /// `JLORE_GAMES_DAILY_CAP` held back Jlore for this seat (R1483000). `economy` is what the
+    /// result paid this seat's person (#1657).
     View {
         view: Box<DuosView>,
         legal: Vec<DuosActionBody>,
@@ -364,6 +313,8 @@ pub fn error_message(code: SocketErrorCode, message: &str, nonce: Option<&str>) 
 #[cfg(test)]
 mod tests {
     use jackioh_engine::ActionBody;
+
+    use crate::actor::protocol::MAX_NONCE_LENGTH;
 
     use super::*;
 
@@ -418,6 +369,45 @@ mod tests {
     }
 
     #[test]
+    fn the_co_op_parser_holds_the_1v1_parsers_client_nonce_rules() {
+        let one_v_one = |nonce: &Value| {
+            parse_client_message(
+                &json!({ "type": "action", "action": { "type": "endTurn", "nonce": nonce } }).to_string(),
+            )
+            .err()
+            .map(|refused| refused.reason)
+        };
+        let co_op = |nonce: &Value| {
+            parse_duos_message(
+                &json!({ "type": "action", "nonce": nonce, "body": { "kind": "concede" } }).to_string(),
+            )
+            .err()
+            .map(|refused| refused.reason)
+        };
+        let missing = "every action carries a client nonce (SPEC §9.3)";
+        let too_long = "that nonce is too long";
+        // §9.8's bound counts UTF-16 units, as JavaScript's `length` does: one emoji is two.
+        let half = MAX_NONCE_LENGTH / 2;
+        for (nonce, refused) in [
+            (Value::Null, Some(missing)),
+            (json!(""), Some(missing)),
+            (json!(7), Some(missing)),
+            (json!("n".repeat(MAX_NONCE_LENGTH)), None),
+            (json!("n".repeat(MAX_NONCE_LENGTH + 1)), Some(too_long)),
+            (json!("😀".repeat(half)), None),
+            (json!("😀".repeat(half + 1)), Some(too_long)),
+            (
+                json!("srv-1"),
+                Some(r#"a nonce starting "srv-" is the server's own (R270)"#),
+            ),
+        ] {
+            let refused = refused.map(str::to_string);
+            assert_eq!(one_v_one(&nonce), refused, "1v1: {nonce}");
+            assert_eq!(co_op(&nonce), refused, "co-op: {nonce}");
+        }
+    }
+
+    #[test]
     fn a_nonce_in_the_duos_wrappers_namespace_is_malformed_and_one_merely_like_it_is_not() {
         for nonce in ["duos:", "duos:begin", "duos:end:r1:d0:mine"] {
             let frame = format!(
@@ -425,7 +415,6 @@ mod tests {
             );
             assert!(parse_duos_message(&frame).is_err(), "{frame}");
         }
-        // The old round-end shape is an ordinary client nonce now: the round's own are `duos:`'s.
         let frame = r#"{"type":"action","nonce":"mine:end:r1:d0","body":{"kind":"concede"}}"#;
         assert!(parse_duos_message(frame).is_ok(), "{frame}");
     }
@@ -448,9 +437,27 @@ mod tests {
             r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"unit","side":"p1","lane":9}}"#,
             r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"hand","side":"p3","index":0}}"#,
             r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"hand","side":"p1","index":-1}}"#,
+            r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"unit","side":"p1","lane":1.5}}"#,
+            r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"hero","side":1}}"#,
         ] {
             assert!(parse_duos_message(bad).is_err(), "{bad}");
         }
+        // A whole number is read as JS reads it: `1.0` is duel 1.
+        let whole = parse_duos_message(
+            r#"{"type":"ping","ping":"careful","target":{"duel":1.0,"at":"unit","side":"p1","lane":2.0}}"#,
+        );
+        assert!(matches!(
+            whole,
+            Ok(DuosClientMessage::Ping {
+                target: PingTarget {
+                    duel: 1,
+                    side: PlayerId::P1,
+                    lane: Some(2),
+                    ..
+                },
+                ..
+            })
+        ));
     }
 
     #[test]

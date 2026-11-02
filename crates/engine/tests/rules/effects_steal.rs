@@ -1,17 +1,12 @@
 //! Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's ownership, R33's face-down trap and
-//! #86's "steal all enemy units". The fixture Trap this file needs is registered here, so no shared
-//! fixture has to grow for it (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-steal.test.ts`.
+//! #86's "steal all enemy units". Its fixture Trap is registered here, so no shared one grows (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::effects::{give_control, steal, steal_all};
 use jackioh_engine::layers::unit_view;
-use jackioh_engine::resolve::{HookOptions, make_context};
-use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{Effect, EngineSink};
+use jackioh_engine::resolve::HookOptions;
 use jackioh_engine::state::{CardInstance, Exertion, GameState, find_instance_mut, new_instance};
 use jackioh_engine::zones::{
     OffFieldZone, PlaceOnFieldOptions, active_units_of, card_at, lock_zone, move_to_zone, place_on_field,
@@ -19,7 +14,7 @@ use jackioh_engine::zones::{
 
 use super::fixtures::catalog::spell_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{events_json, in_hand, live, new_game, put, slot};
+use super::fixtures::harness::{events_json, in_hand, live, new_game, put, run_with_options as run, slot};
 
 /// A face-down Trap for R33; #36 radiant steals a backrow card.
 fn trap() -> CardDef {
@@ -38,19 +33,6 @@ fn game() -> GameState {
     state
 }
 
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted.
-fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut events = Vec::new();
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, options);
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
-}
-
 fn as_p1() -> HookOptions {
     HookOptions {
         controller: Some(PlayerId::P1),
@@ -62,7 +44,6 @@ fn controls(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     run(state, steal(json_as(json!({ "instanceId": card.id }))), as_p1())
 }
 
-/// `cardAt(state, slot(player, row, lane))?.id`.
 fn id_at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<String> {
     card_at(state, slot(player, row, lane)).map(|card| card.id.clone())
 }
@@ -115,8 +96,7 @@ mod r15_steal_s6_3_m3_t1 {
             }
         );
 
-        // The card never left the field, so R78's reset does not apply: damage, buffs, position and
-        // counters stay.
+        // It never left the field, so R78's reset does not apply: damage, buffs, position, counters stay.
         assert_eq!(now.damage, 1);
         assert_eq!(now.buffs, AttackHealth { attack: 2, health: 0 });
         assert_eq!(now.position, Some(Position::Def));

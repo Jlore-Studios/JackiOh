@@ -34,6 +34,12 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
+The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark beside it or under it,
+the stacked logo and the mark alone each on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
+the repository's `photos/logo`, which no build reads. `scripts/brand-logo.py` draws them all, outlining
+the wordmark from the self-hosted Alegreya, so no SVG needs a font; run it by hand and commit what it
+writes.
+
 The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
 The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
@@ -68,7 +74,8 @@ shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fi
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
 line with the same testid, and the blocks are `aria-hidden`. The blocks shimmer only under
 `data-motion="full"` (the OS's preference and the settings panel's both stop it) and sit inside a
-root that clips them, so the one-screen rule holds. `main.tsx`'s `Loading` takes `skeleton` for the
+root that clips them, so the one-screen rule holds. Over them the blocks' layer draws the JackiOh
+mark, still, in a dark halo (`skeleton.css`), but in a shell panel, which the logo heads. `main.tsx`'s `Loading` takes `skeleton` for the
 same drawing. Still text: the deck builder's win-rate line and the chat's and the replays' "show
 more" buttons (content or a button is already there), the practice start screen's shuffle and the
 boards' "Joining …" panels.
@@ -76,7 +83,9 @@ boards' "Joining …" panels.
 A wait shows only once it outlasts a moment (R2108000): `SKELETON_DELAY_MS` (300 ms) passes before
 the skeleton's blocks or the shell's waiting panel appears, and a fast read never flashes either.
 `useShownAfterDelay` sets `data-shown` on the skeleton and, through `shown`, on `ShellPanel`. It is
-a timer because Reduce motion zeroes CSS delays. The blocks are brass. An empty menu panel draws
+a timer because Reduce motion zeroes CSS delays. The blocks are brass. Every `ShellPanel` (a wait, a
+refusal, the 404) is headed by the stacked logo, the `h1` whose name is the site's, on the tavern's
+wood (`auth/tavern.css`); both are drawn only once the panel shows, so a short wait flashes no wood. An empty menu panel draws
 `empty/EmptyState.tsx`: the tankard, the words with the old testid, and an optional `action` (`to`
 for a link, `onPress` for a button). The ruling lists what stays text.
 
@@ -380,9 +389,9 @@ net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for
                         the lobby
 net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
                         its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
-                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack wait on it,
-                        Buy, Open and Open all turning economy/spend.css's wheel, and a 429 keeps its
-                        press's key
+                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack and the
+                        cosmetic pack panel's Open and chase Buy (R2683000) wait on it, Buy, Open and Open
+                        all turning economy/spend.css's wheel, and a 429 keeps its press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
@@ -412,8 +421,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
                         collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
                         tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
-                        group as before (R633), beside the owned list from GET /api/cosmetics
-                        (collection/CosmeticsPanel.tsx), with no defaults of every card, so a card with no pick
+                        group as before (R633), with no list of what the account owns (R2731000) and no
+                        defaults of every card, so a card with no pick
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
@@ -427,7 +436,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
                         POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
                         collection/
-                        holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
+                        holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
@@ -486,7 +495,9 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
-                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
+                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
+                        inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
+                        focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
                         refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
                         read the account again (`onChanged`, `revision`) (`shop.ts` holds the

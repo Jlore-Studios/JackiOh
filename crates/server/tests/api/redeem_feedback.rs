@@ -1,25 +1,11 @@
-//! R192, docs/polish/5-sign-in.md B7, B8, B9 and B13: what the code screen is told, and what it is
-//! never told.
-//!
-//!  - B7: `GET /api/codes/status` says how many tries this account has left in §9.4's window.
-//!  - B8: a refusal at §9.4 step 2 or 3 is a 429 `rate_limited` whose wait is the whole attempt
-//!    window (`details.retryAfterMs` and `Retry-After`), while every code-dependent refusal keeps
-//!    R145's identical bytes and gains no header.
-//!  - B9: R109's API-wide limiter says how long until its oldest counted request leaves the window.
-//!  - B13: a request body larger than `API_MAX_BODY_BYTES` is refused before it is parsed.
-//!
-//! Redemption and the API limiter both run on tokio's paused clock, so the production 250 ms floor
-//! costs nothing and `tokio::time::advance` drives the limiter. The limits are `config.rs`'s own
-//! numbers. Minted codes come from the server's own ids, inside R104's alphabet.
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
+//! R192, docs/polish/5-sign-in.md B7, B8, B9, B13: redemption feedback and rate limits (§9.4, R145, R109).
+//! R104's alphabet; SURFACE §11.2.
 
 use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
-use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
-use sha2::Sha256;
 use tower::ServiceExt;
 
 use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
@@ -33,9 +19,7 @@ use jackioh_server::config::{
 use jackioh_server::db::store::CodeAttempt;
 
 use crate::support::deps::{add_user, test_app};
-use crate::support::store::{advance, fake_lock, from, to_json};
-
-// Fixtures
+use crate::support::store::{advance, fake_lock, from, hmac_sha256_hex, to_json};
 
 const MS_PER_SECOND: i64 = 1000;
 
@@ -157,14 +141,7 @@ struct Hashes {
 
 impl Hashes {
     fn ip(&self, raw: &str) -> String {
-        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:ip", self.pepper).as_bytes())
-            .expect("any key length");
-        mac.update(raw.trim().to_lowercase().as_bytes());
-        mac.finalize()
-            .into_bytes()
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect()
+        hmac_sha256_hex(&format!("{}:ip", self.pepper), &raw.trim().to_lowercase())
     }
 }
 

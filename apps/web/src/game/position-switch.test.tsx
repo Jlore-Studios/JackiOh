@@ -2,27 +2,15 @@
 // entry (animations.ts) plays over the board as it was BEFORE the switch (Game.tsx plans entries
 // against the view still on screen), so the card's own `data-position` says which way it is turning.
 //
-// The old keyframes always ran upright -> 90deg at full size. Entering DEF they ended at full size and
-// snapped to the DEF scale when the new view swapped in; leaving DEF they started upright, turned the wrong way
-// and snapped upright. The sheet is read as text (vitest stubs CSS imports, as fx/css.test.ts does), and
-// the one fact it must agree with Card.tsx on, the resting DEF transform, is read off a rendered card.
-
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+// The sheet is read as text (vitest stubs CSS imports, as fx/css.test.ts does), and the one fact it
+// must agree with Card.tsx on, the resting DEF transform, is read off a rendered card.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import Game from "./Game.tsx";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
-
-function readSheet(fromWeb: string): string {
-  for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
-    const path = resolve(process.cwd(), candidate);
-    if (existsSync(path)) return readFileSync(path, "utf8");
-  }
-  throw new Error(`${fromWeb} not found from ${process.cwd()}`);
-}
+import { readSheet } from "../test/setup.ts";
 
 const css = readSheet("src/game/animations.css");
 const board = readSheet("src/game/board.css");

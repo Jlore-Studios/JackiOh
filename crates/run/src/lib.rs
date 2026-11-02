@@ -3,9 +3,7 @@
 //! knows about a run. `README.md` is this crate's contract.
 //!
 //! Every rule here is the plan's (its DR sections), every number a constant in `config.rs`, and the
-//! mode has no spec section yet. The content (the pool packs and shops deal, the cards any starting
-//! deck may hold, the enemies, artifacts, blessings, events and curses) is data the caller passes in;
-//! `run_placeholder_content` is pseudo cards and temporary bosses until the designer's lists land.
+//! mode has no spec section yet. The content is data the caller passes in (`RunContent`).
 //!
 //! Like the engine's `reduce`, `run_reduce` takes no rng: it rebuilds it from `(seed, rng_cursor)` and
 //! writes the cursor back, so a run file (`RunFile`: its setup, the unlocks it started from and its
@@ -39,9 +37,7 @@ use crate::config::{
     RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
 };
 
-// ---------------------------------------------------------------------------------------------
 // Content: data the caller passes in
-// ---------------------------------------------------------------------------------------------
 
 /// What a run deals from: the designer's lists, or `run_placeholder_content` until they land. A
 /// Sandbox run's caller adds the player's custom cards to `pool` (DR1).
@@ -262,9 +258,7 @@ pub fn run_placeholder_content() -> RunContent {
     serde_json::from_str(include_str!("placeholder.json")).expect("placeholder.json is valid content")
 }
 
-// ---------------------------------------------------------------------------------------------
 // The run's state
-// ---------------------------------------------------------------------------------------------
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
@@ -683,9 +677,7 @@ pub struct RunState {
     pub stats: RunStats,
 }
 
-// ---------------------------------------------------------------------------------------------
 // Seeds
-// ---------------------------------------------------------------------------------------------
 
 const SEED_LETTERS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -708,9 +700,7 @@ fn seed_is_valid(seed: &str) -> bool {
     seed.len() == RUN_SEED_LENGTH && seed.bytes().all(|b| SEED_LETTERS.contains(&b))
 }
 
-// ---------------------------------------------------------------------------------------------
 // The starting deck
-// ---------------------------------------------------------------------------------------------
 
 /// The slots' names, from the lowest: `RUN_SLOT_LADDER`'s columns.
 const SLOT_NAMES: [&str; 6] = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Anything"];
@@ -904,9 +894,7 @@ pub fn run_create(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunContent) 
     Ok(state)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The map
-// ---------------------------------------------------------------------------------------------
 
 fn weighted<T: Copy>(rows: &[(T, i32)], rng: &mut Rng) -> T {
     let total: i32 = rows.iter().map(|(_, w)| w).sum();
@@ -1052,9 +1040,7 @@ fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNo
     rows
 }
 
-// ---------------------------------------------------------------------------------------------
 // Reads
-// ---------------------------------------------------------------------------------------------
 
 /// The node stood on.
 pub fn run_node(state: &RunState) -> Option<&RunNode> {
@@ -1177,9 +1163,7 @@ pub fn run_constants() -> RunConstants {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The reducer
-// ---------------------------------------------------------------------------------------------
 
 /// The run after one action, or why the action is refused (the state unchanged).
 pub fn run_reduce(state: &RunState, content: &RunContent, action: &RunAction) -> Result<RunState, String> {

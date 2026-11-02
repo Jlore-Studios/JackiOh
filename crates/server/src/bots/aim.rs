@@ -1,10 +1,7 @@
 //! A ladder bot's aim arrow (SPEC §9.5, R738, R639000; #639): the aim a person's client would send
-//! the opponent while they made the move the bot decided, so the bot's targeted plays and attacks
-//! show an arrow as a person's do. The server's mirror of `apps/web/src/game/aim/aim.ts`'s
-//! `aimSource` and `aimEndOf`: every end is a public handle (a hero by its seat, a field card by its
-//! zone, a hand card by its position in the bot's own hand), and only a move with a declared target
-//! aims, never one that only places a card. The actor's relay judges the aim again against the
-//! receiver's view before it goes (`aim_is_public`), as it judges a person's.
+//! the opponent while making a move, so targeted plays and attacks show an arrow as a person's do.
+//! Every end is a public handle, and only a move with a declared target aims, never a simple placement.
+//! The relay judges aim visibility against the receiver's view (`aim_is_public`).
 
 use jackioh_engine::{
     ActionBody, Aim, AimEnd, DamageTarget, GameState, PlayerId, RANDOM_ATTACK_TARGET, Selection,

@@ -4,9 +4,6 @@
 //! §6.3: Tribute X sacrifices X of your units as an additional cost; a card whose own text tributes
 //! (Carnivorous Cube) sacrifices what that text names, any of your other permanents, backrow
 //! included (R41). The play validator owns the cost and the choice travels in the play action (R81).
-//! The Sheep Token counts as 2 toward X while on the field (§3.2); Lava Golem may pick enemy units.
-//! A tribute in a card's script is an ordinary Sacrifice, where the Sheep's 2 never applies.
-//! §10.5: step 1 validates "Tribute available", step 2 pays "mana, Tributes (sacrifice)".
 //!
 //! Fixtures are prefixed `tb-` and indexed above 1550 (BUILD §0). The Sheep carries index `T-sheep`
 //! and the `tributeWorth` flag its script declares.

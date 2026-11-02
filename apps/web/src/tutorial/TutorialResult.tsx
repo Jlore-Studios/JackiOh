@@ -1,9 +1,7 @@
 // Lesson-result modal (SPEC §9.10): wins persist on this device (progress.ts, R294), while loss
 // and draw retry the same lesson. It reads only the human's `PlayerView` (CLAUDE.md rule 7).
-// R314, R2205002: a win names each mechanic the game did not show found, with its rule, and the
-// Field Guide keeps it from then on.
-// R2434002: a concede is the one way to lose a lesson (R2201000): the result says so plainly, the
-// lesson is not won, and this device keeps it as lost until it is.
+// R314, R2205002: a win names each mechanic the game did not show found, with its rule.
+// R2434002: a concede is the one way to lose a lesson (R2201000); this device keeps it as lost until won.
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -27,7 +25,6 @@ type TutorialResultProps = {
   result: Result;
   viewer: PlayerId;
   lesson: TutorialLesson;
-  /** The lesson after this one on the path; undefined after the last. */
   next: TutorialLesson | undefined;
   /** The next lesson was still locked when this one started, so this win is what opened it. */
   unlockedNow: boolean;
@@ -65,7 +62,6 @@ function Emblem({ won, number }: { won: boolean; number: number }): ReactElement
   );
 }
 
-/** "Easy, Medium or Hard", in the tiers' order. */
 function tierList(): string {
   const labels = DIFFICULTIES.map((tier) => t(DIFFICULTY_LABEL[tier]));
   const last = labels.pop() ?? "";

@@ -1,35 +1,18 @@
 //! A finished game's record for the card statistics (SPEC §9.11, R376): which cards each seat started
-//! with, drew and played, and how the game ended, read off a replay of `(seed, decks, log)`.
+//! with, drew and played, and how the game ended, read off a replay of `(seed, decks, log)`. It reads
+//! raw events no view has redacted, so it runs only where the whole game is already known.
 //!
-//! The state keeps no such history — `turnLog` is one turn's, and `applied` keeps only the last
-//! actions' events — so this folds the log exactly as `replay::fold` does and reads the raw events
-//! each step emits, which no view has redacted. It runs only where the whole game is already known:
-//! the server once a match has its result, and the AI's development runs.
+//! `cardPlayed` is emitted for a play from hand and a cast alike (§2.4's cast on draw, R70), so each seat's
+//! hand is followed through the events, and only a `cardPlayed` naming a card in it is a play. A play
+//! countered in its announce window has none (§10.5, R448); a play step 3 replaced (R449) is followed by
+//! its `transformed`. A card a Counter sends to its player's hand that their effect then casts (C #4
+//! Palantir, R831001; S #139 Wormhole) is a cast all the same. Each play keeps whether `cardPlayed` placed
+//! it Radiant (R1147000), so step-3 Radiant (R0983, C+ #68) counts.
 //!
-//! What "played" means needs one bookkeeping device. `cardPlayed` is emitted for a play from hand and
-//! for a cast alike (§2.4's cast on draw, R70), and only the first is the player's play. So each
-//! seat's hand is followed through the events: the hand the state holds as an action begins, plus
-//! every `addedToHand`, minus every card that leaves it. A `cardPlayed` naming a card in that hand is
-//! a play from hand; a cast names a card that never entered it. A play countered in its announce
-//! window has no `cardPlayed` (§10.5, R448), so it is none; a play step 3 replaced (R449) is followed
-//! by its `transformed` to the card it resolves as, the one its `cardPlayed` names. A card a Counter
-//! sends to the countering player's hand and that player's effect then casts in the same step (C #4
-//! Palantir, R831001), or in the step that answers the prompt the cast opened (S #139 Wormhole asking
-//! the cast's target), passes through a hand too, and is a cast all the same. Each play keeps whether
-//! it was Radiant as `cardPlayed` placed it (R1147000), so step-3 Radiant (Gifted Program, Feng Shui
-//! per R0983, C+ #68) counts.
-//!
-//! R2089000: a Created card (R943) is no dealt card, so it is left out of `opening`, `drawn` and
-//! `played`, and each Created instance is credited instead to the seat that made it: the seat a
-//! minting event's `creator` names (an effect that made it for the other seat), else the controller
-//! of the card whose effect summoned it (R1088's `sourceId`), else the seat it went to (The Coin and
-//! every other card a rule mints). It is used the first time it is played, from a hand or anywhere
-//! else, cast, summoned or set by an effect, or takes a card's place on the field (a Transform), by
-//! either seat, and counts once however often it is used again; the rest the seat made are its
-//! never used ones. A Created card played from a hand is also kept as its player's (`createdPlayed`),
-//! which the quests count beside `played`.
-//!
-//! Port of `packages/engine/src/gameSummary.ts` (part 5).
+//! R2089000: a Created card (R943) is left out of `opening`, `drawn` and `played` and credited to the seat
+//! that made it: a minting event's `creator`, else the controller of the card whose effect summoned it
+//! (R1088's `sourceId`), else the seat it went to (The Coin). It is used once, the first time it is
+//! played, cast, summoned, set or takes a card's place; a hand play is its player's `createdPlayed`.
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -99,10 +82,9 @@ fn mark_radiant(reading: &mut Reading, after: &GameState, id: &str) {
     }
 }
 
-/// Each seat's hand as an action begins: the cards the state holds there, and those of `following`
-/// (the hands the last action ended with) that a play has taken to the resolving zone and not yet
-/// placed. A prompt can hold a play there past its action (§10.5: the choices of the card step 3 put
-/// in its place, R449, or the announce window, C #4 Palantir), and its `cardPlayed` comes in a later one.
+/// Each seat's hand as an action begins: the state's, plus the cards of `following` (the last action's
+/// hands) a play took to the resolving zone and has not placed, since a prompt can hold one there past
+/// its action (§10.5: R449's step-3 choices, or C #4 Palantir's announce window).
 fn hands_of(state: &GameState, following: Option<&Hands>) -> Hands {
     let hand = |player: PlayerId| -> IndexMap<String, String> {
         let mut cards: IndexMap<String, String> = state.players[player]
@@ -131,16 +113,15 @@ fn leave(hands: &mut Hands, instance_id: &str) {
     }
 }
 
-/// The card one of `ids` names, as the step left it or, for one that has left the state, as the step
-/// found it.
+/// The card one of `ids` names, as the step left it, else as the step found it.
 fn card_of<'a>(before: &'a GameState, after: &'a GameState, ids: &[&str]) -> Option<&'a CardInstance> {
     ids.iter()
         .find_map(|id| find_instance(after, id))
         .or_else(|| ids.iter().find_map(|id| find_instance(before, id)))
 }
 
-/// R943: whether the card is Created. One neither state holds was made and gone within the step: no
-/// dealt card is, for the deal put every one of them in the state before the first action.
+/// R943: whether the card is Created. One neither state holds was made and gone within the step: no dealt
+/// card is, for the deal put every one of them in the state before the first action.
 fn is_created(before: &GameState, after: &GameState, ids: &[&str]) -> bool {
     card_of(before, after, ids).is_none_or(|card| card.created == Some(true))
 }
@@ -214,9 +195,8 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                 def_id,
                 ..
             } => {
-                // §2.4: a draw that reached the hand is followed at once by its `addedToHand`; a burned
-                // card's `burned` or a cast's `cardPlayed` follows instead. The opening hand's draws are the
-                // opening hand's, not draws of the game.
+                // §2.4: a draw that reached the hand is followed at once by its `addedToHand` (a burn's
+                // `burned` or a cast's `cardPlayed` instead); the opening hand's are no draws of the game.
                 let reached_hand = matches!(
                     events.get(at + 1),
                     Some(GameEvent::AddedToHand { instance_id: next_id, .. }) if next_id == instance_id
@@ -304,8 +284,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             GameEvent::RadiantSet { instance_id, .. } => {
                 reading.radiant.insert(instance_id.clone());
                 // R1256000: an instance's first cue counts for its controller when the step turned it
-                // Radiant: not Radiant before the step, Radiant after. The engine also cues a card that
-                // was Radiant already (R177), and a hidden card's re-cues dedupe to one.
+                // Radiant; the engine also cues a card Radiant already (R177), and re-cues dedupe to one.
                 if reading.radiant_seen.insert(instance_id.clone())
                     && find_instance(before, instance_id).is_none_or(|card| !card.radiant)
                     && let Some(card) = find_instance(after, instance_id)
@@ -443,8 +422,7 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         played: reading.played[player].clone(),
         played_turns: listed(&reading.played_turns[player]),
         played_radiant: listed(&reading.played_radiant[player]),
-        // R1256000: a fresh summary always knows the counts; `None` stays reserved for
-        // records written before the change.
+        // R1256000: a fresh summary always knows the counts; `None` is for older records.
         fatigue_draws: Some(reading.fatigue_draws[player]),
         fatigue_damage: Some(reading.fatigue_damage[player]),
         traps_set: Some(reading.traps_set[player]),
@@ -513,12 +491,10 @@ impl SummaryReader {
     }
 }
 
-/// R376: what each seat's cards did in a finished game, and how it ended. The fold is
-/// `replay::fold`'s, so an action the log holds and the engine refuses is skipped as it is there.
-/// `None` when the log leaves the game without a result: a record is only ever made of a finished
-/// game.
+/// R376: what each seat's cards did in a finished game, and how it ended; `None` with no result. The
+/// fold is `replay::fold`'s, so an action the log holds and the engine refuses is skipped as there.
 pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
-    // TS hands `createGame` no `dealt` here (only `fold` does); kept so, since it changes no event.
+    // No `dealt` here, unlike `fold`: it changes no event.
     let start = create_recorded_game(&CreateGameOptions {
         seed: input.seed.clone(),
         decks: input.decks.clone(),

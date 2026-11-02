@@ -4,27 +4,20 @@
 //!            (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
 //!            instead" — §8 Conventions: the cell restates only what happens to a crossing card, so
-//!            the direction choice and the rotation itself are kept. Patch v0.3.10 (#831) shortened the
-//!            printed Radiant text; the effect is the same.
+//!            the direction choice and the rotation itself are kept.
 //!
-//! The direction is a play-time choice, not a prompt: R81 names this card ("a declared `direction`
-//! pick [travels] in `modes`"), and §10.6 says no Core card opens a `direction` prompt. So the script
-//! declares `modes`, `legal_actions` enumerates both, and the answer arrives in `ctx.modes`, which
-//! `chosen_options(ctx)` reads like a prompt-mode answer.
+//! The direction is a play-time choice, not a prompt: R81 names this card and §10.6 says no Core card
+//! opens a `direction` prompt, so the script declares `modes` and `chosen_options(ctx)` reads `ctx.modes`.
 //! The rotation is `subsystems/rotation.rs`'s (R14), which mutates the board and so is not in the
 //! effects barrel (CLAUDE.md rule 5); the `rotate` verb (engine/src/effects/rotate.rs) wraps it with
-//! the controller's perspective and the running face's `radiant`, so both faces share one hook. What
-//! it already does:
-//!   * two rings turn together, the rotating player's lanes 1→5 then the opponent's 5→1, read whole
-//!     before anything is placed (§3.1); a Stack travels whole (§3.2, R13); a card never leaves the
-//!     field, so R78's reset never runs and damage travels (R14);
-//!   * a crossing card enters its new side summoning sick (R171); `controller` changes and `owner`
-//!     does not, a bounce aside (R12, R747), and a face-down trap is read by its new controller (R33);
-//!   * a Reborn-reserved destination bounces the card to its controller's hand (R14, R88, R747): the
-//!     hand cap applies (R4) and a unit token ceases to exist (R11); a Locked one takes the card
-//!     (R831000, patch v0.3.10; it bounced it before);
-//!   * radiant turns an OUTBOUND crossing into that bounce at `cost_override: 0` (R65); cards crossing
-//!     onto this side still cross and change control (R14, R171).
+//! the controller's perspective and the running face's `radiant`, so both faces share one hook.
+//!   * both rings turn together, read whole before anything is placed (§3.1); a Stack travels whole
+//!     (§3.2, R13); a card never leaves the field, so R78's reset never runs and damage travels;
+//!   * a crossing card enters summoning sick (R171); `controller` changes and `owner` does not (R12,
+//!     R747), and a face-down trap is read by its new controller (R33);
+//!   * a Reborn-reserved destination bounces the card to its controller's hand (R88): the hand cap
+//!     applies (R4) and a unit token ceases to exist (R11); a Locked one takes the card (R831000, #831);
+//!   * radiant turns an OUTBOUND crossing into that bounce at `cost_override: 0` (R65).
 
 use jackioh_engine::prelude::*;
 
@@ -40,10 +33,9 @@ fn direction_decl() -> ModeDecl {
     }
 }
 
-/// The declared pick, narrowed rather than cast. `chosen_options(ctx)` reads a prompt answer's mode
-/// first and `ctx.modes` second, so one reader covers both an ordinary play and an Echo repeat of
-/// this Cry. R90 keeps the play legal with the answers that exist, so a play that carried no
-/// direction fizzles here instead of guessing a side for the whole board.
+/// The declared pick, narrowed rather than cast. `chosen_options(ctx)` reads a prompt answer's mode,
+/// then `ctx.modes`, so it covers an Echo repeat too. R90 keeps a play to the answers that exist; one
+/// carrying no direction fizzles here instead of guessing a side for the whole board.
 fn direction_of(ctx: &EffectContext<'_>) -> Option<&'static str> {
     let chosen = chosen_options(ctx);
     let picked = chosen.first().map(String::as_str);
@@ -65,9 +57,8 @@ pub fn script() -> CardScripts {
             cry: Some(hook(silas)),
             ..Script::default()
         },
-        // The same declaration and the same hook: the radiant difference is `ctx.radiant`, which the
-        // rotation subsystem reads for itself (R14's "radiant bounces go to the card's controller's
-        // hand", R747).
+        // The same declaration and hook: the radiant difference is `ctx.radiant`, which the rotation
+        // subsystem reads for itself (R14, R747).
         radiant: Script {
             modes: vec![direction_decl()],
             cry: Some(hook(silas)),
@@ -77,10 +68,7 @@ pub fn script() -> CardScripts {
 }
 
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-// R14, R33, R78, R81, R88). BUILD M4-T4 row 52: "Rotate both rings either direction, control changes
-// on crossing, damage travels, Silas moves too; a Locked destination takes the card (R831000, patch
-// v0.3.10; it bounced it before); radiant bounces crossing
-// cards to their owner's hand at cost 0 (R14)". The ring, from p1's seat (§3.1): p1 lanes 1→5, then
+// R14, R33, R78, R81, R88). BUILD M4-T4 row 52 (R831000). The ring, from p1's seat (§3.1): p1 lanes 1→5, then
 // p2 lanes 5→1, back to p1 lane 1; "right" is one step forward along it, "left" one back.
 #[cfg(test)]
 mod tests {
@@ -141,10 +129,8 @@ mod tests {
 
             // The Engine cell's "Silas rotates too": he is on the field for his own Cry (§10.5 step 4).
             assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
-            // The unit ring: p1 lane 5 → p2 lane 5, p2 lane 1 → p1 lane 1.
             assert_eq!(slot_of(s.card(&reno)), "p2 units 5");
             assert_eq!(slot_of(s.card(&felinor)), "p1 units 1");
-            // The backrow ring turns with it: p1 lane 1 → p1 lane 2, p2 lane 1 → p1 lane 1.
             assert_eq!(slot_of(s.card(&farm)), "p1 backrow 2");
             assert_eq!(slot_of(s.card(&stimmy)), "p1 backrow 1");
             s.expect_events(json!(["cardPlayed", "rotated", "controlChanged"]));
@@ -166,7 +152,6 @@ mod tests {
             assert_eq!(s.card(&reno).owner, P1);
             assert_eq!(s.card(&felinor).controller, P1);
             assert_eq!(s.card(&felinor).owner, P2);
-            // Silas did not cross, so nothing about him changed but the lane.
             assert_eq!(s.card("core-052").controller, P1);
         }
 
@@ -222,8 +207,6 @@ mod tests {
 
             s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));
 
-            // One step back along the ring: p1 lane 3 → p1 lane 2, p1 lane 1 → p2 lane 1 (crossing),
-            // p2 lane 5 → p1 lane 5 (crossing the other way).
             assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
             assert_eq!(slot_of(s.card(&reno)), "p2 units 1");
             assert_eq!(s.card(&reno).controller, P2);
@@ -262,7 +245,6 @@ mod tests {
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
-            // Patch v0.3.10 (#831): the Lock no longer stops the rotation; it bounced the card before.
             assert_eq!(s.unit_at(P2, 5).id, reno);
             assert_eq!(s.card(&reno).controller, P2);
             assert_eq!(s.card(&reno).owner, P1);
@@ -311,9 +293,8 @@ mod tests {
             s.expect_in_zone(&reno, "hand");
             assert_eq!(s.card(&reno).owner, P1);
             assert_eq!(s.card(&reno).cost_override, Some(0));
-            // Midrange Menace moves from p2's lane 1 to p1's — to Silas's controller, not to the opponent —
-            // so the radiant clause leaves it alone and the base clause holds: it crosses and changes
-            // control, still owned by p2 and at its printed cost (§8 Conventions, R14, R171).
+            // Midrange Menace moves to Silas's controller, not to the opponent, so the base clause holds:
+            // it crosses and changes control, still p2's and at its printed cost (§8 Conventions, R14, R171).
             assert_eq!(s.unit_at(P1, 1).id, menace);
             assert_eq!(s.card(&menace).controller, P1);
             assert_eq!(s.card(&menace).owner, P2);

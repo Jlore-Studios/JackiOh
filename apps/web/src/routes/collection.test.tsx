@@ -1,8 +1,5 @@
-// `/collection` (#1307, SPEC §14): the screen reads each panel's answers with the caller's token,
-// shows each panel's own loading message and error, and never goes blank when a read is refused.
-// R1579000: it is the hub of four doors, its Cards and Cosmetics sections open in place by
-// `?section=`, and Cosmetics is where a cosmetic is equipped. R1953001: with no defaults of every
-// card left in it.
+// `/collection` (#1307, SPEC §14): each panel reads with the caller's token and never goes blank when a
+// read is refused. R1579000: the hub of four doors. R1953001: no defaults of every card in it.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -62,7 +59,6 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 
 const TOKEN = "token-1";
 
-/** Every read answers its fixture. */
 function answerAll(): void {
   vi.mocked(getCollection).mockResolvedValue(fullCollection());
   vi.mocked(getWallet).mockResolvedValue(walletInfo());
@@ -257,20 +253,18 @@ describe("R1579000 the Collection hub", () => {
     expect(window.location.pathname).toBe(paths.collection);
   });
 
-  it("R1579000 the Cosmetics door lists what the account owns and equips through the same store, with no request", async () => {
+  it("R1579000 the Cosmetics door equips through the same store, with no request", async () => {
     answerAll();
     render(<CollectionRoute token={TOKEN} />);
 
     fireEvent.click(screen.getByTestId(T.door("cosmetics")));
-    expect(await screen.findByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toBeInTheDocument();
-    expect(screen.getAllByTestId(T.ownedCosmetic("table-felt", null))).toHaveLength(1);
-    expect(screen.queryByTestId(T.ownedCosmetic("foil-none", null))).toBeNull();
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
 
     const group = SETTINGS_GROUPS.find((candidate) => candidate.id === "cosmetics");
     if (group === undefined) throw new Error("no cosmetics settings group");
     const changed = vi.fn();
     const unsubscribe = group.subscribe(changed);
-    // R1655000: the playmat, backdrop and card back are tiles, each a click on an owned one.
+    // R1655000: the playmat, backdrop and card back are tiles.
     fireEvent.click(within(screen.getByTestId(T.tile("table-felt"))).getByRole("button"));
     fireEvent.click(within(screen.getByTestId(T.tile("card-back-starfield"))).getByRole("button"));
     unsubscribe();
@@ -283,11 +277,7 @@ describe("R1579000 the Collection hub", () => {
     });
     expect(group.read()["table"]).toBe("table-felt");
     expect(changed).toHaveBeenCalled();
-    expect(getOwnedCosmetics).toHaveBeenCalledTimes(1);
-    expect(getOwnedCosmetics).toHaveBeenCalledWith(TOKEN);
-    for (const read of [getCollection, getWallet, getPacks, getCosmeticPacks, getTracks, getQuests]) {
-      expect(read).not.toHaveBeenCalled();
-    }
+    for (const read of READS) expect(read).not.toHaveBeenCalled();
   });
 
   it("R1579000 the browser's Back and Forward move between the hub and a section", async () => {
@@ -311,19 +301,41 @@ describe("R1579000 the Collection hub", () => {
 
   it("R1953001 the Cosmetics tab has no Defaults for every card section", async () => {
     answerAll();
-    // The synced settings hold a foil, a finish and a border no select can change any more.
+    // The synced settings hold a foil, a finish and a border no select changes.
     writeCosmetics({ foil: "foil-rainbow", finish: "finish-linen", border: "border-wood" });
     render(<CollectionRoute token={TOKEN} />);
 
     fireEvent.click(screen.getByTestId(T.door("cosmetics")));
-    expect(await screen.findByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toBeInTheDocument();
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
     expect(screen.queryByText("Defaults for every card")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Defaults for every card" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.getByRole("heading", { name: "Equipped" })).toBeInTheDocument();
     expect(screen.getByTestId(T.tiles("table"))).toBeInTheDocument();
-    // R1655000 freezes the group's shape: the picks stay stored, untouched.
+    // R1655000 freezes the group's shape: the picks stay stored.
     expect(readCosmetics()).toMatchObject({ foil: "foil-rainbow", finish: "finish-linen", border: "border-wood" });
+  });
+
+  it("R2731000 the Cosmetics section shows the Equipped heading, its text and the tiles, and no Owned list", async () => {
+    answerAll();
+    window.history.replaceState(null, "", paths.collectionSection("cosmetics"));
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "cosmetics");
+    expect(screen.getByRole("heading", { name: "Equipped" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
+      ),
+    ).toBeInTheDocument();
+    for (const kind of ["table", "field", "cardBack"] as const) {
+      expect(await screen.findByTestId(T.tiles(kind))).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("heading", { name: "Owned" })).toBeNull();
+    expect(screen.queryByText("Loading your cosmetics…")).toBeNull();
+    expect(document.querySelector(".collection-list")).toBeNull();
+    expect(document.querySelector('[data-testid^="collection-owned-"]')).toBeNull();
+    expect(getOwnedCosmetics).not.toHaveBeenCalled();
   });
 
   it("R1579000 an unknown section opens the hub", () => {
@@ -363,7 +375,7 @@ describe("R1655000 the Collection's card view", () => {
     expect(readCardPicks("core-001")).toEqual({ border: "border-wood", foil: "foil-rainbow" });
     expect(face?.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
     expect(readCosmetics().foil).toBe("foil-none");
-    // Who owns what is the session's (`useCanEquip`, from the screen's `ViewerFullArt`): the section reads nothing more for it.
+    // Ownership is the session's (`useCanEquip`): the section reads nothing more for it.
     expect(getOwnedCosmetics).not.toHaveBeenCalled();
   });
 
@@ -418,7 +430,7 @@ describe("R2125000 the Cards section opens on what the last visit kept", () => {
     vi.mocked(getQuests).mockReturnValue(new Promise(() => undefined));
   }
 
-  /** What a first visit's reads left behind: the wallet panel's three answers and the quests. */
+  /** What a first visit's reads left behind. */
   function keepWallet(): void {
     rememberRead(TOKEN, keptPaths.wallet, walletInfo());
     rememberRead(TOKEN, keptPaths.packs, packsInfo());

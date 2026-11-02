@@ -1,10 +1,4 @@
-//! Tutorial progress on the account (SPEC §9.10, R320; ← `apps/server/src/api/tutorial.ts`).
-//!
-//! The device keeps which lessons a player has won, and whether they hid the lesson path, in
-//! `localStorage` (R294). An active account keeps the same on the server too, so a player who signs
-//! in on another device finds them there, and the client merges the two copies (R321). This file is
-//! the account's half: two routes, both `active` (a pending account has the code screen and nothing
-//! else, §9.4), both keyed on the profile the verified token names and never on anything in the body.
+//! Tutorial progress on the account (SPEC §9.10, R320, R294, R321; §9.4, SURFACE §11.2).
 //!
 //! ```text
 //!   GET /api/tutorial  -> { progress: { completed, hiddenChoice } }
@@ -12,22 +6,8 @@
 //!                      -> { progress } as it stands after the merge
 //! ```
 //!
-//! A PUT merges and never replaces (R320): the account's lessons become the union of the stored and
-//! the sent, so a stale device can never remove a completed lesson, and its Hide/Show choice is
-//! replaced only by a strictly newer one. The same body sent twice changes nothing, so a client may
-//! retry it freely. The merge is the store's (`app.merge_tutorial_progress`, migration 0011), under a
-//! lock on the profile, so two devices writing at once cannot lose each other's lesson.
-//!
-//! The server does not know the lessons: they are the client's (`apps/web/src/tutorial/lessons.ts`),
-//! and a lesson added there needs no change here. So an id is checked for its shape only — a
-//! lower-case slug of at most `TUTORIAL_LESSON_ID_MAX_LENGTH` characters — and an account holds at
-//! most `TUTORIAL_LESSONS_MAX`. None of this is a rule: a lesson is a practice game and records no
-//! result (R187), and nothing the server does reads this row.
-//!
-//! TS's `createTutorialRoutes()` declared the two routes; in Rust the route table is `app.rs`'s
-//! `ROUTES` (SURFACE §11.2), which lists them, both `AuthLevel::Active`, as
-//! `("GET", "/api/tutorial", get_tutorial)` and `("PUT", "/api/tutorial", put_tutorial)` in TS's
-//! order.
+//! PUT merges completed lessons and hidden choices without removing progress (R320, R187).
+//! Enforces length limits (`TUTORIAL_LESSON_ID_MAX_LENGTH`, `TUTORIAL_LESSONS_MAX`).
 
 use std::sync::Arc;
 
@@ -41,8 +21,7 @@ use crate::app::{App, now_ms};
 use crate::config::{TUTORIAL_LESSON_ID_MAX_LENGTH, TUTORIAL_LESSONS_MAX};
 use crate::db::store::{TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow};
 
-/// R320: a lesson id is a lower-case slug (`basics`, `first-steps`): TS
-/// `/^[a-z0-9]+(?:-[a-z0-9]+)*$/u`, checked by hand (the server carries no regex crate).
+/// R320: checks whether lesson id is a lower-case slug.
 fn is_lesson_id(entry: &str) -> bool {
     !entry.is_empty()
         && entry.split('-').all(|part| {
@@ -50,7 +29,7 @@ fn is_lesson_id(entry: &str) -> bool {
         })
 }
 
-/// What the client reads: `TutorialAccountProgress` in `apps/web/src/net/api.ts`.
+/// Client tutorial progress representation.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TutorialProgressView {
@@ -74,7 +53,7 @@ fn progress_view(row: Option<&TutorialProgressRow>) -> TutorialProgressView {
     }
 }
 
-/// TS `Number.isSafeInteger(at)` on a JSON number, as the integer it is.
+/// Checks whether a JSON number is a safe integer.
 fn safe_integer(value: &Value) -> Option<i64> {
     const MAX_SAFE_INTEGER: i64 = 9_007_199_254_740_991;
     let number = if let Some(integer) = value.as_i64() {
@@ -115,10 +94,7 @@ pub fn read_completed(body: &Value) -> Result<Vec<String>, ApiError> {
     Ok(ids.into_iter().collect())
 }
 
-/// R320, R321: `hiddenChoice` is absent or null (no choice to propose), or `{ hidden, at }` with `at`
-/// a whole number of epoch milliseconds, the choosing device's clock. A time after the server's own
-/// is taken as now: a device whose clock runs ahead could otherwise make its choice win over every
-/// later one for as long as its clock stays ahead.
+/// R320, R321: parses optional `{ hidden, at }` choice, clamping future timestamps to now.
 pub fn read_hidden_choice(body: &Value, now: i64) -> Result<Option<TutorialHiddenChoice>, ApiError> {
     let value = match body.get("hiddenChoice") {
         None | Some(Value::Null) => return Ok(None),
@@ -151,7 +127,6 @@ pub async fn get_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
 /// `PUT /api/tutorial` (`active`, so a pending account gets 403, §9.4).
 pub async fn put_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    // TS `deps.timers.now()`: the server's one clock (`app::now_ms`, which tokio's paused clock moves).
     let now = now_ms();
     let completed = read_completed(&req.body)?;
     let hidden_choice = read_hidden_choice(&req.body, now)?;

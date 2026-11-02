@@ -59,8 +59,6 @@ mod tests {
     const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: "Pierce. Deal {damage} damage to all Units."
     const NETHER: &str = "core-088"; // (4) Spell: "Destroy all permanents."
 
-    /// p1 has played the Smith (`radiant` its face) into unit zone 1, `p1_backrow` in its backrow; p2
-    /// has a Vanilla in unit zone 1 and a Hit Job in hand.
     fn played(radiant: bool, p1_backrow: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "p1": {
@@ -74,7 +72,6 @@ mod tests {
         s
     }
 
-    /// Both players' next two turns: the start of p1's second turn after the play awakens it.
     fn to_its_awakening(s: &mut Scenario) {
         s.end_turn().end_turn().end_turn().end_turn();
         assert_eq!(s.state().active, P1);
@@ -84,14 +81,12 @@ mod tests {
         Some(Slumber { turns: Some(turns) })
     }
 
-    /// Whether any legal action of `player` names `id`: an attack, a switch, a play's pick.
     fn named_by_a_legal_action(s: &Scenario, player: PlayerId, id: &str) -> bool {
         legal_actions(s.state(), player)
             .iter()
             .any(|action| serde_json::to_string(action).expect("serializes").contains(&format!("\"{id}\"")))
     }
 
-    /// Where in `events` `matches` first holds.
     fn first(events: &[GameEvent], matches: impl Fn(&GameEvent) -> bool) -> Option<usize> {
         events.iter().position(matches)
     }
@@ -100,7 +95,6 @@ mod tests {
         matches!(event, GameEvent::Awakened { .. })
     }
 
-    /// The row and lane of every Waraxe summoned so far.
     fn summoned_waraxes(s: &Scenario) -> Vec<(Row, i32)> {
         s.events()
             .iter()
@@ -111,8 +105,6 @@ mod tests {
             .collect()
     }
 
-    /// R2271000: an awake Smith in p1's unit zone 1 (`radiant` both faces) while a second, played into
-    /// zone 2, lies Dormant until its awakening.
     fn awake_beside_a_dormant_one(radiant: bool) -> Scenario {
         let mut s = crate::scenario(json!({
             "p1": {
@@ -147,7 +139,6 @@ mod tests {
             s.expect_refused(|s| s.attack(&smith, "hero"));
 
             s.end_turn();
-            // The opponent's turn: its Vanilla may not attack it, and its Hit Job may not name it.
             assert!(!named_by_a_legal_action(&s, P2, &smith));
             s.expect_refused(|s| s.attack(VANILLA, &smith));
         }
@@ -164,7 +155,6 @@ mod tests {
             s.end_turn();
             s.state_mut().players[P2].mana.current = 10;
 
-            // Damage to all Units: the Vanilla takes it, the Dormant Smith does not.
             let vanilla_health = s.stats(VANILLA).health;
             s.play(WHIRLWIND, json!({}));
             assert!(
@@ -177,7 +167,6 @@ mod tests {
                 GameEvent::Damage { target_id, .. } if *target_id == smith
             )));
 
-            // Destroy all permanents: the Vanilla dies, the Dormant Smith stays as it was.
             let vanilla = s.unit_at(P2, 1).id;
             s.play(NETHER, json!({}));
             s.expect_in_zone(&vanilla, "graveyard");

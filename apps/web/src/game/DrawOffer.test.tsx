@@ -1,7 +1,5 @@
-// The draw offer on the table (DrawOffer.tsx, §2.5, R36, R269), read off the view alone: the
-// offerer's "waiting for reply", the other seat's Accept and Decline (live only when `legal` lists
-// `answerDraw`), and what became of the offer. All of it is the `draw-toast` element the animation
-// table's `drawOffered` / `drawAnswered` rows play on.
+// The draw offer on the table (DrawOffer.tsx, §2.5, R36, R269), read off the view alone. All of it
+// is the `draw-toast` element the animation table's `drawOffered` / `drawAnswered` rows play on.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -119,7 +117,6 @@ describe("the seat that answers", () => {
     expect(offer).toHaveTextContent("Your opponent offers a draw");
     expect(offer.closest("[aria-live]"), "announced as it arrives").not.toBeNull();
     expect(document.querySelector("[aria-modal='true']"), "the board stays usable").toBeNull();
-    // The board is still there and still clickable around it.
     expect(screen.getByTestId("board")).toBeInTheDocument();
   });
 

@@ -1,22 +1,12 @@
 //! Classic+ #42 KY's Test's question bank (docs/classic-sets.md B5 E31, SPEC §8.7 row 42, R420, R580).
 //!
 //! The machinery that is not card data: the Easy generator, a problem drawn from a bank handed in as
-//! data (the Medium and Hard problems live in `packages/cards`, which the engine never imports), the
+//! data (the Medium and Hard problems live in the cards crate, which the engine never imports), the
 //! reward roll, and the two prompts. Each step is a plain-data continuation, so a paused game survives
-//! JSON and replays (§9.3):
-//!
-//!   cry    one reward rolled per difficulty (`KY_TEST_REWARDS`; Hard has one entry, so no draw, R129),
-//!          then a `mode` prompt of the three difficulties, each labeled "<difficulty>: <reward>".
-//!   ask    a problem of the chosen difficulty — generated for Easy (R580; since issue #2179 a
-//!          four-digit sum or difference, R2179003, `KyTestEasy`), drawn from the bank otherwise — as
-//!          an `answer` prompt (R465): the statement and the options in an rng-shuffled order, the
-//!          right letter in the resume data where no view reaches (§10.8).
-//!   grade  a right answer gains that difficulty's rolled reward (every card Radiant on the Radiant
-//!          face); a wrong one nothing. Pools are non-token cards of every set (R380) through
-//!          `addRandomFromCatalog`, which never offers the running card (R387); the hand cap burns.
-//!
-//! Port of `packages/engine/src/subsystems/kyTest.ts`. `KyTestDifficulty` is `crate::config`'s (part 1
-//! placed it beside `KY_TEST_REWARDS`, whose `of` takes it), re-exported here under its TS module.
+//! JSON and replays (§9.3). The Cry rolls one reward per difficulty (Hard has one entry, so no draw,
+//! R129); `ask` poses an `answer` prompt (R465), the right letter in the resume data where no view
+//! reaches (§10.8); `grade` adds the reward on a right answer, from non-token cards of every set (R380)
+//! through `addRandomFromCatalog`, which never offers the running card (R387); the hand cap burns.
 
 use std::sync::Arc;
 
@@ -49,8 +39,7 @@ pub struct KyTestProblem {
 const ROLLED: &str = "kyTestRewards";
 const CHOSEN: &str = "kyTestDifficulty";
 
-/// R420, R580: a + b with each addend drawn from `KY_TEST_EASY_ADDENDS`, and three wrong sums, each
-/// a + b moved by a different entry of `KY_TEST_EASY_MISSES` — so the four options always differ.
+/// R420, R580: a + b, and wrong sums moved by different `KY_TEST_EASY_MISSES`, so the options differ.
 pub fn easy_problem(rng: &mut Rng) -> KyTestProblem {
     let min = KY_TEST_EASY_ADDENDS.min;
     let max = KY_TEST_EASY_ADDENDS.max;
@@ -70,11 +59,8 @@ pub fn easy_problem(rng: &mut Rng) -> KyTestProblem {
     }
 }
 
-/// R2179003: a + b or a − b, by one coin, with each operand drawn from `KY_TEST_FOUR_DIGIT_OPERANDS`
-/// and a difference taken the larger less the smaller, so no answer is negative; its three wrong
-/// answers are the answer moved by three different entries of `KY_TEST_FOUR_DIGIT_MISSES`, so the
-/// four options always differ. The problem rides the prompt by its operands (`easy:<a>+<b>`,
-/// `easy:<a>-<b>`).
+/// R2179003: a + b or a − b by one coin, a difference the larger less the smaller so no answer is
+/// negative; the wrong answers move it by different `KY_TEST_FOUR_DIGIT_MISSES`, so the options differ.
 pub fn four_digit_problem(rng: &mut Rng) -> KyTestProblem {
     let min = KY_TEST_FOUR_DIGIT_OPERANDS.min;
     let max = KY_TEST_FOUR_DIGIT_OPERANDS.max;
@@ -126,20 +112,20 @@ impl KyTestEasy {
     }
 }
 
-/// TS `isDifficulty(value)`: the difficulty a string names, when it is one of `KY_TEST_DIFFICULTIES`.
+/// The difficulty a string names, when it is one of `KY_TEST_DIFFICULTIES`.
 fn is_difficulty(value: &str) -> Option<KyTestDifficulty> {
     let difficulty = value.parse::<KyTestDifficulty>().ok()?;
     KY_TEST_DIFFICULTIES.contains(&difficulty).then_some(difficulty)
 }
 
-/// `kyTestScript`'s answer: the card's Cry and the steps its prompts re-enter, by step name.
+/// The card's Cry and the steps its prompts re-enter, by step name.
 #[derive(Clone)]
 pub struct KyTestScript {
     pub cry: Hook,
     pub resume: IndexMap<&'static str, Hook>,
 }
 
-/// TS `{ ...reward.pool }` as a catalog query: only the fields the pool states.
+/// A reward pool as a catalog query: only the fields the pool states.
 fn pool_query(pool: Option<crate::config::KyTestRewardPool>) -> Value {
     let mut query = Map::new();
     if let Some(pool) = pool {
@@ -156,8 +142,7 @@ fn pool_query(pool: Option<crate::config::KyTestRewardPool>) -> Value {
     Value::Object(query)
 }
 
-/// The whole card: its Cry and the two steps its prompts re-enter. `bank` holds the Medium and Hard
-/// problems; the Easy ones are four-digit sums and differences (R2179003).
+/// The whole card; `bank` holds the Medium and Hard problems, the Easy ones four-digit (R2179003).
 pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
     ky_test_script_with(bank, KyTestEasy::FourDigits)
 }

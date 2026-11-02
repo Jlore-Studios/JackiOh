@@ -1,6 +1,6 @@
-// Patch card diffs (brief B4.2; R388) compare snapshots, including unknown fields so no change is lost.
-// Text uses `fillParams` and R277 word diffs (R432; B2.7, B2.5, B3.4; R279; E36; R507).
-// They read public catalog data only (CLAUDE.md rule 7).
+// Patch card diffs (brief B4.2; R388) compare snapshots, unknown fields included so no change is lost.
+// Text uses `fillParams` and R277 word diffs (R432; B2.7, B2.5, B3.4; R279; E36; R507). Public catalog
+// data only (CLAUDE.md rule 7).
 
 import { fillParams, keywordKey, type CardCost, type CardDef, type CardDefs, type CardFace, type Param } from "@jackioh/shared";
 
@@ -125,7 +125,7 @@ const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(Object.entries(CARD_KEYS).
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(Object.keys(CARD_KEYS));
 
-/** A price in R432's words: "(2) Cost", "(X) Cost", and an embiggen card's "(2) Cost, Embiggened (4)" (R1175000). */
+/** A price in R432's words, an embiggen card's included (R1175000). */
 export function costText(cost: CardCost): string {
   if (typeof cost === "number") return `(${String(cost)}) Cost`;
   if (cost === "X") return "(X) Cost";

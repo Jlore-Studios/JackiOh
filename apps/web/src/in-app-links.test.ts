@@ -1,9 +1,8 @@
 // #2562: every link to a screen of the app moves in place. An `<a>` in a non-test `.tsx` under
 // `apps/web/src` whose `href` is a `paths.` entry or an address starting with `/` carries
-// `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves without a page load and leaves a
-// modified or middle click to the browser, or opens a new tab (`target="_blank"`). A bare one reloads
-// the site: the read cache, the engine's WebAssembly and the audio unlock go with it. An `href` passed
-// in a variable (`action.to`) is its caller's to pair; FULL_LOADS lists the links that load the page on purpose.
+// `onClick={followInApp(…)}` (`routes/nav.tsx`) or opens a new tab: a bare one reloads the site, and
+// the read cache, the engine's WebAssembly and the audio unlock go with it. An `href` passed in a
+// variable is its caller's to pair; FULL_LOADS lists the links that load the page on purpose.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";

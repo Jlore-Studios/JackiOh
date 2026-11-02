@@ -1,7 +1,5 @@
 // The Trade control (R1838000, TradeControl.tsx): the Duos pass control's bar over a Tradable hand
-// card, read off the view and `legal` alone. Pointing at a hand card `legal` lists a `trade` for, or
-// whose view carries a `tradeReason`, puts the bar on it with the price and the Trades left the view
-// gives; it sends the listed `trade` and nothing else (CLAUDE.md rule 7).
+// card, read off the view and `legal` alone; it sends the listed `trade` and nothing else (CLAUDE.md rule 7).
 
 import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -23,7 +21,7 @@ const TRADE_H1: ActionBody = { type: "trade", instanceId: "h1" };
 const END_TURN: ActionBody = { type: "endTurn" };
 const REASON = "you have made this turn's 1 Trade";
 
-/** p1's main phase holding Prestige (`h1`) and a Stockpile (`h2`); `left` Trades left this turn. */
+/** p1's main phase holding Prestige (`h1`) and a Stockpile (`h2`). */
 function holding(over: { left?: number; reason?: string; trades?: boolean } = {}): PlayerView {
   const { left = 1, reason, trades = true } = over;
   return baseView({

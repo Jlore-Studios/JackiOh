@@ -19,7 +19,6 @@ pub const ID: &str = "classic-001";
 /// The label both faces print the formula under (R280).
 const FORMULA: &str = "for each card in their exile";
 
-/// N: the damage per card times the opponent's exile size, now.
 fn curse_damage(ctx: &impl ParamContext, state: &GameState, controller: PlayerId) -> i32 {
     param(ctx, "damage") * zone_count(state, opponent_of(controller), OffFieldZone::Exile)
 }
@@ -88,11 +87,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1: one hit of N (R63), then the draw; its preview
-// is N (R280); radiant: the same, then Recruit their newest permanent, back to its owner's piles when
-// it leaves the field (§3.2) but for a death, to your graveyard as yours (R2618000), a Unit attacking at
-// once (R53), a Trap set face-down (R33); tuned
-// numbers read through `param()` (R386).
+// C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1 (R63, R280, §3.2, R2618000, R53, R33, R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -131,7 +126,6 @@ mod tests {
         s.events().iter().map(js).filter(|event| event["type"] == "damage").collect()
     }
 
-    /// p2's exiled card of this definition (p1's library holds some of the same definitions).
     fn their_exiled(s: &Scenario, def_id: &str) -> CardInstance {
         match s.pile(P2, "exile").into_iter().find(|candidate| candidate.def_id == def_id) {
             Some(card) => card,
@@ -316,7 +310,6 @@ mod tests {
                     CurseOpts { their_exile: Some(vec![MENACE, VANILLA, STOCKPILE]), ..CurseOpts::default() },
                 );
                 s.play(CURSE, json!({}));
-                // 3 for the exile of three, then the Vanilla's 4.
                 assert_eq!(hits_on(&s, P2), vec![3, 4]);
                 s.expect_health(P2, 23);
                 s.expect_events(json!(["damage", "drawn", "summoned", "attackDeclared"]));
@@ -416,8 +409,6 @@ mod tests {
             #[test]
             fn the_newest_permanent_with_no_open_zone_for_it_nothing_is_recruited_not_an_older_one() {
                 crate::register_all();
-                // The Trap is the newest permanent and your backrow is full, so nothing comes, though the older
-                // Vanilla would fit a unit zone; and nothing attacks.
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": CURSE, "radiant": true }, STOCKPILE],

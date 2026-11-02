@@ -1,10 +1,7 @@
-// The Jlore pill (#1659, part of #1651; SPEC §14.1): Jlore's coin and the balance `GET /api/wallet`
-// answers, in the top bar of every signed-in screen that shows one. It links to `/shop`. A visitor
-// has no session, so it makes no request and renders nothing; neither does a session whose wallet
-// read the server refuses. The balance is the server's (CLAUDE.md rule 7): see `wallet.ts`.
-//
-// A new balance is counted to, up or down, in the number only (the pill's box does not move); reduce
-// motion, the setting or the system's (`reducedMotionNow`), shows it at once.
+// The Jlore pill (#1659, part of #1651; SPEC §14.1): the balance `GET /api/wallet` answers, in the
+// top bar of a signed-in screen. A visitor (no session) or a refused wallet read renders nothing.
+// The balance is the server's (CLAUDE.md rule 7): see `wallet.ts`. A new balance is counted to in
+// the number only (the pill's box does not move).
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 

@@ -6,14 +6,12 @@
 //! Radiant: "While in your deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand or deck and each adjacent
 //!          Unit."
-//! Engine: a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of its owner's play, a cast
-//! included (R70) but not a cast on draw (R2179002), whose running face carries a tribal tag (TRIBAL_TAGS, R1424): `summon_this` into
-//! the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with no
-//! open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
-//! it summons nothing. End of turn: `upgrade({ scope: { side: "self", zones: ["hand", "library"] },
-//! random: cards })`, one uniform pick over both piles (R440); Radiant, then one Buff on each Unit
-//! `adjacent_to` this (§3.1). "All Tribes" is all five tribal tags in the catalog's `tags`, read off
-//! them by the client — no catalog field of its own.
+//! Engine: a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of a `tribal_play`: `summon_this`
+//! into the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with
+//! no open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
+//! it summons nothing. End of turn: one Buff on a uniform pick over hand and deck (R440); Radiant, then
+//! one Buff on each Unit `adjacent_to` this (§3.1). "All Tribes" is all five tribal tags in the
+//! catalog's `tags`, read off them by the client — no catalog field of its own.
 
 use jackioh_engine::prelude::*;
 
@@ -85,13 +83,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #87 Tatches the Totem — SPEC §8.8 row 87, BUILD M10 row M 87: "In your deck, after you play or
-// cast a card with a tribal tag (Human, Felinor, KY, CN or Jlockeed; MD-E11) and it resolves, it is
-// summoned into your leftmost open unit zone with no Cry, hidden until then; a card with no tribal
-// tag, or a face-down play, does nothing; with no open zone it stays; the frame prints All Tribes
-// and its tags list all five, so any tag filter for one of them sees it; at your end of turn one
-// random card of your hand and deck together gets one Buff, cued per R440; cards reads through
-// `param()`; radiant 0/6, then one Buff on each Unit adjacent to it".
+// M #87 Tatches the Totem — SPEC §8.8 row 87, BUILD M10 row M 87.
 #[cfg(test)]
 mod tests {
     use super::*;

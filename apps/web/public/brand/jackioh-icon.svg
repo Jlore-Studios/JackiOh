@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<defs>
+  <linearGradient id="wordGold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fbe7b0"/><stop offset="0.22" stop-color="#ffe39a"/><stop offset="0.44" stop-color="#f3c969"/>
+    <stop offset="0.62" stop-color="#c9953f"/><stop offset="0.82" stop-color="#9b6423"/><stop offset="1" stop-color="#d9a44c"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fff6d6"/><stop offset="0.32" stop-color="#fde68a"/>
+    <stop offset="0.62" stop-color="#f0c04a"/><stop offset="1" stop-color="#a86a1f"/>
+  </linearGradient>
+  <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fde68a"/><stop offset="0.5" stop-color="#c9953f"/><stop offset="1" stop-color="#f0c04a"/>
+  </linearGradient>
+  <radialGradient id="face" cx="0.5" cy="0.4" r="0.75">
+    <stop offset="0" stop-color="#3a2f6e"/><stop offset="0.55" stop-color="#241c44"/><stop offset="1" stop-color="#141a2e"/>
+  </radialGradient>
+  <linearGradient id="back" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2b3349"/><stop offset="1" stop-color="#141a2e"/>
+  </linearGradient>
+  <pattern id="stripes" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="22" height="22" fill="none"/><rect width="9" height="22" fill="#ffffff" fill-opacity="0.045"/>
+  </pattern>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.45"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0e0905" flood-opacity="0.55"/>
+  </filter>
+  <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0e0905" flood-opacity="0.65"/>
+  </filter>
+</defs>
+<defs><radialGradient id="tile" cx="0.5" cy="0.42" r="0.75"><stop offset="0" stop-color="#4a2a12"/><stop offset="0.6" stop-color="#2b170c"/><stop offset="1" stop-color="#120b07"/></radialGradient></defs><rect width="1024" height="1024" fill="url(#tile)"/><g transform="translate(512 520) scale(0.80) translate(-512 -512)"><g transform="translate(512 512) scale(1.14) translate(-491 -528)"><g transform="rotate(-15 372 548)" filter="url(#shadow)">
+<rect x="152.0" y="240.0" width="440" height="616" rx="48.4" fill="url(#back)"/>
+<rect x="152.0" y="240.0" width="440" height="616" rx="48.4" fill="url(#stripes)"/>
+<circle cx="372" cy="548" r="149.60000000000002" fill="none" stroke="#d4af37" stroke-opacity="0.75" stroke-width="13.2"/>
+<circle cx="372" cy="548" r="119.68000000000002" fill="none" stroke="#d4af37" stroke-opacity="0.4" stroke-width="6.16" stroke-dasharray="17.6 13.2"/>
+<path d="M372.0 419.3 L407.9 512.1 L500.7 548.0 L407.9 583.9 L372.0 676.7 L336.1 583.9 L243.3 548.0 L336.1 512.1 Z" fill="#7f6bd0" fill-opacity="0.75" stroke="#e8d28a" stroke-width="7.919999999999999" stroke-linejoin="round"/>
+<circle cx="372" cy="548" r="24.2" fill="#ffd24a"/>
+<rect x="152.0" y="240.0" width="440" height="616" rx="48.4" fill="none" stroke="url(#goldEdge)" stroke-width="19.8"/>
+<rect x="176.2" y="264.2" width="391.6" height="567.6" rx="29.04" fill="none" stroke="#d4af37" stroke-opacity="0.45" stroke-width="5.28"/>
+</g>
+<g transform="rotate(8 636 490)" filter="url(#shadow)">
+<rect x="416.0" y="182.0" width="440" height="616" rx="48.4" fill="url(#face)"/>
+<rect x="416.0" y="182.0" width="440" height="616" rx="48.4" fill="none" stroke="url(#goldEdge)" stroke-width="19.8"/>
+<rect x="440.2" y="206.2" width="391.6" height="567.6" rx="29.04" fill="none" stroke="#d4af37" stroke-opacity="0.45" stroke-width="5.28"/>
+</g><g transform="rotate(8 636 490)"><circle cx="636" cy="490" r="211.2" fill="url(#glow)"/><path d="M554.7 730.66 533.9 705.7 534.94 697.9Q552.62 681.78 561.98 666.96Q571.34 652.14 574.72 631.3399999999999Q578.1 610.54 578.1 576.74V381.21999999999997Q578.1 365.09999999999997 574.98 359.9Q571.86 354.7 561.46 354.7Q557.82 354.7 553.4000000000001 354.96Q548.98 355.21999999999997 545.86 355.48Q542.74 355.74 542.74 355.74L538.06 348.46L542.22 308.94L615.54 308.41999999999996Q641.02 307.9 663.38 307.12Q685.74 306.34 700.04 305.55999999999995Q714.34 304.78 714.34 304.78L710.1800000000001 353.14Q695.1 356.78 690.94 361.2Q686.78 365.62 685.74 380.18Q684.7 394.74 683.9200000000001 414.76Q683.14 434.78 682.36 458.17999999999995Q681.58 481.58 680.8 506.53999999999996Q680.02 531.5 679.76 555.6800000000001Q679.5 579.86 679.5 601.18Q679.5 651.1 649.6 682.3Q619.7 713.5 554.7 730.66Z" fill="url(#gold)" stroke="#2b1800" stroke-width="9.879999999999999" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/><path d="M754.0 228.0 L772.1 293.9 L838.0 312.0 L772.1 330.1 L754.0 396.0 L735.9 330.1 L670.0 312.0 L735.9 293.9 Z" fill="#fff6d6" stroke="#f0c04a" stroke-width="5.04" stroke-linejoin="round" filter="url(#lift)"/></g></g></g>
+</svg>

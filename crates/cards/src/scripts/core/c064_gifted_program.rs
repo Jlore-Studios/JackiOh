@@ -1,23 +1,7 @@
 //! #64 Gifted Program (SPEC §8.3, §10.1, §10.5 step 3, §5.2, R56, R70, R74, R213, R214).
-//!
 //! Base: "The first card costing 1 or less you play each turn becomes Radiant as it is played".
-//! Radiant: "2 or less" — §8's Conventions make that a change to the threshold only.
-//!
-//! §8.3's Engine cell puts it before resolution with "cost = cost paid": §10.5 step 3, after the
-//! cost is paid and before the card moves or resolves. The card is a static flag carrying its
-//! threshold, read by `play_steps::gifted_program_step` through `play_choices::gifted_makes_radiant`.
-//! Three things decide it, all the engine's:
-//!   - "you play": only the playing player's permanents count (§8 Conventions), so a stolen Gifted
-//!     Program works for its thief;
-//!   - R56: the cost compared is the one ACTUALLY PAID after every modifier; a cast pays 0 (R70);
-//!   - "the first ... each turn": R213 counts plays off the turn log, not a flag on this instance,
-//!     so a Gifted Program that changes hands, or leaves and comes back, can neither use up another
-//!     player's first cheap card nor hand its own player a second one.
-//!
-//! A flag, not a hook, because step 1 must know the face before it reads targets and modes (R214).
-//! It cannot catch its own play: step 3 runs before step 4 puts it on the board (R119).
-//! THE GLOW (R662): `condition.rs` asks `query::gifted_would_make_radiant`, which is
-//! `gifted_makes_radiant` at the cost a play pays now (R56, R213), so glow and step 3 agree.
+//! Radiant: "2 or less" (§8 Conventions).
+//! Trigger fires in §10.5 step 3 (before resolution; R213, R214, R119). Cost paid checked (R56, R70). Makes instance Radiant (§5.2, R74, §10.1).
 
 use jackioh_engine::prelude::*;
 
@@ -46,13 +30,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #64 Gifted Program — SPEC §8.3, §10.5 step 3, BUILD M4-T4 row 64.
-//
-// Must-pass: "First ≤1-cost card each turn is radiant before it resolves (its Cry uses radiant
-// text); second is not; radiant threshold 2 (R56)."
-//
-// The card is its `giftedProgram` flag, read as §10.5 step 3 (R213, R214); `backrow: [GIFTED]` arms
-// it. R662's yellow glow is tested at the end of this file.
+// #64 Gifted Program — SPEC §8.3, §10.5 step 3, BUILD M4-T4 row 64. The card is its `giftedProgram` flag,
+// read as §10.5 step 3 (R213, R214); `backrow: [GIFTED]` arms it. R662's yellow glow is tested at the end
+// of this file.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

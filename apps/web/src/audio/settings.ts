@@ -1,17 +1,15 @@
-// The audio settings store (docs/polish/2-sound.md, Surface; B12, B13).
-//
-// One cached `AudioSettings` object, persisted as JSON under `localStorage["jackioh.audio.v1"]`.
-// Every storage access sits inside try/catch: private windows, blocked site data and quota errors
-// must never break the game, so a failed read gives the defaults and a failed write still updates
-// memory. The cached object is frozen and replaced (never mutated) on each change, which is what
-// lets `useSyncExternalStore` compare snapshots by identity. A "storage" event from another tab
-// re-reads the key, so two open games share one mute switch.
+// The audio settings store (docs/polish/2-sound.md, Surface; B12, B13): one cached `AudioSettings`,
+// persisted as JSON under `localStorage["jackioh.audio.v1"]`. Every storage access sits inside try/catch:
+// private windows, blocked site data and quota errors must never break the game. The cached object is
+// frozen and replaced on each change, so `useSyncExternalStore` compares snapshots by identity. A
+// "storage" event from another tab re-reads the key, so two open games share one mute switch.
 
 import { useSyncExternalStore } from "react";
 
 import { isRecord } from "../wire/json.ts";
 import { AUDIO_SETTINGS_KEY, MUSIC_STATIONS } from "./constants.ts";
 import type { AudioSettings, MusicStation } from "./types.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export const DEFAULT_AUDIO_SETTINGS: Readonly<AudioSettings> = Object.freeze({
   master: 0.8,
@@ -41,18 +39,15 @@ function station(value: unknown, fallback: MusicStation): MusicStation {
 }
 
 /**
- * Settings saved before `playMusicInBackground` named this switch the other way round
- * (`pauseMusicOnBlur`, default on). A saved value is read inverted, so a player who had turned the old
- * switch off keeps their music playing and nobody else hears a change.
+ * A saved `pauseMusicOnBlur` (this switch the other way round, default on) is read inverted, so a player
+ * who turned it off keeps their music playing and nobody else hears a change.
  */
 function legacyBackground(o: Record<string, unknown>): boolean {
   return typeof o.pauseMusicOnBlur === "boolean" ? !o.pauseMusicOnBlur : DEFAULT_AUDIO_SETTINGS.playMusicInBackground;
 }
 
-/** Total: any input → valid settings. Each field independently: a finite number is clamped to [0,1],
- *  anything else takes the default; a boolean field that is not a boolean takes the default, and a
- *  station that is not one of MUSIC_STATIONS takes the default. Settings saved before the music
- *  existed read with the music's defaults. */
+/** Total: any input → valid settings, each field independently: a finite number is clamped to [0,1];
+ *  a value not of its field's kind (a station not in MUSIC_STATIONS) takes the default. */
 export function parseAudioSettings(raw: unknown): AudioSettings {
   const o: Record<string, unknown> = isRecord(raw) ? raw : {};
   return {
@@ -84,16 +79,8 @@ function parseStored(text: string): Readonly<AudioSettings> {
   }
 }
 
-function readStoredText(): string | null {
-  try {
-    return window.localStorage.getItem(AUDIO_SETTINGS_KEY);
-  } catch {
-    return null;
-  }
-}
-
 function loadFromStorage(): Readonly<AudioSettings> {
-  const text = readStoredText();
+  const text = getStored(AUDIO_SETTINGS_KEY);
   return text === null ? DEFAULT_AUDIO_SETTINGS : parseStored(text);
 }
 
@@ -107,13 +94,13 @@ function notify(next: AudioSettings): void {
   }
 }
 
-/** Cached after the first read. Reads localStorage[AUDIO_SETTINGS_KEY] inside try/catch. */
+/** Cached after the first read. */
 export function readAudioSettings(): AudioSettings {
   if (cache === null) cache = loadFromStorage();
   return cache;
 }
 
-/** Merges, parses (clamps), caches, persists as JSON inside try/catch, notifies each subscriber once. */
+/** Merges, parses (clamps), caches, persists, and notifies each subscriber once. */
 export function writeAudioSettings(patch: Partial<AudioSettings>): AudioSettings {
   const merged: Record<string, unknown> = { ...readAudioSettings() };
   for (const [key, value] of Object.entries(patch)) {
@@ -121,11 +108,8 @@ export function writeAudioSettings(patch: Partial<AudioSettings>): AudioSettings
   }
   const next = Object.freeze(parseAudioSettings(merged));
   cache = next;
-  try {
-    window.localStorage.setItem(AUDIO_SETTINGS_KEY, JSON.stringify(next));
-  } catch {
-    // Storage is unavailable or full: the change still holds for this page.
-  }
+  // Storage that refuses it (unavailable or full): the change still holds for this page.
+  setStored(AUDIO_SETTINGS_KEY, JSON.stringify(next));
   notify(next);
   return next;
 }
@@ -136,7 +120,7 @@ function installStorageListener(): void {
     const key = (event as StorageEvent).key;
     // A null key is `localStorage.clear()` in another tab; any other key is not ours.
     if (key != null && key !== AUDIO_SETTINGS_KEY) return;
-    const text = readStoredText();
+    const text = getStored(AUDIO_SETTINGS_KEY);
     const next = text === null ? DEFAULT_AUDIO_SETTINGS : parseStored(text);
     cache = next;
     notify(next);

@@ -1,17 +1,5 @@
-//! R1452 (SPEC §9.12): the bot seat. A ladder bot's seat has no socket: the match actor plays it
-//! itself, deciding off the queue and moving at a human pace inside its clock, with server nonces
-//! (`srv-bot-…`, R270). It gets no disconnect grace (R744), emotes through its persona (R645), is
-//! rated as R610 rates a bot, and its match replays from `(seed, log)` and survives a restart like
-//! any other.
-//!
-//! R639000: it answers a draw offer and its mulligan at a person's pace, lets a turn run out at the
-//! fitted rate, and shows its aim a beat before a targeted attack, each drawn from the fitted rows.
-//!
-//! These run the real engine and the real cards (`jackioh_cards::register_all`), not the testkit's
-//! scripted ones: the bot decides on the blocking pool, whose threads do not see a test's
-//! thread-local card override. The one exception puts a single testkit card in the person's hand and
-//! never lets the bot decide while it is in play. Time is tokio's paused clock, which does not move on its own while a
-//! decision is running there, so the think times cost no real time and the decisions only theirs.
+//! R1452 (SPEC §9.12): ladder bot seat decisions, server nonces (R270), and personas (R645).
+//! No disconnect grace (R744), rated per R610, human-paced responses per R639000.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -42,7 +30,7 @@ use jackioh_server::economy::store::CardPicks;
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{fake, from, q, to_json};
+use crate::support::store::{fake, from, named_cards, q, to_json};
 
 const MATCH_ID: &str = "match-bot-seat";
 const PERSON: &str = "profile-person";
@@ -206,10 +194,7 @@ async fn started_bot_match(
     (app, actor)
 }
 
-/// R1834005: the bot's cosmetics on its row, as the pool draws them (a wardrobe of the starters
-/// alone, its account picks and a border of its own on every card of its deck), and the person's
-/// on their account (their `cosmetics` settings group and a border of their own on every card of
-/// theirs).
+/// R1834005: sets up cosmetics on rows for bot and person decks.
 async fn dress(app: &App, person_deck: &[String], bot_deck: &[String]) {
     let entries = |deck: &[String], border: &str| -> Value {
         let cards: std::collections::BTreeSet<&String> = deck.iter().collect();
@@ -928,9 +913,7 @@ async fn r1452_persona_greets_through_the_relay() {
 
 #[tokio::test(start_paused = true)]
 async fn r1452_r1127_a_card_that_hears_emotes_hears_the_bots() {
-    // The person holds the testkit's Field Spell that hears emotes. Its card is the only test card
-    // in the match, and the person plays it on their own turn, which they never end, so the bot
-    // never decides while it is in play (the blocking pool's threads do not see the testkit).
+    // Person holds testkit Field Spell hearing emotes; plays on own turn.
     install_test_cards();
     let balanced = AI_PERSONAS
         .iter()
@@ -1006,9 +989,7 @@ async fn r1452_r1127_a_card_that_hears_emotes_hears_the_bots() {
 
 #[tokio::test(start_paused = true)]
 async fn r1351000_a_blocked_bots_emote_reaches_no_one_and_a_card_still_hears_it() {
-    // The person holds the testkit's Field Spell that hears emotes. Its card is the only test card
-    // in the match, and the person plays it on their own turn, which they never end, so the bot
-    // never decides while it is in play (the blocking pool's threads do not see the testkit).
+    // Person holds testkit Field Spell hearing emotes; plays on own turn.
     install_test_cards();
     let balanced = AI_PERSONAS
         .iter()
@@ -1116,9 +1097,7 @@ async fn r1452_bot_telemetry_is_ai() {
 
 #[tokio::test(start_paused = true)]
 async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
-    // The bot's turn begins once (its first move's think time, its concession, its idle roll): a
-    // rebuild reads off the log the turn the bot last moved in, so its next move after a restart in
-    // the middle of its turn is a later move's, not a first one's.
+    // Rebuild reads turn bot last moved in, preserving mid-turn progress.
     let m = bot_match("seed-bot-mid-turn", PlayerId::P1, PersonaName::Silent, false).await;
     let bot = m.bot();
     to_the_persons_turn(&m).await;
@@ -1190,35 +1169,10 @@ async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
     assert_eq!(at - rebuilt_at, later, "{action}");
 }
 
-/// Every `(instanceId, defId)` a view JSON names, wherever it names one.
-fn named_cards(view: &Value) -> Vec<(String, String)> {
-    let mut named = Vec::new();
-    let mut stack = vec![view];
-    while let Some(value) = stack.pop() {
-        match value {
-            Value::Object(fields) => {
-                if let (Some(Value::String(instance)), Some(Value::String(def))) =
-                    (fields.get("instanceId"), fields.get("defId"))
-                {
-                    named.push((instance.clone(), def.clone()));
-                }
-                stack.extend(fields.values());
-            }
-            Value::Array(entries) => stack.extend(entries),
-            _ => {}
-        }
-    }
-    named
-}
-
 /// How many of the person's turns the game below runs, at most, for the bot to show its cards.
 const DRESSED_TURNS: usize = 6;
 
-/// R1834005, R1452: a bot's seat freezes its loadout through the same path a person's does (its
-/// wardrobe as what it owns, its drawn picks as its account's), and its frames have the same shape
-/// and the same sending rule: the seat-level half on attach before the view, and a card's own picks
-/// only after a view that shows that card of its deck, once. Nothing the person reads tells the two
-/// seats apart.
+/// R1834005, R1452: bot seat freezes loadout identically to human; frames match shape and sending rules.
 #[tokio::test(start_paused = true)]
 async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
     let (app, actor) = started_bot_match(

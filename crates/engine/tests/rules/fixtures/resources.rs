@@ -1,9 +1,6 @@
 //! Test-only cards for Stinkyscape's Resources and Credits (#1840, R1840000–R1840006): six Resources,
-//! one of each rarity and two Commons, and an asteroid, the mining node's shape ("Activate: Take 2
-//! damage. Tribute this. Death: gain 2 random Resources"). No shipped card is a Resource yet
-//! (Stinkyscape's come with the set), so the engine never imports `crates/cards` for this.
-//!
-//! Ids are prefixed `fx-res-` and indexed from 18410, so they collide with no other fixture file's.
+//! one of each rarity and two Commons, and an asteroid, the mining node's shape. Ids `fx-res-…` from
+//! 18410, so they collide with no other fixture file's.
 
 use std::sync::LazyLock;
 
@@ -80,7 +77,6 @@ pub static RESOURCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     defs
 });
 
-/// The Resources and the asteroid on top of `base`.
 pub fn resources_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for def in RESOURCE_DEFS.iter() {
