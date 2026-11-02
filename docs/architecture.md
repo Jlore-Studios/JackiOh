@@ -79,7 +79,8 @@ nothing else: the redacted event stream, the view each event was planned against
 catalog (R202). A card's signature animation is its entry in its set's effects table
 (`apps/web/src/fx/cards/<set>.json5`, `docs/polish/9-card-animations.md`, R2784000): bundled data,
 keyed by a `defId` the viewer can already read, so a hidden card keys none, and it paces nothing
-(R200).
+(R200). A combat keyword's beat (`fx/motifs/beats.ts`, R2789000) keys on the `via` the engine puts on an
+event (R2783001), never on a guess from the view.
 
 ---
 
