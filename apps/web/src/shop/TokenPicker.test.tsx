@@ -137,6 +137,30 @@ describe("#1309 the token picker", () => {
     expect(cosmetic.parentElement).not.toContainElement(card);
   });
 
+  // R2730000 removed the shop's card browser, so main's card-picker tests went with it. The
+  // R2728000 Legendary readout they surrounded stays: the shop still shows it.
+  it("R2728000 the shop shows Legendary tokens held and a Legendary next step at its size", async () => {
+    const bars = tokenBars();
+    tokenServer({
+      bars: {
+        status: 200,
+        body: {
+          ...bars,
+          cosmeticBar: { points: 40, size: 100 },
+          nextStep: "legendary",
+          tokens: { ...bars.tokens, cosmeticLegendary: 2 },
+        } satisfies TokenBarsResponse,
+      },
+    });
+    render(<TokenPicker token={TOKEN} />);
+
+    const cosmetic = await screen.findByTestId(T.cosmeticBar);
+    expect(cosmetic).toHaveTextContent("40 / 100");
+    expect(cosmetic.querySelector("progress")).toHaveProperty("max", 100);
+    expect(screen.getByTestId(T.nextStep)).toHaveTextContent("Legendary token");
+    expect(screen.getByTestId(T.heldLegendary)).toHaveTextContent("Legendary tokens held: 2");
+  });
+
   it("the page's next revision reads the bars again", async () => {
     // The bars move at the server after the first read (another panel opened a pack).
     let bars = tokenBars();

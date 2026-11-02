@@ -12,7 +12,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, on_field, register_cards};
+use super::support::{AI, HUMAN, on_field, register_cards, unit};
 
 const CANNON: &str = "stinkyscape-052";
 const POLYMORPH: &str = "meditative-024";
@@ -50,13 +50,6 @@ fn prices_of(activations: Vec<ActivationPrice>) -> Prices {
         activations,
         ..Prices::default()
     }
-}
-
-fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
-    active_units_of(state, player)
-        .into_iter()
-        .find(|unit| unit.def_id == def_id)
-        .expect("the unit is on the field")
 }
 
 /// The price of `controller`'s `def_id`, which must be priced.

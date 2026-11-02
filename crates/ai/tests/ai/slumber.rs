@@ -11,7 +11,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, register_cards};
+use super::support::{AI, HUMAN, close, register_cards};
 
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
 
@@ -140,10 +140,6 @@ fn cosmality_on_curve(tier: Handicap, human_hand: &[&str]) -> GameState {
     .clone();
     state.players[AI].handicap = Some(tier);
     state
-}
-
-fn close(a: f64, b: f64) {
-    assert!((a - b).abs() < 1e-9, "{a} vs {b}");
 }
 
 #[test]

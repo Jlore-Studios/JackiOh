@@ -85,12 +85,14 @@ Death on the field and in the seat's hand (spawned first, R923001) as its contro
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
 `kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
 fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
-(R2566000). A card's start-of-turn and end-of-turn hooks count
-by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
-such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
-enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
-R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
-before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
+(R2566000). A card's start-of-turn, end-of-turn and start-of-the-opponent's-turn hooks count
+by one firing each (R2477000, R2565000, R2689000): at the root `turn_hook_prices` fires, within
+`AI_TURN_HOOK_PROBE_NODES`, each such hook of the units on either field, of the backrow cards the seat can
+read on either side (a face-down enemy card is never probed) and of the seat's hand's Field Spells and
+Units (set or placed first, R923001) through the engine's trigger queue, and prices it as its controller's
+evaluation after less before, each crystal gained at `next_turn_mana`; the first two count once for each
+time its controller's turn runs them (`multipliers::extra_runs`, Joint Filing's extra runs, R821), read on
+the state evaluated, and the third once; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
 A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
 (R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
@@ -425,7 +427,8 @@ and any human seat the server hands it after a disconnect (§13.8).
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
+pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame;
+pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody>;
 ```
 
@@ -460,7 +463,7 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI
   never concedes (R188), so it neither offers nor confirms a team's concede.
-- `duos_gate` plays the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
+- `duos_gate_game` plays game n of the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
   (seeds `${series}:${n}`) or a team on the 1v1 gates' greedy baseline (#1760): `duos_greedy_action`
   plays each seat's own duel with `greedy_action`, never passes, and draws only on its seat's stream
   (seeds `${series}:greedy:${n}`). A matchup passes at its opponent's floor, `DUOS_GATE_WIN_FLOOR`

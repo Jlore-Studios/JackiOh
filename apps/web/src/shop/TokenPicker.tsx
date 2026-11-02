@@ -127,6 +127,9 @@ function TokenBody({ bars }: { bars: TokenBarsResponse }): ReactElement {
       <p className="token-held" data-testid={shopTestid.heldEpic}>
         {t("Epic tokens held: {count}", { count: bars.tokens.cosmeticEpic })}
       </p>
+      <p className="token-held" data-testid={shopTestid.heldLegendary}>
+        {t("Legendary tokens held: {count}", { count: bars.tokens.cosmeticLegendary })}
+      </p>
       <p>
         <a href={paths.collection} data-testid={shopTestid.cosmeticSpend} onClick={followInApp(paths.collection)}>
           {t("Hold a locked card or cosmetic in your Collection to spend a token")}

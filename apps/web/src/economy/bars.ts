@@ -75,18 +75,27 @@ export function fraction(points: number, size: number): number {
 }
 
 /**
+ * The size of the bar a sweep crosses (R2728000): the `step`th of `sizes`, the server's size of each
+ * step a bar's fills cross, else `size`.
+ */
+export function sizeAt(size: number, sizes: readonly number[] | undefined, step: number): number {
+  return sizes?.[step] ?? size;
+}
+
+/**
  * The sweeps a bar plays from `from` to `value` over a bar of `size`: each of `fills` sweeps to full,
  * bursts and restarts at 0, and the last ends at `value`. Points past either end are held to the bar.
+ * With `sizes` (R2728000), sweep `i` crosses a bar of `sizes[i]`, the last the one it rests on.
  */
-export function segments(size: number, value: number, from: number, fills: number): Segment[] {
-  const top = Math.max(0, size);
-  const hold = (points: number): number => Math.min(top, Math.max(0, points));
+export function segments(size: number, value: number, from: number, fills: number, sizes?: readonly number[]): Segment[] {
+  const top = (step: number): number => Math.max(0, sizeAt(size, sizes, step));
+  const hold = (points: number, step: number): number => Math.min(top(step), Math.max(0, points));
   const bursts = Math.max(0, Math.floor(fills));
   const out: Segment[] = [];
   for (let burst = 0; burst < bursts; burst += 1) {
-    out.push({ from: burst === 0 ? hold(from) : 0, to: top, burst: true });
+    out.push({ from: burst === 0 ? hold(from, 0) : 0, to: top(burst), burst: true });
   }
-  out.push({ from: bursts === 0 ? hold(from) : 0, to: hold(value), burst: false });
+  out.push({ from: bursts === 0 ? hold(from, 0) : 0, to: hold(value, bursts), burst: false });
   return out;
 }
 
@@ -115,6 +124,9 @@ export function flightsMs(count: number): number {
   return count > 0 ? (count - 1) * BAR_FLIGHT_STAGGER_MS + BAR_FLIGHT_MS : 0;
 }
 
+/** The printed rarity of each cycle step that pays a token (R1305001, R2728000). */
+const STEP_RARITY = { rare: "Rare", epic: "Epic", legendary: "Legendary" } as const;
+
 /**
  * The reward a bar's `fill`th fill (from 1) reveals: a card token for the card bar, the cycle's step
  * the opening paid for the cosmetic bar (R1305001); none when the answer names no such fill.
@@ -128,7 +140,7 @@ export function fillReward(bars: OpeningBarsAnswer, bar: "card" | "cosmetic", fi
   const key = `cosmetic-${String(fill)}`;
   const label = nextStepWords(step);
   if (step === "cosmeticPack") return { key, kind: "cosmeticPack", label };
-  return { key, kind: "cosmeticToken", label, rarity: step === "epic" ? "Epic" : "Rare" };
+  return { key, kind: "cosmeticToken", label, rarity: STEP_RARITY[step] };
 }
 
 /** The rarity whose sting a reward plays: its own, when it names a printed one, else its kind's. */

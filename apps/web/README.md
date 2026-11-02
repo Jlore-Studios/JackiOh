@@ -432,11 +432,11 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); a locked tile or strip item a held
-                        holding a tile, a strip item or a card, or its inspect key, opens it full screen
-                        (collection/ItemPreview.tsx, R2730000). Only there does a locked item a held token
-                        covers offer the token (collection/TokenOffer.tsx): a cosmetic token through
-                        POST /api/tokens/redeem-cosmetic (R1953001), or a card token through
+                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
+                        R2730000). Only there does a locked item a held token covers offer the token
+                        (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
+                        POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
                         the collection is read again;
                         collection/
@@ -459,7 +459,8 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
                         client sum); `JlorePill.tsx`, the pill in routes/nav.tsx's top bar and the
                         landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
-                        to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
+                        to after, bursts when full and restarts with the overflow, each fill on its own
+                        step's size where the answer gives one (R2728000); `RewardReveal.tsx`, a
                         filled bar's reward flown out one at a time; `OpeningBars.tsx`, the opening's
                         token bars pinned at the top of the screen, each slot's points (`slotPoints`)
                         flying from its card into them and a full bar pulsing before its reward

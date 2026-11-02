@@ -29,7 +29,7 @@ const TOKEN = "token-1";
 
 /** Held tokens, none but those given. */
 function held(over: Partial<HeldTokens> = {}): HeldTokens {
-  return { card: 0, cosmeticRare: 0, cosmeticEpic: 0, cosmeticPack: 0, ...over };
+  return { card: 0, cosmeticRare: 0, cosmeticEpic: 0, cosmeticLegendary: 0, cosmeticPack: 0, ...over };
 }
 
 /** `GET /api/tokens` holding `tokens`. */
