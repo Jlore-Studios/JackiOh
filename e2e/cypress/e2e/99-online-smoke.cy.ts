@@ -1,7 +1,8 @@
 /**
  * The deployed stack, in a real Chromium, with two real accounts. Every other spec drives a LOCAL client
- * against fixtures (ASSUMPTION A6), so none exercises what breaks in a deployment: Vercel serving the
- * bundle, Supabase issuing a token to a real password, Render verifying it, Postgres behind Render.
+ * against fixtures (ASSUMPTION A6), so none exercises what breaks in a deployment: Cloudflare serving the
+ * bundle, Supabase issuing a token to a real password, the server's container verifying it, and Postgres
+ * behind the server.
  * SKIPPED BY DEFAULT: behind `--env online=true`, never part of the M8 gate.
  *
  * Run it with:
@@ -128,7 +129,7 @@ function signInThroughForm(email: string): void {
       expect(main, "a main bundle is referenced").to.be.a("string");
       cy.request(String(main)).then((js) => {
         const body = String(js.body);
-        expect(body, "the Render URL is compiled in").to.contain(SERVER);
+        expect(body, "the server's URL is compiled in").to.contain(SERVER);
         expect(body, "the localhost fallback is not in use").to.not.contain("localhost:8787");
       });
     });
@@ -151,7 +152,7 @@ function signInThroughForm(email: string): void {
     cy.location("pathname").should("eq", "/decks");
   });
 
-  it("the collection and the three seeded decks come back from Render", () => {
+  it("the collection and the three seeded decks come back from the server", () => {
     tokenFor(P1).then((token) => {
       cy.request({ url: `${SERVER}/api/collection`, headers: { Authorization: `Bearer ${token}` } })
         .then((res) => {

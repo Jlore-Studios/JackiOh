@@ -16,7 +16,7 @@
     "test:deploy": "sh crates/server/tests/deploy/rehearse.sh",
     "test:e2e": "pnpm --filter @jackioh/e2e test:e2e",
     "test:sql": "sh crates/server/tests/sql/run.sh",
-    "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json && tsc -p e2e/tsconfig.json && tsc -p e2e/cypress/component/tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p apps/edge/tsconfig.json && tsc -p apps/web/tsconfig.json && tsc -p e2e/tsconfig.json && tsc -p e2e/cypress/component/tsconfig.json"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

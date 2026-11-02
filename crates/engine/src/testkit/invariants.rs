@@ -1421,11 +1421,6 @@ fn name_of(card: &CardInstance) -> String {
     format!("{} ({}, {}'s)", card.id, card.def_id, card.controller)
 }
 
-/// The keywords a unit has now, through the layers (`layers::unit_view`).
-fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyword> {
-    crate::layers::unit_view(state, card).keywords.clone()
-}
-
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
 /// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 for both seats
@@ -1513,7 +1508,7 @@ impl InvariantMonitor {
 
     fn note_windfury(&mut self, state: &GameState) {
         for card in field_cards(state) {
-            if has_keyword(&keywords_now(state, card), KeywordKind::Windfury) {
+            if crate::layers::unit_has(state, card, KeywordKind::Windfury) {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
             }
@@ -1547,7 +1542,7 @@ impl InvariantMonitor {
     fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
         let left_with = find_instance(state, id).is_some_and(|card| {
             let keywords = if card.zone.z() == ZoneName::Field {
-                keywords_now(state, card)
+                crate::layers::keywords_of(state, card)
             } else {
                 crate::layers::card_keywords(state, card)
             };
@@ -1681,8 +1676,8 @@ impl InvariantMonitor {
             }
             _ => None,
         });
-        let had = changed
-            .unwrap_or_else(|| has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn));
+        let had =
+            changed.unwrap_or_else(|| crate::layers::unit_has(state, card, KeywordKind::AnimatedOnYourTurn));
         at < self.turn && had
     }
 
@@ -1779,7 +1774,7 @@ impl InvariantMonitor {
         if target_ids.is_empty() {
             return None;
         }
-        let keywords = keywords_now(state, unit);
+        let keywords = crate::layers::keywords_of(state, unit);
         if has_keyword(&keywords, KeywordKind::Charge) {
             return None;
         }
@@ -1909,7 +1904,7 @@ impl InvariantMonitor {
                 instance_id: instance_id.clone(),
                 def_id: card.def_id.clone(),
                 kind,
-                deft: has_keyword(&keywords_now(state, card), KeywordKind::Deft),
+                deft: crate::layers::unit_has(state, card, KeywordKind::Deft),
             })
         });
         self.note_windfury(state);
@@ -2331,9 +2326,8 @@ impl InvariantMonitor {
                     });
                     let deft = chosen.map_or_else(
                         || {
-                            find_instance(state, declarer).is_some_and(|card| {
-                                has_keyword(&keywords_now(state, card), KeywordKind::Deft)
-                            })
+                            find_instance(state, declarer)
+                                .is_some_and(|card| crate::layers::unit_has(state, card, KeywordKind::Deft))
                         },
                         |chosen| chosen.deft,
                     );
