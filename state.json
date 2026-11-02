@@ -13858,6 +13858,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-02T17:21:14Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "41490573084",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
