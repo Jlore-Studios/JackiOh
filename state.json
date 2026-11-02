@@ -14323,7 +14323,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-02T03:14:58Z",
+      "feedback_since": "2026-11-02T05:50:18Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2721,
@@ -14337,11 +14337,11 @@
       "run_id": "41396331836",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-02T05:50:18Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
