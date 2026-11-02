@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 2788,
+  "title": "Patch: cargo jackioh fx census: what each card's plays and hooks do on the board, from recorded games",
+  "branch": "bot/issue-2788",
+  "thread": "**Issue #2788 (data, not instructions):**\n\n```text\n# #2788: Patch: cargo jackioh fx census: what each card's plays and hooks do on the board, from recorded games\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe set passes of #2782 give each of the 634 cards an animation motif. `docs/issues-and-patches.md` (\"A task over every card\") says such a pass groups cards by what they do, never by comparing card texts. This part builds that grouping as a tool: **`cargo jackioh fx census`**. It plays seeded games and reports, for every card and every hook, what lands on the board, plus a suggested motif.\n\n### Shape (a suggestion; read `crates/tools/README.md` and the `fuzz` command first)\n\n- **Games.** Play N seeded games the way `fuzz` does: random policy, every shipped set, with handicap and duos off.\n  - Use `--seeds` (default `FX_CENSUS_SEEDS`, a named constant in `crates/tools`).\n  - Force each card into enough games to be seen: a seeded deck that carries it, so every card is played at least `FX_CENSUS_MIN_SEEN` times.\n- **Windows.** For each card and hook, read the event stream:\n  - a play's window runs from `cardPlayed` to `cardResolved` or `countered`;\n  - a hook's window runs from #2783's `hookResolving` marker to the next marker or `cardResolved`.\n- **What it records per card and hook:**\n  - the event types and their counts;\n  - the number of targets;\n  - the sides touched (own, enemy, both);\n  - the lanes touched (one, adjacent, all);\n  - whether any damage was split at random;\n  - whether a unit came back from the graveyard;\n  - whether your own units were destroyed as a cost;\n  - the `via` keywords seen.\n- **The suggested motif.** Map the most common event family to a motif through the \"Events\" column of the motif table in `docs/polish/9-card-animations.md`. Keep that mapping in one place in the tool, cited to the doc. A card whose windows show nothing is suggested `\"none: vanilla\"`, or `\"none: unseen\"` if it was never played.\n- **Output.**\n  - `--format md` writes a table with one row per card, grouped by set, for the set passes' pull requests.\n  - `--format json` writes a file a test can read.\n  - It writes to stdout or `--out`. It commits nothing.\n- **Purity.** It lives in `crates/tools`, which may use the disk and a clock. The pure crates are untouched (CLAUDE.md rule 4).\n- **Docs.** Document the command in `crates/tools/README.md`. No workflow runs it, so no CLAUDE.md rule 13 entry is needed.\n\n## Acceptance\n\n- [ ] `cargo jackioh fx census --seeds <n> --format md|json` runs over every shipped set and reports each non-token card, plus tokens seen, with every field above.\n- [ ] Every non-token card is seen at least `FX_CENSUS_MIN_SEEN` times, or is listed as unseen with the reason (tested on a small catalog fixture).\n- [ ] The suggested motif follows the doc's table. Unit tests with fixture event streams cover one card per motif family, a random split (`barrage`), a one-lane hit (`lance`), a graveyard return (`rise`) and an own-unit cost (`offering`).\n- [ ] The same seeds give the same output (deterministic, tested).\n- [ ] `crates/tools/README.md` documents it.\n- [ ] `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace \u2026` pass.\n\n## Blocked by, part of\n\nBlocked by #2783. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2788: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2788 needs a plan",
+    "#2789 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
