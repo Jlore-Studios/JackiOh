@@ -4,8 +4,7 @@
 // Sandbox/Campaign and daily-only filter, and each entry opens that run's stats in a dialog.
 //
 // CLAUDE.md rule 7: this reads completed `RunRecord`s only, never a live run, the engine or
-// hidden game information. Part D registers the `/dungeon` route this links back to; until its
-// `paths.dungeon` lands, the address below is the frozen `/dungeon` the issue names.
+// hidden game information.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
@@ -15,14 +14,13 @@ import "../../auth/tavern.css";
 import { EmptyState } from "../../empty/EmptyState.tsx";
 import { MS_PER_SECOND } from "../../game/clockConstants.ts";
 import { formatDateTime, formatNumber, t, useLocale } from "../../i18n/i18n.ts";
+import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import { useModalKeys } from "../../together/modalKeys.ts";
+import { RUN_STAT_LABELS } from "../map/RunOverScreen.tsx";
 import { readRunHistory, type DungeonMode, type RunRecord } from "../store.ts";
 import { dungeonStatsTestid, type DungeonLeaderboard } from "./testids.ts";
 import "./dungeon-stats.css";
-
-/** Part D's Dungeon Run screen, the address DR14 freezes for it. */
-const DUNGEON_PATH = "/dungeon";
 
 /** Unit conversions for a run's elapsed time, shown whole-second as `M:SS`, or `H:MM:SS` past the hour. */
 const SECONDS_PER_MINUTE = 60;
@@ -36,71 +34,8 @@ const MODES: readonly DungeonMode[] = ["sandbox", "campaign"];
 /** The mode words, kept as data so `t()` reads them at render and a locale change stays live. */
 const MODE_WORDS = { sandbox: "Sandbox", campaign: "Campaign" } as const;
 
-/**
- * Every `RunStats` field's player label, in the order the details table shows them. `Record`
- * keeps it exhaustive against `keyof RunStats`, so a wire field added or removed points here.
- * Player words say "relic(s)", never "artifact(s)" (#2708).
- */
-const STAT_LABELS: Record<keyof RunStats, string> = {
-  nodesVisited: "Nodes visited",
-  fightsWon: "Fights won",
-  elitesWon: "Elites won",
-  ghostsWon: "Ghosts won",
-  miniBossesWon: "Mini-bosses won",
-  bossesWon: "Bosses won",
-  damageDealt: "Damage dealt",
-  healingDone: "Healing done",
-  cardsDrawn: "Cards drawn",
-  turns: "Turns",
-  damageTaken: "Damage taken",
-  healed: "Healed",
-  coinsEarned: "Coins earned",
-  coinsSpent: "Coins spent",
-  ticketsEarned: "Tickets earned",
-  ticketsSpent: "Tickets spent",
-  cardsKept: "Cards kept",
-  cardsBought: "Cards bought",
-  cardsRemoved: "Cards removed",
-  cardsMadeRadiant: "Cards made Radiant",
-  cardsBuffed: "Cards buffed",
-  packsSkipped: "Packs skipped",
-  artifactsTaken: "Relics taken",
-  artifactsLeveled: "Relics levelled",
-  blessingsTaken: "Blessings taken",
-  eventsSeen: "Events seen",
-  chestsOpened: "Chests opened",
-};
-
-/** The details table's rows, in label order. */
-const STAT_FIELDS: readonly (keyof RunStats)[] = [
-  "nodesVisited",
-  "fightsWon",
-  "elitesWon",
-  "ghostsWon",
-  "miniBossesWon",
-  "bossesWon",
-  "damageDealt",
-  "healingDone",
-  "cardsDrawn",
-  "turns",
-  "damageTaken",
-  "healed",
-  "coinsEarned",
-  "coinsSpent",
-  "ticketsEarned",
-  "ticketsSpent",
-  "cardsKept",
-  "cardsBought",
-  "cardsRemoved",
-  "cardsMadeRadiant",
-  "cardsBuffed",
-  "packsSkipped",
-  "artifactsTaken",
-  "artifactsLeveled",
-  "blessingsTaken",
-  "eventsSeen",
-  "chestsOpened",
-];
+/** The details table's rows, in the order the run-over screen lists them (`RUN_STAT_LABELS`). */
+const STAT_FIELDS = Object.keys(RUN_STAT_LABELS) as (keyof RunStats)[];
 
 /** The four boards, in the order the screen shows them. */
 const BOARDS: readonly { key: DungeonLeaderboard; title: string }[] = [
@@ -313,7 +248,7 @@ function RunDetails({ record, onClose }: { record: RunRecord; onClose: () => voi
         <dl className="dungeon-stats__table">
           {STAT_FIELDS.map((field) => (
             <div className="dungeon-stats__stat" key={field}>
-              <dt>{t(STAT_LABELS[field])}</dt>
+              <dt>{t(RUN_STAT_LABELS[field])}</dt>
               <dd data-testid={dungeonStatsTestid.stat(field)}>{formatNumber(record.stats[field])}</dd>
             </div>
           ))}
@@ -366,7 +301,7 @@ export function DungeonStats(): ReactElement {
 
   return (
     <div className="app-shell tavern one-screen" data-testid={dungeonStatsTestid.root}>
-      <BackLink to={DUNGEON_PATH} />
+      <BackLink to={paths.dungeon} />
       <main className="one-screen__body">
         <div className="dungeon-stats">
           <h1 className="dungeon-stats__title">{t("Dungeon leaderboards")}</h1>
@@ -374,7 +309,7 @@ export function DungeonStats(): ReactElement {
             <EmptyState
               text={t("No finished runs on this device yet.")}
               testId={dungeonStatsTestid.noHistory}
-              action={{ label: t("Start a dungeon run"), to: DUNGEON_PATH }}
+              action={{ label: t("Start a dungeon run"), to: paths.dungeon }}
             />
           ) : (
             <>

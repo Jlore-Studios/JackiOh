@@ -49,7 +49,7 @@ const STAT_LABELS: Record<keyof RunStats, string> = {
   cardsBuffed: "Cards buffed",
   packsSkipped: "Packs skipped",
   artifactsTaken: "Relics taken",
-  artifactsLeveled: "Relics levelled",
+  artifactsLeveled: "Relics leveled",
   blessingsTaken: "Blessings taken",
   eventsSeen: "Events seen",
   chestsOpened: "Chests opened",

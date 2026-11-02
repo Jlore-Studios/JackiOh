@@ -9,6 +9,7 @@ import type { ReactElement } from "react";
 import type { RunContent, RunState, RunStats } from "@jackioh/run";
 
 import { t } from "../../i18n/i18n.ts";
+import { paths } from "../../net/navigate.ts";
 import { followInApp } from "../../routes/nav.tsx";
 import { runEmbers, runScore } from "../../wasm/index.ts";
 import type { Dungeon } from "../store.ts";
@@ -120,7 +121,7 @@ export function RunOverScreen({ dungeon, run, content, won }: RunOverScreenProps
           {t("Start a new run")}
         </button>
         {/* Part D owns the dungeon routes, so the address is literal until it names a path. */}
-        <a href="/dungeon/stats" data-testid={dungeonMapTestid.statsLink} onClick={followInApp("/dungeon/stats")}>
+        <a href={paths.dungeonStats} data-testid={dungeonMapTestid.statsLink} onClick={followInApp(paths.dungeonStats)}>
           {t("Statistics")}
         </a>
       </div>
