@@ -11577,7 +11577,7 @@
       "started_at": "2026-11-02T17:48:39Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2726": {
       "cleared": {
