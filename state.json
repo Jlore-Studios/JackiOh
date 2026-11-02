@@ -14267,15 +14267,27 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/art/ART.md",
+            "apps/web/src/cards/art/CardArt.tsx",
+            "apps/web/src/cards/art/procedural.ts",
+            "e2e/cypress/e2e/45-economy-loop.cy.ts",
+            "spec/14-economy.md"
+          ],
+          "from": "598f4c342654c78570330f9ae4c4b84f18ebea47",
+          "main": "542d16f961cfa40b1389615a5bad1c3389ea3b82"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41396233904",
+            "run": "41405067209",
             "tier": "strong"
           }
         ],
-        "sha": "598f4c342654c78570330f9ae4c4b84f18ebea47",
+        "sha": "4d23828a1882c6dcabd042b8ac260300af1b3a09",
         "tiers": {
           "claude": "strong"
         }
