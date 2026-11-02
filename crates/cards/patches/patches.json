@@ -20403,5 +20403,53 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.10d",
+    "date": "2026-11-01",
+    "title": "Patch: the web's barrels hold only what importers take, and its duplicated helpers and test helpers keep one copy each",
+    "source": "#2160, #2743",
+    "notes": "The client's code merges of #2160: the barrels hold only the names an importer takes through them, and duplicated helpers keep one copy each (messages, storage, sockets, class names, tests). Under apps/web/src/cards/ only the barrels, imports and shared helpers moved (R2529000 counts any code change there): no card looks or plays differently.",
+    "player": {
+      "title": "Behind-the-scenes tidying",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The code behind the card faces and the game screens was tidied; nothing looks or plays differently."
+      ]
+    },
+    "commits": [
+      "07b67a1e49adce94a129924d414a1ebdc5b9f3cf"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10e",
+    "date": "2026-11-02",
+    "title": "Patch: the Jlorious card back, owned only by reaching Jlorious",
+    "source": "#2755",
+    "notes": "R2755000: card-back-jlorious, a Mythic card back that no roll, cosmetic pack, token, Chase Shard bar, dev fill or ladder bot offers; a rated game grants it to each person it leaves Jlorious, and migration 0074 to everyone who held Jlorious before. On a card its emblem draws the J and star of the logo's front card and breathes.",
+    "player": {
+      "title": "The Jlorious card back",
+      "new": [
+        "The Jlorious card back: the logo's gold J and star on a violet card. The only way to own it is to reach Jlorious, and it is yours to keep."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "124d3322fb63ca0105c77aabd39296f6d286ca97"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
