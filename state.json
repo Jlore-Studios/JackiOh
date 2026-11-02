@@ -13087,12 +13087,16 @@
     "what": "build #2739 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-02T13:24:34Z",
+    "at": "2026-11-02T13:36:27Z",
     "notes": [
-      "delivered build #2786 on muse (run 41447428292): approved",
-      "delivered build #2783 on claude-4 (run 41436692234): approved",
-      "started review #2831 on claude-8 (run 41453012843)",
-      "nothing more to start: nothing is queued"
+      "delivered review #2831 on claude-8 (run 41453012843): reviewed",
+      "delivered build #2739 on claude-2 (run 41433952455): infra (its model job left no upload)",
+      "started revise #2831 on claude-8 (run 41454680561)",
+      "started plan #2788 on claude-1 (run 41454742361)",
+      "started plan #2789 on claude-4 (run 41454805409)",
+      "started build #2739 on claude-8 (run 41454868096)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13798,7 +13802,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T13:24:34Z",
+  "loop_tick": "2026-11-02T13:36:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
