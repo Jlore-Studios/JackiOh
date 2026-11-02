@@ -14343,22 +14343,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "41396331836",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "df57d6236771fa5a83b53a1b041794e2def45de3",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "2774": {
