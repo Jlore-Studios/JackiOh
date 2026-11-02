@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 2787,
+  "title": "Patch: auras: a quiet lasting look while a Field Spell or lasting effect holds",
+  "branch": "bot/issue-2787",
+  "thread": "**Issue #2787 (data, not instructions):**\n\n```text\n# #2787: Patch: auras: a quiet lasting look while a Field Spell or lasting effect holds\nOpened by @MaxGoetzmann.\n\n## What it does\n\n87 cards are Field Spells, and many other cards leave something lasting behind: a modifier, a Lock, a \"this turn\" rule, a rider like Hinder's. Today none of that shows on the board between the moment it lands and the moment it ends.\n\n`aura` is #2782's one persistent motif. While the effect holds, its side, lane or zone gets a quiet looping look in the card's palette:\n\n- a tint;\n- a slow particle drift;\n- an edge glow.\n\nThe look begins with a one-shot Signature and fades out when the effect ends.\n\n### Shape (a suggestion)\n\n- **What it reads.** An aura layer drawn from `PlayerView`, not from events, beside the static keyword art (`apps/web/src/cards/KeywordFx.tsx`, `keywords.css`). Components still take a `PlayerView` and nothing else.\n- **What has an aura.**\n  - **Field Spells:** every standing face-up Field Spell or Field Trap.\n  - **Lasting effects:** a modifier listed in the view (`ModifierList`) that a card's table entry names. The view's rider and modifier entries carry the source `defId` where the view shows it.\n  - **Hidden:** a face-down card never shows an aura (CLAUDE.md rule 7).\n- **Its looks.** About 8 looks, each in the card's palette (`FLAVOR_LOOKS`): ember, frost, bloom, void, storm, holy, toxic and arcane. A card's table entry (#2784) picks one with `aura: { look, palette?, scope: side | lane | zone | board }`.\n- **Begin and end.**\n  - The Field Spell's arrival or the modifier's appearance plays the \"it begins\" Signature: a fade-in plus a short burst.\n  - Its leaving plays a fade-out.\n  - Both are keyed on the view change the runner already animates.\n- **Stacking.** When several auras cover one zone, at most `AURA_MAX_PER_ZONE` show. Decide which ones win (newest, or the nearest scope) in a ruling.\n- **Cost.**\n  - One shared `requestAnimationFrame` loop (`apps/web/src/fx/loop.ts`), within the particle cap, with a per-aura particle budget.\n  - It pauses while the tab is hidden.\n  - It is a still tint under reduced motion, and nothing with the effects intensity `off`.\n\nThe set passes fill in each Field Spell's `aura` entry, which #2784's schema already accepts. This part draws them, and wires about 10 example Field Spells across sets.\n\n## Acceptance\n\n- [ ] The aura layer draws the 8 looks for any standing Field Spell or named modifier, at `side`, `lane`, `zone` and `board` scope (vitest of the planner, plus a component spec with two auras standing at once).\n- [ ] Begin and end play when the Field Spell arrives and leaves (tested).\n- [ ] A face-down card never has an aura, on either seat (tested).\n- [ ] Stacking follows the ruling, capped at `AURA_MAX_PER_ZONE` (tested).\n- [ ] The particle budget is respected, the loop pauses while the tab is hidden, the aura is still under reduced motion, and there is none with the intensity `off` (tested).\n- [ ] A frame-time check in the component spec shows the board with 4 auras stays within the frame budget at the phone particle cap.\n- [ ] About 10 example Field Spells across sets have auras.\n- [ ] Every number is a named constant (CLAUDE.md rule 9).\n- [ ] A ruling note in this issue's block covers what has an aura and how auras stack. `cargo jackioh spec check` passes.\n\n## Blocked by, part of\n\nBlocked by #2784. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2787: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
