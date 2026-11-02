@@ -12,7 +12,7 @@ import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { FX_TEXT } from "./constants.ts";
+import { FX_CALLOUT_MS, FX_TEXT } from "./constants.ts";
 import FxLayer, { type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
 import type { FxSurface } from "./surface.ts";
@@ -502,7 +502,7 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     expect(fxDom?.parentElement).toBe(layer);
   });
 
-  it("B37 prefers-reduced-motion switches the layer off: no canvas, no DOM root, no cue", () => {
+  it("B37 prefers-reduced-motion switches the layer off: no canvas, no cue, and an empty still DOM root (R2789000)", () => {
     setReducedMotion(true);
     const sched = fakeSchedule();
     const queue = queueWith(sched);
@@ -513,13 +513,16 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     expect(m.layer()?.getAttribute("data-fx")).toBe("off");
     expect(m.layer()?.getAttribute("aria-hidden")).toBe("true");
     expect(m.canvas()).toBeNull();
-    expect(m.fxDom()).toBeNull();
+    // R2789000: the one thing it can draw, a keyword's still callout, needs the DOM root.
+    expect(m.fxDom()?.getAttribute("data-still")).toBe("true");
+    expect(m.fxDom()?.childElementCount).toBe(0);
 
     act(() => queue.enqueue([HIT], view));
     fx.pump(500);
     expect(fx.measured).toHaveLength(0);
     expect(fx.shakes).not.toContain("apply");
-    expect(m.layer()?.childElementCount).toBe(0);
+    expect(m.layer()?.childElementCount).toBe(1);
+    expect(m.fxDom()?.childElementCount).toBe(0);
   });
 
   it("B37 the viewer's reduce-motion setting switches the layer off", () => {
@@ -529,7 +532,39 @@ describe("B37 — when the layer draws, and what it never renders", () => {
 
     expect(m.layer()?.getAttribute("data-fx")).toBe("off");
     expect(m.canvas()).toBeNull();
+    expect(m.fxDom()?.getAttribute("data-still")).toBe("true");
+    expect(m.fxDom()?.childElementCount).toBe(0);
+  });
+
+  it("R2789000 under reduced motion a keyword's callout draws still, and nothing at intensity off", () => {
+    setReducedMotion(true);
+    const cleave: GameEvent = { type: "damage", sourceId: "u1", targetId: "u7", amount: 1, combat: true, via: "Cleave" };
+    const view = fullBoardView();
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true });
+    const m = mountLayer(queue, view, fx);
+
+    act(() => queue.enqueue([cleave], view));
+    fx.pump(50);
+    expect(m.count("callout")).toBe(1);
+    const callout = m.game.querySelector<HTMLElement>('[data-fx="callout"]');
+    expect(callout?.getAttribute("data-callout")).toBe("Cleave");
+    expect(callout?.getAttribute("data-still")).toBe("true");
+    // Only the callout: no splat, no shake, no canvas, and it is gone after FX_CALLOUT_MS.
+    expect(m.fxDom()?.childElementCount).toBe(1);
+    expect(m.canvas()).toBeNull();
+    expect(fx.shakes).not.toContain("apply");
+    fx.pump(FX_CALLOUT_MS + 100);
+    expect(m.count("callout")).toBe(0);
+
+    act(() => {
+      setFxSettings({ intensity: "off" });
+    });
     expect(m.fxDom()).toBeNull();
+    act(() => queue.enqueue([cleave], view));
+    fx.pump(100);
+    expect(m.count("callout")).toBe(0);
+    expect(m.layer()?.childElementCount).toBe(0);
   });
 
   it("B37 intensity \"off\" switches the layer off and plans no cue, while the runner still animates", () => {

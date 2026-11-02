@@ -1415,6 +1415,11 @@ export type RunnerSignal =
   | { kind: "start"; entry: AnimationEntry } // an entry went in flight (durationMs > 0 only)
   | { kind: "idle" } // emitted each time the pump fires onSettled
   /**
+   * R2789000: an entry that plays with no duration (reduced motion) though its row has one. It holds
+   * nothing and waits for nothing; the effects layer draws its still callouts, the one effect that survives it.
+   */
+  | { kind: "still"; entry: AnimationEntry }
+  /**
    * drain() ran. `entries` are the ones it cut short, in order: the entry in flight, then every one
    * still waiting. A drained game over never plays its killing blow, so the effects layer replays it.
    */
@@ -1637,7 +1642,10 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         if (settle()) signal({ kind: "idle" });
         return;
       }
-      if (next.durationMs <= 0) continue;
+      if (next.durationMs <= 0) {
+        if ((animationRow(next.type)?.durationMs ?? 0) > 0) signal({ kind: "still", entry: next });
+        continue;
+      }
       current = next;
       notify();
       // Captured before the signal, so a listener that drains or resets inside `start` leaves this

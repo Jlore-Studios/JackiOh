@@ -9,7 +9,7 @@
 // CLAUDE.md rule 9: particle counts live in `TUNING`, game-over timings in `RESULT_TUNING`, the rest
 // in `constants.ts`.
 
-import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
@@ -26,6 +26,7 @@ import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import { shieldCues } from "./shield.ts";
+import { planBeats } from "./motifs/beats.ts";
 import { shotCue } from "./stage.ts";
 import { entranceCues, entranceLandMs } from "./takeover.ts";
 import {
@@ -308,17 +309,6 @@ function renderedSource(view: PlayerView, id: string): { anchor: FxAnchor; kind:
   return null;
 }
 
-function sourceIsPoisonous(sourceId: string | null, view: PlayerView): boolean {
-  if (sourceId === null || sourceId === HIDDEN_ID) return false;
-  for (const side of SIDES) {
-    const sv = side === "you" ? view.you : view.opponent;
-    for (const unit of sv.units) {
-      if (unit !== null && unit.instanceId === sourceId) return hasKeyword(unit.keywords, "Poisonous");
-    }
-  }
-  return false;
-}
-
 /** Where a non-combat damage source is drawn, or null. */
 export function sourceAnchor(
   sourceId: string | null,
@@ -480,11 +470,9 @@ function impactTail(event: DamageEvent, p: Plan, hit: number, flavorParticle?: F
   const tier = damageTier(event.amount);
   const particleIntensity = i * feel.particleScale;
   const at = anchor(p.tgt);
-  const poisonous = sourceIsPoisonous(event.sourceId, p.view);
   const cues: FxCue[] = [];
   cues.push(burst(particleIntensity, "spark", at, "point", hit, tier === "big" || tier === "giga" ? "impactHeavy" : "impactSpark"));
   if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
-  if (poisonous) cues.push(burst(particleIntensity, "poison", at, "area", hit, "impactPoison"));
   // Issue #124: a spell's or a card's hit lands in its family's look as well.
   if (!event.combat) {
     const accent = flavorParticle ?? lookOf(sourceFacts(event.sourceId, p.view, p.env))?.preset;
@@ -505,15 +493,13 @@ function impactTail(event: DamageEvent, p: Plan, hit: number, flavorParticle?: F
 function impactCues(event: DamageEvent, p: Plan): FxCue[] {
   const i = p.env.intensity;
   const at = anchor(p.tgt);
-  const poisonous = sourceIsPoisonous(event.sourceId, p.view);
   const cues: FxCue[] = [];
   let hit = 0;
   if (!event.combat) {
     const src = sourceAnchor(event.sourceId, p.view, p.env.memory);
     if (src !== null && src.anchor.kind === "testid" && src.anchor.testid !== p.tgt) {
       const flight = frac(FX_PROJECTILE_FLIGHT_FRACTION, p.D);
-      const preset: FxPreset =
-        src.kind === "unit" && poisonous ? "poison" : src.kind === "hand" || src.kind === "hero" ? "fire" : "arcane";
+      const preset: FxPreset = src.kind === "hand" || src.kind === "hero" ? "fire" : "arcane";
       cues.push(projectile(i, preset, src.anchor, at, flight));
       hit = flight;
     }
@@ -598,6 +584,8 @@ const death: Recipe = (event, p) => {
   });
   return [
     crack(p.D, at, 0),
+    // R2789000: the poison a Poisonous kill leaves is the death's own, keyed on the event's `via`.
+    ...(event.via === "Poisonous" ? [burst(i, "poison", at, "area", 0, "impactPoison")] : []),
     burst(i, "ember", at, "area", frac(FX_DEATH_EMBER_AT, p.D), "deathEmber"),
     burst(i, "smoke", at, "area", frac(FX_DEATH_SMOKE_AT, p.D), "deathSmoke"),
     ...exit,
@@ -1259,13 +1247,16 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   }
   if (entry.zone !== undefined) return zoneCues(entry, view, env);
   if (entry.cast !== undefined) cues.push(...castCues(entry, view, env));
+  // R2789000: a combat keyword's beat decorates its entry, and draws a hit's row in its place where it says so.
+  const beats = planBeats(entry, view, env);
+  cues.push(...beats.cues);
   for (const event of entry.events) {
     const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
     if (signature !== null) {
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;
     }
-    if (replaced(event)) continue;
+    if (replaced(event) || beats.replaces.has(event)) continue;
     const recipe = animationRow(event.type)?.fx?.recipe;
     if (recipe === undefined) continue;
     const tgt = targetFor(event, view);

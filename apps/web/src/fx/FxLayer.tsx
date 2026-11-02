@@ -25,6 +25,7 @@ import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
+import { planStillCallouts } from "./motifs/beats.ts";
 import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
 import { createFxMemory } from "./memory.ts";
@@ -125,7 +126,10 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   const [settings] = useFxSettings();
   // The panel's "Reduce motion" is read through its hook so a change re-renders the layer.
   const panelReduces = useSetting("reduceMotion");
-  const enabled = !panelReduces && !reducedMotionNow(settings) && settings.intensity !== "off";
+  const reduces = panelReduces || reducedMotionNow(settings);
+  const enabled = !reduces && settings.intensity !== "off";
+  // R2789000: under reduced motion the layer draws a keyword's still callout and nothing else.
+  const still = reduces && settings.intensity !== "off";
   const settingReduces = settings.motion === "reduce" || panelReduces;
   const intensity: number = FX_INTENSITY_SCALE[settings.intensity];
   const lookup = useContext(CatalogContext);
@@ -139,8 +143,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
 
   // What the runner's listener reads: a ref, so the subscription is made once per queue and never
   // torn down between two entries of one burst.
-  const live = useRef({ enabled, intensity, lookup, seams, view, latest: latest ?? view });
-  live.current = { enabled, intensity, lookup, seams, view, latest: latest ?? view };
+  const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view });
+  live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view };
 
   const planEnv = (): FxPlanEnv => {
     const current = live.current;
@@ -163,11 +167,12 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
 
   // The director lives exactly as long as the canvas and the DOM root it draws into.
   useLayoutEffect(() => {
-    if (!enabled) return undefined;
-    const canvas = canvasRef.current!;
+    if (!enabled && !still) return undefined;
+    const canvas = canvasRef.current;
     const domRoot = domRef.current!;
     const s = live.current.seams ?? {};
-    const surface = (s.surface ?? createSurface)(canvas);
+    // A still layer has no canvas: its callouts are DOM.
+    const surface = enabled && canvas !== null ? (s.surface ?? createSurface)(canvas) : null;
     const created = createFxDirector({
       surface,
       domRoot,
@@ -186,7 +191,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       created.dispose();
       surface?.dispose();
     };
-  }, [enabled]);
+  }, [enabled, still]);
 
   useLayoutEffect(() => {
     if (paused) director.current?.pause();
@@ -236,6 +241,15 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           const env = planEnv();
           env.memory.remember(entry.events);
           target.play([...planFx(entry, entry.view, env), ...planStage(entry, entry.view, env)]);
+          return;
+        }
+        case "still": {
+          // R2789000: an entry of no duration (reduced motion): its keyword callouts, held still.
+          const target = director.current;
+          if (!live.current.still || target === null) return;
+          const env = planEnv();
+          env.memory.remember(signal.entry.events);
+          target.play(planStillCallouts(signal.entry, signal.entry.view, env));
           return;
         }
         case "idle":
@@ -341,7 +355,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   return (
     <div ref={rootRef} className="fx-layer" data-testid="fx-layer" data-fx={enabled ? "on" : "off"} data-paused={paused ? "true" : undefined} aria-hidden="true">
       {enabled ? <canvas ref={canvasRef} className="fx-canvas" data-testid="fx-canvas" /> : null}
-      {enabled ? <div ref={domRef} className="fx-dom" data-testid="fx-dom" /> : null}
+      {enabled || still ? <div ref={domRef} className="fx-dom" data-testid="fx-dom" data-still={still ? "true" : undefined} /> : null}
     </div>
   );
 }
