@@ -13,6 +13,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/human"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	journalmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
+	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -67,6 +68,13 @@ func (x *Deliverer) Item() {
 	if (action == "plan" || action == "build") && x.hasResultPlan() {
 		x.RatingNote = x.ApplyRating(number)
 	}
+	if x.Record(number).Truthy("paused") {
+		// A run of it delivers: whether it was paused again, `Interrupted` says anew (#2748).
+		x.Ctx.Store.Update(func(s *pyjson.Object) any {
+			statemod.Item(s, number).Pop("paused")
+			return nil
+		}, fmt.Sprintf("paused #%d delivered", number))
+	}
 	if action == "build" && x.hasResultPlan() {
 		// The run planned it first: a later run builds from that plan, never plans again.
 		who, tier := x.planner()
@@ -82,6 +90,12 @@ func (x *Deliverer) Item() {
 	x.keepSession(number) // a Claude run's own session, for its next run there (#2748)
 	x.journal(number)
 	x.closeAsks(number)
+	// A `/harness handoff` that came while this run held it (#2748): applied now it is delivered.
+	x.try(func() {
+		if said := planmod.DeliverHandoff(x.Ctx, number); said != "" {
+			x.log(fmt.Sprintf("#%d: handed off as asked: %s", number, said))
+		}
+	})
 }
 
 func (x *Deliverer) deliverItem(number int) {
@@ -760,8 +774,11 @@ func (x *Deliverer) Interrupted(number int, kind string) {
 	}
 	x.requeueLabel(number, kind)
 	rounds, roundTier := x.rounds()
+	// `paused`: the next run goes on from this one's work, on its owner first when it is free, ahead
+	// of new work there (#2748, `plan.Pairs`), or held for it while only its 5-hour window keeps it.
 	x.remember(number, pyjson.New("last_findings", py.Or(x.Result.Get("findings"), []any{}),
-		"verdict_rounds", rounds, "round_tier", roundTier))
+		"verdict_rounds", rounds, "round_tier", roundTier,
+		"paused", pyjson.New("at", clock.ISO(x.Ctx.Now()), "provider", x.Provider.ID, "interrupt", interrupt)))
 	where := "on the branch"
 	if kind == "revise" {
 		where = fmt.Sprintf("on `%s`, where the next revision starts", queue.WipBranch(number))

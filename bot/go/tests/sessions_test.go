@@ -613,3 +613,39 @@ func TestSessions_ASessionIsPackedRedactedAndOnlyItsOwnFilesComeBack(t *testing.
 	tampered := sealed[:len(sealed)-8] + "AAAAAAA="
 	assertTrue(t, sessions.Restore(tampered, sessionsSecret, t.TempDir(), moved, sessionsID) != nil)
 }
+
+// A held item (#2748, section 1) resumes its session on its owner once the owner can start
+// again: no other subscription took it meanwhile, so the session the cut-off run kept is still
+// that subscription's.
+func TestSessions_AHeldItemResumesItsSessionOnItsOwnerAfterTheReset(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{"muse"}})
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
+	flowUpdateItem(h.ctx, 12, pyjson.New("owner", "claude-1", "owner_why", "it planned it"))
+	w := &sessionsWorld{t: t, h: h}
+	// claude-1's run is cut off by a refusal on its 5-hour window, which ends half an hour on.
+	s := w.keeper("claude-1", sessionsSecret)
+	r := workFake(map[string]any{
+		"build": sessionsBuilder(s, sessionsID, sessionsFirstLine,
+			map[string]string{"src/game.txt": "half\n", work.NotesFile: "## State\nnext: the Coin\n"}),
+		"review": sessionsLimited})
+	_, first, _ := w.night(r, s)
+	assertEqual(t, first.Get("status"), "interrupted")
+	assertEqual(t, w.record(12).Get("provider"), "claude-1")
+	// Ten minutes on, Muse is free, but the item waits for its owner.
+	testsupport.ClockOf(h.ctx).At = testsupport.Night.Add(10 * time.Minute)
+	assertEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("action"), "none")
+	assertIn(t, config.LabelWaiting, h.gh.LabelNames(12))
+	// Past the reset its owner takes it up, in its own session.
+	testsupport.ClockOf(h.ctx).At = testsupport.Night.Add(31 * time.Minute)
+	s = w.keeper("claude-1", sessionsSecret)
+	r = workFake(map[string]any{"build": sessionsBuilder(s, sessionsID, `{"type":"user","message":"the second run"}`,
+		map[string]string{"src/game.txt": "whole\n"}), "review": workReviewer(workApprove)})
+	planned, second, _ := w.night(r, s)
+	assertEqual(t, crossObj(t, planned, "session").Get("id"), sessionsID)
+	builds := sessionsBuilds(r)
+	assertEqual(t, len(builds), 1)
+	assertEqual(t, builds[0].Resume, sessionsID)
+	assertEqual(t, second.Get("status"), "approved")
+	assertEqual(t, crossObj(t, second, "session").Get("resumed"), true)
+	assertNotIn(t, config.LabelWaiting, h.gh.LabelNames(12))
+}

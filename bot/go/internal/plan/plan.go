@@ -18,9 +18,11 @@
 // subscription is free and available (`providers.availability`: switched on, its secret set,
 // inside its hours unless the item is forced, under its limits):
 //
-//   - **build, revise, fix**: the subscription that planned it first (one lane, one owner), else
-//     the first free seat in the lane's tier order (#695: Muse before agy before GPT before
-//     Sonnet), on the weakest seat of a subscription that meets the tier; ties break by the load
+//   - **build, revise, fix**: the subscription that owns it first (one lane, one owner: the one
+//     that planned it or took it up last, #2748), which it waits for a bounded while when only
+//     that one's 5-hour session keeps it (`hold.go`), and each subscription's own work before new
+//     work; else the first free seat in the lane's tier order (#695: Muse before agy before GPT
+//     before Sonnet), on the weakest seat of a subscription that meets the tier; ties break by the load
 //     balancer (`balance`: the most room under its caps, then the fewest runs held) and then the
 //     usage order (`priority`), with `build_last` ones such as claude-2 after all of them. A
 //     builder above the item's tier (no seat of that tier free, or one comes later in the tier

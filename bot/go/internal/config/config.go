@@ -397,11 +397,13 @@ func LiveRun(kind, action, mode, source string, reconcile, pr bool) string {
 // merge`, `person merges`) never carries it.
 var LabelMerging = LabelPrefix + "merging"
 
-// LabelWaiting is an item held for the subscription that owns it (#2748, section 1): its run was
-// cut off at its 5-hour cap and its owner can start again within `hold_minutes`, so it waits for
-// that owner, not for another subscription. Defined here; what sets and clears it (through
-// `queue.SetWaiting`), and the readers that keep it from another subscription, come with the hold
-// itself.
+// LabelWaiting is an item held for the subscription that owns it (#2748, section 1): only its
+// owner's 5-hour session keeps that one from taking it, and it can start again within
+// `hold_minutes`, so it waits for that owner, not for another subscription. The planner and the
+// sweep put it on and take it off (`plan.SyncHolds`, through `queue.SetWaiting`), the planner
+// gives a held item to nobody else (`plan.Owning`, `plan.Pairs`), and it comes off with the queue
+// label when the item leaves the queue (`queue.SetStateLabel`) or a person hands it off
+// (`plan.Handoff`).
 var LabelWaiting = LabelPrefix + "waiting"
 
 // LabelTracking is the type label of a tracker, the production countdown and the status issues
@@ -679,6 +681,13 @@ type Config struct {
 	// item on the same account resumes it (`internal/sessions`, #2748). The config's
 	// `resume_sessions`; off when it is left out.
 	ResumeSessions bool // default: False
+	// HoldMinutes: how long a queued item waits for the subscription that owns it when only that
+	// one's 5-hour window keeps it from starting (#2748, section 1; `hold.go`, `plan.Owning`).
+	// The config's `hold_minutes`; 0, when it is left out, holds nothing.
+	HoldMinutes int // default: 0
+	// HoldExempt: the subscriptions an item never waits for (`hold_exempt`): one of them that
+	// cannot take its item hands it off at once.
+	HoldExempt []string // default: ()
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`

@@ -24,6 +24,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -479,6 +480,10 @@ func Execute(ctx *hctx.Context, command *commands.Command, thread *pyjson.Object
 	}
 	if verb == "rebuild" {
 		return stepup.RebuildRequest(ctx, number, by)
+	}
+	if verb == "handoff" {
+		// Release it from its owner and any hold (#2748): to anyone, at a difficulty, or to people.
+		return plan.Handoff(ctx, number, by, command.Args)
 	}
 	if verb == "review" {
 		if !isPR {

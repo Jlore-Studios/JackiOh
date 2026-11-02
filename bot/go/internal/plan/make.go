@@ -62,6 +62,9 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 	state = ctx.Store.Load()
 	notes = append(notes, SyncNeedsPlan(ctx, state)...)
 	lanes := ReadLanes(ctx, state)
+	// The holds for owners (#2748): put on, lifted or released before anything is given out.
+	notes = append(notes, SyncHolds(ctx, state, lanes, force, quiet)...)
+	state = ctx.Store.Load()
 	if !lanes.AnyRoom() {
 		return Nothing(fmt.Sprintf("every lane is busy (%s)", lanes.Describe())).
 			Set("housekeeping", pyjson.ListOf(notes))
@@ -83,8 +86,12 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 		}
 	}
 	if item != nil && mode != "suggest" {
+		why := WhyNone(ctx, state, lanes)
+		if held := Holds(ctx, state, q, lanes, force, quiet)[*item]; held != nil {
+			why = fmt.Sprintf("it is %s; %s", HoldLine(ctx, held), why)
+		}
 		return Nothing(fmt.Sprintf("#%d is not queued (or has failed %d times), or no subscription "+
-			"can take it now: %s", *item, cfg.MaxFailures, WhyNone(ctx, state, lanes))).
+			"can take it now: %s", *item, cfg.MaxFailures, why)).
 			Set("skipped", pyjson.ListOf(skipped))
 	}
 	if mode == "suggest" || mode == "auto" {
@@ -96,6 +103,9 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 	reason := "nothing is queued"
 	if len(q) > 0 {
 		reason = "no subscription can take the queue now: " + WhyNone(ctx, state, lanes)
+		if held := HeldNote(ctx, Holds(ctx, state, q, lanes, force, quiet)); held != "" {
+			reason += "; waiting for their owners: " + held
+		}
 	}
 	return Nothing(reason).Set("housekeeping", pyjson.ListOf(notes)).Set("skipped", pyjson.ListOf(skipped))
 }

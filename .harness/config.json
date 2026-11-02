@@ -109,6 +109,8 @@
   ],
   "upload_transcripts": false,
   "resume_sessions": true,
+  "hold_minutes": 60,
+  "hold_exempt": ["muse"],
   "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
     { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },

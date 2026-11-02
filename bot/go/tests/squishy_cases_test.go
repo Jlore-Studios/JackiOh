@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/commands"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/dashboard"
@@ -25,6 +26,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
@@ -199,6 +201,38 @@ func TestSquishyCases_ItsCommands(t *testing.T) {
 	assertNotIn(t, "`approve`", text) // it makes no suggestions to vote on (#796)
 	assertIn(t, "I do not know `approve`", commands.HelpText(bot, "approve"))
 	assertIn(t, "`/squishy help`", commands.Pointer_(bot))
+}
+
+// Squishy has `/squishy handoff` too, and holds nothing for an owner (`hold_minutes` 0, #2748):
+// its one account is all it has, so an item of its waits in the queue as it always did.
+func TestSquishyCases_ItsHandoffAndNoHold(t *testing.T) {
+	squishyCasesModule(t)
+	bot := "squishy-squooby"
+	read := [][2]string{}
+	for _, c := range commands.Parse("/squishy handoff\n/squishy handoff human\n@squishy-squooby handoff hard", bot) {
+		read = append(read, [2]string{c.Verb, c.Args})
+	}
+	assertEqual(t, read, [][2]string{{"handoff", ""}, {"handoff", "human"}, {"handoff", "hard"}})
+	assertIn(t, "| `handoff [medium\\|hard\\|human]` |", commands.HelpText(bot, ""))
+	assertIn(t, "`/squishy handoff hard`", commands.HelpText(bot, "handoff"))
+	assertIn(t, "(`squishy:waiting`)", commands.HelpText(bot, "handoff"))
+	w := newSquishyCasesWorld(t)
+	assertEqual(t, w.cfg.HoldMinutes, 0)
+	assertFalse(t, w.cfg.Holds())
+	// Its account is refused until twenty minutes on: no hold, no `squishy:waiting`, no comment.
+	w.gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelBuild}})
+	flowUpdateItem(w.ctx, 5, pyjson.New("owner", "claude-squishy"))
+	flowUpdate(w.ctx, func(s *pyjson.Object) {
+		providers.Record(s, "claude-squishy").Set("refused_until", clock.ISO(testsupport.Night.Add(20*time.Minute)))
+	})
+	planned := plan.Make(w.ctx, false, nil, "auto", nil)
+	assertEqual(t, planned.Get("action"), "none")
+	assertNotIn(t, "waiting for their owners", planned.Str("reason"))
+	assertNotIn(t, config.LabelWaiting, w.gh.LabelNames(5))
+	assertEqual(t, len(w.gh.BotComments(5)), 0)
+	// The handoff answers in Squishy's own words.
+	assertIn(t, "the next subscription that may build it", w.ask(5, "/squishy handoff")[0])
+	assertEqual(t, w.ctx.Store.Load().Obj("items").Obj("5").Get("owner"), "")
 }
 
 // ------------------------------------------------------------------ QueueCases

@@ -32,6 +32,9 @@ type Assignment struct {
 	Notes []string // default: field(default_factory=list)
 	// The runner label it takes (`runner_for`): "" is its subscription's own (`runs_on`).
 	RunsOn string // default: ""
+	// Why the item leaves its owner for this subscription, when it does (`Owning`'s `Gone`): the
+	// claim records it as the new owner's `owner_why` (#2748).
+	OwnerWhy string // default: ""
 }
 
 // SelfCheck is plan.Assignment.self_check.
@@ -154,10 +157,11 @@ func seatKey(seat *providers.Seat) []any { return []any{tierRank[seat.Tier], sea
 // the tier; with a note when that seat is above the tier, saying why (none of that tier is
 // free, or the tier order puts this one first). Among subscriptions whose seat is the same
 // model (the Claude accounts' Sonnet or Opus), the load balancer (`spread`) goes before the
-// usage order. One lane, one owner (#725): an item stays with the subscription that planned it
-// (`avoid`) when that one can build it, so planner and builder are the same. A revision that
-// answers a final audit (`audit_tier`) stays at the auditor's tier or above, so the auditor
-// fixes and pushes it.
+// usage order. One lane, one owner (#725, #2748): an item stays with the subscription that owns
+// it (`avoid`: the one that planned it or took it up last, `queue.OwnerOf`) when that one can
+// build it, a revision that answers a final audit too. A revision that answers a final audit
+// (`audit_tier`) stays at the auditor's tier or above, so its owner keeps it only with a seat of
+// that tier, and otherwise the auditor's tier fixes and pushes it.
 //
 // A fullsend `part` (#505), whose plan is on record by now, goes first to the subscriptions
 // whose strongest seat is weakest, and one with no seat of its tier may build it on a seat of
@@ -194,9 +198,10 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		}
 		return 0
 	}
-	// One lane, one owner (#725): an item stays with the subscription that planned it when that
-	// one can build it, and a `build_last` one (claude-2) goes after the rest.
-	ownerFirst := !part && auditTier == "" &&
+	// One lane, one owner (#725, #2748): an item stays with the subscription that owns it when
+	// that one can build it (at an audit's tier too), and a `build_last` one (claude-2) goes after
+	// the rest.
+	ownerFirst := !part &&
 		slices.ContainsFunc(offered, func(p *providers.Provider) bool {
 			return p.ID == avoid && !p.BuildLast && len(buildingSeats(p)) > 0
 		})
@@ -235,7 +240,7 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		seat := py.MinBy(seats, seatKey)
 		prefix := ""
 		if ownerFirst && provider.ID == avoid {
-			prefix = fmt.Sprintf("its planner `%s` keeps it: one lane, one owner. ", avoid)
+			prefix = fmt.Sprintf("its owner `%s` keeps it: one lane, one owner. ", avoid)
 		}
 		if !providers.TierAtLeast(seat.Tier, floor) {
 			return seat, prefix + fmt.Sprintf("a fullsend part, built on %s from its plan: its "+
@@ -412,9 +417,13 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 			return RunReviewer(pool, p, candidate.Difficulty) != nil
 		})
 	}
+	// Its owner first (#2748): a build's or a revision's; a fullsend part keeps its planner's, as
+	// before owners.
 	avoid, auditTier := "", ""
-	if candidate.Kind == "build" {
+	if candidate.Kind == "build" && candidate.Part {
 		avoid = candidate.PlannedBy
+	} else if candidate.Kind == "build" || candidate.Kind == "revise" {
+		avoid = candidate.Owner
 	}
 	if candidate.Kind == "revise" {
 		auditTier = candidate.AuditTier
@@ -475,6 +484,20 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 		return []any{!(force || c.Forced), c.Kind != "review", c.Priority, queue.KindOrder[c.Kind],
 			-difficultyIndex(c.Difficulty), c.QueuedAt, c.Number}
 	})
+	// Who owns each item, and whether it waits for its owner (#2748, `Owning`): an item held for
+	// its owner goes to nobody else, and one that carries `bot:waiting` to its owner alone, until
+	// the hold is lifted or released (`SyncHolds`, which the plan runs first).
+	owning := map[int]*Ownership{}
+	for _, c := range order {
+		owning[c.Number] = Owning(ctx, state, c, lanes, force, quietOK)
+	}
+	order = filter(order, func(c *queue.Candidate) bool {
+		own := owning[c.Number]
+		return own.Hold == nil && !(c.Waiting && !own.Free)
+	})
+	elsewhere := func(c *queue.Candidate, a *Assignment) bool {
+		return c.Waiting && a.Provider.ID != owning[c.Number].Owner
+	}
 	// The Needs plan stage first: a planner on the planning lane, which takes no build lane,
 	// plans the fullsend parts a medium subscription (Muse) builds from their plans before the
 	// rest, each by a model that meets its plan floor (medium for a medium or unrated item,
@@ -498,26 +521,83 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 				continue
 			}
 			seat := fitting[0]
+			// Its owner plans it when it may (a plan it was cut off in goes on there, #2748).
+			if owner := owning[candidate.Number].Owner; owner != "" {
+				if own := filter(fitting, func(s *providers.Seat) bool { return s.Provider.ID == owner }); len(own) > 0 {
+					seat = own[0]
+				}
+			}
 			what := "writes it"
 			if !candidate.Rated {
 				what = "rates and plans it"
 			}
-			planning = append(planning, Pair{candidate, &Assignment{
+			assignment := &Assignment{
 				Provider: seat.Provider, Action: "plan", Difficulty: candidate.Difficulty, Plan: seat,
 				Notes: []string{fmt.Sprintf("#%d: needs a plan; %s %s on the planning lane",
-					candidate.Number, seat.Describe(), what)}}})
+					candidate.Number, seat.Describe(), what)}}
+			if elsewhere(candidate, assignment) {
+				continue
+			}
+			handedOff(candidate, assignment, owning[candidate.Number])
+			planning = append(planning, Pair{candidate, assignment})
 		}
 	}
 	var found []Pair
 	if lanes.Free() > 0 || lanes.MachineFree() > 0 {
 		for _, candidate := range order {
-			if assignment := Assign(ctx, state, candidate, lanes, force, quietOK); assignment != nil {
+			if assignment := Assign(ctx, state, candidate, lanes, force, quietOK); assignment != nil &&
+				!elsewhere(candidate, assignment) {
+				handedOff(candidate, assignment, owning[candidate.Number])
 				found = append(found, Pair{candidate, assignment})
 			}
 		}
 	}
 	planning = py.SortedBy(planning, func(pair Pair) []any { return []any{!(force || pair.Candidate.Forced)} })
-	return append(planning, found...)
+	// Own lane first (#2748): a subscription's own work, a continuation of an item paused or cut
+	// off, a revision of its pull request or an item held for it, goes before new work on it:
+	// after the forced plans, ahead of the other plans, of review runs (#317 part 9 put those
+	// before every build and revision) and of every other build or revision, so a lane that a run
+	// just freed takes its own next, while its session can still be resumed, and its item does not
+	// change hands because a review took the lane first.
+	ownWork := func(pair Pair) bool {
+		c, own := pair.Candidate, owning[pair.Candidate.Number]
+		return own.Owner != "" && pair.Assignment.Provider.ID == own.Owner &&
+			(c.Kind == "revise" || c.Continues || c.WasHeld)
+	}
+	var out, own, plans, rest []Pair
+	for _, pair := range planning {
+		switch {
+		case force || pair.Candidate.Forced:
+			out = append(out, pair)
+		case ownWork(pair):
+			own = append(own, pair)
+		default:
+			plans = append(plans, pair)
+		}
+	}
+	for _, pair := range found {
+		if ownWork(pair) {
+			own = append(own, pair)
+		} else {
+			rest = append(rest, pair)
+		}
+	}
+	return slices.Concat(out, own, plans, rest)
+}
+
+// handedOff notes an item going to a subscription other than its owner (`Owning`): why, for the
+// claim (`OwnerWhy`) and for the run's routing.
+func handedOff(c *queue.Candidate, assignment *Assignment, own *Ownership) {
+	if own == nil || own.Owner == "" || assignment.Provider.ID == own.Owner {
+		return
+	}
+	why := own.Gone
+	if why == "" {
+		why = fmt.Sprintf("its owner `%s` cannot take it now", own.Owner)
+	}
+	assignment.OwnerWhy = why
+	assignment.Notes = append(assignment.Notes, fmt.Sprintf("#%d: handed off from its owner `%s` (%s); "+
+		"`%s` owns it from this run", c.Number, own.Owner, why, assignment.Provider.ID))
 }
 
 // SurveyProvider is plan.survey_provider.

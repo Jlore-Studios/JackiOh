@@ -66,7 +66,9 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 
 // Claim builds the plan for one queued thread on one subscription, and marks it with its run's
 // live label (`config.LiveRun`: `bot:planning`, `bot:building`, `bot:fixing-ci`, …, #2748), which
-// its record keeps as `live`. nil when the thread is closed, or a pull request from a fork.
+// its record keeps as `live`. A planning run, a build or a revision makes its subscription the
+// item's owner (`takeOver`, #2748), and ends any hold on it (its `bot:waiting` goes with the
+// queue's label). nil when the thread is closed, or a pull request from a fork.
 func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment) *pyjson.Object {
 	cfg := ctx.Cfg
 	provider := assignment.Provider
@@ -158,7 +160,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		case assignment.Action == "plan":
 			message = fmt.Sprintf("Planning this now%s, on %s (`%s`): it is difficulty:%s. The plan "+
 				"goes into this issue's description, under **Plan**, and the lane's owner builds "+
-				"from it (the item stays with its planner when it can build it).", RunLink(cfg),
+				"from it (the planner owns the item, so it builds it when it can).", RunLink(cfg),
 				assignment.Plan.Describe(), labelNeedsPlan, candidate.Difficulty)
 		default:
 			message = fmt.Sprintf("Starting work on this now%s: it is difficulty:%s. %s",
@@ -309,6 +311,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		entry.Update(pyjson.New("run_id", cfg.RunID, "started_at", clock.ISO(ctx.Now()), "kind", kind,
 			"action", assignment.Action, "stop_requested", false, "pending_request", false,
 			"provider", provider.ID, "runs_on", planned.Get("runs_on"), "live", live))
+		if kind != "review" {
+			// The subscription that takes it up owns it (#2748); a held item waits no more.
+			takeOver(state, number, provider.ID, assignment, ctx.Now())
+			entry.Pop("hold")
+		}
 		taken = asks.Take(entry)
 		state.Set("last_run", pyjson.New("at", clock.ISO(ctx.Now()), "url", cfg.RunURL(),
 			"what", fmt.Sprintf("%s #%d on %s", assignment.Action, number, provider.ID)))

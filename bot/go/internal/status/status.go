@@ -517,6 +517,18 @@ func Report(ctx *hctx.Context) string {
 		"to revise: %s; "+
 		"for a review run: %s.", numbers(labelled(config.LabelBuild, &no)),
 		numbers(labelled(config.LabelRevise, &yes)), numbers(labelled(config.LabelCross, &yes))))
+	var owners []string // held for their owners (#2748), as the planner or the sweep last found them
+	for _, issue := range labelled(config.LabelWaiting, nil) {
+		line := "#" + py.Str(issue.Get("number"))
+		if hold := plan.RecordedHold(state.Obj("items").Obj(py.Str(issue.Get("number")))); hold != nil {
+			line += " " + plan.HoldLine(ctx, hold)
+		}
+		owners = append(owners, line)
+	}
+	if len(owners) > 0 {
+		lines = append(lines, fmt.Sprintf("- Waiting for their owners (`%s`; `%s handoff` releases one): %s.",
+			config.LabelWaiting, config.Slash, strings.Join(owners, "; ")))
+	}
 	lines = append(lines, fmt.Sprintf("- Waiting for a person: %s.", numbers(labelled(config.LabelBlocked, nil))))
 	lines = append(lines, fmt.Sprintf("- Handed to people as only a person can do it (`%s`, "+
 		"never touched): %s.", config.LabelHumanRequired, numbers(labelled(config.LabelHumanRequired, nil))))

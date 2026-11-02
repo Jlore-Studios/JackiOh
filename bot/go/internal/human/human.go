@@ -36,12 +36,13 @@ import (
 )
 
 // LetsGo are the labels that say the bot has an item, which come off when it hands the item
-// over: the queue's state labels (`bot:blocked` among them), the Needs plan stage and the modes.
-// What says what a thread is (`bot:pr`, `bot:pr-open`, `bot:planned`) stays.
+// over: the queue's state labels (`bot:blocked` among them), the Needs plan stage, a hold for its
+// owner (`bot:waiting`, #2748) and the modes. What says what a thread is (`bot:pr`,
+// `bot:pr-open`, `bot:planned`) stays.
 var LetsGo = letsGo()
 
 func letsGo() map[string]bool {
-	out := map[string]bool{config.LabelNeedsPlan: true}
+	out := map[string]bool{config.LabelNeedsPlan: true, config.LabelWaiting: true}
 	for _, label := range queue.StateLabels {
 		out[label] = true
 	}

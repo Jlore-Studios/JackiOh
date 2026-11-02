@@ -92,6 +92,20 @@ type Candidate struct {
 	RoundsUsed int // default: 0
 	// The owner tier that used them ("" when none); a new owner starts its own count.
 	RoundTier string // default: ""
+	// For a build or a revision: the subscription that owns the item (`OwnerOf`, #2748): the one
+	// that planned it or took it up last, until a handoff ("" for none, or released).
+	Owner string // default: ""
+	// It carries `bot:waiting`: held for its owner (`plan.Owning`).
+	Waiting bool // default: False
+	// When its hold began (its record's `hold`), while it carries `bot:waiting`: the hold ends
+	// `hold_minutes` after it ("" for none).
+	HoldSince string // default: ""
+	// It was held for its owner, and its owner has not taken it up since (its record's `hold`).
+	WasHeld bool // default: False
+	// It continues work a run left unfinished: a run was paused or cut off on it (its record's
+	// `paused`), or left its unfinished work or draft (`handoff` of kind `work` or `draft`, or a
+	// revision's `wip`). With its owner, its own work goes before new builds (`plan.Pairs`).
+	Continues bool // default: False
 }
 
 // NewCandidate is Candidate(number, kind, title, forced, queued_at) with its defaults.
@@ -161,6 +175,36 @@ func PlanMeets(candidate *Candidate) bool {
 // weaker than its difficulty's plan floor (a medium plan for a hard item).
 func NeedsPlan(candidate *Candidate) bool {
 	return candidate.Kind == "build" && !PlanMeets(candidate)
+}
+
+// OwnerItem is the item whose owner a thread answers to (#2748): a bot pull request's issue (its
+// record's `issue`, which deliver writes when it opens it), whose plan and build it carries on, or
+// else the thread itself.
+func OwnerItem(s *pyjson.Object, number int) int {
+	if issue := py.MustInt(py.Or(recordOf(s, number).Get("issue"), 0)); issue != 0 {
+		return issue
+	}
+	return number
+}
+
+// OwnerOf is the subscription that owns thread `number`'s item (`OwnerItem`, #2748): its record's
+// `owner`, which a claim writes for the subscription that takes the item up (a planning run, a
+// build or a revision; never a review) and a handoff clears to "", or, in a record from before
+// owners were kept, the subscription that planned it (`planned_by_id`). "" for none.
+func OwnerOf(s *pyjson.Object, number int) string {
+	record := recordOf(s, OwnerItem(s, number))
+	if owner, ok := record.Lookup("owner"); ok {
+		return py.OrStr(owner, "")
+	}
+	return py.OrStr(record.Get("planned_by_id"), "")
+}
+
+// Continues is: a run left the item's work unfinished, and the next run goes on from it: one was
+// paused or cut off on it (`paused`, deliver), or kept its notes, its draft (`handoff` of kind
+// `work` or `draft`) or a revision's unfinished commits (`wip`).
+func Continues(record *pyjson.Object) bool {
+	return record.Truthy("paused") || record.Truthy("wip") ||
+		py.In(record.Obj("handoff").Get("kind"), "work", "draft")
 }
 
 // KIND_ORDER: the order of urgency after forced items, the priority tier and the difficulty
@@ -582,6 +626,14 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			if kind == "build" || kind == "revise" {
 				c.RoundsUsed = py.MustInt(py.Or(record.Get("verdict_rounds"), 0))
 				c.RoundTier = py.OrStr(record.Get("round_tier"), "")
+				c.Owner = OwnerOf(s, number)
+				c.Waiting = names[config.LabelWaiting]
+				hold := record.Obj("hold")
+				c.WasHeld = hold != nil
+				if c.Waiting && hold != nil && !hold.Truthy("lifted") {
+					c.HoldSince = py.OrStr(hold.Get("since"), "")
+				}
+				c.Continues = Continues(record)
 			}
 			found[number] = c
 			order = append(order, number)

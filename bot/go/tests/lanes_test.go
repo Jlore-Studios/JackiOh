@@ -47,12 +47,14 @@ func TestLanes_AMediumBuildStaysWithItsPlanner(t *testing.T) {
 	assertIn(t, "one lane, one owner", note)
 }
 
+// The note names the subscription that keeps it as its owner (#2748): the one that planned it,
+// or took it up last.
 func TestLanes_ABuildKeepsItsPlannerWithANote(t *testing.T) {
 	pool := testsupport.MakeConfig().Pool
 	muse := pool.Get("muse")
 	seat, note := lanesSeat(pool, []*providers.Provider{muse}, "medium", "muse", "")
 	assertEqual(t, lanesSeatID(t, seat)[0], "muse")
-	assertIn(t, "its planner `muse` keeps it", note)
+	assertIn(t, "its owner `muse` keeps it", note)
 }
 
 // The owner keeps it only when it can build it (#725): with the planner not free, the lane's

@@ -107,12 +107,17 @@ func LabelNames(thread *pyjson.Object) map[string]bool {
 }
 
 // Leave exactly `wanted` (or none) of the queue's state labels on the thread. A pull request
-// back in the queue is no longer ready for a person to merge, so `ready for merge` comes off.
+// back in the queue is no longer ready for a person to merge, so `ready for merge` comes off. A
+// thread that leaves the queue (a run takes it, it is blocked, stopped or done) waits for no owner
+// any more, so `bot:waiting` comes off unless it stays queued (`bot:build`, `bot:revise`).
 func SetStateLabel(ctx *hctx.Context, number int, current map[string]bool, wanted string) {
 	for _, name := range StateLabels {
 		if current[name] && name != wanted {
 			ctx.GH.RemoveLabel(number, name)
 		}
+	}
+	if current[config.LabelWaiting] && wanted != config.LabelBuild && wanted != config.LabelRevise {
+		ctx.GH.RemoveLabel(number, config.LabelWaiting)
 	}
 	if wanted != "" && current[config.LabelReady] {
 		ctx.GH.RemoveLabel(number, config.LabelReady)
@@ -150,8 +155,9 @@ func NotMerging(ctx *hctx.Context, number int, current map[string]bool) {
 }
 
 // SetWaiting puts `bot:waiting` on an item held for its owner (#2748, section 1), or takes it off
-// (`waiting` false). The hold itself (phase C of #2748) calls it; nothing does yet, and until
-// then no reader keeps a `bot:waiting` item from another subscription. `current` is its labels.
+// (`waiting` false): the hold (`plan.SyncHolds`) and a handoff (`plan.Handoff`) call it. No other
+// subscription takes an item while it waits (`plan.Owning`, `plan.Pairs`). `current` is its
+// labels.
 func SetWaiting(ctx *hctx.Context, number int, current map[string]bool, waiting bool) {
 	if waiting && !current[config.LabelWaiting] {
 		ctx.GH.AddLabels(number, []string{config.LabelWaiting})
@@ -882,6 +888,7 @@ func Stop(ctx *hctx.Context, number int, by string) string {
 		record := stateItem(s, number)
 		record.Set("stop_requested", true).Set("stopped_by", by).Set("stopped_at", clock.ISO(ctx.Now())).
 			Set("forced", false).Set("pending_request", false)
+		record.Pop("hold") // out of the queue, it waits for no owner (its `bot:waiting` is off)
 		// Asks still waiting will never be answered; a run's own are settled when it stops.
 		dropped = asks.PopWaiting(record)
 		return nil

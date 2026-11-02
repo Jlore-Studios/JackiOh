@@ -19,6 +19,9 @@
 //     (`config.RETIRED_LABELS`), which it deletes;
 //   - a tree the bot split (`squishy:tree`, #60) whose sub-issues have all closed: its close-out is
 //     queued, which checks the parent against `main` and closes it or opens what is missing;
+//   - an item held for its owner (#2748, `plan.SyncHolds`): `bot:waiting` and its comment go on
+//     while only its owner's 5-hour window keeps it, and come off once the owner can start again
+//     or the hold runs out (`hold_minutes`), so the next run takes it;
 //   - an issue the bot has planned, and a pull request it opened, that carries no `difficulty:*` label
 //     (a planner that gave no rating line leaves none, #735): it gets its issue's label, or medium,
 //     which is how it routes anyway; an issue still waiting for its plan is left to the planner;
@@ -114,7 +117,7 @@ func Sweep(ctx *hctx.Context) []string {
 	notes := []string{}
 	parts := []part{
 		{"labels", Labels}, {"comments", comments}, {"reviews", reviews},
-		{"assignments", assignments}, {"failed_ci", failedCI}, {"needs_plan", needsPlan},
+		{"assignments", assignments}, {"failed_ci", failedCI}, {"needs_plan", needsPlan}, {"holds", holds},
 		{"green_heads", GreenHeads}, {"trees", Trees}, {"deliveries", Deliveries},
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
 		{"issue_types", issueTypes}, {"difficulty_labels", difficultyLabels},
@@ -310,6 +313,15 @@ var ProductionMerge = "production merge"
 // for a person to rate it: the planning lane rates and plans it, and `_night_run` starts that run.
 func needsPlan(ctx *hctx.Context, since time.Time) []string {
 	return plan.SyncNeedsPlan(ctx, ctx.Store.Load())
+}
+
+// holds keeps the holds for owners (#2748, `plan.SyncHolds`) between the planner's runs: an item
+// whose owner's 5-hour window alone keeps it gets `bot:waiting` and its comment within one sweep,
+// and one whose owner can start again, or whose hold ran out, loses it, so `_night_run`'s look at
+// the queue finds it for its owner, or for anyone.
+func holds(ctx *hctx.Context, since time.Time) []string {
+	state := ctx.Store.Load()
+	return plan.SyncHolds(ctx, state, plan.ReadLanes(ctx, state), false, plan.AnyQuiet)
 }
 
 // GreenHeads is _green_heads: a bot pull request whose head met the review rule and then went

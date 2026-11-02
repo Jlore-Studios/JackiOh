@@ -9,7 +9,8 @@
 // would start it, and calls a subscription idle only when it may start work and nothing queued is
 // for it. An item no run can take says the tier its difficulty needs (an Opus for a hard one, or a
 // revision that answers a strong audit), which subscriptions have such a seat, and when the first
-// of them can start one: at a reset, at its hours, after its back-off, or when its run ends.
+// of them can start one: at a reset, at its hours, after its back-off, or when its run ends. An
+// item held for its owner (#2748, `plan.Holds`) says for whom, until when and why.
 package waiting
 
 import (
@@ -238,17 +239,9 @@ func Need(c *queue.Candidate) (string, string, string) {
 	return c.Kind, tier, why
 }
 
-// `20:27` today (Central time), `Fri 18:47` on another day.
+// `20:27` today (Central time), `Fri 18:47` on another day (`plan.Clock`).
 func Clock(ctx *hctx.Context, at time.Time) string {
-	zone := clock.Zone(ctx.Cfg.Timezone)
-	local := at.In(zone)
-	today := ctx.Now().In(zone)
-	ly, lm, ld := local.Date()
-	ty, tm, td := today.Date()
-	if ly == ty && lm == tm && ld == td {
-		return local.Format("15:04")
-	}
-	return local.Format("Mon 15:04")
+	return plan.Clock(ctx, at)
 }
 
 // Why `provider` may not start a run now, as a `Now`, or None (nil) when it may (its lanes
@@ -392,6 +385,11 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 		}
 	}
 	now := Subscriptions(ctx, s, lanes, after, starts, halted)
+	// Items held for their owners (#2748): what they wait for is that owner.
+	holds := map[int]*plan.Hold{}
+	if halted == "" {
+		holds = plan.Holds(ctx, s, q, lanes, false, plan.AnyQuiet)
+	}
 	// The planner's own order (`plan.pairs`), the items that start at the next run first.
 	order := slices.Clone(q)
 	sort.SliceStable(order, func(i, j int) bool {
@@ -413,7 +411,9 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 			TierWhy: why, Priority: priority, Starts: start, Forced: c.Forced}
 		if row.Starts == nil {
 			row.Waiting = halted
-			if halted == "" {
+			if held := holds[c.Number]; held != nil {
+				row.Waiting = "⏸️ " + plan.HoldLine(ctx, held)
+			} else if halted == "" {
 				row.Waiting = WaitsFor(ctx, s, c, step, tier, after, now)
 			}
 		}

@@ -394,6 +394,11 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.ReviewPaths = mustStrs(raw.Get("review_paths"))
 	c.UploadTranscripts = pyjson.Truthy(raw.Get("upload_transcripts"))
 	c.ResumeSessions = pyjson.Truthy(raw.GetOr("resume_sessions", optional.Get("resume_sessions")))
+	c.HoldMinutes = py.MustInt(raw.GetOr("hold_minutes", optional.Get("hold_minutes")))
+	if c.HoldMinutes < 0 {
+		raiseConfig("hold_minutes: must be 0 (no hold) or more")
+	}
+	c.HoldExempt = mustStrs(raw.GetOr("hold_exempt", optional.Get("hold_exempt")))
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
 		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))
