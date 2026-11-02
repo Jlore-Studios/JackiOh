@@ -93,10 +93,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #52 Cannon v3 — SPEC §8.10 row 52, BUILD M12 row S 52: its Activate deals 5 to a chosen
-// enemy Unit; the enemy hero is never offered as its target, and aiming at it is refused; once a turn,
-// a second use refused; equipped onto a Unit, the host takes the Activate; damage reads through
-// `param()`; radiant 0/8, 10 damage.
+// Stinkyscape #52 Cannon v3 — SPEC §8.10 row 52, BUILD M12 row S 52.
 #[cfg(test)]
 mod tests {
     use super::*;

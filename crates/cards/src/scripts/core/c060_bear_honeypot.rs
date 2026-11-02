@@ -146,8 +146,6 @@ mod tests {
             .collect()
     }
 
-    /// How many events of this type the whole game has emitted (`"trapFired" | "attackDeclared" |
-    /// "summoned"`).
     fn count_of(g: &Scenario, kind: &str) -> usize {
         g.events()
             .iter()
@@ -227,8 +225,7 @@ mod tests {
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
                 // #21 Hinder is cast on draw: drawing it casts it (§2.4, R58), for 0, and the cast is no
-                // play (R2179002; through v0.5.2 it was, R70, and set the trap off). Its Radiant face
-                // discards nothing (R431), so the cast asks no question.
+                // play (R2179002). Its Radiant face discards nothing (R431), so the cast asks no question.
                 "p2": { "hand": ["core-005"], "library": [{ "def": "core-021", "radiant": true }, "core-011"] },
             }));
 
@@ -691,7 +688,7 @@ mod tests {
             if radiant { "radiant" } else { "base" }
         }
 
-        /// R662 `${face}`: with an open zone it glows for its controller only, and the opponent's cheap
+        /// R662: with an open zone it glows for its controller only, and the opponent's cheap
         /// play sets it off.
         fn glows_with_an_open_zone(radiant: bool) {
             crate::register_all();
@@ -708,7 +705,7 @@ mod tests {
             assert!(s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
         }
 
-        /// R662 `${face}`: with every unit zone taken it does not glow, and the play leaves it armed (R430).
+        /// R662: with every unit zone taken it does not glow, and the play leaves it armed (R430).
         fn dark_with_every_zone_taken(radiant: bool) {
             crate::register_all();
             let mut s = scenario(json!({

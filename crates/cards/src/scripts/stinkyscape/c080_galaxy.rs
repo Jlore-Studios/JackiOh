@@ -72,8 +72,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80 (R101, R1841002). Since #2521 it is no
-// Starship Piece, its Miners leaving it none (R1852001).
+// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80 (#2521; R101, R1841002, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;

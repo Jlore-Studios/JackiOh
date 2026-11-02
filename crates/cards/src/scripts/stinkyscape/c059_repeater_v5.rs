@@ -101,8 +101,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #59 Repeater v5 — SPEC §8.10 row 59, BUILD M12 row S 59: its Activate deals 3 through
-// Armor (Pierce) to a chosen enemy Unit, never the enemy hero; four uses a turn; radiant 0/16, 6 damage.
+// Stinkyscape #59 Repeater v5 — SPEC §8.10 row 59, BUILD M12 row S 59.
 #[cfg(test)]
 mod tests {
     use super::*;

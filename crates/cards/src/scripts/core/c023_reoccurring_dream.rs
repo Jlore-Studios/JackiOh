@@ -53,7 +53,6 @@ fn lucky(ctx: &EffectContext<'_>, printed: i32) -> i32 {
 /// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
 /// its owner's hand, and a full hand burns it (§2.4, R4) — both of which `bounce` does.
 fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
-    // TS read the live `ctx.self`: the card as it stands now.
     let Some(self_) = ctx.live_self() else {
         return false;
     };

@@ -69,11 +69,8 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// Stinkyscape #86 Prototype-X2 — SPEC §8.10 row 86, BUILD M12 row S 86: Tribute 5, lowered 1 by each of
-// its owner's Floats while it waits in hand, never in the deck (R2657002), never below 0 (R1841003); its Cry asks 3 Discovers in turn, each
-// three Epic Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
-// (R1841002, R1751000); radiant 16/16 and Legendary Weapons. Since #2521 it is no Starship Piece
-// (R1852001).
+// Stinkyscape #86 Prototype-X2 — SPEC §8.10 row 86, BUILD M12 row S 86 (#2521; R2657002, R1841003,
+// R1841002, R1751000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;

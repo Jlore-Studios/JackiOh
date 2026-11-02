@@ -91,11 +91,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40: at resolution, if the opponent controls 4+
-// permanents (unit-pile tops and backrow, face-down included; dormant cards don't count, R13), steal one at
-// random (R60), placed per R15, an entry (R171); radiant 6/6: you pick, a face-down option carrying only
-// its id (R177); a stolen face-down trap is read by you (R33); threshold reads through `param()` (R386).
-// The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
+// C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40 (R13, R60, R15, R171, R177, R33, R386).
+// The `conditionMet` proofs (R195) are in `tests/cross/condition_active.rs`, with the other cards'.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

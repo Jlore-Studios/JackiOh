@@ -87,11 +87,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1: one hit of N (R63), then the draw; its preview
-// is N (R280); radiant: the same, then Recruit their newest permanent, back to its owner's piles when
-// it leaves the field (§3.2) but for a death, to your graveyard as yours (R2618000), a Unit attacking at
-// once (R53), a Trap set face-down (R33); tuned
-// numbers read through `param()` (R386).
+// C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1 (R63, R280, §3.2, R2618000, R53, R33, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

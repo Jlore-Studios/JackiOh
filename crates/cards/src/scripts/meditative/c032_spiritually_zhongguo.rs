@@ -112,11 +112,8 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32: "All three in order as it resolves": the
-// learning (R440), then one random non-token CN definition (never this card, R387) replacing every card in
-// your hand in place, Immutable ones too, each costing (1) since #2657 and a generated card for R673's roll
-// (MD-B10), then 5 random CN Units per R64, a full row taking fewer (R129); units reads through `param()`;
-// radiant the learning reaches only the opponent's hand and deck, and the new hand cards and Units are Radiant.
+// M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32 (R440, R387, #2657, R673, MD-B10, R64,
+// R129).
 
 #[cfg(test)]
 mod tests {

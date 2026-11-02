@@ -81,7 +81,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40. ; Radiant: twice the count (R275). R62:
+// #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40. Radiant: twice the count (R275). R62:
 // the bottom card is exiled before the draw. R63: a hit of 0 is no damage instance, so an empty pile emits
 // none. §2.4/R3: fatigue is the draw's, so an empty library shows exactly one instance.
 #[cfg(test)]

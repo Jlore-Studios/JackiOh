@@ -44,11 +44,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: face-down (R33), fires at start of
-// your next turn with start-of-turn triggers (R62) and goes to graveyard. Places 1 Plague Counter on each
-// permanent, face-down included (R97; C #27 doubles), then draws 1; radiant: 2 counters each and draw 2;
-// tuned numbers (tokens, draw) read through `param()` (R386).
-// The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
+// C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63 (R33, R62, R97, R386).
+// The C #27 Pestilent Slime case needs C #27's script registered.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

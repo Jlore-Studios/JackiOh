@@ -28,7 +28,7 @@ pub fn script() -> CardScripts {
 
 // Stinkyscape #77 Yuma — SPEC §8.10 row 77, BUILD M12 row S 77 (R1845002). The prompts' answerers (legal
 // actions, the policy, the timeout, the AI) are the engine's (R1845002); the Lucky draw's comparator is
-// proven on the engine's fixture (R1877001). No Starship Piece since #2521: its death fuses nothing.
+// proven on the engine's fixture (R1877001).
 #[cfg(test)]
 mod tests {
     use super::*;

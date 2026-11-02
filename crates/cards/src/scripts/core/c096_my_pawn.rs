@@ -283,7 +283,6 @@ mod tests {
             let victim = id_of(&s, SMALL);
 
             // §4.4 step 9 sends only the excess on: 6 − the 1/1's 1 health = 5, exactly lethal at 5.
-            // Granting the keyword on a fixture is a test's business, not a card's (CLAUDE.md rule 5).
             grant_trample(&mut s, &attacker);
             assert!(arms(&s, &attack_declared(&attacker, &victim, false)));
 
@@ -350,7 +349,7 @@ mod tests {
     const SORCERER: &str = "core-068";
     /// #56 Jilliax: its radiant face is a 6/4 with Rush, Taunt, Lifesteal, Divine Shield and Reborn.
     const JILLIAX: &str = "core-056";
-    /// #66 The Rock, 10/10 Indestructible: the one Indestructible unit in Core since patch v0.1.1.
+    /// #66 The Rock, 10/10 Indestructible: the one Indestructible unit in Core.
     const ROCK: &str = "core-066";
     /// Cards for the AI's turn, as the other My Pawn tests give it (my_pawn.rs).
     const STOCKPILE: &str = "core-005";
@@ -432,7 +431,6 @@ mod tests {
             assert_eq!(events_on(&s, &attacker.id, "destroyed"), 1);
             s.expect_in_zone(&attacker, "graveyard");
 
-            // …and the AI still plays out the rest of the turn.
             turn_went_on(&s, P1);
         }
 
@@ -615,7 +613,7 @@ mod tests {
             if radiant { "radiant" } else { "base" }
         }
 
-        /// R662 `${face}`: at 7 health it glows for its controller only, and the swing is canceled.
+        /// R662: at 7 health it glows for its controller only, and the swing is canceled.
         fn glows_at_7(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -632,7 +630,7 @@ mod tests {
             assert!(any_event(&s, "trapFired"));
         }
 
-        /// R662 `${face}`: at 8 health it does not glow, and the swing lands.
+        /// R662: at 8 health it does not glow, and the swing lands.
         fn dark_at_8(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -648,7 +646,7 @@ mod tests {
             s.expect_health(P1, 1);
         }
 
-        /// R662 `${face}`: on its controller's own turn it glows for the blow on the board.
+        /// R662: on its controller's own turn it glows for the blow on the board.
         fn glows_on_own_turn(radiant: bool) {
             let face = face_of(radiant);
             let s = scenario(json!({

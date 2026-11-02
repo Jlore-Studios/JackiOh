@@ -206,9 +206,7 @@ mod tests {
     const SEVEN_SEVEN: &str = "core-025";
     const DUELIST: &str = "core-045";
     const ROCK: &str = "core-066";
-    /// A (0) Spell its holder could still play, so a turn here never ends by itself (R82): through
-    /// v0.5.9f the Fanatic's own switch to Defense Position kept it open, which Can't Defend took away
-    /// (R2657000).
+    /// A (0) Spell its holder could still play, so a turn here never ends by itself (R82).
     const FILLER: &str = "core-010";
     const MENACE: &str = "core-019";
     const LIBRARY: [&str; 3] = [SEVEN_SEVEN, "core-008", "core-020"];
@@ -217,7 +215,6 @@ mod tests {
         super::script()
     }
 
-    /// A `{ pick: "instance", instanceId }` target list, the play action's declared pick (R81).
     fn target(id: &str) -> Value {
         json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
     }
@@ -258,7 +255,6 @@ mod tests {
     const FIENDER: &str = "core-092";
     const VANILLA: &str = "core-008";
 
-    /// `{ def: KPOP, radiant: true }`: the radiant face in hand (§5.2).
     fn radiant_kpop() -> Value {
         json!({ "def": KPOP, "radiant": true })
     }
@@ -270,7 +266,6 @@ mod tests {
         json!({ "mark": "allure", "color": "pink" })
     }
 
-    /// A `marked` event's JSON with the Allure mark spread in.
     fn marked(instance_id: &str, added: bool) -> Value {
         json!({ "type": "marked", "instanceId": instance_id, "mark": "allure", "color": "pink", "added": added })
     }
@@ -747,7 +742,6 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            // K-Pop Fanatic takes p1's last free zone, lane 5.
             g.play(KPOP, target(&prey.id));
             assert_eq!(g.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
@@ -947,7 +941,6 @@ mod tests {
             assert_eq!(p2_marks.first().map(|event| event["instanceId"].clone()), Some(json!(trap.id)));
         }
 
-        /// One action of the folded game: its nonce, `reduce`, and the log.
         fn act(log: &mut Vec<Action>, state: &GameState, body: Value) -> GameState {
             let mut action = body;
             action["nonce"] = json!(format!("kpop-mark-{}", log.len() + 1));

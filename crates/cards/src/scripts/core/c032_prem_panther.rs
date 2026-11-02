@@ -65,12 +65,6 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426, R2396000).
-//
-// R426: it draws only after an attack it made, declared or forced (R53), 2 for each Unit that attack
-// destroyed (the Radiant face's Cleave kills too); never for a Unit it kills defending. Survival is not
-// asked (R2396000): the hook is owed on the snapshot the Panther fought with, so it draws even when it
-// dies in the combat, once even for one back through Reborn, for the player who attacked (R212, R42).
-//
 // Sparring partners: #15 Me and Mr Token (its Cry does not fire from a `field` setup), #13 Jlockeed
 // Shredder-10 (kills a 5/4 Panther on the swing back), #11 Tempo Timmy (First Strike) and #9 Moths to the
 // Flame (makes every enemy Unit attack it).

@@ -89,8 +89,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24 (R81). Radiant (R275) deals 2X, heals 6X and gains
-// X+1, still for X paid; each radiant mode is checked at an odd and an even X, and X = 0 is refused (R348).
+// #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24 (R81, R275). X = 0 is refused (R348).
 // Nothing prompts (R81), so `state.pending` stays null. Both sides keep a unit and a card in hand so no turn
 // auto-ends. The default board is turn 9: 4 mana now and a MAX_MANA 4 refresh, so a positive
 // `mana.nextTurnMod` shows as current mana above 4 while max mana stays 4 (§2.3: temporary mana).

@@ -190,12 +190,8 @@ pub fn script_v0_3_16() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #9 Income Tax — SPEC §8.6 row 9, BUILD M9 Classic row C 9: fires on the opponent's second draw of a
-// turn, on either turn, after a cast-on-draw card is cast (R58); a draw a limit stops does not count
-// (§2.4); the keep prompt opens at once on the drawer's turn and waits for the start of their next
-// turn otherwise (R1279000); the rest of their hand becomes yours (R12), overflow burned (R317);
-// radiant: (1) less, kept in every zone (R78); tuned numbers read through `param()` (R386). Here p2
-// sets the trap, p1 draws.
+// C #9 Income Tax — SPEC §8.6 row 9, BUILD M9 Classic row C 9 (R58, §2.4, R1279000, R12, R317, R78,
+// R386). Here p2 sets the trap, p1 draws.
 #[cfg(test)]
 mod tests {
     use super::*;

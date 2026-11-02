@@ -55,9 +55,7 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S T-narcor — SPEC §7, BUILD M12 row S T-narcor (issue #2521): played from the hand, adds one random
-// non-token Legendary card of a set that ships to the hand, never a Mythic, a full hand burning it;
-// radiant a Radiant one. Tagged Resource and Token.
+// S T-narcor — SPEC §7, BUILD M12 row S T-narcor (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

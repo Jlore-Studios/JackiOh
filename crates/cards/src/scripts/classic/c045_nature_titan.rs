@@ -48,11 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45: Tribute 1 (§6.3, R101), refused
-// with no Unit to Tribute; on a full board it takes the tributed Unit's zone unless Reborn, Locked or
-// a Stack pile's top (R391); a Sheep overpays; Cry and each attack, forced included, before its damage
-// (R2285000): draw 1, heal 3, no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal)
-// via `param()` (R386).
+// C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45 (§6.3, R101, R391, R2285000, R386).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

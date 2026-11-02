@@ -21,10 +21,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #177 Cloaking Module — SPEC §8.10 row 177, BUILD M12 row S 177: "played onto a Unit as an Equip, the
-// host gains +2/+2 and stays no piece unless it was one (R1852001); set face-down by Cloaked and revealed,
-// it takes a unit zone; played alone, its death fuses it into a Dormant Starship (R1852000); radiant 4/4
-// with Immune to Spells: a Spell's sweep passes it by".
+// S #177 Cloaking Module — SPEC §8.10 row 177, BUILD M12 row S 177 (R1852001, R1852000).
 #[cfg(test)]
 mod tests {
     use super::*;

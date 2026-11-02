@@ -361,9 +361,7 @@ mod tests {
     }
 
     /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
-    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446). A Core card and its
-    /// Legacy card are two cards (R2511001), so the top three may hold both, as facing three 7/7s Core
-    /// #43 Big Felinor and TG #51 Legacy: Big Felinor both rank at "clear".
+    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446).
     fn offers_rank_at(setup: &Value, priorities: &[&str]) {
         let top = subsystems::top_three(&resolving(setup), P1, &options(None));
         for scored in &top {

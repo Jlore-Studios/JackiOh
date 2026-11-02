@@ -136,11 +136,9 @@ pub fn script_v0_3_7b() -> CardScripts {
     scripts(true)
 }
 
-// SPEC §8.6 (R1149000): dormant while set and unrevealed, its aura and preview wake once it is revealed,
-// at its start of turn or by anything else (R686); the self-Tribute is live face-down (R403). Enemy
-// units have −X Attack floored at 0; unrevealed, the opponent's view shows no drop and never names the
-// card (R33); preview shows X once revealed (§10.8, R280). Multiplier is tuned via param() (R386).
-// Radiant sets attack to 0 after all other layers (§10.4), so their hits are no hits (R63).
+// SPEC §8.6 (R1149000, R686, R403, §10.8, R280, R386). Unrevealed, the opponent's view shows no Attack
+// drop and never names the card (R33). Radiant sets attack to 0 after all other layers (§10.4), so their
+// hits are no hits (R63).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

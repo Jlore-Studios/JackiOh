@@ -45,10 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite (issue #2521): played from the hand, 1 damage
-// to a random enemy (the hero or a Unit, each seen over the seeds) with Pierce, so an Armored hero or
-// Unit takes it whole; damage reads through `param()`; radiant it resolves twice (Echo 1), both hits
-// piercing. Tagged Resource and Token.
+// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::layers::unit_view;

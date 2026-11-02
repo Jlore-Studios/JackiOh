@@ -50,8 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #78 Ozark — SPEC §8.10 row 78, BUILD M12 row S 78 (R1841002). Since #2521 it is no Starship
-// Piece, its Miners leaving it none (R1852001), and its death fuses nothing.
+// Stinkyscape #78 Ozark — SPEC §8.10 row 78, BUILD M12 row S 78 (#2521; R1841002, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -171,9 +171,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 must-pass row 31, as R429 rewrites it: "1st play → 1 damage, 2nd → 2, 3rd → 3, 4th → 5,
-// 5th → 8; clamps at 89 (R25); its cost — costMod, discounts, the cost paid — changes its price and
-// never its damage (R67); the return costs (1) more, never above (4)".
+// BUILD M4-T4 must-pass row 31, as R429 rewrites it.
 // Every side gets a unit so §2.5's auto-end-turn does not run the turn on: an unspent exertion is a
 // meaningful action.
 #[cfg(test)]

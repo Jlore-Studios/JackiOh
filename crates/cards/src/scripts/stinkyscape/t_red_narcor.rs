@@ -60,9 +60,7 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S T-red-narcor — SPEC §7, BUILD M12 row S T-red-narcor (issue #2521): played from the hand at (0),
-// its caster gains 2 mana (past max too) and draws 1; mana and draw read through `param()`; radiant
-// gains 4 and draws 2. Tagged Resource and Token.
+// S T-red-narcor — SPEC §7, BUILD M12 row S T-red-narcor (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

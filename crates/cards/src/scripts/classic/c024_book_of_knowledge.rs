@@ -52,11 +52,10 @@ pub fn script_v0_5_9f() -> CardScripts {
 }
 
 // C #24 Book of Knowledge — SPEC §8.6 row 24, BUILD M9 Classic row C 24 (R58, R317, §2.4, R386).
-//
 // The pipeline cases set both ends to one count, so they draw it with no roll. The steal case puts C #4
-// Palantir in the opponent's backrow: its base face steals a (1) Cost Spell, no "you may" (balance patch
-// 1, mandatory), and casts it itself (patch v0.3.10, R831001), so the Book draws for the opponent and
-// never for you while Palantir stands. The draw-limit half (B5 E3) is proved in C #4's own test file.
+// Palantir in the opponent's backrow: its base face steals a (1) Cost Spell, no "you may", and casts it
+// itself (R831001), so the Book draws for the opponent and never for you while Palantir stands. The
+// draw-limit half (B5 E3) is proved in C #4's own test file.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -102,7 +102,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.4.0f and every version before it ran, stealing any enemy permanent;
+/// R767000: the scripts v0.4.0f and every version before it ran, stealing any enemy permanent.
 pub fn script_v0_4_0f() -> CardScripts {
     CardScripts {
         base: feelings(PERMANENTS),

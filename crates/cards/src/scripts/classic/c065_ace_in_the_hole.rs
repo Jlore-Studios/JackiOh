@@ -82,10 +82,9 @@ pub fn script() -> CardScripts {
 }
 
 // C #65 Ace in the Hole — SPEC §8.6 row 65, BUILD M9 Classic row C 65 (R33, R62, R386).
-//
 // The coin is the match rng's next draw as its controller's turn ends (the trap's end-of-turn hook,
 // which R62 runs before the window the trap fires in), so each case picks a seed whose next coin is the
-// face it needs (`withCoin`) and then checks the trap did what that coin says — which is what "one
+// face it needs (`with_coin`) and then checks the trap did what that coin says — which is what "one
 // seeded coin each time" means.
 #[cfg(test)]
 mod tests {

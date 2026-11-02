@@ -148,10 +148,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #61 Flak v5 — SPEC §8.10 row 61, BUILD M12 row S 61: its Activate deals each enemy Unit
-// its own random 1 to 3 (60%, 30%, 10%), three rounds, each rolling anew, and the enemy hero nothing
-// (#2657); radiant 0/16, 2 to 4 with Lucky 1: two rolls per hit, the higher kept (R2521001), and
-// Activate 3.
+// Stinkyscape #61 Flak v5 — SPEC §8.10 row 61, BUILD M12 row S 61 (#2657, R2521001).
 #[cfg(test)]
 mod tests {
     use super::*;

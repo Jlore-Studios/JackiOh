@@ -33,13 +33,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1: it costs (1);
-// after the turn's cleanup the turn starts again — a whole turn, the turn count and max mana up, its refresh,
-// Brittle tick, start-of-turn triggers and draw, Units no longer summoning sick; the 60-turn cap
-// counts it; cast on the opponent's turn the extra turn follows the next one; a second Rift that
-// game, either face or a copy, grants no turn and resolves the rest; each player has their own flag;
-// the opponent's next-turn effects wait for their own turn; radiant also 2 temporary mana now, 2 next
-// turn (on the extra turn) and draw 2, read through `param()`.
+// Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1.
 #[cfg(test)]
 mod tests {
     use super::*;

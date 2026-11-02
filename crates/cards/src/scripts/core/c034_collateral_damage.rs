@@ -43,9 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #34 Collateral Damage — SPEC §8.2 row 34, BUILD M4-T4 must-pass row 34:
-// "Exiles an Indestructible permanent and a random opponent library card; radiant same-row
-//  neighbours too".
+// #34 Collateral Damage — SPEC §8.2 row 34, BUILD M4-T4 must-pass row 34.
 // #66 The Rock is a 10/10 with printed Indestructible, so it is the must-pass's Indestructible
 // permanent (placed by the setup, so its Tribute cost is not in the way).
 #[cfg(test)]

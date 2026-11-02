@@ -130,11 +130,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #58 Beam v5 — SPEC §8.10 row 58, BUILD M12 row S 58: its Activate deals 11 to a chosen
-// enemy Unit and 11 to each Unit beside it, through Armor (Pierce); the enemy hero is never offered as
-// its target, and aiming at it is refused; once a turn, a second use refused; refused on its user's next
-// turn and usable the turn after, a bounce clearing it (R1841000, R78); equipped onto a Unit, the host
-// takes the Activate; damage reads through `param()`; radiant 0/16, 22 damage.
+// Stinkyscape #58 Beam v5 — SPEC §8.10 row 58, BUILD M12 row S 58 (R1841000, R78).
 #[cfg(test)]
 mod tests {
     use super::*;

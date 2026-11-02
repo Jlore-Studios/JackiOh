@@ -195,9 +195,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it: the Tribute choice travels
-// in the play action (R81), one of your other Units only; the chosen Unit is sacrificed and remembered;
-// Death → 2 copies (radiant fills the board) keeping `statsOverride` (R41); nothing eaten → nothing (R41).
+// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it. The copies keep
+// `statsOverride`, and nothing eaten summons nothing (R41).
 // HARNESS GAP: `FieldSetup` has no `statsOverride`, so the one fixture that needs it sets it itself.
 #[cfg(test)]
 mod tests {

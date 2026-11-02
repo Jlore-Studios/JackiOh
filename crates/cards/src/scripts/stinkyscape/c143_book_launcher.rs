@@ -148,9 +148,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// Stinkyscape #143 Book Launcher — SPEC §8.10 row 143, BUILD M12 row S 143: its one Activate, once a
-// turn, casts a random harmful Book at a chosen enemy or a random helpful Book at a chosen ally, free
-// (R70), by rng picks that replay; radiant 0/12 and the Books Radiant.
+// Stinkyscape #143 Book Launcher — SPEC §8.10 row 143, BUILD M12 row S 143 (R70).
 #[cfg(test)]
 mod tests {
     use super::*;

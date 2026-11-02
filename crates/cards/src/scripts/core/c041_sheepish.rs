@@ -90,9 +90,8 @@ pub fn script() -> CardScripts {
 }
 
 // #41 Sheepish (SPEC §8.2, §5.1, §10.3, §10.5 step 7; R17, R23, R33, R61, R70, R120, R174, R427).
-// Must-pass row (BUILD M4-T4 #41, as R427 rewrites it): "Opponent's Unit becomes a Sheep after its Cry
-// resolves; trap consumed; Immutable target → consumed with no effect; radiant adds 0-cost Lava Golem."
-// "After its Cry" is proved with an observable Cry: #53 Reno heals a p1 hero left at 10 up to 30.
+// Must-pass row: BUILD M4-T4 #41, as R427 rewrites it. That the Sheep comes after the Cry is proved with an
+// observable Cry: #53 Reno heals a p1 hero left at 10 up to 30.
 #[cfg(test)]
 mod tests {
     use super::script;

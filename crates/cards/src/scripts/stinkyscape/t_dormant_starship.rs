@@ -35,12 +35,8 @@ pub fn script() -> CardScripts {
 }
 
 // S T-dormant-starship Dormant Starship — SPEC §8.10 row T-dormant-starship, BUILD M12 row S
-// T-dormant-starship: a Starship Piece's death summons it 0/0 into its owner's leftmost open unit zone, else
-// on top of lane 3, and the piece's copy fuses in at once (R1852000), the dead piece's base version (#2521,
-// R2521000); it is Dormant, unattackable and unreachable (R1839000); a Stack card played onto it is exiled
-// before it resolves (R1852007); its Activate for (3) launches it: the Starship keyword, a name (R1852004),
-// its fused Cries, then When launched (R1852003); "Your Starship launch costs (0)" prices it (R1852006); no
-// pool and no deck holds it (R1857001); radiant R349's fallback, 0/0.
+// T-dormant-starship (#2521; R1852000, R2521000, R1839000, R1852007, R1852004, R1852003, R1852006,
+// R1857001, R349).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

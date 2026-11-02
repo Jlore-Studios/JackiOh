@@ -54,9 +54,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #35 Lunar Eclipse — SPEC §8.2 row 35, BUILD M4-T4 must-pass row 35:
-// "3 damage; next spell this turn −1; a unit play does not consume it; expires at cleanup;
-//  radiant 6 / −2".
+// #35 Lunar Eclipse — SPEC §8.2 row 35, BUILD M4-T4 must-pass row 35.
 // The second spell is #16 Hit Job, a (3) Cost Spell: at full price p1 would be left with 0 mana,
 // with the discount 1 (and 2 with the radiant −2).
 #[cfg(test)]

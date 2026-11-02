@@ -39,9 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #81 Radix — SPEC §8.10 row 81, BUILD M12 row S 81: its Cry asks 2 Discovers in turn,
-// each three Rare Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
-// (R1841002, R1751000); radiant 4/4 and Epic Weapons. Since #2521 it is no Starship Piece (R1852001).
+// Stinkyscape #81 Radix — SPEC §8.10 row 81, BUILD M12 row S 81 (#2521; R1841002, R1751000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;

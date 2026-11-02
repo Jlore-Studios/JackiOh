@@ -62,10 +62,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #141 Fruit Launcher — SPEC §8.10 row 141, BUILD M12 row S 141: its Activate takes a
-// permanent and casts one random Fruit at it for its controller, free (R70), by an rng pick that
-// replays, a Grape among them (tokens included, R2521006); a Fruit whose target cannot be that
-// permanent makes its own choices at random; radiant 0/8 and a Radiant Fruit.
+// Stinkyscape #141 Fruit Launcher — SPEC §8.10 row 141, BUILD M12 row S 141 (R70, R2521006).
 #[cfg(test)]
 mod tests {
     use super::*;

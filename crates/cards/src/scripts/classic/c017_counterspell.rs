@@ -94,14 +94,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019";
 
-    /// TS `armed(radiantFace = false, lane = 2)`.
     fn armed(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": COUNTER, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
 
     use crate::merged;
 
-    /// TS `setup(p1 = {}, p2 = {}, radiantFace = false)`.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -114,7 +112,7 @@ mod tests {
         events.iter().filter(|event| event.event_type() == kind).count()
     }
 
-    /// TS `toMatchObject`: every key of `expected` is equal in `actual`, objects compared key by key.
+    /// Every key of `expected` is equal in `actual`, objects compared key by key.
     fn assert_subset(actual: &Value, expected: &Value) {
         match (actual, expected) {
             (Value::Object(actual_map), Value::Object(expected_map)) => {

@@ -42,10 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #82 Phalanx — SPEC §8.10 row 82, BUILD M12 row S 82: its Cry asks 2 Discovers in turn,
-// each three Rare Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
-// (R1841002, R1751000); radiant 8/8 with Armor 6 and Epic Weapons. Since #2521 it is no Starship Piece
-// (R1852001).
+// Stinkyscape #82 Phalanx — SPEC §8.10 row 82, BUILD M12 row S 82 (#2521; R1841002, R1751000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -58,11 +58,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46: draws one at a time (this Spell
-// already out of your hand) until your hand holds as many cards as the opponent's; a draw that adds no
-// card ends it; its preview is the draws asked for now (R280); radiant: twice as many; its tuned number
-// (multiplier) reads through `param()` (R386), on the Radiant face only (R749).
-// The preview's proofs are in `test/preview.test.ts` (its C #46 section).
+// C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46 (R280, R386, R749). The preview's
+// proofs are in `tests/cross/preview.rs` (its C #46 section).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

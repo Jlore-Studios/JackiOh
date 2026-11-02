@@ -83,7 +83,6 @@ mod tests {
 
     use crate::matches_object;
 
-    /// A shallow object spread: `{ ...base, ...extra }`.
     fn merge(base: Value, extra: Value) -> Value {
         let mut out = base;
         if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
@@ -141,7 +140,6 @@ mod tests {
         keys
     }
 
-    /// `query(args)`, by id.
     fn query_ids(args: Value) -> Vec<String> {
         crate::query::query(&json_as(args))
             .iter()
@@ -205,7 +203,6 @@ mod tests {
         chain: Option<i32>,
     }
 
-    /// Writes `memory[key]` on the card a reference names.
     fn set_memory(s: &mut Scenario, card: &str, key: &str, value: Value) {
         let id = s.card(card).id.clone();
         find_instance_mut(s.state_mut(), &id)
@@ -263,7 +260,6 @@ mod tests {
         panic!("no cursor below {CURSOR_SEARCH} rolls \"recast\" into #95 itself from seed \"{SEED}\"");
     }
 
-    /// `chaos` with the base roll "recast" pinned to a cast of #95 itself.
     fn recast_of_core(opts: ChaosOpts) -> Scenario {
         chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor()), ..opts })
     }
@@ -933,10 +929,8 @@ mod tests {
             // No question was asked at any point: with no prompt open the roll cannot have paused (R113).
             assert!(s.state().pending.is_none());
             assert_eq!(events_of(&s, "chaosRolled").len(), 1);
-            // The draw completed: the library is empty and both Renos are in hand.
             assert!(s.pile(P1, "library").is_empty());
             assert_eq!(s.hand(P1).iter().filter(|card| card.def_id == RENO).count(), 2);
-            // Hinder cast by draw and discarded one of two hand cards.
             s.expect_in_zone("core-021", "graveyard");
             let menace = s.hand(P1).iter().any(|card| card.def_id == MENACE);
             let jammed = s.hand(P1).iter().any(|card| card.def_id == JAMMED);

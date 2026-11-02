@@ -129,7 +129,7 @@ mod tests {
             assert_eq!(g.card(&prey).controller, PlayerId::P1);
             assert_eq!(g.card(&prey).owner, PlayerId::P2);
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-            // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
+            // It costs (4) (#40), out of the harness's 4.
             g.expect_mana(PlayerId::P1, 0);
         }
 

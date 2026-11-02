@@ -63,11 +63,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #36 Burn — SPEC §8.6 row 36, BUILD M9 Classic row C 36: base draws if your current mana as it
-// resolves is 4 or more, and `conditionMet` answers in hand with the mana left after paying now
-// (R195), so a surcharge (C #77) moves it; radiant: deal 4, draw if max mana is 4 or more (§2.3);
-// its name is a rules word, and "burned" elsewhere is no reference to it (R381); numbers read
-// through `param()` (R386). The `conditionMet` proofs (R195) are in `../condition-active.test.ts`.
+// C #36 Burn — SPEC §8.6 row 36, BUILD M9 Classic row C 36 (§2.3, R386). Its name is a rules word, and
+// "burned" elsewhere is no reference to it (R381). The `conditionMet` proofs (R195) are in
+// `tests/cross/condition_active.rs`.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

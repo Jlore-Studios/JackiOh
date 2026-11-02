@@ -167,9 +167,7 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S #163 Swear Loyalities — SPEC §8.10 row S 163, BUILD M12 row S 163, R2521004: the chosen faction's
-// Faction card is added to the hand, then every card in its caster's hand and library of another faction
-// and not of the chosen one is exiled; radiant the Faction card Radiant.
+// S #163 Swear Loyalities — SPEC §8.10 row S 163, BUILD M12 row S 163 (R2521004).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

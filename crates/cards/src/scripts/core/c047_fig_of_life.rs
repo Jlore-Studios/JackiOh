@@ -36,11 +36,9 @@ pub fn script() -> CardScripts {
 
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4 (R19).
 //
-// R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero").
-//
 // §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. What is
 // asserted instead is the §6.3 Heal split: a unit never rises past its max health, while a hero
-// has no maximum (§3) and goes straight past 30. The props have no script beyond printed keywords.
+// has no maximum (§3) and goes straight past 30.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
