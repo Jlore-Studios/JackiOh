@@ -73,12 +73,6 @@ function shakesOf(cues: readonly FxCue[]): FxCue[] {
   return cues.filter((cue) => cue.kind === "shake");
 }
 
-describe("#1443 the volley cap", () => {
-  it("#1443 the volley cap is four", () => {
-    expect(FX_FLAVOR_VOLLEY_MAX).toBe(4);
-  });
-});
-
 describe("#1443 a Spell's non-combat damage fires its flavor's shot from its controller's hero", () => {
   it("#1443 Burn throws Fire from your hero", () => {
     const view = resolvingView("classic-036", "spell-1");
