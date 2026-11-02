@@ -220,8 +220,8 @@ describe("R503: CardArt draws the card's motif", () => {
 
 describe("#2681: proceduralCardArtUri", () => {
   it("#2681 proceduralCardArtUri matches CardArt's generated source for every art family", () => {
-    // Core's (R503), Stinkyscape's (R2170000), Training Grounds' own (R2202000) and a Legacy card's, which
-    // wears its Core card's picture read by the Core card's name (R2511000).
+    // Core's (R503), Stinkyscape's (R2170000), Training Grounds' own (R2202000) and a Legacy card's,
+    // which draws its own yard picture with its Core card's subject (R2724000, R2511000).
     const ids = ["core-002", "classic-036", "stinkyscape-001", "traininggrounds-001", "traininggrounds-041"];
     for (const id of ids) {
       const card = def(id);
@@ -232,9 +232,10 @@ describe("#2681: proceduralCardArtUri", () => {
         cleanup();
       }
     }
-    // The families really differ, so the loop above compares four different pictures per face.
+    // The families really differ, so the loop above compares five different pictures per face; the
+    // Legacy card's is its own, never its Core card's (R2724000).
     const uris = new Set(ids.map((id) => proceduralCardArtUri(def(id), false)));
-    expect(uris.size).toBe(ids.length - 1);
-    expect(proceduralCardArtUri(def("traininggrounds-041"), true)).toBe(proceduralCardArtUri(def("core-002"), true));
+    expect(uris.size).toBe(ids.length);
+    expect(proceduralCardArtUri(def("traininggrounds-041"), true)).not.toBe(proceduralCardArtUri(def("core-002"), true));
   });
 });

@@ -12,7 +12,7 @@ import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
-import { proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
@@ -69,19 +69,18 @@ export function CardArt({
   }, [near]);
   const resolve = useDefResolver();
   const theme = themeFor(tags, type);
-  // R2170000 and R2202000: the Stinkyscape and Training Grounds sets draw their own families, and a
-  // Training Grounds Legacy card its Core card's picture, read by the Core card's name (its own after
-  // "Legacy: ", R2511000); every other card keeps R503's art.
+  // R2170000, R2202000 and R2724000: the Stinkyscape and Training Grounds sets draw their own
+  // families, and a Training Grounds Legacy card its own yard picture with its Core card's subject,
+  // read by the Core card's name (its own after "Legacy: ", R2511000); every other card keeps R503's art.
   const coreId = snapshotArtOf(defId);
   const ownName = name ?? resolve?.(defId)?.name;
   const cardName = coreId === null ? ownName : ownName?.replace(LEGACY_PREFIX, "");
-  const artId = coreId ?? defId;
   const stinky = isStinkyscapeArt(defId);
   const yard = isTrainingGroundsArt(defId);
   const motif = stinky || yard ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
   // R2249000: a Starship draws its own art, never a real one its fused definition might name.
-  const real = starship === null ? artUrl(artId, radiant, manifest) : null;
+  const real = starship === null ? artUrl(defId, radiant, manifest) : null;
 
   if (real !== null && real.src !== failedSrc) {
     const src = real.src;
@@ -115,7 +114,9 @@ export function CardArt({
         ? stinkyscapeArtUri(defId, cardName, tags, type, radiant)
         : yard
           ? trainingGroundsArtUri(defId, cardName, tags, type, radiant)
-          : proceduralArtUri(artId, theme, compositionFor(type), radiant, motif);
+          : coreId !== null
+            ? legacyArtUri(defId, coreId, cardName, tags, type, radiant)
+            : proceduralArtUri(defId, theme, compositionFor(type), radiant, motif);
   const family =
     starship !== null
       ? "starship"
@@ -123,7 +124,9 @@ export function CardArt({
         ? stinkySubject(defId, cardName, tags, type).family
         : yard
           ? yardSubject(defId, cardName, tags, type).family
-          : undefined;
+          : coreId !== null
+            ? "legacy"
+            : undefined;
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span

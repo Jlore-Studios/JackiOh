@@ -1,8 +1,9 @@
 // R2202000: the Training Grounds set's own procedural art (issue #2202). Every `traininggrounds-`
-// entry but the snapshots draws here instead of `artSpec`: a training yard (a sky, a palisade, a
+// entry but the Legacy cards draws here instead of `artSpec`: a training yard (a sky, a palisade, a
 // sand floor) under one subject that its family fixes and its name's word details, so the set's
 // dummies, ogres, knives, totems, Felinors, runes, posters and its Golem each read as what the card
-// is. The snapshots #41–#60 keep their Core card's picture (`SNAPSHOT_ART`). Presentation only
+// is. The Legacy cards #41–#60 draw their Core card's subject in the yard, each with a touch of its
+// own (`SNAPSHOT_ART`, `legacySvg`, R2724000). Presentation only
 // (CLAUDE.md rule 7): a pure function of the card's id, name, tags and type, with geometry drawn from
 // streams the Radiant face shares, so the two faces differ only in their paint and the gold rays.
 // No other set reaches this file, so no shipped card's picture moves (R503).
@@ -12,14 +13,15 @@ import type { CardType, Tag } from "@jackioh/shared";
 import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
-import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
+import { artSpec, type ArtSpec, type SkyScheme } from "./procedural.ts";
+import { compositionFor, mixHex, RADIANT_PALETTE, themeFor, turnHue } from "./themes.ts";
 
 export const TRAINING_GROUNDS_PREFIX = "traininggrounds-";
 
 /**
- * The Legacy cards, the snapshots of docs/training-grounds-set.md TG2: each draws the picture of the
- * Core card it freezes, so a Legacy card and its Core card look the same (R503); its `Legacy:` name and
- * tag set it apart (R2511000).
+ * The Legacy cards, the snapshots of docs/training-grounds-set.md TG2: each draws its Core card's
+ * subject in the yard, with a touch of its own (`legacySvg`, R2724000), so the picture, the
+ * `Legacy:` name and the tag set it apart (R503, R2511000).
  */
 export const SNAPSHOT_ART: Readonly<Record<string, string>> = {
   "traininggrounds-041": "core-002",
@@ -131,7 +133,7 @@ export function yardSubject(_defId: string, name: string | undefined, tags: read
 
 // The paint
 
-type Paint = {
+export type Paint = {
   sky: readonly [string, string];
   ground: readonly [string, string];
   wood: string;
@@ -351,7 +353,7 @@ function practiceSword(p: Paint, length: number): string {
 
 type Defs = string[];
 
-function backdrop(rng: Rng, p: Paint, family: YardFamily, defs: Defs): string {
+function backdrop(rng: Rng, p: Paint, night: boolean, defs: Defs): string {
   const out: string[] = [];
   defs.push(
     `<linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.sky[0]}"/>` +
@@ -360,7 +362,6 @@ function backdrop(rng: Rng, p: Paint, family: YardFamily, defs: Defs): string {
       `<stop offset="1" stop-color="${p.ground[1]}"/></linearGradient>`,
   );
   out.push(rect(0, 0, BOX, BOX, "url(#sk)"));
-  const night = FAMILY_PAINTS[family].sky === NIGHT_SKY;
   if (night) {
     for (let i = 0; i < STARS; i += 1) {
       out.push(circle(between(rng, 1, 99), between(rng, 1, HORIZON - 14), between(rng, 0.2, 0.6), "#ffffff", { opacity: between(rng, 0.4, 1) }));
@@ -884,6 +885,13 @@ function subjectMarkup(rng: Rng, p: Paint, subject: YardSubject, name: string | 
 
 // The document
 
+const VIGNETTE =
+  `<radialGradient id="v" gradientUnits="userSpaceOnUse" cx="${HALF}" cy="${HALF}" r="${VIGNETTE_RADIUS}">` +
+  `<stop offset="${VIGNETTE_START}" stop-color="#000" stop-opacity="0"/>` +
+  `<stop offset="1" stop-color="#000" stop-opacity="${VIGNETTE_OPACITY}"/></radialGradient>`;
+const SVG_OPEN =
+  `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">`;
+
 const SUBJECT_SCALES: Readonly<Partial<Record<YardFamily, number>>> = { ogre: 1.06, golem: 1.08, poster: 1.05 };
 
 function rays(seed: number): string {
@@ -922,15 +930,11 @@ export function trainingGroundsSvg(defId: string, name: string | undefined, tags
   const tilt = between(ahead, -SUBJECT_TILT_JITTER, SUBJECT_TILT_JITTER);
   const scale = (SUBJECT_SCALES[subject.family] ?? 1) * (1 + between(ahead, -SUBJECT_SCALE_JITTER, SUBJECT_SCALE_JITTER));
   const defs: Defs = [];
-  defs.push(
-    `<radialGradient id="v" gradientUnits="userSpaceOnUse" cx="${HALF}" cy="${HALF}" r="${VIGNETTE_RADIUS}">` +
-      `<stop offset="${VIGNETTE_START}" stop-color="#000" stop-opacity="0"/>` +
-      `<stop offset="1" stop-color="#000" stop-opacity="${VIGNETTE_OPACITY}"/></radialGradient>`,
-  );
-  const yard = backdrop(behind, p, subject.family, defs);
+  defs.push(VIGNETTE);
+  const yard = backdrop(behind, p, FAMILY_PAINTS[subject.family].sky === NIGHT_SKY, defs);
   const drawn = subjectMarkup(ahead, p, subject, name);
   return (
-    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    SVG_OPEN +
     `<defs>${defs.join("")}</defs>` +
     yard +
     (radiant ? rays(seed) : "") +
@@ -938,5 +942,146 @@ export function trainingGroundsSvg(defId: string, name: string | undefined, tags
     group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
+  );
+}
+
+// R2724000: the Legacy cards' own pictures
+
+/** R2724000: the yard's daylight paint, which every Legacy face starts from. */
+export const LEGACY_PAINT: Paint = { sky: DAY_SKY, ground: SAND, wood: WOOD, light: "#f2e6c8", body: "#e0c060", dark: "#5a3a1a", accent: "#d2452f", glow: "#fff2c0", line: OUTLINE };
+/** R2724000: the yard's sky follows the Core card's picture: night or dusk when it is, day otherwise. */
+const LEGACY_SKIES: Readonly<Record<SkyScheme, readonly [string, string]>> = { dawn: DAY_SKY, split: DAY_SKY, dusk: DUSK_SKY, night: NIGHT_SKY };
+/** R2724000: how far a Core subject is re-inked into the yard's wood. */
+const LEGACY_WOOD_MIX = 0.4;
+/** R2724000: the ink width of a redrawn Core subject and its patch. */
+const LEGACY_INK = 0.5;
+/** R2724000: the share of the Core glow a Legacy face keeps. */
+const LEGACY_GLOW_SHARE = 0.5;
+/** R2724000: the stitched patch behind the emblem, as a share of its size. */
+const PATCH_RADIUS = 0.62;
+/** R2724000: the patch's stitch ring, as a share of the patch. */
+const PATCH_STITCH = 0.82;
+/** R2724000: the patch stitching's dash. */
+const PATCH_STITCH_DASH = "1.4 1.1";
+/** R2724000: a Legacy motif or accent glyph's stroke. */
+const GLYPH_STROKE = 1.1;
+/** R2724000: a Legacy accent glyph's quietness. */
+const ACCENT_OPACITY = 0.8;
+/** R2724000: a yard touch's distance from the nearer edge. */
+const TOUCH_INSET = 17;
+/** R2724000: a yard touch's height on the sand. */
+const TOUCH_GROUND = 86;
+/** R2724000: a carrot's orange. */
+const CARROT = "#e8742a";
+/** R2724000: a carrot top's green. */
+const LEAF = "#5ab84a";
+/** R2724000: a chalk tally's board. */
+const CHALKBOARD = "#2f4a3a";
+/** R2724000: a lifting stone's grey. */
+const STONE = "#9a9488";
+/** R2724000: a barrel's water. */
+const WATER = "#4a9ad8";
+/** R2724000: a fig's purple. */
+const FIG = "#6a2a5a";
+
+/** R2724000: the practice-yard touch a Legacy card's face carries, one per card. */
+export type LegacyTouch = "rope-cordon" | "crate-stack" | "sword-in-sand" | "paw-prints" | "weapon-rack" | "arrow-target" | "range-flags" | "straw-heap" | "hammock" | "lantern" | "scratching-post" | "carrot-bucket" | "chalk-tally" | "lifting-stone" | "tattered-banner" | "shovel" | "water-barrel" | "pell-post" | "fig-basket" | "scarecrow";
+
+/** R2724000: each Legacy card's own touch, #41–#60 in the union's order. */
+export const LEGACY_TOUCHES: Readonly<Record<string, LegacyTouch>> = {
+  "traininggrounds-041": "rope-cordon",
+  "traininggrounds-042": "crate-stack",
+  "traininggrounds-043": "sword-in-sand",
+  "traininggrounds-044": "paw-prints",
+  "traininggrounds-045": "weapon-rack",
+  "traininggrounds-046": "arrow-target",
+  "traininggrounds-047": "range-flags",
+  "traininggrounds-048": "straw-heap",
+  "traininggrounds-049": "hammock",
+  "traininggrounds-050": "lantern",
+  "traininggrounds-051": "scratching-post",
+  "traininggrounds-052": "carrot-bucket",
+  "traininggrounds-053": "chalk-tally",
+  "traininggrounds-054": "lifting-stone",
+  "traininggrounds-055": "tattered-banner",
+  "traininggrounds-056": "shovel",
+  "traininggrounds-057": "water-barrel",
+  "traininggrounds-058": "pell-post",
+  "traininggrounds-059": "fig-basket",
+  "traininggrounds-060": "scarecrow",
+};
+
+/** R2724000: one paw of the paw-prints touch. */
+function pawPrint(p: Paint, x: number, y: number): string {
+  const ink = { opacity: 0.75 };
+  return ellipse(x, y, 1.6, 1.3, p.dark, ink) + circle(x - 1.6, y - 1.8, 0.6, p.dark, ink) + circle(x, y - 2.4, 0.6, p.dark, ink) + circle(x + 1.6, y - 1.8, 0.6, p.dark, ink);
+}
+
+/** R2724000: the twenty yard touches, each drawn about (0, 0) on the sand. */
+export const TOUCH_DRAWINGS: Readonly<Record<LegacyTouch, (p: Paint) => string>> = {
+  "rope-cordon": (p) => rect(-12, -12, 3, 12, p.wood, inked(p)) + rect(9, -12, 3, 12, p.wood, inked(p)) + path("M-10.5 -10Q0 -3 10.5 -10", "none", { stroke: p.dark, "stroke-width": 1.4, "stroke-linecap": "round" }),
+  "crate-stack": (p) => rect(-12, -9, 11, 9, p.wood, inked(p)) + rect(1, -9, 11, 9, p.wood, inked(p)) + rect(-5.5, -18, 11, 9, p.wood, inked(p)) + path("M-12 -9L-1 0M1 -9L12 0M-5.5 -18L5.5 -9", "none", { stroke: p.dark, "stroke-width": 0.7 }),
+  "sword-in-sand": (p) => ellipse(0, 0, 6, 1.8, p.ground[1], { opacity: 0.7 }) + group(at(0, -14, 180), practiceSword(p, 15)),
+  "paw-prints": (p) => ([[-10, -1], [-5, -6], [0, -1], [5, -6], [10, -1]] as const).map(([x, y]) => pawPrint(p, x, y)).join(""),
+  "weapon-rack": (p) => [-6, 0, 6].map((x) => group(at(x, -1, 4, 0.6), practiceSword(p, 34))).join("") + rect(-12, -9, 24, 2.4, p.wood, inked(p)) + rect(-11, -9, 2.4, 9, p.wood, inked(p)) + rect(8.6, -9, 2.4, 9, p.wood, inked(p)),
+  "arrow-target": (p) => line(-5, 0, -1, -8, p.wood, 1.4) + line(5, 0, -1, -8, p.wood, 1.4) + circle(0, -12, 8, p.body, inked(p)) + circle(0, -12, 5.4, p.light) + circle(0, -12, 2.8, p.accent) + line(0, -12, 9, -17, p.wood, 1) + poly([[9, -17], [12, -20.5], [12.8, -17], [11, -15.6]], p.accent),
+  "range-flags": (p) => ([[-9, 14], [0, 11], [9, 8]] as const).map(([x, h]) => line(x, 0, x, -h, p.dark, 0.9) + poly([[x, -h], [x + 5, -h + 1.6], [x, -h + 3.2]], p.accent, inked(p))).join(""),
+  "straw-heap": (p) => path("M-12 0Q-10 -9 0 -10Q10 -9 12 0Z", p.body, inked(p)) + path("M-8 -3L-4 -7M-2 -2L1 -8M4 -3L8 -7M-11 -1L-14 -4M11 -1L14 -5", "none", { stroke: p.dark, "stroke-width": 0.6, "stroke-linecap": "round" }),
+  hammock: (p) => rect(-13, -14, 2.4, 14, p.wood, inked(p)) + rect(10.6, -14, 2.4, 14, p.wood, inked(p)) + path("M-11 -12Q0 -1 11 -12Q0 -5 -11 -12Z", p.light, inked(p)),
+  lantern: (p) => rect(-1.2, -20, 2.4, 20, p.wood, inked(p)) + path("M0 -20Q7 -21 7 -16", "none", { stroke: p.wood, "stroke-width": 1.6 }) + circle(7, -10, 6, p.glow, { opacity: 0.45 }) + rect(4.6, -13, 4.8, 6, p.glow, inked(p)) + rect(4, -14.4, 6, 1.6, p.dark, inked(p)) + line(7, -16, 7, -14.4, p.dark, 0.6),
+  "scratching-post": (p) => rect(-8, -2.4, 16, 2.4, p.wood, inked(p)) + rect(-3, -20, 6, 17.6, p.body, inked(p)) + path("M-3 -17L3 -15M-3 -13L3 -11M-3 -9L3 -7M-3 -5L3 -3", "none", { stroke: p.dark, "stroke-width": 0.7 }) + rect(-5, -22, 10, 2.4, p.wood, inked(p)),
+  "carrot-bucket": (p) => [-3, 0, 3].map((x) => poly([[x - 1.4, -9], [x, -16], [x + 1.4, -9]], CARROT, inked(p)) + path(`M${x} -16l-1.4 -2.6M${x} -16l1.4 -2.6`, "none", { stroke: LEAF, "stroke-width": 0.9 })).join("") + path("M-7 -9L7 -9L5.6 0L-5.6 0Z", p.wood, inked(p)) + line(-6.6, -5, 6.6, -5, p.dark, 0.7),
+  "chalk-tally": (p) => line(-8, 0, -5, -20, p.wood, 1.4) + line(8, 0, -5, -20, p.wood, 1.4) + rect(-9, -19, 18, 12, CHALKBOARD, inked(p)) + path("M-6 -16.5V-10.5M-4 -16.5V-10.5M-2 -16.5V-10.5M0 -16.5V-10.5M-7 -11.5L1 -15.5M3.5 -16L6.5 -11M6.5 -16L3.5 -11", "none", { stroke: p.light, "stroke-width": 0.7, "stroke-linecap": "round" }),
+  "lifting-stone": (p) => ellipse(0, -6, 9, 6.4, STONE, inked(p)) + path("M-7 -9Q0 -20 7 -9", "none", { stroke: p.dark, "stroke-width": 1.2 }) + path("M-3 -5L1 -7M2 -3L5 -4", "none", { stroke: p.dark, "stroke-width": 0.6, opacity: 0.6 }),
+  "tattered-banner": (p) => line(-6, 0, -6, -24, p.dark, 1) + path("M-6 -23L8 -23L6 -19L8 -15L4 -16L2 -12L-1 -15L-6 -13Z", p.light, inked(p)) + circle(-6, -24, 1, p.wood),
+  shovel: (p) => path("M-12 0Q-6 -6 0 -5Q6 -6 12 0Z", p.ground[1], inked(p)) + group(at(2, -4, 14), rect(-0.9, -18, 1.8, 14, p.wood, inked(p)) + rect(-3, -20, 6, 2, p.wood, inked(p)) + path("M-3.4 -4L3.4 -4L2.6 3Q0 5 -2.6 3Z", p.dark, inked(p))),
+  "water-barrel": (p) => path("M-7 0Q-9 -8 -7 -16L7 -16Q9 -8 7 0Z", p.wood, inked(p)) + path("M-7.8 -4H7.8M-7.8 -12H7.8", "none", { stroke: p.dark, "stroke-width": 1.2 }) + ellipse(0, -16, 7, 1.6, WATER, inked(p)),
+  "pell-post": (p) => rect(-3.4, -22, 6.8, 22, p.wood, inked(p)) + rect(-3.4, -16, 6.8, 1.6, p.accent) + path("M-3.4 -18L-0.6 -16.6M3.4 -13L0.4 -11.6M-3.4 -8L-0.8 -6.8", "none", { stroke: p.dark, "stroke-width": 0.8 }),
+  "fig-basket": (p) => [-4, 0, 4].map((x) => circle(x, -8, 2.8, FIG, inked(p))).join("") + path("M-9 -8L9 -8L7 0L-7 0Z", p.body, inked(p)) + path("M-8 -5H8M-7.4 -2.4H7.4", "none", { stroke: p.dark, "stroke-width": 0.6 }) + path("M-8 -8Q0 -20 8 -8", "none", { stroke: p.body, "stroke-width": 1.4 }),
+  scarecrow: (p) => rect(-1, -24, 2, 24, p.wood, inked(p)) + rect(-10, -18, 20, 2, p.wood, inked(p)) + path("M-5 -17L5 -17L4 -8L-4 -8Z", p.light, inked(p)) + circle(0, -21, 3.4, p.body, inked(p)) + path("M-5 -23.4L5 -23.4L0 -27Z", p.wood, inked(p)) + path("M-10 -16.5l-2 2M10 -16.5l2 2M-4 -8l-1 3M4 -8l1 3", "none", { stroke: p.body, "stroke-width": 0.8 }),
+};
+
+/** R2724000: one of the Core picture's glyphs on the Legacy face, as `svg.ts` draws its own. */
+function placedGlyph(placed: ArtSpec["emblem"], opacity: number): string {
+  const drawn = EMBLEMS[placed.glyph];
+  const center = EMBLEM_BOX / 2;
+  return group(
+    `translate(${fmt(placed.x)} ${fmt(placed.y)}) rotate(${fmt(placed.rotate)}) scale(${fmt(placed.size / EMBLEM_BOX)}) translate(-${center} -${center})`,
+    path(drawn.d, placed.fill, { stroke: placed.stroke, "stroke-width": GLYPH_STROKE, "stroke-linejoin": "round", "fill-rule": drawn.rule }),
+    { opacity },
+  );
+}
+
+/**
+ * R2724000: a Legacy face's picture. `name` is the Core card's name; geometry comes from the two
+ * ids, so the Radiant face draws the same shapes, gilded, over gold rays.
+ */
+export function legacySvg(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
+  const theme = themeFor(tags, type);
+  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme));
+  const seed = hashId(defId);
+  const based: Paint = { ...LEGACY_PAINT, sky: LEGACY_SKIES[core.skyScheme] };
+  const p = radiant ? gild(based) : based;
+  const defs: Defs = [
+    VIGNETTE,
+    `<radialGradient id="lg"><stop offset="0" stop-color="${core.glow.color}" stop-opacity="${fmt(core.glow.opacity * LEGACY_GLOW_SHARE)}"/>` +
+      `<stop offset="1" stop-color="${core.glow.color}" stop-opacity="0"/></radialGradient>`,
+  ];
+  const yard = backdrop(seededRandom((seed ^ BACKDROP_SALT) >>> 0), p, core.skyScheme === "night", defs);
+  const [from, to] = core.subjectRidges;
+  const subject = core.ridges.slice(from, to).map((ridge) => path(ridge.d, mixHex(ridge.fill, p.wood, LEGACY_WOOD_MIX), { opacity: ridge.opacity, "fill-rule": "evenodd", stroke: p.line, "stroke-width": LEGACY_INK, "stroke-linejoin": "round" })).join("");
+  const { emblem } = core;
+  const patch =
+    circle(emblem.x, emblem.y, emblem.size * PATCH_RADIUS, p.light, inked(p)) +
+    circle(emblem.x, emblem.y, emblem.size * PATCH_RADIUS * PATCH_STITCH, "none", { stroke: p.dark, "stroke-width": LEGACY_INK, "stroke-dasharray": PATCH_STITCH_DASH });
+  const touch = LEGACY_TOUCHES[defId];
+  const touchX = core.glow.cx < HALF ? BOX - TOUCH_INSET : TOUCH_INSET;
+  return (
+    SVG_OPEN + `<defs>${defs.join("")}</defs>` + yard + (radiant ? rays(seed) : "") +
+    circle(core.glow.cx, core.glow.cy, core.glow.r, "url(#lg)") + subject +
+    core.motifGlyphs.map((placed) => placedGlyph(placed, placed.opacity)).join("") +
+    patch + placedGlyph(emblem, 1) + (core.accent === null ? "" : placedGlyph(core.accent, ACCENT_OPACITY)) +
+    (touch === undefined ? "" : group(at(touchX, TOUCH_GROUND), TOUCH_DRAWINGS[touch](p))) +
+    rect(0, 0, BOX, BOX, "url(#v)") + "</svg>"
   );
 }

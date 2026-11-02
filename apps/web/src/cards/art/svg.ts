@@ -12,7 +12,7 @@ import { fmt } from "./hash.ts";
 import type { MotifId } from "./motifs.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
-import { trainingGroundsSvg } from "./traininggrounds.ts";
+import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
 const DATA_PREFIX = "data:image/svg+xml,";
@@ -197,6 +197,17 @@ export function trainingGroundsArtUri(defId: string, name: string | undefined, t
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
   const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. */
+export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
+  const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(legacySvg(defId, coreId, name, tags, type, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
