@@ -14763,19 +14763,30 @@
     "2807": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T04:12:25Z",
       "issue": 2738,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The R384 test 'the inline mode picker opens, headed by the card' expects the modal's text to contain 'The Power to Punish'; this change removes the only place that text was drawn (the title), so the web unit suite will go red and the builder never ran this file.",
+          "evidence": "The test activates fs2 (classic-020) with two modes, which `pickerForNeed`'s `mode` case (Prompt.tsx:687-712) makes a `discover` with `sourceDefId` classic-020. `isCardLayout` is true and the picker is neither folded nor read-only, so `bare` is true and Prompt.tsx:1504 drops `PickerTitle`, which was the only place `prompt-title-source` drew the name. The options are choice cards (ChoiceCard.tsx: label, detail, and `CardArt` that is aria-hidden with alt=\"\"), and modeText.ts's classic-020 details don't name the card, so `toHaveTextContent(\"The Power to Punish\")` cannot pass. The builder's report lists only the 12 plan files plus Game, v020-real, ReplayPlayer and CraftEditor; ActivateControl.test.tsx is not among them, and the full `pnpm --dir apps/web test` was not run.",
+          "severity": "blocking",
+          "where": "apps/web/src/game/ActivateControl.test.tsx:269"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-2",
-      "queued_at": "2026-11-02T05:27:07Z",
+      "queued_at": "2026-11-02T05:45:16Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "41394839748",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-02T05:34:42Z",
       "stop_requested": false,
       "taken_asks": [],
