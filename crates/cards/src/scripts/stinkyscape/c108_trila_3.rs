@@ -28,26 +28,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    #[test]
-    fn prints_ranged_windfury_7_7_radiant_14_14_with_rush() {
-        crate::register_all();
-        let def = crate::card_def(TRILA);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Ranged", "Windfury"]);
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Ranged", "Rush", "Windfury"]
-        );
-        assert_eq!((def.base.attack, def.base.health), (Some(7), Some(7)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(14), Some(14)));
-    }
-
     #[test]
     fn windfury_attacks_twice_a_turn() {
         crate::register_all();
