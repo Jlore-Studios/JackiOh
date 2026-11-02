@@ -13324,6 +13324,7 @@
         "by": "`claude` (strong) twice",
         "sha": "9b7f56d81d6906ff9a56474d890710983f4d906e"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-02T15:32:40Z",
