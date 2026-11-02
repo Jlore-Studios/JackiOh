@@ -50,8 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58: token each start of turn; radiant +3/+3 aura only on
-// Rush Tokens). Proved here: R62 and §6.2 (start of turn fires on the controller's turn only, after the
+// #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58). Proved here: R62 and §6.2 (start of turn fires on the controller's turn only, after the
 // mana refresh, before the draw), R64 (leftmost empty unlocked zone; a full row summons nothing), §10.4
 // layer 5 (the aura is a computed layer, not a buff), §7, §8 Conventions ("same": the face summons AND pumps).
 #[cfg(test)]

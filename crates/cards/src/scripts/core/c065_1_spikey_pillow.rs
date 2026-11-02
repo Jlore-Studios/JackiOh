@@ -52,9 +52,6 @@ pub fn script_v0_5_9f() -> CardScripts {
 }
 
 // #65.1 Spikey Pillow — SPEC §8.3, §4.1, §10.4, BUILD M4-T4 row 65.1.
-//
-// Must-pass: "Cannot switch to DEF; your units −2 attack floored at 0; radiant excludes other
-// Pillows."
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

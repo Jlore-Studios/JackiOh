@@ -69,9 +69,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275).
-// BUILD M4-T4 row 54: "2 random units of cost 3, no tokens, not #54, cost override 1; radiant
-// Radiant units at 0".
+// #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275). BUILD M4-T4 row 54.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -47,9 +47,6 @@ pub fn script() -> CardScripts {
 }
 
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
-//
-// Must-pass: "+3/+3 and one pool keyword the unit lacks (R21); radiant +6/+6 and two distinct
-// keywords; not playable with no Unit to target, though a cast with none fizzles (R703)."
 #[cfg(test)]
 mod tests {
     use jackioh_engine::reduce::legal_actions;

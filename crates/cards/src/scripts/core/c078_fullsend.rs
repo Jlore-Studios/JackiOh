@@ -73,8 +73,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #78 /fullsend — SPEC §8.3, R62, R65, R364, §2.3, §10.5 step 5. BUILD M4-T4: "Refresh 3 mana (R364); −1 cost
-// this turn; hand exiled at end of turn; radiant also draws 1 for each card played this turn".
+// #78 /fullsend — SPEC §8.3, R62, R65, R364, §2.3, §10.5 step 5. BUILD M4-T4.
 // The discount is read off the hand's own cost (`viewFor`, §10.8) and confirmed by paying; R65's X-cost
 // clause by playing an X card. R62's place for the exile is proved by the event order. R662's yellow glow
 // (Radiant only) is tested at the end of this file.

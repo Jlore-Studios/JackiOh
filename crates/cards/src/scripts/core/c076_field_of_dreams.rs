@@ -49,10 +49,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #76 Field of Dreams — SPEC §8.3, R31, R4, R11, R50.
-//
-// BUILD M4-T4: "Hand of N → N Reminisce, old cards in GY (R31); exiled; radiant gives radiant
-// Reminisce".
+// #76 Field of Dreams — SPEC §8.3, R31, R4, R11, R50; BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

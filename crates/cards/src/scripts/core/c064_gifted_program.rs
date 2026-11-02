@@ -30,10 +30,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #64 Gifted Program — SPEC §8.3, §10.5 step 3, BUILD M4-T4 row 64. Must-pass: "First ≤1-cost card each turn
-// is radiant before it resolves (its Cry uses radiant text); second is not; radiant threshold 2 (R56)." The
-// card is its `giftedProgram` flag, read as §10.5 step 3 (R213, R214); `backrow: [GIFTED]` arms it. R662's
-// yellow glow is tested at the end of this file.
+// #64 Gifted Program — SPEC §8.3, §10.5 step 3, BUILD M4-T4 row 64. The card is its `giftedProgram` flag,
+// read as §10.5 step 3 (R213, R214); `backrow: [GIFTED]` arms it. R662's yellow glow is tested at the end
+// of this file.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -135,9 +135,6 @@ pub fn script() -> CardScripts {
 }
 
 // #65 Masochism Mask — SPEC §8.3, §10.6, BUILD M4-T4 row 65.
-//
-// Must-pass: "In opening hand (Quickdraw); start-of-turn mode prompt; 'lose 3' ignores armor;
-// radiant two picks including 'nothing'."
 #[cfg(test)]
 mod tests {
     use super::script;

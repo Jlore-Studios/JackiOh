@@ -94,10 +94,10 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// SPEC §8.6 row 52, BUILD M9 Classic row C 52 (R33, R44, R767000). Going Long (Armor 2), C #75 Argusland
-// (halved) and Anti-oneshot Armor (a cap of 5) stand on either hero's side; Hinder, drawn by the
-// follow-up, discards at random with no prompt (R682). "A draw if both heroes are at 0" needs a second
-// hit after the trap is spent: Prem Panther's "draw 2" into an empty deck.
+// SPEC §8.6 row 52, BUILD M9 Classic row C 52 (R33, R44, R767000); set health (C #29) never opens it.
+// Going Long (Armor 2), C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either
+// hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if both
+// heroes are at 0" needs a second hit after the trap is spent: Prem Panther's "draw 2" into an empty deck.
 #[cfg(test)]
 mod tests {
     use crate::merged;

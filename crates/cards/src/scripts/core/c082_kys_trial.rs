@@ -88,8 +88,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247). BUILD M4-T4's row: "Three distinct numbers
-// 1–100 never 82 or a token index (R54); chosen card is radiant; radiant costs 0". The options are
+// #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247). BUILD M4-T4's row. The options are
 // the numbers (R247), so each case reads them off `state.pending.options` and looks the card up in
 // the catalog, as a player does in the collection.
 #[cfg(test)]

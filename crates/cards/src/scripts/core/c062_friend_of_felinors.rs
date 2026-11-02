@@ -36,9 +36,6 @@ pub fn script() -> CardScripts {
 }
 
 // #62 Friend of Felinors — SPEC §8.3, BUILD M4-T4 row 62.
-//
-// Must-pass: "Fills empty zones only; radiant then +2/+2 to every unit you control including the
-// new tokens."
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

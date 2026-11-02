@@ -63,9 +63,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #36 Burn — SPEC §8.6 row 36, BUILD M9 Classic row C 36 (§2.3, R386). Its name is a rules word, and
-// "burned" elsewhere is no reference to it (R381). The `conditionMet` proofs (R195) are in
-// `tests/cross/condition_active.rs`.
+// C #36 Burn — SPEC §8.6 row 36, BUILD M9 Classic row C 36 (§2.3, R386). `conditionMet` answers in hand
+// with the mana left after paying now (R195), so a surcharge (C #77) moves it; its proofs are in
+// `tests/cross/condition_active.rs`. Its name is a rules word, and "burned" elsewhere is no reference to
+// it (R381).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
