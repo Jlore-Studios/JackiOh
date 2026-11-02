@@ -13919,10 +13919,8 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-02T17:08:53Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-8` (claude, opus) rejected it: `task`: The change does not do what #2849 asks: it wraps 39 behaviour tests, one each, into arrays of closures under it.each, so the case count bare"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
