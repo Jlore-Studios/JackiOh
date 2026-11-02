@@ -44,6 +44,8 @@ export const statsTestid = {
   drillDownClose: "stats-drill-down-close",
   drillDownRadiantToggle: "stats-drill-down-radiant-toggle",
   drillDownRadiantFace: "stats-drill-down-radiant-face",
+  /** R2756000: the drill-down's art choice (No full art and each full art's tier), shown on a full-art card alone. */
+  drillDownArt: "stats-drill-down-art",
   drillDownAlmanac: "stats-drill-down-almanac",
   drillDownTokens: "stats-drill-down-tokens",
 } as const;
