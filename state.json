@@ -14300,6 +14300,9 @@
     "2774": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "4cc703767f0706f22fc7568cd879b0486981ef96": 1
+      },
       "cleared": {
         "at": "2026-11-02T04:09:49Z",
         "by": "`claude` (strong)",
