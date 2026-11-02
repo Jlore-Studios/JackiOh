@@ -2011,8 +2011,8 @@
   background: radial-gradient(
     circle at var(--fx-x) var(--fx-y),
     color-mix(in srgb, var(--fx-tint-core) 22%, transparent) 0,
-    color-mix(in srgb, var(--fx-tint-glow) 14%, rgb(0 0 0 / 0.55)) 30%,
-    rgb(0 0 0 / 0.92) 75%
+    color-mix(in srgb, var(--fx-tint-glow) 14%, color-mix(in srgb, var(--pal-black) 55%, transparent)) 30%,
+    color-mix(in srgb, var(--pal-black) 92%, transparent) 75%
   );
   animation: fx-takeover-dark var(--fx-land) ease-in both;
 }
@@ -2036,7 +2036,7 @@
   border-radius: 6%;
   background: linear-gradient(
     160deg,
-    color-mix(in srgb, var(--fx-tint-rim) 85%, white) 0%,
+    color-mix(in srgb, var(--fx-tint-rim) 85%, var(--pal-white)) 0%,
     color-mix(in srgb, var(--fx-tint-core) 60%, transparent) 45%,
     color-mix(in srgb, var(--fx-tint-glow) 80%, transparent) 100%
   );
@@ -2119,7 +2119,7 @@
     color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 17deg 20deg,
     transparent 23deg 30deg
   );
-  mask-image: radial-gradient(circle, black 0, black 18%, transparent 55%);
+  mask-image: radial-gradient(circle, var(--pal-black) 0, var(--pal-black) 18%, transparent 55%);
   animation: fx-takeover-rays calc(var(--fx-ms) - var(--fx-land)) cubic-bezier(0.2, 0.7, 0.3, 1) var(--fx-land) both;
 }
 
@@ -2150,7 +2150,7 @@
   translate: -50% -50%;
   border-radius: 50%;
   box-shadow:
-    0 0 0 6px color-mix(in srgb, var(--fx-tint-rim) 80%, white),
+    0 0 0 6px color-mix(in srgb, var(--fx-tint-rim) 80%, var(--pal-white)),
     0 0 30px 14px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
     inset 0 0 30px 10px color-mix(in srgb, var(--fx-tint-glow) 50%, transparent);
   animation: fx-takeover-wave calc(var(--fx-ms) - var(--fx-land)) ease-out var(--fx-land) both;

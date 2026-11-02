@@ -1622,7 +1622,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .game:not([data-reduced-motion="true"])[data-takeover="mythic"] .board .card:not([data-animating]) {
-  animation: takeover-recoil 420ms var(--ease-out) both;
+  animation: takeover-recoil var(--motion-slow) var(--ease-out) both;
   animation-delay: var(--takeover-land-ms, 0ms);
 }
 
