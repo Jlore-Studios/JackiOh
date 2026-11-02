@@ -13087,6 +13087,13 @@
     "2829": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-02T16:00:40Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy lines 2 and 5 fail outright: the change spans jackioh-engine and jackioh-tools and edits crates/engine/src"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
