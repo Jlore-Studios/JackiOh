@@ -121,10 +121,13 @@ lethal the solver proves is played trimmed to the actions it needs
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that
 suffix). A free play (a (0) Spell back from the graveyard under In Too Deep's reward L, R454, or The Coin)
 could otherwise open the same lethal at every decision. Each line tries its moves in move order
-(`candidates.rs`): attacks on the enemy hero, kills the attacker survives, each attacker's best kill (its
-target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own read
-(`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
-of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
+(`candidates.rs`): attacks on the enemy hero, kills the attacker survives and each attacker's best kill
+(its target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own
+read (`reply.rs`'s `trade_value`, #1779), these three ranked together by that model's values, best
+first, ties in that order (#2825): a kill by `trade_value`, a hit on the hero by `face_value`
+(`reply_face_value` of what it deals through the hero's Armor), and every hit on the hero first while
+the seat's ready attacks reach the face together (`ready_gap`); then the plays round-robin, answers, the
+Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or

@@ -14,7 +14,8 @@ use serde_json::Value;
 
 use crate::config::{AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
 use crate::evaluate::{Prices, can_swing, deft_in_defense};
-use crate::reply::trade_value;
+use crate::lethal::ready_gap;
+use crate::reply::{face_value, trade_value};
 
 /// Canonical JSON of an action body (keys sorted, SURFACE §5.2), for equality across determinizations.
 pub fn action_key(action: &ActionBody) -> String {
@@ -334,11 +335,39 @@ fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: 
 
 /// #1779: what an attack on a unit is worth when it kills its target, or with Cleave a neighbour
 /// (#1821), at an even trade or better by the opponent model's static read (`trade_value`: the
-/// target's worth, less the attacker's when it dies too), else `None`. Each attacker's best one goes
-/// just after the winning trades (`in_move_order`).
+/// target's worth, less the attacker's when it dies too), else `None`. Each attacker's best one ranks
+/// with the hero attacks and the winning trades (`in_move_order`, #2825).
 fn even_trade(state: &GameState, attacker_id: &str, target_id: &str, prices: &Prices) -> Option<f64> {
     let trade = trade_value(state, find_instance(state, attacker_id)?, target_id, prices);
     ((trade.kills || trade.splash_kills) && trade.value >= 0.0).then_some(trade.value)
+}
+
+/// #2825: where an attack on the enemy hero or a winning trade stands among the move order's first
+/// attacks, by the opponent model's own values (`reply.rs`'s `ranked_attacks`): a hit on the hero by
+/// `face_value` (`AI_EVAL.win` for each when `face_is_lethal`), a hit on a unit by `trade_value`.
+fn front_value(
+    state: &GameState,
+    seat: PlayerId,
+    action: &ActionBody,
+    face_is_lethal: bool,
+    prices: &Prices,
+) -> f64 {
+    let ActionBody::Attack {
+        attacker_id,
+        target_id,
+    } = action
+    else {
+        return f64::NEG_INFINITY;
+    };
+    let Some(attacker) = find_instance(state, attacker_id) else {
+        return f64::NEG_INFINITY;
+    };
+    let enemy = seat.opponent();
+    if *target_id == format!("hero-{}", enemy.as_str()) {
+        face_value(state, attacker, enemy, face_is_lethal)
+    } else {
+        trade_value(state, attacker, target_id, prices).value
+    }
 }
 
 /// Tier 2's actions: a play, Heroic Power's power (R43) and any card's Activate ability (B3.2, R384).
@@ -804,9 +833,10 @@ pub fn root_candidate_actions(state: &GameState, seat: PlayerId, prices: &Prices
     in_move_order(state, seat, root_candidate_set(state, seat), prices)
 }
 
-/// The candidates `actions` in move order: hero attacks, winning trades, even trades (each attacker's
-/// best, #1779), plays round-robin, answers, Trades of Tradable hand cards (R1838000), buys and sales at
-/// the Marketplace (R1853004), other attacks, position switches, endTurn.
+/// The candidates `actions` in move order: hero attacks, winning trades and even trades (each attacker's
+/// best, #1779) ranked together by the opponent model's values, best first (#2825); then plays
+/// round-robin, answers, Trades of Tradable hand cards (R1838000), buys and sales at the Marketplace
+/// (R1853004), other attacks, position switches, endTurn.
 fn in_move_order(
     state: &GameState,
     seat: PlayerId,
@@ -868,18 +898,34 @@ fn in_move_order(
     let (even_trades, other_attacks): (Vec<_>, Vec<_>) = late_attacks
         .into_iter()
         .enumerate()
-        .map(|(at, (action, _))| (at, action))
         .partition(|(at, _)| picked.contains(at));
 
+    // #2825: the hero attacks, winning trades and even trades ranked together by the opponent model's
+    // values, best first, ties in that order; while the ready attacks reach the face together
+    // (`ready_gap`), every hero attack ranks first, so the lethal solver's walk still finds it first.
+    let face_is_lethal = !hero_attacks.is_empty() && ready_gap(state, seat) <= 0.0;
+    let mut front: Vec<(ActionBody, f64)> = hero_attacks
+        .into_iter()
+        .chain(good_trades)
+        .map(|action| {
+            let value = front_value(state, seat, &action, face_is_lethal, prices);
+            (action, value)
+        })
+        .collect();
+    front.extend(
+        even_trades
+            .into_iter()
+            .map(|(_, (action, even))| (action, even.unwrap_or(f64::NEG_INFINITY))),
+    );
+    front.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
     let mut out: Vec<ActionBody> = Vec::new();
-    out.extend(hero_attacks);
-    out.extend(good_trades);
-    out.extend(even_trades.into_iter().map(|(_, action)| action));
+    out.extend(front.into_iter().map(|(action, _)| action));
     out.extend(round_robin(state, seat, &plays));
     out.extend(answers);
     out.extend(hand_trades);
     out.extend(market_deals);
-    out.extend(other_attacks.into_iter().map(|(_, action)| action));
+    out.extend(other_attacks.into_iter().map(|(_, (action, _))| action));
     out.extend(switches);
     out.extend(ends);
     out
