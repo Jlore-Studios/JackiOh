@@ -14,7 +14,7 @@ import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { firstReveal, isFaceDownSet } from "./entrance.ts";
-import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
+import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, wipeAt, type Pile, type PlayTracker, type Sweep, type Wipe, type ZoneImpact } from "./runs.ts";
 import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
 import { prefersReducedMotion } from "../settings/motion.ts";
@@ -934,6 +934,8 @@ export const CAST_BUDGET_MS = 2200;
 export const ZONE_IMPACT_MS = 700;
 /** A run of hits or heals that swept a whole side, played as one roll of fog. */
 export const SWEEP_MS = 600;
+/** R2800000: a set-piece card's run of removals, played as one entry its set piece draws (after its hold). */
+export const WIPE_MS = 600;
 
 /**
  * One unit of motion: usually one event, two for the collapsed `cardPlayed` + `summoned` pair, which BUILD
@@ -959,6 +961,8 @@ export type AnimationEntry = {
   cast?: { by: string; ordinal: number };
   zone?: ZoneImpact;
   sweep?: Sweep;
+  /** R2800000: a set-piece card's hook removed these cards in one run, which its set piece claims. */
+  wipe?: Wipe;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
   /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
@@ -1079,6 +1083,11 @@ export type EntryEntrance = {
   player: PlayerId;
   reveal: boolean;
   anchor: string | null;
+  /**
+   * R2800000: this Mythic's own wipe in the same action is the action's set piece, so its takeover
+   * yields to it: the entrance claims no hold and draws no takeover.
+   */
+  yielded?: true;
 };
 
 /** R2722001: the public catalog's type and rarity (a token's printed one) of a readable card, or null. */
@@ -1109,7 +1118,8 @@ export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed:
  * R2785000: gives the first entries of one action (one call) that `claimOf` claims, at most
  * `SET_PIECES_PER_ACTION`, their `setPiece`, adding its hold to the entry's `durationMs` ahead of its
  * motion; the queue pins it against the burst budget. A later claim in the same action, an entry that
- * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing.
+ * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing. R2800000: a
+ * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing.
  */
 export function setPieceEntries(
   entries: readonly AnimationEntry[],
@@ -1117,7 +1127,11 @@ export function setPieceEntries(
   opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
 ): AnimationEntry[] {
   let held = 0;
+  // R2800000: a Mythic whose own wipe in this action is a set piece yields its takeover to it.
+  const own = new Set(entries.flatMap((entry) => (entry.wipe !== undefined && claimOf(entry) !== null ? [entry.wipe.sourceId] : [])));
   return entries.map((entry) => {
+    const entrance = entry.entrance;
+    if (entrance?.tier === "mythic" && own.has(entrance.instanceId)) return { ...entry, entrance: { ...entrance, yielded: true } };
     if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
     const claim = claimOf(entry);
     const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
@@ -1192,7 +1206,7 @@ export function pileTestid(pile: Pile): string {
  */
 function pinned(entry: AnimationEntry): boolean {
   // R2785000 (from R2722001's takeover): a set piece's hold is the action's one capped beat, never squeezed.
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.type === "rolled" || entry.setPiece !== undefined;
+  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.wipe !== undefined || entry.type === "rolled" || entry.setPiece !== undefined;
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
@@ -1236,13 +1250,15 @@ function castFrame(event: GameEvent, view: PlayerView): string | null {
 /**
  * Turns an event stream into entries, collapsing each `cardPlayed` + `summoned` pair; `reducedMotion` zeroes
  * every duration. `plays` remembers the plays still resolving from one batch to the next; a caller without
- * one gets a fresh tracker, which reads casts inside this batch alone.
+ * one gets a fresh tracker, which reads casts inside this batch alone. `wipeOf` names the cards with a set
+ * piece, whose hook's run of removals plays as one wipe (R2800000); by default none does.
  */
 export function planEntries(
   events: readonly GameEvent[],
   view: PlayerView,
   reducedMotion: boolean,
   plays: PlayTracker = createPlayTracker(),
+  wipeOf: (defId: string) => boolean = () => false,
 ): AnimationEntry[] {
   const out: AnimationEntry[] = [];
   const timed = (ms: number): number => (reducedMotion ? 0 : ms);
@@ -1271,6 +1287,23 @@ export function planEntries(
         sweep: sweep.sweep,
       });
       i += sweep.length;
+      continue;
+    }
+
+    // R2800000: a set-piece card's hook removing cards, one run of them, plays as one pinned entry.
+    const wiped = wipeAt(events, i, view, plays.hook(), wipeOf);
+    if (wiped !== null) {
+      const run = take(i, wiped.length);
+      plays.closeHook();
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(WIPE_MS),
+        frames: frameMap(run.map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        wipe: wiped.wipe,
+      });
+      i += wiped.length;
       continue;
     }
 
@@ -1451,6 +1484,8 @@ export type AnimationQueueOptions = {
   setPieceOf?: SetPieceClaimer;
   /** R2785000: false on a board that plays no effects (the Duos teammate's, R2095000): no set piece holds it. */
   setPieces?: boolean;
+  /** R2800000: the cards with a set piece, whose hook's removals play as one wipe (`planEntries`). Absent: none. */
+  wipeOf?: (defId: string) => boolean;
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
@@ -1666,7 +1701,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       // Read live, so a change in the settings panel applies from the next action on (R201).
       const settings = readSettings();
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
-      const planned = planEntries(events, view, reduced, plays);
+      const planned = planEntries(events, view, reduced, plays, options.wipeOf);
       const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
       const scaled = slammed.map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);

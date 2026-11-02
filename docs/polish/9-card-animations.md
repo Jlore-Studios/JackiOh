@@ -16,11 +16,13 @@ pasted in by a person, and each name then joins `FX_MOTIF_NAMES` (see "Open" at 
 | none | `"none: <reason>"` | the card's event rows alone (`ANIMATIONS`' `fx` recipes, the flavor's cast, impact, entrance and exit) | nothing to draw |
 | motif | `{ <hook>: { motif, palette?, row? } }` | a shared motif from `fx/motifs/`, on top of or in place of the event rows | the motif's planner, shared by every card that names it |
 | bespoke | `{ bespoke: "<recipe>" }` | a recipe of the card's own, in `fx/cards/<set>/` | the card's own file |
+| set piece | `{ setPiece: "<key>" }` | a board clear's set piece: its hook's removals as one wipe the queue holds for one capped, skippable beat (R2785000, R2800000) | `fx/setPieces.ts`, its board motion `game/board.css` and its sound bed `audio/setPieceBeds.ts` |
 
 Every catalog card starts as `"none: pending"` and moves up a tier in its set's pass. A bespoke
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
 Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the marquee entrances of
-#100 Ceaseless Void, BOOM! Big Max, Nature Titan and Spell Tyrant).
+BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
+names, below).
 
 ## The motifs
 
@@ -170,6 +172,34 @@ as that card's play through the real board's effects layer. "Play as a set piece
 as the fixture set piece (R2785000): its play's entry holds the board for `SET_PIECE_HOLD_MS`, scaled
 and capped as every set piece, until a tap, a click or Space skips it.
 
+## Set pieces
+
+The cards that clear the board are #2782's loudest tier (R2800000). A card's set piece keys on its
+hook's marker (`hookResolving`, R2783000, or a Trap's `trapFired`) when the seat reads the card
+(R202): the runner plays the hook's first run of `destroyed`, `exiled` and `bounced` events (each
+bounce with its `addedToHand`) as one pinned `WIPE_MS` entry (`game/runs.ts` `wipeAt`), the queue
+claims it as the action's one set piece (`wipeClaim`, its key's beat at speed 1) and holds it as
+R2785000 holds every set piece, and the effects layer draws it in place of the removals' own rows
+(`planSetPiece`): its cue over the whole layer (`setPiece`), a `pull` and an `"after"` `conceal` on
+each card it takes, and at the swallow, the end of the hold, an implosion, a ring and the shake. The
+board twists the sides it takes from (`data-set-piece-shape`, `data-set-piece-sides`, board.css). It
+centres on a Trap's zone (R154) or a Unit's own, else on the middle of the one side it takes from,
+else on the board. Each has a sound bed of `sfx.ts` recipes across its hold (`SET_PIECE_BEDS`), and
+the removals sound once, condensed, as it ends.
+
+| Key | Shape | Beat | Palette | Cards |
+|---|---|---|---|---|
+| `nether` | vortex, the board swallowed into the Nether | `SET_PIECE_HOLD_MS` | Dark | Core #88 Twisting Nether (Radiant's "enemy permanents" over that side alone) |
+| `voidFold` | fold: the edges close in to black, the cards sink, the light comes back at the Void | `VOID_FOLD_HOLD_MS` | Dark | Core #100 Ceaseless Void, which lands with its `voidCollapse` entrance first and whose takeover yields to the fold |
+| `vortex` | vortex, turning the other way | `SET_PIECE_HOLD_MS` | the card's own | Core #17 Flood, Classic #43 Plague Nuke, Classic+ #1 Doom Shroom (at its zone), Classic+ #12.6 Frozen Wastes, Stinkyscape #4.1 Farewell, Stinkyscape #117 Core System |
+
+The clears of one side, or too small to hold the game, take `wipe` on their hook: Classic+ #32.2
+Brawl (it spares a Unit), both Calls to Chaos (Classic+ #73, Stinkyscape #151: one random effect of
+theirs clears one side), the Anomaly Found! token (its caster's side) and Training Grounds #30
+Floodgates (`death: wipe`, its own side, which plans nothing until `death` hooks draw). Stinkyscape
+#12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
+ids R97 hides on both seats.
+
 ## Examples
 
 Twelve cards across the sets wear the first motifs, as the pattern for the passes:
@@ -177,7 +207,7 @@ Twelve cards across the sets wear the first motifs, as the pattern for the passe
 | Card | Entry |
 |---|---|
 | Core #35 Lunar Eclipse | `cast: bolt` |
-| Core #88 Twisting Nether | `cast: wipe` |
+| Classic+ #32.2 Brawl | `cast: wipe` |
 | Classic #16 Book of Flame | `cast: scorch`, palette Fire |
 | Classic #71 Lane Eater | `cry: lance` |
 | Classic+ #21 Whirlwind | `cast: nova` |

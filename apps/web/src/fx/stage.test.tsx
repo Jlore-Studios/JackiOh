@@ -647,6 +647,28 @@ describe("B48 aiming the lunge in the page", () => {
   });
 });
 
+describe("R2800000 a set piece's pull in the page", () => {
+  it("R2800000 a pull draws a card toward the set piece's centre, or sinks it in place, and release clears it", () => {
+    const card = boardElement(`card-${MINE}`, { x: 100, y: 300, width: 60, height: 82 });
+    boardElement("board", { x: 0, y: 0, width: 800, height: 600 });
+    const h = directorHarness();
+    h.director.play([{ kind: "pull", testid: `card-${MINE}`, to: { kind: "testid", testid: "board" }, delayMs: 0, durationMs: FX_HOLD_MAX_MS }]);
+    expect(card.getAttribute("data-fx-pulled")).toBe("true");
+    // From the card's centre (130, 341) to the board's (400, 300).
+    expect(Number.parseFloat(card.style.getPropertyValue("--fx-pull-x"))).toBeCloseTo(270, 5);
+    expect(Number.parseFloat(card.style.getPropertyValue("--fx-pull-y"))).toBeCloseTo(-41, 5);
+    h.director.release();
+    expect(card.hasAttribute("data-fx-pulled")).toBe(false);
+    expect(card.style.getPropertyValue("--fx-pull-x")).toBe("");
+    // Pulled toward itself, it sinks where it stands.
+    h.director.play([{ kind: "pull", testid: `card-${MINE}`, to: { kind: "testid", testid: `card-${MINE}` }, delayMs: 0, durationMs: FX_HOLD_MAX_MS }]);
+    expect(card.style.getPropertyValue("--fx-pull-x")).toBe("0.0px");
+    expect(card.style.getPropertyValue("--fx-pull-y")).toBe("0.0px");
+    h.director.release();
+    expect(card.hasAttribute("data-fx-pulled")).toBe(false);
+  });
+});
+
 describe("B46 standInCopy and landingBox", () => {
   it("B46 the landing box is the zone's height, the source's shape, centered in the zone and never wider than it", () => {
     const land = landingBox(ZONE_BOX, HAND_BOX);

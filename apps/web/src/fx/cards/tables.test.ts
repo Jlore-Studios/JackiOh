@@ -1,12 +1,14 @@
 // R2784000: every set's effects table (fx/cards/<set>.json5) held to the catalog: every card, tokens
 // included, in catalog order, one line each under its own name, Stinkyscape split in two at 091; and
 // the loader's errors, each naming its file and card. R502, R670: the seven former `CARD_FX` cards are
-// `{ bespoke }` entries.
+// `{ bespoke }` entries but #100 Ceaseless Void, whose `{ setPiece }` lands it with its collapse (R2800000).
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "../../wire/cards.ts";
+import { entranceKeyOf } from "../cardFx.ts";
 import { FX_MOTIF_NAMES } from "../motifs/names.ts";
+import { SET_PIECE_KEYS } from "../setPieceKeys.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, parseFxCardTable, type FxCardFile } from "./tables.ts";
 
 const IDS = Object.keys(CATALOG);
@@ -92,6 +94,19 @@ describe("R2784000 the per-set effects tables", () => {
     expect(() => parseFxCardTable("test.json5", "{ broken")).toThrow(/^fx\/cards\/test\.json5: \(syntax\): /);
   });
 
+  it("R2800000 a setPiece entry names a known set piece and nothing else", () => {
+    for (const key of SET_PIECE_KEYS) {
+      expect(parseFxCardTable("test.json5", `{ "core-088": { setPiece: "${key}" } }`).get("core-088"), key).toEqual({ kind: "setPiece", key });
+    }
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parseFxCardTable("test.json5", `{ ${body} }`)).toThrow(problem);
+    };
+    says(`"core-088": { setPiece: "maelstrom" }`, /^fx\/cards\/test\.json5: core-088: unknown set piece "maelstrom"$/);
+    says(`"core-088": { setPiece: 7 }`, /core-088: unknown set piece "7"/);
+    says(`"core-088": { setPiece: "nether", cast: { motif: "wipe" } }`, /core-088: a setPiece entry holds nothing else/);
+    says(`"core-088": { setPiece: "nether", bespoke: "voidCollapse" }`, /core-088: a (bespoke|setPiece) entry holds nothing else/);
+  });
+
   it("R2784000 every motif name the design doc gives is accepted, drawn yet or not, with any flavor's palette", () => {
     for (const motif of FX_MOTIF_NAMES) {
       const table = parseFxCardTable("test.json5", `{ "core-035": { cast: { motif: "${motif}", palette: "Tech", row: "keep" } } }`);
@@ -102,24 +117,25 @@ describe("R2784000 the per-set effects tables", () => {
     expect(hooks.get("classic-071")?.kind).toBe("hooks");
   });
 
-  it("R2784000 R502 R670 the seven former CARD_FX cards are bespoke, each its own recipe", () => {
+  it("R2784000 R502 R670 R2800000 the seven former CARD_FX cards keep their recipes: six bespoke, and the Void's set piece lands with its collapse", () => {
     const former = {
       "core-021": { kind: "bespoke", key: "manaCrack" },
       "core-027": { kind: "bespoke", key: "bloodDrain" },
-      "core-100": { kind: "bespoke", key: "voidCollapse" },
       "classic-045": { kind: "bespoke", key: "titanBloom" },
       "classic-056": { kind: "bespoke", key: "tyrantSigil" },
       "classic-080": { kind: "bespoke", key: "bigBoom" },
       "classicplus-024": { kind: "bespoke", key: "crushingWalls" },
     };
     for (const [defId, entry] of Object.entries(former)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
-    expect(new Set(Object.values(former).map((entry) => entry.key)).size).toBe(7);
+    expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold" });
+    expect(entranceKeyOf("core-100")).toBe("voidCollapse");
+    expect(new Set([...Object.values(former).map((entry) => entry.key), entranceKeyOf("core-100")]).size).toBe(7);
   });
 
   it("R2784000 the twelve examples name their motifs", () => {
     const examples = {
       "core-035": { kind: "hooks", hooks: { cast: { motif: "bolt" } } },
-      "core-088": { kind: "hooks", hooks: { cast: { motif: "wipe" } } },
+      "classicplus-032-2": { kind: "hooks", hooks: { cast: { motif: "wipe" } } },
       "classic-016": { kind: "hooks", hooks: { cast: { motif: "scorch", palette: "Fire" } } },
       "classic-071": { kind: "hooks", hooks: { cry: { motif: "lance" } } },
       "classicplus-021": { kind: "hooks", hooks: { cast: { motif: "nova" } } },

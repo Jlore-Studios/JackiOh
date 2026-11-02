@@ -28,7 +28,8 @@ describe("R2784000 the /dev/fx gallery", () => {
     expect(optionsOf(fxGalleryTestid.scale)).toEqual(FX_GALLERY_SCALES.map(String));
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
-    expect(cards).toHaveLength(12);
+    // The twelve examples but #88 Twisting Nether, now a set piece, and the five board clears that take `wipe` (R2800000).
+    expect(cards).toHaveLength(16);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
