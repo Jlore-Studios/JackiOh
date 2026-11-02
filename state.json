@@ -26664,14 +26664,18 @@
         {
           "at": "2026-11-02T05:47:11Z",
           "minutes": 147.7
+        },
+        {
+          "at": "2026-11-02T06:46:46Z",
+          "minutes": 122.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-02T10:09:00Z",
-          "utilization": 0.02
+          "utilization": 0.03
         },
-        "observed_at": "2026-11-02T05:47:11Z",
+        "observed_at": "2026-11-02T06:46:46Z",
         "seven_day": {
           "resets_at": "2026-11-09T00:00:00Z",
           "utilization": 0.17
