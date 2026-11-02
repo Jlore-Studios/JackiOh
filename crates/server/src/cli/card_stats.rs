@@ -24,9 +24,9 @@ use anyhow::bail;
 use serde::Serialize;
 
 use jackioh_engine::wire::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, PILOT_FILTERS,
-    PilotFilter, SOURCE_FILTERS, SourceFilter, WindowQuery, WindowRequest, WindowedReport, card_stats_of,
-    format_card_stats, windowed_card_stats,
+    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, ModeFilter,
+    PILOT_FILTERS, PilotFilter, SOURCE_FILTERS, SourceFilter, WindowQuery, WindowRequest, WindowedReport,
+    card_stats_of, format_card_stats, windowed_card_stats,
 };
 
 use crate::cli::{connect_one, database_url};
@@ -181,7 +181,7 @@ pub async fn card_stats_window(
             history: &history,
             at,
             live_pilot: options.filter.pilot,
-            mode: None,
+            mode: ModeFilter::All,
             request: WindowRequest::Gated,
         },
     );

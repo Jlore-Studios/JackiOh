@@ -55,19 +55,23 @@ struct RecordOptions {
     /// R2089000: p1's Created cards used (`createdUsed`) and made but never used (`createdUnused`).
     p1_created_used: Option<Value>,
     p1_created_unused: Option<Vec<&'static str>>,
+    /// R2777002: the cards of p1's deck that reached its hand (the first three its opening hand, the
+    /// rest drawn); by default the whole deck, so no card goes unseen.
+    p1_hand: Option<Vec<&'static str>>,
 }
 
-/// One seat's summary: the first three cards are the opening hand, the rest drawn.
+/// One seat's summary: the first three cards of `hand` are the opening hand, the rest drawn.
 fn seat(
     deck: &[&str],
+    hand: &[&str],
     played: &[&str],
     played_turns: Option<Vec<usize>>,
     played_radiant: Option<Vec<bool>>,
 ) -> Value {
     let mut val = json!({
         "deck": deck,
-        "opening": deck.iter().take(3).collect::<Vec<_>>(),
-        "drawn": deck.iter().skip(3).collect::<Vec<_>>(),
+        "opening": hand.iter().take(3).collect::<Vec<_>>(),
+        "drawn": hand.iter().skip(3).collect::<Vec<_>>(),
         "played": played,
         "playedTurns": played_turns.unwrap_or_else(|| (1..=played.len()).collect()),
     });
@@ -101,8 +105,10 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
         .unwrap_or_else(|| p2_deck.iter().take(2).copied().collect());
     let pilot = if source == "dev" { "ai" } else { "human" };
     let [p1_pilot, p2_pilot] = options.pilots.unwrap_or([pilot, pilot]);
+    let p1_hand = options.p1_hand.unwrap_or_else(|| p1_deck.clone());
     let mut p1 = seat(
         &p1_deck,
+        &p1_hand,
         &p1_played,
         options.p1_played_turns,
         options.p1_played_radiant,
@@ -127,7 +133,7 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
             "turns": options.turns.unwrap_or(5),
             "seats": {
                 "p1": p1,
-                "p2": seat(&p2_deck, &p2_played, options.p2_played_turns, options.p2_played_radiant),
+                "p2": seat(&p2_deck, &p2_deck, &p2_played, options.p2_played_turns, options.p2_played_radiant),
             }
         }
     })
@@ -1768,6 +1774,103 @@ mod r377_public_stats_match_type {
         let bo3_turn3 = find(&bo3["byTurn"], "turn", &json!(3)).expect("turn 3 is tallied");
         assert_eq!(bo3_turn3["games"], json!(5));
         assert!(find(&bo3["byTurn"], "turn", &json!(1)).is_none());
+    }
+}
+
+mod r2777000_adjusted_and_split_card_stats {
+    use super::*;
+
+    /// `count` live games of `mode`: p1 holds `core-001` to `core-004`, sees only `hand` of them and
+    /// plays none, and wins when `won`.
+    fn games(tag: &str, mode: &'static str, hand: Vec<&'static str>, won: bool, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                make_game_record(
+                    &format!("adjusted-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some(mode),
+                        p1_deck: Some(vec!["core-001", "core-002", "core-003", "core-004"]),
+                        p1_hand: Some(hand.clone()),
+                        p1_played: Some(Vec::new()),
+                        p2_deck: Some(vec!["core-005"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn card<'a>(data: &'a Value, id: &str) -> &'a Value {
+        find(&data["cards"], "id", &json!(id)).expect("the card is listed")
+    }
+
+    #[tokio::test]
+    async fn r2777000_r2777001_r2777002_constructed_pools_bo1_and_conquest_random_counts_a_card_once_seen_and_cards_list_by_adjusted_rate()
+     {
+        let app = test_app().await;
+        let mut records = Vec::new();
+        // Constructed: core-001 seen in 30 Best of 1 games (24 won) and 30 Conquest games (24 won),
+        // never drawn in 60 more (30 won); core-002 seen in all 120 (78 won).
+        let all = vec!["core-001", "core-002", "core-003", "core-004"];
+        let without = vec!["core-002", "core-003", "core-004"];
+        records.extend(games("bo1-seen-won", "bo1", all.clone(), true, 24));
+        records.extend(games("bo1-seen-lost", "bo1", all.clone(), false, 6));
+        records.extend(games("bo3-seen-won", "bo3", all.clone(), true, 24));
+        records.extend(games("bo3-seen-lost", "bo3", all.clone(), false, 6));
+        records.extend(games("bo1-unseen-won", "bo1", without.clone(), true, 30));
+        records.extend(games("bo1-unseen-lost", "bo1", without.clone(), false, 30));
+        // All Random: core-001 dealt in 40 games, seen in 10 of them (all won), never drawn in 30
+        // (10 won).
+        records.extend(games("random-seen", "random", all.clone(), true, 10));
+        records.extend(games("random-unseen-won", "random", without.clone(), true, 10));
+        records.extend(games("random-unseen-lost", "random", without.clone(), false, 20));
+        insert_records(&app, records).await;
+
+        // R2777001: Constructed is Best of 1 and Conquest together, and no All Random game.
+        let (status, _, constructed) =
+            get_public(&app, "/api/stats/cards?source=live&mode=constructed").await;
+        assert_eq!(status, 200);
+        assert_eq!(constructed["mode"], json!("constructed"));
+        assert_eq!(constructed["modeLabel"], json!("Constructed"));
+        assert_eq!(constructed["totalGames"], json!(120));
+        let a = card(&constructed, "core-001");
+        assert_eq!(a["games"], json!(120));
+        assert_eq!(
+            (a["drawnGames"].clone(), a["notDrawnGames"].clone()),
+            (json!(60), json!(60))
+        );
+        // R2777000: 50% plus the 30-point drawn delta, kept as far as 60 games a side back it.
+        let prior = 0.05_f64 * 0.05;
+        let kept = prior / (prior + 0.25 * (1.0 / 60.0 + 1.0 / 60.0));
+        let adjusted = a["adjustedWinRate"].as_f64().expect("both sides have games");
+        assert!((adjusted - (0.5 + kept * 0.3)).abs() < 1e-9, "{adjusted}");
+        // core-002 was always seen: no baseline, so no adjusted rate, and it lists after core-001.
+        assert_eq!(card(&constructed, "core-002")["adjustedWinRate"], Value::Null);
+        let order = ids_of(&constructed);
+        let at = |id: &str| order.iter().position(|listed| listed == id);
+        assert!(at("core-001") < at("core-002"), "{order:?}");
+
+        // R2777002: All Random counts a card once seen: 10 games, all won, below the floor.
+        let (_, _, random) = get_public(&app, "/api/stats/cards?source=live&mode=random").await;
+        let a = card(&random, "core-001");
+        assert_eq!(a["games"], json!(10));
+        assert_eq!(a["winRate"].as_f64(), Some(1.0));
+        assert_eq!(a["hasEnoughGames"], json!(false));
+        assert_eq!(a["notDrawnGames"], json!(30));
+        assert!((a["playRate"].as_f64().unwrap() - 10.0 / 80.0).abs() < 1e-9);
+        // Best of 1 alone still counts every deck that held it.
+        let (_, _, bo1) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(card(&bo1, "core-001")["games"], json!(90));
+
+        // The game figures and the drill-down read the same two modes.
+        let (_, _, games) = get_public(&app, "/api/stats/games?source=live&mode=constructed").await;
+        assert_eq!(games["totalGames"], json!(120));
+        let (status, _, drill) = get_public(&app, "/api/stats/cards/core-001?mode=constructed").await;
+        assert_eq!(status, 200);
+        assert_eq!(drill["card"]["id"], json!("core-001"));
     }
 }
 

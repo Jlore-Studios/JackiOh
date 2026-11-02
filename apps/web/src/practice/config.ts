@@ -47,6 +47,13 @@ export const PRACTICE_SETUP_KEY = "jackioh.practice.setup";
 
 export const PRACTICE_DEFAULT_DIFFICULTY: Difficulty = "easy";
 
+/**
+ * R2777003: the one tier whose practice games the player's own statistics (R639) count. Easy plays the AI on a
+ * person's resources (§9.9, R180); Medium and Hard hand it more, so their games would pull the player's win
+ * rates down for a reason that is not the player's cards.
+ */
+export const PRACTICE_TALLY_DIFFICULTY: Difficulty = "easy";
+
 export const PRACTICE_SEED_BYTES = 4;
 
 export const PRACTICE_SEED_MAX_LENGTH = 64;
