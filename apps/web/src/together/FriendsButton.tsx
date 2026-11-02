@@ -45,9 +45,10 @@ import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
 import { tabStops, useModalKeys } from "./modalKeys.ts";
-import { attempt, messageOf, usePolled } from "./session.ts";
+import { usePolled } from "./session.ts";
 import { friendsBadgeCount, noteFriends, reloadSocial, useSocialReads } from "./socialPoll.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
+import { attempt, messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
 import "../routes/lobby.css";
@@ -128,14 +129,12 @@ function FriendsPanel({
   const copy = (): void => {
     if (name === undefined) return;
     // Copy failures stay silent because the name stays on screen.
-    Promise.resolve()
-      .then(() => navigator.clipboard.writeText(name))
-      .then(
-        () => {
-          setCopied(true);
-        },
-        () => undefined,
-      );
+    attempt(() => navigator.clipboard.writeText(name)).then(
+      () => {
+        setCopied(true);
+      },
+      () => undefined,
+    );
   };
 
   // A list whatever answered: the panel sits on every screen, a server's older answer must not take one down.

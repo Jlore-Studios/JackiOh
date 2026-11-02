@@ -35,6 +35,7 @@ import {
   deckListOrder,
   manaCurve,
   matchesFilter,
+  printedPrice,
   searchMatches,
   shippedTags,
   sortPool,
@@ -290,6 +291,17 @@ describe("costBucket and costOrder (B31)", () => {
   it("B31 an embiggen card is never filed under its embiggen price", () => {
     expect(costBucket({ base: 2, embiggen: 4 })).not.toBe("4");
     expect(costBucket({ base: 3, embiggen: 5 })).not.toBe("5");
+  });
+
+  it("#2160 printedPrice is the number, the embiggen base or X, and tileCost prints it, blank without a cost", () => {
+    expect(printedPrice(0)).toBe(0);
+    expect(printedPrice(7)).toBe(7);
+    expect(printedPrice({ base: 2, embiggen: 4 })).toBe(2);
+    expect(printedPrice("X")).toBe("X");
+    expect(tileCost(10)).toBe("10");
+    expect(tileCost({ base: 3, embiggen: 5 })).toBe("3");
+    expect(tileCost("X")).toBe("X");
+    expect(tileCost(undefined)).toBe("");
   });
 
   it("B31 costOrder is the number, the embiggen base, and +Infinity for X", () => {

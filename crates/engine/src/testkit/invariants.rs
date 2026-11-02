@@ -1,5 +1,6 @@
-//! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed
-//! work (SPEC §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md
+//! Fuzz-level invariants for zones, summoning sickness, exertion, game over, hidden information and
+//! owed work (SPEC §3, §4.1, §4.2, §9.3, §10.3, §10.8, R11, R49, R53, R83, R113, R171, R636;
+//! docs/polish/4-edge-cases.md
 //! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), `fuzz --duos`
 //! one per duel through `DuosInvariantMonitor` (#1074, with the Duos view's own redaction and the pool
 //! bounds, §13.4, §13.6), and the edge-case hunters reuse it.
@@ -42,8 +43,12 @@
 //!     stint is `readied`. The state settles the bound where it can: a kill whose attacker the action
 //!     leaves on the field with its attack spent, its killing attack its last, readied nothing, and its
 //!     credit is taken back.
+//!   - `lastSwitch`, the turn and stint of each instance's latest chosen position switch, recorded
+//!     only when that `switchPosition` emits its matching `positionSwitched`; an effect's switch
+//!     spends nothing (R20). `chosenExertion` snapshots the chosen attacker's or switcher's identity
+//!     and layered Deft before reduction, when combat may take it off the field before its event.
 //!
-//! The ten checks:
+//! The twelve checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
@@ -152,6 +157,15 @@
 //!      player, is a violation. A prompt held by the card's own controller opens on either turn (In Too
 //!      Deep's reward choice), an engine prompt records no owner, and the mulligans are no `pending`.
 //!      The message names the asking card and the turn.
+//!   I11 no definition-level Unit token sits in either graveyard, either exile pile or `held` (§3,
+//!      §3.2, R11). The definition is read by `is_unit_token_def`, never from the card's current face,
+//!      so setting or transforming a token cannot disguise it; Spell tokens remain ordinary pile cards.
+//!   I12 one chosen switch and one declared attack cannot share a turn and field stint unless the Unit
+//!      has layered Deft (R49), and no Unit switches twice there. Only a chosen `switchPosition`
+//!      confirmed by its matching `positionSwitched` counts, so effect-driven switches spend nothing
+//!      (R20), and forced attacks likewise spend nothing (R53). Windfury's first declared attack spends
+//!      the switch exertion (R636); re-entry advances the stint, and a confirmed `mayAttackAgain` kill
+//!      refresh clears the old switch beside I2's attack-count baseline.
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -535,6 +549,40 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
 /// R11: whether a definition is a unit token's, which ceases to exist when it leaves the field.
 fn is_unit_token_def(state: &GameState, def_id: &str) -> bool {
     crate::catalog::find_def(Some(state), def_id).is_some_and(|def| def.token && def.type_ == CardType::Unit)
+}
+
+/// I11: definition-level Unit tokens cease to exist when they leave the field (§3, §3.2, R11),
+/// so neither player's public piles nor the cards waiting in `held` may contain one. A face or layer
+/// cannot disguise the token because `is_unit_token_def` reads its definition.
+fn unit_token_pile_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    for player in PLAYER_IDS {
+        let side = &state.players[player];
+        for (location, cards) in [
+            ("graveyard", side.graveyard.as_slice()),
+            ("exile", side.exile.as_slice()),
+        ] {
+            for card in cards {
+                if is_unit_token_def(state, &card.def_id) {
+                    found.push(format!(
+                        "I11 unit token in pile: {} ({}) is in {player}'s {location} on turn {} \
+                         (§3, §3.2, R11)",
+                        card.id, card.def_id, state.turn
+                    ));
+                }
+            }
+        }
+    }
+    for held in state.held.iter().flatten() {
+        let card = &held.card;
+        if is_unit_token_def(state, &card.def_id) {
+            found.push(format!(
+                "I11 unit token in pile: {} ({}) is in held beneath {} on turn {} (§3, §3.2, R11)",
+                card.id, card.def_id, held.holder_id, state.turn
+            ));
+        }
+    }
+    found
 }
 
 /// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
@@ -1465,6 +1513,23 @@ struct AttackMark {
     count: i32,
 }
 
+/// The turn and stint of an instance's latest chosen position switch.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SwitchMark {
+    turn: i32,
+    stint: i32,
+}
+
+/// I12's pre-reduction snapshot: an attack can remove its Unit before `attackDeclared`, while Deft
+/// must be read through the layers as the chosen action saw it (R49).
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ChosenExertion {
+    instance_id: String,
+    def_id: String,
+    kind: crate::combat::ExertionKind,
+    deft: bool,
+}
+
 /// B5 E35, R1869002: the fresh exertion a kill gave its attacker in one stint on one turn: `at` is how
 /// many attacks it had declared there then (none once a settling took it back), `before` the credit it
 /// held there before it.
@@ -1530,8 +1595,9 @@ fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyw
 }
 
 /// TS `InvariantMonitor`, made by `create_invariant_monitor`: the shadow of this file's header and
-/// the checks run against it. `before` is I1 and I3, `after` feeds one action's events into the
-/// shadow and runs I2, I4, I5, I7, I9 and I10, `hidden` is I6 for both seats and `unlisted` is I8.
+/// the checks run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one
+/// action's events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 for
+/// both seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -1540,6 +1606,8 @@ pub struct InvariantMonitor {
     entered: IndexMap<String, i32>,
     stint: IndexMap<String, i32>,
     last_attack: IndexMap<String, AttackMark>,
+    last_switch: IndexMap<String, SwitchMark>,
+    chosen_exertion: Option<ChosenExertion>,
     /// R636: the stint in which each instance was last seen with Windfury. Read from the states between
     /// actions and after each one, so a unit that dies on its second attack was seen with it before —
     /// and from `keywordGranted` events and a Buff's keyword row (`upgraded`, R386) inside the action, so
@@ -1593,6 +1661,8 @@ impl InvariantMonitor {
             entered: IndexMap::new(),
             stint: IndexMap::new(),
             last_attack: IndexMap::new(),
+            last_switch: IndexMap::new(),
+            chosen_exertion: None,
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
             drawn_windfury: IndexSet::new(),
@@ -1702,19 +1772,33 @@ impl InvariantMonitor {
         self.unsettled_credits.insert(id.to_string());
     }
 
-    /// R1869002: a credited attacker the action leaves on the field, its killing attack its last, with
-    /// its attack exertion spent was readied by nothing: its credit is taken back. One it readied is
-    /// `readied` for the rest of its stint, as `mayAttackAgain` leaves it with no `summonedTurn`. Settled
-    /// once nothing is owed, since an `afterAttack` a prompt paused runs in a later action (R113).
+    /// R1869002: a credited attacker the action leaves on the field, with every exertion half the
+    /// shadow saw spent still spent, was readied by nothing: its credit is taken back. This matters for
+    /// a forced attack (R53), which spends no attack exertion itself: only a reset of an earlier attack
+    /// or switch proves `mayAttackAgain` ran. One it readied is `readied` for the rest of its stint, as
+    /// `mayAttackAgain` leaves it with no `summonedTurn`. Settled once nothing is owed, since an
+    /// `afterAttack` a prompt paused runs in a later action (R113).
     fn settle_kill_credits(&mut self, state: &GameState) {
         if state.pending.is_some() || !state.work.is_empty() {
             return;
         }
         for id in std::mem::take(&mut self.unsettled_credits) {
-            let spent = find_instance(state, &id)
-                .is_some_and(|card| card.zone.z() == ZoneName::Field && card.exertion.attacked);
-            if !spent {
-                self.readied.insert(id);
+            let Some(credit) = self.kill_credits.get(&id).copied() else {
+                continue;
+            };
+            let attack_was_spent = credit.at.unwrap_or(0) > credit.before.unwrap_or(0);
+            let switch_was_spent = self
+                .last_switch
+                .get(&id)
+                .is_some_and(|mark| mark.turn == credit.turn && mark.stint == credit.stint);
+            let refreshed = find_instance(state, &id).is_some_and(|card| {
+                card.zone.z() == ZoneName::Field
+                    && ((attack_was_spent && !card.exertion.attacked)
+                        || (switch_was_spent && !card.exertion.switched))
+            });
+            if refreshed {
+                self.readied.insert(id.clone());
+                self.last_switch.shift_remove(&id);
             } else if let Some(credit) = self.kill_credits.get_mut(&id) {
                 credit.at = credit.before;
             }
@@ -1987,9 +2071,27 @@ impl InvariantMonitor {
         found
     }
 
-    /// I1 and I3 on the state the next action is chosen in. Empty when clean.
+    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot.
+    /// Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
+        self.chosen_exertion = match action {
+            ActionBody::Attack { attacker_id, .. } => {
+                Some((attacker_id, crate::combat::ExertionKind::Attack))
+            }
+            ActionBody::SwitchPosition { instance_id } => {
+                Some((instance_id, crate::combat::ExertionKind::Switch))
+            }
+            _ => None,
+        }
+        .and_then(|(instance_id, kind)| {
+            find_instance(state, instance_id).map(|card| ChosenExertion {
+                instance_id: instance_id.clone(),
+                def_id: card.def_id.clone(),
+                kind,
+                deft: has_keyword(&keywords_now(state, card), KeywordKind::Deft),
+            })
+        });
         self.note_windfury(state);
         self.carried_windfury = PLAYER_IDS
             .into_iter()
@@ -2080,7 +2182,8 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9 and I10 against the resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7 and I9–I12 against the
+    /// resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
@@ -2331,6 +2434,54 @@ impl InvariantMonitor {
                         self.windfury.insert(instance_id.clone(), stint);
                     }
                 }
+                GameEvent::PositionSwitched { instance_id, .. } => {
+                    // R20: an effect's switch emits the same event but spends nothing. I12 counts only
+                    // the event that confirms the chosen `switchPosition` action.
+                    let chosen = self
+                        .chosen_exertion
+                        .as_ref()
+                        .filter(|chosen| {
+                            chosen.kind == crate::combat::ExertionKind::Switch
+                                && chosen.instance_id == *instance_id
+                        })
+                        .cloned();
+                    if let Some(chosen) = chosen {
+                        // The chosen action owns only its first matching event. A later switch of the
+                        // same Unit in this reduction came from an effect and spends nothing (R20).
+                        self.chosen_exertion = None;
+                        let current = self.stint_of(instance_id);
+                        let switched_here = self
+                            .last_switch
+                            .get(instance_id)
+                            .is_some_and(|mark| mark.turn == self.turn && mark.stint == current);
+                        if switched_here {
+                            found.push(format!(
+                                "I12 second switch: {} ({}) switched position twice on turn {} in the same \
+                                 field stint (§4.1 one switch exertion per turn; Deft keeps only one, R49)",
+                                chosen.instance_id, chosen.def_id, self.turn
+                            ));
+                        }
+                        let credited = self.credited_at(instance_id).unwrap_or(0);
+                        let attacked_since_refresh = self.last_attack.get(instance_id).is_some_and(|mark| {
+                            mark.turn == self.turn && mark.stint == current && mark.count > credited
+                        });
+                        if attacked_since_refresh && !chosen.deft {
+                            found.push(format!(
+                                "I12 switch after attack: {} ({}) switched position after declaring an attack \
+                                 on turn {} in the same field stint without Deft (§4.1, R49; Windfury's first \
+                                 attack spends the switch exertion, R636)",
+                                chosen.instance_id, chosen.def_id, self.turn
+                            ));
+                        }
+                        self.last_switch.insert(
+                            instance_id.clone(),
+                            SwitchMark {
+                                turn: self.turn,
+                                stint: current,
+                            },
+                        );
+                    }
+                }
                 GameEvent::AttackDeclared {
                     attacker_id,
                     target_id,
@@ -2340,10 +2491,6 @@ impl InvariantMonitor {
                     // R53: a forced attack is not a declaration and spends nothing (nor readies a
                     // transform, R424); its kill may still earn a kill credit (R1869002).
                     self.attack = None;
-                    // R1869002: a credited attacker declaring again inside the action was readied.
-                    if self.unsettled_credits.shift_remove(attacker_id) {
-                        self.readied.insert(attacker_id.clone());
-                    }
                     if *forced {
                         self.attack = Some(ShadowAttack {
                             attacker_id: attacker_id.clone(),
@@ -2358,6 +2505,52 @@ impl InvariantMonitor {
                     // substitute's to answer for.
                     let declarer = instead_of.as_deref().unwrap_or(attacker_id);
                     let current = self.stint_of(declarer);
+                    // R1869002: a credited declarer attacking again inside the action consumes I2's
+                    // speculative attack baseline before the settled state can. The declaration alone
+                    // does not prove that I12's shared switch exertion was refreshed: a no-op
+                    // `afterAttack` can be followed by the very illegal declaration this oracle must
+                    // catch. Clear a spent switch only when the resulting field state independently
+                    // shows that half reset. R1202 makes `declarer`, not `attacker_id`, own both facts.
+                    let switch_spent = self
+                        .last_switch
+                        .get(declarer)
+                        .is_some_and(|mark| mark.turn == self.turn && mark.stint == current);
+                    let switch_refreshed = switch_spent
+                        && find_instance(state, declarer)
+                            .is_some_and(|card| card.zone.z() == ZoneName::Field && !card.exertion.switched);
+                    if (!switch_spent || switch_refreshed) && self.unsettled_credits.shift_remove(declarer) {
+                        self.readied.insert(declarer.to_string());
+                        if switch_refreshed {
+                            self.last_switch.shift_remove(declarer);
+                        }
+                    }
+                    let chosen = self.chosen_exertion.as_ref().filter(|chosen| {
+                        chosen.kind == crate::combat::ExertionKind::Attack && chosen.instance_id == declarer
+                    });
+                    let deft = chosen.map_or_else(
+                        || {
+                            find_instance(state, declarer).is_some_and(|card| {
+                                has_keyword(&keywords_now(state, card), KeywordKind::Deft)
+                            })
+                        },
+                        |chosen| chosen.deft,
+                    );
+                    let switched_here = self
+                        .last_switch
+                        .get(declarer)
+                        .is_some_and(|mark| mark.turn == self.turn && mark.stint == current);
+                    if switched_here && !deft {
+                        let who = chosen.map_or_else(
+                            || find_instance(state, declarer).map_or_else(|| declarer.to_string(), name_of),
+                            |chosen| format!("{} ({})", chosen.instance_id, chosen.def_id),
+                        );
+                        found.push(format!(
+                            "I12 attack after switch: {who} declared an attack after switching position on turn \
+                             {} in the same field stint without Deft (§4.1, R49; Windfury does not restore the \
+                             switch exertion, R636)",
+                            self.turn
+                        ));
+                    }
                     let previous = self.last_attack.get(declarer).copied();
                     let repeat = previous
                         .is_some_and(|previous| previous.turn == self.turn && previous.stint == current);
@@ -2498,6 +2691,11 @@ impl InvariantMonitor {
             ));
         }
 
+        // I11: a definition-level Unit token never reaches an off-field pile (§3, §3.2, R11).
+        found.extend(unit_token_pile_findings(state));
+        // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
+        // untouched duel, so no marker may survive to match another duel's later event.
+        self.chosen_exertion = None;
         found
     }
 
@@ -2619,7 +2817,7 @@ impl DuosInvariantMonitor {
         &mut self.monitors[duel]
     }
 
-    /// I1 and I3 on the state the next Duos action is chosen in.
+    /// I1 and I3 on the state the next Duos action is chosen in, plus I12's chosen exertion snapshot.
     pub fn before(&mut self, state: &DuosState, seat: DuosSeat, action: &DuosActionBody) -> Vec<String> {
         let duel = seat.duel();
         let violations = match action {
@@ -2636,8 +2834,8 @@ impl DuosInvariantMonitor {
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9 and I10 against both duels,
-    /// and checks pool bounds (§13.4) for both teams.
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7 and I9–I12 against both
+    /// duels, and checks pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];

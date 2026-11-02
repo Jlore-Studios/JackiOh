@@ -8,8 +8,8 @@ import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
-import { attempt } from "../together/session.ts";
 import { followInApp } from "./nav.tsx";
+import { attempt } from "../net/errors.ts";
 import "./lobby.css";
 
 const MS_PER_SECOND = 1000;

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<defs>
+  <linearGradient id="wordGold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fbe7b0"/><stop offset="0.22" stop-color="#ffe39a"/><stop offset="0.44" stop-color="#f3c969"/>
+    <stop offset="0.62" stop-color="#c9953f"/><stop offset="0.82" stop-color="#9b6423"/><stop offset="1" stop-color="#d9a44c"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fff6d6"/><stop offset="0.32" stop-color="#fde68a"/>
+    <stop offset="0.62" stop-color="#f0c04a"/><stop offset="1" stop-color="#a86a1f"/>
+  </linearGradient>
+  <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fde68a"/><stop offset="0.5" stop-color="#c9953f"/><stop offset="1" stop-color="#f0c04a"/>
+  </linearGradient>
+  <radialGradient id="face" cx="0.5" cy="0.4" r="0.75">
+    <stop offset="0" stop-color="#3a2f6e"/><stop offset="0.55" stop-color="#241c44"/><stop offset="1" stop-color="#141a2e"/>
+  </radialGradient>
+  <linearGradient id="back" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2b3349"/><stop offset="1" stop-color="#141a2e"/>
+  </linearGradient>
+  <pattern id="stripes" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="22" height="22" fill="none"/><rect width="9" height="22" fill="#ffffff" fill-opacity="0.045"/>
+  </pattern>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.45"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0e0905" flood-opacity="0.55"/>
+  </filter>
+  <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0e0905" flood-opacity="0.65"/>
+  </filter>
+</defs>
+<g transform="rotate(6 512 512)" filter="url(#shadow)">
+<rect x="192.0" y="64.0" width="640" height="896" rx="70.4" fill="url(#face)"/>
+<rect x="192.0" y="64.0" width="640" height="896" rx="70.4" fill="none" stroke="url(#goldEdge)" stroke-width="28.799999999999997"/>
+<rect x="227.2" y="99.2" width="569.6" height="825.6" rx="42.24" fill="none" stroke="#d4af37" stroke-opacity="0.45" stroke-width="7.68"/>
+</g><g transform="rotate(6 512 512)"><circle cx="512" cy="512" r="307.2" fill="url(#glow)"/><path d="M393.26000000000005 863.5400000000001 362.86 827.0600000000001 364.38000000000005 815.6600000000001Q390.22 792.1000000000001 403.90000000000003 770.44Q417.58000000000004 748.7800000000001 422.52000000000004 718.3800000000001Q427.46000000000004 687.9800000000001 427.46000000000004 638.58V352.8200000000001Q427.46000000000004 329.2600000000001 422.90000000000003 321.6600000000001Q418.34000000000003 314.06000000000006 403.14000000000004 314.06000000000006Q397.82000000000005 314.06000000000006 391.36 314.44000000000005Q384.90000000000003 314.8200000000001 380.34000000000003 315.2000000000001Q375.78000000000003 315.5800000000001 375.78000000000003 315.5800000000001L368.94 304.9400000000001L375.02000000000004 247.18000000000006L482.18 246.42000000000007Q519.4200000000001 245.66000000000008 552.1 244.5200000000001Q584.78 243.3800000000001 605.6800000000001 242.2400000000001Q626.58 241.10000000000008 626.58 241.10000000000008L620.5 311.7800000000001Q598.46 317.1000000000001 592.3800000000001 323.56000000000006Q586.3000000000001 330.0200000000001 584.78 351.30000000000007Q583.26 372.5800000000001 582.12 401.8400000000001Q580.98 431.1000000000001 579.84 465.30000000000007Q578.7 499.5000000000001 577.5600000000001 535.98Q576.4200000000001 572.46 576.0400000000001 607.8000000000001Q575.6600000000001 643.1400000000001 575.6600000000001 674.3000000000001Q575.6600000000001 747.2600000000001 531.96 792.8600000000001Q488.26 838.46 393.26000000000005 863.5400000000001Z" fill="url(#gold)" stroke="#2b1800" stroke-width="14.44" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/><path d="M684.0 130.0 L710.7 227.3 L808.0 254.0 L710.7 280.7 L684.0 378.0 L657.3 280.7 L560.0 254.0 L657.3 227.3 Z" fill="#fff6d6" stroke="#f0c04a" stroke-width="7.4399999999999995" stroke-linejoin="round" filter="url(#lift)"/></g>
+</svg>

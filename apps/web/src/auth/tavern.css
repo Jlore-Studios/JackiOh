@@ -605,13 +605,68 @@
 
 /* ---- the shell's own panels (main.tsx): the gate's waits and refusals, the 404 --------------- */
 
-.tavern.shell-panel .panel--auth {
-  margin-top: clamp(24px, 14vh, 140px);
+/* The tavern's wood under every shell panel: planks seen from above, their seams and ends staggered
+   board to board, a fine grain, a warm light where the logo hangs and the dark at the edges. Drawn
+   once the panel shows (R2108000), so a wait too short to show flashes no wood between two menus. */
+.tavern.shell-panel[data-shown="true"] {
+  --plank: 72px;
+  --plank-length: 420px;
+  --plank-seam: color-mix(in srgb, var(--tavern-night) 72%, transparent);
+
+  background:
+    radial-gradient(ellipse 55% 40% at 50% 26%, color-mix(in srgb, var(--tavern-flame) 20%, transparent), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 38%, transparent 40%, color-mix(in srgb, var(--tavern-night) 90%, transparent)),
+    conic-gradient(from 0deg at 2px var(--plank), transparent 0 270deg, var(--plank-seam) 0) 0 0 / var(--plank-length)
+      calc(var(--plank) * 2),
+    conic-gradient(from 0deg at 2px var(--plank), transparent 0 270deg, var(--plank-seam) 0) calc(var(--plank-length) / 2)
+      var(--plank) / var(--plank-length) calc(var(--plank) * 2),
+    repeating-linear-gradient(180deg, transparent 0 calc(var(--plank) - 2px), var(--plank-seam) 0 var(--plank)),
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tavern-night) 14%, transparent) 0 1px,
+      transparent 0 5px,
+      color-mix(in srgb, var(--tavern-wood-light) 10%, transparent) 0 6px,
+      transparent 0 11px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      var(--tavern-wood) 0 var(--plank),
+      color-mix(in srgb, var(--tavern-wood) 80%, var(--tavern-night)) 0 calc(var(--plank) * 2),
+      color-mix(in srgb, var(--tavern-wood) 88%, var(--tavern-wood-light)) 0 calc(var(--plank) * 3)
+    );
 }
 
-/* #2108, R2108000: a wait's panel shows once it outlasts SKELETON_DELAY_MS, so a fast account
-   check or screen load never flashes it. */
-.tavern.shell-panel[data-shown="false"] .panel {
+/* The floor is wood already: the table that fades in from the bottom of every tavern screen goes. */
+.tavern.shell-panel[data-shown="true"]::before {
+  content: none;
+}
+
+/* The stacked logo (public/brand) above the board, its box held by the img's width and height. */
+.tavern.shell-panel .shell-panel__brand {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(16px, 8vh, 96px);
+  line-height: 0;
+}
+
+.tavern.shell-panel .shell-panel__logo {
+  width: clamp(150px, 28vh, 260px);
+  height: auto;
+  filter: drop-shadow(0 0 28px color-mix(in srgb, var(--tavern-flame) 35%, transparent));
+}
+
+.tavern.shell-panel .panel--auth {
+  margin-top: clamp(12px, 3vh, 28px);
+}
+
+/* The logo is right above it: a skeleton in a shell panel draws no mark of its own (R2115000). */
+.tavern.shell-panel .skeleton__blocks::before {
+  content: none;
+}
+
+/* #2108, R2108000: a wait's panel and its logo show once it outlasts SKELETON_DELAY_MS, so a fast
+   account check or screen load never flashes them. */
+.tavern.shell-panel[data-shown="false"] :is(.panel, .shell-panel__brand) {
   visibility: hidden;
 }
 
