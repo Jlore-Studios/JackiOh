@@ -13409,11 +13409,8 @@
     "what": "build #2725 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-02T15:59:10Z",
-    "notes": [
-      "delivered build #2788 on muse (run 41461651900): approved",
-      "delivered build #2829 on muse (run 41457074147): approved"
-    ],
+    "at": "2026-11-02T16:07:24Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14118,7 +14115,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T15:59:10Z",
+  "loop_tick": "2026-11-02T16:07:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
