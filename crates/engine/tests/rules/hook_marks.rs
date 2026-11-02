@@ -565,7 +565,7 @@ fn r2783000_a_face_down_cloaked_card_is_never_named_to_the_other_seat() {
     let mut state = board_783("hook-marks-cloaked");
     let card = new_instance(&mut state, &cloaked_unit().id, P1, Zone::Hand { player: P1 });
     state.players.p1.hand.push(card.clone());
-    state = act(
+    let played = act_ok(
         &state,
         json!({
             "type": "play",
@@ -575,8 +575,52 @@ fn r2783000_a_face_down_cloaked_card_is_never_named_to_the_other_seat() {
             "playerId": "p1",
         }),
     );
+    // Set by its Cloaked, its text is inert (R1040): the Cry the play pipeline runs as it is set is
+    // no hook of its resolving, so it marks nothing, for either seat.
+    assert_eq!(markers(&played.events), vec![]);
+    let mut state = played.state;
     let set = state.players.p1.backrow[1].clone().expect("the set card");
     let (_, events) = run_on_sink(&mut state, |sink| mark_hook(sink, &set, P1, HookKind::Activate));
+    assert_eq!(events, vec![]);
+    // Revealed (R783006), its text resolves: its Cry is marked as it runs, the card public by then.
+    let revealed = act_ok(
+        &state,
+        json!({ "type": "activate", "instanceId": set.id, "ability": "reveal", "playerId": "p1" }),
+    );
+    // It asks for its Cry's target first; the run the answer starts is the Cry's, and is marked.
+    assert_eq!(markers(&revealed.events), vec![]);
+    let pending = revealed
+        .state
+        .pending
+        .as_ref()
+        .expect("the Cry asks for its target");
+    let enemy_hero = pending
+        .options
+        .iter()
+        .find(|option| option.key == "hero:p2")
+        .expect("the enemy hero")
+        .selection
+        .clone();
+    let answered = act_ok(
+        &revealed.state,
+        ActionInput {
+            body: ActionBody::Answer {
+                choice_id: pending.id.clone(),
+                selection: vec![enemy_hero],
+            },
+            player_id: P1,
+        },
+    );
+    assert_eq!(
+        markers(&answered.events),
+        vec![(set.id.clone(), cloaked_unit().id, P1, HookKind::Cry)]
+    );
+    assert_eq!(view_markers(&answered.state, P2).len(), 1);
+
+    // A hook of a Cloaked card where the other seat cannot read it, in its controller's hand.
+    let held = new_instance(&mut state, &cloaked_unit().id, P1, Zone::Hand { player: P1 });
+    state.players.p1.hand.push(held.clone());
+    let (_, events) = run_on_sink(&mut state, |sink| mark_hook(sink, &held, P1, HookKind::Whenever));
     assert!(matches!(
         &events[..],
         [GameEvent::HookResolving { hidden_from: Some(hidden), .. }] if *hidden == vec![P2]
@@ -586,16 +630,17 @@ fn r2783000_a_face_down_cloaked_card_is_never_named_to_the_other_seat() {
         events,
     });
 
-    // Its controller reads it (and the set's own Cry run before it, marked as the card stood set).
+    // Its controller reads it; the other seat reads neither marker nor card.
     assert_eq!(
-        view_markers(&state, P1).last(),
-        Some(
-            &json!({ "type": "hookResolving", "sourceId": set.id, "defId": cloaked_unit().id, "controller": "p1", "hook": "activate" })
-        )
+        view_markers(&state, P1),
+        vec![
+            json!({ "type": "hookResolving", "sourceId": held.id, "defId": cloaked_unit().id, "controller": "p1", "hook": "whenever" })
+        ]
     );
     let theirs = view_events(&state, P2);
     assert!(view_markers(&state, P2).is_empty());
     assert!(!names_anywhere(&theirs, &set.id));
+    assert!(!names_anywhere(&theirs, &held.id));
     assert!(!names_anywhere(&theirs, &cloaked_unit().id));
 }
 

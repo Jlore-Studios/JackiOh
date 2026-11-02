@@ -5,7 +5,8 @@
 //!
 //! Each first run of a Cry, a Death, a start-of-turn or end-of-turn hook, a Whenever trigger and an
 //! Activate is marked once, just before its effects, whatever they then do (a hook that fizzles is
-//! marked too); a continuation after a prompt is the same run and has none.
+//! marked too); a continuation after a prompt is the same run and has none. A card set face-down by
+//! its Cloaked, its text inert (R1040), marks nothing, though the play pipeline runs its Cry.
 
 use crate::script::{ACTIVATION_HOOK_PREFIX, EngineSink};
 use crate::state::{CardInstance, find_instance};
@@ -26,8 +27,14 @@ pub fn hook_kind_of(hook: &str) -> Option<HookKind> {
 
 /// Emit `card`'s marker for `hook`, run by `controller`. The card is read as it stands now (as it
 /// died, for a Death hook's snapshot of a card no longer anywhere), and the seats that cannot read it
-/// there (R177's `unreadable_by`) are recorded on the marker, which their views then withhold.
+/// there (R177's `unreadable_by`) are recorded on the marker, which their views then withhold. A card
+/// whose own text is dormant as the hook's run reads it (set by its Cloaked and not yet revealing,
+/// R783004, R1040) marks nothing: the play pipeline still runs a set card's Cry, which the card's script
+/// answers with nothing, so no hook of its resolves.
 pub fn mark_hook(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId, hook: HookKind) {
+    if crate::alt_play::is_dormant(card) {
+        return;
+    }
     let live = find_instance(sink.state, &card.id).unwrap_or(card);
     let def_id = live.def_id.clone();
     let hidden = crate::effects::card_scope::unreadable_by(sink.state, live);
