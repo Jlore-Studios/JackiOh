@@ -1,6 +1,7 @@
 // R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown (a card's own
 // cosmetics view, the playmat, backdrop and card back tiles), and only where a held token covers it
-// (R1305003, §14.2): no token covers a chase, a default or a starter.
+// (R1305003, §14.2): a Legendary token covers a Legendary chase too, and no token a Mythic (R2728000),
+// a default or a starter.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7): the held counts are `GET /api/tokens`' and the offer only
 // hides what the server would refuse. A refusal shows the server's words and changes nothing.
@@ -24,21 +25,29 @@ import "./tokenOffer.css";
 export type HeldTokens = TokenBarsResponse["tokens"];
 
 /** The tokens that buy a cosmetic, the lowest first, so an offer spends the cheapest that covers it. */
-const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic"];
+const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic", "Legendary"];
 
 function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
-  return tier === "Rare" ? held.cosmeticRare : held.cosmeticEpic;
+  switch (tier) {
+    case "Rare":
+      return held.cosmeticRare;
+    case "Epic":
+      return held.cosmeticEpic;
+    case "Legendary":
+      return held.cosmeticLegendary;
+  }
 }
 
 /**
- * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003). Null for a
- * chase, a default or a starter, and where nothing held covers it or the held tokens are unread.
+ * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003), so a chase
+ * only a Legendary token covers, and a Mythic none (R2728000). Null for a default or a starter, and
+ * where nothing held covers it or the held tokens are unread.
  */
 export function offerTier(
-  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "chase">,
+  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter">,
   held: HeldTokens | null,
 ): CosmeticTokenTier | null {
-  if (held === null || cosmetic.chase || cosmetic.default || cosmetic.starter) return null;
+  if (held === null || cosmetic.default || cosmetic.starter) return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
 }
 
@@ -67,16 +76,26 @@ export function useHeldTokens(token: string | null | undefined): [HeldTokens | n
 }
 
 function offerWords(tier: CosmeticTokenTier, count: number): string {
-  return tier === "Rare"
-    ? t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) })
-    : t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
+  switch (tier) {
+    case "Rare":
+      return t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) });
+    case "Epic":
+      return t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
+    case "Legendary":
+      return t("Unlock with a Legendary token ({count} held)", { count: formatNumber(count) });
+  }
 }
 
 /** What the offer asks before it spends (R2480000): the cosmetic, and the token it spends. */
 function questionWords(tier: CosmeticTokenTier, name: string): string {
-  return tier === "Rare"
-    ? t("Unlock {name}? This spends 1 Rare token.", { name })
-    : t("Unlock {name}? This spends 1 Epic token.", { name });
+  switch (tier) {
+    case "Rare":
+      return t("Unlock {name}? This spends 1 Rare token.", { name });
+    case "Epic":
+      return t("Unlock {name}? This spends 1 Epic token.", { name });
+    case "Legendary":
+      return t("Unlock {name}? This spends 1 Legendary token.", { name });
+  }
 }
 
 /** The offer on one locked cosmetic: asks first (R2480000), then spends a `tier` token on `cosmeticId`. */
