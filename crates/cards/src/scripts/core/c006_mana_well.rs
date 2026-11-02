@@ -2,20 +2,15 @@
 //! a Radiant cell that changes only a number changes only that number (§8 Conventions), so the two
 //! faces are the same hook with a different amount.
 //!
-//! The rest of the §8.1 Engine cell ("Temporary mana, may exceed 4") is the engine's already:
-//!   - `gain_mana` adds to `mana.current`, never `mana.max`, so it can exceed 4 (§2.3); `refresh_mana`
-//!     resets `current = max` each turn, so the gain never accumulates.
-//!   - `start_of_turn` fires for the controller only, before the draw (§2.2, §6.2, R68), and a Field
-//!     Spell that has left the field answers no hook (R153), so "leaves → back to 4" needs nothing here.
-//!
-//! The gain lands on the controller because `gain_mana` defaults its `player` to "self" (§6.3).
+//! `gain_mana` adds to `mana.current`, never `mana.max`, so it may exceed 4 (§2.3), and defaults its
+//! `player` to "self" (§6.3). `start_of_turn` fires for the controller only, before the draw (§2.2,
+//! §6.2, R68); a Field Spell that has left the field answers no hook (R153), so leaving needs nothing.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-006";
 
-/// The only difference between the two faces is how much mana the start of the turn gives: the
-/// declared number `mana` (R386), 1 and 2 on the Radiant face, read off the face that is up.
+/// The gain is the declared number `mana` (R386), 1 and 2 on the Radiant face, read off the face up.
 fn mana_well() -> Script {
     Script {
         start_of_turn: Some(hook(|ctx| vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))])),
@@ -29,8 +24,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #6 Mana Well — SPEC §8.1 row 6, BUILD M4-T4 must-pass: "Turn-4 player has 5 mana; leaves → back
-// to 4; radiant 6".
+// #6 Mana Well — SPEC §8.1 row 6, BUILD M4-T4 must-pass.
 //
 // The default `turn: 9` makes every scenario here a "turn-4 player" (§2.3's max is 4), and each side
 // keeps a small library so `start_turn()`'s draw is a draw, not fatigue (§2.4, R3).
@@ -58,8 +52,7 @@ mod tests {
 
             s.start_turn();
 
-            // 4 refreshed + 1 from the Well, and the max is untouched: temporary mana may exceed 4
-            // (§2.3).
+            // 4 refreshed + 1 from the Well; the max is untouched (§2.3).
             s.expect_mana(PlayerId::P1, 5);
             assert_eq!(s.view(PlayerId::P1).you.mana.max, 4);
         }

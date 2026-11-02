@@ -1,12 +1,6 @@
-//! Test-only definitions for `subsystems/callToChaosPlus.ts` (C+ #73 Call to Chaos (Classic+ Edition)'s
-//! table, R423). The engine does not depend on `packages/cards`, so each pool its entries name — Fruits
-//! (Grapes included, R382), Books, Classic cards, the "Call to Chaos" pool of both editions, the Classic
-//! Golem — gets stand-ins under the tags, sets and indices the real cards carry; the real card's test
-//! covers the same cases against the real catalog
-//! (packages/cards/test/classic-plus/073-call-to-chaos-classic-edition.test.ts).
-//!
-//! Port of `packages/engine/test/fixtures/callToChaosPlus.ts`: each exported def is a `pub static` under
-//! TS's name snake_cased (`core95`, `book_token`, `hard_field`).
+//! Test-only definitions for `subsystems/call_to_chaos_plus.rs` (C+ #73 Call to Chaos (Classic+
+//! Edition)'s table, R423). The engine does not depend on `crates/cards`, so each pool its entries name
+//! gets stand-ins under the tags, sets and indices the real cards carry.
 
 #![allow(non_upper_case_globals)]
 

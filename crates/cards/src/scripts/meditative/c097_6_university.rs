@@ -17,9 +17,6 @@ pub const ID: &str = "meditative-097-6";
 /// §8.8: "Activate" is once a turn.
 const USES: i32 = 1;
 
-/// Activate (R384): separate Buffs (Upgrade, R386) on each other permanent acting on your side (unit
-/// tops, backrow cards, face-down ones; this one left out since patch v0.3.10, #831), each application
-/// its own draw; an Immutable card is left alone (R23).
 fn study() -> ActivationDecl {
     ActivationDecl {
         id: "study".to_string(),
@@ -48,10 +45,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M 97.6 University — SPEC §8.8 row 97.6, BUILD M10 row M 97.6: "Can't attack; Activate, once a turn: two
-// Buffs on each other permanent on your side (itself left out since patch v0.3.10), face-down cards included (the latter cued per R440), an
-// Immutable one unchanged; enemy cards untouched; times reads through `param()`; radiant 0/24 and four
-// Buffs each".
+// M 97.6 University — SPEC §8.8 row 97.6, BUILD M10 row M 97.6.
 //
 // A Buff is counted by the `upgraded` events naming each card. Every scenario keeps a 0-cost Spell in each
 // hand and spares in the libraries, so R82 does not end the turn after the Activate.
@@ -159,8 +153,8 @@ mod tests {
     }
 
     /// The loop #884 found: each use's own Buffs could step its Activate N and its `times`, each use
-    /// funding more, until one turn never ended. Now the turn's uses stop at the cap, and since patch
-    /// v0.3.10 (#831) its Buffs leave it out, so its `times` stays as printed.
+    /// funding more, until one turn never ended. The turn's uses stop at the cap, and its Buffs leave it
+    /// out (#831), so its `times` stays as printed.
     #[test]
     fn r884000_a_set_activate_n_stops_at_the_cap_its_own_buffs_never_feed_it_and_the_game_goes_on() {
         let mut s = setup(false);
@@ -188,8 +182,8 @@ mod tests {
         fn r386_buffs_each_of_your_other_permanents_twice_a_face_down_card_included_itself_never() {
             let mut s = setup(false);
             s.activate(ID, json!({}));
-            // The Vanilla and the face-down Trap twice; the University itself never (patch v0.3.10); the
-            // Immutable Menace never (R23); the enemy Vanilla never.
+            // The Vanilla and the face-down Trap twice; the University itself never; the Immutable Menace
+            // never (R23); the enemy Vanilla never.
             assert_eq!(tally(&s), [0, 2, 0, 2, 0]);
         }
 

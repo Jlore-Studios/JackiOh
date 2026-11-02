@@ -57,10 +57,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #12.1 Shadow Word Death — SPEC §8.10 row S 12.1, BUILD M12 row S 12.1: "destroys a chosen Unit
-// with 5 Attack or more; a 4-Attack Unit can't be chosen; Attack an aura gives counts; an
-// Indestructible Unit survives; attack reads through `param()`; radiant its neighbours die too, a
-// 1-Attack one included" (R1867005, proven here and in S #12.2's file).
+// S #12.1 Shadow Word Death — SPEC §8.10 row S 12.1, BUILD M12 row S 12.1 (R1867005).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -124,8 +121,6 @@ mod tests {
             s.expect_in_zone(&target, "graveyard");
         }
 
-        /// R1867005, R1868000: the limit is checked with the play and not again as the Spell resolves,
-        /// so a target lowered from 5 Attack to 3 between the two still dies.
         #[test]
         fn r1867005_a_target_lowered_past_the_limit_after_the_pick_still_dies() {
             crate::register_all();
@@ -167,7 +162,6 @@ mod tests {
                 "p1": { "hand": [DEATH, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "backrow": [WEAPONS] },
             }));
-            // +3 from the aura: 7 Attack, chosen and destroyed.
             let target = s.unit_at(P2, 1);
             s.expect_stats(&target, json!({ "attack": 7 }));
 

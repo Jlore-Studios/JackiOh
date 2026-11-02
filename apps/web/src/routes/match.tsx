@@ -1,28 +1,16 @@
-// `/match/<id>` — the networked board (BUILD M6-T4, SPEC §9.5).
+// `/match/<id>` — the networked board (BUILD M6-T4, SPEC §9.5): open the socket (`game/net.ts`),
+// render whatever `PlayerView` came back through the hotseat's `Game.tsx`, and send clicks straight
+// back out. CLAUDE.md rule 7: no rule is decided here, and nothing on screen comes from anywhere but
+// the view.
 //
-// The whole route is three lines of intent: open the socket (`game/net.ts`), render whatever
-// `PlayerView` came back through the same `Game.tsx` the hotseat route renders, and send clicks
-// straight back out. CLAUDE.md rule 7: no rule is decided here, and nothing on screen comes from
-// anywhere but the view.
+// WHERE LEGALITY COMES FROM. The client never computes legality (BUILD M5-T2): the actor sends
+// `legalActions` for this socket's own seat on the `view` frame (`ViewMessage` in
+// `crates/server/src/actor/protocol.rs`). When it has never arrived (`net.ts` reports it) this file
+// shows a loud notice, since prompts would still work and nothing else would: a silently dead board.
 //
-// WHERE LEGALITY COMES FROM. `game/actions.ts` derives every clickable element by filtering the
-// `legalActions` array (BUILD M5-T2: "The client never computes legality itself; it asks
-// `legalActions` and greys out the rest"). The actor sends it on the `view` frame —
-// `crates/server/src/actor/protocol.rs` `ViewMessage` is `{type:"view", view, legal}` and
-// `match_actor.rs` `push_view` fills it with `legalActions(state, player)` for that socket's own
-// seat — so this route hands `match.legal` to the same `Game.tsx` the hotseat route hands
-// `engine.legalActions(state, seat)`. `net.ts` reports when it has never arrived; this
-// file renders that state as a loud notice instead of a silently dead board, because the failure
-// is invisible otherwise: prompts would still work (`Prompt.tsx` rebuilds an `answer` from
-// `PendingView.options` when it is given no array) and nothing else would. Nothing here papers
-// over it with a client-side legality check.
-//
-// THE CATALOG. `CardView` is `{ instanceId, defId, radiant, cost }` (§10.8), so a view alone cannot
-// put a card's NAME on its face — and `cy.playByName` / `cy.handCardByName` find cards by name. The
-// hotseat route gets its defs from the engine it is running; this route runs none, so it feeds
-// `CatalogContext` the catalog the client ships (`game/currentCatalog.ts`, §9.4, #1378), which is in
-// hand before the board's first render and asks the server nothing. A card the catalog lacks still
-// shows its `defId`, never a guessed name.
+// THE CATALOG. A `CardView` carries no name (§10.8), and the specs find cards by name, so the board's
+// `CatalogContext` is the catalog the client ships (`game/currentCatalog.ts`, §9.4, #1378), which asks
+// the server nothing. A card the catalog lacks shows its `defId`, never a guessed name.
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -76,18 +64,13 @@ export function promptHolderOf(pending: PlayerView["pending"], viewer: PlayerId)
 
 /** Chrome this route invented. None of it is in `e2e/support/testids.ts`; see the hand-off report. */
 export const matchTestid = {
-  /**
-   * The connection line, in a player's words (`connectionWords`). The raw state (`connecting`,
-   * `open`, `reconnecting`, `refused`, `closed`) rides on its `data-connection`.
-   */
+  /** The connection line in a player's words; the raw state rides on its `data-connection`. */
   status: "match-status",
-  /** The notice that stands in for the missing legal-action frame. */
   missingLegal: "missing-legal-frame",
   /** The panel shown before the first `view` frame lands. */
   connecting: "match-connecting",
-  /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
-  /** #1599, #1899: the sentence that stands in for a socket closed for good (a voided match): the panel's before any view, the board's notice once it is up. */
+  /** #1599, #1899: the sentence that stands in for a socket closed for good (a voided match). */
   gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
@@ -103,7 +86,6 @@ export const matchTestid = {
   watchers: "match-watchers",
 } as const;
 
-/** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
 function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReconnect: () => void }): ReactElement {
   return (
     <>
@@ -131,17 +113,9 @@ export type MatchRouteProps = {
 };
 
 /**
- * The socket URL with its credentials stripped, for display only.
- *
- * `net.ts`'s `socketUrlFor` once put the access token in the query string, so rendering the URL raw
- * printed a live bearer token on screen and into the DOM on every connect — visible in a
- * screenshot, a screen share, over a shoulder, and to any extension that can read the page. Since
- * R1379000 the address names the match only and the token is offered as a subprotocol; the query is
- * still stripped, so no credential a future address carries reaches the screen. The host and path
- * are the useful part of the diagnostic; the query never was.
- *
- * Returns the input unchanged if it will not parse, since this is a status line and must not be
- * the thing that throws.
+ * The socket URL with its query stripped, for display only, so no credential an address carries
+ * reaches the screen (the token travels as a subprotocol, R1379000). Returns the input unchanged if
+ * it will not parse: a status line must not be the thing that throws.
  */
 export function withoutToken(raw: string): string {
   try {
@@ -185,11 +159,9 @@ function recorded(ranks: MatchRanksResponse): boolean {
 }
 
 /**
- * Both seats' ranks and win streaks for the match bar (R604, R612, R2101000): whether this game moves the rating, and each
- * seat's visible rank beside its username, never its profile id (R1436). Read when the match opens, so a promotion
- * mid-match shows on the next one, and again once its result has come (R2388000): `MATCH_RANKS_READ_ATTEMPTS` reads in all,
- * `MATCH_RANKS_RETRY_MS` apart, while a ranked read carries no move. An answer that is not a ranks body — or no answer —
- * leaves no banner rather than breaking the board.
+ * Both seats' ranks and win streaks for the match bar (R604, R612, R2101000), by username, never profile id (R1436).
+ * Read when the match opens, so a promotion mid-match shows on the next one, and again once its result has come while a
+ * ranked read carries no move (R2388000). An answer that is not a ranks body leaves no banner rather than breaking the board.
  */
 function useMatchRanks(token: string, matchId: string, gameOver: boolean): MatchRanksResponse | null {
   const [ranks, setRanks] = useState<MatchRanksResponse | null>(null);
@@ -231,16 +203,11 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // R336: a Conquest game shows its series' score and won decks, and once it is over the way to the next game.
   const series = useMatchSeries(token, matchId, match.view?.result != null);
   const lookup = currentCatalogLookup();
-  /**
-   * R768000: the finished match's replay, opened from its result panel at step 0, or at its last
-   * step making the last turn's GIF; null shows the board. Leaving goes back to the board and its
-   * result panel.
-   */
+  /** R768000: the finished match's replay (`share` opens it at the last turn's GIF); null shows the board. */
   const [watching, setWatching] = useState<{ share: boolean } | null>(null);
 
-  // BUILD M5-T3 / `e2e/support/types.ts`: `window.__jackioh` outside production builds. Installed
-  // once, reading through a ref, so a spec that re-reads `handle.state` sees the current view and
-  // not the one that existed when the effect ran.
+  // BUILD M5-T3: `window.__jackioh` outside production builds, installed once and reading through a
+  // ref, so a spec that re-reads `handle.state` sees the current view.
   const latest = useRef(match);
   latest.current = match;
   useEffect(
@@ -259,8 +226,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           return latest.current.view?.viewer ?? null;
         },
         dispatch: (action) => {
-          // `playerId` is dropped: `parseClientMessage` discards it and the actor stamps the
-          // authenticated seat, so sending one would be theatre.
+          // `playerId` is dropped: the actor stamps the authenticated seat.
           const { playerId: _seat, ...body } = action;
           latest.current.send(body as ActionBody);
         },
@@ -277,10 +243,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     if (paid) announceWallet();
   }, [paid]);
 
-  // R643–R644: the match's emote session. The local seat's sends emit through the socket
-  // (`sendEmote`); the opponent's relays land through `match.emote`, whose `seq` bumps on every
-  // frame so the same emote twice still notifies. The device setting mutes the opponent live.
-  // R1342: the portraits frame dealt this account its own hand, which follows the seat it plays.
+  // R643–R644: the opponent's relays land through `match.emote`, whose `seq` bumps on every frame so
+  // the same emote twice still notifies. R1342: this account's dealt hand follows the seat it plays.
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
   const ownHand = match.emoteHand;
   const seatNow = view?.viewer;
@@ -316,8 +280,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     [match.sendAim, relayedAim, viewer],
   );
 
-  // R1834004: the viewer's own side wears the deck slots its seat froze when the match began (R1834002),
-  // so the deck it queued with; the account's choice until the first `loadouts` frame.
+  // R1834004: the viewer's side wears the deck slots its seat froze at the start (R1834002); the
+  // account's choice until the first `loadouts` frame.
   const loadouts = match.loadouts;
   const ownSeat = viewer === undefined || loadouts === null ? null : loadouts[viewer].seat;
   const deckCosmetics = useMemo(
@@ -325,8 +289,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     [ownSeat],
   );
 
-  // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
-  // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
+  // The clock frame of the view's turn: a view on the next turn never reads the last turn's deadline.
   const clock = useFrameFor(match.clock, turnKeyOf(view));
 
   // What the server said when it refused the socket is for a debugger, not the player (below).
@@ -336,8 +299,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     console.error(`The server refused the socket for match ${matchId}: ${refusedWith}`);
   }, [refusedWith, matchId]);
 
-  // No frame has carried `legalActions` (see WHERE LEGALITY COMES FROM above): the player gets a
-  // sentence, and the console gets why.
+  // No frame has carried `legalActions` (WHERE LEGALITY COMES FROM): the console gets why.
   const readOnly = view !== null && match.legalSource === "none";
   useEffect(() => {
     if (!readOnly) return;
@@ -349,8 +311,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     );
   }, [readOnly]);
 
-  // #1792: the tab says when the game waits on the player (its mulligan, a prompt it holds, or its
-  // turn: `awaitsYou`), so a match in a background tab can be found.
+  // #1792: the tab says when the game waits on the player, so a match in a background tab can be found.
   const yourMove = view !== null && awaitsYou(view);
   useEffect(() => {
     document.title = yourMove ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
@@ -388,8 +349,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         </ShellPanel>
       );
     }
-    // #1599: a socket closed for good before any view (a voided match's VOIDED_CLOSE_CODE, game/net.ts)
-    // has nothing left to wait for, so the panel says so rather than Joining.
+    // #1599: a socket closed for good before any view (a voided match) has nothing left to wait for.
     if (match.connection === "closed") {
       return (
         <ShellPanel testId={matchTestid.connecting}>
@@ -446,13 +406,11 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   }
 
   const activeIsYou = view.active === view.viewer;
-  // R79's turn clock belongs to the ACTIVE player. `clock` frames are preferred over
-  // `PlayerView.clockMs` because they carry the server's `now`, which is what makes a countdown
-  // immune to this tab's wall-clock skew (`protocol.ts`).
+  // R79's turn clock belongs to the ACTIVE player. `clock` frames beat `PlayerView.clockMs`: they
+  // carry the server's `now`, which makes a countdown immune to this tab's wall-clock skew.
   const turnMs = clock === null ? view.clockMs : remainingMs(clock.clocks.turnDeadline, clock);
-  // R265, R268: while both mulligans are open one deadline runs for both seats, reported as the
-  // prompt deadline (and as each seat's `clockMs`), so both sides show it — the seat that has
-  // already answered included, since it is waiting on it.
+  // R265, R268: while both mulligans are open one deadline (the prompt deadline) runs for both seats,
+  // so both sides show it, the seat that has already answered included.
   const inMulligan = view.mulligan !== undefined;
   const mulliganMs = clock === null ? view.clockMs : remainingMs(clock.clocks.promptDeadline, clock);
   const opponent: PlayerId = view.opponent.player;
@@ -460,9 +418,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     you: clock === null ? null : remainingMs(clock.clocks.graceDeadline[view.viewer], clock),
     opponent: clock === null ? null : remainingMs(clock.clocks.graceDeadline[opponent], clock),
   };
-  // #1899: a socket closed for good once the board is up — the server voided the match
-  // (VOIDED_CLOSE_CODE, game/net.ts; `close()` runs only as this route unmounts) — has nothing to
-  // reconnect to, so the board says the match is gone and offers the lobby.
+  // #1899: a socket closed for good once the board is up (a voided match; `close()` runs only as this
+  // route unmounts) has nothing to reconnect to.
   const gone = match.connection === "closed";
   // R679: the server keeps no record of a voided match, so its result offers no replay to watch or share.
   const voided = view.result?.reason === "voided";
@@ -496,10 +453,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           : t("{reason}. Head back to the lobby.", { reason: connectionWords("refused") })
       }
       resultActions={
-        // A finished match's way on (Result.tsx): a rematch while the opponent is still here —
-        // never for a series game, finished or not: the server refuses those (`series_game`),
-        // and the Conquest continue flow owns what comes next — then the series' next game
-        // when there is one, then the lobby, where the next one starts.
+        // A rematch, never for a series game (the server refuses those, `series_game`, and the
+        // Conquest continue flow owns what comes next), then the series' next game, then the lobby.
         <>
           {series === null ? (
             <RematchButtons

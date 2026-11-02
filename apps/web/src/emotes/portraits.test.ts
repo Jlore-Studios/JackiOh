@@ -1,8 +1,6 @@
-// R641's portrait roster on the client (portraits.ts): every portrait id resolves, once at module
-// load, to the catalog card its `PORTRAITS` entry names — BY NAME, never by number, so the test
-// reads the name off the resolved def rather than asserting the lookup went anywhere in
-// particular. `portraitOrDefault` is the other half: the deck column's `null` and anything the
-// roster does not know both read as `vanilla` (D5).
+// R641's portrait roster on the client (portraits.ts): every portrait id resolves to the catalog card
+// its `PORTRAITS` entry names, by name, never by number. `portraitOrDefault` is the other half: the
+// deck column's `null` and anything the roster does not know both read as `vanilla` (D5).
 
 import { describe, expect, it } from "vitest";
 
@@ -14,7 +12,7 @@ import { PORTRAIT_DEFS } from "./portraits.ts";
 
 const catalog = catalogJson as unknown as Record<string, CardDef>;
 
-/** The issue's roster table (R641): each portrait id, its card's name and the card it lands on. */
+/** The issue's roster table (R641). */
 const ROSTER: Record<PortraitId, { cardName: string; defId: string }> = {
   vanilla: { cardName: "Mr. Vanilla", defId: "core-008" },
   gary: { cardName: "Gary the Gambler", defId: "core-004" },
@@ -30,7 +28,6 @@ describe("R641 the portrait roster", () => {
 
     for (const id of PORTRAIT_IDS) {
       const { defId, def } = PORTRAIT_DEFS[id];
-      // The roster's cardName found the def: the name on it is the name the issue's table gives.
       expect(def.name, id).toBe(PORTRAITS[id].cardName);
       // And the resolution is a catalog entry — the same object the Almanac would draw.
       expect(catalog[defId]?.name, `${id} -> ${defId}`).toBe(def.name);

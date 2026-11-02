@@ -1,5 +1,4 @@
 // docs/polish/1-animations.md, behavior B31: projectiles, cracks and rings (S5 `canvasFx.ts`).
-//
 // A projectile's head is observed through the trail it leaves in a real `ParticleSystem`: clearing
 // the system and stepping a few frames leaves only particles emitted near the head at that moment.
 
@@ -321,7 +320,6 @@ describe("B41 flashes", () => {
     expect(tinted.some((c) => c.startsWith("rgba(255, 0, 170"))).toBe(true);
     expect(tinted.some((c) => c.startsWith("rgba(119, 136, 153"))).toBe(false);
 
-    // One color is both the core and the glow.
     const single = stopsOf(["#112233"]);
     expect(single.every((c) => c.startsWith("rgba(17, 34, 51"))).toBe(true);
 
@@ -402,7 +400,7 @@ describe("R200 and intensity: shapes age by real time, projectiles scale with in
   const TO: FxVec = { x: 700, y: 300 };
 
   it("R200 a stalled frame ages every shape by the real time that passed, not the clamped step", () => {
-    // Review: dt is clamped to 50 ms, so on a 500 ms frame a 900 ms effect lived for seconds of wall time.
+    // dt is clamped to 50 ms, so aged by dt a 900 ms effect would live for seconds of wall time.
     const { fx } = setup();
     fx.crack(BOX, 400);
     fx.ring("gold", BOX, 500);

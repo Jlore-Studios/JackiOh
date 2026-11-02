@@ -5,12 +5,11 @@
 //! jackioh-server stats-fold
 //! ```
 //!
-//! Every record the server writes is folded as it is written; a record written before migration 0041
-//! is not, and until it is, the totals miss it and the retention purge keeps its detail. The server's
-//! retention loop folds them at boot (`api::retention::run_purge`); this runs the same fold by hand,
-//! `STATS_FOLD_BATCH_RECORDS` records to a transaction, and says how many it folded. Run again, it
-//! folds nothing: each record is marked folded with its counts, in one transaction. A record whose
-//! detail does not read is set aside uncounted and printed (R1715000).
+//! A record written before migration 0041 was not folded as it was written, so the totals miss it
+//! and the retention purge keeps its detail. The retention loop folds them at boot
+//! (`api::retention::run_purge`); this runs the same fold by hand, `STATS_FOLD_BATCH_RECORDS` records
+//! to a transaction, and folds nothing run again. A record whose detail does not read is set aside
+//! uncounted and printed (R1715000).
 
 use anyhow::bail;
 
@@ -19,7 +18,6 @@ use crate::cli::{connect_one, database_url};
 
 const USAGE: &str = "Usage: jackioh-server stats-fold";
 
-/// `stats-fold`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if !args.is_empty() {
         bail!(USAGE);

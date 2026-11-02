@@ -25,12 +25,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #13 Mommy Barker — SPEC §8.7 row 13, BUILD M9 Classic+ row C+ 13: "Death adds 1 random Pancake
-// token (C+ #12.1–#12.8) to your hand, hidden from the opponent (R97); exile or a bounce adds nothing; a
-// full hand burns it; the count reads through `param()`; radiant 4/4 with Reborn, adding a token on
-// both deaths (R8)".
-
-/// `describe("C+ #13 Mommy Barker")`.
+// C+ #13 Mommy Barker — SPEC §8.7 row 13, BUILD M9 Classic+ row C+ 13, R8, R97.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,12 +44,11 @@ mod tests {
 
     use crate::js;
 
-    /// TS `PANCAKE_TOKENS`: C+ #12.1 to #12.8.
+    /// C+ #12.1 to #12.8.
     fn pancake_tokens() -> Vec<String> {
         (1..=8).map(|k| format!("classicplus-012-{k}")).collect()
     }
 
-    /// TS `/classicplus-012-\d/`.
     fn names_a_pancake_token(text: &str) -> bool {
         (0..=9).any(|digit| text.contains(&format!("classicplus-012-{digit}")))
     }
@@ -77,11 +71,9 @@ mod tests {
         s
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
-        /// Death adds one random Pancake token to your hand
         #[test]
         fn death_adds_one_random_pancake_token_to_your_hand() {
             let mut s = dies_attacking(false, vec![FILLER]);
@@ -89,14 +81,12 @@ mod tests {
             assert_eq!(pancakes_in(&s).len(), 1);
         }
 
-        /// R97 the token is hidden from the opponent
         #[test]
         fn r97_the_token_is_hidden_from_the_opponent() {
             let s = dies_attacking(false, vec![FILLER]);
             assert!(!names_a_pancake_token(&js(&s.view(P2)).to_string()));
         }
 
-        /// a bounce adds nothing
         #[test]
         fn a_bounce_adds_nothing() {
             let mut s = scenario(json!({
@@ -108,7 +98,6 @@ mod tests {
             assert!(pancakes_in(&s).is_empty());
         }
 
-        /// exile adds nothing: it never dies
         #[test]
         fn exile_adds_nothing_it_never_dies() {
             let mut s = scenario(json!({
@@ -121,7 +110,6 @@ mod tests {
             assert!(pancakes_in(&s).is_empty());
         }
 
-        /// a full hand burns it
         #[test]
         fn a_full_hand_burns_it() {
             let s = dies_attacking(false, vec![FILLER; HAND_CAP as usize]);
@@ -147,7 +135,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 

@@ -18,7 +18,6 @@ pub const ID: &str = "classic-030";
 fn recycle(discounts: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // The graveyard as the Spell begins to resolve, read once for both halves.
             let shuffled: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Graveyard)
                 .iter()
                 .map(|card| card.id.clone())
@@ -32,12 +31,9 @@ fn recycle(discounts: bool) -> Script {
                 }));
             }
             if discounts {
-                // A card's declared numbers do not move while its Spell resolves, so the discount is
-                // read here, where the context is in hand.
                 let discount = param(&*ctx, "discount");
                 let shuffled = shuffled.clone();
                 effects.push(for_each_card(ForEachCardArgs {
-                    // The cards that went in: the graveyard's, now in the library.
                     cards: Arc::new(move |c| {
                         zone_cards(&*c.state, c.controller, OffFieldZone::Library)
                             .iter()
@@ -68,11 +64,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #30 Recycle — SPEC §8.6 row 30, BUILD M9 Classic row C 30: shuffles every graveyard card into your
-// deck at random positions; R80's cap: cards that don't fit stay in the graveyard; positions are blank
-// in both views and your deck list names the cards (R311); then draw 1; radiant: each shuffled card costs
-// (1) less (`costMod`, R78). Its name is a rules word, and C #64's "Recycler" is no reference to it
-// (R381); numbers: R386.
+// C #30 Recycle — SPEC §8.6 row 30, BUILD M9 Classic row C 30 (R80, R311, R78, R386). Its name is a
+// rules word, and C #64's "Recycler" is no reference to it (R381).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,7 +215,6 @@ mod tests {
                         .count(),
                     0
                 );
-                // One card went in (60), then the draw took one out.
                 assert_eq!(s.pile(P1, "library").len(), (LIBRARY_CAP - 1) as usize);
             }
 

@@ -3,24 +3,18 @@
 //!   Base:    "Cry: add 2 random (3) Cost Units to your hand; they cost 1"
 //!   Radiant: "Cry: add 2 random Radiant (3) Cost Units to your hand; they cost 0" — §8's
 //!            cell "They are Radiant and cost 0" (R275's raise: the cards' face and their price).
-//!            The cell restates only what the cards are and cost, so the count and the pool are
-//!            the base clause's, unchanged (§8 Conventions).
+//!            The count and the pool are the base clause's (§8 Conventions).
 //!
 //! The Engine cell, "Non-token pool excluding #54; `costOverride`", is §5.1's one query: tokens are
-//! left out automatically, `excludeDefId: ID` is passed explicitly, and `costRange: { min: 3, max: 3 }`
-//! is read out of play per R65 (X-cost reads 0, embiggen its base; `query_cost` is the one number
-//! every bracket reads).
-//! R60: both picks may repeat, since the row does not say "different": two draws with replacement.
-//! R65/R78: "they cost 1" (radiant: 0) is `cost_override` on each created instance, which survives in
-//! every zone. §5.2: on the radiant face the instance's Radiant flag is set as it is made.
-//! R4: the add-to-hand pipeline owns the hand cap, so this file never counts space. R215: the price is
-//! the card's price in the hand, so a card the full hand burns reaches the graveyard at its printed
-//! price, Radiant still on the radiant face.
-//! `add_random_from_catalog` picks with `ctx.rng` (a hook may not roll dice itself: that advances
-//! `rng_cursor`, which is state) and creates each card through the `add_to_hand` pipeline (§2.4, R4).
+//! left out automatically, `excludeDefId: ID` explicitly, and the cost range is read out of play (R65).
+//! R60: the two picks are draws with replacement, since the row does not say "different".
+//! R65/R78: "they cost 1" (radiant: 0) is `cost_override` on each created instance, kept in every zone;
+//! §5.2: the radiant face sets each one's flag as it is made. R4: the `add_to_hand` pipeline owns the
+//! hand cap (§2.4). R215: the price is the card's price in the hand, so a burnt card reaches the
+//! graveyard at its printed price, Radiant still on the radiant face. `add_random_from_catalog` picks
+//! with `ctx.rng` (a hook may not roll dice itself: `rng_cursor` is state).
 //!
-//! Through v0.4.0f the pool was (3) or (4) Cost Units; `script_v0_4_0f` keeps it for those versions'
-//! replays (R767000).
+//! `script_v0_4_0f` keeps the older (3) or (4) Cost pool for those versions' replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -75,10 +69,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275).
-// BUILD M4-T4 row 54: "2 random units of cost 3, no tokens, not #54, cost override 1; radiant
-// Radiant units at 0". R215: a card the full hand burns reaches the graveyard without the price —
-// Radiant still on the radiant face, since that flag is set as it is made.
+// #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275). BUILD M4-T4 row 54.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -231,8 +222,7 @@ mod tests {
         #[test]
         fn r60_the_two_picks_may_repeat_nothing_here_asks_for_different_cards() {
             crate::register_all();
-            // Both cards come out of the same pool with replacement, so a pair of the same def is legal —
-            // this test pins the reading, not a particular seed: whatever comes out, it is in the pool.
+            // With replacement a pair of the same def is legal; this pins the reading, not a seed.
             let mut s = scenario(json!({ "seed": "straaza-repeat", "p1": { "hand": ["core-054"] } }));
 
             s.play("core-054", json!({}));
@@ -258,8 +248,7 @@ mod tests {
             assert_eq!(s.pile(P1, "graveyard").len(), 1);
             s.expect_events(json!(["addedToHand", "burned"]));
 
-            // R215: "they cost 1" is the card's price in the hand, so the card that landed has it and the
-            // burned one, which never reached the hand, lies in the graveyard without it.
+            // R215: the card that landed has the price; the burned one, never in the hand, lies without it.
             let kept: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
             assert_eq!(kept.len(), 1);
             assert_eq!(kept.first().and_then(|card| card.cost_override), Some(1));
@@ -377,9 +366,8 @@ mod tests {
             assert_eq!(kept.first().map(|card| card.radiant), Some(true));
             assert_eq!(kept.first().and_then(|card| card.cost_override), Some(0));
 
-            // R215: the 0 is the card's price in the hand, and the burned card never reached one, so it
-            // lies in the graveyard at its printed price; the Radiant flag was set as it was made (§5.2,
-            // R74) and R215 keeps it there.
+            // R215: the burned card never reached the hand, so it lies in the graveyard at its printed
+            // price, its Radiant flag set as it was made (§5.2, R74).
             let burned = burned_card(&mut s);
             assert!(pool_ids().contains(&burned.def_id));
             assert!(burned.radiant);

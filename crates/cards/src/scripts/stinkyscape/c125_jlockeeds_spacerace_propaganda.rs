@@ -47,9 +47,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #125 Jlockeed's Spacerace Propaganda — SPEC §8.10 row 125, BUILD M12 row S 125: "a Field
-// Spell: while face-up in the backrow its Activate adds one random Starship Piece to its controller's
-// hand, once a turn, a second use refused (R384); a full hand burns it; radiant a Radiant piece".
+// Stinkyscape #125 Jlockeed's Spacerace Propaganda — SPEC §8.10 row 125, BUILD M12 row S 125
+// (R384).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -62,7 +61,6 @@ mod tests {
     const ABILITY: &str = "propaganda";
     const FILLER: &str = "core-005";
 
-    /// p1 has the Propaganda face-up in backrow lane 1 and `fillers` cards in hand.
     fn standing(radiant: bool, fillers: usize) -> Scenario {
         scenario(json!({
             "seed": "propaganda",
@@ -76,7 +74,6 @@ mod tests {
         }))
     }
 
-    /// The pieces the last step added to p1's hand, as (definition, face).
     fn added(s: &Scenario) -> Vec<(String, bool)> {
         s.last_events()
             .iter()
@@ -103,7 +100,6 @@ mod tests {
         assert!(prints_piece(&first[0].0), "{first:?}");
         assert!(!first[0].1);
         s.expect_refused(|s| s.activate(PROPAGANDA, json!({ "ability": ABILITY })));
-        // A new turn of its controller's, a new use.
         s.end_turn().end_turn();
         s.activate(PROPAGANDA, json!({ "ability": ABILITY }));
         assert_eq!(added(&s).len(), 1);

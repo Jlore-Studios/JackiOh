@@ -1,10 +1,7 @@
 //! A seat that cannot lose (SPEC §2, §9.10; R2201000): the handicap's `heroFloor`, which a lesson's
-//! human plays under (`TUTORIAL_HUMAN`).
-//!
-//! The floor holds against every way to lose: damage (a hit is capped at what the hero has above its
-//! floor), fatigue (an ordinary hit), life loss, setting health, the health swap, an opponent's win
-//! by effect, held win and flight, and a vote. It never stops the floored seat from winning, and it
-//! is absent from every game that does not set it.
+//! human plays under (`TUTORIAL_HUMAN`). The floor holds against every way to lose (a hit is capped at
+//! what the hero has above its floor), never stops the floored seat from winning, and is absent from
+//! every game that does not set it.
 //!
 //! Fixtures: the vanilla catalog (`fx-1` up), and effects run through `make_context` and settled, as
 //! `alt_wins.rs` runs them, so the state check's game-end point runs after each.
@@ -32,7 +29,6 @@ fn size(handicap: Option<Handicap>) -> i32 {
     handicap.map_or(DECK_SIZE, |h| h.deck_size)
 }
 
-/// A game in setup with these handicaps, each seat dealt vanilla units of its handicap's size.
 fn created(seed: &str, p1: Option<Handicap>, p2: Option<Handicap>) -> GameState {
     setup_catalog();
     create_game(&CreateGameOptions {
@@ -197,12 +193,10 @@ mod r2201000_a_seat_that_cannot_lose {
 
     #[test]
     fn r2201000_no_win_of_the_opponents_ends_the_game_against_a_floored_seat() {
-        // A win by effect.
         let mut state = floored("r2201000-win-by-effect");
         run_settled(&mut state, &[win_game(json_as(json!({})))], OTHER);
         assert!(state.result.is_none(), "an opponent's win by effect is not read");
 
-        // A held win that is met at once.
         let mut state = floored("r2201000-alt-win");
         run_settled(
             &mut state,
@@ -211,7 +205,6 @@ mod r2201000_a_seat_that_cannot_lose {
         );
         assert!(state.result.is_none(), "an opponent's held win is not read");
 
-        // A vote whose tally is full.
         let mut state = floored("r2201000-vote");
         state.players[FLOORED].votes = Some(VoteTally {
             turn: state.turn,

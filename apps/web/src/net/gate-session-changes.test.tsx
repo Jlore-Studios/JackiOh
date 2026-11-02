@@ -1,10 +1,7 @@
-// A session that changes under a request (docs/polish/5-sign-in.md, R194, after the second panel).
-//
-// A renewal is a round trip, and the device can sign out, or sign in as someone else, while it is
-// out. A renewal must also hand back the same account it renewed: a refresh token answers with the
-// session of whoever owns it, whatever access token came with it. And a page the browser restores
-// from its back/forward cache must not keep showing an account that has since signed out. Asserted
-// through the real modules over a stubbed `fetch`, with tokens whose payload carries a user id.
+// A session that changes under a request (docs/polish/5-sign-in.md, R194, after the second panel): the
+// device can sign out or switch account while a renewal is out; a refresh token renews whoever owns it,
+// whatever access token came with it; and a page restored from the back/forward cache must not keep
+// showing an account that has since signed out. Real modules over a stubbed `fetch`.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,9 +23,8 @@ const URL_ = "https://project.supabase.co";
 const KEY = "sb_publishable_test";
 const API = "http://localhost:8787";
 const SLOW = { timeout: 5_000 } as const;
-// The budget for a test as a whole. Most tests below render the whole <App /> and then wait up to
-// `SLOW` more than once, so vitest's default of 5 s for the entire test was smaller than the waits
-// it holds, and under a loaded CI runner it ran out first.
+// A whole test's budget: most render <App /> and wait up to `SLOW` more than once, which vitest's 5 s
+// default for the entire test cannot hold on a loaded CI runner.
 const SLOW_TEST = { timeout: 30_000 } as const;
 
 function base64url(text: string): string {
@@ -108,9 +104,7 @@ describe("R194 a renewal the device outlived", () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
 
-    // A screen's request came back 401, and the renewal is out.
     const renewal = renewAfterUnauthorized(expired);
-    // The player signs out meanwhile (the code screen's button, or the gate's slow panel).
     signOut();
     expect(readSession()).toBeNull();
     provider.answer(tokens(renewed, "rt-2"));
@@ -119,9 +113,8 @@ describe("R194 a renewal the device outlived", () => {
     await vi.waitFor(() => {
       expect(assign).toHaveBeenCalledWith(paths.landing);
     });
-    // Not written back over the sign-out: the landing page finds a signed-out device.
     expect(readSession()).toBeNull();
-    // And the renewed session is revoked, not left live at the provider.
+    // The renewed session is revoked, not left live at the provider.
     await vi.waitFor(() => {
       expect(provider.logouts).toContain(`Bearer ${renewed}`);
     });
@@ -155,11 +148,10 @@ describe("R194 a renewal the device outlived", () => {
     const provider = heldRefresh();
 
     const renewal = renewAfterUnauthorized(xExpired);
-    // The device signs out of X and signs in as Y.
     store(yLive, "y-rt", Date.now() + 3_600_000);
     provider.answer(tokens(tokenFor("user-x", "renewed"), "x-rt-2"));
 
-    // The device is Y now, and nothing made for X is sent again as Y.
+    // Nothing made for X is sent again as Y.
     expect(await renewal).toEqual({ kind: "switched" });
     expect(readSession()?.accessToken).toBe(yLive);
   });
@@ -181,8 +173,7 @@ describe("R194 a renewal the device outlived", () => {
 
 describe("R194 a renewal must hand back the same account", SLOW_TEST, () => {
   it("R194 a stored token naming one user and a refresh token owned by another ends the session", async () => {
-    // What a forged confirmation link would have left behind: an access token naming the victim,
-    // and the attacker's real refresh token, which renews into the attacker's account.
+    // What a forged confirmation link leaves: a token naming the victim, and the attacker's refresh token.
     const forged = tokenFor("victim-user", "forged");
     const attacker = tokenFor("attacker-user", "attacker");
     store(forged, "attacker-real-refresh-token", Date.now() + 3_600_000);
@@ -215,7 +206,7 @@ describe("R194 a renewal must hand back the same account", SLOW_TEST, () => {
     }, SLOW);
     expect(window.location.search).toBe("?reason=expired");
     expect(readSession()).toBeNull();
-    // The attacker's session was never used to read an account, and it is revoked.
+    // The attacker's session never reads an account, and it is revoked.
     expect(meTokens).not.toContain(attacker);
     await waitFor(() => {
       expect(logouts).toContain(attacker);
@@ -242,8 +233,7 @@ describe("R194 a page restored from the back/forward cache", SLOW_TEST, () => {
     render(<App />);
     await screen.findByTestId(inviteTestid.accountEmail, undefined, SLOW);
 
-    // Signed out, then the browser's Back button restores this very page from its cache: frozen,
-    // it heard no storage event.
+    // Back restores this page from its cache: frozen, it heard no storage event.
     clearSession();
     act(() => {
       window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
@@ -321,9 +311,7 @@ describe("the code screen reads the account once", SLOW_TEST, () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A re-read in the background keeps the open screen (the third panel round)
-// ---------------------------------------------------------------------------------------------
 
 /** A token of one provider session: `session_id` is what tells a renewal from a new sign-in. */
 function sessionToken(sub: string, sessionId: string, tag: string): string {
@@ -339,25 +327,21 @@ function otherTabWrote(): void {
   window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY }));
 }
 
-/** Lets the round trips already answered, and the renders they cause, run (no timer stands behind them). */
+/** Lets the round trips already answered, and their renders, run. */
 async function flush(): Promise<void> {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
-/** How often `/api/auth/me` was asked: one more once the gate's re-read is out. */
+/** How often `/api/auth/me` was asked. */
 function meReads(): number {
   return vi.mocked(fetch).mock.calls.filter(([input]) => String(input) === `${API}/api/auth/me`).length;
 }
 
-/**
- * One socket opened, with the token its handshake offered (R1379000); `drop` ends it the way a
- * network blip does (not a close this side asked for).
- */
+/** One socket opened, with the token its handshake offered (R1379000); `drop` is a network blip, not a close. */
 type FakeSocket = { url: string; token: string | null; closed: boolean; drop: () => void };
 
-/** A WebSocket that records each one opened and whether it was closed. */
 function fakeSockets(): FakeSocket[] {
   const sockets: FakeSocket[] = [];
   class FakeWebSocket {
@@ -411,7 +395,6 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       expect(sockets).toHaveLength(1);
     }, SLOW);
 
-    // The (still good) session was renewed and written.
     store(renewed, "rt-2", Date.now() + 3_600_000);
     const reads = meReads();
     act(() => {
@@ -451,7 +434,6 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       expect(sockets).toHaveLength(1);
     }, SLOW);
 
-    // The gate renews and hands the new token down.
     await waitFor(() => {
       expect(readSession()?.accessToken).toBe(renewed);
     }, SLOW);
@@ -465,7 +447,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       { first: true, closed: false },
     ]);
 
-    // A later drop reconnects with the renewed token, not the one that is about to expire.
+    // A later drop reconnects with the renewed token.
     act(() => {
       sockets[0]?.drop();
     });
@@ -573,7 +555,6 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     render(<App />);
     await screen.findByTestId(inviteTestid.input, undefined, SLOW);
 
-    // The device signed in as someone else.
     store(sessionToken("user-y", "session-9", "someone-else"), "rt-9", Date.now() + 3_600_000);
     act(() => {
       otherTabWrote();
@@ -588,7 +569,7 @@ describe("R194 the token an open screen holds is kept fresh", SLOW_TEST, () => {
   it("R194 the gate renews before the token expires, so /play's match watch finds the match it was paired into", async () => {
     const old = sessionToken("user-p", "session-1", "old");
     const renewed = sessionToken("user-p", "session-1", "new");
-    // The token the gate hands /play expires a moment after the renewal margin begins.
+    // Expires a moment after the renewal margin begins.
     store(old, "rt-1", Date.now() + AUTH_SESSION_REFRESH_MARGIN_SECONDS * 1000 + 300);
     const refreshes: string[] = [];
     vi.stubGlobal(

@@ -1,24 +1,9 @@
-// 46 — every menu fits one screen (issue #1581, part of #1576, R1581000).
-//
-// Key assertion (issue #1581): "a check that fails when a menu scrolls ... visits each menu route at
-// a desktop size and a phone size and asserts the document does not scroll vertically". Each test
-// opens one menu at BUILD M5-T1's two sizes (`viewports`, support/config.ts: 1280x720 and 390x844),
-// waits for the ids that say it has drawn, and asserts the document's scrollHeight is no more than
-// the window's innerHeight (and its scrollWidth no more than its innerWidth). Settled layout is read
-// by a retried assertion, so a late-arriving list is measured too.
-//
-// The exceptions, as #1576 states them and R1581000 rules them:
-//   - The tavern home (`/`, with the settings open on it) is its main screen and exactly one screen
-//     below the floor: `LANDING_SCREENS` windows, not one.
-//   - A big list of cards (the almanac's and the deck builder's pool, Collection's Cards, the
-//     statistics' table) and every menu's own region (the account's, the practice setup's, the patch
-//     notes' ...) scroll inside the menu, never the page. This check reads the page, so it never
-//     sees them, and so nothing is exempted for them here.
-// Not asked: the boards, and the static legal pages (spec 38 holds those to axe).
-//
-// Per pull request: SMOKE in scripts/shard-specs.mjs holds 46. Networked: the signed-in menus need
-// `E2E=1 cargo run --release -p jackioh-server`; the series screen is answered by an intercept.
-// Every wait is a retried DOM assertion.
+// 46 — every menu fits one screen (issue #1581, part of #1576, R1581000): each test opens one menu at
+// BUILD M5-T1's two sizes (`viewports`, support/config.ts) and asserts, by a retried assertion, that
+// the document scrolls neither way, but for the tavern home (`LANDING_SCREENS`). A big list of cards
+// and a menu's own region scroll inside the menu, never the page. Not asked: the boards, and the
+// static legal pages (spec 38 holds those to axe). Per pull request: SMOKE in scripts/shard-specs.mjs
+// holds 46. Networked: the signed-in menus need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
@@ -44,13 +29,9 @@ import {
 } from "../../support/testids.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
 
-/**
- * #1576's tavern home: its main screen, and exactly one screen below the floor. The only menu the
- * page may be taller than one window.
- */
+/** #1576's tavern home: its main screen and one more below the floor. */
 const LANDING_SCREENS = 2;
 
-/** Every other menu: the page is the window's height and no more. */
 const ONE_SCREEN = 1;
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
@@ -84,10 +65,9 @@ function expectOnScreen(viewport: MenuViewport, screens: number): void {
 }
 
 /**
- * The code screen and the consent screen as a pending account meets them, drawn for p1. Spec 10
- * redeems the pending fixture, which stays active until the server restarts (R144), and the daily run
- * can put both specs in one shard; so p1's own read of the account is made to say pending (no match,
- * no series), and `owes` adds what it owes. The screens draw only from that read (CLAUDE.md rule 7).
+ * The code and consent screens as a pending account meets them, drawn for p1. Spec 10 redeems the
+ * pending fixture until the server restarts (R144) and may share this shard, so p1's own read of the
+ * account says pending, `owes` adding what it owes: the screens draw only from it (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
   cy.intercept("GET", "**/api/auth/me", (req) => {
@@ -106,9 +86,8 @@ function asPending(owes: Record<string, boolean> = {}): void {
 }
 
 /**
- * A series between its games, choosing a deck (the shape of `SeriesView`, apps/web/src/net/api.ts):
- * three decks to pick from and the clock running, which is the screen at its tallest. `now` is the
- * server's own clock (R333), here this browser's.
+ * A series between its games choosing among three decks, the clock running: the screen at its tallest
+ * (`SeriesView`'s shape, apps/web/src/net/api.ts). `now` is the server's clock (R333), here this browser's.
  */
 function seriesPicking(now: number): Record<string, unknown> {
   return {

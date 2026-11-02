@@ -1,12 +1,9 @@
 //! Test-only cards for Stinkyscape's "the AI at the wheel" (issue #1844, part of #1836): the
-//! autopilot aura (R1844000), the Pareto hint (R1844001) and the helpful cast (R1844002). Each
-//! fixture is trimmed to the one property its name promises, the same script on both faces; the real
-//! cards (Stinkyscape #46, #47, #147, #147.2) come with the set.
-//!
-//! The catalog is pinned as `perfect_hand.rs`'s is: the vanilla Core units and these cards, nothing
-//! else, so `CHARGER` is the only Charge card the perfect pool holds.
-//!
-//! Ids are prefixed `aw-` and indexed from 18440, so they cannot collide with another fixture file's.
+//! autopilot aura (R1844000), the Pareto hint (R1844001) and the helpful cast (R1844002), each trimmed
+//! to the one property its name promises (the real cards, Stinkyscape #46, #47, #147, #147.2, come
+//! with the set). The catalog is the vanilla Core units and these cards only, as `perfect_hand.rs`'s
+//! is, so `CHARGER` is the only Charge card the perfect pool holds.
+//! Ids are prefixed `aw-` and indexed from 18440, clear of every other fixture file's.
 
 use std::sync::LazyLock;
 
@@ -25,7 +22,6 @@ pub const MORE_ACTIONS: i32 = 3;
 /// What `ASK` deals the target its caster picks.
 pub const ASK_DAMAGE: i32 = 3;
 
-/// A Core Common card `aw-<name>` of `type_` costing `cost`, with `extra` over the definition.
 fn def(name: &str, index: i32, type_: &str, cost: i32, extra: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -45,7 +41,6 @@ fn def(name: &str, index: i32, type_: &str, cost: i32, extra: Value) -> CardDef 
     ))
 }
 
-/// A Unit's two faces, the Radiant one at twice the stats.
 fn unit_faces(name: &str, attack: i32, health: i32, keywords: Value) -> Value {
     json!({
         "base": { "attack": attack, "health": health, "keywords": keywords, "text": name },
@@ -53,7 +48,7 @@ fn unit_faces(name: &str, attack: i32, health: i32, keywords: Value) -> Value {
     })
 }
 
-/// #46's aura as a fixture: the autopilot plays the first `HALF_ACTIONS` actions of each turn.
+/// #46's aura: the autopilot plays the first `HALF_ACTIONS` actions of each turn.
 pub static HALFCYCLER: LazyLock<CardDef> =
     LazyLock::new(|| def("halfcycler", 18440, "Field Spell", 1, json!({})));
 
@@ -61,11 +56,11 @@ pub static HALFCYCLER: LazyLock<CardDef> =
 pub static HALFCYCLER_MORE: LazyLock<CardDef> =
     LazyLock::new(|| def("halfcycler-more", 18441, "Field Spell", 1, json!({})));
 
-/// #47's aura as a fixture: the autopilot plays each turn whole.
+/// #47's aura: the autopilot plays each turn whole.
 pub static FULLCYCLER: LazyLock<CardDef> =
     LazyLock::new(|| def("fullcycler", 18442, "Field Spell", 1, json!({})));
 
-/// #147's Cry as a fixture: the Pareto hint for the rest of the turn.
+/// #147's Cry: the Pareto hint for the rest of the turn.
 pub static HINT_UNIT: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "hint-unit",
@@ -76,14 +71,14 @@ pub static HINT_UNIT: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// #147.2's aura as a fixture: the Pareto hint on each of its controller's turns.
+/// #147.2's aura: the Pareto hint on each of its controller's turns.
 pub static HINT_FIELD: LazyLock<CardDef> =
     LazyLock::new(|| def("hint-field", 18444, "Field Spell", 1, json!({})));
 
 /// A Spell that does something helpful, the base face's way (R1844002).
 pub static HELPER: LazyLock<CardDef> = LazyLock::new(|| def("helper", 18445, "Spell", 1, json!({})));
 
-/// #147.2's start of turn as a fixture: something helpful as its controller's turn begins.
+/// #147.2's start of turn: something helpful as its controller's turn begins.
 pub static HELPER_FIELD: LazyLock<CardDef> =
     LazyLock::new(|| def("helper-field", 18446, "Field Spell", 1, json!({})));
 
@@ -102,11 +97,10 @@ pub static CHARGER: LazyLock<CardDef> = LazyLock::new(|| {
 pub static DEAR: LazyLock<CardDef> =
     LazyLock::new(|| def("dear", 18448, "Unit", 4, unit_faces("dear", 1, 1, json!([]))));
 
-/// A Spell that asks its caster for a target, any Unit or hero, and deals it 3: a prompt of the
-/// player's own (`outside_data`'s zap).
+/// Asks its caster for any Unit or hero and deals it 3 (`outside_data`'s zap).
 pub static ASK: LazyLock<CardDef> = LazyLock::new(|| def("ask", 18449, "Spell", 1, json!({})));
 
-/// A Spell whose question goes to the opponent (`outside_data`'s ask-enemy).
+/// Its question goes to the opponent (`outside_data`'s ask-enemy).
 pub static ASK_ENEMY: LazyLock<CardDef> = LazyLock::new(|| def("ask-enemy", 18450, "Spell", 1, json!({})));
 
 /// The resume step the two questions re-enter.
@@ -119,7 +113,6 @@ fn flagged(flags: StaticFlags) -> CardScripts {
     })
 }
 
-/// The scripts of the fixtures, by def id.
 pub static AI_WHEEL_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock::new(|| {
     vec![
         (
@@ -208,8 +201,7 @@ pub static AI_WHEEL_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock::ne
     ]
 });
 
-/// The vanilla units and these cards as the whole catalog, with the shared fixture scripts and these
-/// registered on this thread.
+/// Registers the catalog the header names, with the scripts, on this thread.
 pub fn register_ai_wheel() {
     setup_catalog();
     let mut defs = vanilla_catalog(2 * DECK_SIZE, 1);

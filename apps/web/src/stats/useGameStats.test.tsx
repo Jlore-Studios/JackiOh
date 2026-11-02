@@ -45,7 +45,6 @@ describe("R639 useGameStats", () => {
     expect(stats.cards["core-001"]).toMatchObject({ seen: 1, played: 1 });
     expect(stats.cards["core-002"]).toMatchObject({ playedAgainst: 1 });
 
-    // The same finished view again, or a re-render, adds nothing.
     rerender({ view: { ...over } });
     expect(readPlayerStats().games).toBe(1);
   });
@@ -97,7 +96,6 @@ describe("R639 useGameStats", () => {
     const stats = readPlayerStats();
     expect(stats).toMatchObject({ games: 2, draws: 1 });
     expect(stats.cards["core-007"]?.seen).toBe(1);
-    // The first game's card is not carried into the second game's log.
     expect(stats.cards["core-001"]?.seen).toBe(1);
   });
 });

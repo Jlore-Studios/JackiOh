@@ -1,11 +1,7 @@
-//! Port of `packages/engine/test/game-summary.test.ts`.
-//!
-//! SPEC §9.11, R376: `summarizeGame` reads a finished game's record off `(seed, decks, log)`. Each
-//! figure is checked against an oracle the summary does not use: the hands the state holds once the
-//! mulligans resolve, the hand card each logged `play` names, and the drawn cards the hand holds once
-//! the step that drew them is done. The fixture Hinder is cast on draw (§2.4) and the fixture Going
-//! Long is a Quickdraw card (R225), so a cast and a Quickdraw deal are both in these games, and a full
-//! hand burns a draw (R4). packages/cards test/game-summary.test.ts repeats the oracles over real cards.
+//! SPEC §9.11, R376: `summarize_game` reads a finished game's record off `(seed, decks, log)`, each
+//! figure checked against an oracle the summary does not use. The fixture Hinder is cast on draw (§2.4)
+//! and the fixture Going Long is a Quickdraw card (R225), so a cast and a Quickdraw deal are both in
+//! these games, and a full hand burns a draw (R4).
 
 use jackioh_engine::testkit::*;
 
@@ -49,8 +45,7 @@ fn sorted(ids: &[String]) -> Vec<String> {
     copy
 }
 
-/// JS `list.splice(list.lastIndexOf(card), 1)`, kept as written: a card that is not there is -1,
-/// which takes the last entry.
+/// Removes the last copy of `card`; a card that is not there takes the last entry instead.
 fn splice_last_index_of(list: &mut Vec<String>, card: &str) {
     match list.iter().rposition(|each| each == card) {
         Some(at) => {
@@ -62,7 +57,7 @@ fn splice_last_index_of(list: &mut Vec<String>, card: &str) {
     }
 }
 
-/// JS `events.slice(from)`: a negative start counts from the end.
+/// A negative start counts from the end.
 fn slice_from(events: &[GameEvent], from: isize) -> &[GameEvent] {
     let len = events.len() as isize;
     let start = if from < 0 {
@@ -348,7 +343,6 @@ mod summarize_game_s9_11 {
                 assert_eq!(sorted(&summary.seats.p1.opening), sorted(&opening.p1), "{seed}");
                 assert_eq!(sorted(&summary.seats.p2.opening), sorted(&opening.p2), "{seed}");
             }
-            // Every card drawn into a hand came out of that seat's library: its own deck.
             for player in PLAYER_IDS {
                 let deck: IndexSet<String> = if player == PlayerId::P1 {
                     live.decks.0.iter().cloned().collect()
@@ -424,7 +418,6 @@ mod summarize_game_s9_11 {
         assert!(casts > 0);
         assert!(burned.p1 > 0);
         assert!(burned.p2 > 0);
-        // Nothing was played from a hand, and only what reached a hand is a draw.
         assert_eq!(summary.seats.p1.played, Vec::<String>::new());
         assert_eq!(summary.seats.p2.played, Vec::<String>::new());
         assert_eq!(summary.seats.p1.drawn, kept.p1);

@@ -1,7 +1,5 @@
-// #1445: a Unit's summon entrance takes its flavor. The `summon` recipe (cues.ts) keeps today's
-// motion underneath and appends one entrance per flavor from `FLAVOR_ENTRANCES` (entrances.ts).
-// A summon the view does not show face-up keeps today's cue (R202), and reduced motion and
-// intensity off keep the summon's fallback.
+// #1445: the `summon` recipe (cues.ts) appends one entrance per flavor from `FLAVOR_ENTRANCES` (entrances.ts)
+// over its base motion. A summon the view does not show face-up keeps the base cue (R202).
 
 import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -240,7 +238,6 @@ describe("#1445 a Unit's summon entrance takes its flavor", () => {
     // Reduced motion zeroes the entry: no flavor cue, exactly today's ring and burst.
     const reduced = plan([summon("p1", "n1", "core-002", "units", 3)], 0, { reduced: true });
     expectCues(reduced, [ring("dust", tid(ZONE), 0, 0), burst("dust", tid(ZONE, FOOT), "ring", 0)]);
-    // Intensity off plans nothing.
     expect(plan([summon("p1", "n1", "core-002", "units", 3)], 400, { env: envOf({ intensity: FX_INTENSITY_SCALE.off }) })).toEqual([]);
     expect(plan([summon("p1", "n1", "core-066", "units", 3)], 400, { env: envOf({ intensity: FX_INTENSITY_SCALE.off }) })).toEqual([]);
   });

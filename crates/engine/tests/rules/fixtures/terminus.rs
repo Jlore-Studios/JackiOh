@@ -1,32 +1,24 @@
-//! Test-only cards for the verbs Stinkyscape's Terminus cards are written with (issue #1870): a win a
-//! card carries (R1870000), an exile that takes a Stack pile whole (R1870001), the Echo a resolving
-//! card gives itself (R1870002), "your Units have <keyword>" through the next turn (R1870004) and a
-//! keyword a card keeps for good (R1870007). Each does it through the engine's own verbs, as a card
-//! script would, so the engine never imports `crates/cards`; the cards come behind the set's gate.
-//!
-//! Ids are prefixed `tm-` and indexed from 18700, so they collide with no other fixture file's.
+//! Test-only cards for the verbs of Stinkyscape's Terminus cards (#1870): a win a card carries
+//! (R1870000), an exile taking a Stack pile whole (R1870001), the Echo a resolving card gives itself
+//! (R1870002), "your Units have <keyword>" through the next turn (R1870004) and a keyword kept for good
+//! (R1870007), through the engine's own verbs so the engine never imports `crates/cards`. Ids are `tm-`
+//! from 18700, so they collide with no other fixture file's.
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// What the exam deals the enemy hero with each resolution.
 pub const EXAM_DAMAGE: i32 = 1;
 
-/// A Spell with no text.
 pub const PLAIN: &str = "tm-plain";
 /// A Spell: "Add a Plain to your hand. It wins you the game when you play it."
 pub const CROWN: &str = "tm-crown";
 /// A Spell: "Exile all permanents", each Stack pile whole.
 pub const SWEEP: &str = "tm-sweep";
-/// A Spell: "Deal 1 damage to the enemy hero, and this gains Echo +1."
 pub const EXAM: &str = "tm-exam";
-/// A Spell: "Your Units have Charge during your next turn."
 pub const RALLY: &str = "tm-rally";
-/// A Spell: "This gains Lucky +1 for good."
 pub const CHARM: &str = "tm-charm";
-/// A plain 3/3.
 pub const GRUNT: &str = "tm-grunt";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>) -> CardDef {
@@ -123,7 +115,6 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// The harness's catalog and scripts plus this file's cards.
 pub fn register_terminus() {
     super::harness::setup_catalog();
     let mut catalog: CardDefs = registered_catalog().clone();

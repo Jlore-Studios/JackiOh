@@ -1,20 +1,10 @@
 //! Rotate as a verb (SPEC §6.3 Rotate, §3.1's rotation-topology ruling, §3.2; R14, R88; §8.3 #52).
 //!
-//! `subsystems/rotation.rs` is that ruling in full: the two rings (the rotating player's lanes 1 to 5,
-//! then the opponent's 5 down to 1, and back) turning one step together, the whole board read first so
-//! a rotation is atomic; a Stack pile traveling whole (§3.2, R13); `controller` changing only across
-//! the center line, `owner` never (R12); a Reborn-reserved destination bouncing the card to its OWNER's
-//! hand (R14, R88, R4's hand cap, R11's vanishing token), a Locked one taking it (R831000); and #52's radiant face replacing
-//! an outbound crossing (a card leaving the rotating player's side for the opponent's) with that bounce
-//! at `costOverride` 0, while a card crossing onto that side still crosses.
-//!
-//! None of that is here: a second ring walk would be a second topology. This file is the wrapper,
-//! because `rotate_rings` takes an `EngineSink` and mutates the board, which a card script may not do
-//! (CLAUDE.md rule 5).
-//!
-//! THE TWO DEFAULTS: §3.1 reads "left" and "right" from the ROTATING player's seat, so `perspective`
-//! is the controller; and #52's two faces differ only in `ctx.radiant`, which `rotate_rings` honors
-//! through its own `radiant` argument. So `rotate({ direction })` is the complete call.
+//! `subsystems/rotation.rs` is that ruling in full (a Stack pile traveling whole, R13; control across
+//! the center line, R12; the Reborn and Locked bounces, R14, R88, R4, R11, R831000; #52's radiant face),
+//! and a second ring walk here would be a second topology. This file is the wrapper, since
+//! `rotate_rings` mutates the board, which a card script may not do (CLAUDE.md rule 5). §3.1 reads
+//! "left" and "right" from the ROTATING player's seat, so `perspective` defaults to the controller.
 
 use serde::{Deserialize, Serialize};
 
@@ -39,10 +29,8 @@ pub struct RotateArgs {
 }
 
 /// §6.3 Rotate: every card on the field moves one step around its ring, in the direction the play
-/// declared (R81 makes #52's direction a play choice, never a prompt).
-///
-/// There is no fizzle case to write: a board with nothing on it rotates nothing, and the subsystem
-/// still emits its one `rotated` event, which is what §10.10 animates.
+/// declared (R81: a play choice, never a prompt). An empty board still emits its one `rotated` event,
+/// which §10.10 animates.
 pub fn rotate(args: RotateArgs) -> Effect {
     Effect::new("rotate", move |ctx| {
         let rotation = RotationArgs {
@@ -50,7 +38,6 @@ pub fn rotate(args: RotateArgs) -> Effect {
             perspective: player_of(ctx, args.perspective.unwrap_or(PlayerSpec::SelfSide)),
             radiant: Some(args.radiant.unwrap_or(ctx.radiant)),
         };
-        // `EffectContext` derefs to `EngineSink`, so the subsystem takes the context as it stands.
         let _ = rotate_rings(ctx, &rotation);
     })
 }

@@ -1,6 +1,5 @@
-// #258: the OS reduced-motion preference is followed live (useOsReducedMotion.ts): the hook re-reads
-// the media query on its `change` event, and Game.tsx rebuilds its animation queue when it flips,
-// exactly as it does for the panel's own "Reduce motion".
+// #258: the OS reduced-motion preference is followed live (useOsReducedMotion.ts): Game.tsx rebuilds
+// its animation queue when it flips, exactly as it does for the panel's own "Reduce motion".
 
 import type { GameEvent } from "@jackioh/shared";
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";

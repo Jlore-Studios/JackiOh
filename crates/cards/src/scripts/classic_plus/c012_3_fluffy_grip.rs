@@ -37,12 +37,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.3 Fluffy Grip — SPEC §8.7 row 12.3, BUILD M9 Classic+ row C+ 12.3: "A random Unit card of the
-// opponent's deck (R60) moves to your hand and becomes yours (R12), `costOverride` 0; a deck with no
-// Unit, or an empty deck, gives nothing and draws nothing (R129); a full hand burns it into your
-// graveyard, now its owner's (R12); `stolen` names the card only to you, the opponent reading the
-// sentinel and a deck one card smaller (R97); a unit-token card follows R11; radiant it also becomes
-// Radiant".
+// C+ #12.3 Fluffy Grip — SPEC §8.7 row 12.3, BUILD M9 Classic+ row C+ 12.3 (R12, R60, R97); a
+// unit-token card follows R11.
 #[cfg(test)]
 mod tests {
     use crate::def_ids;

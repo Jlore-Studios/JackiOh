@@ -33,8 +33,7 @@ function world(): string {
   roots.push(root);
   mkdirSync(join(root, "scripts"));
   copyFileSync(join(ROOT, "scripts/build-wasm.sh"), join(root, "scripts/build-wasm.sh"));
-  // cargo logs each build and leaves what that target's build leaves in target/ (CARGO_TARGET_DIR
-  // when it is set, as cargo does), naming the run.
+  // cargo logs each build and leaves its output in target/ (CARGO_TARGET_DIR when set), naming the run.
   sh(
     join(root, "bin/cargo"),
     [
@@ -48,7 +47,6 @@ function world(): string {
     ].join("\n"),
   );
   sh(join(root, "bin/rustup"), "printf '%s\\n' wasm32-unknown-unknown wasm32-unknown-emscripten");
-  // wasm-bindgen: the pinned version, and the four files it writes from the module it is given.
   sh(
     join(root, ".cache/bin/wasm-bindgen"),
     [
@@ -88,7 +86,6 @@ function run(root: string, name: string, env: Record<string, string> = {}): Run 
   return { builds: readFileSync(log, "utf8").split("\n").filter(Boolean), out: result.stdout };
 }
 
-/** Every file under `dir` with its contents, by path relative to it. */
 function files(dir: string): Record<string, string> {
   const found: Record<string, string> = {};
   const walk = (at: string): void => {
@@ -109,8 +106,8 @@ describe("scripts/build-wasm.sh's directories", () => {
     const root = world();
     const shared = mkdtempSync(join(tmpdir(), "build-wasm-shared-"));
     roots.push(shared);
-    // The tools live only in the shared cache: a script that looked in the root's .cache would
-    // clone the emsdk and download wasm-bindgen there, which the last line catches.
+    // The tools live only in the shared cache: a script that looked in the root's .cache would fetch
+    // them there, which the last line catches.
     renameSync(join(root, ".cache"), join(shared, "cache"));
     run(root, "shared", { CARGO_TARGET_DIR: join(shared, "target"), JACKIOH_CACHE_DIR: join(shared, "cache") });
     const built = files(pkg(root));

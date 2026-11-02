@@ -1,9 +1,5 @@
-//! DEPLOYED_COMMIT -> `Env.deployed_commit` (src/env.rs): the commit `GET /api/catalog` and the
-//! probes report, which the Worker hands the container from `wrangler deploy`'s
-//! `--var DEPLOYED_COMMIT:<sha>` (apps/edge/src/routing.ts). It is optional, never a problem, and
-//! only a git SHA survives, because the value ends up in a response header.
-//!
-//! Port of `apps/server/test/env-deployed-commit.test.ts` (part 18).
+//! Deployed commit header from DEPLOYED_COMMIT, which the Worker passes from `wrangler deploy`'s
+//! `--var DEPLOYED_COMMIT:<sha>` (`src/env.rs`, `apps/edge/src/routing.ts`, §11.3).
 
 use indexmap::IndexMap;
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};

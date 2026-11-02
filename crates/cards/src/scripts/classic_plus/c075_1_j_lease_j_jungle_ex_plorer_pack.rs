@@ -6,11 +6,8 @@
 //!            (§2.4); the Radiant sets `costOverride` 0. A spell token, so it goes to the graveyard
 //!            after it resolves (§7). Tunes: cards 5 ↑."
 //!
-//! Cast on draw is the static flag §2.4's draw reads (R58): drawn, it casts itself at once and the draw
-//! repeats, so its owner draws again; played from a hand it resolves the same way. The pool names its two
-//! sets, so Core never comes up; a Pack is a token, so it is never in its own pool (§5.1, R387). Each card
-//! is made Radiant before it reaches the hand (R74), and the Radiant face's price lands only on a card that
-//! reached it (§2.4, R4).
+//! A Pack is a token, so it is never in its own pool (§5.1, R387). Each card is made Radiant before it
+//! reaches the hand (R74), and the Radiant face's price lands only on a card that reached it (§2.4, R4).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -47,11 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #75.1 J-lease J-Jungle EX-plorer Pack — SPEC §8.7 row 75.1, BUILD M9 Classic+ row C+ 75.1: "Cast on
-// draw (R70, R58): adds 5 random Radiant non-token Classic or Classic+ cards (never Core) to your hand,
-// repeats allowed, a full hand burning the rest, then you draw again; played from a hand it does the
-// same; the five are hidden from the opponent (R97); the count reads through `param()`; radiant they also
-// cost (0)".
+// C+ #75.1 J-lease J-Jungle EX-plorer Pack — SPEC §8.7 row 75.1, BUILD M9 Classic+ row C+ 75.1 (R70, R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

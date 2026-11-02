@@ -1,10 +1,6 @@
 //! Activate (docs/classic-sets.md B3.2, R384): a card's "Activate:", "Activate N:" and "Activate ♾️:"
 //! abilities, the `activate` action and its alias `activatePower`, the refusal that is also the list,
 //! the costs, the choices, the pauses, and the view.
-//!
-//! Every rule of B3.2 is pinned here by observable behavior: what the action does to the board, what
-//! `legalActions` offers, what `viewFor` shows, and what survives a prompt, a JSON round trip and a
-//! replay.
 
 use std::sync::Arc;
 
@@ -108,7 +104,6 @@ fn lacks(value: &Value, key: &str) -> bool {
     value.as_object().is_none_or(|object| !object.contains_key(key))
 }
 
-/// The refusal's text, or `None` when it may be activated.
 fn why_not(state: &GameState, player: PlayerId, instance_id: &str, ability: Option<&str>) -> Option<String> {
     why_cannot_activate_ability(state, player, instance_id, ability)
         .err()
@@ -127,7 +122,6 @@ fn hero_target() -> Value {
     json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
 }
 
-/// The abilities `legal_actions` lists under one card, by name.
 fn listed_abilities(state: &GameState, instance: &str) -> Vec<Option<String>> {
     legal_actions(state, P1)
         .into_iter()
@@ -153,7 +147,6 @@ fn ability_ids(state: &GameState, instance: &str) -> Vec<String> {
         .collect()
 }
 
-/// Apply `effect` for `controller` with no card running it, then settle.
 fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
@@ -175,7 +168,6 @@ fn apply(state: &mut GameState, controller: PlayerId, effect: Effect) {
     state.rng_cursor = rng.cursor();
 }
 
-/// The first target as JSON (null when there is none).
 fn first_target<T: serde::Serialize>(body: &T) -> Value {
     json_of(body)["targets"][0].clone()
 }
@@ -241,7 +233,6 @@ mod r384_b3_2_activate_using_an_ability {
         assert!(events_of_type(&events, GameEventType::CardPlayed).is_empty());
         assert_eq!(after.counters.played, state.counters.played);
         assert_eq!(after.players.p1.turn_log, state.players.p1.turn_log);
-        // Its use is counted on the instance, for this turn.
         assert_eq!(
             after.players.p1.backrow[0]
                 .as_ref()
@@ -327,10 +318,8 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
             Some(json!({ "turn": state.turn, "count": 1, "abilities": { "gamma": 1 } }))
         );
         // Under R1751000 (amending R384), each ability tracks its uses separately.
-        // gamma's activation does not lock out alpha!
         assert_eq!(why_not(&after, P1, &card.id, Some("alpha")).as_deref(), None);
 
-        // Activating alpha in the same turn succeeds.
         let after2 = act(&after, activate(P1, &card.id, json!({ "ability": "alpha" })));
         assert_eq!(
             after2.players.p1.backrow[0]
@@ -339,7 +328,6 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
                 .cloned(),
             Some(json!({ "turn": state.turn, "count": 2, "abilities": { "gamma": 1, "alpha": 1 } }))
         );
-        // Both abilities are now spent for the turn.
         assert_eq!(
             why_not(&after2, P1, &card.id, Some("alpha")).as_deref(),
             Some("that ability has already been used this turn")
@@ -453,7 +441,6 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
             ACTIVATE_UNLIMITED_CAP
         );
 
-        // The tuned count is the one the refusal reads.
         let mut next = act(&state, activate(P1, &once.id, hero_target()));
         next = act(&next, activate(P1, &once.id, hero_target()));
         assert_eq!(next.players.p2.hero.health, HERO_HEALTH - 2);
@@ -777,7 +764,6 @@ mod r384_b3_2_rule_4_costs {
         assert_eq!(alone.players.p2.hero.health, HERO_HEALTH - 5);
         assert!(alone.players.p1.units[0].is_none());
 
-        // The refusals: none, two, an enemy unit, the same unit twice.
         let ally = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         assert_eq!(
             act_result(&state, activate(P1, &eater.id, hero_target()))
@@ -971,7 +957,6 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
                 "targets": [{ "pick": "instance", "instanceId": eater.id }],
             })
         );
-        // Every listed action is one the reducer accepts.
         for body in &listed {
             assert_eq!(
                 act_result(
@@ -985,7 +970,6 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
                 None
             );
         }
-        // And each ability of each card acting on the field is listed as its own entry.
         assert!(legal_actions(&state, P1).iter().any(|body| json_of(body)
             == json!({ "type": "activate", "instanceId": ally_a.id, "ability": "surge" })));
 
@@ -1668,20 +1652,16 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         fuse_onto(&mut state, vec![other], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["zap", "recall"]);
 
-        // Ability 1 ("recall") activated.
         let state = act(&state, activate(P1, &card.id, json!({ "ability": "recall" })));
         assert_eq!(notes(&state), vec!["recall:spell"]);
 
-        // Ability 2 ("zap") is still usable in the same turn!
         assert_eq!(why_not(&state, P1, &card.id, Some("zap")), None);
 
-        // Ability 1 cannot be activated again this turn.
         assert_eq!(
             why_not(&state, P1, &card.id, Some("recall")),
             Some("that ability has already been used this turn".to_string())
         );
 
-        // Activate ability 2 ("zap") in the same turn.
         let state = act(
             &state,
             activate(
@@ -1692,7 +1672,6 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - ZAPPER_DAMAGE);
 
-        // Now both abilities have spent their uses for this turn.
         assert_eq!(
             why_not(&state, P1, &card.id, Some("recall")),
             Some("that ability has already been used this turn".to_string())
@@ -1726,7 +1705,6 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         assert_eq!(recall_view.uses_left, Some(1));
         assert!(recall_view.usable);
 
-        // Activate recall
         let state = act(
             &state,
             activate(P1, &card_inst.id, json!({ "ability": "recall" })),
@@ -1790,35 +1768,28 @@ mod r1751000_fused_activates_have_separate_cooldowns {
             json!("spell"),
         );
 
-        // Activate recall on the target BEFORE fusion.
         let state = act(
             &state,
             activate(P1, &card_inst.id, json!({ "ability": "recall" })),
         );
 
-        // Verify recall was marked used on the card.
         assert_eq!(
             card(&state, &card_inst.id).memory.get("activations"),
             Some(&json!({ "turn": state.turn, "count": 1, "abilities": { "recall": 1 } }))
         );
 
-        // Fuse with target as first ingredient: [&target, &food].
         let mut fused_state = state.clone();
         let other = in_hand(&mut fused_state, &zapper.id, P1, 1).remove(0);
         let live_target = card(&fused_state, &card_inst.id).clone();
         fuse_onto(&mut fused_state, vec![live_target, other], &card_inst);
 
-        // The fused card has recall (from target at ingredient 0) and zap (from food).
-        // recall is already used this turn.
         assert_eq!(
             why_not(&fused_state, P1, &card_inst.id, Some("recall")),
             Some("that ability has already been used this turn".to_string())
         );
 
-        // zap was NOT used, and can be activated!
         assert_eq!(why_not(&fused_state, P1, &card_inst.id, Some("zap")), None);
 
-        // Activate zap.
         let state_after_zap = act(
             &fused_state,
             activate(
@@ -1828,7 +1799,6 @@ mod r1751000_fused_activates_have_separate_cooldowns {
             ),
         );
 
-        // Both are now spent.
         assert_eq!(
             why_not(&state_after_zap, P1, &card_inst.id, Some("recall")),
             Some("that ability has already been used this turn".to_string())
@@ -1880,7 +1850,6 @@ mod r1876000_r1876001_another_cards_activate {
         apply(&mut state, P1, run_activation(of(&free.id)));
         // Each "Gain 1 mana", run as the running card's effect.
         assert_eq!(state.players.p1.mana.current, before + 2);
-        // The free one still has both of its "Activate 2" uses.
         state = act(&state, activate(P1, &free.id, json!({})));
         state = act(&state, activate(P1, &free.id, json!({})));
         assert_eq!(state.players.p1.mana.current, before + 4);
@@ -1941,7 +1910,6 @@ mod r2246000_a_frozen_card_uses_no_activate {
             &json_of(view_for(&state, P1))["you"]["units"][0],
             &json!({ "activations": [{ "ability": "surge", "usesLeft": 2, "usable": false, "reason": FROZEN }] })
         ));
-        // A card that is not Frozen beside it activates as ever.
         assert_eq!(why_not(&state, P1, &free.id, None), None);
         assert!(lists_activate_of(&state, &free.id));
     }

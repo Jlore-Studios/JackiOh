@@ -14,7 +14,6 @@ import { liveFace } from "./faces.ts";
 import { HAND_HINTS, hintsFor, type HandHint } from "./handHints.ts";
 import "./handHints.css";
 
-/** The testid of a hand card's hint row. */
 export function handHintsTestid(instanceId: string): string {
   return `hand-hints-${instanceId}`;
 }

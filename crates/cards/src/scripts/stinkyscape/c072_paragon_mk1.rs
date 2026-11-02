@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #72 Paragon Mk1 — SPEC §8.10 row 72, BUILD M12 row S 72: "a 6/1 Charge Flying Ranged
-// Unit that takes no strike back from a defender without Ranged (R783000); no Starship Piece, so its
-// death fuses nothing (#2521); radiant 12/2 with Pierce (R346)".
+// Stinkyscape #72 Paragon Mk1 — SPEC §8.10 row 72, BUILD M12 row S 72 (R783000, #2521, R346).
 #[cfg(test)]
 mod tests {
     use super::*;

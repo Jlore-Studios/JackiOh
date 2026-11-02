@@ -1,8 +1,8 @@
-//! The Marketplace in the AI's search (R1853004): `legal_actions` lists a buy, the move order tries it
-//! after the plays, answers and Trades and before End Turn, and the AI answers a turn with one on offer
-//! with a legal action. The opponent's own offers are hidden from the seat (`observe::redact`,
-//! R2250002), so they never steer the decision. The state's Marketplace is written by hand: one Mr.
-//! Vanilla (core-008) offer of the AI's at 40 Credits, and the AI holds 100.
+//! The Marketplace in the AI's search (R1853004): `legal_actions` lists a buy, the move order tries it after
+//! the plays, answers and Trades and before End Turn, and the AI answers a turn with one on offer with a
+//! legal action. The opponent's own offers are hidden from the seat (`observe::redact`, R2250002), so they
+//! never steer the decision. The state's Marketplace is written by hand: one Mr. Vanilla offer of the AI's at
+//! 40 Credits, and the AI holds 100.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -124,7 +124,7 @@ fn held_credits_are_worth_what_they_buy_on_the_own_side_only() {
 }
 
 /// A price no card's place in hand is worth at `AI_EVAL.market_credit` a Credit (30 points), all the
-/// Credits the AI holds. Before #2389 a Credit was worth nothing, so the AI bought at any price.
+/// Credits the AI holds.
 const OVERPRICED: i32 = 1000;
 
 #[test]

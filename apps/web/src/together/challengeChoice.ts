@@ -1,17 +1,11 @@
-// What a challenge is made or accepted with (#1831, R1831000): the picks the challenge dialog
-// (`ChallengeDialog.tsx`) and the toast's Accept (`ChallengeToast.tsx`) share, and the last of them
-// remembered for the browser, so a repeat challenge or an accept starts on the pick the player made
-// before. A per-viewer convenience like the lobby's own (`PLAY_CHOICE_KEY`, `routes/play.tsx`), kept
-// beside the settings and not in them, which sync to the account (R634).
+// What a challenge is made or accepted with (#1831, R1831000): the picks the challenge dialog and the
+// toast's Accept share, and the last of them remembered for the browser. A per-viewer convenience like
+// the lobby's own (`PLAY_CHOICE_KEY`), kept beside the settings and not in them, which sync to the
+// account (R634). CLAUDE.md rule 7: whether a deck may be played is the server's, at the room.
 //
-// CLAUDE.md rule 7: a pick is only what the player chose; whether a deck may be played is the
-// server's, at the room.
-//
-// R915005: a deck naming a custom card, or a trio holding one, plays only in practice, so no pick here is
-// one (`deckPracticeOnly`, `trioPracticeOnly`); the pickers list it off, "(practice only)", as the lobby's do.
-//
-// R2031000: All Random's "More cards from" pick is not kept here but in the device's online pick
-// (`readPlayLean`, `game/LeanNewest.tsx`), the lobby's and the rematch's.
+// R915005: a deck naming a custom card, or a trio holding one, plays only in practice, so no pick here
+// is one. R2031000: All Random's "More cards from" pick is kept in the device's online pick
+// (`readPlayLean`, `game/LeanNewest.tsx`), not here.
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 import type { LeanPick } from "@jackioh/shared";
@@ -69,10 +63,7 @@ export function pickTrio(
   return trios.find((trio) => trio.id === id && !trioPracticeOnly(trio, decks)) ?? firstTrio(trios, decks);
 }
 
-/**
- * What a room is made with for `mode`, or null while its pick is missing (`choiceFor` in `routes/play.tsx`).
- * R2031000: All Random carries `lean` as `leanSet` when there is one (R924000).
- */
+/** What a room is made with, or null while its pick is missing (`choiceFor` in `routes/play.tsx`; R924000). */
 export function choiceOf(
   mode: QueueMode,
   deckId: string | null,
@@ -89,7 +80,6 @@ export function choiceOf(
   }
 }
 
-/** The last pick made in this browser: Best of 1 and no deck or trio when there is none, or it is not readable. */
 export function readChallengeChoice(): StoredChallengeChoice {
   const none: StoredChallengeChoice = { mode: "bo1", deckId: null, trioId: null };
   try {
@@ -109,9 +99,8 @@ export function readChallengeChoice(): StoredChallengeChoice {
 }
 
 /**
- * Remembers the deck or trio `choice` was made with, keeping the other as it was. The mode is kept
- * only when `setsMode`: a challenge sent sets the dialog's next mode, while an accepted one says
- * nothing of the mode the player would challenge in.
+ * The mode is kept only when `setsMode`: a challenge sent sets the dialog's next mode, while an
+ * accepted one says nothing of the mode the player would challenge in.
  */
 export function rememberChallengeChoice(choice: ModeChoice, setsMode: boolean): void {
   const before = readChallengeChoice();

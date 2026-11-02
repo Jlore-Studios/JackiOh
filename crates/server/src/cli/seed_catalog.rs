@@ -1,26 +1,19 @@
 //! Catalog loader. Copies the card catalog into `public.cards`, stamping every row with the catalog
 //! version. `jackioh-server seed-catalog`, and the second step of `jackioh-server release`.
 //!
-//! SPEC §9.4: "catalog is static, versioned, shipped with the client". The client renders card text
-//! from its own bundled copy; this table exists so `collection.card_id` and `loadout_deck_cards.card_id`
-//! have something to reference and so the server can run L6 ("every card exists in the current catalog
-//! version and is not banned") in SQL. Nothing here is a source of truth for card rules.
+//! SPEC §9.4: "catalog is static, versioned, shipped with the client". The client renders card text from
+//! its own bundled copy; this table exists so `collection.card_id` and `loadout_deck_cards.card_id` have
+//! something to reference and so the server can run L6 ("every card exists in the current catalog version
+//! and is not banned") in SQL. Nothing here is a source of truth for card rules.
 //!
-//! With no argument it seeds the catalog compiled into this binary (`jackioh_cards::catalog_json()`,
-//! crates/cards/catalog.json) at the version compiled in with it (`jackioh_cards::catalog_version()`,
-//! the newest entry of crates/cards/patches/patches.json). A `CATALOG_VERSION` in the environment
-//! that names another version is reported and ignored, as the server ignores it, so a card patch
-//! is seeded without a hand edit anywhere. With a path, it seeds that file instead (a fixture
+//! With no argument it seeds the catalog compiled into this binary (`jackioh_cards::catalog_json()`) at the
+//! version compiled in with it (`jackioh_cards::catalog_version()`, the newest entry of
+//! crates/cards/patches/patches.json). A `CATALOG_VERSION` in the environment that names another version is
+//! reported and ignored, as the server ignores it. With a path, it seeds that file instead (a fixture
 //! catalog), at `CATALOG_VERSION`, which is then required.
 //!
-//! In the same transaction it copies the cosmetics registry compiled in (`crate::cosmetics`,
-//! R1295000) into `public.cosmetics` (migration 0045, SPEC §14.2), which the owned cosmetics
-//! reference as `collection` references `public.cards`.
-//!
-//! R1310000: before the stamp it writes the starter cards (`config::STARTER_CARDS`) to
-//! `app.settings.starter_cards`, which a new account's activation grant reads (R111, migration
-//! 0050), so the list has one source. The stamp grants no account anything (R1310001): migration
-//! 0050 dropped R481's grant, and with it the dev accounts R1300001 had the seed hand it.
+//! R1310000: it writes the starter cards where R111's activation grant reads them, so the list has one
+//! source. The stamp grants no account anything (R1310001; R481, R1300001).
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use anyhow::{Result, anyhow};
@@ -33,7 +26,6 @@ use sqlx::postgres::PgConnection;
 
 use crate::env::quoted;
 
-/// Where the compiled-in catalog came from, for the messages that name it.
 const COMPILED_CATALOG: &str = "crates/cards/catalog.json";
 
 /// The subset of BUILD M4-T1's per-card schema that `public.cards` stores.
@@ -103,14 +95,10 @@ fn entry_of(value: &Value) -> CatalogEntry {
     }
 }
 
-/// The three shapes a catalog file may arrive in, reduced to a list of entries. `None` means
-/// none of the three.
-///
-/// The third is the one that matters: the catalog is a **record keyed by card id**, which is what
-/// `CardDefs` is and what `src/api/catalog.rs` parses it as.
-///
-/// `text` is the file's text again: a record is re-read into an `IndexMap` so its entries keep the
-/// file's order (serde_json's own map sorts its keys).
+/// The three shapes a catalog file may arrive in, reduced to a list of entries. `None` means none of them.
+/// The third, the one that matters, is a **record keyed by card id**, as `CardDefs` is and
+/// `src/api/catalog.rs` parses it. `text` is the file's text again: a record is re-read into an `IndexMap`
+/// so its entries keep the file's order (serde_json's own map sorts its keys).
 fn catalog_rows(parsed: &Value, text: &str, path: &str) -> Result<Option<Vec<Value>>> {
     if let Some(rows) = parsed.as_array() {
         return Ok(Some(rows.clone()));
@@ -273,7 +261,6 @@ async fn write_catalog(
     Ok(entries.len())
 }
 
-/// The connection string, the version, the catalog, one transaction, one line.
 pub async fn run(args: Vec<String>) -> Result<()> {
     let connection_string = super::database_url()?;
     let configured = std::env::var("CATALOG_VERSION").unwrap_or_default();

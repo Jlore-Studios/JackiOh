@@ -1,7 +1,6 @@
-// The card presentation module's barrel (docs/polish/6-cards.md, Surface): the names code outside
-// `src/cards/` takes through it, and only those. Code outside may as well import a `cards/` module
-// by its path, as many files do. Inside `src/cards/`, files import each other by path and never
-// through this barrel, so it cannot create an import cycle.
+// The card presentation module's barrel (docs/polish/6-cards.md, Surface): only the names code outside
+// `src/cards/` takes through it, which may also import a `cards/` module by path. Inside `src/cards/`,
+// files import each other by path, never through this barrel, so it cannot create an import cycle.
 
 export { ALL_TRIBES, faceModel } from "./model.ts";
 export type { FaceModel, InPlay } from "./model.ts";

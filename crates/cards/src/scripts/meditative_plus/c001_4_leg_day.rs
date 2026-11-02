@@ -22,9 +22,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #1.4 Leg Day — SPEC §8.9 row 1.4, BUILD M11 row M+ 1.4: "gives every Unit its caster
-// controls +5/+5, the opponent's none; with no Unit, nothing; buff reads through `param()`; radiant
-// +10/+10".
+// Meditative+ #1.4 Leg Day — SPEC §8.9 row 1.4, BUILD M11 row M+ 1.4.
 #[cfg(test)]
 mod tests {
     use super::*;

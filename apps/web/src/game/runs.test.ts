@@ -1,5 +1,4 @@
-// The animation runner's reads off a burst (game/runs.ts): which plays are casts, which runs hit a
-// whole pile, and which runs of hits sweep a whole side.
+// The animation runner's reads off a burst (game/runs.ts).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

@@ -1,9 +1,7 @@
 //! A Tribute can pay for its own zone (docs/classic-sets.md B4.5; SPEC §3.2, R391): with its row full,
 //! a Tribute card may be played into a zone its own Tribute empties — a pile of exactly one tributed
-//! unit, without Reborn, not Locked — and `legalActions` pairs each zone with the paying sets that
+//! unit, without Reborn, not Locked — and `legal_actions` pairs each zone with the paying sets that
 //! leave it open, while the play's check reads the same pair (R90, R101, R210).
-//!
-//! Port of `packages/engine/test/tribute-zones.test.ts`.
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog, summon};
 use jackioh_engine::testkit::*;
@@ -109,12 +107,12 @@ fn fill_row(state: &mut GameState, defs: &[(i32, String)]) -> Vec<CardInstance> 
         .collect()
 }
 
-/// TS `only(items)` (playPipelineB's): the first item, failing on none.
+/// The first item, failing on none.
 fn only<T: Clone>(items: &[T]) -> T {
     items.first().cloned().expect("expected at least one item")
 }
 
-/// A play as its JSON, so `play.zone?.lane` and `play.tributes` read as TS reads them.
+/// A play as its JSON, so a test reads its `zone` and `tributes`.
 fn play_json(play: &impl serde::Serialize) -> Value {
     serde_json::to_value(play).expect("a play serializes")
 }
@@ -130,7 +128,7 @@ fn plays(state: &GameState, card: &CardInstance) -> Vec<Value> {
         .collect()
 }
 
-/// `whyChoicesRefused(state, "p1", card, { type: "play", instanceId, zone: { row: "units", lane }, tributes })`.
+/// `why_choices_refused` for p1's play of `card` into units lane `lane`, paying `tributes`.
 fn refused_at(state: &GameState, card: &CardInstance, lane: i32, tributes: &[&str]) -> Option<String> {
     let play: PlayAction = json_as(json!({
         "type": "play",
@@ -143,7 +141,6 @@ fn refused_at(state: &GameState, card: &CardInstance, lane: i32, tributes: &[&st
         .map(|error| error.message)
 }
 
-/// `toMatch(/text/)` on an error that must be there.
 fn says(error: &Option<String>, text: &str) -> bool {
     error.as_deref().is_some_and(|message| message.contains(text))
 }

@@ -1,24 +1,12 @@
 //! `cargo jackioh luau surface [--json] [--card <id>]…` (#560, groundwork for #442's part 6, #448): the
-//! engine API every card script calls, card by card.
+//! engine API every card script calls. Per face: the `Script` hooks it sets (and whether the Radiant
+//! face reuses the base's), the effect verbs, read helpers and random pools it uses; then a summary of
+//! each with its cards. The cards that stay in Rust (#442's L14) are marked and counted apart.
 //!
-//! For each card script (`crates/cards/src/scripts/<set>/<file>.rs`, above its `#[cfg(test)]`) it
-//! reports, per face: the `Script` hooks the face sets, and whether the Radiant face reuses the base
-//! face (`radiant: base.clone()`, `..base.clone()`); the effect verbs it calls (the `pub fn`s of
-//! `crates/engine/src/effects/` that return an `Effect`); the read helpers it calls (the other `pub fn`s
-//! the engine's prelude re-exports, `subsystems::…` paths, `remember` and the ctx readers); and the
-//! random pools it uses (`crates/cards/src/query.rs`). Names that appear in the file but in neither
-//! face are the card's `elsewhere`. The cards that stay in Rust (#442's L14) are marked. A summary then
-//! lists every distinct hook, verb, reader and pool with the cards that use it, the L14 cards counted
-//! apart.
-//!
-//! It reads source text, as part 6's grep would, and is not a Rust parser. Comments, string and
-//! character literals and everything from `#[cfg(test)]` on are blanked before any scan. What it follows
-//! is the shapes the scripts use: a `CardScripts { base, radiant }` literal in `script()`, faces that are
-//! `Script { … }` literals (spread `..Script::default()` or `..base.clone()`), `let` bindings and helper
-//! functions of the same file, and `base.field` borrowed into the Radiant face. A name it cannot classify
-//! is listed as unclassified, and a card it cannot read as unreadable with its reason (a card ported to
-//! Luau, #442, as one whose script is its `.luau`); neither fails the command, and nothing is dropped.
-//! Only the report is printed: no file is written, so it cannot go stale.
+//! It reads source text and is not a Rust parser: comments, literals and everything from `#[cfg(test)]`
+//! on are blanked first. A name it cannot classify is listed as unclassified and a card it cannot read
+//! as unreadable with its reason; neither fails the command. Only the report is printed: no file is
+//! written, so it cannot go stale.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -213,7 +201,7 @@ pub(super) fn run(args: &SurfaceArgs) -> Result<()> {
     }
 }
 
-/* ---------------------------------------------------------------------------------- the lexer */
+// The lexer
 
 /// A blanked character: a space, or the newline itself so lines keep their numbers.
 fn blank(out: &mut String, ch: char) {
@@ -336,7 +324,7 @@ fn code_text(source: &str) -> String {
     out
 }
 
-/* --------------------------------------------------------------------------- scanning helpers */
+// Scanning helpers
 
 fn is_ident_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
@@ -361,7 +349,6 @@ fn skip_space(text: &[u8], mut at: usize) -> usize {
     at
 }
 
-/// The end of the identifier run that starts at `at`.
 fn run_end(text: &[u8], mut at: usize) -> usize {
     while at < text.len() && is_ident_byte(text[at]) {
         at += 1;
@@ -369,12 +356,10 @@ fn run_end(text: &[u8], mut at: usize) -> usize {
     at
 }
 
-/// The last byte before `at` that is not whitespace.
 fn prev_byte(text: &[u8], at: usize) -> Option<usize> {
     text[..at].iter().rposition(|b| !b.is_ascii_whitespace())
 }
 
-/// The identifier that ends right before `at`, whitespace skipped.
 fn prev_word(text: &[u8], at: usize) -> Option<Range<usize>> {
     let last = prev_byte(text, at)?;
     if !is_ident_byte(text[last]) {
@@ -729,7 +714,7 @@ fn find_edits(
     edits
 }
 
-/* --------------------------------------------------------------------------- the engine's names */
+// The engine's names
 
 /// What the engine and the cards crate offer a script, found in their sources.
 #[derive(Debug, Default)]
@@ -930,7 +915,7 @@ fn load_names(root: &Path) -> Result<Names> {
     Ok(names)
 }
 
-/* ------------------------------------------------------------------------------ one card file */
+// One card file
 
 /// One script file's code, with what the reading of a face needs.
 struct Code<'a> {
@@ -1242,7 +1227,6 @@ impl Code<'_> {
     }
 }
 
-/// A text that is one identifier and nothing else.
 fn is_lone_ident(text: &str) -> bool {
     text.bytes().next().is_some_and(is_ident_start) && text.bytes().all(is_ident_byte)
 }
@@ -1299,7 +1283,7 @@ fn read_card(source: &str, names: &Names) -> Result<CardSurface, String> {
     })
 }
 
-/* ------------------------------------------------------------------------------ the survey */
+// The survey
 
 /// The id a card file declares, as `crates/cards/build.rs` reads it: `pub const ID: &str = "…";`.
 fn read_id(text: &str) -> Option<String> {
@@ -1427,7 +1411,7 @@ fn survey(root: &Path, only: &[String]) -> Result<Report> {
     Ok(report)
 }
 
-/* ------------------------------------------------------------------------------ the printer */
+// The printer
 
 /// A table cell holding names, `—` when there are none.
 fn cell<'a>(names: impl IntoIterator<Item = &'a String>) -> String {
@@ -1751,7 +1735,7 @@ mod tests {
         assert_eq!(report.summary.verbs["steal"].cards, 1);
         assert_eq!(report.summary.verbs["steal"].ids, ["classic-032"]);
         assert!(survey(&repo_root(), &["nope".into()]).is_err());
-        // Every card is Rust again since #902, Bigot (once the first card ported) among them.
+        // Every card is Rust (#902), Bigot among them.
         let bigot = survey(&repo_root(), &["core-002".into()]).unwrap();
         assert_eq!(bigot.cards.len(), 1);
         assert!(bigot.unreadable.is_empty());

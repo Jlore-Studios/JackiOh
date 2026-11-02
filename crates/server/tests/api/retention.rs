@@ -1,10 +1,6 @@
-//! The retention purge (`crates/server/src/api/retention.rs`): which cutoffs it hands the store.
-//! What the store then deletes is asserted against both stores in `tests/store/contract.rs`, and in
-//! Postgres by `tests/sql/07_retention_purge.sql`.
-//!
-//! Runs on `support::deps::test_app()` (the fake store), with `tokio::time::pause()` standing in
-//! for the manual clock.
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
+//! The retention purge (`crates/server/src/api/retention.rs`): which cutoffs it hands the store
+//! (docs/v0.3.0/SURFACE.md §11.2). What the store then deletes is asserted in `tests/store/contract.rs`
+//! and `tests/sql/07_retention_purge.sql`.
 
 use serde_json::json;
 

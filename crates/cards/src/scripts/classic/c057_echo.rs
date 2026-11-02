@@ -71,7 +71,6 @@ mod tests {
 
     use crate::js;
 
-    /// The state written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serializes");
         serde_json::from_str(&text).expect("the state parses back")
@@ -86,7 +85,6 @@ mod tests {
             .collect()
     }
 
-    /// The legal `play` actions of the Echo in hand, as JSON.
     fn echo_plays(s: &Scenario, player: PlayerId) -> Vec<Value> {
         let id = s.card(ECHO).id.clone();
         legal_actions(s.state(), player)
@@ -125,7 +123,6 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [ECHO, VANILLA] } }));
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
                 assert!(card.get("copies").is_none());
-                // One play, with no `targets` key (an absent key reads as null).
                 assert_eq!(
                     echo_plays(&s, PlayerId::P1).iter().map(|play| play["targets"].clone()).collect::<Vec<Value>>(),
                     vec![Value::Null],
@@ -158,7 +155,6 @@ mod tests {
                     json!({ "defId": STOCKPILE, "radiant": false }),
                 );
                 s.play(ECHO, json!({}));
-                // Stockpile's text: draw 2, heal your hero 2 — for Echo's player.
                 assert_eq!(
                     s.last_events()
                         .iter()
@@ -299,7 +295,6 @@ mod tests {
                 assert_eq!(card["cost"], 1);
                 assert_eq!(card["copies"]["defId"], WILDFIRE);
                 s.end_turn();
-                // p1's Echo copies the resolved Book: the copy is no Book play.
                 s.play(ECHO, json!({ "targets": at_p2() }));
                 assert!(s.state().pending.is_none());
                 let played = s
@@ -320,7 +315,6 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [ADAPTIVE, ECHO], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 } }));
                 s.play(ADAPTIVE, json!({ "x": 1, "targets": at_p2() }));
                 s.state_mut().players.p1.mana.current = 4;
-                // The X values, first-seen order, each once.
                 let mut xs: Vec<Value> = Vec::new();
                 for play in echo_plays(&s, PlayerId::P1) {
                     if !xs.contains(&play["x"]) {
@@ -386,7 +380,6 @@ mod tests {
                 assert_eq!(revived.state, live.state);
                 let hand = &live.state.players.p1.hand;
                 assert_eq!(hand.iter().find(|card| Some(&card.id) == vanilla.as_ref()).map(|card| card.cost_mod), Some(-1));
-                // "Exile this": the Echo, not a Reminisce, goes to exile.
                 assert_eq!(
                     live.state.players.p1.exile.iter().map(|card| card.def_id.as_str()).collect::<Vec<&str>>(),
                     vec![REMINISCE, ECHO],
@@ -400,7 +393,6 @@ mod tests {
                 // A cast on draw is no play (R2179002), so the record a CN-Virus played from hand leaves.
                 s.state_mut().last_spell = Some(PlayRecord { def_id: CN_VIRUS.to_string(), radiant: false });
                 s.start_turn();
-                // The draw is Echo, which copies CN-Virus and is cast (1 damage); the draw repeats.
                 assert_eq!(hits(s.last_events(), "hero-p1"), vec![1]);
                 s.expect_in_zone(ECHO, "graveyard");
                 assert!(s.last_events().iter().map(js).any(|event| event["type"] == "cardPlayed" && event["defId"] == ECHO));
@@ -436,9 +428,7 @@ mod tests {
             fn r399_a_fused_pile_on_back_at_the_bottom_of_its_deck_is_still_the_last_spell_and_echo_has_its_text() {
                 crate::register_all();
                 // Part 40's sweep (`sweep:easy:core-076:2`): Pile On with Book Worm fused in (R77, R179) goes
-                // back to the bottom of its deck by Pile On's own clause, where neither player sees it. The
-                // last Spell names it, and its definition stays the state's (`transient_defs`), so Echo is
-                // priced, listed and resolves its text.
+                // back to the bottom of its deck by Pile On's own clause, where neither player sees it.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ECHO, VANILLA], "library": [STOCKPILE, MENACE, VANILLA, STOCKPILE] },
@@ -467,7 +457,6 @@ mod tests {
                 assert_eq!(permanents, 2, "p1 drew its top Stockpile; a Menace and a Vanilla are left to Recruit");
                 s.play(ECHO, json!({}));
                 s.expect_mana(PlayerId::P1, 3);
-                // Pile On's text, for Echo's player: every permanent in p1's deck is Recruited.
                 assert!(s.pile(PlayerId::P1, "library").iter().all(|card| card.def_id == STOCKPILE));
                 let units = (1..=5).filter(|lane| s.unit(PlayerId::P1, *lane).is_some()).count();
                 assert_eq!(units, permanents);

@@ -1,4 +1,4 @@
-// A6: routes, endpoints, and fixtures are overridden through Cypress `expose`; BUILD M8 fixes hotseat only.
+// A6: routes, endpoints, and fixtures are overridden through Cypress `expose`.
 
 import { DECK_SIZE } from "../../apps/web/src/wire/engineConfig.ts";
 
@@ -25,17 +25,17 @@ export const routes = {
   deckbuilder: () => env("deckbuilderRoute", "/decks"),
   play: () => env("playRoute", "/play"),
   match: (matchId: string) => `${env("matchRoute", "/match")}/${matchId}`,
-  /** R259: a Best-of-3 series between games. */
+  /** R259: a Best-of-3 series. */
   series: (seriesId: string) => `${env("seriesRoute", "/series")}/${seriesId}`,
-  /** #920: the card creator (SPEC §12.11). */
+  /** #920, SPEC §12.11. */
   creator: () => env("creatorRoute", "/creator"),
-  /** SPEC §9.9: practice against the AI. */
+  /** SPEC §9.9. */
   practice: () => env("practiceRoute", "/practice"),
-  /** R768000: the recent games and their replays. */
+  /** R768000. */
   replays: () => env("replaysRoute", "/replays"),
-  /** §14: the account page, whose Dev tools toggle spec 45 opens. */
+  /** §14: spec 45 opens its Dev tools toggle. */
   account: () => env("accountRoute", "/account"),
-  /** #1307: the collection, wallet, set tracks and quests. */
+  /** #1307. */
   collection: () => env("collectionRoute", "/collection"),
   /** R1579000: the Cards section. */
   collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
@@ -49,12 +49,10 @@ export const server = {
   ws: () => env("wsUrl", "ws://localhost:8787/ws/match"),
 };
 
-/** A6: `path` on the API's origin, as every networked spec and command requests it. */
 export function apiUrl(path: string): string {
   return `${server.http()}${path}`;
 }
 
-/** A6: the `authorization: Bearer <token>` header the server's signed-in routes read. */
 export function bearerHeaders(token: string): Record<string, string> {
   return { authorization: `Bearer ${token}` };
 }
@@ -89,9 +87,8 @@ export const TUTORIAL_HANDICAP = {
 export type E2EAccount = { email: string; password: string; token: string };
 
 /**
- * A6: `pending` waits at the spec-10 invite gate; `p1`/`p2` own every card. R1310004: `econ` waits
- * at the gate too, for spec 45, which redeems it into a new account's starter cards (R1310000); the
- * E2E server counts it, and it alone, as a dev account.
+ * A6: `pending` waits at the spec-10 invite gate; `p1`/`p2` own every card. R1310004: `econ` waits there
+ * too, for spec 45 to redeem (R1310000); the E2E server counts it alone as a dev account.
  */
 export const accounts: Record<"p1" | "p2" | "pending" | "econ", () => E2EAccount> = {
   p1: () => ({ email: env("p1Email", "e2e-p1@jackioh.test"), password: env("p1Password", "e2e-p1-password"), token: env("p1Token", "e2e-token-p1") }),
@@ -120,7 +117,7 @@ export const timeouts = {
   axe: 30_000,
 };
 
-/** BUILD M5-T1's two sizes, a desktop's and a phone's; spec 46 holds every menu to one screen at both (R1581000). */
+/** BUILD M5-T1's two sizes; spec 46 holds every menu to one screen at both (R1581000). */
 export const viewports = {
   desktop: { label: "desktop", width: 1280, height: 720 },
   phone: { label: "phone", width: 390, height: 844 },
@@ -129,7 +126,7 @@ export type MenuViewport = (typeof viewports)[keyof typeof viewports];
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {
-  /** §2.6 L2, the engine's own (`crates/engine/src/config.rs`, generated into the web's wire layer). */
+  /** §2.6 L2, the engine's own (`crates/engine/src/config.rs`, via the web's wire layer). */
   DECK_SIZE,
   MAX_COPIES: 1,
   MAX_MANA: 4,
@@ -149,8 +146,7 @@ export const constants = {
 export const FX_SETTINGS_KEY = "jackioh.fx.v1";
 
 /**
- * R1310004: `E2E_FULL_ART_GATED_KEY` in apps/web/src/cards/fullArt.ts. A development build gates
- * full art on ownership (R1313000) only when this key holds "1" as the page loads; spec 45 sets it
- * before it visits, and every other spec sees every full art.
+ * R1310004: `E2E_FULL_ART_GATED_KEY` in apps/web/src/cards/fullArt.ts. A development build gates full
+ * art on ownership (R1313000) only when this key holds "1" as the page loads; only spec 45 sets it.
  */
 export const FULL_ART_GATED_KEY = "jackioh.e2e.fullArtGated";

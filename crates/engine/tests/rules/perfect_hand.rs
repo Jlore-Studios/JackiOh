@@ -5,9 +5,9 @@
 //! The pool is pinned: this file registers its cards on top of the vanilla Core units and nothing
 //! else (no scripted fixture), so each ranking is a statement about a fixed state and pool, never
 //! about the scorer's weights. The pool is every set that ships (R1446): seven cards of Core, Classic
-//! and Classic+, one radiant-only body of each set that ships (read off `SHIPPED_SETS`, so no test lists
-//! the sets), and a giant of a set that does not ship, which stays out. Core #97's scorer is reused
-//! unchanged. Defs are `ph-`, indexed from 4901.
+//! and Classic+, one radiant-only body of each set that ships (read off `SHIPPED_SETS`), and a giant of
+//! a set that does not ship, which stays out. Core #97's scorer is reused unchanged. Defs are `ph-`,
+//! indexed from 4901.
 
 use std::cmp::Ordering;
 
@@ -74,7 +74,7 @@ fn zealot() -> CardDef {
     def("zealot", "Spell", "Classic+", 4901, json!({ "cost": 4 }))
 }
 
-/// A 4/4 Charge for 1: the one card that enables lethal. Core, which the pool reaches since R1446.
+/// A 4/4 Charge for 1: the one card that enables lethal. Core, which the pool reaches (R1446).
 fn charger() -> CardDef {
     unit(
         "charger",
@@ -340,7 +340,6 @@ fn contains_all(list: &[String], expected: &[String]) -> bool {
     expected.iter().all(|entry| list.contains(entry))
 }
 
-/// The `defId` of each event of this type.
 fn def_ids_of(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events
         .iter()

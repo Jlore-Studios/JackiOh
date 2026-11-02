@@ -1,12 +1,5 @@
-//! B53 (#936, `.fullsend/SPEC.md` S7): chat between friends. Only friends; a body of 1 to
-//! `CHAT_MAX_CHARS` after trimming, filtered by the username word filter (blocked words masked with
-//! `*`); at most `CHAT_MESSAGES_PER_MINUTE` per sender; pages of at most `CHAT_PAGE`, newest last,
-//! paged back by `?before=` and the page's `nextCursor` (R1384000); reading a page marks it read; messages older than
-//! `CHAT_RETENTION_DAYS` are purged by the retention loop; a report is stored once per reporter.
-//!
-//! The whole router over the fake store. Time is tokio's paused clock wherever an order, a window
-//! or an age matters, so every message has its own `createdAt`. The retention loop is the one
-//! `app.rs` spawns (`api::retention::run_purge`), run here for one pass.
+//! B53 (#936, .fullsend/SPEC.md S7, R1384000): chat between friends.
+//! Tests friendship restriction, length limits, word filtering, rate limits, and pagination.
 
 use std::sync::Arc;
 
@@ -30,10 +23,6 @@ const PAST_THE_PAGE: usize = 5;
 
 /// How many times `settle` yields: enough for a spawned loop's first pass over the fake store.
 const SETTLE_YIELDS: usize = 256;
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 fn count<T>(value: T) -> usize
 where
@@ -146,9 +135,7 @@ async fn friends() -> (Arc<App>, Account, Account) {
     (app, ada, bea)
 }
 
-// ---------------------------------------------------------------------------------------------
 // B53
-// ---------------------------------------------------------------------------------------------
 
 mod b53_sending {
     use super::*;

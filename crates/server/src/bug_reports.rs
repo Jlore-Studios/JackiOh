@@ -1,32 +1,21 @@
 //! Bug reports. Not in SPEC, and no R-row: operational, as #861's probes are.
 //!
 //! When the server finds a match its own log does not reproduce (§9.3's determinism break), it keeps
-//! the match going, as the rebuild always has ("a live match is better than a dead one",
-//! `actor::registry::rebuild`), logs the finding (`bug.found`) and files one GitHub issue the night
-//! bot builds (`BUG_REPORT_LABELS`: `bot:build`, bot/README.md). It looks in six places:
+//! the match going ("a live match is better than a dead one", `actor::registry::rebuild`), logs the
+//! finding (`bug.found`) and files one GitHub issue the night bot builds (`BUG_REPORT_LABELS`:
+//! `bot:build`, bot/README.md).
 //!
-//!  - a 1v1 rebuild whose fold refuses an action the log holds (`actor::registry`);
-//!  - a co-op rebuild that does (`duos::registry`);
-//!  - the reaper's recovery fold that does (`api::results`);
-//!  - a finished match whose log does not fold to its end (`api::game_records`);
-//!  - a 1v1 live action whose `reduce` panicked (`actor::match_actor`, R1253000);
-//!  - a co-op one (`duos::actor`).
-//!
-//! What a report says. The repository is public and the match may still be live, so a report names
-//! each match, where it was found, the build and the catalog, and each refused row's seq, seat and
-//! action type, never a refusal's text or a panic's message, a card or an instance id, any of which
-//! could show a hand to the opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
+//! The repository is public and the match may still be live, so a report names each match, where it
+//! was found, the build, the catalog, and each refused row's seq, seat and action type: never a
+//! refusal's text, a panic's message, a card or an instance id, which could show a hand to the
+//! opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
 //! log does not reproduce").
 //!
-//! How often. Findings group by `Signature`: where found, the build, the catalog, and the first
-//! refused action's type. A signature files one issue, titled with its first match and the
-//! signature, whose body lists each match the process sees with it, up to
-//! `BUG_REPORT_LISTED_MATCHES`, edited in as each arrives. A match is listed once per process. At
-//! most `BUG_REPORTS_PER_WINDOW` issues are opened in `BUG_REPORT_WINDOW_MS`, and no issue is
-//! opened when one whose title holds the signature exists already, open or closed, so a restart
-//! files nothing twice, and that signature's later matches are only logged. Every finding is logged
-//! whatever is filed. Without `CREATE_ISSUES_TOKEN` nothing leaves the process, and a test's app
-//! records what it would file.
+//! Findings group by `Signature`: one issue per signature, titled with its first match and the signature,
+//! listing each match the process sees with it once, up to `BUG_REPORT_LISTED_MATCHES`. At most
+//! `BUG_REPORTS_PER_WINDOW` issues are opened in `BUG_REPORT_WINDOW_MS`, and none when an issue (open or
+//! closed) whose title holds the signature exists, so a restart files nothing twice; later matches are only
+//! logged.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};

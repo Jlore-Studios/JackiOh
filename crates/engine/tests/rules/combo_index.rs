@@ -1,8 +1,6 @@
-//! Combo-Index (BUILD M3-T7): SPEC §8 #93, R27, R60, R62 and §4.4 step 8.
-//!
-//! The card is a Field Spell with a grade counter on its instance. At the end of its controller's
-//! turn, "if cards played this turn >= grade, grade +1 and run every step from E up to the new
-//! grade" (§8 #93), the steps run in order and S is terminal (R27).
+//! Combo-Index (BUILD M3-T7): SPEC §8 #93, R27, R60, R62 and §4.4 step 8. A Field Spell with a grade
+//! counter: at the end of its controller's turn, "if cards played this turn >= grade, grade +1 and run
+//! every step from E up to the new grade" (§8 #93), the steps run in order and S is terminal (R27).
 
 use jackioh_engine::query::cards_played_this_turn;
 use jackioh_engine::subsystems::combo_index::{
@@ -108,8 +106,7 @@ fn on_field(state: &mut GameState, grade: Option<i32>) -> CardInstance {
     find_instance(state, &card.id).expect("on the field").clone()
 }
 
-/// Play a card for real: R70's cast counts as a play for everything that counts plays, so this is
-/// the same `turnLog` bookkeeping §10.5 step 4 writes, not a parallel record.
+/// Play a card for real: R70's cast is the same `turnLog` bookkeeping §10.5 step 4 writes.
 fn play(sink: &mut EngineSink<'_>, def_id: &str, radiant: bool) -> CardInstance {
     let mut card = in_hand(sink.state, def_id, P1, 1).remove(0);
     if radiant {
@@ -132,8 +129,8 @@ fn kinds_of(effects: &[Effect]) -> Vec<&'static str> {
     effects.iter().map(|effect| effect.kind).collect()
 }
 
-/// The five steps as the cascade names them. Grade B is the library's own `setRadiantRandom` (R60)
-/// and grade A is a `damage` effect that states its Lifesteal (R85), so both carry library kinds.
+/// The five steps as the cascade names them: B is the library's `setRadiantRandom` (R60) and A a
+/// `damage` effect that states its Lifesteal (R85).
 const STEP_KINDS: [&str; 5] = [
     "comboIndexStepE",
     "comboIndexStepD",
@@ -269,7 +266,6 @@ mod r27_combo_index_s8_93_m3_t7 {
             play(sink, &trick().id, false);
             play(sink, &trick().id, false);
 
-            // The rise first, then E, D and C — never a step above the new grade (R27).
             let mut expected = vec!["comboIndexRaiseGrade"];
             expected.extend_from_slice(&STEP_KINDS[..3]);
             assert_eq!(kinds_of(&combo_index_end_of_turn(sink, &card)), expected);
@@ -321,7 +317,6 @@ mod r27_combo_index_s8_93_m3_t7 {
 
         assert_eq!(grade_now(&state, &card_id), Some(6));
         assert_eq!(json_of(grade_name_of(card(&state, &card_id))), json!("S"));
-        // Two full rounds of E, D, C, B, A, in order, after the counter moves (R27).
         let types: Vec<Value> = events[from..]
             .iter()
             .map(|event| json_of(event)["type"].clone())
@@ -379,7 +374,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert!(effects.is_empty());
         run(&mut sink, &card, effects);
 
-        // No rise and no step: the state is exactly what it was (R27 "nothing further happens at S").
+        // Nothing changed: R27's "nothing further happens at S".
         assert_eq!(grade_now(sink.state, &card.id), Some(6));
         assert_eq!(*sink.state, before);
         assert_eq!(sink.events.len(), events_before);
@@ -496,7 +491,6 @@ mod r27_combo_index_s8_93_m3_t7 {
         });
         assert_eq!(card(&small, &only_id).cost_mod, -1);
 
-        // A panic here fails the test.
         let mut none = game("step-d-empty");
         sink_events(&mut none, &mut Vec::new(), |sink| {
             let none_card = on_field(sink.state, None);
@@ -663,7 +657,6 @@ mod r27_combo_index_s8_93_m3_t7 {
                 run(sink, &card, effects);
             });
 
-            // Every random pick of the S cascade, in one string.
             serde_json::to_string(&json!({
                 "hand": state
                     .players
@@ -698,7 +691,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             json_of(grade_name_of(super::card(sink.state, &card.id))),
             json!("D")
         );
-        // E copied the played card and D discounted two hand cards, before the turn ended (§2.2).
+        // E and D ran before the turn ended (§2.2).
         let added: Vec<Value> = events_of_type(sink.events, GameEventType::AddedToHand)
             .iter()
             .map(json_of)
@@ -751,7 +744,7 @@ mod r86_what_a_pool_of_cards_played_this_turn_holds {
             vec![spell.id.clone(), unit.id.clone()]
         );
 
-        // Both are still findable, so both are in the pool: a card that moved zone is still a card.
+        // A card that moved zone is still a card, so both are in the pool.
         let pool = |state: &GameState| -> Vec<String> {
             played_cards_this_turn(state, P1)
                 .iter()
@@ -760,8 +753,7 @@ mod r86_what_a_pool_of_cards_played_this_turn_holds {
         };
         assert_eq!(pool(&*sink.state), vec![spell.id.clone(), unit.id.clone()]);
 
-        // Make one cease to exist, as a unit token does when it leaves the field (R11): out of every
-        // pile, and tagged `gone` rather than claiming a zone it is not in.
+        // Gone, as a unit token leaving the field is (R11): out of every pile, its zone `gone`.
         remove_from_any_zone(sink.state, &mut unit);
         unit.zone = Zone::Gone { player: P1 };
         assert!(find_instance(sink.state, &unit.id).is_none());

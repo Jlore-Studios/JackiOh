@@ -1,9 +1,6 @@
-// apps/web/.env.production and apps/web/.env.staging: the production and the staging build's settings,
-// committed so that no host has to hold them (promote-production.yml builds production from the first,
-// deploy-staging.yml staging from the second over it, `build:staging`; check-production-bundle.mjs
-// refuses a bundle without them). Each is shipped to every browser, so it may only ever hold the
-// public half of the environment contract, and the hosts it names must be ones its build's CSP lets
-// the page reach.
+// apps/web/.env.production and .env.staging, committed so no host holds the builds' settings
+// (promote-production.yml and deploy-staging.yml build from them). Each ships to every browser, so it may
+// hold only public variables, and the hosts it names must be ones its build's CSP lets the page reach.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";

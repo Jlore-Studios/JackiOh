@@ -1,8 +1,6 @@
 //! Test-only cards for ME-TRIG (docs/meditative-set.md M5; R820–R824): the trigger multipliers of
-//! Meditative #9 Joint Filing and #10 Double Counting, and #12 Fear Mongerer's "trigger your End of
-//! turn effects", each reproduced through the script hooks and the effects library so the engine is
-//! proved without `crates/cards` (CLAUDE.md: the engine never depends on it). The real cards are
-//! tested again in their own files.
+//! Meditative #9 Joint Filing and #10 Double Counting, and #12 Fear Mongerer's "trigger your End of turn
+//! effects", through the script hooks and effects library, so the engine is proved without `crates/cards`.
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
@@ -60,29 +58,20 @@ pub const DOUBLE: &str = "tm-double";
 /// Units carrying a turn-hook multiplier of 1 and of 2, for a Fuse.
 pub const EXTRA_UNIT_ONE: &str = "tm-extra-unit-one";
 pub const EXTRA_UNIT_TWO: &str = "tm-extra-unit-two";
-/// Start of turn and End of turn: 1 damage to the enemy hero.
 pub const TICKER: &str = "tm-ticker";
-/// End of turn: 1 damage to the enemy hero, then Bounce this.
 pub const LEAVER: &str = "tm-leaver";
 /// A Field Spell: at the start of your opponent's turn, 1 damage to the enemy hero (C #62's hook).
 pub const LIVING: &str = "tm-living";
-/// End of turn: summon a TICKER.
 pub const SPAWNER: &str = "tm-spawner";
-/// A Unit whose Cry deals 1 damage to its declared enemy Unit or hero.
 pub const AIMER: &str = "tm-aimer";
-/// A Spell: 1 damage to a declared Unit or hero, either side.
 pub const BOLT: &str = "tm-bolt";
-/// A vanilla 1/1.
 pub const PAWN: &str = "tm-pawn";
-/// A 1/1 whose Death deals 1 damage to the enemy hero.
 pub const DIER: &str = "tm-dier";
-/// A Spell: destroy every card on your side, units and backrow.
 pub const NUKE: &str = "tm-nuke";
 /// A Unit whose Cry deals 1, asks a mode (its answer deals 4), then deals 2: a list that parks its tail.
 pub const ASKER: &str = "tm-asker";
 /// A Spell: trigger the Cry of a declared Unit of yours (C #54 Rewind's shape).
 pub const TRIGGERER: &str = "tm-triggerer";
-/// A Unit whose Cry triggers its controller's End of turn effects twice.
 pub const FEAR: &str = "tm-fear";
 
 fn field_spell(index: u32, name: &str) -> CardDef {
@@ -93,7 +82,6 @@ fn spell(index: u32, name: &str) -> CardDef {
     def(index, name, "Spell", json!({}))
 }
 
-/// Every fixture definition.
 pub fn catalog() -> CardDefs {
     [
         field_spell(9001, "joint"),
@@ -126,7 +114,6 @@ fn turn_extra(extra: i32) -> Script {
     }
 }
 
-/// Every fixture script.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     let enemy_unit_or_hero = TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "hero"] }));
     let any_unit_or_hero = TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }));

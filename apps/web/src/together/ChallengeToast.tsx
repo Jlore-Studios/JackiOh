@@ -1,29 +1,21 @@
 // The challenge toast (#936, B57; #1831): mounted once in the shell (`main.tsx`), it reads the open
-// challenges every `SOCIAL_POLL_MS` while the tab holds a session, on every screen (`socialPoll.ts`,
-// the one read the Friends button's badge and Play together share).
+// challenges every `SOCIAL_POLL_MS` while the tab holds a session (`socialPoll.ts`, the one read the
+// Friends button's badge and Play together share).
 //
-// AN INCOMING CHALLENGE is a toast with the challenge's mode and, but for All Random, a picker of
-// the player's deck (or trio) that starts on the one they last used for it in this browser
-// (`challengeChoice.ts`); for All Random, "More cards from" (R924000) for the player's own dealt
-// deck, starting from the device's online pick (`readPlayLean`, R2031000), shown once the engine is in
-// (`LeanSetPickerLazy.tsx`: the shell mounts the toast on every screen, #778). Accept joins the room by
-// its code with that pick, which accepts the challenge (B49), and takes the player to the game: one
-// press (R1831000). Decline declines it.
-// R915005: a deck naming a custom card (or a trio holding one) is listed off, "(practice only)", with the
-// lobby's note, and never picked.
-// Either way the toast goes. A screen holding unsaved work asks first, and the toast stays until
-// the player goes (R1754000). A join the server refuses is shown in its words, with "Open in lobby",
-// the way a room link opens `/play` with the room's code and mode filled in (R767), as it does when
-// there is no deck to join with.
+// AN INCOMING CHALLENGE is a toast with its mode and a picker of the player's deck (or trio), starting on the
+// last one used (`challengeChoice.ts`); for All Random, "More cards from" (R924000) on the device's online
+// pick (R2031000), shown once the engine is in (#778). Accept joins the room by its code, which accepts the
+// challenge (B49), in one press (R1831000). R915005: a deck naming a custom card (or a trio holding one) is
+// listed off, "(practice only)", and never picked. A screen holding unsaved work asks first (R1754000). A
+// refused join is shown in the server's words, with "Open in lobby", as a room link opens `/play` (R767).
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
-// friend joins it, wherever the challenger is. While the last read held one of theirs (or one was just
-// sent from this tab, `follow.ts`), each read also asks `/api/auth/me` for a live game, and once it
-// names one the toast announces it as a pairing is announced ("Match found!", R765) and takes them there.
+// friend joins it, wherever the challenger is. While one is open (`follow.ts`), each read also asks
+// `/api/auth/me` for a live game, and the toast announces it as a pairing is announced (R765).
 //
-// Nothing here is a rule (CLAUDE.md rule 7): whom a player may challenge, whether a deck may be
-// played, and when a challenge lapses, are the server's. A session the server refuses outright is
-// not asked again until the tab holds another one.
+// Nothing here is a rule (CLAUDE.md rule 7): whom a player may challenge, whether a deck may be played,
+// and when a challenge lapses are the server's. A session the server refuses outright is not asked again
+// until the tab holds another one.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -59,7 +51,6 @@ import { messageOf } from "../net/errors.ts";
 
 import "./together.css";
 
-/** The player's saved decks and trios as the toast read them, or that it could not. */
 type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
 
 /** Adds `id` to a set without changing the one React holds. */
@@ -69,7 +60,6 @@ function including(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
   return next;
 }
 
-/** Where a join answered with a game puts the player: the match, else the series, else the lobby. */
 function gameAfterJoin(answer: { matchId: string | null; seriesId: string | null }): string {
   if (typeof answer.matchId === "string" && answer.matchId.length > 0) return paths.match(answer.matchId);
   if (typeof answer.seriesId === "string" && answer.seriesId.length > 0) return paths.series(answer.seriesId);
@@ -95,7 +85,7 @@ export function ChallengeToast(): ReactElement {
   const [refusedId, setRefusedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [found, setFound] = useState<LiveGame | null>(null);
-  /** The player's decks and trios, read while a challenge that needs one is shown; null until read. */
+  /** The player's decks and trios; null until read. */
   const [saved, setSaved] = useState<Saved | "failed" | null>(null);
   /** The deck or trio picked in a toast, by challenge; until then the one last used. */
   const [picks, setPicks] = useState<Readonly<Record<string, string>>>({});
@@ -156,7 +146,6 @@ export function ChallengeToast(): ReactElement {
     };
   }, [social.challengeReads, social.outgoing, social.refused]);
 
-  // The announcement holds for the pairing's beat, then the player is taken to the game.
   useEffect(() => {
     if (found === null) return;
     const timer = window.setTimeout(() => {
@@ -183,7 +172,7 @@ export function ChallengeToast(): ReactElement {
     return chosen === undefined ? readPlayLean() : chosen;
   };
 
-  /** Joins the room by its code with `choice`, which accepts the challenge, and takes the player to its game (R1831000). */
+  /** Joins with `choice` and takes the player to its game (R1831000). */
   const join = (challenge: Challenge, choice: ModeChoice): void => {
     if (joining !== null) return;
     setJoining(challenge.challengeId);
@@ -253,7 +242,6 @@ export function ChallengeToast(): ReactElement {
           const list = saved === null || saved === "failed" ? [] : challenge.mode === "bo3" ? saved.trios : saved.decks;
           const practice = practiceOnlyIds(saved, challenge.mode);
           const busy = joining === id || declining === id;
-          // Nothing to join with, or the join was refused: the lobby is the way in.
           const lobby = refusedId === id || (challenge.mode !== "random" && saved !== null && choice === null);
           return (
             <section
@@ -333,7 +321,7 @@ export function ChallengeToast(): ReactElement {
                     disabled={busy}
                     aria-busy={joining === id}
                     onClick={() => {
-                      // R1754000: a page holding unsaved work may hold the join, and with it the move; until the player goes, the toast stays.
+                      // R1754000: unsaved work may hold the join; until the player goes, the toast stays.
                       leaveFirst(() => {
                         join(challenge, choice);
                       });

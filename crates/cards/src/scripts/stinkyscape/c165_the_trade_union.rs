@@ -29,10 +29,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #165 The Trade Union — SPEC §8.10 row 165, BUILD M12 row S 165: "while it acts, every card in its
-// controller's hand may be Traded, once a turn; leaving the field, only printed Tradable cards may;
-// radiant two Trades a turn, a third refused; trades reads through `param()` on the Radiant face only
-// (R824000)".
+// S #165 The Trade Union — SPEC §8.10 row 165, BUILD M12 row S 165 (R824000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,8 +43,6 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile, a Spell that prints no Tradable.
     const PRESTIGE: &str = "meditative-053"; // Prints Tradable.
 
-    /// The Union acting in p1's backrow lane 1 (Radiant on `radiant`); p1 holds three Stockpiles and a
-    /// Prestige, p2 a Stockpile.
     fn unionised(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -64,7 +59,6 @@ mod tests {
         s.backrow(P1, 1).expect("the Union in p1's backrow")
     }
 
-    /// The ids of `seat`'s hand cards of `def`.
     fn held(s: &Scenario, seat: PlayerId, def: &str) -> Vec<String> {
         s.hand(seat)
             .into_iter()
@@ -83,12 +77,10 @@ mod tests {
         }
     }
 
-    /// The reducer's answer to p1 Trading `id`.
     fn trade_refusal(s: &Scenario, id: &str) -> Option<String> {
         reduce(s.state(), &Action::new(trade_of(id), P1, "t")).error
     }
 
-    /// Runs `effects` as p1's on a hand-built sink at the state's rng cursor, settling after.
     fn by_hand(s: &mut Scenario, effects: Vec<Effect>) {
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();

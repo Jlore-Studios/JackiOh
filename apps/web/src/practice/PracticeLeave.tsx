@@ -1,12 +1,7 @@
-// "Leave this game?": what "New game" and "Menu" ask while a practice game is still being played.
-//
-// A game against the AI costs nothing to abandon, but it is still minutes of play one stray tap
-// from gone, and "New game" sits in the HUD beside the board. Staying is the default: it has the
-// focus, and Escape, Back (R2127000) or a click outside the panel means stay.
-//
-// R765: a free game is the player's to keep. Its question offers Save and leave, which keeps the
-// game for the practice menu's banner, beside Leave without saving, which gives it up. A tutorial
-// lesson is never kept (R668), so its question keeps the one way out it always had.
+// "Leave this game?": what "New game" and "Menu" ask while a practice game is still being played, since
+// it is minutes of play one stray tap from gone. Staying is the default: it has the focus, and Escape,
+// Back (R2127000) or a click outside the panel means stay. R765: a free game's question offers Save and
+// leave; a tutorial lesson is never kept (R668), so its question keeps the one way out.
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 
@@ -15,10 +10,7 @@ import { useBackLayer } from "../net/backLayers.ts";
 import { practiceTestid } from "./testids.ts";
 import "./practice.css";
 
-/**
- * Where leaving goes: back to the setup ("New game"), out to the main menu ("Menu"), or from a
- * tutorial lesson back to the lesson path ("Exit tutorial").
- */
+/** Where leaving goes: "New game", "Menu", or from a tutorial lesson "Exit tutorial". */
 export type PracticeLeaveTo = "setup" | "menu" | "lessons";
 
 type PracticeLeaveProps = {

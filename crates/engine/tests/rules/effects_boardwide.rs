@@ -1,9 +1,6 @@
 //! The board-wide and adjacency verbs of the effects library (BUILD M3-T1; SPEC §6.3, §3.1, §3.2,
 //! §4.4, §4.5, §10.7; R11, R12, R13, R16, R31, R46, R55, R59, R68, R78), thin walks over
-//! `cardsInScope` / `adjacentTo`:
-//!   destroyAll, destroyAdjacentTo — #2, #16, #17, #43, #88
-//!   damageAll — #13
-//!   bounceAll, exileAll, exileAdjacentTo, discardHand, exileHand — #17, #34, #76, #78, #100
+//! `cardsInScope` / `adjacentTo` for #2, #13, #16, #17, #34, #43, #76, #78, #88 and #100.
 //!
 //! These pin down the difference between a sweep and a loop of single-target verbs: `destroyAll`
 //! only marks, so §4.5 collects the whole board under ONE state check (R59), and `damageAll`
@@ -213,7 +210,6 @@ fn with_self(card: &CardInstance) -> RunOptions<'_> {
     }
 }
 
-/// The one card a single-card fixture call made.
 fn only(cards: Vec<CardInstance>) -> CardInstance {
     if cards.len() != 1 {
         panic!("expected exactly one fixture card");
@@ -256,15 +252,12 @@ fn chosen() -> Value {
     json!({ "of": "chosen" })
 }
 
-// destroyAll
-
 mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     use super::*;
 
     #[test]
     fn marks_every_matching_enemy_unit_leaves_allies_and_other_tags_standing_and_one_state_check_buries_them_in_their_controllers_graveyards_r2618000_r59()
      {
-        // §6.3.
         let mut state = game("destroyAll-scope");
         let ally = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let ally_human = put(&mut state, HUMAN, slot(PlayerId::P1, Row::Units, 2), json!({}));
@@ -283,7 +276,7 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
             defaults(),
         );
 
-        // Only marks: §4.5 step 1 has not run, so nothing has moved and nothing has been announced.
+        // Only marks: §4.5 step 1 has not run, so nothing has moved or been announced.
         assert_eq!(
             [&enemy_one, &enemy_two, &stolen].map(|card| run.marked(card)),
             [Some(true), Some(true), Some(true)]
@@ -334,7 +327,6 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
 
     #[test]
     fn rows_units_backrow_marks_a_backrow_card_too_c88_twisting_nether() {
-        // §6.3: rows ["units", "backrow"] (#88 Twisting Nether).
         let mut state = game("destroyAll-backrow");
         let ally_unit = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let ally_backrow = put(
@@ -467,8 +459,6 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     }
 }
 
-// destroyAdjacentTo
-
 mod destroy_adjacent_to_s3_1_m3_t1 {
     use super::*;
 
@@ -507,7 +497,6 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
 
     #[test]
     fn an_edge_lane_has_one_neighbour_and_c16_s_pairing_kills_the_target_with_it_in_one_state_check_r59() {
-        // §3.1.
         let mut state = game("destroyAdjacent-edge");
         let target = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let right = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 2), json!({}));
@@ -541,7 +530,6 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
 
     #[test]
     fn fizzles_silently_when_the_target_is_not_on_the_field_and_the_card_still_resolves() {
-        // §3.1.
         let mut state = game("destroyAdjacent-fizzle");
         let in_hand_card = only(in_hand(&mut state, BEAST, PlayerId::P1, 1));
         let neighbour = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
@@ -558,15 +546,12 @@ mod destroy_adjacent_to_s3_1_m3_t1 {
     }
 }
 
-// damageAll
-
 mod damage_all_s6_3_s4_4_r59_m3_t1 {
     use super::*;
 
     #[test]
     fn deals_one_instance_to_each_enemy_unit_and_with_heroes_to_the_enemy_hero_leaving_allies_untouched_c13_jlockeed_shredder_10()
      {
-        // §4.4.
         let mut state = game("damageAll-enemies");
         let self_card = put(
             &mut state,
@@ -594,7 +579,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         assert_eq!(run.card(&self_card).damage, 0);
         assert_eq!(run.state.players[PlayerId::P2].hero.health, HERO_HEALTH - 2);
         assert_eq!(run.state.players[PlayerId::P1].hero.health, HERO_HEALTH);
-        // Units in lane order first, then the hero of the scoped side.
         assert_eq!(
             run.damage_targets(),
             vec![
@@ -613,7 +597,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     #[test]
     fn snapshots_its_targets_before_the_first_hit_one_damage_event_per_unit_present_when_the_sweep_began_and_no_unit_hit_twice_r59()
      {
-        // §4.4.
         let mut state = game("damageAll-snapshot");
         let self_card = put(
             &mut state,
@@ -634,8 +617,8 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
             .collect();
         let mut run = Runner::new(state);
 
-        // 2 damage on 2-health bodies: every one of them is at 0 health by the second hit, and §4.5
-        // never runs between the hits of one effect (R59), so all three are still standing here.
+        // Every 2-health body is at 0 by the second hit, and §4.5 never runs between the hits of one
+        // effect (R59), so all three still stand here.
         run.apply(
             damage_all(json_as(json!({ "side": "enemy", "amount": 2 }))),
             None,
@@ -657,9 +640,8 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
             vec![2, 2, 2]
         );
 
-        // The list belongs to the apply that read it: a unit joining afterwards took nothing from the
-        // first sweep. No verb can remove a card from inside `dealDamage`, so the snapshot's other
-        // half is the assertion above: each target hit once, in `cardsInScope` order.
+        // A unit joining after the sweep read its list takes nothing from it; no verb can remove a card
+        // inside `dealDamage`, so the snapshot's other half is the each-target-hit-once assertion above.
         let latecomer = put(
             &mut run.state,
             BEAST,
@@ -687,7 +669,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
     #[test]
     fn puts_every_hit_through_the_whole_pipeline_divine_shield_eats_one_armor_soaks_one_indestructible_takes_none_and_the_sweep_carries_on()
      {
-        // §4.4.
         let mut state = game("damageAll-pipeline");
         let self_card = put(
             &mut state,
@@ -736,7 +717,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
 
     #[test]
     fn ignore_armor_reaches_the_same_armor_7_body_the_plain_sweep_could_not_true_strike_s4_4_step_2() {
-        // §4.4.
         let mut state = game("damageAll-true-strike");
         let self_card = put(
             &mut state,
@@ -791,7 +771,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
 
     #[test]
     fn a_sweep_over_an_empty_board_still_hits_the_scoped_hero() {
-        // §6.3.
         let state = game("damageAll-empty-board");
         let mut run = Runner::new(state);
 
@@ -805,8 +784,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         assert_eq!(run.damage_targets(), vec!["hero-p2".to_string()]);
     }
 }
-
-// bounceAll
 
 mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     use super::*;
@@ -836,7 +813,6 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
 
         assert_eq!(run.hand(PlayerId::P1), vec![mine.id.clone()]);
         assert_eq!(run.hand(PlayerId::P2), vec![theirs.id.clone(), stolen.id.clone()]);
-        // R747: it lands in p2's hand as p2's own card.
         assert_eq!(run.card(&stolen).owner, PlayerId::P2);
         assert_eq!(run.card(&stolen).controller, PlayerId::P2);
         assert_eq!(run.card(&stolen).zone, Zone::Hand { player: PlayerId::P2 });
@@ -883,7 +859,6 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
 
     #[test]
     fn defaults_to_the_unit_row_bounce_all_units_leaves_the_backrow_in_place() {
-        // §3.2.
         let mut state = game("bounceAll-default-rows");
         let unit = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let backrow = put(
@@ -901,15 +876,12 @@ mod bounce_all_s6_3_s3_2_r11_r78_r747_m3_t1 {
     }
 }
 
-// exileAll
-
 mod exile_all_s6_3_r11_r55_m3_t1 {
     use super::*;
 
     #[test]
     fn exiles_every_permanent_on_both_sides_but_the_running_card_and_bumps_counters_exiled_once_per_card_that_reached_the_pile_c100_ceaseless_void()
      {
-        // §6.3.
         let mut state = game("exileAll-void");
         let self_card = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let my_other = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 2), json!({}));
@@ -971,7 +943,6 @@ mod exile_all_s6_3_r11_r55_m3_t1 {
 
     #[test]
     fn without_exclude_self_the_sweep_takes_the_running_card_too() {
-        // §6.3.
         let mut state = game("exileAll-includes-self");
         let self_card = put(&mut state, BEAST, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = Runner::new(state);
@@ -988,15 +959,12 @@ mod exile_all_s6_3_r11_r55_m3_t1 {
     }
 }
 
-// exileAdjacentTo
-
 mod exile_adjacent_to_s3_1_m3_t1 {
     use super::*;
 
     #[test]
     fn exiles_the_neighbours_in_the_target_s_row_and_leaves_the_other_row_and_the_target_alone_c34_collateral_damage()
      {
-        // §3.1.
         let mut state = game("exileAdjacent-row");
         let left = put(
             &mut state,
@@ -1042,7 +1010,6 @@ mod exile_adjacent_to_s3_1_m3_t1 {
 
     #[test]
     fn an_empty_neighbouring_lane_contributes_nothing_and_the_effect_still_resolves() {
-        // §3.1.
         let mut state = game("exileAdjacent-gap");
         let target = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 3), json!({}));
         let right = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 4), json!({}));
@@ -1058,8 +1025,6 @@ mod exile_adjacent_to_s3_1_m3_t1 {
         assert_eq!(run.id_at(PlayerId::P2, Row::Units, 3), Some(target.id.clone()));
     }
 }
-
-// discardHand
 
 mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
     use super::*;
@@ -1085,7 +1050,6 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
 
     #[test]
     fn draws_nothing_from_the_rng_so_rng_cursor_and_every_downstream_replay_hash_are_unchanged() {
-        // §10.7.
         let mut state = game("discardHand-rng");
         in_hand(&mut state, BEAST, PlayerId::P1, 3);
         let mut run = Runner::new(state);
@@ -1137,7 +1101,6 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
 
     #[test]
     fn player_enemy_empties_the_opponent_s_hand_and_leaves_the_controller_s_alone() {
-        // §6.3.
         let mut state = game("discardHand-enemy");
         let mine = in_hand(&mut state, BEAST, PlayerId::P1, 2);
         let theirs = in_hand(&mut state, BEAST, PlayerId::P2, 2);
@@ -1161,15 +1124,12 @@ mod discard_hand_s6_3_r16_r31_s10_7_m3_t1 {
     }
 }
 
-// exileHand
-
 mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
     use super::*;
 
     #[test]
     fn empties_the_hand_into_the_exile_pile_and_bumps_counters_exiled_once_per_card_that_got_there_c78_fullsend()
      {
-        // §6.3.
         let mut state = game("exileHand-sweep");
         let cards = in_hand(&mut state, BEAST, PlayerId::P1, 3);
         let token = only(in_hand(&mut state, &rush_token(), PlayerId::P1, 1));
@@ -1183,7 +1143,7 @@ mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
             run.exile(PlayerId::P1),
             cards.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
         );
-        // R11: the unit-token card ceased to exist, so it is not in the pile and not counted (R55).
+        // R11: the unit-token card ceased to exist, so it is not counted (R55).
         assert!(run.gone(&token));
         assert_eq!(run.state.counters.exiled, 3);
         assert_eq!(events_of_type(&run.events, GameEventType::Exiled).len(), 4);
@@ -1194,7 +1154,6 @@ mod exile_hand_s6_3_r11_r55_s10_7_m3_t1 {
 
     #[test]
     fn does_nothing_to_an_empty_hand_and_the_card_still_resolves() {
-        // §6.3.
         let state = game("exileHand-empty");
         let mut run = Runner::new(state);
 

@@ -1,28 +1,15 @@
 //! A card changing owner (docs/classic-sets.md B5 E2, E16): the second exception to "a card always
-//! goes to its owner's piles" (§3.2), beside R73's library swap. A card taken off the stack as it is
-//! cast, out of a hand or out of a deck moves to the thief's hand and its owner becomes the thief, so
-//! every pile it reaches afterwards is the thief's. The hand cap applies to the thief's hand, and a
-//! card it burns goes to the thief's graveyard, since the thief owns it by then (§2.4).
+//! goes to its owner's piles" (§3.2), beside R73's library swap. A card taken off the stack, out of a
+//! hand or out of a deck moves to the thief's hand and its owner becomes the thief, so its later piles,
+//! hand cap and burns are the thief's (§2.4). Two ways in, one `change_owner`: `take_into_hand` (E2's
+//! countered Spell, E16, Classic+ #12.3, and a Unit off the field, R1185003, M+ #24 Bob) and
+//! `draw_from_library_of` (Classic #58), §2.4's draw for the thief once the card has left the library.
 //!
-//! Two ways in, one change of owner (`change_owner`):
-//!   - `take_into_hand`: the card goes straight to the thief's hand (E2's countered Spell, E16's cards
-//!     handed over, Classic+ #12.3's card out of the deck, and since R1185003 a Unit taken off the field,
-//!     M+ #24 Bob's "Put an enemy Unit into your hand").
-//!   - `draw_from_library_of`: a draw of the thief's own, taken from the other player's library (Classic
-//!     #58: "draw the bottom card of your opponent's deck") — §2.4's draw from the moment the card has
-//!     left the library, so the thief's hand cap, a cast on draw for the thief and the game draw counter
-//!     all apply, and an empty library gives nothing and deals no fatigue to anybody.
-//!
-//! Hidden information (R466). `stolen` names the card to whoever could read it where it was taken
-//! from and to whoever can read it where it is now (`view_for::redact_event`): a card out of a hand is its
-//! holder's, a face-down card its controller's, a public one everyone's, and a card out of a library
-//! nobody's, so the victim of a deck steal never learns which card left. The victim's own library list (R310) would give it away by what it stops listing, so a card
-//! taken out of a library by the other player turns the rest of that library unknown to its owner
-//! (R312's `hide_from_owner`): the list may show less than they could piece together, never more.
-//!
-//! Port of `packages/engine/src/ownership.ts`. TS wrote through the live card it was handed; here a
-//! `card: &CardInstance` is the card as the caller holds it, and every write lands on the instance of
-//! that id in the state.
+//! Hidden information (R466): `stolen` names the card to whoever could read it where it was taken from
+//! and where it is now (`view_for::redact_event`), so the victim of a deck steal never learns which
+//! card left; and since the victim's own library list (R310) would give it away, the rest of that
+//! library turns unknown to its owner (R312's `hide_from_owner`): less than they could piece together,
+//! never more. Every write lands on the instance of the card's id in the state.
 
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +21,7 @@ use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Zone, ZoneName};
 use crate::zones::live_or;
 
-/// `Extract<GameEvent, { type: "stolen" }>["zone"]`: every zone name but "gone".
+/// The zone a `stolen` event names: every zone name but "gone".
 type StolenFrom = ZoneName;
 
 fn stolen_from(instance: &CardInstance) -> Option<StolenFrom> {
@@ -42,11 +29,9 @@ fn stolen_from(instance: &CardInstance) -> Option<StolenFrom> {
     if zone == ZoneName::Gone { None } else { Some(zone) }
 }
 
-/// E2, E16: `card` becomes `thief`'s — owner and controller — and `stolen` says so, naming the pile it
-/// came from and both players. It does not move the card: the caller puts it in the hand, or draws it.
-/// R311's record of what the old owner was shown of the card was theirs, so it goes; R466: a card taken
-/// out of the other player's library leaves the rest of that library unknown to them. Returns false,
-/// changing nothing, for a card that has ceased to exist.
+/// E2, E16: `card` becomes `thief`'s, owner and controller, and `stolen` says so; the caller moves it.
+/// R311's record of what the old owner was shown goes; R466: a card taken out of the other player's
+/// library leaves the rest of it unknown to them. False, changing nothing, for a card that is gone.
 pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: PlayerId) -> bool {
     let card = live_or(sink.state, card);
     let Some(zone) = stolen_from(&card) else {
@@ -92,9 +77,8 @@ pub(crate) fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> V
     }
 }
 
-/// `"hand" | "burned" | "vanished"`: where a card taken into a hand went — the hand, its new owner's
-/// graveyard because the hand was full (§2.4, R4), or nowhere, a unit token taken off the field having
-/// ceased to exist (R11, R1185003).
+/// Where a card taken into a hand went: the hand, its new owner's graveyard from a full hand (§2.4, R4),
+/// or nowhere, a unit token taken off the field having ceased to exist (R11, R1185003).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TakenTo {
     #[serde(rename = "hand")]
@@ -105,14 +89,12 @@ pub enum TakenTo {
     Vanished,
 }
 
-/// E2, E16: move `card` to `thief`'s hand as the thief's own card. `stolen` is emitted first, naming
-/// the pile it came from and both players, then the hand's own `addedToHand` or `burned` (§2.4).
-/// A card that has ceased to exist is not taken. Returns where it went, or `None` when it was not taken.
+/// E2, E16: move `card` to `thief`'s hand as the thief's own card: `stolen` first, then the hand's
+/// `addedToHand` or `burned` (§2.4). Where it went, or `None` for a card that has ceased to exist.
 ///
-/// R1185003: a card on the field leaves it on the way, as a Bounce takes it (R747's ownership move, the
-/// thief's hand in place of the controller's): R78's reset, the pile beneath it resuming (R13) and the
-/// thief's hand cap. A unit token taken off the field ceases to exist instead (R11), so no hand and no
-/// graveyard sees it.
+/// R1185003: a card on the field leaves it as a Bounce takes it (R747, the thief's hand for the
+/// controller's): R78's reset, the pile beneath resuming (R13), the thief's hand cap. A unit token
+/// ceases to exist instead (R11).
 pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: PlayerId) -> Option<TakenTo> {
     if !change_owner(sink, card, thief) {
         return None;
@@ -147,11 +129,10 @@ pub enum LibraryEnd {
     Bottom,
 }
 
-/// E16, E2: one draw of `drawer`'s, taken from `from`'s library — its bottom card by default (Classic
-/// #58 Common Resources). The card leaves that library and becomes the drawer's (`change_owner`), then
-/// §2.4's draw finishes it as the drawer's own (`draw::complete_draw`): the game draw counter, `drawn`,
-/// a cast on draw for the drawer (R58) and the drawer's hand cap (R4). An empty library gives nothing
-/// and deals no fatigue to anybody: returns `None`.
+/// E16, E2: one draw of `drawer`'s from `from`'s library, its bottom card by default (Classic #58
+/// Common Resources): the card becomes the drawer's (`change_owner`), then §2.4's draw finishes it
+/// (`draw::complete_draw`: the draw counter, `drawn`, R58's cast on draw, R4's hand cap). An empty
+/// library gives nothing and deals no fatigue to anybody: `None`.
 pub fn draw_from_library_of(
     sink: &mut EngineSink<'_>,
     drawer: PlayerId,
@@ -172,7 +153,6 @@ pub fn draw_from_library_of(
         LibraryEnd::Bottom => library.len() - 1,
     };
     let card = library.get(at)?.clone();
-    // B5 E3: it is the drawer's draw, so the drawer's draw limit stops it before the card moves (§2.4).
     if crate::draw::draw_blocked(sink, drawer) {
         return Some(DrawOutcome::Limited);
     }

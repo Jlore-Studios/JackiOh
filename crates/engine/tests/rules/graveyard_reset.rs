@@ -1,12 +1,11 @@
-//! R766 (issue #473): a card that reaches a graveyard or an exile pile is its printed card again, its
-//! price included. R78 and R215 already reset it there; since R766 its `costMod` and `costOverride` go
-//! with the rest, so it costs its printed cost (R65) wherever it is read or played from there, while its
-//! Radiant face, its tuning, its Brittle and times-played counts and its enchantments stay, and a fused
-//! card stays fused at its fused definition's cost. A price a card is given on its way to a hand, or one
-//! it keeps going from the field to a hand (R78), is untouched.
+//! R766 (issue #473): a card that reaches a graveyard or an exile pile is its printed card again: R78
+//! and R215 reset it there, and its `costMod` and `costOverride` go with the rest, so it costs its printed
+//! cost (R65) wherever it is read or played from there. Its Radiant face, tuning, Brittle and times-played
+//! counts and enchantments stay, and a fused card stays fused at its fused definition's cost. A price given
+//! on its way to a hand, or kept going from the field to a hand (R78), is untouched.
 //!
-//! The engine half, on fixture cards. The loop issue #473 found — C+ #54 Book of Books' (0) Book of
-//! Stats replayed for free under C #90 In Too Deep's reward L — is proved on the real cards in
+//! The engine half, on fixture cards. The loop issue #473 found, C+ #54 Book of Books' (0) Book of Stats
+//! replayed for free under C #90 In Too Deep's reward L, is proved on the real cards in
 //! `crates/cards/src/scripts/classic/c090_in_too_deep.rs`.
 
 use jackioh_engine::effects::{
@@ -63,7 +62,6 @@ fn run(state: &mut GameState, effect: Effect, target: Option<&str>) {
     state.rng_cursor = rng.cursor();
 }
 
-/// `{ target: { of: "chosen" } }`.
 fn chosen() -> Value {
     json!({ "target": { "of": "chosen" } })
 }
@@ -225,7 +223,6 @@ fn r766_r77_a_fused_card_reaching_the_graveyard_stays_fused_and_costs_its_fused_
     discard_it(&mut state, &crafted.id);
     let landed = live(&state, &crafted.id);
     assert_eq!(landed.zone, Zone::Graveyard { player: P1 });
-    // Still the fusion: its definition, never its ingredients again.
     assert_eq!(landed.def_id, crafted.def_id);
     assert!(state.transient_defs.contains_key(&crafted.def_id));
     assert_eq!(
@@ -238,7 +235,6 @@ fn r766_r77_a_fused_card_reaching_the_graveyard_stays_fused_and_costs_its_fused_
             .collect::<Vec<_>>(),
         vec![crafted.id.clone()]
     );
-    // That definition's printed card: no buffs, no price.
     assert_eq!(landed.buffs, AttackHealth { attack: 0, health: 0 });
     assert_eq!(price_of(&landed), (0, None));
     assert_eq!(price(&state, &crafted.id), 2);

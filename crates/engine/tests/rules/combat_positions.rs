@@ -1,6 +1,4 @@
 //! Positions and exertion (SPEC §4.1, R6, R7, R20, R49; BUILD M2-T1).
-//!
-//! Port of `packages/engine/test/combat-positions.test.ts`.
 
 use serde::Serialize;
 
@@ -16,7 +14,7 @@ use crate::rules::fixtures::harness::{
     put, sink_for, slot,
 };
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON body (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
@@ -29,12 +27,10 @@ fn expect_match(actual: impl Serialize, expected: Value) {
     );
 }
 
-/// The refusal a check gives, or `None` when it allows (TS `{ error?: string }`).
 fn refusal(check: Result<(), EngineError>) -> Option<String> {
     check.err().map(|error| error.message)
 }
 
-/// The exertion TS's object literal `{ attacked, switched }` writes (`attacks` absent).
 fn exertion(attacked: bool, switched: bool) -> Exertion {
     Exertion {
         attacked,
@@ -47,7 +43,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The layered view of the card `id` names, as it stands now.
 fn view_of(state: &GameState, id: &str) -> UnitView {
     unit_view(state, by_id(state, id))
 }
@@ -77,8 +72,7 @@ fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
         .unwrap_or_else(|| panic!("could not add {def_id} to {player}'s hand"))
 }
 
-/// The spell path of R20: a switch that is an effect, not the player's action. The events it
-/// emitted, and its refusal.
+/// The spell path of R20, a switch by an effect, not the player's action: its events and its refusal.
 fn switch_by_effect(
     state: &mut GameState,
     unit: &CardInstance,
@@ -295,7 +289,6 @@ mod positions_and_exertion_m2_t1 {
         );
         put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
 
-        // The plain unit gets one exertion only; the Duelist gets both.
         let first = unit_in(&state, P1, 1).id;
         state = act(
             &state,
@@ -437,7 +430,6 @@ mod positions_and_exertion_m2_t1 {
             KeywordKind::Taunt
         ));
 
-        // Back in Attack Position the Taunt is gone again.
         switch_by_effect(&mut state, &defender, Some(Position::Atk));
         assert!(!has_keyword(
             &view_of(&state, &defender.id).keywords,
@@ -491,7 +483,6 @@ mod positions_and_exertion_m2_t1 {
         switch_by_effect(&mut state, &enemy, Some(Position::Def));
         assert_eq!(view_of(&state, &enemy.id).armor, 8);
 
-        // Radiant Big D-fender gives +4 instead.
         let mut radiant_state = playing("defense-armor-radiant");
         let radiant_armor = put(
             &mut radiant_state,

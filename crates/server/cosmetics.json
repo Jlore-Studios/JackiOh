@@ -128,6 +128,7 @@
     { "id": "full-art-tommy-tempo-signed", "kind": "fullArt", "name": "Tommy Tempo signed full art", "rarity": "Mythic", "default": false, "chase": true, "card": "classicplus-026" },
     { "id": "full-art-j-jungle-explorer", "kind": "fullArt", "name": "J-lease J-Jungle EX-plorer full art", "rarity": "Epic", "default": false, "card": "classicplus-075" },
     { "id": "full-art-j-jungle-explorer-animated", "kind": "fullArt", "name": "J-lease J-Jungle EX-plorer animated full art", "rarity": "Legendary", "default": false, "chase": true, "card": "classicplus-075" },
-    { "id": "full-art-j-jungle-explorer-signed", "kind": "fullArt", "name": "J-lease J-Jungle EX-plorer signed full art", "rarity": "Mythic", "default": false, "chase": true, "card": "classicplus-075" }
+    { "id": "full-art-j-jungle-explorer-signed", "kind": "fullArt", "name": "J-lease J-Jungle EX-plorer signed full art", "rarity": "Mythic", "default": false, "chase": true, "card": "classicplus-075" },
+    { "id": "card-back-jlorious", "kind": "cardBack", "name": "Jlorious", "rarity": "Mythic", "default": false, "starter": false, "jlorious": true }
   ]
 }

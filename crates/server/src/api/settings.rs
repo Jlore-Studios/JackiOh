@@ -1,18 +1,8 @@
-//! The player's game settings on the account (SPEC §9.1, R633, R634).
+//! Player settings persistence and merge (SPEC §9.1, R633, R634).
 //!
-//! The device keeps the settings in `localStorage`; an active account keeps the same on the server
-//! and the client merges the two copies (R634). Two routes, both `Active` (§9.4), keyed on the
-//! profile the token names and never on the body: `GET /api/settings` and `PUT /api/settings` with
-//! `{ groups: { <id>: { at, values } } }`, answering `{ settings: { groups } }` after the merge.
-//!
-//! A PUT merges and never replaces (R634): a group replaces the stored one only when its `at` is
-//! strictly later, and a group not named is left alone. The same body twice changes nothing. The
-//! merge is the store's (`app.merge_player_settings`, migration 0018), under a lock on the profile.
-//! The server does not know the settings, so a body is checked for shape only (`PLAYER_SETTINGS_*`
-//! limits), but for the `cosmetics` group (R1834001): each of its six picks, where the body names
-//! it, must be a text, an id of the registry under its kind that the account owns (a default, a
-//! starter or a ledger row), since a match shows the account's picks to the other seat. None of it
-//! is a rule: nothing the engine does reads a setting.
+//! `GET /api/settings` and `PUT /api/settings` (`AuthLevel::Active`, §9.4).
+//! PUT merges groups by timestamp rather than replacing (R634).
+//! Validates cosmetic slot picks against owned registry items (R1834001, `PLAYER_SETTINGS_*`).
 
 use std::sync::Arc;
 
@@ -63,7 +53,7 @@ fn is_setting_name_shape(name: &str) -> bool {
     chars.next().is_some_and(|ch| ch.is_ascii_alphabetic()) && chars.all(|ch| ch.is_ascii_alphanumeric())
 }
 
-/// What the client reads: `PlayerSettingsAccountCopy` in `apps/web/src/net/api.ts`.
+/// Client settings view representation.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerSettingsView {
@@ -119,10 +109,8 @@ fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
     Some(number as i64)
 }
 
-/// R633, R634: `groups` is an object of at most `PLAYER_SETTINGS_GROUPS_MAX` groups, each
-/// `{ at, values }`: `at` a whole number of epoch ms on the writing device's clock, `values` a flat
-/// object of at most `PLAYER_SETTINGS_KEYS_MAX` settings. An `at` after the server's clock is taken
-/// as now (R320's way): a fast clock could otherwise win over every later change.
+/// R633, R634: reads groups map (`PLAYER_SETTINGS_GROUPS_MAX`, `PLAYER_SETTINGS_KEYS_MAX`).
+/// Clamps future timestamps to server now (R320).
 pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSettingsGroup>, ApiError> {
     let Some(raw) = body
         .get("groups")
@@ -182,8 +170,7 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
     Ok(groups)
 }
 
-/// R1834001: the `cosmetics` group's picks, each where it is present: a text naming an id of its
-/// kind the account owns, on every card for a card kind. Any other key is left to the shape check.
+/// R1834001: validates cosmetic picks against owned items.
 fn check_cosmetics_group(group: &PlayerSettingsGroup, owned: &OwnedCosmetics) -> Result<(), ApiError> {
     for kind in CARD_SLOT_KINDS.into_iter().chain(DECK_SLOT_KINDS) {
         let key = setting_key(kind);
@@ -200,8 +187,7 @@ fn check_cosmetics_group(group: &PlayerSettingsGroup, owned: &OwnedCosmetics) ->
     Ok(())
 }
 
-// `GET` and `PUT /api/settings` are two rows of `app.rs`'s `ROUTES`, both `AuthLevel::Active`, so a
-// pending account gets 403 from each (§9.4).
+// Both routes require AuthLevel::Active (§9.4).
 
 /// `GET /api/settings`.
 pub async fn get_settings(app: &Arc<App>, req: Req) -> ApiResult {

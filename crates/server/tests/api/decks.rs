@@ -1,26 +1,6 @@
-//! Saved decks and trios (`crates/server/src/api/decks.rs`, SPEC §9.4, R250–R256) and the
-//! queue-time helpers the queue and the rooms share (`read_mode_choice`, `freeze_choice`,
-//! `assert_free_to_play`; R253, R257, R264).
-//!
-//! Not a test of D1–D4, T1–T3 or L1–L6: those live in the shared validator
-//! (`jackioh_engine::validator`) and are tested there. Here the questions are the endpoints' own:
-//! is the id a UUID, is the catalog current, are the draft issues passed through untouched, what
-//! does each store outcome answer, and is another profile's id indistinguishable from a missing
-//! one. Every expected issue is the shared module's own verdict for the same input.
-//!
-//! The rulings, by their test titles:
-//!  - R250: a save checks structure only (D1–D4), at most `MAX_SAVED_DECKS` decks;
-//!  - R252: T1–T3, at most `MAX_SAVED_TRIOS` trios, a deleted deck empties its slots;
-//!  - R256: `PUT` is an idempotent upsert keyed by the client's id;
-//!  - R341: a trio import is checked like every save and written all or nothing, under both caps
-//!    (R340);
-//!  - R165: a profile with nothing saved is refused as a deck failure, not a missing resource;
-//!  - R1827000: a deck's portrait is one its account owns, on top of D5;
-//!  - R2100000: each save keeps a version (a burst one, at most `DECK_VERSIONS_KEPT`), and a restore
-//!    is a save of one that keeps the version it replaced.
-//!
-//! The test app serves the compiled-in catalog and the handlers call the shared validator directly
-//! (SURFACE §11.3), so the cards here are the real catalog's playable ids.
+//! Saved decks and trios (`crates/server/src/api/decks.rs`, SPEC §9.4, R250–R256, R253, R257, R264).
+//! Rulings: R250, R252, R256, R341, R340, R165, R1827000, R2100000.
+//! Surface contract: SURFACE §11.3.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -595,7 +575,7 @@ mod saved_decks_9_4_r250_r256 {
     }
 }
 
-/// R250's draft refusals, one per D-rule case (TS's table of `it`s).
+/// R250 draft refusals, one per D-rule case.
 mod r250_refuses_a_draft_that_breaks_d1_d4_with_the_shared_module_s_own_issues {
     use super::*;
 

@@ -1,11 +1,4 @@
-//! B43–B47 (#936, `.fullsend/SPEC.md` S7): friend requests by `name#tag`, the mutual add, accept,
-//! decline, cancel and unfriend, blocks, and the status a friend shows.
-//!
-//! Every request goes through the whole router over the fake store (`support::deps`), from accounts
-//! seeded active with a tagged username (`Ada#1`). S7 writes a refusal's body as `{code}`; the repo's
-//! error envelope is `{error: {code, message, details?}}`, so `code_is` reads the code wherever the
-//! body carries it. A live 1v1 match is started on the real registry with the server tests' cards
-//! (`support::engine`), and a Duos match through S6's room routes.
+//! Friend requests, blocks, and presence (B43, B47, #936): add, accept, decline, cancel, and unfriend.
 
 use std::sync::Arc;
 
@@ -25,10 +18,6 @@ const HOUR_MS: u64 = 3_600_000;
 
 /// How many accepts the cap test makes before it lets §9.8's per-account minute pass.
 const ACCEPTS_PER_MINUTE: usize = 100;
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// A config count as a `usize`, whichever integer type `config.rs` gives it.
 fn count<T>(value: T) -> usize
@@ -227,9 +216,7 @@ async fn duos_match(app: &Arc<App>, host: &Account, guest: &Account) -> String {
     joined["matchId"].as_str().expect("a match id").to_string()
 }
 
-// ---------------------------------------------------------------------------------------------
 // B43 — a request by exact `name#tag`
-// ---------------------------------------------------------------------------------------------
 
 mod b43_a_request_by_name_and_tag {
     use super::*;
@@ -404,9 +391,7 @@ mod b43_a_request_by_name_and_tag {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B44 — the mutual add
-// ---------------------------------------------------------------------------------------------
 
 mod b44_the_mutual_add {
     use super::*;
@@ -430,9 +415,7 @@ mod b44_the_mutual_add {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B45 — accept, decline, cancel, unfriend
-// ---------------------------------------------------------------------------------------------
 
 mod b45_accept_decline_cancel_and_unfriend {
     use super::*;
@@ -584,9 +567,7 @@ mod b45_accept_decline_cancel_and_unfriend {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B46 — blocks
-// ---------------------------------------------------------------------------------------------
 
 mod b46_blocks {
     use super::*;
@@ -659,9 +640,7 @@ mod b46_blocks {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B47 — status
-// ---------------------------------------------------------------------------------------------
 
 mod b47_status {
     use super::*;

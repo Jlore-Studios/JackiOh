@@ -1,37 +1,13 @@
-//! One actor per match (SPEC §9.2, §9.3, §9.5, BUILD M6-T4). Port of `apps/server/src/match/actor.ts`.
-//!
-//! "The match actor is the only stateful component: it holds the state in memory, one WebSocket per
-//! player, an alarm for the turn clock, and it appends every resolved action to the log" (§9.2).
-//! This file is that, and nothing else: it owns no rules, no timer and no socket library.
-//!
-//!  - The rules live in `jackioh_engine`, reached through `actor::engine` (SURFACE §11.3: no port),
-//!    under the match's pinned catalog (R388, R767000).
-//!    §9.3: "`reduce` refuses illegal actions itself and returns the reason", so a refusal is relayed
-//!    verbatim and never re-derived here.
-//!  - The clock lives in `actor::clock` (R79). Every expiry comes back as a `ClockExpiry` and is
-//!    dispatched as a *server action* through the same path a client action takes, because
-//!    "(seed, log) reconstructs any match" (§9.3) — a timeout that skipped the log would break that.
-//!    The mulligan clock (R268) is the one expiry that becomes more than one action: a `timeout` for
-//!    each seat still owing its mulligan, in seat order, each its own row.
-//!  - The results row lives behind `crate::api::results::record_result` (§9.5, M7-T2).
-//!  - The only per-player payload is `engine::view_for(state, player)` (§9.1, §10.8). No socket
-//!    ever sees a state, the other hand, library order, or the other seat's view.
-//!  - R1452: a ladder bot's seat has no socket. The actor plays it itself (`drive_bots`): the move is
-//!    decided and paced in `bots::seat`, off the queue, and comes back as a server action through the
-//!    same path a client's takes; its persona (`bots::persona`) reads the bot seat's own view and its
-//!    emotes are relayed as a player's are. R639000: its aim goes through the relay a beat before a
-//!    targeted move, it lets an occasional turn run out, and once a ranked match ends it stays a
-//!    while and may offer or meet a rematch (`bots::signals`), as a person does.
-//!
-//! Every task runs on one serialized queue, so the actor really is single-threaded: a socket frame
-//! and a clock alarm can never interleave two `reduce` calls or two log appends. In Rust the queue
-//! is one tokio task per match draining an mpsc inbox, one task at a time (each run as its own
-//! spawned task, so a task that panics is logged as `match.task.threw` and the queue goes on, as
-//! TS's `fireAndForget` caught a throw). A `reduce` that panics is caught in `apply_action` and never
-//! kills its task (R1253000). What TS ran synchronously outside the queue (taking a
-//! socket, parsing a frame, relaying an emote or an aim, a socket going away) runs synchronously
-//! here too, on the caller's thread, under the actor's lock — which is never held across an
-//! `.await` and never while a socket is closed (a close calls back into the actor).
+//! One actor per match (SPEC §9.2, §9.3, §9.5): it holds the state, one socket per player and the
+//! clock, and appends every resolved action to the log; it owns no rules, no timer and no socket
+//! library. The rules are `actor::engine`'s (SURFACE §11.3) under the match's pinned catalog (R388,
+//! R767000), and a refusal is relayed verbatim, never re-derived. Every clock expiry (R79; R268's
+//! mulligan clock times out each seat still owing) is a server action on a client's path, since
+//! "(seed, log) reconstructs any match" (§9.3). A socket is only sent `view_for` its player (§9.1,
+//! §10.8). R1452, R639000: a ladder bot's seat has no socket; the actor plays it (`drive_bots`).
+//! Every task runs on one serialized queue, so two `reduce` calls or log appends never interleave; a
+//! panicking `reduce` is caught (R1253000). The lock is never held across an `.await` nor while a
+//! socket is closed (a close calls back into the actor).
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -100,9 +76,8 @@ impl Drop for Replying {
     }
 }
 
-/// TS `MatchActorInput`.
+/// Input parameters for creating a match actor.
 pub struct MatchActorInput {
-    /// TS `match` (a Rust keyword): the row as it stands.
     pub match_row: MatchRow,
     /// The live state: the opening `Registry::start` began, or the fold `Registry::rebuild` ran off the
     /// runtime (#1035).
@@ -130,18 +105,13 @@ pub struct MatchActorInput {
     pub dealt_cards: BTreeMap<String, (PlayerId, String)>,
 }
 
-/// R417, R678: the boards a match was created with — its seats' last boards and the two other
-/// players' boards a Glitch may put on the field — as `create_game` and `fold` take them:
-/// `(last_boards, glitch_boards)`.
+/// R417, R678: the boards a match was created with: `(last_boards, glitch_boards)`.
 pub fn last_boards_of(match_row: &MatchRow) -> (Option<LastBoards>, Option<LastBoards>) {
     (match_row.last_boards.clone(), match_row.glitch_boards.clone())
 }
 
-/// R1452, R639000: by home seat, the turn of each bot's last move in `log` (its nonce `srv-bot-…`),
-/// as `on_bot_move` keeps it in memory, so an actor rebuilt in the middle of a bot's turn knows that
-/// turn had already begun: its first move's think time, its concession and its idle roll come only
-/// at a turn's start, not again after a restart. Folded step by step as `telemetry::replay` folds,
-/// under the match's pinned catalog (R388, R767000).
+/// R1452, R639000: each bot's last move's turn, so an actor rebuilt mid-turn draws no second think
+/// time, concession or idle roll for it. Folded under the pinned catalog (R388, R767000).
 pub fn bot_moved_turns(
     pinned: Pinned,
     match_row: &MatchRow,
@@ -164,8 +134,7 @@ pub fn bot_moved_turns(
     bot_moved_turns_from(pinned, state, log, PerPlayer::new(None, None))
 }
 
-/// `bot_moved_turns` carried on from `moved` as it stood on `state`, over the rows after it: how a
-/// rebuild resumes a checkpoint's bot turns (#1169).
+/// Resumes bot turns from checkpoint state (#1169).
 pub fn bot_moved_turns_from(
     pinned: Pinned,
     mut state: EngineState,
@@ -193,7 +162,7 @@ pub fn bot_moved_turns_from(
     moved
 }
 
-/// One task on the actor's serialized queue (TS's `enqueue`d closures, named).
+/// One task on the actor's serialized queue.
 enum Task {
     /// The clock has to be armed before the first action (R79).
     Arm,
@@ -227,7 +196,7 @@ enum Task {
     Attach {
         home: PlayerId,
     },
-    /// TS `idle()`: answered once every task queued before it has run.
+    /// Resolves once every task queued before it has run.
     Idle(oneshot::Sender<()>),
     /// #1169: the restart drain's checkpoint, answered once it is written or passed over.
     Checkpoint(oneshot::Sender<()>),
@@ -242,7 +211,7 @@ enum Task {
 }
 
 impl Task {
-    /// TS's `what` label for `match.task.threw`.
+    /// Label for `match.task.threw` telemetry.
     fn what(&self) -> String {
         match self {
             Task::Arm => "arm".to_string(),
@@ -261,12 +230,11 @@ impl Task {
 
 /// R738: one seat's aim relay (see `Core::aims`).
 struct AimSlot {
-    /// The newest aim received and not yet relayed: `None` when there is none (TS `undefined`),
-    /// `Some(None)` an aim that has ended (TS `null`).
+    /// Newest aim received: `None` if none, `Some(None)` if aim ended.
     pending: Option<Option<Aim>>,
     /// The one wait armed to relay it.
     timer: Option<Timer>,
-    /// When the seat's last relay went; `None` is never (TS `-Infinity`).
+    /// Timestamp of last relay, or `None` if never sent.
     last_at: Option<i64>,
     /// What the opponent was last told, so a repeat is never sent and a seat that leaves mid-aim has
     /// its arrow cleared.
@@ -286,69 +254,44 @@ fn empty_aim_slot() -> AimSlot {
 struct Core {
     state: EngineState,
     next_seq: i64,
-    /// §9.3: "every action carries a client nonce, deduped server-side". `reduce` dedupes internally
-    /// too, but the actor must not write a second log row or push a second view, so it keeps the ack
-    /// it already answered with. Rebuilt from the log, so a client that reconnects and retries an
-    /// action from before the crash still gets its original ack.
+    /// §9.3: each nonce's ack, so a resend writes no second row or view; rebuilt from the log.
     acks: IndexMap<String, ServerMessage>,
-    /// R1253000: the nonces of actions whose `reduce` panicked: never logged, so a rebuild starts empty;
-    /// a resend gets `panicked_answer` again with no second reduce. Not `acks`: `write_checkpoint`
-    /// reads `acks.last()` as the newest row's nonce.
+    /// R1253000: nonces whose reduce panicked, answered `panicked_answer` again. Not `acks`, whose
+    /// last `write_checkpoint` reads as the newest row's.
     panicked: IndexSet<String>,
     /// Keyed by the seat each account BEGAN in (`home`).
     sockets: PerPlayer<Option<Socket>>,
     /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
     attached_once: PerPlayer<bool>,
-    /// R137, R835000, R835002, R2686000: each seat's abuse guard (`actor::guard`), by home seat: its
-    /// action flood window, its refusals toward the unusual-rejection alert, its malformed frames
-    /// and when its socket's last hello was answered.
+    /// R137, R835000, R835002, R2686000: abuse guard per home seat (flood window, refusals, malformed
+    /// frames, last answered hello).
     guards: PerPlayer<SeatGuard>,
-    /// R835001: the socket generation each seat's queued-but-unrun Hello belongs to (`None` when
-    /// none is queued). A repeat for the same home and generation is absorbed; a Hello from a
-    /// newer generation always enqueues.
+    /// R835001: socket generation for queued unrun Hello per seat.
     hello_pending: PerPlayer<Option<u64>>,
     /// R835001: bumped on every `attach` (the first included, so generations start at 1), keying
     /// `hello_pending` so a reattach's Hello is never swallowed by the older socket's queued one.
     socket_generation: PerPlayer<u64>,
-    /// R643: each seat's recent emote sends, the one input the shared `emote_gate` decides on. The
-    /// client runs the same gate against its own copy, so the two can never disagree about the
-    /// limit, and a dropped emote is simply never relayed — not an error, not a rejected action.
+    /// R643: recent emote sends for the shared `emote_gate`, which the client runs too.
     emote_history: PerPlayer<Vec<i64>>,
-    /// R1351000: whether either account blocks the other, which mutes each one's emotes toward the
-    /// other. Read as the actor arms, set by a block made while it lives (`mute_emotes_between`),
-    /// and never cleared: an unblock mid-match lifts nothing until the next match.
+    /// R1351000: mutes emotes if either blocks the other; never cleared until the next match.
     emotes_blocked: bool,
     /// R738: each seat's aim relay.
     aims: PerPlayer<AimSlot>,
     /// R679: set once a Glitch voided the match; nothing more is sent, written or attached.
     voided: bool,
-    /// A rebuilt actor whose log already ends in a result and whose row is already `finished` has
-    /// nothing left to record. One that is still `live` crashed between the terminal action and the
-    /// results write, so it heals itself on arming (§9.5: every ending records a result).
+    /// Nothing left to record; a rebuilt actor still `live` heals its missing result on arming (§9.5).
     finished: bool,
-    /// R1483000: whether the daily Jlore cap held back each account's pay for this match, keyed by
-    /// home like `sockets`. Read off the ledger (`results::game_jlore_caps`) once the result has
-    /// landed, or as an actor arms on a match already finished; each seat's views carry its own.
+    /// R1483000: daily Jlore cap status per seat.
     jlore_capped: PerPlayer<bool>,
-    /// #1657: what the result's write paid each account, keyed by home like `sockets`, as the write
-    /// answered it; each seat's views carry its own from then on. `None` for a bot's home, before
-    /// the write, and on an actor whose write found the result already there or that was rebuilt on
-    /// a finished match: nothing paid then, so nothing is told.
+    /// #1657: what the result's write paid each seat; `None` when nothing was, so nothing is told.
     economy: PerPlayer<Option<GameEconomy>>,
-    /// When this actor's rematch window opened (R672): the game's end, or, for an actor rebuilt on a
-    /// match already `finished`, the rebuild. `None` while the game is on. `Registry::reap_finished`
-    /// counts `REMATCH_OFFER_TTL_MS` from here.
+    /// R672: when the rematch window opened; `Registry::reap_finished` counts its TTL from here.
     finished_at: Option<i64>,
     stopped: bool,
     persisted_clocks: MatchClocks,
-    /// R744: the grace deadlines the match row held when this actor was built, keyed by engine seat
-    /// as stored, until the first attach hands them to the clock (`start_absent_grace`). Until then a
-    /// write of the clocks keeps them, so the arm task's first `persist_clocks` cannot erase them.
+    /// R744: stored grace deadlines until the first attach; clock writes keep them meanwhile.
     stored_grace: Option<PerPlayer<Option<i64>>>,
-    /// R677: whether the accounts hold each other's seat, as of the last state change. Every socket
-    /// is keyed by the seat its account began in (`home`), and every engine read by the seat played
-    /// now, so this one flag is the whole mapping. Only the engine's state sets it — a Glitch's
-    /// swap, which a client reaches only by legally playing Glitch — never a frame.
+    /// R677: whether Glitch swapped the seats; only the engine's state sets it, never a frame.
     swapped: bool,
     last_pending_for: Option<PlayerId>,
     /// R265: which seats owed a mulligan at the last push, so a `prompt` frame goes out on a change.
@@ -381,9 +324,7 @@ struct Core {
     bot_rematch_replying: PerPlayer<bool>,
     /// Social (#939): B50's watchers and the delayed views they are sent (`Spectate`).
     spectate: Spectate,
-    /// R1834003: the `(seat, card)` pairs whose card picks each socket has been sent, keyed by
-    /// home like `sockets`; emptied by every hello and attach, so a page that lost them gets them
-    /// again with its next view.
+    /// R1834003: card picks sent to each socket; every hello and attach empties it.
     card_picks_sent: PerPlayer<BTreeSet<(PlayerId, String)>>,
 }
 
@@ -415,7 +356,7 @@ struct Shared {
     core: Mutex<Core>,
 }
 
-/// TS `MatchActor`: a cheap handle (`Clone`) on one match's actor.
+/// Cheap handle (`Clone`) on one match's actor.
 #[derive(Clone)]
 pub struct MatchActor {
     shared: Arc<Shared>,
@@ -478,7 +419,7 @@ fn panic_message(error: tokio::task::JoinError) -> String {
     jackioh_ai::panic_message(&*error.into_panic())
 }
 
-/// The serialized queue: one task at a time, so nothing interleaves (TS's `enqueue` chain).
+/// The serialized queue: one task at a time, so nothing interleaves.
 async fn run_queue(shared: Weak<Shared>, mut inbox: mpsc::UnboundedReceiver<Task>) {
     while let Some(task) = inbox.recv().await {
         let Some(strong) = shared.upgrade() else { break };
@@ -491,8 +432,7 @@ async fn run_queue(shared: Weak<Shared>, mut inbox: mpsc::UnboundedReceiver<Task
     }
 }
 
-/// TS `createMatchActor`. Must be called inside a tokio runtime: it spawns the actor's queue and arms
-/// the clock.
+/// Spawns the actor's queue and arms the clock; must be called inside a tokio runtime.
 pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor {
     let MatchActorInput {
         match_row,
@@ -643,11 +583,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     });
     let actor = MatchActor { shared };
 
-    // The clock has to be armed before the first action, not on the first one (R79: the turn clock
-    // is already running when the match opens). TS's arm task ran its synchronous half (the sync)
-    // in the microtask after `createMatchActor` returned, so the actor a caller got back was already
-    // armed: the same here, before anything can read it; the queued half persists the clocks and
-    // resolves a match that was already over.
+    // R79: turn clock runs when the match opens; arm clock synchronously so callers
+    // see it armed, while queued task persists clocks and resolves finished matches.
     actor.shared.clock.sync(&clock_view_for(&opening));
     // Social (#939): B50's record starts with the state the actor opens on.
     actor.spectate_record();
@@ -665,7 +602,7 @@ impl MatchActor {
         &self.shared.match_row.id
     }
 
-    /// TS `fireAndForget(task)`: onto the queue; a task that panics is logged by `run_queue`.
+    /// Enqueues task; panicking tasks are logged by `run_queue`.
     fn enqueue(&self, task: Task) {
         if self.shared.inbox.send(task).is_err() {
             tracing::warn!(event = "match.queue.closed", matchId = %self.match_id_str());
@@ -760,10 +697,8 @@ impl MatchActor {
                 let _ = reply.send(answer);
             }
             Task::Emote { home, emote } => {
-                // MD-D29, R1127: the seat is the one this account plays when the emote runs, and the
-                // `Emote` action is minted only while a card hears it — otherwise the relay above is
-                // all the emote ever was (R643). The reply is discarded: the sender already showed
-                // the emote locally, and a rate-limited emote is silently dropped.
+                // MD-D29, R1127: mints `Emote` action only if a card hears it; otherwise the relay
+                // suffices (R643). The sender showed it already, so the reply is dropped.
                 let player = playing(&self.lock(), home);
                 let wanted = ActionBody::Emote { emote };
                 let nonce = {
@@ -827,9 +762,7 @@ impl MatchActor {
         }
     }
 
-    // ---------------------------------------------------------------------
     // Sending. §10.8: a socket only ever carries this player's own view.
-    // ---------------------------------------------------------------------
 
     /// R642, R1342: the portraits frame for the account that began in `home`, with its own hand.
     fn portraits_for(&self, home: PlayerId) -> ServerMessage {
@@ -868,18 +801,8 @@ impl MatchActor {
         }
     }
 
-    /// §10.8's view and, beside it, BUILD M5-T2's array ("the client never computes legality itself;
-    /// it asks `legalActions` and greys out the rest").
-    ///
-    /// `player` is passed to BOTH calls, which is the whole security property: a socket is only ever
-    /// handed the actions its own seat may take. `legal_actions(state, player.opponent())` would name
-    /// every `play` in the opponent's hand and so hand over the hidden information §9.1 lists first.
-    ///
-    /// Both are read off the same `state` under the same lock, so the array is always true of the
-    /// view it travels with — the actor's queue means no `reduce` can land between them.
-    ///
-    /// R1834003: after the view, the own picks of each card it newly shows (`cards_due`), to an open
-    /// socket only, so a pair is marked sent only once it is.
+    /// §10.8 view and legal actions, both for `player`: the opponent's would name its hand (§9.1).
+    /// One lock reads both, so actions match the view. R1834003: then new card picks (`cards_due`).
     fn push_view(&self, core: &mut Core, player: PlayerId) {
         let home = playing(core, player);
         let view = self.view_of(core, player);
@@ -907,37 +830,26 @@ impl MatchActor {
         );
     }
 
-    // ---------------------------------------------------------------------
     // The clock (R79, §9.5)
-    // ---------------------------------------------------------------------
 
-    /// R79, exactly: the turn clock ends the active player's turn; a prompt clock answers only that
-    /// prompt; grace becomes a loss; the ceiling becomes a draw. R268 adds the mulligan clock, which
-    /// times out every seat still owing its mulligan. Each one is a real action, appended to the log
-    /// like any other, because `(seed, log)` must reconstruct the match (§9.3).
+    /// R79: clock expiries (turn, prompt, grace, ceiling) and R268 mulligans become logged server
+    /// actions, since `(seed, log)` must reconstruct the match (§9.3).
     fn server_actions_for(&self, core: &Core, expiry: ClockExpiry) -> Vec<(PlayerId, ActionBody)> {
         let snapshot = engine::snapshot(&core.state);
         match expiry {
             ClockExpiry::Turn { player } | ClockExpiry::Prompt { player } => {
                 vec![(player, ActionBody::Timeout)]
             }
-            // R268: one clock for both seats, so on expiry every seat still owing is timed out — read
-            // when the expiry runs, since a seat may have answered between the alarm and this task — in
-            // seat order, each stamped with its own seat (R146: a timeout belongs to the player whose
-            // clock ran out). What a timed-out mulligan keeps is the engine's business (R268: the whole
-            // hand); a seat that has already answered is owed nothing and gets no row.
+            // R268: seats still owing as this runs (one may have answered since the alarm), in seat
+            // order; R146: stamped with own seat.
             ClockExpiry::Mulligan => mulligan_window(&snapshot)
                 .into_iter()
                 .map(|player| (player, ActionBody::Timeout))
                 .collect(),
-            // SPEC §11 R146: "a disconnect timeout belongs to the player who disconnected, because the
-            // loss is theirs". `disconnectExpired` names the player in its body (§10.2), so the seat
-            // the action is *stamped* with would otherwise be free; R146 fixes it so folding the log
-            // reads one seat rather than "whoever happened to be active".
+            // SPEC §11 R146: disconnect timeout stamped with the disconnected player (§10.2).
             ClockExpiry::Grace { player } => vec![(player, ActionBody::DisconnectExpired { player })],
-            // SPEC §11 R146: reaching the turn ceiling "belongs to neither and is stamped with the
-            // active seat as a convention", so a fold never has to guess. R79 makes it a draw and R112
-            // covers the reaper's version of the same ending.
+            // SPEC §11 R146: the ceiling is no seat's, stamped with the active one by convention;
+            // R79 draw, R112 reaper draw.
             ClockExpiry::Ceiling => vec![(snapshot.active, ActionBody::CeilingReached)],
             // R1563006: the question still open for that player is answered Stop (R1184001's answer),
             // read when the expiry runs, since the player may have stopped or missed in between.
@@ -1036,9 +948,7 @@ impl MatchActor {
         }
     }
 
-    // ---------------------------------------------------------------------
     // Applying an action
-    // ---------------------------------------------------------------------
 
     /// Pushes everything the clients need after a state change, in one order for both seats. `fresh`
     /// is how many events the change produced, which the bots' personas read (R645).
@@ -1082,10 +992,8 @@ impl MatchActor {
     fn push_prompts(&self, core: &mut Core, snapshot: &MatchSnapshot) {
         let deadline = self.shared.clock.snapshot().prompt_deadline;
 
-        // R265, R266: while both mulligans are open neither seat holds `pending`, and each is sent the
-        // frame that fits it — a seat that owes its mulligan its own prompt, a seat that has answered
-        // only that the other seat still owes one. The sealed answer is in neither: R266 makes that a
-        // seat is ready public and what it kept private, and the opponent's frame names no choice.
+        // R265, R266: no seat holds `pending` here: an owing seat gets its prompt, one that answered
+        // learns the other still owes, and neither names the sealed answer.
         let owed = mulligan_window(snapshot);
         let owed_key = mulligan_key(&owed);
         if !owed.is_empty() && owed_key != core.last_mulligan_owed {
@@ -1176,10 +1084,8 @@ impl MatchActor {
         )
     }
 
-    /// R679: a Glitch voided the match. It never happened: no result, no rating move, no last board
-    /// and no game record. Both sockets are closed with `MATCH_VOIDED_CLOSE_CODE` (the last view they
-    /// got already shows the game over with reason `voided`), the registry drops the actor, and
-    /// `void_match` removes the match from the store and logs the one line abuse checks read.
+    /// R679: match voided with no result, ratings, or records. Closes sockets with
+    /// `MATCH_VOIDED_CLOSE_CODE`, drops the actor, and `void_match` deletes it from the store.
     async fn on_void(&self) {
         let sockets = {
             let mut core = self.lock();
@@ -1299,13 +1205,8 @@ impl MatchActor {
         );
     }
 
-    /// R1483000: whether the daily Jlore cap held back either account's pay for this match, read
-    /// off the ledger now that the result is in it. Every view of a seat it held back carries it;
-    /// `announce` sends those seats a fresh one now, for a result just written (an actor arming on
-    /// a finished match sends its sockets theirs as each attaches), and with them each seat the
-    /// write paid (`Core::economy`, #1657), so one view tells a seat both. A read that fails costs
-    /// the line, never the result or the pay: it is logged, and the next rebuilt actor reads it
-    /// again.
+    /// R1483000: whether the daily Jlore cap held back pay; with `announce`, capped or paid
+    /// (`Core::economy`, #1657) seats get fresh views. A failed read is only logged.
     async fn load_jlore_caps(&self, announce: bool) {
         let caps = match crate::api::results::game_jlore_caps(&self.shared.deps, self.match_id_str()).await {
             Ok(caps) => caps,
@@ -1326,10 +1227,8 @@ impl MatchActor {
         }
     }
 
-    /// R639000, R672: each bot home of a ranked match draws its plan for the game's end as the game
-    /// ends (`at`), not voided: it stays present from then until its linger ends, as a person's open
-    /// socket does, and meets a person's offer as `on_rematch_offer` says. An end whose result never
-    /// lands lets the actor go (`let_go_unrecorded`), and its plan with it.
+    /// R639000, R672: plans bot rematch and post-game linger in ranked games. Dropped if
+    /// result fails to land (`let_go_unrecorded`).
     fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
         // R641000: a series game offers no rematch, so its bot stays for none. R1555000: nor do two
         // bots offer each other one.
@@ -1374,10 +1273,8 @@ impl MatchActor {
         });
     }
 
-    /// R639000, R672: a person in seat `from` offered a rematch that made none yet. The bot home
-    /// opposite meets it, at the person's stakes and `reply_ms` later, when its plan accepts, it has
-    /// not answered already and it is still on the match (its linger has not ended). Once it means to
-    /// meet it, it stays on the match until it has, as a person reaching for the button does.
+    /// R639000, R672: bot accepts human rematch offer if plan permits, still lingering,
+    /// and not yet answered, replying after `plan.reply_ms` at matching stakes.
     pub fn on_rematch_offer(&self, from: PlayerId, stakes: RematchStakes) {
         let bot = from.opponent();
         if self.shared.bots[bot].is_none() {
@@ -1412,13 +1309,9 @@ impl MatchActor {
         });
     }
 
-    /// R1437: `record_result`, tried up to `MATCH_RECORD_RESULT_ATTEMPTS` times, the first wait
-    /// `MATCH_RECORD_RESULT_BACKOFF_MS` and each next one twice the last. A repeat is safe: a write
-    /// that finds the match's row already written answers that row (`api/results.rs`). It runs on the
-    /// actor's queue, which the game's end has left nothing to do but refuse actions and push views.
-    /// Answers what the write paid each seat (`results::Recorded`, #1657) once the result landed,
-    /// `None` when it never did. A ceiling draw pays the seats too, but the actor lets go straight
-    /// after it, so it answers no seat's pay.
+    /// R1437: retries `record_result` with exponential backoff; idempotent, as a write that finds the
+    /// row answers it (`api/results.rs`). Returns payouts (`results::Recorded`, #1657) once landed, or
+    /// `None` if exhausted. Ceiling draws pay seats but return no payouts as the actor halts at once.
     async fn record_result_with_retries(
         &self,
         input: RecordResultInput,
@@ -1449,11 +1342,9 @@ impl MatchActor {
         None
     }
 
-    /// R1253000, R112: a clock's action whose `reduce` panicked ends the match as the reaper ends one at
-    /// the ceiling, a draw by `match-ceiling` with `turns = 0` and both ratings unchanged, written as
-    /// R1437 writes any ending. No result is in the state, and no telemetry or game record follows,
-    /// as after the reaper's. The actor lets go as the reaper's `stop` does, without waiting on the
-    /// queue this runs in; a write that never lands lets go as `let_go_unrecorded` says.
+    /// R1253000, R112: a clock action whose `reduce` panicked ends the match as a ceiling draw with
+    /// turns=0 and ratings unchanged, written as R1437 writes any ending. Halts the actor without
+    /// waiting on the queue; unrecorded writes invoke `let_go_unrecorded`.
     async fn end_as_ceiling_draw(&self) {
         let at = now_ms();
         {
@@ -1475,20 +1366,16 @@ impl MatchActor {
         self.halt();
     }
 
-    /// R1437: the result never landed, so the match is still `live` and both players are still in it.
-    /// The registry forgets this actor (as R679's void does, since `stop` would wait on the queue this
-    /// runs in) and both sockets close as `stop` closes them, which the client reconnects on: the next
-    /// socket rebuilds the actor from the log, and the rebuilt actor writes the result as it arms.
+    /// R1437, R679: unrecorded result leaves match live; registry forgets actor (`stop` would wait on
+    /// this queue) and closes sockets, so the reconnect's rebuilt actor writes the result.
     fn let_go_unrecorded(&self) {
         self.shared.deps.matches.forget(self.match_id_str());
         self.halt();
         tracing::warn!(event = "match.result.unrecorded", matchId = %self.match_id_str());
     }
 
-    /// R776000: the log holds a row at the seq this actor was about to write (a write that committed and
-    /// whose answer was lost, or a second writer), so the actor is behind its log. It lets go as
-    /// `let_go_unrecorded` does, and the next socket folds `(seed, log)`, that row included. An actor
-    /// already stopped lets nothing go: the registry may hold its rebuilt successor by now.
+    /// R776000: the log holds this actor's next seq already, so it lets go as `let_go_unrecorded`
+    /// does, unless stopped: the registry may hold its rebuilt successor.
     fn let_go_diverged(&self) {
         if self.lock().stopped {
             return;
@@ -1498,11 +1385,8 @@ impl MatchActor {
         tracing::warn!(event = "match.log.diverged", matchId = %self.match_id_str());
     }
 
-    /// R1253000: a live `reduce` panicked (a settle cap's `panic!`, say). Nothing was logged or kept, so
-    /// the state, the log and `next_seq` stand. The nonce keeps its answer, since `reduce` is pure and
-    /// the same action on the same state panics again, and the finding is filed for the night bot
-    /// (`bug_reports.rs`): the seq the action would have taken, its seat and its type, never the
-    /// panic's message, which only the private log line holds.
+    /// R1253000: pure `reduce` panicked; state and log stand untouched. Caches the panicked
+    /// nonce and files a bug report with seq and action type (omitting private panic text).
     fn on_reduce_panicked(&self, action: &Action, seq: i64, message: &str) -> ServerMessage {
         tracing::error!(
             event = "match.action.panicked",
@@ -1572,10 +1456,8 @@ impl MatchActor {
                 "type" = %action.action_type(),
                 reason = %reason,
             );
-            // R835000: a reducer refusal counts toward the seat's unusual-rejection alert.
-            // `player` is an engine seat; `playing` maps it back to the account's home (its own
-            // inverse, R677). The dedupe-ack and `MatchOver` paths above return before this, and
-            // store failures below never reach `reduce`'s verdict, so none of them counts.
+            // R835000: reducer refusals count toward unusual-rejection alert; maps engine
+            // seat back to account home (R677). Dedupes and store failures never count.
             let alert = {
                 let mut core = self.lock();
                 let home = playing(&core, player);
@@ -1587,8 +1469,7 @@ impl MatchActor {
             return error_message(SocketErrorCode::IllegalAction, reason, Some(&nonce));
         }
 
-        // §9.3: append-only. The row goes in *before* the new state is committed, so a failed write
-        // can never leave the in-memory state ahead of the log that has to reconstruct it.
+        // §9.3: row before state, so a failed write never leaves the state ahead of the log.
         let row = MatchActionRow {
             match_id: self.shared.match_row.id.clone(),
             seq,
@@ -1633,20 +1514,11 @@ impl MatchActor {
         ack
     }
 
-    // ---------------------------------------------------------------------
     // The bot seat (R1452)
-    // ---------------------------------------------------------------------
 
-    /// R1452: starts the move of every bot home whose seat owes the match one (R677: the engine seat
-    /// it plays now) and is not already deciding. `seat::play` decides and waits out the think time
-    /// off the queue, then queues the move as `Task::BotMove`; the queue goes on meanwhile, so a
-    /// clock that runs out first still times the bot out as it would a person.
-    ///
-    /// R639000: a bot whose own turn is just starting first asks `signals::idles_turn` whether it
-    /// lets this one run out; when it does, no move is started, so its turn clock times it out
-    /// (R79) as it does a person who is away. The answer is drawn on the turn's own stream, so every
-    /// later call this turn answers the same. A targeted move's aim goes through the relay
-    /// (`receive_aim`) once `play` comes back, and the move `aim_lead_ms` after it.
+    /// R1452: launches asynchronous moves for bots owing actions on their current seat (R677).
+    /// Think time is waited off-queue; clocks can still expire. R639000: if `idles_turn` (drawn on the
+    /// turn's stream, so every call agrees), no move starts and turn clock times out (R79).
     fn drive_bots(&self) {
         let mut core = self.lock();
         if core.finished || core.stopped {
@@ -1731,19 +1603,11 @@ impl MatchActor {
         }
     }
 
-    /// R1452: plays the move a bot home decided, as a server action (R270's prefix, so no client can
-    /// pre-empt it and R1442 records no think time for it, numbered by the seq it takes) stamped with
-    /// the seat it plays now. R639000: a bot concedes and answers a draw offer as `seat::play` drew
-    /// it, offers one too (R2660001), never an emote (`never_played`), and its aim, once relayed, is
-    /// taken down after the move as a person's client takes its own down.
-    ///
-    /// A move decided on a state the log has since moved past (the other seat acted meanwhile: a
-    /// person's auto-end-turn switch, their side of the mulligan, an answer to a prompt) still goes,
-    /// its think time waited out, while it is the same turn and the engine takes it; else the bot
-    /// decides again. So no stream of the person's own actions can hold the bot's move back. A fresh
-    /// move the AI could not give, or the engine refused, becomes `fallback_action`'s, tried once;
-    /// one whose write failed is decided again `BOT_WRITE_RETRY_MS` later, never traded for the
-    /// fallback.
+    /// R1452: applies decided bot move with R270 prefix (bypassing R1442 think telemetry).
+    /// R639000: concedes and answers draws as `seat::play` drew them, offers one too (R2660001), never
+    /// an emote, and tears down relayed aim after move. A move on a stale state still goes in the same
+    /// turn if the engine takes it. A refused fresh move falls back to `fallback_action` once; a failed
+    /// write is decided again after `BOT_WRITE_RETRY_MS`.
     async fn on_bot_move(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
         let aimed = played.aim.is_some();
         self.on_bot_move_inner(home, version, turn, played).await;
@@ -1909,15 +1773,9 @@ impl MatchActor {
         }
     }
 
-    /// R643, R1342: relays the emote of the account that began in `home`, a person's or a bot's, to
-    /// its opponent. One outside the sender's dealt hand is refused first, as silently as a
-    /// rate-limited one and without spending the limit: the menu never offers it, so only a stale or
-    /// a hand-made client sends one. Then the same gate the client ran: a fail is a silent drop (no
-    /// error, no rejected-action log); a pass relays to the opponent only (the sender already showed
-    /// it locally), then runs as an `Emote` action while a card hears it (R1127). R645: a person's
-    /// emote that goes out is offered to the opposing bot's persona, which may answer it; a bot never
-    /// answers a bot. R1351000: while either account blocks the other, a pass is relayed to no one
-    /// and only runs as the `Emote` task.
+    /// R643, R1342: drops undealt or rate-limited emotes silently. Passes relay to opponent and
+    /// enqueue `Emote` if a card listens (R1127). R645: offers person emote to opposing bot persona
+    /// (bots never answer bots). R1351000: blocked accounts relay to no one.
     fn relay_emote(&self, core: &mut Core, home: PlayerId, emote: EmoteId) {
         let player = playing(core, home);
         if !hand_holds(&self.shared.emote_hands[home], emote) {
@@ -1960,9 +1818,7 @@ impl MatchActor {
         self.schedule_emotes(foe, intents);
     }
 
-    // ---------------------------------------------------------------------
     // Sockets
-    // ---------------------------------------------------------------------
 
     /// A frame from the account that began in `home`; the seat it acts for is read as it runs.
     fn on_frame(&self, home: PlayerId, text: &str) {
@@ -1994,12 +1850,9 @@ impl MatchActor {
             }
             Ok(ClientMessage::Hello(_)) => {
                 // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: a Hello
-                // while one for the same home and socket generation is still queued is absorbed —
-                // reconnect is idempotent — so a hello flood costs one view push. R2686000: one
-                // that finds none queued is still dropped, unanswered and with the socket left
-                // open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered on
-                // this socket, so a client that sends again as each answer arrives costs one view
-                // per interval. A newer generation (a reattach) always enqueues.
+                // while one for the same home and socket generation is still queued is absorbed, so
+                // a flood costs one view push. R2686000: one within WATCH_HELLO_INTERVAL_MS of the
+                // last answered is dropped, the socket left open; a reattach always enqueues.
                 let generation = core.socket_generation[home];
                 if core.hello_pending[home] != Some(generation)
                     && core.guards[home].hello_answer_allowed(generation, now_ms())
@@ -2040,9 +1893,7 @@ impl MatchActor {
         }
     }
 
-    // ---------------------------------------------------------------------
     // The opponent's aim (R738)
-    // ---------------------------------------------------------------------
 
     /// R738: an aim is relayed to the opponent at most once per `AIM_RELAY_INTERVAL_MS` per seat.
     /// Faster ones are coalesced, not dropped outright: the newest waits out the interval and goes
@@ -2147,13 +1998,9 @@ impl MatchActor {
         self.enqueue(Task::Disconnect { home });
     }
 
-    /// R744: an account that has had no socket on this actor (the actor was rebuilt after a restart,
-    /// or the player never opened the match) is disconnected, so its grace starts with the first
-    /// socket that does attach, on the seat it plays (R677): at the deadline stored on the match when
-    /// there is one, else a fresh window. A bot's seat is attached from the start, so in a match with
-    /// a bot it starts as the actor arms (R1452). Nothing starts at boot, so a match no socket returns
-    /// to stays the reaper's draw (R112) and nobody loses by seat order. Safe to repeat: a running
-    /// grace keeps its deadline (R147).
+    /// R744: starts grace for unattached accounts when the first socket connects, on the seat
+    /// played (R677), from the stored deadline or afresh; a bot's as the actor arms (R1452). Nothing
+    /// starts at boot, so unreturned matches stay reaper draws (R112); repeat-safe (R147).
     fn start_absent_grace(&self, core: &mut Core) {
         for home in PLAYERS {
             if core.attached_once[home] {
@@ -2166,9 +2013,7 @@ impl MatchActor {
         core.stored_grace = None;
     }
 
-    // ---------------------------------------------------------------------
-    // The actor's surface (TS `MatchActor`)
-    // ---------------------------------------------------------------------
+    // The actor's surface
 
     pub fn match_id(&self) -> &str {
         &self.shared.match_row.id
@@ -2300,11 +2145,9 @@ impl MatchActor {
         let _ = written.await;
     }
 
-    /// #1169: the checkpoint of the state after the log's newest row, its play telemetry (R1442) and
-    /// its bots' turns (R639000), stored for the next rebuild to resume (`actor::checkpoint`). None
-    /// for a match that has ended, been voided or stopped, or whose log is shorter than
-    /// `MATCH_CHECKPOINT_MIN_ACTIONS`. A write that fails is logged and costs nothing more: the next
-    /// rebuild folds the whole log. No state reaches a log line.
+    /// #1169: writes state checkpoint, telemetry (R1442), and bot turns (R639000) for rebuilds.
+    /// Skipped if ended, voided, stopped, or below `MATCH_CHECKPOINT_MIN_ACTIONS`.
+    /// Failed writes are logged (no state in the line) and fall back to full log folds on rebuild.
     async fn write_checkpoint(&self) {
         let (seq, nonce, body) = {
             let core = self.lock();
@@ -2395,12 +2238,9 @@ impl MatchActor {
         self.spectate_close(CLOSE_GOING_AWAY, "the actor is going away");
     }
 
-    /// R672: which seats hold an open socket right now. The registry's `presence_of` reads this, so a
-    /// rematch offer learns whether the opponent is still on the match. A seat is present while it
-    /// holds a socket that is still open. R1452: a bot's seat holds none, and is present until the
-    /// game ends, as a person playing it would be; R639000: after that it stays present until its
-    /// rematch plan's linger ends, or past it until an answer it is giving lands, as a person on the
-    /// death screen is, and then reads as gone.
+    /// R672: seats with an open socket, read by the registry's `presence_of`. R1452: bot seats are
+    /// present during play; R639000: post-game they linger until rematch plans or pending
+    /// replies finish, after which they report as absent.
     pub fn presence(&self) -> PerPlayer<bool> {
         let core = self.lock();
         let playing_on = !core.finished && !core.voided;
@@ -2446,12 +2286,8 @@ impl WeakMatchActor {
 }
 
 impl MatchActor {
-    /// R835000: counts one refused action for `home` (a reducer refusal or a flood rejection) and
-    /// answers the alert's payload the first time the seat's window crosses
-    /// `REJECTION_ALERT_THRESHOLD`: the seat's profile id and the count. `None` before that and
-    /// after the alert has gone — exactly one alert per match per seat. The window is pruned to
-    /// `REJECTION_ALERT_WINDOW_MS` first, so old refusals fall out and the crossing is strictly
-    /// over the threshold.
+    /// R835000: tracks refused actions per seat, triggering at most one alert per match when
+    /// crossing `REJECTION_ALERT_THRESHOLD` within `REJECTION_ALERT_WINDOW_MS`.
     fn note_rejection(&self, core: &mut Core, home: PlayerId, now: i64) -> Option<(String, usize)> {
         let rejected = core.guards[home].note_rejection(now)?;
         let (first, second) = self.seats();
@@ -2479,10 +2315,8 @@ fn clock_view_for(snapshot: &MatchSnapshot) -> ClockView {
     }
 }
 
-/// R738, R97, R177: whether every end of `sender`'s aim names something `view` (the receiver's own)
-/// shows. A hero and a zone of the field are public wherever they are — a face-down card is named
-/// by its zone, never itself — so a zone need only exist. A hand card is named by its position, and
-/// only in the sender's own hand, which the receiver sees as that many backs.
+/// R738, R97, R177: checks whether aim endpoints are visible to the receiving viewer (hero/zone
+/// are public, a face-down card named by its zone; hand cards checked by index in sender's hand).
 pub fn aim_is_public(aim: &Aim, sender: PlayerId, view: &PlayerView) -> bool {
     match &aim.source {
         AimEnd::Hand { player, index } => {
@@ -2541,26 +2375,17 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
     }
 }
 
-// ---- Social: watching and shared replays (#939, #940) ----
+// Social: watching and shared replays (#939, #940)
 //
-// B50, B51: a friend's live 1v1 game, ranked or unranked, watched from their seat. Each change records the view
-// of each seat as the change left it, keyed by the account that began in it (`home`; R677: a
-// Glitch's swap moves the record with the account), and each watcher is sent each recorded view of
-// its friend's seat SPECTATE_DELAY_MS after the state it shows, by the one wait the actor arms for
-// the next view due. A watcher who joins starts from the newest view already that old. Nothing a
-// watcher's socket sends reaches a reducer, log, relay or clock: a later hello is answered with the
-// view it was last sent, so its page can tell a live socket from a dead one (R1103000), and every
-// other frame is dropped unanswered, counted against the watcher's malformed budget; a watcher's
-// hellos are answered once per WATCH_HELLO_INTERVAL_MS, and past the budget its socket is closed
-// with 1008 (R2609000). A watcher's leaving changes nothing in the match but the count the
-// players are told (B51). Once the match is over, a watcher sent its seat's last view, the one with
-// the result, is let go (R1107000).
+// B50, B51: a friend's live 1v1 game watched from their seat. Each change records each seat's view,
+// keyed by home (R677: a Glitch's swap moves the record with the account), and a watcher is sent each
+// view of its friend's seat SPECTATE_DELAY_MS after the state it shows, by one armed wait. Nothing a
+// watcher's socket sends reaches a reducer, log, relay or clock; past its malformed budget it is
+// closed with 1008. Its leaving changes only the count the players are told.
 
 use crate::actor::protocol::watchers_frame;
-// RFC 6455's normal closure and "going away" (`ws_server`'s): a watcher's socket is closed with the
-// first when a newer socket of the same account replaces it or once it has had a finished match's
-// last view (R1107000), and with the second when the actor goes (wire vocabulary, like
-// `CLOSE_POLICY_VIOLATED`).
+// A watcher's socket closes with `CLOSE_NORMAL` when a newer socket of its account replaces it or
+// after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes.
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::parse_watch_hello;
@@ -2666,11 +2491,10 @@ impl WatchRefused {
 }
 
 impl MatchActor {
-    /// B50: a watcher's socket, for `profile_id`'s account, on the seat the account that began in
-    /// `home` plays. A newer socket of the same account replaces its older one, so an account is one
-    /// watcher; otherwise a match already watched by SPECTATORS_PER_MATCH sockets is `Full`. From
-    /// here on the socket's hellos are answered (R1103000) and its other frames go unanswered and
-    /// count against its malformed budget (R2609000), and the players are told the new count (B51).
+    /// B50: `profile_id`'s watcher socket on the seat `home`'s account plays. A newer socket of the
+    /// account replaces its older one; otherwise a match with SPECTATORS_PER_MATCH watchers is `Full`.
+    /// Its hellos are answered (R1103000), its other frames count against its malformed budget
+    /// (R2609000).
     pub fn attach_watcher(
         &self,
         home: PlayerId,
@@ -2765,11 +2589,8 @@ impl MatchActor {
         self.lock().spectate.watchers.len()
     }
 
-    /// B50, B46: the watchers `revoked(watcher, friend)` names (the watcher's account and the
-    /// account whose seat it watches) are let go at once: each socket is told `forbidden`, as a
-    /// refused hello is, and closed with R148's 4403, and the players hear the new count (B51). The
-    /// friend turning watching off, or the two unfriending or blocking, calls this: being let in once
-    /// is no standing leave. Answers how many went.
+    /// B50, B46: revokes matching watchers (watching turned off, unfriended, blocked), sending
+    /// forbidden and closing with R148's 4403; updates players' count (B51). Answers how many.
     pub fn revoke_watchers(&self, revoked: &dyn Fn(&str, &str) -> bool) -> usize {
         let gone: Vec<Watcher> = {
             let mut core = self.lock();
@@ -2809,13 +2630,10 @@ impl MatchActor {
         gone.len()
     }
 
-    /// R1103000: a watcher's later hello is answered with the view it was last sent, again, so its
-    /// page hears that the socket is alive (R1441's probe). It is never a view sooner than
-    /// SPECTATE_DELAY_MS after the state it shows, and a watcher sent no view yet is sent nothing.
-    /// R1834003: nothing else rides with it: the socket already holds the loadouts it was sent as it
-    /// attached, and a page that lost them comes back on a new socket, which is sent them again.
-    /// R2609000: at most once per `WATCH_HELLO_INTERVAL_MS`; a hello sooner after the last answered
-    /// one is dropped, and one that finds no view to send starts no interval.
+    /// R1103000: a watcher's later hello is answered with its last view again, so its page hears the
+    /// socket is alive (R1441's probe); one sent no view yet is sent nothing. R1834003: no loadouts
+    /// ride with it (a page that lost them comes back on a new socket). R2609000: at most once per
+    /// `WATCH_HELLO_INTERVAL_MS`; a hello that finds no view to send starts no interval.
     fn answer_watcher_hello(&self, id: u64) {
         let mut core = self.lock();
         if core.stopped || core.spectate.closed {
@@ -3008,12 +2826,9 @@ impl MatchActor {
         *timer = Some((armed, due));
     }
 
-    /// R1107000: once the match is over, each watcher that has been sent its seat's last view (the
-    /// newest in its record: nothing is recorded after the game's end, so it is the one with the
-    /// result) is let go: out of the list, and the players told the new count (B51). Answers those
-    /// watchers, for the caller to close with `close_finished_watchers` once it has let go of the
-    /// lock. Called after each `spectate_flush` that can send that view: the wait's and an attach's.
-    /// `spectate_record_in`'s cannot, since the view it records is SPECTATE_DELAY_MS from due.
+    /// R1107000, B51: removes watchers who received the final view of a finished match and
+    /// updates player counts. Returns watchers to be closed via `close_finished_watchers`; called
+    /// after each `spectate_flush` that can send that view.
     #[must_use]
     fn spectate_let_go_finished(&self, core: &mut Core) -> Vec<Watcher> {
         if !core.finished || core.spectate.closed {
@@ -3055,4 +2870,3 @@ impl MatchActor {
         }
     }
 }
-// ---- end Social: watching and shared replays ----

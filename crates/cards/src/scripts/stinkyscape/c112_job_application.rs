@@ -13,21 +13,10 @@
 //!            add a Paycheck to your hand at the start of each of your turns." (buffs 5)
 //!   Radiant: "Lucky 1", and the same text. (buffs 10)
 //!
-//! The quest is `Script.stages` (R1854000): Stage 1 opens as the card enters, and each stage's reward is
-//! the card's own trigger on its own `questCompleted`. Stage 1's goal is an Activate (`SEND`, R384) that
-//! needs a hand card (R703): it notes the resume's cost and its wait, sets the card aside beneath this
-//! one (`set_aside_from_hand`, R1865000) and completes the stage (`complete_this_quest`, R1854001); the
-//! reward hears back (`hear_back`, R1854004) after the wait the resume earned (R1865001): a weighted draw
-//! from the match rng by its merit (its rarity, its cost and its Radiant face), an iKwzki always 6.
-//! Stage 2 draws one of three goals as it opens (R1854002), the first asking for the noted cost; its
-//! reward gives the resume back at (0), Buffed `buffs` times the reward factor (`return_held_to_hand`).
-//! Stage 3's goal is an Activate of two modes (`ANSWER`, R81): accept, and the card adds factor
-//! Paychecks (S #112.1) at each of its controller's later starts of turn while it stays; or re-apply,
-//! tripling the factor (at most ×9) and opening Stage 1 again (R1865002). Death summons it from the
-//! graveyard into its own backrow zone, else R64's, its line, its factor and its memory reset (R78); its
-//! resume, whose holder left the field, is exiled (R1865000). An exile or a bounce ends it.
-//! Radiant: its Lucky 1 (`lucky_on`) draws the wait again and keeps the shorter, and `buffs` is 10.
-//! Tunes: buffs 5 ↑ (Radiant 10).
+//! Quest stages (R1854000): Stage 1 Activate sends hand card as resume (R384, R703, R1865000, R1854001); hears back (R1854004, R1865001).
+//! Stage 2 draws goal (R1854002); returns held resume at (0) buffed.
+//! Stage 3 accepts or reapplies (R81, #112.1, R1865002). Death resummon (R64, R78, R1865000).
+//! Radiant: Lucky 1 keeps shorter wait; buffs 10.
 
 use jackioh_engine::effects::{
     AddToHandArgs, HearBackArgs, RememberArgs, ReturnHeldArgs, SetAsideArgs, SummonArgs, add_to_hand,
@@ -398,13 +387,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #112 Job Application — SPEC §8.10 row 112, BUILD M12 row S 112: "entering opens Stage 1; its
-// Activate sends a hand card in and the stage completes; Stage 2 opens 2 to 6 of its controller's
-// turns later, its goal drawn among three (each seen over the seeds); completing it adds the resume,
-// Buffed 5 times, at (0); Stage 3's Activate either adds a Paycheck at each later start of turn or
-// reopens Stage 1 with the rewards tripled; destroyed, it is resummoned at Stage 1; buffs reads
-// through `param()`; radiant Lucky 1 keeps the shorter wait, and the resume is Buffed 10 times"
-// (R1865000–R1865002).
+// S #112 Job Application — SPEC §8.10 row 112, BUILD M12 row S 112 (R1865000, R1865002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -416,30 +399,20 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (1) Common Unit 4/4: the resume, of merit 1, a weak one.
     const VANILLA: &str = "core-008";
-    /// The Interview's plays: (0), (1) and (2) Common Units.
     const SLIME: &str = "classic-027";
     const RUSHER: &str = "core-011";
     const POINTMASTER: &str = "core-020";
-    /// (3) Common Unit, of merit 3, a solid resume; the decks are made of it.
     const MENACE: &str = "core-019";
-    /// (4) Legendary Unit, of merit 7, a strong resume.
     const SILAS: &str = "core-052";
-    /// A Unit set to 12/12 in P1's fifth lane, whose hit on the enemy hero meets Hardball.
     const BIG: &str = "core-025";
     const BIG_LANE: i32 = 5;
-    /// (4) "Destroy all permanents."
     const NETHER: &str = "core-088";
-    /// (0) "Exile every (1) Cost or less card on the field."
     const LAG: &str = "classic-025";
-    /// The cards each library holds.
     const LIBRARY: usize = 10;
-    /// The mana P1 holds as the test starts, and refills to before a dear cast.
     const MANA: i32 = 10;
 
-    /// P1's main phase: Job Application on `radiant`'s face in hand with the resume, the Interview's
-    /// three plays and `extra`; BIG on the field; both decks of Menaces. Each turn ends when the test
+    /// Each turn ends when the test
     /// ends it (R82).
     fn setup(seed: &str, radiant: bool, extra: &[&str]) -> Scenario {
         let mut hand = vec![
@@ -466,7 +439,6 @@ mod tests {
         s
     }
 
-    /// Job Application played into P1's backrow (`zone` when given): its id there.
     fn played(s: &mut Scenario, zone: Option<i32>) -> String {
         let opts = zone.map_or(json!({}), |lane| json!({ "zone": lane }));
         s.play(ID, opts);
@@ -486,7 +458,6 @@ mod tests {
         subsystems::quest_memory_of(s.card(ID)).expect("a quest line")
     }
 
-    /// The first card of `def_id` in P1's hand.
     fn in_hand(s: &Scenario, def_id: &str) -> CardInstance {
         s.hand(P1)
             .into_iter()
@@ -494,7 +465,6 @@ mod tests {
             .unwrap_or_else(|| panic!("{def_id} in P1's hand"))
     }
 
-    /// Stage 1's Activate, sending P1's first `def_id` in: that card.
     fn send(s: &mut Scenario, def_id: &str) -> CardInstance {
         let resume = in_hand(s, def_id);
         s.activate(ID, json!({ "ability": SEND, "targets": pick::id(&resume.id) }));
@@ -505,12 +475,10 @@ mod tests {
         s.activate(ID, json!({ "ability": ANSWER, "modes": [mode] }));
     }
 
-    /// The turns the line waits to hear back in.
     fn wait(s: &Scenario) -> i32 {
         line(s).hear_back.expect("a wait to hear back").turns
     }
 
-    /// A game played to the sending of `resume` on `radiant`'s face: the wait it earned.
     fn wait_of(seed: &str, radiant: bool, resume: &str) -> i32 {
         let mut s = setup(seed, radiant, &[SILAS]);
         played(&mut s, None);
@@ -518,7 +486,6 @@ mod tests {
         wait(&s)
     }
 
-    /// Turns end until P1's turn opens with the Interview open: the turns of P1's that started.
     fn until_interview(s: &mut Scenario) -> i32 {
         let mut started = 0;
         for _ in 0..2 * LONGEST_WAIT {
@@ -534,7 +501,6 @@ mod tests {
         panic!("the Interview never opened");
     }
 
-    /// The Interview met: BIG's hit for 12, then plays of (0), (1) and (2), until the Offer opens.
     fn interview(s: &mut Scenario) {
         let big = s.unit(P1, BIG_LANE).expect("BIG").id;
         s.attack(big.as_str(), "hero");
@@ -566,7 +532,6 @@ mod tests {
             .count()
     }
 
-    /// P2's turn and then P1's: the Paychecks P1's turn start gave.
     fn next_paychecks(s: &mut Scenario) -> usize {
         s.end_turn();
         assert!(paychecks_given(s) == 0, "none on the opponent's turn");
@@ -600,7 +565,6 @@ mod tests {
         s.card_mut(ID).memory.insert(key.to_string(), value);
     }
 
-    /// Back in P1's hand from the Interview, at (0), with the Buffs it got: (the card, its Buffs).
     fn resume_back(seed: &str, radiant: bool, factor: Option<i32>) -> (Scenario, CardInstance, usize) {
         let mut s = setup(seed, radiant, &[]);
         played(&mut s, None);
@@ -700,7 +664,6 @@ mod tests {
             Some(&json!(1)),
             "the resume's cost noted"
         );
-        // Stage 1 is done, and the Offer not open yet.
         s.expect_refused(|s| {
             s.activate(
                 ID,
@@ -920,7 +883,6 @@ mod tests {
         assert_eq!(line(&s).active, Vec::<String>::new(), "the line is done");
         assert_eq!(next_paychecks(&mut s), 1);
         assert_eq!(next_paychecks(&mut s), 1);
-        // The Offer is answered: nothing more to Activate.
         s.expect_refused(|s| s.activate(ID, json!({ "ability": ANSWER, "modes": [ACCEPT] })));
     }
 
@@ -970,7 +932,6 @@ mod tests {
         until_interview(&mut s);
         let before = s.events().len();
         if line(&s).active == [PROVE] {
-            // Asked for the Menace's (3): one more of them, drawn since.
             s.play(MENACE, json!({}));
         } else {
             interview(&mut s);
@@ -1081,9 +1042,6 @@ mod tests {
             "its resume exiled too"
         );
     }
-    /// R1884004: Job Application's text fused onto a 2/2 that Core #46 Suppressive Aura, Embiggened,
-    /// holds at 0/0 dies at once, and its Death does not bring it back to die again without end
-    /// (handicapped fuzz seed 5555 of the Stinkyscape release): it stays in the graveyard.
     #[test]
     fn r1884004_fused_onto_a_unit_the_board_holds_at_0_health_it_stays_dead() {
         const TAOTIE: &str = "meditative-047"; // (4) 2/2.

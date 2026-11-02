@@ -1,8 +1,7 @@
 //! M #66 Fiery Waraxe (SPEC §8.8 row 66): (2) Field Spell, Common, 3/2 → 6/4.
 //!   Base:    "Animated on your turn, Rush, First Strike"
 //!   Radiant: "Animated on your turn, Rush, Pierce, First Strike"
-//! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only
-//! (First Strike on both faces since patch v0.3.10, Rush since #1704).
+//! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only (Rush, #1704).
 
 use jackioh_engine::prelude::*;
 
@@ -90,8 +89,7 @@ mod tests {
     #[test]
     fn radiant_6_4_pierce_ignores_hero_armor() {
         crate::register_all();
-        // It attacks from its next start of turn under R1062, live since the set shipped (R1420).
-        // Libraries, so neither turn's draw costs a fatigue hit.
+        // It attacks from its next start of turn (R1062, R1420).
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": WARAXE, "radiant": true }, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "armor": 3 },

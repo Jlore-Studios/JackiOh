@@ -1,7 +1,5 @@
-// The six portraits' colors and the places of their drifting motes (R1332). Every portrait is
-// drawn the same on the board, in its inspect view and in the deck builder's picker, so the look
-// is a table of colors and the motes a pure function of the portrait's id: no clock, no random.
-// The CSS that uses them is `portrait.css`; the component that sets them is `PortraitArt.tsx`.
+// The six portraits' colors and the places of their drifting motes (R1332). A portrait draws the
+// same wherever it is, so the motes are a pure function of its id: no clock, no random.
 
 import type { PortraitId } from "@jackioh/shared";
 import { PORTRAIT_IDS } from "@jackioh/shared";
@@ -15,7 +13,6 @@ import {
   PORTRAIT_MOTE_MIN_PCT,
 } from "./config.ts";
 
-/** One portrait's colors: the ground lit from its upper left, the light, the rim and the motes. */
 export type PortraitLook = {
   /** The oval's own gradient background, light at the upper left to dark at the foot. */
   ground: readonly [string, string];
@@ -23,7 +20,6 @@ export type PortraitLook = {
   light: string;
   /** The rim light along the oval's lit edge. */
   rim: string;
-  /** The drifting motes. */
   mote: string;
 };
 
@@ -43,7 +39,6 @@ export type PortraitMote = { x: number; y: number; size: number; delayMs: number
 /** The oval's width and height are each this many percent of themselves. */
 const OVAL_PCT = 100;
 
-/** The motes of one portrait, seeded from its id. */
 export function portraitMotes(portrait: PortraitId): readonly PortraitMote[] {
   const next = seededRandom(hashId(`portrait-motes:${portrait}`));
   const span = OVAL_PCT - PORTRAIT_MOTE_EDGE_PCT - PORTRAIT_MOTE_EDGE_PCT;

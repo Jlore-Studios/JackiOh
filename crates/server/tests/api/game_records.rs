@@ -1,11 +1,5 @@
-//! SPEC §9.11, R376–R378: the live half of the card statistics. A finished match is filed once,
-//! after its result, under its mode, the patch the match started on and two human pilots, and
-//! nothing about it can cost the result. The real engine plays the games, through the real
-//! registry, actor and results writer, driven over the match protocol by two in-memory sockets.
-//!
-//! The losing seat concedes once both mulligans are in, which ends a real game in one action:
-//! the record's `reason` is `concede`. Every live record is filed under the patch the match started
-//! on (its row's catalog version, R388). Surface contract: docs/v0.3.0/SURFACE.md §11.3.
+//! Live game records for card statistics (SPEC §9.11, R376, R378; SURFACE §11.3).
+//! Records filed after result under start patch (R388) without blocking result delivery.
 
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
@@ -35,8 +29,6 @@ const P1: &str = "profile-1";
 const P2: &str = "profile-2";
 /// The catalog version a game below started on: carried by this thread's build, not its own.
 const STARTED_ON: &str = "v-started";
-
-// Plumbing (private copies: each test file of this binary keeps its own)
 
 #[derive(Clone, Default)]
 struct LogLines(Arc<StdMutex<Vec<u8>>>);

@@ -1,10 +1,7 @@
 //! #8 Mr. Vanilla (SPEC §8.1): a 1-cost 4/4 → 12/12 Human Unit with no text on either face (patch
-//! v0.1.1 took away its Immutable and the Radiant face's Divine Shield, and made it a true vanilla:
-//! its Radiant face is its stats alone, tripled). A card with no text has no hooks, so both Scripts
-//! are empty — an empty Script is the answer, not a placeholder.
-//!
-//! Nothing about it is special any more: Transform, Vanilla and Fuse-onto all reach it like any unit,
-//! and making it Radiant on the field swaps its stat layer in place (§5.2), keeping its damage.
+//! v0.1.1): its Radiant face is its stats alone. A card with no text has no hooks, so both Scripts
+//! are empty — an empty Script is the answer, not a placeholder. Made Radiant on the field, it swaps
+//! its stat layer in place (§5.2), keeping its damage.
 
 use jackioh_engine::prelude::*;
 
@@ -16,10 +13,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #8 Mr. Vanilla — SPEC §8.1 row 8, BUILD M4-T4 must-pass: "A 4/4 with no text: Sheepish turns it
-// into a Sheep like any unit; radiant a 12/12 with no text, and made Radiant on the field it takes the
-// 12/12 face at once, keeping its damage" (patch v0.1.1: it used to be Immutable, and its Radiant face
-// had Divine Shield).
+// #8 Mr. Vanilla — SPEC §8.1 row 8, BUILD M4-T4 must-pass.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -54,8 +48,7 @@ mod tests {
             s.expect_stats("core-008", json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
             let vanilla = s.card("core-008").clone();
             assert_eq!(keyword_kinds(&s, &vanilla), Vec::<String>::new());
-            // No text: the play emits the play itself and nothing else — no Cry, no trigger. Its
-            // announce (§10.5 step 3a, R448) is part of the play.
+            // No text, so no Cry and no trigger; its announce (§10.5 step 3a, R448) is part of the play.
             let types: Vec<&str> = s.last_events().iter().map(|event| event.event_type().as_str()).collect();
             assert_eq!(
                 types,

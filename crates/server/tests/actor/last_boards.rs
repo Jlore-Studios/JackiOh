@@ -1,9 +1,4 @@
-//! Last boards on the server (C+ #29 Portal to the Past, R417, R565; BUILD M9-T11: "a finished game
-//! writes both seats' last boards, never the opponent's face-down cards").
-//!
-//! The first block plays a real game over the fake store: each seat's stored board is the field its
-//! own final view showed, and the next match starts from those boards, frozen on its row, so a
-//! rebuilt actor folds the same game. The second goes straight through the results writer.
+//! Last boards on the server (C+ #29, R417, R565, BUILD M9-T11).
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;

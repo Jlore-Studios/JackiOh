@@ -1,9 +1,7 @@
-//! The Classic+ Fruit verbs (effects/fruit.ts): the Grapes C+ #65 Two Grapes and #66 Vine of Grapes roll
+//! The Classic+ Fruit verbs (effects/fruit.rs): the Grapes C+ #65 Two Grapes and #66 Vine of Grapes roll
 //! by `GRAPE_ODDS` with Lucky (R382, §6.1), C+ #65.2/#65.3's hit-or-heal and priced draw (§2.4, R58,
 //! R65), and C+ #65.5 Mythic Grape's hand replaced card for card (R11, R60, R129, R387). Through fixture
-//! scripts (fixtures/fruit.ts); the real cards' tests cover the same cases again.
-//!
-//! Port of `packages/engine/test/effects-fruit.test.ts`.
+//! scripts (fixtures/fruit.rs); the real cards' tests cover the same cases again.
 
 use jackioh_engine::effects::fruit::{
     add_rolled, add_rolled_grapes, damage_enemy_or_heal_friend, draw_priced, replace_hand_with_random,
@@ -27,7 +25,7 @@ fn grape_ids() -> Vec<&'static str> {
     GRAPE_ODDS.iter().map(|grape| grape.def_id).collect()
 }
 
-/// TS `GRAPE_IDS.indexOf(id)`: -1 when absent.
+/// The index in `GRAPE_ODDS`, or -1 when absent.
 fn grape_index(id: &str) -> i64 {
     grape_ids()
         .iter()
@@ -53,19 +51,19 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// The card running the script, resolving as a Spell does (§10.5 step 4). Like TS's, it is in no pile.
+/// The card running the script, resolving as a Spell does (§10.5 step 4), in no pile.
 fn resolving(state: &mut GameState, def_id: &str, radiant: bool, player: PlayerId) -> CardInstance {
     let mut card = new_instance(state, def_id, player, Zone::Resolving { player });
     card.radiant = radiant;
     card
 }
 
-/// `resolving(state, defId)` with TS's defaults (base face, p1).
+/// `resolving` on the base face, for p1.
 fn resolving_p1(state: &mut GameState, def_id: &str) -> CardInstance {
     resolving(state, def_id, false, PlayerId::P1)
 }
 
-/// `run(state, effect, self)` with TS's defaults (no targets, p1).
+/// `run` with no targets, for p1.
 fn run_as(state: &mut GameState, effect: Effect, self_: &CardInstance) -> Vec<GameEvent> {
     run(state, effect, Some(self_), vec![], PlayerId::P1)
 }
@@ -123,7 +121,6 @@ mod roll_grape_r382_build_2_grape_odds {
         }
     }
 
-    /// TS: "§6.1 Lucky 1 rolls twice and keeps the better: Rotten falls to ~1.4%, Mythic rises to ~2%".
     #[test]
     fn lucky_1_rolls_twice_and_keeps_the_better_rotten_falls_to_1_4_percent_mythic_rises_to_2_percent() {
         let counts = shares("grape-lucky", 1, 20_000);
@@ -133,7 +130,6 @@ mod roll_grape_r382_build_2_grape_odds {
         assert!(share(grape_ids()[4]) < 2.8);
     }
 
-    /// TS: "§6.1 a Lucky roll is two draws of the rng, an ordinary one draw".
     #[test]
     fn a_lucky_roll_is_two_draws_of_the_rng_an_ordinary_one_draw() {
         let mut plain = Rng::new("grape-draws", 0);
@@ -144,7 +140,6 @@ mod roll_grape_r382_build_2_grape_odds {
         assert_eq!(lucky.cursor(), 2);
     }
 
-    /// TS: "§6.1 Lucky keeps the later entry: with a fixed seed the lucky pick is the best of the two plain picks".
     #[test]
     fn lucky_keeps_the_later_entry_with_a_fixed_seed_the_lucky_pick_is_the_best_of_the_two_plain_picks() {
         for i in 0..50 {
@@ -194,7 +189,6 @@ mod add_rolled_grapes_c_65_66 {
         assert!(state.players[PlayerId::P1].hand.iter().all(|card| card.radiant));
     }
 
-    /// TS: "§6.1 the Lucky is the running card's own: the Radiant face's printed Lucky 1 is two draws a Grape".
     #[test]
     fn the_lucky_is_the_running_card_s_own_the_radiant_face_s_printed_lucky_1_is_two_draws_a_grape() {
         let mut state = game("grapes-lucky");
@@ -237,7 +231,7 @@ mod add_rolled_grapes_c_65_66 {
         assert_eq!(state.rng_cursor, 6);
     }
 
-    /// TS: "§2.4 R4 a full hand burns each Grape that doesn't fit".
+    /// §2.4, R4.
     #[test]
     fn r4_a_full_hand_burns_each_grape_that_doesn_t_fit() {
         let mut state = game("grapes-burn");
@@ -260,7 +254,7 @@ mod add_rolled_grapes_c_65_66 {
         );
     }
 
-    /// TS: "§10.7 a fixed seed and cursor give fixed Grapes in a fixed order".
+    /// §10.7.
     #[test]
     fn a_fixed_seed_and_cursor_give_fixed_grapes_in_a_fixed_order() {
         let roll = || -> Vec<String> {
@@ -423,7 +417,7 @@ mod draw_priced_c_65_2_65_3 {
         assert_eq!(top.and_then(|top| live(&state, &top.id).cost_override), Some(0));
     }
 
-    /// TS: "§2.4 R4 a burned card takes no price".
+    /// §2.4, R4.
     #[test]
     fn r4_a_burned_card_takes_no_price() {
         let mut state = game("priced-burn");
@@ -438,7 +432,6 @@ mod draw_priced_c_65_2_65_3 {
         assert_eq!(live(&state, &top.id).cost_mod, 0);
     }
 
-    /// TS: "§2.4 a fatigue draw brings no card and prices nothing".
     #[test]
     fn a_fatigue_draw_brings_no_card_and_prices_nothing() {
         let mut state = game("priced-fatigue");
@@ -652,7 +645,7 @@ mod roll_weighted_r960_md_c1 {
         AUSPICIOUS_ROCK_ODDS.iter().map(|entry| entry.def_id).collect()
     }
 
-    /// TS `AUSPICIOUS_ROCK_IDS.indexOf(id)`: -1 when absent.
+    /// The index in `AUSPICIOUS_ROCK_ODDS`, or -1 when absent.
     fn rock_index(id: &str) -> i64 {
         rock_ids()
             .iter()

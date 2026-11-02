@@ -1,8 +1,7 @@
 // The set tracks panel (#1307, SPEC §14.7): each shipped set's level, XP bar and next rewards, and
-// for a locked track how it unlocks. All of it is `GET /api/tracks` (CLAUDE.md rule 7): the bar is
-// as long as the level's span the server sends (`levelXp`) and as full as the XP it has left
-// (`xpToNext`) allows; the client knows no curve. #1664: the bar is the economy's `FillBar`, at
-// rest (no `from`), which keeps a native `<progress>` with that `max` and `value`.
+// how a locked track unlocks, all `GET /api/tracks`' (CLAUDE.md rule 7: the client knows no curve).
+// #1664: the bar is the economy's `FillBar` at rest, a native `<progress>` of `levelXp` holding
+// `levelXp − xpToNext`.
 
 import type { ReactElement } from "react";
 

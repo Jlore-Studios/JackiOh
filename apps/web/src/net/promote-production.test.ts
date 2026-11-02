@@ -24,7 +24,7 @@ const LABEL = "production merge";
 // Both people, and `human` so the night bot never picks these up.
 const PEOPLE = ["jgoetzmann", "MaxGoetzmann"];
 
-// --- the stand-in for `gh` -------------------------------------------------------------------
+// The stand-in for `gh`
 
 const FAKE_GH = String.raw`#!/usr/bin/env node
 const fs = require("fs");
@@ -152,7 +152,7 @@ interface Gh {
   tokens: string[];
 }
 
-// --- a world: origin, a working copy, the stand-in -------------------------------------------
+// A world: origin, a working copy, the stand-in
 
 interface World { root: string; origin: string; work: string; bin: string; sha: Record<string, string> }
 const roots: string[] = [];

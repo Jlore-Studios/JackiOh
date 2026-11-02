@@ -4,14 +4,8 @@
 //!   Radiant: "Taunt / Cry: Set every other Unit's Attack and Health to 3/3. Fill your board with Rush
 //!            Tokens in Chinese."
 //!
-//! THE SET (R1185002) is Hearthstone's: every other Unit of both sides (`set_stats_all`, the tops of
-//! piles, carried and standing Units included) wears 3/3 as its §10.4 layer 1 (`statsOverride`), its
-//! buffs, the stat half of its tuning and its damage gone, auras still applying on top; an Immutable
-//! Unit is untouched (R23). The 3/3 is the frame, not a declared number: it is good for one side and
-//! bad for the other, so no `better` direction fits it.
-//! THE FILL (Radiant face) comes after the set: Rush Tokens at their printed 3/3 in every empty zone of
-//! yours, a Locked one included (`fill_board`, R942, R1136000), each in Chinese (the `chinese` rider,
-//! R1300), so CN, every card in Chinese being CN (`query::tags_of`, R1176000).
+//! set_stats_all sets other Units to 3/3 as §10.4 layer 1 (R1185002; Immutable untouched, R23).
+//! Radiant fill_board summons Rush Tokens in Chinese (R942, R1136000, R1300, R1176000).
 
 use jackioh_engine::prelude::*;
 
@@ -49,10 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #21 Harmony Spirit — SPEC §8.9 row 21, BUILD M11 row M+ 21: "Cry: every other Unit of
-// both sides is 3/3 undamaged, a buffed one losing its buffs, an aura still applying on top; an
-// Immutable Unit is untouched; Harmony Spirit itself stays 3/7; radiant 6/14, then each empty zone of
-// yours gets a Rush Token in Chinese, CN (R1176000), at 3/3".
+// Meditative+ #21 Harmony Spirit — SPEC §8.9 row 21, BUILD M11 row M+ 21 (R1176000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -63,7 +54,6 @@ mod tests {
     const FILLER: &str = "core-005";
     /// Core #11 Tempo Timmy, a 3/3 (any body to set).
     const TIMMY: &str = "core-011";
-    /// Core #8 Mr. Vanilla, a 4/4.
     const BIG: &str = "core-008";
     /// Core #19 Midrange Menace, whose Radiant face is an Immutable 18/18.
     const IMMUTABLE: &str = "core-019";

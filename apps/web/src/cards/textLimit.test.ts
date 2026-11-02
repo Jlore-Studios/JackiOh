@@ -1,8 +1,7 @@
 // R1017000: every catalog face fits the measured text limit (constants.ts FACE_TEXT_LIMIT), or prints
 // a short form that does (shortText.ts SHORT_FORMS), so no face in the Almanac or the deck builder
-// shrinks its art for its words. The pixel half, that no face takes the long layout at 170 px, is the
-// component spec's (e2e/cypress/component/card-faces.cy.tsx B15). R2450000: a staged Quest is measured
-// by the one stage it prints (questFace.ts).
+// shrinks its art for its words; the pixel half is e2e/cypress/component/card-faces.cy.tsx's (B15).
+// R2450000: a staged Quest is measured by the one stage it prints (questFace.ts).
 
 import { describe, expect, it } from "vitest";
 

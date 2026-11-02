@@ -1,23 +1,15 @@
 //! Idempotency keys for the spends (SPEC §14.11, R2124000; issue #2124): a spend sent again after
 //! the client gave up on its answer (`API_REQUEST_TIMEOUT_SECONDS`) runs once.
 //!
-//! Every spend route (`POST /api/packs/buy`, `/api/packs/open`, `/api/tokens/redeem-card`,
-//! `/api/tokens/redeem-cosmetic`, `/api/cosmetic-packs/open`, `/api/cosmetic-packs/chase` and
-//! `/api/codes/redeem`) takes an optional `Idempotency-Key` header holding a UUID ([`RequestKey`]);
-//! anything else there is 400, and a request without one runs as it always did. A key belongs to
-//! its account. Under the account's economy lock (R1301003), in the spend's own transaction:
+//! Every spend route, and `POST /api/codes/redeem`, takes an optional `Idempotency-Key` header holding a
+//! UUID ([`RequestKey`]); anything else there is 400. A key belongs to its account. Under the account's
+//! economy lock (R1301003), in the spend's own transaction, a key sent before answers as it committed, or
+//! with another route or body is 422, spending nothing ([`replayed`]); only a committed spend is kept, so a
+//! refused key may run again once the refusal no longer holds ([`keep`]). The retention loop sweeps expired
+//! keys ([`sweep_expired`]); deleting an account takes its keys.
 //!
-//! - [`replayed`]: a key the account sent before with the same route and body answers the status
-//!   and body it committed with, and spends nothing; with another route or body it is 422
-//!   `idempotency_key_reused`, and spends nothing either.
-//! - [`keep`]: an unknown key runs the spend and writes its answer beside the grant, so the two
-//!   commit together or not at all. Only a committed spend is kept: a refusal writes nothing, so
-//!   the same key may run again once the refusal no longer holds.
-//! - [`sweep_expired`]: the retention loop deletes a key `IDEMPOTENCY_KEY_TTL_HOURS` after it was
-//!   written (`api::retention::run_purge`), and an account's deletion takes its keys with it.
-//!
-//! The body is kept only as a keyed hash ([`RequestKey::of`]), under `CODE_PEPPER`'s `:body`
-//! domain, so no invite code a redemption sent is kept, even hashed under the code's own domain.
+//! The body is kept only as a keyed hash ([`RequestKey::of`]) under `CODE_PEPPER`'s `:body` domain, so
+//! no invite code a redemption sent is kept, even hashed under the code's own domain.
 
 use serde::Serialize;
 use serde_json::Value;
