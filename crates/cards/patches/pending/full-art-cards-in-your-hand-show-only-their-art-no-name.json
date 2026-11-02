@@ -1,0 +1,17 @@
+{
+  "title": "Patch: full-art cards in your hand show only their art, no name",
+  "sources": "#2723",
+  "notes": "A full-art card (R1017001, R2655000) in the viewer's own hand now draws only its art, its cost gem and a Unit's attack and health: no name banner, Mythic signature, rarity gem, set mark or crest (R2723000). Its name stays in its words for a screen reader and the tooltip; every other view prints the whole face. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Full-art cards in your hand",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A full-art card in your hand now shows just its art, its cost and, on a Unit, its attack and health. Hover over it, or hold it on a touch screen, to see its name and the whole card."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

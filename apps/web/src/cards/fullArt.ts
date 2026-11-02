@@ -2,6 +2,7 @@
 // art across the whole face, no words; the Full-art cards setting turns it off. R1313000: where ownership decides
 // (`FULL_ART_GATED`) only the viewer's own copy of an owned full art prints it (`FullArtOwned`), else all count as owned.
 // R2655000: three tiers (`FullArtTier`); R2655002: a token in `fullArtTokens.json` prints its parent's. CLAUDE.md rule 7.
+// R2723000: in the viewer's own hand it keeps only the cost gem and a Unit's attack and health (CardFace's `ownHand`).
 // R2715000: a fourth, the Animated art (`animated-<slug>`, tier "Animated"), prints the normal face with its art moving
 // (R2715001) and no full art (`printsFullArt`); a pick of `true` still names the still Epic.
 
