@@ -176,6 +176,19 @@ jobs:
             echo "::error::PRODUCTION_DATABASE_URL is not set: JackiOh-Production -> Connect -> Session pooler"
             exit 1
           fi
+          # Where the password comes from, and what it looks like (never the password): a refused login
+          # is most often the wrong thing on the clipboard.
+          if [[ "$PRODUCTION_DATABASE_URL" == *"[YOUR-PASSWORD]"* ]]; then
+            case "$DB_PASSWORD" in
+              "") pw="unset" ;;
+              sb_*) pw="a Supabase API key, not the database password" ;;
+              postgres*://*) pw="a database address, not the password" ;;
+              *) pw="${#DB_PASSWORD} characters" ;;
+            esac
+            echo "the password: PRODUCTION_DB_PASSWORD, $pw" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "the password: the one written into PRODUCTION_DATABASE_URL" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
           python3 "$RUNNER_TEMP/pooler.py" "$PRODUCTION_REF" "$PRODUCTION_DATABASE_URL" "" \
             > "$RUNNER_TEMP/production.url.raw" 2> "$RUNNER_TEMP/production.where" ||
             { cat "$RUNNER_TEMP/production.where"; exit 1; }
