@@ -14442,19 +14442,13 @@
       "interruptions": 0,
       "issue": 2850,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The acceptance asks the PR to give each file's case counts before and after, and one line per deleted case naming the test that still covers it, but the PR has no description at all and the builder wrote no report.",
-          "evidence": "Issue #2850's Acceptance, third bullet. PR #2868 reads \"_The builder wrote no description._\", and the builder's report holds only that PR text. The earlier review raised this and approved anyway.",
-          "severity": "blocking",
-          "where": "task"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-5",
       "queued_at": "2026-11-02T21:02:11Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "",
       "run_id": "41528076875",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -14462,6 +14456,7 @@
       "started_at": "2026-11-02T21:24:33Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
