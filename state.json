@@ -14334,12 +14334,22 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "df57d6236771fa5a83b53a1b041794e2def45de3",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "41417586866",
+            "tier": "medium"
+          }
+        ],
+        "sha": "4652dad079d03493ec7196401f87061470f64ae0",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2774": {
