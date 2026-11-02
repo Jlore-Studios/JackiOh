@@ -1,7 +1,7 @@
 //! R185: one concrete world consistent with what the seat knows. `redact` has already turned every
 //! hidden card into a placeholder; this fills each one with a real non-token definition of any set
-//! (R380) drawn from what the opponent has not shown, shuffles the seat's own library, and gives the
-//! world a seed of its own, so no simulation can foresee a real draw or a real coin flip.
+//! (R380) drawn from what its own side has not shown (R2826000), shuffles the seat's own library, and
+//! gives the world a seed of its own, so no simulation can foresee a real draw or a real coin flip.
 //!
 //! docs/polish/3-ai.md's six steps, in order. `rng` is the AI's own stream and every draw below comes
 //! from it in a fixed order, so the same public state and the same rng give the same world.
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::config::AI_DETERMINIZE;
-use crate::observe::HIDDEN_DEF_ID;
+use crate::observe::{HIDDEN_DEF_ID, minted_for_deck_of};
 
 fn all_cards(state: &GameState) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
@@ -262,7 +262,10 @@ fn query_ids(args: serde_json::Value) -> Vec<String> {
 /// reads only the auras that reach its own hand (R783007), so sampling the other side's slots first
 /// does not change it.
 pub struct DetGround {
-    seen: IndexSet<String>,
+    /// R2826000: what each side has shown, by the card's owner, in any zone.
+    seen: PerPlayer<IndexSet<String>>,
+    /// R2826000: whose shown cards each card of the seat's own library is sampled against, in its order.
+    own_library_sides: Vec<PlayerId>,
     trap_pool: Vec<String>,
     aura_traps: Vec<String>,
     shown: String,
@@ -271,16 +274,30 @@ pub struct DetGround {
     card_pool: Vec<String>,
 }
 
-/// The `DetGround` of a public state: step 2's `seen`, step 3's pools and aura baseline, steps 4/5's
-/// card pool — every read made on the state as it was handed in, before any sampling.
+/// The `DetGround` of a public state: step 2's `seen` per side and the side of each card of the seat's
+/// library, step 3's pools and aura baseline, steps 4/5's card pool — every read made on the state as it
+/// was handed in, before any sampling.
 pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
     let opp = seat.opponent();
-    let mut seen: IndexSet<String> = IndexSet::new();
+    let mut seen: PerPlayer<IndexSet<String>> = PerPlayer::default();
     for card in all_cards(public_state) {
-        if card.owner == opp && !is_placeholder(card) {
-            seen.insert(card.def_id.clone());
+        if !is_placeholder(card) {
+            seen[card.owner].insert(card.def_id.clone());
         }
     }
+    // R2826000, R73: a hidden card of the seat's library minted for the opponent's deck is the
+    // opponent's; every other is the seat's own (R312, R433).
+    let own_library_sides: Vec<PlayerId> = public_state.players[seat]
+        .library
+        .iter()
+        .map(|card| {
+            if minted_for_deck_of(public_state, opp, card) {
+                opp
+            } else {
+                seat
+            }
+        })
+        .collect();
     let trap_pool = query_ids(json!({ "type": ["Trap", "Field Trap"] }));
     let aura_traps: Vec<String> = trap_pool
         .iter()
@@ -318,6 +335,7 @@ pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
     let card_pool = query_ids(json!({ "excludeDefId": AI_DETERMINIZE.exclude_def_ids }));
     DetGround {
         seen,
+        own_library_sides,
         trap_pool,
         aura_traps,
         shown,
@@ -352,9 +370,10 @@ pub fn determinize_on(
     next.seed = format!("ai:{}", int_2_31(rng));
     next.rng_cursor = 0;
 
-    // Step 2: what the opponent has shown, in any zone (det_ground's `seen`).
+    // Step 2: what each side has shown (det_ground's `seen`) and what this determinization has given
+    // each side so far (R2826000): two decks may hold the same card, one deck holds it once (§2.6).
     let seen = &ground.seen;
-    let mut sampled: IndexSet<String> = IndexSet::new();
+    let mut sampled: PerPlayer<IndexSet<String>> = PerPlayer::default();
 
     // Step 3: face-down backrow placeholders, in lane order, from the Trap and Field Trap pool. R602: a
     // face-down Trap's aura is live (R403) and the units it changes are on the board for the seat to read,
@@ -365,6 +384,8 @@ pub fn determinize_on(
         shown: &ground.shown,
         match_shown_cost: options.match_shown_cost.unwrap_or(true),
     };
+    // R33, R448: a backrow or resolving card is hidden from the seat only while it is the opponent's, so
+    // each is sampled as the opponent's (R2826000).
     for side in [opp, seat] {
         let cloakable = &ground.cloakable[side];
         let pool = &ground.slot_pool[side];
@@ -402,7 +423,15 @@ pub fn determinize_on(
             } else {
                 None
             };
-            let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, seen, &mut sampled, rng);
+            let def_id = sampler.trap_for(
+                &mut next,
+                side,
+                slot,
+                shown_cost,
+                &seen[opp],
+                &mut sampled[opp],
+                rng,
+            );
             set_slot_def(&mut next, side, slot, &def_id);
             stamp_sampled_set_as(&mut next, side, slot, cloakable, set_turn);
         }
@@ -417,7 +446,8 @@ pub fn determinize_on(
             }
             let set_turn = card.summoned_turn.unwrap_or(next.turn);
             if slot_card(&next, side, slot).is_some_and(is_placeholder) {
-                let def_id = sampler.trap_for(&mut next, side, slot, None, seen, &mut sampled, rng);
+                let def_id =
+                    sampler.trap_for(&mut next, side, slot, None, &seen[opp], &mut sampled[opp], rng);
                 set_slot_def(&mut next, side, slot, &def_id);
                 stamp_sampled_set_as(&mut next, side, slot, cloakable, set_turn);
             }
@@ -429,18 +459,20 @@ pub fn determinize_on(
     let pool = &ground.card_pool;
     for at in 0..next.players[opp].hand.len() {
         if is_placeholder(&next.players[opp].hand[at]) {
-            next.players[opp].hand[at].def_id = sample_def(pool, seen, &mut sampled, rng);
+            next.players[opp].hand[at].def_id = sample_def(pool, &seen[opp], &mut sampled[opp], rng);
         }
     }
     for at in 0..next.players[opp].library.len() {
         if is_placeholder(&next.players[opp].library[at]) {
-            next.players[opp].library[at].def_id = sample_def(pool, seen, &mut sampled, rng);
+            next.players[opp].library[at].def_id = sample_def(pool, &seen[opp], &mut sampled[opp], rng);
         }
     }
-    // Step 5: the seat's own library — the opponent's cards in it sampled as in step 4, then shuffled.
+    // Step 5: the seat's own library, then shuffled. R2826000: a card minted for the opponent's deck
+    // (R73) is sampled as in step 4; every other hidden card there is the seat's own (R312, R433).
     for at in 0..next.players[seat].library.len() {
         if is_placeholder(&next.players[seat].library[at]) {
-            next.players[seat].library[at].def_id = sample_def(pool, seen, &mut sampled, rng);
+            let side = ground.own_library_sides.get(at).copied().unwrap_or(seat);
+            next.players[seat].library[at].def_id = sample_def(pool, &seen[side], &mut sampled[side], rng);
         }
     }
     next.players[seat].library = rng.shuffle(&next.players[seat].library);

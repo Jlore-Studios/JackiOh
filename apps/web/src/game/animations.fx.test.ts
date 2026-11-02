@@ -648,7 +648,23 @@ describe("B2 subscribeSignals", () => {
 
     queue.enqueue(longStream(2), fullBoardView());
 
-    expect(kinds(seen)).toEqual(["idle"]);
+    // R2789000: an entry that would have played signals `still` for the effects layer's callouts.
+    expect(kinds(seen).filter((kind) => kind !== "still")).toEqual(["idle"]);
+  });
+
+  it("R2789000 reduced motion emits still per entry with a row duration, in order, and idle after them", () => {
+    const clock = fakeClock();
+    const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: true, settings: at(1) });
+    const seen = listen(queue);
+
+    queue.enqueue([MANA, DAMAGE, GAME_OVER], fullBoardView());
+
+    expect(kinds(seen)).toEqual(["still", "still", "idle"]);
+    expect(seen.flatMap((signal) => (signal.kind === "still" ? [signal.entry.type] : []))).toEqual(["manaChanged", "damage"]);
+    expect(seen.flatMap((signal) => (signal.kind === "still" ? [signal.entry.durationMs] : []))).toEqual([0, 0]);
+    // Nothing is held: no timer, no entry in flight.
+    expect(clock.schedule).not.toHaveBeenCalled();
+    expect(queue.inFlight()).toBeNull();
   });
 
   it("B2 an empty enqueue emits idle and no start", () => {
@@ -898,7 +914,7 @@ describe("B5 the motion reduce setting", () => {
     expect(queue.animating().size).toBe(0);
     expect(queue.idle()).toBe(true);
     expect(onSettled).toHaveBeenCalledTimes(1);
-    expect(kinds(seen)).toEqual(["idle"]);
+    expect(kinds(seen).filter((kind) => kind !== "still")).toEqual(["idle"]);
   });
 
   it("B5 reduce ignores the speed setting: nothing is scheduled at any speed", () => {

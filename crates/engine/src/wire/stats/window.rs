@@ -26,7 +26,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, CreatedStats, GameFigures, GameMode, GameSource, GameTotal, PILOTS, Pilot,
+    CardStats, CardStatsFilter, CreatedStats, GameFigures, GameSource, GameTotal, ModeFilter, PILOTS, Pilot,
     PilotFilter, RecordsKey, SourceFilter, StatsTotals, add_created, add_stats, card_stats_of, game_figures,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
@@ -278,9 +278,9 @@ pub struct WindowQuery<'a> {
     /// The seats of a live record counted (R807000: `unified` is every seat, human and bot). A
     /// development record always counts both seats (R378, R1451).
     pub live_pilot: PilotFilter,
-    /// R377: one match type the figures count, or every mode. R654's gate counts every mode's live
-    /// games whatever it names.
-    pub mode: Option<GameMode>,
+    /// R377: one match type the figures count, every mode, or (R2777001) Constructed's two. R654's gate
+    /// counts every mode's live games whatever it names.
+    pub mode: ModeFilter,
     pub request: WindowRequest,
 }
 
@@ -371,29 +371,43 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             GameSource::Live => (SourceFilter::Live, query.live_pilot),
             GameSource::Dev => (SourceFilter::Dev, PilotFilter::Unified),
         };
-        let report = card_stats_of(
-            by_version.get(version).unwrap_or(&empty),
-            &CardStatsFilter {
-                source: filter_source,
-                mode: query.mode,
-                patch: Some(version.to_string()),
-                pilot,
-            },
-        );
-        Part {
-            games: i64::from(report.games),
-            decks: i64::from(report.decks),
-            cards: report
-                .cards
-                .into_iter()
-                .map(|stats| (stats.card.clone(), stats))
-                .collect(),
-            created: report
-                .created
-                .into_iter()
-                .map(|stats| (stats.card.clone(), stats))
-                .collect(),
+        let mut part = Part {
+            games: 0,
+            decks: 0,
+            cards: IndexMap::new(),
+            created: IndexMap::new(),
+        };
+        // R2777001: each mode the query reads, summed, as one card's records in two modes are two decks.
+        for mode in query.mode.modes() {
+            let report = card_stats_of(
+                by_version.get(version).unwrap_or(&empty),
+                &CardStatsFilter {
+                    source: filter_source,
+                    mode: *mode,
+                    patch: Some(version.to_string()),
+                    pilot,
+                },
+            );
+            part.games += i64::from(report.games);
+            part.decks += i64::from(report.decks);
+            for stats in report.cards {
+                match part.cards.get_mut(&stats.card) {
+                    None => {
+                        part.cards.insert(stats.card.clone(), stats);
+                    }
+                    Some(held) => add_stats(held, &stats),
+                }
+            }
+            for stats in report.created {
+                match part.created.get_mut(&stats.card) {
+                    None => {
+                        part.created.insert(stats.card.clone(), stats);
+                    }
+                    Some(held) => add_created(held, &stats),
+                }
+            }
         }
+        part
     };
     let mut parts: IndexMap<(String, GameSource), Part> = IndexMap::new();
     for step in &history[..=at] {
@@ -515,21 +529,19 @@ pub struct WindowedGames {
 
 /// R1994000: the game figures at `at` over the window every card shares, under R654's gate as
 /// R1367000 amends it (`windowed_card_stats` reads the same window): the counted versions' records of
-/// the sources the window counts, in `mode` or every mode. The gate counts every mode's live games.
+/// the sources the window counts, in the modes `mode` reads. The gate counts every mode's live games.
 pub fn windowed_game_figures(
     totals: &StatsTotals,
     history: &[PatchStep],
     at: &str,
-    mode: Option<GameMode>,
+    mode: ModeFilter,
     request: WindowRequest,
 ) -> WindowedGames {
     let collapsed = collapse_gameless(history, |version| totals.games(version));
     let (history, at) = resolve(&collapsed, at);
     let window = window_in(&history, at, None, request, &|version| totals.live_games(version));
     let counts = |key: &RecordsKey| {
-        window.counted.contains(&key.patch)
-            && window.sources().contains(&key.source)
-            && mode.is_none_or(|mode| key.mode == mode)
+        window.counted.contains(&key.patch) && window.sources().contains(&key.source) && mode.counts(key.mode)
     };
     let records = totals
         .records
@@ -568,7 +580,7 @@ mod tests {
     use super::*;
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
-    use crate::wire::stats::{CreatedUse, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
+    use crate::wire::stats::{CreatedUse, GameMode, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
 
     const A: &str = "core-001";
     const B: &str = "core-002";
@@ -637,7 +649,7 @@ mod tests {
             history,
             at,
             live_pilot: PilotFilter::Unified,
-            mode: None,
+            mode: ModeFilter::All,
             request: WindowRequest::Gated,
         }
     }
@@ -977,7 +989,7 @@ mod tests {
         };
 
         // Two live games in v2's window and none before it: provisional, the AI game padding it.
-        let games = at(&totals, None);
+        let games = at(&totals, ModeFilter::All);
         assert_eq!(
             games.window,
             windowed_card_stats(&totals, &query(&history, "v3")).patch
@@ -1003,17 +1015,76 @@ mod tests {
         // At the gate the live games alone count: the records added without their games count in
         // `records` and not in the figures, as a record folded before the figures were kept.
         add_live(&mut totals, "v2", PUBLIC_STATS_MIN_LIVE_GAMES);
-        let games = at(&totals, None);
+        let games = at(&totals, ModeFilter::All);
         assert_eq!(games.window.source, WindowSource::Live);
         assert_eq!(games.records, PUBLIC_STATS_MIN_LIVE_GAMES + 2);
         assert_eq!(games.figures.map(|figures| figures.games), Some(2));
         assert_eq!(games.pairs.len(), 2);
 
         // A mode no record was played in has no figures.
-        let conquest = at(&totals, Some(GameMode::Bo3));
+        let conquest = at(&totals, ModeFilter::Only(GameMode::Bo3));
         assert_eq!(
             (conquest.records, conquest.figures, conquest.pairs),
             (0, None, Vec::new())
         );
+    }
+
+    #[test]
+    fn r2777001_constructed_counts_best_of_one_and_conquest_together_and_no_all_random_game() {
+        let history = [step("v1", PatchTier::Major, &[])];
+        let in_mode = |record: GameRecord, mode: GameMode| GameRecord { mode, ..record };
+        let mut totals = StatsTotals::default();
+        for record in [
+            in_mode(game("m1", GameSource::Live, "v1", &[A]), GameMode::Bo1),
+            in_mode(game("m2", GameSource::Live, "v1", &[A]), GameMode::Bo3),
+            in_mode(game("m3", GameSource::Live, "v1", &[A, B]), GameMode::Random),
+        ] {
+            totals.fold(&record, false);
+        }
+        // Every mode's live games still count toward R654's gate.
+        add_live(&mut totals, "v1", PUBLIC_STATS_MIN_LIVE_GAMES - 3);
+        let read = |mode: ModeFilter| {
+            windowed_card_stats(
+                &totals,
+                &WindowQuery {
+                    mode,
+                    ..query(&history, "v1")
+                },
+            )
+        };
+
+        let constructed = read(ModeFilter::Constructed);
+        assert_eq!(constructed.patch.source, WindowSource::Live);
+        let a = constructed.card(A).expect("A was in two constructed decks");
+        assert_eq!((a.stats.in_deck.games, a.stats.in_deck.wins), (2, 2));
+        assert!(
+            constructed.card(B).is_none(),
+            "B was only ever dealt in All Random"
+        );
+
+        let random = read(ModeFilter::Only(GameMode::Random));
+        assert_eq!(random.card(A).map(|card| card.stats.in_deck.games), Some(1));
+        assert_eq!(random.patch.source, WindowSource::Live);
+
+        // The pair of modes reads what each mode read on its own, summed.
+        let one = |mode| {
+            read(ModeFilter::Only(mode))
+                .card(A)
+                .map_or(0, |card| card.stats.in_deck.games)
+        };
+        assert_eq!(one(GameMode::Bo1) + one(GameMode::Bo3), 2);
+        assert!(
+            ModeFilter::Constructed.counts(GameMode::Bo3)
+                && !ModeFilter::Constructed.counts(GameMode::Random)
+        );
+
+        let games = windowed_game_figures(
+            &totals,
+            &history,
+            "v1",
+            ModeFilter::Constructed,
+            WindowRequest::Gated,
+        );
+        assert_eq!(games.records, PUBLIC_STATS_MIN_LIVE_GAMES - 1);
     }
 }
