@@ -6,13 +6,15 @@
 //
 // Hovering or focusing an item shows it on the large card; clicking one the card owns equips it on
 // this card alone (`writeCardPick`, `writeCardFullArt`), and a locked one, which `useCanEquip` says no
-// to, equips nothing. `Use default` of a kind clears the card's pick, which leaves the card to its
+// to, equips nothing. Holding one, or its inspect key, previews it fullscreen (ItemPreview.tsx,
+// R2730000). `Use default` of a kind clears the card's pick, which leaves the card to its
 // kind's default (R1953001). The view decides nothing (CLAUDE.md rule 7): it sets a pick in the
 // device's store, which `cards/cardPicksSync.ts` sends to the account (R1834000), for the viewer's own
 // faces and, frozen as an online match begins, the opponent's sight of them (R1834002);
-// `GET /api/cosmetics` is the answer to what the viewer owns. R1953001: a locked one a held cosmetic
-// token covers offers that token in place (TokenOffer.tsx), on a card the account owns `MAX_COPIES`
-// of, the only card a token's per-card cosmetic goes on.
+// `GET /api/cosmetics` is the answer to what the viewer owns. R1953001, R2730000: a locked one a
+// held cosmetic token covers offers that token in its fullscreen preview (TokenOffer.tsx), and
+// nowhere else, on a card the account owns `MAX_COPIES` of, the only card a token's per-card
+// cosmetic goes on.
 //
 // A preview writes no pick. A face wears only what the store holds, and `cards/cosmetics.ts` has no
 // seam to draw one wearing an id it does not, so a preview of a foil, finish or border is a second
@@ -26,13 +28,13 @@
 // The card's text and meta stay one click away: `Card text` opens the detail view over this one.
 // Every animation here is a transform or opacity (collection.css) and holds still under reduced motion.
 
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CardArt, CardDetail, CardFace, faceModel } from "../cards/index.ts";
+import { CardArt, CardDetail, CardFace, INSPECT_KEY_SHORTCUT, faceModel } from "../cards/index.ts";
 import {
   DEFAULT_CARD_COSMETICS,
   OwnershipContext,
@@ -61,6 +63,7 @@ import {
   type StripItem,
   type StripKind,
 } from "./collection.ts";
+import ItemPreview, { trapTab, usePreviewHold } from "./ItemPreview.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 
 /**
@@ -127,6 +130,70 @@ function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item
   );
 }
 
+/** R2730000: one strip item: a hold or the inspect key previews it fullscreen, a click equips it. */
+function StripItemButton({
+  def,
+  face,
+  item,
+  equipped,
+  show,
+  hide,
+  equip,
+  onPreview,
+}: {
+  def: CardDef;
+  face: FaceModel;
+  item: StripItem;
+  equipped: boolean;
+  show: (item: StripItem) => void;
+  hide: (item: StripItem) => void;
+  equip: (item: StripItem) => void;
+  onPreview: (item: StripItem) => void;
+}): ReactElement {
+  return (
+    <button
+      type="button"
+      className="collection-strip__item"
+      data-testid={T.stripItem(item.id)}
+      data-owned={String(item.owned)}
+      data-equipped={String(equipped)}
+      data-rarity={item.rarity}
+      aria-pressed={equipped}
+      aria-disabled={item.owned ? undefined : true}
+      aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
+      {...usePreviewHold(`strip-${item.id}`, () => {
+        onPreview(item);
+      })}
+      onClick={() => {
+        equip(item);
+      }}
+      onMouseEnter={() => {
+        show(item);
+      }}
+      onMouseLeave={() => {
+        hide(item);
+      }}
+      onPointerEnter={() => {
+        show(item);
+      }}
+      onPointerLeave={() => {
+        hide(item);
+      }}
+      onFocus={() => {
+        show(item);
+      }}
+      onBlur={() => {
+        hide(item);
+      }}
+    >
+      <StripPicture def={def} face={face} item={item} />
+      <span className="collection-strip__name">{item.name}</span>
+      <span className="collection-strip__rarity">{t(item.rarity)}</span>
+      {item.owned ? null : <span className="collection-strip__lock">{t("Locked")}</span>}
+    </button>
+  );
+}
+
 function StripKindGroup({
   group,
   def,
@@ -136,7 +203,7 @@ function StripKindGroup({
   hide,
   equip,
   clear,
-  offer,
+  onPreview,
 }: {
   group: StripGroup;
   def: CardDef;
@@ -146,8 +213,8 @@ function StripKindGroup({
   hide: (item: StripItem) => void;
   equip: (item: StripItem) => void;
   clear: (kind: StripKind) => void;
-  /** R1953001: what a locked item offers, a held token that covers it, else nothing. */
-  offer: (item: StripItem) => ReactElement | null;
+  /** R2730000: what a held or inspected item opens: its fullscreen preview. */
+  onPreview: (item: StripItem) => void;
 }): ReactElement {
   const own = group.kind === "fullArt" ? picks.fullArt : picks[group.kind];
   return (
@@ -167,70 +234,23 @@ function StripKindGroup({
         </button>
       </div>
       <ul className="collection-strip__items">
-        {group.items.map((item) => {
-          const equipped = isEquipped(def.id, item, picks);
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                className="collection-strip__item"
-                data-testid={T.stripItem(item.id)}
-                data-owned={String(item.owned)}
-                data-equipped={String(equipped)}
-                data-rarity={item.rarity}
-                aria-pressed={equipped}
-                aria-disabled={item.owned ? undefined : true}
-                onClick={() => {
-                  equip(item);
-                }}
-                onMouseEnter={() => {
-                  show(item);
-                }}
-                onMouseLeave={() => {
-                  hide(item);
-                }}
-                onPointerEnter={() => {
-                  show(item);
-                }}
-                onPointerLeave={() => {
-                  hide(item);
-                }}
-                onFocus={() => {
-                  show(item);
-                }}
-                onBlur={() => {
-                  hide(item);
-                }}
-              >
-                <StripPicture def={def} face={face} item={item} />
-                <span className="collection-strip__name">{item.name}</span>
-                <span className="collection-strip__rarity">{t(item.rarity)}</span>
-                {item.owned ? null : <span className="collection-strip__lock">{t("Locked")}</span>}
-              </button>
-              {item.owned ? null : offer(item)}
-            </li>
-          );
-        })}
+        {group.items.map((item) => (
+          <li key={item.id}>
+            <StripItemButton
+              def={def}
+              face={face}
+              item={item}
+              equipped={isEquipped(def.id, item, picks)}
+              show={show}
+              hide={hide}
+              equip={equip}
+              onPreview={onPreview}
+            />
+          </li>
+        ))}
       </ul>
     </section>
   );
-}
-
-/** Keeps Tab inside the dialog, which holds nothing but buttons. */
-function trapTab(event: KeyboardEvent<HTMLElement>): void {
-  if (event.key !== "Tab") return;
-  const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled])")];
-  const first = buttons[0];
-  const last = buttons[buttons.length - 1];
-  if (first === undefined || last === undefined) return;
-  const active = document.activeElement;
-  if (event.shiftKey && active === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && active === last) {
-    event.preventDefault();
-    first.focus();
-  }
 }
 
 export default function CardCosmeticsView({
@@ -251,6 +271,7 @@ export default function CardCosmeticsView({
   const canEquip = useCanEquip();
   const picks = useCardPicks(def.id);
   const [preview, setPreview] = useState<StripItem | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
@@ -259,6 +280,7 @@ export default function CardCosmeticsView({
   // MAX_COPIES, the only card a token's per-card cosmetic goes on (the server's `choice_of`).
   const offering = copies >= MAX_COPIES && strip.some((group) => group.items.some((item) => !item.owned));
   const [tokens, setTokens] = useHeldTokens(offering ? token : null);
+  const previewed = strip.flatMap((group) => group.items).find((item) => item.id === previewing) ?? null;
 
   // Focus moves in and goes back to the card that opened the view; Escape closes it, unless the card's text is over it.
   useLayoutEffect(() => {
@@ -269,7 +291,7 @@ export default function CardCosmeticsView({
     };
   }, []);
   useEffect(() => {
-    if (textOpen) return undefined;
+    if (textOpen || previewing !== null) return undefined;
     const onKeyDown = (event: globalThis.KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
     };
@@ -277,7 +299,7 @@ export default function CardCosmeticsView({
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [textOpen, onClose]);
+  }, [textOpen, previewing, onClose]);
   // R2127000: Back closes the view as Close does, and the focus goes back as above. The card's text,
   // opened over it, is a layer of its own on top, so Back closes that first.
   useBackLayer(onClose);
@@ -297,15 +319,12 @@ export default function CardCosmeticsView({
     if (token === null || tokens === null || tier === null) return null;
     return (
       <TokenOffer
+        key={item.id}
         token={token}
-        tier={tier}
+        spend={{ kind: "cosmetic", tier, cosmeticId: item.id, cardId: def.id }}
         held={tokens}
-        cosmeticId={item.id}
         name={item.name}
-        cardId={def.id}
         onRedeemed={setTokens}
-        testid={T.tokenOffer(item.id)}
-        errorTestid={T.tokenOfferError(item.id)}
       />
     );
   };
@@ -343,7 +362,9 @@ export default function CardCosmeticsView({
                 }}
                 equip={equip}
                 clear={clear}
-                offer={offer}
+                onPreview={(item) => {
+                  setPreviewing(item.id);
+                }}
               />
             ))}
             <div className="collection-cardview__actions">
@@ -373,6 +394,25 @@ export default function CardCosmeticsView({
           />
         ) : null}
       </div>
+      {previewed === null ? null : (
+        <ItemPreview
+          id={previewed.id}
+          name={previewed.name}
+          rarity={previewed.rarity}
+          owned={previewed.owned}
+          picture={
+            previewed.kind === "fullArt" && !previewed.owned ? (
+              <StripPicture def={def} face={face} item={previewed} />
+            ) : (
+              <LargeFace face={face} preview={previewed} />
+            )
+          }
+          offer={previewed.owned ? null : offer(previewed)}
+          onClose={() => {
+            setPreviewing(null);
+          }}
+        />
+      )}
     </OwnCopy>
   );
 }

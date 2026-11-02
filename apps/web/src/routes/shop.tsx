@@ -73,7 +73,7 @@ export default function ShopRoute({ token }: { token: string }): ReactElement {
           <Shop token={token} revision={reads.shop} onChanged={changedBy("shop")} />
           <PackOpening token={token} revision={reads.opening} onChanged={changedBy("opening")} />
           <CosmeticPacks token={token} revision={reads.cosmetics} onChanged={changedBy("cosmetics")} />
-          <TokenPicker token={token} revision={reads.tokens} onChanged={changedBy("tokens")} />
+          <TokenPicker token={token} revision={reads.tokens} />
         </div>
         {/* R1665000: the odds and the pity are on their own page, not in the panels above. */}
         <p className="shop-purchases-link">

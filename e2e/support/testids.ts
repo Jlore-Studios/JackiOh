@@ -934,23 +934,31 @@ export function shopBuyId(pack: string): string {
   return `shop-buy-${pack}`;
 }
 
-/** §14.5: the token picker: the card tokens held, and one Pick per card a card token unlocks. */
+/** §14.5: the token picker: the card tokens held, spent from a locked card's preview in the Collection (R2730000). */
 export const TOKEN_PANEL = "token-panel";
 export const TOKEN_HELD_CARD = "token-held-card";
 
-export function tokenCardPickId(cardId: string): string {
-  return `token-card-pick-${cardId}`;
+/** R2730000: a locked card or cosmetic's fullscreen preview in the Collection, the only place a token is spent. */
+export function collectionSetToggleId(set: string): string {
+  return `collection-set-toggle-${set}`;
 }
 
-/** Every card token Pick, whatever its card; the card is the testid's suffix. */
-export const TOKEN_CARD_PICKS = '[data-testid^="token-card-pick-"]';
+export function collectionCardId(cardId: string): string {
+  return `collection-card-${cardId}`;
+}
 
-/** §14.5 (#2251): the card-token picker's Unlock confirm and Cancel, mirroring `shopTestid`. */
-export const TOKEN_CARD_CONFIRM = "token-card-confirm";
-export const TOKEN_CARD_CANCEL = "token-card-cancel";
+/** Every locked card in the Collection's grid, whatever its card; the card is the testid's suffix. */
+export const COLLECTION_LOCKED_CARDS = '[data-testid^="collection-card-"][data-owned="false"]';
 
-/** Every card face in the card-token picker's pool, whatever its card; the card is the testid's suffix. */
-export const TOKEN_POOL_CARDS = '[data-testid^="card-pool-"]';
+export const COLLECTION_PREVIEW = "collection-preview";
+
+export function collectionTokenOfferId(id: string): string {
+  return `collection-token-offer-${id}`;
+}
+
+export function collectionTokenOfferConfirmId(id: string): string {
+  return `collection-token-offer-confirm-${id}`;
+}
 
 /** §14.3: the packs held, and the scene that opens one (`data-grant` on a slot is `card`, `cosmetic` or `bars`). */
 export function packsOpenId(pack: string): string {

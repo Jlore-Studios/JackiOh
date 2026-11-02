@@ -73,6 +73,11 @@ export const collectionTestid = {
   tokenOfferDialog: (id: string) => `collection-token-offer-dialog-${id}`,
   tokenOfferConfirm: (id: string) => `collection-token-offer-confirm-${id}`,
   tokenOfferCancel: (id: string) => `collection-token-offer-cancel-${id}`,
+  // R2730000: the fullscreen preview a held or inspected item opens, the only place a token is spent.
+  preview: "collection-preview",
+  previewScrim: "collection-preview-scrim",
+  previewClose: "collection-preview-close",
+  previewStatus: "collection-preview-status",
   ownedCosmetic: (id: string, cardId: string | null) =>
     cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;

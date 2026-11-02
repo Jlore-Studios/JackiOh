@@ -3320,6 +3320,8 @@
   "Epic tokens held: {count}": "持有史诗代币：{count}",
   "Unlock with a Rare token ({count} held)": "用稀有代币解锁（持有 {count} 个）",
   "Unlock with an Epic token ({count} held)": "用史诗代币解锁（持有 {count} 个）",
+  "Unlock with a card token ({count} held)": "用卡牌代币解锁（持有 {count} 个）",
+  "Hold a locked card or cosmetic in your Collection to spend a token": "在收藏中长按未解锁的卡牌或外观即可使用代币",
   "Unlock {name}? This spends 1 Rare token.": "解锁{name}？这将花费 1 个稀有代币。",
   "Unlock {name}? This spends 1 Epic token.": "解锁{name}？这将花费 1 个史诗代币。",
   "Spend cosmetic tokens on a locked cosmetic in your Collection": "在收藏中把外观代币用在未解锁的外观上",
