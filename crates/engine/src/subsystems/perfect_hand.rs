@@ -15,7 +15,7 @@ use serde_json::json;
 use crate::layers::AuraTable;
 use crate::prelude::json_as;
 use crate::script::Effect;
-use crate::state::{CardInstance, GameState, find_instance};
+use crate::state::{CardInstance, GameState};
 use crate::subsystems::scorer::{Scored, ScorerOptions, dry_run_base, perfect_pool, score_def_in};
 use crate::wire::PlayerId;
 
@@ -96,9 +96,7 @@ pub fn replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs) -> Effect {
                 crate::zones::OffFieldZone::Graveyard,
                 Default::default(),
             );
-            let landed = find_instance(ctx.sink.state, &card.id)
-                .cloned()
-                .unwrap_or_else(|| card.clone());
+            let landed = crate::zones::live_or(ctx.sink.state, &card);
             crate::zones::report_graveyard_landing(&mut ctx.sink, &landed, result);
         }
         for scored in picks.iter().take(hand.len()) {

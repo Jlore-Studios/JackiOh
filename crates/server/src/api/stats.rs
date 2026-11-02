@@ -54,14 +54,12 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
-    CARD_STATS_MIN_SAMPLE, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX,
-    PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
+    CARD_STATS_MIN_SAMPLE, MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS,
+    PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
+    PUBLIC_STATS_MIN_LIVE_GAMES,
 };
 use crate::db::store::{PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
-
-/// Unit conversion, not configuration.
-const MS_PER_SECOND: i64 = 1000;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]

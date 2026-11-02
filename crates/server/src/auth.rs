@@ -35,7 +35,7 @@ use serde_json::{Value, json};
 
 use crate::config::{
     AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
-    JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS,
+    JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS, MS_PER_SECOND,
 };
 
 // The identity a verified token names
@@ -120,9 +120,6 @@ pub const PASSWORD_PATH_DISABLED_MESSAGE: &str =
 pub const ACCOUNT_DELETION_UNAVAILABLE_MESSAGE: &str = "Account deletion is not available on this server.";
 pub const ACCOUNT_DELETION_RETRY_MESSAGE: &str =
     "Your account could not be deleted just now. Try again in a minute.";
-
-/// Unit conversion, not configuration.
-const MS_PER_SECOND: i64 = 1000;
 
 /// The level a token claims to be (`aal`): `aal2` once a second factor was proved (R665).
 const SECOND_FACTOR_LEVEL: &str = "aal2";

@@ -56,6 +56,7 @@ import type {
 import type { ReplaySource } from "../replay/source.ts";
 import { SEQUENCE_WINDOW_MS, sequenceQuestionOf, stopAnswerOf } from "../game/sequenceClock.ts";
 import { practiceReplaySource } from "../replay/sources.ts";
+import { messageOf } from "../net/errors.ts";
 
 type PracticePhase = "idle" | "starting" | "playing" | "over" | "failed";
 
@@ -130,10 +131,6 @@ const globalTimers: PracticeTimers = {
 };
 
 type Job = { body: PracticeRequestBody; done: (response: PracticeResponse) => void };
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 function unexpected(response: PracticeResponse): string {
   return response.type === "failed" ? response.message : `the practice worker answered "${response.type}" unexpectedly`;

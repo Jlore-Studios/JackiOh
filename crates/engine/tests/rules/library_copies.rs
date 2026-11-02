@@ -11,7 +11,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::add_library_copies;
 
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, matches_object, new_game, run_effect, set_library,
+    events_of_type, in_hand, matches_object, new_game, run_as_p1 as run, set_library,
 };
 
 fn game(seed: &str) -> GameState {
@@ -20,12 +20,6 @@ fn game(seed: &str) -> GameState {
     state.active = P1;
     state.phase = Phase::Main;
     state
-}
-
-/// TS `run(state, effect)`: the effect applied for p1 with no card of its own, the rng cursor written
-/// back; its events.
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
 }
 
 fn copies(args: Value) -> Effect {

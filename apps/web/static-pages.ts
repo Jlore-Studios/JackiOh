@@ -6,7 +6,7 @@
 // Every address names the build's own host (`StaticPagesInput.origin`, #696), and so does the CSP the
 // build writes into `_headers` (`connectSources`).
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import type { Plugin } from "vite";
@@ -14,8 +14,9 @@ import type { Plugin } from "vite";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
+import { RELEASE_ART_DIR, releaseArtAsset, releaseArtAssets } from "./src/patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines } from "./src/patches/releases.ts";
-import type { Patch, TechnicalEntry } from "./src/patches/source.ts";
+import type { Patch, Snapshot, TechnicalEntry } from "./src/patches/source.ts";
 import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS, MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
@@ -470,11 +471,16 @@ export type StaticPagesInput = {
   patches: readonly Patch[];
   /** R1369000: the technical log, `technical.json`. */
   technical?: readonly TechnicalEntry[];
+  /** #2681: one version's catalog snapshot; with it, every patch's release artwork is written beside the pages. */
+  snapshot?: (version: string) => Snapshot | null;
   outDir: string;
   origin: string;
   /** The build's `VITE_SUPABASE_URL`, for its CSP (`connectSources`); unset, the CSP names no Supabase host. */
   supabaseUrl?: string | undefined;
 };
+
+/** Where the release artwork is written under the output directory (releaseArt.ts's `RELEASE_ART_DIR`, without its slash). */
+const RELEASE_ART_FOLDER = "release-art";
 
 export function writeStaticPages({
   template,
@@ -482,6 +488,7 @@ export function writeStaticPages({
   cards,
   patches,
   technical = [],
+  snapshot,
   outDir,
   origin,
   supabaseUrl,
@@ -498,6 +505,10 @@ export function writeStaticPages({
     writeFileSync(file, pageHtml(template, page, pages, extra, origin));
   }
   writeFileSync(join(outDir, "sitemap.xml"), sitemapXml(pages, origin));
+  if (snapshot !== undefined) {
+    mkdirSync(join(outDir, RELEASE_ART_FOLDER), { recursive: true });
+    for (const { path, svg } of releaseArtAssets(patches, snapshot)) writeFileSync(join(outDir, decodeURIComponent(path)), svg);
+  }
   for (const file of ADDRESSED_PUBLIC_FILES) {
     const text = readFileSync(join(outDir, file), "utf8");
     if (!text.includes(SITE_ORIGIN)) throw new Error(`static-pages.ts: ${file} does not name ${SITE_ORIGIN}`);
@@ -518,9 +529,15 @@ export function staticPages(): Plugin {
   let outDir = "";
   let origin = SITE_ORIGIN;
   let supabaseUrl: string | undefined;
+  // Reading here avoids bundling the catalog into each config load.
+  const data = (file: string): unknown =>
+    JSON.parse(readFileSync(resolve(root, "../../crates/cards", file), "utf8"));
+  const snapshot = (version: string): Snapshot | null => {
+    const file = resolve(root, "../../crates/cards/patches", `${version}.json`);
+    return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Snapshot) : null;
+  };
   return {
     name: "jackioh:static-pages",
-    apply: "build",
     configResolved(config) {
       root = config.root;
       outDir = resolve(config.root, config.build.outDir);
@@ -531,16 +548,35 @@ export function staticPages(): Plugin {
       const supabase: unknown = config.env.VITE_SUPABASE_URL;
       supabaseUrl = typeof supabase === "string" ? supabase : undefined;
     },
+    // #2681: the dev server draws a patch's artwork when asked for it, as the build writes it, and
+    // answers no other path: nothing is written into the source tree.
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const path = (request.url ?? "").split("?")[0] ?? "";
+        try {
+          const asset = path.startsWith(RELEASE_ART_DIR)
+            ? releaseArtAsset(path, data("patches/patches.json") as Patch[], snapshot)
+            : null;
+          if (asset === null) {
+            next();
+            return;
+          }
+          response.setHeader("Content-Type", "image/svg+xml");
+          response.end(asset.svg);
+        } catch (error) {
+          next(error);
+        }
+      });
+    },
+    // Only a build writes pages: `serve` never runs this hook.
     writeBundle() {
-      // Reading here avoids bundling the catalog into each config load.
-      const data = (file: string): unknown =>
-        JSON.parse(readFileSync(resolve(root, "../../crates/cards", file), "utf8"));
       writeStaticPages({
         template: readFileSync(join(outDir, "index.html"), "utf8"),
         pages: PUBLIC_PAGES,
         cards: data("catalog.json") as CardDefs,
         patches: data("patches/patches.json") as Patch[],
         technical: data("patches/technical.json") as TechnicalEntry[],
+        snapshot,
         outDir,
         origin,
         supabaseUrl,

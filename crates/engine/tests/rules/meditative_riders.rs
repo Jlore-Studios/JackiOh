@@ -11,7 +11,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::harness::{act, act_ok, in_hand, new_game, put, run_effect, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    act, act_ok, in_hand, new_game, put, run_as_p1 as run, run_effect, sink_for, slot,
+};
 use crate::rules::fixtures::meditative_riders::{
     GRANT_KEY, LOG_LANE, RIDER_SCRIPTS, bearer, book, closed_mic, ear, fuser, granter, log_card, mind, notes,
     open_mic, riders_catalog,
@@ -72,11 +74,6 @@ fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-/// The effect applied on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
 }
 
 /// The events of one action, as a player's view sends them.

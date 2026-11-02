@@ -4,7 +4,7 @@
 // `_headers`' CSP). `writeStaticPages` is called on a temp directory with the source `index.html`, so
 // no test needs a full build.
 
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,7 @@ import {
   PUBLIC_PAGES,
   connectSources,
   sitemapXml,
+  staticPages,
   writeStaticPages,
 } from "../static-pages.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "./game/deckbuilder/filters.ts";
@@ -32,9 +33,10 @@ import { almanacShelf } from "./game/deckbuilder/shelf.ts";
 import { SITE_ORIGIN, originOf, paths, siteOrigin } from "./net/navigate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { newestFirst } from "./patches/history.ts";
+import { releaseArtAssets, releaseArtPath } from "./patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./patches/releases.ts";
-import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V3, fixtureDef } from "./patches/fixtures.ts";
-import type { Patch } from "./patches/source.ts";
+import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./patches/fixtures.ts";
+import type { Patch, Snapshot } from "./patches/source.ts";
 import AccessibilityRoute from "./routes/accessibility.tsx";
 import AiRoute from "./routes/ai.tsx";
 import CopyrightRoute from "./routes/copyright.tsx";
@@ -74,10 +76,31 @@ function publicFiles(): string {
   return outDir;
 }
 
-/** Writes every page for this data, origin and Supabase host, with the public files it rewrites, and returns the directory. */
-function writeAll(cards: CardDefs, patches: readonly Patch[], origin: string = SITE_ORIGIN, supabaseUrl?: string): string {
+/**
+ * Writes every page for this data and origin, with the public files it rewrites, and returns the
+ * directory: with a Supabase host, the CSP names it; with a snapshot reader, each patch's release
+ * artwork is written too.
+ */
+function writeAll(
+  cards: CardDefs,
+  patches: readonly Patch[],
+  origin: string = SITE_ORIGIN,
+  {
+    supabaseUrl,
+    snapshot,
+  }: { supabaseUrl?: string | undefined; snapshot?: (version: string) => Snapshot | null } = {},
+): string {
   const outDir = publicFiles();
-  writeStaticPages({ template: TEMPLATE, pages: PUBLIC_PAGES, cards, patches, outDir, origin, supabaseUrl });
+  writeStaticPages({
+    template: TEMPLATE,
+    pages: PUBLIC_PAGES,
+    cards,
+    patches,
+    ...(snapshot === undefined ? {} : { snapshot }),
+    outDir,
+    origin,
+    supabaseUrl,
+  });
   return outDir;
 }
 
@@ -224,7 +247,7 @@ describe("the static pages", () => {
     ] as const) {
       const other = origin === production ? staging : production;
       const supabase = envValue(file, "VITE_SUPABASE_URL");
-      const outDir = writeAll(CATALOG, REAL_PATCHES, origin, supabase);
+      const outDir = writeAll(CATALOG, REAL_PATCHES, origin, { supabaseUrl: supabase });
       for (const { path } of PUBLIC_PAGES) {
         const { html, doc } = read(outDir, path);
         expect(attr(doc, 'link[rel="canonical"]', "href"), `${origin} ${path}`).toBe(`${origin}${path}`);
@@ -352,6 +375,69 @@ describe("the static pages", () => {
           norm(el.textContent),
         );
       }
+    }
+  });
+});
+
+describe("#2681 the release artwork beside the static pages", () => {
+  const snapshot = (version: string): Snapshot | null => FIXTURE_SNAPSHOTS[version] ?? null;
+  // V1 is a major here, V2 and V3 are not.
+  const patches = FIXTURE_PATCHES.map((patch) => (patch.version === V1 ? { ...patch, tier: "major" as const } : patch));
+
+  it("#2681 writes normal release art for every patch and a still companion for each major", () => {
+    const outDir = writeAll(fixtureCatalog(), patches, SITE_ORIGIN, { snapshot });
+    expect(readdirSync(join(outDir, "release-art")).sort()).toEqual([`${V1}-still.svg`, `${V1}.svg`, `${V2}.svg`, `${V3}.svg`].sort());
+    // Each file is what releaseArt.ts draws for its path: the major's normal file moves, the rest hold still.
+    const assets = releaseArtAssets(patches, snapshot);
+    expect(assets).toHaveLength(4);
+    for (const asset of assets) expect(readFileSync(join(outDir, asset.path), "utf8"), asset.path).toBe(asset.svg);
+    expect(readFileSync(join(outDir, releaseArtPath(V1, "animated")), "utf8")).toContain("<style>");
+    for (const path of [releaseArtPath(V1, "still"), releaseArtPath(V2, "animated"), releaseArtPath(V3, "animated")]) {
+      expect(readFileSync(join(outDir, path), "utf8"), path).not.toContain("<style");
+    }
+    // The pages are written as before, and a build handed no snapshots writes no artwork.
+    expect(existsSync(join(outDir, "patch-notes", "index.html"))).toBe(true);
+    expect(existsSync(join(writeAll(fixtureCatalog(), patches), "release-art"))).toBe(false);
+  });
+
+  it("#2681 the dev server draws a release's artwork when asked, and passes every other path on", () => {
+    type Handler = (request: { url?: string }, response: { setHeader: (name: string, value: string) => void; end: (body: string) => void }, next: (error?: unknown) => void) => void;
+    const plugin = staticPages() as unknown as {
+      configResolved: (config: unknown) => void;
+      configureServer: (server: { middlewares: { use: (handler: Handler) => void } }) => void;
+    };
+    plugin.configResolved({ root: join(HERE, ".."), build: { outDir: "dist" }, env: {} });
+    let handler: Handler | null = null;
+    plugin.configureServer({ middlewares: { use: (use) => (handler = use) } });
+    const serve = (url: string): { body: string | null; type: string | null; passed: boolean } => {
+      const seen = { body: null as string | null, type: null as string | null, passed: false };
+      handler?.(
+        { url },
+        {
+          setHeader: (name, value) => {
+            if (name === "Content-Type") seen.type = value;
+          },
+          end: (body) => {
+            seen.body = body;
+          },
+        },
+        () => {
+          seen.passed = true;
+        },
+      );
+      return seen;
+    };
+    // The real history: a major's animated file and its still companion, and a patch's file, with a query string.
+    const animated = serve(`${releaseArtPath("v0.4.0", "animated")}?t=1`);
+    expect(animated.type).toBe("image/svg+xml");
+    expect(animated.body).toContain("<style>");
+    expect(animated.body).toContain("v0.4.0");
+    expect(serve(releaseArtPath("v0.4.0", "still")).body).not.toContain("<style");
+    expect(serve(releaseArtPath("v0.4.1", "animated")).body).toContain("v0.4.1");
+    for (const url of [releaseArtPath("v0.4.1", "still"), "/release-art/nobody.svg", "/patch-notes", "/", "/release-art/"]) {
+      const seen = serve(url);
+      expect(seen.passed, url).toBe(true);
+      expect(seen.body, url).toBeNull();
     }
   });
 });

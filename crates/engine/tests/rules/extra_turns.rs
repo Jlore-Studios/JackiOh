@@ -4,13 +4,12 @@
 //! Port of nothing shipped: no shipped card loses a refresh or owes a turn.
 
 use jackioh_engine::effects::{gain_mana, lose_refreshes, next_turn_mana, take_extra_turn};
-use jackioh_engine::resolve::{HookOptions, make_context};
-use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{Effect, EngineSink};
+use jackioh_engine::resolve::HookOptions;
+use jackioh_engine::script::Effect;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{act, act_result, new_game};
+use crate::rules::fixtures::harness::{act, act_result, new_game, run_with_options as run};
 
 /// Past both mulligans, in p1's main phase on turn 1, with no automatic turn end on either seat
 /// (R82 would otherwise run a zero-mana turn on by itself).
@@ -31,19 +30,6 @@ fn playing(seed: &str) -> GameState {
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     state
-}
-
-/// Apply one effect the way `resolve.ts` does, and hand back the events it emitted.
-fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut events = Vec::new();
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, options);
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 fn as_p1() -> HookOptions {
