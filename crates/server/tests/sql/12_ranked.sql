@@ -543,4 +543,132 @@ begin
 end $$;
 rollback;
 
+\echo '### R2778000: two ladders: the All Random triple on profiles, refused to a client; a row, a bot rating and a rated game per ladder ###'
+begin;
+do $$
+declare
+  wrong text := '';
+  refused_by text;
+begin
+  -- The All Random triple: doubles, never null, a new player's values by default.
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'profiles'
+                and column_name in ('random_rating', 'random_rating_deviation', 'random_rating_volatility')
+                and (data_type <> 'double precision' or is_nullable <> 'NO')) then
+    raise exception 'FAIL (R2778000): the All Random triple is not three non-null doubles';
+  end if;
+  if (select count(*) from information_schema.columns
+       where table_schema = 'public' and table_name = 'profiles'
+         and column_name in ('random_rating', 'random_rating_deviation', 'random_rating_volatility')) <> 3 then
+    raise exception 'FAIL (R2778000): profiles lacks a column of the All Random triple';
+  end if;
+  if (select random_rating from public.profiles where id = '11111111-1111-1111-1111-111111111111')
+       is distinct from (select rating from public.profiles where id = '11111111-1111-1111-1111-111111111111')
+     or (select random_rating_deviation from public.profiles where id = '11111111-1111-1111-1111-111111111111')
+       is distinct from 350::float8 then
+    raise exception 'FAIL (R2778000): profile 1 does not start All Random at its own rating and a new player''s deviation';
+  end if;
+
+  -- One season row per player per season per ladder, and only the two ladders.
+  insert into public.seasons (id, patch_version, started_at) values ('v8.1', 'v8.1.0', now());
+  insert into public.season_ranks (season_id, profile_id, games, wins, losses, draws, ladder,
+                                   floor, streak, peak_ladder, peak_jlorious, updated_at)
+    values ('v8.1', '11111111-1111-1111-1111-111111111111', 5, 5, 0, 0, 40, 1, 5, 40, null, now());
+  insert into public.season_ranks (season_id, profile_id, format, games, wins, losses, draws, ladder,
+                                   floor, streak, peak_ladder, peak_jlorious, updated_at)
+    values ('v8.1', '11111111-1111-1111-1111-111111111111', 'random', 2, 1, 1, 0, null, 0, 0, null, null, now());
+  if (select format from public.season_ranks
+       where season_id = 'v8.1' and profile_id = '11111111-1111-1111-1111-111111111111' and games = 5)
+     is distinct from 'constructed' then
+    raise exception 'FAIL (R2778000): a row written without a ladder is not Constructed''s';
+  end if;
+  begin
+    insert into public.season_ranks (season_id, profile_id, format, games, wins, losses, draws, ladder,
+                                     floor, streak, peak_ladder, peak_jlorious, updated_at)
+      values ('v8.1', '11111111-1111-1111-1111-111111111111', 'random', 3, 2, 1, 0, null, 0, 0, null, null, now());
+    raise exception 'FAIL (R2778000): a second All Random row for the same player and season held';
+  exception
+    when unique_violation then
+      get stacked diagnostics refused_by = constraint_name;
+      if refused_by is distinct from 'season_ranks_pkey' then
+        raise exception 'FAIL (R2778000): the duplicate was refused by %, not season_ranks_pkey', refused_by;
+      end if;
+  end;
+  begin
+    insert into public.season_ranks (season_id, profile_id, format, games, wins, losses, draws, ladder,
+                                     floor, streak, peak_ladder, peak_jlorious, updated_at)
+      values ('v8.1', '22222222-2222-2222-2222-222222222222', 'wild', 0, 0, 0, 0, null, 0, 0, null, null, now());
+    raise exception 'FAIL (R2778000): a season row on a ladder that does not exist held';
+  exception
+    when check_violation then null;
+  end;
+
+  -- A bot's rating per ladder.
+  insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at)
+    values ('ai-ladders', 1100, 300, 0.06, 1, now());
+  insert into public.bot_ratings (bot_id, format, rating, deviation, volatility, games, updated_at)
+    values ('ai-ladders', 'random', 900, 300, 0.06, 1, now());
+  if (select count(*) from public.bot_ratings where bot_id = 'ai-ladders') <> 2 then
+    wrong := wrong || 'bot_ratings ';
+  end if;
+  begin
+    insert into public.bot_ratings (bot_id, format, rating, deviation, volatility, games, updated_at)
+      values ('ai-ladders', 'random', 950, 300, 0.06, 2, now());
+    raise exception 'FAIL (R2778000): a second All Random rating for the same bot held';
+  exception
+    when unique_violation then
+      get stacked diagnostics refused_by = constraint_name;
+      if refused_by is distinct from 'bot_ratings_pkey' then
+        raise exception 'FAIL (R2778000): the duplicate was refused by %, not bot_ratings_pkey', refused_by;
+      end if;
+  end;
+
+  -- A rated game names its ladder, Constructed by default, and only the two.
+  if (select column_default from information_schema.columns
+       where table_schema = 'public' and table_name = 'rated_games' and column_name = 'format')
+     not like '''constructed''%' then
+    wrong := wrong || 'rated_games.format default ';
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'rated_games_format_check') then
+    wrong := wrong || 'rated_games_format_check ';
+  end if;
+  if wrong <> '' then
+    raise exception 'FAIL (R2778000): %', wrong;
+  end if;
+  raise notice 'OK (R2778000): a season row, a bot rating and a rated game per ladder, keyed and checked';
+end $$;
+rollback;
+
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
+do $$
+begin
+  if current_user <> 'authenticated' then
+    raise exception 'FAIL (R2778000): running as %, not authenticated', current_user;
+  end if;
+  begin
+    perform random_rating from public.profiles where id = '11111111-1111-1111-1111-111111111111';
+    raise exception 'FAIL (R2778000): authenticated read profiles.random_rating — R612 holds for both ladders';
+  exception
+    when insufficient_privilege then
+      raise notice 'OK (R2778000): profiles.random_rating refused';
+    when others then
+      if sqlerrm like 'FAIL%' then raise; end if;
+      raise exception 'FAIL (R2778000): profiles.random_rating raised "%" (%)', sqlerrm, sqlstate;
+  end;
+  begin
+    perform random_rating_deviation, random_rating_volatility
+      from public.profiles where id = '11111111-1111-1111-1111-111111111111';
+    raise exception 'FAIL (R2778000): authenticated read the All Random deviation and volatility';
+  exception
+    when insufficient_privilege then
+      raise notice 'OK (R2778000): the All Random deviation and volatility refused';
+    when others then
+      if sqlerrm like 'FAIL%' then raise; end if;
+      raise exception 'FAIL (R2778000): the All Random deviation raised "%" (%)', sqlerrm, sqlstate;
+  end;
+end $$;
+rollback;
+
 \echo '### ALL RANKED CHECKS RAN ###'

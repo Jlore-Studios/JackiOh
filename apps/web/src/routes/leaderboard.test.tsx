@@ -24,6 +24,7 @@ const ID_LENA = "9e8d7c6b-5a4f-4e3d-2c1b-0a9f8e7d6c5b";
 function board(over: Partial<LeaderboardResponse> = {}): LeaderboardResponse {
   return {
     season: "v0.2",
+    ladder: "constructed",
     jlorious: [
       { position: 1, profileId: ID_MAX, username: "Max", you: false },
       { position: 2, profileId: ID_ME, username: "محمد#2", you: true },
@@ -47,6 +48,47 @@ afterEach(() => {
 });
 
 describe("the leaderboard screen", () => {
+  it("R2778000 opens on Constructed, switches to All Random and back, each ladder read and named in the address", async () => {
+    window.history.replaceState(null, "", "/leaderboard");
+    vi.mocked(getLeaderboard).mockImplementation(async (_token, ladder = "constructed") =>
+      ladder === "random"
+        ? board({ ladder: "random", jlorious: [], raisins: 9, you: { tier: "raisin", placementsPlayed: 1, placementGames: 5 } })
+        : board(),
+    );
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    const group = await screen.findByTestId(leaderboardTestid.ladder);
+    const constructed = within(group).getByRole("button", { name: "Constructed" });
+    const random = within(group).getByRole("button", { name: "All Random" });
+    expect(constructed).toHaveAttribute("aria-pressed", "true");
+    expect(random).toHaveAttribute("aria-pressed", "false");
+    expect(await screen.findByTestId("leaderboard-jlorious")).toHaveTextContent("Max");
+    expect(vi.mocked(getLeaderboard)).toHaveBeenLastCalledWith(TOKEN, "constructed");
+
+    fireEvent.click(random);
+    expect(random).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByTestId("leaderboard-raisins")).toHaveTextContent("9 players");
+    expect(screen.queryByTestId("leaderboard-jlorious")).toBeNull();
+    expect(vi.mocked(getLeaderboard)).toHaveBeenLastCalledWith(TOKEN, "random");
+    expect(window.location.search).toBe("?ladder=random");
+
+    fireEvent.click(constructed);
+    expect(await screen.findByTestId("leaderboard-jlorious")).toHaveTextContent("Max");
+    expect(window.location.search).toBe("");
+  });
+
+  it("R2778000 an address with ?ladder=random opens on All Random", async () => {
+    window.history.replaceState(null, "", "/leaderboard?ladder=random");
+    vi.mocked(getLeaderboard).mockResolvedValue(board({ ladder: "random" }));
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    const group = await screen.findByTestId(leaderboardTestid.ladder);
+    expect(within(group).getByRole("button", { name: "All Random" })).toHaveAttribute("aria-pressed", "true");
+    await screen.findByTestId("leaderboard-season");
+    expect(vi.mocked(getLeaderboard)).toHaveBeenCalledWith(TOKEN, "random");
+    window.history.replaceState(null, "", "/leaderboard");
+  });
+
   it("lists Jlorious by position, the tiers with their counts, and the Raisins", async () => {
     vi.mocked(getLeaderboard).mockResolvedValue(board());
     render(<LeaderboardRoute token={TOKEN} />);
