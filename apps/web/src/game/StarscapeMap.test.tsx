@@ -12,7 +12,6 @@ import { fullBoardView } from "../test/fixtures.ts";
 
 afterEach(cleanup);
 
-/** A charted map: one node of each reward, Heals up to the 19th, then the edge; standing on `at`. */
 function map(at: number): StarscapeView {
   const heal: StarscapeNodeView = { reward: "heal", amount: 3 };
   const nodes: StarscapeNodeView[] = [

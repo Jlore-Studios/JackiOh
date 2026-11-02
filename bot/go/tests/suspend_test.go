@@ -13,7 +13,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/commands"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/dashboard"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
@@ -248,8 +247,8 @@ func TestSuspend_TheProbeStopsARunOnASuspendedSubscription(t *testing.T) {
 func TestSuspend_TheStatusIssueShowsASuspendedAccountAsOff(t *testing.T) {
 	_, ctx := newSuspendScheduling()
 	suspendSuspend(ctx, "claude-1")
-	style, text := dashboard.Account(ctx, ctx.Store.Load(), ctx.Cfg.Pool.Get("claude-1"))
-	assertEqual(t, [2]string{style, text}, [2]string{"off", "⚫ suspended"})
+	assertEqual(t, dashboardHeldBy(ctx, ctx.Store.Load(), ctx.Cfg.Pool.Get("claude-1")),
+		[2]string{"off", "⚫ suspended"})
 }
 
 // ---------------------------------------------------------------------------- RunTests

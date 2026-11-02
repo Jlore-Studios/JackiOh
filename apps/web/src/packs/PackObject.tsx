@@ -1,16 +1,11 @@
-// The pack as a physical object (#1663, part of #1651, SPEC §14.3, §14.6): a foil wrapper with a
-// crimped seal at each end, the set's emblem and colors, a sheen that follows the pointer, a slight
-// tilt toward it, a press, and a tear that bursts it open. The store's shelf and the pack-opening
-// scene draw the same object, at `shelf` and `scene` size.
-//
-// PRESENTATION ONLY (CLAUDE.md rule 7). `state` is the caller's: this draws a pack pressed, tearing
-// or open and decides nothing about when. Every animation moves transform and opacity alone
-// (`pack-object.css`). REDUCED MOTION (the panel's setting or the system's, followed live, as the
-// economy's bars read them) holds the tilt, the sheen and the tear still and sets `data-motion=reduce`.
+// The pack as a physical object (#1663, part of #1651, SPEC §14.3, §14.6) for the shelf and the
+// pack-opening scene. PRESENTATION ONLY (CLAUDE.md rule 7): `state` is the caller's, and this decides
+// nothing about when. Every animation moves transform and opacity alone (`pack-object.css`). REDUCED
+// MOTION holds the tilt, the sheen and the tear still and sets `data-motion=reduce`.
 
 import { useRef, type CSSProperties, type PointerEvent, type ReactElement, type ReactNode } from "react";
 
-import { setMarkOf } from "../cards/setMark.ts";
+import { glyphUri, setMarkOf } from "../cards/setMark.ts";
 import { useReducedMotion } from "../economy/FillBar.tsx";
 import { COSMETIC_PACK, PACK_TEAR_MS, PACK_TILT_DEG, packName } from "./packs.ts";
 import "./pack-object.css";
@@ -27,21 +22,16 @@ export type PackObjectProps = {
   children?: ReactNode;
 };
 
-const SVG_NS = "http://www.w3.org/2000/svg";
 const INK = "#1d1530";
-
-function dataUri(body: string): string {
-  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='${SVG_NS}' viewBox='0 0 24 24'>${body}</svg>`)}`;
-}
 
 /** The two emblems `setMark.ts` has no glyph for: a ringed globe and a four-point star, drawn as it draws its own. */
 const OWN_EMBLEMS: Readonly<Record<string, string>> = {
-  global: dataUri(
+  global: glyphUri(
     `<circle cx='12' cy='12' r='9.6' fill='#bba8dc' stroke='${INK}' stroke-width='1.6'/>` +
       `<ellipse cx='12' cy='12' rx='4.2' ry='9.6' fill='none' stroke='${INK}' stroke-width='1.2'/>` +
       `<path d='M2.6 12H21.4M4.4 7.2H19.6M4.4 16.8H19.6' stroke='${INK}' stroke-width='1.2' fill='none'/>`,
   ),
-  [COSMETIC_PACK]: dataUri(
+  [COSMETIC_PACK]: glyphUri(
     `<path d='M12 1.4L14.6 9.4L22.6 12L14.6 14.6L12 22.6L9.4 14.6L1.4 12L9.4 9.4Z' fill='#ff8ad0' stroke='#2a0f21' stroke-width='1.4' stroke-linejoin='round'/>`,
   ),
 };

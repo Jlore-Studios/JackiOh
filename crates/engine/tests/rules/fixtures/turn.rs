@@ -1,9 +1,7 @@
 //! Test-only cards for the turn systems (docs/classic-sets.md B5): ending a turn from an effect (E10),
-//! draw limits and counts (E3, E4), cast on draw (E39), the delayed kinds (E27), the rest-of-game
-//! effect (E28), and the start-of-turn and cleanup stages for Brittle and Animated (B3.3, B3.1). Each
-//! reproduces one shape through the engine's own verbs; the engine never imports `crates/cards`.
-//!
-//! Ids are prefixed `tn-` and indexed from 4300, so they cannot collide with another fixture file's.
+//! draw limits and counts (E3, E4), cast on draw (E39), the delayed kinds (E27), the rest-of-game effect
+//! (E28) and the start-of-turn and cleanup stages for Brittle and Animated (B3.3, B3.1), through the
+//! engine's own verbs (it never imports `crates/cards`). Ids are `tn-` from 4300, clear of other fixtures'.
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
@@ -49,7 +47,7 @@ fn def(index: u32, name: &str, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-// The note log: a Field Spell in p2's backrow lane 5 whose memory records what ran, in order.
+// The note log: a Field Spell in p2's backrow whose memory records what ran, in order.
 
 pub fn log_card() -> CardDef {
     def(4301, "log", "Field Spell", json!({}))
@@ -75,7 +73,6 @@ fn log_of_mut(state: &mut GameState) -> Option<&mut CardInstance> {
         .and_then(|slot| slot.as_mut())
 }
 
-/// The steps the log card's memory holds, in order (empty without a log card).
 pub fn notes(state: &GameState) -> Vec<String> {
     match log_of(state).and_then(|log| log.memory.get("steps")) {
         Some(Value::Array(steps)) => steps
@@ -178,17 +175,15 @@ pub fn two_more() -> CardDef {
     def(4306, "two-more", "Spell", json!({}))
 }
 
-/// The AI card Rate Limit's shape: the opponent's play sets it off, and their turn ends after it.
+/// The AI card Rate Limit's shape: the opponent's play ends their turn after it.
 pub fn rate_limit() -> CardDef {
     def(4307, "rate-limit", "Trap", json!({}))
 }
 
-/// A plain Spell that notes its own resolution.
 pub fn marker() -> CardDef {
     def(4308, "marker", "Spell", json!({}))
 }
 
-/// A Spell that asks its caster, and notes the answer.
 pub fn questioner() -> CardDef {
     def(4309, "questioner", "Spell", json!({}))
 }
@@ -200,7 +195,7 @@ pub fn palantir() -> CardDef {
     def(4310, "palantir", "Field Spell", json!({ "tags": ["Quickdraw"] }))
 }
 
-/// Classic #49's aura, loosened to 2 so the lowest-holds rule shows: "Players can't draw more than 2".
+/// Classic #49's aura, loosened to 2 so the lowest-holds rule shows.
 pub fn anti_greed() -> CardDef {
     def(4311, "anti-greed", "Unit", json!({ "attack": 9, "health": 9 }))
 }
@@ -210,7 +205,6 @@ pub fn draw_two() -> CardDef {
     def(4312, "draw-two", "Spell", json!({ "tags": ["Quickdraw"] }))
 }
 
-/// A cast-on-draw Spell and a cast-on-draw Unit that note being cast.
 pub fn cast_spell() -> CardDef {
     def(4313, "cast-spell", "Spell", json!({}))
 }
@@ -219,7 +213,6 @@ pub fn cast_unit() -> CardDef {
     def(4314, "cast-unit", "Unit", json!({ "attack": 1, "health": 1 }))
 }
 
-/// A plain card, drawn to hand.
 pub fn plain() -> CardDef {
     def(4315, "plain", "Spell", json!({}))
 }
@@ -246,29 +239,27 @@ pub fn hurrah() -> CardDef {
     def(4319, "hurrah", "Spell", json!({}))
 }
 
-/// `delay` with `next`: a card step at the end of the controller's next turn.
 pub fn later() -> CardDef {
     def(4320, "later", "Spell", json!({}))
 }
 
-/// Classic+ #52's shape: for the rest of the game, at the start of your turn, a note (a card, in #52).
+/// Classic+ #52's shape: for the rest of the game, at the start of your turn, a note.
 pub fn contract() -> CardDef {
     def(4321, "contract", "Spell", json!({}))
 }
 
-/// The same, whose start-of-turn effect asks.
 pub fn contract_ask() -> CardDef {
     def(4322, "contract-ask", "Spell", json!({ "tags": ["Quickdraw"] }))
 }
 
-/// R1861002 (Stinkyscape #39's shape): for the rest of the game, at the end of your turn, a note.
+/// R1861002 (Stinkyscape #39's shape): the same at the end of your turn.
 pub fn contract_end() -> CardDef {
     def(4326, "contract-end", "Spell", json!({}))
 }
 
 // The start-of-turn stages: a delayed effect and a start-of-turn hook to order them against.
 
-/// A Spell that schedules a note for the start of its controller's next turn (R62's delayed stage).
+/// A Spell delaying a note to its controller's next start of turn (R62's delayed stage).
 pub fn reminder() -> CardDef {
     def(4323, "reminder", "Spell", json!({}))
 }
@@ -294,7 +285,6 @@ fn second_draw(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     )
 }
 
-/// A data bag entry as text: a string as itself, `undefined` for a missing key.
 fn js_string(value: Option<&Value>) -> String {
     match value {
         None => "undefined".to_string(),
@@ -661,7 +651,6 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table
 });
 
-/// `base` with every turn fixture over it.
 pub fn turn_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in TURN_DEFS.iter() {
@@ -670,7 +659,6 @@ pub fn turn_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts, by id: `TURN_SCRIPTS`.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TURN_SCRIPTS.clone()
 }

@@ -19,9 +19,9 @@ import { resetTestid } from "../auth/testids.ts";
 import { confirmProblem, newPasswordProblem } from "../auth/validation.ts";
 import { t } from "../i18n/i18n.ts";
 import {
-  AUTH_MESSAGES,
   AuthError,
   adoptSession,
+  authMessageOf,
   refreshSession,
   sessionNearExpiry,
   updatePassword,
@@ -215,7 +215,7 @@ export default function ResetPasswordRoute(): ReactElement {
         navigate(paths.landing);
       })
       .catch((cause: unknown) => {
-        setError(cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service);
+        setError(authMessageOf(cause));
         if (cause instanceof AuthError && cause.failure === "linkExpired") setLinkSpent(true);
       })
       .finally(() => {
@@ -239,7 +239,7 @@ export default function ResetPasswordRoute(): ReactElement {
     navigate(target);
   }
 
-  // Sentences with an address inside: one entry each, split around it, so English keeps its text nodes.
+  // A sentence with an address inside is one entry, split around it.
   const [forBefore = "", forAfter = ""] = t("For {account}").split("{account}");
   const [replacesBefore = "", replacesAfter = ""] = t("Saving signs this browser out of {address}.").split("{address}");
 

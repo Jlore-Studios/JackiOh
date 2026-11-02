@@ -45,10 +45,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #130 Jlockeed's Starship Retrofitting Program — SPEC §8.10 row 130, BUILD M12 row S 130:
-// "adds one random Jlockeed card (not itself, R387) to its caster's hand with Starship Piece; played as a
-// Unit and destroyed, it fuses a copy into the Dormant Starship (R1852000); a full hand burns it; radiant
-// the card Radiant and (1) cheaper, discount read through `param()` (R824000)".
+// Stinkyscape #130 Jlockeed's Starship Retrofitting Program — SPEC §8.10 row 130, BUILD M12 row S
+// 130 (R1852000, R387, R824000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -61,7 +59,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const FILLER: &str = "core-005";
 
-    /// p1 holds the Program (Radiant on `radiant`), a Hit Job and `fillers` more cards.
     fn holding(radiant: bool, seed: &str, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": PROGRAM, "radiant": radiant }), json!(HIT_JOB)];
         hand.extend((0..fillers).map(|_| json!(FILLER)));
@@ -72,7 +69,6 @@ mod tests {
         }))
     }
 
-    /// The card the Program's play added to p1's hand.
     fn added(s: &Scenario) -> Option<CardInstance> {
         s.last_events().iter().find_map(|event| match event {
             GameEvent::AddedToHand { player: P1, instance_id, .. } => Some(s.card(instance_id).clone()),
@@ -96,7 +92,6 @@ mod tests {
 
     #[test]
     fn r1878003_r1852000_played_as_a_unit_it_is_a_starship_piece_and_its_death_fuses_it_into_the_dormant_starship() {
-        // The first seed whose card is a Unit p1 can play now.
         let seed = seed_where("retrofit-unit", |seed| {
             let mut s = holding(false, seed, 1);
             s.play(PROGRAM, json!({}));
@@ -117,7 +112,6 @@ mod tests {
 
     #[test]
     fn s2_4_a_full_hand_burns_it() {
-        // The Program leaves the hand as it is played, and the Hit Job and 9 fillers fill it.
         let mut s = holding(false, "retrofit-full", 9);
         s.play(PROGRAM, json!({}));
         assert!(added(&s).is_none());

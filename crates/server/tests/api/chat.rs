@@ -1,12 +1,5 @@
-//! B53 (#936, `.fullsend/SPEC.md` S7): chat between friends. Only friends; a body of 1 to
-//! `CHAT_MAX_CHARS` after trimming, filtered by the username word filter (blocked words masked with
-//! `*`); at most `CHAT_MESSAGES_PER_MINUTE` per sender; pages of at most `CHAT_PAGE`, newest last,
-//! paged back by `?before=` and the page's `nextCursor` (R1384000); reading a page marks it read; messages older than
-//! `CHAT_RETENTION_DAYS` are purged by the retention loop; a report is stored once per reporter.
-//!
-//! The whole router over the fake store. Time is tokio's paused clock wherever an order, a window
-//! or an age matters, so every message has its own `createdAt`. The retention loop is the one
-//! `app.rs` spawns (`api::retention::run_purge`), run here for one pass.
+//! B53 (#936, .fullsend/SPEC.md S7, R1384000): chat between friends.
+//! Tests friendship restriction, length limits, word filtering, rate limits, and pagination.
 
 use std::sync::Arc;
 
@@ -17,8 +10,8 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{CHAT_MAX_CHARS, CHAT_MESSAGES_PER_MINUTE, CHAT_PAGE, CHAT_RETENTION_DAYS};
 use jackioh_server::db::store::{ChatMessageRow, StoreError};
 
-use crate::support::deps::{add_user, call, empty_test_app};
-use crate::support::store::{advance, fake, uuid};
+use crate::support::deps::{call, empty_test_app};
+use crate::support::store::{Account, account, advance, befriend, fake};
 
 /// Unit conversions, not configuration.
 const MINUTE_MS: u64 = 60_000;
@@ -30,10 +23,6 @@ const PAST_THE_PAGE: usize = 5;
 
 /// How many times `settle` yields: enough for a spawned loop's first pass over the fake store.
 const SETTLE_YIELDS: usize = 256;
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 fn count<T>(value: T) -> usize
 where
@@ -59,32 +48,6 @@ fn encode_query(raw: &str) -> String {
         .collect()
 }
 
-struct Account {
-    id: String,
-    name: String,
-    token: String,
-}
-
-async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    let id = uuid(n);
-    let user_id = format!("user-{n}");
-    let tag = i64::from(n);
-    fake(app).lock().await.seed_profile(json!({
-        "id": id,
-        "userId": user_id,
-        "status": "active",
-        "username": base,
-        "usernameTag": tag,
-        "usernamePrompted": true,
-    }));
-    let token = add_user(app, &user_id, &format!("{user_id}@example.test"), true);
-    Account {
-        id,
-        name: format!("{base}#{tag}"),
-        token,
-    }
-}
-
 async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
     (status, body)
@@ -99,28 +62,6 @@ fn code_is(body: &Value, code: &str) -> bool {
     ]
     .iter()
     .any(|value| value.as_str() == Some(code))
-}
-
-async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
-    let (status, body) = api(
-        app,
-        "POST",
-        "/api/friends/requests",
-        &a.token,
-        json!({ "username": b.name }),
-    )
-    .await;
-    assert_eq!(status, 201, "{body}");
-    let request_id = body["requestId"].as_str().expect("a request id").to_string();
-    let (status, body) = api(
-        app,
-        "POST",
-        &format!("/api/friends/requests/{request_id}/accept"),
-        &b.token,
-        Value::Null,
-    )
-    .await;
-    assert_eq!(status, 200, "{body}");
 }
 
 async fn send(app: &Arc<App>, from: &Account, to: &Account, body: &str) -> (u16, Value) {
@@ -194,9 +135,7 @@ async fn friends() -> (Arc<App>, Account, Account) {
     (app, ada, bea)
 }
 
-// ---------------------------------------------------------------------------------------------
 // B53
-// ---------------------------------------------------------------------------------------------
 
 mod b53_sending {
     use super::*;

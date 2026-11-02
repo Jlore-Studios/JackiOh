@@ -1,10 +1,7 @@
-// R1966000: the Sets tab of `/stats` (SPEC §9.11): each shipped set's cards on the patch the page
-// shows, read off the card figures `GET /api/stats/cards` already sends, so the server adds nothing.
-//
-// A card's win rate is R377's in-deck rate: its deck's wins over the games it was in a deck. A set's
-// win rate pools its cards (their wins over their games); its mean and median are over the cards with
-// the sample floor's games (R654). Decks mix sets (R380), so a set's rate is how its cards fare in mixed
-// decks, not how a deck of it would.
+// R1966000: the Sets tab of `/stats` (SPEC §9.11), read off the card figures `GET /api/stats/cards` sends.
+// A card's win rate is R377's in-deck rate; a set's pools its cards (their wins over their games), and its
+// mean and median are over the cards with the sample floor's games (R654). Decks mix sets (R380), so a
+// set's rate is how its cards fare in mixed decks, not how a deck of it would.
 
 import { SHIPPED_SETS } from "@jackioh/shared";
 
@@ -31,11 +28,11 @@ export type SetRow = {
   /** Its cards with any games, and those with the sample floor's. */
   cards: number;
   rated: number;
-  /** Its cards' games added up (a game counts once for each of its cards in a deck), and their wins. */
+  /** Its cards' games summed (a game counts once per card of it in a deck), and their wins. */
   games: number;
   wins: number;
   pooled: number | null;
-  /** The pooled rate's standard error, as if every card-game were independent: they are not, so it is a floor. */
+  /** The pooled rate's standard error as if every card-game were independent: they are not, so it is a floor. */
   error: number | null;
   mean: number | null;
   median: number | null;
@@ -65,12 +62,10 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-/** A higher win rate first, then more games, then the id. */
 function byRate(a: RatedCard, b: RatedCard): number {
   return b.winRate - a.winRate || b.games - a.games || a.id.localeCompare(b.id);
 }
 
-/** Each set with games on the patch, the highest pooled win rate first. */
 export function setRows(cards: readonly PublicCardStat[], minSample: number): SetRow[] {
   const sets = new Map<string, PublicCardStat[]>();
   for (const card of cards) {
@@ -106,7 +101,6 @@ export function setRows(cards: readonly PublicCardStat[], minSample: number): Se
 
 export type Leaders = { pooled: string | null; mean: string | null; median: string | null };
 
-/** The set with the highest of each measure, or null when no set has it. */
 export function leaders(rows: readonly SetRow[]): Leaders {
   const top = (measure: (row: SetRow) => number | null): string | null => {
     let best: SetRow | null = null;
@@ -119,7 +113,7 @@ export function leaders(rows: readonly SetRow[]): Leaders {
   return { pooled: top((row) => row.pooled), mean: top((row) => row.mean), median: top((row) => row.median) };
 }
 
-/** Each set's pooled win rate minus its pooled rate on the previous patch, where both have one. */
+/** Each set's pooled win rate change from the previous patch, where both have one. */
 export function changes(rows: readonly SetRow[], previous: readonly SetRow[]): Map<string, number> {
   const before = new Map(previous.map((row) => [row.set, row.pooled]));
   const out = new Map<string, number>();
@@ -130,10 +124,6 @@ export function changes(rows: readonly SetRow[], previous: readonly SetRow[]): M
   return out;
 }
 
-/**
- * The cards `SET_STATS_OUTLIER_Z` or more standard errors from 50%, at most `SET_STATS_CARDS_LISTED`
- * on each side: the strongest furthest over first, the weakest furthest under first.
- */
 export function outliers(
   cards: readonly PublicCardStat[],
   minSample: number,

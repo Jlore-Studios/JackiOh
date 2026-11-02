@@ -1,22 +1,21 @@
-// Client-side preferences (docs/polish/7-mobile-ux.md S8, B19–B22).
-// They never enforce rules (CLAUDE.md rule 7); `autoEndTurn` is player intent for R82 and R345.
+// Client-side preferences (docs/polish/7-mobile-ux.md S8, B19–B22); they never enforce rules (CLAUDE.md rule 7).
 // Storage is untrusted, so failed access uses in-memory or default settings.
 
 import { useSyncExternalStore } from "react";
 import { isRecord } from "../wire/json.ts";
-import { localStorageOrNull } from "../net/storage.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 export type Settings = {
   dragToPlay: boolean;
-  /** Gameplay; stays false because e2e specs end turns with one click. */
+  /** Off: e2e specs end turns with one click. */
   confirmEndTurn: boolean;
-  /** R82/R345: default true auto-ends only when ending is left. */
+  /** R82/R345: auto-ends only when ending is left. */
   autoEndTurn: boolean;
   hoverPreviews: boolean;
-  /** R2102000: the lethal hint of every game against the practice AI (R2291000); default on. */
+  /** R2102000: the lethal hint against the practice AI (R2291000). */
   lethalHint: boolean;
   reduceMotion: boolean;
-  /** R644 (§5): mute opponents' emotes, default off per device. */
+  /** R644 (§5): kept per device. */
   muteOpponentEmotes: boolean;
 };
 
@@ -34,10 +33,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   muteOpponentEmotes: false,
 });
 
-/**
- * The keys `parseSettings` keeps, in the order they are written to storage. Any other stored key is
- * dropped, such as the `publicStats` an older device kept (R2000000).
- */
+/** The kept keys, in storage order; any other (an older device's `publicStats`) is dropped (R2000000). */
 const SETTING_KEYS: readonly SettingKey[] = [
   "dragToPlay",
   "confirmEndTurn",
@@ -48,7 +44,7 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "muteOpponentEmotes",
 ];
 
-/** B22: settings.css maps this <html> attribute to the reduced-motion scale. */
+/** B22: settings.css maps this attribute to the reduced-motion scale. */
 const REDUCE_MOTION_ATTRIBUTE = "data-reduce-motion";
 
 let snapshot: Settings | null = null;
@@ -57,7 +53,7 @@ const subscriptions = new Set<() => void>();
 
 let storageListening = false;
 
-/** Tolerant storage parser: invalid values use defaults and never throw. */
+/** Invalid values take their default; never throws. */
 export function parseSettings(raw: unknown): Settings {
   const next: Settings = { ...DEFAULT_SETTINGS };
   try {
@@ -82,9 +78,7 @@ export function parseSettings(raw: unknown): Settings {
 
 function loadStored(): Settings {
   try {
-    const storage = localStorageOrNull();
-    if (storage === null) return DEFAULT_SETTINGS;
-    const raw = storage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = getStored(SETTINGS_STORAGE_KEY);
     if (raw === null) return DEFAULT_SETTINGS;
     return Object.freeze(parseSettings(raw));
   } catch {
@@ -93,11 +87,8 @@ function loadStored(): Settings {
 }
 
 function persist(settings: Settings): void {
-  try {
-    localStorageOrNull()?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  } catch {
-    // Keep in-memory settings when storage fails.
-  }
+  // Storage that fails leaves the in-memory settings.
+  setStored(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }
 
 function applyToDocument(settings: Settings): void {

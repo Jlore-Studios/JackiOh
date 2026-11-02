@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3 } from "./fixtures.ts";
 import { githubReleases, markdownText, type GithubRelease, type ShippedRecord } from "./github.ts";
+import { releaseArtPath } from "./releaseArt.ts";
 import type { Release } from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
@@ -119,6 +120,31 @@ describe("GitHub releases", () => {
     expect(counts).not.toContain("<details>");
   });
 
+  it("#2681 embeds each release's artwork from staging or production as appropriate", () => {
+    // V3 is only on staging: its image is the staging host's; the two on production have production's.
+    const { releases } = fixtureReleases({ live: [V1, V2] });
+    const image = (tag: string, site: string): string => `(${site}${releaseArtPath(tag, "animated")})`;
+    expect(release(releases, V3).body).toContain(image(V3, "https://staging.example"));
+    expect(release(releases, V3).body).not.toContain("https://prod.example/release-art/");
+    for (const tag of [V1, V2]) {
+      expect(release(releases, tag).body).toContain(image(tag, "https://prod.example"));
+      expect(release(releases, tag).body).not.toContain("https://staging.example/release-art/");
+    }
+    // One image per release, in the Markdown a release reads: its alt names the patch, and it comes straight after the date line.
+    const body = release(releases, V3).body;
+    expect(body.match(/!\[/gu)).toHaveLength(1);
+    expect(body).toContain(`**2026-03-04** · Earlier patches · Micro patch\n\n![${V3}: Two fixture sets, release artwork]${image(V3, "https://staging.example")}\n\n`);
+    // It is the normal file, which holds still for a patch and drifts for a major, and every level of card detail keeps it.
+    expect(body).not.toContain("-still.svg");
+    for (const limit of [GITHUB_RELEASE_BODY_LIMIT, release(fixtureReleases().releases, V3).body.length - 1, 1]) {
+      expect(release(fixtureReleases({ limit }).releases, V3).body, String(limit)).toContain(releaseArtPath(V3, "animated"));
+    }
+    // A title with Markdown in it cannot break the image out of its brackets.
+    const odd: Patch[] = FIXTURE_PATCHES.map((patch) => (patch.version === V2 ? { ...patch, title: "A [b](x) *title*" } : patch));
+    const written = release(fixtureReleases({ patches: odd }).releases, V2).body;
+    expect(written).toContain(`![${V2}: A \\[b\\](x) \\*title\\*, release artwork]${image(V2, "https://prod.example")}`);
+  });
+
   it("escape what Markdown would read in a card's words, and keep its line breaks", () => {
     expect(markdownText("*Star* <b>_x_</b> [1]\nDraw ~2~ | `go`")).toBe("\\*Star\\* \\<b\\>\\_x\\_\\</b\\> \\[1\\]<br>Draw \\~2\\~ \\| \\`go\\`");
   });
@@ -144,6 +170,8 @@ describe("GitHub releases of the real history", () => {
     for (const entry of releases) {
       expect(entry.body.length, entry.tag).toBeLessThanOrEqual(GITHUB_RELEASE_BODY_LIMIT);
       expect(entry.target, entry.tag).toMatch(/^[0-9a-f]{40}$/u);
+      // #2681: each names its own tag's artwork, the encoded version in its path.
+      expect(entry.body, entry.tag).toContain(`](${SITES.production}/release-art/${encodeURIComponent(entry.tag)}.svg)`);
     }
   });
 

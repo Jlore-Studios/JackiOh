@@ -2,25 +2,13 @@
 //! M2-T2, M2-T4). The damage pipeline of §4.4 lives in `damage.rs` and the state check of §4.5 in
 //! `state_check.rs`: this module orders them, it never re-implements them.
 //!
-//! Nothing here is random and nothing here asks the player *directly*: the client's `attack` and
-//! `switchPosition` actions come in through `reduce`, and every refusal is a string the action layer
-//! hands back untouched (CLAUDE.md rule 4).
-//!
-//! The one thing that is not a plain function of the state is §4.2 step 4, the trap window between a
-//! declaration and its damage. A trap that fires there can prompt its controller, and a prompt is
-//! state rather than a callback (§9.3), so `declare_attack` is a resumable sequence: it puts the
-//! declaration in `state.declared_attack`, hands the `attackDeclared` event to `traps::run_trap_window`,
-//! and — only if that pauses — owes step 5's combat to `state.work` under `ATTACK_WINDOW_WORK`
-//! (R113, R117). Everything the resume needs is an id, because the window can replace every instance
-//! in the state before step 5 runs (R44's AI turn drives `reduce`, which clones).
-//!
-//! Port of `packages/engine/src/combat.ts` (part 3). TS passed live `CardInstance` objects and wrote
-//! through them; here a card argument is the instance as the caller had it, and this module reads and
-//! writes the card under that id in the state as it stands now (`find_instance`), which is what the
-//! TS object was. A card no longer anywhere in the state has ceased to exist, so it is on no field.
-//! TS's `registerWorkHandler` and `registerDeclarationCheck` calls go (SURFACE §6.6): `work.rs`'s
-//! dispatcher calls `run_owed_attack`, `run_owed_forced_run`, `run_owed_forced_random` and
-//! `run_owed_after_attack` directly, and `traps.rs` calls `declared_attack_stands`.
+//! Nothing here is random or asks the player directly; every refusal is a string the action layer hands
+//! back untouched (CLAUDE.md rule 4). §4.2 step 4's trap window can prompt, and a prompt is state
+//! (§9.3), so `declare_attack` is resumable: the declaration sits in `state.declared_attack` and, if the
+//! window pauses, step 5's combat is owed to `state.work` under `ATTACK_WINDOW_WORK` (R113, R117). The
+//! resume holds only ids, since the window can replace every instance (R44's AI turn drives `reduce`,
+//! which clones), and a card argument is re-read by id as the state stands now (`find_instance`).
+//! `work.rs` calls the `run_owed_*` handlers and `traps.rs` `declared_attack_stands` directly (SURFACE §6.6).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -38,8 +26,7 @@ use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_key
 use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
 use crate::zones::live_or;
 
-/// What an attack can be declared on (§4.2 step 2): an enemy unit or the enemy hero. It is the
-/// damage pipeline's own target type, so a declared attack hands its target straight to `deal_damage`.
+/// What an attack can be declared on (§4.2 step 2), the damage pipeline's own target type.
 pub type AttackTarget = DamageTarget;
 
 /// The two halves of a unit's turn (§4.1). A unit has one of them; Deft Duelist has both (R49).
@@ -50,8 +37,7 @@ pub enum ExertionKind {
     Switch,
 }
 
-/// Every entry point returns the §4.2 refusal reason, or nothing when it went through (TS
-/// `{ error?: string }`, SURFACE §4.4.9).
+/// Every entry point returns the §4.2 refusal reason, or nothing when it went through (SURFACE §4.4.9).
 pub type CombatResult = Result<(), EngineError>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -62,7 +48,7 @@ pub struct SwitchPositionOptions {
     pub to: Option<Position>,
 }
 
-/// B5 E35: what a forced attack on "a random enemy" draws from (TS `"enemies" | "enemyUnits"`).
+/// B5 E35: what a forced attack on "a random enemy" draws from.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -71,17 +57,13 @@ pub enum AttackAmong {
     EnemyUnits,
 }
 
-// ---------------------------------------------------------------------------------------------
-// Live reads (TS held the live object) and private copies of `scripts.rs`'s readers (fullsend
-// rule 5).
-// ---------------------------------------------------------------------------------------------
+// Live reads and private copies of `scripts.rs`'s readers (fullsend rule 5).
 
 /// The card as it stands in the state now, or `None` once it is nowhere (it ceased to exist).
 fn live_card(state: &GameState, card: &CardInstance) -> Option<CardInstance> {
     find_instance(state, &card.id).cloned()
 }
 
-/// The target with its unit read as it stands now (the hero as it is).
 fn live_target_or_given(state: &GameState, target: &AttackTarget) -> AttackTarget {
     match target {
         DamageTarget::Unit { instance } => DamageTarget::Unit {
@@ -91,7 +73,6 @@ fn live_target_or_given(state: &GameState, target: &AttackTarget) -> AttackTarge
     }
 }
 
-/// Whether the card under this id acts on the field now; a card that is nowhere does not.
 fn active_now(state: &GameState, id: &str) -> bool {
     find_instance(state, id).is_some_and(|card| is_active_on_field(state, card))
 }
@@ -100,7 +81,6 @@ fn to_json<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).unwrap_or(Value::Null)
 }
 
-/// A combat hit's flags: `{ combat: true }`.
 fn combat_flags() -> Option<DamageFlags> {
     Some(DamageFlags {
         combat: Some(true),
@@ -120,7 +100,6 @@ fn attack_flags(poisonous: bool) -> Option<DamageFlags> {
     })
 }
 
-/// An engine sequence's own continuation: no card, the hook and step named, `data` as given.
 fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
     Resume {
         def_id: String::new(),
@@ -132,9 +111,8 @@ fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resum
     }
 }
 
-/// R49: a unit with Deft has two exertions, one attack and one switch, where every other unit has
-/// one. The keyword is read through §10.4's layers, so a granted Deft counts the same as a printed
-/// one (patch v0.2.4 made R49's flag a keyword).
+/// R49: a unit with Deft has two exertions, one attack and one switch, where every other unit has one,
+/// read through §10.4's layers so a granted Deft counts the same as a printed one.
 fn has_two_exertions(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
     auras.unit_has(unit, KeywordKind::Deft)
 }
@@ -154,10 +132,9 @@ pub fn attacks_per_turn_in(auras: &AuraTable<'_>, unit: &CardInstance) -> i32 {
     }
 }
 
-/// §4.1: one exertion per turn, so a unit that attacked cannot switch and a unit that switched
-/// cannot attack (R6). A unit with Deft spends the two independently (R49). R636: a unit with
-/// Windfury attacks again until it has declared `attacks_per_turn`, and the first of them already
-/// spends the exertion a switch needs.
+/// §4.1: one exertion per turn, so a unit that attacked cannot switch and one that switched cannot
+/// attack (R6); Deft spends the two independently (R49). R636: Windfury attacks again up to
+/// `attacks_per_turn`, the first attack already spending the exertion a switch needs.
 pub fn has_exertion(state: &GameState, unit: &CardInstance, kind: ExertionKind) -> bool {
     has_exertion_in(&AuraTable::per_read(state), unit, kind)
 }
@@ -174,7 +151,6 @@ pub fn exertion_unspent(state: &GameState, unit: &CardInstance, kind: ExertionKi
     exertion_unspent_in(&AuraTable::per_read(state), unit, kind)
 }
 
-/// `exertion_unspent` read through a sweep's `AuraTable` (#892).
 pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
     let spent = &unit.exertion;
     if kind == ExertionKind::Attack {
@@ -190,10 +166,9 @@ pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: Exe
     !spent.attacked && !spent.switched
 }
 
-/// §4.1: a unit that entered the field this turn is summoning sick. A unit that enters again, a
-/// Reborn body included, entered it on that turn like any other (R83), and so does a unit whose
-/// controller changed this turn (R171, through `enter_new_side` below), and a card a Stack pile
-/// uncovers is sick in the same way (R1829000, `zones::remove_from_field`), so this is the one comparison.
+/// §4.1: a unit that entered the field this turn is summoning sick: a Reborn body (R83), a unit whose
+/// controller changed (R171, `enter_new_side`) and a card a Stack pile uncovers (R1829000,
+/// `zones::remove_from_field`) alike, so this is the one comparison.
 pub fn is_sick(state: &GameState, unit: &CardInstance) -> bool {
     unit.summoned_turn == Some(state.turn)
 }
@@ -206,16 +181,11 @@ pub fn is_asleep(state: &GameState, unit: &CardInstance, keywords: &[Keyword]) -
         && !has_keyword(keywords, KeywordKind::Charge)
 }
 
-/// R171: a card whose controller changes has entered its new controller's side on this turn — §4.1's
-/// "entered the field" for `is_sick`, and a fresh exertion for its new controller. Every path that
-/// changes control on the field calls this at the moment it emits `controlChanged`, for every card
-/// that changes sides (a card dormant under a Stack and a backrow card included), and for nothing
-/// else: a card moving along its own side has not entered anything.
-///
-/// `from` is the controller the card had before. A player modifier a permanent installed and still
-/// owns (#79 Twinspell's "the next Spell you play gains Echo +1", `sourceId`) is that permanent's
-/// lasting effect (§5.1), and §8's conventions read its "you" as the controller, so it follows the
-/// card to its new side rather than staying with the player it left.
+/// R171: a card whose controller changes has entered its new controller's side on this turn (§4.1, for
+/// `is_sick`), with a fresh exertion. Every path that changes control on the field calls this, for every
+/// card that changes sides (dormant and backrow included) and for nothing else. A player modifier a
+/// permanent installed and still owns (#79 Twinspell, `sourceId`) is its lasting effect (§5.1) whose
+/// "you" is the controller (§8), so it follows the card from `from` to its new side.
 pub fn enter_new_side(sink: &mut EngineSink<'_>, card: &CardInstance, from: PlayerId) {
     let turn = sink.state.turn;
     let mut controller = card.controller;
@@ -240,15 +210,13 @@ pub fn is_active_on_field(state: &GameState, unit: &CardInstance) -> bool {
     crate::zones::acts_on_field(state, unit)
 }
 
-/// R446: a Unit standing on a carrier (Classic+ #33 Ivory Tower) can neither attack nor be attacked —
-/// declared or forced (R53 waives position, sickness and Taunt, never this) — and so binds no attacker
-/// with its Taunt (§4.2 step 3).
+/// R446: a Unit standing on a carrier (Classic+ #33 Ivory Tower) can neither attack nor be attacked,
+/// declared or forced (R53 never waives this), and so binds no attacker with its Taunt (§4.2 step 3).
 fn carried_out_of_combat(state: &GameState, unit: &CardInstance) -> bool {
     crate::zones::is_carried(state, unit)
 }
 
-/// §4.1: the position the player's own switch puts a unit in, the other one (a unit with none is in
-/// Attack Position).
+/// §4.1: the position the player's own switch puts a unit in (a unit with none is in Attack Position).
 pub fn position_after_switch(unit: &CardInstance) -> Position {
     if unit.position.unwrap_or(Position::Atk) == Position::Atk {
         Position::Def
@@ -257,11 +225,9 @@ pub fn position_after_switch(unit: &CardInstance) -> Position {
     }
 }
 
-/// §4.1, R49, R1174000: why the unit could not switch to `to`, or `Ok` when it can.
-/// `switch_position` refuses with it and `legal_actions` lists a `switchPosition` by it
-/// (`reduce::can_switch`), so the two can never disagree. `spend_exertion` is false for a switch
-/// that is an effect (R20), which spends nothing and so is refused by the position alone; a Frozen
-/// Unit's own switch is refused, an effect's is not.
+/// §4.1, R49, R1174000: why the unit could not switch to `to`, or `Ok` when it can. `switch_position`
+/// refuses with it and `legal_actions` lists a `switchPosition` by it (`reduce::can_switch`), so the two
+/// never disagree. `spend_exertion` is false for an effect's switch (R20), which spends nothing.
 pub fn why_cannot_switch(
     state: &GameState,
     unit: &CardInstance,
@@ -271,7 +237,6 @@ pub fn why_cannot_switch(
     why_cannot_switch_in(&AuraTable::per_read(state), unit, to, spend_exertion)
 }
 
-/// `why_cannot_switch` read through a sweep's `AuraTable` (#892).
 pub fn why_cannot_switch_in(
     auras: &AuraTable<'_>,
     unit: &CardInstance,
@@ -290,9 +255,9 @@ pub fn why_cannot_switch_in(
         return Err(EngineError::new("that unit has already acted this turn"));
     }
     // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
-    // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it
-    // through v0.5.9f), nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23
-    // Warp Disruptor), nor an Indestructible one, whatever made it so (R2179000).
+    // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it),
+    // nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor
+    // an Indestructible one, whatever made it so (R2179000).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
             || auras.unit_has(unit, KeywordKind::CantDefend)
@@ -328,9 +293,7 @@ pub fn switch_position(
     let to = options.to.unwrap_or_else(|| position_after_switch(&unit));
 
     // R91: asking for the position the unit already holds "does nothing: no error, no event and no
-    // exertion spent". It is read before the exertion because there is no switch to refuse — a unit
-    // that has already acted is not told it has, since nothing was going to be spent. #48's "switch
-    // every unit" reaches units already in the position it would set.
+    // exertion spent", read before the exertion because there is no switch to refuse.
     if to == from {
         return Ok(());
     }
@@ -354,15 +317,13 @@ pub fn switch_position(
 /// use an Activate.
 pub const FROZEN_REFUSAL: &str = "that Unit is Frozen";
 
-/// §4.2 step 1: "choose an attacker that can attack", in the order the step lists — exertion
-/// unspent, Attack Position, not sick unless Rush or Charge, attack above 0, no "Can't attack" —
-/// with §3.2's "is it even on the field" first. The order is what decides which reason a unit that
-/// fails several ways reports, so R6's spent exertion is read before its position.
+/// §4.2 step 1 in the step's order (exertion unspent, Attack Position, not sick unless Rush or Charge,
+/// attack above 0, no "Can't attack"), after §3.2's "on the field": the order decides which reason a
+/// unit failing several ways reports, so R6's spent exertion is read before its position.
 pub fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<(), EngineError> {
     why_cannot_declare_in(&AuraTable::per_read(state), attacker)
 }
 
-/// `why_cannot_declare` read through a sweep's `AuraTable` (#892).
 pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Result<(), EngineError> {
     let state = auras.state();
     // R1839000: a Dormant card is on the field and attacks nothing until it awakens.
@@ -400,11 +361,9 @@ pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> 
     Ok(())
 }
 
-/// Every enemy unit whose Taunt forces the target, printed, granted or from Defense (§4.2 step 3) —
-/// among the units this attacker may attack at all: B5 E35 has a Taunt bind only the attackers that
-/// could legally attack it, so a Taunt only its own lane may attack (Classic+ #19.1) leaves an attacker
-/// in another lane free, and one that cannot be attacked — a Unit a carrier holds (R446) among them —
-/// binds nobody.
+/// Every enemy unit whose Taunt forces the target, printed, granted or from Defense (§4.2 step 3),
+/// among the units this attacker may attack at all (B5 E35): a Taunt only its own lane may attack
+/// (Classic+ #19.1) leaves an attacker in another lane free, and one a carrier holds (R446) binds nobody.
 fn taunt_wall(auras: &AuraTable<'_>, attacker: &CardInstance, enemy: PlayerId) -> Vec<CardInstance> {
     let state = auras.state();
     crate::zones::active_units_of(state, enemy)
@@ -425,9 +384,8 @@ fn taunt_wall(auras: &AuraTable<'_>, attacker: &CardInstance, enemy: PlayerId) -
         .collect()
 }
 
-/// Steps 1 to 3 of §4.2, as the reason the attack is refused, or `Ok` when it is legal. The action
-/// layer surfaces this string as the error of an `attack` action, and `attack_targets` filters with
-/// it, so the two can never disagree.
+/// Steps 1 to 3 of §4.2, as the reason the attack is refused, or `Ok` when it is legal: the `attack`
+/// action's error and `attack_targets`'s filter, so the two can never disagree.
 pub fn why_cannot_attack(
     state: &GameState,
     attacker: &CardInstance,
@@ -436,7 +394,6 @@ pub fn why_cannot_attack(
     why_cannot_attack_in(&AuraTable::per_read(state), attacker, target)
 }
 
-/// `why_cannot_attack` read through a sweep's `AuraTable` (#892).
 pub fn why_cannot_attack_in(
     auras: &AuraTable<'_>,
     attacker: &CardInstance,
@@ -480,8 +437,7 @@ pub fn why_cannot_attack_in(
             }
         }
     }
-    // B5 E35: the unit restrictions — can't be attacked, attacked only from its own lane, can't attack
-    // or be attacked — which a forced attack obeys as well (`force_attack`).
+    // B5 E35: the unit restrictions, which a forced attack obeys as well (`force_attack`).
     crate::restrictions::attack_restriction_in(auras, attacker, target)?;
 
     // §6.1: Rush lifts sickness for unit targets only, Charge for units and the hero. Step 1 has
@@ -510,19 +466,16 @@ pub fn can_attack(state: &GameState, attacker: &CardInstance, target: &AttackTar
     can_attack_in(&AuraTable::per_read(state), attacker, target)
 }
 
-/// `can_attack` read through a sweep's `AuraTable` (#892).
 pub fn can_attack_in(auras: &AuraTable<'_>, attacker: &CardInstance, target: &AttackTarget) -> bool {
     why_cannot_attack_in(auras, attacker, target).is_ok()
 }
 
 /// Every target this attacker may legally declare on, enemy units in lane order and then the enemy
-/// hero (§4.2). Empty when the attacker cannot attack at all, which is what the action layer and the
-/// AI policy read instead of enumerating attacks themselves.
+/// hero (§4.2), which the action layer and the AI policy read rather than enumerate attacks themselves.
 pub fn attack_targets(state: &GameState, attacker: &CardInstance) -> Vec<AttackTarget> {
     attack_targets_in(&AuraTable::per_read(state), attacker)
 }
 
-/// `attack_targets` read through a sweep's `AuraTable` (#892).
 pub fn attack_targets_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Vec<AttackTarget> {
     let enemy = opponent_of(attacker.controller);
     let mut candidates: Vec<AttackTarget> = crate::zones::active_units_of(auras.state(), enemy)
@@ -548,9 +501,8 @@ fn target_id_of(target: &AttackTarget) -> String {
 }
 
 /// The inverse of `target_id_of`: the target an `attackDeclared` event or an open `declaredAttack`
-/// names. Exported because the ids are all a paused attack and a trap trigger have to go on — #96
-/// My Pawn reads the event, and §4.2 step 5 reads the state back after the window — and because the
-/// `hero-<player>` spelling is this module's, so nobody else should be parsing it.
+/// names (#96 My Pawn reads the event, §4.2 step 5 the state). The `hero-<player>` spelling is this
+/// module's, so nobody else should be parsing it.
 pub fn attack_target_of(state: &GameState, target_id: &str) -> Option<AttackTarget> {
     if let Some(named) = target_id.strip_prefix(HERO_TARGET_PREFIX) {
         let player = PLAYER_IDS.into_iter().find(|id| id.as_str() == named)?;
@@ -577,7 +529,6 @@ fn has_fallen(state: &GameState, unit: &CardInstance) -> bool {
     view.health <= 0 || unit.marked_destroyed == Some(true) || unit.marked_exiled == Some(true)
 }
 
-/// `has_fallen` on the card under this id now; a card that is nowhere has fallen.
 fn has_fallen_now(state: &GameState, id: &str) -> bool {
     match find_instance(state, id) {
         Some(card) => has_fallen(state, card),
@@ -634,9 +585,8 @@ pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &C
 }
 
 /// §4.4 step 10: Cleave deals the attacker's attack to each unit adjacent to the target as separate
-/// instances. It belongs to the attack rather than to the hit, so it lands even when Divine Shield,
-/// Indestructible or the zero rule stopped the hit on the defender (R63); adjacency never crosses
-/// sides (§3.1), so the attacker's own neighbours are never cleaved.
+/// instances. It belongs to the attack, not the hit, so it lands even when Divine Shield,
+/// Indestructible or the zero rule stopped the hit (R63); adjacency never crosses sides (§3.1).
 fn cleave(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -703,7 +653,6 @@ fn strike(
     cleave(sink, &source, target, cleave_amount, poisonous);
 }
 
-/// The defender's hit back on the attacker.
 fn strike_back(sink: &mut EngineSink<'_>, defender: &CardInstance, attacker: &CardInstance, attack: i32) {
     let source = live_or(sink.state, defender);
     let target = live_or(sink.state, attacker);
@@ -727,10 +676,8 @@ pub fn takes_strike_back(state: &GameState, attacker: &CardInstance, defender: &
 }
 
 /// The exchange of §4.3, with no validation, no exertion and no state check: the First Strike step,
-/// then the simultaneous step. Both attacks are read before either lands, which is what makes the
-/// simultaneous step simultaneous; a hero never strikes back, and a defender in Defense Position
-/// strikes back with its full attack, the position's Armor +1 applying only to what it takes.
-///
+/// then the simultaneous step, both attacks read before either lands. A hero never strikes back, and a
+/// Defense-Position defender strikes back with its full attack (its Armor +1 only on what it takes).
 /// The caller runs the state check, so both hits of one combat land before anything dies (R59).
 pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
     let Some(attacker) = live_card(sink.state, attacker) else {
@@ -760,9 +707,8 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
         return;
     };
 
-    // R94: both attacks are read once, here, before either hit lands. That is what makes the
-    // simultaneous step simultaneous, and it is why a First Strike survivor is struck back with the
-    // attack the defender had before the hit landed rather than with whatever it reads afterwards.
+    // R94: both attacks are read once, here, before either hit lands, so a First Strike survivor is
+    // struck back with the attack the defender had before the hit.
     let strike_back_attack = crate::layers::unit_view(sink.state, &defender).attack;
     // MD-D4, R1120: the combat-only modifiers on this attacker's strike at this defender, read once
     // beside R94's reads. Only the attacker's strikes get it; the strike back never does.
@@ -810,58 +756,34 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     strike_back(sink, &defender, &attacker, strike_back_attack);
 }
 
-// ---------------------------------------------------------------------------------------------
 // §4.2 step 4: the trap window between the declaration and the damage (R44, R100, R113, R117)
-// ---------------------------------------------------------------------------------------------
 
-/// R113: the `resume.hook` of the one work item this module parks — the rest of an attack whose
-/// step 4 window a prompt interrupted. It is an engine sequence and not a card's, so the name is one
-/// no `Script` can hold, and `run_owed_attack` below is what `work.rs` runs for it, the way `traps.rs`
-/// owns its window and `turn.rs` its two boundaries. `work::run_work_item` raises on a hook nothing
-/// knows, and an attack that cannot be resumed is exactly the lost sequence that rule exists to
-/// prevent: a declaration that spent an exertion and never became damage.
+/// R113: the `resume.hook` of the one work item this module parks, the rest of an attack whose step 4
+/// window a prompt interrupted: a name no `Script` can hold, which `work.rs` runs by `run_owed_attack`.
+/// `work::run_work_item` raises on a hook nothing knows, since an attack that cannot be resumed is a
+/// declaration that spent an exertion and never became damage.
 pub const ATTACK_WINDOW_WORK: &str = "@attackWindow";
 
 /// The window owes one step: §4.2 step 5, the combat the declaration has not resolved yet.
 const ATTACK_COMBAT_STEP: &str = "combat";
 
 /// R100: "an event the window is scheduled to deliver is not also offered to the immediate trap
-/// check". The window below delivers `attackDeclared` itself, so §10.3's frontier must not deliver
-/// it a second time — a trap that declined a non-lethal swing would otherwise be offered the same
-/// declaration again *after* the damage, against a hero the attack has already hit, and a Field Trap
-/// would answer one declaration twice.
-///
-/// `triggers.rs` copies events out of `sink.events` into `state.dispatch` starting at the frontier's
-/// cursor (`triggers::dispatched`), so advancing it past this event is precisely "the frontier has
-/// taken it" — it has, into this window. R100's own mechanism (`traps::TRAP_WINDOW_EVENTS`) cannot serve
-/// here: it withholds an event *type*, and a forced attack's `attackDeclared` opens no window (R121)
-/// and must keep reaching the immediate check like any other event a card's effect list emits.
-///
-/// The cursor is at the event on every path that opens a window: `reduce` hands an `attack` action a
-/// sink whose event list it has not touched, and `reduce` is the only production caller. A sink a
-/// test has already run a combat on is the one other shape; there the cursor is behind, and moving
-/// it would silently drop the events in between, so the event is left on the frontier instead.
+/// check". The window delivers `attackDeclared` itself, so §10.3's frontier must not (a Field Trap
+/// would answer twice): moving its cursor (`triggers::dispatched`) past the event takes it. That is per
+/// declaration, not per *type* (`traps::TRAP_WINDOW_EVENTS`): a forced attack's opens no window (R121).
+/// A test's sink may have its cursor behind the event, and moving it would drop the events between.
 fn withhold_from_frontier(sink: &mut EngineSink<'_>, at: usize) {
     // Every sink over the action's list shares the frontier (`EngineSink::frontier`), so a loop on
-    // another sink — a cast's step-4 window inside an effect the window's traps run (R70) — sees the
-    // cursor move too.
+    // another sink (a cast's step-4 window inside the window's traps, R70) sees the cursor move too.
     if crate::triggers::dispatched(sink) == at {
         crate::triggers::set_dispatched(sink, at + 1);
     }
 }
 
-/// The ordinary (non-trap) triggers on the declaration, queued in R68's order. This is the second
-/// half of `triggers::dispatch_event`; its first half is the immediate trap check, which §4.2 step 4
-/// replaces with the window, so calling `dispatch_event` itself would offer the event to the traps a
-/// second time. Queueing only reads the board, so it cannot pause, and the entries pop in the
-/// caller's own resolution loop — after the combat, exactly where they popped before step 4 existed.
-///
-/// R212, as `dispatch_event` reads it: the board is read after the window, which can have moved it, so
-/// the events the window emitted since the declaration say how. A card that moved zones since — a
-/// unit a trap in the window summoned, a Reborn body, anything My Pawn's AI turn put on the field — is
-/// on a stay that did not see the declaration and does not answer it (R174), and a card whose
-/// controller changed since — a unit a trap in the window stole — answers for the player who
-/// controlled it when the attack was declared (R171).
+/// The ordinary (non-trap) triggers on the declaration, queued in R68's order: the second half of
+/// `triggers::dispatch_event`, whose first half step 4's window replaces; they pop after the combat.
+/// R212: the board is read after the window, so a card that moved zones since is on a stay that did not
+/// see the declaration (R174), and one whose controller changed answers for its controller then (R171).
 fn queue_declaration_triggers(sink: &mut EngineSink<'_>, event: &GameEvent, since: &[GameEvent]) {
     let mut later: Option<crate::stays::LaterMoves> = None;
     for holder in crate::triggers::holders_answering(sink.state, event.event_type()) {
@@ -889,22 +811,16 @@ fn queue_declaration_triggers(sink: &mut EngineSink<'_>, event: &GameEvent, sinc
     }
 }
 
-/// Park the rest of the attack (R113). `work.rs` owns `state.work`, so this only ever calls `owe`:
-/// the item lands at `state.work_cursor`, which `traps::run_trap_window` has just advanced past the
-/// traps *it* still owes, so the window finishes before the combat it precedes. Nothing is held but
-/// the declaration's id, which is plain JSON, so the paused attack survives a round trip.
-///
-/// R117: this is called at the moment the window pauses and never in advance. While `declare_attack`
-/// is on the stack the combat is `declare_attack`'s alone, so a resolution loop running *inside* the
-/// window — My Pawn's AI playout drives `reduce`, which settles — can neither take nor re-run it.
-/// Pre-parking a sequence's continuation is what made a played card's Cry fire twice (R1, R117).
+/// Park the rest of the attack (R113) at `state.work_cursor`, which `traps::run_trap_window` has just
+/// moved past the traps it still owes, so the window finishes first; only ids are held. R117: only when
+/// the window pauses, never in advance, so a resolution loop inside the window (My Pawn's AI playout)
+/// can neither take nor re-run the combat; pre-parking made a Cry fire twice (R1).
 fn owe_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
     let mut data = IndexMap::new();
     data.insert("declaredAttack".to_string(), json!(id));
     owe(sink, engine_resume(ATTACK_WINDOW_WORK, ATTACK_COMBAT_STEP, data));
 }
 
-/// Close the window, if this declaration is still the one that holds it open.
 fn close_window(state: &mut GameState, id: &str) -> Option<DeclaredAttack> {
     if state.declared_attack.as_ref().is_some_and(|open| open.id == id) {
         state.declared_attack.take()
@@ -913,18 +829,10 @@ fn close_window(state: &mut GameState, id: &str) -> Option<DeclaredAttack> {
     }
 }
 
-/// R220: whether a declaration still stands as it was declared, which §4.2 step 5 asks before it
-/// resolves anything and the traps later in the window ask before they answer it (`traps.rs`).
-///
-/// §4.2 step 2 makes an attack "an enemy unit, or the enemy hero", and a trap in step 4's window can
-/// change that before step 5: destroy the attacker or its target, steal either, swap the boards. The
-/// attack is aimed at the stays that were declared (R174), so an attacker or a target that has left
-/// the field is gone even when a Reborn body stands in its zone — a new arrival, summoning sick
-/// (R83), which declared nothing. The attacker must still be the declarer's: p1 declared the attack,
-/// and a unit p2 now controls is not p1's to attack with. And the target must still be the
-/// attacker's enemy (R173 says the same of a forced attack). Otherwise the attack is over, like one
-/// My Pawn canceled: no combat, and the exertion stays spent (R44). Hearthstone cancels an attack
-/// whose attacker or defender has left play.
+/// R220: whether a declaration still stands, asked by §4.2 step 5 and by the window's later traps
+/// (`traps.rs`). It is aimed at the declared stays (R174), so an attacker or target that left the field
+/// is gone even if a Reborn body (R83) stands there; the attacker must still be the declarer's and the
+/// target its enemy (R173). Otherwise, as in Hearthstone, it is over: no combat, exertion spent (R44).
 pub fn declared_attack_stands(state: &GameState, open: &DeclaredAttack) -> bool {
     if open.cancelled {
         return false;
@@ -965,19 +873,9 @@ pub fn declared_attack_stands(state: &GameState, open: &DeclaredAttack) -> bool 
     is_enemy_of(attacker, &target)
 }
 
-/// §4.2 step 5, once step 4's window has closed: resolve the combat the declaration still owes, then
-/// run the state check — when the declaration still stands (R220).
-///
-/// The attacker and the target are read back out of `state.declared_attack` by id rather than from
-/// the caller's own variables, because the window can have replaced every instance in the state:
-/// R44's AI turn drives `reduce`, which clones, and `subsystems::ai_policy::adopt_state` copies the
-/// clone back field by field. Ids survive that; object references do not.
-///
-/// R94 is untouched. "Both units' attack is read at the start of the combat" — that read is
-/// `resolve_combat`'s, and the combat starts here, after the window. Nothing reads either attack
-/// before it, so a trap that buffed or shrank a unit inside the window is read once, in the right
-/// order, and a First Strike survivor is still struck back with the attack the defender had when the
-/// combat began.
+/// §4.2 step 5 once step 4's window has closed: the combat and state check, when the declaration still
+/// stands (R220). Read back by id, since the window can have replaced every instance (R44's AI turn,
+/// `subsystems::ai_policy::adopt_state`); R94's attack read is `resolve_combat`'s, after the window.
 fn resolve_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
     // A window opened inside this one owns the field now, and this declaration is over either way.
     // The only Core shape is My Pawn handing the turn to the AI policy, which cancels first (R44).
@@ -998,8 +896,7 @@ fn resolve_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
     if sink.state.result.is_some() {
         return;
     }
-    // R2285000: the attacker's own "When this attacks" first, before any damage. With no such hook
-    // nothing runs and the attack goes on at once, as before.
+    // R2285000: the attacker's own "When this attacks" first, before any damage.
     let open = if declared_attack_stands(sink.state, &open)
         && find_instance(sink.state, &open.attacker_id).is_some_and(|card| has_when_attacks(sink.state, card))
     {
@@ -1023,8 +920,7 @@ fn resolve_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
 /// §4.2 step 5 for a declaration whose attacker has answered it (R2285000): the defender's side's
 /// "one of your Units is attacked" (R1849008), then the combat.
 fn defend_and_fight(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, bounce: bool) {
-    // R1849008: the defender's side answers "one of your Units is attacked" before the combat. With
-    // no such hook on that side nothing runs and the attack fights at once, as before.
+    // R1849008: the defender's side answers "one of your Units is attacked" before the combat.
     if declared_attack_stands(sink.state, &open) {
         let holders = ally_attacked_holders(sink.state, &open);
         if !holders.is_empty() {
@@ -1048,8 +944,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
         return;
     }
     if !declared_attack_stands(sink.state, &open) {
-        // R1203, MD-E15: a Prime still on the field whose target left in the window is canceled
-        // before any joiner musters, its exertion spent. Only a Prime takes this path.
+        // R1203, MD-E15: a Prime whose target left in the window is canceled before any joiner musters.
         if let Some(prime) = find_instance(sink.state, &open.attacker_id)
             && is_active_on_field(sink.state, prime)
             && crate::scripts::flags_of(sink.state, prime).attack_joiners == Some(true)
@@ -1073,8 +968,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
         return;
     };
 
-    // R1203: the Prime's joiners attack first. Anything else fights at once, as before, with the
-    // substitute's bounce after its combat.
+    // R1203: the Prime's joiners attack first; anything else fights at once, a substitute's bounce after.
     if crate::scripts::flags_of(sink.state, &attacker).attack_joiners != Some(true) {
         resolve_combat(sink, &attacker, &target);
         close_combat(sink, &attacker, &target, false, open.copies_for);
@@ -1115,12 +1009,10 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
     }
 }
 
-/// R1202, R1203: the combat a replacement or rider parked (`attack_summon::run_owed`).
-///
-/// A declared attack that still stands fights now; one whose target has left the field before its
-/// combat is canceled (`attackCancelled`, MD-E15's shape — the exertion stays spent). A forced
-/// attack fights when its attacker and its target still act since `since`. Then, when the
-/// substitute owes it, the bounce home — whether or not it fought.
+/// R1202, R1203: the combat a replacement or rider parked (`attack_summon::run_owed`). A declared
+/// attack that still stands fights; one whose target left the field first is canceled
+/// (`attackCancelled`, MD-E15, exertion spent). A forced attack fights when attacker and target still
+/// act since `since`. Then the bounce home a substitute owes, fought or not.
 pub(crate) fn prime_combat(sink: &mut EngineSink<'_>, owed: &crate::attack_summon::OwedAttackSummon) {
     if let Some(open) = &owed.declared {
         if declared_attack_stands(sink.state, open) {
@@ -1167,13 +1059,10 @@ fn target_acts_since(state: &GameState, target: &AttackTarget, since: u32) -> bo
     }
 }
 
-/// §10.3, §4.2 step 4: the traps answer what the window did before step 5. A trap in the window is an
-/// effect like any other, so its events — the hit it dealt the attacker, the unit it summoned — reach
-/// the traps at once, and a trap answering them fires and resolves inside step 4, before any damage of
-/// the attack: one that destroys the hit attacker leaves no attacker for step 5 (R220). The ordinary
-/// triggers they wake are queued behind the declaration's and wait for the loop after the combat, as
-/// they did before. A trap that asks here pauses step 4 again, and the combat stays owed behind its
-/// answer (R113). False when the combat must not resolve now.
+/// §10.3, §4.2 step 4: the traps answer what the window did before step 5. A trap's events reach the
+/// traps at once and resolve inside step 4, before any damage (one that destroys the attacker leaves
+/// none for step 5, R220); the ordinary triggers wait for the loop after the combat. A trap that asks
+/// pauses step 4 again, the combat owed behind it (R113). False when the combat must not resolve now.
 fn window_answered(sink: &mut EngineSink<'_>, id: &str) -> bool {
     crate::triggers::dispatch_pending(sink);
     if sink.state.result.is_some() {
@@ -1187,8 +1076,7 @@ fn window_answered(sink: &mut EngineSink<'_>, id: &str) -> bool {
     true
 }
 
-/// `work.rs`'s handler for a parked attack: the same attack, continued where it stopped (R113) — the
-/// window's own events answered first, the answer's included (`window_answered`).
+/// `work.rs`'s handler for a parked attack (R113), the window's own events answered first.
 pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
     let Some(id) = item
         .resume
@@ -1205,30 +1093,12 @@ pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
     resolve_declared_attack(sink, &id);
 }
 
-/// The player's attack: §4.2 steps 1 to 5. Validation first, then step 4 — the exertion, then the
-/// trap window — and only then step 5's combat and state check.
-///
-/// R1202: an attack Windfast would make, its substitute makes instead (`attack_summon`): the
-/// exertion below is Windfast's, spent before the substitute is drawn, and no `attackDeclared` of its own is ever
-/// emitted for it.
-///
-/// Step 4 in full: "Declaring the attack has now spent the attacker's exertion, before any damage.
-/// Trap window: My Pawn checks whether the hit would be lethal and, if so, cancels the attack; the
-/// exertion is not given back, so the attack is gone either way (R44)." So the declaration goes into
-/// `state.declared_attack` before any trap sees it — that record is what `effects::combat::cancel_attack`
-/// marks (§6.3 "Cancel an attack") — and the traps are offered the event through
-/// `traps::run_trap_window`, the same scheduled-window entry point §2.2's end-of-turn window uses. That
-/// is not an analogy: it is the one implementation, so the ordering, the R68 side order and, above
-/// all, R113's parking of the traps a prompt stopped the window from reaching are shared rather than
-/// re-derived here.
-///
-/// A trap in the window can prompt its controller, so the rest of the attack is a resumable sequence
-/// like the two turn boundaries: at the moment the window pauses, and never before it (R117), the
-/// combat is owed to `state.work` and `run_owed_attack` above picks it up when the answer drains the
-/// queue. `state.work` is drained ahead of the trigger queue, and the traps the window still owes
-/// are parked on `state.work` too, in front of the combat — which is why the window uses
-/// `run_trap_window` rather than `triggers::dispatch_event`, whose remainder would wait *behind* the
-/// combat in the trigger queue and so fire after the damage it exists to pre-empt.
+/// The player's attack: §4.2 steps 1 to 5, validation, then step 4 (the exertion, the trap window),
+/// then step 5's combat and state check; an attack Windfast would make, its substitute makes (R1202).
+/// The declaration goes into `state.declared_attack` (what `effects::combat::cancel_attack` marks, §6.3,
+/// R44) before `traps::run_trap_window` (§2.2) offers it to the traps, sharing R68's side order and R113's
+/// parking. When the window pauses (R117) the combat is owed behind the traps it still owes: queued by
+/// `triggers::dispatch_event` it would fire after the damage they exist to pre-empt.
 pub fn declare_attack(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -1238,10 +1108,9 @@ pub fn declare_attack(
     let chosen = live_target_or_given(sink.state, chosen);
     why_cannot_attack(sink.state, &attacker, &chosen)?;
 
-    // B5 E5, E9: step 2's target chosen, and before the trap window, "a friendly unit is targeted" —
-    // a card of the defender's that interposes (from the hand) is summoned and the attack moves to it
-    // (`replacements::answer_targeting`: `summoned`, then `redirected`). An attack carries no source
-    // card, so a `by: "spell"` card (Classic #33 Joro, R651) never answers one.
+    // B5 E5, E9: before the trap window, "a friendly unit is targeted": a defender's card that
+    // interposes from the hand is summoned and the attack moves to it (`replacements::answer_targeting`).
+    // An attack has no source card, so a `by: "spell"` card (Classic #33 Joro, R651) never answers one.
     let interposer = match &chosen {
         DamageTarget::Unit { instance } => {
             crate::replacements::answer_targeting(sink, instance, attacker.controller, TargetedWhat::Attack)
@@ -1255,8 +1124,7 @@ pub fn declare_attack(
 
     // Step 4's first sentence. R44 never gives this back, so a canceled attack is gone either way.
     // R636: only a repeat attack writes `attacks`, so an ordinary exertion keeps its two-flag shape.
-    // R1202: this is the declarer's exertion — Windfast's, whose substitute spends it without
-    // emitting its own declaration.
+    // R1202: this is the declarer's exertion, Windfast's, whose substitute emits no declaration.
     if let Some(live) = find_instance_mut(sink.state, &attacker.id) {
         let attacks = live
             .exertion
@@ -1269,8 +1137,7 @@ pub fn declare_attack(
         }
     }
 
-    // R1202, R831006: the attack Windfast would make, a random Unit summoned from its controller's
-    // hand makes instead.
+    // R1202, R831006: a random Unit summoned from its controller's hand makes Windfast's attack instead.
     match crate::attack_summon::replace_attacker(sink, &attacker) {
         crate::attack_summon::Replaced::By(unit) => {
             let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
@@ -1282,12 +1149,10 @@ pub fn declare_attack(
     declare_instead(sink, &attacker, &target, None, false)
 }
 
-/// R1202: everything in `declare_attack` after its exertion block — the declaration, the trap
-/// window, the combat — for `attacker`, which a substitute may be. A substitute attacks only when
-/// the unit restrictions let it (`attack_restriction`); otherwise nothing happens, the declarer's
-/// exertion spent either way. Its declaration carries `bounce_after` and an `exits_from` taken
-/// after the summon, and its event carries `instead_of` — the declarer's id — and `forced: false`,
-/// so a declared substitute's attack opens its trap window like any declared attack.
+/// R1202: `declare_attack` after its exertion (the declaration, the trap window, the combat) for
+/// `attacker`, which a substitute may be. A substitute attacks only when the unit restrictions let it
+/// (`attack_restriction`); its declaration carries `bounce_after` and a post-summon `exits_from`, its
+/// event `instead_of` and `forced: false`, so it opens its trap window like any declared attack.
 pub(crate) fn declare_instead(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -1329,12 +1194,9 @@ pub(crate) fn declare_instead(
     let at = sink.events.len();
     sink.events.push(event.clone());
     withhold_from_frontier(sink, at);
-    // The interposer's `summoned` and `redirected` stand before the declaration on the frontier, which
-    // the window's own dispatch delivers (R100) — the declaration is the window's alone all the same.
-    // Marked unconditionally: on the paths a replacement parks behind a prompt (`attack_summon`)
-    // the cursor no longer stands at the declaration when the answer makes it, so the mark is what
-    // keeps the frontier from delivering it a second time. Where the cursor did stand there the mark
-    // changes nothing — the declaration was already past it.
+    // The interposer's `summoned` and `redirected` precede the declaration on the frontier (R100), the
+    // declaration the window's alone. Marked unconditionally: where a replacement parked behind a prompt
+    // (`attack_summon`) the cursor no longer stands at it, and elsewhere the mark changes nothing.
     let declaration = sink.events[at].clone();
     crate::triggers::mark_dispatched(sink, &[declaration]);
 
@@ -1364,25 +1226,11 @@ pub(crate) fn declare_instead(
     Ok(())
 }
 
-/// A forced attack (Moths to the Flame, Bear Honeypot): §4.2's last paragraph and R53. It skips
-/// steps 1 to 3, so position, sickness and the Taunt rule do not apply, and it spends no exertion, so
-/// the unit may still take its own attack on its own turn. The target still strikes back, and the
-/// combat is followed by its own state check.
-///
-/// R121 — AND IT OPENS NO TRAP WINDOW. Step 4 is one sentence about spending the attacker's exertion
-/// and one about the window that answers the declaration, and a forced attack has neither half: R121
-/// says in as many words that it "is declared by the effect, not the player … so it is not 'the
-/// opponent declaring an attack'", and §6.3's Cancel-an-attack row is "call off an attack already
-/// declared", which is the player's declaration and not a compulsion. So `state.declared_attack` stays
-/// null here and nothing can cancel a forced attack — which is also what #96 already says, since its
-/// `when` refuses every event carrying `forced`.
-///
-/// The engineering reading agrees with the rules one. A window here would open inside a card's
-/// effect list, where a trap's prompt would split the list §10.3 calls one unit of work, and where
-/// `force_attacks_on`'s run would have to become a second resumable sequence — for a window no Core
-/// card can fire in. Nothing is lost by leaving it out: the `attackDeclared` event a forced attack
-/// emits still reaches the traps through §10.3's immediate check, exactly as it does today, because
-/// the withholding above is per declaration rather than per event type.
+/// A forced attack (Moths to the Flame, Bear Honeypot; §4.2's last paragraph, R53): it skips steps 1
+/// to 3 and spends no exertion; the target still strikes back, and its own state check follows.
+/// R121: it opens no trap window ("declared by the effect, not the player"), so `state.declared_attack`
+/// stays null and nothing cancels it (§6.3; #96's `when` refuses `forced`), and no prompt splits a card's
+/// effect list, §10.3's one unit of work. Its `attackDeclared` still reaches the immediate check.
 pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
     force_attack_with(sink, attacker, target, false);
 }
@@ -1426,14 +1274,11 @@ fn force_attack_with(
         return;
     }
     // R173: the compulsion waives position, sickness and Taunt (R53), never whose side the target is
-    // on. A target that is not this attacker's enemy — it changed sides mid-run, or had crossed to
-    // the attacker's side before the run began — is not attacked, and the attacker is passed over in
-    // silence, as R96 passes over one that is gone.
+    // on: against a target not its enemy the attacker is passed over in silence, as R96 passes one gone.
     if !allies && !is_enemy_of(&attacker, &target) {
         return;
     }
-    // B5 E35: nor the unit restrictions — a forced attack on a target its attacker may not attack does
-    // not happen, and is passed over in silence the same way.
+    // B5 E35: nor the unit restrictions; such an attack is passed over in silence the same way.
     if crate::restrictions::attack_restriction(sink.state, &attacker, &target).is_err() {
         return;
     }
@@ -1476,9 +1321,8 @@ fn force_attack_with(
     }
 }
 
-/// R1202: a forced attack that skips the replacement — the substitute's own, or any forced attack
-/// continued after its pick or its joiners — made as a forced attack with `instead_of` set, then
-/// its combat and state check.
+/// R1202: a forced attack that skips the replacement (the substitute's own, or one continued after its
+/// pick or its joiners), declared with `instead_of`, then its combat and state check.
 pub(crate) fn force_attack_instead(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -1496,10 +1340,9 @@ pub(crate) fn force_attack_instead(
 }
 
 /// A forced attack's combat and state check (R53), its attacker's "When this attacks" first
-/// (R2285000). With no such hook the combat is at once, as before; after one, the combat is fought
-/// only while the attacker and the target still act on the stays the attack began on (R174), as
-/// `prime_combat`'s forced branch asks. A question in the hook owes the rest, the combat included
-/// (R113), and a run that made this attack owes its own rest behind it.
+/// (R2285000); after one, the combat is fought only while attacker and target still act on the stays
+/// the attack began on (R174). A question in the hook owes the rest, the combat included (R113), and
+/// a run that made this attack owes its own rest behind it.
 fn forced_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
     if !has_when_attacks(sink.state, attacker) {
         resolve_combat(sink, attacker, target);
@@ -1544,13 +1387,10 @@ pub(crate) fn is_enemy_of(attacker: &CardInstance, target: &AttackTarget) -> boo
     }
 }
 
-/// R53: the named units attack the named target one at a time, in the order given (lane order, as
-/// `active_units_of` reports it), each its own combat with its own state check, and the sequence stops
-/// as soon as the target is no longer on the field — and R174 has a target that left and came back
-/// (a Reborn body) count as gone, since what is standing there now is a new arrival (R83). The same
-/// holds for each attacker the run named: one that died in an earlier combat of the run and came back
-/// through Reborn before its turn is not the unit the run named, so it is passed over in silence like
-/// any attacker that is gone (R96). (TS `since = exitMark(sink.state)`: `None` is the mark now.)
+/// R53: the named units attack the named target one at a time, in the order given (lane order), each
+/// its own combat and state check, stopping once the target is off the field; R174 counts a target
+/// that left and came back (a Reborn body, R83) as gone. So with an attacker: one that died and came
+/// back through Reborn is passed over in silence (R96). `since: None` is the mark now.
 pub fn force_attacks_on(
     sink: &mut EngineSink<'_>,
     attackers: &[CardInstance],
@@ -1570,9 +1410,8 @@ pub fn force_attacks_on(
                 return;
             }
         }
-        // R53, R113: the check after the last combat collected a unit whose Death asks something, and
-        // that check belongs to that combat (R59). The run waits for the answer rather than walking on
-        // over the prompt: the attackers still to come are owed, and the answer's drain brings them.
+        // R53, R113: the last combat's check (R59) collected a Death that asks; the attackers still to
+        // come are owed rather than walked on over the prompt, and the answer's drain brings them.
         if is_paused(sink) {
             owe_forced_run(sink, &attackers[at..], target, since);
             return;
@@ -1584,14 +1423,12 @@ pub fn force_attacks_on(
     }
 }
 
-/// R113: the `resume.hook` of a forced run a Death hook's prompt stopped between two combats: the
-/// attackers it has not reached and the target, by id, since R44's AI turn can replace every
-/// instance before the answer (the same reason `ATTACK_WINDOW_WORK` carries ids).
+/// R113: the `resume.hook` of a forced run a Death's prompt stopped between two combats: the rest, by
+/// id, since R44's AI turn can replace every instance before the answer.
 pub const FORCED_RUN_WORK: &str = "@forcedRun";
 
 /// Park the rest of a run at the pause, with the mark it began at, so the answer's own departures
-/// count against the stays the run named too (R174). (TS `OwedForcedRun = { attackers; target:
-/// { unit } | { hero }; since? }`, written as that JSON.)
+/// count against the stays the run named too (R174).
 fn owe_forced_run(sink: &mut EngineSink<'_>, rest: &[CardInstance], target: &AttackTarget, since: u32) {
     if sink.state.result.is_some() {
         return;
@@ -1657,14 +1494,11 @@ pub fn run_owed_forced_run(sink: &mut EngineSink<'_>, item: &WorkItem) {
     force_attacks_on(sink, &attackers, &target, since);
 }
 
-// ---------------------------------------------------------------------------------------------
 // B5 E35: forced attacks on "a random enemy" and on the unit's own hero
-// ---------------------------------------------------------------------------------------------
 
-/// B5 E35: what a forced attack on "a random enemy" draws from — the targets its attacker may attack,
-/// enemy units in lane order and then (for "an enemy", not "an enemy Unit") the enemy hero. R53 waives
-/// position, sickness and Taunt, so none of those narrows the list; the unit restrictions do, and so
-/// does a carrier (R446): a carried Unit neither attacks nor is drawn, so no roll is spent on it.
+/// B5 E35: what a forced attack on "a random enemy" draws from: enemy units in lane order, then the
+/// enemy hero for "an enemy". R53 waives position, sickness and Taunt; the unit restrictions and a
+/// carrier (R446) still narrow the list, so no roll is spent on a carried Unit.
 pub fn random_attack_targets(
     state: &GameState,
     attacker: &CardInstance,
@@ -1690,11 +1524,9 @@ pub fn random_attack_targets(
 }
 
 /// B5 E35: the attacker makes `times` forced attacks (R53), each on a target drawn from the match rng
-/// among the ones it may attack as that attack begins (Classic #78's "attacks a random enemy", twice on
-/// its Radiant face; Classic+ #19.2's "a random enemy Unit"). Each is its own combat with its own state
-/// check; the run stops once the attacker has left the field on the stay it began on, or has nothing
-/// to attack. A Death between two of them that asks owes the rest (`FORCED_RANDOM_WORK`, R113).
-/// (TS `since = exitMark(sink.state)`: `None` is the mark now.)
+/// among the ones it may attack as that attack begins (Classic #78, Classic+ #19.2), each its own combat
+/// and state check, stopping once the attacker has left the field on the stay it began on or has
+/// nothing to attack. A Death between two that asks owes the rest (`FORCED_RANDOM_WORK`, R113).
 pub fn force_attacks_random(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -1732,7 +1564,6 @@ pub fn force_attacks_random(
 /// R113: the `resume.hook` of a random forced run a Death's question stopped between two attacks.
 pub const FORCED_RANDOM_WORK: &str = "@forcedRandom";
 
-/// (TS `OwedForcedRandom = { attacker; among; left; since }`, written as that JSON.)
 fn owe_forced_random(sink: &mut EngineSink<'_>, attacker: &str, among: AttackAmong, left: i32, since: u32) {
     if left <= 0 || sink.state.result.is_some() {
         return;
@@ -1768,10 +1599,9 @@ pub fn run_owed_forced_random(sink: &mut EngineSink<'_>, item: &WorkItem) {
     force_attacks_random(sink, &attacker, among, left as i32, Some(since as u32));
 }
 
-/// B5 E35: a forced attack on the unit's OWN hero (Classic+ #19.5 Bot Loser while Berserk). R53's
-/// compulsion, with the one change R173 never allows elsewhere: the target is its controller's hero.
-/// A hero never strikes back (§4.3), so the unit deals its attack to its own hero, and the combat has
-/// its own state check. The unit restrictions still hold: one that cannot attack does not.
+/// B5 E35: a forced attack on the unit's OWN hero (Classic+ #19.5 Bot Loser while Berserk): R53's
+/// compulsion with the one change R173 never allows elsewhere. A hero never strikes back (§4.3), the
+/// combat has its own state check, and the unit restrictions still hold.
 pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance) {
     if sink.state.result.is_some() {
         return;
@@ -1797,20 +1627,12 @@ pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance)
     forced_combat(sink, &attacker, &target);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1848005: the melee, every Unit on the field attacking another until one is left
-// ---------------------------------------------------------------------------------------------
 
-/// R1848005 (Stinkyscape #120 Wild System, "All units attack each other until only one survives",
-/// "allies can attack each other, max 20 attacks"): up to `attacks` forced attacks (R53), each between
-/// a pair drawn from the match rng as it begins. The fighters are every Unit acting on the field, the
-/// active player's in lane order and then the other's (`active_units_of`, so a card beneath a Stack
-/// neither attacks nor is hit, R13, and a carried Unit is passed by, R446); an attacker is drawn among
-/// the ones with a Unit they may attack under §4.2 step 2's restrictions — an ally as well as an enemy,
-/// never a hero — and then its target among those. Each attack is its own combat with its own state
-/// check, so the fighters are read again for the next. The melee ends once one Unit or none is left,
-/// once no fighter has a Unit it may attack, once the game is over, or after `attacks` of them; a
-/// question a combat's deaths ask owes the rest (`MELEE_WORK`, R113).
+/// R1848005 (Stinkyscape #120 Wild System, "allies can attack each other, max 20 attacks"): up to
+/// `attacks` forced attacks (R53), each between a pair drawn from the match rng among the Units acting
+/// on the field (`active_units_of`, active player's first; none beneath a Stack, R13, nor carried,
+/// R446), never a hero. Each is its own combat and state check; a question owes the rest (R113).
 pub fn run_melee(sink: &mut EngineSink<'_>, attacks: i32) {
     let mut left = attacks;
     while left > 0 {
@@ -1886,18 +1708,14 @@ pub fn run_owed_melee(sink: &mut EngineSink<'_>, item: &WorkItem) {
     run_melee(sink, left as i32);
 }
 
-// ---------------------------------------------------------------------------------------------
 // "When this attacks": the attacker's `whenAttacks` hook, before any damage of its attack (R2285000)
-// ---------------------------------------------------------------------------------------------
 
-/// R113: the `resume.hook` of the engine sequence this section parks — an attacker's `whenAttacks`
-/// hook owed before its combat: the rest of the hook after a question of its own, or the state check
-/// that follows it, and then the rest of the attack.
+/// R113: the `resume.hook` of an attacker's `whenAttacks` owed before its combat (its rest after a
+/// question of its own, or its state check), then the rest of the attack.
 pub const WHEN_ATTACKS_WORK: &str = "@whenAttacks";
 
-/// The facts an attack hands its attacker's `whenAttacks` hook, in the hook's `ctx.data`
-/// (`when_attacks_of` reads them back): the attack's target (a unit's id or `hero-<player>`) and
-/// whether the attack was forced (R53).
+/// The facts an attack hands its attacker's `whenAttacks` hook in its `ctx.data` (`when_attacks_of`
+/// reads them back): the target (a unit's id or `hero-<player>`) and whether it was forced (R53).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct WhenAttacksFacts {
@@ -1944,12 +1762,10 @@ fn owe_when_attacks(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) {
     owe(sink, engine_resume(WHEN_ATTACKS_WORK, "hook", data));
 }
 
-/// R2285000: the attacker's hook, from `paused` when a question split it, then the state check that
-/// follows it (R59). The hook runs for the player who controls the attacker, a new one only while the
-/// attacker still acts on the field; one a question split finishes whatever became of it. The attack
-/// to go on with now, retargeted when the hook transformed its target (R2285002); `None` when the game
-/// ended or a question stopped the sequence, whose rest — the attack included — is then owed on
-/// `state.work` (R113).
+/// R2285000: the attacker's hook, from `paused` when a question split it, then its state check (R59).
+/// It runs for the attacker's controller, a new one only while the attacker still acts on the field.
+/// The attack to go on with, retargeted when the hook transformed its target (R2285002); `None` when
+/// the game ended or a question stopped the sequence, its rest owed on `state.work` (R113).
 fn answer_when_attacks(
     sink: &mut EngineSink<'_>,
     owed: &OwedWhenAttacks,
@@ -2022,8 +1838,7 @@ fn answer_when_attacks(
             );
             None
         }
-        // Parked: the rest of the hook went to `state.work` as this sequence's own item, which takes
-        // the target the hook has already transformed.
+        // Parked: the hook's rest is on `state.work`, and takes the target the hook already transformed.
         crate::prompts::ListStatus::Parked => {
             if followed.target_id != owed.target_id {
                 repark_retargeted(sink, owed, &followed);
@@ -2070,7 +1885,6 @@ fn followed_target(sink: &EngineSink<'_>, target_id: &str, from: usize) -> Strin
     id
 }
 
-/// The owed attack, aimed at `target_id` — its declaration's target too.
 fn retargeted(owed: &OwedWhenAttacks, target_id: &str) -> OwedWhenAttacks {
     let mut owed = owed.clone();
     if let Some(open) = owed.declared.as_mut() {
@@ -2124,22 +1938,18 @@ pub fn run_owed_when_attacks(sink: &mut EngineSink<'_>, item: &WorkItem) {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // "After this attacks": the attacker's `afterAttack` hook, once the combat's state check has closed
-// ---------------------------------------------------------------------------------------------
 
-/// R113: the `resume.hook` of the engine sequence this section parks — an attacker's `afterAttack`
-/// hook owed behind the state check that closes its combat (a Death there asked something), or the
-/// rest of that hook after a question of its own, with the check that follows it.
+/// R113: the `resume.hook` of an attacker's `afterAttack` owed behind its combat's closing check (a
+/// Death there asked), or of its rest after a question of its own, with the check that follows it.
 pub const AFTER_ATTACK_WORK: &str = "@afterAttack";
 
 /// The facts a combat hands its attacker's `afterAttack` hook, in the hook's `ctx.data`
 /// (`after_attack_of` reads them back): the attack's target (a unit's id or `hero-<player>`), the units
-/// that combat destroyed — the ones whose lethal hit was the attacker's (R42's killer: the attacked
-/// unit, and Cleave's kills) — whether the attacker is still on the field on the stay it attacked from
-/// once the check has closed (true, since an "After this attacks" runs only then, R2285001; false only
-/// for a "Whenever this attacks" whose attacker died or left, R2396000), and whether the attack was
-/// forced (R53).
+/// the attacker's lethal hits destroyed (R42's killer: the attacked unit, and Cleave's kills), whether
+/// the attacker is still on the field on the stay it attacked from once the check has closed (false only
+/// for a "Whenever this attacks" whose attacker died or left, R2396000; R2285001), and whether the attack
+/// was forced (R53).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterAttackFacts {
@@ -2292,12 +2102,10 @@ pub fn run_owed_combat_copies(sink: &mut EngineSink<'_>, item: &WorkItem) {
 }
 
 /// The state check that closes a combat (§4.2 step 5, §4.3 step 3, R53), then the attacker's
-/// `afterAttack` hook (Classic+ #73.1, Stinkyscape #91) — only when the attacker is still on the
-/// field on the stay it attacked from once that check has closed (R2285001), or, for a "Whenever this
-/// attacks" (Core #32), whatever became of it (R2396000). An attack that was called
-/// off (R44, R220) never fought and never reaches here. The hook is a whole effect, so a check follows
-/// it (R59); a question inside it, or a Death's question in the check before it, owes the rest to
-/// `state.work` (R113).
+/// `afterAttack` hook (Classic+ #73.1, Stinkyscape #91): only for an attacker still on the field on the
+/// stay it attacked from (R2285001), or, for a "Whenever this attacks" (Core #32), whatever became of it
+/// (R2396000). A called-off attack (R44, R220) never reaches here. The hook is a whole effect, so a check
+/// follows it (R59); a question inside it, or in the check before it, owes the rest to `state.work` (R113).
 ///
 /// MD-D20, R1123: when `copies_for` names a player, that player's fresh copies of what the two
 /// combatants destroyed come first, right after the check and before `afterAttack`.
@@ -2309,8 +2117,7 @@ fn close_combat(
     copies_for: Option<PlayerId>,
 ) {
     let snapshot = live_or(sink.state, attacker);
-    // MD-C26: the defender as it fought, read before the check that closes its combat — a pure
-    // read, with no rng, so a combat with no hook on either side replays exactly as before.
+    // MD-C26: the defender as it fought, before the closing check; a pure read (no rng), so replays hold.
     let defender_snapshot = match target {
         DamageTarget::Unit { instance } => Some(live_or(sink.state, instance)),
         DamageTarget::Hero { .. } => None,
@@ -2362,7 +2169,6 @@ fn combatant_hooks(
     since: u32,
     from: usize,
 ) {
-    // MD-C26: the attacker's `afterAttack` runs first; only when it has one.
     let attacker_id = snapshot.id.clone();
     if crate::scripts::script_of(sink.state, &snapshot)
         .after_attack
@@ -2395,8 +2201,7 @@ fn combatant_hooks(
         }
         run_after_attack(sink, &owed, None);
     }
-    // MD-C26: then the defender's `afterAttacked`, once per combat it was the target of — never
-    // for an attack on the hero, which has no defender snapshot.
+    // MD-C26: then the defender's `afterAttacked`, once per combat it was attacked in (never a hero).
     if let Some(defender) = defender_snapshot
         && crate::scripts::script_of(sink.state, &defender)
             .after_attacked
@@ -2442,11 +2247,9 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
-    // R2285001: "After this attacks" only for an attacker still on the field on the stay it attacked
-    // from; one that died in the combat, or left the field otherwise, does nothing, and no check is
-    // owed after a hook that never ran. R2396000: "Whenever this attacks" also for one that died or
-    // left, as the snapshot it fought with, as `run_after_attacked` runs a dead defender; a Reborn
-    // body is not it, so it runs once.
+    // R2285001, R2396000 (above): an "After this attacks" for a gone attacker does nothing and owes no
+    // check; a "Whenever this attacks" runs as the snapshot it fought with, as `run_after_attacked` runs
+    // a dead defender; a Reborn body is not it, so it runs once.
     let self_card = match (live, survived) {
         (Some(live), true) => live,
         _ if script.after_attack_even_if_gone => owed.snapshot.clone(),
@@ -2481,7 +2284,7 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
             sink,
             Some(&self_card),
             crate::resolve::HookOptions {
-                // R426: the player who controlled it in that combat, though a Death in the check took it since.
+                // R426: its controller in that combat, though a Death in the check took it since.
                 controller: Some(owed.snapshot.controller),
                 data: Some(data),
                 ..crate::resolve::HookOptions::default()
@@ -2536,20 +2339,15 @@ pub fn run_owed_after_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
     run_after_attack(sink, &owed, paused_of(&item.resume.data));
 }
 
-// ---------------------------------------------------------------------------------------------
-// "After this is attacked": the defender's `afterAttacked` hook, once the combat's state check
-// has closed (Meditative #49.3, MD-C26, R1026)
-// ---------------------------------------------------------------------------------------------
+// "After this is attacked": the defender's `afterAttacked` hook (Meditative #49.3, MD-C26, R1026)
 
-/// R113: the `resume.hook` of the engine sequence this section parks — a defender's
-/// `afterAttacked` hook owed behind the state check that closes its combat, or the rest of that
-/// hook after a question of its own, with the check that follows it.
+/// R113: the `resume.hook` of a defender's `afterAttacked` owed behind its combat's closing check, or
+/// of its rest after a question of its own, with the check that follows it.
 pub const AFTER_ATTACKED_WORK: &str = "@afterAttacked";
 
-/// The facts a combat hands its defender's `afterAttacked` hook, in the hook's `ctx.data`
-/// (`after_attacked_of` reads them back): the attacker's id, whether the attack was forced (R53),
-/// and whether the attacker is still on the field on the stay it attacked from once the check has
-/// closed. The attacker's hook runs first (MD-C26).
+/// The facts a combat hands its defender's `afterAttacked` hook, in its `ctx.data`
+/// (`after_attacked_of` reads them back): the attacker's id, whether the attack was forced (R53), and
+/// whether the attacker survived the closing check. The attacker's hook runs first (MD-C26).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterAttackedFacts {
@@ -2632,7 +2430,7 @@ fn run_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked, pause
         (Some(live), true) => live.clone(),
         _ => owed.snapshot.clone(),
     };
-    // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
+    // The facts, then `SELF_KEY` for a defender that died, in that key order.
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("attackerId".to_string(), json!(owed.attacker_id));
     data.insert("forced".to_string(), json!(owed.forced));
@@ -2656,7 +2454,7 @@ fn run_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked, pause
             sink,
             Some(&self_card),
             crate::resolve::HookOptions {
-                // MD-C26: the player who controlled it in that combat, though a Death in the check took it since.
+                // MD-C26: its controller in that combat, though a Death in the check took it since.
                 controller: Some(owed.snapshot.controller),
                 data: Some(data),
                 ..crate::resolve::HookOptions::default()
@@ -2716,15 +2514,10 @@ pub fn run_owed_after_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
     run_after_attacked(sink, &owed, paused_of(&item.resume.data));
 }
 
-// ---------------------------------------------------------------------------------------------
-// "When one of your Units is attacked": the defender's side's `allyAttacked` hooks, between a
-// declared attack's trap window and its combat (Stinkyscape #14 Arm of the Jempire, R1849008)
-// ---------------------------------------------------------------------------------------------
+// "When one of your Units is attacked": `allyAttacked` hooks (Stinkyscape #14 Arm of the Jempire, R1849008)
 
-/// R113: the `resume.hook` of the engine sequence this section parks — the `allyAttacked` hooks a
-/// declared attack still owes before its combat, and the combat after them: the rest of a hook after
-/// a question of its own, the check that follows a hook, or the holders a Death's question in that
-/// check stopped.
+/// R113: the `resume.hook` of the `allyAttacked` hooks a declared attack still owes before its combat,
+/// and the combat after them, from wherever a question (a hook's own, or a Death's) stopped them.
 pub const ALLY_ATTACKED_WORK: &str = "@allyAttacked";
 
 /// The facts an `allyAttacked` hook is handed in its `ctx.data` (`ally_attacked_of` reads them back):
@@ -2754,17 +2547,15 @@ pub fn ally_attacked_of(ctx: &crate::script::EffectContext<'_>) -> Option<AllyAt
 struct OwedAllyAttacked {
     declared: DeclaredAttack,
     holders: Vec<String>,
-    /// The first holder's hook is done and only the state check that follows it is owed. Only ever
-    /// `Some(true)`.
+    /// The first holder's hook is done; only its state check is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
 }
 
 const ALLY_ATTACKED_KEY: &str = "allyAttacked";
 
-/// R1849008: the cards that answer this declaration — every card acting on the attacked Unit's
-/// controller's side with an `allyAttacked` hook, the attacked Unit itself included, in R68's order.
-/// None for an attack on a hero.
+/// R1849008: the cards that answer this declaration, every card acting on the attacked Unit's side
+/// with an `allyAttacked` hook (the Unit included) in R68's order; none for an attack on a hero.
 fn ally_attacked_holders(state: &GameState, open: &DeclaredAttack) -> Vec<String> {
     let Some(DamageTarget::Unit { instance }) = attack_target_of(state, &open.target_id) else {
         return Vec::new();
@@ -2782,11 +2573,10 @@ fn owe_ally_attacked(sink: &mut EngineSink<'_>, owed: &OwedAllyAttacked) {
     owe(sink, engine_resume(ALLY_ATTACKED_WORK, "hook", data));
 }
 
-/// R1849008: the holders' hooks, one after another, each a whole effect followed by its state check
-/// (R59), from `paused` when a question split the first. A holder no longer acting on the field is
-/// passed over, and once the declaration no longer stands (R220) no further hook starts. True when the
-/// combat may go on now; false when the game ended or a question stopped the sequence, whose rest —
-/// the combat included — is then owed on `state.work` (R113).
+/// R1849008: the holders' hooks in turn, each a whole effect followed by its state check (R59), from
+/// `paused` when a question split the first. A holder no longer acting is passed over, and once the
+/// declaration no longer stands (R220) no further hook starts. True when the combat may go on now;
+/// false when the game ended or a question stopped the sequence, its rest owed on `state.work` (R113).
 fn answer_ally_attacked(
     sink: &mut EngineSink<'_>,
     mut owed: OwedAllyAttacked,
@@ -2910,19 +2700,14 @@ pub fn run_owed_ally_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
     fight_declared(sink, declared, since, bounce);
 }
 
-// ---------------------------------------------------------------------------------------------
-// "After one of your Units attacks": the attacker's side's `allyAttack` hooks, once the state
-// check that closes the combat has run (Training Grounds #31 Level Up!, R2199000)
-// ---------------------------------------------------------------------------------------------
+// "After one of your Units attacks": `allyAttack` hooks (Training Grounds #31 Level Up!, R2199000)
 
-/// R113: the `resume.hook` of the engine sequence this section parks — the `allyAttack` hooks a
-/// combat still owes after its check and its combatants' own hooks: the rest of a hook after a
-/// question of its own, the check that follows a hook, or the holders a question stopped.
+/// R113: the `resume.hook` of the `allyAttack` hooks a combat still owes after its check and its
+/// combatants' own hooks, from wherever a question stopped them.
 pub const ALLY_ATTACK_WORK: &str = "@allyAttack";
 
-/// The facts an `allyAttack` hook is handed in its `ctx.data` (`ally_attack_of` reads them back):
-/// the attacker's id, the attack's target (a Unit's id or `hero-<player>`), whether the attack was
-/// forced (R53), and whether the attacker still stands on the field as this hook starts.
+/// The facts an `allyAttack` hook is handed in its `ctx.data` (`ally_attack_of` reads them back): the
+/// attacker's id, the target, `forced` (R53) and whether the attacker still stands as the hook starts.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AllyAttackFacts {
@@ -2957,8 +2742,7 @@ struct OwedAllyAttack {
     /// The first holder's `survived`, judged once as its hook starts, so a pause re-reads the same.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     survived: Option<bool>,
-    /// The first holder's hook is done and only the state check that follows it is owed. Only ever
-    /// `Some(true)`.
+    /// The first holder's hook is done; only its state check is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
 }
@@ -2981,9 +2765,8 @@ fn owe_ally_attack(sink: &mut EngineSink<'_>, owed: &OwedAllyAttack) {
     owe(sink, engine_resume(ALLY_ATTACK_WORK, "hook", data));
 }
 
-/// R2199000: the holders' hooks, one after another, each a whole effect followed by its state check
-/// (R59), from `paused` when a question split the first. A holder no longer acting on the field is
-/// passed over. A question stops the sequence, whose rest is then owed on `state.work` (R113).
+/// R2199000: the holders' hooks in turn, each a whole effect followed by its state check (R59), from
+/// `paused` when a question split the first; one no longer acting is passed over (R113 for a pause).
 fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut paused: Option<PausedStep>) {
     if owed.check_only.take() == Some(true) && !owed.holders.is_empty() {
         owed.holders.remove(0);

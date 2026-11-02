@@ -3,15 +3,10 @@
 //! own, its Brittle count, its declared numbers as they stand, what Degrade, Upgrade and KY's Constant
 //! changed, its enchantments, and — on a hand card — the keywords it has gained there.
 //!
-//! `view_for` builds every card view it shows through `card_view`, and only for a card the viewer may
-//! read there (the viewer's own hand, a unit, a face-up backrow card or the controller's face-down
-//! one, a graveyard, an exile pile, the resolving zone), so none of this reaches a player who may not
-//! read the card: the opponent's hand and every library travel as counts, a face-down trap as its
-//! zone and cost (R351), and the owner's library list reads what the owner was shown going in, never
-//! the card (R311), so a change made inside a deck shows once the card leaves it. Every key is absent
-//! when it has nothing to say, so a card with no instance data views exactly as before patch v0.2.0.
-//!
-//! Port of `packages/engine/src/instanceView.ts`.
+//! `view_for` builds every card view through `card_view`, only for a card the viewer may read there,
+//! so none of this reaches a player who may not: the opponent's hand and every library travel as
+//! counts, a face-down trap as its zone and cost (R351), and the owner's library list reads what the
+//! owner was shown going in, never the card (R311). Every key is absent when it has nothing to say.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -19,9 +14,8 @@ use serde::{Deserialize, Serialize};
 use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, Enchantment, Keyword, Tag, Tuning, keyword_key};
 
-/// TS `Pick<CardView, "type" | "brittle" | "params" | "tuning" | "enchantments">`: the instance-data
-/// keys of a card view, each `None` when it has nothing to say. Serializes as those keys of
-/// `CardView` do.
+/// The instance-data keys of a card view, each `None` when it has nothing to say. Serializes as those
+/// keys of `CardView` do.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceData {
@@ -65,8 +59,7 @@ pub fn instance_data_view(state: &GameState, card: &CardInstance) -> InstanceDat
     if let Some(params) = params {
         out.params = Some(params);
     }
-    // B3.4 rule 7: what changed, for the client's Degrade and Upgrade marks. (TS `copyTuning`, a JSON
-    // deep copy, is a clone here.)
+    // B3.4 rule 7: what changed, for the client's Degrade and Upgrade marks.
     let tuning = if crate::tuning::is_tuned(card) {
         card.tuning.clone()
     } else {
@@ -75,7 +68,7 @@ pub fn instance_data_view(state: &GameState, card: &CardInstance) -> InstanceDat
     if let Some(tuning) = tuning {
         out.tuning = Some(tuning);
     }
-    // E39. (TS `enchantmentsOf(card)` is `card.enchantments ?? []`.)
+    // E39: the enchantments, when there are any.
     let enchantments: &[Enchantment] = card.enchantments.as_deref().unwrap_or(&[]);
     if !enchantments.is_empty() {
         out.enchantments = Some(enchantments.to_vec());
@@ -84,7 +77,7 @@ pub fn instance_data_view(state: &GameState, card: &CardInstance) -> InstanceDat
 }
 
 fn same_keywords(a: &[Keyword], b: &[Keyword]) -> bool {
-    // A comparator-less `.sort()` on strings (SURFACE §4.4.1): a plain sort of the keys.
+    // SURFACE §4.4.1: a plain sort of the keys.
     let key = |list: &[Keyword]| -> String {
         let mut keys: Vec<String> = list.iter().map(keyword_key).collect();
         keys.sort();

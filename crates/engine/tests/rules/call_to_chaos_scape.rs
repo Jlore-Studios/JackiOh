@@ -1,9 +1,7 @@
-//! Stinkyscape #151 Call to Chaos (Scape Edition)'s entry builders (`subsystems/call_to_chaos_scape.rs`),
-//! whose table is the card's (its first entry lays an Anomaly board, data the cards crate holds): the
-//! entries that summon or add the set's cards, against `fixtures::call_to_chaos_stinkyscape` — the
-//! Corvettes, the Drone Battleship's pile (R1842000), the Interceptor in every zone (R1882007), the
-//! Starship Pieces (R1878000) and the Weapons. The real card's tests (S #151) cover every entry against
-//! the real catalog.
+//! Stinkyscape #151 Call to Chaos (Scape Edition)'s entry builders (`subsystems/call_to_chaos_scape.rs`;
+//! the table, its first entry laying an Anomaly board, is the cards crate's data): the entries that summon or
+//! add the set's cards, against `fixtures::call_to_chaos_stinkyscape`: the Corvettes, the Drone Battleship's
+//! pile (R1842000), the Interceptor in every zone (R1882007), the Starship Pieces (R1878000), the Weapons.
 
 use jackioh_engine::config::{
     CHAOS_SCAPE_CORVETTES, CHAOS_SCAPE_HAND_PIECES, CHAOS_SCAPE_WEAPONS, CHAOS_STINKYSCAPE_COST, UNIT_ZONES,
@@ -15,22 +13,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::P1;
 
 use crate::rules::fixtures::call_to_chaos_stinkyscape::{
-    CORVETTE, INTERCEPTOR, MELTDOWN, PIECES, PROPAGATION, SHIELD, WEAPONS, register_chaos_stinkyscape,
+    CORVETTE, INTERCEPTOR, MELTDOWN, PIECES, PROPAGATION, SHIELD, WEAPONS, stinkyscape_game as game,
 };
-use crate::rules::fixtures::harness::{new_game, put, set_library, slot};
-
-/// A main phase on p1's turn, empty hands and the fixture cards registered.
-fn game(seed: &str) -> GameState {
-    let mut state = new_game(seed, None);
-    register_chaos_stinkyscape();
-    state.turn = 4;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state.players.p1.hand = Vec::new();
-    state.players.p2.hand = Vec::new();
-    set_library(&mut state, P1, &[] as &[&str]);
-    state
-}
+use crate::rules::fixtures::harness::{put, slot};
 
 /// Run `effect` as p1's, from a resolving fixture card, then the state check.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {

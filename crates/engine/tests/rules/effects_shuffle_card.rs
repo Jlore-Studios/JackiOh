@@ -1,9 +1,5 @@
-//! §6.3 Shuffle of an existing card into its owner's library — `shuffleCardInto`
-//! (effects/shuffleCard.ts), the verb Classic #30 Recycle needs ("Shuffle your graveyard into your
-//! deck"). SPEC §6.3, R80, R97, R311, R316. The real card's test (packages/cards/test/classic/
-//! 030-recycle.test.ts) covers the same cases again through the card.
-//!
-//! Port of `packages/engine/test/effects-shuffle-card.test.ts`.
+//! §6.3 Shuffle of an existing card into its owner's library — `shuffleCardInto`, the verb
+//! Classic #30 Recycle needs ("Shuffle your graveyard into your deck"). R80, R97, R311, R316.
 
 use jackioh_engine::testkit::*;
 

@@ -1,6 +1,5 @@
-// R979000: a card in your hand that cannot be played says why (`CardView.playReason`): in its
-// tooltip, in the inspect notes and, when you click it and `legal` offers no play, in a notice on
-// the board. The client reads the field off the view and works nothing out (CLAUDE.md rule 7).
+// R979000: a card in your hand that cannot be played says why (`CardView.playReason`). The client
+// reads the field off the view and works nothing out (CLAUDE.md rule 7).
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
@@ -26,7 +25,6 @@ afterEach(() => {
 const lookup = lookupFromDefs(CATALOG);
 const REASON = "you can't play (3)+ Cost cards now";
 
-/** c1 cannot be played and says why; c2 may be played. */
 function reasonView(): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -38,7 +36,6 @@ function reasonView(): PlayerView {
   });
 }
 
-/** Only c2 is offered a play. */
 const LEGAL: readonly ActionBody[] = [
   { type: "play", instanceId: "c2" },
   { type: "endTurn" },
@@ -67,7 +64,7 @@ describe("R979000 a card in hand that cannot be played says why", () => {
     const playable = click("c2");
     expect(playable).toEqual({ interaction: IDLE, action: { type: "play", instanceId: "c2" } });
 
-    // A hand card with no reason and no play stays silent, as it always did.
+    // A hand card with no reason and no play stays silent.
     const bare = reasonView();
     bare.you.hand = Array.isArray(bare.you.hand)
       ? bare.you.hand.map((entry) =>
@@ -139,7 +136,6 @@ describe("R979000 a card in hand that cannot be played says why", () => {
 describe("R1571000 a card in your graveyard that cannot be played says why", () => {
   const GY_REASON = "that card costs 3, more than your mana";
 
-  /** gy1 cannot be played and says why; gy2 may be played. */
   function graveyardView(): PlayerView {
     return baseView({
       you: emptySide("p1", {
@@ -151,7 +147,6 @@ describe("R1571000 a card in your graveyard that cannot be played says why", () 
     });
   }
 
-  /** Only gy2 is offered a play. */
   const GY_LEGAL: readonly ActionBody[] = [
     { type: "play", instanceId: "gy2" },
     { type: "endTurn" },

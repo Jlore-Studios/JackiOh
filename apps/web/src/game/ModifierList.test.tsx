@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { baseView, fullBoardView, opponentModifiers, yourModifiers } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
+import { at } from "../test/stubServer.ts";
 import { ModifierList, modifierListTestid } from "./ModifierList.tsx";
 
 afterEach(() => {
@@ -65,5 +67,25 @@ describe("R169 the modifier list", () => {
     expect(screen.getByTestId(modifierListTestid.panel), "a tap inside the list keeps it open").toBeInTheDocument();
     fireEvent.click(chip);
     expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
+  });
+});
+
+describe("R2127000 Back closes the modifier list", () => {
+  it("R2127000 Back closes the open modifier list and nothing else; a second Back leaves", async () => {
+    at("/play");
+    window.history.pushState(null, "", "/practice");
+    render(<ModifierList view={fullBoardView()} opponentLabel="AI" />);
+    const chip = screen.getByTestId(modifierListTestid.chip);
+
+    fireEvent.click(chip);
+    expect(screen.getByTestId(modifierListTestid.panel)).toBeInTheDocument();
+    await pressBack();
+    expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
+    expect(chip).toHaveAttribute("aria-expanded", "false");
+    expect(window.location.pathname).toBe("/practice");
+
+    // The layer is spent: the next Back is the page's and leaves the screen.
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
   });
 });

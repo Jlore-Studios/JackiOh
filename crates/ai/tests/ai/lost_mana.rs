@@ -1,7 +1,7 @@
 //! R844 (#1224): the AI prices the mana its coming turns will not bring. Holding Meditative #18
-//! Expedition12 with one spare crystal and two K-Pop Fanatics (core-050, Radiant 2/2 Divine Shield)
-//! that next turn's four crystals would cast, it keeps the Expedition. With Silly Silas (core-052,
-//! (4) 4/4, Radiant 8/8) it still casts it, so the price does not stop it casting the card at all.
+//! Expedition12 with one spare crystal and two K-Pop Fanatics (Radiant 2/2 Divine Shield) that next
+//! turn's four crystals would cast, it keeps the Expedition. With Silly Silas, a (4) 4/4, Radiant 8/8,
+//! it still casts it, so the price does not stop it casting the card at all.
 //!
 //! R1012005: both are the hand eval's decisions. With the learned evaluation on, the search takes the
 //! network's correction too (R1012001), and they check nothing; `evaluate.rs` holds the price itself

@@ -1,11 +1,9 @@
 //! #36 Magic Jammed (SPEC §8.2): "Destroy target backrow card; Lock its zone", radiant "Steal
 //! target backrow card; Lock its original zone". The radiant cell restates BOTH base clauses, so it
 //! replaces both and nothing base-only survives (§8 Conventions).
-//!
 //! The target is declared, so it travels in the `play` action and resolution never pauses (R81).
 //! Unnarrowed means either side: an ALLY backrow card is a legal pick (unlike #49), and stealing it
 //! does nothing (`steal` refuses your own card, R76) while the Lock still lands (§3.2).
-//!
 //! EFFECT ORDER is load-bearing: `lock` reads the zone where the chosen card sits now and `steal`
 //! MOVES it (R15), so the lock runs FIRST. `destroy` only marks the card (§4.5), so the base order
 //! is not load-bearing. R33's visibility needs no line here: `viewFor` keys it on `controller`.
@@ -47,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #36 Magic Jammed (SPEC §8.2, BUILD M4-T4): "Destroy backrow and lock zone, locked zone rejects
-// play; radiant steals into same-lane zone else first free, original zone locked, trap identity
-// visible to thief (R33)."
+// #36 Magic Jammed (SPEC §8.2, BUILD M4-T4) (R33).
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -115,7 +111,6 @@ mod tests {
             assert!(s.backrow("p2", 3).is_none());
             // §3.2: the lock lives on the zone and outlives its occupant.
             assert!(s.state().players.p2.locks.backrow[2]);
-            // R81: the target traveled with the play, so resolution never paused.
             assert!(s.state().pending.is_none());
         }
 
@@ -148,9 +143,7 @@ mod tests {
 
             s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) })).end_turn();
 
-            // p2 is active now and holds a Field Spell; lane 3 is the zone Magic Jammed locked.
             s.expect_refused_with(|s| s.play(MANA_WELL, json!({ "zone": 3 })), "not open");
-            // Every other backrow zone still takes it.
             s.play(MANA_WELL, json!({ "zone": 4 }));
             assert!(s.backrow("p2", 4).is_some());
         }
@@ -165,16 +158,13 @@ mod tests {
 
             s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&target.id) }));
 
-            // R15: the same lane on the thief's side, because it was free.
             assert_eq!(s.backrow("p1", 2).map(|card| card.id), Some(target.id.clone()));
             assert!(s.backrow("p2", 2).is_none());
             assert_eq!(s.card(&target.id).controller, PlayerId::P1);
             // R12: control moved, ownership did not.
             assert_eq!(s.card(&target.id).owner, PlayerId::P2);
-            // "Lock its original zone": the zone it came from, not the one it landed in.
             assert!(s.state().players.p2.locks.backrow[1]);
             assert!(!s.state().players.p1.locks.backrow[1]);
-            // Steal, not destroy: the card is still on the field.
             s.expect_in_zone(&target.id, "field");
         }
 

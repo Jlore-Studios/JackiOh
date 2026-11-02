@@ -1,16 +1,7 @@
 //! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62, R1563000): "Reveals when any player
-//! Floats: Summon an X/X Bread Token for you. X = the Float." A player Floats when their turn ends with
-//! unspent mana, and the Float is that mana (§6.2 Float; the face said "ends a turn with unspent mana"
-//! until #1563, the same rule). The radiant cell only says "X = 3 × the Float" (§8 Conventions), so
-//! both faces share the trigger, the beneficiary and the token.
-//!
-//! It fires in R62's end-of-turn trap window (both sides, in R68 order): a trap trigger on `turnEnded`,
-//! which `traps.rs` reserves for that window (`TRAP_WINDOW_EVENTS`). "Any player" needs no condition.
-//! R52: the token goes to the trap's controller (`player: "self"`), whoever ended the turn. X comes off
-//! the event (`turnEnded.unspentMana`, the engine's `float_of`), so the trigger reads no state. The token is printed 0/0 and
-//! summoned X/X through `statsOverride` (§7, R37). A Field Trap is not consumed (§5.1, §3.2, R33).
-//! The R280 preview and the R195/R662 glow read `unspent_mana_of`, which is public (§10.8); R33 hides
-//! a face-down trap's preview from the opponent.
+//! Floats: Summon an X/X Bread Token for you. X = the Float." (Radiant: 3x; §6.2, §8 Conventions).
+//! End-of-turn trap window (§4.2 step 4, R68, R175; unspentMana Float, R195, #1563, §10.8).
+//! Summons token (R64; full board fails, §3.2); Radiant grants stats (R78).
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -106,12 +97,9 @@ pub fn script() -> CardScripts {
 
 // #18 Bread and Butter — SPEC §8.1 row 18, BUILD M4-T4 row 18.
 //
-// Must-pass (M4-T4): "Fires in the trap window at either player's end with unspent mana (R62), token
-// to trap controller (R52), X = unspent, 0 → nothing, stays; radiant 3X".
-//
 // R62: the trap watches `turnEnded`, which `traps.rs` reserves for the end-of-turn trap window (R68
-// order). R52 is why the opponent's-turn test asserts an EMPTY board on the ending player's side. §7,
-// R37: the token is printed 0/0, so every assertion reads the def id AND the stats. The R280 preview
+// order). R52 is why the opponent's-turn test asserts an EMPTY board on the ending player's side. R37
+// (§7): the token is printed 0/0, so every assertion reads the def id AND the stats. The R280 preview
 // is proved in tests/cross/preview.rs; R662's glow (`conditionMet`) at the end of this file.
 #[cfg(test)]
 mod tests {

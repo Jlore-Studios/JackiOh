@@ -1,6 +1,4 @@
-// `/patch-notes` (R388, R724000): a public route, lazy like the others, with its tab title and canonical link,
-// linked from the site footer, served by vercel.json (net/deploy-routes.test.ts reads `paths`) and
-// listed in the sitemap.
+// `/patch-notes` (R388, R724000): a public route, served by vercel.json (net/deploy-routes.test.ts reads `paths`).
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -58,7 +56,6 @@ describe("R388 the /patch-notes route", () => {
     const toggles = sets.map((set) => within(set).getByTestId(patchTestid.setToggle).getAttribute("aria-expanded"));
     expect(toggles).toEqual(sets.map((_set, at) => (at === 0 ? "true" : "false")));
     expect(sets.length).toBeGreaterThan(1);
-    // The newest patch sits in the open line, and no shut line lists a patch until it is opened.
     expect(within(sets[0] ?? document.body).getAllByTestId(patchTestid.patch)[0]?.dataset.version).toBe(shipped.at(-1)?.version);
     for (const set of sets.slice(1)) expect(within(set).queryAllByTestId(patchTestid.patch)).toEqual([]);
   });

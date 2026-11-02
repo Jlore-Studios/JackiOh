@@ -17,10 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #48 Ultralight Chassis — SPEC §8.10 row 48, BUILD M12 row S 48: "a 4/1 Rush
-// Starship Piece whose death fuses a copy into its owner's Dormant Starship (R1852000); played as
-// an Equip onto a Unit, the host gains +4/+1 and Rush and stays no piece unless it was one
-// (R1852001); radiant 8/2".
+// Stinkyscape #48 Ultralight Chassis — SPEC §8.10 row 48, BUILD M12 row S 48 (R1852000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,7 +110,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(CHASSIS, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 4/1, with Rush.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 8, "health": 5 }));
         let host_kinds = kinds(&s, host.id.as_str());

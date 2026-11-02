@@ -1,22 +1,5 @@
-//! docs/polish/5-sign-in.md B14: concurrent redemptions, against both stores.
-//!
-//! §9.4 step 6 says "increment uses and set the account active, atomically", and `Tx::redeem` is
-//! the whole six-step transaction. `contract.rs` proves each step one call at a time; this proves
-//! it holds when calls overlap:
-//!
-//!  - one pending profile redeeming several good codes at once is activated once and spends one code;
-//!  - several profiles racing for a code's last use get exactly one `ok`;
-//!  - at §9.4 step 3's per-IP boundary, concurrent redemptions from DIFFERENT profiles at one
-//!    address get exactly one more lookup (held across profiles by migration 0006's advisory lock);
-//!  - a redemption that overlaps another request's transaction stays committed when that one rolls
-//!    back.
-//!
-//! ONE suite, TWO stores, like `contract.rs`: every case runs against `Db::Fake` always, and against
-//! `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time per database).
-//!
-//! Every call is started before any is awaited (`join_all`), so the stores see them overlap. The fake
-//! serializes them on its one lock; Postgres runs them on separate connections under
-//! `app.redeem_invite_code`'s row and advisory locks.
+//! docs/polish/5-sign-in.md B14: concurrent redemptions against both stores (SPEC §9.4 step 3, step 6).
+//! Proves activation atomicity, single-winner races, IP bounds, and rollback isolation.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -31,6 +14,7 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::PgPool;
 
+use super::contract::seed_cards;
 use crate::support::test_app::test_app;
 
 /// One transaction around one store call made outside `store.tx`: begin, the call, commit. Answers
@@ -48,18 +32,6 @@ macro_rules! once {
 }
 
 // The two ends of the contract
-
-/// The fixture catalog the Postgres end seeds: 80 playable ids and two tokens (§9.4 L1–L3).
-const CATALOG_VERSION: &str = "core-1";
-const PLAYABLE_COUNT: usize = 80;
-
-fn playable_ids() -> Vec<String> {
-    (1..=PLAYABLE_COUNT).map(|i| format!("core-{i:03}")).collect()
-}
-
-fn token_ids() -> Vec<String> {
-    vec!["core-001.1".to_string(), "core-002.1".to_string()]
-}
 
 /// Every table the migrations create, children first. `cards` is seeded once and kept. Nothing
 /// writes the loadout tables (R254) but they are emptied all the same, so a hand-written row leaves
@@ -81,26 +53,6 @@ const REDEMPTION_ENABLED_SQL: &str =
 
 fn database_url() -> Option<String> {
     std::env::var("DATABASE_URL").ok().filter(|url| !url.is_empty())
-}
-
-async fn seed_cards(admin: &PgPool) {
-    sqlx::query(
-        "insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
-     select c.id, c.ord::text, 'Fixture ' || c.id, 'Core', 'Unit', '{}'::text[],
-            case when c.token then 'Token' else 'Common' end, c.token, '1'::jsonb, $3::text
-       from (
-         select t.id, false as token, t.ord from unnest($1::text[]) with ordinality as t(id, ord)
-         union all
-         select t.id, true, 1000 + t.ord from unnest($2::text[]) with ordinality as t(id, ord)
-       ) as c
-     on conflict (id) do nothing",
-    )
-    .bind(playable_ids())
-    .bind(token_ids())
-    .bind(CATALOG_VERSION)
-    .execute(admin)
-    .await
-    .expect("seed the fixture cards");
 }
 
 struct Harness {
@@ -176,10 +128,7 @@ impl Harness {
             .expect("auth.users insert returned no id")
             .try_get("id")
             .expect("id");
-        // Migration 0001's `on_auth_user_created` trigger has just made the pending profile row.
-        // The contract exercises `profiles.create` itself — the path `resolve_caller` takes for a
-        // user whose row is missing — so the trigger's row is removed here and asserted separately
-        // in `postgres.rs`, where it belongs.
+        // Remove 0001 trigger profile row so contract directly tests `profiles.create`.
         sqlx::query("delete from public.profiles where id = $1")
             .bind(id)
             .execute(admin)

@@ -28,10 +28,8 @@ use indexmap::IndexSet;
 
 pub const ID: &str = "classic-079";
 
-/// Where the resolving card notes its controller's library as the Spell begins.
 const LIBRARY_KEY: &str = "riskyDieLibrary";
 
-/// "They": the cards in its controller's hand now that were in their library as the Spell began.
 fn drawn_into_hand(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
     let noted = recalled(ctx, LIBRARY_KEY);
     let library: IndexSet<String> = noted
@@ -88,7 +86,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs only in its declared threshold (1), read through `param`.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -120,7 +117,6 @@ mod tests {
 
     use crate::js;
 
-    /// Instance IDs of cards drawn by `player`.
     fn drawn_ids(events: &[GameEvent], player: PlayerId) -> Vec<String> {
         events
             .iter()
@@ -131,7 +127,6 @@ mod tests {
             .collect()
     }
 
-    /// Each hand card's cost by def id, as p1's own view gives it (a later card of the same def wins).
     fn hand_costs(s: &Scenario) -> IndexMap<String, i64> {
         let view = js(&s.view(P1));
         let hand = view["you"]["hand"].as_array().cloned().unwrap_or_default();
@@ -144,11 +139,9 @@ mod tests {
         costs
     }
 
-    /// base
     mod base {
         use super::*;
 
-        /// draws 3; they cost (1) less; those that still cost (1) or more are exiled
         #[test]
         fn draws_3_they_cost_1_less_those_that_still_cost_1_or_more_are_exiled() {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [FILLER, STOCKPILE, MENACE, VANILLA] } }));
@@ -171,7 +164,6 @@ mod tests {
             assert_eq!(hand_costs(&s).get(STOCKPILE).copied(), Some(0));
         }
 
-        /// cards already in your hand are untouched
         #[test]
         fn cards_already_in_your_hand_are_untouched() {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, STOCKPILE], "library": [FILLER, FILLER, FILLER] } }));
@@ -195,7 +187,6 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [CN_VIRUS, MENACE, STOCKPILE, FILLER] } }));
             s.play(RISKY, json!({}));
             s.expect_in_zone(CN_VIRUS, "graveyard");
-            // The three draws took CN-Virus (cast, the draw repeating into Menace), Stockpile and Filler.
             s.expect_in_zone(MENACE, "exile")
                 .expect_in_zone(STOCKPILE, "hand")
                 .expect_in_zone(FILLER, "hand");
@@ -209,7 +200,6 @@ mod tests {
             hand.extend(vec![VANILLA; 9]);
             let mut s = scenario(json!({ "p1": { "hand": hand, "library": [FILLER, MENACE, STOCKPILE] } }));
             s.play(RISKY, json!({}));
-            // Risky Die left the hand (9), the first draw fills it (10), the next two burn.
             s.expect_in_zone(FILLER, "hand")
                 .expect_in_zone(MENACE, "graveyard")
                 .expect_in_zone(STOCKPILE, "graveyard");
@@ -322,11 +312,9 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
-        /// only those that still cost (2) or more are exiled: a (2) card kept at (1), a (3) card exiled
         #[test]
         fn only_those_that_still_cost_2_or_more_are_exiled_a_2_card_kept_at_1_a_3_card_exiled() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": RISKY, "radiant": true }, VANILLA], "library": [ARMOR, MENACE, STOCKPILE] } }));
@@ -346,7 +334,6 @@ mod tests {
             s.expect_in_zone(ARMOR, "exile");
         }
 
-        /// draws 3, and a card cast on draw is still none of them
         #[test]
         fn draws_3_and_a_card_cast_on_draw_is_still_none_of_them() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": RISKY, "radiant": true }, VANILLA], "library": [CN_VIRUS, ARMOR, FILLER, FILLER] } }));

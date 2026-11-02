@@ -1,5 +1,6 @@
--- Play together's social tables (migration 0038, SPEC S7, B43-B53; issue #936). Runs after
--- 21_custom_cards.sql; profiles 1 and 2 are active by then (03 activated them).
+-- Play together's social tables (migration 0038, SPEC S7, B43-B53; issue #936), and 0073's drop of
+-- 0038's watching setting (R2615000; issue #2620). Runs after 21_custom_cards.sql; profiles 1 and 2 are
+-- active by then (03 activated them).
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-19: every check raises on failure (`raise exception 'FAIL (S7 …): …'`), every
@@ -59,12 +60,6 @@ begin
     end if;
   end loop;
 
-  select count(*) into n from information_schema.columns
-   where table_schema = 'public' and table_name = 'profiles' and column_name = 'allow_spectators'
-     and data_type = 'boolean' and is_nullable = 'NO' and column_default = 'true';
-  if n <> 1 then
-    raise exception 'FAIL (S7, B50): profiles.allow_spectators is not a non-null boolean defaulting to true';
-  end if;
   raise notice 'OK (S7): RLS on all eight, one select policy on seven, presence server-only, no client write';
 end $$;
 rollback;
@@ -302,5 +297,37 @@ begin
     raise exception 'FAIL (S7): % social row(s) outlived the deleted profile', n;
   end if;
   raise notice 'OK (S7): a deleted profile takes its requests, friendships, blocks, presence, challenges, messages, reports and shares';
+end $$;
+rollback;
+
+\echo '### R2615000: 0073 dropped profiles.allow_spectators and its client grant, and re-applies ###'
+begin;
+do $$
+begin
+  -- Guard: the query below reads profiles' columns at all, or its "none" would prove nothing.
+  if not exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'profiles' and column_name = 'kind') then
+    raise exception 'FAIL (R2615000): profiles.kind is not listed; the checks below would prove nothing';
+  end if;
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'profiles' and column_name = 'allow_spectators') then
+    raise exception 'FAIL (R2615000): profiles.allow_spectators is still there; migration 0073 drops it';
+  end if;
+  if exists (select 1 from information_schema.column_privileges
+              where table_schema = 'public' and table_name = 'profiles' and column_name = 'allow_spectators') then
+    raise exception 'FAIL (R2615000): a role still holds a privilege on profiles.allow_spectators';
+  end if;
+end $$;
+-- What run.sh's apply_migration filters, a re-run's "does not exist, skipping", is quieted here.
+set local client_min_messages = warning;
+\i /tmp/0073_drop_watching_setting.sql
+set local client_min_messages = notice;
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'profiles' and column_name = 'allow_spectators') then
+    raise exception 'FAIL (R2615000): re-applying 0073 left profiles.allow_spectators in place';
+  end if;
+  raise notice 'OK (R2615000): profiles.allow_spectators and its grant are gone, and 0073 re-applies cleanly';
 end $$;
 rollback;

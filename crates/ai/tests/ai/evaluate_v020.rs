@@ -1,14 +1,5 @@
-//! What `evaluate` sees of patch v0.2.0's mechanics (SPEC §9.9 "Evaluation"; docs/classic-sets.md B3.1,
-//! B3.3, B3.4, B5 E6, E35). Each term reads the engine's own helper — `active_brittle_count`,
-//! `animated_kind_of`, `cannot_attack`, `own_cost` and the layers' `unit_view` — and is a named weight in
-//! AI_EVAL that GREEDY_EVAL, frozen with the gates, sets to nothing. As in evaluate.rs, nothing
-//! here pins a weight's value: the tests pin orderings, and where a term is exactly one weight, that
-//! the weight is all it adds.
-//!
-//! Port of `packages/ai/test/evaluate-v020.test.ts`. TS registered the test-only card for the whole
-//! file at import; the registries' override is per thread here, so every test installs it first
-//! (`install_idle`). A TS helper that changed a live card (`giveBrittleCount`, `tuningOf`) changes the
-//! state's copy of it here, found by id.
+//! What `evaluate` sees of v0.2.0 mechanics (SPEC §9.9, docs/classic-sets.md B3.1, B5 E6).
+//! Tests pin orderings, not weights.
 
 use jackioh_ai::{AI_EVAL, EvalWeights, GREEDY_EVAL, NextSwing, Prices, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{

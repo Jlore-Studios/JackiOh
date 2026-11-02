@@ -1,15 +1,5 @@
-//! The Conquest series' pure rules (`src/api/series_rules.rs`, SPEC §9.5, R330–R337, R259–R263).
-//!
-//! No store, no clock and no router: every transition is a function of a row and a time, checked
-//! here on hand-built rows; `series.rs` and `tests/actor/series_recovery.rs` check the same rulings
-//! through the server.
-//!
-//! The trios are built from the owners' names ("alice", "bob"), so "the projection never carries
-//! the opponent's deck names or cards" is a substring search: nothing in bob's view may contain
-//! "alice".
-//!
-//! Rows and views are read as camelCase JSON, so cases depend on the wire shape, not the Rust field
-//! types. A refused transition returns `Result<_, SeriesRefusal>`; `refusal_of` reads its `reason`.
+//! Conquest series pure rules (`src/api/series_rules.rs`, SPEC §9.5, R330–R337, R259–R263).
+//! Verifies state transitions, secret deck privacy in projections, and refusal reasons.
 
 use jackioh_engine::validator::TRIO_DECKS;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
@@ -22,7 +12,7 @@ use jackioh_server::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_
 use jackioh_server::db::store::{FrozenTrio, SeriesRow};
 use serde_json::{Value, json};
 
-use crate::support::store::to_json;
+use crate::support::store::{assert_match, to_json};
 
 const NOW: i64 = 1_700_000_000_000;
 const PICK_MS: i64 = SERIES_PICK_SECONDS * 1000;
@@ -63,22 +53,6 @@ fn keys(object: &Value) -> Vec<String> {
 
 fn has(set: &Value, x: &Value) -> bool {
     set.as_array().is_some_and(|items| items.contains(x))
-}
-
-/// Every key `expected` names holds the same value in `actual` (objects partially, arrays whole).
-fn assert_match(actual: &Value, expected: &Value) {
-    fn matches(actual: &Value, expected: &Value) -> bool {
-        match (actual, expected) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
-            }
-            _ => actual == expected,
-        }
-    }
-    assert!(matches(actual, expected), "expected {actual} to match {expected}");
 }
 
 /// A slot or a game number in whatever integer type the rules take.

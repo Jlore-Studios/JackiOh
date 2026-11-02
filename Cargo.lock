@@ -1291,6 +1291,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jackioh-run"
+version = "0.5.0"
+dependencies = [
+ "jackioh-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "jackioh-server"
 version = "0.5.0"
 dependencies = [

@@ -1,16 +1,12 @@
-// Polish 6, slice C: where the hover preview goes (docs/polish/6-cards.md, B27).
-//
-// `placePreview(anchor, viewport, size)` picks the first side the preview fits on, in the order
-// left, right, above, below (#912 put the left first), and clamps `left` and `top` so the box stays PREVIEW_MARGIN_PX inside
-// the viewport. The spec fixes that order and the clamp. It does not fix the exact offset from the
-// anchor on the chosen side, or the vertical alignment beside it, so every case here is chosen with
-// room to spare either way, and the geometry asserted is only what a side means: a preview on the
-// right starts at or after the anchor's right edge, one above ends at or before its top, and so on.
+// Where the hover preview goes (docs/polish/6-cards.md, B27). The spec fixes the side order (left,
+// right, above, below; #912 put the left first) and the PREVIEW_MARGIN_PX clamp, not the offset from
+// the anchor or the alignment beside it, so each case has room to spare and asserts only what a side means.
 
 import { describe, expect, it } from "vitest";
 
 import { PREVIEW_MARGIN_PX } from "./constants.ts";
 import { placePreview, type Rect } from "./index.ts";
+import { rectOf } from "./placement.ts";
 
 type Size = { width: number; height: number };
 type Side = "right" | "left" | "above" | "below";
@@ -92,6 +88,14 @@ const CASES: Case[] = [
   },
 ];
 
+describe("rectOf", () => {
+  it("is an element's box on screen, as a plain rect (#2160)", () => {
+    const element = document.createElement("div");
+    element.getBoundingClientRect = () => ({ left: 10, top: 20, width: 30, height: 40, right: 40, bottom: 60, x: 10, y: 20, toJSON: () => ({}) });
+    expect(rectOf(element)).toEqual({ left: 10, top: 20, width: 30, height: 40 });
+  });
+});
+
 describe("placePreview: the side (B27)", () => {
   for (const c of CASES) {
     it(c.name, () => {
@@ -166,8 +170,6 @@ describe("placePreview: the clamp (B27)", () => {
   });
 });
 
-// A card in a row (the hand, the resolving strip) asks for "above" first: beside it the preview
-// would cover the next card along, which is where the pointer is going.
 describe("placePreview: a card in a row prefers above", () => {
   it("rises over a hand card at the bottom of a desktop screen instead of covering its neighbour", () => {
     const anchor: Rect = { left: 92, top: 477, width: 55, height: 76 };

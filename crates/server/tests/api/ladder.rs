@@ -1,9 +1,4 @@
-//! The visible ladder (SPEC §9.12, R605–R608), as pure functions: where a position sits, what the
-//! hidden rating calls for, how one game moves it, the floor, and Jlorious.
-//!
-//! Port of `apps/server/test/ranked/ladder.test.ts` (part 18). The ladder's answers that travel to
-//! the client (`VisibleRank`, `PeakBadge`, the Grape tier names) are compared as the JSON they
-//! serialize to, which is what TS's `toEqual` on those objects compared.
+//! Visible ladder logic (SPEC §9.12, R605, R608): rank positions, rating convergence, and tier floors.
 
 use std::collections::BTreeMap;
 
@@ -70,12 +65,10 @@ fn tier_name(ladder: i32) -> String {
         .to_string()
 }
 
-/// TS `targetLadder(percentile)`.
 fn target(percentile: Percentile) -> i32 {
     target_ladder(&percentile)
 }
 
-/// TS `pipDelta({ result, ladder, target, streak })`.
 fn delta(result: GameResult, ladder: i32, target: i32, streak: i32) -> i32 {
     pip_delta(&PipDeltaInput {
         result,
@@ -85,7 +78,6 @@ fn delta(result: GameResult, ladder: i32, target: i32, streak: i32) -> i32 {
     })
 }
 
-/// TS `applyRankedGame(rank, { result, target, at: AT })`.
 fn apply(rank: &SeasonRank, result: GameResult, target: i32) -> SeasonRank {
     apply_ranked_game(
         rank,

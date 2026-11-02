@@ -1,6 +1,4 @@
-//! CREATE_ISSUES_TOKEN and GITHUB_ISSUES_REPO -> `Env.github_issues_token` and
-//! `Env.github_issues_repo` (src/env.rs): where the server files a match its own log does not
-//! reproduce (`bug_reports.rs`). Both optional: with no token a finding is only logged.
+//! Environment mapping for CREATE_ISSUES_TOKEN and GITHUB_ISSUES_REPO.
 
 use indexmap::IndexMap;
 use jackioh_server::config::BUG_REPORT_REPO_DEFAULT;

@@ -1,25 +1,13 @@
 //! Quests (docs/classic-sets.md B5 E33): the machinery of Classic #90 In Too Deep (SPEC §8.6 row 90,
-//! §10.1, §10.6, §10.8; R404). The tree (which quests there are, what completes each, which rewards
-//! each offers and where each leads) is data the card's script declares (`Script.quests`, a
-//! `QuestBook`); the rewards are ordinary verbs in the card file, and the card's own trigger answers
-//! `questCompleted` with them: a `reward` prompt on the base face (§10.6), every reward on the Radiant
-//! face. This module is what no card file may do: keep the count.
+//! §10.1, §10.6, §10.8; R404). The tree is data the card's script declares (`Script.quests`); the
+//! rewards are ordinary verbs its own `questCompleted` trigger returns (§10.6). This module counts.
 //!
-//! State (§10.1) is the card's instance, `memory.quest` (`QuestMemory`): plain JSON, so a paused state
-//! survives a round trip and a log folds to the same hash (§9.3). R78 resets memory as a card leaves
-//! the field, which is the whole of "leaving the field resets the quest line".
+//! State (§10.1) is `memory.quest`, plain JSON so a log folds to the same hash (§9.3); R78 resets it
+//! as the card leaves the field. Counting starts as a quest opens (R404); an event from before a card's
+//! arrival never reaches it (R212).
 //!
-//! Counting starts "from the moment it opens" (R404): events dispatch in emit order, so a quest a reward
-//! opens waits for its own opening report, and an event from before a card's arrival never reaches it (R212).
-//!
-//! Issue #1854 (Stinkyscape's staged Quests, R1854000–R1854004) generalises the line rather than adding
-//! a second one. A card may declare its quest as stages (`Script.stages`): the line runs on the book
-//! those compile to (`script::staged_book`), one stage open at a time, the first as the card enters,
-//! and the card's own reward effects move it on (`effects::next_stage`, `open_stage`, `hear_back`), the
-//! stage it stands at and a wait to hear back riding the same `memory.quest`. Six goals join R404's
-//! (R1854002), and an effect may complete the current stage of a line, In Too Deep's open quests
-//! included (`effects::complete_quests`, R1854001). Every field the issue adds to `QuestMemory` is
-//! skipped while empty, so In Too Deep's line serializes, hashes and replays exactly as before.
+//! #1854 (R1854000–R1854004): staged quests (`Script.stages`), one stage open at a time. Every field it
+//! adds to `QuestMemory` is skipped while empty, so In Too Deep's line hashes and replays as ever.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -40,9 +28,8 @@ use crate::zones::{active_units_of, card_at, slots_of};
 
 // The tree, as a card declares it
 
-// What completes a quest (R404's countable readings): `QuestGoal` (`script.rs`, which describes each
-// goal). Counted goals move as events are dispatched, and a draw a limit stopped or a fatigue draw
-// counts for nothing (R541); board goals are read off the board at each state check.
+// Counted goals (R404) move as events dispatch (a draw a limit stopped or a fatigue draw counts
+// nothing, R541); board goals are read at each state check.
 pub use crate::script::{
     QuestBook, QuestDef, QuestGoal, QuestRewardDef, QuestStage, QuestStageGoal, QuestStageReward, staged_book,
 };
@@ -79,9 +66,8 @@ pub fn quest_goal_of(quest: &QuestDef) -> i32 {
     }
 }
 
-/// The quest tree a card's running face declares, or `None` (a Vanilla card has none, R115). It reads
-/// the card's script, which needs the state (SURFACE §6.6). R1854000: a card that declares stages and
-/// no tree runs on the book its stages compile to.
+/// The quest tree a card's running face declares (none on a Vanilla card, R115; reading the script
+/// needs the state, SURFACE §6.6). R1854000: stages and no tree run on their compiled book.
 pub fn quest_book_of(state: &GameState, card: &CardInstance) -> Option<QuestBook> {
     let script = crate::scripts::script_of(state, card);
     if let Some(book) = script.quests.as_ref() {
@@ -94,8 +80,7 @@ pub fn quest_book_of(state: &GameState, card: &CardInstance) -> Option<QuestBook
     }
 }
 
-/// R1854000: a staged quest's stages, in order, or none for a card whose quest is a tree (or that has
-/// no quest).
+/// R1854000: a staged quest's stages, in order, or none for a tree or no quest.
 pub fn quest_stages_of(state: &GameState, card: &CardInstance) -> Vec<QuestStage> {
     let script = crate::scripts::script_of(state, card);
     if script.quests.is_some() {
@@ -120,7 +105,6 @@ pub fn stage_of_quest(stages: &[QuestStage], id: &str) -> Option<u32> {
         .map(|at| at as u32 + FIRST_QUEST_STAGE)
 }
 
-/// R1854000: stage `stage` of `stages`, or `None` for a number the card does not have.
 fn stage_def(stages: &[QuestStage], stage: u32) -> Option<&QuestStage> {
     stage
         .checked_sub(FIRST_QUEST_STAGE)
@@ -129,11 +113,10 @@ fn stage_def(stages: &[QuestStage], stage: u32) -> Option<&QuestStage> {
 
 // The quest line on the instance (§10.1)
 
-/// Where the quest line lives on the instance (`memory.quest`, §10.1).
 pub const QUEST_MEMORY_KEY: &str = "quest";
 
-/// R1854004: a staged line waiting to hear back: `stage` opens at the start of its controller's turn
-/// once `turns` more of them have started.
+/// R1854004: a staged line waiting to hear back: `stage` opens once `turns` more of its controller's
+/// turns have started.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HearBack {
@@ -141,8 +124,8 @@ pub struct HearBack {
     pub stage: u32,
 }
 
-/// R1854002: the costs paid by the plays a `differentCostsInTurn` quest has counted, and the turn they
-/// were paid on; a record of an earlier turn counts nothing.
+/// R1854002: the costs a `differentCostsInTurn` quest has counted, and their turn; a record of an
+/// earlier turn counts nothing.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnCosts {
@@ -158,13 +141,13 @@ pub struct QuestMemory {
     pub active: Vec<String>,
     /// Each counted quest's count so far, capped at its goal.
     pub progress: IndexMap<String, i32>,
-    /// The completed quests, in the order they were completed.
+    /// The completed quests, in completion order.
     pub done: Vec<String>,
-    /// The auras held (rewards L and M), in the order they were granted.
+    /// The auras held (rewards L and M), in grant order.
     pub auras: Vec<String>,
-    /// Quests a reward opened whose opening report the loop has not dispatched yet: not counting.
+    /// Quests a reward opened whose opening report is not dispatched yet: not counting.
     pub waiting: Vec<String>,
-    /// R1854000: the stage a staged line stands at (1 for the first). Absent on a tree's line.
+    /// R1854000: the stage a staged line stands at (1 for the first); absent on a tree's line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stage: Option<u32>,
     /// R1854004: the stage the line hears back with, and the turns until it does.
@@ -188,7 +171,6 @@ fn string_list(raw: Option<&Value>) -> Vec<String> {
     }
 }
 
-/// A finite number in the bag.
 fn finite_count(value: &Value) -> Option<i32> {
     value
         .as_f64()
@@ -212,7 +194,7 @@ pub fn quest_memory_of(card: &CardInstance) -> Option<QuestMemory> {
                 }
             }
         }
-        // `Object.entries` of an array: its indices as keys.
+        // An array: its indices as keys.
         Some(Value::Array(items)) => {
             for (at, value) in items.iter().enumerate() {
                 if let Some(count) = finite_count(value) {
@@ -251,14 +233,13 @@ fn write_memory(card: &mut CardInstance, memory: &QuestMemory) {
     );
 }
 
-/// `write_memory` on the card as it stands in the state.
 fn store_memory(state: &mut GameState, card_id: &str, memory: &QuestMemory) {
     if let Some(card) = find_instance_mut(state, card_id) {
         write_memory(card, memory);
     }
 }
 
-/// The auras a card's quest line holds (rewards L and M): a pure read for its `aura` and `graveyard_play`.
+/// The auras the quest line holds (rewards L and M), for the card's `aura` and `graveyard_play`.
 pub fn held_quest_auras(card: &CardInstance) -> Vec<String> {
     quest_memory_of(card)
         .map(|memory| memory.auras)
@@ -274,9 +255,9 @@ fn backrow_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
         .collect()
 }
 
-/// Quest 3: the permanents `player` controls now — the tops of their unit piles and their backrow cards.
+/// Quest 3: the permanents `player` controls now: their unit piles' tops and backrow cards.
 fn permanents_controlled(state: &GameState, player: PlayerId) -> i32 {
-    // R1081000: a Unit standing in the backrow is among the active units already; count it once.
+    // R1081000: a Unit in the backrow is among the active units already; count it once.
     let units = active_units_of(state, player);
     let backrow = backrow_cards_of(state, player)
         .into_iter()
@@ -315,7 +296,6 @@ fn board_value(state: &GameState, player: PlayerId, goal: &QuestGoal) -> i32 {
     }
 }
 
-/// R1854002: the different costs a `differentCostsInTurn` quest has counted this turn.
 fn costs_this_turn(state: &GameState, memory: &QuestMemory, id: &str) -> i32 {
     memory
         .costs
@@ -339,8 +319,8 @@ pub fn quest_progress_of(state: &GameState, card: &CardInstance, quest: &QuestDe
     goal.min(value).max(0)
 }
 
-/// R1854002: the cost a `playCosting` quest's play must have paid: the number the quest card remembers
-/// under `remembered` while it holds one, else the goal's own `cost`.
+/// R1854002: the cost a `playCosting` quest's play must pay: the card's memory under `remembered`
+/// while it holds one, else the goal's `cost`.
 pub fn quest_cost_of(card: &CardInstance, goal: &QuestGoal) -> Option<i32> {
     let QuestGoal::PlayCosting { cost, remembered } = goal else {
         return None;
@@ -364,10 +344,9 @@ fn report(sink: &mut EngineSink<'_>, card: &CardInstance, quest: &QuestDef, prog
     });
 }
 
-/// Open `id` on the card `card_id` names unless it was ever opened (a quest reached by two paths opens
-/// once, R404). `live`: counting at once (the first quest, as the card enters); otherwise it waits for
-/// its own opening report to be dispatched. Quest 9's "a deck already empty when the quest opens
-/// completes it at once" is its count met as it opens.
+/// Open `id` on `card_id` unless it was ever opened (a quest reached by two paths opens once, R404).
+/// `live`: counting at once (the first quest); otherwise it waits for its own opening report. Quest
+/// 9's "a deck already empty when it opens" is its count met at once.
 fn open_on(sink: &mut EngineSink<'_>, card_id: &str, id: &str, live: bool) {
     let Some(mut card) = find_instance(sink.state, card_id).cloned() else {
         return;
@@ -399,11 +378,9 @@ fn open_on(sink: &mut EngineSink<'_>, card_id: &str, id: &str, live: bool) {
     report(sink, &card, &quest, progress);
 }
 
-/// R1854000: open stage `stage` of the staged line on the card `card_id` names. The line has one stage
-/// open at a time, so the quests open on it close, unfinished, and a wait to hear back ends; the
-/// stage's own goals are forgotten (returning to a stage opens it afresh), and one of them opens — the
-/// only one, or one drawn from the match rng when the stage has several (one draw). Nothing for a
-/// card whose quest is not staged, or for a stage it does not have. `live` as `open_on`'s.
+/// R1854000: open stage `stage` on `card_id`. One stage is open at a time, so the open quests close
+/// unfinished and a wait to hear back ends; its goals are forgotten (a return opens it afresh) and one
+/// opens, drawn from the match rng if several. `live` as `open_on`'s.
 fn open_stage_on(sink: &mut EngineSink<'_>, card_id: &str, stage: u32, live: bool) {
     let Some(card) = find_instance(sink.state, card_id).cloned() else {
         return;
@@ -435,8 +412,7 @@ fn open_stage_on(sink: &mut EngineSink<'_>, card_id: &str, stage: u32, live: boo
     }
 }
 
-/// The first quest of a card on the field that has no quest line yet: it opens as the card enters. A
-/// staged quest opens its first stage (R1854000).
+/// A card on the field with no quest line yet opens its first quest (or stage, R1854000).
 fn open_first_if_new(sink: &mut EngineSink<'_>, card_id: &str) {
     let Some(card) = find_instance(sink.state, card_id).cloned() else {
         return;
@@ -455,10 +431,8 @@ fn open_first_if_new(sink: &mut EngineSink<'_>, card_id: &str) {
     }
 }
 
-/// Open the running card's quest `id` — a reward's next quest (R404). Counting from the moment it
-/// opens: the events emitted before it in this action do not count (`QuestMemory.waiting`). Nothing
-/// for a card that has left the field since its run began (R174: its quest line went with it, R78), for
-/// a quest the tree does not have, or for one already opened.
+/// Open the running card's quest `id`, a reward's next quest, counting from the moment it opens (R404,
+/// `QuestMemory.waiting`). Nothing for a card that has left the field since its run began (R174, R78).
 pub fn open_quest(id: impl Into<String>) -> Effect {
     let id: String = id.into();
     Effect::new("openQuest", move |ctx| {
@@ -469,9 +443,8 @@ pub fn open_quest(id: impl Into<String>) -> Effect {
     })
 }
 
-/// Hold a reward's aura on the running card (In Too Deep's L and M): it holds while the card is on the
-/// field, and leaving the field ends it (R78). The card's own `aura` and `graveyard_play` hooks read it
-/// back (`held_quest_auras`).
+/// Hold a reward's aura on the running card (In Too Deep's L and M) until it leaves the field (R78); its
+/// `aura` and `graveyard_play` hooks read it back (`held_quest_auras`).
 pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
     let reward_id: String = reward_id.into();
     Effect::new("holdQuestAura", move |ctx| {
@@ -489,8 +462,7 @@ pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
     })
 }
 
-/// The running card, on the field on the stay its run began with (R174), with a quest tree — as it
-/// stands in the state now.
+/// The running card as it stands now, if on the field on its run's stay (R174) with a quest tree.
 pub(crate) fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let on_stay = crate::effects::targets::self_on_its_stay(ctx)?;
     let self_ = find_instance(ctx.sink.state, &on_stay.id)?.clone();
@@ -504,7 +476,6 @@ pub(crate) fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
 // Moving a staged line on (R1854000, R1854004): the card's own reward effects call these
 // (`effects::open_stage`, `next_stage`, `hear_back`).
 
-/// R1854000: the stage the running card's staged line stands at, or `None` (no line, or not staged).
 pub(crate) fn current_stage_of(card: &CardInstance) -> Option<u32> {
     quest_memory_of(card).and_then(|memory| memory.stage)
 }
@@ -518,8 +489,7 @@ pub(crate) fn open_stage_now(ctx: &mut EffectContext<'_>, stage: u32) {
 }
 
 /// R1854004: the running card's staged line hears back with `stage` once `turns` of its controller's
-/// turns have started; at once when `turns` is 0 or less. A later wait replaces an earlier one. Nothing
-/// for a stage the card does not have.
+/// turns have started (at once for 0 or less); a later wait replaces an earlier one.
 pub(crate) fn hear_back_on(ctx: &mut EffectContext<'_>, turns: i32, stage: u32) {
     let Some(card) = quest_card_of(ctx) else {
         return;
@@ -537,8 +507,7 @@ pub(crate) fn hear_back_on(ctx: &mut EffectContext<'_>, turns: i32, stage: u32) 
 }
 
 /// R1854004: at the start of `player`'s turn (R62's Brittle stage, after the Dormant countdowns), each
-/// staged line of theirs that waits to hear back counts one turn down, in R68's order, and one whose
-/// wait ends opens the stage it hears back with. Nothing on a side without such a line.
+/// of their lines waiting to hear back counts a turn down, in R68's order; one whose wait ends opens.
 pub fn hear_back_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
     for card in quest_cards_in_order(sink.state) {
         if card.controller != player || !crate::zones::acts_on_field(sink.state, &card) {
@@ -563,9 +532,7 @@ pub fn hear_back_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
 }
 
 /// R1854000: the stage the running card's own `questCompleted` names (`FIRST_QUEST_STAGE` for the
-/// first), or `None` for another card's report, a quest that is no stage's goal, or a card whose quest
-/// is not staged. A staged card's trigger on `questCompleted` returns the reward of this stage
-/// (`subsystems::completed_stage_of`).
+/// first), whose reward its trigger returns; `None` for another card's report or an unstaged quest.
 pub fn completed_stage_of(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<u32> {
     let GameEvent::QuestCompleted {
         instance_id, quest, ..
@@ -582,10 +549,8 @@ pub fn completed_stage_of(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<
 
 // Completing by an effect (R1854001)
 
-/// R1854001: mark every quest open on the card `card_id` names completed, for the next state check to
-/// notice as any completion (`notice_quests`). A card with a quest but no line yet (summoned this
-/// moment, before any event or check) opens its first quest or stage first, as it would on its own. A
-/// line with nothing open — hearing back, or done — has nothing to complete.
+/// R1854001: mark every quest open on `card_id` met, for the next state check (`notice_quests`). A
+/// card with no line yet (summoned this moment) opens its first quest or stage first.
 fn complete_open_on(sink: &mut EngineSink<'_>, card_id: &str) {
     open_first_if_new(sink, card_id);
     let Some(card) = find_instance(sink.state, card_id).cloned() else {
@@ -606,10 +571,8 @@ fn complete_open_on(sink: &mut EngineSink<'_>, card_id: &str) {
     }
 }
 
-/// R1854001: "Complete the current stage on all your Quests" (Stinkyscape #6 Tylannt). Every card with
-/// the Quest tag acting on `player`'s side of the field, in lane order (units, then the backrow), whose
-/// text holds a quest — In Too Deep's tree as much as a staged one — has every quest open on it marked
-/// completed (`complete_open_on`).
+/// R1854001: "Complete the current stage on all your Quests" (Stinkyscape #6 Tylannt): each face-up
+/// Quest-tagged card with a quest (a tree or staged) acting on `player`'s side, in lane order.
 pub(crate) fn complete_quests_of(sink: &mut EngineSink<'_>, player: PlayerId) {
     let cards: Vec<String> = quest_cards_in_order(sink.state)
         .into_iter()
@@ -626,8 +589,8 @@ pub(crate) fn complete_quests_of(sink: &mut EngineSink<'_>, player: PlayerId) {
     }
 }
 
-/// R1854001: the running card's own open quests completed (a `byEffect` goal's "Activate: …", Job
-/// Application's resume), whatever its tags.
+/// R1854001: the running card's own open quests completed, whatever its tags (a `byEffect` goal's
+/// "Activate: …", Job Application's resume).
 pub(crate) fn complete_this_quest_now(ctx: &mut EffectContext<'_>) {
     let Some(card) = quest_card_of(ctx) else {
         return;
@@ -643,7 +606,7 @@ fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
-        // R1081000: a Unit standing in the backrow is among the active units already; visit it once.
+        // R1081000: visit a backrow Unit once.
         let backrow: Vec<CardInstance> = backrow_cards_of(state, player)
             .into_iter()
             .filter(|card| !units.iter().any(|unit| unit.id == card.id))
@@ -664,10 +627,8 @@ fn hero_side(id: &str) -> Option<PlayerId> {
         .find(|player| id == format!("hero-{}", player.as_str()))
 }
 
-/// R212: the side a card or hero stood on when an event happened, read off the events that followed
-/// it — a change of control since hands back the controller before it, and a card destroyed since died
-/// under the controller its `destroyed` names — and otherwise off the card where it is now. `None` for
-/// a card gone with nothing to say (a replaced card).
+/// R212: the side a card or hero stood on when an event happened: off a later change of control or
+/// `destroyed`, else off the card where it is now.
 fn side_when(state: &GameState, id: &str, after: &[GameEvent]) -> Option<PlayerId> {
     if let Some(hero) = hero_side(id) {
         return Some(hero);
@@ -715,9 +676,8 @@ fn entered_exile(state: &GameState, def_id: &str) -> bool {
     !(def.token && def.type_ == CardType::Unit)
 }
 
-/// R1854002: whether the card an event names is a Unit with `tag` (any Unit when `tag` is absent): the
-/// card's type and tags where it is now (its granted tags included, `query::tags_of`), or its
-/// definition's when it has ceased to exist (a unit token, R11).
+/// R1854002: whether the card an event names is a Unit with `tag` (any Unit for none), by its type and
+/// tags now, or its definition's once it has ceased to exist (a unit token, R11).
 fn is_unit_tagged(state: &GameState, instance_id: &str, def_id: &str, tag: Option<Tag>) -> bool {
     let (card_type, tags) = match find_instance(state, instance_id) {
         Some(card) => (card_type_of(state, card), crate::query::tags_of(state, card)),
@@ -729,8 +689,7 @@ fn is_unit_tagged(state: &GameState, instance_id: &str, def_id: &str, tag: Optio
     card_type == CardType::Unit && tag.is_none_or(|tag| tags.contains(&tag))
 }
 
-/// What one event adds to a quest of `goal` for a card controlled by `me`, or 0. `after` is the events
-/// that followed this one; `card` is the quest card as it stands.
+/// What one event adds to a quest of `goal` on a card `me` controls; `after` is the events since.
 fn credit_of(
     state: &GameState,
     card: &CardInstance,
@@ -780,8 +739,7 @@ fn credit_of(
                 0
             }
         }
-        // R1854002: a `radiantSet` reported on a Unit of yours with the tag, in your hand, your deck,
-        // your graveyard or exile, or on your side of the field.
+        // R1854002: a Unit of yours with the tag made Radiant, in any zone of yours.
         (
             QuestGoal::UnitsMadeRadiant { tag, .. },
             GameEvent::RadiantSet {
@@ -841,9 +799,8 @@ const COUNTED_EVENTS: [GameEventType; 7] = [
     GameEventType::CardPlayed,
 ];
 
-/// R1854002: a play of yours a `differentCostsInTurn` quest counts: its cost joins this turn's costs
-/// (a record of an earlier turn starts again), and the progress is how many different costs it holds.
-/// `Some(progress)` when it moved.
+/// R1854002: a play of yours joins a `differentCostsInTurn` quest's costs this turn; `Some(progress)`
+/// when it moved.
 fn count_play_cost(
     state: &GameState,
     memory: &mut QuestMemory,
@@ -874,10 +831,9 @@ fn count_play_cost(
     Some(record.costs.len() as i32)
 }
 
-/// §10.3, R404: one event reaching the resolution loop, before the traps and the triggers see it: every
-/// open, counting quest of every card on the field that the event counts for moves, and says so
-/// (`questProgressed`). `after` is the events that followed this one (`triggers::events_after_dispatched`),
-/// read once before anything here writes: a card that has moved since did not see the event (R212).
+/// §10.3, R404: one event reaching the resolution loop, before traps and triggers, moves every open
+/// quest it counts for (`questProgressed`). `after` (`triggers::events_after_dispatched`) is read
+/// before anything here writes: a card that has moved since did not see the event (R212).
 pub fn observe_quest_event(
     sink: &mut EngineSink<'_>,
     event: &GameEvent,
@@ -906,7 +862,6 @@ pub fn observe_quest_event(
     let later: Vec<GameEvent> = after(sink);
     let moves = moves_in(&later, Some(&*sink.state));
     for card in &cards {
-        // R212: a card that arrived after the event, or came back since, is on a stay that did not see it.
         if moves.moved.contains(&card.id) {
             continue;
         }
@@ -914,8 +869,7 @@ pub fn observe_quest_event(
         if !COUNTED_EVENTS.contains(&event.event_type()) {
             continue;
         }
-        // R1854002: the quest card's own play is how it entered, before its quest opened (R404), so it
-        // counts for none of its goals.
+        // R1854002: the quest card's own play came before its quest opened (R404).
         if matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == card.id) {
             continue;
         }
@@ -974,11 +928,8 @@ pub fn observe_quest_event(
     }
 }
 
-/// R1854002: a steal — a card `thief`'s opponent owned taken into `thief`'s hand (`stolen`), or a card
-/// their opponent controlled taken onto `thief`'s side of the field (Steal, `controlChanged` with
-/// `how: steal`) — counted where it happens, as the loop reads the event without its `how`
-/// (`GameEvent::as_rules_read`, R1366): every open `cardsStolen` quest of `thief`'s moves and says so.
-/// Nothing on a board with no such quest, so no shipped game changes.
+/// R1854002: a steal (`stolen`, or `controlChanged` with `how: steal`) moves `thief`'s `cardsStolen`
+/// quests here: the loop reads events without their `how` (`GameEvent::as_rules_read`, R1366).
 pub fn note_steal(sink: &mut EngineSink<'_>, thief: PlayerId) {
     for card in quest_cards_in_order(sink.state) {
         if card.controller != thief || !crate::zones::acts_on_field(sink.state, &card) {
@@ -1029,11 +980,9 @@ fn complete(state: &GameState, card: &CardInstance, quest: &QuestDef, memory: &Q
     memory.progress.get(&quest.id).copied().unwrap_or(0) >= quest_goal_of(quest)
 }
 
-/// §4.5, R404: the state check has settled the board, so every card with a quest tree on the field opens
-/// its first quest if it has none yet, and every open quest whose count reached its goal or whose board
-/// condition holds now is completed — moved to `done` and reported by `questCompleted`, in R68's order
-/// and each card's quests in the order they opened. A reward two completed quests offer is granted by
-/// each (each completion runs its own rewards); the card's trigger answers each report.
+/// §4.5, R404: once the state check has settled the board, each open quest whose goal is met moves to
+/// `done` and is reported (`questCompleted`), in R68's order, each card's in opening order. Each
+/// completion runs its own rewards, so a reward two completed quests offer is granted by each.
 pub fn notice_quests(sink: &mut EngineSink<'_>) {
     for card in quest_cards_in_order(sink.state) {
         open_first_if_new(sink, &card.id);
@@ -1100,8 +1049,8 @@ pub fn notice_quests(sink: &mut EngineSink<'_>) {
 
 // The view (§10.8)
 
-/// R1854000: each stage of a staged line as the view shows it: done, the one open now, or still to
-/// come (the one it hears back with carrying the turns left, R1854004).
+/// R1854000: each stage of a staged line: done, open now, or to come (the one it hears back with
+/// carrying the turns left, R1854004).
 fn stages_view(stages: &[QuestStage], memory: &QuestMemory) -> Vec<QuestStageView> {
     let current = memory.stage.unwrap_or(FIRST_QUEST_STAGE);
     stages
@@ -1153,10 +1102,9 @@ fn stages_view(stages: &[QuestStage], memory: &QuestMemory) -> Vec<QuestStageVie
         .collect()
 }
 
-/// R404, §10.8: the open quests with their progress and the rewards on offer, and the auras held, or
-/// `None` for a card with no quest line. Everything here is the tree's own text and public counts, so
-/// it rides on every view of the card (a face-up Field Spell both players read). R1854000: a staged
-/// line adds its stages, and R1854002 a `playCosting` quest the cost it asks for.
+/// R404, §10.8: the open quests with their progress and rewards, and the auras held. All of it is the
+/// tree's text and public counts, so it rides on every view of the card. R1854000 adds a staged line's
+/// stages, R1854002 a `playCosting` quest's cost.
 pub fn quest_view_of(state: &GameState, card: &CardInstance) -> Option<QuestView> {
     let book = quest_book_of(state, card)?;
     let memory = quest_memory_of(card)?;

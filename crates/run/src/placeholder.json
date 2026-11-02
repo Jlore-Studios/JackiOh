@@ -1,0 +1,740 @@
+{
+ "pool": [
+  {
+   "id": "pseudo-01",
+   "name": "Pseudo Unit 1",
+   "rarity": "Common",
+   "set": "Classic",
+   "cardType": "Unit",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-02",
+   "name": "Pseudo Unit 2",
+   "rarity": "Common",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-03",
+   "name": "Pseudo Spell 3",
+   "rarity": "Common",
+   "set": "Stinkyscape",
+   "cardType": "Spell",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-04",
+   "name": "Pseudo Unit 4",
+   "rarity": "Common",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-05",
+   "name": "Pseudo Trap 5",
+   "rarity": "Common",
+   "set": "Classic",
+   "cardType": "Trap",
+   "tags": []
+  },
+  {
+   "id": "pseudo-06",
+   "name": "Pseudo Unit 6",
+   "rarity": "Common",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": [
+    "Robot"
+   ]
+  },
+  {
+   "id": "pseudo-07",
+   "name": "Pseudo Field Spell 7",
+   "rarity": "Common",
+   "set": "Stinkyscape",
+   "cardType": "Field Spell",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-08",
+   "name": "Pseudo Unit 8",
+   "rarity": "Common",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-09",
+   "name": "Pseudo Unit 9",
+   "rarity": "Common",
+   "set": "Classic",
+   "cardType": "Unit",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-10",
+   "name": "Pseudo Unit 10",
+   "rarity": "Common",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-11",
+   "name": "Pseudo Spell 11",
+   "rarity": "Common",
+   "set": "Stinkyscape",
+   "cardType": "Spell",
+   "tags": []
+  },
+  {
+   "id": "pseudo-12",
+   "name": "Pseudo Unit 12",
+   "rarity": "Common",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot"
+   ]
+  },
+  {
+   "id": "pseudo-13",
+   "name": "Pseudo Trap 13",
+   "rarity": "Common",
+   "set": "Classic",
+   "cardType": "Trap",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-14",
+   "name": "Pseudo Unit 14",
+   "rarity": "Common",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-15",
+   "name": "Pseudo Field Spell 15",
+   "rarity": "Common",
+   "set": "Stinkyscape",
+   "cardType": "Field Spell",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-16",
+   "name": "Pseudo Unit 16",
+   "rarity": "Common",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-17",
+   "name": "Pseudo Unit 17",
+   "rarity": "Rare",
+   "set": "Classic",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-18",
+   "name": "Pseudo Unit 18",
+   "rarity": "Rare",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": [
+    "Robot"
+   ]
+  },
+  {
+   "id": "pseudo-19",
+   "name": "Pseudo Spell 19",
+   "rarity": "Rare",
+   "set": "Stinkyscape",
+   "cardType": "Spell",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-20",
+   "name": "Pseudo Unit 20",
+   "rarity": "Rare",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-21",
+   "name": "Pseudo Trap 21",
+   "rarity": "Rare",
+   "set": "Classic",
+   "cardType": "Trap",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-22",
+   "name": "Pseudo Unit 22",
+   "rarity": "Rare",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-23",
+   "name": "Pseudo Field Spell 23",
+   "rarity": "Rare",
+   "set": "Stinkyscape",
+   "cardType": "Field Spell",
+   "tags": []
+  },
+  {
+   "id": "pseudo-24",
+   "name": "Pseudo Unit 24",
+   "rarity": "Rare",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot"
+   ]
+  },
+  {
+   "id": "pseudo-25",
+   "name": "Pseudo Unit 25",
+   "rarity": "Rare",
+   "set": "Classic",
+   "cardType": "Unit",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-26",
+   "name": "Pseudo Unit 26",
+   "rarity": "Rare",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-27",
+   "name": "Pseudo Spell 27",
+   "rarity": "Epic",
+   "set": "Stinkyscape",
+   "cardType": "Spell",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-28",
+   "name": "Pseudo Unit 28",
+   "rarity": "Epic",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-29",
+   "name": "Pseudo Trap 29",
+   "rarity": "Epic",
+   "set": "Classic",
+   "cardType": "Trap",
+   "tags": []
+  },
+  {
+   "id": "pseudo-30",
+   "name": "Pseudo Unit 30",
+   "rarity": "Epic",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": [
+    "Robot"
+   ]
+  },
+  {
+   "id": "pseudo-31",
+   "name": "Pseudo Field Spell 31",
+   "rarity": "Epic",
+   "set": "Stinkyscape",
+   "cardType": "Field Spell",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-32",
+   "name": "Pseudo Unit 32",
+   "rarity": "Epic",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-33",
+   "name": "Pseudo Unit 33",
+   "rarity": "Epic",
+   "set": "Classic",
+   "cardType": "Unit",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-34",
+   "name": "Pseudo Unit 34",
+   "rarity": "Legendary",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-35",
+   "name": "Pseudo Spell 35",
+   "rarity": "Legendary",
+   "set": "Stinkyscape",
+   "cardType": "Spell",
+   "tags": []
+  },
+  {
+   "id": "pseudo-36",
+   "name": "Pseudo Unit 36",
+   "rarity": "Legendary",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot"
+   ]
+  },
+  {
+   "id": "pseudo-37",
+   "name": "Pseudo Trap 37",
+   "rarity": "Legendary",
+   "set": "Classic",
+   "cardType": "Trap",
+   "tags": [
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-38",
+   "name": "Pseudo Unit 38",
+   "rarity": "Mythic",
+   "set": "Meditative",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-39",
+   "name": "Pseudo Field Spell 39",
+   "rarity": "Mythic",
+   "set": "Stinkyscape",
+   "cardType": "Field Spell",
+   "tags": [
+    "Fruit"
+   ]
+  },
+  {
+   "id": "pseudo-40",
+   "name": "Pseudo Unit 40",
+   "rarity": "Mythic",
+   "set": "Core",
+   "cardType": "Unit",
+   "tags": [
+    "Robot",
+    "Beast"
+   ]
+  },
+  {
+   "id": "pseudo-boss-1",
+   "name": "Pseudo Boss Card 1",
+   "rarity": "Epic",
+   "set": "Boss",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-boss-2",
+   "name": "Pseudo Boss Card 2",
+   "rarity": "Legendary",
+   "set": "Boss",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-boss-3",
+   "name": "Pseudo Boss Card 3",
+   "rarity": "Legendary",
+   "set": "Boss",
+   "cardType": "Unit",
+   "tags": []
+  },
+  {
+   "id": "pseudo-boss-4",
+   "name": "Pseudo Boss Card 4",
+   "rarity": "Mythic",
+   "set": "Boss",
+   "cardType": "Unit",
+   "tags": []
+  }
+ ],
+ "starterAccess": [
+  "pseudo-01",
+  "pseudo-02",
+  "pseudo-03",
+  "pseudo-04",
+  "pseudo-05",
+  "pseudo-06",
+  "pseudo-07",
+  "pseudo-08",
+  "pseudo-09",
+  "pseudo-10",
+  "pseudo-11",
+  "pseudo-12",
+  "pseudo-13",
+  "pseudo-14",
+  "pseudo-15",
+  "pseudo-16",
+  "pseudo-17",
+  "pseudo-18",
+  "pseudo-19",
+  "pseudo-20"
+ ],
+ "enemies": [
+  {
+   "id": "temp-grunt-1",
+   "name": "Temp Grunt 1",
+   "tier": "fight"
+  },
+  {
+   "id": "temp-grunt-2",
+   "name": "Temp Grunt 2",
+   "tier": "fight"
+  },
+  {
+   "id": "temp-grunt-3",
+   "name": "Temp Grunt 3",
+   "tier": "fight"
+  },
+  {
+   "id": "temp-elite-1",
+   "name": "Temp Elite 1",
+   "tier": "elite",
+   "artifacts": [
+    "looming-presence"
+   ]
+  },
+  {
+   "id": "temp-elite-2",
+   "name": "Temp Elite 2",
+   "tier": "elite",
+   "artifacts": [
+    "looming-presence"
+   ]
+  },
+  {
+   "id": "temp-mini-boss-1",
+   "name": "Temp Mini-boss 1",
+   "tier": "miniBoss",
+   "deck": [
+    "pseudo-boss-1",
+    "pseudo-boss-2"
+   ],
+   "artifacts": [
+    "looming-presence"
+   ]
+  },
+  {
+   "id": "temp-mini-boss-2",
+   "name": "Temp Mini-boss 2",
+   "tier": "miniBoss",
+   "deck": [
+    "pseudo-boss-1",
+    "pseudo-boss-3"
+   ],
+   "artifacts": [
+    "looming-presence"
+   ]
+  },
+  {
+   "id": "temp-final-boss",
+   "name": "Temp Final Boss",
+   "tier": "boss",
+   "deck": [
+    "pseudo-boss-2",
+    "pseudo-boss-3",
+    "pseudo-boss-4"
+   ],
+   "artifacts": [
+    "overwhelming-presence",
+    "temp-final-relic"
+   ],
+   "drop": "temp-final-relic"
+  }
+ ],
+ "passives": [
+  {
+   "id": "temp-picky",
+   "name": "Temp Picky",
+   "kind": "economic",
+   "tier": "bronze",
+   "effect": {
+    "type": "skip",
+    "coins": 25
+   },
+   "starter": true,
+   "text": "You may keep no cards from a pack, for 25 Coins."
+  },
+  {
+   "id": "temp-piggy-bank",
+   "name": "Temp Piggy Bank",
+   "kind": "economic",
+   "tier": "bronze",
+   "effect": {
+    "type": "coinsPerFight",
+    "n": 5
+   },
+   "starter": true,
+   "text": "+5 Coins after each fight."
+  },
+  {
+   "id": "temp-big-heart",
+   "name": "Temp Big Heart",
+   "kind": "economic",
+   "tier": "bronze",
+   "effect": {
+    "type": "maxHp",
+    "n": 5
+   },
+   "starter": true,
+   "text": "+5 max HP."
+  },
+  {
+   "id": "temp-wide-net",
+   "name": "Temp Wide Net",
+   "kind": "economic",
+   "tier": "silver",
+   "effect": {
+    "type": "packSize",
+    "n": 2
+   },
+   "starter": true,
+   "text": "Packs show 2 more cards."
+  },
+  {
+   "id": "temp-thick-skin",
+   "name": "Temp Thick Skin",
+   "kind": "combat",
+   "tier": "silver",
+   "starter": true,
+   "text": "Your hero starts each fight with 3 Armor. (Placeholder: combat artifacts do nothing in a fight yet.)"
+  },
+  {
+   "id": "temp-greedy",
+   "name": "Temp Greedy",
+   "kind": "economic",
+   "tier": "gold",
+   "effect": {
+    "type": "keepMore",
+    "n": 1
+   },
+   "starter": true,
+   "text": "Keep 1 more card from each pack."
+  },
+  {
+   "id": "temp-coupon",
+   "name": "Temp Coupon",
+   "kind": "economic",
+   "tier": "silver",
+   "effect": {
+    "type": "shopDiscount",
+    "percent": 20
+   },
+   "text": "Shop Coin prices are 20% lower."
+  },
+  {
+   "id": "temp-ticket-stub",
+   "name": "Temp Ticket Stub",
+   "kind": "economic",
+   "tier": "silver",
+   "effect": {
+    "type": "ticketsPerFight",
+    "n": 1
+   },
+   "text": "+1 Ticket after each fight."
+  },
+  {
+   "id": "temp-quick-start",
+   "name": "Temp Quick Start",
+   "kind": "combat",
+   "tier": "gold",
+   "text": "Draw 1 more card in your opening hand. (Placeholder.)"
+  },
+  {
+   "id": "temp-war-chest",
+   "name": "Temp War Chest",
+   "kind": "economic",
+   "tier": "platinum",
+   "effect": {
+    "type": "coinsPerFight",
+    "n": 20
+   },
+   "text": "+20 Coins after each fight."
+  },
+  {
+   "id": "temp-crown",
+   "name": "Temp Crown",
+   "kind": "combat",
+   "tier": "diamond",
+   "text": "A mini-boss's strong artifact. (Placeholder.)"
+  },
+  {
+   "id": "temp-final-relic",
+   "name": "Temp Final Relic",
+   "kind": "combat",
+   "tier": "diamond",
+   "unobtainable": true,
+   "text": "Temp Final Boss's own: nothing else gives it, and it cannot be extracted. (Placeholder.)"
+  },
+  {
+   "id": "looming-presence",
+   "name": "Looming Presence",
+   "kind": "enemy",
+   "text": "Its bearer has the Medium AI's resources: +1 mana and +1 card in the opening hand."
+  },
+  {
+   "id": "overwhelming-presence",
+   "name": "Overwhelming Presence",
+   "kind": "enemy",
+   "text": "Its bearer has the Hard AI's resources: +1 mana up to 7, +1 card in the opening hand, and 2 draws a turn."
+  },
+  {
+   "id": "temp-blessing-vitality",
+   "name": "Temp Blessing of Vitality",
+   "kind": "blessing",
+   "god": "Temp God of Health",
+   "effect": {
+    "type": "maxHp",
+    "n": 10
+   },
+   "text": "+10 max HP."
+  },
+  {
+   "id": "temp-blessing-greed",
+   "name": "Temp Blessing of Greed",
+   "kind": "blessing",
+   "god": "Temp God of Coin",
+   "effect": {
+    "type": "coinsPerFight",
+    "n": 10
+   },
+   "text": "+10 Coins after each fight."
+  },
+  {
+   "id": "temp-blessing-insight",
+   "name": "Temp Blessing of Insight",
+   "kind": "blessing",
+   "god": "Temp God of Sight",
+   "effect": {
+    "type": "packSize",
+    "n": 1
+   },
+   "text": "Packs show 1 more card."
+  }
+ ],
+ "events": [
+  {
+   "id": "temp-event-stranger",
+   "text": "A stranger offers you a deal. (Placeholder story.)",
+   "options": [
+    {
+     "text": "Pay 30 Coins for a card",
+     "coins": -30,
+     "card": true
+    },
+    {
+     "text": "Lose 5 HP for 50 Coins",
+     "hp": -5,
+     "coins": 50
+    },
+    {
+     "text": "Walk away"
+    }
+   ]
+  },
+  {
+   "id": "temp-event-altar",
+   "text": "A dusty altar hums. (Placeholder story.)",
+   "options": [
+    {
+     "text": "Bleed on it (8 HP) for an artifact",
+     "hp": -8,
+     "artifact": true
+    },
+    {
+     "text": "Pocket the offering (2 Tickets)",
+     "tickets": 2
+    },
+    {
+     "text": "Walk away"
+    }
+   ]
+  }
+ ],
+ "curses": [
+  {
+   "id": "temp-curse-1",
+   "name": "Temp Curse 1",
+   "text": "Placeholder: curses change no fight yet.",
+   "points": 1
+  },
+  {
+   "id": "temp-curse-2",
+   "name": "Temp Curse 2",
+   "text": "Placeholder: curses change no fight yet.",
+   "points": 2
+  },
+  {
+   "id": "temp-curse-3",
+   "name": "Temp Curse 3",
+   "text": "Placeholder: curses change no fight yet.",
+   "points": 3
+  }
+ ]
+}

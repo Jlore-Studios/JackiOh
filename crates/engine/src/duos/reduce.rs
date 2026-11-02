@@ -1,28 +1,16 @@
 //! `duos_begin` and `duos_reduce` (#936 S4): one Duos step, then the settle that follows every step.
 //!
-//! A step is one of three things. A duel action goes to its duel's own `reduce`, as the seat's player,
-//! under the action's nonce — except End turn, which only marks its seat ended (B5). A pass moves a
-//! hand card to the teammate's duel (B20). A concede opens, or joins, the team's offer (B11).
-//!
-//! Then the settle, in order, until nothing moves (`DUOS_SETTLE_CAP` is its backstop):
-//!   1. the judge: a team's pool at 0 or less, or a duel's own ending, ends the game (B16);
-//!   2. round 1 opens once all four mulligans have resolved and both duels' first turns have begun (B2),
-//!      on those first turns: one an effect has already ended counts its seat as ended (B7);
+//! A step is a duel action, to its duel's `reduce` as the seat's player under the action's nonce
+//! (End turn only marks its seat ended, B5), a pass (B20) or a concede (B11). Then the settle, in
+//! order, until nothing moves (`DUOS_SETTLE_CAP` is its backstop):
+//!   1. the judge (B16);
+//!   2. round 1 opens once all four mulligans have resolved and both first turns have begun (B2, B7);
 //!   3. a round seat with nothing left but End turn, and no pass it may make, is ended (B9, R82's rule);
-//!   4. once both round seats have ended, End turn reaches duel 0, then duel 1 (B5) — each under a
-//!      nonce of its own (`round_end_nonce`), so a fold replays it exactly — and only then is the
-//!      game judged: the round's close is part of the step that closed it, so pools both End turns
-//!      emptied are emptied in the same step (B16, §13.4);
-//!   5. once both duels' turns have moved on, the next round opens with each duel's new active player
-//!      as its round seat (B5, B8) — a turn an effect ended (R456) has moved already (B7).
+//!   4. once both round seats have ended, End turn reaches duel 0, then duel 1 (B5, `round_end_nonce`),
+//!      and only then is the game judged, so pools both End turns emptied go in one step (B16, §13.4);
+//!   5. once both duels' turns have moved on, the next round opens (B5, B8).
 //!
 //! After every change to a duel the pools are made equal again (B15, `duel_changed`).
-//!
-//! The wrapper's own nonces (the settle after `duos_begin`, each round's End turns) are minted in a
-//! namespace of their own, `DUOS_NONCE_PREFIX`, which no seat's action may carry, so no action can
-//! take a nonce the round's close is about to use and turn that End turn into a duel's silent
-//! replay (R270's stall). A duel that finds the round's nonce already applied refuses the End turn
-//! rather than taking it as done.
 
 use crate::catalog::fused_id_specs;
 use crate::config::{DUOS_SETTLE_CAP, SETUP_TURN};
@@ -42,15 +30,14 @@ use super::legal::{auto_end_due, why_duel_refused, why_pass_refused};
 use super::state::{DuosBegunTurn, DuosReduceResult, DuosState, duos_seat};
 
 /// The namespace of the wrapper's own nonces: a seat's action whose nonce starts with it is refused,
-/// so the nonces the round's close reaches the duels under are never a seat's (R270's rule, as the
-/// server keeps `srv-` for its own).
+/// so no action takes one the round's close is about to use and turns that End turn into a duel's
+/// silent replay (R270's stall; the server keeps `srv-` for its own).
 pub const DUOS_NONCE_PREFIX: &str = "duos:";
 
 /// The nonce the settle runs under after `duos_begin`, which has no action of its own.
 const BEGIN_NONCE: &str = "duos:begin";
 
-/// Deal both duels and open all four mulligans (B1, B2): each duel's `begin_game`, duel 0 first.
-/// Refused once either duel has begun.
+/// Deal both duels and open all four mulligans (B1, B2), duel 0 first; refused once either has begun.
 pub fn duos_begin(state: &DuosState) -> DuosReduceResult {
     let begun = state.result.is_some()
         || state.duels.iter().any(|game| {
@@ -78,7 +65,7 @@ pub fn duos_begin(state: &DuosState) -> DuosReduceResult {
     }
 }
 
-/// Apply one Duos action. A refused one comes back with the input state, no events and the reason.
+/// Apply one Duos action; a refused one returns the input state, no events and the reason.
 pub fn duos_reduce(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
     let mut next = state.clone();
     let mut events: Vec<DuosEvent> = Vec::new();
@@ -131,9 +118,8 @@ fn apply(state: &mut DuosState, action: &DuosAction, events: &mut Vec<DuosEvent>
     }
 }
 
-/// B11: the first concede opens the team's offer, the teammate's concede ends the game for the other
-/// team, and the offerer's own second concede is refused (its offer already stands). Each team has
-/// an offer of its own, so the other team's concede neither takes nor clears it.
+/// B11: the first concede opens the team's offer, the teammate's ends the game for the other team,
+/// and the offerer's second is refused. The other team's concede neither takes nor clears it.
 fn concede(state: &mut DuosState, seat: DuosSeat, events: &mut Vec<DuosEvent>) -> Result<(), EngineError> {
     let team = seat.team();
     match state.concede_offer[team] {
@@ -151,10 +137,8 @@ fn concede(state: &mut DuosState, seat: DuosSeat, events: &mut Vec<DuosEvent>) -
     }
 }
 
-/// B20: pay the pass cost, take the card out of the passer's hand and put it at the right end of the
-/// teammate's under the next instance id of the teammate's duel, as `passed_card` makes it. Not a
-/// draw, a play or a discard: nothing in either duel hears it, and only the mana it paid is reported
-/// there. Its stay in the passer's hand ends as any removal from a hand ends one (R1140).
+/// B20: a pass is not a draw, a play or a discard: no duel hears it but for the mana paid, and the
+/// card's stay in the passer's hand ends as any removal from a hand ends one (R1140).
 fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut Vec<DuosEvent>) {
     let from = seat.duel();
     let mate = seat.teammate();
@@ -191,14 +175,12 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
     });
 }
 
-/// R1168000: the memory entries a passed card keeps — its own return price (R153) and Heroic Power's
-/// rolled power (R43), which are the card itself. Anything else a card remembers in a hand names
-/// something of the duel it left (a Fortify Mind's secret, R862; a Journey Complete's journey,
-/// R1246), and those ids name other things in the teammate's duel (§13.1), so it stays behind.
+/// R1168000: the memory a passed card keeps, which is the card itself: its return price (R153) and
+/// Heroic Power's rolled power (R43). The rest names the duel it left (a Fortify Mind's secret, R862;
+/// a Journey Complete's journey, R1246), whose ids name other things in the teammate's (§13.1).
 const PASSED_MEMORY: &[&str] = &[RETURN_PRICE_KEY, POWER_KEY];
 
-/// B20, R1168000: `card` as a pass puts it in `receiver`'s hand under `id`: owned and controlled by
-/// the receiver, everything on it kept (buffs, cost modifiers, face) but the memory that names the
+/// B20, R1168000: `card` in `receiver`'s hand under `id`, keeping all but the memory that names the
 /// duel it left. The AI's pass model makes its copy here too, so the two cannot drift.
 pub fn passed_card(card: CardInstance, id: String, receiver: PlayerId) -> CardInstance {
     let mut moved = card;
@@ -212,10 +194,8 @@ pub fn passed_card(card: CardInstance, id: String, receiver: PlayerId) -> CardIn
     moved
 }
 
-/// A card whose definition lives in its duel alone — a fused or crafted card's (R77, R102) — takes it
-/// to the duel it is passed into, and with it every match-made definition it is made of: a Fuse's
-/// ingredients may be fused or crafted cards themselves, and the card's readers (its params, its
-/// element) read them through it.
+/// A fused or crafted card's definition lives in its duel alone (R77, R102): it and every match-made
+/// definition it is made of go with the card.
 fn carry_match_defs(state: &mut DuosState, from: usize, to: usize, def_id: &str) {
     let mut queue: Vec<String> = vec![def_id.to_string()];
     while let Some(id) = queue.pop() {
@@ -230,8 +210,7 @@ fn carry_match_defs(state: &mut DuosState, from: usize, to: usize, def_id: &str)
     }
 }
 
-/// After every step, until nothing moves: judge, open round 1, end the seats with nothing left, close
-/// the round, open the next (see the header).
+/// After every step, until nothing moves, in the header's order.
 fn settle(state: &mut DuosState, nonce: &str, events: &mut Vec<DuosEvent>) {
     for _pass in 0..DUOS_SETTLE_CAP {
         if judge(state, events) {
@@ -289,21 +268,15 @@ fn round_closed(state: &DuosState) -> bool {
         && (0..DUOS_DUELS).all(|duel| turn_moved(state, duel))
 }
 
-/// Whether duel `duel` has left the round's turn: its turn has moved on, or a Glitch reset (R676)
-/// dealt it again, which is no turn of the round's however its new count runs (R1168002).
+/// Whether duel `duel` has left the round's turn, or a Glitch reset (R676) dealt it again (R1168002).
 fn turn_moved(state: &DuosState, duel: usize) -> bool {
     state.round_turns[duel] == SETUP_TURN || state.duels[duel].turn != state.round_turns[duel]
 }
 
-/// B2, B5, B8, B22: the next round — each duel's round seat is the seat of the turn the duel has
-/// begun past the last round's (`take_round_turn`; an extra turn, R846, keeps it on the same team),
-/// nobody has ended or passed, and each team's open concede offer lapses (B11).
-///
-/// Round 1 is both duels' first turns, team A's (B2). A duel whose first turn an effect already ended
-/// while the other duel's mulligans were still open (R456: a Tommy Tempo drawn at its start) opens
-/// round 1 on that turn all the same, its seat counted as ended, and so does any later round whose
-/// turn ended as it began (R1168001): opening a round on the duel's new active player instead would
-/// leave that duel a turn ahead of the other for the rest of the game.
+/// B2, B5, B8, B22: the next round, on each duel's next turn (`take_round_turn`; an extra turn, R846,
+/// keeps it on the same team); each team's open concede offer lapses (B11). A round whose turn an
+/// effect ended as it began (R456, R1168001) still opens on it, its seat counted as ended, or that
+/// duel would stay a turn ahead of the other for the rest of the game.
 fn open_round(state: &mut DuosState, events: &mut Vec<DuosEvent>) {
     state.round += 1;
     for duel in 0..DUOS_DUELS {
@@ -323,10 +296,9 @@ fn open_round(state: &mut DuosState, events: &mut Vec<DuosEvent>) {
     events.push(DuosEvent::RoundStarted { round: state.round });
 }
 
-/// R1168001: give duel `duel` the round's turn — the first turn it has begun past the last round's,
-/// whose seat is the round seat. One the duel has already moved past (it ended as it began, R456)
-/// counts as ended with End turn already reached (B7), so the duel's new active player waits for the
-/// round to close and each duel's turn moves once a round (§13.3). Whether there was one.
+/// R1168001: give duel `duel` the round's turn, the first it has begun past the last round's; whether
+/// there was one. One it has already moved past (R456) counts as ended with End turn reached (B7), so
+/// each duel's turn moves once a round (§13.3).
 fn take_round_turn(state: &mut DuosState, duel: usize) -> bool {
     let after = state.round_turns[duel];
     let begun = &mut state.begun[duel];
@@ -361,11 +333,9 @@ fn record_begun(state: &mut DuosState, duel: usize, events: &[GameEvent]) {
     }
 }
 
-/// B5: End turn reaches `duel` at the round's close, as its active player. Whether it did: a duel
-/// that refuses it (it cannot while its round seat has ended with no prompt open) is tried again
-/// after the next step. So is one that has applied the round's nonce already: its `reduce` would
-/// answer that replay with the state unchanged and no error, and taking that as the End turn would
-/// leave the duel's turn where it is and the round closed for ever.
+/// B5: End turn reaches `duel` at the round's close, as its active player; whether it did. A refusal,
+/// or the round's nonce already applied (whose replay `reduce` answers unchanged, with no error), is
+/// tried again after the next step.
 fn end_round_turn(state: &mut DuosState, duel: usize, nonce: &str, events: &mut Vec<DuosEvent>) -> bool {
     let game = &state.duels[duel];
     let nonce = round_end_nonce(nonce, state.round, duel);
@@ -384,9 +354,8 @@ fn end_round_turn(state: &mut DuosState, duel: usize, nonce: &str, events: &mut 
     true
 }
 
-/// The nonce the wrapper's own End turn reaches a duel under: in the wrapper's namespace, with the
-/// round, the duel and the closing action's nonce, so no seat's action carries it, no two of a
-/// game's are alike and a fold replays them exactly.
+/// The wrapper's End-turn nonce: in its namespace, with the round, the duel and the closing action's
+/// nonce, so no seat's action carries it, no two are alike and a fold replays them exactly.
 fn round_end_nonce(nonce: &str, round: i32, duel: usize) -> String {
     format!("{DUOS_NONCE_PREFIX}end:r{round}:d{duel}:{nonce}")
 }
@@ -399,8 +368,8 @@ fn duel_changed(state: &mut DuosState, duel: usize, events: &[GameEvent]) {
         return;
     }
     if state.duels[duel].turn < state.round_turns[duel] {
-        // R1168002: a Glitch reset (R676) dealt the duel again and its turn count started over. The
-        // round's turn there is over, and no turn it began before the reset is one a round takes.
+        // R1168002: a Glitch reset (R676) restarted its turn count: the round's turn there is over,
+        // and no turn begun before the reset is one a round takes.
         state.begun[duel].clear();
         state.round_turns[duel] = SETUP_TURN;
         state.ended[duel] = true;
@@ -415,16 +384,14 @@ fn duel_changed(state: &mut DuosState, duel: usize, events: &[GameEvent]) {
         take_round_turn(state, duel);
         return;
     }
-    // B7: the turn moved without the round closing — an effect ended it (R456) — so the round seat
-    // has ended, and End turn has reached the duel already.
+    // B7: an effect ended the turn (R456): its round seat has ended and End turn has reached it.
     state.ended[duel] = true;
     state.end_applied[duel] = true;
 }
 
-/// B15: each team's pool as duel `from` left it, copied to the team's seat in every other duel, and
-/// to that hero's health while it is spent (a spent hero's health reads the pool, B13). A seat that
-/// has lost its Duos life — a Glitch reset deals a duel again (R676) — is made a Duos seat again: its
-/// own HP back at the start, unspent, on its team's pool, and R82 off (`duos_seat`).
+/// B15: each team's pool as duel `from` left it, copied to the team's seat in every other duel and to
+/// a spent hero's health (B13). A seat that has lost its Duos life (a Glitch reset, R676) is made a
+/// Duos seat again: own HP at the start, unspent, on its team's pool, R82 off (`duos_seat`).
 fn sync_pools(state: &mut DuosState, from: usize) {
     for &team in Team::ALL {
         let player = team.player();
@@ -462,9 +429,8 @@ fn judge(state: &mut DuosState, events: &mut Vec<DuosEvent>) -> bool {
 }
 
 /// B16: a team whose pool is at 0 or less loses (both at once: a draw); otherwise a duel's own ending
-/// ends the game with its team's result — `turnCap` for R2's cap, `ceiling` for R79's, `voided` for a
-/// Glitch's void (R679, R1168002), `duelResult` for any other. Two duels that ended at once and
-/// disagree are a draw.
+/// ends the game with its team's result, by its reason (R2's turn cap, R79's ceiling, a Glitch's void:
+/// R679, R1168002). Two duels that ended at once and disagree are a draw.
 fn result_now(state: &DuosState) -> Option<DuosResult> {
     let emptied: Vec<Team> = Team::ALL
         .iter()

@@ -111,7 +111,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 
 | Table | Client read | Policy | Client write |
 | --- | --- | --- | --- |
-| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0032), which marks a ladder bot's profile, is in no client grant (R1452); `allow_spectators` (0038) was the watching setting, read no longer since friends may always watch (R2615000), and left for a later migration to drop |
+| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0032), which marks a ladder bot's profile, is in no client grant (R1452) |
 | `invite_codes` | **none** | no policy | none — a readable code row defeats the gate (§9.8) |
 | `code_attempts` | **none** | no policy | none |
 | `cards` | all rows | `true` | none — the catalog is static data (§9.4) |
@@ -782,7 +782,7 @@ step that is not yet implemented says which BUILD task delivers it.
    0038 adds Play together's eight tables (SPEC §9.4, §9.5): `friend_requests`, `friendships`,
    `blocks`, the server-only `presence`, `challenges`, `chat_messages`, `chat_reports` and
    `replay_shares`, each readable only by its own players, and `profiles.allow_spectators`, on by
-   default, which nothing reads since R2615000. 0039 adds the co-op tables (SPEC §13.9): `duos_rooms`, which a room's two people read but
+   default, which nothing read after R2615000 and 0073 drops (#2620). 0039 adds the co-op tables (SPEC §13.9): `duos_rooms`, which a room's two people read but
    its frozen deck choices, and the server-only `duos_matches` and `duos_match_actions`. A room goes
    with an account that is deleted (and, until 0051, so did a co-op match); neither needs anything
    else from the bring-up. 0045

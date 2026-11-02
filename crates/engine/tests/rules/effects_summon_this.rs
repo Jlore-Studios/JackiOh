@@ -1,10 +1,7 @@
-//! Deck and graveyard triggers, and "summon this from your hand or deck" (docs/classic-sets.md B5 E26):
-//! a card in a library answers its `deckTriggers` (Classic+ #37 Wardrum), a card in a graveyard its
-//! `graveyardTriggers` (Classic #47 Recurring Felinor), and a hand or deck trigger may summon its own
-//! card — no Cry, summoning sick, the leftmost open zone (Classic #66 EU Striker). R464 is their place
-//! in R68's order: after the hand's triggers and before the graveyard's, in the order the instances
-//! were created and never by library position, which is hidden (§9.1); and a library card's queue
-//! entry, like a hand card's, takes no number from the counter both seats read (R177).
+//! Deck and graveyard triggers (Classic+ #37 Wardrum, Classic #47 Recurring Felinor), and "summon this
+//! from your hand or deck" (Classic #66 EU Striker; docs/classic-sets.md B5 E26), in R68's order by
+//! R464: never by library position, which is hidden (§9.1); a library card's queue entry takes no
+//! number (R177).
 
 use jackioh_engine::testkit::*;
 
@@ -62,7 +59,6 @@ fn last_applied_events(state: &GameState) -> Vec<GameEvent> {
         .unwrap_or_default()
 }
 
-/// The top card of a unit zone, by its index in the row.
 fn unit_top(state: &GameState, player: PlayerId, index: usize) -> Option<CardInstance> {
     state.players[player]
         .units
@@ -139,7 +135,7 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
         );
         state.players.p2.library = vec![enemy_deck.clone()];
 
-        // The registry: a library card is a holder only when it declares deck triggers.
+        // A library card is a holder only when it declares deck triggers.
         let order: Vec<String> = cards_in_trigger_order(&state)
             .iter()
             .map(|holder| holder.card.id.clone())
@@ -148,7 +144,7 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
         assert!(index_of(&order, &older.id) < index_of(&order, &newer.id));
         assert!(index_of(&order, &newer.id) < index_of(&order, &grave.id));
         assert!(!order.contains(&filler.id));
-        // Active side first: the other player's deck card comes after all of p1's.
+        // Active side first: p2's deck card comes after all of p1's.
         assert!(index_of(&order, &enemy_deck.id) > index_of(&order, &grave.id));
         let holders = trigger_holders_for_event(&state, GameEventType::CardResolved);
         assert_eq!(
@@ -352,7 +348,7 @@ mod e26_summon_this_from_your_hand_or_deck {
             .cloned();
         let zap_id = hand_card(&state, PlayerId::P1, &zap).id.clone();
         state = act_logged(&state, play_body(PlayerId::P1, &zap_id), &mut log).state;
-        // From the hand or the deck, wherever the deal left it, it answered the Spell.
+        // Wherever the deal left it, hand or deck, it answered the Spell.
         assert_eq!(
             unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id),
             drum.map(|card| card.id)
@@ -364,8 +360,7 @@ mod e26_summon_this_from_your_hand_or_deck {
 mod e26_graveyard_triggers_classic_47 {
     use super::*;
 
-    /// p1's Trap fires on p2's play while `recurring` waits in p1's graveyard; the card comes back
-    /// as it stands afterwards (in the hand when it returned, else as it was).
+    /// p1's Trap fires on p2's play while `recurring` waits in p1's graveyard; returns the card after it.
     fn trap_fires(seed: &str, radiant: bool) -> (GameState, CardInstance) {
         let mut state = board(seed);
         let mut card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
@@ -396,7 +391,7 @@ mod e26_graveyard_triggers_classic_47 {
     #[test]
     fn e26_when_one_of_your_traps_fires_the_card_in_your_graveyard_returns_to_your_hand() {
         let (state, card) = trap_fires("recur", false);
-        // (p2's play ended their turn by itself, R82, so p1 has drawn for the new turn as well.)
+        // (p2's play ended their turn by itself, R82, so p1 has drawn too.)
         assert!(ids_of(&state.players.p1.hand).contains(&card.id));
         assert_eq!(card.zone.z(), ZoneName::Hand);
         assert_eq!(

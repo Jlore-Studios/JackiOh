@@ -1,29 +1,10 @@
-//! The lethal solver (SPEC §9.9): a bounded search for a line that wins this turn on every
-//! determinization, through attack orderings, removing Taunt first, buffs before attacks, a spell to
-//! the face, and prompts answered on the way. Nothing in this crate recurses, so both of its walks
-//! keep their own explicit frontier.
+//! The lethal solver (SPEC §9.9): bounded search for a line winning this turn across all determinizations.
 //!
-//! It runs in two stages on one node allowance:
-//!   1. A depth-first walk in move order (`candidate_actions` puts face attacks and winning trades
-//!      first) for AI_SEARCH.lethalQuickNodes nodes. The usual lethal, a few swings at the face, is
-//!      the first path it tries. When the walk runs out of moves before it runs out of nodes, the
-//!      whole tree has been searched and there is no lethal to find.
-//!   2. Otherwise a best-first walk with what is left: it expands the position closest to lethal
-//!      (`ready_gap`: the enemy hero's life, in a Duos duel its own HP and its team's pool (R964000),
-//!      less what the attacks still to come would deal past its Taunts), trying its first
-//!      AI_SEARCH.lethalWidth moves at once. A depth-first walk spends everything below its first
-//!      move, so a lethal that starts with a card late in move order (a spell that kills one's own
-//!      unit for its Death, a tribute of the enemy's Taunts) is out of its reach on a wide board. The
-//!      best-first walk tries each of the first lethalWidth moves and ranks what they leave by
-//!      `ready_gap`, so such a card is found when it is among those moves. A move past the first
-//!      lethalWidth of its position is never tried by either walk.
+//! Stages:
+//! 1. Depth-first walk in move order for `AI_SEARCH.lethalQuickNodes`.
+//! 2. Best-first walk ordered by `ready_gap` (enemy hero life including Duos pool R964000 less ready attacks).
 //!
-//! A line counts only when it wins on every determinization. `decide` plays a proved line trimmed to
-//! the actions it needs (`trim_lethal`, R1965000), since a walk may prove a lethal behind steps it does
-//! not need, and only a line's first action is played.
-//!
-//! Port of `packages/ai/src/lethal.ts`. TS's frames shared one state object between the moves pushed
-//! from it; here they share it through an `Rc`.
+//! Proved lines are verified across all determinizations and trimmed (`trim_lethal`, R1965000).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::rc::Rc;
@@ -149,11 +130,7 @@ fn wins_on(
     Some(true)
 }
 
-/// Whether `legal_actions` would list an attack for `unit`, which `seat` controls, in a position
-/// where `seat` may act in its main phase: some target passes the engine's own test
-/// (`combat::can_attack`, the filter `attack_targets` applies). Asked unit by unit, with a unit whose
-/// attack is spent ruled out first, because enumerating every legal action (every play, target and
-/// mode of a wide hand) cost the best-first walk more than simulating its moves did.
+/// Whether `legal_actions` lists an attack for `unit` (`combat::can_attack`).
 fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     if !has_exertion(state, unit, ExertionKind::Attack) {
         return false;
@@ -173,11 +150,7 @@ fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     })
 }
 
-/// Whether `unit`, which `has_attack`, may hit the enemy hero once no Taunt walls it: what
-/// `combat::why_cannot_attack` asks of a hero target before the Taunt wall (§4.2 step 3), which it
-/// tests last. Not `can_attack` on the hero, which refuses every attacker a Taunt wall binds. The unit
-/// restrictions refuse the hero inside the Gauntlet (R1849005), and §6.1 lets a unit on its summon
-/// turn hit the hero only with Charge, Rush lifting summoning sickness for unit targets alone.
+/// Whether `unit` may hit enemy hero once Taunts clear (§4.2, Gauntlet R1849005, Charge/Rush §6.1).
 fn may_hit_hero(state: &GameState, unit: &CardInstance) -> bool {
     let hero = AttackTarget::Hero {
         player: unit.controller.opponent(),
@@ -197,13 +170,7 @@ fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
     attacks_per_turn(state, unit) - spent
 }
 
-/// How far the seat stands from lethal this turn: the enemy hero's life (`effective_life`: in a Duos
-/// duel its own HP and its team's pool, R964000) less what the units that may still attack (those
-/// `legal_actions` lists an attack for) would deal it past the enemy's Taunts, counted as
-/// `face_threat` counts it. A unit that may attack units only (`may_hit_hero`: a Rush unit on its
-/// summon turn, or one in the Gauntlet) still binds a Taunt but deals the hero nothing past them
-/// (#1823). Zero or less means the attacks left could end the game. It only orders the search; a
-/// lethal is always proved by playing it through `reduce`.
+/// Gap to lethal: enemy hero life (including Duos pool R964000) less damage past Taunts (#1823).
 pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if let Some(result) = &state.result {
         return if result.winner.player() == Some(seat) {
@@ -222,9 +189,7 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
         return f64::from(life);
     }
-    // TS first ran `subsystems.syncFusedScripts(state)`, as legalActions did, so a fused card's scripts
-    // were this state's own before its layers were read. Rust builds fused scripts from the state on
-    // every lookup (SURFACE §6.6), so there is nothing to sync.
+    // Fused scripts are built from state on lookup (SURFACE §6.6).
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
@@ -374,14 +339,8 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pri
     Walk::Exhausted
 }
 
-/// The lethal solver on dets[0]: `lethal_moves` (candidate_actions minus endTurn and every
-/// switchPosition but a Deft unit's to Attack), lines at most AI_SEARCH.lethalMaxDepth long, a
-/// visited set keyed on `search_signature`. A depth-first walk in move order gets
-/// AI_SEARCH.lethalQuickNodes; if it neither found a lethal nor searched the whole tree, a best-first
-/// walk by `ready_gap` gets the rest (the header says why). A line is lethal when simulate leaves
-/// state.result.winner === seat, and it is returned only if replaying it (equality with legal_actions
-/// at each step) also wins on every other determinization; otherwise the search continues. Spends at
-/// most `limit` nodes of `counter`.
+/// Runs depth-first then best-first lethal search on dets[0], requiring candidate lines
+/// to win on all determinizations. Spends at most `limit` nodes of `counter`.
 pub fn find_lethal(
     dets: &[GameState],
     seat: PlayerId,
@@ -399,8 +358,7 @@ pub fn find_lethal(
     )
 }
 
-/// `find_lethal` with the depth-first walk's share given: TS's test set `AI_SEARCH.lethalQuickNodes`
-/// at run time, which a Rust `const` cannot be (`tests/ai/lethal.rs`).
+/// `find_lethal` with a configurable depth-first quick-node budget.
 pub fn find_lethal_with_quick_nodes(
     dets: &[GameState],
     seat: PlayerId,
@@ -446,20 +404,9 @@ pub fn find_lethal_with_quick_nodes(
     }
 }
 
-/// R1965000: `line`, a lethal `find_lethal` proved on `dets`, cut down to the actions it needs, for
-/// `decide`, which plays only a line's first action and then plans again. A walk may prove a lethal
-/// behind steps it does not need: the best-first walk takes the longer line on a tied `ready_gap`, and
-/// a free play that leaves the gap where it was (a (0) Spell that draws nothing, or The Coin, played
-/// again from the graveyard under C #90 In Too Deep's reward L, R454) can stand in front of the same
-/// lethal at every decision, so playing the untrimmed line's first action could repeat it without
-/// end. First the shortest suffix that still wins on every world of `dets` (`wins_on`), so the action
-/// played is one the rest of the line cannot win without; then, one at a time from the front, each
-/// action the line still wins without, starting over after each, until it needs every action left.
-/// Each try is `wins_on`'s replay through `simulate`, charged as the walks' own proof is: at most
-/// `lethal_max_depth` tries a pass and one pass for each action it drops. `None` when the counter
-/// stops it before it has found that suffix: the line it holds then may open with such a free play,
-/// and a clock that stops each decision at the same point would have it played every time. When the
-/// counter stops it after, the line is kept as far as it was cut.
+/// R1965000: trim `line` to the actions it needs so unnecessary free plays (e.g. C #90 In Too Deep,
+/// R454) do not stall `decide`. Finds the shortest winning suffix across all worlds, then greedily
+/// drops unneeded prefix actions.
 pub fn trim_lethal(
     dets: &[GameState],
     seat: PlayerId,
@@ -490,15 +437,8 @@ pub fn trim_lethal(
     Some(line)
 }
 
-/// R2102000: whether `seat` has a sure win this turn by what it can see, for the practice AI's
-/// lethal hint (SPEC §9.9). Like `decide` (R185) it reads only `redact(state, seat)`: it fills that in
-/// as LETHAL_HINT_DETERMINIZATIONS worlds drawn from LETHAL_HINT_SEED's stream, its own, and asks
-/// `find_lethal` for a line that wins on every one of them within LETHAL_HINT_NODES nodes. So two
-/// states that differ only in what `seat` cannot see give one answer, and a face-down card that could
-/// be a trap which stops the line keeps it dark. False outside `seat`'s own main phase with no prompt
-/// open, once the game is over, when the search panics, and when `should_stop` (the browser's clock,
-/// as `AiOptions::should_stop` is the AI's) stops it before it proves a line. Only the page asks it;
-/// `decide` never does, so it changes no game.
+/// R2102000: practice AI lethal hint (SPEC §9.9). Like `decide` (R185), samples determinizations
+/// from `redact(state, seat)` and checks if `find_lethal` finds a win across all worlds within budget.
 pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool {
     let own_main = state.active == seat && state.phase == Phase::Main;
     if state.result.is_some() || state.pending.is_some() || !own_main {

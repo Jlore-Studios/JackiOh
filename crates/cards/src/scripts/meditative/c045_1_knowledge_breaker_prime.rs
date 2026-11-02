@@ -123,7 +123,6 @@ mod tests {
 
         #[test]
         fn cry_sets_five_random_traps_fewer_on_a_full_backrow() {
-            // Empty backrow: five random Traps arrive.
             let mut s = scenario(json!({
                 "seed": "prime-traps",
                 "p1": { "mana": 8, "hand": [PRIME], "library": [VANILLA] },
@@ -184,8 +183,7 @@ mod tests {
             s.play(&spare.id, json!({ "zone": 1, "row": "backrow", "faceDown": "cloaked" }));
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 4 }));
-            // Every other CN or KY permanent on both fields is gone: the CN and the KY Unit, the
-            // set CN Unit, and the Breaker granter itself.
+            // Every other CN or KY permanent is gone, the set CN Unit and the Breaker included.
             assert!(s.unit(P1, 1).is_none());
             assert!(s.unit(P1, 2).is_none());
             assert!(s.unit(P2, 1).is_none());
@@ -199,14 +197,11 @@ mod tests {
 
         #[test]
         fn r1176000_destroys_a_translated_permanent_and_spares_an_english_one() {
-            // A Vanilla in Chinese is CN (R1176000): the Cry destroys the translated ones on both
-            // fields and leaves the English one standing.
             let (mut s, translated, english) = translated_board("prime-translated", false);
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 3 }));
-            // The Cry destroys each one; a Trap the Cry set may then return one (Classic #14 on this
-            // seed since the Stinkyscape release, #1884, moved the five Traps it rolls), so the check is
-            // the destruction, not the zone it ends in.
+            // A Trap the Cry set may return one (Classic #14 on this seed, #1884), so the check is the
+            // destruction, not the zone it ends in.
             let destroyed: Vec<String> = s
                 .events()
                 .iter()
@@ -321,7 +316,6 @@ mod tests {
                     .iter()
                     .any(|card| card.def_id == KY_UNIT)
             );
-            // Its Traps arrive Radiant: five set, all from the Trap pool.
             assert_eq!(trap_count(&s, P1), 5);
             assert!(s.state().players[P1].backrow.iter().flatten().all(|card| card.radiant));
         }

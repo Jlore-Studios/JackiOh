@@ -14,7 +14,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-091-1";
 
 pub fn script() -> CardScripts {
-    // Both faces summon their joiners; the Radiant face's First Strike is catalog data beside it.
     let base = Script {
         static_flags: Some(StaticFlags {
             attack_joiners: Some(true),
@@ -26,14 +25,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #91.1 Windfurious Prime — SPEC §8.8 row 91.1, BUILD M10 row M 91-1: "its controller's
-// hand-or-deck pool is Uniform; the joiners attack first (in lane order); a declared attack whose
-// target has left the field before its combat is canceled (exertion spent), attackCancelled is
-// emitted, and the others' window, too; a subset attacks if there are fewer zones, none if there
-// are no Units, and only those cast; they never return".
-//
-// The rider is proved in `crates/engine/tests/rules/mb22.rs` (R1203); these tests prove the card's
-// own faces carry it.
+// M #91.1 Windfurious Prime — SPEC §8.8 row 91.1, BUILD M10 row M 91-1. The rider is proved in
+// `crates/engine/tests/rules/mb22.rs` (R1203); these tests prove the card's own faces carry it.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,7 +59,6 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.attack(PRIME, "hero");
-                // The Prime declares; before its combat both joiners strike as forced attacks (R1203) …
                 let kinds: Vec<(String, bool)> = s
                     .events()
                     .iter()
@@ -82,9 +74,7 @@ mod tests {
                 let prime = s.card(PRIME).id.clone();
                 assert_eq!(kinds[0].0, prime);
                 assert!(kinds[1].1 && kinds[2].1, "the joiners are forced");
-                // … and all three hit: the hero took the joiners' 3 + 14 and the Prime's 5.
                 s.expect_health(P2, HERO_HEALTH - 3 - 14 - 5);
-                // The joiners stay; nothing returns.
                 assert_eq!(
                     s.state().players[P1].units.iter().flatten().count(),
                     3,
@@ -123,7 +113,6 @@ mod tests {
                 s.play(PRIME, json!({ "zone": 1 }));
                 let first = s.unit(P2, 1).unwrap().id;
                 let second = s.unit(P2, 2).unwrap().id;
-                // Rush: it attacks a Unit at once; Windfury: a second time.
                 s.attack(PRIME, &first);
                 s.expect_in_zone(&first, "graveyard");
                 s.attack(PRIME, &second);
@@ -144,7 +133,6 @@ mod tests {
                 let other = s.card(OTHER).id.clone();
                 s.attack(PRIME, "hero");
                 assert!(s.state().pending.is_none(), "no Cry prompt opened");
-                // One from the hand and one from the deck: both pools together.
                 s.expect_in_zone(&scarab, "field");
                 s.expect_in_zone(&other, "field");
                 assert_ne!(scarab, other);
@@ -153,7 +141,6 @@ mod tests {
 
             #[test]
             fn r1203_a_forced_attack_brings_its_joiners_too() {
-                // Moths to the Flame: "Start of turn: Every enemy Unit attacks this."
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-forced",
@@ -201,7 +188,6 @@ mod tests {
                     })
                     .collect();
                 assert_eq!(canceled, vec![prime.clone()], "the Prime's attack is canceled");
-                // Only the first joiner fought: the target was gone before the second's turn.
                 let fights = s
                     .events()
                     .iter()
@@ -232,7 +218,6 @@ mod tests {
 
             #[test]
             fn r1203_fewer_units_fewer_joiners() {
-                // One Unit in hand and deck together: one joiner.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-one-unit",

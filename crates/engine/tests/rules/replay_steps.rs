@@ -1,7 +1,6 @@
-// R768, issue #508: what a replay shows. A seat's view at any step of a finished game is
-// `view_for` of the state after that many accepted actions; a page and a step cost at most
-// REPLAY_CHECKPOINT_EVERY `reduce` calls; a rejected action is no step; another catalog version or
-// another final hash is refused with no step.
+// R768, issue #508: a seat's view at any step of a finished game is `view_for` of the state after that
+// many accepted actions; a page and a step cost at most REPLAY_CHECKPOINT_EVERY `reduce` calls; a
+// rejected action is no step; another catalog version or final hash is refused with no step.
 //
 // R767000, issue #767: a game played on a shipped catalog version the build carries replays under
 // that version's cards and kept scripts, step for step; any other version is still `earlier_patch`.
@@ -33,7 +32,6 @@ fn record(hash: &str) -> ReplayRecord {
     }
 }
 
-/// Open a replay that must be ready: its step count and checkpoints.
 fn opened(input: &ReplayInput, hash: &str) -> (usize, ReplayCheckpoints) {
     match replay_open(input, &record(hash), BUILD) {
         ReplayOpen::Ready { steps, checkpoints } => (steps, checkpoints),
@@ -41,7 +39,6 @@ fn opened(input: &ReplayInput, hash: &str) -> (usize, ReplayCheckpoints) {
     }
 }
 
-/// Every step of `seat`, a page at a time from step 0, each page holding to the reduce budget.
 fn all_steps(checkpoints: &ReplayCheckpoints, seat: PlayerId) -> Vec<ReplayStep> {
     let total = checkpoints.accepted.len() + 1;
     let mut steps: Vec<ReplayStep> = Vec::new();
@@ -78,8 +75,7 @@ fn r768_every_step_is_view_for_after_a_fresh_fold_of_its_prefix() {
         for (seat, seat_steps) in &shown {
             assert_eq!(seat_steps.len(), steps, "{seed} {seat}");
         }
-        // One fresh fold per prefix, held to both seats' steps: it was the binary's slowest test
-        // with a fold per seat (#2090).
+        // One fresh fold per prefix, held to both seats' steps: a fold per seat is too slow (#2090).
         for k in 0..steps {
             let folded = fold(&input(seed, &live.decks, live.log[..k].to_vec()));
             assert!(folded.errors.is_empty(), "{seed} step {k}");
@@ -160,8 +156,7 @@ fn r768_a_rejected_action_is_not_a_step() {
     setup_catalog();
     let hash = hash_state(&live.state);
 
-    // The game's log with an action the reducer refuses before every fifth entry and after the last:
-    // an end of turn from the seat that is not the active one.
+    // The game's log with an action the reducer refuses before every fifth entry and after the last.
     let mut state = fold(&input(seed, &live.decks, Vec::new())).state;
     let mut junked: Vec<Action> = Vec::new();
     let mut junk = 0;
@@ -258,8 +253,7 @@ fn old_catalog(kept: IndexMap<String, CardScripts>) -> &'static ShippedCatalog {
     shipped_catalog(OLD).expect("the old catalog is carried")
 }
 
-/// R767000: a game played on `OLD`, and every step's view of both seats as the live game showed it:
-/// a fresh fold of its prefix under `OLD`'s catalog.
+/// R767000: a game played on `OLD`, and each step's view of both seats: a fresh fold of its prefix.
 fn played_on_old(seed: &str, old: &'static ShippedCatalog) -> (RandomGame, Vec<[PlayerView; 2]>) {
     with_shipped(Some(old), || {
         let live = play_random_game(seed, None);
@@ -281,8 +275,6 @@ fn on_old(hash: &str) -> ReplayRecord {
     }
 }
 
-/// R767000: a game on `OLD` opens ready under `OLD`'s catalog, every page of both seats is the view
-/// the live game showed, and the same log folded under the build's catalog is another game.
 fn assert_replays_under_old(seed: &str, old: &'static ShippedCatalog) {
     let (live, views) = played_on_old(seed, old);
     let hash = hash_state(&live.state);

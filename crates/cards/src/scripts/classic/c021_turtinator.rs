@@ -49,8 +49,6 @@ pub fn script() -> CardScripts {
         activations: vec![eat()],
         ..Script::default()
     };
-    // The same script: the Radiant face's "twice its Attack" is its declared multiplier (2), which
-    // `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -117,8 +115,6 @@ mod tests {
             crate::register_all();
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, TURTLE);
-            // The Radiant face is the base script itself, so its ability's hook is the very same
-            // closure.
             assert!(Arc::ptr_eq(&scripts.radiant.activations[0].run, &scripts.base.activations[0].run));
             let ability = &scripts.base.activations[0];
             assert_eq!(ability.uses, ActivationUses::Count(1));
@@ -168,7 +164,6 @@ mod tests {
 
                 eat(&mut s, TIMMY, enemy_hero(), TURTLE);
 
-                // Timmy is 3 in the graveyard; the aura's +3 counted, because it was paid as it stood.
                 s.expect_health(P2, 24);
             }
 
@@ -288,7 +283,6 @@ mod tests {
                 eat(&mut s, POINTMASTER, json!([{ "pick": "instance", "instanceId": menace.id }]), TURTLE);
                 s.expect_stats(&menace, json!({ "health": 2 }));
 
-                // Once a turn (patch v0.3.10), so the hero target is a second board.
                 let mut s = setup(json!({ "field": [TURTLE, VANILLA] }), json!({}));
                 eat(&mut s, VANILLA, json!([{ "pick": "hero", "player": "p1" }]), TURTLE);
                 s.expect_health(P1, 26);
@@ -306,7 +300,6 @@ mod tests {
 
             #[test]
             fn r384_activates_once_a_turn_and_again_on_the_next() {
-                // Activate (patch v0.3.10; Activate ♾️ before): the second use in a turn is refused.
                 crate::register_all();
                 let mut s = setup(
                     json!({ "field": [TURTLE, TIMMY, VANILLA], "hand": [FILLER, FILLER], "library": [FILLER, FILLER] }),

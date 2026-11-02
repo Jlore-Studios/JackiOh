@@ -1,12 +1,7 @@
-// crates/server/tests/deploy/rehearse.sh's split modes (#1556), which CI runs as jobs of their own:
-// REHEARSAL_STAGE builds one Dockerfile stage (`deps`, `game`, then `crates`) into the layer cache and starts
-// nothing (REHEARSAL_DEPS_ONLY=1 is `deps`); REHEARSAL_STAGE=image builds the whole image and saves it
-// with REHEARSAL_SAVE_IMAGE; REHEARSAL_LOAD_IMAGE with REHEARSAL_BOOT runs one boot shard on it.
-// REHEARSAL_CACHE_FROM may name several caches, separated by spaces, one --cache-from each (#1787).
-// A stand-in `docker` on PATH records each call, so no Docker is needed. Only the validation and the
-// build/save paths are tested here: past the build the script needs real `psql`/Postgres (the
-// readiness loop would burn 60 s in vitest), so the full boot sequencing is proven by CI's own
-// rehearsal jobs and the daily full run instead.
+// crates/server/tests/deploy/rehearse.sh's split modes (#1556), which CI runs as jobs of their own, and its
+// space-separated REHEARSAL_CACHE_FROM (#1787). A stand-in `docker` on PATH records each call, so no Docker
+// is needed. Only the validation and the build/save paths are tested here: past the build the script needs
+// real `psql`/Postgres (the readiness loop would burn 60 s in vitest), so CI's rehearsal jobs prove the boot.
 
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -43,7 +38,6 @@ function rehearse(env: Record<string, string>): { status: number | null; stdout:
   return { status: run.status, stdout: run.stdout, stderr: run.stderr, calls };
 }
 
-/** The script run deps-only with `env` added: its stdout and every `docker` call, one per line. */
 function depsOnly(env: Record<string, string>): { stdout: string; calls: string[] } {
   const run = rehearse({ REHEARSAL_DEPS_ONLY: "1", ...env });
   expect(run.status, run.stderr).toBe(0);

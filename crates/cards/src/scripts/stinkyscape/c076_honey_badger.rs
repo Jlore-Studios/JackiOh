@@ -34,9 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 76 Honey Badger — SPEC §8.10 row 76, BUILD M12 row S 76: "with Rush, attacks an enemy Unit the turn
-// it lands and gains one random Resource, never the hero that turn; no Starship Piece, so its death fuses
-// nothing (#2521); radiant 8/12, Radiant Resources".
+// S 76 Honey Badger — SPEC §8.10 row 76, BUILD M12 row S 76 (#2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,10 +1,7 @@
-// R2102000, R2291000: the practice core's lethal hint. In every game against the AI (each tier, a
-// sandbox game, a tutorial lesson), every snapshot asks `lethalHint` for the human's seat and carries
-// `lethal: true` when it says yes. A check that throws gives no hint and the game goes on.
-//
-// `@jackioh/ai` is mocked with a `lethalHint` that is the real one until a test tells it to answer
-// yes or throw, and that records the seats and deadlines it was asked with. The check's own tests, the hidden-card
-// invariance among them, are the Rust AI's (`crates/ai/tests/ai/lethal_hint.rs`).
+// R2102000, R2291000: the practice core's lethal hint. In every game against the AI, every snapshot asks
+// `lethalHint` for the human's seat and carries `lethal: true` when it says yes; one that throws gives no
+// hint. The mocked `lethalHint` is the real one until a test says otherwise; the check's own tests, the
+// hidden-card invariance among them, are the Rust AI's (`crates/ai/tests/ai/lethal_hint.rs`).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +12,8 @@ import { PRACTICE_LETHAL_HINT_CLOCK_MS } from "./config.ts";
 import { createPracticeCore } from "./core.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { lessonStartConfig } from "../tutorial/start.ts";
-import type { PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
+import type { PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeStartConfig } from "./protocol.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 type Mode = "real" | "yes" | "throw";
 
@@ -53,11 +51,6 @@ function driver(now = 0): Driver {
       return core.handle({ id, ...body } as PracticeRequest);
     },
   };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 function config(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {

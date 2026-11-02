@@ -1,19 +1,17 @@
-//! R1441 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that
-//! stops reading is let go.
+//! R1441 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that stops
+//! reading is let go.
 //!
-//!  - the pump pings every `WS_PING_INTERVAL_SECONDS`; a socket that has sent no frame of any kind
-//!    for `WS_IDLE_TIMEOUT_SECONDS` is dropped, which is a disconnect: its seat's grace starts and the
-//!    opponent is shown it;
-//!  - a socket that answers its pings stays;
-//!  - a socket's outgoing queue holds `WS_OUTBOX_MAX_FRAMES` frames, and one more closes it;
-//!  - the page's wake probe reopens a socket at most once per ping interval, a pace the account's
-//!    request budget, which every upgrade counts against (R2478000), never refuses.
+//!  - the pump pings every `WS_PING_INTERVAL_SECONDS`; a socket that has sent no frame for
+//!    `WS_IDLE_TIMEOUT_SECONDS` is dropped, which is a disconnect: its seat's grace starts and the opponent
+//!    is shown it, while one that answers its pings stays;
+//!  - an outgoing queue holds `WS_OUTBOX_MAX_FRAMES` frames, and one more closes the socket;
+//!  - the wake probe reopens a socket at most once per ping interval, a pace the account's request budget,
+//!    which every upgrade counts against (R2478000), never refuses.
 //!
-//! The first two run the real `/ws/match` upgrade and the real registry on tokio's paused clock. Real
-//! TCP races a paused clock (the header of `actor/ws_server.rs`), so the connection is an in-memory
-//! pipe (`MemoryListener`): `axum::serve` accepts the server end of a `tokio::io::duplex`, and the
-//! test is the client on the other. Every duration is read from `config.rs`, so these tests state
-//! R1441's numbers nowhere.
+//! The ping tests run the real `/ws/match` upgrade and registry on tokio's paused clock. Real TCP races a
+//! paused clock, so the connection is an in-memory pipe (`MemoryListener`: `axum::serve` accepts the server
+//! end of a `tokio::io::duplex`). Every duration is read from `config.rs`, so these tests state R1441's
+//! numbers nowhere.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -31,7 +29,7 @@ use jackioh_server::config::{
 };
 
 use super::ws_server::seed_matches;
-use crate::support::socket::{FakeSocket, create_fake_socket, settle};
+use crate::support::socket::{FakeSocket, create_fake_socket, read_frame_now, settle};
 
 /// The pipe's buffer each way: far more than a match's first frames, so a write never waits on the
 /// pump and the paused clock has nothing to race.
@@ -163,32 +161,10 @@ impl Client {
         self.stream.write_all(&frame).await.expect("the frame is written");
     }
 
-    /// The next frame as it stands on the wire (server frames are unmasked), or `None` at the end
-    /// of the stream.
-    async fn read_frame_now(&mut self) -> Option<(u8, Vec<u8>)> {
-        let mut head = [0u8; 2];
-        self.stream.read_exact(&mut head).await.ok()?;
-        let opcode = head[0] & 0x0F;
-        let mut length = u64::from(head[1] & 0x7F);
-        if length == 126 {
-            let mut extended = [0u8; 2];
-            self.stream.read_exact(&mut extended).await.ok()?;
-            length = u64::from(u16::from_be_bytes(extended));
-        } else if length == 127 {
-            let mut extended = [0u8; 8];
-            self.stream.read_exact(&mut extended).await.ok()?;
-            length = u64::from_be_bytes(extended);
-        }
-        let mut payload = vec![0u8; usize::try_from(length).ok()?];
-        self.stream.read_exact(&mut payload).await.ok()?;
-        Some((opcode, payload))
-    }
-
     /// The first `view` frame: the actor pushes one when the registry attaches the socket (§9.5).
     async fn first_view(&mut self) -> Value {
         loop {
-            let (opcode, payload) = self
-                .read_frame_now()
+            let (opcode, payload) = read_frame_now(&mut self.stream)
                 .await
                 .expect("a view frame after the attach");
             if opcode != 0x1 {
@@ -212,7 +188,7 @@ async fn r1441_drops_a_socket_that_answers_no_ping_after_the_idle_timeout_and_sh
 
     // Pings arrive and none is answered, until the server ends the connection.
     let mut pings = 0;
-    while let Some((opcode, _)) = p1.read_frame_now().await {
+    while let Some((opcode, _)) = read_frame_now(&mut p1.stream).await {
         if opcode == PING {
             pings += 1;
         }
@@ -254,8 +230,7 @@ async fn r1441_keeps_a_socket_that_answers_its_pings_open_past_the_idle_timeout(
     // Three idle timeouts' worth of pings, each answered with a pong that carries its payload.
     let mut pongs = 0;
     while opened.elapsed() < IDLE_TIMEOUT * 3 {
-        let (opcode, payload) = p1
-            .read_frame_now()
+        let (opcode, payload) = read_frame_now(&mut p1.stream)
             .await
             .expect("the server kept a socket that answers its pings");
         assert_ne!(opcode, 0x8, "the server closed a socket that answers its pings");

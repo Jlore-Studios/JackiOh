@@ -1,28 +1,11 @@
-// `/stats`: Public card and player statistics page (SPEC §9.11, R654).
-//
-// Accessible signed out and signed in.
-// Provides three tabs:
-//  - Cards: sortable, filterable table of card win rates and play rates; the filters, not columns, cover cost, rarity and keyword (R2446000).
-//  - Sets: each set's cards on the patch (below).
-//  - Players: public player aggregates (games, win rate, favorite cards, fun stats from #125).
-// Features:
-//  - No provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661); the patch bar below is the way back to the previous patch.
-//  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
-//    for a Drawn vs not drawn the server withholds until both its sides reach the floor (R654, R2427000).
-//  - URL search params for shareable views.
-//  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
-//    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
-//  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
-//  - Patch bar (R1973002): a picker of the newest patches with enough games, and the patch before and after
-//    the one shown; a patch is the window the cards share (R1973001), so a micro is never a step of its own.
-//  - Sets tab (R1966000): each set's cards on the patch, pooled, by mean and by median, the change since the
-//    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
-//  - Games panel (R1994000): at the head of the Cards tab's scrolling panel, how the patch's games went
-//    (stats/GamesPanel.tsx).
-//  - Created cards (R2089000): below the Cards tab's table, the cards made during games, apart from the deck
-//    cards and answering the same search box (stats/CreatedPanel.tsx).
-//  - Tokens (R2370000): behind the Cards tab's Show tokens toggle, off by default, the tokens alone with each
-//    one's win rate, above the Created cards (stats/TokensPanel.tsx).
+// `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on three tabs: Cards
+// (the filters, not columns, cover cost, rarity and keyword, R2446000), Sets (R1966000) and Players (public
+// aggregates, fun stats from #125). No provisional banner and no reading notes (R2325000): the page never
+// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games", and a
+// Drawn vs not drawn the server withholds until both sides reach it, "not enough data" (R2427000). The
+// patch bar (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of
+// its own. The Cards tab also holds the games panel (R1994000), the Created cards (R2089000) and, behind
+// Show tokens, off by default, the tokens (R2370000).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -202,7 +185,6 @@ function DrillDownBackLayer({ onClose }: { onClose: () => void }): null {
 
 export default function StatsRoute(): ReactElement {
   const locale = useLocale();
-  // Read initial state from URL search params
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const [tab, setTab] = useState<TabKey>(() => {
@@ -219,7 +201,6 @@ export default function StatsRoute(): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
-  // R2370000: the Tokens section, off unless the address asks for it.
   const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
   const [mode, setMode] = useState<string>(
     ["bo1", "bo3", "random"].includes(initialParams.get("mode") ?? "")
@@ -227,7 +208,6 @@ export default function StatsRoute(): ReactElement {
       : "",
   );
 
-  // Column visibility
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
     games: true,
@@ -239,7 +219,7 @@ export default function StatsRoute(): ReactElement {
     playRate: true,
   });
 
-  // Card stats response. R2125000: a revisit starts on the table these filters last read and reads it again behind it.
+  // R2125000: a revisit starts on the table these filters last read and reads it again behind it.
   const [cardStatsKept] = useState(() =>
     cachedRead<PublicStatsCardsResponse>(
       null,
@@ -252,17 +232,15 @@ export default function StatsRoute(): ReactElement {
   // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
   const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
 
-  // Players response
   const [playersLoading, setPlayersLoading] = useState(false);
   const [playersError, setPlayersError] = useState(false);
   const [playersList, setPlayersList] = useState<PublicPlayerSummary[]>([]);
   const [playerSearch, setPlayerSearch] = useState("");
-  // The search the players tab last asked for (the box's text, a pause after its last change) and its page.
+  // The search last asked for (the box's text, a pause after its last change) and its page.
   const [playerQuery, setPlayerQuery] = useState("");
   const [playerPage, setPlayerPage] = useState(1);
   const [playersHasMore, setPlayersHasMore] = useState(false);
 
-  // Drill-down data
   const [drillDownLoading, setDrillDownLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<CardDrillDownResponse | null>(null);
   const [drillDownError, setDrillDownError] = useState(false);
@@ -271,14 +249,13 @@ export default function StatsRoute(): ReactElement {
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
 
-  // R1966000: the Sets tab's patch, every set's cards unfiltered, and its previous patch's for the change.
+  // R1966000: every set's cards, unfiltered, and the previous patch's for the change.
   const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
   const [setsPrevious, setSetsPrevious] = useState<PublicStatsCardsResponse | null>(null);
   const [setsError, setSetsError] = useState(false);
   // Bumped by the Sets tab's Retry, as `cardStatsAttempt` is by the table's.
   const [setsAttempt, setSetsAttempt] = useState(0);
 
-  // Sync state to URL
   const updateUrl = useCallback(() => {
     const params = new URLSearchParams();
     if (tab !== "cards") params.set("tab", tab);
@@ -304,7 +281,6 @@ export default function StatsRoute(): ReactElement {
     updateUrl();
   }, [updateUrl]);
 
-  // Fetch card stats
   const fetchCardStats = useCallback(
     () => {
       const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode);
@@ -342,7 +318,7 @@ export default function StatsRoute(): ReactElement {
     return fetchCardStats();
   }, [fetchCardStats, cardStatsAttempt]);
 
-  // Fetch players: one page of the server's `limit` rows. The response carries no total, so a full page may have another after it.
+  // The response carries no total, so a full page of the server's `limit` rows may have another after it.
   const fetchPlayers = useCallback((query: string, page: number) => {
     setPlayersLoading(true);
     setPlayersError(false);
@@ -364,8 +340,7 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, []);
 
-  // One request per pause in the typing, not one per keystroke: the box's text becomes the query
-  // `PLAYER_SEARCH_DEBOUNCE_MS` after its last change, from page 1.
+  // One request per pause in the typing, not one per keystroke.
   useEffect(() => {
     if (playerSearch === playerQuery) return;
     const timer = window.setTimeout(() => {
@@ -408,7 +383,6 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [tab, patch, mode, setsAttempt]);
 
-  // Fetch card drill-down
   useEffect(() => {
     if (!cardDrillDownId) {
       setDrillDownData(null);
@@ -432,11 +406,9 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md,
-  // B25): the focus moves to its Close when it opens, Tab and Shift+Tab stay inside, Escape and Back
-  // (R2127000, `DrillDownBackLayer`) close it, and the control that opened it has the focus back once
-  // it closes. That control is kept when it is pressed, not read off the focus, which a click on a
-  // button does not move in every browser.
+  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25; Escape and Back
+  // close it, R2127000). The control that opened it is kept when it is pressed, not read off the
+  // focus, which a click on a button does not move in every browser.
   const drillDownOpener = useRef<HTMLElement | null>(null);
   const drillDownDialog = useRef<HTMLDivElement>(null);
   const drillDownCloseButton = useRef<HTMLButtonElement>(null);
@@ -479,7 +451,6 @@ export default function StatsRoute(): ReactElement {
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
-  // R1966000: the Sets tab's figures, off the cards it read; R1973002: compared with the patch before.
   const setsSince = setsData ? previousPatchOf(setsData)?.name : undefined;
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   const sets = useMemo(() => (setsData ? setRows(setsData.cards, setsMinSample) : []), [setsData, setsMinSample]);
@@ -504,7 +475,6 @@ export default function StatsRoute(): ReactElement {
     return KEYWORD_KINDS.filter((kind) => present.has(kind));
   }, []);
 
-  // Toggle sort
   const handleSort = (col: SortColumn) => {
     if (sortCol === col) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -514,7 +484,6 @@ export default function StatsRoute(): ReactElement {
     }
   };
 
-  // Filter and sort cards
   const filteredCards = useMemo(() => {
     if (!cardStatsData) return [];
     let list = [...cardStatsData.cards];
@@ -586,13 +555,11 @@ export default function StatsRoute(): ReactElement {
 
   // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
-  // R2370000: of those, the catalog's tokens.
   const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
 
   const summary = cardStatsData?.summary;
 
-  // R1973002: the patch shown, the picker's choices and the patches either side of it. The newest is
-  // asked for with no `?patch=`, so the address stays the plain one.
+  // R1973002: the newest patch is asked for with no `?patch=`, so the address stays the plain one.
   const patchList = cardStatsData?.patches ?? [];
   const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
   const pickable = offeredPatches(patchList, shownPatch);

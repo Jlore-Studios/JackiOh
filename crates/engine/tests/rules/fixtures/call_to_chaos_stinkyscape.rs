@@ -1,11 +1,10 @@
 //! The Stinkyscape set's two Call to Chaos tables (`subsystems/call_to_chaos_stinky.rs` and
-//! `call_to_chaos_scape.rs`, R1882001–R1882009) name the set's cards by index (B2.2): these fixture
-//! cards stand at those indices, in the Stinkyscape set, with no text, so each entry is proved on what
-//! it summons or adds and not on what the real cards then do (the cards' own tests, S #150 and #151).
+//! `call_to_chaos_scape.rs`, R1882001–R1882009) name cards by index (B2.2): these stand at those indices
+//! with no text, so an entry is proved on what it summons or adds; S #150's and #151's tests do the rest.
 
 use jackioh_engine::testkit::*;
 
-use super::harness::setup_catalog;
+use super::harness::{new_game, set_library, setup_catalog};
 
 /// `id`, a Stinkyscape card at `index` with no text: a Unit when `stats` are given.
 fn card(
@@ -96,6 +95,20 @@ fn defs() -> Vec<CardDef> {
         defs.push(unit(id, &(210 + at).to_string(), json!(["Weapon"])));
     }
     defs
+}
+
+/// A main phase on p1's turn 4, empty hands and library and these cards registered: where the two
+/// Stinkyscape tables' tests start.
+pub fn stinkyscape_game(seed: &str) -> GameState {
+    let mut state = new_game(seed, None);
+    register_chaos_stinkyscape();
+    state.turn = 4;
+    state.active = PlayerId::P1;
+    state.phase = Phase::Main;
+    state.players.p1.hand = Vec::new();
+    state.players.p2.hand = Vec::new();
+    set_library(&mut state, PlayerId::P1, &[] as &[&str]);
+    state
 }
 
 /// The harness's catalog and scripts, plus these cards.

@@ -1,0 +1,17 @@
+{
+  "title": "Patch: every finish shows on a full-art card",
+  "sources": "#2720",
+  "notes": "On a full-art face every finish now paints a band of itself round the art's edge, at most 0.6 opaque and clear toward the middle, under the gems, the banner, the signature and the stats (R2720000). Animated finishes move as before. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Finishes on full-art cards",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A card's finish now shows on its full art, as a band of its color and texture round the art's edge."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}

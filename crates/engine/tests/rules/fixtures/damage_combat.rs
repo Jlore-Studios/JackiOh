@@ -1,14 +1,7 @@
-//! Fixture cards for the damage and combat systems of patch v0.2.0 (docs/classic-sets.md B5 E5–E9,
-//! E35, E37, and §4.5's backrow Death). The engine never imports `packages/cards` (CLAUDE.md), so each
-//! system is proved through a card shaped like the one that will use it: a Final Gambit, a Voidwalker,
-//! a Blood Moon, a Joro. Ids are `dc-…`, indexed from 4700, so they collide with no other test file.
-//!
-//! Port of `packages/engine/test/fixtures/damage-combat.ts`. Each exported def is a `pub static` under
-//! TS's name snake_cased; TS's module counter (`nextIndex`, from 4700, one per `def` call in file
-//! order, `unit`'s included) is each def's stated index. TS's module `let nonce` is a per-thread counter
-//! (each Rust test runs on its own thread, as each TS test file ran in its own module), and an action
-//! body is the TS literal as JSON (`act(&state, json!({ "type": "endTurn", "playerId": "p1" }))`) or
-//! any `ActionInput`.
+//! Fixture cards for the damage and combat systems (docs/classic-sets.md B5 E5–E9, E35, E37, and
+//! §4.5's backrow Death), each proved through a card shaped like the one that will use it, since the
+//! engine never imports the cards crate. Ids are `dc-…`, indexed from 4700, so they collide with no other
+//! test file. The action nonce is a per-thread counter (each test runs on its own thread).
 
 #![allow(non_upper_case_globals)]
 
@@ -22,7 +15,6 @@ use jackioh_engine::testkit::*;
 
 use super::harness::{act, act_result, both, new_game, next_action, put, slot};
 
-/// TS `def(name, type, extra = {})`: a Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("dc-{name}"),
@@ -45,8 +37,6 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// TS `unit(name, attack, health, keywords = [], radiantKeywords = keywords)`: the Radiant face
-/// doubles the stats. Pass `json!([])` for no keywords and the same list twice for TS's default.
 fn unit(
     name: &str,
     index: i32,
@@ -70,14 +60,11 @@ fn plain_unit(name: &str, index: i32, attack: i32, health: i32) -> CardDef {
     unit(name, index, attack, health, json!([]), json!([]))
 }
 
-// ---------------------------------------------------------------------------
 // The note log: a Field Spell in p1's backrow lane 5 whose memory records what ran, in order.
-// ---------------------------------------------------------------------------
 
 pub const LOG_LANE: i32 = 5;
 pub static log_card: LazyLock<CardDef> = LazyLock::new(|| def("log", 4701, "Field Spell", json!({})));
 
-/// Everything the note log has recorded, in order.
 pub fn notes(state: &GameState) -> Vec<String> {
     match state.players.p1.backrow.get((LOG_LANE - 1) as usize) {
         Some(Some(log)) => match log.memory.get("steps").and_then(Value::as_array) {
@@ -100,8 +87,7 @@ fn write(state: &mut GameState, entry: String) {
     log.memory.insert("steps".to_string(), json!(steps));
 }
 
-/// An effect that appends `entry` to the note log (nothing, while there is no log). TS's
-/// `note(entry: string | ((ctx) => string))`: this is the string form; `note_with` the function form.
+/// An effect that appends `entry` to the note log (nothing, while there is no log).
 pub fn note(entry: impl Into<String>) -> Effect {
     let entry: String = entry.into();
     Effect::new("dc:note", move |ctx| write(ctx.state, entry.clone()))
@@ -126,7 +112,6 @@ pub fn ask_controller(step: impl Into<String>) -> Effect {
     })
 }
 
-/// TS `String(x)` for an optional boolean: `"true"`, `"false"` or `"undefined"`.
 fn js_bool(value: Option<bool>) -> String {
     match value {
         Some(value) => value.to_string(),
@@ -148,9 +133,7 @@ fn both_of(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// ---------------------------------------------------------------------------
 // E5 replacements
-// ---------------------------------------------------------------------------
 
 /// Classic #52's shape: redirect a lethal hit on its hero to the enemy hero, then heal 10 and draw 3.
 pub static gambit: LazyLock<CardDef> = LazyLock::new(|| def("gambit", 4702, "Trap", json!({})));
@@ -188,9 +171,7 @@ pub static blood_moon: LazyLock<CardDef> = LazyLock::new(|| {
 /// Classic #33's shape: from the hand, interposes when the opponent targets a friendly unit.
 pub static joro: LazyLock<CardDef> = LazyLock::new(|| plain_unit("joro", 4710, 1, 1));
 
-// ---------------------------------------------------------------------------
 // E6, E7, E8 pipeline pieces
-// ---------------------------------------------------------------------------
 
 /// Classic #75's shape: the hero's hits are halved (Radiant: quartered), rounded up, after Armor.
 pub static argus: LazyLock<CardDef> = LazyLock::new(|| def("argus", 4711, "Field Spell", json!({})));
@@ -198,7 +179,7 @@ pub static argus: LazyLock<CardDef> = LazyLock::new(|| def("argus", 4711, "Field
 pub static hidden_argus: LazyLock<CardDef> = LazyLock::new(|| def("hidden-argus", 4712, "Trap", json!({})));
 /// Classic+ #11's shape: the hero takes at most 1 per hit.
 pub static anime_armor: LazyLock<CardDef> = LazyLock::new(|| plain_unit("anime-armor", 4713, 4, 4));
-/// Classic+ #11's shape since issue #2179: its hero and this Unit take at most 1 per hit (R2179005).
+/// Classic+ #11's shape (#2179): its hero and this Unit take at most 1 per hit (R2179005).
 pub static self_guard: LazyLock<CardDef> = LazyLock::new(|| plain_unit("self-guard", 4790, 4, 4));
 /// Classic+ #38's shape: Spell Damage +2 (Radiant +5).
 pub static solar: LazyLock<CardDef> = LazyLock::new(|| {
@@ -258,9 +239,7 @@ pub static sweep: LazyLock<CardDef> = LazyLock::new(|| def("sweep", 4721, "Field
 /// A Spell: deal 2 damage to every unit (a Spell's sweep).
 pub static storm: LazyLock<CardDef> = LazyLock::new(|| def("storm", 4722, "Spell", json!({})));
 
-// ---------------------------------------------------------------------------
 // E35 restrictions and statuses
-// ---------------------------------------------------------------------------
 
 /// Classic+ #51's shape: can't be attacked.
 pub static fighter: LazyLock<CardDef> = LazyLock::new(|| plain_unit("fighter", 4723, 7, 2));
@@ -281,7 +260,6 @@ pub static statue: LazyLock<CardDef> = LazyLock::new(|| plain_unit("statue", 472
 pub static charger: LazyLock<CardDef> = LazyLock::new(|| plain_unit("charger", 4726, 4, 2));
 /// Classic+ #19.5's shape: while Berserk, attacks its own hero at its controller's start of turn; Radiant can't go Berserk.
 pub static bot_loser: LazyLock<CardDef> = LazyLock::new(|| plain_unit("bot-loser", 4727, 5, 5));
-/// An immune unit: Immune to Spells printed.
 pub static warded: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
         "warded",
@@ -293,9 +271,7 @@ pub static warded: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-// ---------------------------------------------------------------------------
 // E37 and backrow Death
-// ---------------------------------------------------------------------------
 
 /// Classic+ #3's shape: Death — deal 1 damage to a random enemy for each Plague Counter on it.
 pub static snake: LazyLock<CardDef> = LazyLock::new(|| plain_unit("snake", 4729, 1, 6));
@@ -325,7 +301,6 @@ pub static leech: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Lifesteal" }]),
     )
 });
-/// A plain 2/2 and a plain 1/8, bodies to attack with and at.
 pub static grunt: LazyLock<CardDef> = LazyLock::new(|| plain_unit("grunt", 4734, 2, 2));
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| plain_unit("wall", 4735, 1, 8));
 /// A Field Trap that notes every declared attack and every summon it is offered (it fires again and again).
@@ -367,7 +342,7 @@ pub static pawn: LazyLock<CardDef> = LazyLock::new(|| def("pawn", 4743, "Trap", 
 pub static defender: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender", 4744, 1, 6));
 /// R1026: the same, whose hook asks its controller before it finishes.
 pub static defender_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender-asker", 4745, 1, 6));
-/// R1704001: Classic #52's shape since #1704: cancel a lethal hit on its hero, then heal 10 and draw 3.
+/// R1704001: Classic #52's shape (#1704): cancel a lethal hit on its hero, then heal 10 and draw 3.
 pub static cancel_gambit: LazyLock<CardDef> = LazyLock::new(|| def("cancel-gambit", 4746, "Trap", json!({})));
 /// R2199000: "After one of your Units attacks": notes the attacker, whether the attack was forced,
 /// whether the attacker survived, and the player it acts for (Training Grounds #31 Level Up!'s shape).
@@ -493,7 +468,6 @@ fn hero_target() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["hero"] }))]
 }
 
-/// A replacement as TS's literal `{ id, on, instead }`, with no `where`, `when`, `then` or `by`.
 fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDef {
     ReplacementDef {
         id: id.to_string(),
@@ -535,7 +509,6 @@ fn gambit_script(amount: i32) -> Script {
     }
 }
 
-/// R1704001: `gambit_script`, canceling the hit.
 fn cancel_gambit_script(amount: i32) -> Script {
     Script {
         replacements: vec![ReplacementDef {
@@ -622,7 +595,6 @@ fn gone_kill_noter() -> Script {
     }
 }
 
-/// Classic #14's Radiant shape: its controller's dying units flicker instead; the follow-up notes them.
 fn shadowstep_script() -> CardScripts {
     both(Script {
         replacements: vec![ReplacementDef {
@@ -1237,9 +1209,7 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     ])
 });
 
-// ---------------------------------------------------------------------------
 // Harness
-// ---------------------------------------------------------------------------
 
 pub fn register() {
     let mut defs: CardDefs = registered_catalog().clone();
@@ -1276,7 +1246,6 @@ pub fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Answer the one open prompt, whoever it belongs to.
 pub fn answer(state: &GameState) -> ReduceResult {
     let Some(pending) = state.pending.as_ref() else {
         panic!("expected a prompt to be open");
@@ -1296,15 +1265,12 @@ pub fn answer(state: &GameState) -> ReduceResult {
     result
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 pub fn round_trip(state: &GameState) -> GameState {
     serde_json::from_value(serde_json::to_value(state).expect("a state is JSON"))
         .expect("a state's JSON is a state")
 }
 
-/// §9.3: the live game and its replay agree. `start` is the state the log was played from; the log is
-/// folded again from a clone of it, action by action through `reduce`, and the two end states hash
-/// the same (`replay.hashState`).
+/// §9.3: the live game and its replay agree.
 pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
     let mut state = clone_state(start);
     for action in log {
@@ -1317,8 +1283,7 @@ pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
     hash_state(&state) == hash_state(live)
 }
 
-/// A recorder: every action it plays goes into its log, so a test can replay what it played. TS's
-/// `{ state: () => GameState, play(body), log, start }`.
+/// A recorder: every action it plays goes into its log, so a test can replay what it played.
 #[derive(Clone, Debug)]
 pub struct Recorder {
     current: GameState,
@@ -1327,12 +1292,10 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    /// The state after every action played so far.
     pub fn state(&self) -> &GameState {
         &self.current
     }
 
-    /// Plays one action with the next nonce and records it; panics with a refusal's text.
     pub fn play(&mut self, body: impl serde::Serialize) -> ReduceResult {
         let action = next_action(body);
         let result = reduce(&self.current, &action);
@@ -1353,7 +1316,6 @@ pub fn recorder(start: &GameState) -> Recorder {
     }
 }
 
-/// Each event's `type`, in order.
 pub fn event_types(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -1361,8 +1323,7 @@ pub fn event_types(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// Whether the card is in one of the player's piles. TS `pile: "hand" | "library" | "graveyard" |
-/// "exile"`: a `ZoneName` or its string.
+/// Whether the card is in one of the player's piles, `pile` a `ZoneName` or its string.
 pub fn in_pile(state: &GameState, player: PlayerId, pile: impl ToString, id: &str) -> bool {
     let side = &state.players[player];
     let cards = match pile.to_string().as_str() {

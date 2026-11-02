@@ -1,12 +1,7 @@
-// `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000), off
-// the Shop and the pack screen. Public like `/terms` (main.tsx serves it ungated): the disclaimer shows
-// to anyone, and the odds and the account's counters show to a session, which this page reads for
-// itself (`readSession`), so a visitor with none makes no request and is pointed at sign-in.
-//
-// The client computes nothing (CLAUDE.md rule 7): every percentage is the server's, from `GET
-// /api/packs` and `GET /api/cosmetic-packs`, only formatted (`tierPercents`), the fallback tier
-// included, and so is every counter and threshold. A read that fails says why in its place and
-// offers Try again (#1774), as the other screens' own reads do (#1691).
+// `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000). Public
+// like `/terms` (main.tsx serves it ungated); it reads the session itself (`readSession`), so a visitor
+// with none makes no request. The client computes nothing (CLAUDE.md rule 7): every figure is the
+// server's, only formatted. A failed read offers Try again in its place (#1774), as elsewhere (#1691).
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -48,7 +43,6 @@ export const purchasesTestid = {
 /** Where a read's wait or failure shows: the card packs' and the pity's both read `GET /api/packs`. */
 export type PurchasesPlace = "card-packs" | "cosmetic-packs" | "pity";
 
-/** A read as the page shows it: waiting, answered, or refused with the words to show and Try again. */
 type Read<T> =
   | { kind: "loading" }
   | { kind: "ready"; value: T }
@@ -84,7 +78,7 @@ function useRead<T>(token: string | null, read: (token: string) => Promise<T>): 
   return state;
 }
 
-/** `ready` where the read answered, else what it is waiting for, or why it failed with Try again, in the same place. */
+/** The read's answer, or its wait or its failure with Try again, in the same place. */
 function Answered<T>({
   read,
   place,
@@ -208,7 +202,7 @@ function Pity({ info }: { info: PacksResponse }): ReactElement {
   );
 }
 
-/** The odds and the counters, for a session: the page's two reads, each answering the sections it holds. */
+/** The odds and the counters, for a session. */
 function Published({ token }: { token: string }): ReactElement {
   const packs = useRead(token, getPacks);
   const cosmetic = useRead(token, getCosmeticPacks);

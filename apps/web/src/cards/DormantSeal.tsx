@@ -1,20 +1,11 @@
-// A Dormant card's binding seal (#2435, R1839000): the grey veil and the night-violet ribbons
-// with their crescent, drawn on a minion the view says is Dormant (`FaceModel.dormant`, from
-// `UnitView.slumber`, faces.ts). MinionFace mounts this right before the state rail, so the veil's
-// `backdrop-filter` greys only what is painted before it and the rail (the Dormant badge, its
-// countdown, the Starship piece count) stays in color on top.
-//
-// The seal has three layers: the veil (the whole face greyed and dimmed), the two still ribbons
-// (the bound mark, crossing over the portrait's middle), and the two looping parts (the runes
-// drifting along the bands and the crescent seal where they cross). Each part is an inline,
-// aria-hidden SVG with no <text> or <title> (a face is span, strong, img and aria-hidden SVG,
-// docs/polish/6-cards.md B12). A part that loops carries `cf-dormant-anim`; dormant.css runs its
-// keyframes always, and never under reduced motion. A card beneath a Stack (R1839003) is not drawn,
-// so nothing changes there; only a Dormant card on top of its zone gets the treatment.
-//
-// The release lives in animations.css (`jk-dormant-break`, `jk-dormant-lift`) and game/awakening.ts:
-// on `awakened` (R1839002) the ribbons burst and the veil lifts, and `data-awakening` holds the seal
-// gone through a Starship's launch (R1852003).
+// A Dormant card's binding seal (#2435, R1839000), drawn on a minion the view says is Dormant
+// (`FaceModel.dormant`, faces.ts). MinionFace mounts this right before the state rail, so the veil's
+// `backdrop-filter` greys only what is painted before it and the rail stays in color on top.
+// Each part is an aria-hidden SVG with no <text> or <title> (docs/polish/6-cards.md B12); a looping
+// part carries `cf-dormant-anim`, which dormant.css never runs under reduced motion. A card beneath
+// a Stack (R1839003) is not drawn. The release is animations.css's and game/awakening.ts's: on
+// `awakened` (R1839002) the ribbons burst, and `data-awakening` holds the seal gone through a
+// Starship's launch (R1852003).
 
 import type { CSSProperties, ReactElement } from "react";
 

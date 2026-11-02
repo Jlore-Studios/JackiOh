@@ -1,12 +1,8 @@
 // docs/polish/1-animations.md, behaviors B8 to B22: the cue planner (S6) and its recipe table (S7).
-//
 // R200 (the effects layer paces nothing) and R202 (effects draw from the redacted stream only) are
 // named here; the rulings index points at this file for both.
-//
-// Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop those
-// two fields and B9 checks how counts scale instead. Everything else in a cue (kind, preset, anchor,
-// spread, delay, duration, tone, amount, text) is S7's and is compared exactly. Within one recipe the
-// cues are compared as a set: S7 lists what is planned, not in which order.
+// Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop them (B9
+// checks how counts scale); the rest of a cue is S7's, compared exactly and, within a recipe, as a set.
 
 import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -54,9 +50,7 @@ import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, 
 import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
-/* ------------------------------------------------------------------------------------------- *
- * Fixture ids, read off the M5-T1 board rather than guessed
- * ------------------------------------------------------------------------------------------- */
+/* Fixture ids, read off the M5-T1 board rather than guessed */
 
 const VIEW: PlayerView = fullBoardView();
 
@@ -93,9 +87,7 @@ const MY_TRAP = backrowId(4);
 /** The viewer's face-up Field Trap in backrow lane 2. */
 const MY_FIELD_TRAP = backrowId(1);
 
-/* ------------------------------------------------------------------------------------------- *
- * Anchors and expected cues, in S7's notation
- * ------------------------------------------------------------------------------------------- */
+/* Anchors and expected cues, in S7's notation */
 
 type Loose = Record<string, unknown>;
 
@@ -203,9 +195,7 @@ function shakesOf(cues: readonly FxCue[]): number[] {
   return cues.flatMap((cue) => (cue.kind === "shake" ? [cue.trauma] : []));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Planning helpers
- * ------------------------------------------------------------------------------------------- */
+/* Planning helpers */
 
 function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
@@ -263,9 +253,7 @@ const played = (player: "p1" | "p2", instanceId: string, defId = "core-002"): Ga
   costPaid: 1,
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * One sample per recipe branch, for the property checks
- * ------------------------------------------------------------------------------------------- */
+/* One sample per recipe branch, for the property checks */
 
 type Sample = { name: string; events: GameEvent[]; prime?: GameEvent[]; card?: FxPlanEnv["card"] };
 
@@ -354,9 +342,7 @@ function planSample(sample: Sample, D: number, intensity: number = FX_INTENSITY_
   return planFx({ ...entry, durationMs: D }, view, env);
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B8: R200, every cue lands inside its entry
- * ------------------------------------------------------------------------------------------- */
+/* B8: R200, every cue lands inside its entry */
 
 describe("B8 timing bounds", () => {
   it("R200 every planned cue starts inside its entry and ends within FX_MAX_TAIL_MS of the entry's end, for every D from MIN_ENTRY_MS to 1400 ms", () => {
@@ -403,9 +389,7 @@ describe("B8 timing bounds", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B9: intensity
- * ------------------------------------------------------------------------------------------- */
+/* B9: intensity */
 
 describe("B9 intensity", () => {
   const LEVELS = [FX_INTENSITY_SCALE.low, FX_INTENSITY_SCALE.normal, FX_INTENSITY_SCALE.high] as const;
@@ -483,9 +467,7 @@ describe("B9 intensity", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B10 to B12: impact
- * ------------------------------------------------------------------------------------------- */
+/* B10 to B12: impact */
 
 describe("B10 spell projectiles", () => {
   it("B10 a non-combat damage from a rendered unit fires its flavor's shot and lands every impact at the landing", () => {
@@ -643,9 +625,7 @@ describe("B12 poison", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B13: sources and memory
- * ------------------------------------------------------------------------------------------- */
+/* B13: sources and memory */
 
 describe("B13 sourceAnchor and memory", () => {
   it("B13 a rendered instance comes first: a unit, a face-up backrow card or a card in the viewer's hand", () => {
@@ -763,9 +743,7 @@ describe("B13 sourceAnchor and memory", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B14, B15: summon and cast
- * ------------------------------------------------------------------------------------------- */
+/* B14, B15: summon and cast */
 
 describe("B14 summon", () => {
   const ZONE = testid.zone("you", "units", 3);
@@ -891,7 +869,6 @@ describe("B15 cast", () => {
       expectCues(cues, [
         ring("dust", tid(zone), slam, D),
         burst("dust", tid(zone, FOOT), "ring", slam),
-        // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
         burst("spark", tid(zone, FOOT), "point", slam),
       ]);
     }
@@ -984,9 +961,7 @@ describe("B15 cast", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B16: one test per S7 row
- * ------------------------------------------------------------------------------------------- */
+/* B16: one test per S7 row */
 
 describe("B16 the recipe table, row by row", () => {
   it("B16 healed: holy rays and a holy burst at 0, a heal splat at 0.2 D", () => {
@@ -1043,7 +1018,7 @@ describe("B16 the recipe table, row by row", () => {
           crack(cardT(MINE_3), 0, D),
           burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
-          // #1446: core-017 is Nature, so it wilts: leaves drop off the card and settle at its foot.
+          // #1446: core-017 is Nature, so it wilts.
           burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
         ],
@@ -1265,7 +1240,7 @@ describe("B16 the recipe table, row by row", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
       const zone = zoneT("opponent", "backrow", 4);
-      // The event names a card the catalog knows, but the view shows no such instance (an opponent's face-down trap).
+      // The catalog knows the card, but the view shows no such instance (an opponent's face-down trap).
       const fired: GameEvent = { type: "trapFired", instanceId: "face-down-1", defId: "core-021", controller: "p2", row: "backrow", lane: 4 };
       const cues = plan([fired], D);
       expectCues(cues, [ring("arcane", zone, 0, D), burst("arcane", zone, "ring", b), shake(0.4, b)]);
@@ -1453,9 +1428,7 @@ describe("B16 the recipe table, row by row", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B17, B18: flights and buffs
- * ------------------------------------------------------------------------------------------- */
+/* B17, B18: flights and buffs */
 
 describe("B17 card flights", () => {
   it("B17 drawn: a card back flies from library to hand over D, and a sparkle lands at D", () => {
@@ -1553,9 +1526,7 @@ describe("B18 buff arrows", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B19, B20: mana and banners
- * ------------------------------------------------------------------------------------------- */
+/* B19, B20: mana and banners */
 
 describe("B19 mana sparks", () => {
   function manaCues(player: "p1" | "p2", current: number, D: number, view?: PlayerView): FxCue[] {
@@ -1563,7 +1534,6 @@ describe("B19 mana sparks", () => {
   }
 
   it("B19 one sparkle per crystal that fills, from the planning view's current mana up", () => {
-    // The fixture's viewer has 2 of 4 crystals lit; the opponent has 0 of 3.
     expect(VIEW.you.mana.current).toBe(2);
     expect(VIEW.opponent.mana.current).toBe(0);
     const D = ANIMATIONS.manaChanged.durationMs;
@@ -1661,9 +1631,7 @@ describe("B20 turn banners", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B21: R202, the redacted stream only
- * ------------------------------------------------------------------------------------------- */
+/* B21: R202, the redacted stream only */
 
 /** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`. */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
@@ -1876,9 +1844,7 @@ describe("B21 the redacted stream only", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B22: game over and hand-over
- * ------------------------------------------------------------------------------------------- */
+/* B22: game over and hand-over */
 
 describe("B22 planResult and planHandover", () => {
   const over = (winner: "p1" | "p2" | "draw", extra: Partial<PlayerView> = {}) =>
@@ -1976,9 +1942,7 @@ describe("B22 planResult and planHandover", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Review fixes: the killing blow, and projectiles that scale with intensity
- * ------------------------------------------------------------------------------------------- */
+/* The killing blow, and projectiles that scale with intensity */
 
 describe("R200 planLethal: the killing blow a drained game over never drew", () => {
   const finished = (winner: "p1" | "p2" | "draw") =>
@@ -2043,7 +2007,6 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
     const lethal = planLethal(entries, finished("p2"), envOf());
     expect(lethal.leadMs).toBe(FX_LETHAL_LEAD_MAX_MS);
     const empty = r(FX_LETHAL_LEAD_MAX_MS / 2);
-    // The library's dust at 0, the streak landing inside the first half, the hit's splat after it.
     expect(lethal.cues.some((cue) => cue.kind === "burst" && cue.preset === "dust" && cue.delayMs === 0)).toBe(true);
     const streak = lethal.cues.find((cue) => cue.kind === "projectile");
     expect(streak).toMatchObject({ preset: "void", from: tid("library-you"), to: heroT("you") });

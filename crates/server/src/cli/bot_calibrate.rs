@@ -11,12 +11,9 @@
 //! each strength's Elo offset from the strongest, and prints the `BOT_SEED_RATINGS` and
 //! `BOT_CALIBRATION_GENERATION` rows to paste into `crates/server/src/config.rs` by hand, as
 //! `timing-fit` prints its rows (CLAUDE.md rule 9): no number reaches a ladder bot without a person
-//! reading it first. It needs no database. Its anchor, the rating the reference is given, is
-//! `--anchor` or else the seed of record shifted by the Elo of each AI promotion since
-//! `BOT_CALIBRATION_GENERATION` (`training/history/*.jsonl`, run from the repository root).
-//!
-//! `bot-calibrate-live` reads the rated games the reference bot played against people (DATABASE_URL)
-//! and prints the rating they say it performs at, to give `bot-calibrate` as `--anchor`.
+//! reading it first. Its anchor, the rating the reference is given, is `--anchor` or else the seed
+//! of record shifted by the Elo of each AI promotion since `BOT_CALIBRATION_GENERATION`
+//! (`training/history/*.jsonl`, run from the repository root).
 
 use std::path::{Path, PathBuf};
 
@@ -55,7 +52,6 @@ const USAGE: &str = "Usage: jackioh-server bot-calibrate [--games=<n>] [--seed=<
 
   --since=<ms>       Only games that ended at or after this epoch ms. Default: 0.";
 
-/// `crates/ai/generation.json`, compiled in: the AI generation this build holds.
 const GENERATION_JSON: &str = include_str!("../../../ai/generation.json");
 
 /// The AI generation this build compiles in (`crates/ai/generation.json`).
@@ -67,7 +63,6 @@ pub fn compiled_generation() -> anyhow::Result<i64> {
         .ok_or_else(|| anyhow!("crates/ai/generation.json has no integer \"generation\""))
 }
 
-/// `bot-calibrate`'s options.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrateOptions {
     pub games: usize,
@@ -82,8 +77,6 @@ fn number<T: std::str::FromStr>(name: &str, raw: &str) -> anyhow::Result<T> {
         .map_err(|_| anyhow!("--{name} must be a number (got {}).\n\n{USAGE}", quoted(raw)))
 }
 
-/// Parses `--flag=value` arguments, refusing anything it does not know and any pair with fewer
-/// than `BOT_CALIBRATION_MIN_GAMES` games.
 pub fn parse_calibrate_args(argv: &[String]) -> anyhow::Result<CalibrateOptions> {
     let mut options = CalibrateOptions {
         games: BOT_CALIBRATION_GAMES_PER_PAIR,
@@ -128,7 +121,6 @@ pub fn parse_calibrate_args(argv: &[String]) -> anyhow::Result<CalibrateOptions>
     Ok(options)
 }
 
-/// `bot-calibrate-live`'s `--since` (epoch ms), 0 when it is not given.
 pub fn parse_live_args(argv: &[String]) -> anyhow::Result<i64> {
     let mut since = 0;
     for arg in argv {
@@ -171,7 +163,6 @@ pub fn promotions_of(text: &str) -> anyhow::Result<Vec<Promotion>> {
     Ok(promotions)
 }
 
-/// Every `*.jsonl` in `dir`, by file name, as promotions.
 fn read_history(dir: &Path) -> anyhow::Result<Vec<Promotion>> {
     let entries = std::fs::read_dir(dir).map_err(|error| {
         anyhow!(
@@ -193,7 +184,6 @@ fn read_history(dir: &Path) -> anyhow::Result<Vec<Promotion>> {
     Ok(promotions)
 }
 
-/// What a calibration found.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationReport {
     pub generation: i64,
@@ -257,7 +247,6 @@ pub fn render_calibration(report: &CalibrationReport) -> String {
     out
 }
 
-/// `bot-calibrate`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_calibrate_args(&args)?;
     let generation = compiled_generation()?;
@@ -317,11 +306,9 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `bot-calibrate-live`'s arguments after the subcommand (`main.rs`).
 pub async fn run_live(args: Vec<String>) -> anyhow::Result<()> {
     let since = parse_live_args(&args)?;
     let connection_string = database_url()?;
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     let read = async {
         let mut tx = db.begin(None).await?;

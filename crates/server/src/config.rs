@@ -26,6 +26,19 @@ use serde::{Deserialize, Serialize};
 use crate::cosmetics::CosmeticRarity;
 
 // ---------------------------------------------------------------------------------------------
+// Time units: conversions, not configuration. Rows and clocks are stamped in epoch milliseconds
+// and most durations here are stated in seconds or days; every module that converts between them
+// takes these (#2160).
+// ---------------------------------------------------------------------------------------------
+
+/// Milliseconds in a second.
+pub const MS_PER_SECOND: i64 = 1000;
+/// Milliseconds in a day, a UTC day included (an epoch-ms timestamp has no leap seconds).
+pub const MS_PER_DAY: i64 = 86_400_000;
+/// Nanoseconds in a millisecond: `time::OffsetDateTime` counts the one, the port the other.
+pub const NANOS_PER_MS: i128 = 1_000_000;
+
+// ---------------------------------------------------------------------------------------------
 // R79 — match lifecycle defaults (SPEC §9.5, BUILD §2). Exact names per BUILD §2's last
 // paragraph; do not rename or re-derive these.
 // ---------------------------------------------------------------------------------------------
@@ -601,10 +614,12 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// Ten a second follows a hover from target to target and bounds what a scripted client can push.
 pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
-/// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. A second: a
-/// page probes only once its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer
-/// ends the quiet (R1441), so a real page's probe never falls inside it, while a scripted flood
-/// costs one view a second.
+/// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000
+/// holds a player's socket to the same interval, on `/ws/match` and `/ws/duos`: a later hello of one
+/// socket generation, sooner than this after the last answered one, is dropped unanswered, while the
+/// first hello of a new generation (a reattach) is always answered. A second: a page probes only once
+/// its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer ends the quiet (R1441),
+/// so a real page's probe never falls inside it, while a scripted flood costs one view a second.
 pub const WATCH_HELLO_INTERVAL_MS: i64 = 1_000;
 /// Match sockets one client address may hold at once, counting handshakes still in progress. Not in
 /// SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it

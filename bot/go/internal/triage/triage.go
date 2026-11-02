@@ -140,10 +140,6 @@ func ThreadOf(payload *pyjson.Object) (*pyjson.Object, bool) {
 	return issue.Copy(), issue.Has("pull_request")
 }
 
-func FollowsConvention(title string) bool {
-	return Convention.MatchString(py.Strip(title))
-}
-
 // PullTitleOK is whether a pull request's title may become the squash commit's subject (the title
 // check, `.github/workflows/pr-title.yml`, #187): it follows the convention, it is one a tool
 // gives its own pull requests (`AUTOMATED_PULL`), or it reverts a pull request whose title passes.

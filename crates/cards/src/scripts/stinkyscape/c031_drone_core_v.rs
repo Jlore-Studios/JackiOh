@@ -28,8 +28,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #31 Drone Core V — SPEC §8.10 row 31, BUILD M12 row S 31: "summons a Drone Corvette (8/8, Ranged,
-// Flying, two random combat keywords); radiant a Radiant one (16/16, four)".
+// S #31 Drone Core V — SPEC §8.10 row 31, BUILD M12 row S 31.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::drawn_combat_keywords;

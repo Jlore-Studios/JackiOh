@@ -1,11 +1,6 @@
-// `/series/<id>`: the Conquest series between its games (R330–R338, R262), from the server's
-// projection.
-//
-// Everything on the screen comes from the `SeriesView` the mocked API answers; the tests show that
-// what the view leaves out (the opponent's pick and deck names, R336) never appears, that a pick
-// (chosen, then locked in, R331) and a forfeit send exactly the player's intent, that both sides'
-// won decks are shown locked (R330), and that the clock is counted from the server's own `now`
-// rather than this device's clock (R333).
+// `/series/<id>`: the Conquest series between its games (R330–R338, R262), from the mocked `SeriesView`:
+// what it leaves out (the opponent's pick and deck names, R336) never appears, a pick (chosen, then
+// locked in, R331) and a forfeit send only intent, and the clock counts from the server's `now`.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +11,7 @@ import { navigate } from "../net/navigate.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import SeriesRoute, { endReasonWords, seriesTestid } from "./series.tsx";
+import { setVisibility } from "../test/setup.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -135,7 +131,6 @@ describe("the series screen", () => {
     expect(score).toHaveTextContent(`Win with all ${String(SERIES_WINS_NEEDED)} decks`);
     expect(score).toHaveTextContent(`game 2 of at most ${String(SERIES_MAX_GAMES)}`);
 
-    // Your decks: the one that won is locked, in the standings and in the picker.
     expect(screen.getByTestId(seriesTestid.deck(0))).toHaveAttribute("data-won", "true");
     expect(screen.getByTestId(seriesTestid.deck(0))).toHaveTextContent("won · locked");
     expect(screen.getByTestId(seriesTestid.deck(1))).toHaveAttribute("data-won", "false");
@@ -151,7 +146,6 @@ describe("the series screen", () => {
     expect(status).toHaveTextContent("Opponent is choosing…");
     for (const name of THEIR_SECRET_NAMES) expect(screen.queryByText(new RegExp(name))).toBeNull();
 
-    // The history, from your side.
     const game = screen.getByTestId(seriesTestid.game(1));
     expect(game).toHaveAttribute("data-result", "win");
     expect(game).toHaveTextContent("Game 1: Aggro vs their deck 2");
@@ -194,7 +188,6 @@ describe("the series screen", () => {
     expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("Waiting for your opponent…");
     expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("You're playing Control in game 1.");
     expect(screen.getByTestId(seriesTestid.deck(1))).toHaveAttribute("data-picked", "true");
-    // Sealed: no deck can be chosen any more.
     expect(screen.queryByTestId(seriesTestid.pick(2))).toBeNull();
     expect(screen.queryByTestId(seriesTestid.lockIn)).toBeNull();
   });
@@ -275,19 +268,15 @@ describe("the series screen", () => {
 
   it("a woken page reads the series again at once, and a game that started while away opens", async () => {
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     try {
       await renderSeries();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(1);
 
       // A hidden tab reads nothing; a visible one reads once; so does the network coming back.
-      show("hidden");
+      setVisibility("hidden");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(1);
-      show("visible");
+      setVisibility("visible");
       await waitFor(() => {
         expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
       });
@@ -301,7 +290,7 @@ describe("the series screen", () => {
 
       // The opponent locked in while the tab slept: the wake finds the game and opens it.
       vi.mocked(getSeries).mockResolvedValue(view({ status: "playing", pickDeadline: null, currentMatchId: "m-1" }));
-      show("visible");
+      setVisibility("visible");
       await waitFor(() => {
         expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/m-1");
       });
@@ -315,10 +304,6 @@ describe("the series screen", () => {
 
   it("a woken read never overlaps another, and its late answer cannot undo a pick or reach a closed screen", async () => {
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     const held = (): { read: Promise<SeriesView>; answer: (view: SeriesView) => void } => {
       let answer: (view: SeriesView) => void = () => undefined;
       const read = new Promise<SeriesView>((resolve) => {
@@ -338,10 +323,10 @@ describe("the series screen", () => {
       // A read is out: more wakes add none.
       const first = held();
       vi.mocked(getSeries).mockReturnValueOnce(first.read);
-      show("visible");
+      setVisibility("visible");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
-      show("visible");
+      setVisibility("visible");
       window.dispatchEvent(new Event("online"));
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(2);
@@ -359,7 +344,7 @@ describe("the series screen", () => {
       // A read that is out when the player leaves is let go: the game it names opens nothing.
       const second = held();
       vi.mocked(getSeries).mockReturnValueOnce(second.read);
-      show("visible");
+      setVisibility("visible");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(3);
       unmount();
@@ -368,7 +353,7 @@ describe("the series screen", () => {
       expect(vi.mocked(navigate)).not.toHaveBeenCalled();
 
       // Leaving also ends the listening.
-      show("visible");
+      setVisibility("visible");
       await settleReads();
       expect(vi.mocked(getSeries)).toHaveBeenCalledTimes(3);
     } finally {

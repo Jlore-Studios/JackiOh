@@ -1,12 +1,7 @@
-// R724000: the Patch notes page groups patches by release line. A line is the major version that
-// brought a set (a Z), and lists the patches from it up to the next major; it carries a summary and
-// the technical changes players noticed in that major version, which ship no card data (v0.3.0, the
-// Rust rewrite, is Meditative's). Every patch's own note (R724001) reads under fixed headings.
-//
-// Presentation only, over public data (CLAUDE.md rule 7). A version is compared for equality and
-// never parsed or ordered (R105): a line starts at its major (R1369000), its `tier` in patches.json or,
-// for a patch shipped before tiers were recorded, the one that adds a card of a set no earlier patch
-// held, in patches.json's own order, so a lettered patch ("v0.2.10b") sits in its line like any other.
+// R724000: the Patch notes page groups patches by release line, from the major that brought a set (a Z)
+// up to the next major; each patch's own note (R724001) reads under fixed headings.
+// Presentation only, over public data (CLAUDE.md rule 7). A version is compared for equality and never
+// parsed or ordered (R105): a line starts at its major (R1369000), in patches.json's own order.
 
 import type { Patch, PlayerNote, TechnicalEntry } from "./source.ts";
 
@@ -38,7 +33,7 @@ export const EARLIER_RELEASE: Release = { id: "earlier", name: "Earlier patches"
 /**
  * R724000, R1369000: the release lines, oldest first, the n-th opened by the n-th major. A major
  * version that brings a set adds its line here; a set the owner wraps into a line (R2204000) renames
- * the line it joins instead, as Training Grounds did Stinkyscape's.
+ * the line it joins instead.
  */
 export const RELEASES: readonly Release[] = [
   {
@@ -109,12 +104,10 @@ export const RELEASES: readonly Release[] = [
   },
 ];
 
-/** The title the page shows for a patch: its player note's, or its record's when it has no note. */
 export function playerTitle(patch: Patch): string {
   return patch.player?.title ?? patch.title;
 }
 
-/** A card id's set, as an id spells it: the part before its first dash. */
 function idSet(id: string): string {
   const dash = id.indexOf("-");
   return dash === -1 ? id : id.slice(0, dash);
@@ -139,9 +132,8 @@ function unwrittenRelease(patch: Patch): Release {
 }
 
 /**
- * R724000, R1369000: the patches by release line, newest line first and each line's patches newest
- * first. The n-th major opens the n-th line; patches before every major open Earlier patches; every
- * other patch joins the line open before it.
+ * R724000, R1369000: the patches by release line, newest line first, each line's patches newest first.
+ * Patches before every major form Earlier patches; every other patch joins the line open before it.
  */
 export function releaseGroups(patches: readonly Patch[], releases: readonly Release[]): ReleaseGroup[] {
   const groups: { release: Release; patches: Patch[] }[] = [];

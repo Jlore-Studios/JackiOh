@@ -2,7 +2,6 @@
 //! steps 1 and 3, R56, R81, R90, R213, R214). Found by the polish-4 edge-case hunt, round 3
 //! (docs/polish/4-edge-cases.md, lenses L1, L2 and L9); every case here failed before its fix, except
 //! the third R213 case, which pins the reading the fix adopts.
-//!
 //!  - R213: "the first card costing 1 or less you play each turn" counts the player's plays that turn,
 //!    so a Gifted Program that changes hands, or leaves and comes back, neither uses up another
 //!    player's first cheap card nor gives its own player a second.
@@ -42,7 +41,6 @@ fn backrow_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
     }
 }
 
-/// The `play` actions `legalActions` offers p1 for the card `id`.
 fn offered(g: &Scenario, id: &str) -> Vec<ActionBody> {
     legal_actions(g.state(), PlayerId::P1)
         .into_iter()
@@ -50,7 +48,6 @@ fn offered(g: &Scenario, id: &str) -> Vec<ActionBody> {
         .collect()
 }
 
-/// The `modes` of each offered play.
 fn offered_modes(g: &Scenario, id: &str) -> Vec<Option<Vec<String>>> {
     offered(g, id)
         .into_iter()
@@ -65,7 +62,6 @@ fn modes(list: &[&str]) -> Option<Vec<String>> {
     Some(list.iter().map(|mode| (*mode).to_string()).collect())
 }
 
-/// The face the card's `cardResolved` says resolved, or `None` when there is none or it says nothing.
 fn resolved_face(g: &Scenario, id: &str) -> Option<bool> {
     g.events().iter().find_map(|event| match event {
         GameEvent::CardResolved {
@@ -82,10 +78,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
     fn r213_r2179002_a_gifted_program_stolen_after_its_owners_cast_on_draw_this_turn_makes_the_thiefs_first_cheap_card_radiant_8_conventions_r171()
      {
         jackioh_cards::register_all();
-        // p1's turn begins. p1 holds #9 Moths to the Flame, worn down to 4 health; p2 holds Gifted
-        // Program, a Prem Panther, and a Hinder on top of the library.
         let mut g = scenario(json!({
-            // A Mega Church's Activate takes the Gifted Program; Stockpile (1).
             "p1": {
                 "hand": [STOCKPILE],
                 "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }, { "def": CHURCH, "lane": 2 }],
@@ -102,8 +95,8 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
 
         // p1's start of turn: Moths makes p2's Panther attack it; the Panther destroys it and survives,
         // so p2 draws 2 — on p1's turn (R426: a forced attack is an attack). The first draw is Hinder,
-        // cast as it is drawn for 0: no play (R2179002), so p2's Gifted Program passes it by (through
-        // v0.5.2 it was a play, R70, and made it Radiant).
+        // cast as it is drawn for 0: a cast (R70) but no play (R2179002), so p2's Gifted Program passes
+        // it by.
         g.start_turn();
         let hinder = g
             .events()
@@ -121,8 +114,6 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         }
         assert_eq!(g.state().players.p1.mana.next_turn_mod, -1); // the base face ran: "1 lower"
 
-        // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: an Activate
-        // plays no card. Stockpile is p1's first cheap card, so it resolves its radiant text.
         g.state_mut().players.p1.mana.current = 1;
         g.activate(CHURCH, json!({ "targets": pick::id(&gifted) }));
         assert_eq!(g.card(gifted.as_str()).controller, PlayerId::P1);
@@ -165,7 +156,6 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         g.expect_in_zone(gifted.as_str(), "hand");
         g.play(gifted.as_str(), json!({ "zone": 4 }));
 
-        // Stockpile is the second card costing 1 or less p1 has played this turn, not the first.
         g.play(second.as_str(), json!({}));
         assert!(!g.card(second.as_str()).radiant);
     }
@@ -183,7 +173,6 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         g.play(GIFTED, json!({}));
         g.play(friend.as_str(), json!({}));
 
-        // Pint-Sized Summoner reads the same way: the first minion played this turn, whenever it came.
         assert!(!g.card(friend.as_str()).radiant);
         let timmy = g.card(TIMMY).id.clone();
         g.expect_stats(timmy.as_str(), json!({ "attack": 3, "maxHealth": 3 }));
@@ -198,8 +187,6 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            // Pocket Chaos costs (4): a −2 costMod puts the play at (2), inside radiant Gifted
-            // Program's threshold, while its base cost stays (4).
             "p1": {
                 "hand": [{ "def": POCKET_CHAOS, "costMod": -2 }, STOCKPILE],
                 "library": [STOCKPILE],
@@ -210,8 +197,6 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
         }));
         let chaos = g.card(POCKET_CHAOS).id.clone();
 
-        // It costs 2, inside radiant Gifted Program's threshold, so step 3 will make it Radiant: the play
-        // answers the radiant face's two mode declarations, and `legalActions` offers them.
         assert!(offered_modes(&g, &chaos).contains(&modes(&["health", "skip"])));
         assert!(!offered_modes(&g, &chaos).contains(&modes(&["health"])));
 
@@ -226,7 +211,6 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
                 .count(),
             0
         );
-        // The radiant face draws nothing: the library's Stockpile stays there.
         assert_eq!(
             g.hand(PlayerId::P1)
                 .iter()
@@ -287,15 +271,11 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
         let panther = g.unit_at(PlayerId::P2, 1).id;
         let hero = json!({ "pick": "hero", "player": "p2" });
 
-        // It costs 0, so it is the first card costing 1 or less this turn: step 3 makes it Radiant, and
-        // radiant Bigot destroys all enemy non-Humans with no target. The flat list is the Sorcerer's
-        // alone, so a list built for the base face (Bigot's target, then the Sorcerer's) is refused.
         let refused =
             json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": panther }, hero.clone()] });
         g.expect_refused(|g| g.play(card.as_str(), refused.clone()));
         g.play(card.as_str(), json!({ "zone": 2, "targets": [hero] }));
 
-        // Radiant Twisted Sorcerer deals 8 to the target the player named for it: p2's hero, 30 → 22.
         assert_eq!(resolved_face(&g, &card), Some(true));
         g.expect_health(PlayerId::P2, 22);
     }
@@ -414,8 +394,6 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
             });
         assert!(offered);
 
-        // Step 2 pays the Tribute: the Cube's Death summons two copies of the Unit it ate, each carrying
-        // Gifted Program's text.
         s.play(
             crafted.id.as_str(),
             json!({ "tributes": tributes, "targets": [{ "pick": "instance", "instanceId": felinor }], "zone": 5 }),
@@ -431,8 +409,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
 
         // R214: "step 1 already knows" the face, and step 1 checked the play's choices against the base
         // face, so that is the face step 5 resolves: the chosen Big Felinor is destroyed and nothing
-        // else. A Gifted Program that arrived after step 1 cannot turn it into a face whose choices no
-        // step checked, destroying the 7/7 the play never named.
+        // else.
         assert!(!s.card(crafted.id.as_str()).radiant);
         s.expect_in_zone(felinor.as_str(), "graveyard");
         s.expect_in_zone(seven_seven.as_str(), "field");

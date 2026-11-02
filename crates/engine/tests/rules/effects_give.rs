@@ -1,12 +1,6 @@
-//! Cards between the players' piles (docs/classic-sets.md B5 E16, and E2's hand and deck half): a card
-//! out of the other player's hand or deck becomes the taker's — owner and controller — so every pile
-//! it reaches later is the taker's, the taker's hand cap burns it into the taker's graveyard, and a
-//! draw from the other player's deck is a draw of the taker's own (Classic #9, #58, Classic+ #12.3).
-//! R466 is the hidden-information half: `stolen` names the card only to whoever could read it where it
-//! was taken or can read it now, and a card taken out of a library turns the rest of that library
-//! unknown to its owner, whose list (R310) would otherwise name it by what it stopped listing.
-//!
-//! Port of `packages/engine/test/effects-give.test.ts`.
+//! Cards between the players' piles (docs/classic-sets.md B5 E16, E2's hand and deck half; Classic #9,
+//! #58, Classic+ #12.3): a card taken becomes the taker's, owner and controller. R466 is the hidden half,
+//! and a card taken out of a library turns the rest of that library unknown to its owner (R310).
 
 use jackioh_engine::effects::{draw_from_opponent, give_from_hand, take_from_library};
 use jackioh_engine::testkit::*;
@@ -49,7 +43,6 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
     sink.events
 }
 
-/// The `stolen` events of the newest applied action, as `viewer` reads them.
 fn stolen_seen_by(state: &GameState, viewer: PlayerId) -> Vec<Value> {
     view_for(state, viewer)
         .events
@@ -108,7 +101,6 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
             events,
         });
 
-        // The one Unit of their deck, now p1's in every sense, costing (0) in p1's hand.
         let taken = library[1].clone();
         assert_eq!(ids(&state.players[PlayerId::P1].hand), vec![taken.id.clone()]);
         assert_eq!(live(&state, &taken.id).owner, PlayerId::P1);
@@ -146,7 +138,6 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
                 unknown: 2
             })
         );
-        // The taker's own library is untouched.
         assert_eq!(unknown_in_own_library(&state, PlayerId::P1), Some(0));
         assert_eq!(
             view_for(&state, PlayerId::P1)
@@ -291,7 +282,6 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
         );
         assert_eq!(pending.min, 1);
         assert_eq!(pending.max, 1);
-        // The trap's controller sees that the other player is choosing, and nothing of their hand.
         assert_eq!(
             view_for(&state, PlayerId::P1).pending,
             Some(PendingView::Elsewhere(PendingElsewhereView {
@@ -325,7 +315,6 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
                 given.iter().map(|card| json!(card.id)).collect::<Vec<_>>()
             );
         }
-        // The spent trap reached its owner's graveyard.
         assert_eq!(
             state.players[PlayerId::P1]
                 .graveyard
@@ -571,7 +560,6 @@ mod r466_a_card_taken_off_the_field {
             ),
             vec![json!(["p1", "p2"]), json!(["p2"]), json!(["p1"])]
         );
-        // p1 holds all three now, so p1 reads all three.
         assert_eq!(
             event_instance_ids(&stolen_seen_by(&state, PlayerId::P1)),
             vec![json!(face_up.id), json!(own_trap.id), json!(taken_trap.id)]
@@ -600,7 +588,6 @@ mod e2_e16_the_change_of_owner_itself {
         let mut sink = Bench::new(&state);
         assert!(take_into_hand(&mut sink.sink(&mut state), &card, PlayerId::P1).is_none());
         assert!(!change_owner(&mut sink.sink(&mut state), &card, PlayerId::P1));
-        // TS read the object it handed in; nothing in the state holds a card that is gone.
         assert_eq!(card.owner, PlayerId::P2);
         assert!(find_instance(&state, &card.id).is_none());
         assert_eq!(sink.events, Vec::<GameEvent>::new());

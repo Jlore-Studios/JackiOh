@@ -25,21 +25,18 @@ function hintCss(): string {
   return readFileSync(join(HERE, "handHints.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
-/** A hint that prints the card's cost. */
 const COST: HandHint = {
   id: "test-cost",
   icon: "target",
   applies: (c) => ({ n: c.cost, label: t("Cost") }),
 };
 
-/** A hint with no number, dimmed. */
 const DIMMED: HandHint = {
   id: "test-dimmed",
   icon: "cog",
   applies: () => ({ dimmed: true, label: t("Target") }),
 };
 
-/** A hint that never applies. */
 const NEVER: HandHint = {
   id: "test-never",
   icon: "cog",

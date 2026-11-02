@@ -108,8 +108,6 @@ async function mount(): Promise<void> {
   });
 }
 
-// §9.4's gate
-
 /** Account-switch test wait, not game or server configuration. */
 const SWITCH_WAIT_MS = 10_000;
 const SWITCH_TEST_TIMEOUT_MS = 30_000;
@@ -211,8 +209,6 @@ describe("the gate (§9.4)", () => {
   });
 });
 
-// Reads
-
 describe("what the screen opens with", () => {
   it("R250 lists the saved decks and trios by name, with the session's token on the read", async () => {
     await mount();
@@ -308,9 +304,7 @@ describe("what the screen opens with", () => {
 });
 
 // The portraits the picker offers (R1827000)
-
 describe("the portrait picker's offer (R1827000)", () => {
-  /** A new deck's editor, its picker opened: the tiles it offers, in order. */
   async function offeredOnANewDeck(): Promise<(string | null)[]> {
     await waitFor(() => {
       expect(screen.getByTestId("workshop")).toBeInTheDocument();
@@ -344,8 +338,6 @@ describe("the portrait picker's offer (R1827000)", () => {
   });
 });
 
-// Writes (R256)
-
 describe("saving", () => {
   it("R256 a new deck is PUT under a client-minted id with the token, the name and the catalog version", async () => {
     await mount();
@@ -374,8 +366,6 @@ describe("saving", () => {
   });
 });
 
-// Another account on this device (R256)
-
 describe("when another account signs in under an open workshop", () => {
   const OTHER_TOKEN = "e2e-token-p2";
   const OTHER_PROFILE = "profile-p2";
@@ -395,7 +385,7 @@ describe("when another account signs in under an open workshop", () => {
     vi.mocked(getDecks).mockResolvedValue(decksResponse([], [], catalog.version));
     window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: OTHER_TOKEN }));
     window.dispatchEvent(new StorageEvent("storage", { key: E2E_SESSION_STORAGE_KEY }));
-    // Real-clock reload and mount can exceed waitFor's one-second default.
+    // Real-clock reload and mount can outrun waitFor's 1 s default.
     await waitFor(
       () => {
         expect(getDecks).toHaveBeenCalledWith(OTHER_TOKEN);
@@ -423,7 +413,6 @@ describe("when another account signs in under an open workshop", () => {
 });
 
 describe("R2125000 the workshop opens on the decks the last visit kept", () => {
-  /** A read that answers when the test says. */
   function deferDecks(): (answer: DecksResponse) => Promise<void> {
     let resolve: (answer: DecksResponse) => void = () => undefined;
     vi.mocked(getDecks).mockReturnValue(

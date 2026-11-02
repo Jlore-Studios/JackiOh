@@ -1,37 +1,15 @@
-// MN09 (#552): every Meditative face reads, measured in a real layout engine. The set is read off the
-// catalog (every entry of `Meditative`, its tokens included), so a card a later part adds is measured
-// the day it lands, with no list to update here.
-//
-//   FIT    every Meditative card's base and Radiant face, and its Chinese face on both (ME-CN, #516,
-//          R1301: `crates/cards/chinese.json` gives every Meditative card one), at the inspect view's
-//          two sizes — the hover preview's (PREVIEW_HEIGHT_PX tall) and the touch sheet's on the
-//          smallest phone (`.inspect-face--sheet`'s 56dvh of a 640 px screen) — keeps `.card-name` and
-//          `.card-text` inside their boxes on both axes (cards/fit.ts), and nothing clamps but a face
-//          named in LONG_FACES (which may clamp only on the sheet, at the
-//          reading floor, since the sheet prints the rules whole beside it).
-//   BOARD  the same cards where the board draws them: in the hand, as a Unit on the field and as a
-//          face-up Field Spell or Trap in the backrow, through `Game` with the real catalog at
-//          1280x720, 390x844 and 360x780. Every name stays inside its plate unclamped, except that a
-//          board minion's plate may end a long name in an ellipsis at its floor (cards.css, fit.ts:
-//          the hover preview shows it whole), and every face has a box.
-//   MARKS  the set mark (R503, the ensō) is on the face and clear of the gems, the name, the rules
-//          box, the stats and the crest at every size it shows, and gone below SET_MARK_MIN_FACE_PX;
-//          "All Tribes" (R1382) leads the tags line of a card with every tribal tag (R1424) and sits
-//          inside the face, clear of the rules box and the stats — on the catalog's cards that have
-//          them, and on a Meditative Unit given them, so the check holds before #87 lands.
-//   ART    each card's procedural art is its own: no two Meditative cards draw the same picture,
-//          base or Radiant.
-//
-// "With the set previewed": no face reads what ships (CardFace.tsx and cards/setMark.ts take the
-// set straight off the definition), so a face drawn from the catalog is the face a player will see
-// once the set ships (R1420); nothing here has to pretend `SHIPPED_SETS` lists it.
-//
-// The Created status (ME-CREATED, `CardView.created`, R943) is drawn on no face (R2647000):
-// meditative-prompts.cy.tsx checks a card in hand at phone width, and its hold's preview (#617).
-//
-// Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and each
-// carries a control (the face fills its box, the name has a box and reads the card's name), since a
-// collapsed box "fits" perfectly.
+// MN09 (#552): every Meditative face reads, measured in a real layout engine. The set is read off the catalog
+// (its tokens included), so a card a later part adds is measured the day it lands.
+//   FIT    base, Radiant and Chinese faces (ME-CN, #516, R1301) keep name and text inside their boxes (cards/fit.ts);
+//          only a LONG_FACES face may clamp, on the phone sheet, which prints the rules whole beside it.
+//   BOARD  the same cards in hand, field and backrow at three sizes: every name stays inside its plate.
+//   MARKS  the set mark (R503) clears the gems, name, rules, stats and crest, and is gone below SET_MARK_MIN_FACE_PX;
+//          "All Tribes" (R1382) leads the tags line of a card with every tribal tag (R1424), so it holds before #87.
+//   ART    no two Meditative cards draw the same picture, base or Radiant.
+// No face reads what ships, so a catalog face is the one a player sees once the set ships (R1420). The Created
+// status (ME-CREATED, R943) is drawn on no face (R2647000): meditative-prompts.cy.tsx checks it (#617).
+// Every measurement sits inside `.should()` so it retries while `useFitText` settles, with a control (the face
+// fills its box, the name reads the card's name), since a collapsed box "fits" perfectly.
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
@@ -46,7 +24,6 @@ import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catal
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { baseView, card, emptySide, faceUpBackrow, unit } from "../../../apps/web/src/test/fixtures.ts";
 
-/** Every Meditative entry in the catalog, tokens included, in catalog order. */
 const MEDITATIVE: readonly CardDef[] = Object.values(CATALOG).filter((def) => def.set === "Meditative" && def.id !== GLITCH_DEF_ID);
 
 /** Retries cover `useFitText`'s rounds and the ResizeObserver passes behind them. */
@@ -70,7 +47,7 @@ const FACES: readonly Face[] = [
 
 type InspectSize = { label: string; height: number; clampLong: boolean };
 
-/** The inspect view's two face sizes: on the hover preview nothing clamps, on the phone sheet only the longest texts may. */
+/** The inspect view's two face sizes. */
 const INSPECT_SIZES: readonly InspectSize[] = [
   { label: "the hover preview", height: PREVIEW_HEIGHT_PX, clampLong: false },
   { label: "the phone sheet", height: Math.round(Math.min(PREVIEW_HEIGHT_PX, SMALLEST_PHONE.height * SHEET_SHARE)), clampLong: true },
@@ -108,17 +85,10 @@ function inside(inner: DOMRect, outer: DOMRect): boolean {
   return inner.left >= outer.left - SLACK_PX && inner.right <= outer.right + SLACK_PX && inner.top >= outer.top - SLACK_PX && inner.bottom <= outer.bottom + SLACK_PX;
 }
 
-/**
- * A board minion's name plate (cards.css, `.cf[data-layout="minion"] .card-name`) prints at no less than
- * this many pixels; a name that would need less ends in an ellipsis at it instead (`data-clamped`, fit.ts),
- * and the hover preview shows it whole. Mirrors the plate's `max(7.5px, …)`.
- */
+/** Mirrors the minion name plate's `max(7.5px, …)` (cards.css); a longer name ends in an ellipsis (fit.ts). */
 const MINION_NAME_FLOOR_PX = 7.5;
 
-/**
- * Every way the name plate of one face fails: it must read the card's name, have a box, and fit — except
- * a board minion's plate, whose name may end in an ellipsis at its floor, inside the minion, by design.
- */
+/** Every way one face's name plate fails; a board minion's may end in an ellipsis at its floor. */
 function nameProblems(root: Element, expected: string, at: string): string[] {
   const name = root.querySelector<HTMLElement>(".card-name");
   if (name === null) return [`${at}: no .card-name`];
@@ -139,12 +109,12 @@ function nameProblems(root: Element, expected: string, at: string): string[] {
   return problems;
 }
 
-/* --------------------------------------------------------------------------------------- FIT */
+/* FIT */
 
 function InspectGrid({ height, face }: { height: number; face: Face }) {
   const width = widthFor(height);
   return (
-    // R2655001: API Key Fishing and Tatches the Totem print full art now; the grid reads their words.
+    // R2655001: API Key Fishing and Tatches the Totem print full art; the grid reads their words.
     <FullArtAllowed allowed={false}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
         {MEDITATIVE.map((def) => (
@@ -177,8 +147,7 @@ function inspectProblems(doc: Document, def: CardDef, size: InspectSize, face: F
   }
   if (printed !== "" && (text.clientWidth === 0 || text.clientHeight === 0)) problems.push(`${at}: .card-text has no box`);
   const clamped = text.getAttribute("data-clamped") === "true";
-  // Keyed by the face's own label, as the moved vitest premise names them: it pins no Chinese face
-  // long, so no Chinese face may clamp.
+  // Keyed by the face's own label, as textLimit.test.ts names them: it pins no Chinese face long.
   const mayClamp = size.clampLong && LONG_FACES.includes(`${def.id} ${face.label}`);
   if (clamped && !mayClamp) {
     problems.push(`${at}: the rules text is clamped (${String(printedLength(def, face))} characters printed)`);
@@ -196,8 +165,7 @@ function inspectProblems(doc: Document, def: CardDef, size: InspectSize, face: F
 }
 
 describe("MN09: every Meditative face fits its frame at the inspect view's sizes", () => {
-  // The premise this run assumes — the set's faces over 260 printed characters, which alone may
-  // clamp on the phone sheet — is pinned per pull request in
+  // Only faces over 260 printed characters may clamp on the phone sheet: pinned per pull request in
   // apps/web/src/cards/textLimit.test.ts against LONG_FACES.
   for (const size of INSPECT_SIZES) {
     for (const face of FACES) {
@@ -214,7 +182,7 @@ describe("MN09: every Meditative face fits its frame at the inspect view's sizes
   }
 });
 
-/* ------------------------------------------------------------------------------------- BOARD */
+/* BOARD */
 
 /** The viewports the board is played on: BUILD M5-T1's two and the narrowest phone (docs/polish/7-mobile-ux.md). */
 const VIEWPORTS = [
@@ -258,7 +226,7 @@ function backrowCard(owner: "p1" | "p2", def: CardDef): BackrowView {
 
 type Batch = { hand: CardDef[]; units: CardDef[]; backrow: CardDef[] };
 
-/** Every card in a hand once, every Unit on the field once and every backrow card in a backrow once, a board at a time. */
+/** Each card once in a hand, each Unit once on the field, each backrow card once in a backrow. */
 const BATCHES: readonly Batch[] = (() => {
   const hands = chunks(MEDITATIVE, HAND_SIZE);
   const units = chunks(UNITS, ZONES * 2);
@@ -338,7 +306,7 @@ describe("MN09: every Meditative card where the board draws it — the hand, a u
   }
 });
 
-/* ------------------------------------------------------------------------------------- MARKS */
+/* MARKS */
 
 /** What the set mark must never cover (R503). */
 const CLEAR_OF = [".cost-gem", ".card-name", ".cf-gem", ".card-text", ".cf-atk", ".cf-hp", ".cf-crest"] as const;
@@ -420,7 +388,7 @@ describe("MN09: the set mark and the All Tribes label sit where they should on e
     it(`MN09 R1382 "All Tribes" leads the tags line, inside the face and clear of the rules and the stats${chinese ? ", on a Chinese face" : ""}`, () => {
       cy.viewport(1280, 900);
       cy.mount(
-        // R2655001: Tatches the Totem prints full art now; the test reads its tags line.
+        // R2655001: Tatches the Totem prints full art; the test reads its tags line.
         <FullArtAllowed allowed={false}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8 }}>
             {[PREVIEW_HEIGHT_PX, Math.round(170 / FACE_ASPECT)].flatMap((height) =>
@@ -460,7 +428,7 @@ describe("MN09: the set mark and the All Tribes label sit where they should on e
   }
 });
 
-/* --------------------------------------------------------------------------------------- ART */
+/* ART */
 
 describe("MN09: each Meditative card's procedural art is its own", () => {
   for (const radiant of [false, true]) {

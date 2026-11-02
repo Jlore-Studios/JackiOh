@@ -6,16 +6,14 @@
 //!            Cry. Tunes: none."
 //!
 //! Death fires when Brother Lar goes from the field to a graveyard (§6.2): destroyed or tributed — not
-//! when it is exiled or bounced. By then its zone is empty, so R64's leftmost open zone may be its own,
-//! unless a granted Reborn has reserved that zone for Lar's return (R64), when Ping goes elsewhere.
+//! when it is exiled or bounced.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-076";
 
-/// §7, §8.7: the token Brother Lar leaves behind (TS `cardDef("classicplus-076-1").id`, read off the
-/// catalog).
+/// §7, §8.7: the token Brother Lar leaves behind, read off the catalog.
 fn ping_id() -> String {
     crate::card_def("classicplus-076-1").id
 }
@@ -37,9 +35,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #76 Brother Lar — SPEC §8.7 row 76, BUILD M9 Classic+ row C+ 76: "Death summons a Brother Ping
-// (C+ #76.1) into your leftmost open unit zone, Lar's own zone included unless a granted Reborn reserves
-// it (R64); exile or a bounce summons nothing; radiant the Ping is Radiant".
+// C+ #76 Brother Lar — SPEC §8.7 row 76, BUILD M9 Classic+ row C+ 76.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

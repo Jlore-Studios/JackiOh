@@ -9,15 +9,10 @@
 //!            crystals." — finds 3
 //!   Radiant: the Discover's options, Stage 1's Unit, Stage 2's Anomaly Found! and Resource Radiant.
 //!
-//! A staged Quest (R1854000): `Script.stages`, three stages of one goal each, the first opened as the card
-//! enters the field, each reward given by its own trigger on its own `questCompleted` and moving the line
-//! on with `next_stage`, the line done after Stage 3. R1873001: the Cry is one Discover over one pool, the
-//! cards tagged Acclaimed or Jelly Bean (every Acclaimed card is a Unit) of the sets that ship (R380), the
-//! pick added to the hand, Radiant on the Radiant face. Stage 1: `unitsMadeRadiant` (R1854002), so a Jelly
-//! Bean on an Acclaimed hand card meets it; reward a random non-token Acclaimed Unit summoned (R64, no Cry,
-//! R1). Stage 2: `unitsDied`; R1873002: `finds` rolls, each at even odds an Anomaly Found! added to the
-//! hand (a full hand burns it, §2.4) or a Resource gained into the hand by R1840002's roll (R1840000).
-//! Stage 3: `cardsStolen`; reward `steal_mana_crystals` (R1854003).
+//! Staged Quest (R1854000, next_stage). Cry: Discover Acclaimed/Jelly Bean pool (R1873001, R380).
+//! Stage 1: unitsMadeRadiant (R1854002); reward summons random Acclaimed Unit (R64, R1).
+//! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000).
+//! Stage 3: cardsStolen; reward steal_mana_crystals (R1854003).
 
 use jackioh_engine::effects::{AddToHandArgs, GainResourcesArgs, SummonRandomArgs, gain_resources, summon_random};
 use jackioh_engine::prelude::*;
@@ -152,14 +147,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #7 The Greatest Heist — SPEC §8.10 row 7, BUILD M12 row S 7: "Cry (played): one Discover over the
-// Acclaimed Units and Jelly Beans; enters at Stage 1, public on the card (R1854000); a Jelly Bean that makes
-// an Acclaimed Unit Radiant completes Stage 1 and a random Acclaimed Unit is summoned; two of your Acclaimed
-// Units dying (an enemy's not) completes Stage 2 and finds rolls follow, each an Anomaly Found! to hand or a
-// Resource to the hand; a steal from the opponent completes Stage 3: their crystals drop to 0 and yours rise
-// to the cap (R1854003); leaving the field resets the line; finds reads through `param()`; radiant: the
-// Discover, the Unit, the Anomalies and the Resources Radiant". Leaving the field resetting the line is
-// R78's, proven by the engine's staged-quest tests (R1854000) and here on the card.
+// Stinkyscape #7 The Greatest Heist — SPEC §8.10 row 7, BUILD M12 row S 7 (R1854000, R1854003,
+// R78).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,11 +167,9 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: Bounce all permanents.
 
-    /// Enough to play anything a test asks, each turn.
     const MANA: i32 = 20;
 
-    /// The shipped pool: the Acclaimed Units and the Jelly Beans of the sets that ship, the Stinkyscape
-    /// set's nine Acclaimed Units among them since its release (#1884). Re-pinned for the Training
+    /// Re-pinned for the Training
     /// Grounds release (#2204): its Jelly Beans #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean (the
     /// snapshot of Core #26) join it.
     const POOL: [&str; 18] = [
@@ -206,7 +193,7 @@ mod tests {
         "traininggrounds-050",
     ];
 
-    /// p1 holds the Heist (Radiant on `radiant`) and `hand`; p2 has a Vanilla. Each turn ends when the
+    /// Each turn ends when the
     /// test ends it (R82).
     fn holding(radiant: bool, seed: &str, hand: &[&str]) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
@@ -222,7 +209,6 @@ mod tests {
         s
     }
 
-    /// The Discover's options.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.clone().expect("the Heist's Discover");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
@@ -236,7 +222,6 @@ mod tests {
             .collect()
     }
 
-    /// Plays the Heist into backrow lane 1 and takes the Discover's first option: that option.
     fn played(s: &mut Scenario) -> String {
         s.play(ID, json!({ "zone": 1 }));
         let first = offered(s)[0].clone();
@@ -249,7 +234,6 @@ mod tests {
         subsystems::quest_memory_of(heist).and_then(|line| line.stage)
     }
 
-    /// p1 plays a Tylannt into unit lane `lane`: the Heist's current stage completes.
     fn tylannt(s: &mut Scenario, lane: i32) {
         s.play(TYLANNT, json!({ "zone": lane }));
     }
@@ -345,7 +329,6 @@ mod tests {
         tylannt(&mut s, 1);
         assert_eq!(stage(&s), Some(COMRADERY));
         let p1_acclaimed = s.unit(P1, 2).expect("the Unit Stage 1 summoned").id;
-        // One of p1's dies, then an Acclaimed Unit p2 controls: one death of p1's, Stage 2 still open.
         s.play(HIT_JOB, json!({ "targets": pick::id(&p1_acclaimed) }));
         let enemy = s.unit(P2, 1).expect("p2's Vanilla").id;
         s.card_mut(enemy.as_str()).granted_tags.get_or_insert_with(Vec::new).push(Tag::Acclaimed);
@@ -353,7 +336,6 @@ mod tests {
         assert_eq!(stage(&s), Some(COMRADERY));
     }
 
-    /// p1's Heist walked to Stage 3 by two Tylannts; returns the scenario.
     fn at_the_vaults(radiant: bool, seed: &str, hand: &[&str]) -> Scenario {
         let mut cards = vec![TYLANNT, TYLANNT];
         cards.extend_from_slice(hand);
@@ -365,7 +347,6 @@ mod tests {
         s
     }
 
-    /// What Stage 2's reward found: (Anomaly Found!s added to the hand, Resources gained), each with its face.
     fn found(s: &Scenario) -> (Vec<bool>, Vec<bool>) {
         let anomalies = s.hand(P1).into_iter().filter(|card| card.def_id == ANOMALY_FOUND).map(|card| card.radiant).collect();
         let resources = resources_in_hand_of(s.state(), P1).into_iter().map(|card| card.radiant).collect();

@@ -1,20 +1,8 @@
-// The account's cosmetics as preview tiles (#1662, R1655000, R1579000, part of #1651): the playmat
-// (`table`), the backdrop (`field`) and the card back (`cardBack`) your own side wears in a game. A
-// playmat and a backdrop are drawn together as a mini board, each tile its own kind over what is
-// equipped of the other; a card back is drawn by `cards/CardBack.tsx`, the back a game draws.
-//
-// Clicking an owned tile equips it as the select it replaced did: `writeCosmetics`, the same store
-// and `cosmetics` group (R633, `cards/cosmetics.ts`, `settings/groups.ts`), and no request. A tile
-// the account does not own is locked and greyed with its rarity, and equips nothing. `GET
-// /api/cosmetics` says what the account owns, through the `AccountCosmeticsOwned` main.tsx mounts
-// while ownership decides (R1833000, `useOwnsAccountCosmetic`); with none above it every tile is
-// owned. A stored pick the account does not own shows as the kind's default, which is what the
-// board draws. R1953001: a locked tile a held cosmetic token covers offers that token in place
-// (TokenOffer.tsx). This decides nothing (CLAUDE.md rule 7).
-//
-// Every animation is a transform or opacity (the backdrops' particles, game/table.css) and holds still
-// under reduced motion; a tile's particles move only while it is the equipped one, hovered or focused
-// (collection.css).
+// The account's cosmetics as preview tiles (#1662, R1655000, R1579000, part of #1651): the playmat,
+// backdrop and card back your own side wears. An owned tile equips through `writeCosmetics` (R633)
+// with no request; ownership is `GET /api/cosmetics` through main.tsx's `AccountCosmeticsOwned`
+// (R1833000), else every tile is owned; a locked one offers a held token that covers it (R1953001).
+// This decides nothing (CLAUDE.md rule 7). Particles move only on the equipped, hovered or focused tile.
 
 import type { ReactElement } from "react";
 
@@ -36,7 +24,6 @@ import TokenOffer, { offerTier, useHeldTokens, type HeldTokens } from "./TokenOf
 import "../game/table.css";
 import "../settings/settings.css";
 
-/** The playmat and backdrop of a mini board, then the card back, each its own row of tiles. */
 const TILE_ROWS: readonly { kind: DeckSlotKind; hint: string }[] = [
   { kind: "table", hint: "The playmat on your side. A deck can pick its own." },
   { kind: "field", hint: "The backdrop behind your side. Reduce motion holds it still." },
@@ -54,7 +41,6 @@ function TilePicture({ kind, id, equipped }: { kind: DeckSlotKind; id: CosmeticI
   return <MiniBoard table={kind === "table" ? id : equipped.table} field={kind === "field" ? id : equipped.field} />;
 }
 
-/** R1953001: the session's token and its held cosmetic tokens, which a locked tile's offer spends. */
 type Offers = { token: string | null; held: HeldTokens | null; onRedeemed: (held: HeldTokens) => void };
 
 function TileRow({
@@ -122,10 +108,8 @@ function TileRow({
 }
 
 /**
- * R1297000, R1655000: the playmat, backdrop and card back your own side wears in a game. A deck's
- * own pick, set in the deck builder, beats these. R1833000: what the account owns is
- * `useOwnsAccountCosmetic`'s, and an unowned pick is equipped as its kind's default. R1953001:
- * `token` reads the held cosmetic tokens a locked tile offers; none offers none.
+ * R1297000, R1655000: the account's picks, which a deck's own pick beats. R1833000: an unowned pick
+ * is equipped as its kind's default. R1953001: `token` reads the held tokens a locked tile offers.
  */
 export default function AccountCosmeticTiles({ token = null }: { token?: string | null }): ReactElement {
   const picks = useCosmetics();

@@ -106,14 +106,6 @@ func TestWindowsMatchPython(t *testing.T) {
 				t.Errorf("%s %s: next_open = %s, want %s", w.Str("describe"), ISO(at),
 					ISO(time.Unix(got, 0)), ISO(time.Unix(int64(c[2].(int)), 0)))
 			}
-			closes := win.ClosesAt(at)
-			var got any
-			if !closes.IsZero() {
-				got = int(closes.Unix())
-			}
-			if !pyjson.Equal(got, c[3]) {
-				t.Errorf("%s %s: closes_at = %v, want %v", w.Str("describe"), ISO(at), got, c[3])
-			}
 		}
 	}
 }

@@ -13,7 +13,7 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// Whether the chosen target is the caster's own (TS `boolean | null`: `None` when it is gone).
+/// Whether the chosen target is the caster's own (`None` when it is gone).
 fn is_yours(ctx: &EffectContext<'_>) -> Option<bool> {
     let target = resolve_target(ctx, &json_as::<TargetSpec>(json!({ "of": "chosen" })))?;
     let controller = match target {
@@ -44,9 +44,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #12.2 Death Boil — SPEC §8.7 row 12.2, BUILD M9 Classic+ row C+ 12.2: "A target Unit or hero: an
-// enemy takes 6 damage (Spell Damage raises it), one of yours is healed 6 (a hero past 30, a unit up to
-// its max health); the amount reads through `param()` (step 2); radiant 12 and 12".
+// C+ #12.2 Death Boil — SPEC §8.7 row 12.2, BUILD M9 Classic+ row C+ 12.2.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

@@ -40,10 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #1.5 Star Chart — SPEC §8.9 row 1.5, BUILD M11 row M+ 1.5: "its caster travels their
-// starscape map 2 nodes, gaining each node's reward (R1847001), charting it first when they have none
-// (R1847000); at the edge it adds Edge of the Universe and the travels left do nothing (R2521008); no
-// mana is paid and no Alteran Reach is needed; nodes reads through `param()`; radiant 4 nodes".
+// Meditative+ #1.5 Star Chart — SPEC §8.9 row 1.5, BUILD M11 row M+ 1.5 (R1847001, R1847000, R2521008).
 #[cfg(test)]
 mod tests {
     use super::*;

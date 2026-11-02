@@ -1,12 +1,9 @@
-// B40 drag-to-play on a seeded hotseat game (docs/polish/7-mobile-ux.md).
-// `support/ux.ts` supplies pointer gestures and new attributes; support/testids.ts supplies the rest.
-// The seed puts #11 Tempo Timmy in player 1's opening hand; the decks make no autonomous board changes.
-// §8 #11 Tempo Timmy (3/3, Rush, First Strike) attacks heroes on player-turn 3 (§6.1). From
-// HERO_HEALTH (30, §2), one hit leaves 27. B39 preserves click-click with dragging enabled.
+// B40 drag-to-play on a seeded hotseat game (docs/polish/7-mobile-ux.md); B39 keeps click-click with
+// dragging enabled. The decks make no autonomous board changes. §8 #11 Tempo Timmy (3/3, Rush, First
+// Strike) attacks heroes on player-turn 3 (§6.1): from HERO_HEALTH (30, §2), one hit leaves 27.
 
 import { constants, seedFor } from "../../support/config.ts";
 import { BOARD, attackIs, cardId, handCardId, healthIs, heroId, ts, zoneId } from "../../support/testids.ts";
-import type { PlayerId } from "../../support/types.ts";
 import {
   DRAGGING_ATTR,
   DRAG_ARROW,
@@ -31,6 +28,7 @@ import {
   releaseOver,
   settingId,
 } from "../../support/ux.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 
 const SEED = seedFor("04-combat-1604");
 const DECK_A = "04-combat-a";
@@ -44,16 +42,6 @@ const LANE_1 = zoneId("you", "units", 1);
 const LANE_1_REF = { side: "you", row: "units", lane: 1 } as const;
 
 const OPPONENT_HERO = heroId("opponent");
-
-/** BUILD M5-T3: hand the device to the acting seat. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
-      undefined,
-    );
-    if (handle.seat !== player) cy.handOver();
-  });
-}
 
 function startGame(): void {
   cy.seedGame({ seed: SEED, a: DECK_A, b: DECK_B });
@@ -159,7 +147,6 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     cy.get(ts(SETTINGS_PANEL)).should("not.exist");
     cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "off");
 
-    // Reload restores the same seed, decks, and setting.
     cy.reload();
     cy.jackioh().should((handle) => {
       expect(handle.seed, "the same seed after the reload").to.eq(SEED);

@@ -1,8 +1,7 @@
-// Meditative+ batch 03 (issue #1181): the engine systems M+ #4 Supply Drop, #22 Mountaintop Garden and
-// #23 Enormous Elderberry are written with, each through a fixture script (`fixtures/mplus_b03.rs`)
-// before a card uses it: R1181000's effect made "in N turns" with its countdown badge (`delay`'s
-// `turns` and `label`), R1181002's aura over embiggen prices (the `embiggenGarden` flag) and
-// R1181003's price for the Embiggened version alone (`add_to_hand`'s `embiggenCostOverride`).
+// Meditative+ batch 03 (issue #1181): the engine systems of M+ #4 Supply Drop, #22 Mountaintop Garden
+// and #23 Enormous Elderberry, each through a fixture script: R1181000's effect made "in N turns" with
+// its countdown badge (`delay`'s `turns` and `label`), R1181002's aura over embiggen prices (the
+// `embiggenGarden` flag) and R1181003's price for the Embiggened version alone (`embiggenCostOverride`).
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
