@@ -18,7 +18,7 @@ export type PlayStep =
 
 /** The parts of `viewFor` the driver reads (a structural subset of `PlayerView`). */
 type ViewLike = {
-  pending?: { forYou?: boolean; kind?: string; prompt?: string; options?: unknown[] } | null;
+  pending?: { forYou?: boolean; kind?: string; prompt?: string; options?: unknown[]; max?: number } | null;
   you: { hand: { instanceId: string; defId: string }[] | { count: number }; libraryCount?: number };
 };
 
@@ -51,10 +51,28 @@ export const GAME_OVER = "the game is over";
 /** Mirrors `apps/web/src/game/contract.ts`: a "Choose one" this short is drawn as a Discover pop-up. */
 const DISCOVER_OPTION_LIMIT = 4;
 
+/**
+ * #2757: a Choose one of one lane is no Discover but its lanes on the board, a `mode` all the same. These mirror
+ * `LANES` (`contract.ts`) and `isLanePick` (`actions.ts`): every option is `mode:lane-<n>`, n of the board's lanes.
+ */
+const LANE_KEY = /^mode:lane-([1-9]\d*)$/;
+const LANE_COUNT = 5;
+
+function optionKey(option: unknown): string {
+  const key = typeof option === "object" && option !== null ? (option as { key?: unknown }).key : undefined;
+  return typeof key === "string" ? key : "";
+}
+
+function isLanePick(pending: { options?: unknown[]; max?: number }): boolean {
+  const options = pending.options ?? [];
+  const inBoard = (option: unknown): boolean => Number(LANE_KEY.exec(optionKey(option))?.[1] ?? 0) <= LANE_COUNT && LANE_KEY.test(optionKey(option));
+  return (pending.max ?? 1) <= 1 && options.length > 0 && options.every(inBoard);
+}
+
 /** The `data-prompt-kind` the board draws a prompt with (`apps/web/src/game/Prompt.tsx`, the M5-T4 contract). */
-export function boardKind(pending: { kind?: string; options?: unknown[] }): string {
+export function boardKind(pending: { kind?: string; options?: unknown[]; max?: number }): string {
   const kind = pending.kind ?? "";
-  return kind === "mode" && (pending.options?.length ?? 0) <= DISCOVER_OPTION_LIMIT ? "discover" : kind;
+  return kind === "mode" && (pending.options?.length ?? 0) <= DISCOVER_OPTION_LIMIT && !isLanePick(pending) ? "discover" : kind;
 }
 
 /**

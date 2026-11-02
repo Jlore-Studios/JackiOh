@@ -126,8 +126,10 @@ describe("#2646 route 2: a play's short choices are choice cards", () => {
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", modes: ["board"] });
     cleanup();
 
-    const lanes = Array.from({ length: OVER }, (_, at) => `lane-${String(at + 1)}`);
-    renderBuild(handView("meditative-098"), playing(lanes.map((mode): ActionBody => ({ type: "play", instanceId: "h1", modes: [mode] }))));
+    // #2757: Showdown's lanes are no list now, but lit on the board; Swear Loyalities' factions are one.
+    const factions = ["Vanguard Coalition", "ETHICS", "Golden Accord", "Pegasus", "Star-jumper Core"];
+    expect(factions).toHaveLength(OVER);
+    renderBuild(handView("stinkyscape-163"), playing(factions.map((mode): ActionBody => ({ type: "play", instanceId: "h1", modes: [mode] }))));
     expectList("mode");
   });
 
