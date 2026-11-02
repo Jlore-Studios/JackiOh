@@ -15,6 +15,7 @@ import {
   FxControls,
   LanguageSelect,
   OpponentCosmeticsSwitch,
+  RarityFoilSwitch,
   SetWatermarksSwitch,
   VibrationSwitch,
 } from "./controls.tsx";
@@ -45,6 +46,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(FxControls),
     reset: () => {
       setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    },
+  },
+  {
+    section: "visuals",
+    id: "card-rarity-foil",
+    render: () => createElement(RarityFoilSwitch),
+    reset: () => {
+      writeCardSettings({ rarityFoil: CARD_SETTINGS_DEFAULTS.rarityFoil });
     },
   },
   {
