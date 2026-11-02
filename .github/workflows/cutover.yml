@@ -103,11 +103,18 @@ jobs:
           ref, src, pool = sys.argv[1], sys.argv[2], sys.argv[3]
           def fail(why):
               print(f"::error::{why}", file=sys.stderr); sys.exit(1)
-          if "[YOUR-PASSWORD]" in src:
-              raw = os.environ.get("DB_PASSWORD", "")
-              if not raw:
-                  fail("the address still says [YOUR-PASSWORD], and PRODUCTION_DB_PASSWORD is not set")
-              src = src.replace("[YOUR-PASSWORD]", up.quote(raw, safe=""))
+          # A password of its own (PRODUCTION_DB_PASSWORD) wins over whatever the address holds, its
+          # `[YOUR-PASSWORD]` or one typed in, percent-encoded or not: the address is cut at its scheme
+          # and its last `@`, so a raw `@`, `/` or `#` in the old password cannot move the split.
+          raw = os.environ.get("DB_PASSWORD", "")
+          if raw:
+              scheme, sep, rest = src.partition("://")
+              userinfo, at, after = rest.rpartition("@")
+              if not (sep and at):
+                  fail("the address is not scheme://user:password@host/database")
+              src = f"{scheme}://{userinfo.split(':', 1)[0]}:{up.quote(raw, safe='')}@{after}"
+          elif "[YOUR-PASSWORD]" in src:
+              fail("the address still says [YOUR-PASSWORD], and PRODUCTION_DB_PASSWORD is not set")
           p = up.urlsplit(src)
           creds, _, _ = p.netloc.rpartition("@")
           user, _, password = creds.partition(":")
@@ -178,17 +185,13 @@ jobs:
           fi
           # Where the password comes from, and what it looks like (never the password): a refused login
           # is most often the wrong thing on the clipboard.
-          if [[ "$PRODUCTION_DATABASE_URL" == *"[YOUR-PASSWORD]"* ]]; then
-            case "$DB_PASSWORD" in
-              "") pw="unset" ;;
-              sb_*) pw="a Supabase API key, not the database password" ;;
-              postgres*://*) pw="a database address, not the password" ;;
-              *) pw="${#DB_PASSWORD} characters" ;;
-            esac
-            echo "the password: PRODUCTION_DB_PASSWORD, $pw" | tee -a "$GITHUB_STEP_SUMMARY"
-          else
-            echo "the password: the one written into PRODUCTION_DATABASE_URL" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
+          case "$DB_PASSWORD" in
+            "") pw="PRODUCTION_DB_PASSWORD is unset, so the one written into PRODUCTION_DATABASE_URL" ;;
+            sb_*) pw="PRODUCTION_DB_PASSWORD, which is a Supabase API key, not the database password" ;;
+            postgres*://*) pw="PRODUCTION_DB_PASSWORD, which is a database address, not the password" ;;
+            *) pw="PRODUCTION_DB_PASSWORD, ${#DB_PASSWORD} characters" ;;
+          esac
+          echo "the password: $pw" | tee -a "$GITHUB_STEP_SUMMARY"
           python3 "$RUNNER_TEMP/pooler.py" "$PRODUCTION_REF" "$PRODUCTION_DATABASE_URL" "" \
             > "$RUNNER_TEMP/production.url.raw" 2> "$RUNNER_TEMP/production.where" ||
             { cat "$RUNNER_TEMP/production.where"; exit 1; }
