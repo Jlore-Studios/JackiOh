@@ -33,7 +33,12 @@ export type FxPreset =
   | "void"
   | "confetti"
   | "blood"
-  | "frost";
+  | "frost"
+  | "leaf"
+  | "circuit"
+  | "crumb"
+  | "star"
+  | "exhaust";
 
 export type FxSpread = "point" | "area" | "ring";
 export type FxSplatTone = "damage" | "heal" | "loss";

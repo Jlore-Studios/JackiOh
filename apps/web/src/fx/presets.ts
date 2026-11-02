@@ -3,6 +3,7 @@
  * where every particle number lives. Blood and frost are R502's (#27 Blood Ridden's price, #21
  * Hinder's cracked crystals) and serve any card's mark drawn in crimson or cyan (R437). Every
  * `life[1]` stays at or under FX_MAX_PARTICLE_LIFE_MS, so no burst outlives the runner's tail (R200).
+ * #2792: leaf (Nature), circuit (Tech), crumb (Snack), star and exhaust (Tech's starfield and rocket).
  */
 import type { FxPreset } from "./types.ts";
 
@@ -225,6 +226,67 @@ export const PARTICLE_PRESETS: { readonly [P in FxPreset]: ParticlePresetSpec } 
     stretch: 2,
     flash: { core: "#f2fdff", color: "#6fd6ff", scale: 0.7, ms: 200 },
   },
+  leaf: {
+    life: [550, 900],
+    speed: [30, 120],
+    size: [8, 16],
+    gravity: 90,
+    drag: 0.8,
+    spin: 5,
+    blend: "source-over",
+    colors: ["#c8f07a", "#7cc843", "#3f8f2a", "#e0c34a"],
+    shrink: false,
+    twirl: true,
+  },
+  circuit: {
+    life: [300, 650],
+    speed: [80, 260],
+    size: [4, 8],
+    gravity: 0,
+    drag: 0.9,
+    spin: 0,
+    blend: "lighter",
+    colors: ["#e8fdff", "#5ef0ff", "#38ff9c", "#0077ff"],
+    shrink: true,
+  },
+  crumb: {
+    life: [420, 820],
+    speed: [90, 260],
+    size: [4, 9],
+    gravity: 480,
+    drag: 0.45,
+    spin: 9,
+    blend: "source-over",
+    colors: ["#f3d29b", "#d9a066", "#a86b32", "#7a4a22"],
+    shrink: true,
+    twirl: true,
+  },
+  star: {
+    life: [450, 880],
+    speed: [40, 160],
+    size: [6, 13],
+    gravity: -20,
+    drag: 0.75,
+    spin: 4,
+    blend: "lighter",
+    colors: ["#ffffff", "#fff3b8", "#bfd4ff"],
+    shrink: true,
+    twirl: true,
+    flash: { core: "#ffffff", color: "#bfd4ff", scale: 0.8, ms: 220 },
+  },
+  exhaust: {
+    life: [300, 700],
+    speed: [160, 420],
+    size: [8, 18],
+    gravity: -120,
+    drag: 0.7,
+    spin: 0,
+    blend: "lighter",
+    colors: ["#fff4d6", "#ffb347", "#ff6a1f", "#8c8c94"],
+    shrink: true,
+    stretch: 2.4,
+    flash: { core: "#fff8e6", color: "#ff9a3c", scale: 0.9, ms: 200 },
+  },
 };
 
 /** Every preset in a fixed order: the particle pool stores a preset as its index here. */
@@ -245,4 +307,9 @@ export const PRESET_ORDER: readonly FxPreset[] = [
   "confetti",
   "blood",
   "frost",
+  "leaf",
+  "circuit",
+  "crumb",
+  "star",
+  "exhaust",
 ];
