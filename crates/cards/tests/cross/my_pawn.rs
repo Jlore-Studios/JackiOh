@@ -446,7 +446,7 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
     fn r212_r44_a_corpse_eater_drawn_during_my_pawns_ai_turn_does_not_feed_on_a_death_a_trap_dealt_earlier_in_the_same_window()
      {
         jackioh_cards::register_all();
-        // Vanilla, then My Pawn cancels
+        // p1's Sorcerer swings for lethal; p2's lane-1 trap destroys p1's Mr. Vanilla, then My Pawn cancels
         // the swing and hands the rest of p1's turn to the AI (R44), which ends it, so p2 draws Corpse Eater
         // inside this action. The loop hands the window's death to the triggers only after the AI turn
         // (§10.3), but the Eater reached the hand after that death, and R212 says it must not feed on it.

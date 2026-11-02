@@ -217,8 +217,8 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
     }
 }
 
-/// No Core unit watches another card's event
-/// from the field (#32 and #91 watch their own), which is why these cases need one.
+/// No Core unit watches another card's event from the field (#32 and #91 watch their own), which is why these
+/// cases need one.
 fn place_watcher(g: &mut Scenario, id: &str, lane: i32, on: GameEventType) -> CardInstance {
     let script = Script {
         triggers: vec![TriggerDef::new(format!("{id}:on-{on}"), &[on], |_ctx, _event| {

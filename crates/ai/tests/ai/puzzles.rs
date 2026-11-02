@@ -307,7 +307,6 @@ mod prompts_through_the_search_b19 {
             "{}",
             trace(&run.turn)
         );
-        // The discovered True Strike is the card the AI then played.
         assert!(
             run.turn.actions.iter().any(
                 |action| matches!(&action.body, ActionBody::Play { instance_id, .. } if *instance_id == true_strike.id)

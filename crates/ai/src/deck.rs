@@ -216,8 +216,7 @@ pub const AI_DECK: AiDeck = AiDeck {
     // R1370, chosen by measurement (`r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card`
     // holds it): 48 is the smallest weight at which every set that ships is forced into fewer than one
     // deck in ten wherever the floor owes at most two of its cards in five (the 396-card pool since
-    // #1187, at the sizes since #1705). The boost stops once the floor is met, so the rest is dealt as
-    // without it.
+    // #1187, at the sizes since #1705).
     lean_boost: 48.0,
     // R817000 (#817): "less Quickdraw bloat".
     max_quickdraw: 2,
@@ -685,8 +684,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     } else {
         (f64::from(size) * AI_DECK.theme_min_share).ceil() as i32
     };
-    // R1370: rounded up, so a human's 25-card deck owes 13, Medium's 30 15 and Hard's 35 18. R1390:
-    // never on a gated set.
+    // R1390: never on a gated set.
     let lean = ungated_lean(options.lean_set, gated);
     let lean_needed = if lean.is_none() {
         0

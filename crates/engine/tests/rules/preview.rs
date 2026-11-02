@@ -422,7 +422,6 @@ fn side(view: &PlayerView, viewer: PlayerId) -> &SideView {
 
 // The viewer's hand
 
-/// R280 preview in the viewer's own hand
 mod r280_preview_in_the_viewer_s_own_hand {
     use super::*;
 
@@ -539,7 +538,6 @@ mod r280_preview_in_the_viewer_s_own_hand {
 
 // The field: the top of a unit pile, the backrow
 
-/// R280 preview on the field
 mod r280_preview_on_the_field {
     use super::*;
 
@@ -726,7 +724,6 @@ mod r280_preview_on_the_field {
 
 // Nowhere else
 
-/// R280 preview is nowhere else
 mod r280_preview_is_nowhere_else {
     use super::*;
 
@@ -852,7 +849,6 @@ mod r280_preview_is_nowhere_else {
 
 // A read, and nothing more
 
-/// R280 the hook is a pure read
 mod r280_the_hook_is_a_pure_read {
     use super::*;
 
@@ -902,7 +898,6 @@ mod r280_the_hook_is_a_pure_read {
 
 // R102: a fused card's list, and its refs
 
-/// R280 a fusion's preview is its ingredients' lists in ingredient order (R102)
 mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
     use super::*;
 

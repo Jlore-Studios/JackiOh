@@ -1,13 +1,10 @@
 //! A permanent's lasting effect lasts while it is on the field (SPEC §5.1, §5.2, R30, R169, R209).
-//! Found by the polish-4 edge-case hunt, rounds 2 and 4 (docs/polish/4-edge-cases.md, lenses L1, L2
-//! and L8); every case here failed before its fix.
-//! #79 Twinspell's "the next Spell you play gains Echo +1" is a player modifier, which the engine used
-//! to end only by consuming it. So a Twinspell that left the field — bounced by radiant #52, destroyed
-//! by #36 — kept echoing its old controller's next Spell, and one bounced and replayed stacked a
-//! second rider. And the rider's amount was fixed by the face that installed it, so a Twinspell
-//! radiant #49 stole and made Radiant still granted +1. Round 4: the rider was installed by a Cry,
-//! which #79 does not print (R169), so a Twinspell summoned onto the field (§6.2: no Cry) granted
-//! nothing, and neither did Twinspell's text fused by #85 onto the other player's Field Spell.
+//! Found by the polish-4 edge-case hunt, rounds 2 and 4 (docs/polish/4-edge-cases.md, lenses L1, L2, L8).
+//! #79 Twinspell's "the next Spell you play gains Echo +1" is a player modifier that ends when Twinspell
+//! leaves the field (bounced by radiant #52, destroyed by #36), and one replayed adds no second rider.
+//! Its amount is Twinspell's current face's, as when radiant #49 steals it and makes it Radiant. #79
+//! prints no Cry (R169), so a Twinspell summoned onto the field (§6.2: no Cry) grants it too, as does
+//! Twinspell's text fused by #85 onto the other player's Field Spell.
 //! Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};

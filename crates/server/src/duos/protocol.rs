@@ -386,7 +386,7 @@ mod tests {
         };
         let missing = "every action carries a client nonce (SPEC §9.3)";
         let too_long = "that nonce is too long";
-        // §9.8's bound counts UTF-16 units, as TS's `length` does: one emoji is two.
+        // §9.8's bound counts UTF-16 units, as JavaScript's `length` does: one emoji is two.
         let half = MAX_NONCE_LENGTH / 2;
         for (nonce, refused) in [
             (Value::Null, Some(missing)),

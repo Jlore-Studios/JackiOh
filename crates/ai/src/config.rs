@@ -908,7 +908,7 @@ pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// R846, #1886: the cards that owe their caster an extra turn when cast (`take_extra_turn`), priced in
 /// hand by `AI_EVAL.extra_turn_in_hand`: M #19.1 Temporal Rift, S #4.3 Event Horizon (twice on its
-/// Radiant face, counted once) and S #4.4 Last Word. A test casts each and checks the turn is owed.
+/// Radiant face, counted once) and S #4.4 Last Word.
 pub const AI_EXTRA_TURN_CARDS: &[&str] = &["meditative-019-1", "stinkyscape-004-3", "stinkyscape-004-4"];
 
 /// The most times the AI plays one card (one instance) in a turn; past it the card is no candidate

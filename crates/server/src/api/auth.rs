@@ -45,7 +45,7 @@ const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str =
 const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str =
     "Finish your Conquest series before you delete your account.";
 
-/// TS `str(body, key)` (http.ts): a non-empty string field, or a 400 naming it.
+/// A non-empty string field, or a 400 naming it.
 fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
     match body.get(key) {
         Some(Value::String(value)) if !value.is_empty() => Ok(value.clone()),

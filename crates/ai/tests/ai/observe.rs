@@ -98,9 +98,9 @@ fn is_hidden_backrow(state: &GameState, card: &CardInstance, seat: PlayerId) -> 
 
 /// B9's mutation: rewrite everything `seat` may not know and nothing else. The opponent's hand and
 /// library get new identities, Radiant flags and order; a backrow card the seat cannot read gets another
-/// Trap (another card of the pool, if it is no Trap) that shows the same cost (R351: the seat reads that
-/// much, #85's own included) and leaves the seat's view unchanged (R403, R602: a live face-down aura
-/// shows on the board); the seat's own library is reordered; seed, cursor and the nonce log are replaced.
+/// Trap (another card of the pool, if it is no Trap) that shows the same cost (R351, #85's own included)
+/// and leaves the seat's view unchanged; the seat's own library is reordered; seed, cursor and the nonce
+/// log are replaced.
 fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     let mut out = clone(state);
     let mut rng = create_rng(&format!("observe-mutate:{seed}"), 0);

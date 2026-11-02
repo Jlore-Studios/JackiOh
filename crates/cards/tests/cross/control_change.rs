@@ -103,7 +103,6 @@ fn keyword_kinds(g: &Scenario, card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// R171 with the cards that change control
 mod r171_with_the_cards_that_change_control {
     use super::*;
 
@@ -655,7 +654,6 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
     }
 }
 
-/// R14: radiant Silly Silas bounces only the cards that would move to the opponent
 mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_opponent {
     use super::*;
 
@@ -668,10 +666,9 @@ mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_oppone
         }));
         let inbound = g.unit_at("p2", 1);
 
-        // That card moves to p1, not "to the
-        // opponent", so the radiant clause does not touch it and the base clause keeps it: it crosses
-        // and changes control (§8 Conventions: every base clause the radiant cell does not restate is
-        // kept), entering p1's side this turn (R171).
+        // That card moves to p1, not "to the opponent", so the radiant clause does not touch it and the base
+        // clause keeps it: it crosses and changes control (§8 Conventions: every base clause the radiant cell
+        // does not restate is kept), entering p1's side this turn (R171).
         g.play(SILAS, json!({ "zone": 3, "modes": ["right"] }));
 
         assert_eq!(g.unit("p1", 1).map(|c| c.id), Some(inbound.id.clone()));

@@ -40,8 +40,8 @@ const HEARTHSTONE_WORDS: &[(&str, &str)] = &[
     ("The Coin", "幸运币"),
 ];
 
-/// The set's own words (the same list): the tuning verbs print as Buff and Nerf since patch v0.3.4
-/// (R1320; Upgrade and Degrade before it, R386), and the library is the deck (R366).
+/// The set's own words (the same list): the tuning verbs print as Buff and Nerf (R1320, R386), and the
+/// library is the deck (R366).
 const SET_WORDS: &[(&str, &str)] = &[
     ("Radiant", "光辉"),
     ("Tribute", "献祭"),

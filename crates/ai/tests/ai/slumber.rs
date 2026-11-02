@@ -92,10 +92,8 @@ fn r1839000_a_dormant_card_is_no_threat_until_it_wakes() {
     let awake = board();
     let mut dormant = awake.clone();
     sleep(&mut dormant, HUMAN);
-    // The human's Timmy threatens the AI's face awake, and nothing asleep.
     assert!(face_threat(&awake, HUMAN) > 0);
     assert_eq!(face_threat(&dormant, HUMAN), 0);
-    // So the sleeping Timmy is better for the AI than the awake one.
     assert!(eval(&dormant, &AI_EVAL) > eval(&awake, &AI_EVAL));
 }
 

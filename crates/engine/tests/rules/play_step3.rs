@@ -104,7 +104,6 @@ fn cast_and_settle(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent>
 mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     use super::*;
 
-    /// "R449 the card played becomes the named card, which asks its target and resolves as that play"
     #[test]
     fn r449_the_card_played_becomes_the_named_card_which_asks_its_target_and_resolves_as_that_play() {
         let mut state = pacted("r449-replace", false);
@@ -209,7 +208,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert!(!text.contains(PA.crier.id.as_str()), "{text}");
     }
 
-    /// "R449 the Radiant modifier replaces with the Radiant card"
     #[test]
     fn r449_the_radiant_modifier_replaces_with_the_radiant_card() {
         let mut state = pacted("r449-radiant", true);
@@ -236,7 +234,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         );
     }
 
-    /// "R449 a cast is a play and is replaced too (R70)"
     #[test]
     fn r449_r70_a_cast_is_a_play_and_is_replaced_too() {
         let mut state = pacted("r449-cast", false);
@@ -263,7 +260,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 4);
     }
 
-    /// "R449 the named card itself is not replaced by itself"
     #[test]
     fn r449_the_named_card_itself_is_not_replaced_by_itself() {
         let mut state = pacted("r449-self", false);
@@ -281,7 +277,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert_eq!(played.state.players.p2.hero.health, HERO_HEALTH - 4);
     }
 
-    /// "R449 a replacement that is a permanent takes the leftmost open zone at step 4 (R64)"
     #[test]
     fn r449_r64_a_replacement_that_is_a_permanent_takes_the_leftmost_open_zone_at_step_4() {
         let mut state = game("r449-permanent");
@@ -309,7 +304,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 3);
     }
 
-    /// "R449 the modifier lasts this turn only"
     #[test]
     fn r449_the_modifier_lasts_this_turn_only() {
         let state = pacted("r449-expiry", false);
@@ -333,7 +327,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         );
     }
 
-    /// "R449 the replacement's own question pauses the play: JSON round trip and replay agree"
     #[test]
     fn r449_the_replacements_own_question_pauses_the_play_json_round_trip_and_replay_agree() {
         /// `{ paused, done, revived }`: the hashes of the paused state, of the live answer and of the
@@ -371,7 +364,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         assert_eq!(second, first);
     }
 
-    /// "R449 a Counter reads the replacement's announce and cancels it"
     #[test]
     fn r449_a_counter_reads_the_replacements_announce_and_cancels_it() {
         let mut state = pacted("r449-counter", false);
@@ -412,7 +404,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
 mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produce {
     use super::*;
 
-    /// "R449 every Fruit its controller plays becomes Radiant as it is played, and nothing else does"
     #[test]
     fn r449_every_fruit_its_controller_plays_becomes_radiant_as_it_is_played_and_nothing_else_does() {
         let mut state = game("r213-produce");
@@ -446,7 +437,6 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
         assert_eq!(events_json(&second.events, "radiantSet"), Vec::<Value>::new());
     }
 
-    /// "R449 step 1 reads the Radiant face (R214), so the play carries that face's choices"
     #[test]
     fn r449_r214_step_1_reads_the_radiant_face_so_the_play_carries_that_faces_choices() {
         let mut state = game("r214-produce");
@@ -476,8 +466,6 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 3);
     }
 
-    /// "R449 the opponent's Organic Produce does nothing for this player, and a cast Fruit is Radiant
-    /// too (R70)"
     #[test]
     fn r449_r70_the_opponents_organic_produce_does_nothing_for_this_player_and_a_cast_fruit_is_radiant_too() {
         let mut state = game("r213-produce-theirs");

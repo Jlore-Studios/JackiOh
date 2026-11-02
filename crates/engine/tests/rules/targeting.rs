@@ -5,7 +5,7 @@
 //! point a targeting cost is owed (Classic #89 Paul Allen's Ghost: random discards at pay time, R682,
 //! and with too few other cards the card is no legal target at all), and an interceptor answers
 //! (Classic #33 Joro, from its owner's hand: summoned, no Cry, summoning sick, and the pick moves to
-//! it). A Spell's declarations never offer a card Immune to Spells, and the v0.2.0 filter fields — a
+//! it). A Spell's declarations never offer a card Immune to Spells, and the filter fields — a
 //! graveyard pick, a cost range, damaged, Plague Counters, a named predicate — narrow what a declaration
 //! offers.
 

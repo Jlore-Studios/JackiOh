@@ -51,7 +51,6 @@ fn unit_now(state: &GameState, card: &CardInstance) -> AttackTarget {
     on_unit(&live(state, card))
 }
 
-/// lethal projection (M3-T7, R44)
 mod r44_lethal_projection_m3_t7 {
     use super::*;
 

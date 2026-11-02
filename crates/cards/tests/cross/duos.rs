@@ -218,10 +218,9 @@ mod expedition123 {
     const EXPEDITION: &str = "meditative-019";
     const RIFT: &str = "meditative-019-1";
 
-    /// The lost refreshes land on
-    /// A1's extra turn and on its next own turn, in duel 0 alone; the third is normal, as in the 1v1
-    /// game below. The extra turn keeps duel 0's round on A1 (§13.3), so the rounds run [A1, B2],
-    /// [B1, A2] from then on, and no seat acts out of its round.
+    /// The lost refreshes land on A1's extra turn and on its next own turn, in duel 0 alone; the third is
+    /// normal, as in the 1v1 game below. The extra turn keeps duel 0's round on A1 (§13.3), so the rounds run
+    /// [A1, B2], [B1, A2] from then on, and no seat acts out of its round.
     #[test]
     fn r844_r846_expedition123_and_its_rift_lose_the_casters_own_turns_in_its_own_duel() {
         let mut s = begun("cross-duos-expedition");

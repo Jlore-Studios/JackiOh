@@ -4,7 +4,7 @@
 // path and click-click must, so one test plays a card by keyboard alone. Every route runs again at the phone
 // size (#1561), whose labels end in " (phone)" so an exception holds at one width only. Daily only: a pull
 // request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38. Networked: the
-// signed-in routes need `E2E=1 cargo run --release -p jackioh-server`. Every wait is a retried DOM assertion.
+// signed-in routes need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";

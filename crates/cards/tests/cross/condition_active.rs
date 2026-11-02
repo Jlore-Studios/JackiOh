@@ -1115,7 +1115,6 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
 
 // Meditative #57 Clip-Farming Critikal (hand only): Combo, a card played earlier this turn
 
-/// Meditative #57 Clip-Farming Critikal lights up in hand once a card was played this turn (R195)
 mod meditative_c57_clip_farming_critikal_lights_up_in_hand_once_a_card_was_played_this_turn_r195 {
     use super::*;
 

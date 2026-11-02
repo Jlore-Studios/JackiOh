@@ -66,7 +66,6 @@ fn keyword_kinds(s: &Scenario, card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// R42 and R89: the unit whose damage instance was lethal
 mod r42_and_r89_the_unit_whose_damage_instance_was_lethal {
     use super::*;
 
@@ -178,7 +177,6 @@ mod r176_my_pawns_projection_follows_the_combat {
     }
 }
 
-/// §5.1, R44, R152: My Pawn and the AI turn it hands over
 mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
     use super::*;
 
@@ -515,7 +513,6 @@ fn asking_window_trap(s: &mut Scenario, id: &str, then: &'static str) {
     );
 }
 
-/// R220: §4.2 step 5 resolves the attack only as it was declared
 mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     use super::*;
 
@@ -740,7 +737,6 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     }
 }
 
-/// R176: the hero My Pawn projects is the one the combat leaves
 mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
     use super::*;
 
@@ -827,7 +823,6 @@ fn caller() -> Script {
     }
 }
 
-/// R212: a declaration is answered as the board stood when it was declared
 mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     use super::*;
 
@@ -835,9 +830,8 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     fn r212_r171_a_unit_a_trap_in_the_window_stole_answers_the_declaration_for_the_player_who_controlled_it_then_s10_3()
      {
         // p1's own trap in the window steals the Watcher, so the attack is over (R220). The Watcher's
-        // "whenever a unit attacks, you draw" answers a declaration
-        // made while p2 controlled it: p2 draws, not p1 (R212's "a card whose controller has changed
-        // since answers for the one it had").
+        // "whenever a unit attacks, you draw" answers a declaration made while p2 controlled it: p2 draws,
+        // not p1 (R212's "a card whose controller has changed since answers for the one it had").
         let mut s = setup(json!({
             "seed": "edge-r7-watcher-stolen",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -1048,9 +1042,8 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
     #[test]
     fn r220_a_trap_answering_the_window_traps_hit_on_the_attacker_fires_before_step_5_so_the_destroyed_attacker_never_swings_s10_3_s4_2_step_4()
      {
-        // Traps are
-        // responses that fire immediately (§10.3), and both resolve inside step 4's window, before any
-        // damage of the attack (§4.2 step 4), so the attacker is gone when step 5 comes.
+        // Traps are responses that fire immediately (§10.3), and p2's two resolve inside step 4's window,
+        // before any damage of the attack (§4.2 step 4), so the attacker is gone when step 5 comes.
         let mut s = setup(json!({
             "seed": "cw8-window-chain",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },

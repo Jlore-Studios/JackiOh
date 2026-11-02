@@ -49,7 +49,6 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-/// R65: one cost calculation, in play and out of it
 mod r65_one_cost_calculation_in_play_and_out_of_it {
     use super::*;
 
@@ -141,7 +140,6 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
     }
 }
 
-/// §2.3: a one-shot refresh rider moves current mana, not max mana
 mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
     use super::*;
 

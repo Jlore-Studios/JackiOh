@@ -87,8 +87,6 @@ fn lib(def_ids: &[&str]) -> Vec<String> {
 mod r315_fatigue {
     use super::*;
 
-    /// "R315 reports a fatigue draw as `fatigue` with its owner, its count and its hit, just before
-    /// the hit, to both seats"
     #[test]
     fn r315_reports_a_fatigue_draw_as_fatigue_with_its_owner_its_count_and_its_hit_just_before_the_hit_to_both_seats()
      {
@@ -128,7 +126,6 @@ mod r315_fatigue {
         }
     }
 
-    /// "R315 counts each fatigue draw of a draw N on, 1, 2, 3"
     #[test]
     fn r315_counts_each_fatigue_draw_of_a_draw_n_on_1_2_3() {
         let mut state = new_game("r315-count", None);
@@ -160,8 +157,7 @@ mod r315_fatigue {
         );
     }
 
-    /// "R315 still reports a fatigue draw whose whole hit Armor absorbs, ahead of R240's report", which
-    /// is the pipeline's `damageAbsorbed` (R1362).
+    /// R240's report is the pipeline's `damageAbsorbed` (R1362).
     #[test]
     fn r315_r240_r1362_still_reports_a_fatigue_draw_whose_whole_hit_armor_absorbs_ahead_of_the_report() {
         let mut state = new_game("r315-armor", None);
@@ -217,8 +213,6 @@ mod r316_library_overflow {
         state
     }
 
-    /// "R316 reports a copy a full library refuses as `libraryOverflow` notCreated, public to both
-    /// seats"
     #[test]
     fn r316_reports_a_copy_a_full_library_refuses_as_library_overflow_not_created_public_to_both_seats() {
         let mut state = full_library("r316-new");
@@ -244,8 +238,6 @@ mod r316_library_overflow {
         assert_eq!(views.p2, vec![refused]);
     }
 
-    /// "R316 reports an existing card a full library sends to the graveyard as `graveyard`, then its
-    /// enteredGraveyard"
     #[test]
     fn r316_reports_an_existing_card_a_full_library_sends_to_the_graveyard_as_graveyard_then_its_entered_graveyard()
      {
@@ -273,8 +265,6 @@ mod r316_library_overflow {
         assert_eq!(first_field(&views.p2, "libraryOverflow", "defId"), json!("fx-2"));
     }
 
-    /// "R316 reports an existing unit-token card a full library turns away as `ceased`, with no
-    /// graveyard"
     #[test]
     fn r316_reports_an_existing_unit_token_card_a_full_library_turns_away_as_ceased_with_no_graveyard() {
         let mut state = full_library("r316-token");
@@ -299,8 +289,6 @@ mod r316_library_overflow {
         );
     }
 
-    /// "R316 judges a copy that was never made by the card it copies: a face-down trap's copy names
-    /// nothing to the other seat"
     #[test]
     fn r316_judges_a_copy_that_was_never_made_by_the_card_it_copies_a_face_down_traps_copy_names_nothing_to_the_other_seat()
      {
@@ -375,7 +363,6 @@ mod r316_library_overflow {
         assert_eq!(first_field(&theirs, "libraryOverflow", "defId"), json!(trap.id));
     }
 
-    /// "R316 carries a refused Radiant copy's face with its identity, and hides both together"
     #[test]
     fn r316_carries_a_refused_radiant_copys_face_with_its_identity_and_hides_both_together() {
         let mut state = full_library("r316-radiant");
@@ -429,7 +416,6 @@ mod r316_library_overflow {
         );
     }
 
-    /// "R316 reports nothing below the cap, and a CN-Virus chain at the cap turns its second copy away"
     #[test]
     fn r316_reports_nothing_below_the_cap_and_a_cn_virus_chain_at_the_cap_turns_its_second_copy_away() {
         let mut roomy = new_game("r316-roomy", None);
@@ -474,8 +460,6 @@ mod r316_library_overflow {
 mod r317_a_full_hand_burns {
     use super::*;
 
-    /// "R317 burns the card a full hand cannot take, and both seats read it: drawn, burned, then its
-    /// graveyard"
     #[test]
     fn r317_burns_the_card_a_full_hand_cannot_take_and_both_seats_read_it_drawn_burned_then_its_graveyard() {
         let mut state = started("r317");
@@ -522,7 +506,6 @@ mod r317_a_full_hand_burns {
         }
     }
 
-    /// "R317 hides a burned card from the opponent once it returns to its owner's hand"
     #[test]
     fn r317_hides_a_burned_card_from_the_opponent_once_it_returns_to_its_owners_hand() {
         let mut state = new_game("r317-returned", None);
@@ -555,7 +538,6 @@ mod r317_a_full_hand_burns {
         );
     }
 
-    /// "R317 burns a unit-token card out of existence: public, and no graveyard"
     #[test]
     fn r317_burns_a_unit_token_card_out_of_existence_public_and_no_graveyard() {
         let mut state = new_game("r317-token", None);

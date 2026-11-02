@@ -1001,7 +1001,6 @@ mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
     }
 }
 
-/// I8 (#1192): an attack or a switch `reduce` accepts that the list leaves out.
 mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 

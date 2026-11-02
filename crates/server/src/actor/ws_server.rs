@@ -2,15 +2,10 @@
 //!
 //! The protocol is proven against the in-memory socket (`tests/support/socket.rs`), the same `Socket`
 //! the actor talks to. This file adds `socket_from_ws` (an axum WebSocket as a `Socket`; text frames
-//! only, a binary frame is answered with `error` and dropped) and `handle_match_socket` (the upgrade:
-//! authenticate through `app.auth`, count it against its account's R109 budget (R2478000), apply
-//! §9.4's gate (`assert_active`), refuse unless the profile is in the match it asked for or held a
-//! seat in it finished while its rematch window is open (§9.5, R1285000), §9.1). `handle` also
-//! bounds what an unauthenticated client costs: a frame over `MAX_FRAME_BYTES` closes the socket with
-//! 1009, and one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. The pump pings
-//! every `WS_PING_INTERVAL_SECONDS` and drops a connection silent for `WS_IDLE_TIMEOUT_SECONDS`, and a
-//! socket's outgoing queue holds at most `WS_OUTBOX_MAX_FRAMES` frames (SPEC §9.5, §9.8, R1441), so a
-//! dead or unread peer starts its seat's grace and cannot grow the server's memory.
+//! only, a binary frame is answered with `error` and dropped) and `handle_match_socket`, the upgrade's
+//! checks. The frame cap and the per-address socket count bound what an unauthenticated client costs;
+//! the pump's pings, idle timeout and bounded outgoing queue (SPEC §9.5, §9.8, R1441) let a dead or
+//! unread peer start its seat's grace without growing the server's memory.
 //!
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from the
 //! offered `jackioh.bearer.` subprotocol (R1379000), or, when none is offered, from the previous

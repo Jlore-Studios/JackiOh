@@ -67,7 +67,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// R265 the mulligans are open at once
 mod r265_the_mulligans_are_open_at_once {
     use super::*;
 
@@ -183,7 +182,6 @@ mod r265_the_mulligans_are_open_at_once {
     }
 }
 
-/// R265 a game that ends while the mulligans are open
 mod r265_a_game_that_ends_while_the_mulligans_are_open {
     use super::*;
 
@@ -217,7 +215,6 @@ mod r265_a_game_that_ends_while_the_mulligans_are_open {
     }
 }
 
-/// R266 an answer is sealed until both are in
 mod r266_an_answer_is_sealed_until_both_are_in {
     use super::*;
 
@@ -319,7 +316,6 @@ mod r266_an_answer_is_sealed_until_both_are_in {
     }
 }
 
-/// R267 a sealed answer is read against the hand at resolution
 mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
     use super::*;
 
@@ -425,7 +421,6 @@ mod r267_a_sealed_answer_is_read_against_the_hand_at_resolution {
     }
 }
 
-/// R268 a mulligan whose clock runs out
 mod r268_a_mulligan_whose_clock_runs_out {
     use super::*;
 
@@ -475,7 +470,6 @@ mod r268_a_mulligan_whose_clock_runs_out {
     }
 }
 
-/// R269 a draw offer's lifetime
 mod r269_a_draw_offer_s_lifetime {
     use super::*;
 

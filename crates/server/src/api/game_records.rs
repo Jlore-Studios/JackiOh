@@ -10,7 +10,7 @@
 //! logged and swallowed. It is keyed by match id, so a result written twice files the game once; the
 //! reaper's ceiling draws (R112) leave none. R1596000: a failed filing is made again by the retention
 //! loop while the log is held. R1044000: the store folds each record into the totals in the same
-//! transaction; `fold_pending` folds the ones written before the totals existed.
+//! transaction.
 
 use jackioh_engine::{
     FoldArgs, FoldError, GameMode, GameRecord, GameSource, GameSummary, PerPlayer, Pilot, PlayerId,

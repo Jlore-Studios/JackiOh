@@ -9,23 +9,18 @@
 //! - `app`: `App`, the route table, boot and the background loops.
 //! - `auth`: the `Auth` enum, Supabase and the E2E fixtures.
 //! - `api`: the routes. `actor`: the match lifecycle.
-//! - `bots`: the ladder bots: their personas, seat, fallback and pool (SPEC §9.12, R1453, R1454,
-//!   R1451, R1452; #638).
+//! - `bots`: the ladder bots' personas, seat, fallback, pool (§9.12, R1451, R1452, R1453, R1454; #638).
 //! - `ranked`: the ladder's pure rules. `db`: the store and migrations.
-//! - `seats`: the seat ledger, the one game each profile holds, which every door into a game
-//!   reserves through (R1523000; #1523).
+//! - `seats`: the seat ledger, the one game each profile holds (R1523000; #1523).
 //! - `cli`: the command-line tools `main.rs` dispatches to.
-//! - `loops`: the background loops' supervisor, which logs a loop that panics (#842) or returns
-//!   (#1093) and starts it again.
+//! - `loops`: the loops' supervisor, logging and restarting one that panics (#842) or returns (#1093).
 //! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
-//! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for the
-//!   night bot.
+//! - `bug_reports`: a match its own log does not reproduce, filed as a GitHub issue for the night bot.
 //! - `cosmetics`: the cosmetics registry, `cosmetics.json`, and its check (#1295, R1295000).
 //! - `loadout`: the cosmetics each seat of a match wears, frozen as it starts, and when a card's own
 //!   picks may be sent (#1834, R1834002, R1834003).
-//! - `economy`: the economy's store, migration 0045's holdings and ledgers (SPEC §14.11, #1299),
-//!   its pure math, the set-track level curve and the pity roll (#1298), and the card pack roll,
-//!   buying and opening a pack (#1301).
+//! - `economy`: the economy's holdings and ledgers (SPEC §14.11, #1299), its math, level curve and pity
+//!   (#1298), and the card packs (#1301).
 
 pub mod actor;
 pub mod api;

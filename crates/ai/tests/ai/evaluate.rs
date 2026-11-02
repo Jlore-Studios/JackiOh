@@ -468,7 +468,7 @@ mod face_threat_b13 {
 
     #[test]
     fn b13_the_anti_oneshot_cap_applies_to_each_hit_not_to_the_total() {
-        // #73 Anti-oneshot Armor caps each hit on p1's hero at 4 (5 until #2657): 7 becomes 4, 3 stays 3.
+        // #73 Anti-oneshot Armor caps each hit on p1's hero at 4 (#2657): 7 becomes 4, 3 stays 3.
         let state = board(json!({ "p1": { "backrow": ["core-073"] }, "p2": { "field": enemy() } }));
         assert_eq!(face_threat(&state, PlayerId::P2), 7);
     }

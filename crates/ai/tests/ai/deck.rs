@@ -822,7 +822,6 @@ mod r1370_a_deck_that_leans_on_a_set {
         ];
         for (seed, size, literal, cursor, expected) in pins {
             for literal in [literal.clone(), {
-                // An explicit `null` reads as absent.
                 let mut with_null = literal.clone();
                 with_null["leanSet"] = Value::Null;
                 with_null
@@ -834,7 +833,6 @@ mod r1370_a_deck_that_leans_on_a_set {
                 assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
             }
         }
-        // The option is absent unless set, and absent from the options' JSON.
         assert_eq!(AiDeckOptions::default().lean_set, None);
         assert_eq!(
             serde_json::to_value(AiDeckOptions::default()).ok(),
@@ -1317,7 +1315,6 @@ mod r1390_the_ai_decks_soft_gate {
             );
         }
         assert!(dealt > 0, "an empty gate dealt no Meditative card");
-        // The option is absent unless set, so the AI's own options still read `{}`.
         assert_eq!(AiDeckOptions::default().gated_sets, None);
         assert_eq!(
             serde_json::to_value(options(json!({ "gatedSets": [] }))).ok(),
@@ -1493,7 +1490,6 @@ mod win_rate_strength {
             assert_eq!(&deal(&seed, Some(1.0)), deck, "{seed}: thin rows");
         }
         clear_overrides();
-        // The option is absent unless set, so the AI's own options still read `{}`.
         assert_eq!(AiDeckOptions::default().strength, None);
         assert_eq!(
             serde_json::to_value(options(json!({ "strength": 0.5 }))).ok(),

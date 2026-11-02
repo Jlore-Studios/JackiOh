@@ -7854,22 +7854,18 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //  * foreign keys. `results.match_id`, `tickets.match_id`, `profiles.current_match_id`, `decks`, `trios` and
 //    both sides of `series` are foreign keys: a pointer to a row never created raises here and passes in the
 //    fake (`src/api/**` writes the target first). `series.next_match_id` has NONE, on purpose (R263).
-//  * deck and trio strictness. `app.upsert_deck` / `app.upsert_trio` (0007) raise on an inactive profile, a
-//    bad name (D1, T1), too many cards (D2) or copies of one id (D4) and a malformed cards value; the
-//    in-memory store checks none, because `check_deck_draft` / `check_trio_draft` refuse them first. Stricter
-//    by design (§9.4's "defense in depth"). D3 (a deckable card) is checked by neither store.
-//  * tutorial strictness (R320). `app.merge_tutorial_progress` (0011) raises on an inactive profile, a bad
-//    lesson id, a choice with no time and a missing profile row; the in-memory store checks none, because
-//    `src/api/tutorial.rs` refuses a malformed body first. The merge is the same in both; its cap is the
-//    smaller of the caller's and `app.settings.tutorial_lessons_max`.
-//  * player settings strictness (R633). `app.merge_player_settings` (0018) raises on an inactive profile and
-//    a malformed group; the in-memory store checks neither, because `src/api/settings.rs` refuses a malformed
-//    body first. Its caps are the smaller of the caller's and `app.settings`' `player_settings_groups_max` /
-//    `player_settings_bytes_max`; the byte cap counts the text jsonb prints (`jsonb_text_bytes`).
-//  * custom card strictness (R915008). `app.create_custom_card` / `app.update_custom_card` (0037) and
-//    `public.custom_cards`' checks refuse a missing or inactive profile and a bad id, version, frame, source
-//    or builder; the in-memory store checks none, because `src/api/custom_cards.rs` refuses what the engine's
-//    validator refuses first (R915001).
+//  * strictness, by design (§9.4's "defense in depth"): the SQL raises where the in-memory store checks
+//    nothing, because the server refuses the same first. `app.upsert_deck` / `app.upsert_trio` (0007) raise
+//    on an inactive profile, a bad name (D1, T1), too many cards (D2), copies of one id (D4) or a malformed
+//    cards value (`check_deck_draft` / `check_trio_draft`); D3 (a deckable card) is checked by neither
+//    store. `app.merge_tutorial_progress` (0011, R320) raises on an inactive profile, a bad lesson id, a
+//    choice with no time or a missing profile row (`src/api/tutorial.rs`); its cap is the smaller of the
+//    caller's and `app.settings.tutorial_lessons_max`. `app.merge_player_settings` (0018, R633) raises on an
+//    inactive profile or a malformed group (`src/api/settings.rs`); its caps are the smaller of the caller's
+//    and `app.settings`' `player_settings_groups_max` / `player_settings_bytes_max`, the byte cap counting
+//    the text jsonb prints (`jsonb_text_bytes`). `app.create_custom_card` / `app.update_custom_card` (0037,
+//    R915008) and `public.custom_cards`' checks refuse a missing or inactive profile and a bad id, version,
+//    frame, source or builder (`src/api/custom_cards.rs` refuses what the engine's validator does, R915001).
 //  * caps. The port passes the cap (`max_decks`, `max_trios`, `max_cards`); the SQL applies the smaller of it
 //    and `app.settings.max_saved_decks` / `max_saved_trios` (0007, mirroring `MAX_SAVED_DECKS` and
 //    `MAX_SAVED_TRIOS`) / `max_custom_cards` (0037, mirroring `CUSTOM_CARDS_PER_ACCOUNT`). Equal today;

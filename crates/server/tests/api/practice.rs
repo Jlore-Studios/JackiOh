@@ -1,9 +1,8 @@
 //! Practice earning (SPEC §14.8, #1303): a practice game pays half rates once the server has
 //! checked it, on a seed it issued (`POST /api/practice/seeds`, `POST /api/practice/claims`).
 //!
-//! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a
-//! forged result, an AI move the engine refuses, another seed's log, an unfinished log, a sandbox
-//! tool, a seed claimed before, a lapsed seed and a pruned one pay nothing and say why
+//! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a forged,
+//! reused, unfinished or sandboxed claim, or one on a lapsed or pruned seed, pays nothing and says why
 //! (R1303000–R1303003, whose proving tests live here). A paid game moves the account's quests by
 //! what it did, as a ladder game does (R1304001).
 //!

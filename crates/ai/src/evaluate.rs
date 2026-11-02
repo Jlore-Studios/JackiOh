@@ -1231,7 +1231,6 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
         .map(|card| (card, true));
     let listed: Vec<(&CardInstance, bool)> = field.chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
-    // R2566000: every live Death first, in R2424000's order, then each Starship Piece with none.
     for pieces in [false, true] {
         for &(card, in_hand) in &listed {
             let wanted = if pieces {
@@ -1599,8 +1598,7 @@ fn probe_turns<P>(
 /// (R185): one use of the Activate of each unit acting on either field and each card acting face-up in
 /// either backrow, each once. The enemy's are tried at the start of its next turn, the seat's at the start
 /// of its own (`probe_turns`), so a use already spent this turn hides nothing. Automatic turn end off
-/// (R345), no price passed, at most `AI_ACTIVATION_PROBE_NODES` nodes; none spent when no card has an
-/// Activate or outside the seat's own main phase.
+/// (R345), no price passed, at most `AI_ACTIVATION_PROBE_NODES` nodes.
 pub fn activation_prices(
     world: &GameState,
     seat: PlayerId,
@@ -1756,8 +1754,7 @@ fn has_attack_hook_unit(world: &GameState, player: PlayerId) -> bool {
 /// one attack of each unit acting on either field with an attack hook, each once, against the same attack
 /// by its hookless twin, at the start of its controller's next turn (`probe_turns`), so an attack already
 /// made this turn hides nothing. Automatic turn end off (R345), no price passed, at most
-/// `AI_ATTACK_HOOK_PROBE_NODES` nodes; none spent when no unit has an attack hook or outside the seat's
-/// own main phase.
+/// `AI_ATTACK_HOOK_PROBE_NODES` nodes.
 pub fn attack_hook_prices(
     world: &GameState,
     seat: PlayerId,

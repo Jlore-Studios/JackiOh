@@ -691,9 +691,8 @@ fn setup_boomerang() -> Script {
 mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
     use super::*;
 
-    // Setup does not
-    // draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts it in the
-    // hand (`cast_on_setup_arrival`).
+    // Setup does not draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts
+    // it in the hand (`cast_on_setup_arrival`).
     #[test]
     fn r155_a_return_spell_cast_by_a_mulligan_s_replacement_draw_stays_in_the_graveyard_at_its_caster_s_first_turn_end_a_turn_it_was_not_played_on()
      {

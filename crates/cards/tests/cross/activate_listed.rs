@@ -546,7 +546,7 @@ mod c_n23_devils_pact {
         let mut s = pact(true);
         activate_listed(&mut s, DEVILS_PACT, any);
         play_vanilla_as_a_book(&mut s);
-        // A base Book since #2179 (a Radiant one's 8 before): 4, raised by its Spell Damage +2 (R1563002).
+        // A base Book since #2179: 4, raised by its Spell Damage +2 (R1563002).
         s.expect_health(P2, 24);
     }
 }

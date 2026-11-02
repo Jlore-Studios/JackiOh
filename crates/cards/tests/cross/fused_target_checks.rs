@@ -2,12 +2,9 @@
 //! may name a predicate (`TargetFilter.check`) in its card's `targetChecks`. Those are pure reads asked
 //! with the candidate, not hooks that return lists, so the fused card must answer them with a boolean.
 //! Found by the fuzz gate: a fused card of two ingredients that each define `targetChecks` (here Classic
-//! #48 Hired Shrimp and a fusion holding C+ #41 KY's Constant) made `legalActions` throw "Cannot read
-//! properties of undefined (reading '__partDepth')" for as long as it sat in a hand, and `reduce` with
-//! it, because every action ends by asking whether the turn is over (R82). The combiner wrapped each
-//! predicate as a fused Cry; one ingredient defining the object was never wrapped, so no test saw it.
-//! Test paths: SURFACE §4.1, §8.
-//! `expect(() => legalActions(…)).not.toThrow()` is the call itself: a panic fails the test.
+//! #48 Hired Shrimp and a fusion holding C+ #41 KY's Constant) broke `legalActions` for as long as it
+//! sat in a hand, and `reduce` with it, because every action ends by asking whether the turn is over
+//! (R82). A bare `legal_actions` call is a test of its own: a panic fails it. Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::PlayerId::P1;
 use jackioh_engine::subsystems::fuse::FuseArgs;

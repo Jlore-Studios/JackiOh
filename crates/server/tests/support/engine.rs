@@ -656,7 +656,7 @@ pub fn keep_whole_hand(state: &GameState, seat: PlayerId, nonce: &str) -> Action
 }
 
 /// Both mulligans answered by keeping the whole hand, p1 first: the state at the start of turn 1,
-/// for a test that is not about the mulligan (TS's fake opened there unless asked not to).
+/// for a test that is not about the mulligan.
 pub fn past_the_mulligans(state: &GameState) -> GameState {
     let mut state = state.clone();
     for (seat, nonce) in [

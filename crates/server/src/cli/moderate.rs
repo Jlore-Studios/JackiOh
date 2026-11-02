@@ -10,8 +10,7 @@
 //! jackioh-server moderate chat-reports
 //! ```
 //!
-//! The `invite-clusters` watch and the rejection-rate alert produce the signal; these are the levers
-//! that act on it. A ban applies at once even mid-match: new requests and upgrades are refused through
+//! A ban applies at once even mid-match: new requests and upgrades are refused through
 //! `assert_active`, while the running actor is untouched and the reaper owns the in-flight game (the
 //! account-deletion posture).
 //!

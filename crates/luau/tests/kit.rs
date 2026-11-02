@@ -427,9 +427,8 @@ mod r915002_parity {
         );
     }
 
-    /// The third mode reduces the Cost of a card in your hand since patch v0.3.10 (#831; it gained mana
-    /// before), which the kit has no verb for, so the twin names it and only the two it can write are
-    /// compared.
+    /// The third mode reduces the Cost of a card in your hand (#831), which the kit has no verb for, so the
+    /// twin names it and only the two it can write are compared.
     #[test]
     fn r915002_classic_081_an_activate_asks_which_of_its_three() {
         let source = "return Card {\n  activate = {\n    label = \"Choose one\",\n    run = function(c, n)\n      local pick = c:choose({ \"heal\", \"draw\", \"reduce\" })\n      if pick == \"heal\" then\n        c:heal(\"your hero\", n.heal)\n      elseif pick == \"draw\" then\n        c:draw(n.draw)\n      end\n    end,\n  },\n}\n";

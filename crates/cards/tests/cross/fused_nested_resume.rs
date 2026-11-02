@@ -1,13 +1,9 @@
 //! R102, B3.4 rule 5: a fusion several levels deep names the ingredient whose text is running by a path
 //! of indices from the outermost card in (`work.PART_KEY`), and `param` walks that path down the fused
 //! ids. The path is built by the hooks of each level, so every level has to add its index.
-//! Found by the fuzz gate (seed 598 of fuzz-handicap, once the pool changed by a card): a Final Gambit
-//! four fusions down resumed its step ("heal your hero, draw") against the wrong ingredient and threw
-//! `declares no number "heal"`. A table of steps (`Script.resume`) held by only one ingredient of a
-//! fusion was passed up as it stood, so no hook at that level wrapped its steps; the one that did sat
-//! at the first level with two such tables, and its path began there. A Final Gambit set under a card
-//! with no table of its own read its numbers off the outer card's first ingredient. Fusion ids stay
-//! short enough to spell out here, so the digest ids of the seed (R468) are not needed to show it.
+//! Found by the fuzz gate (seed 598 of fuzz-handicap): a Final Gambit set under a card with no table
+//! of steps (`Script.resume`) of its own read its numbers off the outer card's first ingredient. Fusion
+//! ids stay short enough to spell out here, so the digest ids of the seed (R468) are not needed.
 //! Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::PlayerId::{P1, P2};

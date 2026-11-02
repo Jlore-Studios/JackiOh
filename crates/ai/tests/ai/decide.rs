@@ -107,7 +107,6 @@ mod forced_moves_and_nothing_to_do_b16 {
         );
         assert_eq!(decision.as_ref().map(|d| d.stats.nodes), Some(0));
         assert_eq!(options.rng.cursor(), 0);
-        // The engine takes it.
         act(&state, AI, &decision.expect("a decision").action);
     }
 
@@ -473,7 +472,6 @@ mod the_mulligan_at_its_bounds_b20 {
             ActionBody::Mulligan { keep } => sorted(keep.clone()),
             _ => vec![],
         };
-        // Exactly one card is kept: a copy of the proven four-drop.
         assert_eq!(kept.len(), 1);
         let kept_card = state.players[PlayerId::P1]
             .hand

@@ -113,7 +113,6 @@ fn to_json(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("serializes")
 }
 
-/// R310 the viewer's own library, without its order
 mod r310_the_viewer_s_own_library_without_its_order {
     use super::*;
 
@@ -259,7 +258,6 @@ mod r310_the_viewer_s_own_library_without_its_order {
     }
 }
 
-/// R311 what the owner was shown going in
 mod r311_what_the_owner_was_shown_going_in {
     use super::*;
 
@@ -397,7 +395,6 @@ mod r311_what_the_owner_was_shown_going_in {
     }
 }
 
-/// R312 cards the owner was never shown
 mod r312_cards_the_owner_was_never_shown {
     use super::*;
 

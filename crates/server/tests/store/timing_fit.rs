@@ -178,11 +178,8 @@ fn with(mut row: SignalOutcomeRow, change: impl FnOnce(&mut MatchSignalRow)) -> 
     row
 }
 
-/// Five matches. m1: p1 concedes on turn 8, 30 behind, after a timeout, and meets p2's rematch
-/// offer. m2: p2 concedes on turn 12, 50 behind, having declined p1's draw offer. m3: p2 accepts
-/// p1's draw offer, in a match no rematch could follow (p1's offer there counts for nothing). m4: p1
-/// wins by a hero's death and offers a rematch p2 never meets; p2 timed out twice. m5: p1 against
-/// the AI, whose concession on turn 3, 99 behind, is the AI's and left out.
+/// Five matches. m3 is one no rematch could follow, so p1's rematch offer there counts for nothing; m5's
+/// concession is the AI's, and left out.
 fn outcomes() -> Vec<SignalOutcomeRow> {
     use GameOverReason::*;
     use PlayerId::*;

@@ -202,10 +202,9 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         );
     }
 
-    // #55 radiant Lava Golem and #56 radiant Jilliax print Taunt beside Indestructible, and the probe's
-    // silent-change check found R46 taking that Taunt with nothing in the action's stream saying so.
-    // R347 takes Taunt off every Indestructible unit, so a knock-down has none to take: the view shows
-    // none before the destroy and none after, and the action reports none.
+    // R347 takes Taunt off every Indestructible unit (#55 and #56 radiant once printed both), so R46's
+    // knock-down has none to take: the view shows none before the destroy and none after, and the
+    // action reports none.
     #[test]
     fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3()
      {

@@ -73,7 +73,6 @@ fn of_type(state: &GameState, player: PlayerId, types: &[CardType]) -> i32 {
 mod r451_plays_by_type_this_turn_classic_plus_c37 {
     use super::*;
 
-    /// "R451 counts each play by the type it was played as, and a Field Trap is a Trap"
     #[test]
     fn r451_counts_each_play_by_the_type_it_was_played_as_and_a_field_trap_is_a_trap() {
         let mut state = game("r451-types");
@@ -94,7 +93,6 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
         assert_eq!(of_type(&state, PlayerId::P2, &[CardType::Spell]), 0);
     }
 
-    /// "R451 clears at every start of turn, for both players"
     #[test]
     fn r451_clears_at_every_start_of_turn_for_both_players() {
         let mut state = play(&game("r451-reset"), PlayerId::P1, &PA.ping.id, false);
@@ -105,7 +103,6 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
         assert_eq!(state.players.p1.turn_log.played_by_type, None);
     }
 
-    /// "R451 a cast counts (R70), on the turn it happens, whoever's turn that is"
     #[test]
     fn r451_r70_a_cast_counts_on_the_turn_it_happens_whoevers_turn_that_is() {
         let mut state = game("r451-cast");
@@ -138,7 +135,6 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
         );
     }
 
-    /// "R451 a countered play counts nowhere (R448)"
     #[test]
     fn r451_r448_a_countered_play_counts_nowhere() {
         let mut state = game("r451-countered");
@@ -162,7 +158,6 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
 mod r451_plays_by_tag_this_game_classic_plus_c64_ai_scaling_law {
     use super::*;
 
-    /// "R451 counts each tag of each play, and never resets"
     #[test]
     fn r451_counts_each_tag_of_each_play_and_never_resets() {
         let mut state = game("r451-tags");
@@ -195,7 +190,6 @@ mod r451_plays_by_tag_this_game_classic_plus_c64_ai_scaling_law {
 mod r451_the_last_spell_played_game_wide_classic_c57 {
     use super::*;
 
-    /// "R451 records the last Spell either player played, with its face, and no other type overwrites it"
     #[test]
     fn r451_records_the_last_spell_either_player_played_with_its_face_and_no_other_type_overwrites_it() {
         let mut state = game("r451-last-spell");
@@ -220,8 +214,6 @@ mod r451_the_last_spell_played_game_wide_classic_c57 {
         );
     }
 
-    /// "R451 a played Echo records the Spell it copied, never itself, so it can't copy itself into a
-    /// loop"
     #[test]
     fn r451_a_played_echo_records_the_spell_it_copied_never_itself_so_it_cant_copy_itself_into_a_loop() {
         let mut state = game("r451-echo");
@@ -261,7 +253,6 @@ mod r451_the_last_face_up_card_each_player_played_ai_autocomplete {
         })
     }
 
-    /// "R451 records per player; Traps set face-down and AI generated cards never count"
     #[test]
     fn r451_records_per_player_traps_set_face_down_and_ai_generated_cards_never_count() {
         let mut state = game("r451-face-up");
@@ -329,7 +320,6 @@ mod r451_the_last_face_up_card_each_player_played_ai_autocomplete {
         );
     }
 
-    /// "R451 every record is plain data: it survives a JSON round trip and hashes the same"
     #[test]
     fn r451_every_record_is_plain_data_it_survives_a_json_round_trip_and_hashes_the_same() {
         let mut state = game("r451-json");

@@ -261,8 +261,8 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
 
 #[test]
 fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
-    // (The Power to Punish, which this test used, deals
-    // Pierce damage of its own since #2179.)
+    // Introspection's end of turn deals 2 to each enemy, with no Pierce of its own (The Power to Punish's has
+    // it, #2179).
     let introspection_at_armored = |pierce: bool| {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "library": [FILLER, FILLER], "backrow": [{ "def": INTROSPECTION, "faceUp": true }] },
@@ -290,7 +290,7 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
             .collect()
     };
 
-    // Unbuffed, the Unit's Armor 7 takes the whole of its 1 damage (2 until #2657).
+    // Unbuffed, the Unit's Armor 7 takes the whole of its 1 damage.
     let s = introspection_at_armored(false);
     assert_eq!(s.stats(ARMORED).health, 7);
     assert!(unit_hits(&s).is_empty());

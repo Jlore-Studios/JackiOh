@@ -134,8 +134,8 @@ mod registry_build_m4_t2 {
 
     #[test]
     fn two_scripts_never_claim_one_card_build_rs_refuses_it() {
-        // build.rs is that check now
-        // (SURFACE §7.4): what reaches the registry has one file per id, sorted by id.
+        // build.rs refuses a second script for one id (SURFACE §7.4): what reaches the registry has one file
+        // per id, sorted by id.
         let ids = scripted_ids();
         let mut sorted = ids.clone();
         sorted.sort();

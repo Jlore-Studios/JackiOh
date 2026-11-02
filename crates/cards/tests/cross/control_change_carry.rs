@@ -1,6 +1,5 @@
 //! What a card's "you" follows once it changes sides (SPEC §6.2, §8 Conventions: "'Your' means the
-//! controller", R30, R171). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens
-//! L1); every case here failed before its fix.
+//! controller", R30, R171). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L1).
 //!  - #79 Twinspell's "the next Spell you play gains Echo +1" is a modifier the permanent installed,
 //!    and it moves with the permanent to its new controller.
 //!  - §6.2: a start-of-turn hook fires on its controller's own turn start. One queued for that
@@ -115,8 +114,8 @@ mod s6_2_a_start_of_turn_hook_belongs_to_its_controllers_turn {
         let mrow = g.unit_at("p2", 1);
         let p2_hand = g.hand("p2").len();
 
-        // Moths compels Mrow, which
-        // dies to the strike back; its Death takes control of the unit that destroyed it (R361): Moths.
+        // Moths compels Mrow, which dies to the strike back; its Death takes control of the unit that
+        // destroyed it (R361): Moths.
         g.start_turn();
         g.expect_in_zone(&mrow, "graveyard");
         assert_eq!(g.card(&moths).controller, PlayerId::P2);

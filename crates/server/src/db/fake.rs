@@ -13,11 +13,9 @@
 //! (R250–R263), tutorial progress (R320), player settings (R633, R634), custom cards (R915008), deck versions
 //! (R2100000), ranked tables (R608, R609, R611) and game records (R376, R378).
 //!
-//! R111 IS A DATABASE TRIGGER, so `profiles_set_status` carries it rather than a handler (SPEC §11 R111;
-//! R1310000, `config::STARTER_CARDS`, which Postgres reads from `app.settings.starter_cards`), writing both
-//! tables as `collection.rs`'s `grant_cards` does with the same `LAUNCH_COPIES` and `LAUNCH_GRANT_REASON`.
-//! Each store method is a free function of the same name, taking the transaction first, and synchronous: the
-//! transaction already holds the one lock.
+//! R111 IS A DATABASE TRIGGER, so `profiles_set_status` carries it rather than a handler (SPEC §11 R111),
+//! writing both tables as `collection.rs`'s `grant_cards` does. Each store method is a free function of the
+//! same name, taking the transaction first, and synchronous: the transaction already holds the one lock.
 
 use std::sync::Arc;
 

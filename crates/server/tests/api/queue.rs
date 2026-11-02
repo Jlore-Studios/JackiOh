@@ -1,5 +1,4 @@
-//! SPEC §11 R165, R166, R167, R253, R257, R258, R264, R1372, R924000, R1450, R640001, R640002, R1996000:
-//! Queue rules and modes under §9.5. R165 (loadouts), R166 (sweep order), R167 (cancel),
+//! SPEC §11: queue rules and modes under §9.5. R165 (loadouts), R166 (sweep order), R167 (cancel),
 //! R253 (deck validation), R257 (modes, R259 series), R258 (random deal), R264 (series block),
 //! R1372/R924000 (set lean), R1450 (reaping), R640001 (gap limit), R640002/R1996000 (readout cache).
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3; catalog grant R111; auth gate §9.4.

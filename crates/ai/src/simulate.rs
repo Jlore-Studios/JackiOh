@@ -446,9 +446,7 @@ pub(crate) fn best_auto_answer(
 /// how the beam ranks a child that waits there (search.rs): every prompt open on the way, either seat's,
 /// gets its holder's best auto-answer (`best_auto_answer`, each answer one node of `counter`), at most
 /// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by `open_score`. Only a score: the
-/// child stays at its prompt. `None` when no prompt of the seat's is open, the counter refuses a node, no
-/// answer is accepted, the prompts outrun the cap or the engine panics: the child then keeps its plain
-/// evaluation.
+/// child stays at its prompt, and keeps its plain evaluation on `None`.
 pub fn own_prompt_score(
     state: &GameState,
     seat: PlayerId,

@@ -1124,11 +1124,10 @@ mod lanes_that_play_differently {
         }
     }
 
-    /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line.
-    /// At 3 mana with Midrange Menace (3) and a vanilla (1) in hand and a beam one line wide,
-    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 3 (the midlane,
-    /// R2203001) is a line below lane 1's. The same one depth deep, where lane 1's line is closed after
-    /// the loop ends.
+    /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line:
+    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped, since the Menace's lane 3 (the
+    /// midlane, R2203001) is a line below lane 1's. The same one depth deep, where lane 1's line is
+    /// closed after the loop ends.
     #[test]
     fn a_lane_variant_is_closed_only_beside_a_line_the_beam_keeps_and_ranks_below_it() {
         jackioh_cards::register_all();

@@ -108,7 +108,6 @@ fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
         .unwrap_or_else(|| panic!("{instance_id} is not in the hand"))
 }
 
-/// R280 a preview value may carry the set of cards it counts
 mod r280_a_preview_value_may_carry_the_set_of_cards_it_counts {
     use super::*;
 

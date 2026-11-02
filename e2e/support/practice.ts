@@ -1,6 +1,6 @@
 // The practice screen as specs 13 and 40 drive it (#2160): the opening hand kept whole, a prompt's
-// first option taken, and the wait through the AI's turns for the human's main phase. All of it
-// acts through the UI and reads the DOM, as each spec's own copy did.
+// first option taken, and the wait through the AI's turns for the human's main phase, all through the
+// UI and the DOM.
 
 import { timeouts } from "./config.ts";
 import { ANIMATING, BOARD, END_TURN, PROMPT, PROMPT_SUBMIT, RESULT_OVERLAY, promptOf, promptOptionId, ts } from "./testids.ts";

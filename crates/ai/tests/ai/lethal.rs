@@ -1,10 +1,8 @@
 //! The lethal solver's two walks (lethal.rs, SPEC §9.9): a depth-first walk in move order for
 //! AI_SEARCH.lethalQuickNodes nodes, then a best-first walk by `ready_gap` on the rest of the allowance.
-//! The board below is one the depth-first walk alone cannot solve in 150 nodes (a test holds that, so
-//! the board keeps exercising the second walk): the lethal starts with a Lava Golem that tributes both
-//! enemy Taunts, and the cheap targeted spells beside it put hundreds of lines ahead of that play in
-//! move order. The best-first walk ranks the Golem's tributes by what they leave the attackers, and
-//! finds it.
+//! The board below is one the depth-first walk alone cannot solve in 150 nodes: the cheap targeted
+//! spells beside its Lava Golem put hundreds of lines ahead of the Golem's tributes in move order. The
+//! best-first walk ranks those tributes by what they leave the attackers, and finds the lethal.
 
 use indexmap::IndexSet;
 use jackioh_ai::{
@@ -553,9 +551,8 @@ mod duos_life_r964000 {
 
 /// R1965000 (issue #1965): C #90 In Too Deep's reward L lets the AI play cards from its graveyard
 /// (R454), so a (0) Spell there can be played again and again: C #37 Last Hurrah, M #62 Small Time
-/// Recruits and The Coin. The board's lethal, Bigot into the Felinor Token and then the 7/7 at the face,
-/// is one the depth-first walk does not find first. The best-first walk proves it behind replays of the
-/// Spells, which `decide`, planning again after each action, would replay without end; it plays the line
+/// Recruits and The Coin. The best-first walk proves the board's lethal behind replays of the Spells,
+/// which `decide`, planning again after each action, would replay without end; it plays the line
 /// trimmed to the actions it needs (`trim_lethal`).
 mod free_replays_r1965000 {
     use super::*;

@@ -6,8 +6,7 @@
 //! The cards: Nurse Cleaver 3/6 Cleave, Zoomerbin Oomen 1/2, Paul Allen's Ghost 5/6 Divine Shield, Jay Fungus
 //! 3/6 Taunt, Midrange Menace 9/9 Taunt, Voidwalker 6/3, and Tempo Timmy 3/3, the non-Cleave control
 //! attacker. The shield is the Ghost rather than Jilliax, whose Taunt would bind every reply attack to itself
-//! and whose direct hit pops the shield even without Cleave. Field entries without a `lane` fill consecutive
-//! lanes; the reply boards pin lanes to leave lane 3 empty.
+//! and whose direct hit pops the shield even without Cleave.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

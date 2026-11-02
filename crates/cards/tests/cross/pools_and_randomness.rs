@@ -1,6 +1,5 @@
 //! Random pools and the draws they take (SPEC §5.1, §10.7, R60, R129). Found by the polish-4
-//! edge-case hunt, round 4 (docs/polish/4-edge-cases.md, lens "card by card"); every case here failed
-//! before its fix.
+//! edge-case hunt, round 4 (docs/polish/4-edge-cases.md, lens "card by card").
 //!  - §5.1: a random pool never offers the card that generated it, unless the card names the pool
 //!    itself. #95's "add 3 random cards" named no pool; and a card's own exclusion (§8 #54's "pool
 //!    excluding #54") holds when a fused card runs that text, whose own definition is a transient id.
@@ -366,8 +365,8 @@ mod seed_search_survives_a_pool_change {
         assert_eq!(s.card(&panther.id).zone.z().as_str(), "graveyard");
         assert_eq!(s.state().players.p2.hero.health, 26);
 
-        // Plastic Surgery's pool is
-        // `RANDOM_KEYWORD_POOL` (R21), which no catalog change moves, so this part holds either way.
+        // Plastic Surgery's pool is `RANDOM_KEYWORD_POOL` (R21), which no catalog change moves, so this part
+        // holds either way.
         let setup = |seed: &str| {
             let s = scenario(json!({
                 "seed": seed,

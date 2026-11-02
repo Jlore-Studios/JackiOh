@@ -42,9 +42,8 @@ pub enum JloreReason {
     Launch,
 }
 
-/// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, and a pack
-/// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5), the Chase Shard bar
-/// buying (§14.6) and the launch's reset (§14.12).
+/// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, a pack opened, a
+/// token bar paying, a token redeemed and the Chase Shard bar buying (§14.3, §14.5, §14.6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EconomyReason {

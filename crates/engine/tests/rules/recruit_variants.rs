@@ -76,7 +76,6 @@ fn face_down_marker() -> BackrowView {
     })
 }
 
-/// E25 Recruit from the opponent's exile (Classic #1 Radiant)
 mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
     use super::*;
 

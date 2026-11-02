@@ -305,7 +305,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
             },
             "p2": { "field": [BIG_FELINOR, SEVEN_SEVEN], "hand": [RENO], "library": [RENO] },
         }));
-        // Vanilla, which
+        // A Unit that carries Gifted Program's text: the Gifted Program fused onto p1's Mr. Vanilla, which
         // keeps its instance and its type (R77). #22 eats Units only (R428), and this one is a Unit.
         let vanilla = must(s.unit(PlayerId::P1, 3), "p1's Mr. Vanilla");
         let gifted = must(s.backrow(PlayerId::P1, 1), "p1's Gifted Program");

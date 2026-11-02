@@ -12,9 +12,8 @@
 //! reported and ignored, as the server ignores it. With a path, it seeds that file instead (a fixture
 //! catalog), at `CATALOG_VERSION`, which is then required.
 //!
-//! R1310000: before the stamp it writes the starter cards (`config::STARTER_CARDS`) to
-//! `app.settings.starter_cards`, which a new account's activation grant reads (R111, migration 0050), so the
-//! list has one source. The stamp grants no account anything (R1310001; R481, R1300001).
+//! R1310000: it writes the starter cards where R111's activation grant reads them, so the list has one
+//! source. The stamp grants no account anything (R1310001; R481, R1300001).
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use anyhow::{Result, anyhow};

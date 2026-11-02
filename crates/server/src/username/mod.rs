@@ -67,8 +67,7 @@ impl UsernameRefusal {
 /// `USERNAME_INPUT_MAX_CHARS` characters is too long, refused before anything else reads it; a character
 /// outside the Basic Multilingual Plane is refused), NFKC, characters (a letter `L*`, a decimal digit
 /// `Nd`, `_`, or a combining mark `M*` after a letter, at most `USERNAME_MAX_MARKS` in a row), one script
-/// (`Script_Extensions`: digits, `_` and a mark that takes its letter's script go with any; Han mixes
-/// with Hiragana and Katakana, or with Hangul), `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended
+/// (`Script_Extensions`, as `writings` reads it), `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended
 /// grapheme clusters, then the light filter.
 pub fn normalize_username(raw: &str) -> Result<String, UsernameRefusal> {
     let trimmed = raw.trim();

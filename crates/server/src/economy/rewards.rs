@@ -3,13 +3,11 @@
 //! Every payout, practice earning's too, goes through [`pay_game_rewards`], which pays a finished game's
 //! summary and moves the account's set tracks (§14.7) and its quests (§14.9, `quests::move_quests`,
 //! [[R1304001]]). It owns no transaction: each caller pays in the transaction that records its game, so a
-//! failure rolls the game back with it. It answers what it paid as the game's [`GameEconomy`], which its
-//! callers hand the seat it paid (#1657).
+//! failure rolls the game back with it.
 //!
 //! - Where the server ran the match, it counts the actions from its own log; the client reports
 //!   nothing. `api::results`'s write pays every 1v1 match it records (ladder, unranked and Conquest),
-//!   and `duos::finish_match` a co-op game, counting each person's own moves ([[R1502000]]). An
-//!   action counts when [`is_player_action`] says the player took it ([[R1302004]]).
+//!   and `duos::finish_match` a co-op game, counting each person's own moves ([[R1502000]]).
 //! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together, over the
 //!   UTC day the game ended in ([[R1483000]]): the game that crosses it is paid the part that fits, the
 //!   ones after it no Jlore (and no Jlore row); XP and quests are paid in full. Quest and track Jlore

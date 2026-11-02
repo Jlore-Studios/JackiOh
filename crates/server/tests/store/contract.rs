@@ -287,9 +287,8 @@ impl StoreHarness {
                 .await
                 .expect("auth.users insert returned no id");
                 // Migration 0001's `on_auth_user_created` trigger has just made the pending profile
-                // row. The contract exercises `profiles.create` itself — the path `resolveCaller`
-                // takes for a user whose row is missing — so the trigger's row is removed here and
-                // asserted separately in `postgres.rs`, where it belongs.
+                // row. The contract exercises `profiles.create` itself (`resolve_caller`'s path for a
+                // user with no row), so the trigger's row is removed here and asserted in `postgres.rs`.
                 sqlx::query("delete from public.profiles where id = $1::uuid")
                     .bind(&id)
                     .execute(admin)
@@ -5949,7 +5948,7 @@ mod ranked {
         q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &id(), 1));
         q!(harness, t => t.ranked_note_peak_jlorious("v0.2", &a.id, 1));
 
-        // putRank merges the peak rather than replacing it: a rank row the player's own game wrote
+        // `ranked_put_rank` merges the peak rather than replacing it: a rank row the player's own game wrote
         // cannot undo a better position a bystander's game already recorded, and a null never
         // erases — but a better position the writer computed still lands.
         let row = j(&must(q!(harness, t => t.ranked_rank("v0.1", &a.id)), "the rank"));

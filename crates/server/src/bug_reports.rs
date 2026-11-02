@@ -3,10 +3,7 @@
 //! When the server finds a match its own log does not reproduce (§9.3's determinism break), it keeps
 //! the match going ("a live match is better than a dead one", `actor::registry::rebuild`), logs the
 //! finding (`bug.found`) and files one GitHub issue the night bot builds (`BUG_REPORT_LABELS`:
-//! `bot:build`, bot/README.md). It looks where a fold refuses an action the log holds (a 1v1 or co-op
-//! rebuild, `actor::registry`, `duos::registry`; the reaper's recovery fold, `api::results`), where a
-//! finished match's log does not fold to its end (`api::game_records`), and where a live 1v1 or co-op
-//! action's `reduce` panicked (`actor::match_actor`, R1253000; `duos::actor`).
+//! `bot:build`, bot/README.md).
 //!
 //! The repository is public and the match may still be live, so a report names each match, where it
 //! was found, the build, the catalog, and each refused row's seq, seat and action type: never a

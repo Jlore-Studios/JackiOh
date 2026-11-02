@@ -378,9 +378,8 @@ mod tests {
 
     /// The bar sizes as §14.5 states them (R1953000, R1999000): on any collection, every slot adds its points
     /// whatever it grants, and before pity (which only lifts a slot's rarity) a pack's mean points are its
-    /// slots' rarity odds (`card_odds`, the fallback included) weighted by each rarity's points:
-    /// `PACK_SLOTS - 1` slots at 1.61 and the floored one at 2.21, so 8.65. Each bar then fills once every
-    /// its target packs on average: its size over that mean, rounded.
+    /// slots' rarity odds (`card_odds`, the fallback included) weighted by each rarity's points. Each bar
+    /// then fills once every its target packs on average: its size over that mean, rounded.
     #[test]
     fn r1953000_the_bars_fill_at_their_target_packs_on_average() {
         let mean = |odds: TierOdds| {

@@ -6,12 +6,9 @@
 //! the socket's pump starts, so a `hello` sent the moment the socket opens is held while the token is checked
 //! rather than dropped. The gate is the one `/ws/watch` waits behind too (`actor::guard`, R835002): it
 //! answers a frame that is not the hello `malformed` and closes the socket past `MALFORMED_FRAMES_PER_WINDOW`
-//! of them. Then `handle_duos_socket` verifies the token (offered as a subprotocol, R1379000), applies §9.4's
-//! gate (`assert_active`), waits for the hello (at most `WS_IDLE_TIMEOUT_SECONDS`), and attaches the socket
-//! to the seat the profile holds in that match, folding the actor back first when it is not in memory. Every
-//! refusal answers one `error` frame with code `forbidden` and closes with R148's codes (4401, 4403, 4404,
-//! 4429 past the account's budget (R2478000), and 1011 for a fault), so a socket learns that it may not have
-//! the match, never which check said so.
+//! of them. The token is offered as a subprotocol (R1379000). Every refusal answers one `error` frame with
+//! code `forbidden` and closes with R148's codes (4429 past the account's budget, R2478000), so a socket
+//! learns that it may not have the match, never which check said so.
 //!
 //! The match is the hello's `matchId`, else the upgrade's `?matchId=`, else the profile's live co-op match
 //! (B42).

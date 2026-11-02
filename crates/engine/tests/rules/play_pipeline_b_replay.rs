@@ -198,8 +198,7 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
         assert!(x_asked > 0);
     }
 
-    /// "#1387: a tampered round trip is detected by a hash mismatch" — the step-10 state
-    /// round-trips to the live hash, and adding one health moves it.
+    /// #1387: the step-10 state round-trips to the live hash, and adding one health moves it.
     #[test]
     fn an_invalid_round_trip_is_detected_by_a_hash_mismatch() {
         let seed = "pb-replay-1";
@@ -233,8 +232,8 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
         );
     }
 
-    /// "#1387: a mid-game state survives a serialized restart and continues" — the round-tripped
-    /// step-10 state replays the next ten actions onto the live hashes with no refusal.
+    /// #1387: the round-tripped step-10 state replays the next ten actions onto the live hashes with
+    /// no refusal.
     #[test]
     fn a_mid_game_state_survives_a_serialized_restart_and_continues() {
         let seed = "pb-replay-1";

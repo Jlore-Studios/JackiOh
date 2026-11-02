@@ -1,6 +1,6 @@
 //! Forced attacks and whose side their target is on, and when a run is over (SPEC §4.2, §6.3 Forced
 //! attack, R53, R96, R173, R174). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md,
-//! lenses L1 and L5); every case here failed before its fix.
+//! lenses L1 and L5).
 //!  - R173: a forced attack is made on an enemy. When #86 "Miss" Mrow dies to #9 Moths to the
 //!    Flame's strike back and its Death steals Moths, the rest of the run is on Moths's new side and
 //!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit that #52
@@ -72,8 +72,8 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
         let mrow = g.unit_at(P2, 1);
         let vanilla = g.unit_at(P2, 2);
 
-        // Mrow goes first and dies to the strike
-        // back; its Death takes control of the unit that destroyed it — Moths — for p2 (R361).
+        // Mrow goes first and dies to the strike back; its Death takes control of the unit that destroyed it
+        // — Moths — for p2 (R361).
         g.start_turn();
         g.expect_in_zone(&mrow.id, "graveyard");
         assert_eq!(g.card(&moths.id).controller, P2);

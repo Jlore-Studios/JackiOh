@@ -44,7 +44,6 @@ fn count(events: &[GameEvent], type_: GameEventType) -> usize {
     events.iter().filter(|event| event.event_type() == type_).count()
 }
 
-/// §10.5 step 6: an Echo repeat is step 5 again, granted Combo parts included
 mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
     use super::*;
 
@@ -229,7 +228,6 @@ mod r174_a_trap_after_bear_honeypots_run_meets_the_played_unit_the_run_killed_as
     }
 }
 
-/// §4.5, R118: a played unit that does not survive its own arrival still resolves its Cry
 mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves_its_cry {
     use super::*;
 
@@ -242,9 +240,9 @@ mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves
         let prey = g.unit_at("p2", 1);
         let bigot = g.card(BIGOT).clone();
 
-        // No trap answered it and nothing took it off the
-        // field at step 4, so step 5 resolves its Cry (R118: the Cry is lost only where a trap has taken
-        // the card off the field), and the check after the play collects it (§4.5).
+        // No trap answered it and nothing took it off the field at step 4, so step 5 resolves its Cry (R118:
+        // the Cry is lost only where a trap has taken the card off the field), and the check after the play
+        // collects it (§4.5).
         g.play(BIGOT, json!({ "targets": pick::instance(&prey) }));
         g.expect_in_zone(&prey, "graveyard");
         g.expect_in_zone(&bigot, "graveyard");
@@ -344,7 +342,6 @@ fn wipe_on_play() -> Script {
     }
 }
 
-/// R174, R118, R61: the play follows the stay step 4 put the card on, not a Reborn body
 mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_body {
     use super::*;
 
@@ -408,10 +405,10 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
     #[test]
     fn r174_r53_r83_bear_honeypots_tokens_do_not_attack_the_reborn_body_of_a_played_unit_that_died_in_its_own_resolution_s10_5_step_7()
      {
-        // Step 6's check collects it and Reborn
-        // brings a new arrival back at 1 health (§4.5 step 4, R83) before step 7. p2's Bear Honeypot
-        // answers the play: "if it was a Unit, they attack it" — but the unit that was played has left
-        // the field, so the tokens attack nothing and the Reborn body is left standing.
+        // Step 6's check collects it and Reborn brings a new arrival back at 1 health (§4.5 step 4, R83)
+        // before step 7. p2's Bear Honeypot answers the play: "if it was a Unit, they attack it" — but the
+        // unit that was played has left the field, so the tokens attack nothing and the Reborn body is left
+        // standing.
         let mut s = setup(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-honeypot-martyr",
@@ -455,7 +452,6 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
     }
 }
 
-/// R174: a target a trap answering the play took off the field is gone for the play's step 5
 mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_plays_step_5 {
     use super::*;
 

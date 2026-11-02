@@ -1,5 +1,5 @@
 //! A fused card's scripts across matches in one process (SPEC §9.2, §9.3, R77, R102, R179). Found by
-//! the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L7); it failed before its fix.
+//! the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L7).
 //! A fused definition is match state, but its scripts are code the process registers under the
 //! definition's id. A server runs every match in one process and folds a match's log to rebuild it,
 //! so two matches that fused different pairs into the same slot must not share an id: R179 has the id

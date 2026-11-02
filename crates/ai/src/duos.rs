@@ -184,8 +184,7 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 /// (B28). A card qualifies when the seat cannot play it this turn and its teammate can, or, with the
 /// team's `pass_cost` 0, when the teammate can afford it next turn and the seat cannot. The playable ones
 /// come first, ranked by the teammate's best bounded follow-up (R1127000), and are named only when worth
-/// passing (R1723000). B29: it reads its own duel redacted and, of the teammate, only its own side and
-/// the determinized probe.
+/// passing (R1723000).
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
     catch_unwind(AssertUnwindSafe(|| passes_of(state, seat))).unwrap_or_default()

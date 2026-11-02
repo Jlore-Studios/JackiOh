@@ -31,7 +31,8 @@ use crate::db;
 use crate::env::{self, Env};
 use crate::loops;
 
-/// The server: every port bound exactly once (SURFACE §11.2).
+/// The server: every port bound exactly once (SURFACE §11.2). What it keeps in memory is one per app,
+/// so a fresh app starts empty and one test's floods, offers or seats never leak into another's.
 pub struct App {
     pub env: Env,
     pub db: db::store::Db,
@@ -39,43 +40,35 @@ pub struct App {
     /// The live match actors. Queue, rooms and series start matches through it while the actor
     /// inside it reduces them.
     pub matches: actor::registry::Registry,
-    /// §9.8's per-account rate limit at the API (R109, R157), one per app: a fresh app starts with an
-    /// empty window, so one test's flood cannot leak into the next.
+    /// §9.8's per-account rate limit at the API (R109, R157).
     pub limiter: api::http::RateLimiter,
     /// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, which refuses
-    /// an account whose R109 budget is spent before the store is read. One per app, for the limiter's
-    /// reason.
+    /// an account whose R109 budget is spent before the store is read.
     pub known_profiles: api::http::KnownProfiles,
-    /// R1443: sign-ins by username, counted per address and, apart, per username. One per app, for
-    /// the limiter's reason.
+    /// R1443: sign-ins by username, counted per address and, apart, per username.
     pub sign_in_limiter: api::http::RateLimiter,
     /// The catalog this build ships, its version and the deployed commit.
     pub catalog: api::catalog::Catalog,
-    /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter.
+    /// §9.4's redemption circuit breaker (R106).
     pub breaker: Mutex<api::codes::BreakerState>,
-    /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
+    /// R768: the opened replays and the replay routes' own allowance.
     pub replays: api::replays::Replays,
     /// SPEC §11 R978000: the public card statistics' computed per-patch reports and R1583000's play
-    /// rates, held here for the limiter's reason.
+    /// rates.
     pub card_stats: api::stats::KeptReports,
-    /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
-    /// tests never share presence.
+    /// SPEC §11 R897000: when each queued profile was last heard from.
     pub queue_presence: api::queue::QueuePresence,
     /// SPEC §11 R1996000: the queue readout last counted, kept for `QUEUE_READOUT_CACHE_TTL_SECONDS`.
-    /// One per app, so parallel tests never share it.
     pub queue_readout: api::queue::KeptReadout,
-    /// SPEC §11 R672: the rematch offers in memory (`api::rematch`). One per app, so parallel tests
-    /// never share offers.
+    /// SPEC §11 R672: the rematch offers in memory (`api::rematch`).
     pub rematch_offers: api::rematch::RematchOffers,
-    /// SPEC §11 R2092000: the co-op Play again offers in memory (`duos::again`). One per app, so
-    /// parallel tests never share offers.
+    /// SPEC §11 R2092000: the co-op Play again offers in memory (`duos::again`).
     pub duos_again_offers: crate::duos::again::DuosAgainOffers,
-    /// SPEC §11 R1523000: the seat ledger, the one game each profile holds (`seats`). One per app,
-    /// so parallel tests never share seats; `serve` boots it before the port opens.
+    /// SPEC §11 R1523000: the seat ledger, the one game each profile holds (`seats`); `serve` boots it
+    /// before the port opens.
     pub seats: crate::seats::Seats,
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-    /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
-    /// limiter's reason.
+    /// SPEC S7: the friend requests' and chat's own allowances (B43, B53).
     pub social: crate::social::Social,
     /// #1035: the setup of the blocking job a whole-log fold runs in (`actor::engine::off_runtime`):
     /// `actor::engine::registered_thread` here; a test's carries its thread's cards over.
@@ -90,14 +83,13 @@ pub struct App {
     /// went live (R1310000). A field so a test can turn it off; nothing else sets it.
     pub economy_live: bool,
     /// §14.8, #1303: the permits of the practice claims being verified at once,
-    /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
+    /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`).
     pub practice_verifications: tokio::sync::Semaphore,
     /// SPEC §11 R2422000: how many practice claims are settling now (`api::practice`), so the
-    /// shutdown drain waits for every one before it closes the store. One per app, for the limiter's
-    /// reason.
+    /// shutdown drain waits for every one before it closes the store.
     pub practice_settles: tokio::sync::watch::Sender<usize>,
     /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
-    /// (`economy::spend_slots`). One per app, for the limiter's reason.
+    /// (`economy::spend_slots`).
     pub spends: crate::economy::spend_slots::SpendSlots,
 }
 

@@ -680,8 +680,8 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
             "p1": { "hand": [EDGE_VANILLA] },
             "p2": { "field": [EDGE_VANILLA, EDGE_VANILLA], "hand": [EDGE_VANILLA] },
         }));
-        // The exile pile is public and
-        // chronological (§3), so the order the picks are exiled in is on the table for both seats.
+        // The exile pile is public and chronological (§3), so the order the picks are exiled in is on the
+        // table for both seats.
         fixture(
             &mut s,
             "edge-r8-exile-two",

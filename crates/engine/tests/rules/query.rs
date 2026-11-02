@@ -73,7 +73,6 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<CardInstan
         .cloned()
 }
 
-/// the card-facing read surface (BUILD M3-T1, SPEC §10.9)
 mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     use super::*;
 

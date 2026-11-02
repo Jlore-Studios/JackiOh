@@ -462,9 +462,9 @@ fn one_unit() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
 }
 
-/// Vanilla in lane 3, and p1 holding a radiant Hit Job that
-/// destroys p2's lane-1 unit and the lane-2 unit beside it, so both of their Deaths run in that one
-/// pass, lane 1 first (R68), with no state check between them (§4.5 step 3).
+/// A board for one Death pass: p1's 3/3 Mr. Vanilla in lane 3, and p1 holding a radiant Hit Job that destroys
+/// p2's lane-1 unit and the lane-2 unit beside it, so both of their Deaths run in that one pass, lane 1 first
+/// (R68), with no state check between them (§4.5 step 3).
 fn death_pass_board() -> (Scenario, CardInstance) {
     let s = scenario(json!({
         "p1": { "hand": [{ "def": HIT_JOB, "radiant": true }, RENO], "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },

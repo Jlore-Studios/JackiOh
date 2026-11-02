@@ -61,7 +61,7 @@ pub struct AiSweep {
     pub seeds_per_card: i32,
     pub decision_ms: i32,
     pub max_actions: i32,
-    /// R2425000: pass 1's neverPlayed needs this many playable turns (the name is from when it counted affordable ones).
+    /// R2425000: pass 1's neverPlayed needs this many playable turns.
     pub min_affordable_turns: i32,
     pub self_harm_delta: f64,
     /// selfHarm needs at least this many plays, so one play into a trap does not ban a card.

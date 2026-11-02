@@ -712,9 +712,9 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
 
     #[test]
     fn r102_r65_a_suppressive_aura_paid_4_fused_onto_a_mana_well_keeps_its_2_2_6_3_embiggen() {
-        // The fused cost already reads that ingredient at
-        // the price it was played for (R77: the sum of the printed costs per R65), and its text is the
-        // same ingredient's, which §6.3 Embiggen has read the stored choice, so the aura stays −2/−2.
+        // The fused cost already reads that ingredient at the price it was played for (R77: the sum of the
+        // printed costs per R65), and its text is the same ingredient's, which §6.3 Embiggen has read the
+        // stored choice, so the aura stays −2/−2.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {

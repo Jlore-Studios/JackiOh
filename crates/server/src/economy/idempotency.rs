@@ -1,14 +1,12 @@
 //! Idempotency keys for the spends (SPEC §14.11, R2124000; issue #2124): a spend sent again after
 //! the client gave up on its answer (`API_REQUEST_TIMEOUT_SECONDS`) runs once.
 //!
-//! Every spend route (`POST /api/packs/buy`, `/api/packs/open`, `/api/tokens/redeem-card`,
-//! `/api/tokens/redeem-cosmetic`, `/api/cosmetic-packs/open`, `/api/cosmetic-packs/chase` and
-//! `/api/codes/redeem`) takes an optional `Idempotency-Key` header holding a UUID ([`RequestKey`]);
-//! anything else there is 400. A key belongs to its account. Under the account's economy lock
-//! (R1301003), in the spend's own transaction, a key sent before answers as it committed, or with another
-//! route or body is 422, spending nothing ([`replayed`]); only a committed spend is kept, so a refused key
-//! may run again once the refusal no longer holds ([`keep`]). The retention loop sweeps expired keys
-//! ([`sweep_expired`]); deleting an account takes its keys.
+//! Every spend route, and `POST /api/codes/redeem`, takes an optional `Idempotency-Key` header holding a
+//! UUID ([`RequestKey`]); anything else there is 400. A key belongs to its account. Under the account's
+//! economy lock (R1301003), in the spend's own transaction, a key sent before answers as it committed, or
+//! with another route or body is 422, spending nothing ([`replayed`]); only a committed spend is kept, so a
+//! refused key may run again once the refusal no longer holds ([`keep`]). The retention loop sweeps expired
+//! keys ([`sweep_expired`]); deleting an account takes its keys.
 //!
 //! The body is kept only as a keyed hash ([`RequestKey::of`]) under `CODE_PEPPER`'s `:body` domain, so
 //! no invite code a redemption sent is kept, even hashed under the code's own domain.
