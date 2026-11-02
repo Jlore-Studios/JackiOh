@@ -13824,6 +13824,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-02T08:42:06Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -13832,11 +13833,13 @@
       "provider": "claude-1",
       "queued_at": "2026-11-01T19:37:30Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "strong",
       "run_id": "41415130683",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-02T08:43:20Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2740": {
       "cleared": {
