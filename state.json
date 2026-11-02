@@ -14446,18 +14446,14 @@
     "what": "build #2689 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-02T04:08:13Z",
+    "at": "2026-11-02T04:24:56Z",
     "notes": [
-      "delivered review #2776 on claude-8 (run 41386017678): reviewed",
-      "delivered revise #2774 on claude-3 (run 41381939223): approved",
-      "delivered revise #2769 on muse (run 41379645092): approved",
-      "delivered build #2707 on muse (run 41378573402): part",
-      "started build #2709 on muse (run 41387108063)",
-      "started build #2738 on muse (run 41387167841)",
-      "started build #2687 on claude-3 (run 41387222791)",
-      "started build #2691 on claude-8 (run 41387277929)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 91%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-02T09:00:00Z; it can start a build or a plan again in 4h 45m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 149h 46m; `claude-2` is idle, but nothing queued is for it",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered revise #2772 on claude-6 (run 41381993422): approved",
+      "delivered build #2727 on claude-3 (run 41358249366): interrupted",
+      "started build #2727 on claude-6 (run 41388561175)",
+      "started build #2689 on claude-3 (run 41388618647)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15163,7 +15159,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T04:08:13Z",
+  "loop_tick": "2026-11-02T04:24:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
