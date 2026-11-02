@@ -13526,11 +13526,11 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "claude-1",
       "round_tier": "strong",
-      "run_id": "41355497338",
+      "run_id": "pending:acf2b3c1-1793584290",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-01T22:07:21Z",
+      "started_at": "2026-11-02T01:51:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -14026,9 +14026,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T01:39:43Z",
+    "at": "2026-11-02T01:51:48Z",
     "url": "",
-    "what": "build #2715 on claude-6"
+    "what": "build #2728 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-02T01:37:58Z",
