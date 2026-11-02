@@ -1,9 +1,5 @@
-// Types the specs and the support commands share.
-//
-// e2e does NOT import @jackioh/shared: BUILD M8 is written while the engine (`crates/*`) and apps/*
-// are still in flight, and `tsc -p e2e/tsconfig.json` has to pass on its own. Everything below is a
-// structural subset of the real types (SPEC §10.1, §10.2, §10.8) — narrow enough that a drift in
-// the engine types cannot silently break the specs, wide enough for the assertions M8 asks for.
+// Types the specs and support commands share: narrow structural subsets of the real types (SPEC §10.1,
+// §10.2, §10.8), not @jackioh/shared, since `tsc -p e2e/tsconfig.json` has to pass on its own.
 
 /** SPEC §10.1: seats. */
 export type PlayerId = "p1" | "p2";
@@ -79,11 +75,7 @@ export type ActionBody =
 export type ActionInput = ActionBody & { playerId: PlayerId };
 export type Action = ActionBody & { playerId: PlayerId; nonce: string };
 
-/**
- * The parts of `GameState` (SPEC §10.1) the specs read off `window.__jackioh.state`.
- * Deliberately loose: the specs assert through `viewFor`-shaped data and the DOM, and use the
- * state only for the replay hash (spec 01) and for seat/turn bookkeeping.
- */
+/** The parts of `GameState` (SPEC §10.1) the specs read off `window.__jackioh.state`: loose, used only for the replay hash and seat/turn bookkeeping. */
 export type GameStateLike = {
   seed: string;
   turn: number;
@@ -91,23 +83,16 @@ export type GameStateLike = {
   phase: string;
   result: { winner: PlayerId | "draw"; reason: string } | null;
   /**
-   * TWO SHAPES, ONE FIELD. The hotseat handle hands over the raw `GameState`, so `pending` is the
-   * engine's `PendingChoice` and the seat it belongs to is **`playerId`**
-   * (`crates/engine/src/state.rs`). A networked handle has no `GameState` at all and derives this
-   * from the `PlayerView` instead (`apps/web/src/game/net.ts` `viewDerivedState`), which spells the
-   * same seat **`player`**. Both are optional here because either may be the one present.
-   *
-   * Declaring only `player` is what made an assertion on a hotseat game read `undefined` and pass
-   * type-checking while failing at run time, so both names are spelled out rather than one.
+   * TWO SHAPES, ONE FIELD: the hotseat's raw `PendingChoice` names its seat `playerId` (`crates/engine/src/state.rs`);
+   * a networked handle's (`apps/web/src/game/net.ts` `viewDerivedState`) spells it `player`. Declaring
+   * only one let an assertion on the other read `undefined` past type-checking.
    */
   pending:
     | { id?: string; choiceId?: string; kind?: PromptKind; playerId?: PlayerId; player?: PlayerId }
     | null;
   /**
-   * §2.1 step 3, R265: both seats' opening mulligans while they are open at once — hotseat only,
-   * since it is the raw `GameState` (`crates/engine/src/state.rs` `MulliganSeat`). `pending` is
-   * null for the whole window; `keep` is a seat's sealed answer, null until it gives one. Absent
-   * once the second answer has resolved both, and never on a networked handle.
+   * §2.1 step 3, R265: both seats' open mulligans, hotseat only (`crates/engine/src/state.rs`
+   * `MulliganSeat`); `pending` is null meanwhile, and `keep` is a seat's sealed answer, null until given.
    */
   mulligan?: Record<PlayerId, { prompt?: { id?: string; kind?: PromptKind }; keep: string[] | null }>;
   players: Record<PlayerId, unknown>;
@@ -115,9 +100,8 @@ export type GameStateLike = {
 };
 
 /**
- * BUILD M5-T3: `/dev/hotseat` exposes this when `import.meta.env.MODE !== "production"`.
- * `state`, `dispatch` and `seed` are the fixed contract. `log` and `decks` are ASSUMPTION A2 and
- * are only needed by spec 01 (recorded-log replay hash).
+ * BUILD M5-T3: `/dev/hotseat` exposes this outside production. `state`, `dispatch` and `seed` are the
+ * fixed contract; `log` and `decks` are ASSUMPTION A2, for spec 01's replay hash.
  */
 export type JackiOhDevHandle = {
   state: GameStateLike;
@@ -127,28 +111,19 @@ export type JackiOhDevHandle = {
   log?: Action[];
   /** ASSUMPTION A2: the two deck lists the route resolved, seat order [p1, p2]. */
   decks?: [string[], string[]];
-  /**
-   * R180: the handicaps the hotseat game was created with, `{}` for none (a fixture's `handicap`,
-   * injected by `seedGame`). `cy.replayCheck` folds the log with them.
-   */
+  /** R180: the handicaps the hotseat game was created with, `{}` for none; `cy.replayCheck` folds with them. */
   handicaps?: Partial<Record<PlayerId, FixtureHandicap>>;
   /** Present in networked mode (apps/web/src/game/net.ts) when the route is not hotseat. */
   seat?: PlayerId;
-  /**
-   * Hotseat only (routes/dev/hotseat.tsx): the seat holding the device's `viewFor`, its
-   * `legalActions`, and handing the device to a seat. Spec 36's driver (support/playthrough.ts) reads
-   * the view and the legal list to choose each step, as the AI does; the view is a `PlayerView`,
-   * kept loose here like the state.
-   */
+  /** Hotseat only (routes/dev/hotseat.tsx), for spec 36's driver: the device seat's `viewFor`, its `legalActions`, and handing the device over. */
   view?: () => Record<string, unknown>;
   legal?: () => ActionBody[];
   setSeat?: (seat: PlayerId) => void;
 };
 
 /**
- * R180: one seat's handicap, as `Handicap` in crates/engine/src/config.rs spells it (a structural
- * copy: support/ imports no engine types). Every field is a non-negative integer, `deckSize` is
- * 1..LIBRARY_CAP (R184), and `heroHealth` is optional (R290).
+ * R180: one seat's handicap, a structural copy of `Handicap` in crates/engine/src/config.rs. Fields are
+ * non-negative integers, `deckSize` is 1..LIBRARY_CAP (R184), and `heroHealth` is optional (R290).
  */
 export type FixtureHandicap = {
   deckSize: number;
@@ -167,17 +142,12 @@ export type FixtureDeck = {
   spec: string;
   /** Why these cards: what the spec needs out of the deck. */
   description: string;
-  /**
-   * Exactly DECK_SIZE distinct non-Token catalog ids, or exactly `handicap.deckSize` when the
-   * fixture carries a handicap (R184); `validateDeck` throws otherwise.
-   */
+  /** Exactly DECK_SIZE distinct non-Token catalog ids, or `handicap.deckSize` with a handicap (R184). */
   cards: string[];
   /**
-   * The seat's handicap (R180), for a scenario SPEC's own resources cannot reach in a few turns:
-   * spec 25's 5-card library that fatigues on turn 3, 9-card opening hand, 60-card library. A
-   * hotseat fixture whose deal was tuned before #1705 carries `TUTORIAL_HUMAN`'s, a human's resources
-   * with the earlier deck size, so it keeps its cards (R1705005). `seedGame` gives fixture A's to p1
-   * and fixture B's to p2. A networked fixture carries none: the server refuses a handicap.
+   * The seat's handicap (R180), for a scenario SPEC's own resources cannot reach in a few turns. A hotseat
+   * fixture tuned before #1705 carries `TUTORIAL_HUMAN`'s, a human's resources with the earlier deck
+   * size, to keep its cards (R1705005); a networked one carries none: the server refuses a handicap.
    */
   handicap?: FixtureHandicap;
 };
@@ -188,11 +158,7 @@ export type E2EDeckInjection = {
   seed: string;
   /** R180: each seat's handicap, from the fixtures that carry one; absent when neither does. */
   handicaps?: Partial<Record<PlayerId, FixtureHandicap>>;
-  /**
-   * R1420: the sets the hotseat engine previews before it creates the game, so a deck may hold a set
-   * the catalog carries before it ships (spec 36's `["Meditative"]`). The route calls the engine's
-   * `previewSets`, which a production build's module refuses.
-   */
+  /** R1420: the sets the hotseat engine previews before it creates the game, so a deck may hold an unshipped set (spec 36); a production build refuses `previewSets`. */
   preview?: string[];
 };
 
@@ -200,17 +166,9 @@ export type E2EDeckInjection = {
 export type PromptAnswer = {
   /** `PendingOption.key` values to pick (discover, mode, direction, embiggen, hand, mulligan). */
   options?: string[];
-  /**
-   * Take the first N options offered, whatever their keys are. Discover's three options are drawn
-   * by the match rng (SPEC §10.6), so no spec can name one: "take the first" is the only stable
-   * way to answer it. Picked before `options`, and the two can be combined.
-   */
+  /** The first N options, whatever their keys: the match rng draws Discover's (SPEC §10.6). Picked before `options`; the two combine. */
   first?: number;
-  /**
-   * R81's embiggen price, as the boolean it is. The picker keys its two options `"true"` and
-   * `"false"` (the two prices), so this is `options: [String(embiggen)]` without a spec having to
-   * know that the key is a stringified boolean.
-   */
+  /** R81's embiggen price, as the boolean it is: the picker keys its two prices `"true"` and `"false"`. */
   embiggen?: boolean;
   /** Board instance ids to pick (target, tribute, hand pickers rendered on the cards). */
   cards?: string[];

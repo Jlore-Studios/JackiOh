@@ -6,7 +6,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { flavorSourceOf } from "../fx/flavorSource.ts";
 import { sideOf, type Side } from "./contract";
 
-/** R97's sentinel (engine `viewFor.ts` `HIDDEN_ID`). */
+/** R97's sentinel (the engine's `HIDDEN_ID`). */
 const HIDDEN = "hidden";
 
 const SIDES: readonly Side[] = ["you", "opponent"];
@@ -16,23 +16,20 @@ export const PLAYS_OPEN_MAX = 16;
 
 // Casts
 
-/** A play the stream has opened and not yet resolved, and how many casts it has made so far. */
+/** A play the stream has opened and not yet resolved. */
 export type OpenPlay = { player: PlayerId; instanceId: string; defId: string; casts: number };
 
 /** A cast: the play that made it (as it stood after this cast) and which of its casts this is (1 on). */
 export type Cast = { by: OpenPlay; ordinal: number };
 
 export type PlayTracker = {
-  /** The innermost play still resolving, or undefined. */
   current(): OpenPlay | undefined;
   /** Reads one event, in stream order; a `cardPlayed` that is a cast returns who cast it. */
   see(event: GameEvent): Cast | null;
   clear(): void;
 };
 
-/**
- * Tracks open plays. R97 may close the innermost play; B5 E1 counters before §10.5's `cardPlayed`, so it closes only an exact match.
- */
+/** R97 may close the innermost play; B5 E1 counters before §10.5's `cardPlayed`, so it closes only an exact match. */
 export function createPlayTracker(): PlayTracker {
   let open: OpenPlay[] = [];
 
@@ -90,18 +87,15 @@ export function createPlayTracker(): PlayTracker {
 
 export type PileKind = "library" | "graveyard" | "exile";
 
-/** One pile: whose (viewer-relative) and which. */
 export type Pile = { side: Side; pile: PileKind };
 
 /**
- * A whole-pile impact as the runner plays it: the pile, how many cards it held as the run began, and
- * how many events the run made (a pile changed twice over makes twice its count).
+ * A whole-pile impact: how many cards the pile held as the run began, and how many events the run
+ * made (a pile changed twice over makes twice its count).
  */
 export type ZoneImpact = Pile & { count: number; events: number };
 
-/**
- * R440 hidden changes map only where public text names one library; multi-pile cards (C+ #73) stay unmapped.
- */
+/** R440 hidden changes map only where public text names one library; multi-pile cards (C+ #73) stay unmapped. */
 export const HIDDEN_PILE_OF: Readonly<Record<string, "own" | "enemy">> = {
   // C+ #8 Withering Storm changes the opponent's deck.
   "classicplus-008": "enemy",
@@ -125,14 +119,12 @@ function seat(view: PlayerView, side: Side): PlayerView["you"] {
   return side === "you" ? view.you : view.opponent;
 }
 
-/** How many cards a pile holds in `view`. */
 export function pileCount(view: PlayerView, pile: Pile): number {
   const sv = seat(view, pile.side);
   if (pile.pile === "library") return sv.libraryCount;
   return pile.pile === "graveyard" ? sv.graveyard.length : sv.exile.length;
 }
 
-/** The public pile (a graveyard or an exile) `view` lists the card in, or null. */
 function publicPileOf(view: PlayerView, instanceId: string): Pile | null {
   for (const side of SIDES) {
     const sv = seat(view, side);
@@ -142,7 +134,6 @@ function publicPileOf(view: PlayerView, instanceId: string): Pile | null {
   return null;
 }
 
-/** Whether `view` shows the card anywhere: on the field, in a hand the viewer reads, resolving, in a public pile. */
 function shown(view: PlayerView, instanceId: string): boolean {
   if (publicPileOf(view, instanceId) !== null) return true;
   for (const side of SIDES) {
@@ -156,14 +147,11 @@ function shown(view: PlayerView, instanceId: string): boolean {
   return false;
 }
 
-/** The other player. */
 function otherOf(player: PlayerId): PlayerId {
   return player === "p1" ? "p2" : "p1";
 }
 
-/**
- * `inferred` piles count whole only on an exact run, because the view did not show the card's origin.
- */
+/** `inferred` piles count whole only on an exact run, because the view did not show the card's origin. */
 export function pileOf(
   event: GameEvent,
   view: PlayerView,
@@ -207,9 +195,7 @@ function samePile(a: Pile, b: Pile): boolean {
   return a.side === b.side && a.pile === b.pile;
 }
 
-/**
- * A same-type, same-pile run is whole at two or more events and the pile count (exactly for inferred piles).
- */
+/** A same-type, same-pile run is whole at two or more events and the pile count (exactly for inferred piles). */
 export function pileRunAt(
   events: readonly GameEvent[],
   at: number,
@@ -237,7 +223,7 @@ export function pileRunAt(
 
 // Sweeps
 
-/** A sweep as the runner plays it: hits or heals, the sides every unit of which it reached, and its source. */
+/** A sweep as the runner plays it: `sides` are the sides every unit of which it reached. */
 export type Sweep = { tone: "damage" | "heal"; sides: readonly Side[]; sourceId: string | null };
 
 const HERO_ID = /^hero-(p1|p2)$/;
@@ -253,7 +239,6 @@ function targetSide(view: PlayerView, targetId: string): { side: Side; unit: boo
   return null;
 }
 
-/** One step of a sweep: the card or hero it reaches, and whether it is a hit, a heal or a shield taking a hit. */
 function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; source?: string | null } | null {
   if (event.type === "damage") return event.combat ? null : { target: event.targetId, tone: "damage", source: event.sourceId };
   if (event.type === "divineShieldLost") return { target: event.instanceId, tone: "damage" };
@@ -263,9 +248,7 @@ function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; sou
   return null;
 }
 
-/**
- * A sweep reaches every unit on each touched side with distinct non-combat hits or heals.
- */
+/** A sweep reaches every unit on each touched side with distinct non-combat hits or heals. */
 export function sweepAt(
   events: readonly GameEvent[],
   at: number,
@@ -305,10 +288,8 @@ export function sweepAt(
 
 /**
  * #1443: one volley of non-combat damage from one source, planned as one entry so its shots start
- * together. A hit only when `events[at]` is `damage` with `combat: false` and a non-null,
- * non-sentinel `sourceId`, the run of consecutive same-`sourceId`, non-combat `damage` events has
- * length 2 or more, and the view shows the source face-up (`flavorSourceOf` non-null:
- * hidden/unknown/hero-power sources keep today's entries).
+ * together. Only when the view shows the source face-up (`flavorSourceOf` non-null):
+ * hidden/unknown/hero-power sources keep today's entries.
  */
 export function volleyAt(events: readonly GameEvent[], at: number, view: PlayerView): { length: number } | null {
   const first = events[at];

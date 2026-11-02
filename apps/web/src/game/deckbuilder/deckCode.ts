@@ -4,10 +4,7 @@
 // `JKO<version>.` precedes an unpadded base64url body:
 // [name-byte-length] [UTF-8 name] [LEB128 card count] [LEB128 card numbers] [two-byte checksum].
 // Version 2 uses a card's set offset plus §5 index (B2.2); non-whole-number Token indices like
-// "T-AI-1" cannot be encoded (R251). Names failing D1 fall back to "Imported deck". FNV-1a detects damaged pastes.
-// Older codes are refused except Core-only version 1 (R255).
-//
-// Decoding is total: it rejects over-long or malformed input before resolving name (D1) and cards.
+// "T-AI-1" cannot be encoded (R251). Older codes are refused but Core-only version 1 (R255).
 // Trio codes share the body reader, resolver and checksum (R339, `trioCode.ts`).
 
 import { checkDeckDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
@@ -22,7 +19,6 @@ import {
 } from "@jackioh/server-config";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 
-/** What every code starts with, before its version digits and a ".". */
 export const DECK_CODE_PREFIX = "JKO";
 
 /** The name an import gets when the code's own name is unusable (R255). */
@@ -31,7 +27,6 @@ export const IMPORTED_DECK_NAME = "Imported deck";
 export type DroppedCards = {
   /** Card numbers the catalog does not know, in code order (numbers, not ids). */
   unknown: readonly number[];
-  /** Ids of Tokens the code named. */
   tokens: readonly string[];
   /** Ids of copies past MAX_COPIES (one entry per dropped copy). */
   duplicates: readonly string[];
@@ -66,9 +61,7 @@ export const DECK_CODE_MESSAGES = Object.freeze({
 
 // Byte format
 
-/** The name's byte length is one byte. */
 const NAME_LENGTH_BYTES = 1;
-/** The most name bytes one length byte can say. */
 const NAME_BYTES_MAX = 0xff;
 const CHECKSUM_BYTES = 2;
 /** The smallest payload: an empty name's length, a zero count and the checksum. */
@@ -231,7 +224,6 @@ export function pushChecksum(out: number[]): void {
   out.push((checksum >>> BYTE_BITS) & BYTE_MASK, checksum & BYTE_MASK);
 }
 
-/** The code for a deck. */
 export function encodeDeckCode(name: string, cardIds: readonly string[], catalog: CatalogSnapshot): string {
   const payload: number[] = [];
   writeDeckBody(payload, name, cardIds, catalog);
@@ -247,7 +239,6 @@ export type ReadFailure = "incomplete" | "damaged";
 /** A cursor over a payload, `end` being where its checksum starts. Shared with `trioCode.ts`. */
 export type PayloadReader = { bytes: Uint8Array; at: number; end: number };
 
-/** A reader over `bytes`, or "incomplete" when they cannot even hold `minimum` bytes and a checksum. */
 export function payloadReader(bytes: Uint8Array, minimum: number): PayloadReader | "incomplete" {
   if (bytes.length < minimum) return "incomplete";
   return { bytes, at: 0, end: bytes.length - CHECKSUM_BYTES };
@@ -273,7 +264,6 @@ export function readVarint(reader: PayloadReader): number | ReadFailure {
   return "damaged";
 }
 
-/** A name: its length byte, then that many bytes. */
 export function readNameBytes(reader: PayloadReader): Uint8Array | "incomplete" {
   const length = readByte(reader);
   if (length === "incomplete") return length;
@@ -302,7 +292,6 @@ export function readDeckBody(reader: PayloadReader): DeckBody | ReadFailure {
   return { nameBytes, numbers };
 }
 
-/** Whether the reader stopped exactly at the checksum, and the checksum holds. */
 export function checkEnd(reader: PayloadReader): "ok" | "damaged" | "checksum" {
   if (reader.at !== reader.end) return "damaged";
   const { bytes, end } = reader;
@@ -344,13 +333,11 @@ export function decodeName(
   return valid(name) ? { name, fellBack: false } : { name: fallback, fellBack: true };
 }
 
-/** What a deck's body becomes: its name, the cards kept, what was dropped and what is unowned. */
 export type ResolvedDeck = Omit<Extract<DecodedDeck, { ok: true }>, "ok">;
 
 /**
- * R255: a deck body against this catalog and collection — numbers the catalog does not know,
- * Tokens, copies past `MAX_COPIES` and cards past `DECK_SIZE` dropped and listed; cards the player
- * does not own kept and flagged. `version` is the code's: a version 1 code's numbers are Core's.
+ * R255: a deck body against this catalog and collection: what a deck cannot hold is dropped and
+ * listed, cards the player does not own kept and flagged. A version 1 code's numbers are Core's.
  */
 export function resolveDeck(
   body: DeckBody,
@@ -413,11 +400,9 @@ export type HeaderMessages = {
 };
 
 /**
- * The text of a pasted code, read as far as its payload's bytes: the length cap first, unread
- * (`maxInputLength`), then whitespace, the prefix and version, and base64url. `other` is the prefix
- * of the other kind of code, answered with `otherMessage` so a trio code pasted as a deck (or the
- * reverse) is sent where it belongs. `alsoReads` is the older version still read (R255, R339),
- * and the version read comes back with the bytes.
+ * The text of a pasted code, read as far as its payload's bytes. `other` is the prefix of the other
+ * kind of code, answered with `otherMessage` so a trio code pasted as a deck (or the reverse) is sent
+ * where it belongs. `alsoReads` is the older version still read (R255, R339).
  */
 export function readCodeText(
   text: unknown,
@@ -451,7 +436,6 @@ export function readCodeText(
   return { ok: true, bytes, version };
 }
 
-/** The trio code's prefix (R339), which the deck import recognizes and sends where it belongs. */
 const TRIO_CODE_PREFIX_SEEN = "JKT";
 
 function decodeUnsafe(text: unknown, catalog: CatalogSnapshot, collection: Collection | null): DecodedDeck {

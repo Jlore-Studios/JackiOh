@@ -1,7 +1,5 @@
 //! Temporary (SPEC §6.1, R637): a card that is discarded from its owner's hand at the end of their turn.
 //! The card keyword, not temporary mana (§2.3).
-//!
-//! Port of `packages/engine/test/temporary.test.ts`.
 
 use jackioh_engine::testkit::*;
 
@@ -12,7 +10,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// `eventsOfType(events, kind).map((event) => event[field])`, read through each event's JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Value {
     Value::Array(
         events_of_type(events, kind)

@@ -1,10 +1,7 @@
-// R738: the opponent's aim, drawn on this board — Hearthstone's targeting arrow in the opponent's
-// color, from the source the opponent is aiming with to the target it is over, gone when the aim
-// ends. It draws only what the relay names, and the relay names only public handles: a hand card is
-// the card back at that position, a field card its zone, a hero its portrait (`aim.ts`).
-//
-// While the opponent is over nothing yet, only the source is marked. Under Reduce Motion the arrow
-// stands still (opponentAim.css). It never takes a hit, so the board under it stays clickable.
+// R738: the opponent's aim, drawn on this board — Hearthstone's targeting arrow in the opponent's color. It
+// draws only what the relay names, and the relay names only public handles: a hand card is the card back at
+// that position, a field card its zone, a hero its portrait (`aim.ts`). Under Reduce Motion the arrow stands
+// still (opponentAim.css). It never takes a hit, so the board under it stays clickable.
 
 import { useLayoutEffect, useState, type ReactElement } from "react";
 

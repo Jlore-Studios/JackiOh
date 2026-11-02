@@ -1,28 +1,7 @@
-//! R1452 (SPEC §9.12): the bot seat's own rules, apart from the actor. A think time stays inside
-//! `BOT_THINK_MIN_MS`..`BOT_THINK_MAX_MS` and leaves `BOT_CLOCK_MARGIN_MS` on the acting clock, and
-//! so does the search's deadline; R188's guard names the concession and both draws; the fallback
-//! move ends the turn when it can and never concedes.
-//!
-//! R639000: the think time grows with the legal actions and on a lethal turn, a mulligan, a draw
-//! answer and a concession have priors of their own, and `play` concedes only at the bot's turn
-//! start and answers a draw offer by the bot's own roll, reading where it stands through a
-//! determinized world (a face-down enemy card included) centered on the even board.
-//!
-//! R2660000: `play` concedes, at its turn start and by its temper, only facing a lethal on the
-//! opponent's board it cannot stop (`unstoppable_lethal`), however far behind it stands otherwise.
-//! R2660001: a bot well behind that does not concede offers a draw at its turn start by its own
-//! roll, once a turn as R36 has it, and the actor plays the offer: an emote is all it never plays.
-//!
-//! R747000: the strength's skill is the chance each decision follows the AI, the rest the skill miss
-//! rolled on the bot's own AI stream; a full skill takes no draw and decides as it did before the
-//! knob, and the table's seed ratings are what the skill-to-Elo curve gives their skills.
-//!
-//! R2214000: a miss is a beginner's move, not a uniform one: at strength 0 it is always legal, drawn
-//! on the bot's own stream so the same job plays the same, and over seeded turn starts it ends a turn
-//! with a card it could play, or makes an attack the greedy baseline scores below standing still, far
-//! less often than §10.7's random policy.
-//!
-//! `jackioh_server::bots::seat`, on the real cards.
+//! R1452 (SPEC §9.12): bot seat rules. Think time limits, R188 guard, fallback move.
+//! R639000: think time scaling, mulligan and draw responses.
+//! R2660000: concedes only facing an unstoppable lethal; R2660001: offers a draw while well behind.
+//! R747000: skill roll vs miss; R2214000: beginner misses vs §10.7 random policy.
 
 use jackioh_ai::{
     AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, DeterminizeOptions, GREEDY_EVAL, NextSwing,
@@ -587,9 +566,7 @@ fn with_face_down_trap(mut state: GameState, seat: PlayerId) -> GameState {
     state
 }
 
-/// The states at each turn's start of a game on `seed` in which both seats play random legal moves
-/// (no concession or draw offer), with random decks: boards, backrows and face-down cards of every
-/// kind a game reaches.
+/// States at each turn start of game with random legal moves.
 fn random_turn_starts(seed: &str) -> Vec<GameState> {
     jackioh_cards::register_all();
     let decks = (
@@ -636,9 +613,7 @@ fn random_turn_starts(seed: &str) -> Vec<GameState> {
 
 #[tokio::test(start_paused = true)]
 async fn r639000_a_face_down_enemy_card_stops_neither_the_standing_read_nor_the_bots_turn() {
-    // The read evaluates a determinized world, never the placeholder `redact` leaves (which the
-    // evaluation cannot look up): it reads at every turn start of random games, the many with a
-    // face-down card the active seat cannot see among them.
+    // Evaluates determinized world, reading at each turn start.
     let mut hidden = 0;
     for game in 0..12 {
         let seed = format!("hidden-game-{game}");
@@ -742,8 +717,7 @@ fn ai_stream(seed: &str, seat: PlayerId) -> Rng {
     Rng::new(&format!("{seed}:bot-ai:{seat}"), 0)
 }
 
-/// What the seat plays when its roll keeps the AI: `decide_styled` at the weakest strength's search
-/// and style, on `rng`, which the roll has already drawn from. The move and where the stream stands.
+/// AI move decision at weakest strength search and style.
 fn ai_move(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<ActionBody>, u32) {
     let strength = BOT_STRENGTHS[0];
     let mut options = AiOptions {
@@ -869,10 +843,7 @@ async fn r2214000_a_strength_zero_miss_is_legal_and_replays() {
     }
 }
 
-/// What `r2214000_a_strength_zero_miss_makes_far_fewer_beginners_mistakes_than_random` counts over one
-/// game's turn starts, per picker, random then miss: the picks that ended the turn while a card could
-/// be played, of those with a card to play, and the attacks the greedy baseline scores below standing
-/// still, of those with such an attack to make.
+/// Tallies premature turn ends and suboptimal attacks across random vs skill miss pickers.
 #[derive(Default)]
 struct MissTally {
     idle: [usize; 2],

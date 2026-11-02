@@ -4,12 +4,11 @@
 //!            so "exile this" is kept and the pick arrives Radiant (§8 Conventions).
 //!   Engine:  "Scorer in 10.7 ranks every non-token card of every set that ships except #97 for the
 //!            current state; Discover offers the top 3 (R29, R1446)".
-//! The ranking is the subsystem's (§10.7): `subsystems/scorer.rs` owns every weight and filter, so
-//! this card only asks it for three ids and passes `{ radiant }`, so the radiant face ranks radiant
-//! faces (`ScorerOptions`, §5.2). The ids are a `defId` pool (§5.1), so only those three are offered;
-//! tokens and #97 are out already (R29, B2.6, R387). The exile is the second effect, as §8.5 prints
-//! it: `apply_resumable` parks it on `state.work` and drains it after the answer (§10.6). §10.5
-//! step 7 sends a resolved Spell to the graveyard "or exile": `exile` bumps R55's counter.
+//! `subsystems/scorer.rs` owns every weight and filter (§10.7); this card asks it for three ids, a
+//! `defId` pool (§5.1), passing `{ radiant }` so the radiant face ranks radiant faces (§5.2). Tokens and
+//! #97 are out already (R29, B2.6, R387). The exile is the second effect, as §8.5 prints it:
+//! `apply_resumable` parks it on `state.work` until the answer (§10.6); §10.5 step 7's "or exile"
+//! bumps R55's counter.
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog, exile};
 use jackioh_engine::prelude::*;
@@ -74,12 +73,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4 row 97: "Scorer deterministic; a lethal-enabling card ranks first when lethal
-// exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant; the pool is every set
-// that ships but #97 (R1446)". §10.7's dry run plays each candidate on a copy of the state and reads
-// only what its player may read (R222). The pool is the real catalog's, so a test that names cards
-// reads Core's own top three, whose order the other sets cannot move: Core comes first in the catalog
-// order, so each Core candidate's dry run is the one it was when the pool was Core alone.
+// BUILD M4-T4 row 97 (R29, #97, R1446). §10.7's dry run reads only what its player may read (R222). The pool
+// is the real catalog's, so a test that names cards reads Core's own top three, whose order the other sets
+// cannot move: Core comes first in the catalog order.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,8 +138,7 @@ mod tests {
         s.state().clone()
     }
 
-    /// The first three Core cards of a ranking: Core's own top three, the pool #97 drew on before
-    /// R1446, in the order it ranked them then.
+    /// The first three Core cards of a ranking: Core's own top three.
     fn core_top_three(ranked: &[subsystems::Scored]) -> Vec<String> {
         ranked
             .iter()
@@ -174,8 +169,6 @@ mod tests {
             assert_eq!(pending["max"], 1);
             assert_eq!(pending["options"].as_array().map(Vec::len), Some(3));
 
-            // The state the card read is this one with the spell resolving: #97 is out of the hand and no
-            // prompt is open yet, so the scorer's dry run plays.
             let top: Vec<String> = subsystems::top_three(&resolving(&setup), P1, &options(None))
                 .iter()
                 .map(|scored| scored.def.id.clone())
@@ -241,8 +234,6 @@ mod tests {
             assert_eq!(core_top_three(&ranked).first().map(String::as_str), Some(CHARGER));
             let charger = ranked.iter().find(|scored| scored.def.id == CHARGER);
             assert_eq!(charger.map(priority_of), Some(json!("lethal")));
-            // …and the card offers the top 3 of the state it resolves in, the best of them a lethal card,
-            // which is the whole of what #97 contributes.
             let top = subsystems::top_three(&resolving(&setup), P1, &options(None));
             assert_eq!(top.first().map(priority_of), Some(json!("lethal")));
             let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
@@ -321,7 +312,6 @@ mod tests {
             s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
 
-            // Ranked for the state as the Discover meets it, the dry run included (a prompt open stops it).
             let top: Vec<String> = subsystems::top_three(&resolving(&setup), P1, &options(Some(true)))
                 .iter()
                 .map(|scored| scored.def.id.clone())
@@ -344,29 +334,22 @@ mod tests {
 
     // §10.7's priorities for cards whose claim lives in their text.
 
-    /// A Discover's options are `mode` selections carrying catalog ids (§10.6).
     fn offered_ids(s: &Scenario) -> Vec<String> {
         option_ids(&open(s.state()))
     }
 
-    /// Every Core card whose own text heals its controller's hero: #5 Stockpile, #24 Efficiency Dividend,
-    /// #47 Fig of Life, #53 Reno, #56 Jilliax (Lifesteal), #74 Adaptive UI and #95 Call to Chaos. #19 Midrange
-    /// Menace and #93 Combo-Index are allowed too, so a scorer that reads "heals" more loosely still passes.
+    /// Core cards that heal their own hero: #5, #24, #47, #53, #56 (Lifesteal), #74 and #95; #19 and #93
+    /// are allowed too, so a scorer that reads "heals" more loosely still passes.
     const HEALERS: &[&str] = &[
         "core-005", "core-024", "core-047", "core-053", "core-056", "core-074", "core-095", "core-019", "core-093",
     ];
 
-    /// Every Core card whose own text removes a whole enemy board of ordinary units: #17 Flood, #43 Big
-    /// Felinor, #88 Twisting Nether and #100 Ceaseless Void. #87 Pocket Chaos, #16 Hit Job and #55 Lava
-    /// Golem are allowed too; Lava Golem's Tribute 3 may take enemy units (R101), so it is paid with
-    /// the three 7/7s.
+    /// Core cards that remove a whole enemy board by text: #17, #43, #88 and #100; #87, #16 and #55 are
+    /// allowed too (Lava Golem's Tribute 3 may take enemy units, R101, so it is paid with the 7/7s).
     const CLEARERS: &[&str] = &["core-017", "core-043", "core-088", "core-100", "core-087", "core-016", "core-055"];
 
-    /// Every Core card that, played from the 3 mana p1 has left after #97, deals 3 or more to the enemy
-    /// hero this turn:
-    /// #24 Efficiency Dividend (X damage to a target), #35 Lunar Eclipse (3 damage), #44 True Strike (4,
-    /// ignoring Armor), #45 Deft Duelist (a 4/3 with Charge), #68 Twisted Sorcerer (Cry: 4 damage) and
-    /// #74 Adaptive UI (X damage).
+    /// Core cards that, from the 3 mana p1 has left after #97, deal 3 or more to the enemy hero this
+    /// turn: #24, #35, #44, #45 (Charge), #68 and #74.
     const LETHAL_AT_3: &[&str] = &["core-024", "core-035", "core-044", "core-045", "core-068", "core-074"];
 
     fn outside(offered: &[String], allowed: &[&str]) -> Vec<String> {
@@ -378,9 +361,7 @@ mod tests {
     }
 
     /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
-    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446). A Core card and its
-    /// Legacy card are two cards (R2511001), so the top three may hold both, as facing three 7/7s Core
-    /// #43 Big Felinor and TG #51 Legacy: Big Felinor both rank at "clear".
+    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446).
     fn offers_rank_at(setup: &Value, priorities: &[&str]) {
         let top = subsystems::top_three(&resolving(setup), P1, &options(None));
         for scored in &top {
@@ -407,9 +388,7 @@ mod tests {
         fn s10_7_hero_below_10_and_card_heals_high_at_5_health_the_three_best_core_cards_heal() {
             crate::register_all();
             // Nothing is lethal (p2 is at 30 with no board on either side) and there is no enemy board to
-            // clear, so the heal criterion is the highest one that applies. Seven Core cards heal their
-            // controller's hero, so a scorer that ranks every one of them "high" puts three of them at
-            // the top of Core's cards.
+            // clear, so the heal criterion is the highest one that applies.
             let setup = json!({
                 "seed": "r5-zephyrs-heal",
                 "p1": { "hand": [ZEPHYRS, MENACE_FILLER], "health": 5 },
@@ -417,16 +396,14 @@ mod tests {
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
             assert_eq!(core.len(), 3);
             assert_eq!(outside(&core, HEALERS), Vec::<String>::new(), "Core cards that do not heal");
-            // …and every offer, of whatever set, ranks at the heal criterion or above.
             offers_rank_at(&setup, &["lethal", "clear", "heal"]);
         }
 
         #[test]
         fn s10_7_can_clear_the_enemy_board_high_facing_three_7_7s_the_three_best_core_cards_clear_the_board() {
             crate::register_all();
-            // Three #25 4-mana 7/7s (Armor 7): no unit in Core answers one alone, let alone three, while
-            // Flood, Big Felinor, Twisting Nether and Ceaseless Void each remove the whole board by text.
-            // p1 holds 5 mana, so the (4) clearers are affordable once #97's 1 is paid.
+            // Three #25 7/7s (Armor 7): no unit in Core answers one alone. p1 holds 5 mana, so the (4)
+            // clearers are affordable once #97's 1 is paid.
             let setup = json!({
                 "seed": "r5-zephyrs-clear",
                 "p1": { "hand": [ZEPHYRS, MENACE_FILLER], "mana": 5 },
@@ -435,7 +412,6 @@ mod tests {
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
             assert_eq!(core.len(), 3);
             assert_eq!(outside(&core, CLEARERS), Vec::<String>::new(), "Core cards that do not clear the board");
-            // …and every offer, of whatever set, ranks at the clear criterion or above.
             offers_rank_at(&setup, &["lethal", "clear"]);
         }
 
@@ -485,7 +461,6 @@ mod tests {
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
             assert_eq!(core.len(), 3);
             assert_eq!(outside(&core, LETHAL_AT_3), Vec::<String>::new(), "Core cards that are not lethal");
-            // …and every offer, of whatever set, is lethal.
             offers_rank_at(&setup, &["lethal"]);
         }
     }
@@ -502,7 +477,6 @@ mod tests {
         value.unwrap_or_else(|| panic!("setup: {what} is missing"))
     }
 
-    /// The catalog ids a Discover of #97's offers, sorted.
     fn offered_defs(g: &Scenario) -> Vec<String> {
         sorted(&option_ids(&open(g.state())))
     }
@@ -523,10 +497,9 @@ mod tests {
         #[test]
         fn r222_the_cards_n97_offers_do_not_depend_on_which_face_down_trap_the_opponent_holds_s9_1_s10_8_r33() {
             crate::register_all();
-            // Two games p1 cannot tell apart: p2 holds one face-down trap in the same zone, a My Pawn in
-            // one and a Sheepish in the other. The dry run plays each candidate on a copy of the real
-            // state, so the Sheepish turns Big Felinor and Bigot into Sheep before their Cries and they
-            // stop "clearing" p2's board: the offers name the trap.
+            // Two games p1 cannot tell apart: p2's one face-down trap is a My Pawn in one, a Sheepish in
+            // the other. Played on the real state, the Sheepish turns Big Felinor and Bigot into Sheep
+            // before their Cries: the offers name the trap.
             let offers_with = |trap: &str| -> Vec<String> {
                 let mut g = scenario(json!({
                     "seed": "zephyrs-hidden-trap",
@@ -548,9 +521,8 @@ mod tests {
         #[test]
         fn r222_the_cards_n97_offers_do_not_depend_on_the_order_of_the_viewer_s_own_library_s3_s9_1() {
             crate::register_all();
-            // p1 is at 5 health, so a heal is the priority, and #5 Stockpile ("draw 2; heal your hero 2")
-            // is one. With two #27 Blood Ridden Glowy Jelly Beans on top of the library the dry run's draw
-            // casts them, p1 loses 10 and Stockpile stops "healing": the offers say what is on top.
+            // p1 at 5 health makes a heal the priority, and #5 Stockpile draws 2: with two #27 Jelly Beans
+            // on top the dry run's draw casts them, p1 loses 10 and the offers say what is on top.
             let offers_with = |library: &[&str]| -> Vec<String> {
                 let mut g = scenario(json!({
                     "seed": "zephyrs-library-order",
@@ -573,10 +545,9 @@ mod tests {
         #[test]
         fn s10_7_a_charge_unit_s_swing_is_read_through_the_viewer_s_auras_both_ways_s10_4_layer_5() {
             crate::register_all();
-            // #45 Deft Duelist is a printed 4/3 with Charge. Under p1's #14 Jlockeed's Weapons it swings
-            // for 7 the turn it lands, which is lethal on a hero at 7; under p1's own #65.1 Spikey Pillow
-            // it swings for 2, which is not lethal on a hero at 4. The scorer reads the printed 4 both
-            // times, and the Duelist has no text for the dry run to play.
+            // #45 Deft Duelist, a printed 4/3 with Charge, swings for 7 under p1's #14 Jlockeed's Weapons
+            // and for 2 under p1's own #65.1 Spikey Pillow. The scorer reads the printed 4 both times, and
+            // the Duelist has no text for the dry run to play.
             let under_weapons = scenario(json!({
                 "seed": "zephyrs-weapons",
                 "p1": { "hand": [ZEPHYRS, VANILLA], "backrow": ["core-014"], "library": LIBRARY },
@@ -591,7 +562,6 @@ mod tests {
             assert_eq!(priority_of(&scored_on(&under_weapons, "core-045")), json!("lethal"));
             assert_ne!(priority_of(&scored_on(&under_pillow, "core-045")), json!("lethal"));
 
-            // …and the ranking follows: the lethal card is among Core's top three.
             let ranked = subsystems::rank(under_weapons.state(), P1, &options(None));
             assert!(core_top_three(&ranked).contains(&"core-045".to_string()));
         }
@@ -601,7 +571,7 @@ mod tests {
             crate::register_all();
             // #34 Collateral Damage exiles one target permanent, and p2 has one unit: it clears p2's board.
             // With nine permanents of p1's own ahead of it among the targets, the dry run's eight plays
-            // never aim at p2's unit, and the clear is missed. Four fewer friendly permanents and it is seen.
+            // never aim at p2's unit.
             let g = scenario(json!({
                 "seed": "zephyrs-crowded",
                 "p1": {

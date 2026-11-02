@@ -1,19 +1,7 @@
-//! The catalog and validator bindings (`src/api/catalog.rs`, and `jackioh_engine::validator`, which
-//! the handlers call directly): the two places the server reaches data and rules that live in other
-//! crates (SPEC §9.4). It is docs/v0.3.0/README.md V18's proof too: the server serves the catalog
-//! version of the newest `patches.json` entry, with `x-deployed-commit`.
-//!
-//! Two SPEC §11 rulings live here as well:
-//!   * R163 — the catalog endpoint a client that ships none can read: whole, unprojected,
-//!     unauthenticated, carrying R105's version.
-//!   * R164 — where L6's ban list lives: server state, never a flag on a card definition, read
-//!     through the catalog handle.
-//!
-//! The catalog is compiled in (`jackioh_cards::catalog_json()`) and its version is
-//! `jackioh_cards::catalog_version()`, whatever `CATALOG_VERSION` says (a different value only
-//! warns). The binding tests hand `jackioh_engine::validator` the snapshot a handler builds from the
-//! catalog handle (`snapshot` below), JSON in and JSON out (§10.1). R388's `GET /api/catalog/:version`
-//! serves every shipped patch's exact snapshot.
+//! Catalog and validator bindings (`src/api/catalog.rs`, SPEC §9.4, §11, docs/v0.3.0/README.md V18).
+//! - R163: unauthenticated catalog endpoint (R105).
+//! - R164: server-side ban list.
+//! - R388: GET /api/catalog/:version for shipped patches (§10.1).
 
 use std::sync::Arc;
 

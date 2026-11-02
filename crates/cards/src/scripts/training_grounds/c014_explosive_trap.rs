@@ -1,12 +1,7 @@
 //! TG #14 Explosive Trap (SPEC §8.11 row 14). (1) Trap, Common. "Trample / Reveals when your opponent
 //! plays a Unit: After it resolves, deal {damage} damage to it." (Radiant: Trample, Pierce, 12.)
-//! Core #41 Sheepish's trigger: §10.5 step 7's `cardResolved`, after the Cry and every Echo (R427), a
-//! play, so never a token, a Recruit or a Reborn (R1, R61); the opponent's, a Unit, and still on the
-//! field from that play (R174), every condition in `when` so a miss leaves it set (R99). Then C #5
-//! Tesla's hit on the instance. A Trap's printed Trample and Pierce reach no hit by themselves
-//! (`damage.rs` reads a source's Trample only for an attacking Unit or a Spell), so the hit states them
-//! (R2199001): the excess past the Unit's Health, after its Armor, goes to its controller's hero
-//! (§4.4 step 9, R1750000); Divine Shield or Indestructible stops the hit, and nothing tramples.
+//! Core #41 trigger: §10.5 step 7 `cardResolved` (after Cry/Echo, R427; never token/Recruit/Reborn, R1, R61; R174, R99).
+//! C #5 hit states Trample and Pierce (R2199001; §4.4 step 9, R1750000 excess to hero).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::prelude::*;
@@ -52,7 +47,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #14 Explosive Trap — SPEC §8.11 row 14, BUILD M13 row TG 14. p2 sets it face-down in backrow
+// TG #14 Explosive Trap — SPEC §8.11 row 14, BUILD M13 row TG 14.
 // lane 1; p1 is active and plays.
 #[cfg(test)]
 mod tests {

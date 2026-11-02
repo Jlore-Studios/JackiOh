@@ -38,10 +38,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #54 Book of Books — SPEC §8.7 row 54, BUILD M9 Classic+ row C+ 54: "Adds 2 random non-token Books
-// of any set, never Book of Books (R387), which cost (0) (`costOverride` 0); repeats allowed; a full
-// hand burns; hidden from the opponent (R97); the count reads through `param()`; radiant the Books are
-// Radiant". R637: each Book is Temporary, in both faces, and is discarded at the end of the turn.
+// C+ #54 Book of Books — SPEC §8.7 row 54, BUILD M9 Classic+ row C+ 54 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -52,7 +49,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `book({ radiant?, seed?, fillers? })`: `None` is the TS default.
     fn book(radiant: bool, seed: Option<&str>, fillers: Option<usize>) -> Scenario {
         let mut hand = vec![json!({ "def": BOOK, "radiant": radiant })];
         hand.extend((0..fillers.unwrap_or(1)).map(|_| json!(FILLER)));

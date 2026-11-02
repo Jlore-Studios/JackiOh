@@ -1,28 +1,15 @@
-//! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the I1–I4
-//! monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`), so a test
-//! names every engine item as `jackioh_engine::testkit::*` gives it.
+//! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the
+//! I1–I4 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
 //!
-//! `register_scripts` and `register_catalog` are the harness's (`scenario.rs`): they set the
-//! thread-local override that `catalog::registered_catalog()` and `scripts::script_of()` consult
-//! first under this feature, and they win here over the production versions `crate::*` also brings.
+//! `register_scripts` and `register_catalog` (`scenario.rs`) set the thread-local override that
+//! `catalog::registered_catalog()` and `scripts::script_of()` consult first under this feature, so they win
+//! over the production versions `crate::*` also brings.
 //!
-//! `seed_search.rs` is #848's seed search: `seed_where` and `cursor_where` find at run time the seed or
-//! the rng cursor where a pool's roll lands as a test needs, so no test pins one a pool change would move.
-//!
-//! `seams.rs` holds the two test seams made from outside the engine: a test-made work handler and
-//! stand-ins for three turn stages. `preview.rs` is R1420's preview of a set that does not ship yet.
-//! `duos_scenario.rs` is #936's: a begun Duos game, every mulligan kept, round 1 open.
-//!
-//! `golden.rs` is the golden replay's pure half (§13.3, #1641): `cargo jackioh golden check --file` replays
-//! recorded games with it, and the engine's `tests/golden.rs` folds the hotseat fixture with it. It is not
-//! globbed in: a caller names `golden::<item>`.
-//!
-//! `pick.rs` holds the one-instance pick builders and `scenario.rs` the panicking `Scenario::unit_at`
-//! (#1826); like `golden`, callers name the module (`pick::<builder>`). `scenario.rs`'s `must` (an
-//! `Option`'s value, or a panic naming what was expected, #2023) comes in with the glob.
-//!
-//! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
-//! engine functions): a test names `effects::<verb>` or imports the verbs it uses.
+//! `seed_search.rs` is #848's seed search: `seed_where` and `cursor_where` find the seed or rng cursor where
+//! a pool's roll lands as a test needs. `preview.rs` is R1420's preview of a set that does not ship yet,
+//! `duos_scenario.rs` #936's begun Duos game. `golden.rs` (§13.3, #1641) and `pick.rs` (the one-instance pick
+//! builders, #1826) are not globbed in: callers name the module (`golden::<item>`). `must` (#2023) comes in
+//! with the glob, the effects library (its verbs share names with engine functions) does not.
 
 pub mod duos_scenario;
 pub mod glow;

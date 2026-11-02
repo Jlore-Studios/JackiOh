@@ -1,6 +1,6 @@
-//! R747000 (SPEC §9.12, R1452): the skill knob on a seat. At skill 1.0 a seat decides exactly as it
-//! did before the knob and takes no extra draw, at 0.0 it plays the skill miss (R2214000) on the same
-//! stream, in between each decision rolls the seat's own seeded stream, and every run reproduces.
+//! R747000 (SPEC §9.12, R1452): the skill knob on a seat. At skill 1.0 a seat takes no extra draw, at
+//! 0.0 it plays the skill miss (R2214000) on the same stream, in between each decision rolls the seat's
+//! own seeded stream, and every run reproduces.
 
 use jackioh_ai::{
     AI_BUDGET, AI_SKILL_MAX, AI_SKILL_MIN, MatchConfig, MatchHooks, MatchSetup, SearchBudget, SeatController,

@@ -1,7 +1,6 @@
-// Patch notes (brief B4.2 item 5; R388, R507) lazy-load opened snapshots and limit faces in large additions.
-// Patches sit in their release line, one bubble per set, the newest open (R724000), and each shows its
-// player note, never its record's source or notes (R724001). They read public patch data only (CLAUDE.md
-// rule 7).
+// Patch notes (brief B4.2 item 5; R388, R507): opened snapshots load lazily, large additions limit
+// their faces. Patches sit in their release line, the newest open (R724000), each with its player
+// note, never its record's source or notes (R724001). Public patch data only (CLAUDE.md rule 7).
 
 import { useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -36,10 +35,7 @@ function patchCount(count: number): string {
   return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
 }
 
-/**
- * A card's name as a control that opens its history. `link-button` keeps the tavern's wood-button
- * rule off it; patches.css draws it as the tavern's gold prose link.
- */
+/** A card's name that opens its history; `link-button` keeps the wood-button rule off it (patches.css draws the gold link). */
 function NameButton({ def, onOpen }: { def: CardDef; onOpen: OpenCard }): ReactElement {
   return (
     <button
@@ -214,7 +210,7 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   );
 }
 
-/** R724001: a patch's note under the page's fixed headings; nothing when it has none or no line. */
+/** R724001: a patch's note under the page's fixed headings. */
 function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElement | null {
   const sections = note === undefined ? [] : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0);
   if (note === undefined || sections.length === 0) return null;
@@ -337,9 +333,8 @@ function PatchEntry({
 }
 
 /**
- * #2052: the detail's place while a card opened from a patch loads, or after it failed: its status line,
- * Try again when it failed, and Close. A dialog as the detail is (`useModalOverlay`), so Escape, the
- * scrim and Back close it too; a dialog's wait stays text (R2108000).
+ * #2052: the detail's place while a card opened from a patch loads, or after it failed. A dialog as the
+ * detail is (`useModalOverlay`), so Escape, the scrim and Back close it too; its wait stays text (R2108000).
  */
 function OpeningCard({ read, onClose }: { read: Exclude<Loaded<CardDef | null>, { status: "ready" }>; onClose: () => void }): ReactElement {
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -376,14 +371,14 @@ function OpeningCard({ read, onClose }: { read: Exclude<Loaded<CardDef | null>, 
 function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Patch[]; onClose: () => void }): ReactElement | null {
   const source = usePatchSource();
   const read = useLoaded<CardDef | null>(`open:${id}`, async () => currentDef(id, patches, await source.index(), (version) => source.snapshot(version)));
-  // #2052, R2108000: a card that answers within SKELETON_DELAY_MS opens as it always did, with no wait shown.
+  // #2052, R2108000: a card that answers within SKELETON_DELAY_MS opens with no wait shown.
   const waited = useShownAfterDelay();
   if (read.status === "ready") return read.value === null ? null : <CardDetail def={read.value} onClose={onClose} historyOpen />;
   if (read.status === "loading" && !waited) return null;
   return <OpeningCard read={read} onClose={onClose} />;
 }
 
-/** R724000: one release line as a bubble: its name, span and count, and, opened, its summary, technical changes and patches. */
+/** R724000: one release line as a bubble. */
 function ReleaseBubble({
   release,
   group,
@@ -469,7 +464,7 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   const defs: Loaded<CardDefs | null> = useLoaded(`defs:${newest?.version ?? ""}`, () =>
     newest === undefined ? Promise.resolve(null) : source.snapshot(newest.version),
   );
-  // The technical log is a patch's extra lines: until it loads, or if it fails, the page reads without them.
+  // Until the technical log loads, or if it fails, the page reads without its lines.
   const log = useLoaded("technical", () => source.technical());
   const technical = technicalLines(log.status === "ready" ? log.value : []);
   const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));

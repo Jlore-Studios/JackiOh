@@ -11,8 +11,7 @@
 //! The copy is a fresh card of the definition the event names (R71), so a fused card copies its
 //! transient definition (R77) and a card that has ceased to exist since (Core #41 Sheepish) still
 //! copies. A cast is a play (R70), a cast on draw none (R2179002); a countered card never reached the
-//! log (R448). Double Header does
-//! not answer its own play (R119), so the turn it lands copies nothing (R826).
+//! log (R448). Double Header does not answer its own play (R119), so the turn it lands copies nothing (R826).
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -76,18 +75,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #11 Double Header — SPEC §8.8 row 11, BUILD M10 row M 11: "From the turn after it
-// lands, the first card you play each turn, once it resolves, adds a fresh base copy costing (0)
-// to your hand; the second card adds nothing; the turn it lands it copies nothing, being or
-// following the turn's first card (R119, R826); a cast first card counts (R70); a countered one
-// does not, so the next is the first; a fused card's copy is the fused definition (R77); a card
-// that has ceased to exist still copies; the opponent's plays copy nothing; the hand cap burns the
-// copy; setCost reads through `param()`; radiant the copy is Radiant".
-//
-// Core #5 Stockpile is the played first card; Core #27 Blood Ridden Glowy Jelly Bean (cast on draw,
-// R70) is the cast one; Classic #17 Counterspell counters; Core #41 Sheepish transforms the victim
-// after its resolution; Core #99 Craft a Card builds the fused card (answered as its own tests
-// answer: each Discover with its first option).
+// Meditative #11 Double Header — SPEC §8.8 row 11, BUILD M10 row M 11.
+// Fixtures: Core #27, Classic #17, Core #41 and Core #99, as their consts say.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -107,8 +96,7 @@ mod tests {
     const COUNTER: &str = "classic-017"; // (2) Trap: counter an opponent's Spell.
     const CRAFT: &str = "core-099"; // (4) Spell: Discover 2 Units, fuse them, the result costs (0).
 
-    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues;
-    /// `extra` replaces its own entries.
+    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {
         crate::merged(
             json!({ "mana": 10, "hand": [SPARE], "library": [VANILLA, VANILLA, VANILLA] }),
@@ -124,7 +112,6 @@ mod tests {
             .collect()
     }
 
-    /// The open prompt, as its JSON.
     fn open(s: &Scenario) -> Value {
         crate::js(must(s.state().pending.as_ref(), "an open prompt"))
     }
@@ -174,7 +161,6 @@ mod tests {
                 "p1": side(json!({ "hand": [ID, STOCKPILE, SPARE] })),
                 "p2": side(json!({})),
             }));
-            // Its own play is the turn's first card, which it does not answer (R119).
             s.play(ID, json!({ "zone": 1 }));
             s.play(STOCKPILE, json!({}));
             assert!(copies(&s, P1).is_empty());
@@ -191,7 +177,6 @@ mod tests {
                 })),
                 "p2": side(json!({})),
             }));
-            // The draw casts the Jelly Bean free, no play (through v0.5.2 the turn's first card, R70).
             let jelly = s.card(JELLY).id.clone();
             s.start_turn();
             s.expect_in_zone(&jelly, "graveyard");
@@ -266,7 +251,6 @@ mod tests {
             });
             let (s, fused) = crafted(&seed);
             let fused_def = fused.def_id.clone();
-            // The fused card's first play on a later turn copies its transient definition (R77).
             let copies: Vec<CardInstance> = copies(&s, P1)
                 .into_iter()
                 .filter(|card| card.def_id == fused_def)

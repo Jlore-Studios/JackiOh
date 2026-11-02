@@ -1,8 +1,7 @@
-//! The delayed kinds (docs/classic-sets.md B5 E27, E28, R458): a destroy at the start of your next
-//! turn, aimed at a unit (Classic #20) or read then over a scope (its Radiant face); your hand
-//! discarded at the end of this turn or of your *next* turn (Classic #37); `delay`'s `next`; and a
-//! start-of-turn effect for the rest of the game (Classic+ #52), which runs in R62's delayed stage
-//! among the delayed effects in creation order, once per turn, and stacks; and its end-of-turn form
+//! The delayed kinds (docs/classic-sets.md B5 E27, E28, R458): a destroy at your next turn's start, at a
+//! unit (Classic #20) or over a scope (its Radiant); your hand discarded at the end of this or your *next*
+//! turn (Classic #37); `delay`'s `next`; a start-of-turn effect for the rest of the game (Classic+ #52), run
+//! in R62's delayed stage in creation order, once a turn, and stacking; and its end-of-turn form
 //! (Stinkyscape #39, R1861002).
 
 use jackioh_engine::effects::delay::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
@@ -75,7 +74,6 @@ fn play(state: &mut GameState, player: PlayerId, def_id: &str, extra: Value) -> 
     act_ok(state, body)
 }
 
-/// End the active player's turn.
 fn pass(state: &GameState) -> ReduceResult {
     act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
 }
@@ -97,7 +95,6 @@ fn instance_ids(events: &[GameEvent], ty: GameEventType) -> Vec<Value> {
         .collect()
 }
 
-/// The `discarded` events of `owner`'s cards.
 fn discarded_of(events: &[GameEvent], owner: PlayerId) -> Vec<Value> {
     events_of_type(events, GameEventType::Discarded)
         .into_iter()
@@ -448,7 +445,6 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
         );
     }
 
-    /// The replayed game's step: `reduce` with a nonce from the log's length, logged once accepted.
     fn step(state: &mut GameState, log: &mut Vec<Action>, body: Value) {
         let mut action = body;
         action["nonce"] = json!(format!("rp{}", log.len()));
@@ -536,7 +532,7 @@ mod b5_e28_for_the_rest_of_the_game_at_the_start_of_your_turn_r458 {
         );
         assert_eq!(state.phase, Phase::Main);
         assert!(state.pending.is_none());
-        // It ran once: the answer finished it and the turn went on to its draw, not back to the effect.
+        // It ran once: after the answer the turn went on to its draw, not back to the effect.
         assert_eq!(state.players.p1.hand.len(), hand + 1);
 
         let replayed = fold(&json_as(json!({ "seed": seed, "decks": decks, "log": log })));

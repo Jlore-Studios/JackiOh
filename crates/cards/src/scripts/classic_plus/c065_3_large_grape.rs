@@ -3,9 +3,8 @@
 //!   Radiant: the same text, amount 10 and draw 2.
 //!   Engine:  "As C+ #65.2, the drawn card taking `costOverride` 0. Tunes: amount 5 ↑; draw 1 ↑."
 //!
-//! C+ #65.2 Normal Grape with a set price in place of the discount: each card a draw put in the hand
-//! costs (0) (`costOverride`, R65), which an X-cost card's X never minds. A card cast on draw, a burned
-//! card, a fatigue draw and a limited draw get nothing (`drawPriced`, effects/fruit.ts).
+//! The set price (R65) is one an X-cost card's X never minds. A card cast on draw, a burned card, a
+//! fatigue draw and a limited draw get nothing (`drawPriced`).
 
 use jackioh_engine::effects::{damage_enemy_or_heal_friend, draw_priced};
 use jackioh_engine::prelude::*;
@@ -36,9 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #65.3 Large Grape — SPEC §8.7 row 65.3, BUILD M9 Classic+ row C+ 65.3: "As Normal Grape with 5 and
-// 5, and the drawn card costs (0) (`costOverride` 0); amount and draw read through `param()`; radiant 10
-// and 10, draw 2, and each drawn card costs (0)".
+// C+ #65.3 Large Grape — SPEC §8.7 row 65.3, BUILD M9 Classic+ row C+ 65.3.
 #[cfg(test)]
 mod tests {
     use super::*;

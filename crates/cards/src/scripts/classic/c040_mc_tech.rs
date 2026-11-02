@@ -17,10 +17,8 @@ use jackioh_engine::effects::{ForEachCardArgs, choose_target, for_each_card, ste
 
 pub const ID: &str = "classic-040";
 
-/// The Radiant pick's resume step.
 const STEAL_STEP: &str = "steal";
 
-/// The permanents `player`'s opponent controls: the tops of their unit piles, then their backrow.
 fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = slots_of(enemy, Row::Backrow)
@@ -36,8 +34,6 @@ fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     permanents
 }
 
-/// "If your opponent controls {threshold} or more permanents": the one test the Cry and the glow make.
-/// The Cry's and the glow's contexts are different types, so the caller hands over the three readings.
 fn enough_permanents(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
     enemy_permanents(state, controller).len() as i32 >= threshold
 }
@@ -95,14 +91,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40: at resolution, if the opponent controls 4+
-// permanents (unit-pile tops and backrow, face-down included; dormant cards don't count, R13), steal one at
-// random (R60), placed per R15, an entry (R171); radiant 6/6: you pick, a face-down option carrying only
-// its id (R177); a stolen face-down trap is read by you (R33); threshold reads through `param()` (R386).
-// The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
-// The face-down traps used below never fire during these plays: My Pawn answers only a lethal attack,
-// Bread and Butter and Intern Stimmy the end of a turn, and Unlicensed Experimentation a permanent of a
-// type its controller controls (p2 controls no Unit when they hold only traps).
+// C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40 (R13, R60, R15, R171, R177, R33, R386).
+// The `conditionMet` proofs (R195) are in `tests/cross/condition_active.rs`, with the other cards'.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -121,7 +111,6 @@ mod tests {
 
     use crate::js;
 
-    /// The four traps, each face-down.
     fn face_down_traps() -> Value {
         Value::Array([PAWN, BREAD, STIMMY, UNLICENSED].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
     }
@@ -384,7 +373,6 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                // An absent prompt serializes as `null`.
                 let prompt = js(&s.view(PlayerId::P1).pending).to_string();
                 assert_ne!(prompt, "null");
                 for trap in [PAWN, BREAD, STIMMY, UNLICENSED] {

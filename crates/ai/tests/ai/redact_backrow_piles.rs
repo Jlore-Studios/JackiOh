@@ -1,9 +1,5 @@
-//! R185 and B5 E21 (R447): a card dormant under a backrow pile is on the board, and a face-down one there
-//! is as hidden from the other seat as a face-down trap on top — `redact` makes it a placeholder,
-//! `determinize` fills it from the face-down pool, and a carrier's Unit (R446) stays a public card. Real
-//! catalog, real dealt game; the AI is p1 as in every AI test.
-//!
-//! Port of `packages/ai/test/redact-backrow-piles.test.ts`.
+//! R185, B5 E21 (R447): card dormant under backrow pile is hidden from other seat; `redact` makes it
+//! a placeholder, `determinize` fills from pool, and carrier's Unit (R446) stays public.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

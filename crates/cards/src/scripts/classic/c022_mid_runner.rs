@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-022";
 
-/// "{threshold} or more mana": the one test both the Cry and the glow make.
 fn enough_mana(ctx: &impl ParamContext, mana: i32) -> bool {
     mana >= param(ctx, "threshold")
 }
@@ -73,7 +72,6 @@ pub fn script() -> CardScripts {
         })),
         ..Script::default()
     };
-    // The same script: the Radiant face is the base text on doubled stats (docs/radiant-audit.md).
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -130,7 +128,6 @@ mod tests {
             crate::register_all();
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, RUNNER);
-            // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(
                 scripts.radiant.cry.as_ref().unwrap(),
                 scripts.base.cry.as_ref().unwrap()

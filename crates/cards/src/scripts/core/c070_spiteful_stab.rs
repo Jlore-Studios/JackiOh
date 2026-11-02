@@ -3,14 +3,10 @@
 //! Base: "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your
 //! exile". Radiant (R275): 4, per full 3, +2 per card; the target and the 30 baseline are kept.
 //! R72: "'Cards in exile' means your own exile pile; missing health counts from 30 even when the hero
-//! has more": `missing = max(0, HERO_HEALTH - health)` (§2's 30, `config.rs`, BUILD §2) and
-//! `amount = base + floor(missing / step) + perExiled * exileCount`. The exile is the controller's
-//! own pile (§3), never the opponent's or the game-wide `counters.exiled` (R55).
-//! R280: the `preview` is each face's text, its value the damage `stab_amount` comes to now, from the
-//! hero's health and exile count, both public (§10.8).
-//! §8 Conventions: a bare `target` is a unit only (`pick_kinds_for`, R90), so the heroes are named.
-//! R81: the pick travels in the `play` action, so nothing pauses. §4.4: one damage instance, R63's
-//! zero rule applies. R662, the glow: in hand when a scaling term adds damage, built on `stab_amount`.
+//! has more" (§2's 30, BUILD §2): the controller's own pile (§3), never `counters.exiled` (R55).
+//! R280: the `preview` is each face's text, its value the damage now, from public facts (§10.8).
+//! §8 Conventions: a bare `target` is a unit only (R90), so the heroes are named. R81: the pick travels
+//! in the `play` action. §4.4: one damage instance (R63). R662: glows in hand once a scaling term adds.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -30,8 +26,7 @@ struct Stab {
     per_exiled: i32,
 }
 
-/// §8: "Deal 2 …, +1 per full 5 health …, +1 per card …"; radiant "Deal 4 …, per full 3 …, +2 per
-/// card …": the declared numbers `damage`, `healthStep` and `perExile` (R386), as the card stands.
+/// The declared numbers `damage`, `healthStep` and `perExile` (R386), as the card stands.
 fn numbers_of<C: ParamContext + ?Sized>(ctx: &C) -> Stab {
     Stab {
         base: param(ctx, "damage"),
@@ -40,8 +35,6 @@ fn numbers_of<C: ParamContext + ?Sized>(ctx: &C) -> Stab {
     }
 }
 
-/// §10.9: a hook may read state to compute an effect's arguments; it never writes. Both reads go
-/// through the engine's read-only board surface (`hero_of`, `zone_count`, BUILD M3-T1).
 /// R72: missing health floors at 0, and the exile is the controller's OWN pile.
 fn stab_amount(state: &GameState, controller: PlayerId, face: Stab) -> i32 {
     let missing = (HERO_HEALTH - hero_of(state, controller).health).max(0);
@@ -57,8 +50,7 @@ fn spiteful_stab(face: FaceKind) -> Script {
             let amount = stab_amount(ctx.state, ctx.controller, numbers_of(&*ctx));
             vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
         })),
-        // R280: the label is the face's whole text as printed, with its declared numbers as the card
-        // stands (R386).
+        // R280: the label is the face's text, its declared numbers as the card stands (R386).
         preview: Some(condition_hook(move |ctx| {
             vec![PreviewValue {
                 label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref()),
@@ -83,10 +75,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #70 Spiteful Stab — SPEC §8.3, BUILD M4-T4: "2 + floor(missing/5) + exile count"; radiant
-// 4 + floor(missing/3) + 2 × exile (R275 doubled the exile term).
-//
-// §8.3's Engine cell: "`missing = max(0, 30 − health)`, floor division; your own exile (R72)".
+// #70 Spiteful Stab — SPEC §8.3, BUILD M4-T4. ; radiant 4 + floor(missing/3) + 2 × exile (R275 doubled the
+// exile term).
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -99,16 +89,14 @@ mod tests {
     const SPONGE: &str = "core-019"; // Midrange Menace, 9/9, no Armor: a target that survives.
     const FODDER: &str = "core-010"; // Rapid Replenish, a Spell: filler for an exile pile.
 
-    /// R82: a turn left with only end, concede and offer-draw auto-ends, and `reduce` checks that after
-    /// EVERY action, so a play that empties the hand and leaves no unit hands the turn over and the
-    /// numbers under test move. Every scenario below therefore keeps one free 0-cost Spell in p1's
-    /// hand: never played, it only keeps one legal action on the turn.
+    /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
+    /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// The refusal's word, lower-case (a hand check: no regex crate).
     const TARGET_TEXT: &str = "target";
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
+    /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {
         crate::register_all();
         let mut opts = opts;
@@ -208,8 +196,7 @@ mod tests {
 
         #[test]
         fn s4_4_the_whole_amount_is_one_pipeline_instance_so_armor_absorbs_it_once() {
-            // #25 4-mana 7/7 prints Armor 7; 2 + floor(10/5) = 4 is fully absorbed and R63 makes it a
-            // non-event rather than four separate hits.
+            // #25 prints Armor 7: 2 + floor(10/5) = 4 is absorbed whole, a non-event (R63), not four hits.
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 }, "p2": { "field": ["core-025"] } }));
             let targets = pick::unit_at(&s, P2, 1);
             s.play(STAB, json!({ "targets": targets }));

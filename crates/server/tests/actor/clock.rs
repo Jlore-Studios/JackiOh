@@ -1,9 +1,4 @@
-//! BUILD M7-T1's fake-timer tests for the match clock (SPEC §9.5, R79).
-//!
-//! One test per clock path, on tokio's paused clock (`start_paused = true`): `sleep_settled(ms)` fires the
-//! due timers in deadline order, so the assertions are on the millisecond rather than a tolerance.
-//! Every duration is derived from the server's config (`crate::config`), so these tests state R79's
-//! numbers nowhere.
+//! Fake-timer tests for the match clock (SPEC §9.5, R79) on tokio's paused clock.
 
 use std::sync::{Arc, Mutex};
 
@@ -232,9 +227,7 @@ mod match_clock {
         let deadline = h.grace(P1);
         assert_eq!(deadline, Some(now() + h.grace_ms));
 
-        // The socket flaps: another drop arrives while the first countdown is still running. Re-arming
-        // here would hand the player a fresh window every time they bounced, and the match would stall
-        // for as long as they kept it up.
+        // Re-arming on flaps would allow stalling; keep original deadline.
         sleep_settled(h.grace_ms - SECOND).await;
         h.clock.start_grace(P1, None);
         assert_eq!(h.grace(P1), deadline);
@@ -244,8 +237,7 @@ mod match_clock {
         sleep_settled(SECOND).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }]);
 
-        // And a grace that has run out can be started again: the guard is about extending a live
-        // countdown, not about refusing the next one.
+        // An expired grace can be started again.
         h.clock.start_grace(P1, None);
         assert_eq!(h.grace(P1), Some(now() + h.grace_ms));
     }
@@ -264,8 +256,7 @@ mod match_clock {
         sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }]);
 
-        // A stored deadline later than a fresh window would end is held to it (R147): a rebuild can
-        // shorten a grace, never extend one.
+        // Stored deadline later than fresh window is held to it (R147); rebuilds never extend grace.
         h.clock.start_grace(P2, Some(now() + h.grace_ms * 2));
         assert_eq!(h.grace(P2), Some(now() + h.grace_ms));
 
@@ -455,8 +446,7 @@ mod match_clock {
         assert_eq!(h.expiries(), vec![ClockExpiry::Mulligan]);
         assert!(h.mulligan_ms < h.turn_ms);
 
-        // It fires once: the window is still open until the actor's timeouts land, and a `sync` that
-        // still reports it arms nothing new.
+        // Fires once; sync while still open arms nothing new.
         h.clock.sync(&mulligan_window(&[P2]));
         sleep_settled(h.mulligan_ms * 2).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Mulligan]);
@@ -468,8 +458,7 @@ mod match_clock {
         h.clock.sync(&mulligan_window(&[P1, P2]));
         let deadline = h.deadline("promptDeadline");
 
-        // p2 answers first, well into the window. The seat still owing gets what was left, not a fresh
-        // window, and the seat that answered still reads the same countdown: it is waiting on it.
+        // Answering does not give the other seat a fresh window.
         sleep_settled(20 * SECOND).await;
         h.clock.sync(&mulligan_window(&[P1]));
         assert_eq!(h.deadline("promptDeadline"), deadline);
@@ -671,13 +660,11 @@ mod r389_the_match_ceiling_doubled_with_the_turn_cap_patch_v0_2_0_b4_3 {
     #[test]
     fn r389_the_hard_ceiling_is_120_minutes_and_the_server_runs_with_it() {
         assert_eq!(int(MATCH_CEILING_MINUTES), 120);
-        // The Rust clock reads `config::MATCH_CEILING_MINUTES` itself (no `ServerConfig`).
         assert_eq!(match_ceiling_at(0), int(MATCH_CEILING_MINUTES) * MINUTE);
     }
 
     #[test]
     fn r389_a_game_that_plays_every_turn_to_the_cap_at_a_full_turn_clock_ends_on_the_cap_not_the_ceiling() {
-        // 60 player-turns × 75 s is 75 minutes: under 120.
         let longest_game_ms = PLAYER_TURNS_AT_CAP * int(TURN_CLOCK_SECONDS) * SECOND;
         assert!(longest_game_ms < int(MATCH_CEILING_MINUTES) * MINUTE);
         assert!(longest_game_ms > 60 * MINUTE);

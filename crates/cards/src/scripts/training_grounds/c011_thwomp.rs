@@ -2,11 +2,7 @@
 //! held Training Grounds set (R1420, R2194000).
 //!   Base:    "Deal {damage} damage to a Unit." — 10.
 //!   Radiant: the same text — 100.
-//!
-//! Engine: C #12 Book of Blood's script without its Lifesteal: one declared target, any Unit on either
-//! side and never a hero (R90), then one `damage` on it. A Spell source, so §4.4 step 0 adds its
-//! caster's Spell Damage; a Divine Shield takes the hit whole, Armor lowers it. An Immutable Unit is
-//! never offered (R781001). Both faces run one script: `param` reads the face's number.
+//! C #12 Book of Blood without Lifesteal: target unit (not hero, R90; R781001 Immutable). Spell Damage adds (§4.4 step 0).
 
 use jackioh_engine::prelude::*;
 

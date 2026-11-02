@@ -1,45 +1,15 @@
 //! Trap matching and immediate resolution (SPEC §5.1, §10.3, §2.2's end-of-turn window; BUILD M3-T2).
+//! Traps are checked before other triggers because they are responses, and a trap resolves to completion,
+//! its owner's prompts and forced attacks included, before the action it answered continues (§10.3); the
+//! end-of-turn window is the one scheduled exception (R62).
 //!
-//! §10.3: "Traps are checked before other triggers because they are responses (the end-of-turn trap
-//! window of §2.2 is the one scheduled exception, R62); a trap that fires during the opponent's turn
-//! resolves to completion (including forced attacks and prompts for the trap's owner) before the
-//! opponent's action continues."
-//!
-//! This module owns four things and nothing else:
-//!   1. matching  — which backrow traps watch a given event (`traps_watching`), in R68 order;
-//!   2. firing    — emit `trapFired`, run the trigger to completion, run the state check
-//!      (`fire_traps_for`, `run_trap_window`);
-//!   3. consuming — a Trap goes to its owner's graveyard, a Field Trap stays and is face-up (R33)
-//!      (`consume_trap`);
-//!   4. owing     — a window a prompt interrupted parks the traps that have not seen the event yet
-//!      on `state.work`, so the answer finishes the window (`TRAP_WINDOW_WORK`, R113),
-//!      and a trap whose own list asks parks the rest of its firing — its other
-//!      triggers, its consumption and its check — behind that list (`TRAP_FIRING_WORK`).
-//!
-//! The *when* is the caller's: `triggers.rs` offers every freshly emitted event to `fire_traps_for`
-//! before it queues any ordinary trigger, and `turn.rs` calls `run_trap_window` at R62's scheduled
-//! point — after the end-of-turn triggers and before the end-of-turn delayed effects. R17's two
-//! moments are likewise the play pipeline's (§10.5): Sheepish fires on the `summoned`/`cardPlayed`
-//! pair emitted at step 4, before the Cry of step 5; Bear Honeypot, Unstable Clone Machine and
-//! Unlicensed Experimentation fire on `cardResolved`, which step 7 emits once per play or cast after
-//! the Cry and every Echo repeat, and whose `permanent` flag is R61's "played permanents only".
-//! `cardResolved` needs no list here — a trigger that names an event type is matched on it — but it
-//! does need R119: a trap is a played card too, so `traps_watching` never offers a trap the arrival
-//! event that names the trap itself. And it travels the immediate path alone: R100 keeps the
-//! scheduled window's events to the window, and `cardResolved` is not one of them.
-//!
-//! A window is a sequence that can span a prompt, so it is resumable through `state.work` and
-//! through nothing else (§9.3, R113). Neither of the two dispatch paths may ever *drop* an event it
-//! has not finished delivering: the immediate one owes the rest of its traps as `triggers.rs`'s
-//! front-of-queue `OWED_TO_TRAPS` entry, and the scheduled window owes its remainder here as a
-//! `TRAP_WINDOW_WORK` item — the event plus the ids of the traps still to be offered it, all plain
-//! JSON. A bare `if state.pending.is_some() { return; }` would be the bug and not the fix: it strands
-//! the rest of the window with no way back, which is worse than firing late.
-//!
-//! Port of `packages/engine/src/traps.ts` (part 3). TS's two `registerWorkHandler` calls are not
-//! ported (SURFACE §6.6): `work.rs`'s dispatcher calls `run_owed_firing` (`"@trapFiring"`) and
-//! `run_owed_window` (`"@trapWindow"`) directly. Nor is `registerDeclarationCheck`: the declaration
-//! check is a direct call to `combat::declared_attack_stands`.
+//! The module matches (`traps_watching`, R68 order), fires (`fire_traps_for`, `run_trap_window`), consumes
+//! (`consume_trap`; a Field Trap stays, face-up, R33) and owes: an interrupted window parks the traps not
+//! yet offered the event (`TRAP_WINDOW_WORK`), a trap whose list asks parks the rest of its firing
+//! (`TRAP_FIRING_WORK`), and the immediate path owes its rest as `triggers.rs`'s `OWED_TO_TRAPS`, so no
+//! event is dropped half-delivered (§9.3, R113). The *when* is the caller's: `triggers.rs` offers each
+//! fresh event before any ordinary trigger, `turn.rs` runs the window (R100), and R17's two moments (R61's
+//! `permanent`) are §10.5's. `work.rs` calls `run_owed_firing` and `run_owed_window` (SURFACE §6.6).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -53,21 +23,12 @@ use crate::state::{
 use crate::stays::LaterMoves;
 use crate::wire::{GameEvent, GameEventType, PlayerId, Row, ZoneName};
 
-/// A trap trigger, and the two rows that settle what firing means.
+/// A trap trigger. R99: a trap fires when its trigger's `on` matches the event **and** its `when` admits
+/// it. R61 makes `run` returning `[]` mean "fired, consumed, did nothing", so a condition that must leave
+/// the trap armed (Bear Honeypot's "costing 1 or less") belongs in `when`, never in `run`. A trigger with
+/// no predicate answers every event it names, whichever side caused it.
 ///
-/// R99: a trap fires when its trigger's `on` matches the event **and** its `when` predicate admits
-/// it. The predicate is kept out of the effect list on purpose, because R61 makes `run` returning
-/// `[]` mean "fired, consumed, did nothing" — so a trap whose condition simply was not met cannot
-/// say so through `run` and would be spent by an event it should ignore. A condition that must leave
-/// the trap armed (Bear Honeypot's "costing 1 or less", My Pawn's "would be lethal", Sheepish's
-/// own-side summon, Unlicensed Experimentation's "whose type matches one you control") therefore
-/// belongs in `when`, never in `run`. A trigger that declares no predicate answers every event it
-/// names, whichever side caused it (R99), and with the predicate satisfied an empty effect list
-/// still spends the trap (R61).
-///
-/// `when` is declared on `script.rs`'s `TriggerDef` now, so this alias adds nothing to it: reading
-/// the predicate below is the declared contract, not a structural workaround. The name stays because
-/// the card files annotate their trap triggers with it (#18, #41, #60, #71, #85, #96).
+/// The card files annotate their trap triggers with this alias (#18, #41, #60, #71, #85, #96).
 pub type TrapTrigger = TriggerDef;
 
 /// One trap and the triggers of its own script that this event woke.
@@ -86,10 +47,9 @@ pub struct TrapDispatch {
     pub paused: bool,
 }
 
-/// A dispatch as the module reads it internally: `owed` names the traps the pause stopped it from
-/// offering the event to at all, which is what a resume needs and what neither caller may guess by
-/// subtracting `fired` — a trap whose `when` declined has seen the event and is not owed it again.
-/// (TS `TrapDispatch & { owed }`.)
+/// A dispatch as the module reads it: `owed` names the traps the pause stopped it from offering the event
+/// to, which a resume needs and no caller may guess by subtracting `fired` (a trap whose `when` declined
+/// has seen the event and is not owed it again).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct TrapRun {
     fired: Vec<String>,
@@ -97,16 +57,14 @@ struct TrapRun {
     owed: Vec<String>,
 }
 
-/// R212: the player each trap a dispatch offers the event to answers it for — the one who controlled
-/// it when the event happened, read as the dispatch begins and kept, like the owed list, across any
-/// pause. A trap an earlier effect stole between the event and its dispatch — a cast's events wait
-/// for the list that cast it (R70), and the end-of-turn window offers `turnEnded` to one trap after
-/// another (R62) — still answers for the player who held it then, and its tokens are theirs (R52).
+/// R212: the player each trap a dispatch offers the event to answers for: its controller when the event
+/// happened, read as the dispatch begins and kept across any pause. A trap stolen in between (a cast's
+/// events wait for its list, R70; the window offers `turnEnded` trap by trap, R62) answers, and makes its
+/// tokens, for the player who held it then (R52).
 pub type TrapControllers = IndexMap<String, PlayerId>;
 
-/// An immediate dispatch, as `triggers.rs` parks and resumes it: the traps still owed the event, in
-/// the order the dispatch offered it (R68, fixed as it began), who each answers for, and the stays
-/// it began with (R174). (TS `TrapDispatch & { owed; controllers; mark }`.)
+/// An immediate dispatch, as `triggers.rs` parks and resumes it: the traps still owed the event in the
+/// dispatch's order (R68, fixed as it began), who each answers for, and the stays it began with (R174).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ImmediateDispatch {
     pub fired: Vec<String>,
@@ -116,11 +74,8 @@ pub struct ImmediateDispatch {
     pub mark: u32,
 }
 
-/// R113: the `resume.hook` of the one work item this module parks — the rest of an end-of-turn trap
-/// window. It is an engine sequence, not a card's, so the name is one no `Script` can hold, and
-/// `run_owed_window` below is the dispatcher's arm for it (`work.rs`): `work::run_work_item` panics
-/// on a hook nothing knows, and a window that cannot be resumed is exactly the lost sequence that
-/// rule exists to prevent.
+/// R113: the `resume.hook` a paused end-of-turn trap window parks under. No `Script` can hold the name;
+/// `run_owed_window` is `work.rs`'s arm for it (`work::run_work_item` panics on a hook nothing knows).
 pub const TRAP_WINDOW_WORK: &str = "@trapWindow";
 
 /// The window has one step, named so a reader of `state.work` can see what is owed.
@@ -138,10 +93,9 @@ pub struct OwedWindow {
     pub mark: Option<u32>,
 }
 
-/// R100: the events the *scheduled* end-of-turn window owns. An event the window is scheduled to
-/// deliver is not also offered to the immediate check, so Bread and Butter and Intern Stimmy fire
-/// once per turn end, in the window, on both sides — and not a second time as ordinary responses.
-/// This list is the whole of that withholding, and R62's end-of-turn order depends on it.
+/// R100: the events the scheduled end-of-turn window owns, withheld from the immediate check, so Bread and
+/// Butter and Intern Stimmy fire once per turn end, in the window, on both sides. This list is the whole
+/// of that withholding, and R62's end-of-turn order depends on it.
 pub const TRAP_WINDOW_EVENTS: &[GameEventType] = &[GameEventType::TurnEnded];
 
 pub fn is_trap_window_event(event: &GameEvent) -> bool {
@@ -169,11 +123,10 @@ fn acts_as_trap(state: &GameState, instance: &CardInstance) -> bool {
     is_on_field(instance) && crate::zones::acts_on_field(state, instance)
 }
 
-/// Every trap on the field, in R68 order: the active player's cards first, then the opponent's; on each
-/// side the unit lanes 1–5, then the backrow lanes 1–5. A trap sits in a backrow zone (§5.1) unless it
-/// has animated (R383, B3.1 rule 3): an animated Field Trap stands in a unit zone as a Unit and keeps its
-/// text, so it fires from there, in the unit lanes of R68's order (Classic #5 Tesla keeps zapping). Only
-/// the card acting in a zone is one (§3.2): a trap dormant under a backrow pile never fires (R447).
+/// Every trap on the field, in R68 order: the active player's first; on each side the unit lanes 1–5,
+/// then the backrow lanes 1–5. An animated Field Trap (R383, B3.1 rule 3) stands in a unit zone as a Unit
+/// and fires from there (Classic #5 Tesla keeps zapping). Only the card acting in a zone is one (§3.2): a
+/// trap dormant under a backrow pile never fires (R447).
 pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
     let sides = active_first(state);
     let mut out: Vec<CardInstance> = Vec::new();
@@ -205,22 +158,17 @@ fn trap_triggers_of(state: &GameState, trap: &CardInstance) -> Vec<TrapTrigger> 
     crate::scripts::script_of(state, trap).triggers.clone()
 }
 
-/// R119: the events that say a card arrived. A card does not answer the play that put it onto the
-/// field. Not because it was absent when the play began — §10.5 step 4 places it and only then emits
-/// `cardPlayed`, so it is already a registered watcher by the time its own arrival is dispatched.
-/// The exclusion is deliberate, and for traps it lives here: a trap is never offered the
-/// `cardPlayed`, `summoned` or `cardResolved` event that names the trap itself. R17's two moments are
-/// both in this list, which is why the rule belongs here and not in each card's predicate: Sheepish
-/// answers step 4's `summoned`/`cardPlayed` pair, and Bear Honeypot, Unstable Clone Machine and
-/// Unlicensed Experimentation answer step 7's `cardResolved` — and a Trap or Field Trap is itself a
-/// card someone plays, so without this a trap watching either moment answers its own arrival.
+/// R119: the events that say a card arrived. A card does not answer the play that put it onto the field,
+/// though §10.5 step 4 places it before emitting `cardPlayed`: a trap is never offered the `cardPlayed`,
+/// `summoned` or `cardResolved` that names itself. R17's two moments are both here, and a Trap is itself a
+/// card someone plays, so without this a trap watching either moment would answer its own arrival.
 const ARRIVAL_EVENTS: &[GameEventType] = &[
     GameEventType::CardPlayed,
     GameEventType::Summoned,
     GameEventType::CardResolved,
 ];
 
-/// TS `(event as { instanceId?: unknown }).instanceId`, for the arrival events.
+/// The arrival events' `instanceId`.
 fn arrival_id(event: &GameEvent) -> Option<&str> {
     match event {
         GameEvent::CardPlayed { instance_id, .. }
@@ -237,10 +185,8 @@ fn is_own_arrival(trap: &CardInstance, event: &GameEvent) -> bool {
     if arrival_id(event) == Some(trap.id.as_str()) {
         return true;
     }
-    // R119: nor the play the trap arrived on the field during, whatever put it there — #95 summoning a
-    // Bear Honeypot face-down does not have that Honeypot answer #95's own `cardResolved`, and a
-    // Sheepish a tributed Cube's Death copied at step 2 does not answer the `cardPlayed` of the play
-    // that paid the Tribute.
+    // R119: nor the play the trap arrived on the field during, whatever put it there (#95 summoning a
+    // Bear Honeypot face-down; a Sheepish a tributed Cube's Death copied at step 2).
     arrived_during_play(event).contains(&trap.id)
 }
 
@@ -254,13 +200,9 @@ pub fn arrived_during_play(event: &GameEvent) -> &[String] {
     }
 }
 
-/// The traps this event woke, matched by the event type each trigger names. This is matching only:
-/// a `when` predicate needs an `EffectContext`, so it is evaluated when the trap fires.
-///
-/// Any event type a trigger names is matched, `cardResolved` included — R17's "after the card
-/// resolves", which §10.5 step 7 emits once per play or cast. It reaches the traps through the
-/// immediate path (`fire_traps_for`), never the scheduled one: R100 keeps the two disjoint, and only
-/// `TRAP_WINDOW_EVENTS` belongs to the window.
+/// The traps this event woke, matched by the event type each trigger names; a `when` predicate needs an
+/// `EffectContext`, so it is evaluated when the trap fires. `cardResolved` (R17) is matched too, and only
+/// on the immediate path: R100 keeps the two disjoint.
 pub fn traps_watching(state: &GameState, event: &GameEvent) -> Vec<TrapMatch> {
     let wakes = event.event_type();
     traps_in_order(state)
@@ -285,19 +227,15 @@ pub fn traps_watching(state: &GameState, event: &GameEvent) -> Vec<TrapMatch> {
         .collect()
 }
 
-/// §5.1: a Trap "fires …, then goes to the graveyard"; only a Field Trap "stays after firing and can
-/// fire again". A Trap is face-down until it fires (R33), so a face-up one that is still in the
-/// backrow is one whose firing has not finished — #96 My Pawn's effects are a whole AI turn — and it
-/// answers nothing more: it has fired, and firing is once. `fire_trap` turns it face-up before its
-/// effects run for exactly this reason.
+/// §5.1: a Trap fires, then goes to the graveyard; only a Field Trap fires again. A Trap is face-down
+/// until it fires (R33), so a face-up one still in the backrow is mid-firing (#96 My Pawn's effects are a
+/// whole AI turn) and answers nothing more; `fire_trap` turns it face-up before its effects for this.
 pub fn is_spent(state: &GameState, trap: &CardInstance) -> bool {
     trap.face_up == Some(true) && !is_field_trap(state, trap)
 }
 
-/// §3.2: "backrow cards go to the owner's graveyard when their effect ends (traps after firing
-/// unless Field Trap)". R33: a Field Trap that has fired is face-up to both players from then on.
-/// R61 makes this unconditional: a trap that fired is consumed whether or not its effects achieved
-/// anything, so the caller never asks what the effect list managed to do.
+/// §3.2: backrow cards go to the owner's graveyard when their effect ends, a Field Trap excepted, which is
+/// face-up to both players from then on (R33). R61: a trap that fired is consumed whatever its effects did.
 pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
     let mut card = crate::zones::live_or(sink.state, instance);
     card.face_up = Some(true);
@@ -321,9 +259,8 @@ pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
     if crate::animated::face_type_of(sink.state, &card) == crate::wire::CardType::Unit {
         return;
     }
-    // R383 (B3.1 rules 2 and 4): an Animated Trap's firing ends by animating it, so it is a Unit in a unit
-    // zone now, or it could not for want of an open one and stays in its zone face-up, as a Field Trap
-    // does — either way it does not go to the graveyard. Spent all the same (`is_spent`): a Trap fires once.
+    // R383 (B3.1 rules 2 and 4): an Animated Trap's firing ends by animating it, or leaves it face-up in
+    // its zone when no unit zone is open; either way it stays, spent (`is_spent`).
     if crate::animated::is_animated(sink.state, &card)
         || crate::animated::animated_kind_of(sink.state, &card).is_some()
     {
@@ -341,13 +278,10 @@ pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
     crate::zones::report_graveyard_landing(sink, &landed, result);
 }
 
-/// R152, §3.2, §5.1: #96 My Pawn's effect is the rest of the turn it handed to the AI, so that
-/// effect ends at the cleanup of that turn (`turn.rs` calls this there) — and a Trap "goes to the
-/// graveyard" when its effect ends. The trap is still face-up in its backrow (`is_spent`), because
-/// `fire_trap` is still on the stack underneath the AI's playout, and the next turn begins inside that
-/// same playout: consuming it only once the playout returns left it in the backrow through the
-/// opponent's start of turn, where #37 Gravedigger could not find it in the graveyard. A trap its own
-/// AI turn moved off the field (exiled, destroyed) is no longer in a backrow and is not touched.
+/// R152, §3.2, §5.1: #96 My Pawn's effect is the rest of the turn it handed to the AI, so the Trap goes to
+/// the graveyard at that turn's cleanup (`turn.rs` calls this), not when `fire_trap` returns from under the
+/// AI's playout, inside the next turn (#37 Gravedigger must find it there). A trap its AI turn moved off
+/// the field is not touched.
 pub fn end_handed_over_turn(sink: &mut EngineSink<'_>) {
     for trap in traps_in_order(sink.state) {
         if is_spent(sink.state, &trap) {
@@ -356,13 +290,10 @@ pub fn end_handed_over_turn(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// Fire one trap: emit `trapFired`, run every trigger of its that this event woke, run the state
-/// check so the trap has resolved to completion, then consume it. The trap is consumed whatever its
-/// effects achieved — an Immutable Sheepish target or a Fuse with no legal target still spends it
-/// (R17, R61). Returns false when no trigger's `when` admitted the event, which leaves the trap
-/// armed and face-down (R99) — the one outcome that is not a firing.
-///
-/// `controller` defaults to the trap's own (TS's default parameter).
+/// Fire one trap: emit `trapFired`, run every trigger this event woke, run the state check, then consume
+/// it whatever its effects achieved (an Immutable Sheepish target or a Fuse with no legal target still
+/// spends it, R17, R61). False when no trigger's `when` admitted the event, leaving the trap armed and
+/// face-down (R99). `controller` defaults to the trap's own.
 pub fn fire_trap(
     sink: &mut EngineSink<'_>,
     trap_match: &TrapMatch,
@@ -440,11 +371,10 @@ pub fn fires_again(state: &GameState, trap: &CardInstance) -> Option<bool> {
     (live.face_up == Some(true) && is_field_trap(state, live)).then_some(true)
 }
 
-/// R1849009 (Stinkyscape #174 Aerelret, #22 Gatinsir): "30% chance to Reveal". A face-down trap whose
-/// face prints a chance fires only when the match rng's roll comes under it — its declared number
-/// `chance` where it declares it, out of `PERCENT` — and with the controller's Luck and the trap's
-/// Lucky (R987, R1440) rolling again, any hit enough. A trap without one, a face-up Field Trap firing
-/// again and a set card revealing (R783006) draw nothing, so no other firing moves the rng.
+/// R1849009 (Stinkyscape #174 Aerelret, #22 Gatinsir): "30% chance to Reveal". A face-down trap whose face
+/// prints a chance fires only when the match rng rolls under it (its declared `chance`, out of `PERCENT`),
+/// the controller's Luck and the trap's Lucky rolling again, any hit enough (R987, R1440). Any other firing
+/// (a face-up Field Trap, a set card revealing, R783006) draws nothing, so it never moves the rng.
 fn chance_admits(sink: &mut EngineSink<'_>, trap: &CardInstance, controller: PlayerId) -> bool {
     if trap.face_up == Some(true) || trap.set_as.is_some() {
         return true;
@@ -463,9 +393,8 @@ fn chance_admits(sink: &mut EngineSink<'_>, trap: &CardInstance, controller: Pla
     }
 }
 
-/// What is left of one trap's firing: its armed triggers from `at` on, then its end — consumed, and
-/// the state check that makes it "resolve to completion" (§10.3). All JSON, so a firing a prompt
-/// interrupted is owed on `state.work` as `TRAP_FIRING_WORK` and survives the answer (R113).
+/// What is left of one trap's firing: its armed triggers from `at` on, then its end (consumed, and the
+/// state check, §10.3). All JSON, so it survives a prompt on `state.work` as `TRAP_FIRING_WORK` (R113).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct TrapFiring {
@@ -476,14 +405,10 @@ struct TrapFiring {
     event: GameEvent,
 }
 
-/// R113: the `resume.hook` of a trap's firing that a prompt interrupted — the triggers it has not
-/// run and its end. §10.3 has a trap "resolve to completion (including … prompts for the trap's
-/// owner) before the opponent's action continues", and a trap's list is an effect list like any
-/// other, so it runs resumably: the effects after one that asks are parked by
-/// `prompts::apply_resumable` (re-entered by the trigger's id, `work::script_step_for`), and this item
-/// behind them owes the rest. Running the list straight through walked on over the open prompt,
-/// dropped a second one (`open_prompt` never overwrites) and consumed the trap and ran the check in
-/// the middle of its effect.
+/// R113: the `resume.hook` of a trap's firing a prompt interrupted: the triggers it has not run, and its
+/// end. §10.3 has a trap resolve to completion, its owner's prompts included, so its list runs resumably:
+/// `prompts::apply_resumable` parks the effects after one that asks (re-entered by the trigger's id,
+/// `work::script_step_for`), and this item behind them owes the rest.
 pub const TRAP_FIRING_WORK: &str = "@trapFiring";
 
 /// The armed triggers of one firing, from `firing.at`, each with the trap's controller as "you"
@@ -549,18 +474,12 @@ fn run_armed_triggers(sink: &mut EngineSink<'_>, firing: TrapFiring) {
     end_firing(sink, &firing.trap_id);
 }
 
-/// The end of a firing: the trap consumed and the state check run (§3.2, §10.3).
+/// The end of a firing: the trap consumed and the state check run (§3.2, §10.3). R216: once the trap's
+/// effect has ended the game (#96's AI turn killed a hero) nothing follows, the consumption included.
 ///
-/// R216: once the trap's effect has ended the game (#96's AI turn ran to an end-of-turn hit that
-/// killed a hero) nothing happens after it — the trap is not consumed afterwards.
-///
-/// R52: everything the trap did belongs to the trap's controller, whoever caused the event. §3.2
-/// sends a backrow card to its owner's graveyard when its effect ends, so the trap is consumed where
-/// it is NOW — found again by id, because #96 My Pawn's AI turn replaces every instance in the state
-/// (`ai_policy::adopt_state`). Only a trap still on the field is consumed: one its own effects moved off
-/// it — exiled by the AI's #34 Collateral Damage, destroyed — is where that move put it, and exile is
-/// a pile nothing takes a card back out of (§6.3). One whose turn-long effect has already ended was
-/// consumed by `turn::cleanup` at the end of that turn (R152) and is in the graveyard by now.
+/// The trap is found again by id, since #96 My Pawn's AI turn replaces every instance
+/// (`ai_policy::adopt_state`), and consumed only while on the field: one its own effects moved (exiled by
+/// #34 Collateral Damage, §6.3) stays put, and one whose turn-long effect ended went at cleanup (R152).
 fn end_firing(sink: &mut EngineSink<'_>, trap_id: &str) {
     if sink.state.result.is_some() {
         return;
@@ -614,17 +533,10 @@ pub fn run_owed_firing(sink: &mut EngineSink<'_>, item: &WorkItem) {
     run_armed_triggers(sink, firing);
 }
 
-/// §4.2 step 4, §6.3 "Cancel an attack": the window a declaration opens answers that declaration,
-/// and only while it stands. Once a trap has canceled it (R44), or the window has closed — #96's AI
-/// turn can end the turn, and every declaration the AI makes opens and closes its own — there is no
-/// attack left to answer: a canceled attack resolves no combat, so it "would be lethal" to nobody,
-/// and a second My Pawn stays armed and face-down (R99). The same holds once a trap earlier in the
-/// window has destroyed, stolen or moved the attacker or its target (R220): that attack is over, and
-/// there is nothing for My Pawn to call off. A forced attack opens no window at all (R121) and is not
-/// held back here.
-///
-/// R220's "still stands as it was declared" is `combat.rs`'s (`declared_attack_stands`), which TS
-/// registered here (`registerDeclarationCheck`) only to break an import cycle.
+/// §4.2 step 4, §6.3 "Cancel an attack": a declaration's window answers it only while it stands. Once a
+/// trap has canceled it (R44), the window has closed (#96's AI turn), or an earlier trap has destroyed,
+/// stolen or moved the attacker or its target (R220, `combat::declared_attack_stands`), there is no attack
+/// to answer, and a second My Pawn stays armed (R99). A forced attack opens no window (R121).
 fn declaration_stands(state: &GameState, event: &GameEvent) -> bool {
     let GameEvent::AttackDeclared {
         attacker_id,
@@ -647,10 +559,9 @@ fn declaration_stands(state: &GameState, event: &GameEvent) -> bool {
         && crate::combat::declared_attack_stands(state, open)
 }
 
-/// The match as the board holds it now. A dispatch reads its matches when the window opens, and a
-/// trap that fired before this one can have replaced every instance (#96's AI turn, `adopt_state`),
-/// moved this trap off the field or turned it face-up, so each is found again by id before it is
-/// offered the event: a trap no longer on the field, or already spent, never fires (R61, §5.1).
+/// The match as the board holds it now: an earlier trap can have replaced every instance (#96's AI turn,
+/// `adopt_state`), moved this one off the field or turned it face-up, so it is found again by id, and one
+/// off the field or spent never fires (R61, §5.1).
 fn live_match(state: &GameState, trap_match: &TrapMatch, event: &GameEvent) -> Option<TrapMatch> {
     let trap = find_instance(state, &trap_match.trap.id)?.clone();
     if !acts_as_trap(state, &trap) || !is_trap_type(state, &trap) {
@@ -671,22 +582,16 @@ fn live_match(state: &GameState, trap_match: &TrapMatch, event: &GameEvent) -> O
     }
 }
 
-/// R174, R61: the event as a trap later in the same dispatch meets it. `cardResolved`'s `permanent`
-/// is step 7's answer to "is the played card still in play", read as the card landed — but the traps
-/// that answer the play fire one after another, and an earlier one can take the card off the field
-/// before a later one reads the flag: #60 Bear Honeypot's tokens kill it, and it is in its graveyard
-/// or back through Reborn by the time the next trap fires. That stay has ended, so the next trap
-/// meets a play that is no longer in play: #85 fuses nothing out of a graveyard, and a second #60's
-/// tokens do not attack a Reborn body, which is a new arrival (R83). `dispatch_mark` is the field's
-/// departures when the dispatch began (`stays::exit_mark`), which a dispatch a prompt split carries to
-/// the traps it still owes (`triggers::run_owed_traps`), so the answer that killed the card counts too —
-/// and a play's event carries the mark it happened at (`stays::event_mark`), so what took the card off
-/// the field between the event and its dispatch counts as well (R212).
+/// R174, R61: the event as a trap later in the same dispatch meets it. `cardResolved`'s `permanent` is
+/// read as the card landed, but an earlier trap can take the card off the field first (#60 Bear Honeypot's
+/// tokens kill it), so the next trap meets a play no longer in play: #85 fuses nothing out of a graveyard,
+/// and a second #60's tokens do not attack a Reborn body (R83). `dispatch_mark` is the field's departures
+/// as the dispatch began (`stays::exit_mark`), carried across a prompt (`triggers::run_owed_traps`); a
+/// play's event carries its own mark too (`stays::event_mark`, R212).
 pub fn standing_event(sink: &EngineSink<'_>, event: &GameEvent, dispatch_mark: u32) -> Option<GameEvent> {
     let state: &GameState = &*sink.state;
-    // B5 E1, R448: an announce is answered only while its play can still be countered. Once a Counter
-    // earlier in the window has canceled it (or step 4 has moved the card), a later trap finds no card
-    // and is not offered it at all, so it stays set (R99) rather than firing at nothing (R61).
+    // B5 E1, R448: an announce is answered only while its play can still be countered; once a Counter
+    // canceled it, a later trap is not offered it and stays set (R99) rather than firing at nothing (R61).
     if let GameEvent::CardAnnounced { instance_id, .. } = event {
         return if crate::announce::is_announce_live(state, instance_id) {
             Some(event.clone())
@@ -694,17 +599,14 @@ pub fn standing_event(sink: &EngineSink<'_>, event: &GameEvent, dispatch_mark: u
             None
         };
     }
-    // R212: the stay is the one the event happened on. A play's events carry the mark they were
-    // emitted at (`stays::event_mark`), which a late dispatch — a cast's `cardResolved` after the rest of
-    // the list that cast it, its sweep and the Reborn that put a body back — must not move forward.
+    // R212: the stay is the one the event happened on; a late dispatch (a cast's `cardResolved` after the
+    // list that cast it) must not move the event's own mark forward.
     let mark = dispatch_mark.min(crate::stays::event_mark(event).unwrap_or(dispatch_mark));
     match event {
         GameEvent::CardPlayed { instance_id, .. } | GameEvent::Summoned { instance_id, .. } => {
-            // The same for step 4's pair (#41 Sheepish's moment, R17): a trap answering the arrival of a card
-            // an earlier trap answering it has already taken off the field meets no card in play, and is not
-            // offered the event at all, as #85 is not offered a play that is no longer a permanent in play
-            // (R61). Sheepish does not reach into a hand to rewrite the unit the first trap bounced there, or
-            // turn the Reborn body of the one it killed into a Sheep: that body is nobody's play (R83).
+            // The same for step 4's pair (#41 Sheepish's moment, R17): a card an earlier trap took off the
+            // field meets no later trap (R61); Sheepish rewrites neither a bounced unit nor a Reborn body,
+            // which is nobody's play (R83).
             if crate::stays::left_field_after(state, mark, instance_id) {
                 None
             } else {
@@ -740,8 +642,7 @@ fn dispatch(
 ) -> TrapRun {
     let mut fired: Vec<String> = Vec::new();
     for (index, trap_match) in matches.iter().enumerate() {
-        // §9.3: a prompt is state, so the rest of the dispatch waits for the answer action — and the
-        // traps from here on have not seen the event, which is precisely what is owed (R113).
+        // §9.3: a prompt is state; the traps from here on have not seen the event, and are owed it (R113).
         if crate::work::paused(sink) {
             return TrapRun {
                 fired,
@@ -793,16 +694,11 @@ fn controllers_of(matches: &[TrapMatch], later: Option<&LaterMoves>) -> TrapCont
     out
 }
 
-/// §10.3: offer one event to the traps, as the resolution loop dispatches it — some time after it
-/// happened, since the loop dispatches an event after whatever ran first. R212 has the traps answer it
-/// as the board stood when it happened, which the events owed behind it say (`later`, read only when
-/// some trap watches the event): a trap that reached the field since — summoned by the rest of the
-/// list whose draw cast the card — is on a stay that did not see it and is not offered it, and one
-/// whose controller has changed since answers for the player who held it then. What a prompt stops
-/// the dispatch from offering is returned owed, in the order the dispatch had (R68, R113).
-///
-/// `later` is handed the sink (TS's closure captured it), so it reads the events owed behind this one
-/// without holding a borrow across the dispatch.
+/// §10.3: offer one event to the traps as the resolution loop dispatches it, after it happened. R212
+/// has them answer as the board stood then, which the events owed behind it say (`later`, read only when
+/// a trap watches): a trap that reached the field since is not offered it, and one whose controller has
+/// changed answers for the player who held it then. What a prompt stops is returned owed, in order (R68,
+/// R113). `later` takes the sink so it holds no borrow across the dispatch.
 pub fn offer_event_to_traps(
     sink: &mut EngineSink<'_>,
     event: &GameEvent,
@@ -851,11 +747,10 @@ pub fn offer_event_to_traps(
     }
 }
 
-/// Finish an immediate dispatch a prompt interrupted: the traps it still owed, in the order it had
-/// (R113 — a fresh scan would put a trap the answer moved onto the active side ahead of one the
-/// dispatch had ordered before it), each for the player it answered for (R212), and each meeting the
-/// event as the board now stands (`standing_event`, R174). A trap that met the event before the pause
-/// and declined it is not in the list, and is not offered it again (R99).
+/// Finish an immediate dispatch a prompt interrupted: the traps it still owed, in its order (R113; a fresh
+/// scan would reorder a trap the answer moved sides), each for its player (R212), each meeting the event as
+/// the board now stands (`standing_event`, R174). One that declined before the pause is not offered it
+/// again (R99).
 pub fn resume_event_to_traps(
     sink: &mut EngineSink<'_>,
     event: &GameEvent,
@@ -887,12 +782,9 @@ pub fn resume_event_to_traps(
     }
 }
 
-/// §10.3: offer one freshly emitted event to the traps, before any ordinary trigger is queued. The
-/// whole trap resolves inside this call — forced attacks included (R53) — so the action that emitted
-/// the event continues only afterwards. A prompt for the trap's owner stops the dispatch instead:
-/// the answer action resumes it, which is what "pauses the opponent's action" means (BUILD M3-T2).
-///
-/// R62's window events are withheld: `run_trap_window` fires those at their scheduled point.
+/// §10.3: offer a freshly emitted event to the traps before any ordinary trigger is queued. The whole trap
+/// resolves inside this call, forced attacks included (R53); a prompt for its owner stops the dispatch for
+/// the answer to resume (BUILD M3-T2). R62's window events are withheld for `run_trap_window`.
 pub fn fire_traps_for(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDispatch {
     if is_trap_window_event(event) {
         return TrapDispatch {
@@ -906,9 +798,8 @@ pub fn fire_traps_for(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDispa
             paused: true,
         };
     }
-    // The remainder of an immediate dispatch is `triggers.rs`'s to park: a trap is a response, so it
-    // is owed in front of the trigger queue (`OWED_TO_TRAPS`), not behind the interrupted sequence.
-    // Handed an event with nothing owed behind it, the board it meets is the board it happened on.
+    // `triggers.rs` parks the rest of an immediate dispatch in front of the trigger queue (`OWED_TO_TRAPS`):
+    // a trap is a response. With nothing owed behind the event, the board it meets is the one it happened on.
     let matches = traps_watching(sink.state, event);
     let mark = crate::stays::exit_mark(sink.state);
     let controllers = controllers_of(&matches, None);
@@ -919,9 +810,7 @@ pub fn fire_traps_for(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDispa
     }
 }
 
-// ---------------------------------------------------------------------------
 // The end-of-turn window, and the remainder it owes (§2.2, R62, R100, R113)
-// ---------------------------------------------------------------------------
 
 /// The event a parked window captured, read back defensively: it came through JSON (§10.1).
 fn window_event_of(data: &IndexMap<String, Value>) -> Option<GameEvent> {
@@ -984,14 +873,11 @@ pub fn owed_window_of(resume: &Resume) -> Option<OwedWindow> {
     })
 }
 
-/// Park the rest of the window (R113). `work.rs` owns `state.work`, so this only ever calls
-/// `owe_unnumbered`: the item lands at `state.work_cursor`, which puts it behind anything a trap's own
-/// effects parked inside it (innermost first) and — when a resumption parks again — in front of
-/// everything else still owed. Nothing is held but plain JSON, so the paused window survives a round trip.
+/// Park the rest of the window (R113). The item lands at `state.work_cursor`: behind anything a trap's own
+/// effects parked inside it, and in front of everything else still owed when a resumption parks again.
 ///
-/// R117: this is called at the moment the window pauses and never in advance. While `dispatch` is on
-/// the stack the traps it has not reached are the dispatch's alone, so a `settle` running inside one
-/// of them — a trap's own effects can start one — cannot take the traps the window is standing in.
+/// R117: called at the moment the window pauses, never in advance, so a `settle` inside a trap's effects
+/// cannot take the traps the window is standing in.
 fn owe_window(
     sink: &mut EngineSink<'_>,
     event: &GameEvent,
@@ -1035,15 +921,10 @@ fn owe_window(
     crate::work::owe_unnumbered(sink, resume, None);
 }
 
-/// §2.2 and R62: the end-of-turn trap window. It runs after the end-of-turn triggers and before the
-/// end-of-turn delayed effects, and it fires on both sides in R68 order — the ending player's traps
-/// first — which is what makes Bread and Butter's token go to the trap's controller whichever player
-/// ended the turn with unspent mana (R52).
-///
-/// A trap that prompts its controller stops the window where it stands and the rest of it is owed in
-/// state, so the answer action delivers the event to the traps that have not seen it — a Field Trap
-/// that already fired is not among them, since it fired rather than being passed over (R62, R100).
-/// The game ending stops the window for good: there is nothing left to resume into.
+/// §2.2 and R62: the end-of-turn trap window, after the end-of-turn triggers and before the delayed
+/// effects, on both sides in R68 order (the ending player's first); Bread and Butter's token is the trap's
+/// controller's whoever ended the turn with unspent mana (R52). A trap's prompt stops the window and the
+/// traps that have not seen the event are owed in state (not a Field Trap that fired, R100).
 pub fn run_trap_window(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDispatch {
     if sink.state.result.is_some() {
         return TrapDispatch {
@@ -1081,11 +962,9 @@ pub fn run_trap_window(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDisp
     }
 }
 
-/// Finish a window a prompt interrupted: offer the event to the traps that were owed it, in the
-/// order the window had, and park again if one of those prompts too. The board is re-read only to
-/// drop a trap that has left the field since — destroyed, bounced or fused away — which never fires
-/// (R61); the owed list is what keeps a trap that already fired from firing twice, which a Field
-/// Trap would otherwise do, since firing leaves it on the field (§5.1, R33, R100).
+/// Finish a window a prompt interrupted: offer the event to the traps owed it, in the window's order, and
+/// park again if one prompts. The owed list keeps a Field Trap that already fired, still on the field, from
+/// firing twice (§5.1, R33, R100); the board is re-read only to drop a trap that left the field (R61).
 fn resume_window(sink: &mut EngineSink<'_>, parked: OwedWindow) {
     let OwedWindow {
         event,
@@ -1094,9 +973,8 @@ fn resume_window(sink: &mut EngineSink<'_>, parked: OwedWindow) {
         mark,
     } = parked;
     let watching = traps_watching(sink.state, &event);
-    // The order is the owed list's, not a fresh scan's: R68's sides are read off `state.active`, and
-    // the window's order was fixed when it opened (R62 — the ending player's traps, then the
-    // opponent's). The board is re-read only to drop what has left the field since (R61).
+    // The owed list's order, not a fresh scan's: R68's sides are read off `state.active`, and the
+    // window's order was fixed when it opened (R62).
     let matches: Vec<TrapMatch> = owed
         .iter()
         .filter_map(|id| {

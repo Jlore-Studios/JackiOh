@@ -1,8 +1,7 @@
-// Stinkyscape M11 (issue #1845): the two engine primitives #123 Gokugains and #77 Yuma are written with,
-// each through a fixture script (`fixtures/hidden_trades.rs`) before any card uses it: R1845000's hidden
-// Nerfs (`degrade_secretly`), which no seat reads, R1845001's landing of them as the card is played,
-// sparing its cost, and R1845002's trade offer (`trade_offer`), whose two prompts every answerer
-// answers as it answers any other.
+// Stinkyscape M11 (issue #1845): the engine primitives of #123 Gokugains and #77 Yuma, each through a
+// fixture script (`fixtures/hidden_trades.rs`): R1845000's hidden Nerfs (`degrade_secretly`), which no
+// seat reads, R1845001's landing of them as the card is played, sparing its cost, and R1845002's trade
+// offer (`trade_offer`), whose two prompts every answerer answers as it answers any other.
 
 use jackioh_engine::effects::{
     TRADE_OFFER_HOOK, TRADE_OFFER_LABEL, TRADE_OFFER_LUCKY_KEY, TuneDirection, TuneRow, applicable_changes,
@@ -38,14 +37,12 @@ fn board(seed: &str, p1: Value, p2: Value) -> Scenario {
     board_on(seed, P1, p1, p2)
 }
 
-/// The labels of the badges `viewer` sees on `side`'s seat.
 fn badges(s: &Scenario, viewer: PlayerId, side: PlayerId) -> Vec<String> {
     let view = s.view(viewer);
     let seat = if viewer == side { view.you } else { view.opponent };
     seat.modifiers.into_iter().map(|badge| badge.label).collect()
 }
 
-/// `player`'s first hand card of `def_id`, by instance id.
 fn held(s: &Scenario, player: PlayerId, def_id: &str) -> String {
     s.hand(player)
         .into_iter()
@@ -58,7 +55,6 @@ fn scenario_hand_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
     s.hand(player).into_iter().map(|card| card.id).collect()
 }
 
-/// The open prompt's options, by instance id, in offered order.
 fn offered(s: &Scenario) -> Vec<String> {
     let pending = s.state().pending.as_ref().expect("a prompt is open");
     pending
@@ -76,7 +72,6 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// Every change of hands in these events, as (card, from, to).
 fn stolen(events: &[GameEvent]) -> Vec<(String, PlayerId, PlayerId)> {
     events
         .iter()
@@ -92,7 +87,6 @@ fn stolen(events: &[GameEvent]) -> Vec<(String, PlayerId, PlayerId)> {
         .collect()
 }
 
-/// The Nerfs reported on `id` in these events, as (change, hidden from).
 fn degraded(events: &[GameEvent], id: &str) -> Vec<(TuningChange, Option<Vec<PlayerId>>)> {
     events
         .iter()

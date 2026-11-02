@@ -1,6 +1,5 @@
-// Client-side online-game follow (SPEC §9.5, R765); the server decides the account state
-// (CLAUDE.md rule 7) through `/api/auth/me` (`currentMatchId`, §9.5; `currentSeriesId`, R259; `currentDuosMatchId`, R1566000).
-// Queue follow is per-tab session storage; storage failures mean no follow, never a failed queue.
+// Client-side online-game follow (SPEC §9.5, R765); the server's `/api/auth/me` decides it (CLAUDE.md rule 7;
+// `currentSeriesId`, R259). Queue follow is per-tab session storage; a storage failure means no follow, never a failed queue.
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -19,15 +18,12 @@ const MS_PER_SECOND = 1000;
 /** What a screen says the moment a pairing lands, before it takes the player there. */
 export const MATCH_FOUND_STATUS = "Match found! Taking you to your game…";
 
-// Live game
-
 /** A running match, a Conquest series between games, or a live co-op game (R1566000). */
 export type LiveGame = { kind: "match" | "series" | "duos"; id: string; path: string };
 
 /**
- * Where a profile's game is: the board (`currentMatchId`) or, between the games of a series, the
- * series screen (`currentSeriesId`), or nowhere. The board wins when both are set.
- * A co-op game is no pairing (R1566000): what a queue or the hub follows leaves it out.
+ * The board, else (between a series' games) the series screen, else nowhere. A co-op game is no
+ * pairing (R1566000): what a queue or the hub follows leaves it out.
  */
 export function liveGameOf(me: { currentMatchId: string | null; currentSeriesId?: string | null }): LiveGame | null {
   if (typeof me.currentMatchId === "string" && me.currentMatchId.length > 0) {
@@ -39,10 +35,7 @@ export function liveGameOf(me: { currentMatchId: string | null; currentSeriesId?
   return null;
 }
 
-/**
- * R1566000: the game the menus' banner offers: `liveGameOf`'s, else the live co-op game
- * (`currentDuosMatchId`, §13.8) at `/duos/<id>`.
- */
+/** The game the menus' banner offers: `liveGameOf`'s, else the live co-op game (§13.8). */
 export function bannerGameOf(me: {
   currentMatchId: string | null;
   currentSeriesId?: string | null;
@@ -56,10 +49,7 @@ export function bannerGameOf(me: {
   return null;
 }
 
-/**
- * R765, R1566000: the live game `account` names, a co-op one included, kept current: read again every `SERIES_POLL_SECONDS` for as
- * long as there is one, and null once a read says it is over. An account that is not ready has none.
- */
+/** R765: the live game `account` names (a co-op one included), read again every `SERIES_POLL_SECONDS` while there is one. */
 export function useLiveGame(account: Account, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const token = account.kind === "ready" ? account.token : null;
   const me = account.kind === "ready" ? account.me : null;
@@ -103,8 +93,6 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
   return game;
 }
 
-// Queue joined by this tab
-
 /** Where this tab remembers the mode it queued in, while it waits to be paired. */
 export const QUEUE_STORAGE_KEY = "jackioh.play.queued";
 
@@ -128,7 +116,6 @@ export function rememberQueued(mode: QueueMode): void {
   changed();
 }
 
-/** Forget a left or paired queue. */
 export function forgetQueued(): void {
   removeStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
   changed();
@@ -147,16 +134,10 @@ export function useQueued(): QueueMode | null {
 }
 
 /**
- * R765: while this tab is queued and the player is anywhere but `/play`, read the account every
- * `SERIES_POLL_SECONDS`, and once it names a game, forget the queue, announce the pairing for
- * `MATCH_FOUND_NAV_DELAY_MS` and take the player there. Returns the game being announced, or null.
- * A session that has ended is out of the queue as far as this tab can follow it.
- *
- * R897000: a queue the server no longer holds ends the follow too: `QUEUE_ENDED_AFTER_READS`
- * reads in a row saying `queued` is false forget the queue, so an expired ticket stops the wait
- * instead of waiting for a pairing that never comes.
- *
- * R1754000: a page holding unsaved work may hold that move; the queue is already forgotten and the announcement gone, so nothing waits on it, and the menus' banner still offers the game.
+ * R765: while this tab is queued and away from `/play`, follow the account until it names a game, then
+ * forget the queue and announce the pairing for `MATCH_FOUND_NAV_DELAY_MS` before going there. R897000:
+ * `QUEUE_ENDED_AFTER_READS` reads in a row of `queued: false` forget the queue, so an expired ticket ends
+ * the wait. R1754000: unsaved work may hold the move; nothing waits on it, and the banner still offers it.
  */
 export function useQueueFollow(path: string, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const queued = useQueued();
@@ -170,7 +151,6 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
   useEffect(() => {
     if (!watching) return;
     let canceled = false;
-    // A wake while a read is out would only repeat it; each effect run counts its own.
     let reading = false;
     const check = (): void => {
       if (reading) return;
@@ -198,8 +178,7 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
               setFound(game);
               return;
             }
-            // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a wait,
-            // and a failed read leaves the count alone.
+            // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a wait.
             if (answer.value.queued === false) {
               endedReads.current += 1;
               if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
@@ -218,7 +197,6 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
     };
     check();
     const handle = setInterval(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
-    // A throttled tab's interval stalls; waking it reads the account again at once.
     const stopWake = pageWake(check);
     return () => {
       canceled = true;

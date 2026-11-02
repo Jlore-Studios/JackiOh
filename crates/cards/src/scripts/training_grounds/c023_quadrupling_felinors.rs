@@ -3,10 +3,9 @@
 //!
 //! Base:    "Cry: Summon 3 copies of this."
 //! Radiant: "Cry: Summon 3 copies of this."
-//! Engine: Core #12 Duplicating Felinors' `summon_copy` of itself, made `copies` times: each copy is
-//! R57's (the Radiant flag and buffs kept, damage reset) and lands in the leftmost free zone (R64), one
-//! failing silently per missing zone (§3.2). Copies are summons and fire no Cry (R1), so the chain ends
-//! after one round.
+//! Engine: Core #12 Duplicating Felinors' `summon_copy` of itself, `copies` times: each copy is R57's
+//! (Radiant flag and buffs kept, damage reset), in the leftmost free zone (R64) or silently none (§3.2).
+//! Copies are summons and fire no Cry (R1), so the chain ends after one round.
 
 use jackioh_engine::prelude::*;
 
@@ -26,11 +25,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #23 Quadrupling Felinors — SPEC §8.11 row 23, BUILD M13 row TG 23: "on an empty row: four 3/4
-// Felinors, the copies in the leftmost free zones; the copies' Cries do not fire (exactly three copies);
-// with two free zones left: two copies, no error; a buff on the hand instance is carried, damage is not
-// (R57); summoned or copied itself: no Cry, no copies; the count reads through `param()`. radiant four
-// Radiant 6/8s".
+// TG #23 Quadrupling Felinors — SPEC §8.11 row 23, BUILD M13 row TG 23 (R57).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

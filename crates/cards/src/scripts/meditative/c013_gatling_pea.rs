@@ -8,8 +8,7 @@
 //! C+ #41 KY's Constant's `set_number` on its own `damage` to the damage plus the growth (R386's
 //! `tuning.set`, reported by `numberChanged`). "Permanently" is the card's own tuning, kept in every
 //! zone and by a copy (R57, R78), and moved by a Nerf or Buff; the growth comes after the hit, even one
-//! Armor took whole, and every extra run grows it (R825). Armor is catalog data. Both faces run one
-//! script; `param` reads the face's numbers.
+//! Armor took whole, and every extra run grows it (R825).
 
 use jackioh_engine::effects::{damage, set_number};
 use jackioh_engine::prelude::*;
@@ -38,16 +37,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #13 Gatling Pea — SPEC §8.8 row 13, BUILD M10 row M 13: "Armor 2; at your end of turn
-// only, one hit of 1 on the enemy hero (their Armor applies), then its damage becomes 2, 3 and so
-// on, one more each turn (`numberChanged`), kept through a bounce, a copy (R57) and a return to
-// the field (R78; R825); it grows even when the hit is fully absorbed; each M 9 or M 12 run hits
-// and grows; a Nerf or Buff moves the same number; damage and growth read through `param()`;
-// radiant Armor 4, damage 2, growing by 2".
-//
-// Core #17 Flood bounces it; Core #33 Unstable Clone Machine copies it; C+ #71/#72 are the Buff and
-// Nerf verbs' cards, exercised here through the tuning helpers (R386), which step the same number
-// deterministically.
+// Meditative #13 Gatling Pea — SPEC §8.8 row 13, BUILD M10 row M 13.
+// Core #17 and #33 bounce and copy it; the tuning helpers step the number as C+ #71/#72's Buff and Nerf would.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -63,8 +54,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
     const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
 
-    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues;
-    /// `extra` replaces its own entries.
+    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {
         crate::merged(
             json!({ "mana": 10, "hand": [SPARE], "library": [VANILLA, VANILLA, VANILLA] }),
@@ -175,7 +165,6 @@ mod tests {
                 })),
                 "p2": side(json!({})),
             }));
-            // The end of turn grows the field one to damage 2.
             s.end_turn();
             s.expect_health(P2, 29);
             assert_eq!(number(&s, ID, "damage"), 2);
@@ -188,7 +177,6 @@ mod tests {
             // The replay shuffles three copies at damage 2 and keeps 2 itself.
             s.play(ID, json!({}));
             assert_eq!(number(&s, ID, "damage"), 2);
-            // Three copies went in, after the turn's draw.
             let grown = s
                 .pile("p1", "library")
                 .into_iter()

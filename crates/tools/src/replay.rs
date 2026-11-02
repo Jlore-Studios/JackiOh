@@ -1,26 +1,16 @@
 //! `cargo jackioh replay` (SPEC §9.2, §9.3; SURFACE §12): folds a recorded game from scratch and prints
-//! its state hash. Replaces the TS fold that `e2e/support/tasks/replay-runner.ts` ran under tsx.
+//! its state hash. It reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?,
+//! catalogVersion?}` on stdin, the setup as the live `createGame` had it (R180 handicaps, R433 dealt
+//! seats, R417 last boards, R678 Glitch boards), and prints `{"hash", "errors": [{nonce, error}, …]}`.
+//! A `catalogVersion` folds under that shipped catalog (R767000), and one this build does not carry
+//! exits 1 naming `earlier_patch`; an input without the `versions` marker is read through
+//! `patches/aliases.json` (R1371000). A co-op game (`DuosReplayInput`) folds by `duos_fold` and answers
+//! `{"hash", "refusedAt"}`, stopping at the first refused action.
 //!
-//! Reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?, catalogVersion?}` as JSON on
-//! stdin and prints one JSON line, `{"hash": hashState(folded state), "errors": [{nonce, error}, …]}`. The
-//! setup fields are the fold's input exactly as the live `createGame` had them (R180 handicaps, R433
-//! dealt seats, R417 last boards, R678 Glitch boards); any other key (a browser's `state`, say) is
-//! ignored. A `catalogVersion` folds the game under that shipped catalog (R767000, `catalog_for` inside
-//! `with_shipped`, as `replay_open` does); one this build neither is nor carries exits 1 naming
-//! `earlier_patch` and prints no hash, and without it the game folds under this build's catalog. An
-//! input without the `versions` marker names its catalog as it was before the version retcon, and it
-//! is read through `patches/aliases.json` (R1371000). A co-op game, `{options, log}` (`DuosReplayInput`, pinned by `options.catalogVersion`), is folded by
-//! `duos_fold` and answers `{"hash": duos_hash, "refusedAt": index or null}`; its fold stops at the
-//! first refused action.
-//! The card scripts are registered first: folding without them would diverge from the browser
-//! instead of matching it, since every Cry in the log would fizzle differently (SPEC §10.9). A game
-//! with custom cards (`customCards`, R915006) folds with the card kit's host lent to the engine, as
-//! the browser's Luau module folds it (R915009), so a practice game with a custom card replays here
-//! to the browser's hash.
-//!
-//! A log may hold rejects, so a refused action is listed in `errors`, not fatal. The setup is not:
-//! a deck its seat's handicap does not allow fails loudly instead of replaying a different game
-//! (R180), and input that is not such an object exits 1.
+//! The scripts are registered first, or every Cry in the log would fizzle differently from the browser
+//! (SPEC §10.9); custom cards (R915006) fold with the card kit's host lent, as the browser's (R915009).
+//! A refused action is listed in `errors`, not fatal; a deck its handicap does not allow fails loudly
+//! rather than replay a different game (R180), and input that is no such object exits 1.
 
 use std::io::Read as _;
 use std::rc::Rc;
@@ -37,12 +27,10 @@ use jackioh_luau::custom::KitHost;
 #[derive(clap::Args, Debug)]
 pub struct Args {}
 
-/// R767000: the shipped catalog `game` folds under, read off its `catalogVersion`: `None` (this
-/// build's) when it names none or this build's own version, the carried one when this build carries
-/// it, and an `earlier_patch` error, before anything is folded, for any other version. An input of an
-/// older `scheme` (`versions::scheme_of`: 1 without the `versions` marker, R1371000, or an older
-/// marker, R2532000) names it as it was before a version retcon, and it is read through
-/// `patches/aliases.json`.
+/// R767000: the shipped catalog `game` folds under, by its `catalogVersion`: `None` (this build's) for
+/// none or this build's own, the carried one when carried, else an `earlier_patch` error before any
+/// fold. An older `scheme` (`versions::scheme_of`: no `versions` marker, R1371000, or an older one,
+/// R2532000) names a version as before a retcon, read through `patches/aliases.json`.
 pub(crate) fn pinned_catalog(game: &Value, scheme: u32) -> Result<Option<&'static ShippedCatalog>> {
     let version = match game.get("catalogVersion") {
         None | Some(Value::Null) => return Ok(None),
@@ -104,12 +92,10 @@ pub(crate) const SHIPPED_SEEDS_TRIED: u32 = 8;
 #[cfg(test)]
 const SHIPPED_GAME_ACTIONS: usize = 120;
 
-/// R767000: a game played under a catalog the calling test's thread carries as `SHIPPED_TEST_VERSION`
-/// (the build's with every Unit one Attack higher on both faces): `fuzz`'s decks for the first of
-/// `SHIPPED_SEEDS_TRIED` seeds whose log folds to another hash under the build's own catalog, both
-/// seats random. Answers its JSON, `catalogVersion` included, and its live hash. The caller holds
-/// `preview_every_set()` (the fuzz decks may hold a set that has not shipped, R1420) and runs
-/// `clear_overrides()`.
+/// R767000: a game under a catalog the test's thread carries as `SHIPPED_TEST_VERSION` (every Unit one
+/// Attack higher), on the first of `SHIPPED_SEEDS_TRIED` seeds whose log folds to another hash under the
+/// build's own, both seats random: its JSON and live hash. The caller holds `preview_every_set()` (the
+/// fuzz decks may hold an unshipped set, R1420) and runs `clear_overrides()`.
 #[cfg(test)]
 pub(crate) fn game_on_a_shipped_catalog() -> (Value, String) {
     use indexmap::IndexMap;
@@ -165,7 +151,7 @@ mod tests {
         env!("CARGO_MANIFEST_DIR"),
         "/../engine/tests/golden/01-hotseat-full-game.json"
     );
-    /// Its pinned hash (`packages/cards/test/hotseat-replay.test.ts`).
+    /// Its pinned hash.
     const HOTSEAT_HASH: &str = "972f5b85";
 
     #[test]
@@ -212,8 +198,8 @@ mod tests {
         })
     }
 
-    /// practice/decks.ts' Human Vanguard as it was before #1705: twenty distinct Core cards, which a
-    /// recorded game still folds (R1705003).
+    /// The Human Vanguard deck as it stood before #1705: twenty distinct Core cards, which a recorded
+    /// game still folds (R1705003).
     const VANGUARD: [&str; 20] = [
         "core-004", "core-005", "core-008", "core-011", "core-015", "core-081", "core-001", "core-016",
         "core-020", "core-045", "core-061", "core-069", "core-077", "core-030", "core-013", "core-019",

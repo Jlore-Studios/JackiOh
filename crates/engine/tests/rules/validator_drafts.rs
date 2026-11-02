@@ -52,7 +52,7 @@ fn is_portrait() -> PortraitCheck {
     Arc::new(|portrait: &str| is_portrait_id(&json!(portrait)))
 }
 
-/// The issues for a deck draft with `isDeckable` and `NAME_MAX`. The input borrows its predicates
+/// The issues for a deck draft with `is_deckable` and `NAME_MAX`. The input borrows its predicates
 /// (`DeckDraftInput<'a>`), so it is built and checked here, where they live.
 fn draft_issues(
     name: &str,
@@ -83,7 +83,6 @@ fn draft(cards: &[String], name: &str) -> Value {
     draft_issues(name, cards, None, None)
 }
 
-/// The rule of each issue.
 fn rule_list(issues: &Value) -> Vec<String> {
     issues
         .as_array()
@@ -95,7 +94,6 @@ fn rule_list(issues: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The rule and card of each issue.
 fn rules_and_cards(issues: &Value) -> Value {
     Value::Array(
         issues
@@ -288,10 +286,9 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
 
     #[test]
     fn r641_checks_nothing_when_no_portrait_is_given_or_the_caller_knows_no_roster() {
-        // `portrait` absent or undefined: nothing for D5 to read.
         assert_eq!(draft(&[], "Aggro"), json!([]));
         assert_eq!(portrait_draft(None, Some(is_portrait())), json!([]));
-        // `isPortrait` absent — a caller that predates portraits: the field is taken as given.
+        // No roster predicate from the caller: the field is taken as given.
         assert_eq!(portrait_draft(Some("not-a-portrait"), None), json!([]));
     }
 }

@@ -1,22 +1,12 @@
-//! The Conquest series (SPEC §9.5, R330–R338, with R262–R264): the store half of `series_rules.rs`.
+//! Conquest series management (SPEC §9.5, R330–R338, R262–R264).
 //!
-//! The rules are pure functions over `SeriesRow`; this file reads a row, applies one and writes it
-//! back, and does what a pure function cannot:
-//!  - **Compare-and-set** (R263). A series has several writers (both players, the sweeper,
-//!    `results.rs`); `series_update` writes only over the version it computed from, and a lost write
-//!    re-reads and re-applies the same transition. A pick is persisted before it is acknowledged and
-//!    leaves the server only in its owner's projection (R331).
-//!  - **The rating move** (R262, R604). A transition that ends a ranked series rates it as one game
-//!    (`ranked.rs`, R603), put on the row by the same compare-and-set. A game inside a series is
-//!    never rated (`results.rs`); an abandoned series and a room's are unrated.
-//!  - **Starting the game** (R331, R263). With both picks in, `next_match_id` starts through
-//!    `app.matches` after the commit, since the actor must never run a game the row does not name;
-//!    the sweeper starts one a crash left unstarted, after `SERIES_START_GRACE_SECONDS`.
-//!  - **A bot's side** (R641000). A ladder bot seated in a series makes its picks from the sweeper,
-//!    each after its delay (`bots::pick`), through `pick_deck` as a person's pick goes; the series'
-//!    rating move rates its side as the bot it is (R610).
+//! State transitions over `SeriesRow` with compare-and-set updates (R263, R331).
+//! Ranked series rate once as a single game on completion (R262, R604, R603).
+//! Games start via `app.matches` once both picks land (R331, R263); sweeper handles
+//! unstarted games after `SERIES_START_GRACE_SECONDS`.
+//! Ladder bot sides pick via sweeper delays (R641000) and rate as bots (R610).
 //!
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2. Sweeper: `run_sweeper` (every 5 s).
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -117,12 +107,10 @@ fn to_api(error: SeriesError) -> ApiError {
 
 // Making a series
 
-/// Makes the series in game 1's pick phase and persists it (R331, R333, R263). Called by pairing
-/// (`queue.rs`) and by a Conquest room's join (`actor/rooms.rs`) with the match id they reserved,
-/// which becomes game 1's. No match starts and no in-match flag is set: a series in its pick phase
-/// is not a match, and `assertNotInSeries` is what keeps its players out of the queue meanwhile.
-///
-/// It writes inside the caller's transaction `t`, so the claim and the series land together.
+/// Makes the series in game 1's pick phase and persists it (R331, R333, R263), inside the caller's
+/// transaction `t`, so the claim and the series land together. Called by pairing (`queue.rs`) and by a
+/// Conquest room's join (`actor/rooms.rs`) with the match id they reserved, which becomes game 1's. No
+/// match starts and no in-match flag is set: `assertNotInSeries` keeps its players out of the queue.
 pub async fn start_series(
     _app: &App,
     input: NewSeriesInput,
@@ -191,10 +179,9 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
     let existing = one_tx!(app.db, |t| t.matches_get(&match_id).await?)?;
     if let Some(existing) = existing {
         if matches!(existing.status, crate::db::store::MatchStatus::Live) {
-            // Started, and then the process stopped before the in-match flags were written: the match
-            // itself rebuilds from its log when a socket arrives, so only the flags need healing.
-            // A seat another match holds meanwhile cannot be healed now; the game is reported as
-            // not started by this call either way, and a later transition retries it (R890000).
+            // Started, then the process stopped before the in-match flags were written: the match
+            // rebuilds from its log, so only the flags need healing. Either way this call reports
+            // the game not started, and a later transition retries a seat taken meanwhile (R890000).
             if mark_in_match(app, &seats, &match_id).await? {
                 lease.commit();
             } else {
@@ -248,15 +235,10 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
     // in-match reference points at, and only the start writes it.
     let marked = mark_in_match(app, &seats, &match_id).await;
     if !matches!(marked, Ok(true)) {
-        // Anything but both seats flagged undoes this game. A seat that found another game
-        // mid-start keeps that game; a write a newer server's epoch fenced leaves the game to that
-        // server; a write that failed (a database hiccup) would leave a live match nobody is
-        // flagged into, which `app.matches.has` keeps every later start from retrying. Stop the
-        // actor, then erase the live match with no result (R679), whose `on delete set null`
-        // releases any flag this start wrote while a taken seat is untouched, and report a game
-        // that never started, so the next transition or the sweeper (R263) retries with the same
-        // `next_match_id`. The ledger granted both seats, so the compare-and-set's refusal is drift
-        // (R1523000); the lease puts both sides back between games as it drops.
+        // Anything but both seats flagged undoes this game: a live match nobody is flagged into would
+        // keep every later start from retrying (`app.matches.has`). Erasing it with no result (R679)
+        // lets `on delete set null` release any flag this start wrote, and the next transition or the
+        // sweeper (R263) retries the same `next_match_id`. A compare-and-set refusal is drift (R1523000).
         if matches!(marked, Ok(false)) {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             tracing::info!(
@@ -637,12 +619,11 @@ async fn sweep_one(
     Ok(())
 }
 
-/// One sweep over every series that is not over: a bot side whose pick is due makes it (R641000); a
-/// pick phase past its deadline is settled (R333);
-/// a `playing` series whose match is not running and whose row has sat unchanged for
-/// `SERIES_START_GRACE_SECONDS` gets it started (R263), the grace keeping the sweeper from racing
-/// the starting request; one still without a match row `SERIES_START_GIVE_UP_SECONDS` after its
-/// picks is abandoned, unrated. One series that fails does not stop the sweep.
+/// One sweep over every series that is not over: a bot side whose pick is due makes it (R641000); a pick
+/// phase past its deadline is settled (R333); a `playing` series whose match is not running and whose row
+/// has sat unchanged for `SERIES_START_GRACE_SECONDS` gets it started (R263), the grace keeping the
+/// sweeper from racing the starting request; one still without a match row `SERIES_START_GIVE_UP_SECONDS`
+/// after its picks is abandoned, unrated. One series that fails does not stop the sweep.
 pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
     let now = now_ms();
     let mut swept = SeriesSweep::default();
@@ -786,12 +767,11 @@ pub async fn get_series(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(ok(view(&series, &profile_id)))
 }
 
-/// `POST /api/series/:id/pick` (active), R331: `{ slot, gameNo? }`. The pick is sealed and shown to
-/// the other side only as "picked"; the one that completes both starts the game and the answer
-/// names it in `currentMatchId`. The same slot sent again is answered with the current view as the
-/// success it was; a pick naming another game is never applied. 409 for a different slot once a
-/// pick is in, another game's pick, a game in play, or after the pick clock ran out (R333); 400 for
-/// a slot out of range or whose deck has won (R330).
+/// `POST /api/series/:id/pick` (active), R331: `{ slot, gameNo? }`. The pick is sealed and shown to the
+/// other side only as "picked"; the one that completes both starts the game and the answer names it in
+/// `currentMatchId`. The same slot sent again is answered with the current view; a pick naming another
+/// game is never applied. 409 for a different slot once a pick is in, another game's pick, a game in
+/// play, or after the pick clock ran out (R333); 400 for a slot out of range or whose deck has won (R330).
 pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
     let slot = slot_of(&req.body)?;
     let game_no = game_no_of(&req.body)?;

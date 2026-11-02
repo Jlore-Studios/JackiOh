@@ -25,7 +25,6 @@ fn enemy_permanents() -> BoardScope {
     json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }))
 }
 
-/// The fields of the announce this card reads.
 struct Announced {
     instance_id: String,
     cost_paid: i32,
@@ -81,7 +80,6 @@ fn exile_trap(radiant_face: bool) -> TriggerDef {
         vec![
             countered,
             for_each_card(ForEachCardArgs {
-                // `forEachCard`'s `cards` answers ids.
                 cards: Arc::new(move |at: &mut EffectContext<'_>| {
                     budget_picks(at, budget).into_iter().map(|card| card.id).collect()
                 }),
@@ -325,7 +323,6 @@ mod tests {
 
         #[test]
         fn then_exiles_enemy_permanents_within_the_budget_3_minus_the_cost_paid() {
-            // A (1) Cost play leaves a budget of 2: the (2) Cost Pointmaster fits, the (3) Cost Menace never.
             let mut s = setup(json!({ "field": [POINTMASTER, MENACE] }), true, json!({}));
             let (Some(point), Some(menace)) = (s.unit(P2, 1), s.unit(P2, 2)) else {
                 panic!("fixture");
@@ -353,7 +350,6 @@ mod tests {
 
         #[test]
         fn a_0_cost_permanent_always_fits_while_the_budget_is_above_0() {
-            // A (2) Cost play leaves 1; the Slime costs 0 and fits, and then nothing else does.
             let mut s = setup(json!({ "field": [SLIME, MENACE] }), true, json!({}));
             let slime = s.card(SLIME).clone();
 
@@ -389,7 +385,6 @@ mod tests {
 
         #[test]
         fn r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field_only_the_top_of_the_pile_is_weighed() {
-            // Budget 2: the dormant (1) Cost Vanilla would fit, the (3) Cost Menace on top of it never does.
             let mut s = setup(
                 json!({ "field": [{ "def": VANILLA, "lane": 1 }, { "def": MENACE, "stack": true }] }),
                 true,
@@ -432,7 +427,6 @@ mod tests {
                 live.x = Some(3);
             }
 
-            // Budget 2: a Plague Chalice played for 3 does not fit.
             s.play(TIMMY, json!({ "zone": 2 }));
             s.expect_in_zone(chalice.as_str(), "field");
 
@@ -475,7 +469,6 @@ mod tests {
             s.play(TIMMY, json!({ "zone": 3 }));
 
             s.expect_in_zone(TIMMY, "exile");
-            // Budget 2 − 1 = 1: the (2) Cost Pointmaster no longer fits.
             s.expect_in_zone(POINTMASTER, "field");
         }
     }

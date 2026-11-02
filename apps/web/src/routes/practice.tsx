@@ -1,51 +1,22 @@
-// `/practice`: a game against the AI, with no account and no server (SPEC §9.9, R187).
+// `/practice`: a game against the AI, with no account and no server (SPEC §9.9, R187). The engine
+// and the AI run in a Web Worker (`practice/host.ts`); this route holds only what the worker answers
+// (CLAUDE.md rule 7). The tutorial lives here too (SPEC §9.10): a lesson is a practice game whose
+// config names it (`tutorial/start.ts`).
 //
-// The engine and the AI run in a Web Worker (`practice/host.ts`), and this route holds only what
-// the worker answers: `viewFor(state, human)`, the human's `legalActions` and whether the AI owes an
-// action (CLAUDE.md rule 7). The board is `Game.tsx`, unchanged, inside the catalog the worker sent.
+// The route is NOT gated. It asks for the account only to offer an active player's saved decks, to
+// keep its tutorial progress on the account (R320, R321) and to earn with a free game; an anonymous
+// visitor makes no request at all.
 //
-// The tutorial lives here too (SPEC §9.10): its lesson path tops the lobby, and a lesson is a
-// practice game whose config names it (`tutorial/start.ts`), played under the tutorial's HUD with
-// the coach over the board, or on a phone in a panel above it (`tutorial/`).
+// URL params, all optional and dropped when invalid: `?seed=`, `?seat=`, `?difficulty=`, `?deck=`, `?lesson=`
+// (on its own seed and seat, which `?seed=` and `?seat=` never override), `?try=<custom id>` (#921, R915005),
+// and, outside a production build only, `?pace=fast` and `?aipool=fixture` (#1113, e2e).
 //
-// The route is NOT gated. It asks for the account only to offer an active player's saved decks and
-// to keep an active player's tutorial progress on the account as well as the device (R320, R321,
-// `tutorial/accountSync.ts`), and to earn with a free game (Earning, below); an anonymous visitor
-// makes no request at all: no session means no `/api/auth/me`, and no account means no `/api/decks`,
-// no `/api/tutorial` and no `/api/practice/*`.
-//
-// URL params, all optional and dropped when invalid:
-//   ?seed=<string>        the practice seed; otherwise 8 random hex characters per game
-//   ?difficulty=easy|medium|hard, ?deck=random|preset:<id>|saved:<n>   preselect the setup; with a
-//                         difficulty and a `random` or `preset:` deck the game starts at once
-//   ?seat=p1|p2           the human's seat; otherwise a coin flip per game
-//   ?lesson=<id>          start that tutorial lesson at once, on its own seed and seat (a `?seed=`
-//                         or `?seat=` never overrides a lesson's)
-//   ?try=<custom id>      #921, the creator's "Try it" (`tryPath`): once the account's custom cards are
-//                         read, a game on a random deck around that card (R915005), on the remembered
-//                         difficulty; a card the account does not have shows the setup, saying so
-//   ?pace=fast            e2e pacing, honored only outside a production build
-//   ?aipool=fixture      issue #1113, e2e only: the seeded fixtures deal the AI from the frozen
-//                         fixture pool instead of the live shadow ban, honored only outside a
-//                         production build
-//
-// With none of the params that start a game, a free game left in progress on this device (a reload,
-// a closed tab) picks up where it was (R668, `practice/resume.ts`); one that starts a game discards it.
-// R765: a free game's "New game" and "Menu" offer Save and leave as well as Leave without saving. A
-// game saved that way is not picked up on the next visit: the setup shows, topped by a banner that
-// offers it back (Resume), and starting any other game from here ends it. While the player's online
-// game is live, a banner offers the way back to that too (`net/liveGame.ts`, `GameBanner.tsx`).
-//
-// Custom cards (SPEC §12): an active account's are read too (`useCustomCards`), for the saved decks
-// that name them and for `?try=`. A game with any carries them (R915006), runs on the Luau module
-// (R915009, the worker's choice) and records no card statistics (§12.10).
-//
-// Earning (SPEC §14.8, R1303000): while the economy is live, an active account's free game started
-// from the setup or Play again is played on a seed the server issues (`net/practice.ts`), with the
-// last board the server kept (R1303003); the loading screen shows while it is asked for, and a game
-// the server will not seed is played as before, earning nothing. Once such a game is over its claim
-// goes to the server, and the result dialog says what it earned or why not; a claim that fails in
-// any way leaves the dialog as it was. Lessons, `?try=`, `?seed=` and the other URL games never ask.
+// With no param that starts a game, a free game left in progress picks up where it was (R668); R765:
+// one left with Save and leave waits on the setup's banner instead. Custom cards (SPEC §12): a game
+// with any carries them (R915006), runs on the Luau module (R915009) and records no statistics (§12.10).
+// Earning (SPEC §14.8, R1303000): an active account's free game from the setup or Play again plays
+// on a server seed, with the last board the server kept (R1303003). Lessons, `?try=`, `?seed=` and
+// the other URL games never ask.
 
 import {
   useCallback,
@@ -137,9 +108,7 @@ import { getStored, setStored } from "../net/storage.ts";
 /** The dev handle exists only outside a production build, like `window.__jackioh`. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
-// ---------------------------------------------------------------------------------------------
 // the dev handle (spec 13's replay check)
-// ---------------------------------------------------------------------------------------------
 
 type PracticeDevHandle = {
   snapshot(): Promise<PracticeDebug>;
@@ -155,9 +124,7 @@ declare global {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // URL params
-// ---------------------------------------------------------------------------------------------
 
 type PracticeParams = {
   seed?: string;
@@ -202,16 +169,13 @@ export function readPracticeParams(search: string): PracticeParams {
 
   if (params.get("pace") === "fast") out.pace = "fast";
 
-  // Issue #1113, e2e only: the seeded fixtures deal the AI from the frozen pool. Read at call
-  // time, not the module-level DEV_ONLY, so a test can stub MODE to production and watch it drop.
+  // Read at call time, not DEV_ONLY, so a test can stub MODE to production and watch it drop.
   if (import.meta.env.MODE !== "production" && params.get("aipool") === "fixture") out.aipool = "fixture";
 
   return out;
 }
 
-// ---------------------------------------------------------------------------------------------
 // seeds, seats, pacing and the remembered setup
-// ---------------------------------------------------------------------------------------------
 
 function randomBytes(count: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(count));
@@ -233,9 +197,8 @@ function pacingFor(params: PracticeParams): PracticePacing {
 }
 
 /**
- * The setup this device chose last; `leanSet` is the "More cards from" pick (R1373, R924000), kept
- * whichever deck was picked. A setup kept before the picker holds R1373's `leanNewest`, read as
- * "newest" when on.
+ * `leanSet` is the "More cards from" pick (R1373, R924000), kept whichever deck was picked. A setup
+ * kept before the picker holds R1373's `leanNewest`, read as "newest" when on.
  */
 type StoredSetup = { difficulty?: Difficulty; deck?: string; leanSet?: LeanPick };
 
@@ -278,20 +241,16 @@ function configFor(choice: PracticeSetupChoice, params: PracticeParams): Practic
     difficulty: choice.difficulty,
     humanSeat: params.seat ?? randomSeat(),
     deck: choice.deck,
-    // Issue #1113, e2e only: the seeded fixtures deal the AI from the frozen pool. `EngineGate`
-    // in main.tsx holds this screen until the module is loaded, so the binding below is set.
+    // `EngineGate` (main.tsx) holds this screen until the module is loaded, so the binding is set.
     ...(params.aipool === "fixture" ? { aiBanned: [...FIXTURE_BANNED_IDS] } : {}),
-    // R923000: a sandbox game, with its dev tools.
+    // R923000: a sandbox game.
     ...(choice.sandbox === true ? { sandbox: true } : {}),
-    // R915006: the custom cards the deck names, which the game carries.
+    // R915006: the custom cards the deck names.
     ...(choice.customCards === undefined || choice.customCards.length === 0 ? {} : { customCards: choice.customCards }),
   };
 }
 
-/**
- * `?lesson=` starts that lesson with no click, on the lesson's own seed and seat; otherwise
- * `?difficulty=` plus a `random` or `preset:` `?deck=` starts a practice game.
- */
+/** `?lesson=`, or `?difficulty=` with a `random` or `preset:` `?deck=`, starts a game with no click. */
 function autostartConfig(params: PracticeParams): PracticeStartConfig | null {
   const lesson = params.lesson === undefined ? undefined : lessonById(params.lesson);
   if (lesson !== undefined) return lessonStartConfig(lesson);
@@ -302,15 +261,9 @@ function autostartConfig(params: PracticeParams): PracticeStartConfig | null {
   return configFor({ difficulty: params.difficulty, deck }, params);
 }
 
-// ---------------------------------------------------------------------------------------------
 // hooks
-// ---------------------------------------------------------------------------------------------
 
-/**
- * What the account offers the deck picker: an active account's saved decks (`GET /api/decks`, by
- * name and oldest first, R250), or why there are none (`SavedDecks`), so the setup never tells a
- * signed-in player to sign in.
- */
+/** An active account's saved decks (R250), or why there are none, so a signed-in player is never told to sign in. */
 function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<DecksResponse>): SavedDecks {
   const [loaded, setLoaded] = useState<{ token: string; saved: SavedDecks } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -386,9 +339,8 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
 }
 
 /**
- * The public card data the setup previews decks with. No game exists yet, so it is asked of a
- * host of its own (a worker, like the game's), which is closed as soon as it answers; a game that
- * has started brings the same catalog (`state.defs`), so a later setup screen needs no second ask.
+ * The card data the setup previews decks with, asked of a host of its own (no game exists yet) and
+ * closed once it answers; a started game brings the same catalog, so a later setup needs no second ask.
  */
 function useLobbyCatalog(
   wanted: boolean,
@@ -438,11 +390,9 @@ function useLobbyCatalog(
 }
 
 /**
- * Tell the controller whether the board is still animating, so the AI's next step waits for the
- * player to see the last one (practice/controller.ts). It reads the board's own contract rather
- * than reaching into `Game.tsx`: an element carries `data-animating` for exactly as long as the
- * runner holds a view back (BUILD M5-T4, `game/animations.ts`), which is also what `cy.settled()`
- * waits on.
+ * Tell the controller whether the board is still animating, so the AI's next step waits for the player to
+ * see the last one. An element carries `data-animating` for as long as the runner holds a view back (BUILD
+ * M5-T4), which is also what `cy.settled()` waits on.
  */
 function useBoardBusy(root: HTMLElement | null, controller: PracticeController | null): void {
   useEffect(() => {
@@ -460,9 +410,8 @@ function useBoardBusy(root: HTMLElement | null, controller: PracticeController |
 }
 
 /**
- * Whether the board under `root` is still animating: any element carrying `data-animating`, the
- * one mark `useBoardBusy` above reads. A voice line (`data-speaking`) is left out on purpose, so the
- * victory line never holds the result dialog back.
+ * Whether the board under `root` carries `data-animating`. A voice line (`data-speaking`) is left
+ * out on purpose, so the victory line never holds the result dialog back.
  */
 export function useBoardAnimating(root: HTMLElement | null): boolean {
   const [animating, setAnimating] = useState(false);
@@ -482,12 +431,9 @@ export function useBoardAnimating(root: HTMLElement | null): boolean {
 }
 
 /**
- * Hold the AI's next step while an element anywhere in the page carries `attribute`, for at most
- * `maxMs` per mark (SPEC §9.9: AI turns are paced so the player can follow them). The contract with
- * the layer that marks is one attribute, as the board's is with `data-animating`: it is set while
- * the thing plays and dropped when it ends. A mark that is never cleared holds the AI for at most
- * `maxMs`, so a stuck mark can slow a turn but never stop the game; it is ignored from then on
- * until the page drops it.
+ * Hold the AI's next step while an element anywhere in the page carries `attribute` (SPEC §9.9: AI turns
+ * are paced so the player can follow them), for at most `maxMs` per mark, so a stuck mark can slow a turn
+ * but never stop the game; it is ignored from then on until the page drops it.
  */
 function useMarkHold(controller: PracticeController | null, reason: string, attribute: string, maxMs: number): void {
   useEffect(() => {
@@ -526,19 +472,12 @@ function useMarkHold(controller: PracticeController | null, reason: string, attr
   }, [controller, reason, attribute, maxMs]);
 }
 
-/**
- * Hold the AI's next step while a voice line plays. The audio layer marks an element
- * `data-speaking` while a line plays and drops it when the line ends (polish task 2).
- */
+/** Hold the AI's next step while a voice line plays (`data-speaking`, polish task 2). */
 function useVoiceHold(controller: PracticeController | null): void {
   useMarkHold(controller, "voice", "data-speaking", PRACTICE_VOICE_HOLD_MAX_MS);
 }
 
-/**
- * Hold the AI's next step while its last card is held up (game/showcase/CardShowcase.tsx marks the
- * showcase `data-showcase` for as long as it is up), so the AI never plays its next card over the
- * one the player is reading.
- */
+/** Hold the AI's next step while its last card is held up (`data-showcase`), so it never plays over it. */
 function useShowcaseHold(controller: PracticeController | null): void {
   useMarkHold(controller, "showcase", "data-showcase", PRACTICE_SHOWCASE_HOLD_MAX_MS);
 }
@@ -554,9 +493,7 @@ function useControllerState(controller: PracticeController | null): PracticeCont
   );
 }
 
-// ---------------------------------------------------------------------------------------------
 // the route
-// ---------------------------------------------------------------------------------------------
 
 export type PracticeRouteProps = {
   /** default createPracticeHost */
@@ -585,11 +522,7 @@ function defaultHostFactory(): PracticeHost {
   return createPracticeHost();
 }
 
-/**
- * The setup, loading and failure screens are a centered reading column in the tavern
- * (`app-shell tavern`, auth/tavern.css), like the landing and `/play` the player came from; the game
- * is the full-width board (`app-shell--wide`), like `/dev/hotseat` and `/match/<id>`.
- */
+/** The lobby screens are a centered column in the tavern, like `/play`; the game is the full-width board. */
 function Shell({ variant, children }: { variant: "lobby" | "game"; children: ReactNode }): ReactElement {
   const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell tavern one-screen";
   return <div className={`${shell} practice practice--${variant}`}>{children}</div>;
@@ -651,11 +584,7 @@ function PracticeScreen({
     };
   }, [params]);
 
-  /**
-   * R668: the free game this device left in progress, read once; a URL that starts a game wins, and
-   * that game's own deal replaces it. R765: a game the player was in is picked up at once; one they
-   * left with Save and leave waits on the setup's banner.
-   */
+  /** R668: the free game this device left in progress, read once; a URL that starts a game wins. */
   const [arrival] = useState(() => {
     const autostart = autostartConfig(params);
     // #921: `?try=` starts a game too, once the card is read, so it picks up no game left before.
@@ -674,10 +603,7 @@ function PracticeScreen({
   );
   /** R765: the banner's Resume found nothing to fold, and the setup says so. */
   const [resumeLost, setResumeLost] = useState(false);
-  /**
-   * #921: `?try=`'s card: "pending" until the account's custom cards are read, then its game starts
-   * (null) or the setup says it was not found ("missing"). Null when the URL asks no try.
-   */
+  /** #921: "pending" until the account's custom cards are read, then null (its game starts) or "missing". */
   const [tryState, setTryState] = useState<"pending" | "missing" | null>(() =>
     params.try !== undefined && arrival.autostart === null ? "pending" : null,
   );
@@ -725,9 +651,8 @@ function PracticeScreen({
   }, [game]);
 
   const state = useControllerState(controller);
-  // R668: a save the worker will not fold (another catalog, a game that plays differently now) is
-  // no game to show a failure for: the player lands on the setup, as on a fresh visit.
-  // A failure later in the resumed game, with a board already shown, is reported like any other.
+  // R668: a save the worker will not fold is no game to show a failure for: the player lands on the
+  // setup. A failure once a resumed board is shown is reported like any other.
   const resumeFailed = state.phase === "failed" && state.snapshot === null && game !== null && resumeFrom.current === game;
   /** R765: whether the resume in flight was asked for by the banner's Resume, which then says it failed. */
   const resumeAsked = useRef(false);
@@ -745,15 +670,12 @@ function PracticeScreen({
   // A callback ref held in state, so the watch starts when the board first renders, not before.
   const [boardRoot, setBoardRoot] = useState<HTMLDivElement | null>(null);
   useBoardBusy(boardRoot, controller);
-  // `?pace=fast` is e2e pacing: a headless browser plays every voice line, and holding the AI for
-  // each would only slow the spec. A player's game always waits for the line, and for the card the
-  // AI has just played to be read.
+  // `?pace=fast` is e2e pacing: holding the AI for every voice line would only slow the spec.
   const held = DEV_ONLY && params.pace === "fast" ? null : controller;
   useVoiceHold(held);
   useShowcaseHold(held);
 
-  // The dev handle for spec 13: the debug snapshot (seed, decks, handicaps, log, state, hash) for
-  // the replay check, and the live view. Never in a production build.
+  // The dev handle for spec 13's replay check; never in a production build.
   useEffect(() => {
     if (!DEV_ONLY || controller === null) return;
     const handle: PracticeDevHandle = {
@@ -773,15 +695,12 @@ function PracticeScreen({
       if (window.__jackiohPractice === handle) delete window.__jackiohPractice;
     };
   }, [controller]);
-  // The tutorial's own handle for the e2e lesson spec (tutorial/devHandle.ts), under the same rule.
+  // The tutorial's handle for the e2e lesson spec, under the same rule.
   useTutorialDevHandle(tracker, game?.lesson ?? null);
 
   /** R2379000: the seed on its way back to the server, which the next seed request waits for. */
   const releasing = useRef<Promise<unknown>>(Promise.resolve());
-  /**
-   * R2379000: an earning game given up unclaimed gives its seed back. One that fails leaves the
-   * seed to lapse after `PRACTICE_SEED_TTL_SECONDS`, as before.
-   */
+  /** An earning game given up unclaimed gives its seed back; one that fails lapses after `PRACTICE_SEED_TTL_SECONDS`. */
   const releaseSeedOf = useCallback((left: PracticeStartConfig | null) => {
     const api = earningApi.current;
     const token = earningToken.current;
@@ -797,16 +716,12 @@ function PracticeScreen({
     setResumeLost(false);
   }, [savedGame, releaseSeedOf]);
 
-  /**
-   * R1303000: the setup a game is asking the server to seed, shown as the loading screen; null when
-   * none is. Each ask is numbered, so one given up (Back) or asked again never starts its game.
-   */
+  /** R1303000: the setup awaiting its server seed. Asks are numbered, so one given up or redone never starts. */
   const [seeding, setSeeding] = useState<PracticeStartConfig | null>(null);
   const seedAsks = useRef(0);
   /**
-   * A free game from the setup or Play again: on a server seed when the account may earn with it
-   * (`seedRequestOf`) and the URL fixes no seed, else as it is. A seed the server will not issue, or
-   * that never comes, leaves the game to play as before, earning nothing.
+   * On a server seed when the account may earn (`seedRequestOf`) and the URL fixes no seed. A seed
+   * the server will not issue, or that never comes, leaves the game to play as before, earning nothing.
    */
   const launch = useCallback(
     (config: PracticeStartConfig) => {
@@ -848,7 +763,7 @@ function PracticeScreen({
     },
     [params],
   );
-  /** The loading screen's way back while a seed is asked for: the ask is given up, and the setup shows. */
+  /** Back while a seed is asked for gives the ask up. */
   const onBackFromSeeding = useCallback(() => {
     seedAsks.current += 1;
     setSeeding(null);
@@ -875,8 +790,7 @@ function PracticeScreen({
     [dropSavedGame],
   );
 
-  // #921: `?try=` starts its game once the account's custom cards are read: a random deck around the
-  // card (R915005), on the remembered difficulty and a fresh seed and seat (unless the URL fixes them).
+  // #921: a random deck around the card (R915005), on the remembered difficulty.
   const tryId = params.try;
   const customState = custom.state;
   useEffect(() => {
@@ -906,10 +820,7 @@ function PracticeScreen({
     setGame(savedGame);
   }, [savedGame]);
 
-  /**
-   * "New game" or "Menu" in the middle of a game asks first. The question belongs to the game it
-   * was asked in, so a game that ends, or a fresh one, never inherits it.
-   */
+  /** "New game" or "Menu" mid-game asks first; the question belongs to its game, so no other inherits it. */
   const [leaveAskedFor, setLeaveAskedFor] = useState<{ game: PracticeStartConfig; to: PracticeLeaveTo } | null>(null);
   const onAskNewGame = useCallback(() => {
     if (game !== null) setLeaveAskedFor({ game, to: "setup" });
@@ -935,9 +846,8 @@ function PracticeScreen({
   }, []);
 
   /**
-   * R765: Save and leave keeps the game where it is (the worker's save is already its last answer)
-   * and marks it left on purpose, so the next `/practice` shows the setup with its banner instead of
-   * picking it up.
+   * R765: Save and leave keeps the game (the worker's save is already its last answer) and marks it
+   * left on purpose, so the next `/practice` shows the setup with its banner instead of picking it up.
    */
   const onSaveAndLeave = useCallback(() => {
     if (leaveAskedFor === null) return;
@@ -960,10 +870,7 @@ function PracticeScreen({
     else onNewGame();
   }, [leaveAskedFor, releaseSeedOf, onMenu, onNewGame]);
 
-  /**
-   * The loading screen's way back. A start in flight is given up; a resume in flight is not the
-   * player's to lose (R765): its game is kept as saved, and the setup's banner offers it again.
-   */
+  /** Back from loading gives a start up; a resume is not the player's to lose (R765), so it is kept as saved. */
   const onBackFromLoading = useCallback(() => {
     if (game === null || resumeFrom.current !== game) {
       onNewGame();
@@ -996,10 +903,8 @@ function PracticeScreen({
     setScrollToSetup(false);
   }, [scrollToSetup, game]);
 
-  // A free game in progress is saved on the device and comes back after a reload (R668), but a
-  // lesson is not: its coach reads the game from the deal on, so a reload, a closed tab or a Back
-  // that leaves the page would end it without a word, and the browser asks first, as it does for an
-  // unsent form. A free game, a finished lesson, the setup and the failure screen let the page go.
+  // A free game comes back after a reload (R668), but a lesson does not (its coach reads the game
+  // from the deal on), so leaving the page mid-lesson makes the browser ask first.
   const inProgress = game?.lesson !== undefined && state.phase === "playing";
   useEffect(() => {
     if (!inProgress) return;
@@ -1034,9 +939,8 @@ function PracticeScreen({
   /** The game whose result dialog the player closed to read the final board; null shows it. */
   const [resultClosedFor, setResultClosedFor] = useState<PracticeStartConfig | null>(null);
   /**
-   * The game whose result dialog may open: the board plays its own game-over sequence first (task
-   * 1's killing blow and Victory or Defeat), and the dialog waits for it rather than covering it.
-   * With no effects to watch (reduced motion, effects off, e2e pacing) it opens at once.
+   * The game whose result dialog may open: it waits out the board's own game-over sequence rather
+   * than cover it, and with no effects to watch (reduced motion, effects off, e2e pacing) opens at once.
    */
   const [resultReadyFor, setResultReadyFor] = useState<PracticeStartConfig | null>(null);
   // This game's own end: a Play again renders once with the old controller's finished state.
@@ -1044,15 +948,12 @@ function PracticeScreen({
   const boardAnimating = useBoardAnimating(boardRoot);
   const lethalHintOn = useSetting("lethalHint");
   useEffect(() => {
-    // The burst that ended the game plays out first (Game.tsx no longer drains it): the dialog
-    // opens once the board has settled, and `delay` is the wait after that for the board's own
-    // Victory or Defeat sequence.
+    // The dialog opens once the board has settled, then `delay` more for Victory or Defeat.
     if (!finished || game === null || boardAnimating) return;
     const effectsOff = reducedMotionNow() || getFxSettings().intensity === "off";
     const delay = effectsOff ? 0 : (pace.current.resultDelayMs ?? 0);
     // Never open on this render's word alone: the board's queue starts in Game's layout effect, after
-    // this effect ran, and `boardAnimating` learns of it later. The timer runs once the mark is in the
-    // DOM, so it checks the board itself (a mark found re-runs this effect through `boardAnimating`).
+    // this one, so the timer checks the board itself (a mark found re-runs this via `boardAnimating`).
     const timer = setTimeout(() => {
       if (boardRoot?.querySelector("[data-animating]") != null) return;
       setResultReadyFor(game);
@@ -1061,10 +962,7 @@ function PracticeScreen({
       clearTimeout(timer);
     };
   }, [finished, game, boardAnimating, boardRoot]);
-  /**
-   * R1303000: what the claim of a game on a server seed earned, held by its game, so a Play again
-   * shows nothing of the last one's; null before any claim.
-   */
+  /** R1303000: what a game's claim earned, held by its game, so a Play again shows nothing of the last's. */
   const [earning, setEarning] = useState<{ game: PracticeStartConfig; earning: PracticeEarning } | null>(null);
   /** The game whose end was claimed, so each game is claimed once. */
   const claimedFor = useRef<PracticeStartConfig | null>(null);
@@ -1082,8 +980,7 @@ function PracticeScreen({
       settleTo({ kind: "unreachable" });
       return;
     }
-    // Any failure (the worker's refusal, no answer, a malformed one) is "unreachable": the dialog
-    // stays whole either way.
+    // Any failure is "unreachable": the dialog stays whole either way.
     controller
       .claim()
       .then((claim) => api.claim(token, claim))
@@ -1117,10 +1014,7 @@ function PracticeScreen({
     setResultReadyFor(game);
   }, [game]);
 
-  /**
-   * R768000: the kept game the player is watching from its result dialog, and whether it opened at
-   * the last step to share that turn's GIF; null shows the board. Leaving goes back to the dialog.
-   */
+  /** R768000: the replay watched from the result dialog (`share` opens it at the last turn's GIF). */
   const [watching, setWatching] = useState<{ game: PracticeStartConfig; share: boolean } | null>(null);
   const kept = state.config === game ? state.snapshot?.replay : undefined;
   const keptGame = kept?.game;
@@ -1149,8 +1043,7 @@ function PracticeScreen({
     [controller],
   );
 
-  // R923000: a sandbox game's "Hold the AI's turn", one more reason the controller holds the AI's
-  // next step (as the board's animation and a voice line are), released with the game.
+  // R923000: a sandbox game's "Hold the AI's turn", released with the game.
   const [sandboxHeld, setSandboxHeld] = useState(false);
   const onSandboxHold = useCallback(
     (held: boolean) => {
@@ -1170,8 +1063,7 @@ function PracticeScreen({
     [controller],
   );
 
-  // R642–R645: the game's emote half — the dealt portraits, the AI's persona and its replies —
-  // driven off the controller's snapshots (practice/emotes.ts). With no game it deals nothing.
+  // R642–R645: the dealt portraits, the AI's persona and its replies; with no game it deals nothing.
   const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat, controller);
 
   const defs = state.defs;
@@ -1180,8 +1072,8 @@ function PracticeScreen({
   const gameCustoms = state.config?.customCards;
   const sandboxCustoms = useMemo(() => customDefsOf(gameCustoms ?? []), [gameCustoms]);
 
-  // A lesson won is a lesson completed on this device (R294), the moment the view says so, whether
-  // or not its result dialog is ever seen; an active account hears of it from the sync (R321).
+  // A lesson won is completed on this device (R294) the moment the view says so, whether or not its
+  // result dialog is ever seen.
   const lesson = game?.lesson === undefined ? undefined : lessonById(game.lesson);
   const lessonResult = lesson !== undefined && state.config === game ? (state.snapshot?.view ?? null) : null;
   const wonLesson =
@@ -1320,24 +1212,21 @@ function PracticeScreen({
         error={snapshot.error}
         resultForm="chip"
         emotes={emotes}
-        // R639: a practice game is the player's own game and is logged; a tutorial lesson is not,
-        // R923000: nor is a sandbox game, which counts for nothing, and R915009: nor is a game with
-        // custom cards (§12.10).
+        // R639: a practice game is logged; a lesson is not, nor (R923000) a sandbox game, nor
+        // (R915009, §12.10) a game with custom cards.
         trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
         wearCosmetics
-        // R1297000: the saved deck being played brings its own playmat, backdrop and card back.
+        // R1297000: a saved deck brings its own playmat, backdrop and card back.
         deckCosmetics={config.deck.kind === "saved" ? (config.deck.cosmetics ?? null) : null}
         {...(config.lesson === undefined ? {} : { autoEndTurn: true, lesson: true })}
-        // R2291000: the lethal hint, in every game against the AI (R2102000), which the Lethal hint
-        // setting turns off.
+        // R2291000: in every game against the AI (R2102000), unless the Lethal hint setting is off.
         lethalHint={lethalHintOn && snapshot.lethal === true}
       />
     </FullArtAllowed>
   );
   const result = snapshot.view.result;
   const outcome = result === null ? null : outcomeOf(result, snapshot.view.viewer);
-  // The lesson this board is playing: the controller's own config, so a screen that has just asked
-  // for the next lesson still labels the game it shows until that one starts.
+  // The controller's config, so a screen that just asked for the next lesson labels the one it shows.
   const playing = config.lesson === undefined ? undefined : lessonById(config.lesson);
   const coached = playing !== undefined && tracker !== null ? { lesson: playing, tracker } : null;
   const nextLesson = coached === null ? undefined : nextLessonOf(coached.lesson.id);

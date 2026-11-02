@@ -51,10 +51,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, false)
 }
 
-// C+ #48 Jlockeed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: 0/3, never in Defense
-// Position (a switch is refused, a switch-all leaves it in Attack), never attacks with 0 attack; Death
-// adds a random non-token Jlockeed card costing (0), the pool Core #13, #14, Classic #4, C+ #51, #52
-// (one tag, never itself, R387); a full hand burns it; hidden from the opponent (R97); radiant 0/6.
+// C+ #48 Jlockeed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48, R97.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,12 +66,8 @@ mod tests {
     const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #51, #52,
-    /// Meditative #87 Tatches the Totem (all tribes) and #97 Jlockeed's Evil Blueprints (§8.8) and
-    /// Meditative+ #4 Supply Drop (§8.9). Re-pinned for v0.3.5: the Meditative set joins the pool; and
-    /// for v0.3.15 (Meditative+ ships, #1187): M+ #4 joins it; and for the Stinkyscape release (#1884):
-    /// its #124 to #130, Jlockeed's space program. Re-pinned for the Training Grounds release (#2204):
-    /// that set's snapshots #45 Jlockeed's Weapons (of Core #14) and #48 Jlockeed Shredder-10 (of Core
-    /// #13) join it.
+    /// M #87 and #97 (§8.8), M+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and Training Grounds
+    /// #45 and #48 (#2204), snapshots of Core #14 and #13.
     const POOL: [&str; 17] = [
         "classic-004",
         "classicplus-051",

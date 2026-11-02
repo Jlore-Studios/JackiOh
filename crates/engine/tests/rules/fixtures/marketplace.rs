@@ -1,11 +1,7 @@
 //! Test-only cards and a table for Stinkyscape's Marketplace (#1853, R1853000–R1853005; #2250,
-//! R2250002): a (0) Spell, a (4) and a (5) Unit and a (1) Spell standing in for Call to Chaos (Scape
-//! Edition)'s lot, all of the Boss-X set so a set lot draws among them, and `MARKET_TABLE`, the fixture
-//! table in the shape of the set's (S21): a pool of named cards, one named card, and a set. The engine
-//! never imports `crates/cards` for this; the Resources are `fixtures/resources.rs`'.
-//!
-//! Ids are prefixed `fx-mkt-` and indexed from 18530, so they collide with no other fixture file's; the
-//! hand-sale card (R1861000), kept apart from the table's cards, is 18610.
+//! R2250002), all of the Boss-X set so a set lot draws among them, and `MARKET_TABLE` in the shape of
+//! the set's (S21); the Resources are `fixtures/resources.rs`'. Ids `fx-mkt-…` from 18530 (the
+//! hand-sale card 18610) collide with no other fixture file's.
 
 use std::sync::LazyLock;
 
@@ -13,15 +9,15 @@ use jackioh_engine::testkit::*;
 
 use super::catalog::{spell_def, unit_def};
 
-/// A (0) Spell: the Marketplace's lowest price.
+/// The Marketplace's lowest price.
 pub const FREE: &str = "fx-mkt-free";
 /// A (4) 4/4: 40 Credits.
 pub const FOUR: &str = "fx-mkt-four";
 /// A (5) 5/5: 45 Credits.
 pub const FIVE: &str = "fx-mkt-five";
-/// A (1) Spell, the lot Call to Chaos (Scape Edition) adds.
+/// The lot Call to Chaos (Scape Edition) adds.
 pub const CHAOS: &str = "fx-mkt-chaos";
-/// The fixed price Call to Chaos (Scape Edition) adds its lot at.
+/// The fixed price it adds that lot at.
 pub const CHAOS_PRICE: i32 = 20;
 /// The four fixture cards, the Boss-X set.
 pub const MARKET_CARDS: [&str; 4] = [FREE, FOUR, FIVE, CHAOS];
@@ -47,7 +43,6 @@ pub static MARKET_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The Marketplace's cards on top of `base`.
 pub fn marketplace_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for def in MARKET_DEFS.iter() {
@@ -84,7 +79,6 @@ pub static HAND_SALE_DEF: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// `HAND_SALE`'s script: the flag on both faces and nothing else.
 pub static HAND_SALE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     let face = || Script {
         static_flags: Some(StaticFlags {

@@ -1,4 +1,4 @@
-//! `src/query.ts`: the read-only board surface a card script asks its questions with
+//! `src/query.rs`: the read-only board surface a card script asks its questions with
 //! (BUILD M3-T1's "scripts never touch state", SPEC §10.9's "a hook may read state to compute an
 //! effect's arguments; it never writes").
 //!
@@ -8,9 +8,7 @@
 //! tests are the other half of the surface's promise: a card file holds no reference it can write
 //! the game through, which is the property the acceptance grep is really protecting.
 //!
-//! Port of `packages/engine/test/query.test.ts`. TS's `CardInstance | string` arguments are
-//! `CardOrId::Card(&card)` / `CardOrId::Id(id)`, and `null` `CardOrId::Nothing`. TS held the live card
-//! `put` and `inHand` returned; here a card is re-read from the state (`live`).
+//! `put` and `in_hand` return copies, so a test re-reads a card from the state (`live`).
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -75,13 +73,10 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<CardInstan
         .cloned()
 }
 
-/// the card-facing read surface (BUILD M3-T1, SPEC §10.9)
 mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     use super::*;
 
-    // -------------------------------------------------------------------------
     // heroOf — #68 Twisted Sorcerer's threshold, #70 Spiteful Stab's missing health.
-    // -------------------------------------------------------------------------
 
     #[test]
     fn hero_of_reads_the_health_the_engine_just_took_off_for_the_player_named_and_no_other() {
@@ -91,7 +86,6 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         lose_health(&mut sink_for(&mut state), P1, 7);
 
         assert_eq!(hero_of(&state, P1).health, HERO_HEALTH - 7);
-        // The accessor is keyed on the player it is given: p2 took nothing.
         assert_eq!(hero_of(&state, P2).health, HERO_HEALTH);
     }
 
@@ -128,9 +122,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert_eq!(hero_of(&state, P1).health, HERO_HEALTH);
     }
 
-    // -------------------------------------------------------------------------
     // zoneCards / zoneCount — #30 Archivist, #51 Private Tutor, #71 Intern Stimmy, #83 Transmogulate.
-    // -------------------------------------------------------------------------
 
     #[test]
     fn zone_cards_is_one_player_s_pile_in_zone_order_the_library_top_first() {
@@ -221,9 +213,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert_eq!(zone_count(&state, P1, OffFieldZone::Hand), 1);
     }
 
-    // -------------------------------------------------------------------------
     // The turn log — #23, #24, #31's one-shot return; #38's Combo X; #39's replay of the turn.
-    // -------------------------------------------------------------------------
 
     #[test]
     fn cards_played_this_turn_and_played_ids_this_turn_follow_the_plays_in_play_order() {
@@ -259,7 +249,6 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert!(was_played_this_turn(&state, P1, CardOrId::Id(&second.id)));
         assert!(!was_played_this_turn(&state, P1, CardOrId::Card(&unplayed)));
 
-        // The log is per player: p1's plays are not in p2's log, and p2 has played nothing.
         assert!(!was_played_this_turn(&state, P2, CardOrId::Card(&first)));
         assert_eq!(cards_played_this_turn(&state, P2), 0);
         assert_eq!(played_ids_this_turn(&state, P2), Vec::<String>::new());
@@ -279,9 +268,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert!(!was_played_this_turn(&state, P1, CardOrId::Card(&card)));
     }
 
-    // -------------------------------------------------------------------------
     // playedEarlier — §6.2's Combo X "at play time" (#10, and §10.5 step 5's #38 and #78).
-    // -------------------------------------------------------------------------
 
     #[test]
     fn played_earlier_counts_a_played_card_s_own_place_in_the_log_and_every_play_so_far_for_a_card_in_hand() {
@@ -299,7 +286,6 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
             "a card kept in hand",
         );
 
-        // Nothing played yet: a card in hand would be the first play.
         assert_eq!(
             played_earlier(&state, P1, CardOrId::Card(&live(&state, &held))),
             0
@@ -308,15 +294,12 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         state = play_into(&state, &first, 1);
         state = play_into(&state, &second, 2);
 
-        // Its place in the log, by instance or by id: nothing before the first play, one before the second.
         assert_eq!(played_earlier(&state, P1, CardOrId::Id(&first.id)), 0);
         let on_field = must(top_of(&state, P1, 1), "the second card on the field");
         assert_eq!(played_earlier(&state, P1, CardOrId::Card(&on_field)), 1);
         // A card still in hand has not been played: both plays so far are earlier than its would be.
         assert_eq!(played_earlier(&state, P1, CardOrId::Id(&held.id)), 2);
-        // An id the log does not hold is read the same way.
         assert_eq!(played_earlier(&state, P1, CardOrId::Id("no-such-card")), 2);
-        // The log is per player: p1's plays are not earlier than anything of p2's.
         assert_eq!(played_earlier(&state, P2, CardOrId::Id(&first.id)), 0);
     }
 
@@ -362,7 +345,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
             input(json!({ "type": "play", "instanceId": stockpile.id, "playerId": "p1" })),
         );
 
-        // The cast is no play (R2179002; through v0.5.2 it was one, R70, logged after Stockpile).
+        // The cast (R70) is no play (R2179002).
         let log = played_ids_this_turn(&state, P1);
         assert_eq!(log, vec![stockpile.id.clone()]);
         assert_eq!(cards_played_this_turn(&state, P1), 1);
@@ -625,9 +608,7 @@ mod r1064_armor_on_field {
     }
 }
 
-// -------------------------------------------------------------------------
 // isResolving — S #138 Pocket Peptides (R1881007).
-// -------------------------------------------------------------------------
 mod r1881007_is_resolving {
     use super::*;
 

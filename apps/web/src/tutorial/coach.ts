@@ -1,12 +1,7 @@
 // Tutorial coach tracks lesson steps and tips without deciding legality (SPEC §9.10, R292;
-// CLAUDE.md rule 7). There is no skip: only ackable `info` steps or tips may hold AI (R314).
-// Non-final steps expire after `TUTORIAL_STEP_TURNS_MAX` player turns; tips survive steps until game
-// end, and the HUD always offers exit.
-//
-// R2205000: a `moment` poses a question and is done once the player finds what it sets up. The coach
-// recognizes each Field Guide entry (discoveries.ts) from the view alone and names the rule in a
-// discovery bubble; a moment's hint escalates only when the player stalls or asks for one, and a
-// moment never holds the AI.
+// CLAUDE.md rule 7). There is no skip: only ackable `info` steps or tips may hold AI (R314), non-final
+// steps expire, and the HUD always offers exit. R2205000: the coach recognizes each Field Guide entry
+// (discoveries.ts) from the view alone and names its rule in a bubble.
 
 import type { ActionBody, CardDef, GameEvent, PlayerView, Row } from "@jackioh/shared";
 
@@ -26,7 +21,7 @@ export type CoachCtx = {
   aiToAct: boolean;
   /** Public catalog lookup (§5.1); absent without a catalog in tests. */
   nameOf?: (defId: string) => string | undefined;
-  /** The public catalog's definition (§5.1): a card's printed type, keywords, text and rarity (R2205000). */
+  /** The public catalog's definition (§5.1, R2205000). */
   defOf?: (defId: string) => CardDef | undefined;
 };
 
@@ -46,7 +41,7 @@ export type CoachAnchor =
   | { kind: "library"; side: Side }
   | { kind: "graveyard"; side: Side };
 
-/** A fixed English line, looked up where it is shown, or one built at that moment (a card's name in it, R711000). */
+/** A fixed English line, looked up where it is shown, or one built then (R711000). */
 export type Text = string | ((ctx: CoachCtx) => string);
 type AnchorOf = CoachAnchor | null | ((ctx: CoachCtx) => CoachAnchor | null);
 
@@ -59,7 +54,6 @@ export type CoachStep = {
   anchor?: AnchorOf;
   /** `info`: "Got it" completes it. `act`: its `done` completes it. `moment`: finding what it `discovers`, or its `done`. */
   kind: "info" | "act" | "moment";
-  /** `when` gates activation. */
   when?: (ctx: CoachCtx) => boolean;
   /** Required for `act`; receives the activation view. */
   done?: (ctx: CoachCtx, since: PlayerView) => boolean;
@@ -76,7 +70,7 @@ export type CoachStep = {
   discovers?: readonly string[];
   /** `moment`: the nudge, then the pointed hint, shown as the player stalls or asks (R2205000). */
   hints?: readonly Text[];
-  /** `moment`: what the last hint points at (the card, the lane, the hero). */
+  /** `moment`: what the last hint points at. */
   hintAnchor?: AnchorOf;
   /** `moment`: re-offers an earlier lesson's mechanic, so it is moot once the Field Guide holds it (R314). */
   revisit?: boolean;
@@ -97,7 +91,7 @@ export type LessonScript = {
   tips: readonly CoachTip[];
   /** The Field Guide entries this lesson lists; their discovery bubbles always show (R2205000). */
   teaches?: readonly string[];
-  /** The entries the coach watches for: the whole Field Guide in every lesson that lists `teaches`. Tests pass fixtures. */
+  /** The entries the coach watches for: the whole Field Guide in every lesson that lists `teaches`. */
   guide?: readonly Discovery[];
 };
 
@@ -121,11 +115,10 @@ export type CoachState = {
   known: readonly string[];
   /** `turnsOnStep` when the current step showed. */
   shownAt: number;
-  /** Hint presses on the current step. */
   hintsAsked: number;
   /** Discovery bubbles queued since the player's last own move (`TUTORIAL_BUBBLES_PER_MOVE_MAX`). */
   bubblesSinceMove: number;
-  /** The steps' order as the coach takes them, a later moment brought forward when its board comes first; empty is the script's. */
+  /** The steps' order as the coach takes them (`bringForward`); empty is the script's. */
   order: readonly number[];
 };
 
@@ -153,7 +146,6 @@ export function coachStart(known: readonly string[]): CoachState {
   return known.length === 0 ? COACH_START : { ...COACH_START, known: [...known] };
 }
 
-/** The line in the reader's language: a fixed line is looked up here, a built one where it is built. */
 export function textOf(text: Text, ctx: CoachCtx): string {
   return typeof text === "function" ? text(ctx) : t(text);
 }
@@ -172,17 +164,13 @@ function safely(test: () => boolean): boolean {
   }
 }
 
-/** A script that lists no `teaches` is a step list with no moments, and watches for nothing. */
-/** The step the coach is on: the `index`-th in its order. */
 function stepAt(script: LessonScript, state: CoachState): CoachStep | undefined {
   return script.steps[state.order[state.index] ?? state.index];
 }
 
 /**
- * R2205000: a moment waits for its board, and a later moment whose board has come shows meanwhile. The
- * run of moments after the current one (up to the next other step or the final one) is searched in
- * order for the first that can show now; it swaps places with the current one, which waits behind it,
- * whether it had shown or not.
+ * R2205000: a moment waits for its board; the first later moment in its run (to the next other step or
+ * the final one) that can show now swaps places with it.
  */
 function bringForward(script: LessonScript, state: CoachState, ctx: CoachCtx): CoachState | null {
   const order = state.order.length === 0 ? script.steps.map((_step, at) => at) : [...state.order];
@@ -217,7 +205,6 @@ function retire(state: CoachState, step: CoachStep, outcome: StepOutcome): Coach
   };
 }
 
-/** A moment is done once every entry it sets up has been found in this game. */
 function discovered(step: CoachStep, state: CoachState): boolean {
   const wanted = step.discovers ?? [];
   return step.kind === "moment" && wanted.length > 0 && wanted.every((id) => state.found.includes(id));
@@ -295,7 +282,7 @@ function overdue(step: CoachStep, state: CoachState, turns: number): boolean {
   return turns > TUTORIAL_STEP_TURNS_MAX;
 }
 
-/** The player's own move shows in the fresh events: a play, an attack, a switch, an answer or the turn's end. */
+/** The player's own move shows in the fresh events (a forced attack is not one). */
 function playerMoved(ctx: CoachCtx): boolean {
   const { view } = ctx;
   const own = new Set([
@@ -319,9 +306,8 @@ function playerMoved(ctx: CoachCtx): boolean {
 }
 
 /**
- * R2205000: every entry the view shows found for the first time; a bubble for each the lesson lists
- * or the player has not met, at most `TUTORIAL_BUBBLES_PER_MOVE_MAX` "Got it"s between two of the
- * player's moves, tips and a shown `info` step counted. The rest are found without a bubble.
+ * R2205000: a bubble for each new find the lesson lists or the player has not met, at most
+ * `TUTORIAL_BUBBLES_PER_MOVE_MAX` "Got it"s (tips and a shown `info` step counted) between two of the player's moves.
  * R2434001: an entry a later lesson holds never bubbles, so no lesson teaches what a later one does.
  */
 function discover(script: LessonScript, current: CoachState, ctx: CoachCtx): CoachState {
@@ -419,7 +405,6 @@ type Bubble = {
   holdAi: boolean;
   /** A moment's hint at its current level; null below the first. */
   hint: string | null;
-  /** The player may ask for a (further) hint. */
   canHint: boolean;
   stepNumber: number;
   stepCount: number;
@@ -436,7 +421,6 @@ export function ruleSentence(entry: Discovery): string {
   return rule.charAt(0).toUpperCase() + rule.slice(1);
 }
 
-/** A bubble with a title and text: a tip, a step or a discovery. */
 export function isBubble(display: CoachDisplay): display is Bubble {
   return display.mode === "tip" || display.mode === "step" || display.mode === "discovery";
 }

@@ -1,9 +1,7 @@
-//! R1846000–R1846002 (issue #1846, Stinkyscape's card metrics): the BUSTED and complicated pools,
-//! which `crates/cards/build.rs` compiles in from every script's code lines and the catalog query
-//! reaches (`busted`, `complicated`); `everySet`, "every set, single-player ones too" (Stinkyscape
-//! #109 xxFreshJack's); and a custom card, which counts as neither. Fixture definitions and the
-//! testkit's code lines only (CLAUDE.md: the engine does not depend on crates/cards); the real lists
-//! are proved in `crates/cards/tests/cross/card_metrics.rs`.
+//! R1846000–R1846002 (issue #1846, Stinkyscape's card metrics): the BUSTED and complicated pools, which
+//! `crates/cards/build.rs` compiles in from every script's code lines; `everySet` (Stinkyscape #109's).
+//! Fixtures only (CLAUDE.md: the engine does not depend on crates/cards); the real lists are proved in
+//! `crates/cards/tests/cross/card_metrics.rs`.
 
 use jackioh_engine::testkit::*;
 
@@ -27,9 +25,8 @@ fn card(id: &str, set: &str, index: &str, token: bool) -> CardDef {
     }))
 }
 
-/// Core cards on each side of both thresholds, a long Core token, a long card of each single-player
-/// set, and a long card of a set that neither ships nor is a single-player set (Custom, the one such
-/// name `SetName` has: it stands in for a set the catalog holds before it ships, R1420).
+/// Core cards on each side of both thresholds, a long Core token, a long card of each single-player set
+/// and of Custom, standing in for a set the catalog holds before it ships (R1420).
 fn defs() -> CardDefs {
     [
         card("core-001", "Core", "1", false),
@@ -47,8 +44,6 @@ fn defs() -> CardDefs {
     .collect()
 }
 
-/// Each fixture's code lines: one over the BUSTED threshold, one on it, one over the complicated
-/// threshold and one on it, a short card, and the rest long.
 fn code_lines() -> Vec<(&'static str, usize)> {
     vec![
         ("core-001", BUSTED_CODE_LINES + 1),
@@ -185,8 +180,7 @@ fn r1846001_every_set_adds_the_single_player_sets_and_nothing_held() {
 #[test]
 fn r1846002_a_custom_card_counts_as_neither_whatever_a_table_lists() {
     setup();
-    // Even a table that listed a custom id (the build's never does: it counts the catalog's Rust
-    // scripts) leaves a custom card neither BUSTED nor complicated, with no count.
+    // Even a table listing a custom id (the build's never does) leaves a custom card neither, uncounted.
     let mut lines = code_lines();
     lines.push(("custom-long", BUSTED_CODE_LINES * 2));
     register_code_lines(lines);
@@ -231,7 +225,6 @@ mod r2173000_a_fold_reads_its_versions_own_lists {
         with_shipped(Some(without), || {
             assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
         });
-        // Back on the build's catalog, the build's lists.
         assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
         clear_overrides();
     }

@@ -1,15 +1,5 @@
-//! Tutorial progress on the account (`src/api/tutorial.rs`, SPEC §9.10, R320).
-//!
-//! The questions here are the endpoints' own: who may call them (an active account, and only about
-//! itself), what a body must look like, what a write does to what is stored (a union, and the newer
-//! choice), and that a time from a clock running ahead is taken as now. The merge itself is the
-//! store's and is asserted against both stores in `tests/store/contract.rs`; the database's half —
-//! RLS, the grants and the SQL function — is `tests/sql/05_tutorial_progress.sql` and
-//! `02_rls_as_client.sql`.
-//!
-//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
-//! caller is `e2e-p1`, the other account `e2e-p2`, the pending one `e2e-pending`, and a banned
-//! account is `e2e-p2` set to `banned`. A time "now" is read from the server's wall clock.
+//! Tutorial progress on account (`src/api/tutorial.rs`, SPEC §9.10, R320).
+//! Covers authorization, request validation, union merges, and clock handling.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -134,8 +124,7 @@ mod r320_the_routes_an_active_account_and_only_about_itself {
 
     #[tokio::test]
     async fn r320_declares_get_and_put_api_tutorial_both_active() {
-        // GET and PUT exist, every other method on the path is the router's 404, and both turn a
-        // pending account away, which a `user` route would not.
+        // GET and PUT active; pending account turned away.
         let f = setup().await;
         assert_eq!(get(&f.app, TOKEN).await.0, 200);
         assert_eq!(put(&f.app, json!({ "completed": [] }), TOKEN).await.0, 200);
@@ -176,8 +165,7 @@ mod r320_the_routes_an_active_account_and_only_about_itself {
             json!({ "completed": [], "hiddenChoice": null })
         );
 
-        // A body naming another profile changes nothing about whose row is written: the profile is the
-        // verified token's, never a field of the request.
+        // Profile written is verified token's, ignoring body field.
         progress_of(
             put(
                 &f.app,

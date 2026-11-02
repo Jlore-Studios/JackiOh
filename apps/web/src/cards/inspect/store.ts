@@ -1,5 +1,4 @@
 // The one inspect overlay the page may show (B23), and the plumbing every overlay shares.
-//
 // One module-level `{ key, mode, anchor }`: each trigger's snapshot is null unless the open overlay
 // is its own, so opening one card's preview re-renders that card alone. A mounted CardDetail
 // registers its close callback here, so `closeInspect()` reaches it.
@@ -28,7 +27,7 @@ export function subscribeInspect(listener: () => void): () => void {
   };
 }
 
-/** The open overlay when it belongs to `key`, else null. Stable while nothing changes. */
+/** Stable while nothing changes. */
 export function inspectSnapshot(key: string | null): ActiveInspect | null {
   return key !== null && active !== null && active.key === key ? active : null;
 }
@@ -39,7 +38,6 @@ export function openInspect(next: ActiveInspect): void {
   emit();
 }
 
-/** Closes the open overlay, or only the one for `key`. */
 export function closeInspect(key?: string): void {
   const open = detail;
   if (open !== null && (key === undefined || open.key === key)) {
@@ -52,7 +50,6 @@ export function closeInspect(key?: string): void {
   }
 }
 
-/** Closes `key`'s hover preview and leaves a sheet alone. */
 export function closeHoverFor(key: string): void {
   if (active !== null && active.key === key && active.mode === "hover") {
     active = null;
@@ -60,7 +57,6 @@ export function closeHoverFor(key: string): void {
   }
 }
 
-/** A mounted CardDetail: `closeInspect()` calls `close`. Returns the unregister function. */
 export function registerDetail(key: string, close: () => void): () => void {
   const entry = { key, close };
   detail = entry;
@@ -120,10 +116,9 @@ function tabbablesIn(dialog: Element): HTMLElement[] {
 }
 
 /**
- * Keeps Tab inside `dialog`, wrapping last to first and first to last. Both overlays are portalled
- * to the end of <body>, so without this one Tab from Close walks into the page under the scrim (B25).
- * Focus on the dialog itself (the pack scene's root holds it from the open, #1757) counts as outside, so
- * the next Tab goes to the first control and Shift+Tab to the last.
+ * Keeps Tab inside `dialog`, wrapping: both overlays are portalled to the end of <body>, so one Tab
+ * from Close would walk into the page under the scrim (B25). Focus on the dialog itself (the pack
+ * scene's root holds it from the open, #1757) counts as outside.
  */
 function trapTab(event: KeyboardEvent, dialog: Element): void {
   const tabbables = tabbablesIn(dialog);
@@ -145,12 +140,10 @@ function trapTab(event: KeyboardEvent, dialog: Element): void {
 }
 
 /**
- * What the sheet and the detail share: focus moves to `focusRef` and back, Tab stays inside, Escape,
- * the scrim, Close and the browser's Back (R2127000) dismiss. A pointer click that began before the
- * overlay opened is ignored (after a long-press the lifting finger's click lands on the new scrim)
- * unless it is a keyboard click, a press that began on the element, or CLICK_SUPPRESS_MS has passed.
- * While `closable` is false (the pack scene while its open request is out, #1757), Escape, Back and
- * `close` do nothing, as that dialog's disabled Close does.
+ * What the sheet and the detail share: focus in and back, Tab, Escape, the scrim, Close and Back
+ * (R2127000). A pointer click begun before the overlay opened is ignored until CLICK_SUPPRESS_MS: after
+ * a long-press, the lifting finger's click lands on the new scrim. While `closable` is false (the pack
+ * scene while its open request is out, #1757), nothing closes it, as that dialog's disabled Close does.
  */
 export function useModalOverlay(
   onClose: () => void,
@@ -182,7 +175,6 @@ export function useModalOverlay(
         return;
       }
       if (event.key !== "Escape") return;
-      // A dialog that cannot close now (the pack scene while its open is out, #1757) ignores Escape.
       if (!closableRef.current) return;
       // R279, R2098000: Escape over an open reference's or term's tooltip closes the tooltip alone (CardRef.tsx, TermTip.tsx).
       const dialog = focusRef.current?.closest('[role="dialog"]') ?? null;
@@ -203,7 +195,6 @@ export function useModalOverlay(
     restoreFocus(restoreRef.current);
     onCloseRef.current();
   };
-  // R2127000: Back closes it as Close does, and nothing while it cannot close.
   useBackLayer(close, closable);
 
   return {

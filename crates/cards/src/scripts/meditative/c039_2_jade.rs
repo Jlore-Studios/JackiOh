@@ -31,10 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #39.2 Jade — SPEC §8.8 row 39.2, BUILD M10 row M 39.2: "Raises its caster's Jade
-// Counter by 1 (`jadeChanged`, public on both views, never lowered; MD-C2) and gains 1 temporary
-// mana; a crossing of 5 or 10 runs inside the same effect (MD-C3); jade and mana read through
-// `param()`; radiant 2 and 2".
+// Meditative #39.2 Jade — SPEC §8.8 row 39.2, BUILD M10 row M 39.2.
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,7 +1,5 @@
 //! SPEC §8.11 Training Grounds 4 Boulder Fist Ogre: (2) Unit, Common, 6/7 → 18/21, Rush on both faces,
-//! a card of the held Training Grounds set (R1420, R2194000). Keywords only (§6.1): Rush lets it attack a
-//! Unit the turn it lands, never the hero. The Radiant face adds no keyword, the designer's word
-//! (`docs/radiant-audit.md`, as S #68 Stratos).
+//! a card of the held Training Grounds set (R1420, R2194000). Keywords only (§6.1, `docs/radiant-audit.md`, S #68).
 
 use jackioh_engine::prelude::*;
 
@@ -14,9 +12,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #4 Boulder Fist Ogre — SPEC §8.11 row 4, BUILD M13 row TG 4: "base: 6/7 with Rush; it may attack an
-// enemy Unit the turn it is played; it may not attack the enemy hero that turn; it may attack the hero
-// from its next turn. radiant 18/21 with Rush, the same".
+// TG #4 Boulder Fist Ogre — SPEC §8.11 row 4, BUILD M13 row TG 4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

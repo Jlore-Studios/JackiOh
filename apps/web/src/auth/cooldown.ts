@@ -1,28 +1,22 @@
-// A wait counted on the clock, not in timer ticks (R192's per-address mail interval, the gate's
-// stated waits). A countdown of one second per `setInterval` tick is wrong in a background tab,
-// whose timers are frozen (iOS Safari) or throttled, so a wait is a DEADLINE (epoch ms) and the
-// seconds left are read from the clock at every render; the interval only asks for a re-render.
+// A wait counted on the clock, not in timer ticks (R192's per-address mail interval, the gate's stated
+// waits): a background tab's timers are frozen (iOS Safari) or throttled, so a wait is a DEADLINE (epoch
+// ms) and the seconds left are read from the clock at every render; the interval only asks for a re-render.
 
 import { useCallback, useEffect, useState } from "react";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/** Whole seconds from `now` until `deadline` (epoch ms), rounded up; 0 once it has passed or for none. */
 export function secondsUntil(deadline: number | null, now: number): number {
   if (deadline === null || !Number.isFinite(deadline)) return 0;
   return Math.max(0, Math.ceil((deadline - now) / MS_PER_SECOND));
 }
 
-/** The deadline `seconds` after `from` (epoch ms). */
 export function deadlineAfter(seconds: number, from: number): number {
   return from + Math.max(0, seconds) * MS_PER_SECOND;
 }
 
-/**
- * The whole seconds left until `deadline`, read from the clock at every render: once a second while
- * it lies ahead, and at once when the page is shown again (`visibilitychange`, `pageshow`, `focus`).
- */
+/** Re-renders once a second while `deadline` lies ahead, and at once when the page is shown again. */
 export function useSecondsUntil(deadline: number | null): number {
   const [, rerender] = useState(0);
   const left = secondsUntil(deadline, Date.now());
@@ -59,7 +53,6 @@ export function addressKey(address: string): string {
 export type AddressCooldown = {
   /** Whole seconds left before the mailer may be used again for `address`; 0 for any other. */
   secondsFor: (address: string) => number;
-  /** The provider's interval for `address` runs until `deadline` (epoch ms). */
   startUntil: (address: string, deadline: number) => void;
 };
 
@@ -84,10 +77,7 @@ export function useAddressCooldown(initial: { address: string; deadline: number 
   return { secondsFor, startUntil };
 }
 
-/**
- * Seconds left of a stated wait, from when it was stated: counted on the clock, so a tab the
- * browser put to sleep does not come back still waiting (`auth/cooldown.ts`). 0 when there is none.
- */
+/** Seconds left of a stated wait, from when it was stated; 0 when there is none. */
 export function useCountdown(totalMs: number | undefined): number {
   const [deadline, setDeadline] = useState(() => (totalMs === undefined ? null : Date.now() + totalMs));
   const [stated, setStated] = useState(totalMs);

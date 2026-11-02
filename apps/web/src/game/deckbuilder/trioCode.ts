@@ -1,10 +1,10 @@
 // Trio codes (SPEC §9.4, R339): a trio and its three decks as one line of text, the way a deck code
 // (R255, `deckCode.ts`) carries one deck.
 //
-// Client-side like a deck code: the code is read here and nowhere else, and an import sends the
-// server the decks and the trio (`POST /api/trios/import`, R341), which checks them like any save.
-// Each deck is resolved as a deck code's is (`resolveDeck`): what no deck could hold is dropped and
-// listed, and cards the player does not own are kept and flagged.
+// Client-side like a deck code: the code is read here and nowhere else, and an import sends the server the
+// decks and the trio (`POST /api/trios/import`, R341), which checks them like any save. Each deck is resolved
+// as a deck code's is (`resolveDeck`): what no deck could hold is dropped and listed, and cards the player
+// does not own are kept and flagged.
 //
 // THE FORMAT. `JKT<version>.` then base64url (no padding) of:
 //
@@ -17,9 +17,6 @@
 // - checksum: FNV-1a folded to 16 bits over everything, as a deck code's.
 // - version `TRIO_CODE_VERSION` (2: each deck's numbers carry their set, B2.2); another is refused
 //   with a sentence, except `TRIO_CODE_CORE_ONLY_VERSION` (1), whose decks are read as Core (R339).
-//
-// Decoding never throws: oversize input is refused unread, a deck code is sent to the deck import,
-// and every other failure is a sentence for the player (`TRIO_CODE_MESSAGES`).
 
 import { checkTrioDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
@@ -88,9 +85,7 @@ export const TRIO_CODE_MESSAGES = Object.freeze({
 const NAME_LENGTH_BYTES = 1;
 const SLOTS_BYTES = 1;
 const CHECKSUM_BYTES = 2;
-/** The trio name's length byte, the slots byte and the checksum: the smallest payload there is. */
 const MIN_PAYLOAD_BYTES = NAME_LENGTH_BYTES + SLOTS_BYTES + CHECKSUM_BYTES;
-/** Bits 0, 1 and 2 of the slots byte; anything else set is damage. */
 const SLOT_BITS = (1 << TRIO_CODE_SLOTS) - 1;
 
 /** T1, as the validator states it: whether `name` may be a saved trio's name. */
@@ -99,7 +94,6 @@ function passesT1(name: string): boolean {
   return !issues.some((issue) => issue.rule === "T1");
 }
 
-/** The trio name a code carries: stored form, at most `DECK_NAME_MAX_LENGTH` characters, T1-clean. */
 function trioNameForCode(raw: string): string {
   const cut = normalizeName([...normalizeName(raw)].slice(0, DECK_NAME_MAX_LENGTH).join(""));
   return passesT1(cut) ? cut : IMPORTED_TRIO_NAME;
@@ -107,10 +101,6 @@ function trioNameForCode(raw: string): string {
 
 // Encode
 
-/**
- * The code for a trio: its name and its three slots, each a deck's name and cards or empty. Each
- * deck is written as a deck code writes it (`writeDeckBody`).
- */
 export function encodeTrioCode(name: string, slots: readonly TrioCodeSlot[], catalog: CatalogSnapshot): string {
   const payload: number[] = [];
   pushName(payload, trioNameForCode(name), IMPORTED_TRIO_NAME);

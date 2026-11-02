@@ -3,16 +3,8 @@
 //!   Base:    "Taunt, Tribute 3. Can use enemy Units as Tributes. If any are used, summon this for your
 //!            opponent."
 //!   Radiant: "Taunt, Tribute 3. Can use enemy Units as Tributes."
-//!
-//! Keywords are data: both faces print [Taunt], read off the def by §10.4 layer 1, so this file grants none.
-//! The Tribute is the play cost, not a hook (§6.3: "an additional cost of playing a card"): it lives in
-//! `play_choices.rs` and the chosen units travel in the `play` action's `tributes` list (R81).
-//!   * `tribute` — Tribute 3, the Sheep Token worth 2 (§3.2); sacrificed at §10.5 step 2, past Indestructible.
-//!   * `tribute_enemies` — "Can use enemy Units as Tributes" (R101).
-//!   * `enemy_tribute_hands_over` — base face (R360): an opposing unit in the Tribute puts the Golem on the
-//!     opponent's side, in the lane named else their leftmost open one (R15); still the player's card and play.
-//!
-//! R65/§6.3: a mana price of 0 does not touch the Tribute (#41 Sheepish's free copy still needs three units).
+//! Tribute targets chosen at play time (§10.5, R81, R90); enemy tributes sacrifice enemy units (R360; control is field-only, R15).
+//! If any enemy tribute chosen, summons for opponent (R101; leftmost open zone, R64; §3.2, R4, R11, R65).
 
 use jackioh_engine::prelude::*;
 

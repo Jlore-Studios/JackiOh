@@ -1,8 +1,5 @@
-// Lesson 2's coach (SPEC §9.10, R2205000, R2434001): more Cries, and the keywords units fight with,
-// each a moment the player can find for themselves. A Cry fires as its unit is played, a wall of Taunt
-// and Armor stands in the way, a Divine Shield pops, a Rush unit attacks at once, and a Pierce unit hits
-// straight through Armor. No spell yet: lesson 3 teaches them. Picks read the view and the legal
-// actions only (CLAUDE.md rule 7).
+// Lesson 2's coach (SPEC §9.10, R2205000, R2434001): more Cries, and the keywords units fight with. No
+// spell yet: lesson 3 teaches them. Picks read the view and the legal actions only (CLAUDE.md rule 7).
 
 import type { LessonScript } from "../coach.ts";
 import { unitOf } from "../steps.ts";

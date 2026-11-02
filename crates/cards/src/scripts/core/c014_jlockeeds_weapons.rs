@@ -1,15 +1,12 @@
 //! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +3 attack,
 //! Rush, First Strike", radiant "+6 attack": only the number changes (§8 Conventions).
 //!
-//! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
-//! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
-//! M3-T2) and vanishes the instant the card stops being an aura source. `applies` reads instance data
-//! only and never calls back into `unit_view`, or the layers would recurse.
-//!
-//! "Your units": the controller's units in the `units` row or standing in the backrow (R1081000), so the
-//! aura skips its own backrow card and a stolen unit stops matching because `controller` is compared
-//! (R78 resets it on the way out). Rush from this aura is what R83's "a Reborn body the board has
-//! granted Rush may attack again" refers to.
+//! An aura is §10.4 layer 5, recomputed on every read (`aura_mods`, `engine/src/layers.rs`), so it
+//! covers units summoned later (BUILD M3-T2) and vanishes with its source. `applies` reads instance
+//! data only and never calls back into `unit_view`, or the layers would recurse. "Your units": the
+//! controller's in the `units` row or standing in the backrow (R1081000), not its own backrow card;
+//! a stolen unit stops matching as `controller` is compared (R78 resets it on the way out). R83's
+//! "a Reborn body the board has granted Rush" is this aura's Rush.
 
 use jackioh_engine::prelude::*;
 
@@ -45,12 +42,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +3 attack, Rush, First Strike
-// while present; later summons get it; gone when destroyed; radiant +6". The keywords are tested
-// through the rules: Rush (§4.1) as a fresh unit attacking, First Strike (§4.3 step 1) as the ally
-// killing Bigot (4/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
-// CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed on the ally Field Spell (its target
-// is unnarrowed, §8 Conventions), the only in-game way a test can take a Field Spell off the board.
+// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14, §4.1, §4.3 step 1, R1, #36, §8 Conventions).
+// Allies gain attack, Rush, First Strike while present; removed via #36 Magic Jammed.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -94,8 +87,7 @@ mod tests {
                 s.attack("core-008", "core-002");
 
                 s.expect_in_zone(&bigot, "graveyard");
-                // Without the granted First Strike the exchange is simultaneous and Bigot's 4 kills the
-                // ally.
+                // Without the granted First Strike the exchange is simultaneous and Bigot's 4 kills the ally.
                 s.expect_stats("core-008", json!({ "health": 4 }));
             }
 
@@ -107,8 +99,7 @@ mod tests {
                     "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
-                // #15 Me and Mr Token is printed 1/1 and its Cry summons a 3/3 Rush Token: both land
-                // after the Field Spell did, and both are covered.
+                // #15 Me and Mr Token (1/1) and its Cry's 3/3 Rush Token both land after the aura.
                 s.play("core-015", json!({}));
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
@@ -143,8 +134,7 @@ mod tests {
 
                 s.expect_in_zone(&weapons, "graveyard");
                 s.expect_stats("core-008", json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
-                // The keywords went with it: the ally is summoning-sick-free but has no First Strike, so
-                // Bigot's 4 now kills it in the simultaneous step.
+                // The keywords went with it: with no First Strike, Bigot's 4 now kills the ally.
                 let ally = s.card("core-008").clone();
                 s.attack("core-008", "core-002");
                 s.expect_in_zone(&ally, "graveyard");
@@ -218,7 +208,6 @@ mod tests {
         }
     }
 
-    /// R1081000: a Unit standing in the backrow is one of "your units": it gets the +3 attack.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_is_one_of_your_units() {
         crate::register_all();

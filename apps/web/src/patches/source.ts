@@ -1,4 +1,4 @@
-// Static public patch data (§5.1) loads lazily one file at a time (R388); failed loads can retry.
+// Static public patch data (§5.1) loads lazily one file at a time (R388).
 // Patch order follows patches.json, never version-string sorting (R105 as B4.2 rewrites it).
 // Keep the glob path-based: Vite rejects package specifiers.
 
@@ -30,7 +30,7 @@ export type Patch = {
   readonly notes: string;
   /** R724001: every shipped patch has one (`cargo jackioh patches check`); a fixture may not. */
   readonly player?: PlayerNote;
-  /** R1369000: recorded by `patches ship` from #1366 on; absent on the patches shipped before it. */
+  /** R1369000: recorded by `patches ship` since #1366; the patches shipped before it have none. */
   readonly tier?: "major" | "patch" | "micro";
   readonly changes: readonly PatchChange[];
 };

@@ -1,26 +1,6 @@
-//! SPEC §11 R159, R160, R194, R665 and R1443 — the rulings `src/auth.rs` and `src/api/auth.rs` make
-//! about §9.4's front door.
-//!
-//!  - **R159**: §9.4 step 1's "verified email" is read from the auth provider, and only the
-//!    *positive* answer may be remembered, briefly and per user id. A provider that cannot be
-//!    reached fails closed.
-//!  - **R160**: sign-up and sign-in answer identically for every outcome that depends on whether an
-//!    account exists, so neither endpoint becomes an account-enumeration oracle. No sign-up is
-//!    brokered at all (SURFACE §11.3) and sign-in by email is for the E2E fixtures only, so R160 is
-//!    held by those two doors and by R1443's sign-in by username.
-//!  - **R194**: a session the provider has ended is not honored here either.
-//!  - **R665**: an account with an authenticator app is honored only at `aal2`.
-//!  - **R1443**: a username signs in through the server, which asks the provider with the account's
-//!    address and never sends that address back.
-//!
-//! Nothing here reaches the internet or the wall clock. [`GoTrue`] is a scripted GoTrue on
-//! `127.0.0.1` answering the five endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
-//! user lookup, the admin delete and the password grant) and counting every call. Its JWKS answers
-//! an empty set until a test scripts it (`answer_jwks`), so tier 1 fails *locally* by default; the
-//! cache clock is [`Clock`], a manual one, through the provider's `now` seam.
-//!
-//! Tokens are signed with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is `verify`'s tier 2.
-//! They carry an `exp` far in the future, so the expiry check passes without the test reading a clock.
+//! Auth front door rulings (SPEC §11, §9.4): R159 (verified email), R160 (no account enumeration),
+//! R194 (revoked sessions), R665 (MFA aal2), and R1443 (username sign-in).
+//! Surface contract: SURFACE §11.3.
 
 use std::io;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -45,8 +25,6 @@ use jackioh_server::config::{
 use jackioh_server::db::store::{Db, Profile};
 
 use crate::support::deps::{call, test_app};
-
-// Fixtures
 
 pub(crate) const JWT_SECRET: &str = "hs256-secret-used-only-by-this-test";
 
@@ -107,11 +85,7 @@ fn counts(entries: &[(&str, u32)]) -> IndexMap<String, u32> {
         .collect()
 }
 
-// A manual clock for the provider's caches
-
-/// Epoch ms that move only when a test says so, read by the provider's caches through
-/// `SupabaseAuthInput.now`. Tokio's clock is left alone: a paused runtime jumps to the next timer
-/// whenever it waits on a socket, so the scripted GoTrue's requests would time out.
+/// Epoch ms that move only when a test says so, read by provider caches.
 #[derive(Clone)]
 pub(crate) struct Clock(Arc<AtomicI64>);
 
@@ -132,29 +106,19 @@ impl Clock {
 
 // A scripted GoTrue
 
-/// What the admin lookup of a user id answers.
 pub(crate) enum AdminReply {
-    /// 200 with this user (GoTrue's raw JSON).
     Ok(Value),
-    /// 404: the auth server has no such user any more.
     Missing,
-    /// 500: nobody useful answered.
     Unavailable,
 }
 
-/// What `GET /auth/v1/user` answers for a bearer token.
 pub(crate) enum UserReply {
-    /// 200 with this user: the token's session is live.
     Live(Value),
-    /// 403 `session_not_found`: GoTrue's answer once `/logout` has deleted the session.
     Ended,
-    /// 503: neither live nor ended, as the provider sees it.
     Unreachable,
-    /// Never answers.
     Hang,
 }
 
-/// What the admin delete of a user id answers.
 #[derive(Clone, Copy)]
 pub(crate) enum DeletionReply {
     Deleted,
@@ -162,30 +126,22 @@ pub(crate) enum DeletionReply {
     Unavailable,
 }
 
-/// What `POST /auth/v1/token` answers: R1443's password grant.
+/// R1443 password grant responses.
 #[derive(Clone)]
 pub(crate) enum GrantReply {
-    /// 200 with this body (GoTrue's raw JSON).
     Tokens(Value),
-    /// 400 `invalid_credentials`: GoTrue's answer to a wrong password or an unconfirmed address.
     Refused,
-    /// 429: GoTrue's own per-address limit.
     RateLimited,
-    /// 500: nobody useful answered.
     Unavailable,
 }
 
 type AdminScript = Arc<dyn Fn(&str) -> AdminReply + Send + Sync>;
 type UserScript = Arc<dyn Fn(&str) -> UserReply + Send + Sync>;
 
-/// What the scripted JWKS endpoint answers.
 #[derive(Clone)]
 pub(crate) enum JwksReply {
-    /// 200 with this key set.
     Serve(Value),
-    /// 500: the key endpoint is down.
     Fail,
-    /// Never answers.
     Hang,
 }
 
@@ -927,12 +883,7 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
 
 // R160
 
-/// R160 — the identical sign-up and sign-in error (§9.2, §9.4, §9.8; extends R145).
-///
-/// The Supabase provider brokers no password by email (SURFACE §11.3: `sign_in` answers
-/// unavailable, and `/api/auth/signup` is gone), so the doors R160 guards here are the E2E fixture
-/// sign-in (`/api/auth/signin`, under `E2E=1` only) and the absent sign-up route. The sign-in by
-/// username is R1443's, below.
+/// R160: identical sign-up and sign-in error (§9.2, §9.4, §9.8, R145, SURFACE §11.3, R1443).
 mod r160_r145_the_identical_sign_up_and_sign_in_error {
     use super::*;
 
@@ -1287,13 +1238,7 @@ mod r1443_username_sign_in {
 
 // `currentMatchId` on /api/auth/me (§9.5)
 
-/// The read that makes a two-player game reachable. In both lobby flows only ONE player's HTTP
-/// response carries the match id (the joiner of a room, or whoever enqueued second), and no other
-/// route names a profile's match, so the other player needs `/api/auth/me` to learn it.
-///
-/// `profiles.current_match_id` is set when a match starts and cleared by every ending (§9.5), so it
-/// is the authoritative answer to "am I in a match", and the way back in after a reload that lost
-/// the URL. The caller is the E2E fixture `e2e-p1` (`e2e-token-p1`).
+/// Match reachability via `currentMatchId` on `/api/auth/me` (§9.5).
 mod api_auth_me_reports_the_callers_own_current_match {
     use super::*;
 
@@ -1622,11 +1567,7 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
 
 // R1144000: a failed refresh of the sign-in key set keeps the last good keys
 
-/// R1144000 — a failed refresh of the sign-in key set keeps the last good keys (§9.2, §9.4;
-/// precedent: R159's outage keeps the identity).
-///
-/// Tier 1's first tests: no shared secret here, so the published set is the only local tier, and
-/// every token is ES256 signed by the test-only key (`es256_test_only`).
+/// R1144000: failed refresh of sign-in key set keeps last good keys (§9.2, §9.4, R159).
 mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
     use super::*;
     use crate::api::es256_test_only as es256;

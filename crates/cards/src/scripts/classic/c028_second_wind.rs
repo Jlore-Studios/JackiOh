@@ -18,8 +18,6 @@ pub const ID: &str = "classic-028";
 /// The instance-memory mark the Cry holds while its own discard lands (R393).
 const CRY_RUNNING: &str = "secondWindCry";
 
-/// The card's own memory under `key`, for the replacement's `when`: a pure read with no `EffectContext`
-/// to hand `query::recalled`.
 fn recalled_on<'a>(card: &'a CardInstance, key: &str) -> Option<&'a Value> {
     card.memory.get(key)
 }
@@ -82,11 +80,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28: "Cry: exile your deck, then discard
-// your hand (C #64 sees it), landing before the Aura starts (R393); Aura: any card in your graveyard is
-// playable as from hand (R65's discounts); base: your cards are exiled instead of going to your
-// graveyard; no deck → fatigue (§2.4); radiant: no replacement, only cards priced (1)+ as paid; tuned
-// minimum price via `param()` (R386)".
+// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28 (#64, R393, R65, §2.4, R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,7 +105,6 @@ mod tests {
     const TOE_CRACKER: &str = "classic-006"; // (2) Unit: "Aura: Your Traps cost (0)."
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// What `reduce` answered a graveyard play: the state and the events it made.
     struct Played {
         state: GameState,
         events: Vec<GameEvent>,
@@ -163,8 +156,7 @@ mod tests {
         find_instance(state, &card.id).map(|found| found.zone.z())
     }
 
-    /// Second Wind standing, with a graveyard to play from. The Radiant face is set up standing (its Cry
-    /// not run). On the base face a setup's graveyard would be exiled once it stands, so the graveyard
+    /// On the base face a setup's graveyard would be exiled once it stands, so the graveyard
     /// comes the way the card makes it: Second Wind is played and its Cry discards the hand first (R393).
     fn standing(radiant_face: bool, graveyard: &[&str], extra: Value) -> Scenario {
         let p2 = json!({ "hand": [STOCKPILE, HIT_JOB, COLLATERAL], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] });
@@ -255,7 +247,6 @@ mod tests {
                     graveyard_defs_offered(&s),
                     vec![STOCKPILE, MR_TOKEN, SHEEPISH, MANA_WELL, ECLIPSE, MENACE]
                 );
-                // A targeted Spell carries its targets, each hero and each unit.
                 let eclipse = s
                     .pile(P1, "graveyard")
                     .into_iter()
@@ -301,7 +292,6 @@ mod tests {
                 crate::register_all();
                 let s = standing(false, &[SHEEPISH], json!({ "field": [TOE_CRACKER] }));
                 let trap = s.card(SHEEPISH).clone();
-                // The discount takes it to (0): below the minimum price, so nothing is offered and the play is refused.
                 assert!(plays_of_card(&s, &trap.id, P1).is_empty());
                 expect_throw(|| {
                     play_from_graveyard(&s, &trap, json!({ "zone": { "row": "backrow", "lane": 2 } }));
@@ -456,7 +446,6 @@ mod tests {
                 let spell = s.pile(P1, "graveyard").into_iter().next().expect("setup");
                 let after = play_from_graveyard(&s, &spell, json!({}));
                 assert_eq!(zone_of(&after.state, &spell), Some(ZoneName::Graveyard));
-                // And the (1) Stockpile is offered again: paid (1) each time, it is no free loop.
                 let graveyard: Vec<String> = zone_cards(&after.state, P1, OffFieldZone::Graveyard)
                     .iter()
                     .map(|card| card.id.clone())

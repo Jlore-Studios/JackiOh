@@ -1,8 +1,7 @@
-//! "After one of your Units attacks" (`Script.allyAttack`, R2199000): run for each card acting on the
-//! attacker's side once the state check that closes each of its combats has run — a declared attack's
-//! (§4.2 step 5) and a forced one's (R53) — after the attacker's `afterAttack` and the defender's
-//! `afterAttacked`, in R68's order; never for an attack called off before it fought (R44), nor for the
-//! other side's cards. Training Grounds #31 Level Up! is its user.
+//! "After one of your Units attacks" (`Script.allyAttack`, R2199000): run for each card on the attacker's
+//! side once the state check closing each of its combats has run (§4.2 step 5; a forced one's, R53),
+//! after the attacker's `afterAttack` and the defender's `afterAttacked` in R68's order; never for an
+//! attack called off before it fought (R44), nor for the other side. Training Grounds #31 Level Up! uses it.
 
 use jackioh_engine::combat::ALLY_ATTACK_WORK;
 use jackioh_engine::effects::forced_attacks_on;

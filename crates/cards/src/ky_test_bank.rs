@@ -1,18 +1,6 @@
-//! C+ #42 KY's Test's question bank (SPEC §8.7 row 42, R420): its Medium and Hard problems. Easy ones
-//! are generated from the rng (`subsystems::ky_test`, R580, R2179003). Card data like `catalog.json`:
-//! public, shipped in the client bundle, and versioned with the catalog (R388), so changing a problem is
-//! a patch. Each entry has four different options, one of them its `answer` (the card's tests prove the
-//! floor of `KY_TEST_MIN_PROBLEMS` per difficulty). Plain text with Unicode maths. Patch v0.3.10 (#831)
-//! made each Hard problem one step harder in its own topic, its id kept.
-//!
-//! Issue #2179 (R2179003) moved every problem of v0.5.2's bank, Hard ones included, into Medium, ids
-//! kept, and made the Hard bank graduate mathematics: qualifying-exam problems in analysis, algebra,
-//! topology, geometry, number theory, probability and combinatorics (`GRADUATE`, ids `g01` on).
-//! `KY_TEST_BANK_V0_5_2` is v0.5.2's bank, which its kept script asks from (R767000).
-//!
-//! Port of `packages/cards/src/kyTestBank.ts`. TS's `KY_TEST_BANK` array of objects cannot be a `const`
-//! (a problem holds `String`s), so it is a read-only `LazyLock`, built once on first use like the
-//! crate's `CATALOG`, and never written after.
+//! C+ #42 KY's Test's question bank (SPEC §8.7 row 42, R420): Medium and Hard problems (easy from RNG; R580, R2179003).
+//! Card data versioned with catalog (R388). Patch v0.3.10 (#831) hardened topics.
+//! Issue #2179 (R2179003) moved v0.5.2 problems to Medium, Hard to graduate math (R767000 kept script).
 
 use std::sync::LazyLock;
 
@@ -41,8 +29,7 @@ fn hard(id: &str, statement: &str, answer: &str, wrong: &[&str]) -> Problem {
     problem(KyTestDifficulty::Hard, id, statement, answer, wrong)
 }
 
-/// R2179003: the bank since issue #2179, in the order C+ #42's draw reads (R420): v0.5.2's problems,
-/// every one now Medium, then the graduate Hard ones.
+/// R2179003: the bank since issue #2179 (R420): Medium problems then graduate Hard.
 pub static KY_TEST_BANK: LazyLock<Vec<Problem>> = LazyLock::new(|| {
     let mut bank: Vec<Problem> = KY_TEST_BANK_V0_5_2
         .iter()
@@ -56,8 +43,7 @@ pub static KY_TEST_BANK: LazyLock<Vec<Problem>> = LazyLock::new(|| {
     bank
 });
 
-/// The Hard problems since #2179: graduate mathematics, each with one answer a qualifying exam would
-/// accept and three a careless reading would reach.
+/// Hard problems since #2179: graduate qualifying exam problems.
 fn graduate() -> Vec<Problem> {
     vec![
         // Complex analysis.
@@ -258,8 +244,7 @@ fn graduate() -> Vec<Problem> {
     ]
 }
 
-/// v0.5.2's Medium and Hard problems, in the TS file's order (C+ #42's draw reads this order, R420),
-/// which its kept script asks from (R767000).
+/// v0.5.2's problems in draw order (R420, R767000).
 pub static KY_TEST_BANK_V0_5_2: LazyLock<Vec<Problem>> = LazyLock::new(|| {
     vec![
         // Medium: double integrals.

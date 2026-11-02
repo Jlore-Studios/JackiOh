@@ -1,11 +1,7 @@
 //! Flicker (docs/classic-sets.md B5 E22, R444): "the card leaves the field and re-enters the same zone
-//! at once" — R78's reset, summoning sick, no Cry, no Death — and "it counts as summoned". The move is
-//! `zones.flickerInPlace`; `flickerCard` is the whole of it with its events, for an effect list (the
-//! `flicker` verb below) and for an engine sequence that holds a sink rather than a context: the "would
-//! die" window of §4.5 step 1 flickers the dying units of Classic #14 Shadowstep's Radiant face instead.
-//!
-//! Port of `packages/engine/src/effects/flicker.ts`. TS's `FieldSink` (`{ state, events }`) is an
-//! `EngineSink` here, which an `EffectContext` derefs to.
+//! at once" — R78's reset, summoning sick, no Cry, no Death — and "it counts as summoned". `flicker_card`
+//! takes a sink, not a context, so the "would die" window of §4.5 step 1 can flicker the dying units of
+//! Classic #14 Shadowstep's Radiant face too.
 
 use serde::{Deserialize, Serialize};
 
@@ -17,9 +13,7 @@ use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, re
 use crate::wire::{CardType, GameEvent, Row, Zone};
 use crate::zones::{flicker_in_place, is_carried, lands_face_down};
 
-/// R227 (`zones.freshFaceDownId`, for a card that stands in the state): the card takes the next
-/// number as a fresh id, and C+ #35's history follows it (R419). `(former, fresh)`, or `None` for a
-/// card in no pile.
+/// R227: a card in the state takes the next number as a fresh id: `(former, fresh)`.
 fn fresh_face_down_id_in_place(state: &mut GameState, instance_id: &str) -> Option<(String, String)> {
     let fresh = format!("c{}", state.next_id);
     let card = find_instance_mut(state, instance_id)?;
@@ -31,13 +25,10 @@ fn fresh_face_down_id_in_place(state: &mut GameState, instance_id: &str) -> Opti
     Some((former, fresh))
 }
 
-/// B5 E22: flicker one card acting on the field. It leaves the field — every effect aimed at it ends
-/// (R174), the triggers it queued there go, an animated card's home is let go — and re-enters its zone
-/// in the same place at once: reset (R78), summoning sick (R83), in Attack Position, on the same side.
-/// No Cry (R1: it was not played) and no Death (it went to no graveyard). A unit token comes back like
-/// any card (R444). A Trap re-enters face-down with a fresh id (§3.2, R33, R227); an animated card is
-/// still a Unit in its unit zone and stays face-up; a Field Spell is public. Emits `flickered`, then the
-/// `summoned` it counts as. False, changing nothing, for a card not acting on the field.
+/// B5 E22: flicker one card acting on the field: it leaves (every effect aimed at it ends, R174) and
+/// re-enters in place reset (R78), summoning sick (R83), in Attack Position. No Cry (R1), no Death; a
+/// unit token comes back too (R444). A Trap re-enters face-down with a fresh id (§3.2, R33, R227); an
+/// animated card or a Field Spell stays face-up. Emits `flickered`, then the `summoned` it counts as.
 pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
     // The card as it stands now (TS held the live object).
     let card = crate::zones::live_or(sink.state, card);
@@ -50,7 +41,7 @@ pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
     if !flicker_in_place(sink.state, &card) {
         return false;
     }
-    // The card as `flickerInPlace` left it: reset, sick, in Attack Position.
+    // As `flicker_in_place` left it: reset, sick, in Attack Position.
     let mut card = find_instance(sink.state, &old_id).cloned().unwrap_or(card);
 
     let face_down = row == Row::Backrow && !carried && lands_face_down(sink.state, &card, Row::Backrow);

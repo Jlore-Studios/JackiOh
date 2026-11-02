@@ -1,8 +1,7 @@
 // BUILD M8 05 (V14): reload during #65 Masochism Mask's active-player `PendingChoice` (SPEC §8, §6.2).
 // Prompts are state (§9.3), so reconnect gets a full view rather than replay (§9.5).
 // Turn 7 makes #77 Professor Curvature's R48 modifier live; fingerprint also covers R169 badges.
-// It checks testids (BUILD M5-T1, M5-T4), prompt, counters and badges; R79 owns the clock limits
-// (BUILD §2). CLAUDE.md rule 7 requires assertions against the DOM `viewFor` renders.
+// R79 owns the clock limits (BUILD §2). CLAUDE.md rule 7: assert against the DOM `viewFor` renders.
 // Needs M6/M7-T1; see e2e/README.md.
 
 import {
@@ -125,11 +124,9 @@ function waitForMyTurn(): void {
 // The view fingerprint.
 
 type ViewFingerprint = {
-  /** Every `data-testid` in the document, sorted. */
   testids: string[];
-  /** The open prompt's kind, or null when none is open (BUILD M5-T4 `data-prompt-kind`). */
+  /** BUILD M5-T4 `data-prompt-kind`. */
   promptKind: string | null;
-  /** Per-side counters and mana, read through the testids support/testids.ts builds. */
   counters: Record<string, string>;
   /** R169 badges include captions: R48's suffix is computed when the view is read. */
   modifiers: Record<string, string[]>;
@@ -190,7 +187,7 @@ function optionKeysOf(print: ViewFingerprint): string[] {
 
 describe("05 reconnect — a networked game reloaded mid-prompt", () => {
   it("rebuilds the same view and the same open prompt, with the clock still running", () => {
-    // Re-pinned for #1705's 25-card decks: "05-reconnect-14" no longer draws seat 1 #77 by player-turn 5.
+    // This seed draws seat 1 #77 by player-turn 5 from #1705's 25-card decks.
     const seed = seedFor("05-reconnect-9");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
@@ -214,9 +211,8 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       seatTwoDeck = installed.deckIds[0];
     });
 
-    // Seat 1 creates and seat 2 claims the seeded room (§9.5). R143 requires the E2E server to
-    // honor the optional §9.3 seed; bodies wait for the installed deck ids. R1989000 pins seat 1
-    // to p1 beside the seed, so the spec keeps the seats it was written for.
+    // Seat 1 creates and seat 2 claims the seeded room (§9.5); R143 has the E2E server honor the §9.3
+    // seed. R1989000 pins seat 1 to p1 beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
@@ -274,7 +270,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     cy.endTurn();
     seatTwoEndsTurn();
 
-    // Player-turn 7: the prompt is over a populated badge list.
     cy.waitForPrompt("discover");
 
     // R169's badge must be present for this self-comparison; R48's suffix is now gone.
@@ -291,7 +286,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
         optionKeysOf(print).length,
         '#65 base offers three options: "exile the bottom card of your library, lose 3 health, or summon a Spikey Pillow"',
       ).to.eq(3);
-      // Compare the populated R169 badge list, not a fragile deterministic instance id.
+      // The populated R169 badge list, not a fragile instance id.
       const badges = print.modifiers[modifiersId("you")] ?? [];
       expect(badges, "R169's badge list reached the fingerprint").to.have.length(1);
       expect(badges[0] ?? "", "…carrying R48's live caption, not just an id").to.have.string(
@@ -346,7 +341,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       );
     });
 
-    // Essential reconnected-board testids.
     cy.get(ts(heroId("you"))).should("be.visible");
     cy.get(ts(heroId("opponent"))).should("be.visible");
     for (const lane of LANES) {
@@ -354,7 +348,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       cy.get(ts(zoneId("you", "backrow", lane))).should("exist");
     }
 
-    // The clock kept running.
     cy.then(() => {
       cy.wsPlayer({ action: "messages", name: SEAT_TWO }).should((result) => {
         const seen = (result.messages ?? []).filter((message) => message.type === "clock").length;
@@ -418,8 +411,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       waitForMyTurn();
     });
 
-    // §9.5: the grace countdown is stored on the match so both clients show it. Seat 2's socket
-    // drops, and seat 1's board names whose reconnect window it counts down.
+    // §9.5: the grace countdown is stored on the match so both clients show it.
     cy.then(() => {
       cy.wsPlayer({ action: "disconnect", name: SEAT_TWO });
     });
@@ -437,7 +429,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       ).to.be.at.most(DISCONNECT_GRACE_SECONDS * 1000);
     });
 
-    // Seat 2 comes back inside the window, and the line goes with its grace.
     cy.then(() => {
       cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
     });

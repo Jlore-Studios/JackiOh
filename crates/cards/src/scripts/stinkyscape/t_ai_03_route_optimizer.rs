@@ -53,9 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-3 Route Optimizer — SPEC §8.10 row T-AI-3, BUILD M12 row S T-AI-3: "Discovers among three different
-// Starship Pieces, cards printing the keyword and never a token (R1881001); the pick reaches the hand at
-// (1) less, its costMod −1; radiant the pick is Radiant".
+// S T-AI-3 Route Optimizer — SPEC §8.10 row T-AI-3, BUILD M12 row S T-AI-3 (R1881001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -142,7 +140,6 @@ mod tests {
             "p1": { "hand": hand, "library": filler(4) },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
-        // An effect's cast leaves the hand full: here it starts one past it, so the play leaves it full.
         s.play(OPTIMIZER, json!({}));
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         let pick = offered(&s)[0].clone();

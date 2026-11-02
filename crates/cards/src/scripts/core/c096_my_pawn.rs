@@ -5,82 +5,17 @@
 //!   Radiant: "When the opponent declares an attack that would be lethal to your hero: cancel it,
 //!             destroy the attacker, and an AI plays the rest of their turn with random legal
 //!             actions" (§8's cell "Also destroy the attacker"; R276 gave the card its Radiant face).
-//!
-//! WHAT FIRES IT. §4.2 step 4: "Declaring the attack has now spent the attacker's exertion, before
-//! any damage. Trap window: My Pawn checks whether the hit would be lethal and, if so, cancels the
-//! attack; the exertion is not given back, so the attack is gone either way (R44)". The event that
-//! opens that window is `attackDeclared`, which `combat::declare_attack` emits after spending the
-//! exertion and hands to `traps::run_trap_window` before it resolves any combat, so this trigger
-//! watches exactly that one event. R100 keeps the window's delivery to the window: the declaration
-//! is not offered to §10.3's immediate check as well, so this trap answers one swing once.
-//!
-//! ARMING (R61, `traps.rs`). "`run` returning `[]` is a trap that fired for nothing — it can never
-//! mean 'this event was not mine'", so every condition that must leave My Pawn face-down and armed
-//! lives in the `when` predicate: the opponent's declaration, aimed at a hero that is mine, for
-//! enough damage to end the game. A non-lethal swing therefore leaves the trap set, which is the
-//! whole point of the card. Consuming it is not this file's business either — `fireTrap` emits
-//! `trapFired`, runs the trigger, runs the state check and consumes the trap.
-//!
-//! LETHAL IS THE SUBSYSTEM'S (R44). "Lethal = projected damage to the hero after Armor and the cap,
-//! Trample excess from an attack on a unit included, ≥ health". That calculation is
-//! `subsystems/lethal.rs` (`is_lethal`, `projected_damage`, `projected_hero_damage`, `defending_hero`),
-//! and this card only hands it an attacker and an `AttackTarget`. Nothing here re-reads §4.4.
-//!
-//! FORCED ATTACKS DO NOT FIRE IT. §4.2's last paragraph: a forced attack (Moths to the Flame, Bear
-//! Honeypot) "skips steps 1 to 3" and spends no exertion, and R53 gives each one its own combat and
-//! state check. The card's condition is "when the OPPONENT DECLARES an attack", and a forced attack
-//! is declared by the effect that compels it — usually the defender's own card, on the defender's
-//! own turn, where "an AI plays the rest of THEIR turn" names nobody. `forced` is on the event for
-//! exactly this kind of distinction, so the predicate reads it (R121). `combat::force_attack` opens no
-//! window at all for the same reason, so there is nothing for this trap to cancel there either.
-//!
-//! BUILDING THE `AttackTarget`. The event carries ids only (`attackerId`, `targetId`), and the
-//! `hero-<player>` spelling is `combat.rs`'s. So the reverse of it is `combat::attack_target_of`, which
-//! that module exports for exactly this: §4.2 step 5 reads a paused declaration back through it
-//! too, so the card and the engine agree on what an id means by sharing one reader rather than by
-//! each parsing the string.
-//!
-//! THE BODY (§8.5 #96 "cancel it, and an AI plays the rest of their turn with random legal actions")
-//! is the two verbs of `crates/engine/src/effects/combat.rs`, in the row's order. Neither is
-//! implemented here: a card file cannot cancel combat or drive the reducer itself (CLAUDE.md rules 4
-//! and 5). `cancel_attack` marks the open `state.declaredAttack` canceled, so §4.2 step 5 resolves
-//! no combat and `attackCancelled` is emitted in its place; `ai_plays_out_turn` sets the `aiTurn`
-//! lockout on the attacking player and hands the rest of their turn to §10.7's policy through
-//! `subsystems::ai_policy::play_out_turn` (R84: never `concede`, `offerDraw` or `answerDraw`; R152: the
-//! lockout ends at the cleanup of the turn it took).
-//!
-//! ORDER MATTERS, and it is the row's own. `cancel_attack` first, because `ai_plays_out_turn` drives
-//! `reduce`, which clones the state, and the AI's own actions can open and close declarations of
-//! their own — the attack this trap answers has to be canceled while it is still the open one.
-//! `ai_plays_out_turn` last for a second reason `effects/combat.rs` spells out: the playout replaces
-//! every instance in the state, so no effect after it may hold a `CardInstance` read before it.
-//!
-//! THE RADIANT FACE (R283) adds "destroy the attacker", after the cancel and before the AI turn. It is
-//! an ordinary §6.3 destroy — a mark the state check collects — so an Indestructible attacker is
-//! knocked down instead (R46) and a Reborn one comes back, and the attack is canceled either way
-//! (R44). It rides on the cancel (`cancel_attack({ destroyAttacker })`), which names the attacker of
-//! the declaration it cancels, on the stay it declared from (R174), and happens only where the cancel
-//! does: a Radiant My Pawn fused onto a Radiant My Pawn runs its second half once the first has played
-//! the turn out and the window has closed (R102), and so destroys the Reborn body of nothing.
-//! R283 has the state check collect it before the AI takes the turn: the destroy is in its place in
-//! the list, and `ai_plays_out_turn`'s `settleFirst` runs the check before the playout's first action,
-//! so the AI acts from a board the attacker has already left. The base face has nothing to settle
-//! and keeps the playout exactly as it was.
-//!
-//! THE GLOW (R662). The trap lights up on its controller's field while an enemy unit acting on the
-//! field would deal lethal damage to their hero if it attacked it now (`lethal_attackers_of`, the same
-//! `subsystems::is_lethal` the trigger asks). It says the blow is on the board, on either turn, not
-//! that it can be declared this moment; stats and health are public. The same on both faces.
+//! Trigger in §4.2 step 4 trap window on attackDeclared against hero (R100, §10.3; R61 arms until lethal).
+//! Subsystems calculate lethal damage (subsystems/lethal.rs, R44; forced attacks ignored, R121, R53).
+//! Effects in order (CLAUDE.md rule 5): cancel_attack, then (if radiant) destroy attacker (§6.3, R46, R283, R174, R102), then ai_plays_out_turn (R84, R152).
+//! Glow indicates lethal attacker on board (R662).
 
 use jackioh_engine::effects::{ai_plays_out_turn, cancel_attack};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-096";
 
-/// "When the opponent declares an attack that would be lethal to your hero". Every clause that must
-/// leave the trap armed is here (R61): a declaration (not a forced attack), by the opponent, whose
-/// projection lands on this trap's controller's hero, for at least that hero's health (R44). The
-/// condition is the same on both faces.
+/// R61, R44: armed on opponent declaration lethal to controller's hero.
 fn would_be_lethal(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let GameEvent::AttackDeclared {
         attacker_id,
@@ -107,8 +42,7 @@ fn would_be_lethal(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(target) = attack_target_of(ctx.state, target_id) else {
         return false;
     };
-    // R44 counts Trample excess from an attack on a unit, so the hero at risk is the projection's,
-    // not the declared target: "lethal to YOUR hero" is that hero being this trap's controller.
+    // R44: counts Trample excess towards trap controller's hero.
     if subsystems::defending_hero(&target) != ctx.controller {
         return false;
     }
@@ -116,8 +50,7 @@ fn would_be_lethal(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     subsystems::is_lethal(ctx.state, attacker, &target)
 }
 
-/// `destroys_attacker` is the whole of the radiant text (R283). `when` is the one predicate both
-/// faces share (TS handed both triggers the same `wouldBeLethal` object).
+/// R283: radiant text adds `destroys_attacker`; shared `when` predicate.
 fn my_pawn(destroys_attacker: bool, when: &TriggerWhen) -> TriggerDef {
     // §8.5's clauses in its order. `player: "enemy"` is the attacker's side relative to the trap's
     // controller, which the predicate above has already established.
@@ -157,29 +90,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #96 My Pawn — SPEC §8.5, §4.2 step 4, §6.3 "Cancel an attack", §10.7's AI bullet, R44, R46, R84,
-// R276, R283.
-// BUILD M4-T4 row 96: "Lethal detection accounts for armor and the cap (R44); attack canceled;
-// AI finishes the turn deterministically from the seed; opponent's actions rejected until end of
-// turn; radiant destroys the attacker with the cancel, before the AI turn, an Indestructible one
-// knocked down, and the AI turn starts from a settled board (R283)".
-//   Base:    "When the opponent declares an attack that would be lethal to your hero: cancel it,
-//            and an AI plays the rest of their turn with random legal actions"
-//   Radiant: "When the opponent declares an attack that would be lethal to your hero: cancel it,
-//            destroy the attacker, and an AI plays the rest of their turn with random legal
-//            actions" — R276 gave it this face, and R283 orders it: the destroy rides the cancel
-//            and is collected by a state check before the AI takes the turn. Those cases play real
-//            attacks through the harness (the base face's played-out behavior is proved the same
-//            way in my-pawn.test.ts).
-//
-// WHY THE CONDITION IS TESTED THROUGH `when`. The card's OWN contribution to "would be lethal to
-// your hero" — the whole of the M4-T4 row's first clause — is the `when` predicate, a pure function
-// of the state and the event, so it is called directly here with a context built the way
-// `traps::fire_trap` builds it, which pins each lethal boundary without an AI turn in the way. The
-// base face's cancel, lockout and AI turn are played through real attacks in my-pawn.test.ts.
-//
-// R662's yellow glow (`conditionMet`): on its controller's field while an enemy unit would be lethal
-// attacking their hero now, both faces, checked against the attack, at the end of this file.
+// #96 My Pawn — SPEC §8.5 row 96, BUILD M4-T4 row 96 (R44, R46, R84, R276, R283; §4.2 step 4, §6.3, §10.7).
+// Tests check `when` predicate directly for lethal boundary and R662 yellow glow (`conditionMet`).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,9 +131,7 @@ mod tests {
         }
     }
 
-    /// `when` with the context `traps::fire_trap` would hand it: the trap as `self`, its controller as
-    /// the controller, and the event under test. Nothing is mutated — the predicate only reads, so it
-    /// reads a copy of the scenario's state.
+    /// Builds `when` context as in `traps::fire_trap`.
     fn arms(s: &Scenario, event: &GameEvent) -> bool {
         let trap = s.card(MY_PAWN).clone();
         let mut state = s.state().clone();
@@ -272,8 +182,7 @@ mod tests {
         s.card(card).id.clone()
     }
 
-    /// Granting the keyword on a fixture is a test's business, not a card's (CLAUDE.md rule 5): the
-    /// test writes the state, as TS wrote through the live instance.
+    /// Granting keyword on a fixture writes state directly (CLAUDE.md rule 5).
     fn grant_trample(s: &mut Scenario, instance_id: &str) {
         find_instance_mut(s.state_mut(), instance_id)
             .expect("the attacker is on the field")
@@ -297,7 +206,6 @@ mod tests {
             let scripts = script();
             let base = &scripts.base.triggers[0];
             let radiant = &scripts.radiant.triggers[0];
-            // TS: `radiant` is not the same object as `base`; here, its trigger runs its own body.
             assert!(!Arc::ptr_eq(&radiant.run, &base.run));
             assert_eq!(scripts.radiant.triggers.len(), 1);
             assert_eq!(radiant.on, base.on);
@@ -375,7 +283,6 @@ mod tests {
             let victim = id_of(&s, SMALL);
 
             // §4.4 step 9 sends only the excess on: 6 − the 1/1's 1 health = 5, exactly lethal at 5.
-            // Granting the keyword on a fixture is a test's business, not a card's (CLAUDE.md rule 5).
             grant_trample(&mut s, &attacker);
             assert!(arms(&s, &attack_declared(&attacker, &victim, false)));
 
@@ -405,9 +312,7 @@ mod tests {
         fn r121_a_forced_attack_is_declared_by_the_effect_not_the_player_so_a_trigger_keyed_to_an_opponent_s_declaration_does_not_arm() {
             crate::register_all();
             let s = swing(Swing { health: 6, ..Swing::default() });
-            // §4.2's last paragraph and R53: a forced attack skips steps 1 to 3 and spends no exertion,
-            // and it can happen on the trap owner's own turn, where "an AI plays the rest of their turn"
-            // names nobody. `forced` is on the event for exactly this distinction.
+            // §4.2, R53: forced attack skips steps 1-3, spends no exertion.
             assert!(!arms(&s, &attack_declared(&id_of(&s, ATTACKER), "hero-p1", true)));
         }
 
@@ -419,8 +324,7 @@ mod tests {
                 "active": "p2",
                 // p1 holds the trap at 1 health, so anything reaching it would be lethal.
                 "p1": { "health": 1, "backrow": [MY_PAWN] },
-                // p2's Trample attacker aimed at a unit of p2's OWN: §4.4 step 9 sends the excess to "the
-                // target's controller's hero", which is p2's, so p1's trap has nothing to answer.
+                // §4.4 step 9: Trample excess goes to target's controller's hero.
                 "p2": { "health": 30, "field": [ATTACKER, SMALL] },
             }));
             let attacker = s.unit(P2, 1);
@@ -437,21 +341,15 @@ mod tests {
         }
     }
 
-    // The body of the base trap — R44's cancel with the exertion spent, R84's policy playing the rest
-    // of the turn, R152's lockout and the trap going to the graveyard once the turn it gave has ended —
-    // is proved where its machinery is: crates/engine/tests/rules/effects_combat.rs and
-    // crates/cards/tests/cross/my_pawn.rs, and spec 07 in a browser. The radiant face's addition is
-    // proved below.
+    // R44, R84, R152: base trap cancel, lockout, and AI play.
 
-    // -------------------------------------------------------------------------------------------
     // Radiant: "cancel it, destroy the attacker, and an AI plays the rest of their turn" (R283)
-    // -------------------------------------------------------------------------------------------
 
     /// #68, a 5/5 with nothing that fires in combat: the plain lethal swing at a 5-health hero.
     const SORCERER: &str = "core-068";
     /// #56 Jilliax: its radiant face is a 6/4 with Rush, Taunt, Lifesteal, Divine Shield and Reborn.
     const JILLIAX: &str = "core-056";
-    /// #66 The Rock, 10/10 Indestructible: the one Indestructible unit in Core since patch v0.1.1.
+    /// #66 The Rock, 10/10 Indestructible: the one Indestructible unit in Core.
     const ROCK: &str = "core-066";
     /// Cards for the AI's turn, as the other My Pawn tests give it (my_pawn.rs).
     const STOCKPILE: &str = "core-005";
@@ -533,7 +431,6 @@ mod tests {
             assert_eq!(events_on(&s, &attacker.id, "destroyed"), 1);
             s.expect_in_zone(&attacker, "graveyard");
 
-            // …and the AI still plays out the rest of the turn.
             turn_went_on(&s, P1);
         }
 
@@ -564,8 +461,7 @@ mod tests {
                 .iter()
                 .any(|event| event["type"] == "damage" && event["sourceId"] == attacker.id.as_str()));
 
-            // R46: the mark does not kill it. It is in Attack Position already and has no Taunt to lose,
-            // so the knock-down changes nothing a view shows and reports nothing (R91).
+            // R46, R91: destroy mark on Indestructible does not kill; reports nothing.
             assert_eq!(from_cancel(&s, 1), vec!["attackCancelled"]);
             assert_eq!(events_on(&s, &attacker.id, "positionSwitched"), 0);
             assert_eq!(events_on(&s, &attacker.id, "keywordGranted"), 0);
@@ -577,9 +473,7 @@ mod tests {
         #[test]
         fn r283_destroy_is_not_damage_an_attacker_with_divine_shield_is_destroyed_all_the_same_its_shield_unspent() {
             crate::register_all();
-            // §6.1: Divine Shield negates the first damage instance; a destroy is a mark, not damage
-            // (§6.3), so the shield has nothing to negate. A radiant #20 has the shield and no Reborn, so
-            // the destroy is the whole story.
+            // §6.1, §6.3: Divine Shield negates damage, not destroy. Radiant #20 has no Reborn.
             let printed: Vec<Value> = js(&crate::card_def(POINTMASTER))["radiant"]["keywords"]
                 .as_array()
                 .cloned()
@@ -606,9 +500,7 @@ mod tests {
         #[test]
         fn r283_the_attacker_s_death_is_answered_before_the_ai_takes_the_turn_a_corpse_eater_in_the_ai_s_hand_eats_it_first() {
             crate::register_all();
-            // #89 in p1's hand, with the mana to play it: the AI may well play it, and R212 would have a
-            // card that has moved since the death answer nothing — so the death has to be dispatched, and
-            // the Eater's hand trigger run, before the AI's first action.
+            // R212, #89: death dispatched and hand trigger run before AI acts.
             let mut s = scenario(json!({
                 "seed": "my-pawn-r283-eater",
                 "p1": {
@@ -656,8 +548,7 @@ mod tests {
         #[test]
         fn r283_r174_a_radiant_my_pawn_fused_onto_a_radiant_my_pawn_destroys_the_attacker_once_not_its_reborn_body_again() {
             crate::register_all();
-            // p2's My Pawn, set, is fused by p1's #85 onto p1's Radiant My Pawn (R61, R77): one trap with
-            // both texts, whose second half runs after the first has played p2's turn out (R102).
+            // #85, R61, R77, R102: fused trap runs both texts in sequence.
             let mut s = scenario(json!({
                 "seed": "my-pawn-r283-fused",
                 "active": "p2",
@@ -722,7 +613,7 @@ mod tests {
             if radiant { "radiant" } else { "base" }
         }
 
-        /// R662 `${face}`: at 7 health it glows for its controller only, and the swing is canceled.
+        /// R662: at 7 health it glows for its controller only, and the swing is canceled.
         fn glows_at_7(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -739,7 +630,7 @@ mod tests {
             assert!(any_event(&s, "trapFired"));
         }
 
-        /// R662 `${face}`: at 8 health it does not glow, and the swing lands.
+        /// R662: at 8 health it does not glow, and the swing lands.
         fn dark_at_8(radiant: bool) {
             let face = face_of(radiant);
             let mut s = scenario(json!({
@@ -755,7 +646,7 @@ mod tests {
             s.expect_health(P1, 1);
         }
 
-        /// R662 `${face}`: on its controller's own turn it glows for the blow on the board.
+        /// R662: on its controller's own turn it glows for the blow on the board.
         fn glows_on_own_turn(radiant: bool) {
             let face = face_of(radiant);
             let s = scenario(json!({

@@ -1,7 +1,5 @@
-//! Call to Chaos (BUILD M3-T7): SPEC §8 #95, §7's tokens and R28's capped recursion. The card file
-//! arrives in M4; these tests pin the machinery it will call — each of the ten effects, the base and
-//! radiant rolls, the chain cap, and what the ten do against a full board, a full hand and an empty
-//! library.
+//! Call to Chaos (BUILD M3-T7): SPEC §8 #95, §7's tokens and R28's capped recursion: the ten effects, the
+//! base and radiant rolls, the chain cap, and the ten against a full board, a full hand and an empty library.
 
 use jackioh_engine::subsystems::call_to_chaos::{
     CHAOS_CHAIN_KEY, CHAOS_EFFECTS, CHAOS_RECURSION, CallToChaosArgs, ChaosEffectDef,
@@ -53,7 +51,6 @@ fn chaos() -> CardDef {
     )
 }
 
-/// §7: the 10/10 token index 95.1.
 fn golem() -> CardDef {
     let face = json!({
         "attack": 10,
@@ -200,7 +197,6 @@ fn summoned_defs(state: &GameState, events: &[GameEvent]) -> Vec<CardDef> {
         .collect()
 }
 
-/// One field of every event of a type, as JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -342,9 +338,8 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         });
 
         assert!(state.players.p1.hand.iter().all(|card| card.radiant));
-        // §6.3: the flag is set once and never unset; the cue goes out for all three, because a hand
-        // card is hidden from the opponent and a cue only for the changed ones would give away its face
-        // (R177, R97).
+        // §6.3: the flag is set once and never unset; the cue goes out for all three, as a cue for only the
+        // changed ones would give away a hidden hand card's face (R177, R97).
         assert_eq!(
             field_of(&events, GameEventType::RadiantSet, "instanceId"),
             vec![json!(first.id), json!(second.id), json!(third.id)]
@@ -498,7 +493,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(state.counters.played, 1);
         assert_eq!(state.players.p1.turn_log.cards_played, 1);
         assert_eq!(state.players.p1.mana.current, 2);
-        // The script ran: heal 30 on the caster's hero.
         assert_eq!(state.players.p1.hero.health, 60);
 
         let cast = state.players.p1.graveyard.first();
@@ -506,8 +500,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(cast.map(|card| card.def_id.clone()), Some(chaos().id));
         // R28: a Radiant Call still casts the *base* card.
         assert_eq!(cast.map(|card| card.radiant), Some(false));
-        // R215: it was the chain's first cast while it resolved, and it has landed (R87) as the printed
-        // card again, carrying no link of that chain into whatever brings it back.
+        // R215: the chain's first cast, landed (R87) as the printed card again, keeping no link of the chain.
         assert_eq!(chaos_chain_of(cast), 0);
     }
 
@@ -547,12 +540,10 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             );
             assert_eq!(effects.len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS);
             let names = names_of(&effects);
-            // Three different entries: none comes up twice.
             assert_eq!(
                 names.iter().collect::<IndexSet<_>>().len() as i32,
                 CALL_TO_CHAOS_RADIANT_EFFECTS
             );
-            // In list order, whatever order they were drawn in.
             let order: Vec<i64> = names
                 .iter()
                 .map(|name| {
@@ -588,7 +579,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
     #[test]
     fn r423_a_radiant_call_to_chaos_runs_all_three_rolled_effects_the_recursion_only_when_rolled() {
-        // A seed whose three are the hero heal, the Chaos Golem and the recursion: all three visible at once.
+        // Heal, Golem and recursion: all three visible at once.
         let seed = (0..3000)
             .map(|i| format!("chaos-radiant-run-{i}"))
             .find(|candidate| {
@@ -632,7 +623,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert!(index_of(&types, GameEventType::Healed) < index_of(&types, GameEventType::Summoned));
         assert!(index_of(&types, GameEventType::Summoned) < index_of(&types, GameEventType::CardPlayed));
 
-        // A seed whose three leave the recursion out casts nothing at all.
         let no_recursion = (0..400)
             .map(|i| format!("chaos-radiant-none-{i}"))
             .find(|candidate| {
@@ -690,7 +680,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             json_of(events_of_type(&events, GameEventType::ChaosRolled)),
             json!([{ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": chaos().id, "effects": expected }])
         );
-        // First, before the first rolled effect lands anything.
         assert_eq!(
             events.first().map(|event| event.event_type()),
             Some(GameEventType::ChaosRolled)
@@ -703,7 +692,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         );
         assert!(expected.contains(&"Heal your hero 30".to_string()));
 
-        // The base face names its one.
         let mut base_state = game("chaos-announce-base", None);
         let mut base_events: Vec<GameEvent> = Vec::new();
         let base_card = chaos_card(&mut base_state, false, None);
@@ -729,9 +717,8 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
     #[test]
     fn r28_caps_the_recursion_at_call_to_chaos_chain_cap_casts() {
-        // Every cast copy recurses again, which is the worst case the cap has to stop.
-        // Each cast reports the link it is as its own script runs; a test builder, not a card file.
-        // A hook is `Fn + Send + Sync`, so it reports down a channel.
+        // Every cast copy recurses again, the worst case the cap has to stop; each reports its link down a
+        // channel as its own script runs (a hook is `Fn + Send + Sync`).
         let (sender, receiver) = std::sync::mpsc::channel::<i32>();
         let mut state = game(
             "chaos-chain",
@@ -757,7 +744,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(state.counters.played, CALL_TO_CHAOS_CHAIN_CAP);
         assert_eq!(state.players.p1.graveyard.len() as i32, CALL_TO_CHAOS_CHAIN_CAP);
 
-        // The player's card cast link 1, which cast link 2, and so on to the cap.
         assert_eq!(depths, (1..=CALL_TO_CHAOS_CHAIN_CAP).collect::<Vec<i32>>());
         // R215: each landed in the graveyard (§10.5 step 7, R87) as the printed card again.
         assert!(
@@ -787,7 +773,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert!(events.is_empty());
         assert_eq!(state.counters.played, 0);
         assert!(state.players.p1.graveyard.is_empty());
-        // Not even an instance was created, so the id counter did not move either.
         assert_eq!(state.next_id, before.next_id);
     }
 
@@ -909,7 +894,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(state.players.p1.fatigue_count, 0);
         assert_eq!(state.players.p1.hero.health, 30);
         assert!(events_of_type(&events, GameEventType::Drawn).is_empty());
-        // The mana half of the effect still happens.
         assert_eq!(state.players.p1.mana.current, 4);
     }
 
@@ -950,8 +934,6 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             run(sink, summon_rush_tokens(), None, P1);
         });
 
-        // Five were asked for: lanes 3, 4 and 5 take the unlocked ones, then the Locked lane 1;
-        // the reserved lane 2 is still skipped, so the fifth summon fizzles.
         assert_eq!(
             field_of(&events, GameEventType::Summoned, "lane"),
             vec![json!(3), json!(4), json!(5), json!(1)]
@@ -967,7 +949,7 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
     #[test]
     fn r87_r423_resolves_the_rolled_effects_in_written_order_leaves_a_cast_card_in_the_graveyard_and_rolls_no_substitute_at_the_cap()
      {
-        // 1. Written order: the recursion is the list's last entry, so when it is rolled it resolves last.
+        // The recursion is the list's last entry, so when it is rolled it resolves last.
         for seed in 0..50 {
             let names = names_of(&roll_chaos_effects(
                 &mut Rng::new(&format!("r87-{seed}"), 0),
@@ -979,8 +961,6 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
             }
         }
 
-        // 2. A card cast from no zone ends in the caster's graveyard (§10.5 step 7), so a chain feeds
-        // Gravedigger and friends rather than vanishing.
         let mut state = game("r87-graveyard", Some(hook(|_ctx| vec![heal_hero_thirty()])));
         let cast = chaos_card(&mut state, false, None);
         sink_events(&mut state, &mut Vec::new(), |sink| {
@@ -997,8 +977,6 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
             vec![chaos().id]
         );
 
-        // 3. At the cap the recursion does nothing and nothing is rolled in its place: a radiant Call
-        // at the cap runs only its other two effects.
         let seed = (0..400).map(|i| format!("r87-cap-{i}")).find(|candidate| {
             names_of(&roll_chaos_effects(
                 &mut Rng::new(candidate, 0),
@@ -1054,8 +1032,7 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
             Some(json!(labels_of(&rolled)))
         );
 
-        // What is left is exactly the other two: the same run on a twin state, with those two alone,
-        // produces the same events in the same order after the announcement.
+        // What is left is exactly the other two: a twin state running only those gives the same events.
         let mut alone = game(&seed, Some(radiant_call()));
         let mut alone_events: Vec<GameEvent> = Vec::new();
         sink_events(&mut alone, &mut alone_events, |sink| {

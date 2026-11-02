@@ -1,20 +1,10 @@
-// `/almanac`: the public Card Almanac (R630). Every card in the catalog, tokens included, to browse
-// without signing in: the deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) with nothing
-// that edits a deck. Public like the Patch notes page: the catalog is public (§5.1) and ships in the
-// bundle, so the page reads `@jackioh/cards/catalog.json`, as the landing's fan does, and asks no
-// server and no account anything for the catalog. The card detail's statistics block (R654) reads
-// the public card aggregates, like the deck builder's. `?card=<id>` opens one card's detail, and the
-// URL names the detail that is open.
-//
-// R1956000: signed in to an active account, the page also reads the account, its collection and the
-// session's cosmetics ledger (almanacOwnership.ts), and a card the viewer owns is drawn as their own
-// copy, wearing their picks behind that ledger. Signed out it reads none of them, and every card is
-// drawn as before.
-//
-// The page decides nothing (CLAUDE.md rule 7): what the filter and the sort keep is filters.ts's,
-// the faces and the detail view are the cards module's. It wears the deck builder's look
-// (deckbuilder.css) in the tavern, with the corner's Back and the settings gear; almanac.css holds
-// only what the browse pane needs without the deck editor's grid around it.
+// `/almanac`: the public Card Almanac (R630), every card tokens included, without signing in: the
+// deck builder's browse pane (game/deckbuilder/CardBrowser.tsx) with nothing that edits a deck. The
+// catalog is public (§5.1) and ships in the bundle, so the page asks no server or account for it.
+// R1956000: signed in to an active account, it also reads the collection and the session's cosmetics
+// ledger (almanacOwnership.ts) and draws an owned card as the viewer's copy; signed out, none of it.
+// The page decides nothing (CLAUDE.md rule 7): filters.ts filters and sorts, the cards module draws;
+// almanac.css holds only what the browse pane needs without the deck editor's grid around it.
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 
@@ -73,10 +63,9 @@ export default function AlmanacRoute(): ReactElement {
   const locale = useLocale();
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
-  // `?card=<id>` opens that card's detail (`paths.almanacCard`, the statistics drill-down's link),
-  // and the URL follows the detail a player opens and closes, so a card's page can be shared. The
-  // detail follows the address on every move (R2118000: the command menu opens a card there), not
-  // only on the first render.
+  // `?card=<id>` opens that card's detail (`paths.almanacCard`) and the URL follows the detail, so a
+  // card's page can be shared; it follows the address on every move (R2118000: the command menu opens
+  // a card there).
   const linked = new URLSearchParams(useSearch()).get("card");
   const detailCardId = linked !== null && Object.hasOwn(ALMANAC_CATALOG.cards, linked) ? linked : null;
   const winRates = useCardWinRates(sort.key);
@@ -126,8 +115,7 @@ export default function AlmanacRoute(): ReactElement {
                 ? null
                 : { cardId: detailCardId, meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span> }
             }
-            // R654: the almanac's detail view carries the same compact statistics block as the
-            // deck builder's, reading the public card aggregates.
+            // R654: the deck builder's compact statistics block, from the public card aggregates.
             showStats
             onCloseDetail={() => {
               navigate(paths.almanac, { replace: true });

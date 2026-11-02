@@ -1,47 +1,6 @@
-//! BUILD M6-T4 acceptance, items 1, 3 and 4 (item 2, crash recovery, is `recovery.rs`):
-//!
-//!  1. "two WebSocket clients complete a scripted game"
-//!  3. "an action with a reused nonce returns the original ack"
-//!  4. "the opponent's socket never receives the other hand's `defId`s (protocol-level test)"
-//!
-//! plus the properties SPEC §9 asks for around them: a client cannot act as the other player
-//! (§9.1), a malformed frame is answered rather than fatal, the per-match flood limit rejects the
-//! overflow (§9.8), and a disconnect starts the grace both clients render (§9.5).
-//!
-//! Item 4 is made twice. Most of this file runs on the scripted cards of `test/fakes/engine.ts`,
-//! which can be driven to any situation in one action; the block near the bottom runs the same
-//! acceptance item on the **real** §8 catalog, because a redaction cannot be proved against cards
-//! the test suite wrote. That block's own header says what only it can see.
-//!
-//! The clock is the real one here, and the results writer too. TS stubbed the clock on purpose —
-//! the actor took `CreateMatchClock` through `ActorDeps`, and half its tests fired an expiry *on
-//! demand* (`clock.expire({ kind: "grace", player: "p1" })`) — and stubbed the results writer the
-//! same way. The Rust actor takes neither: its clock, its results writer and its store all come
-//! from the `App` (SURFACE §11.2, §11.3: no ports, no traits), so every expiry here is a deadline
-//! passing on tokio's paused clock, and every ending is written by `api::results` over the fake
-//! store, where the TS stub's call count is read back as the row it wrote.
-//!
-//! Port of `apps/server/test/match/actor.test.ts`. How the TS test's seams map, all in one place:
-//!
-//!  - `createFakeEngine()` is `support::engine::install_test_cards()`: the scripted cards
-//!    (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`) as real engine scripts under this
-//!    thread's testkit override (SURFACE §8, §11.2). The real engine shuffles a deck and opens on both
-//!    mulligans (R265), where the scripted port dealt `fakeDeck`'s extras first and opened on turn 1,
-//!    so the harness deals under the first seed whose opening hands hold every extra, and walks the
-//!    game to rest on p1's turn 1 (both seats' R345 automatic turn end off, as the scripted port never
-//!    ended a turn by itself; both mulligans keeping the whole hand) through the actor's own `submit`
-//!    before any socket attaches. The rows that walk wrote are `Harness.base`: a seq TS counted from 1
-//!    is counted from `base + 1`.
-//!  - `enginePort()` (the real port) is the real §8 catalog (`jackioh_cards::register_all()`, no
-//!    override), dealt under `"seed-actor"` exactly as TS dealt it, and left on both mulligans.
-//!  - `createFakeSocket()` is `support::socket::create_fake_socket()`, behind `Client`; every frame
-//!    is read as the JSON the wire carries (SURFACE §5.1).
-//!  - `deps.store.tables.*` are the fake store's rows, read through the store's own methods.
-//!  - `deps.log.entries` is a `tracing` layer of this file's (`log_capture`): the server logs through
-//!    `tracing` with TS's event names (SURFACE §11.3).
-//!  - `deps.timers` is tokio's paused clock (`start_paused = true`); `sleep_settled` sleeps on it.
-//!  - The `ws` adapter's block runs a real listener and a minimal WebSocket client of this file's,
-//!    since `socketFromWs` and `createMatchSocketHandler` are `actor::ws_server::handle`'s inside now.
+//! BUILD M6-T4 acceptance (items 1, 3, 4; item 2 in `recovery.rs`) and SPEC §9 properties.
+//! Covers seat boundaries (§9.1), disconnect grace (§9.5), and flood limits (§9.8).
+//! Tested on scripted cards and real §8 catalog (SURFACE §5.1, §8, §11.2, §11.3, R265, R345).
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -87,37 +46,22 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
     (next.a.rating, next.b.rating)
 }
 
-// ---------------------------------------------------------------------------
-// TS's deterministic stand-in for `src/match/clock.ts` (`stubClocks`) and its results writer stub
-// (`resultWriter`) are not ported: the Rust actor takes no clock and no results writer to stub (see
-// the header). Their tests drive the real ones.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Scaffolding
-// ---------------------------------------------------------------------------
-
 const MATCH_ID: &str = "match-1";
 
-/// The seed every match here is dealt under (TS `"seed-actor"`); a scripted deal searches from it.
+/// Match deal seed; scripted deals search from it.
 const SEED: &str = "seed-actor";
 
-/// How many seeds a scripted deal tries before it gives up on putting its extras in hand.
 const SEED_SEARCH_LIMIT: usize = 5000;
 
-/// How many times `settle` yields: enough for every task woken at this instant to run.
 const SETTLE_YIELDS: usize = 8;
 
-/// Unit conversion only.
 const SECOND: i64 = 1000;
 const MINUTE: i64 = 60 * SECOND;
 
-/// A config number as milliseconds' arithmetic wants it, whatever integer type `config.rs` gives it.
 fn int(value: impl Into<i64>) -> i64 {
     value.into()
 }
 
-/// A config number as a rating wants it.
 fn float(value: impl Into<f64>) -> f64 {
     value.into()
 }
@@ -142,21 +86,18 @@ fn ceiling_ms() -> i64 {
     int(MATCH_CEILING_MINUTES) * MINUTE
 }
 
-/// The server's own epoch-millisecond clock, the one the actor and the match clock read (TS
-/// `deps.timers.now()`).
+/// Server epoch-millisecond clock.
 fn now() -> i64 {
     jackioh_server::app::now_ms()
 }
 
-/// Lets every task woken at this instant run: the actor, the clock's timers, the sockets' channels.
 async fn settle() {
     for _ in 0..SETTLE_YIELDS {
         tokio::task::yield_now().await;
     }
 }
 
-/// TS `toMatchObject`: every key `expected` names is in `actual` and matches, recursively; arrays
-/// match element by element and have the same length; anything else is equal.
+/// Recursively matches JSON values.
 fn is_match(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -182,8 +123,7 @@ fn result_of(winner: Winner, reason: GameOverReason) -> Option<GameResult> {
     Some(GameResult { winner, reason })
 }
 
-/// One client's end of a fake socket (`support::socket`), read as the JSON frames the server sent.
-/// Every call this file makes on the fake goes through here.
+/// Client fake socket end (`support::socket`).
 struct Client(FakeSocket);
 
 impl Client {
@@ -191,17 +131,14 @@ impl Client {
         Client(create_fake_socket())
     }
 
-    /// The half the actor holds. TS handed the fake itself to `attach`; Rust's `Socket` is a struct.
     fn socket(&self) -> Socket {
         self.0.socket()
     }
 
-    /// Every frame the server sent, in order, as text.
     fn sent(&self) -> Vec<String> {
         self.0.sent()
     }
 
-    /// Every frame the server sent, parsed.
     fn messages(&self) -> Vec<Value> {
         self.sent()
             .iter()
@@ -209,7 +146,6 @@ impl Client {
             .collect()
     }
 
-    /// Frames of one `type`, parsed.
     fn of_type(&self, kind: &str) -> Vec<Value> {
         self.messages()
             .into_iter()
@@ -217,17 +153,14 @@ impl Client {
             .collect()
     }
 
-    /// Simulate the client sending a frame.
     fn receive(&self, text: &str) {
         self.0.receive(text);
     }
 
-    /// Simulate the client sending JSON.
     fn receive_json(&self, value: Value) {
         self.receive(&value.to_string());
     }
 
-    /// Simulate the transport dropping.
     fn drop_transport(&self) {
         self.0.drop();
     }
@@ -240,13 +173,12 @@ impl Client {
         self.0.is_open()
     }
 
-    /// The server's close code for this socket, if it closed it.
     fn close_code(&self) -> Option<u16> {
         self.0.close_code()
     }
 }
 
-/// TS `deps.log`: the server's `tracing` events on this thread, by level and event name.
+/// Server `tracing` events on this thread.
 mod log_capture {
     use std::sync::{Arc, Mutex};
 
@@ -255,7 +187,6 @@ mod log_capture {
     use tracing::{Event, Subscriber};
     use tracing_subscriber::layer::{Context, Layer, SubscriberExt};
 
-    /// TS `RecordingLogger.entries[n]`, by event name: TS's `level` is not read by any test here.
     #[derive(Clone, Debug, PartialEq)]
     pub struct LogEntry {
         pub event: String,
@@ -267,8 +198,7 @@ mod log_capture {
     }
 
     impl Recorder {
-        /// Records the server's events on this thread for as long as the guard lives. A
-        /// `#[tokio::test]` runs its actor tasks on this thread too (its runtime is current-thread).
+        /// Records events on this thread while guard lives.
         pub fn install() -> (Recorder, DefaultGuard) {
             let recorder = Recorder::default();
             let guard =
@@ -285,7 +215,6 @@ mod log_capture {
         }
     }
 
-    /// The event's name: its `event` field (TS's first argument), else its message.
     #[derive(Default)]
     struct EventName {
         event: Option<String>,
@@ -329,9 +258,7 @@ mod log_capture {
     }
 }
 
-// --- the fake store, read and written as TS's `deps.store.tables` --------------------------------
-
-/// TS `deps.store.seedProfile(...)`: a profile row written straight into the fake store.
+/// Seed a profile row into the fake store.
 async fn seed_profile(app: &App, profile: Value) {
     let Db::Fake(data) = &app.db else {
         panic!("the test app runs on the fake store")
@@ -339,7 +266,7 @@ async fn seed_profile(app: &App, profile: Value) {
     data.lock().await.seed_profile(profile);
 }
 
-/// TS `deps.store.tables.matchActions` for one match: its `match_actions` rows, as JSON.
+/// Match action rows as JSON.
 async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let rows = tx.matches_actions(match_id).await.expect("matches.actions");
@@ -349,7 +276,7 @@ async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
         .collect()
 }
 
-/// TS `deps.store.tables.matches[0]`: the match row, as JSON.
+/// Match row as JSON.
 async fn match_row(app: &App, match_id: &str) -> Value {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let row = tx
@@ -361,7 +288,6 @@ async fn match_row(app: &App, match_id: &str) -> Value {
     serde_json::to_value(&row).expect("MatchRow serializes")
 }
 
-/// TS `deps.store.matches.create(...)`: a match row written as TS's object literal.
 async fn create_match_row(app: &App, row: Value) {
     let row: MatchRow = serde_json::from_value(row).expect("a MatchRow");
     let mut tx = app.db.begin(None).await.expect("a store transaction");
@@ -369,8 +295,7 @@ async fn create_match_row(app: &App, row: Value) {
     tx.commit().await.expect("commit");
 }
 
-/// TS `deps.store.tables.results` for one match (one row at most: §9.5, R611), as JSON. Where TS
-/// counted the stub writer's calls, the writer's row is what is counted here.
+/// Match result row (§9.5, R611), as JSON.
 async fn result_row(app: &App, match_id: &str) -> Option<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let row = tx
@@ -381,7 +306,6 @@ async fn result_row(app: &App, match_id: &str) -> Option<Value> {
     row.map(|row| serde_json::to_value(&row).expect("ResultRow serializes"))
 }
 
-/// TS `deps.store.profiles.getMany(...)`, as JSON.
 async fn profiles(app: &App, ids: &[&str]) -> Vec<Value> {
     let ids: Vec<String> = ids.iter().map(|id| (*id).to_string()).collect();
     let mut tx = app.db.begin(None).await.expect("a store transaction");
@@ -392,9 +316,7 @@ async fn profiles(app: &App, ids: &[&str]) -> Vec<Value> {
         .collect()
 }
 
-// --- decks -------------------------------------------------------------------------------------
-
-/// TS `loadCatalog()`'s `cardIds`, tokens filtered out: every deckable §8 id, in catalog order.
+/// Every deckable §8 id in catalog order.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
@@ -412,9 +334,7 @@ fn game_args(seed: &str, decks: &(Vec<String>, Vec<String>)) -> CreateGameArgs {
     }
 }
 
-/// `test/fakes/engine.ts`'s `decksTheEngineAccepts`, a private copy (it is the engine's own
-/// refusal that sizes the decks, so the size is never restated): the slices of the pool grow until
-/// `create_game` stops refusing them, and "refused every deck size" names an unregistered catalog.
+/// Slices pool until `create_game` stops refusing without restating size.
 fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (Vec<String>, Vec<String>) {
     let mut refusals: Vec<String> = Vec::new();
     let mut size = 1;
@@ -444,17 +364,7 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (Vec<String>, Vec<St
     );
 }
 
-/// `decksTheEngineAccepts`, narrowed to the decks whose opening deal, under `seed`, opens straight
-/// onto both mulligans (§2.1, R265) — what a test about the window both seats share needs from its
-/// very first frame.
-///
-/// A deal that asks its seat something makes setup wait for the answer before it opens the mulligans
-/// (R224). No cast-on-draw card is dealt (R635), so no cast asks; a start-of-game clause as its card
-/// arrives in a hand still can (R151). Which cards the deal draws is the seed's to say, so whether a
-/// deal asks is read off the real engine, not off card text. The first deck stays the pool's first
-/// slice; the second slides along the pool a card at a time until the deal asks nothing, so a seed
-/// whose deal already opened on the mulligans keeps exactly the decks `decks_the_engine_accepts`
-/// gives it.
+/// Narrowed to decks opening straight onto both mulligans (§2.1, R265, R224, R635, R151).
 fn decks_that_open_on_the_mulligans(pool: &[String], seed: &str) -> (Vec<String>, Vec<String>) {
     let (first, _) = decks_the_engine_accepts(pool, seed);
     let size = first.len();
@@ -478,9 +388,7 @@ fn dealt_def_ids(state: &jackioh_engine::GameState, player: PlayerId) -> Vec<Str
     hand(&view).into_iter().map(|card| card.def_id).collect()
 }
 
-/// TS's `fakeDeck(extra)` put `extra` in the opening hand; the real engine shuffles every deck with
-/// the match rng, so the scripted decks are dealt under the first of `seed-actor`, `seed-actor-1`, …
-/// whose opening hands hold every seat's extras. The search reads the real engine's own deal.
+/// Scripted decks dealt under match RNG seeds whose opening hands hold extras.
 fn seed_dealing(decks: &(Vec<String>, Vec<String>), wants: [&[&str]; 2]) -> String {
     for attempt in 0..SEED_SEARCH_LIMIT {
         let seed = if attempt == 0 {
@@ -502,30 +410,26 @@ fn seed_dealing(decks: &(Vec<String>, Vec<String>), wants: [&[&str]; 2]) -> Stri
     panic!("no seed of {SEED_SEARCH_LIMIT} deals {wants:?} into the opening hands");
 }
 
-// --- the harness -------------------------------------------------------------------------------
-
 /// Which cards the two seats play.
 #[derive(Clone)]
 enum Decks {
-    /// `support::engine`'s scripted cards: `fake_deck(extra)` per seat (TS `createFakeEngine()`).
+    /// Scripted cards via `fake_deck(extra)` per seat.
     Scripted {
         p1: Vec<&'static str>,
         p2: Vec<&'static str>,
     },
-    /// Real §8 ids (TS `engine: enginePort()`), dealt under `SEED`.
+    /// Real §8 ids dealt under `SEED`.
     Real(Vec<String>, Vec<String>),
 }
 
 /// How far the harness walks the game before any socket attaches.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Walk {
-    /// Not at all: the game is on both mulligans, as the real port opened it.
+    /// On both mulligans as dealt.
     AsDealt,
-    /// R345's automatic turn end off for both seats, the mulligans left open (TS
-    /// `createFakeEngine({ mulligan: true })`, which never ended a turn by itself).
+    /// R345's automatic turn end off for both seats, mulligans left open.
     AutoEndOff,
-    /// `AutoEndOff`, then both mulligans keeping the whole hand: at rest on p1's turn 1, where TS's
-    /// `createFakeEngine()` opened.
+    /// `AutoEndOff`, then both mulligans keep whole hand (at rest on p1's turn 1).
     ToTurnOne,
 }
 
@@ -535,9 +439,7 @@ struct Options {
     portraits: Option<[&'static str; 2]>,
     attach: bool,
     walk: Walk,
-    /// The two profiles' ratings. TS seeded profiles only for the tests about what an ending records
-    /// (its stub writer needed none); the Rust actor always writes through the real `api::results`,
-    /// so both profiles are always seeded, at 1000 unless a test says otherwise.
+    /// The two profiles' ratings (default 1000).
     ratings: [f64; 2],
     /// R1351000: (blocker, blocked) profile pairs standing before the match starts.
     blocks: Vec<(&'static str, &'static str)>,
@@ -569,7 +471,7 @@ impl Default for Options {
     }
 }
 
-/// The real catalog's decks, left as dealt (TS `harness({ engine: enginePort(), p1Deck, p2Deck })`).
+/// Real catalog decks left as dealt.
 fn real(decks: (Vec<String>, Vec<String>)) -> Options {
     Options {
         decks: Decks::Real(decks.0, decks.1),
@@ -590,7 +492,6 @@ struct Harness {
 }
 
 impl Harness {
-    /// TS `actor.idle()`: the frames sent so far have been handled and what they pushed has arrived.
     async fn idle(&self) {
         settle().await;
         self.actor.idle().await;
@@ -617,12 +518,10 @@ impl Harness {
         self.rows().await.last().cloned().expect("a log row")
     }
 
-    /// TS `actor.clocks()`, as `MatchClocks`' JSON.
     async fn clocks(&self) -> Value {
         serde_json::to_value(self.actor.clocks()).expect("MatchClocks serializes")
     }
 
-    /// TS `actor.viewFor(player)`, as JSON.
     async fn view(&self, player: PlayerId) -> Value {
         view_json(&self.actor, player).await
     }
@@ -644,8 +543,7 @@ async fn submit_ok(actor: &MatchActor, player: PlayerId, nonce: &str, body: Valu
     );
 }
 
-/// Brings the game to where TS's scripted port held it, through the actor's own `submit`, before any
-/// socket attaches (no socket sees a frame of it). Answers how many log rows that wrote.
+/// Advances game through `submit` before sockets attach. Returns written log rows count.
 async fn walk_setup(actor: &MatchActor, walk: Walk) -> usize {
     if walk == Walk::AsDealt {
         return 0;
@@ -786,7 +684,7 @@ async fn harness(options: Options) -> Harness {
     h
 }
 
-/// TS `send(actor, socket, nonce, body, smuggled)`: an action frame `{ ...body, ...smuggled, nonce }`.
+/// Send action frame `{ ...body, ...smuggled, nonce }`.
 async fn send_smuggling(h: &Harness, socket: &Client, nonce: &str, body: Value, smuggled: Value) {
     let mut action = body;
     if let (Some(fields), Some(extra)) = (action.as_object_mut(), smuggled.as_object()) {
@@ -841,8 +739,7 @@ fn hand_ids(view: &Value) -> Vec<String> {
     hand(view).into_iter().map(|card| card.instance_id).collect()
 }
 
-/// TS `firstInHand(socket)`: TS's scripted deck put its extras first in hand, so "the first card"
-/// was always the scripted card the test meant. The real deal is shuffled, so it is named.
+/// Returns named card from seat's hand.
 fn in_hand(socket: &Client, def_id: &str) -> String {
     hand(&last_view(socket))
         .into_iter()
@@ -889,9 +786,7 @@ fn legal_types(socket: &Client) -> Vec<String> {
         .collect()
 }
 
-/// The answer to the seat's open prompt. TS sent `{ type: "answer", choiceId, selection: [{ pick:
-/// "none" }] }`, the scripted port's one answer; the scripted card's prompt is the engine's now, so
-/// its answer is read off the seat's own legal array, where TS's was too.
+/// The answer to the seat's open prompt, read off seat's legal array.
 fn answer_of(socket: &Client) -> Value {
     legal_of(socket)
         .into_iter()
@@ -957,9 +852,7 @@ fn scan(sent: &[String], secrets: &[String]) -> (Vec<String>, Vec<String>) {
     (leaked, state_shaped)
 }
 
-// ---------------------------------------------------------------------------
 // M6-T4 acceptance 1
-// ---------------------------------------------------------------------------
 
 mod m6_t4_the_match_actor {
     use super::*;
@@ -1091,15 +984,12 @@ mod m6_t4_the_match_actor {
         assert_eq!(row.final_hash, Some(hash_state(&folded.state)));
     }
 
-    // -------------------------------------------------------------------------
     // M6-T4 acceptance 3
-    // -------------------------------------------------------------------------
 
     #[tokio::test(start_paused = true)]
     async fn an_action_with_a_reused_nonce_returns_the_original_ack() {
         let h = harness(Options::default()).await;
-        // Read the hand off the attach view *before* clearing the buffer the counts below are taken
-        // from: `clear()` drops the frames already sent, `in_hand` needs one of them.
+        // Read hand off attach view before clearing buffer.
         let body = json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") });
         h.p1.clear();
 
@@ -1122,16 +1012,11 @@ mod m6_t4_the_match_actor {
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
     }
 
-    // -------------------------------------------------------------------------
     // M6-T4 acceptance 4
-    // -------------------------------------------------------------------------
 
     #[tokio::test(start_paused = true)]
     async fn the_opponents_socket_never_receives_the_other_hands_def_ids() {
-        // TS dealt two disjoint decks of made-up ids (`p1-secret-<n>`, `p2-secret-<n>`) to its
-        // scripted port, since `fakeDeck()` gives both seats the same filler ids and the scan below
-        // would pass for the wrong reason. The real engine deals only catalog ids, so the two disjoint
-        // decks are real §8 ones, walked to p1's turn 1 as the scripted port opened.
+        // Disjoint real §8 decks walked to p1's turn 1.
         let pool = deckable_pool();
         let decks = decks_that_open_on_the_mulligans(&pool, SEED);
         let h = harness(Options {
@@ -1184,9 +1069,7 @@ mod m6_t4_the_match_actor {
         assert!(last_view(&h.p2)["opponent"]["libraryCount"].as_i64().unwrap_or(0) > 0);
     }
 
-    // -------------------------------------------------------------------------
     // §9.1: the seat is the server's
-    // -------------------------------------------------------------------------
 
     #[tokio::test(start_paused = true)]
     async fn a_client_cannot_submit_an_action_as_the_other_player() {
@@ -1206,9 +1089,7 @@ mod m6_t4_the_match_actor {
         assert_eq!(row["action"]["playerId"], json!("p1"));
         assert_eq!(h.actor.snapshot().active, P1);
 
-        // And the other seat cannot act out of turn: the reducer's own refusal is relayed (§9.3). TS's
-        // scripted port said "it is not your turn" here; the real reducer checks the open prompt first,
-        // so the sentence relayed is whatever it says, read off the reducer itself.
+        // Other seat cannot act out of turn: reducer's refusal relayed (§9.3).
         let refusal = jackioh_engine::reduce(
             &h.actor.engine_state(),
             &Action::new(ActionBody::EndTurn, P2, "out-of-turn"),
@@ -1302,13 +1183,9 @@ mod m6_t4_the_match_actor {
         );
     }
 
-    // -------------------------------------------------------------------------
     // §9.8: per-match flood limit
-    // -------------------------------------------------------------------------
 
-    /// The action the flood tests spend their budget on: R345's preference, which the real reducer
-    /// accepts from either seat at any moment and which changes nothing on the board. TS spent it on
-    /// `offerDraw`, which its scripted port accepted unconditionally; the real one is R36's, once a turn.
+    /// Action spent on flood budget without mutating board state (R345, R36).
     fn filler() -> Value {
         json!({ "type": "setAutoEndTurn", "enabled": false })
     }
@@ -1334,9 +1211,7 @@ mod m6_t4_the_match_actor {
         // §9.8: reject the overflow, do not drop the socket.
         assert!(h.p1.is_open());
 
-        // R137: one shared per-match counter would refuse the *victim* here, which is the abuse the
-        // ruling is about. Each seat holds its own window, so the opponent's click still lands while
-        // p1 is over budget — and the match's aggregate ceiling is twice R109's number, not once.
+        // R137: each seat holds its own window, so opponent acts while p1 is over budget (R109).
         send(&h, &h.p2, "opponent-click", filler()).await;
         assert_eq!(errors(&h.p2), Vec::<Value>::new());
         assert_eq!(
@@ -1390,10 +1265,7 @@ mod m6_t4_the_match_actor {
         let h = harness(Options::default()).await;
         h.p1.clear();
 
-        // A small burst with nothing awaited between the frames is drained without yielding, so
-        // every hello but the first is absorbed by the one still queued: one view push answers
-        // ten hellos. (A larger burst can span the runtime's yield point, letting a queued Hello
-        // run and a later hello enqueue afresh — still at most one outstanding at a time.)
+        // Burst hellos drained: unhandled hellos absorbed by queued one.
         for _ in 0..10 {
             h.p1.receive_json(json!({ "type": "hello" }));
         }
@@ -1409,11 +1281,7 @@ mod m6_t4_the_match_actor {
         h.idle().await;
         assert!(h.p1.of_type("view").len() <= 10);
 
-        // A hello on a newer socket generation is never absorbed. Stage a Hello that is queued
-        // but unrun: deliver it synchronously through the server-side `Socket`, so `on_frame`
-        // enqueues it with no task running between this and the reattach below. (A hello sent the
-        // usual way would still sit in the old transport's channel, and a replaced socket drops
-        // what it never forwarded.)
+        // Hello on newer socket generation is never absorbed by old queue.
         let older = Client::new();
         let older_server = older.socket();
         h.actor.attach(P1, older_server.clone());
@@ -1450,9 +1318,7 @@ mod m6_t4_the_match_actor {
         assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
 
-    // -------------------------------------------------------------------------
     // §9.5: disconnect grace, and the clock as the actor drives it
-    // -------------------------------------------------------------------------
 
     #[tokio::test(start_paused = true)]
     async fn starts_the_grace_countdown_on_a_drop_and_clears_it_on_reconnect() {
@@ -1483,8 +1349,7 @@ mod m6_t4_the_match_actor {
     async fn r79_r146_dispatches_every_clock_expiry_as_a_logged_server_action_each_stamped_per_r146() {
         let h = harness(Options::default()).await;
 
-        // A turn expiry ends the active player's turn. (TS fired its stub clock's `expire`; the real
-        // clock fires when the deadline passes.)
+        // Turn expiry ends active player's turn when deadline passes.
         sleep_settled(turn_ms()).await;
         h.idle().await;
         assert_match(
@@ -1512,9 +1377,7 @@ mod m6_t4_the_match_actor {
         // R79: the non-active player's prompt clock does not end the active player's turn.
         assert_eq!(h.actor.snapshot().active, P2);
 
-        // Grace expiry is a loss for the disconnected player. The real clock runs a grace only for a
-        // seat whose socket has gone (TS fired one on demand with p1 still attached), so p1 drops; p2's
-        // turn clock, resumed with the time it had banked (R79), outlasts the grace.
+        // Grace expiry is a loss for disconnected player (R79).
         h.p1.drop_transport();
         h.idle().await;
         sleep_settled(grace_ms()).await;
@@ -1531,7 +1394,7 @@ mod m6_t4_the_match_actor {
             result_of(Winner::P2, GameOverReason::Disconnect)
         );
         assert!(result_row(&h.app, MATCH_ID).await.is_some());
-        // The clock stopped: no deadline is armed any more (TS read its stub's `stopped` flag).
+        // The clock stopped: no deadline is armed.
         let clocks = h.clocks().await;
         assert!(clocks["turnDeadline"].is_null() && clocks["promptDeadline"].is_null());
         assert_eq!(clocks["graceDeadline"], json!({ "p1": null, "p2": null }));
@@ -1547,10 +1410,7 @@ mod m6_t4_the_match_actor {
 
     #[tokio::test(start_paused = true)]
     async fn r79_r146_ends_the_match_in_a_draw_when_the_ceiling_expires_stamped_with_the_active_seat() {
-        // TS fired its stub clock's ceiling on demand. The real clock measures the ceiling from the
-        // match's `createdAt` (R79), and a game played out to it would end on the turn cap first
-        // (R389), so the match here is a stored row that began a ceiling ago, less a second: the
-        // registry rebuilds its actor from it, whose clock then has one second left.
+        // Match ceiling measured from match's createdAt (R79, R389).
         let (_log, _guard) = Recorder::install();
         install_test_cards();
         let app = empty_test_app().await;
@@ -1629,7 +1489,7 @@ mod m6_t4_the_match_actor {
         let h = harness(Options::default()).await;
         h.p1.receive_json(json!({ "type": "joinRoom", "roomCode": "ABCDEF" }));
         h.idle().await;
-        // SURFACE §11.3: a `joinRoom` frame is answered `malformed` (TS answered `unsupported`).
+        // SURFACE §11.3: a `joinRoom` frame is answered `malformed`.
         assert_match(
             &errors(&h.p1).last().cloned().expect("an error frame"),
             &json!({ "code": "malformed" }),
@@ -1637,14 +1497,9 @@ mod m6_t4_the_match_actor {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R384 — an Activate ability over the socket (#491)
-// ---------------------------------------------------------------------------
 
-/// SPEC §10.2 lists `activate` among the actions a client sends, and `legal_actions` lists every
-/// Activate ability (R384) and, since R752, every Heroic Power's power as one. The socket's whitelist
-/// (`protocol::CLIENT_ACTION_TYPES`) had only the `activatePower` alias, so online every activation a
-/// client sent back from its own legal array was answered `malformed` and applied nothing (#491).
+/// SPEC §10.2: activate actions and Heroic Power activations (R384, R752, #491).
 mod r384_activate_over_the_socket {
     use super::*;
     use jackioh_engine::ActionType;
@@ -1707,8 +1562,7 @@ mod r384_activate_over_the_socket {
             }))
         );
 
-        // Only the instance is required, as the reducer reads it (an `activate` naming no ability is
-        // the card's only one); a field of the wrong shape is malformed, never passed on.
+        // Only instance required for activate; malformed field rejected.
         let bare = parse_client_message(
             &json!({ "type": "action", "action": { "type": "activate", "instanceId": "c7", "nonce": "act-2" } })
                 .to_string(),
@@ -1799,9 +1653,7 @@ mod r384_activate_over_the_socket {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R880 — a craft answer over the socket (Meditative #17)
-// ---------------------------------------------------------------------------
 
 /// ME-CRAFT's answer through the actor (R880): `{ pick: "craft", recipe }` parses to
 /// `Selection::Craft`, and a malformed recipe is `malformed` before it ever reaches `reduce`.
@@ -1868,16 +1720,9 @@ mod r880_parses_a_craft_answer_and_refuses_a_malformed_recipe {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R454 — a Plague-paid graveyard play over the socket, and every listed action through the parser (#620)
-// ---------------------------------------------------------------------------
 
-/// R454: `legal_actions` lists Classic #74 Corpse Plantation's graveyard plays as a `play` whose
-/// `plague` names the counters that pay, and the reducer refuses such a play without them. The socket's
-/// parser rebuilt a `play` without `plague`, so online every one was refused (#620), the class of #491.
-/// The guard below writes every field of every client `ActionBody` out, so a field added to one fails
-/// to compile until it is written in, and then fails the round trip until the parser keeps it; the
-/// sample sends back every action seeded random games list.
+/// R454: Plague-paid graveyard play over socket (#74, #620, #491). Action round-trip verification.
 mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
     use super::*;
     use jackioh_ai::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
@@ -1913,9 +1758,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
         }))
     }
 
-    /// One body per client action type, in `CLIENT_ACTION_TYPES`' order, with every optional field
-    /// set. Each is a struct literal, which an enum variant takes without `..`, so a field added to
-    /// any of them fails to compile here until it is written in.
+    /// One body per client action type in `CLIENT_ACTION_TYPES` order.
     fn every_client_body() -> Vec<ActionBody> {
         let selections = vec![
             Selection::Instance {
@@ -2210,22 +2053,10 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R643 — the emote protocol and its shared rate limit (§9.5, §10.10)
-// ---------------------------------------------------------------------------
 
-/// §10.10's emotes through the actor (R643): a top-level `emote` frame, never an `ActionBody`, so it
-/// reaches neither `reduce`, the append-only log nor a rejected-action log line; the actor relays it
-/// to the opponent alone, drops it silently past the shared limit, and answers an unknown id as
-/// `malformed`.
-///
-/// Every number here is the shared module's (`jackioh_engine::wire::emotes`): the client greys its
-/// menu off the same `emote_gate` the actor drops with, so the constants the test measures against
-/// are the ones the wire actually enforces rather than this file's restatement of them.
-///
-/// The clock here is the real one, so a test that waits out windows sees the turn clock end turns
-/// (R79) as it waits. Those `timeout`s are the clock's rows (`srv-` nonces, R270); "no row" below
-/// means none of an emote's.
+/// §10.10 emotes through the actor (R643): relayed to opponent alone, dropped past shared limit.
+/// Uses `jackioh_engine::wire::emotes` constants. Real clock means turn clock timeouts (R79, R270).
 mod r643_emotes_through_the_actor_9_5_10_10 {
     use super::*;
 
@@ -2286,8 +2117,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
         assert_eq!(acks(&h.p1), Vec::<Value>::new());
 
-        // …and in the other direction, stamped with p2's seat. The two seats keep their own rate-limit
-        // windows, so p2's send immediately after p1's is still inside no cooldown.
+        // p2 emote stamped with p2 seat; separate rate-limit window per seat.
         h.p2.receive_json(json!({ "type": "emote", "emote": p2_emote }));
         h.idle().await;
         assert_eq!(
@@ -2469,7 +2299,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         h.p2.clear();
 
         // Put p1 over the per-second action budget, so the next action frame is the flood refusal.
-        // (R345's preference stands in for TS's `offerDraw`, as in the flood test above.)
+        // R345 preference stands in for flood testing.
         for n in 0..=MATCH_ACTIONS_PER_SECOND as i64 {
             h.p1.receive_json(json!({
                 "type": "action",
@@ -2561,14 +2391,10 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1127 — emotes become engine actions while a card hears them (MD-D29)
-// ---------------------------------------------------------------------------
 
-/// An emote that passed the rate gate runs as a task behind every action queued ahead of it: while
-/// a card with `hears_emotes` acts, the actor mints an `Emote` action for it (nonce `srv-emote-*`,
-/// R270), and the append-only log holds the row. Unheard, rate-limited, or sent on the action
-/// channel, an emote stays R643's cosmetic relay — or a refusal.
+/// Emote passing gate runs behind queued actions; with `hears_emotes` active, actor mints `Emote`
+/// action (nonce `srv-emote-*`, R270). Otherwise stays R643 cosmetic relay or refusal.
 mod r1127_emotes_become_actions_while_heard {
     use super::*;
     use crate::support::engine::TEST_HEARS_EMOTES;
@@ -2681,8 +2507,7 @@ mod r1127_emotes_become_actions_while_heard {
         h.p1.clear();
         h.p2.clear();
 
-        // An emote rides its own message, never the action channel — even while heard. The answer is
-        // the actor's usual malformed one, code and reason back to the sender alone.
+        // Emotes ride emote message, never action channel; action with emote rejected.
         h.p2.receive_json(json!({
             "type": "action",
             "action": { "type": "emote", "emote": "laugh", "nonce": "n9" },
@@ -2701,9 +2526,7 @@ mod r1127_emotes_become_actions_while_heard {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1351000 — a block mutes the two seats' emotes (§9.4)
-// ---------------------------------------------------------------------------
 
 mod r1351000_a_block_mutes_emotes_between_the_seats {
     use super::*;
@@ -2885,14 +2708,9 @@ mod r1351000_a_block_mutes_emotes_between_the_seats {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R642 — the portraits frame (§9.5, §10.11)
-// ---------------------------------------------------------------------------
 
-/// A match's two portraits are the match row's data (R642): fixed when the seats are, sent to each
-/// client on attach and again on a reconnect's `hello`, in a frame of their own — a portrait is
-/// never part of `PlayerView`. The frame carries the receiving account's own emote hand (R1342),
-/// dealt from the match seed (R1341).
+/// R642, R1341, R1342: portraits frame sent on attach/reconnect with dealt emote hand.
 mod r642_the_portraits_frame_9_5 {
     use super::*;
 
@@ -3040,18 +2858,10 @@ mod r642_the_portraits_frame_9_5 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // BUILD M5-T2 / §10.2: the array the client greys the board out with
-// ---------------------------------------------------------------------------
 
-/// "The client never computes legality itself; it asks `legalActions` and greys out the rest"
-/// (BUILD M5-T2), and §10.2 makes `legalActions(state, playerId)` "what both the client UI and the
-/// My Pawn AI consume". The socket is the client's only source for it, so it travels on the `view`
-/// frame (`protocol.rs` `ViewMessage` says why there and not in a frame of its own).
-///
-/// The property under test is not "an array arrives" but **whose** array arrives. `legalActions`
-/// enumerates the `play`s of the cards in the player's hand, so the other seat's array would hand
-/// over every instance id in the opponent's hand — §9.1 lists that first under "Hidden".
+/// Client legality array on view frame (BUILD M5-T2, §10.2). Verifies each seat receives only
+/// its own array and never the opponent's hand instance ids (§9.1 Hidden).
 mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
     use super::*;
 
@@ -3059,9 +2869,7 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
     async fn gives_each_seat_its_own_array_and_never_the_other_seats() {
         let h = harness(Options::default()).await;
 
-        // The real `legalActions` names the active player's plays (one per way to play each card it
-        // can afford: lanes, targets, R81), plus `endTurn` and `concede`; `[{ type: "concede" }]` for
-        // the other seat. TS's scripted port offered one `play` per hand card.
+        // Active player legalActions includes plays, endTurn, concede (R81). Other seat gets concede.
         let p1_hand = hand_ids(&last_view(&h.p1));
         let p2_hand = hand_ids(&last_view(&h.p2));
         assert!(!p1_hand.is_empty());
@@ -3077,9 +2885,7 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
         assert!(plays.iter().all(|instance_id| p1_hand.contains(instance_id)));
         assert!(legal_types(&h.p1).contains(&"endTurn".to_string()));
 
-        // p2 is not the active player, so its own array is the one the engine gives p2 — and it names
-        // none of p1's cards. This is the assertion that would fail if `push_view` ever passed the
-        // wrong player to `legal_actions`.
+        // p2 array is what engine gives p2, naming none of p1's cards.
         assert_eq!(legal_of(&h.p2), vec![json!({ "type": "concede" })]);
         let p2_sees = Value::Array(legal_of(&h.p2)).to_string();
         for instance_id in &p1_hand {
@@ -3115,15 +2921,13 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
         .await;
 
         let choice_id = open_choice(&h.p1);
-        // The holder's array is that prompt's answers and nothing else but concede, which R211 offers
-        // both seats at every moment of a live game (TS's scripted port offered the answer alone).
+        // Prompt holder receives prompt answers and concede (R211).
         let mine = legal_of(&h.p1);
         assert!(mine.iter().any(|action| action["type"] == "answer"));
         assert!(mine.iter().all(|action| (action["type"] == "answer"
             && action["choiceId"] == json!(choice_id))
             || *action == json!({ "type": "concede" })));
-        // §10.6: the opponent "sees only that a prompt is open". Not even the choiceId reaches it —
-        // concede, R211's way out, is the whole of what p2 may do (TS's scripted port offered nothing).
+        // §10.6: opponent only sees prompt is open (concede via R211).
         assert_eq!(legal_of(&h.p2), vec![json!({ "type": "concede" })]);
         assert!(
             !Value::Array(legal_of(&h.p2))
@@ -3144,8 +2948,7 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
         h.actor.attach(P1, revived.socket());
         h.idle().await;
 
-        // The attach pushed one view, and it carries the array: a board rebuilt after a reload is
-        // interactive without waiting for the next action to happen (spec 05 reloads mid-prompt).
+        // Attach view carries legal actions array; board is immediately interactive.
         assert_eq!(views(&revived).len(), 1);
         assert_eq!(legal_of(&revived), before);
 
@@ -3166,28 +2969,10 @@ mod the_legal_action_array_on_the_view_frame_build_m5_t2_10_2 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // M6-T4 acceptance 4 again, with the REAL catalog under the actor
-// ---------------------------------------------------------------------------
 
-/// The same acceptance item, against the real §8 catalog.
-///
-/// Everything above runs on `support::engine`'s scripted cards, whose behavior this suite wrote —
-/// so it proves that the actor and the protocol add no leak *on top of* a redaction. That is fine for
-/// the clock, the log and the flood limit, which is what the scripted cards are for, but CLAUDE.md
-/// rule 7 ("the client ... never sees hidden information") is the one property where the component
-/// under test and the component asserted must not be the same file.
-///
-/// So this block deals two decks of real §8 card ids through `registry.start`, and runs the leak scan
-/// over the bytes the sockets actually received. Three things only exist here:
-///
-///  - the hands are dealt by `beginGame`'s real opening draw of real cards;
-///  - `PlayerView.events` is a real redacted stream (R97) — the `drawn` event for every card in the
-///    opponent's opening hand carries that card's `defId` in the state, and R97's `HIDDEN_ID` is the
-///    only reason it does not reach the other socket;
-///  - the open prompts are two real mulligans, open at once (R265), whose options name each chooser's
-///    own hand card by card (`setup.rs` `mulligan_prompt`), so R81's "only the viewer's own prompt
-///    carries its options" is carrying real ids rather than the scripted port's `{ key: "none" }`.
+/// Protocol leak scan against real §8 catalog (CLAUDE.md rule 7, R97, R265, R81).
+/// Verifies opponent never receives hidden hand defIds in events or open prompts.
 mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
     use super::*;
 
@@ -3218,10 +3003,7 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
 
         let h = harness(real(decks)).await;
 
-        // §2.1, R265: the game opens on both mulligans at once. Both keep everything, so every card
-        // dealt is still in the hand it was dealt to when the scan runs — a card returned to the library
-        // would be one the scan could not reason about, and a card played would be public (§10.8). p2
-        // answers first, so the scan also covers the frames sent while p2's answer was sealed (R266).
+        // §2.1, R265, R266: game opens on both mulligans; cards stay in hand for leak scan (§10.8).
         assert_match(
             &last_view(&h.p1)["pending"],
             &json!({ "forYou": true, "kind": "mulligan" }),
@@ -3304,10 +3086,7 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
 
     #[tokio::test(start_paused = true)]
     async fn r81_r265_each_seats_real_mulligan_prompt_reaches_only_that_seat_with_both_open_at_once() {
-        // The scripted port's prompt carried one `{ key: "none" }` option, so this is the assertion it
-        // could not make: the real mulligan prompt names every card in the chooser's hand by instance
-        // id and by `defId` (`setup.rs` `mulligan_prompt`, `view_for.rs` `option_view`). R265 opens both
-        // at once, so each seat is at the same time the holder of one prompt and the other's opponent.
+        // Mulligan prompt namesChooser's cards by instance id and defId (R265).
         let (_pool, decks) = real_engine();
         let h = harness(real(decks)).await;
 
@@ -3335,8 +3114,7 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
             assert_match(&theirs, &json!({ "forYou": true, "kind": "mulligan" }));
             assert_ne!(theirs["choiceId"], pending["choiceId"]);
 
-            // Whole values, never substrings: real instance ids are `c<n>`, so `c2` is a prefix of the
-            // other seat's own `c21` and a substring search would report a leak that is not one.
+            // Whole values, never substrings: prevents prefix collisions on instance ids.
             let mut secrets: Vec<String> = vec![pending["choiceId"].as_str().unwrap_or_default().to_string()];
             for option in &options {
                 for key in ["key", "instanceId", "defId"] {
@@ -3351,18 +3129,9 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The concurrent mulligan through the actor (R265, R266, R268)
-// ---------------------------------------------------------------------------
 
-/// Both seats' mulligans are open at once (R265) and live outside `pending`, so they are the one time
-/// two seats owe an answer together. What the actor adds to the engine here is its own: the prompt
-/// frames each seat is sent, the one mulligan clock (R268) and the timeouts its expiry becomes. The
-/// rules — what an answer may keep, that it is sealed, what a timeout keeps — are the engine's, and
-/// `crates/engine` proves them.
-///
-/// These run the real engine and the real clock: the fields under test are the real `view_for`'s
-/// (`pending`, `mulligan`), and the claims about the deadline are the clock's own.
+/// Both seats mulligans open at once (R265, R268). Verifies prompt frames and deadline timeouts.
 mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
     use super::*;
 
@@ -3495,9 +3264,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             );
             assert_eq!(h.clocks().await["promptDeadline"], deadline);
 
-            // The second answer resolves both, in seat order, and the game begins (R265, §2.1). A turn
-            // with nothing to do ends itself inside the same action (§2.5, R82), so whose turn is at rest
-            // depends on the hands dealt — which is why the seats below are read, not assumed.
+            // Second answer begins game (R265, §2.1). Turn with nothing to do ends itself (§2.5, R82).
             let keep = ids(h.socket(second));
             send(
                 &h,
@@ -3752,10 +3519,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
 
     #[tokio::test(start_paused = true)]
     async fn r268_the_turn_clock_that_follows_the_mulligan_clock_is_p1s_on_turn_1_from_full() {
-        // The scripted port never ended a turn by itself, so turn 1 was at rest when the window closed
-        // and the hand-over could be read exactly: the real clock, the actor's two timeouts, then p1's
-        // turn. The scripted cards run under the real engine here, so the walk turns R345's automatic
-        // turn end off for both seats first (its two rows are `base`).
+        // The walk turns R345 automatic turn end off for both seats first (its two rows are `base`).
         let h = harness(Options {
             walk: Walk::AutoEndOff,
             ..Options::default()
@@ -3795,9 +3559,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
 
     #[tokio::test(start_paused = true)]
     async fn r268_an_expiry_reads_who_still_owes_when_it_runs_so_a_seat_that_answered_gets_no_timeout() {
-        // The scripted cards, left on both mulligans with the automatic turn end off (TS
-        // `createFakeEngine({ mulligan: true })`). TS's stub clock fired the expiry on demand; the real
-        // one fires at its deadline, and once only.
+        // Scripted cards left on both mulligans; clock fires once at deadline.
         let h = harness(Options {
             walk: Walk::AutoEndOff,
             ..Options::default()
@@ -3818,8 +3580,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         let at = h.actor.snapshot();
         assert_eq!((at.mulligan_owed.len(), at.phase, at.turn), (0, Phase::Main, 1));
 
-        // No second alarm, once both are in: the window's clock fires once (R268) and nothing more is
-        // written. (TS fired a late alarm by hand here; with the real clock nothing can.)
+        // Mulligan window clock fires once (R268).
         sleep_settled(mulligan_ms()).await;
         h.idle().await;
         assert_eq!(h.rows().await.len(), 2);
@@ -3897,8 +3658,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             }),
         );
         assert_eq!(match_row(&h.app, MATCH_ID).await["status"], json!("finished"));
-        // No clock is left to fire into a finished match: a whole ceiling's worth of time writes nothing
-        // (TS counted the manual timers' queue empty; tokio keeps no such count).
+        // No clock fires into a finished match.
         let rows = h.rows().await.len();
         sleep_settled(ceiling_ms()).await;
         h.idle().await;
@@ -3906,17 +3666,9 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Draw offers and concede through the actor (R36, R269, §9.5)
-// ---------------------------------------------------------------------------
 
-/// A draw offer is an engine rule end to end (R36): who may offer (the active player, in the main
-/// phase), how often (`DRAW_OFFERS_PER_TURN`), how long a decline blocks (`DRAW_OFFER_BLOCK_TURNS`)
-/// and how long an unanswered offer stands (R269) are all `crates/engine`'s, because hotseat and
-/// practice play them with no server at all. The actor only relays: an offer is an action like any
-/// other, its refusal is the reducer's sentence, and an accepted draw is one more ending for the
-/// results writer. So these run the real engine and the real results writer over the in-memory
-/// store, so "rated 0.5 each" is the real rating move.
+/// Draw offers relayed through actor (R36, R269). Verifies engine rules and results writing.
 mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
     use super::*;
 
@@ -4162,9 +3914,7 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The `ws` adapter: a real listener and the smallest WebSocket client (TS `fakeWs`)
-// ---------------------------------------------------------------------------
+// The `ws` adapter: listener and WebSocket client
 
 /// One frame off the wire.
 #[derive(Debug)]
@@ -4176,10 +3926,7 @@ enum Frame {
     Pong,
 }
 
-/// A WebSocket client of the smallest kind (RFC 6455): enough to open `/ws/match`, send text and
-/// binary frames, and read the server's frames and its close. No crate in the stack is one, and the
-/// `ws` adapter TS faked (`socketFromWs`) is inside `actor::ws_server::handle` now, so the adapter is
-/// reached the way a browser reaches it.
+/// WebSocket client (RFC 6455) testing actor::ws_server::handle.
 struct WsClient {
     stream: tokio::net::TcpStream,
     buffer: Vec<u8>,
@@ -4411,9 +4158,7 @@ async fn live_fixture_match(app: &Arc<App>, match_id: &str) -> (String, String) 
     }))
     .expect("a StartMatchInput");
     app.matches.start(app, input).await.expect("registry.start");
-    // A test may have staged a seat elsewhere first (R148 refuses a socket not in its match,
-    // then seats it here), and a start's compare-and-set would refuse that seat, so the fixture
-    // clears the flag, whatever match it names, before it seats.
+    // Clear flag before seating to prevent R148 refusal on staged seats.
     for profile_id in [&first, &second] {
         set_in_match(app, profile_id, None).await;
         set_in_match(app, profile_id, Some(match_id)).await;
@@ -4426,19 +4171,12 @@ fn code(value: impl Into<i64>) -> i64 {
     value.into()
 }
 
-// ---------------------------------------------------------------------------
 // R82, R345: the automatic turn end
-// ---------------------------------------------------------------------------
 
 mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
     use super::*;
 
-    /// Two decks the real engine accepts, p1's of cards that each cost two or more and none of which
-    /// casts on draw. Turn 1 has one mana (§2.3), so once both keep their hands p1 has nothing to play
-    /// on it and R82 would end the turn by itself, which is what these tests need to see the preference
-    /// change. (#21 Hinder's cast used to do it, by lowering p1's first refresh to 0, but setup no
-    /// longer deals a cast-on-draw card, R635.) Setup asks nothing, so the tests start, as their names
-    /// say, in the mulligan window (R265).
+    /// Decks accepting turn 1 pass with preference change (§2.3, R82, #21, R635, R265).
     async fn real_match() -> Harness {
         let pool = deckable_pool();
         let (first, _) = decks_the_engine_accepts(&pool, SEED);
@@ -4544,9 +4282,7 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The `ws` adapter (smoke only: every protocol guarantee above is proven on the same `Socket`)
-// ---------------------------------------------------------------------------
 
 mod the_ws_adapter {
     use super::*;
@@ -4628,8 +4364,7 @@ mod the_ws_adapter {
             );
         }
 
-        // In the match it asks for, the same account is attached to its seat (TS: the registry's
-        // `attach` was called with `match-1` and the profile): its seat's view arrives.
+        // Account attached to seat receives seat view.
         let (first, _) = live_fixture_match(&server.app, MATCH_ID).await;
         assert_eq!(first, profile);
         let mut accepted = WsClient::connect(
@@ -4792,9 +4527,7 @@ mod r1086_equip_over_the_socket {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1483000 — a ladder result says whether the day's Jlore cap held an account's pay back
-// ---------------------------------------------------------------------------
 
 mod the_result_says_what_the_daily_cap_held_back {
     use super::*;
@@ -4895,9 +4628,7 @@ mod the_result_says_what_the_daily_cap_held_back {
     }
 }
 
-// ---------------------------------------------------------------------------
 // #1657 — a finished match's views carry what its result paid each seat
-// ---------------------------------------------------------------------------
 
 mod the_result_s_views_carry_what_it_paid_each_seat {
     use super::*;
@@ -4944,9 +4675,7 @@ mod the_result_s_views_carry_what_it_paid_each_seat {
             json!({ "winner": "p2", "reason": "concede" })
         );
 
-        // Each seat's view of the finished game carries what the result paid its own account: its
-        // game's Jlore and XP, and its own newest track from its first level with no XP to where
-        // the store holds it now, every level paid on the way.
+        // Finished game view carries account payout: Jlore, XP, and track levels.
         let mut paid = Vec::new();
         for (socket, profile, jlore) in [
             (&h.p1, "profile-1", JLORE_LADDER_LOSS),
@@ -5041,13 +4770,9 @@ mod the_result_s_views_carry_what_it_paid_each_seat {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R672 — a finished actor leaves the registry once its rematch window has passed
-// ---------------------------------------------------------------------------
 
-/// Nothing dropped a finished actor: `Registry.actors` kept its state, its acks and its queue task for
-/// the life of the process, since the reaper read only the matches still `live`. `reap_finished` drops
-/// one `REMATCH_OFFER_TTL_MS` after the game's end, once neither seat holds an open socket.
+/// `reap_finished` drops actor `REMATCH_OFFER_TTL_MS` after game end when both sockets close.
 mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
     use super::*;
 
@@ -5120,15 +4845,9 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1834002, R1834003 — the loadouts frames (§14.2, §10.8)
-// ---------------------------------------------------------------------------
 
-/// Both seats' loadouts are the match row's data (R1834002), frozen as it starts: the seat-level
-/// half rides in a `loadouts` frame on attach and on every hello, before the view, and a card's own
-/// picks ride in a `cardLoadouts` frame only after a view to that socket has shown a card of that
-/// seat's deck, once per socket until its next hello or attach (R1834003). None of it is part of
-/// `PlayerView`.
+/// Frozen match loadouts delivery on attach and hello (R1834002, R1834003).
 mod r1834003_the_loadouts_frames {
     use super::*;
     use crate::support::store::named_cards;

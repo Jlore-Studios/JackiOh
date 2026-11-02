@@ -1,11 +1,7 @@
-// R1363 (docs/meditative-set.md M8, MN05): a shield flashes up as Armor takes a hit. Where the Armor
+// R1363 (docs/meditative-set.md M8, MN05): a shield flashes up as Armor takes a hit: small where the Armor
 // took half or more of a hit that still landed (`absorbed`, R1360; `armorTookHalf`, game/damageFeel.ts),
-// a small shield glances up with a few sparks; where it took all of it (`damageAbsorbed`, R1361), a
-// full shield blooms with a ring and a burst of sparks.
-//
-// R202: the numbers are the event's, public on both seats; nothing here reads a card. R200: the flash
-// starts with the hit, inside its entry, and is gone FX_SHIELD_TAIL_MS after it ends (≤ T). Under
-// reduced motion the layer plans nothing (FxLayer.tsx).
+// full where it took all of it (`damageAbsorbed`, R1361). R202: the numbers are the event's, public on both
+// seats; nothing here reads a card. R200: the flash is gone FX_SHIELD_TAIL_MS after its entry (≤ T).
 
 import { ringCue, tunedBurst } from "./build.ts";
 import { FX_SHIELD_TAIL_MS } from "./constants.ts";
@@ -17,7 +13,7 @@ const SHIELD_TUNING = {
   bloom: { count: 24, power: 1.1 },
 } as const;
 
-/** The shield over `at` from `delayMs` (when the hit lands) to FX_SHIELD_TAIL_MS after the entry of length `D`. */
+/** The shield over `at` from `delayMs`, when the hit lands. */
 export function shieldCues(size: FxShieldCue["size"], at: FxAnchor, D: number, delayMs: number, intensity: number): FxCue[] {
   const start = Math.max(0, Math.min(D, delayMs));
   const flash: FxShieldCue = { kind: "shield", size, at, delayMs: start, durationMs: D - start + FX_SHIELD_TAIL_MS };

@@ -1,10 +1,5 @@
-//! Animated (docs/classic-sets.md B3.1, R383, R445): a Field Spell, Trap or Field Trap that steps into a
-//! unit zone as a Unit — as the last step of a trap's firing, as an Animated Field Spell enters, and for an
-//! "Animated on your turn" card at its controller's start of turn and back at their cleanup — with its
-//! home zone held, the rule's exceptions, a pause inside the firing, a round trip, a replay, and what
-//! each seat's view shows. Fixtures: `fixtures/field.ts`.
-//!
-//! Port of `packages/engine/test/animated.test.ts`.
+//! Animated (docs/classic-sets.md B3.1, R383, R445): a Field Spell, Trap or Field Trap that steps into a unit
+//! zone as a Unit, its home zone held.
 
 use serde::Serialize;
 
@@ -24,12 +19,11 @@ use crate::rules::fixtures::harness::{
     act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
 };
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -45,7 +39,6 @@ fn expect_match(actual: impl Serialize, expected: Value) {
     );
 }
 
-/// `events.map((event) => event.instanceId)`, read off the events' JSON.
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     json_of(events)
         .as_array()
@@ -80,7 +73,6 @@ fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .collect()
 }
 
-/// What `playPlain` hands back: the state after the play, its events, and the played unit's id.
 struct Played {
     state: GameState,
     events: Vec<GameEvent>,
@@ -129,7 +121,6 @@ fn fill_units(state: &mut GameState, player: PlayerId) {
     }
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn json_round_trip(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
@@ -203,7 +194,6 @@ mod r383_b3_1_animated_traps {
                 .iter()
                 .any(|card| card.id == second.unit)
         );
-        // Rule 4: "A card that is already a Unit when it fires again does not move or change position."
         assert_eq!(id_at(&state, slot(P2, Row::Units, 2)), Some(zapper.id.clone()));
         assert_eq!(by_id(&state, &zapper.id).position, Some(Position::Atk));
         assert!(events_of_type(&second.events, GameEventType::Animated).is_empty());
@@ -233,7 +223,7 @@ mod r383_b3_1_animated_traps {
         );
         assert_eq!(id_at(&state, slot(P2, Row::Units, 4)), Some(turret.id.clone()));
         let fired = play_plain(&mut state, 2);
-        // p2 is the opponent here: its unit lanes (the animated turret) come before its backrow (the listener).
+        // p2 is the opponent: its unit lanes (the animated turret) come before its backrow (the listener).
         assert_eq!(
             instance_ids(events_of_type(&fired.events, GameEventType::TrapFired)),
             vec![turret.id.clone(), ear.id.clone()]
@@ -314,7 +304,6 @@ mod r383_b3_1_animated_traps {
         let summons = instance_ids(events_of_type(&played.events, GameEventType::Summoned));
         assert_eq!(summons, vec![played.unit.clone()]);
         assert!(!summons.contains(&trap.id));
-        // p1's Tesla watches p2's summons, and p2's trap stepping into a unit zone was none.
         assert_eq!(
             instance_ids(events_of_type(&played.events, GameEventType::TrapFired)),
             vec![trap.id.clone()]
@@ -356,7 +345,6 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
             );
         }
 
-        // An enemy unit may attack it on the next turn, and the combat kills it: to the graveyard.
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" })));
         let attacker = card_at(&state, slot(P1, Row::Units, 1)).cloned();
@@ -470,7 +458,6 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             json!({ "instanceId": card.id, "zone": { "player": "p1", "row": "backrow", "lane": 2 } })
         );
         assert!(is_reserved(&next, slot(P1, Row::Backrow, 2)));
-        // Both seats see the held zone and the home lane on the unit.
         for viewer in [P1, P2] {
             let view = view_for(&next, viewer);
             let side = if viewer == P1 { &view.you } else { &view.opponent };
@@ -508,7 +495,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         animate_at_turn_start(&mut sink, P1);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 4)), Some(card.id.clone()));
 
-        // §2.2: the end-of-turn hooks, then cleanup's return (the order `turn.ts` runs them in).
+        // §2.2: the end-of-turn hooks, then cleanup's return.
         run_hooks_in_trigger_order(&mut sink, HookName::EndOfTurn, Some(P1));
         return_at_cleanup(&mut sink, P1);
         assert_eq!(notes_of(find_instance(sink.state, &card.id)), vec!["units"]);
@@ -526,8 +513,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             }])
         );
 
-        // On the opponent's turn it sits in the backrow, where no attack can reach it: no unit walk finds
-        // it, and a backrow effect does (rule 7).
+        // On the opponent's turn, back in the backrow: no unit walk finds it, a backrow effect does (rule 7).
         assert!(!unit_ids(sink.state, P1).contains(&card.id));
         {
             let ctx = make_context(&mut sink, None, by(P2));
@@ -734,8 +720,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     fn r657_r2280000_an_animated_card_with_no_stats_no_longer_animates_or_fights_as_a_0_1() {
         let mut state = playing("animated-wisp");
         let mut sink = sink_for(&mut state);
-        // Printed Animated, no stats on either face: it does not animate, and no 0/1 is read for it
-        // (R657's fallback, gone since issue #2280).
+        // Printed Animated, no stats on either face: it does not animate, no 0/1 read (R657, superseded).
         let base = put(
             sink.state,
             &wisp.id,
@@ -810,8 +795,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
         assert!(attack_targets(sink.state, &now).contains(&DamageTarget::Hero { player: P2 }));
     }
 
-    /// D14: R1062 waited for the Meditative set, and until it opened the start-of-turn animation was
-    /// an entry (R383). The set shipped in v0.3.5, so R1062 holds in every game, nothing previewed.
+    /// D14: the Meditative set has shipped, so R1062 holds in every game, nothing previewed.
     #[test]
     fn r1062_holds_with_nothing_previewed_since_the_meditative_set_shipped_in_v0_3_5() {
         assert!(set_ships(SetName::Meditative));
@@ -870,8 +854,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
 mod r113_r383_b3_1_a_pause_inside_an_animated_traps_firing {
     use super::*;
 
-    /// p2's asking trap in backrow lane 1 fires at p1's play into unit lane 2 and asks: the paused
-    /// state, and the trap's id.
+    /// p2's asking trap (backrow lane 1) fires at p1's play into unit lane 2 and asks: the state, its id.
     fn paused(seed: &str) -> (GameState, String) {
         let mut start = playing(seed);
         let trap = put(
@@ -991,8 +974,7 @@ fn owed(state: &GameState, id: &str) -> bool {
     by_id(state, id).memory.contains_key(ANIMATE_OWED_KEY)
 }
 
-// R2280000 (issue #2280): a Field Spell, Trap or Field Trap becomes a Unit only with both the Animated
-// keyword and stats, a line its definition gives it.
+// R2280000 (issue #2280): a backrow card becomes a Unit only with both the Animated keyword and stats.
 mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
     use super::*;
 
@@ -1069,7 +1051,6 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
         let mut sink = sink_for(&mut state);
         fuse_into(&mut sink, &unit, &flag);
         state_check(&mut sink);
-        // Stats but no Animated: a backrow card, its fused stats doing nothing there.
         assert_eq!(
             id_at(sink.state, slot(P1, Row::Backrow, 1)),
             Some(flag.id.clone())
@@ -1172,8 +1153,7 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
     }
 }
 
-// R2280001 (issue #2280): a face-up backrow card that first comes to have both Animated and stats
-// animates at that state check.
+// R2280001: a face-up backrow card that first comes to have both animates at that state check.
 mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check {
     use super::*;
 

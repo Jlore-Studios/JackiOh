@@ -1,40 +1,12 @@
 // #1050 44: watching a friend's live game (#936, SPEC S7, §9.5 "Watching a friend"; B50, B56).
-//
-// Three accounts, because a watcher holds no seat (`watchable_in` refuses one that does): `one`
-// hosts an unranked room and is the friend watched (seat p1), `pending` joins it as seat p2, and
-// `two` is the friend who watches, in the browser. Neither seat attaches a socket (R744: a seat that
-// never attached starts no grace), so the match just stands while it is watched. `pending` is the
-// fixture account waiting at the invite gate, so `before` reseeds the server (R144) and redeems the
-// good code for it, which leaves nothing for a spec after this one: only spec 10 reads that account
-// and it reseeds first.
-//
-// What it asserts, by behavior (every frame read is one the watch screen's own socket received;
-// an account is one watcher and a newer socket replaces the older, so the spec opens none itself):
-// - B56: a friend's row in a live unranked match offers Watch, and the click opens `/watch/:matchId`
-//   with the friend in the query;
-// - B50: the screen waits (its waiting panel) until the first view, which comes `SPECTATE_DELAY_MS`
-//   after the state it shows, then draws the friend's board read-only from the friend's seat;
-// - B50, §10.8: every `view` frame carries `legal: []`, the friend's seat's hand in full and the
-//   other seat's hand as a count alone;
-// - R2615000: the account's settings carry no watching switch, so a friend may always watch;
-// - B50 (revocation): the friend removing the watcher mid-watch ends it with a `forbidden` frame and
-//   the refused screen, the friendship being the way out;
-// - B50 (refusal): with the two no longer friends, the watch link is refused the same way, and the
-//   way back leads to Play together.
-//
-// "Full" (`SPECTATORS_PER_MATCH`) is not covered here: an account is one watcher, so filling a match
-// takes nine friend accounts and the E2E server seeds three. The server's own test covers it
-// (`b50_b51_a_full_match_is_forbidden_to_one_watcher_more`) and the client shows it as any other
-// `forbidden` (WatchRoute.test.tsx).
-//
-// The first view is due `SPECTATE_DELAY_MS` after the join, and a watcher who comes later is sent it
-// at once, so the waiting panel shows only to one who comes sooner. A page visit alone can take that
-// long, so the browser is on Play together before the join: `one` asks `two` to be friends, and `two`
-// accepts there just after it, which reads the friends list again with `one` in the match.
-//
-// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only,
-// as every spec outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed
-// at compile time, and the spec waits it out.
+// Three accounts, because a watcher holds no seat: `one` hosts an unranked room (seat p1), `pending` joins it as p2,
+// and `two` watches in the browser. Neither seat attaches a socket (R744: a seat that never attached starts no grace),
+// so the match stands while it is watched. `pending` is the fixture account waiting at the invite gate, so `before`
+// reseeds the server (R144) and redeems the good code for it; only spec 10 reads that account and it reseeds first.
+// The waiting panel shows only to a watcher who comes within `SPECTATE_DELAY_MS` of the join, so the browser is on
+// Play together first. "Full" (`SPECTATORS_PER_MATCH`) is the server's test: the E2E server seeds three friends.
+// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only, as every spec
+// outside scripts/shard-specs.mjs's SMOKE.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
@@ -54,12 +26,10 @@ import {
   ts,
 } from "../../support/testids.ts";
 
-// Constants
-
-/** Play together's route, mirroring `paths.together` in apps/web/src/net/navigate.ts. */
+/** Mirrors `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
 
-/** The watch socket's path, `WATCH_PATH` in apps/web/src/together/WatchRoute.tsx. */
+/** `WATCH_PATH` in apps/web/src/together/WatchRoute.tsx. */
 const WATCH_SOCKET_PATH = "/ws/watch";
 
 /** The room's host is seat p1 (§9.5), so the friend watched sees the board from there. */
@@ -82,12 +52,10 @@ function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy.request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) }).its("body");
 }
 
-/** A friend row of the page, by the profile it shows. */
 function friendRow(profileId: string): string {
   return `${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${profileId}"]`;
 }
 
-/** The page's row for a friend request to the watcher, by the profile that sent it. */
 function incomingRequestRow(profileId: string): string {
   return `${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${profileId}"]`;
 }
@@ -213,9 +181,8 @@ describe("44 watching a friend's live game", () => {
       cy.get(incomingRequestRow(oneId), { timeout: timeouts.view }).should("be.visible");
     });
 
-    // An unranked match: `one` hosts the room (seat p1), `pending` joins it (p2). No deck to bring:
-    // the server deals both seats one (R257). The seed fixes the deal (R143), and R1989000 pins the
-    // host to p1 beside it, so the spec keeps the seats it was written for.
+    // No deck to bring: the server deals both seats one (R257). The seed fixes the deal (R143), and R1989000
+    // pins the host to p1 beside it, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
@@ -238,9 +205,7 @@ describe("44 watching a friend's live game", () => {
     });
 
     // B45: `two` accepts, and the page reads the friends list again. B56: the new friend's row offers
-    // Watch, and the click opens the watch screen in the page already loaded. Only those clicks sit
-    // between the join and the watcher's hello, so the waiting panel (up to the delay) is still showing
-    // when it is asserted.
+    // Watch, and the click opens the watch screen in the page already loaded.
     cy.then(() => {
       cy.get(incomingRequestRow(oneId)).within(() => {
         cy.get(ts(TOGETHER_REQUEST_ACCEPT)).click();

@@ -1,5 +1,5 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
-// Missing boxes mount nothing. No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
+// No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, and R1363 shields.
 
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
@@ -103,10 +103,9 @@ function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]):
 }
 
 /**
- * R2652001: one item per coin or die, all at once. Each is a window one face tall over a reel of its
- * tumble faces, which spins (a coin) or tumbles (a die) and lands on the kept face at `--fx-land-ms`;
- * under it, when Lucky drew more than one face, every face it drew, the kept one marked. The words
- * are already the reader's (fx/rolls.ts).
+ * R2652001: one item per coin or die, all at once: a window one face tall over a reel that lands on the
+ * kept face at `--fx-land-ms`; under it, when Lucky drew more than one face, every face drawn, the kept
+ * one marked. The words are already the reader's (fx/rolls.ts).
  */
 function rollItems(doc: Document, el: HTMLElement, cue: FxRollCue): void {
   el.setAttribute("data-kind", cue.die);

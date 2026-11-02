@@ -1,23 +1,15 @@
 //! The match clock (BUILD M7-T1, SPEC §9.5, R79).
 //!
-//! Five independent deadlines on `tokio::time`, none visible to the engine (SPEC §9.3 keeps time
-//! out of `reduce`): an expiry only reports *which* clock ran out, and the actor turns that into
-//! the `timeout`, `disconnectExpired` or `ceilingReached` action the engine sees:
+//! Deadlines on `tokio::time`, none visible to the engine (SPEC §9.3 keeps time out of `reduce`):
+//! an expiry reports *which* clock ran out, turned into the action the engine sees:
+//!  - turn clock (R79): active player's, paused while a prompt is open for non-active player;
+//!  - holder prompt clock (R79): answers that prompt;
+//!  - mulligan clock (R268): one deadline for both seats while open (R265);
+//!  - disconnect grace per player (§9.5);
+//!  - hard ceiling (R79), measured from `started_at`;
+//!  - question sequence clock (R1563006, Meditative+ #20 KY's Competition).
 //!
-//!  - the turn clock (R79: `TURN_CLOCK_SECONDS`), the active player's, reset when the turn changes
-//!    and **paused while a prompt is open for the non-active player**;
-//!  - that holder's prompt clock (R79: `PROMPT_CLOCK_SECONDS`), whose expiry answers only that prompt;
-//!  - the mulligan clock (R268: `MULLIGAN_CLOCK_SECONDS`), one deadline for both seats while both
-//!    mulligans are open (R265), reported as the prompt deadline; the turn clock does not run then;
-//!  - a disconnect grace per player (§9.5: `DISCONNECT_GRACE_SECONDS`), which does **not** pause
-//!    the turn clock;
-//!  - the hard ceiling (R79: `MATCH_CEILING_MINUTES`), measured from `started_at`;
-//!  - R1563006: a question sequence's clock (Meditative+ #20 KY's Competition, the engine's
-//!    `KY_COMPETITION_SECONDS`), armed at a sequence's first question and run beside the turn clock, never
-//!    instead of it; its expiry answers the open question Stop.
-//!
-//! No system clock: `now_ms()` reads tokio's, so tests are exact with `tokio::time::pause()` and
-//! `advance()` (docs/v0.3.0/SURFACE.md §11.2). Every number comes from `crate::config` (R79).
+//! `now_ms()` reads tokio's clock (SURFACE §11.2). Every duration comes from `crate::config` (R79).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
@@ -38,8 +30,6 @@ use jackioh_engine::config::KY_COMPETITION_SECONDS;
 // Unit conversion, not configuration: the definition of a minute (a second's is `crate::config`'s),
 // and every lifecycle *duration* comes from `crate::config` (R79) rather than from here.
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
-
-// Time
 
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -88,8 +78,6 @@ pub(crate) fn after(ms: i64, f: impl FnOnce(u64) + Send + 'static) -> Timer {
     }
 }
 
-// The match row's clocks
-
 /// R79: the ceiling is one deadline measured from the moment the match started.
 pub fn match_ceiling_at(started_at: i64) -> i64 {
     started_at + MATCH_CEILING_MINUTES * MS_PER_MINUTE
@@ -106,8 +94,6 @@ pub fn initial_clocks(started_at: i64) -> MatchClocks {
         ceiling_at: match_ceiling_at(started_at),
     }
 }
-
-// The clock
 
 struct Countdown {
     timer: Option<Timer>,
@@ -129,12 +115,10 @@ impl Countdown {
         self.deadline = None;
     }
 
-    /// Whether the timer with this id is the one this countdown holds now.
     fn armed_by(&self, id: u64) -> bool {
         self.timer.as_ref().map(Timer::id) == Some(id)
     }
 
-    /// Its timer has run: `timer = null` without canceling the running callback.
     fn take_fired(&mut self) {
         if let Some(timer) = self.timer.take() {
             timer.fired();
@@ -162,18 +146,13 @@ struct ClockState {
     remaining: i64,
     turn: Countdown,
 
-    // The non-active holder's prompt clock. `holder` outlives its timer on purpose: the prompt is
-    // still open after the clock runs out (the actor answers it with `timeout`), and a later `sync`
-    // that still reports the same holder must not re-arm a second 30 s window.
+    // Non-active holder's prompt clock: `holder` outlives timer so later `sync` cannot re-arm.
     holder: Option<PlayerId>,
     prompt: Countdown,
 
-    // R268: the mulligan clock. `deadline` is set the first time the window is seen and never moved,
-    // so the seat that answers second gets no more time than the first. Like the prompt clock's
-    // `holder`, `expired` outlives the timer: nothing re-arms a second window over an open one.
-    //
-    // R268: a rebuilt actor (§9.5) arms a fresh full deadline, as the turn clock does, so a crash
-    // gives both seats at most one more window; only the disconnect grace reads its stored
+    // R268: mulligan deadline is set on first sight and never moved, so second seat gets no
+    // extra time. Expired outlives timer so nothing re-arms over an open window.
+    // A rebuilt actor (§9.5) arms a fresh full deadline; only disconnect grace reads its stored
     // deadline back (R744).
     mulligan: Countdown,
     mulligan_open: bool,
@@ -187,8 +166,7 @@ struct ClockState {
     sequence: Countdown,
     sequence_first: Option<String>,
 
-    // R79: one timer for the whole match, measured from `started_at` — so a clock rebuilt after a
-    // crash inherits the ceiling the match already had rather than starting a fresh hour.
+    // R79: match ceiling timer measured from `started_at`, inherited across rebuilds.
     ceiling: Option<Timer>,
 }
 
@@ -245,8 +223,7 @@ impl ClockState {
         self.arm_prompt_in(player, self.prompt_ms);
     }
 
-    /// The prompt clock for `player`, running out `ms` from now: `prompt_ms` for a fresh window, and
-    /// R776000's retry delay for one that ran out and whose action the store failed to write.
+    /// Prompt clock for `player`, running out `ms` from now (`prompt_ms` or R776000 retry delay).
     fn arm_prompt_in(&mut self, player: PlayerId, ms: i64) {
         self.prompt.cancel();
         self.holder = Some(player);
@@ -350,8 +327,7 @@ impl ClockState {
         self.arm_ceiling_in(self.ceiling_at - now_ms());
     }
 
-    /// The ceiling's timer, running out `ms` from now: what is left of the match's hour, and R776000's
-    /// retry delay for a ceiling whose action the store failed to write.
+    /// Ceiling timer, running out `ms` from now (remainder or R776000 retry delay).
     fn arm_ceiling_in(&mut self, ms: i64) {
         let me = self.me.clone();
         self.ceiling = Some(after(ms.max(0), move |id| {
@@ -403,10 +379,8 @@ impl ClockState {
         self.close_mulligan();
 
         match pending_for {
-            // R79 gives its own clock to a prompt held by the *non-active* player. A prompt the active
-            // player owes is governed by their turn clock instead (§2.5: "When the active player's
-            // turn clock runs out, their open prompts are answered by the AI policy and the turn
-            // ends"), so it gets no second, shorter deadline.
+            // R79 gives prompt held by non-active player its own clock; active player is governed
+            // by turn clock (§2.5).
             None => self.clear_prompt(),
             Some(holder) if holder == view.active => self.clear_prompt(),
             Some(holder) => {
@@ -426,21 +400,16 @@ impl ClockState {
         self.sync_sequence(view);
     }
 
-    // §9.5: "Disconnect grace (60 s) and concede end the match as a loss" and "the grace countdown
-    // is stored on the match so both clients show it". It runs beside the turn clock, never
-    // instead of it.
+    // §9.5: disconnect grace stored on match so both clients show it; runs beside turn clock.
     fn start_grace(&mut self, player: PlayerId, deadline: Option<i64>) {
         if self.stopped {
             return;
         }
-        // SPEC §11 R147: "A second disconnect grace starting before the first is cleared keeps the
-        // first deadline, so a socket that flaps cannot extend its own grace indefinitely and stall
-        // the match."
+        // SPEC §11 R147: second grace keeps first deadline so flapping socket cannot extend grace.
         if self.grace[player].timer.is_some() {
             return;
         }
-        // R744: a deadline stored before a restart is kept but held to the end of a fresh window, so a
-        // rebuild can shorten a grace and never extend one (R147). One already past fires at once.
+        // R744: restart keeps stored deadline up to fresh window end (R147). Past deadline fires at once.
         let now = now_ms();
         let fresh = now + self.grace_ms;
         let at = match deadline {
@@ -465,11 +434,9 @@ impl ClockState {
         self.grace[player].cancel();
     }
 
-    /// R776000: the clock that ran out runs out once more `ms` from now, because the action its expiry
-    /// became was never logged. It re-arms only what a `sync` would still leave expired and waiting,
-    /// so whatever would cancel that clock (a new turn, the prompt answered, the mulligans closed, the
-    /// player back inside the grace, the game over) cancels the retry too, and each countdown holds
-    /// one timer, so an expiry is never reported twice at once.
+    /// R776000: re-arm an expired clock `ms` from now if its action was not logged. Only re-arms
+    /// what `sync` leaves expired and waiting; anything canceling the clock cancels the retry.
+    /// Each countdown holds one timer, so an expiry is never reported twice at once.
     fn retry(&mut self, expiry: ClockExpiry, ms: i64) {
         if self.stopped {
             return;
@@ -518,9 +485,7 @@ impl ClockState {
     fn snapshot(&self) -> MatchClocks {
         MatchClocks {
             turn_deadline: self.turn.deadline,
-            // R268: during the window the mulligan deadline is the prompt deadline both clients render —
-            // it is a prompt deadline, held by both seats at once. The two never run together, so the
-            // stored `MatchClocks` keeps its shape.
+            // R268: mulligan deadline is rendered as the prompt deadline held by both seats.
             prompt_deadline: if self.mulligan_open {
                 self.mulligan.deadline
             } else {
@@ -531,10 +496,8 @@ impl ClockState {
         }
     }
 
-    /// The acting deadline this player is under. The mulligan clock, while it runs, is both seats'
-    /// (R268). Otherwise a prompt clock they hold outranks the turn clock, and a paused turn clock
-    /// still reports its banked remainder, the frozen number clients render during R79's pause. Grace
-    /// countdowns are read from `snapshot().grace_deadline`: a deadline to come back by, not to act by.
+    /// The acting deadline this player is under (R268, R79). Grace countdowns are read from
+    /// `snapshot().grace_deadline` (deadline to return, not to act).
     fn remaining_for(&self, player: PlayerId) -> Option<i64> {
         if self.stopped {
             return None;

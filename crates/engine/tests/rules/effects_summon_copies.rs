@@ -1,9 +1,5 @@
-//! The three summon verbs that make a card out of something other than a fixed def id:
-//! R21's random keywords on a summon (#80 Zao Gao), §10.7's copy semantics (#12 Duplicating
-//! Felinors, #61 Prejudiced Postdoc, R57) and §10.7's random pool (#67 Zoomerbin Oomen, §5.1).
-//!
-//! The fixture defs and scripts live here, on top of the shared fixture catalog, so no shared
-//! fixture has to grow for them (CLAUDE.md, BUILD §0).
+//! The three summon verbs that make a card out of something other than a fixed def id. Their fixture
+//! defs and scripts are registered here, so no shared fixture has to grow for them (BUILD §0).
 
 use jackioh_engine::effects::{damage, summon, summon_copy, summon_random};
 use jackioh_engine::testkit::*;
@@ -30,7 +26,6 @@ fn def_of_kind(name: &str, index: i32, type_: &str, overrides: Value) -> CardDef
     json_as(def)
 }
 
-/// The body every copy test duplicates: a plain 2/2 with nothing of its own.
 fn body() -> CardDef {
     def_of_kind("body", 761, "Unit", json!({}))
 }
@@ -85,7 +80,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -107,8 +101,7 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// Apply a whole effect list the way a hook's list is applied: one context, one rng, in order.
-/// The sink's rng starts at the state's cursor, as reduce does.
+/// An effect list applied as a hook's list is: one context, one rng from the state's cursor, in order.
 fn run_all(state: &mut GameState, effects: &[Effect], options: RunOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -135,8 +128,6 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     run_all(state, &[effect], options)
 }
 
-/// The harness's `put` with the Radiant flag: made in its owner's hand, flagged, then placed; a copy
-/// of it as placed comes back.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let mut card = new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
     card.radiant = true;
@@ -239,7 +230,6 @@ mod summon_with_random_keywords_r21_s7_80 {
             assert_eq!(first.iter().collect::<IndexSet<_>>().len(), 2);
             assert_eq!(second.iter().collect::<IndexSet<_>>().len(), 2);
         }
-        // Independent rolls, so on some seed the two tokens are not the same pair of keywords.
         assert!(pairs.iter().any(|(first, second)| first != second));
     }
 
@@ -382,7 +372,6 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         // §4.1: a new body enters in Attack Position and is summoning sick for this turn.
         assert_eq!(copy.position, Some(Position::Atk));
         assert_eq!(copy.summoned_turn, Some(state.turn));
-        // The source is untouched by its own copy.
         let source = live(&state, &source.id);
         assert_eq!(source.damage, 4);
         assert_eq!(
