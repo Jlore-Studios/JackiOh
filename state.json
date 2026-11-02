@@ -14135,15 +14135,23 @@
       }
     },
     "2770": {
+      "action": "revise",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T00:06:55Z",
       "issue": 2730,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-02T02:47:06Z",
+      "run_id": "pending:97fb7ec3-1793587696",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-11-02T02:48:36Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -14166,9 +14174,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T02:48:03Z",
+    "at": "2026-11-02T02:48:36Z",
     "url": "",
-    "what": "revise #2769 on muse"
+    "what": "revise #2770 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-02T02:32:33Z",
