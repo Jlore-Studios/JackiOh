@@ -517,7 +517,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH);
             assert_eq!(
                 json_of(events_of_type(sink.events, GameEventType::Healed)),
-                json!([{ "type": "healed", "targetId": "hero-p1", "amount": 3 }])
+                json!([{ "type": "healed", "targetId": "hero-p1", "amount": 3, "via": "Lifesteal" }])
             );
 
             // A hit Armor reduces to 0 heals nothing, because step 8 never runs.

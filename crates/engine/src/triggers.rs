@@ -36,7 +36,9 @@ use crate::traps::{
     ImmediateDispatch, arrived_during_play, is_trap_type, is_trap_window_event, offer_event_to_traps,
     resume_event_to_traps, trap_controllers_of,
 };
-use crate::wire::{GameEvent, GameEventType, PLAYER_IDS, PlayerId, Row, Zone, ZoneRef};
+use crate::wire::{
+    GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneRef,
+};
 
 /// The zones a card can hold a trigger from (§10.3). `library`: B5 E26's deck triggers (R464).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -1261,6 +1263,10 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     if def.when.as_ref().is_some_and(|when| !when(&mut ctx, &event)) {
         return;
     }
+    // R2783000: the trigger is resolving, which its marker says before any of its effects; the run's
+    // own window (R136) opens after it.
+    crate::hook_marks::mark_hook(&mut ctx.sink, &card, controller, HookKind::Whenever);
+    ctx.events_from = ctx.sink.events.len();
     let effects = (def.run)(&mut ctx, &event);
     crate::prompts::apply_resumable(&mut ctx, &plan, effects, None);
 }
@@ -1333,6 +1339,11 @@ pub struct Frontier {
     /// R2067000: the cast-on-draw cards this action has cast so far, over every chain of it
     /// (`draw::complete_draw`), held to `CAST_ON_DRAW_ACTION_CAP`.
     pub cast_on_draw_casts: i32,
+    /// R2783001: the keyword behind a Unit's coming death, by its id — a Poisonous hit's mark or a First
+    /// Strike's kill, the first one recorded kept — which the state check's `destroyed` takes as its
+    /// `via` (`state_check::collect`). A cue for the client, never game state: it dies with the action.
+    /// Boxed, as it is empty but in a combat, so a sink that owns its frontier stays small.
+    pub death_via: Box<IndexMap<String, KeywordKind>>,
 }
 
 /// Where a sink keeps its `Frontier`: its own for an action's first sink (`EngineSink::new`), its

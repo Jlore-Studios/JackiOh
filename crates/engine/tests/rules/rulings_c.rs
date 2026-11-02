@@ -2579,7 +2579,9 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
             .events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Healed { target_id, amount } => Some((target_id.clone(), *amount)),
+                GameEvent::Healed {
+                    target_id, amount, ..
+                } => Some((target_id.clone(), *amount)),
                 _ => None,
             })
             .collect();
@@ -3036,6 +3038,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
                 target_id: "hero-p2".to_string(),
                 absorbed: 6,
                 combat: false,
+                via: None,
             }]
         );
 
@@ -3704,6 +3707,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
             arrived_during: None,
             exits_from: None,
             creator: None,
+            via: None,
         });
 
         // This script summons nothing, so "the ones I just made" is empty and nobody is compelled.

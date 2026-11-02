@@ -635,6 +635,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // ---- Issue #2652: coin flips and die rolls (R2652001) ----
   // The batch spins as the slot machine's reel does, before the outcome sounds its own result.
   rolled: { sfx: "chaosRoll", cues: () => [sfx("chaosRoll")] },
+
+  // ---- Issue #2783: the event stream says why (R2783000) ----
+  hookResolving: silent("a marker: the hook's own events sound"),
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

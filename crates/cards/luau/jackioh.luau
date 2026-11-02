@@ -1061,6 +1061,7 @@ sourceId: string?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
 creator: PlayerId?,
+via: KeywordKind?,
 } | {
 ["type"]: "damage",
 sourceId: string | nil,
@@ -1068,6 +1069,7 @@ targetId: string,
 amount: number,
 combat: boolean,
 absorbed: number?,
+via: KeywordKind?,
 } | {
 ["type"]: "healthLost",
 player: PlayerId,
@@ -1076,6 +1078,7 @@ amount: number,
 ["type"]: "healed",
 targetId: string,
 amount: number,
+via: KeywordKind?,
 } | {
 ["type"]: "divineShieldLost",
 instanceId: string,
@@ -1089,6 +1092,7 @@ attack: number,
 maxHealth: number,
 killerId: string | nil,
 radiant: true?,
+via: KeywordKind?,
 } | {
 ["type"]: "enteredGraveyard",
 instanceId: string,
@@ -1440,6 +1444,7 @@ sourceId: string | nil,
 targetId: string,
 absorbed: number,
 combat: boolean,
+via: KeywordKind?,
 } | {
 ["type"]: "jadeChanged",
 player: PlayerId,
@@ -1551,9 +1556,16 @@ kind: RollKind,
 sides: number,
 rolls: {RollResult},
 faceDown: true?,
+} | {
+["type"]: "hookResolving",
+sourceId: string,
+defId: string,
+controller: PlayerId,
+hook: HookKind,
+hiddenFrom: {PlayerId}?,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "marketCreditsChanged" | "marketBought" | "marketSold" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled" | "starscapeTravelled" | "held" | "boardReplaced" | "rolled"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "marketCreditsChanged" | "marketBought" | "marketSold" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled" | "starscapeTravelled" | "held" | "boardReplaced" | "rolled" | "hookResolving"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect" | "voted-out" | "both-voted-out" | "fled" | "fled-decisive"
 
@@ -1662,6 +1674,8 @@ holder: NewHolder?,
 }
 
 export type HoldRelease = "itsController" | "holdersController"
+
+export type HookKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenever" | "activate"
 
 export type InsteadDamage = "pierce"
 

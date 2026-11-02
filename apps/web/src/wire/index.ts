@@ -220,6 +220,8 @@ export const GAME_EVENT_TYPES = [
   "boardReplaced",
   // Issue #2652: a card's coin flips or die rolls, one batch per verb or hook (R2652001).
   "rolled",
+  // Issue #2783: a card's hook begins to resolve, a marker for the cues of #2782 (R2783000).
+  "hookResolving",
 ] as const satisfies readonly GameEventType[];
 
 /**

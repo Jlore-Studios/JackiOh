@@ -89,6 +89,7 @@ fn summon_first_free(def_id: String) -> Effect {
             arrived_during: None,
             exits_from: None,
             creator: None,
+            via: None,
         });
     })
 }

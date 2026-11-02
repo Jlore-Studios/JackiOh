@@ -253,6 +253,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
   rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
+  // Issue #2783 (R2783000).
+  hookResolving: { type: "hookResolving", sourceId: "c1", defId: "core-001", controller: "p1", hook: "cry" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -355,6 +357,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   held: "poof",
   boardReplaced: "whoosh",
   rolled: "chaosRoll",
+  // R2783000: a marker; the hook's own events sound.
+  hookResolving: null,
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

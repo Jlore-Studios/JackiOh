@@ -63,6 +63,12 @@ pub struct DamageFlags {
     /// instead of its controller's hero (`trample_onto_adjacent`), and on to that hero where it says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample_onto: Option<TrampleOnto>,
+    /// R2783001: the hit's route, the keyword the engine sent it by — Cleave's neighbour hit, a Trample
+    /// excess, the strike First Strike moved ahead — which its `damage` (or `damageAbsorbed`) carries as
+    /// `via`. Set only by the engine's combat and Trample verbs and never serialized, so no card can
+    /// state it and nothing a state holds carries it.
+    #[serde(skip)]
+    pub via: Option<KeywordKind>,
 }
 
 /// R1848001: where a hit's Trample excess goes when it is not §4.4 step 9's hero: onto the Units
@@ -483,9 +489,11 @@ fn land(
     // pays it like any hit (R125); only "lose health" bypasses the pipeline (R18). Step 3 on a hero, E6's
     // divisors between: `hero_hit_amount`. R1360: `absorbed` is Armor's part at step 2 alone, none for a
     // piercing hit. R1841001: `struck` is the hit as it meets Armor, halved on a hero, rounded down.
+    // R2783001: `pierced` is whether the hit skipped Armor its target had, which its event says.
     let mut struck = amount_in;
     let mut amount = amount_in;
     let mut absorbed = 0;
+    let mut pierced = false;
     match (target, &unit) {
         (DamageTarget::Hero { player }, _) => {
             if flags.is_some_and(|flags| flags.half_to_heroes == Some(true)) {
@@ -494,13 +502,18 @@ fn land(
             let pierce = pierces(sink.state, source, flags);
             if !pierce {
                 absorbed = hero_armor_of(sink.state, *player).clamp(0, struck);
+            } else {
+                pierced = hero_armor_of(sink.state, *player) > 0;
             }
             amount = hero_hit_amount(sink.state, *player, struck, pierce);
         }
         (DamageTarget::Unit { .. }, Some(live)) => {
+            let armor = armor_of(&crate::layers::unit_view(sink.state, live).keywords);
             if !pierces(sink.state, source, flags) {
-                amount = (amount - armor_of(&crate::layers::unit_view(sink.state, live).keywords)).max(0);
+                amount = (amount - armor).max(0);
                 absorbed = (amount_in - amount).max(0);
+            } else {
+                pierced = armor > 0;
             }
             // Step 3 on a Unit: the caps its own guards set on it (R2179005).
             if let Some(cap) = unit_damage_cap(sink.state, live) {
@@ -550,6 +563,7 @@ fn land(
                 target_id: target_id(target),
                 absorbed,
                 combat: flags.is_some_and(|flags| flags.combat == Some(true)),
+                via: flags.and_then(|flags| flags.via),
             });
             let at = sink.events.len() - 1;
             crate::triggers::withhold_report(sink, at);
@@ -643,6 +657,10 @@ fn land(
         amount: dealt,
         combat: flags.is_some_and(|flags| flags.combat == Some(true)),
         absorbed,
+        // R2783001: the hit's route first, else Pierce where it took the hit past Armor.
+        via: flags
+            .and_then(|flags| flags.via)
+            .or(pierced.then_some(KeywordKind::Pierce)),
     });
 
     // Step 6 (on-damage triggers) is dispatched by the trigger loop from the `damage` event (§10.3).
@@ -659,6 +677,8 @@ fn land(
         if !killed_before {
             let killer = crate::kill_credit::credited_killer_id(source_card, card);
             card.last_damaged_by = Some(killer);
+            // R2783001: its `destroyed` says Poisonous, the first route recorded for its death kept.
+            note_death_via(sink, &live.id, KeywordKind::Poisonous);
         }
     }
 
@@ -678,7 +698,7 @@ fn land(
     if let Some(source_card) = source
         && (source_has_lifesteal || flags.is_some_and(|flags| flags.lifesteal == Some(true)))
     {
-        heal_hero(sink, source_card.controller, dealt);
+        lifesteal_heal(sink, source_card.controller, dealt);
     }
 
     // R1849003, step 8a: what a reflecting Unit took is dealt again, from it.
@@ -718,10 +738,28 @@ fn send_excess(
             player: controller_of_now(unit, &args.target),
         },
         amount: excess,
-        flags: args.flags,
+        flags: trample_route(args.flags),
     };
     land_hit(sink, &to_hero, excess, 0, caught);
     0
+}
+
+/// R2783001: a Trample excess's flags, the hit's own with Trample for its route.
+fn trample_route(flags: Option<DamageFlags>) -> Option<DamageFlags> {
+    Some(DamageFlags {
+        via: Some(KeywordKind::Trample),
+        ..flags.unwrap_or_default()
+    })
+}
+
+/// R2783001: the keyword behind a Unit's coming death (`Frontier::death_via`), the first one recorded
+/// kept, which the state check's `destroyed` takes in this action.
+pub(crate) fn note_death_via(sink: &mut DamageSink<'_>, id: &str, via: KeywordKind) {
+    sink.frontier
+        .get_mut()
+        .death_via
+        .entry(id.to_string())
+        .or_insert(via);
 }
 
 /// R1848001 (Stinkyscape #3 Meteor): a Trample excess carried onto its target's §3.1 neighbours, as
@@ -752,6 +790,7 @@ fn trample_onto_adjacent(
             flags: Some(DamageFlags {
                 trample: Some(true),
                 trample_onto: None,
+                via: Some(KeywordKind::Trample),
                 ..args.flags.unwrap_or_default()
             }),
         };
@@ -764,7 +803,7 @@ fn trample_onto_adjacent(
                 player: struck.controller,
             },
             amount: left,
-            flags: args.flags,
+            flags: trample_route(args.flags),
         };
         land_hit(sink, &to_hero, left, 0, caught);
     }
@@ -985,18 +1024,31 @@ fn heal_unit_by(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32,
         sink.events.push(GameEvent::Healed {
             target_id: live.id.clone(),
             amount: healed,
+            via: None,
         });
     }
     healed
 }
 
 pub fn heal_hero(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 {
-    heal_hero_by(sink, player, amount, true)
+    heal_hero_by(sink, player, amount, true, None)
+}
+
+/// §4.4 step 8: Lifesteal's heal, `heal_hero` whose `healed` says Lifesteal (R2783001).
+pub fn lifesteal_heal(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 {
+    heal_hero_by(sink, player, amount, true, Some(KeywordKind::Lifesteal))
 }
 
 /// A hero's heal. R1180003: `multiplied` is whether the player's healing multiplier reaches it: every
-/// heal of an amount, Lifesteal's included, but not "heal up to N", a floor (§6.3).
-fn heal_hero_by(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32, multiplied: bool) -> i32 {
+/// heal of an amount, Lifesteal's included, but not "heal up to N", a floor (§6.3). `via` is the keyword
+/// its `healed` names (R2783001).
+fn heal_hero_by(
+    sink: &mut DamageSink<'_>,
+    player: PlayerId,
+    amount: i32,
+    multiplied: bool,
+    via: Option<KeywordKind>,
+) -> i32 {
     if amount <= 0 {
         return 0;
     }
@@ -1021,6 +1073,7 @@ fn heal_hero_by(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32, multip
     sink.events.push(GameEvent::Healed {
         target_id: format!("hero-{player}"),
         amount: healed,
+        via,
     });
     healed
 }
@@ -1037,7 +1090,7 @@ pub fn heal_hero_up_to(sink: &mut DamageSink<'_>, player: PlayerId, floor: i32) 
         return 0;
     }
     // R1180003: a floor, not an amount, so no healing multiplier pushes it past N.
-    heal_hero_by(sink, player, floor - health, false)
+    heal_hero_by(sink, player, floor - health, false, None)
 }
 
 /// R18: lose health is not damage. No pipeline, no armor, no cap, no on-damage effects.

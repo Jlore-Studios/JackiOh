@@ -475,6 +475,18 @@ impl<T> std::ops::Index<PlayerId> for PerPlayer<T> { type Output = T; /* … */ 
 impl<T> std::ops::IndexMut<PlayerId> for PerPlayer<T> { /* … */ }
 ```
 
+Since #2783 the event union says why things happen, for the client's cues (#2782) and nothing else.
+`damage`, `damageAbsorbed`, `healed`, `destroyed` and `summoned` carry an optional `via: KeywordKind`,
+serialized only when set: Cleave, Trample, First Strike, Pierce, Lifesteal, Poisonous or Reborn, the
+engine's `damage.rs`, `combat.rs` and `state_check.rs` setting it where the keyword applies (a hit's
+route rides `DamageFlags.via`, never serialized; a death's keyword `Frontier.death_via`, which dies
+with the action). `GameEvent::HookResolving { source_id, def_id, controller, hook: HookKind,
+hidden_from }` marks each first run of a Cry, Death, start-of-turn or end-of-turn hook, Whenever
+trigger and Activate just before its effects (`hook_marks.rs`). Neither reaches the trigger loop
+(`as_rules_read`, `triggers::withhold_report`), so no rule reads them and no hash moves; `view_for`
+withholds a marker from a seat that could not read its card and never forwards `hiddenFrom`, and the
+golden texts leave both out (R2783000, R2783001).
+
 ### 6.5 Mutation convention and the per-call sink
 
 A TS function that mutates its `state` argument takes `&mut GameState`; one that only reads takes
