@@ -25232,9 +25232,9 @@
     ],
     "idle_since": "2026-11-02T12:07:28Z",
     "last_run": "2026-11-02T12:07:28Z",
-    "provider": "muse",
+    "provider": null,
     "requested": false,
-    "run_id": "41442134213",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
