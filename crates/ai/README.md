@@ -461,9 +461,9 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
   own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
   hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
-  seat can play itself is named only when the teammate's follow-up also beats the seat's own best
-  bounded use of that card by more than the pass's price (`DUOS_PASS_MARGIN_PER_COST` per crystal of
-  `pass_cost` plus `DUOS_PASS_MIN_GAIN`, R2827000).
+  seat can play itself is named only when that gain also beats what the seat's own best bounded play
+  of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against
+  the other's.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.

@@ -1272,6 +1272,50 @@ fn r2827000_keeps_a_playable_card_the_teammate_gains_nothing_from() {
     assert!(duos_passes(&state, A1).is_empty());
 }
 
+/// Round 1 with A1 holding only the Stab at `a1_mana` and A2 at the Stab's mana with an empty hand,
+/// its hero at `a2_health`: the Stab deals 4 from a full-health Duos hero and 7 from one at 5 (R72).
+fn stab_pass_state(seed: &str, a1_mana: i32, a2_health: i32) -> (DuosState, String) {
+    let mut state = round_one(seed, None);
+    let stab = set_hand(&mut state, A1, &[STAB]).remove(0);
+    set_mana(&mut state, A1, a1_mana);
+    set_hand(&mut state, A2, &[]);
+    set_mana(&mut state, A2, cost(STAB));
+    state.duels[1].players[PlayerId::P1].hero.health = a2_health;
+    (state, stab)
+}
+
+#[test]
+fn r2827000_keeps_a_playable_card_its_teammate_uses_no_better_than_it_would() {
+    let seed = "duos-ai-playable-even";
+    // `cost` reads the catalog before `round_one` registers it.
+    register_cards();
+    // A1 cannot play the Stab: A2's 4 damage clears R1723000's check alone, so the card is passed.
+    let (state, stab) = stab_pass_state(seed, DUOS_PASS_COST, DUOS_OWN_HEALTH);
+    assert!(!can_play(&state.duels[0], PlayerId::P1, &stab));
+    assert_eq!(duos_passes(&state, A1), vec![stab]);
+    // A1 can: its own 4 damage gains it what A2's would, and a pass must beat that by its price.
+    let (state, stab) = stab_pass_state(seed, cost(STAB), DUOS_OWN_HEALTH);
+    assert!(
+        can_play(&state.duels[0], PlayerId::P1, &stab),
+        "A1 can play the Stab itself"
+    );
+    assert!(duos_passes(&state, A1).is_empty());
+}
+
+#[test]
+fn r2827000_passes_a_playable_card_its_hurt_teammate_hits_harder_with() {
+    let seed = "duos-ai-playable-hurt";
+    register_cards();
+    let (state, stab) = stab_pass_state(seed, cost(STAB), 5);
+    assert!(
+        can_play(&state.duels[0], PlayerId::P1, &stab),
+        "A1 can play the Stab itself"
+    );
+    // A2's duel goes worse than A1's: the hurdle weighs what the card gains each, not the two duels.
+    assert!(effective_life(&state.duels[1], PlayerId::P1) < effective_life(&state.duels[0], PlayerId::P1));
+    assert_eq!(duos_passes(&state, A1), vec![stab]);
+}
+
 // #1760: the Duos gate's greedy team plays each seat's duel with the 1v1 greedy baseline
 
 /// What the 1v1 `greedy_action` alone answers for `seat` in its own duel.

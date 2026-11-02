@@ -357,15 +357,15 @@ fn rank_now(
         now.iter()
             .map(|(cost, index, id)| {
                 let score = pass_score(own_probe, seat_player, id, mate_probe, mate);
-                let own_use = playable
+                let own_gain = playable
                     .contains(id)
-                    .then(|| own_use_score(own_probe, seat_player, id));
+                    .then(|| own_use_gain(own_probe, seat_player, id));
                 let gain = own_probe.players[seat_player]
                     .hand
                     .iter()
                     .find(|card| card.id == *id)
                     .map_or(f64::NEG_INFINITY, |passed| {
-                        pass_gain(own_probe, passed, score, &baseline, mate, pass_cost, own_use)
+                        pass_gain(own_probe, passed, score, &baseline, mate, pass_cost, own_gain)
                     });
                 (score, gain, *cost, *index, id.clone())
             })
@@ -454,19 +454,21 @@ fn best_step(
     best
 }
 
-/// R2827000: the seat's own best bounded use of the passed card: the best of `evaluate` over at
-/// most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play` actions of that card on its own probe, the probe's own
-/// value when none applies. Only plays of that card count, never the seat's overall best line (which
-/// may not use the card and would wrongly block passes).
-fn own_use_score(own_probe: &GameState, seat_player: PlayerId, card_id: &str) -> f64 {
+/// R2827000: what the seat's own best bounded use of the passed card gains it, in `evaluate`'s
+/// points: the best of `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play` actions of that
+/// card on its own probe, less the probe's own value, which still counts the card in hand; 0 when no
+/// play applies. A gain within the seat's own duel, since two duels' scores do not compare. Only plays
+/// of that card count, never the seat's overall best line (which may not use the card and would
+/// wrongly block passes).
+fn own_use_gain(own_probe: &GameState, seat_player: PlayerId, card_id: &str) -> f64 {
     let plays: Vec<ActionBody> = legal_actions(own_probe, seat_player)
         .into_iter()
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card_id))
         .take(DUOS_PASS_MAX_FOLLOWUPS)
         .collect();
-    best_step(own_probe, seat_player, plays)
-        .map(|(value, _)| value)
-        .unwrap_or_else(|| evaluate(own_probe, seat_player, NextSwing::Enemy, &AI_EVAL))
+    best_step(own_probe, seat_player, plays).map_or(0.0, |(value, _)| {
+        value - evaluate(own_probe, seat_player, NextSwing::Enemy, &AI_EVAL)
+    })
 }
 
 /// R1723000: the teammate's own best bounded follow-up, with no pass: the best of `evaluate` over the
@@ -491,10 +493,11 @@ fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
 /// follow-up with it (R1127000) or, when higher, the card's best play after the teammate's own best play
 /// (`mate_baseline`), since the mana that play leaves may pay for it too; less the baseline's value, the
 /// card's worth in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of the pass cost and
-/// `DUOS_PASS_MIN_GAIN`: worth making above 0. R2827000: a card the seat can play itself (`own_use`)
-/// faces the own-use hurdle beside it, the lower of the two ruling: the teammate's value with the card
-/// must beat the seat's own best bounded use of it by more than the pass's price too; a card the seat
-/// cannot play passes `None`.
+/// `DUOS_PASS_MIN_GAIN`: worth making above 0. R2827000: a card the seat can play itself brings what
+/// its own play of it gains it (`own_gain`, `own_use_gain`), and the pass must beat that play too, gain
+/// against gain, the lower of the two ruling: that play's gain has the card's worth in hand off it as
+/// the pass's has, so a card the teammate uses no better than the seat is kept by the pass's price and
+/// `DUOS_PASS_MIN_GAIN`. A card the seat cannot play brings `None`.
 fn pass_gain(
     own_probe: &GameState,
     passed: &CardInstance,
@@ -502,7 +505,7 @@ fn pass_gain(
     baseline: &(f64, GameState),
     mate: PlayerId,
     pass_cost: i32,
-    own_use: Option<f64>,
+    own_gain: Option<f64>,
 ) -> f64 {
     let (baseline_value, after_baseline) = baseline;
     let (receiving, given) = received(own_probe, passed, after_baseline, mate);
@@ -514,12 +517,8 @@ fn pass_gain(
     let after = best_step(&receiving, mate, card_plays).map_or(f64::NEG_INFINITY, |(value, _)| value);
     let keep = hand_card_value(own_probe, passed, &AI_EVAL);
     let price = DUOS_PASS_MARGIN_PER_COST * f64::from(pass_cost);
-    let mate_best = score.max(after);
-    let gain = mate_best - baseline_value - keep - price - DUOS_PASS_MIN_GAIN;
-    match own_use {
-        None => gain,
-        Some(own) => gain.min(mate_best - own - price - DUOS_PASS_MIN_GAIN),
-    }
+    let gain = score.max(after) - baseline_value - keep - price - DUOS_PASS_MIN_GAIN;
+    own_gain.map_or(gain, |own| gain.min(gain - own))
 }
 
 /// The teammate's duel as the seat may read it: one determinization of `redact` from the teammate's
