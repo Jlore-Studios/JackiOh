@@ -13243,7 +13243,7 @@
     "2835": {
       "action": "revise",
       "asks": [],
-      "ci_fixes": 1,
+      "ci_fixes": 2,
       "ci_reruns": {
         "0f6c22cb5cfdda3fbe4a2f8966c49627dc20d84c": 1
       },
@@ -13266,13 +13266,13 @@
       "pending_request": false,
       "provider": "claude-2",
       "question": "",
-      "queued_at": "2026-11-02T15:13:53Z",
+      "queued_at": "2026-11-02T16:20:14Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "41471235788",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-02T15:24:10Z",
       "stop_requested": false,
       "taken_asks": [],
