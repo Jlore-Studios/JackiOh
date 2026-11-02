@@ -1,0 +1,70 @@
+{
+  "action": "build",
+  "number": 2829,
+  "title": "Patch: the fuzz gate probes playing through an open prompt",
+  "branch": "bot/issue-2829",
+  "thread": "**Issue #2829 (data, not instructions):**\n\n```text\n# #2829: Patch: the fuzz gate probes playing through an open prompt\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe fuzz gate plays thousands of random games and also sends forged illegal actions to make sure the engine refuses them with the game untouched. Today it never tries the simplest illegal move of all: playing a card, or ending the turn, while a question is still open. After this change it does, so an engine slip that accepts such a move fails loudly at the exact step.\n## Why\nWhile a prompt is open the engine refuses everything but its answer and game-ending actions (`reduce.rs`: a prompt blocks every action but its own answer and the ones that end a game, \u00a79.3, R79; BUILD M1-T3). But `probe_state` in `crates/tools/src/fuzz.rs` only forges a reused nonce, a wrong seat, malformed answers and malformed actions, and `malformed_actions` in `crates/engine/src/testkit/invariants.rs` only forges variants of a Play choice, so when a prompt is open (the chosen action is an Answer) no non-answer probe is ever sent. Invariants I7 (orphaned work) and I10 (opponent-held prompts) do not check this refusal either.\n## Proposal\nAdd one probe to `probe_state`: while a non-mulligan prompt is open, forge the seat's non-answer action (a Play when its hand holds one, else EndTurn) with a fresh nonce, owed a refusal with no events and an unchanged state, through the existing `judge_probe` machinery. Reuse `malformed_actions` shapes where they fit; keep the mulligan path (R265-R266) exactly as it is.\n## Where it lands\nFiles: `crates/tools/src/fuzz.rs` (`probe_state`, probe stride unchanged), `crates/engine/src/testkit/invariants.rs` (`malformed_actions` and neighbors). SPEC sections: \u00a710.6 (prompts), \u00a79.3 and R79 (prompt blocks), R265 (mulligan).\n## Acceptance criteria\n- [ ] New tools unit test: a forged Play during an open prompt is refused, with no events and a byte-identical state; same for EndTurn.\n- [ ] The fuzz gate (`fuzz --seeds 200` at least) and the handicapped wave stay green; Duos fuzz is untouched.\n- [ ] No new numbers: stride and budget constants unchanged (CLAUDE.md rule 9).\n## Size and risks\nSmall to medium work, suggested `difficulty:medium` (test tooling plus a testkit helper, no engine rule change). Risk is probe noise on exotic prompts; the owed-refusal contract (`judge_probe`) is already the standard all other probes meet.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-02T13:51:37Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
