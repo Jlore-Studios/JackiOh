@@ -357,6 +357,14 @@ project has its own signing keys, so every player signs in once more after the s
 password. `STATS_DATABASE_URL` moves to a read-only login on this project, made as `training/learn.md`
 makes `stats_importer` but granted only `select`.
 
+**Email.** Both projects send their sign-in mail (confirmations, password resets, invites) through
+Resend, from `JackiOh <no-reply@jackioh.com>`, at most 30 an hour each: Supabase's own mailer reaches
+only the project's team, two an hour. Resend's records in the jackioh.com zone, and a DMARC policy
+that only reports, are `infra/cloudflare.tf`'s. Actions -> cutover, step `email` (the repository
+secrets `RESEND_API_KEY`, a Full access key, and `SUPABASE_ACCESS_TOKEN`) sets both projects' SMTP to
+a sending-only key it makes for the domain, and deletes the one before: run it again to rotate the
+key. Resend's free plan sends 100 a day; its dashboard (Emails) shows each one sent and bounced.
+
 **The copy,** at section 4's step 6, with nobody promoting production meanwhile: Supabase's own way
 between projects, the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the
 empty production project, both through their session pooler URIs as `postgres`, held in a file outside
