@@ -75,8 +75,8 @@ line only after that review.
 4. Every account is asked to agree again, on its next gated screen (never on `/account` and never in
    a match). The server deploys on merge and the production web up to a day later: until the web
    catches up, its sign-up and consent screen send the old version and are told to reload, and a
-   pending account cannot redeem. Merge a terms change into production at once (`/fast-forward` on
-   the `production merge` issue).
+   pending account cannot redeem. Ship a terms change to production at once: `/promote` on the
+   `production merge` issue.
 5. Each agreement is a row of `terms_acceptances` (account, version, source, time). Accounts made
    before migration 0034 hold a `baseline` row at their creation time.
 
