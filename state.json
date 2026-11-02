@@ -14158,9 +14158,11 @@
     "what": "review #2841 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-02T19:53:37Z",
+    "at": "2026-11-02T20:00:55Z",
     "notes": [
-      "delivered build #2847 on claude-8 (run 41500141507): approved"
+      "delivered revise #2841 on muse (run 41485717299): approved",
+      "started review #2841 on claude-6 (run 41515516767)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14866,7 +14868,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T19:53:37Z",
+  "loop_tick": "2026-11-02T20:00:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
