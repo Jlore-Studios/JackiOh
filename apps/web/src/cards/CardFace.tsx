@@ -36,6 +36,11 @@
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
 // 2–5") under its text.
+//
+// R2718000: a face with a rules box, blank ones included, prints its set's watermark behind the words: its set
+// mark (R503) large, faint and in one ink (`.cf-watermark`, an `img` with no text, setMark.ts `watermarkOf`).
+// Glitch, a face with no box (compact, full art), a set with no symbol and the Set watermarks setting off print
+// none. It takes no pointer, so the text keeps its contrast and tooltip, and hides with the box.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -56,7 +61,7 @@ import { FullArtSignature } from "./FullArtSignature.tsx";
 import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
-import { setMarkOf } from "./setMark.ts";
+import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
 import { questFaceText } from "./questFace.ts";
@@ -296,6 +301,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
+  // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
+  const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
+  // R1017001: a full-art card fills its full face with its art, and prints no words.
   const fullArt = full && showsFullArt(face, fullArtOn);
   const tier = fullArt ? fullArtTier : null;
   const moving = tier === "Legendary" || tier === "Mythic";
@@ -383,6 +391,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             data-short={short !== null ? "true" : undefined}
             data-less={less ? "true" : undefined}
           >
+            {watermark !== null && (
+              <img className="cf-watermark" data-watermark={watermark.kind} src={watermark.src} alt="" aria-hidden="true" draggable={false} />
+            )}
             {face.inPlay && face.starship != null ? (
               // R2249000: a Starship lists its pieces in place of its text.
               <StarshipPieces list={face.starship.list} />

@@ -101,6 +101,7 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["visuals", "card-full-art"],
+      ["visuals", "card-set-watermarks"],
       ["visuals", "card-opponent-cosmetics"],
       ["audio", "audio"],
       ["gameplay", "language"],
@@ -278,6 +279,35 @@ describe("every setting persists and applies live, on a board already on screen"
     });
     expect(readCardSettings().opponentCosmetics).toBe(true);
     expect(toggle("setting-opponentCosmetics").checked).toBe(true);
+  });
+
+  it("R2718000 Set watermarks is a visuals switch, on by default, that takes every watermark off at once; its reset turns it back on", () => {
+    const core = CATALOG["core-002"];
+    if (core === undefined) throw new Error("the catalog has no core-002");
+    render(
+      <>
+        <CardFace face={faceModel({ defId: core.id, def: core, radiant: false })} layout="full" />
+        <SettingsPanel onClose={noop} />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
+    const toggled = toggle("setting-setWatermarks");
+    expect(screen.getByRole("switch", { name: "Set watermarks" })).toBe(toggled);
+    expect(toggled.checked).toBe(true);
+    expect(document.querySelector(".cf .card-text > .cf-watermark")).not.toBeNull();
+
+    fireEvent.click(toggled);
+    expect(readCardSettings().setWatermarks).toBe(false);
+    expect(stored(CARD_SETTINGS_KEY)).toMatchObject({ setWatermarks: false });
+    expect(document.querySelector(".cf-watermark")).toBeNull();
+    expect(document.querySelector(".cf .card-text")).not.toBeNull();
+
+    act(() => {
+      SETTINGS_SLOTS.find((slot) => slot.id === "card-set-watermarks")?.reset?.();
+    });
+    expect(readCardSettings().setWatermarks).toBe(true);
+    expect(toggle("setting-setWatermarks").checked).toBe(true);
+    expect(document.querySelector(".cf .card-text > .cf-watermark")).not.toBeNull();
   });
 
   it("audio: a volume, mute and voice lines write task 2's store, which the engine hears", () => {

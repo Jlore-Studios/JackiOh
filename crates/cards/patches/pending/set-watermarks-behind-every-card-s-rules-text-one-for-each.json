@@ -1,0 +1,17 @@
+{
+  "title": "Patch: set watermarks behind every card's rules text, one for each set",
+  "sources": "#2718",
+  "notes": "Every face with a rules box (any type, Radiant, Chinese, blank) prints its set's mark (R503) large, centred and faint in one ink under the text; a full-art card's goes behind its Full text and detail rules. Glitch, compact, full-art, sub-150 px, face-down and symbol-less sets (Boss, Boss-X, Custom) print none. Meditative+ gets a mark (the ensō with a plus). A Set watermarks switch (Visuals, on by default, device only) removes them (R2718000). How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Set watermarks",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Every card now shows its set's symbol, faint, behind its text, and Meditative+ has a symbol of its own. Turn it off under Settings, Visuals, Set watermarks."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
