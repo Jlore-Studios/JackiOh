@@ -1,8 +1,6 @@
 // inPlay.ts: the words a face in play prints where play and print part ways (SPEC §10.10).
-//
-// `POWER_WORDS` is the client's copy of §8 #98's thirteen powers, keyed by the name the view gives a
-// rolled power (R243). The engine holds the same clauses beside each power's effects, and the
-// client cannot load the engine online, so this test is what keeps the two tables one table.
+// `POWER_WORDS` is the client's copy of §8 #98's thirteen powers, keyed by the view's power name (R243).
+// The engine holds the same clauses and the client cannot load it online, so this test keeps the two tables one.
 
 import { describe, expect, it } from "vitest";
 
@@ -72,9 +70,7 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
 
 describe("Call to Chaos in play", () => {
   it("conceals exactly the cards that carry the Call to Chaos tag: Core #95, the Classic+ Edition #73, the Meditative Edition #95, the Stinkyscape set's two and the Training-Grounds Edition #39", () => {
-    // R1857000: the Stinkyscape set's two editions (#150, #151) joined the list when it shipped (#1884).
-    // Re-pinned for the Training Grounds release (#2204): its #39 Call to Chaos (Training-Grounds
-    // Edition) carries the tag, so it joins the list.
+    // R1857000: the Stinkyscape set's two editions (#150, #151, #1884); Training Grounds' #39 (#2204).
     const concealed = Object.values(CATALOG).filter((def) => setShips(def.set) && concealedInPlay(def.tags));
     expect(concealed.map((def) => def.id)).toEqual([
       "core-095",

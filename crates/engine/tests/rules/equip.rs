@@ -1,7 +1,6 @@
 //! Equip (R1086, ME-EQUIP): the play option onto one of your acting, non-Immutable Units.
 //! An Equip card resolves in full on top of its host, then fuses into it with the host kept
 //! (R653's reading of Hearthstone's Mech fusion), separate from Stack.
-//! Fixture defs and scripts are registered here, as in `effects_summon.rs`'s `game()`.
 
 use jackioh_engine::layers::unit_view;
 use jackioh_engine::play_choices::equip_host_at;
@@ -10,11 +9,8 @@ use jackioh_engine::testkit::*;
 use super::fixtures::field::flush;
 use super::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS `defOfKind`, numbered from 1900.
 fn def_of_kind(name: &str, index: i32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("eq-{name}"),
@@ -37,7 +33,6 @@ fn def_of_kind(name: &str, index: i32, overrides: Value) -> CardDef {
     json_as(def)
 }
 
-/// A plain 2/2 host.
 fn host() -> CardDef {
     def_of_kind("host", 1901, json!({}))
 }
@@ -64,7 +59,6 @@ fn mag() -> CardDef {
     )
 }
 
-/// A 1/1 with both Stack and Equip.
 fn stack_and_equip() -> CardDef {
     def_of_kind(
         "both",
@@ -108,28 +102,24 @@ fn immutable() -> CardDef {
     )
 }
 
-/// An enemy 2/2 that answers a play's announce (§10.5 step 3a) by destroying the Unit in the zone
-/// the play named: aimed at an Equip play, its host leaves before the card is placed, let alone
-/// fused. (A Cry of the Equip card cannot reach the host: the host lies dormant beneath it while
-/// the Cry runs, R13, R1086, so a pick of it fizzles.)
+/// An enemy 2/2 that, at a play's announce (§10.5 step 3a), destroys the Unit in the zone it names: the
+/// host leaves first. (The Equip card's own Cry cannot pick the dormant host, R13, R1086.)
 fn sentry() -> CardDef {
     def_of_kind("sentry", 1905, json!({}))
 }
 
-/// Core #56 Jilliax's shape (R831013): a (1) 1/1 with an embiggen price of (2), at which it is Equip —
-/// its `conditionalKeywords` hands Equip to a card stamped embiggened.
+/// Core #56 Jilliax's shape (R831013): a (1) 1/1 that is Equip at its embiggen price of (2).
 fn paid() -> CardDef {
     def_of_kind("paid", 1906, json!({ "cost": { "base": 1, "embiggen": 2 } }))
 }
 
-/// Stinkyscape #16 Rod of Ages's shape (R1869000): a plain 2/2 that lends Equip
-/// (`staticFlags.lendsEquip`), so any Unit card may be played onto it as an Equip play.
+/// Stinkyscape #16 Rod of Ages's shape (R1869000): a 2/2 that lends Equip, so any Unit card may equip it.
 fn lender() -> CardDef {
     def_of_kind("lender", 1907, json!({}))
 }
 
-/// Stinkyscape #16 Rod of Ages's own shape since issue #2280: an Animated Field Spell with no stats that
-/// lends Equip, so it stays in its backrow zone and hosts there (R1869000, R2280000).
+/// Stinkyscape #16 Rod of Ages's own shape (#2280): a statless Animated Field Spell that lends Equip,
+/// so it hosts from its backrow zone (R1869000, R2280000).
 fn rod_shape() -> CardDef {
     def_of_kind(
         "rod",
@@ -243,7 +233,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// Past both mulligans, in p1's main phase of turn 1, with this file's fixtures registered.
+/// Past both mulligans, p1's main phase of turn 1, this file's fixtures registered.
 fn playing(seed: &str) -> GameState {
     let state = super::fixtures::field::playing(seed);
     let mut catalog = registered_catalog().clone();
@@ -289,9 +279,7 @@ fn fused_events(events: &[GameEvent]) -> Vec<GameEvent> {
     events_of_type(events, GameEventType::Fused)
 }
 
-// ---------------------------------------------------------------------------
 // R1086.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn r1086_offered_onto_each_friendly_acting_unit() {
@@ -345,7 +333,7 @@ fn r1086_r23_none_onto_immutable_enemy_or_empty_and_reduce_agrees() {
     let mag = in_hand(&mut state, &mag().id, PlayerId::P1, 1).remove(0);
     flush(&mut state, PlayerId::P1, 10);
 
-    // The Immutable host, the enemy's Unit and the empty lane offer nothing Equip.
+    // The Immutable host, the enemy's Unit and the empty lane offer no Equip play.
     assert!(equip_actions(&state, &mag.id).is_empty());
     // A Unit handed to the opponent in your own zone is no host either.
     put(
@@ -377,8 +365,7 @@ fn r1086_resolves_on_top_then_fuses_host_kept() {
     flush(&mut state, PlayerId::P1, 10);
     let hero_before = state.players.p2.hero.health;
 
-    // The host is played, exerted, wounded and arrived on an earlier turn: everything the fusion
-    // keeps is set apart from the values the Equip card brings, so the assertions read the keep.
+    // Exerted, wounded and from an earlier turn, the host differs from what the Equip card brings.
     let mut state = act(&state, play_input(&host_card.id, 1, false, Value::Null));
     let host = find_instance_mut(&mut state, &host_card.id).expect("the host");
     host.exertion.attacked = true;
@@ -389,9 +376,9 @@ fn r1086_resolves_on_top_then_fuses_host_kept() {
     assert_eq!(result.error, None);
     let next = result.state;
 
-    // The Cry ran in full on top: the enemy hero took the ping.
+    // The Cry ran in full on top: the ping landed.
     assert_eq!(next.players.p2.hero.health, hero_before - 2);
-    // Then the top card fused into the host, which the fusion kept.
+    // Then it fused into the host, which was kept.
     assert_eq!(fused_events(&result.events).len(), 1);
     let fused = card_at(&next, slot(PlayerId::P1, Row::Units, 1)).expect("the fused host");
     assert_eq!(fused.id, host_card.id);
@@ -400,8 +387,7 @@ fn r1086_resolves_on_top_then_fuses_host_kept() {
     assert_eq!(fused.damage, 1);
     assert_eq!(fused.summoned_turn, Some(7));
     assert!(fused.exertion.attacked);
-    // The top card ceased to exist with no Death: it is in no pile (R86), and no `destroyed`
-    // names it.
+    // The top card ceased to exist with no Death: in no pile (R86), and named by no `destroyed`.
     assert!(find_instance(&next, &mag.id).is_none());
     assert!(
         events_of_type(&result.events, GameEventType::Destroyed)
@@ -427,8 +413,7 @@ fn r1086_nothing_fuses_when_the_host_left_first() {
     );
     let hero_before = state.players.p2.hero.health;
 
-    // The sentry destroys the host as the Equip play is announced: with the host gone, the card
-    // lands in the emptied zone, its Cry still runs, and nothing fuses.
+    // The sentry destroys the host on the announce: the card lands, its Cry still runs, nothing fuses.
     let host_id = host_card.id.clone();
     let result = act_result(&state, play_input(&mag.id, 1, true, Value::Null));
     assert_eq!(result.error, None);
@@ -443,7 +428,6 @@ fn r1086_nothing_fuses_when_the_host_left_first() {
                 |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &host_id)
             )
     );
-    // The Equip card stays the pile's top.
     assert_eq!(
         card_at(&next, slot(PlayerId::P1, Row::Units, 1)).map(|card| card.id.clone()),
         Some(mag.id.clone())
@@ -515,13 +499,11 @@ fn r1086_replays_to_the_same_hash() {
         let done = act(&state, play_input(&mag.id, 1, true, Value::Null));
         hash_state(&done)
     };
-    // The Equip fusion is deterministic: the same seed replays to the same hash.
     assert_eq!(run("equip-replay"), run("equip-replay"));
 }
 
-// R781000: Magnetic is now Equip. The shipped snapshots (v0.3.5, v0.3.6) and a log recorded before the
-// rename spell the keyword and the play's flag the old way, and both read as Equip, written back under
-// the new name only.
+// R781000: older snapshots and logs spell Equip and the play's flag as Magnetic; both read as Equip,
+// written back under the new name only.
 mod r781000_the_old_name_reads_as_equip {
     use super::*;
 
@@ -599,7 +581,7 @@ mod r831013_an_equip_a_price_grants {
 mod r1869000_a_host_that_lends_equip {
     use super::*;
 
-    /// A lender in p1's unit zone 1 and two plain Units in hand, p1 with mana to play both.
+    /// A lender in p1's unit zone 1, two plain Units in hand and the mana for both.
     fn lending() -> (GameState, String, String, String) {
         let mut state = playing("equip-lender");
         put(

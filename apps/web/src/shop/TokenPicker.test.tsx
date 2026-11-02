@@ -1,7 +1,7 @@
-// The token picker (#1309, #2251), from fixture responses: both bars and the cycle's next step,
-// the tokens held and the link to the Collection where each is spent (R2730000), and the page's
-// next revision reading the bars again. R1953001: no token is picked here any more
-// (collection/TokenOffer.test.tsx holds the offers); the held counts stay.
+// The token picker (#1309, #2251), from fixture responses: both bars and the cycle's next step, the
+// held counts and the link to the Collection where each token is spent (R2730000), and the page's next
+// revision reading the bars again. R1953001: no token is picked here (collection/TokenOffer.test.tsx
+// holds the offers).
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -24,7 +24,6 @@ afterEach(() => {
 
 const TOKEN = "token-1";
 
-/** A crafted registry entry. */
 function entry(over: Partial<RegistryCosmetic> & { id: string }): RegistryCosmetic {
   return {
     kind: "foil",
@@ -130,7 +129,6 @@ describe("#1309 the token picker", () => {
     expect(cosmetic).toHaveTextContent("Cosmetic token bar");
     expect(cosmetic.querySelector("progress")).toHaveProperty("value", 30);
     expect(cosmetic.querySelector("progress")).toHaveProperty("max", 150);
-    // Drawn at the points with no animation, and the cycle's next step beside the cosmetic bar.
     expect(card).toHaveAttribute("data-state", "resting");
     expect(cosmetic).toHaveAttribute("data-state", "resting");
     expect(cosmetic.querySelector<HTMLElement>(".fill-bar__fill")?.style.transform).toBe("scaleX(0.2)");
@@ -183,7 +181,6 @@ describe("#1309 the token picker", () => {
 
     answers.bars = { status: 200, body: tokenBars() };
     fireEvent.click(screen.getByTestId(T.tokenRetry));
-    // The read is out: the button waits for it, and a second press sends nothing.
     expect(screen.getByTestId(T.tokenRetry)).toBeDisabled();
     fireEvent.click(screen.getByTestId(T.tokenRetry));
 

@@ -1,12 +1,7 @@
-// The token picker (#1309, SPEC §14.5): both token bars, the cosmetic cycle's next step and the
-// tokens held. R1953001: a cosmetic token is spent where a locked cosmetic is shown, in the
-// Collection (collection/TokenOffer.tsx), so the shop keeps no pick of one and links there.
-// R2730000: a card token is spent the same way, from a locked card's fullscreen preview in the
-// Collection, so the shop's card browser is gone too: the picker shows the bars, the next step,
-// the held counts and the link.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). The bars, their sizes, the next step and the held
-// counts come from `GET /api/tokens`; nothing here is picked or redeemed.
+// The token picker (#1309, SPEC §14.5): the bars, the next step and the held counts. R1953001, R2730000:
+// a token is spent in the Collection, a cosmetic or card token from a locked item's fullscreen preview
+// (collection/TokenOffer.tsx), so the shop keeps no pick or card browser and links there. THE SERVER
+// DECIDES (CLAUDE.md rule 7): the bars, the next step and the held counts come from `GET /api/tokens`.
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -94,7 +89,6 @@ export default function TokenPicker({ token, revision = 0 }: { token: string; re
   );
 }
 
-/** The bars, the next step, the tokens held and the link to where each is spent, once the read has answered. */
 function TokenBody({ bars }: { bars: TokenBarsResponse }): ReactElement {
   return (
     <>

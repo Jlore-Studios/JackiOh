@@ -48,10 +48,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// S #34 Drone Core VIII — SPEC §8.10 row 34, BUILD M12 row S 34: "a Float of 2 at its owner's end of turn
-// makes it cost (4) in hand, never in the deck (R2657002), the opponent's Float nothing (R1563000); played, it summons an
-// Interceptor into every empty unit zone of its caster, then every empty backrow zone (R2248000); radiant
-// Radiant ones".
+// S #34 Drone Core VIII — SPEC §8.10 row 34, BUILD M12 row S 34 (R2657002, R1563000, R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -69,7 +66,6 @@ mod tests {
         effective_cost(s.state(), s.card(id), CostOptions::default())
     }
 
-    /// p1 holds one Drone Core VIII and has one in the deck, with `mana` left to Float.
     fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
         let s = scenario(json!({
             "p1": {
@@ -93,14 +89,12 @@ mod tests {
         s
     }
 
-    /// p1's unit row, lane 1 to 5: each zone's definition and face, or `None` when it is empty.
     fn row(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
             .collect()
     }
 
-    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
     fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5)
             .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
@@ -123,7 +117,6 @@ mod tests {
         let (mut s, hand, _) = floating(0, false);
         s.end_turn();
         assert_eq!(s.card(hand.as_str()).cost_mod, 0);
-        // p2 now ends a turn with mana left: their Float, not p1's.
         s.state_mut().players.p2.mana.current = 4;
         s.end_turn();
         assert_eq!(s.card(hand.as_str()).cost_mod, 0);

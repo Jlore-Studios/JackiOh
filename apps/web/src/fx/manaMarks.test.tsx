@@ -1,7 +1,6 @@
 // R502: the crystals #21 Hinder's rider will not fill, read off the view (manaMarks.ts) and marked on
-// the board's own trays by FxLayer: from the shown view, and from the newest view as soon as the runner
-// reaches the `modifierChanged` that lays the rider. The mark is information, so it stays under
-// reduced motion and with the effects off.
+// the board's trays by FxLayer, from the newest view once the runner reaches the `modifierChanged` that
+// lays the rider. The mark is information, so it stays under reduced motion and with the effects off.
 
 import type { GameEvent, ModifierView, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
@@ -104,9 +103,7 @@ describe("R502 the mark on the board's trays", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * FxLayer, next to a real board
- * ------------------------------------------------------------------------------------------- */
+/* FxLayer, next to a real board */
 
 const QUIET: Partial<FxSeams> = {
   now: () => 0,

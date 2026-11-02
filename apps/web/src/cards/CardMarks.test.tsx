@@ -1,7 +1,5 @@
-// R437: a marked card shows its mark (#50 K-Pop Fanatic's pending steal on its target). The view's
-// `CardView.marks` is read through `marksOf` (marks.ts) and drawn by CardMarks on the board's card
-// wrapper (game/Card.tsx): units and face-up backrow cards, on either seat, rendered the way the board
-// renders them, from fixture views carrying `marks`.
+// R437: a marked card shows its mark (#50 K-Pop Fanatic's pending steal on its target), read through
+// `marksOf` (marks.ts) and drawn by CardMarks on the board's card wrapper (game/Card.tsx).
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -156,7 +154,6 @@ describe("R437 the mark on the board", () => {
     expect(back).not.toBeNull();
     expect(back?.querySelector(".card-marks .card-mark-badge")?.getAttribute("title")).toBe(MARK_WORDS.steal?.text);
     expect(back?.innerHTML).not.toMatch(/core-\d+/);
-    // The unmarked backs carry none.
     expect(root.querySelectorAll('[data-face-down="true"] .card-marks')).toHaveLength(1);
   });
 
@@ -400,7 +397,6 @@ describe("R437 a mark in words, where no tooltip can be read", () => {
     expect(note).toHaveAttribute("data-mark", "steal");
     expect(note).toHaveAttribute("data-mark-color", "purple");
     expect(note).toHaveTextContent(MARK_WORDS.steal?.text ?? "");
-    // An unmarked card has no mark note.
     expect(liveFace(lookup(unit.defId, unit.radiant) ?? { name: unit.defId, type: "Unit", text: "", tags: [] }, unit).marks).toEqual([]);
   });
 });

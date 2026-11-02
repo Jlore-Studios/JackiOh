@@ -1,6 +1,4 @@
-// Exporting a clip as a GIF (#513, R513000): the tries a clip over the byte cap goes through, what
-// the raster is given to draw, cancellation, and that the export, the raster and the encoder stay out
-// of the main bundle.
+// Exporting a clip as a GIF (#513, R513000).
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -27,7 +25,6 @@ const FIRST = clip[0]?.step ?? 0;
 const LAST = clip.at(-1)?.step ?? 0;
 const GIF = Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 2, 3]);
 
-/** What a render was asked: the size and rate of each plan, in order. */
 type Asked = { width: number; height: number; fps: number; maxBytes: number };
 
 function recorder(answers: (Uint8Array<ArrayBuffer> | null)[]): { render: GifRender; asked: Asked[] } {
@@ -77,7 +74,6 @@ describe("the GIF export's tries", () => {
     expect(result.file.type).toBe("image/gif");
     expect(result.file.name).toBe(`jackioh-replay-${String(FIRST + 1)}-${String(LAST + 1)}.gif`);
     expect(result.file.size).toBe(GIF.length);
-    // Progress names the try and the plan's frames.
     const plan = planFrames(clip, { ...REPLAY_GIF_SIZES.square, fps: REPLAY_GIF_FPS, catalogVersion: "", portraits: { p1: "vanilla", p2: "vanilla" } });
     expect(seen).toEqual([
       { frame: 1, frames: planFrames(clip, { ...REPLAY_GIF_SIZES.landscape, fps: REPLAY_GIF_FPS, catalogVersion: "", portraits: { p1: "vanilla", p2: "vanilla" } }).frames.length, attempt: 1, attempts: 3 },
@@ -102,7 +98,6 @@ describe("the GIF export's tries", () => {
     controller.abort();
     expect(await running).toEqual({ kind: "canceled" });
 
-    // Already canceled: nothing is drawn.
     const { render, asked } = recorder([]);
     expect(await exportGif({ clip, preset: "square", lookup }, { signal: controller.signal, onProgress: () => undefined }, render)).toEqual({ kind: "canceled" });
     expect(asked).toEqual([]);
@@ -224,7 +219,7 @@ describe("a GIF's code loads on demand", () => {
     expect(player.dynamics).toEqual(["./gif/export.ts"]);
     expect(readFileSync(join(SRC, "replay/ShareGif.tsx"), "utf8")).toContain('import("./gif/export.ts")');
 
-    // The export reaches the raster by `import()` and a worker, never at once; the worker is the raster's one importer.
+    // The export reaches the raster by `import()` and a worker; the worker is the raster's one importer.
     const exporter = importsOf(join(SRC, "replay/gif/export.ts"));
     expect(exporter.statics.filter((specifier) => /raster\.ts$|encoder\.ts$/u.test(specifier))).toEqual([]);
     expect(exporter.dynamics).toContain("./raster.ts");

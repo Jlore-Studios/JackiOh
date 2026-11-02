@@ -4,15 +4,12 @@
 //!   Radiant: "Cry: Discover a Radiant (3) Cost or less Felinor Unit, then another. Fuse both into
 //!            this."
 //!
-//! Two chained Discovers, the shape #98 Heroic Power's Stitching makes them (R352): the first answer
-//! re-enters with the pick in the second prompt's data, and the second fuses both picks onto this unit.
+//! Two chained Discovers, the shape #98 Heroic Power's Stitching makes them (R352).
 //! Each Discover offers three different non-token Felinor-tagged Units of every set (R380, R405) whose
 //! printed cost (R65) is (2) or less, (3) or less on the Radiant face, never Felinor Fuser itself (R387).
-//! Through v0.5.2 the pool had no cost limit, which `script_v0_5_2` keeps (R767000).
 //!
-//! The Fuse target is this unit on the field (R77, R102): it keeps instance, zone, damage and position,
-//! sums stats, unions keywords, joins texts, costs min(sum, 4), and names the three (R179); fused
-//! Cries never run. Radiant ingredients lend their Radiant face to both forms (§6.3, R77).
+//! The Fuse target is this unit on the field (R77, R102, R179); fused Cries never run. Radiant
+//! ingredients lend their Radiant face to both forms (§6.3, R77).
 
 use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
 use jackioh_engine::prelude::*;
@@ -140,9 +137,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// C+ #30 Felinor Fuser — SPEC §8.7 row 30: two chained Discovers of Felinor Units of any set
-// but Felinor Fuser (R387, R405), first answer in second prompt; then both fused into this unit (R77,
-// R102, R179); options reach only chooser (R177); radiant Discovers Radiant Felinor Units.
+// C+ #30 Felinor Fuser — SPEC §8.7 row 30 (R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -152,12 +147,10 @@ mod tests {
 
     const FUSER: &str = "classicplus-030";
     /// R405: the non-token Felinor-tagged Units of every set, Felinor Fuser aside: Meditative's are §8.8
-    /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release
-    /// (#1884) its #87 Siva 1, a (2). #43 and #94 cost (4), so since issue #2179 neither face offers
-    /// them (`CHEAP_ENOUGH` leaves them out). Re-pinned for the Training Grounds release (#2204): the
-    /// set's Felinor Units join the pool, #17, #22, #23 and #33 and the snapshots #44 (of Core #12) and
-    /// #51 (of Core #43, a (4) too), which a Discover never offers beside their Core card (R2204001).
+    /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet),
+    /// Stinkyscape's #87 Siva 1 (#1884), and Training Grounds' (#2204) #17, #22, #23, #33 and the
+    /// snapshots #44 (of Core #12) and #51 (of Core #43), which a Discover never offers beside their Core
+    /// card (R2204001).
     const FELINOR_UNITS: [&str; 19] = [
         "core-012",
         "core-043",

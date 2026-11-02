@@ -1,7 +1,5 @@
 //! ME-WIN's held wins (SPEC §2.5, R848–R850): Meditative #8 and #20's systems, proved here
 //! through fixture-free effects so the engine owns them.
-//!
-//! Port of nothing shipped: no shipped card holds a win.
 
 use jackioh_engine::effects::{alt_win, win_game};
 use jackioh_engine::resolve::{HookOptions, make_context};
@@ -12,8 +10,7 @@ use jackioh_engine::triggers::{SettleOptions, settle};
 
 use crate::rules::fixtures::harness::{new_game, put, slot};
 
-/// Apply effects the way `resolve.ts` does, then settle: prompts drain, the board settles and the
-/// game-end point of the state check runs.
+/// Apply effects, then settle: prompts drain, the board settles, the state check's game-end point runs.
 fn run_settled(state: &mut GameState, effects: &[Effect], controller: PlayerId) {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -131,8 +128,7 @@ mod r850_the_game_end_point {
     fn r850_a_hero_at_0_loses_even_holding_a_win() {
         let mut state = new_game("alt-win-loss-first", None);
         state.players.p1.hero.health = 0;
-        // A held win (an outright one, so it holds however low the hero is) still loses to the
-        // hero check, which runs first.
+        // A held win (an outright one, holding however low the hero is) loses to the hero check, run first.
         run_settled(&mut state, &[win_game(json_as(json!({})))], PlayerId::P1);
         assert_eq!(state.players.p1.won_by_effect, Some(true), "the win is held");
         let result = state.result.expect("a hero at 0 ends the game");
@@ -142,8 +138,7 @@ mod r850_the_game_end_point {
 
     #[test]
     fn r850_two_winners_draw() {
-        // Both players hold a met win before the same check: one settle, a draw. The two grants
-        // run back to back with no check between them, as a single effect list would.
+        // Both hold a met win before one check: a draw. The grants run back to back, as one list would.
         let mut state = new_game("alt-win-draw-both", None);
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events = Vec::new();

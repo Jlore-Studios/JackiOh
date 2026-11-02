@@ -2,8 +2,8 @@
 //! first (SPEC §14.11, R2378000, issue #2610): `PUT /api/card-picks`, `POST /api/card-picks/upload`,
 //! `POST /api/practice/seeds`, `DELETE /api/practice/seeds/:seed` and
 //! `POST /api/quests/:questId/replace`. The tests hold the turns with claims of their own, as
-//! `tests/api/tokens.rs` does. A fake transaction holds the fake store's mutex, so a free mutex
-//! while a request waits shows it waits holding no transaction.
+//! `tests/api/tokens.rs` does. A fake transaction holds the fake store's mutex, so a free mutex while
+//! a request waits shows it holds no transaction.
 
 use std::sync::Arc;
 
@@ -41,7 +41,6 @@ async fn setup() -> (Arc<App>, String) {
     (app, profile.id)
 }
 
-/// `POST /api/practice/seeds`' body: an Easy random-deck game on this build's catalog.
 fn seed_request() -> Value {
     json!({
         "difficulty": "easy", "humanSeat": "p2", "deck": { "kind": "random", "lean": null },
@@ -49,7 +48,6 @@ fn seed_request() -> Value {
     })
 }
 
-/// A practice seed issued to the caller through the route.
 async fn issue_seed(app: &Arc<App>) -> String {
     let (status, _, body) = call(app, "POST", "/api/practice/seeds", Some(TOKEN), seed_request()).await;
     assert_eq!(status, 201, "{body}");
@@ -83,7 +81,7 @@ fn routes(seed: &str) -> Vec<(&'static str, String, Value, u16)> {
     ]
 }
 
-/// Lets the spawned requests run until `profile_id` has `claims` requests running or waiting.
+/// Yields until `profile_id` has `claims` requests running or waiting.
 async fn until_claims(app: &App, profile_id: &str, claims: usize) {
     for _ in 0..YIELDS {
         if app.spends.claims(profile_id) == claims {
@@ -97,8 +95,7 @@ async fn until_claims(app: &App, profile_id: &str, claims: usize) {
     );
 }
 
-/// `count` turns of `profile_id`'s own, running or waiting, each held until the sender this
-/// answers is dropped.
+/// `count` turns of `profile_id`'s own, each held until the returned sender is dropped.
 async fn hold_turns(app: &Arc<App>, profile_id: &str, count: usize) -> watch::Sender<()> {
     let (release, held) = watch::channel(());
     for _ in 0..count {

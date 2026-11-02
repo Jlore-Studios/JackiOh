@@ -78,11 +78,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// S 170 Medium Asteroid — SPEC §8.10 row 170, BUILD M12 row S 170: "its Activate deals 3 damage to its
-// controller's hero, then tributes it, and its Death gains 2 random Stinkyscape Resources into the hand;
-// destroyed in combat or by an effect it pays the same; it never attacks or switches to Defense;
-// resources and selfDamage read through `param()`; radiant 0/12, the Activate dealing no damage, Radiant
-// Resources".
+// S 170 Medium Asteroid — SPEC §8.10 row 170, BUILD M12 row S 170.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -48,12 +48,10 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-/** The one crest on screen, found by its name. */
 function crestNamed(name: string): HTMLElement {
   return screen.getByRole("img", { name });
 }
 
-/** A crest's drawing: its svg's markup. */
 function drawing(crest: HTMLElement): string {
   return crest.querySelector("svg")?.outerHTML ?? "";
 }

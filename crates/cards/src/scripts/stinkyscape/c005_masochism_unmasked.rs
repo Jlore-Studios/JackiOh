@@ -3,15 +3,8 @@
 //!   Base:    "Reveals when you take damage on your turn: Redirect all damage you take on your turn to
 //!            your opponent, up to {cap} each turn."
 //!   Radiant: the same, "and double it."
-//! Engine: set face-down, it answers the `damage` of a hit on its controller's hero during their own
-//! turn, an extra turn included (R1875000), after the hit, so the hit that reveals it is taken
-//! (R1849004). The reveal does nothing of its own and happens once: face-up, the trap answers nothing
-//! more and stays. What it does is its static flag `ownTurnRedirect` while it acts on the field: each
-//! later hit on its controller's hero on their own turn moves at §4.4 step 0a, after Spell Damage and
-//! before Divine Shield, the Armor and the caps; as much as the cap has left this turn is dealt to the
-//! opponent's hero instead, from the same source, and the rest is taken. The cap counts what is taken
-//! off, per turn, and is the declared `cap` (R386). Radiant: what moves is dealt twice over, on the
-//! same cap (at most 40 a turn). Tunes: cap 20 ↑ (step 5).
+//! Revealed when hero takes damage on own turn (R1875000, R1849004); grants ownTurnRedirect static flag.
+//! Redirects damage at §4.4 step 0a up to declared cap (R386); Radiant deals twice over.
 
 use jackioh_engine::prelude::*;
 
@@ -89,12 +82,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #5 Masochism Unmasked — SPEC §8.10 row 5, BUILD M12 row S 5: "set, it reveals on a hit on its
-// controller's hero on their own turn, and that hit is taken; afterwards, on their turns, each hit on
-// that hero is dealt to the opponent's hero instead, from the same source, until 20 have moved that
-// turn (15 and then 10 move 20 and leave 5, R1849004), taken before the Armor; on the opponent's turn
-// nothing moves; the cap starts again the next turn; cap reads through `param()`; radiant what moves is
-// dealt twice over, at most 40 a turn".
+// S #5 Masochism Unmasked — SPEC §8.10 row 5, BUILD M12 row S 5 (R1849004).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -106,13 +94,9 @@ mod tests {
     const SORCERER: &str = "core-068";
     const SORCERER_HIT: i32 = 4;
     const RADIANT_SORCERER_HIT: i32 = 8;
-    /// The cap a turn, the catalog's.
     const CAP: i32 = 20;
-    /// p2's health, high enough for every doubled hit.
     const P2_HEALTH: i32 = 60;
 
-    /// p1, active with 10 mana, holds `hand` and Masochism (`radiant` its face) in backrow zone 1,
-    /// `face_up` once it has revealed; p2 has 60 health and a card to keep its turns open.
     fn board(radiant: bool, face_up: bool, hand: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": "masochism",
@@ -134,7 +118,6 @@ mod tests {
         json!(vec![json!({ "def": SORCERER, "radiant": radiant }); count])
     }
 
-    /// p1 plays the next Twisted Sorcerer in hand into `zone`, its Cry aimed at p1's own hero.
     fn hit_self(s: &mut Scenario, zone: i32) {
         let sorcerer = s
             .hand(P1)
@@ -166,7 +149,6 @@ mod tests {
             assert!(s.last_events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
             let trap = s.backrow(P1, 1).expect("a Field Trap stays");
             assert_eq!((trap.def_id.as_str(), trap.face_up), (ID, Some(true)));
-            // Face-up, the next hit moves.
             hit_self(&mut s, 2);
             s.expect_health(P1, HERO_HEALTH - SORCERER_HIT);
             s.expect_health(P2, P2_HEALTH - SORCERER_HIT);
@@ -200,7 +182,6 @@ mod tests {
             let mut s = board(false, true, sorcerers(true, 3));
             hit_self(&mut s, 1);
             hit_self(&mut s, 2);
-            // 16 of the 20 have moved; of the next 8, 4 move and 4 are taken.
             s.expect_health(P2, P2_HEALTH - 2 * RADIANT_SORCERER_HIT);
             s.expect_health(P1, HERO_HEALTH);
             hit_self(&mut s, 3);
@@ -255,7 +236,6 @@ mod tests {
             assert_eq!(crate::degrade_number(&mut s, &trap, "cap"), CAP - 5);
             hit_self(&mut s, 1);
             hit_self(&mut s, 2);
-            // 15 move: 8, then 7 of the next 8.
             s.expect_health(P2, P2_HEALTH - (CAP - 5));
             s.expect_health(P1, HERO_HEALTH - (2 * RADIANT_SORCERER_HIT - (CAP - 5)));
         }

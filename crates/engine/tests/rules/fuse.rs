@@ -1,13 +1,7 @@
-//! Fuse and Craft a Card: SPEC §6.3's Fuse row as R77 spells it out (its text, with the cost cap of
-//! R65, is in `spec/rulings/R0077.md`). One test per clause of R77, in the order the ruling writes them.
-//!
-//! The fixtures are local (`fu-` ids, indexes from 1501, so nothing collides with another test
-//! file's) because no shared fixture expresses what the two-face clause needs: an ingredient whose
-//! radiant stats are deliberately *not* double its base, so "the radiant form does the same with
-//! their radiant forms" is observable rather than a coincidence of doubling.
-//!
-//! The kept card is read back from the state by its id; an ingredient that ceased to exist
-//! (`{ z: "gone" }`, R86) is one the state holds in no pile.
+//! Fuse and Craft a Card: SPEC §6.3's Fuse row as R77 spells it out (with R65's cost cap, in
+//! `spec/rulings/R0077.md`), one test per clause in the ruling's order. Fixtures are local (`fu-` ids from
+//! 1501, clear of other test files'); an ingredient's radiant stats are deliberately *not* double its
+//! base, so the two-face clause is observable rather than a coincidence of doubling.
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::damage;
@@ -49,9 +43,7 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// Half of every fusion below. 2/3 Taunt on the base face and 3/9 Taunt + Divine Shield on the
-/// radiant one: the radiant stats are neither double the base nor the same keywords, so a fused
-/// radiant face built out of base forms would read differently from one built out of radiant forms.
+/// Half of every fusion below: its radiant face is neither double its base nor the same keywords.
 fn ingredient_a() -> CardDef {
     def(
         "ingredient-a",
@@ -72,7 +64,7 @@ fn ingredient_a() -> CardDef {
     )
 }
 
-/// The other half: 1/1 Rush, radiant 5/2 Rush + Cleave — again not a doubling.
+/// The other half, again not a doubling.
 fn ingredient_b() -> CardDef {
     def(
         "ingredient-b",
@@ -134,7 +126,6 @@ fn fieldy() -> CardDef {
     def("fieldy", 1506, "Field Spell", json!({ "cost": 1 }))
 }
 
-/// Craft a Card's ingredients: plain Spells, two or three of them.
 fn spell_a() -> CardDef {
     def("spell-a", 1507, "Spell", json!({}))
 }
@@ -156,8 +147,8 @@ fn field_trap_played() -> CardDef {
     def("field-trap-played", 1512, "Field Trap", json!({ "cost": 1 }))
 }
 
-/// R1177000: two tokens, each with `token: true`, rarity Token and the Token tag, as every catalog
-/// token has (§7); the first is a Felinor too, so the tag union's other tags stay observable.
+/// R1177000: two tokens with the token flag, rarity and tag, as every catalog token has (§7); the first
+/// is a Felinor too, so the tag union's other tags stay observable.
 fn token_unit() -> CardDef {
     def(
         "token-unit",
@@ -215,7 +206,6 @@ fn hit(amount: i32) -> Option<Hook> {
     }))
 }
 
-/// A trap whose one trigger, on `on`, deals `amount` to the enemy hero.
 fn trap(id: &str, on: GameEventType, amount: i32) -> CardScripts {
     both(Script {
         triggers: vec![TriggerDef::new(id, &[on], move |_ctx, _event| {
@@ -229,8 +219,7 @@ fn trap(id: &str, on: GameEventType, amount: i32) -> CardScripts {
 
 fn scripts() -> Vec<(String, CardScripts)> {
     vec![
-        // The base texts hit for 1 and 2 and the base Deaths for 3 and 4; the radiant texts hit for 10
-        // and 20, so which pair of scripts a fusion concatenated is readable off the hero's health.
+        // Base Cries hit 1 and 2, Deaths 3 and 4, radiant ×10: the fused pair reads off the hero's health.
         (
             ingredient_a().id,
             CardScripts {
@@ -300,19 +289,16 @@ fn keyword_kinds(keywords: &[Keyword]) -> Vec<String> {
     kinds
 }
 
-/// `fuse(sink, args)`, `args` holding its instances as the state holds them now.
 fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardInstance> {
     let args: FuseArgs = json_as(args);
     fuse(&mut sink.sink(state), args)
 }
 
-/// `fuse(sinkFor(state), args)`.
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
     let mut sink = Bench::new(state);
     fuse_in(state, &mut sink, args)
 }
 
-/// The card placed, then made Radiant.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let card = put(state, def_id, at, json!({}));
     live_mut(state, &card.id).radiant = true;
@@ -337,7 +323,6 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// `(attack, maxHealth)` as §10.4's layers read the card.
 fn stats(state: &GameState, card: &CardInstance) -> (i32, i32) {
     let view = unit_view(state, card);
     (view.attack, view.max_health)
@@ -352,8 +337,6 @@ fn played_by_p2() -> GameEvent {
         "costPaid": 1,
     }))
 }
-
-// The transient definition.
 
 mod fuse_the_transient_definition_r77_m3_t7 {
     use super::*;
@@ -373,7 +356,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             "a fusion",
         );
 
-        // A def id that is not a catalog id: it lives in the state, where `defOf` finds it first (§10.1).
+        // Not a catalog id: it lives in the state, where `defOf` finds it first (§10.1).
         assert_ne!(result.def_id, ingredient_a().id);
         assert_eq!(sorted_keys(&state.transient_defs), vec![result.def_id.clone()]);
         assert_eq!(
@@ -448,7 +431,6 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             keyword_kinds(&fused.radiant.keywords),
             vec!["Cleave", "Divine Shield", "Rush", "Taunt"]
         );
-        // A union, so the keyword both ingredients share appears once.
         assert_eq!(
             keyword_kinds(&fused.base.keywords)
                 .iter()
@@ -533,7 +515,6 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 30); // 10 + 20
 
-        // The base face of the same definition still holds the base pair.
         live_mut(&mut state, &result.id).radiant = false;
         let card = live(&state, &result.id);
         run_hook(
@@ -599,7 +580,6 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         );
         assert_eq!(json_of(def_of(Some(&state), &base.def_id).cost), json!(3));
 
-        // The chosen embiggen price is the printed cost of the card that was played for it (R65).
         let mut other = game("fuse-cost-r65-embiggened");
         let target2 = put(&mut other, &x_unit().id, slot(P1, Row::Units, 1), json!({}));
         live_mut(&mut other, &target2.id).x = Some(1);
@@ -724,7 +704,6 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
             "a fusion",
         );
 
-        // The result *is* that card: same instance id, still in its own zone.
         assert_eq!(result.id, target.id);
         assert_eq!(
             result.zone,
@@ -844,8 +823,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         assert_eq!(result.owner, P1);
         assert_eq!(result.controller, P1);
 
-        // Layer 1 reads the fused face, and Vanilla still clears the fused printed keywords while the
-        // granted ones stay.
+        // Layer 1 reads the fused face; Vanilla still clears its printed keywords, the granted ones stay.
         let view = unit_view(&state, &live(&state, &result.id));
         assert_eq!((view.attack, view.max_health), (8, 8));
         assert!(view.keywords.is_empty());
@@ -876,7 +854,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         assert!(state.players.p1.graveyard.is_empty());
         assert!(state.players.p1.exile.is_empty());
 
-        // Not a death and not a destruction: no events, no counter, and the Death script never ran.
+        // Not a death nor a destruction: no events, no counter, no Death script.
         assert!(events_of_type(&events, GameEventType::Destroyed).is_empty());
         assert!(events_of_type(&events, GameEventType::EnteredGraveyard).is_empty());
         assert_eq!(state.counters.destroyed, before);
@@ -897,8 +875,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     #[test]
     fn r77_radiant_unlicensed_experimentation_fuses_onto_each_matching_permanent_separately_one_fusion_at_a_time()
      {
-        // #85r's loop is the card's (M4); the engine promises each fusion its own transient
-        // definition and kept instance, not one fusion of everything at once.
+        // #85r's loop is the card's (M4); the engine gives each fusion its own definition and kept instance.
         let mut state = game("fuse-one-at-a-time");
         let mut sink = Bench::new(&state);
         let first = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
@@ -916,8 +893,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         assert_eq!(one.id, first.id);
         assert!(find_instance(&state, &played.id).is_none());
 
-        // The second fusion is a separate call with a separate copy of the played permanent, and it
-        // leaves the first fusion's card and definition alone.
+        // A second call, with a fresh copy, leaves the first fusion's card and definition alone.
         let again = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 2), json!({}));
         let two = must(
             fuse_in(
@@ -937,8 +913,6 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         assert_eq!(stats(&state, &live(&state, &two.id)), (3, 4));
     }
 }
-
-// Fused traps and Craft a Card.
 
 mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     use super::*;
@@ -1123,12 +1097,9 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     }
 }
 
-// R1177000: the Token tag goes with the token flag.
-
 mod r1177000_a_fused_card_wears_the_token_tag_only_when_it_is_a_token {
     use super::*;
 
-    /// The fused definition's tags, sorted.
     fn tags_of(def: &CardDef) -> Vec<String> {
         let mut tags: Vec<String> = def.tags.iter().map(|tag| tag.as_str().to_string()).collect();
         tags.sort();

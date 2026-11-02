@@ -40,7 +40,6 @@ fn fixture_def(id: &str, type_: CardType) -> CardDef {
     }))
 }
 
-/// A fixture card: a transient def in the match state and its script in the registry.
 fn state_fixture(state: &mut GameState, id: &str, type_: CardType, script: Script) {
     state
         .transient_defs
@@ -72,7 +71,6 @@ fn asking_on_arrival(prompt: &str) -> Script {
     }
 }
 
-/// A start-of-game clause that casts its card as it arrives in a hand, which only setup does (turn 0).
 fn cast_on_setup_arrival() -> Script {
     Script {
         start_of_game: Some(hook(|ctx| {
@@ -86,7 +84,6 @@ fn cast_on_setup_arrival() -> Script {
     }
 }
 
-/// Two legal decks straight from the catalog: the first 40 non-token cards in id order.
 fn catalog_decks() -> (Vec<String>, Vec<String>) {
     let mut pool: Vec<String> = CATALOG
         .iter()
@@ -100,7 +97,6 @@ fn catalog_decks() -> (Vec<String>, Vec<String>) {
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// An action through `reduce` with a fresh nonce; a refusal fails the test with the engine's message.
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let action = json_as::<ActionInput>(body).with_nonce(format!("setup-mulligan-{nonce}"));
@@ -162,7 +158,6 @@ mod r224_setup_waits_for_a_question {
         );
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
 
-        // A card whose start-of-game clause asks, on top of p1's library: the replacement draw reaches it.
         state_fixture(
             &mut state,
             "edge-r7-l7-asks",
@@ -297,9 +292,6 @@ mod r224_setup_waits_for_a_question {
                 .unwrap_or_else(|| "no".to_string())
         );
 
-        // Every card in p1's library is one of these, so each of the three opening draws asks in turn.
-        // Answering each goes on with the opening deal, and the first mulligan opens only once nothing is
-        // asking.
         let mut state = started.state;
         let mut questions = 0;
         let mut guard = 0;
@@ -345,7 +337,6 @@ mod r224_setup_waits_for_a_question {
             } => Some(choice_id.clone()),
             _ => None,
         });
-        // Every prompt's answer names its PendingChoice id.
         assert_eq!(closed, opened_id);
     }
 }
@@ -389,7 +380,6 @@ fn act_as(state: &GameState, player: PlayerId, body: Value) -> GameState {
     act(state, body).state
 }
 
-/// Both players keep their opening hands; p1's first turn has begun.
 fn keep_both(state: &GameState) -> GameState {
     let next = act_as(
         state,
@@ -498,7 +488,6 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         panic!("no seed deals the asking card to p1");
     }
 
-    /// The paused deal with p1's question answered.
     fn answered(seed: &str, p2_last: &str) -> GameState {
         let state = paused_deal(seed, p2_last);
         let pending = must(state.pending.clone(), "p1's cast question");
@@ -510,7 +499,6 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         )
     }
 
-    /// p1's view of the events, each as its type and, where it has one, its player.
     fn types_of(state: &GameState) -> Vec<String> {
         view_for(state, PlayerId::P1)
             .events
@@ -534,7 +522,6 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         let with_power = answered(&seed, HEROIC_POWER);
         let without = answered(&seed, CRAFT);
 
-        // Setup went on to the mulligans, and p2 holds its 4 opening cards in both games.
         for state in [&with_power, &without] {
             assert_eq!(mulligan_owed(state), vec![PlayerId::P1, PlayerId::P2]);
             assert_eq!(
@@ -581,8 +568,6 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
     fn r225_r224_p1_s_hand_and_library_counts_while_setup_waits_do_not_tell_p2_whether_p1_s_opening_hand_holds_a_quickdraw_card_2_1_9_1()
      {
         register_all();
-        // A seed whose shuffle puts the asking card on top of p1's library, so it is p1's first draw: the
-        // only card in p1's hand, where its clause arrived and asked.
         let mut seed: Option<String> = None;
         let mut at = 0;
         while at < 400 && seed.is_none() {
@@ -606,7 +591,6 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         let with_power = paused_own_deal(&found, HEROIC_POWER);
         let without = paused_own_deal(&found, CRAFT);
 
-        // Both games wait on p1's question, the asking card in p1's hand, p2 not yet dealt.
         for state in [&with_power, &without] {
             assert_eq!(
                 state.pending.as_ref().map(|pending| pending.kind),
@@ -707,15 +691,12 @@ fn setup_boomerang() -> Script {
 mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
     use super::*;
 
-    // No Core card casts in setup or carries an end-of-turn clause of a Spell it casts, so the card that
-    // makes each case observable is a fixture; the rest of each game is real Core cards. Setup does not
-    // draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts it in the
-    // hand (`cast_on_setup_arrival`).
+    // Setup does not draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts
+    // it in the hand (`cast_on_setup_arrival`).
     #[test]
     fn r155_a_return_spell_cast_by_a_mulligan_s_replacement_draw_stays_in_the_graveyard_at_its_caster_s_first_turn_end_a_turn_it_was_not_played_on()
      {
         register_all();
-        // Once for each seat: p1's first turn end is turn 1's, p2's is turn 2's.
         for seat in [PlayerId::P1, PlayerId::P2] {
             let mut state = begin_game(&create_game(&game_args(
                 &format!("edge-r10-setup-return-{seat}"),
@@ -745,7 +726,6 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
             );
             assert_eq!(state.turn, 1);
 
-            // Through the caster's first turn end.
             state = end_turns_through(&state, if seat == PlayerId::P1 { 1 } else { 2 });
             assert_eq!(state.result, None);
 
@@ -775,7 +755,6 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
         .state;
         assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2]);
 
-        // /fullsend's end-of-turn clause, verbatim in shape, on a Spell setup casts.
         let id = "edge-r10-setup-late-exile";
         state_fixture(
             &mut state,
@@ -819,8 +798,7 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
 
         // R241: an end-of-turn clause is "the end of the turn the card was played on", and one made
         // outside its controller's turn "has no end of its controller's turn to wait for, so it is not
-        // armed at all". The same card cast by p2's mulligan was never armed, and p1's was not played on
-        // turn 1 either: its hand stays.
+        // armed at all".
         let exiled: Vec<String> = hand_on_turn_one
             .iter()
             .filter(|card_id| state.players.p1.exile.iter().any(|card| &card.id == *card_id))

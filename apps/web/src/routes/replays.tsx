@@ -1,28 +1,10 @@
-// `/replays` (R768000, #768): the player's recent games, each one's replay a click away. The
-// practice games this device kept (the last `PRACTICE_REPLAYS_KEPT`, R768) and, signed in, the
-// online matches the account played whose log the retention purge has not taken yet, newest first,
-// a page at a time. A game this build cannot show says why, and opens to the same sentence.
-//
-// It holds no log, seed or state (CLAUDE.md rule 7): a row is what the practice worker or the server
-// answers, and the player reads steps through a `ReplaySource`.
-//
-// NOT GATED, BUT ASKED (R970000). The practice half needs no account, so the route renders outside
-// `<Gated>`; an account that owes the age check or the terms in force (R757000, R757001) sees, in place
-// of its online half, a way to the consent screen, and its online games, "Shared with me" and every
-// "Share with a friend" wait until it answers there.
-//
-// DOWNLOAD JSON (R1141000). A row that can be watched can be saved as one JSON file for a bug
-// report: its steps' views and the row's facts, through the same `ReplaySource`, no account named.
-// Its button sits just left of Watch.
-//
-// OPEN REPLAY JSON (R1141000, #1160). The way back in: a file the page wrote is parsed in the page, held to
-// its byte and step caps and this build's catalog version, and mounted through an in-memory source. A
-// file it refuses says why and mounts nothing; it is never uploaded or kept. A co-op file (R1242000)
-// mounts on the co-op replay player.
-//
-// FULL ART (R1313000). Once ownership decides full art, a replay's viewer owns no copy on its
-// board: an online match's, a co-op one's and a file's (which may be either) print every full-art
-// card's normal face. A practice game's, like practice itself, prints every full art.
+// `/replays` (R768000, #768): the practice games this device kept (the last `PRACTICE_REPLAYS_KEPT`,
+// R768) and, signed in, the account's online matches the retention purge has not taken. It holds no log,
+// seed or state (CLAUDE.md rule 7). NOT GATED, BUT ASKED (R970000): the practice half needs no account, so
+// it renders outside `<Gated>`; an account owing the age check or the terms (R757000, R757001) meets the
+// consent screen before its online half. A file the page wrote opens again, held to its caps and this
+// build's catalog version, and is never uploaded or kept (#1160). FULL ART (R1313000): a replay's viewer
+// owns no copy, so only a practice replay prints full art.
 
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
@@ -165,10 +147,9 @@ function DownloadJson({ testKey, game, open }: { testKey: string; game: ReplayJs
 }
 
 /**
- * R1141000: Open replay JSON. The chosen file is parsed here and mounted through `onOpen`; one this
- * build refuses (`replayStepsOf`, or a co-op file's `parseDuosReplayJson`) says why beside the
- * control and mounts nothing. The input is emptied after every choice so the same file can be chosen
- * again, and it waits for `ready`: the card data a replay's cards are named from.
+ * R1141000: Open replay JSON. A file this build refuses says why beside the control and mounts nothing.
+ * The input is emptied after every choice so the same file can be chosen again, and it waits for
+ * `ready`: the card data a replay's cards are named from.
  */
 function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Open) => void }): ReactElement {
   const [reading, setReading] = useState(false);

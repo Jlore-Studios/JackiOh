@@ -1,10 +1,8 @@
-// R1953001 (#1953): a held cosmetic token is offered in the locked cosmetic's fullscreen preview
-// (R2730000), and only where its tier covers the cosmetic (R1305003): the offer redeems it through
-// `POST /api/tokens/redeem-cosmetic` and the cosmetic shows owned once the screen's ownership reads
-// again; a refusal shows the server's words and changes nothing. R2730000 (#2730): a held card
-// token is offered in an unowned card's preview through `POST /api/tokens/redeem-card`, and the
-// collection is read again, so the card reads owned in the preview and the grid.
-// R2480000 (#2480): the offer asks first; Confirm redeems, Cancel and Escape spend nothing.
+// R1953001 (#1953): a held cosmetic token is offered in a locked cosmetic's fullscreen preview, and only
+// where its tier covers it (R1305003); a redemption shows the cosmetic owned once the screen's ownership
+// reads again, and a refusal shows the server's words. R2730000 (#2730): a held card token is offered in
+// an unowned card's preview, and the card reads owned in the preview and the grid. R2480000 (#2480): the
+// offer asks first.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,12 +40,10 @@ afterEach(() => {
   resetLocaleForTests();
 });
 
-/** Held tokens, none but those given. */
 function held(over: Partial<HeldTokens> = {}): HeldTokens {
   return { card: 0, cosmeticRare: 0, cosmeticEpic: 0, cosmeticPack: 0, ...over };
 }
 
-/** The bars answer, holding `tokens`. */
 function barsHolding(tokens: Partial<HeldTokens>): TokenBarsResponse {
   return { ...tokenBars(), tokens: held(tokens) };
 }
@@ -257,7 +253,6 @@ describe("R1953001 a held cosmetic token, offered in the preview", () => {
     const preview = tilePreviewOf("table-marble");
     const offer = await within(preview).findByTestId(T.tokenOffer("table-marble"));
     expect(offer).toHaveTextContent("Unlock with an Epic token (1 held)");
-    // A chase tile is locked with no offer, and a starter tile is owned.
     expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-owned", "false");
     closePreview();
     tilePreviewOf("table-astral");

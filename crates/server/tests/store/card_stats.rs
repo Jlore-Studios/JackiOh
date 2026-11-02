@@ -1,10 +1,4 @@
-//! `cli/card_stats.rs` (stats-cards), `cli/import_dev_records.rs` (stats-import) and
-//! `cli/export_records.rs` (stats-export), SPEC §9.11, R377 and R378, against the fake store: what
-//! the options read, that a development run is read only when asked for, that a file can add
-//! development records and nothing else (a record at a time, or as totals only, R1976000), and that an export holds what stats-cards would read and
-//! reads back through the import. The store's own filtering is `tests/store/contract.rs`'s, against
-//! both stores; the arithmetic is the engine's `wire::stats`.
-//! (← `apps/server/test/db/card-stats.test.ts`)
+//! Card stats CLI tools (`src/cli/card_stats.rs`, SPEC §9.11, R377, R378, R1976000).
 
 use std::path::PathBuf;
 
@@ -87,7 +81,7 @@ fn args(list: &[&str]) -> Vec<String> {
     list.iter().map(|arg| (*arg).to_owned()).collect()
 }
 
-/// The ids the fake's `game_records` table holds, in table order (TS `store.tables.gameRecords`).
+/// The ids `game_records` table holds, in table order.
 async fn stored_ids(db: &Db) -> Vec<String> {
     let Db::Fake(data) = db else {
         panic!("these tests run on the fake store")
@@ -252,8 +246,7 @@ mod stats_cards_report {
         );
     }
 
-    /// R1367000, R1368000: `--window` reads every patch's totals into each card's window, the JSON
-    /// `cargo jackioh winrates --refresh` takes, and refuses the filter flags it replaces.
+    /// R1367000, R1368000: --window reads patch totals into each card window.
     #[tokio::test]
     async fn r1368000_window_reads_every_card_over_its_window_off_the_totals() {
         let db = seeded().await;
@@ -660,7 +653,6 @@ mod stats_import {
 
     #[test]
     fn reads_a_relative_path_from_the_directory_the_command_was_started_in_where_ai_stats_out_wrote_it() {
-        // pnpm ran the TS script in apps/server and passed the caller's directory as INIT_CWD.
         let init_cwd: IndexMap<String, String> = [("INIT_CWD".to_owned(), "/repo".to_owned())]
             .into_iter()
             .collect();

@@ -1,8 +1,8 @@
-//! `jackioh_luau`: the Luau host for card scripts (#442, v0.4.0). The sandbox a script runs in (L5),
-//! the integer boundary every value crosses (L6), the lint that refuses what the sandbox cannot stop
-//! (L6, L7), one VM per thread (L8), and `load_card`, which turns a compiled script into the engine's
-//! `CardScripts`. Since v0.5.0 (#902) no official card runs Luau: it runs custom cards' scripts in the
-//! card kit (`custom`, #913, #915). `README.md` is the contract.
+//! `jackioh_luau`: the Luau host for card scripts (#442): the sandbox a script runs in (L5), the integer
+//! boundary every value crosses (L6), the lint that refuses what the sandbox cannot stop (L6, L7), one VM
+//! per thread (L8), and `load_card`, which turns a compiled script into the engine's `CardScripts`. No
+//! official card runs Luau (#902): it runs custom cards' scripts in the card kit (`custom`, #913, #915).
+//! `README.md` is the contract.
 
 pub mod api;
 pub mod config;
@@ -89,7 +89,7 @@ impl fmt::Display for LuauError {
 impl std::error::Error for LuauError {}
 
 /// A script's source, linted and compiled to the bytecode `load_card` takes. `file` names the source
-/// in every finding and error. `crates/cards/build.rs` will call this in part 4.
+/// in every finding and error.
 pub fn compile(file: &str, source: &str) -> Result<Vec<u8>, LuauError> {
     let findings = lint(file, source);
     if !findings.is_empty() {
@@ -104,19 +104,17 @@ pub fn compile(file: &str, source: &str) -> Result<Vec<u8>, LuauError> {
     })
 }
 
-/// The compiler `compile` uses, which builds no fastcall to a builtin the sandbox took away
-/// (`sandbox::DISABLED_BUILTINS`), so such a call reads the global, which is gone, behind the lint.
-/// It compiles at `LUAU_OPTIMIZATION_LEVEL`.
+/// The compiler `compile` uses, at `LUAU_OPTIMIZATION_LEVEL`. It builds no fastcall to a builtin the
+/// sandbox took away (`sandbox::DISABLED_BUILTINS`), so such a call reads the global, which is gone.
 pub fn compiler() -> Compiler {
     Compiler::new()
         .set_optimization_level(config::LUAU_OPTIMIZATION_LEVEL)
         .set_disabled_builtins(sandbox::DISABLED_BUILTINS)
 }
 
-/// A card's scripts from its compiled module. The module runs once here to read which hooks each face
-/// declares; each declared hook becomes a closure that captures only its `Site` and the bytecode, so
-/// any thread's VM can run it. A hook that fails panics with its error, which names its card, face and
-/// hook (an engine hook has no error to return).
+/// A card's scripts from its compiled module. Each declared hook becomes a closure that captures only its
+/// `Site` and the bytecode, so any thread's VM can run it. A hook that fails panics with its error, which
+/// names its card, face and hook (an engine hook has no error to return).
 pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScripts, LuauError> {
     script::load_card(card, bytecode)
 }

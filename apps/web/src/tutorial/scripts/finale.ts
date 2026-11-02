@@ -1,7 +1,6 @@
-// Lesson 5's coach (SPEC §9.10, R2205000), the final exam: the first lesson whose decks hold
-// Legendary and Mythic cards, with no pool hold. Goetzmann Game Design, a Mythic Quickdraw card, is in
-// the opening hand: playing it finds Quickdraw, the rarest cards and a random effect at once. Then a
-// copy keeps a card's changes; Tutorial Master and Call to Chaos come on the coach's line as it plays. Picks read the view and the legal actions only (CLAUDE.md rule 7).
+// Lesson 5's coach (SPEC §9.10, R2205000), the final exam: Goetzmann Game Design, in the opening hand,
+// finds Quickdraw, the rarest cards and a random effect at once. Picks read the view and the legal
+// actions only (CLAUDE.md rule 7).
 
 import type { LessonScript } from "../coach.ts";
 import { either, finishOf, momentOf, playOf } from "./kit.ts";

@@ -38,7 +38,7 @@ function nameOf(index: number): string {
   return name;
 }
 
-/** The state peek drives actions; assertions against player-visible state use `viewFor` (CLAUDE.md rule 7). */
+/** The state peek drives actions; visible assertions use `viewFor` (CLAUDE.md rule 7). */
 type Held = { id: string; defId: string; radiant?: boolean };
 type FieldUnit = Held & { damage?: number; buffs?: { attack: number; health: number } };
 type SidePeek = {
@@ -87,7 +87,6 @@ function passTurn(): void {
   });
 }
 
-/** Take turns until `ready`, leaving the device with the actor. */
 function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): void {
   const step = (left: number): void => {
     cy.gameState().then((state) => {
@@ -101,7 +100,6 @@ function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): 
   step(TURN_BUDGET);
 }
 
-/** Wait for the player to hold `defId` and afford its SPEC §8 cost. */
 function waitToPlay(player: PlayerId, defId: string): void {
   const cost = COSTS[defId] ?? 0;
   advanceUntil(`${player} can pay ${cost} for ${defId}`, (state) => {
@@ -123,7 +121,6 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
   });
 
   it("§5.2 flips a hand card and a damaged field unit, keeping the damage on the field card", () => {
-    // Damage Mr. Vanilla before testing its Radiant flip.
     waitToPlay("p1", CARDS.mrVanilla);
     cy.playByName(nameOf(8), { zone: { side: "you", row: "units", lane: UNIT_LANE } });
 
@@ -190,7 +187,8 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
         );
       });
 
-      // #28 has one candidate and no play-time choice; expand its click to observe the animation.
+      // #28 has one candidate and no play-time choice, and `cy.playByName` settles before the
+      // animation, so its click is expanded to observe it.
       cy.instanceInHand("p1", CARDS.knockoffTemu).then((temuId) => {
         cy.get(ts(handCardId(temuId))).click();
 

@@ -30,11 +30,6 @@ const PING: ActivationView = { ability: "ping", label: "Deal 1 damage", usesLeft
 const MODES: ActivationView = { ability: "punish", label: "Choose one", usesLeft: 1, usable: true };
 const TURTLE: ActivationView = { ability: "turtle", label: "Tribute a Unit; deal damage", usesLeft: null, usable: true };
 
-/**
- * Your side: a unit `act1` with one Activate ability, a unit `act2` with two, a face-up Field Spell
- * `fs1` with an ability; `u1`, `u2` plain units; two hand cards; a graveyard card `gy1`. The
- * opponent has `e1` and `e2`.
- */
 function activateView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -177,7 +172,6 @@ describe("R384 pressing the control builds the activation as a play is built", (
     expect(selected.has(testid.activate("act1"))).toBe(true);
     expect(selected.has(testid.card("act1"))).toBe(true);
     expect(glow?.has(testid.activate("act1")) ?? false).toBe(false);
-    // A unit no candidate aims at is not a target.
     expect(lit.has(testid.card("u1"))).toBe(false);
 
     const sent = onClickTarget(view, legal, pressed.interaction, { on: "unit", instanceId: "e2", side: "opponent", lane: 2 });
@@ -412,7 +406,6 @@ describe("R391 a Tribute may pay for its own zone, and the client never crosses 
     const view = fullRow();
     const picked = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "t1" }).interaction;
     expect(onClickTarget(view, legal, picked, { on: "zone", side: "you", row: "units", lane: 3 }).action).toEqual(pair(3));
-    // A zone no pair names is not a move.
     const none = onClickTarget(view, legal, picked, { on: "zone", side: "you", row: "units", lane: 1 });
     expect(none.action).toBeUndefined();
     expect(none.interaction).toBe(picked);
@@ -476,7 +469,6 @@ describe("B5 E11 a card in your graveyard that legal lists is played from the pi
     expect(picked.stage).toBe("playing");
     expect(highlightFor(view, two, picked).selected.has(testid.pilePlay("gy1"))).toBe(true);
     expect(onClickTarget(view, two, picked, { on: "graveyard", instanceId: "gy1" }).interaction).toEqual(IDLE);
-    // A card legal does not list is not picked up.
     expect(onClickTarget(view, two, IDLE, { on: "graveyard", instanceId: "gy2" }).interaction).toEqual(IDLE);
   });
 });
@@ -497,11 +489,9 @@ describe("R1840003 R2250000 a Resource in your hand that legal lists is played a
     const { legal: lit } = highlightFor(view, [play], IDLE);
     expect(playSourceTestid(view, "r1")).toBe(testid.handCard("r1"));
     expect(lit.has(testid.handCard("r1"))).toBe(true);
-    // A hand card legal does not list is not lit.
     expect(lit.has(testid.handCard("r2"))).toBe(false);
 
     expect(onClickTarget(view, [play], IDLE, { on: "hand", instanceId: "r1" }).action).toEqual(play);
-    // One legal does not list is not picked up.
     expect(onClickTarget(view, [play], IDLE, { on: "hand", instanceId: "r2" }).interaction).toEqual(IDLE);
   });
 });

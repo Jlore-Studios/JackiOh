@@ -1,16 +1,12 @@
 //! #31 KY's Math Equation (SPEC §8.2 row 31, R429): "Deal Fib(times played + 1) damage to a target.
 //! End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)." Radiant: + 3 (R275).
-//!
 //! R429 the Fib index is the plays this card has had, THIS one included, + 1: counted on the instance
 //!      at §10.5 step 4, casts too (R70), countered plays never, riding every zone (R78).
 //! R67  its cost never changes what it deals. R25 the index clamps at 11. R280 the preview is the
 //!      damage it would deal now, off the same `damage_for` as the Cry (§10.8).
 //! The return is an `end_of_turn` hook on a Spell in the graveyard (§5.1, R68), one-shot by the turn
-//! log; it raises the card's own cost (R65) by 1, never above (4).
-//! R429, R766: only the climb survives the graveyard (R766 takes every price off a card reaching it):
-//! the return gives back the climb earlier returns gave (`return_price_of`) plus (1), capped at (4).
-//! Any other price change stays gone, and a #31 that reaches its graveyard any other way (discarded,
-//! burned, countered) was never flagged for a return, so nothing is noted for it.
+//! log, raising its own cost (R65) by 1 up to (4). R766 takes every price off a card reaching the
+//! graveyard, so the return gives back only the climb earlier returns gave (`return_price_of`).
 
 use jackioh_engine::prelude::*;
 
@@ -59,9 +55,8 @@ fn formula_in(text: &str) -> String {
     panic!("#31's text names no Fib(…) formula: {text}");
 }
 
-/// The plays the Fib index counts: the ones the card has had, this one included. While the card is
-/// resolving its play has been counted already (§10.5 step 4); anywhere else — in hand, for the
-/// preview — "if it resolved now" is one more play than it has had.
+/// While the card is resolving its play has been counted already (§10.5 step 4); anywhere else (in
+/// hand, for the preview) "if it resolved now" is one more play than it has had.
 fn plays_if_resolved_now(self_: &CardInstance) -> i32 {
     let counted = times_played_of(self_);
     if self_.zone.z() == ZoneName::Resolving {
@@ -78,7 +73,6 @@ fn damage_for(self_: &CardInstance, radiant: bool) -> i32 {
 }
 
 fn blast(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    // The card as it stands now, its play already counted.
     let amount = match ctx.live_self() {
         None => fib(0),
         Some(self_) => damage_for(self_, ctx.radiant),
@@ -93,9 +87,8 @@ fn own_cost(state: &GameState, self_: &CardInstance, carried: i32) -> i32 {
 }
 
 /// "End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)." Only on the turn
-/// it was played: the spell stays in the graveyard when its hand is full (`bounce` burns it back,
-/// §2.4), and a card that is still there on a later turn is no longer returning, so the turn log —
-/// which `startTurn` clears — is the gate.
+/// it was played: a card still in the graveyard on a later turn (a full hand burned it back, §2.4) is
+/// not returning, so the turn log, which `startTurn` clears, is the gate.
 fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(self_) = ctx.live_self().cloned() else {
         return vec![];
@@ -106,16 +99,14 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
-    // R429, R766: the climb its earlier returns gave it, which the graveyard took off it and its return
-    // gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
-    // R429: never above (4), so at (4) the +1 adds nothing and the climb it had is all it gets.
+    // R429, R766: the climb its earlier returns gave it (noted as its play landed it, `return_price_of`),
+    // plus the return's +1, never above (4).
     let carried = return_price_of(&self_);
     let raise = RETURN_COST_STEP
         .min(RETURN_COST_CAP - own_cost(ctx.state, &self_, carried))
         .max(0);
-    // R78: the price rides on the instance in the hand, until a graveyard takes it off again (R766). It
-    // lands only on a card that reached the hand: a full hand burns the card back to the graveyard
-    // (§2.4, R4), which is no return. `returnPrice` notes it as the climb beside the `costMod`, so the
+    // R78: the price rides the instance in hand until a graveyard takes it off again (R766); a full hand
+    // burns the card back (§2.4, R4), which is no return. `returnPrice` notes it as the climb, so the
     // next return gives back this and nothing else.
     let price = carried + raise;
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
@@ -132,9 +123,8 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// R280: "Fib(times played + 1) {n}" — the damage it deals if played now, in hand, and as the card
-/// stands wherever else it may be read. It reads its own count of plays, which is the card's (§9.1):
-/// `viewFor` shows it only where the card itself is shown, never on the opponent's hand.
+/// R280: "Fib(times played + 1) {n}" — the damage it deals if played now. Its count of plays is the
+/// card's (§9.1): `viewFor` shows it only where the card itself is shown, never on the opponent's hand.
 fn preview(formula: Formula) -> PreviewHook {
     condition_hook(move |ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
         vec![PreviewValue {
@@ -181,12 +171,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 must-pass row 31, as R429 rewrites it: "1st play → 1 damage, 2nd → 2, 3rd → 3, 4th → 5,
-// 5th → 8; clamps at 89 (R25); its cost — costMod, discounts, the cost paid — changes its price and
-// never its damage (R67); the return costs (1) more, never above (4)".
-//
-// Every side gets a unit on the board so §2.5's auto-end-turn does not run the turn on by itself:
-// a unit with an unspent exertion is always a meaningful action.
+// BUILD M4-T4 must-pass row 31, as R429 rewrites it.
+// Every side gets a unit so §2.5's auto-end-turn does not run the turn on: an unspent exertion is a
+// meaningful action.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -195,7 +182,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `{ targets: [{ pick: "hero", player: "p2" }] }`: every play here aims at the enemy hero.
     fn at_enemy_hero() -> Value {
         json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
     }
@@ -236,7 +222,6 @@ mod tests {
         s
     }
 
-    /// Play, end p1's turn (the return), let p2's turn pass, and come back to p1's main phase.
     fn play_and_come_back(mut s: Scenario) -> Scenario {
         s.play("31", at_enemy_hero());
         s.end_turn();
@@ -245,9 +230,8 @@ mod tests {
         s
     }
 
-    /// R429, R766: one turn of the climb — p1 plays `equation` at the enemy hero with mana to spare,
-    /// the turn ends (its return), and p2's turn passes. The mana the play took, and what the equation
-    /// costs back in hand.
+    /// R429, R766: one turn of the climb (the play, its return, p2's turn): the mana the play took, and
+    /// what the equation costs back in hand.
     fn climb_once(s: &mut Scenario, equation: &CardInstance) -> (i32, i32) {
         s.state_mut().players.p1.mana.current = 10;
         s.play(equation, at_enemy_hero());
@@ -378,8 +362,6 @@ mod tests {
         #[test]
         fn r429_r766_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_it_adds_nothing() {
             crate::register_all();
-            // R429, R766: two real climbs take the equation to (3); its next return reaches (4), and the
-            // one after that adds nothing (the cap stops the +1).
             let mut s = board(BoardOptions::default());
             let equation = s.card("31").clone();
             climb_once(&mut s, &equation);
@@ -392,9 +374,8 @@ mod tests {
         #[test]
         fn r429_r766_a_discount_or_a_surcharge_it_was_played_at_stays_behind_it_returns_at_printed_plus_its_climb() {
             crate::register_all();
-            // R766: its return gives back only the climb its own returns gave it. A price put
-            // on it any other way (here a `costMod` it starts in hand with: a discount, a cost step, a
-            // surcharge) stays behind in the graveyard, so a first return is (1) + (1) whatever it cost.
+            // R766: a `costMod` it starts in hand with (a discount, a cost step, a surcharge) stays
+            // behind in the graveyard, so a first return is (1) + (1) whatever it cost.
             for raised in [-1, 2, 4] {
                 let mut s = board(BoardOptions {
                     cost_mod: Some(raised),
@@ -450,18 +431,15 @@ mod tests {
 
             s.play(&equation, at_enemy_hero());
 
-            // R766: in the graveyard it is the printed (1) card, its price gone with the rest...
             s.expect_in_zone(&equation, "graveyard");
             assert_eq!(s.card(&equation).cost_mod, 0);
             assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 1);
-            // ...and the climb it was played at, the (1) its first return gave it, waits for its own return.
             assert_eq!(return_price_of(s.card(&equation)), 1);
 
             s.end_turn();
 
             s.expect_in_zone(&equation, "hand");
             assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 3);
-            // Back in hand it carries its climb, now (2), into its next play.
             assert_eq!(return_price_of(s.card(&equation)), 2);
         }
 
@@ -551,7 +529,6 @@ mod tests {
             let first = climb_once(&mut s, &fused);
             let second = climb_once(&mut s, &fused);
 
-            // From its printed (3) the first return reaches the cap, and at (4) the next adds nothing.
             assert_eq!(first.1, 4);
             assert_eq!(second, (4, 4));
             assert_eq!(s.card(&fused).cost_mod, 1);
@@ -565,7 +542,6 @@ mod tests {
             find_instance_mut(s.state_mut(), &id).expect("the equation in hand").cost_override = Some(0);
             s.play("31", at_enemy_hero());
             s.expect_mana(P1, 10);
-            // R766: it reaches the graveyard as the printed (1) card, so the return prices it (1) + (1).
             assert_eq!(s.card("31").cost_override, None);
             s.end_turn();
             assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), 2);

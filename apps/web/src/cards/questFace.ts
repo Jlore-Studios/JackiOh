@@ -1,26 +1,17 @@
 // A Quest card's rules box (the Quest tag, R1837000; R2450000): it prints only the stage the card
 // stands at, as Hearthstone's Questlines print the part they are on.
 //
-// A staged Quest (Stinkyscape #7 The Greatest Heist, #112 Job Application, R1854000) prints each stage
-// as a line of its catalog text, "Quest: Stage 2, Comradery. <goal>. Reward: <reward>." (a Chinese
-// face's "任务：第2阶段，同袍之谊。…奖励：…", R1301). Its face keeps its other lines (its keywords, its
-// Cry, its Death) and prints one stage in their place, "Stage 2 of 3, Comradery. Quest: … Reward: …":
-// - on the field, the stage the view's line stands at (`QuestView.stages`, cardState.ts
-//   `currentStage`): while it is open, the quest the view has open on it with its progress (the goal
-//   it drew, where it draws one, R1854002) and the stage's printed reward; while the line waits to hear
-//   back with it, the turns left (R1854004) and the stage's printed goal; once every stage is done,
-//   "Quest complete";
-// - off the field (a hand, the deck builder, the Almanac, a Discover's picks, a reveal), where no stage
-//   has opened, its first, "Stage 1 of 3".
-// In Too Deep's tree (Classic #90, R404, R543) has no stage lines: on the field its face prints its
-// text, then each quest the view has open with its progress and the rewards it offers, then each aura
-// it holds; off the field, its text alone.
+// A staged Quest (Stinkyscape #7 The Greatest Heist, #112 Job Application, R1854000) has a catalog line
+// per stage, "Quest: Stage 2, Comradery. <goal>. Reward: <reward>." (or a Chinese face's, R1301), and
+// prints one in their place: on the field, the stage the view's line stands at (`QuestView.stages`)
+// with the goal it drew (R1854002) or, while it waits to hear back, the turns left (R1854004); off the
+// field, its first. In Too Deep's tree (Classic #90, R404, R543) has no stage lines: on the field it
+// prints its text, its open quests with their rewards and its auras; off the field, its text alone.
 //
-// Everything is the catalog face's words and the view's public quest line, the same on both seats
-// (R1854000, CLAUDE.md rule 7). A Radiant face's marks (R277) and in play its tuned numbers (R386) move
-// with the words they sit on (`assemble`). The whole text, every stage, stays on the left of the hover
-// preview (inspect/Extended.tsx), in the touch sheet and in the detail view, and the inspect overlay
-// lists every stage (inspect/StateNotes.tsx).
+// All of it is the catalog face's words and the view's public quest line, the same on both seats
+// (R1854000, CLAUDE.md rule 7). A Radiant face's marks (R277) and its tuned numbers in play (R386) move
+// with their words (`assemble`). The whole text stays in the hover preview (inspect/Extended.tsx), the
+// touch sheet and the detail view; the inspect overlay lists every stage (inspect/StateNotes.tsx).
 
 import type { QuestView, Tag } from "@jackioh/shared";
 
@@ -139,7 +130,6 @@ function stagePieces(lines: readonly StageLine[], quest: QuestView | null): Piec
   return [{ words: title + line.stop + goals + line.stop }, { from: line.reward, to: line.end }];
 }
 
-/** In Too Deep's tree on the field: a line per open quest with the rewards it offers, or "Quest complete", then its auras. */
 function treeWords(quest: QuestView): string {
   const quests = quest.open.map((one) =>
     one.rewards.length === 0
@@ -151,9 +141,8 @@ function treeWords(quest: QuestView): string {
 }
 
 /**
- * R2450000: what a Quest card's rules box prints — a staged Quest's one stage, In Too Deep's text
- * and its open quests on the field — or null for every other face, and for In Too Deep off the field
- * (and a staged face the view names no printed stage of), which print their text as it is.
+ * R2450000: what a Quest card's rules box prints, or null for a face that prints its text as it is
+ * (every other face, In Too Deep off the field, a staged face the view names no printed stage of).
  */
 export function questFaceText(face: FaceModel): QuestFace | null {
   if (!face.tags.includes(QUEST_TAG)) return null;

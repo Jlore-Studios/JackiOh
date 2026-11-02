@@ -23,8 +23,6 @@ fn the_great_wall() -> Script {
             tribute: Some(TRIBUTE_COST),
             ..StaticFlags::default()
         }),
-        // R1260: all five of the Wall's side, its own zone and the occupied ones included; `lock` skips
-        // a zone Locked already and evicts no one.
         cry: Some(hook(|_ctx| {
             (1..=UNIT_ZONES)
                 .map(|lane| {
@@ -44,11 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M 97.7 The Great Wall — SPEC §8.8 row 97.7, BUILD M10 row M 97.7: "Tribute 3, Immutable, Can't attack; Cry
-// (played): all five of your unit zones are Locked, its own and the occupied ones included, nothing evicted
-// (MD-F15, R1260); afterwards no Unit may be played into them, while a summon and, since patch v0.3.Y, a
-// fill still land (R1136000); the Locks stay after the Wall leaves; an Unlock (M 27, C+ 77) frees them;
-// radiant 0/100 and Armor 2".
+// M 97.7 The Great Wall — SPEC §8.8 row 97.7, BUILD M10 row M 97.7 (MD-F15).
 //
 // Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a play.
 #[cfg(test)]

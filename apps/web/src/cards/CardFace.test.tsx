@@ -1,9 +1,6 @@
-// Polish 6, slice B: the tall card face in jsdom (docs/polish/6-cards.md, "CardFace DOM",
-// behaviors B8's gem, B10's `RulesText`, B12–B14, and the jsdom half of B15).
-//
-// jsdom has no layout, so nothing here measures fit. What it can check is the DOM contract: which
-// elements exist, what they carry, and that `useFitText` leaves an element with no layout alone.
-// The pixel half of B15 is e2e/cypress/component/card-faces.cy.tsx.
+// Polish 6, slice B: the tall card face in jsdom (docs/polish/6-cards.md, "CardFace DOM": B8's gem,
+// B10's `RulesText`, B12–B14, the jsdom half of B15). jsdom has no layout, so this checks the DOM
+// contract only; the pixel half of B15 is e2e/cypress/component/card-faces.cy.tsx.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -15,8 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardType, type Keyword, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
+import { SHIPPED_SETS, fillParams, type CardDef, type CardType, type Keyword, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
 
+import { CardBack } from "./CardBack.tsx";
 import { CardFace, TOKEN_WORD, cx, faceText, typeLine } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
 import { GLITCH_WORDS } from "./glitch.ts";
@@ -36,13 +34,22 @@ import {
 import { flushFits, nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
 import { faceModel, type FaceSource } from "./model.ts";
 import { termsIn } from "./rules.ts";
-import { SET_MARK_MIN_FACE_PX, glyphUri, setMarkOf } from "./setMark.ts";
+import {
+  SET_MARK_MIN_FACE_PX,
+  WATERMARK_INK,
+  WATERMARK_INK_ON_DARK,
+  WATERMARK_OPACITY,
+  WATERMARK_OPACITY_ON_DARK,
+  WATERMARK_SIZE_PCT,
+  glyphUri,
+  setMarkOf,
+  watermarkOf,
+} from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
 import { fusedDef, unit } from "../test/fixtures.ts";
 
-// R1017001: the hero portraits' cards print full art and none of their words. These tests read every
-// face's words, so full art is off here; fullArt.test.tsx covers the full-art faces.
+// R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
 beforeEach(() => {
   writeCardSettings({ fullArt: false });
 });
@@ -53,21 +60,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/* -------------------------------------------------------------------------------------- helpers */
+/* helpers */
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const XHTML = "http://www.w3.org/1999/xhtml";
 const UNKNOWN_ID = "core-999";
-/**
- * The sweeps below render both faces of all 317 catalog entries (v0.2.0's Core, Classic and
- * Classic+), which outruns vitest's 5 s default on a loaded machine.
- */
+/** The catalog sweeps below outrun vitest's 5 s default on a loaded machine. */
 const CATALOG_SWEEP_TIMEOUT_MS = 60_000;
 
 /** vitest stubs CSS imports, so the set mark's stylesheet is read as text. */
 const setMarkCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "setmark.css"), "utf8");
 /** And the faces' own, which draw no token mark (R2647000). */
 const cardsCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8");
+/** R2718000: the sheets that hold the watermark's ground and its inks. */
+const cardStateCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cardstate.css"), "utf8");
+const inspectCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "inspect", "inspect.css"), "utf8");
 
 function def(id: string): CardDef {
   const found = CATALOG[id];
@@ -102,10 +109,8 @@ function gemText(gem: Element): string {
 }
 
 /**
- * Everything B12 and the "Forbidden inside a face" list rule out, as a list of findings. A face
- * must sit inside a `<button>`, so its HTML is span, strong and img only. The Surface also gives
- * the icons as "aria-hidden SVG, no <text>", so SVG content is accepted only inside an
- * `svg[aria-hidden="true"]` and never as `<text>` or `<title>`.
+ * Everything B12 and the "Forbidden inside a face" list rule out. A face must sit inside a `<button>`,
+ * so its HTML is span, strong and img only; the Surface gives the icons as "aria-hidden SVG, no <text>".
  */
 function faceProblems(cf: Element): string[] {
   const problems: string[] = [];
@@ -147,7 +152,7 @@ const TYPE_CARD: readonly (readonly [CardType, string, string])[] = [
   ["Field Trap", "core-018", "notched"],
 ];
 
-/* ----------------------------------------------------------------------------------------- B12 */
+/* B12 */
 
 describe("glyphUri", () => {
   it("draws a glyph's body on a 24-unit square, as the set marks are drawn (#2160)", () => {
@@ -292,7 +297,7 @@ describe("B12: the full face's DOM", () => {
   });
 });
 
-/* ------------------------------------------------------------------------- B18 (compact layout) */
+/* B18 (compact layout) */
 
 describe("B18: the compact layout a face-up backrow card uses", () => {
   it("B18 compact renders cost, art, name, rarity gem and type line, but no text, tags or stats", () => {
@@ -316,7 +321,7 @@ describe("B18: the compact layout a face-up backrow card uses", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------- B8 (DOM) */
+/* B8 (DOM) */
 
 describe("B8: the cost gem renders the model's cost", () => {
   it("B8 .cost-gem shows text, with data-cost set to value and data-tone to the tone", () => {
@@ -375,7 +380,7 @@ describe("B8: the cost gem renders the model's cost", () => {
   });
 });
 
-/* ----------------------------------------------------------------------- B10 (RulesText in DOM) */
+/* B10 (RulesText in DOM) */
 
 describe("B10: RulesText marks terms in bold", () => {
   it("B10 each term renders as strong.cf-term[data-term], and the text reads back unchanged", () => {
@@ -503,7 +508,7 @@ describe("B10: RulesText marks terms in bold", () => {
   );
 });
 
-/* ----------------------------------------------------------------------------------------- B13 */
+/* B13 */
 
 describe("B13: .cf attributes, crest and foil", () => {
   it("B13 .cf carries data-layout, data-card-type, data-rarity, data-name-tier, data-text-tier and data-foil", () => {
@@ -568,7 +573,7 @@ describe("B13: .cf attributes, crest and foil", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------------- B14 */
+/* B14 */
 
 describe("B14: the radiant face", () => {
   it("B14 a radiant face sets data-radiant-face and draws radiant art", () => {
@@ -593,7 +598,7 @@ describe("B14: the radiant face", () => {
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    // Patch v0.3.10 adds "Embiggened (3): Equip." to both faces, below the keyword line ("Paid (3)" until R1175000).
+    // "Embiggened (3): Equip." is on both faces, below the keyword line (R1175000).
     expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
       "Rush",
@@ -648,7 +653,7 @@ describe("B14: the radiant face", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------ B15 (jsdom half) */
+/* B15 (jsdom half) */
 
 function stringOf(length: number): string {
   return "x".repeat(length);
@@ -719,13 +724,10 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-008", true, "s"],
       ["core-t-felinor", true, "s"],
       ["core-052", false, "l"],
-      // Patch v0.3.10 shortened Silly Silas's Radiant text by a tier.
       ["core-052", true, "l"],
       ["core-051", false, "l"],
-      // #1017 cut KY's Private Tutor's Radiant text under the limit.
       ["core-051", true, "l"],
-      // A short form is what the face prints: Combo-Index's two header lines, Call to Chaos's "Three
-      // different random effects, resolved in the order listed…" (#1017).
+      // A short form is what the face prints (#1017).
       ["core-093", false, "l"],
       ["core-095", true, "m"],
       ["meditative-022-1", false, "l"],
@@ -800,7 +802,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------------------- R503 */
+/* R503 */
 
 describe("R503: the set mark and a token's printed rarity", () => {
   function setMark(cf: HTMLElement): HTMLElement {
@@ -992,7 +994,7 @@ describe("R503: the set mark and a token's printed rarity", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------- R1382 */
+/* R1382 */
 
 describe("R1382: a card with every tribal tag prints All Tribes", () => {
   const withTags = (tags: readonly Tag[], chinese = false): HTMLElement => {
@@ -1023,7 +1025,7 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
   });
 });
 
-/* ----------------------------------------------------------------------------------- R1177001 */
+/* R1177001 */
 
 /** Every token a face can show: the catalog's, Glitch aside (it stays blank, R674). */
 const TOKENS: readonly CardDef[] = DEFS.filter((card) => card.token && card.id !== GLITCH_DEF_ID);
@@ -1144,7 +1146,7 @@ describe("R1107: a granted Death ability prints on its own line", () => {
   });
 });
 
-/* --------------------------------------------------------------- issue #814: short faces */
+/* issue #814: short faces */
 
 describe("issue #814: long faces truncate with an ellipsis and keep their whole text", () => {
   const SUMMIT = SUMMIT_DEF_ID;
@@ -1322,5 +1324,228 @@ describe("R2647000: Token and Created live in the hover preview, not on the face
     cleanup();
     render(<HoverPreview face={faceModel({ ...source, chinese: true })} anchor={PREVIEW_ANCHOR} />);
     expect(one(screen.getByTestId(INSPECT_FACE), ".card-type").textContent).toBe(`${CHINESE_TERMS.tags.Token}${CHINESE_TERMS.types.Unit}`);
+  });
+});
+
+/* -------------------------------------------------------------------------------------- R2718000 */
+
+/** WCAG relative luminance of `hex`, laid at `alpha` over `over` when given (palette.test.ts's). */
+function luminance(hex: string, over?: string, alpha = 1): number {
+  const channel = (at: number): number => {
+    const own = parseInt(hex.slice(at, at + 2), 16);
+    const under = over === undefined ? own : parseInt(over.slice(at, at + 2), 16);
+    const c = (alpha * own + (1 - alpha) * under) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+}
+
+function contrast(a: number, b: number): number {
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/** The declarations of the first rule written exactly `selector {` in `css`. */
+function ruleBody(css: string, selector: string): string {
+  const open = css.indexOf(`${selector} {`);
+  if (open < 0) throw new Error(`no ${selector} rule`);
+  return css.slice(open, css.indexOf("}", open));
+}
+
+describe("R2718000: set watermarks", () => {
+  /** One card of each set that ships, with its set. */
+  const SEVEN = [
+    ["core-002", "Core"],
+    ["classic-043", "Classic"],
+    ["classicplus-043", "Classic+"],
+    ["meditative-027", "Meditative"],
+    ["meditativeplus-001", "Meditative+"],
+    ["stinkyscape-017", "Stinkyscape"],
+    ["traininggrounds-017", "Training Grounds"],
+  ] as const;
+
+  function watermarks(cf: Element): HTMLElement[] {
+    return [...cf.querySelectorAll<HTMLElement>(".cf-watermark")];
+  }
+
+  it("R2718000 every set that ships or the catalog holds has its own set mark and watermark, all distinct; Meditative+'s mark is the ensō with Classic+'s plus", () => {
+    const sets = [...new Set<string>([...SHIPPED_SETS, ...DEFS.map((card) => card.set)])];
+    expect(sets).toEqual(expect.arrayContaining(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]));
+    for (const set of sets) {
+      const kind = setMarkOf(set).kind;
+      expect(kind, set).not.toBe("unknown");
+      expect(watermarkOf(set)?.kind, set).toBe(kind);
+    }
+    const marks = sets.map((set) => setMarkOf(set).src);
+    const prints = sets.map((set) => watermarkOf(set)?.src);
+    const onDark = sets.map((set) => watermarkOf(set)?.srcOnDark);
+    expect(new Set(marks).size).toBe(sets.length);
+    expect(new Set(prints).size).toBe(sets.length);
+    expect(new Set(onDark).size).toBe(sets.length);
+    expect(prints).not.toContain(undefined);
+    for (const none of [null, "Boss", "Boss-X", "Custom", "Nonesuch", "constructor"]) expect(watermarkOf(none), String(none)).toBeNull();
+
+    const mark = setMarkOf("Meditative+");
+    expect(mark.kind).toBe("meditative-plus");
+    expect(mark.label).toBe("Meditative+ set");
+    expect(mark.src).not.toBe(setMarkOf("Boss").src);
+    const svg = decodeURIComponent(mark.src);
+    expect(svg).toContain("A7.8 7.8 0 1 0");
+    expect(svg).toContain("M17.6 0.8H21.2");
+    expect(svg).toContain("scale(0.8)");
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("<title");
+    expect(one(catalogFace("meditativeplus-001"), ".cf-set").getAttribute("data-set-mark")).toBe("meditative-plus");
+  });
+
+  it("R2718000 a watermark is its mark's own shapes in one ink at its named opacity", () => {
+    for (const set of SHIPPED_SETS) {
+      const mark = decodeURIComponent(setMarkOf(set).src);
+      const body = mark.slice(mark.indexOf("viewBox='0 0 24 24'>") + "viewBox='0 0 24 24'>".length, mark.lastIndexOf("</svg>"));
+      expect(body, set).not.toBe("");
+      const watermark = watermarkOf(set);
+      for (const [src, ink, opacity] of [
+        [watermark?.src, WATERMARK_INK, WATERMARK_OPACITY],
+        [watermark?.srcOnDark, WATERMARK_INK_ON_DARK, WATERMARK_OPACITY_ON_DARK],
+      ] as const) {
+        expect(src?.startsWith("data:image/svg+xml,"), set).toBe(true);
+        const svg = decodeURIComponent(src?.slice("data:image/svg+xml,".length) ?? "");
+        expect(svg, set).toContain(body);
+        expect(svg.match(new RegExp(`flood-color='${ink}'`, "g")), set).toHaveLength(1);
+        expect(svg, set).toContain(`opacity='${String(opacity)}'`);
+        expect(svg, set).not.toContain("<text");
+        expect(svg, set).not.toContain("<title");
+      }
+    }
+  });
+
+  it("R2718000 a card of each set prints its set's watermark first in its rules box, on base, Radiant and Chinese faces", () => {
+    const faces: [string, string, boolean, Partial<FaceSource>][] = [];
+    for (const [id, set] of SEVEN) for (const radiant of [false, true]) faces.push([id, set, radiant, {}]);
+    faces.push(["meditative-027", "Meditative", false, { chinese: true }]);
+    for (const [id, set, radiant, extra] of faces) {
+      const label = `${id} radiant=${String(radiant)} ${JSON.stringify(extra)}`;
+      const cf = catalogFace(id, radiant, "full", extra);
+      const found = watermarks(cf);
+      expect(found, label).toHaveLength(1);
+      const image = found[0];
+      expect(image?.tagName, label).toBe("IMG");
+      expect(one(cf, ".card-text").firstElementChild, label).toBe(image);
+      expect(image?.getAttribute("src"), label).toBe(watermarkOf(set)?.src);
+      expect(image?.getAttribute("alt"), label).toBe("");
+      expect(image?.getAttribute("aria-hidden"), label).toBe("true");
+      expect(image?.getAttribute("data-watermark"), label).toBe(watermarkOf(set)?.kind);
+      expect(faceProblems(cf), label).toEqual([]);
+      cleanup();
+    }
+  });
+
+  it("R2718000 a blank rules box shows it too", () => {
+    const cf = catalogFace("classic-086");
+    expect(one(cf, ".cf-text-base").textContent).toBe("");
+    expect(watermarks(cf)).toHaveLength(1);
+    expect(one(cf, ".card-text").firstElementChild).toBe(watermarks(cf)[0]);
+  });
+
+  it("R2718000 no watermark on Glitch, a compact face, a full-art face, a card back, a set with no symbol or an unknown card", () => {
+    expect(watermarks(catalogFace(GLITCH_DEF_ID))).toHaveLength(0);
+    cleanup();
+    expect(watermarks(catalogFace("core-002", false, "compact"))).toHaveLength(0);
+    cleanup();
+    writeCardSettings({ fullArt: true });
+    const art = catalogFace("core-001");
+    expect(art.getAttribute("data-full-art")).toBe("true");
+    expect(art.querySelector(".card-text")).toBeNull();
+    expect(watermarks(art)).toHaveLength(0);
+    cleanup();
+    writeCardSettings({ fullArt: false });
+    const back = render(<CardBack />).container;
+    expect(back.querySelector("img")).toBeNull();
+    expect(back.querySelector(".cf-watermark")).toBeNull();
+    cleanup();
+    for (const set of ["Boss", "Custom"] as const) {
+      const card: CardDef = { ...def("core-002"), set };
+      const cf = renderFace({ defId: card.id, def: card, radiant: false });
+      expect(cf.querySelector(".card-text"), set).not.toBeNull();
+      expect(watermarks(cf), set).toHaveLength(0);
+      cleanup();
+    }
+    expect(watermarks(renderFace({ defId: UNKNOWN_ID, name: "Nobody", type: "Spell", radiant: false }))).toHaveLength(0);
+  });
+
+  it("R2718000 the watermark hides with the rules box below FACE_TEXT_MIN_HEIGHT_PX, lies under the text at WATERMARK_SIZE_PCT, takes no pointer", () => {
+    expect(cardsCss).toMatch(
+      new RegExp(`@container cardface \\(max-height: ${String(FACE_TEXT_MIN_HEIGHT_PX - 1)}px\\) \\{\\s*\\.cf:not\\(\\[data-layout="minion"\\]\\) \\.card-text,`),
+    );
+    const box = ruleBody(cardsCss, ".cf .card-text");
+    expect(box).toContain("position: absolute;");
+    expect(box).toContain("z-index: 1;");
+    for (const [css, selector] of [
+      [setMarkCss, ".cf .cf-watermark"],
+      [inspectCss, ".inspect-watermark"],
+    ] as const) {
+      const rule = ruleBody(css, selector);
+      for (const declaration of [
+        "position: absolute;",
+        "z-index: -1;",
+        "pointer-events: none;",
+        "object-fit: contain;",
+        `top: ${String((100 - WATERMARK_SIZE_PCT) / 2)}%;`,
+        `height: ${String(WATERMARK_SIZE_PCT)}%;`,
+      ]) {
+        expect(rule, `${selector} ${declaration}`).toContain(declaration);
+      }
+    }
+    // It never moves, and every colour of it is in setMark.ts.
+    expect(ruleBody(setMarkCss, ".cf .cf-watermark")).not.toMatch(/animation|transition|#[0-9a-f]{3}|rgb|hsl/i);
+    expect(ruleBody(inspectCss, ".inspect-watermark")).not.toMatch(/animation|transition|#[0-9a-f]{3}|rgb|hsl/i);
+  });
+
+  it("R2718000 over the parchment the watermark leaves every ink as readable as the box's own edge, and the Radiant gold at 5:1", () => {
+    const boxes = [
+      ...cardsCss.matchAll(/radial-gradient\(120% 90% at 50% 40%, (#[0-9a-f]{6}), (#[0-9a-f]{6}) 70%, (#[0-9a-f]{6})\)/g),
+    ].map((match) => match.slice(1, 4));
+    // The normal rules box, then the Radiant one.
+    expect(boxes.length).toBeGreaterThanOrEqual(2);
+    const [normal, radiant] = boxes;
+    expect(normal).toEqual(["#f6ecd4", "#e3d2ac", "#c9b48a"]);
+    expect(radiant).toEqual(["#fff6d6", "#f1d98c", "#d9b458"]);
+    const inks = ["#2b2116", "#6b4200", "#1d4f8a", "#1d5a1f", "#13692a", "#a3120f"];
+    for (const ink of inks) expect(cardsCss + cardStateCss, ink).toContain(ink);
+    for (const box of [normal, radiant]) {
+      const [lightest, middle, edge] = box ?? [];
+      if (lightest === undefined || middle === undefined || edge === undefined) throw new Error("a box lacks a stop");
+      for (const stop of [lightest, middle]) {
+        const blended = luminance(WATERMARK_INK, stop, WATERMARK_OPACITY);
+        expect(blended, stop).toBeLessThan(luminance(stop));
+        for (const ink of inks) {
+          expect(contrast(luminance(ink), blended), `${ink} on ${stop} under the watermark`).toBeGreaterThanOrEqual(
+            contrast(luminance(ink), luminance(edge)),
+          );
+        }
+      }
+    }
+    // R277: the Radiant box's gold keeps 5:1 where the text sits, the watermark under it or not.
+    for (const stop of (radiant ?? []).slice(0, 2)) {
+      expect(contrast(luminance("#6b4200"), luminance(WATERMARK_INK, stop, WATERMARK_OPACITY)), stop).toBeGreaterThanOrEqual(5);
+    }
+    // The inspect panels' dark ground, and the lighter ink on it.
+    expect(inspectCss).toContain("background: rgba(11, 13, 19, 0.94);");
+    const ground = "#0b0d13";
+    const lifted = luminance(WATERMARK_INK_ON_DARK, ground, WATERMARK_OPACITY_ON_DARK);
+    expect(lifted).toBeGreaterThan(luminance(ground));
+    for (const ink of ["#e8eaf2", "#ffffff", "#ffd24a", "#8cc4ff", "#7dff9a", "#ff8a8a", "#9aa1b8"]) {
+      expect(contrast(luminance(ink), lifted), `${ink} on the dark ground under the watermark`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("R2718000 with Set watermarks off every face prints as before", () => {
+    writeCardSettings({ setWatermarks: false });
+    for (const [id] of SEVEN) {
+      const cf = catalogFace(id);
+      expect(cf.querySelector(".card-text"), id).not.toBeNull();
+      expect(watermarks(cf), id).toHaveLength(0);
+      expect(cf.querySelector("[data-watermark]"), id).toBeNull();
+      cleanup();
+    }
   });
 });

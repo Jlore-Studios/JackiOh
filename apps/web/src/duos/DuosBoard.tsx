@@ -1,47 +1,18 @@
-// The Duos co-op board (#936 S8, B61–B64; R2095000): Game.tsx for the seat's own duel, and around
-// it the life strip, the teammate strip, the portal, the Both boards toggle, the pass control and
-// the pings.
-//
-// GAME.TSX STAYS THE ONE BOARD (CLAUDE.md). The seat's own duel is `<Game view={view.own}>` with the
-// duel moves `legal` lists unwrapped from their `{kind: "duel"}` envelopes, and every move it reports
-// goes back out wrapped in one. The portal (`duos-portal`) flips the board to `<Game view={view.teammate}>`
-// — the teammate's own view, their hand and face-down cards included, which is the team's to see
-// (B23) — with no legal action and a no-op `onAction` (`replay`, so it raises no prompt and lifts no
-// card): read-only (B63). Each has its own key, so neither board animates the other duel's events.
-// On a wide screen R2095000's toggle (`duos-both`) shows that same read-only board beside the own
-// one instead, silent (Game's `silent`, so two mounted boards play one duel's cues), in
-// `duos-board-teammate` next to `duos-board-own`; the portal stays mounted and CSS hides it there.
-// On a narrowed screen CSS hides the toggle and draws only the board the portal names, which
-// carries the rail as the single board does, so the visible portal flips again.
-//
-// CLAUDE.md rule 7: nothing here decides a rule. The pass control is live exactly when `legal` lists
-// that card's `pass` (B19), the concede offer when it lists `concede` (B11), and a duel's own concede
-// is never sent: the board's Concede means the team's (B10), so it goes out as `{kind: "concede"}`.
-// Game's R345 preference is pinned off, as every Duos duel already holds it (B9), so the board never
-// asks for it. Draw offers are refused in Duos (B10): `legal` never lists one, so those controls stay
-// dark, and duos.css hides them with the board's own Concede, which the rail's offer stands in for.
-//
-// PASSING (B62; R2095000, #2619): the pass control on a hand card of the seat's own (`CardActions.tsx`)
-// sends that card's listed `pass`; anything not listed sends nothing. It is the only way to pass: a
-// hand card dropped on the portal or the teammate's board passes nothing. The Trade control
-// (R1838000) rides the same bar on a Tradable one, in place of Game's own Trade bar.
-//
-// PINGS (B64): the ping wheel on a hero, zone or hand card of either board sends a ping (`onPing`); a
-// ping marks its place (`duos-ping-marker`) for PING_SHOW_MS on whichever board shows its duel, the
-// teammate's ping plays its sound once, and one on the board not showing flashes the portal.
-//
-// REPLAY (#965): `replay` draws a finished game's step for `DuosReplay.tsx`. The own duel's Game is
-// `replay` too, with no legal action and a no-op `onAction`, as the teammate's already is; no card
-// bar, concede, waiting line or result panel is drawn, the rail's round line names the team's result,
-// and the portal still flips.
-//
-// THE RESULT (#1755): the team's result panel takes focus on its first way on as it comes in, and
-// "View the board" folds it to the rail's "Result", which takes the focus and opens it again, its
-// XP reveal and replay door with it, as the 1v1 result folds to its chip (Result.tsx).
-//
-// PLAY AGAIN (R2092000): the panel draws the chrome's `playAgain` and decides nothing: the route's
-// last status read and the last offer's refusal pick the line, and the button only sends the offer.
-// A replay or /dev/duos hangs no `playAgain`, so draws no button.
+// The Duos co-op board (#936 S8, B61–B64; R2095000): Game.tsx for the seat's own duel, around it the life and
+// teammate strips, the portal, the Both boards toggle, the pass control and the pings. Game.tsx stays the one
+// board: the own duel is `<Game view={view.own}>`, its moves wrapped in `{kind: "duel"}`.
+// The portal flips it to the teammate's view (B23) as `replay` with no legal action: read-only (B63). Each has
+// its own key, so neither animates the other duel's events; the wide `duos-both` toggle shows both, `silent`
+// so two mounted boards play one duel's cues.
+// CLAUDE.md rule 7: nothing here decides a rule. Pass is live exactly when `legal` lists that card's `pass`
+// (B19), the concede offer when it lists `concede` (B11); the board's Concede is the team's (B10). Game's R345
+// preference is pinned off (B9); draw offers are refused (B10).
+// PASSING (B62; R2095000, #2619): only the pass control on the seat's own hand card passes; a drop on the
+// portal or the teammate's board passes nothing. The Trade control (R1838000) rides the same bar.
+// PINGS (B64): a ping marks its place for PING_SHOW_MS on the board showing its duel; one on the other
+// flashes the portal. REPLAY (#965): `replay` draws a finished game's step for `DuosReplay.tsx`, both Games
+// read-only. #1755: "View the board" folds the team's result panel to the rail's "Result". R2092000: the
+// panel draws the chrome's `playAgain` and decides nothing.
 
 import {
   useCallback,
@@ -89,15 +60,14 @@ export type DuosBoardProps = {
   pings: readonly ReceivedPing[];
   onPing: (ping: PingKind, target: PingTarget) => void;
   error?: string | null;
-  /** R1483000: the server's per-seat flag for whether the daily cap held this seat's pay back; dev and replay pass false. */
+  /** R1483000: the server's per-seat flag for whether the daily cap held this seat's pay back. */
   jloreCapped: boolean;
-  /** #1664: what the result paid this seat's person, from the server's last view; dev, replay and a game it paid nothing pass none. */
+  /** #1664: what the result paid this seat's person, from the server's last view; none when it paid nothing. */
   economy?: GameEconomy | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
 };
 
-/** Which duel the board shows: the seat's own, or the teammate's through the portal. */
 type Showing = "own" | "teammate";
 
 /** What the teammate's board is offered: nothing (B63). */
@@ -105,11 +75,7 @@ const NOTHING: readonly ActionBody[] = [];
 
 function ignore(): void {}
 
-/**
- * R2095000: the Both boards choice, kept per device. `"1"` means on, anything else (nothing
- * stored included) off, read and written in `try`/`catch` exactly as `CoopPanel.tsx` keeps its
- * room: blocked storage keeps the choice for the page's life.
- */
+/** R2095000: the Both boards choice, kept per device. */
 function readBoth(): boolean {
   return getStored(DUOS_BOTH_KEY) === "1";
 }
@@ -120,10 +86,7 @@ function storeBoth(both: boolean): void {
   else removeStored(DUOS_BOTH_KEY);
 }
 
-/**
- * `Date.now()` as of this render, re-rendered when the next live ping's PING_SHOW_MS runs out, so a
- * marker and the portal's flash go when their time is up with nothing else happening.
- */
+/** `Date.now()` as of this render, re-rendered as the next live ping's PING_SHOW_MS runs out, so it goes on time. */
 function usePingNow(pings: readonly ReceivedPing[]): number {
   const [tick, setTick] = useState(0);
   const now = Date.now();
@@ -157,7 +120,6 @@ function usePingSounds(pings: readonly ReceivedPing[], seat: DuosSeat): void {
   }, [pings, seat]);
 }
 
-/** A Duos result in a player's words, from this seat's team's side. */
 function resultWords(result: DuosResult, team: Team): { outcome: "win" | "loss" | "draw"; heading: string; reason: string } {
   const outcome = result.outcome === "draw" ? "draw" : result.winner === team ? "win" : "loss";
   const heading = outcome === "win" ? t("Your team won") : outcome === "loss" ? t("Your team lost") : t("Draw");
@@ -261,8 +223,7 @@ function ResultPanel({
   leaveRoute: string | undefined;
   playAgain: DuosPlayAgain | undefined;
 }): ReactElement | null {
-  // #1755: the panel takes focus as it comes in (and again when the rail's "Result" reopens it,
-  // which mounts it afresh), on its first way on, as the 1v1 result does (Result.tsx).
+  // #1755: the panel focuses its first way on as it mounts (the rail's "Result" mounts it afresh).
   const actions = useRef<HTMLDivElement>(null);
   useEffect(() => {
     actions.current?.querySelector<HTMLElement>("button, a")?.focus({ preventScroll: true });
@@ -329,8 +290,7 @@ export function DuosBoard({
   replay = false,
 }: DuosBoardProps): ReactElement {
   useLocale();
-  // #1664: the result's write paid this seat's person, so the pill reads the wallet again, once
-  // however many views carry the answer.
+  // #1664: the result paid this seat's person, so the pill reads the wallet again, once however many views say so.
   const paid = economy !== null;
   useEffect(() => {
     if (paid) announceWallet();
@@ -345,12 +305,11 @@ export function DuosBoard({
   // The team's result waits for the duel's last burst to play, as the 1v1 result does (Game.tsx).
   const boardBusy = useBoardBusy(host);
   const [showing, setShowing] = useState<Showing>("own");
-  // R2095000: Both boards, off until the player presses it, never in a replay.
   const [both, setBoth] = useState<boolean>(readBoth);
   const showBoth = both && !replay;
   const [boardAfterResult, setBoardAfterResult] = useState(false);
   // #1755: "View the board" folds the result to the rail's "Result", which takes the focus the panel
-  // had and opens the panel again, as the 1v1 result's chip does (Result.tsx).
+  // had and opens it again, as the 1v1 result's chip does (Result.tsx).
   const reopen = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (boardAfterResult) reopen.current?.focus({ preventScroll: true });
@@ -363,7 +322,6 @@ export function DuosBoard({
   const shownView = showing === "own" ? view.own : view.teammate;
   const over = view.result !== null;
 
-  // The duel moves `legal` lists, out of their envelopes, for the own board (rule 7).
   const duelLegal = useMemo(() => legal.flatMap((body) => (body.kind === "duel" ? [body.body] : [])), [legal]);
   const passLegal = useMemo(
     () => new Set(legal.flatMap((body) => (body.kind === "pass" ? [body.instanceId] : []))),
@@ -402,8 +360,6 @@ export function DuosBoard({
   usePingSounds(pings, seat);
   const now = usePingNow(pings);
   const livePings = pings.filter((ping) => now - ping.at < PING_SHOW_MS);
-  // R2095000: each board marks the pings that name its duel, so a ping shows on whichever board
-  // shows its duel; single mode keeps marking the shown board's, as before.
   const markersFor = (boardView: PlayerView, duel: 0 | 1): PingMarker[] =>
     livePings.flatMap((ping, index) => {
       const spot = spotOfTarget(ping.target, boardView, duel);
@@ -414,9 +370,8 @@ export function DuosBoard({
   const markersOwn = markersFor(view.own, slot);
   const markersMate = markersFor(view.teammate, duelOf(mate));
   const markers = showing === "own" ? markersOwn : markersMate;
-  // R2095000: the portal flashes for a ping on the duel it does not show. On a wide screen both
-  // duels show so the portal (hidden by CSS there) flashes unseen; on a narrowed screen one board
-  // is CSS-hidden, so the visible portal flashes exactly as today's single board does.
+  // R2095000: the portal flashes for a ping on the duel it does not show (unseen on a wide screen,
+  // where CSS hides the portal).
   const flash = livePings.some((ping) => ping.from !== seat && ping.target.duel !== shownDuel);
   const heard = [...livePings].reverse().find((ping) => ping.from !== seat);
 

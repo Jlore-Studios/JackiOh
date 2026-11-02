@@ -2,10 +2,6 @@
 // with what can be done with them now, and one friend request. Nothing here is a rule (CLAUDE.md
 // rule 7): which friend can be challenged or watched is what the server says of them (`status`,
 // `watchable`), and every refusal is shown in the server's words.
-//
-// A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
-// server says the game is `watchable`; Chat always; Remove, at once, and Block, asking once, where
-// the screen gives it the means to. Remove asks nothing because the screen offers Undo (R2119000).
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -20,7 +16,6 @@ import { attempt, messageOf } from "../net/errors.ts";
 
 import "./together.css";
 
-/** The add form (B55): a `name#tag`, and the server's answer to it. */
 export function AddFriend({ onAdded }: { onAdded: () => void }): ReactElement {
   const inputId = useId();
   const [name, setName] = useState("");
@@ -100,7 +95,6 @@ export type FriendRowProps = {
   challengeRefusal?: string | null;
 };
 
-/** One friend (B56): status, and what can be done with them now. */
 export function FriendRow({
   friend,
   unread,
@@ -112,7 +106,6 @@ export function FriendRow({
   onWatch,
   challengeRefusal = null,
 }: FriendRowProps): ReactElement {
-  /** Block's inline question is open. */
   const [asking, setAsking] = useState(false);
   const questionId = useId();
   const canChallenge = friend.status === "online";
@@ -226,7 +219,6 @@ export function FriendRow({
   );
 }
 
-/** One request, either way (B55). */
 export function RequestRow({
   request,
   direction,

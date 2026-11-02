@@ -1,12 +1,6 @@
 // Polish 6, slice D: browsing and building in the deck editor (docs/polish/6-cards.md, B30–B41;
-// the pure half of the filter and sort rules is filters.test.ts, and the pixel half of the layout
-// is e2e/cypress/component/deckbuilder-layout.cy.tsx). Since R250 the editor is one saved deck of
-// the deck workshop, so every test mounts `DeckWorkshop` with that deck open.
-//
-// Most tests use a small inline catalog built to make each rule visible. The fixtures in
-// ./fixtures.ts are used only where the existing contract is the point (every testid on a full
-// deck, and what a save sends).
-//
+// the pure half is filters.test.ts, the pixel half e2e/cypress/component/deckbuilder-layout.cy.tsx).
+// Since R250 the editor is one saved deck of the deck workshop, so every test mounts `DeckWorkshop`.
 // Every validator sentence is computed with the validator, never typed: messages.test.ts fails any
 // client source, tests included, that spells one out.
 
@@ -81,9 +75,7 @@ import {
   addPoolId,
 } from "./testids.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The inline catalog (the same shape as filters.test.ts's, restated so each file stands alone)
-// ---------------------------------------------------------------------------------------------
 
 type DefInput = {
   id: string;
@@ -206,9 +198,7 @@ function card(id: string): CardDef {
 }
 
 
-// ---------------------------------------------------------------------------------------------
 // Harness: one deck open in the workshop, and optionally other saved decks to compare with
-// ---------------------------------------------------------------------------------------------
 
 const OPEN = "deck-open";
 const OPEN_NAME = "Aggro";
@@ -329,10 +319,6 @@ afterEach(() => {
   resetLocaleForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
-// B30: the pool
-// ---------------------------------------------------------------------------------------------
-
 describe("the pool grid (B30)", () => {
   it("B30 the pool is a grid of div.db-item, each with the card-pool button holding the base CardFace and a sibling db-add button", () => {
     mount();
@@ -347,7 +333,6 @@ describe("the pool grid (B30)", () => {
       expect(button.tagName, id).toBe("BUTTON");
       expect(button).toHaveClass("db-card");
       expect(button).toHaveAttribute("data-card", id);
-      // The card, not only its name: cost, type and rarity, then what a click does.
       const label = button.getAttribute("aria-label") ?? "";
       expect(label.startsWith(`${def.name}, `), id).toBe(true);
       expect(label, id).toContain(def.type);
@@ -408,9 +393,8 @@ describe("the pool grid (B30)", () => {
       selector: (match[1] ?? "").trim(),
       body: match[2] ?? "",
     }));
-    // The one sticky element is the sidebar of a phone on its side (a short screen with two
-    // columns): it sticks in its own grid column, so it never lies over a pool card Cypress
-    // scrolls to the top of the viewport. The page's other layouts have nothing sticky at all.
+    // The one sticky element is the sidebar of a phone on its side, in its own grid column, so it
+    // never lies over a pool card Cypress scrolls to the top of the viewport.
     const sticky = rules.filter((rule) => /position\s*:\s*sticky/.test(rule.body));
     expect(sticky.map((rule) => rule.selector)).toEqual([".db-sidebar"]);
     const landscape = /@media \(min-width: 761px\) and \(max-height: 500px\) \{([\s\S]*?)\n\}/.exec(bare)?.[1] ?? "";
@@ -439,10 +423,7 @@ describe("the pool grid (B30)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B31: filters
-// ---------------------------------------------------------------------------------------------
-
 describe("filtering (B31)", () => {
   it("B31 every set, cost, type, tag and rarity chip is a toggle button with aria-pressed, inside db-filters", () => {
     mount();
@@ -580,10 +561,7 @@ describe("filtering (B31)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B32: search
-// ---------------------------------------------------------------------------------------------
-
 describe("searching (B32)", () => {
   it("B32 every term must occur: 'field trap' finds the Field Trap only", () => {
     mount();
@@ -647,10 +625,7 @@ describe("searching (B32)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B33: owned
-// ---------------------------------------------------------------------------------------------
-
 describe("the owned filter (B33)", () => {
   it("B33 is checked by default and limits the pool to owned cards", () => {
     mount();
@@ -716,10 +691,7 @@ describe("the owned filter (B33)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B34: sorting
-// ---------------------------------------------------------------------------------------------
-
 describe("sorting (B34)", () => {
   it("B34 the default is cost ascending", () => {
     mount();
@@ -767,7 +739,6 @@ describe("sorting (B34)", () => {
 });
 
 describe("sorting by win rate (B34)", () => {
-  /** The rates the stats endpoint answers with, each card with enough games. */
   const RATES: Readonly<Record<string, number>> = { "x-04": 0.7, "x-02": 0.6, "x-08": 0.5 };
   /** By win rate, descending: the rated cards, then the rest in tie-break (cost) order. */
   const BY_RATE_DESC = ["x-04", "x-02", "x-08", ...DEFAULT_ORDER.filter((id) => !Object.hasOwn(RATES, id))];
@@ -782,7 +753,7 @@ describe("sorting by win rate (B34)", () => {
   const FAIL = (): Promise<Response> => Promise.reject(new TypeError("Failed to fetch"));
 
   /** Stubs `fetch`: the nth `/api/stats/cards` call gets the nth answer (the last from then on), and
-   *  nothing else ever answers. Returns how many times the stats were asked for. */
+   *  nothing else ever answers. */
   function stubStats(...answers: (() => Promise<Response>)[]): () => number {
     let asked = 0;
     vi.stubGlobal(
@@ -853,10 +824,7 @@ describe("sorting by win rate (B34)", () => {
 });
 
 
-// ---------------------------------------------------------------------------------------------
 // B35: the sidebar
-// ---------------------------------------------------------------------------------------------
-
 describe("the deck sidebar (B35)", () => {
   it("B35 db-sidebar holds the deck's count against DECK_SIZE and its drop region", () => {
     mount(["x-01", "x-05"]);
@@ -951,10 +919,7 @@ describe("the deck sidebar (B35)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B36: the mana curve
-// ---------------------------------------------------------------------------------------------
-
 describe("the mana curve (B36)", () => {
   const DECK = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
 
@@ -989,10 +954,7 @@ describe("the mana curve (B36)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B37: where a card already is
-// ---------------------------------------------------------------------------------------------
-
 describe("held badges (B37)", () => {
   it("B37 a pool card the open deck holds shows .db-held and data-in-deck", () => {
     mount(["x-01"]);
@@ -1017,10 +979,7 @@ describe("held badges (B37)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B38: inspect in the builder
-// ---------------------------------------------------------------------------------------------
-
 describe("inspecting in the builder (B38)", () => {
   it("B38 a right-click on a pool card opens inspect-detail for it, prevents the menu and adds nothing", () => {
     mount();
@@ -1196,9 +1155,7 @@ describe("inspecting in the builder (B38)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The status toast: what the last add or removal did, where a phone deep in the pool can see it
-// ---------------------------------------------------------------------------------------------
 
 describe("the deck status line", () => {
   it("B41 names each add and removal with the deck's count, is polite, and clears after DECK_STATUS_MS", () => {

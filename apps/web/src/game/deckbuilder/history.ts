@@ -3,7 +3,6 @@
 
 import type { DeckItem, DeckStore } from "./sync.ts";
 
-/** The fields an edit sends, as `DeckStore.updateDeck` takes them. */
 export type DeckPatch = Parameters<DeckStore["updateDeck"]>[1];
 /** The fields as they were and as the edit left them; `naming` while its rename is under way. */
 export type DeckStep = { before: DeckPatch; after: DeckPatch; naming: boolean };

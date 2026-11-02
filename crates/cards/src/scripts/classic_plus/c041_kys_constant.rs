@@ -2,13 +2,11 @@
 //!   Choose a card in your hand. Change a random number on it to 3.
 //!   Radiant: Choose a card in your hand. Discover a number on it and change that number to 3.
 //!
-//! "A number on a card" is Degrade and Upgrade's (R386, `numbersOn`): its own cost (never an X), its
-//! attack and health, a numbered keyword's value, a declared number; an Immutable card has none. The
-//! card is a declared hand pick (R81) among your other hand cards with such a number not already 3;
-//! with none the Spell fizzles and still counts as played. Base: one of them at random (R60; one
-//! choice draws nothing, R129). Radiant: a Discover of up to 3 of them, shown to you only. The change
-//! is the engine's `setNumber`: `tuning` (the cost through `costMod`), kept in every zone and by a copy,
-//! reported by a `numberChanged` hidden as the card is.
+//! "A number on a card" is Degrade and Upgrade's (R386): its own cost (never an X), its attack and health, a
+//! numbered keyword's value, a declared number; an Immutable card has none. The card is a declared hand pick
+//! (R81) among your other hand cards with such a number not already 3, the Spell fizzling with none. Base: one
+//! of them at random (R60; one choice draws nothing, R129). Radiant: a Discover of up to 3, shown to you only.
+//! The change is `tuning` (the cost through `cost_mod`), kept in every zone and by a copy.
 
 use jackioh_engine::effects::{chosen_tuning_number, discover_number, set_number};
 use jackioh_engine::prelude::*;
@@ -72,8 +70,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #41 KY's Constant — SPEC §8.7 row 41, B3.4, R60, R81, R97, R129, R386, BUILD M9 row C+ 41.
-// The setting itself is the engine's `setNumber` / `discoverNumber` (packages/engine/test/effects-tune.test.ts).
+// C+ #41 KY's Constant — SPEC §8.7 row 41, BUILD M9 row C+ 41, R97.
 #[cfg(test)]
 mod tests {
     use std::collections::{BTreeMap, BTreeSet};
@@ -120,7 +117,7 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": s.card(card).id }] })
     }
 
-    /// The hand cards `legalActions` offers as the Constant's pick.
+    /// The hand cards `legal_actions` offers as the Constant's pick.
     fn offered(s: &Scenario) -> Vec<String> {
         let constant_id = s.card(CONSTANT).id.clone();
         legal_actions(s.state(), P1)
@@ -267,7 +264,6 @@ mod tests {
                     continue;
                 }
                 s.play(DUPLICATING, json!({ "zone": 1 }));
-                // Cry: summon a copy of this — both the card and its copy are 3/3.
                 let first = s.unit(P1, 1).map(|card| card.id).unwrap_or_else(|| DUPLICATING.to_string());
                 s.expect_stats(&first, json!({ "attack": 3, "health": 3 }));
                 let second = s.unit(P1, 2).map(|card| card.id).unwrap_or_else(|| DUPLICATING.to_string());

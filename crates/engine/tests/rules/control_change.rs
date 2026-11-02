@@ -1,15 +1,8 @@
 //! R171 and R172 at the verb level (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviors 7, 8 and
 //! 10 to 14). A change of control on the field is an entry: the card takes the current turn as its
-//! `summonedTurn` and a fresh exertion, on every path that changes control — Steal, Steal all, the
-//! board swap and a rotation across the center line — and on nothing else. R172 is the other half:
-//! a stolen unit dies as its controller's.
-//!
-//! Engine fixtures only (the engine never depends on `crates/cards`); `control_change_property.rs`
-//! checks the same rows over random boards.
-//!
-//! Every game is past both mulligans, in p1's main phase, so `legal_actions` and `reduce` answer as
-//! in a match. Verbs go straight through `effect.apply` with the actor as the context's controller,
-//! which is also how an effect on the opponent's turn is written (behavior 12).
+//! `summonedTurn` and a fresh exertion, on every path that changes control and on nothing else.
+//! R172: a stolen unit dies as its controller's. `control_change_property.rs` checks the same rows
+//! over random boards.
 
 use std::collections::BTreeSet;
 
@@ -113,7 +106,6 @@ fn rotate(state: &mut GameState, direction: RotationDirection, radiant: bool) ->
     events
 }
 
-/// A unit that entered on an earlier turn and has acted in every way it can.
 fn exhausted(state: &mut GameState, card: CardInstance, turn: i32) -> CardInstance {
     let held = find_instance_mut(state, &card.id).expect("on the field");
     held.summoned_turn = Some(turn);
@@ -125,7 +117,6 @@ fn exhausted(state: &mut GameState, card: CardInstance, turn: i32) -> CardInstan
     held.clone()
 }
 
-/// A unit that entered on an earlier turn and has not acted.
 fn ready(state: &mut GameState, card: CardInstance, turn: i32) -> CardInstance {
     let held = find_instance_mut(state, &card.id).expect("on the field");
     held.summoned_turn = Some(turn);
@@ -164,7 +155,6 @@ fn refusal(result: Result<(), EngineError>) -> Option<String> {
     result.err().map(|error| error.message)
 }
 
-/// The attacks `legalActions` offers this unit, as target ids.
 fn offered_attacks(state: &GameState, card: &CardInstance) -> Vec<String> {
     legal_actions(state, card.controller)
         .into_iter()
@@ -198,7 +188,6 @@ fn card_id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
 }
 
-// R171
 mod r171_a_change_of_control_is_an_entry_s4_1 {
     use super::*;
 
@@ -451,8 +440,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         assert_eq!(inbound.controller, P1);
         assert!(attack_targets(&state, &inbound).is_empty());
 
-        // Along its own side a card has entered nothing: the ready one still attacks, the spent one
-        // still cannot.
+        // Along its own side a card entered nothing: the ready one still attacks, the spent one not.
         let along_ready = live(&state, &along_ready);
         assert_eq!(along_ready.summoned_turn, Some(turn - 1));
         assert_eq!(along_ready.exertion, FRESH);
@@ -478,8 +466,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
      {
         let mut state = playing("cc-rotate-radiant");
         let turn = state.turn;
-        // Rotating right from p1's seat: p1 lane 5 would cross to p2 and is bounced instead (R14);
-        // p2 lane 1 crosses onto p1's side as it would on the base face.
+        // Rotating right from p1's seat: p1 lane 5 is bounced instead of crossing (R14); p2 lane 1
+        // crosses onto p1's side as on the base face.
         let along = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
         let along = exhausted(&mut state, along, turn - 1);
         let their_along = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
@@ -667,7 +655,6 @@ fn live_by_id(state: &GameState, id: &str) -> CardInstance {
         .unwrap_or_else(|| panic!("{id} is gone"))
 }
 
-// R172
 mod r172_a_stolen_unit_dies_as_its_controller_s {
     use super::*;
 

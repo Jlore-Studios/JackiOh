@@ -40,10 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M+ #5 Spirit Lash — SPEC §8.9 row 5, BUILD M11 row M+ 5: "at (0) one hit of 1 on every Unit of
-// both sides, a Divine Shield popped, no hero hit; Embiggened at (1) each hit ignores Armor and
-// heals your hero by the damage dealt; damage reads through `param()`; radiant Echo 1: it resolves
-// twice, an Embiggened play twice Embiggened".
+// M+ #5 Spirit Lash — SPEC §8.9 row 5, BUILD M11 row M+ 5.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -126,13 +123,11 @@ mod tests {
         }));
         s.play(LASH, json!({ "embiggen": true }));
         s.expect_mana(P1, 3);
-        // Two hits of 1, both through Armor: the 7/7 at 6, your own 9/9 at 8.
         let armored = unit_or_blank(&s, P2, 1);
         s.expect_stats(&armored, json!({ "health": 6 }));
         let own = unit_or_blank(&s, P1, 1);
         s.expect_stats(&own, json!({ "health": 8 }));
         assert_eq!(hits(&s), vec![1, 1]);
-        // Lifesteal heals your hero by the damage dealt, once per hit.
         s.expect_health(P1, 22);
     }
 
@@ -173,11 +168,9 @@ mod tests {
             "p2": { "hand": [FILLER], "field": [ARMORED] },
         }));
         s.play(LASH, json!({ "embiggen": true }));
-        // Both resolutions pierce: the 7/7 takes 1 twice.
         let armored = unit_or_blank(&s, P2, 1);
         s.expect_stats(&armored, json!({ "health": 5 }));
         assert_eq!(hits(&s), vec![1, 1, 1, 1]);
-        // Four hits of 1 with Lifesteal.
         s.expect_health(P1, 24);
     }
 }

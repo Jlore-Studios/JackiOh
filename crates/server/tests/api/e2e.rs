@@ -1,18 +1,6 @@
-//! BUILD M8's `E2E=1` test server: the in-memory store, R111's launch-grant trigger, R144's reseed,
-//! the fixture auth provider, R143's optional seed and the CORS layer.
-//!
-//! The invite-gate assertions here are the unit-test half of `e2e/cypress/e2e/10-invite-gate.cy.ts`:
-//! that spec activates the pending fixture account and spends the good code, so without R144 it
-//! passes once and fails on every later run. Running the reseed twice and then redeeming twice is
-//! the whole of that claim, and it is checked here rather than in Cypress because a spec cannot
-//! restart the server it is talking to.
-//!
-//! Ported from `apps/server/test/api/e2e.test.ts` (part 18). TS assembled its runtime from ports
-//! (`createE2EStore`, `createE2EAuth`, a fake match directory, a route subset); the Rust server has
-//! one `App` (SURFACE §11.2), so the harness is `support::deps::test_app()` (FakeStore, the fixture
-//! auth, the fixtures) with its store swapped for one over this file's small catalog where the
-//! launch grant's size is the point. What SURFACE §11.3 removed is ported as its Rust answer: there
-//! is no sign-up route, and the queue body names its mode and its deck by id.
+//! BUILD M8's `E2E=1` test server: in-memory store, R111's launch grant, R144's reseed,
+//! fixture auth provider, R143's optional seed and the CORS layer.
+//! Surface contract: SURFACE §11.2, §11.3.
 
 use std::sync::Arc;
 
@@ -45,10 +33,6 @@ use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{call, test_app};
 use crate::support::store::{from, hmac_sha256_hex, store, to_json, try_store, uuid};
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
 
 // Two starter cards and two that are not (core-003 and core-004 became starters with #1705, R1705002).
 const PLAYABLE: [&str; 4] = ["core-001", "core-002", "core-006", "core-007"];
@@ -100,9 +84,7 @@ fn e2e_store() -> Db {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------
 
 /// Jest's `toMatchObject`: every key `expected` names is in `actual` with a matching value.
 fn assert_matches(actual: &Value, expected: &Value, at: &str) {
@@ -263,9 +245,7 @@ async fn send(app: &Arc<App>, method: &str, path: &str, headers: &[(&str, &str)]
     }
 }
 
-// ---------------------------------------------------------------------------
 // The store
-// ---------------------------------------------------------------------------
 
 mod the_end_to_end_store {
     use super::*;
@@ -425,9 +405,7 @@ mod the_end_to_end_store {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R111
-// ---------------------------------------------------------------------------
 
 mod r111_the_launch_grant_on_pending_active {
     use super::*;
@@ -490,9 +468,7 @@ mod r111_the_launch_grant_on_pending_active {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R144
-// ---------------------------------------------------------------------------
 
 mod r144_the_reseed_at_boot {
     use super::*;
@@ -672,9 +648,7 @@ mod r144_the_reseed_at_boot {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The fixture auth provider
-// ---------------------------------------------------------------------------
 
 mod the_fixture_auth_provider {
     use super::*;
@@ -793,9 +767,7 @@ mod the_fixture_auth_provider {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1310000, R1310004: going live, for the end-to-end server
-// ---------------------------------------------------------------------------
 
 mod r1310000_going_live {
     use super::*;
@@ -883,9 +855,7 @@ mod r1310000_going_live {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R144, on demand (POST /api/e2e/reseed)
-// ---------------------------------------------------------------------------
 
 mod r144_the_reseed_on_demand {
     use super::*;
@@ -982,9 +952,7 @@ mod r144_the_reseed_on_demand {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R143
-// ---------------------------------------------------------------------------
 
 mod r143_the_optional_seed {
     use super::*;
@@ -1094,9 +1062,7 @@ mod r143_the_optional_seed {
         // TS read the fake match directory's `started`; the match row the registry writes is the
         // same record here.
         assert_eq!(started_seeds(&h.app).await, vec![seed.to_string()]);
-        // The seed is consumed with the pair, so nothing accumulates across a long-running server.
-        // TS's map was per test file; the Rust one is a process static the binary's other tests
-        // share (part 19's queue.rs), so what is checked is that this test left nothing behind.
+        // Seed consumed with pair; verify static map leaves nothing behind.
         assert!(e2e_seed_count() <= held_before, "the pair's seed is still held");
     }
 
@@ -1128,15 +1094,10 @@ mod r143_the_optional_seed {
     }
 }
 
-// ---------------------------------------------------------------------------
 // CORS and the catalog route
-// ---------------------------------------------------------------------------
 
 mod cors {
-    //! TS wrapped a bare handler in `withCors(handler, { origins })`; here the CORS layer is driven
-    //! through the real router, whose allow-list in end-to-end mode holds the Vite dev origin
-    //! (`index.ts`'s `browserOrigins`). A route that answers 200 without a token stands in for TS's
-    //! `nothing` handler.
+    //! CORS layer driven through router; end-to-end mode allow-list permits Vite dev origin.
 
     use super::*;
 

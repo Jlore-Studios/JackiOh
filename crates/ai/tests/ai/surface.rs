@@ -1,11 +1,5 @@
-//! The search's building blocks, each against its contract in docs/polish/3-ai.md §Surface: `lineStatus`
-//! and `terminalScore` (simulate.ts), `scoreLine` and `beamSearch` (search.ts), `findLethal`
-//! (lethal.ts), decide's "search" and "prompt" reasons and its planned line, `playAiTurn`'s loop and
-//! nonces, and sweepCard's clock. The numbered behaviors reach these only through `decide` and the
-//! puzzles; here each one is held to its own sentence in the design, so a change that keeps the
-//! puzzles green but breaks a contract still fails.
-//!
-//! Port of `packages/ai/test/surface.test.ts`. TS's per-test `{ timeout }` has no `cargo test` twin.
+//! The search's building blocks against docs/polish/3-ai.md §Surface: `lineStatus`, `terminalScore`,
+//! `scoreLine`, `beamSearch`, `findLethal`, `decide`, `playAiTurn`, and sweep clock.
 
 use std::cell::Cell;
 
@@ -16,7 +10,6 @@ use super::support::{AI, HUMAN, act, ai_options, det, is_legal, js};
 
 const TURN: i32 = 9;
 
-/// `evaluate(state, seat)`: TS's two defaulted arguments, passed explicitly.
 fn eval(state: &GameState, seat: PlayerId) -> f64 {
     evaluate(state, seat, NextSwing::Enemy, &AI_EVAL)
 }
@@ -83,7 +76,7 @@ fn passed_value(ended: &GameState) -> f64 {
     line(ended, AI) - AI_EVAL.unspent_mana * f64::from(ended.players[AI].turn_log.unspent_at_end.unwrap_or(0))
 }
 
-/// TS's module constant `BOGUS`: an attack by a unit that does not exist.
+/// An attack by a unit that does not exist.
 fn bogus() -> ActionBody {
     ActionBody::Attack {
         attacker_id: "no-such-unit".to_string(),
@@ -91,9 +84,7 @@ fn bogus() -> ActionBody {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // simulate.ts
-// ---------------------------------------------------------------------------------------------
 
 mod surface_line_status {
     use super::*;
@@ -174,9 +165,7 @@ mod surface_terminal_score {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // search.ts
-// ---------------------------------------------------------------------------------------------
 
 mod surface_score_line {
     use super::*;
@@ -331,9 +320,7 @@ mod surface_beam_search {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // lethal.ts
-// ---------------------------------------------------------------------------------------------
 
 mod surface_find_lethal {
     use super::*;
@@ -380,9 +367,7 @@ mod surface_find_lethal {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // decide.ts: the searched reasons
-// ---------------------------------------------------------------------------------------------
 
 mod surface_decides_searched_decisions {
     use super::*;
@@ -418,9 +403,7 @@ mod surface_decides_searched_decisions {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // match.ts: one AI turn
-// ---------------------------------------------------------------------------------------------
 
 mod surface_play_ai_turn {
     use super::*;
@@ -454,9 +437,7 @@ mod surface_play_ai_turn {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // sweep.ts: the clock
-// ---------------------------------------------------------------------------------------------
 
 mod surface_sweep_cards_clock {
     use super::*;

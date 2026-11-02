@@ -4,13 +4,9 @@
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
-//! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce, the action, card and
-//! effect helpers, the sink bench (`Bench`), `sink_for`, `ids_of`, `types_of` and `hand_ids` from here
-//! rather than a copy (#1777, #1997, #2024; crates/tools/tests/acceptance.rs refuses a copy, a local
-//! `static NONCE` and a local struct of just `events` and `rng`). The runs several files had copied
-//! word for word (`run_as_p1`, `run_with_options`, `run_with_targets`, `apply_now`, `run_on_sink`) and
-//! the game past both mulligans (`past_the_mulligans`) are here too (#2160); a file that calls one
-//! `run` or `playing` imports it under that name.
+//! The rules tests take these helpers from here rather than a copy (#1777, #1997, #2024, #2160;
+//! crates/tools/tests/acceptance.rs refuses a copy, a local `static NONCE` and a local struct of just
+//! `events` and `rng`); a file that calls one `run` or `playing` imports it under that name.
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -22,8 +18,7 @@ use super::catalog::{vanilla_catalog, vanilla_deck};
 use super::combat::{COMBAT_SCRIPTS, combat_catalog};
 use super::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
-/// The fixture catalog every engine test starts from: the vanilla units, the Rush token and the
-/// scripted and combat fixtures, with their scripts.
+/// The fixture catalog every engine test starts from, with its scripts.
 pub fn setup_catalog() {
     register_catalog(combat_catalog(fixture_catalog(vanilla_catalog(2 * DECK_SIZE, 1))));
     let mut merged: IndexMap<String, CardScripts> = FIXTURE_SCRIPTS.clone();
@@ -50,9 +45,8 @@ pub fn sink_for(state: &mut GameState) -> EngineSink<'_> {
     EngineSink::new(state, events, rng)
 }
 
-/// TS `sinkFor(state, events)`'s events and rng: the rng from the state's seed and cursor, as reduce
-/// starts one, and no events yet. The state stays the test's, lent with the bench to one engine call
-/// at a time (`sink`, `run`), so the test reads the state and the events between calls.
+/// A sink's events and rng (from the state's seed and cursor, as reduce starts one). The state stays the
+/// test's, lent with the bench to one engine call at a time, so the test reads both between calls.
 pub struct Bench {
     pub events: Vec<GameEvent>,
     pub rng: Rng,
@@ -66,12 +60,10 @@ impl Bench {
         }
     }
 
-    /// A sink over `state` that appends to the bench's events and draws from its rng.
     pub fn sink<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
         EngineSink::new(state, &mut self.events, &mut self.rng)
     }
 
-    /// `call` on a sink over `state`; what it returns comes back.
     pub fn run<T>(&mut self, state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
         call(&mut self.sink(state))
     }
@@ -131,7 +123,7 @@ pub fn set_library(
     cards
 }
 
-/// The events of one type, in order; `type_` is a `GameEventType` or its string (`"damage"`).
+/// `type_` is a `GameEventType` or its string (`"damage"`).
 pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEvent> {
     let wanted = type_.to_string();
     events
@@ -141,28 +133,22 @@ pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEve
         .collect()
 }
 
-/// The events of one type, in order, each as its JSON (TS's `eventsOfType`, read by the TS field
-/// names); `kind` is a `GameEventType` or its string, as `events_of_type` takes.
 pub fn events_json(events: &[GameEvent], kind: impl ToString) -> Vec<Value> {
     events_of_type(events, kind).into_iter().map(json_of).collect()
 }
 
-/// The cards' ids, in order; `cards` holds the cards or references to them.
 pub fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
-/// The events' types, in order.
 pub fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
 
-/// The ids of the cards in the player's hand, in order.
 pub fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     ids_of(&state.players[player].hand)
 }
 
-/// TS `both(script)`: the same script on the base and the Radiant face.
 pub fn both(script: Script) -> CardScripts {
     CardScripts {
         base: script.clone(),
@@ -170,8 +156,7 @@ pub fn both(script: Script) -> CardScripts {
     }
 }
 
-/// TS `{ ...base, ...extra }` on two object literals: `extra`'s keys replace `base`'s (the cards
-/// crate's `merged`). Anything but two objects leaves `base` as it is.
+/// `extra`'s keys replace `base`'s (the cards crate's `merged`); anything but two objects keeps `base`.
 pub fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
         for (key, value) in from {
@@ -202,18 +187,15 @@ pub fn next_action(body: impl Serialize) -> Action {
     json_as::<ActionInput>(json_of(body)).with_nonce(next_nonce())
 }
 
-/// `reduce` with the next nonce; a refusal comes back in the result.
 pub fn act_result(state: &GameState, body: impl Serialize) -> ReduceResult {
     reduce(state, &next_action(body))
 }
 
-/// `act_result` for an action that must be accepted: a refusal panics with the action's type and reason.
 pub fn act_ok(state: &GameState, body: impl Serialize) -> ReduceResult {
     let action = next_action(body);
     accepted(&action, reduce(state, &action))
 }
 
-/// `act_ok`'s state.
 pub fn act(state: &GameState, body: impl Serialize) -> GameState {
     act_ok(state, body).state
 }
@@ -226,8 +208,7 @@ pub fn act_logged(state: &GameState, body: impl Serialize, log: &mut Vec<Action>
     result
 }
 
-/// `act` with the nonce given, so two copies of one state sent the same action stay equal, `applied`
-/// and all.
+/// `act` with the nonce given, so two copies of one state sent the same action stay equal, `applied` and all.
 pub fn act_with_nonce(state: &GameState, body: impl Serialize, nonce: &str) -> GameState {
     let action = json_as::<ActionInput>(json_of(body)).with_nonce(nonce);
     accepted(&action, reduce(state, &action)).state
@@ -240,7 +221,7 @@ fn accepted(action: &Action, result: ReduceResult) -> ReduceResult {
     result
 }
 
-/// The card as it stands in `state` now, by its id or a copy of it (TS held the live object).
+/// The card as it stands in `state` now, by its id or a copy of it.
 pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
     let id = ref_id(card.into());
     find_instance(state, &id)
@@ -248,7 +229,6 @@ pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// The card in `state`, by its id or a copy of it, to write through (TS wrote the live object).
 pub fn live_mut(state: &mut GameState, card: impl Into<CardRef>) -> &mut CardInstance {
     let id = ref_id(card.into());
     find_instance_mut(state, &id).unwrap_or_else(|| panic!("no card {id} in the state"))
@@ -287,8 +267,8 @@ pub fn run_as_p1(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, PlayerId::P1)
 }
 
-/// One effect applied straight through its `apply` under `options`, as `resolve.ts` does, with no
-/// card of its own and no settle, the rng's cursor written back; the events it emitted.
+/// One effect applied straight through its `apply` under `options`, with no card of its own and no
+/// settle, the rng's cursor written back; the events it emitted.
 pub fn run_with_options(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -301,8 +281,7 @@ pub fn run_with_options(state: &mut GameState, effect: Effect, options: HookOpti
     events
 }
 
-/// TS `run(state, effect, self, targets, controller)`: one effect on a sink over `state`, the rng
-/// cursor written back; its events.
+/// One effect on a sink over `state`, the rng cursor written back; its events.
 pub fn run_with_targets(
     state: &mut GameState,
     effect: Effect,
@@ -351,7 +330,7 @@ pub fn apply_now(state: &mut GameState, effect: Effect) {
     state.rng_cursor = rng.cursor();
 }
 
-/// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
+/// Run `f` on a sink over `state` and hand back what it emitted.
 pub fn run_on_sink<R>(
     state: &mut GameState,
     f: impl FnOnce(&mut EngineSink<'_>) -> R,
@@ -400,7 +379,6 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
         if step > 4000 {
             panic!("game {seed} did not finish");
         }
-        // The last fallback for the seat to act is the active player.
         let player = seat_to_act(&state).unwrap_or(state.active);
         let actions: Vec<ActionBody> = legal_actions(&state, player)
             .into_iter()
@@ -446,7 +424,6 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
     RandomGame { state, log, decks }
 }
 
-/// A value as JSON, the shape the tests compare (the TS tests' `JSON.parse(JSON.stringify(…))`).
 pub fn json_of(value: impl serde::Serialize) -> serde_json::Value {
     serde_json::to_value(value).expect("serializes")
 }
@@ -456,8 +433,8 @@ pub fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) 
     serde_json::from_value(json_of(value)).expect("parses back")
 }
 
-/// TS `toMatchObject`: every key the expected object names matches, recursively; an array matches
-/// element for element and in length; anything else is equal.
+/// Every key the expected object names matches, recursively; an array matches element for element
+/// and in length; anything else is equal.
 pub fn matches_object(actual: &serde_json::Value, expected: &serde_json::Value) -> bool {
     use serde_json::Value;
     match (actual, expected) {

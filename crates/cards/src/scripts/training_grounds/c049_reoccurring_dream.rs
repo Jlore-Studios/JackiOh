@@ -79,7 +79,6 @@ fn lucky(ctx: &EffectContext<'_>, printed: i32) -> i32 {
 /// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
 /// its owner's hand, and a full hand burns it (§2.4, R4) — both of which `bounce` does.
 fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
-    // TS read the live `ctx.self`: the card as it stands now.
     let Some(self_) = ctx.live_self() else {
         return false;
     };
@@ -136,17 +135,8 @@ pub fn script() -> CardScripts {
 }
 
 
-// #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23: "Seeded 30% roll on a non-Radiant hand
-// card (R60); returns to hand at end of turn; hand full → burned; radiant two rolls at 40% keeping
-// a success".
-//
-// Every roll goes through the seeded rng, so each fixture pins its seed and asserts the outcome
-// that seed produces. The gate itself is asserted across one fixed seed list used by both faces,
-// which is also how "Lucky 1 at 40%" is proved to be strictly luckier than "30%": at the same seed
-// and the same rng cursor a base hit (roll < 0.3) is always a radiant hit (roll < 0.4), and the
-// radiant face rolls a second time on top of that, so its hit set is a strict superset of the base
-// one. Whether any individual seed hits is not asserted: that would pin the rng's internals, not
-// the card.
+// #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23 (R60).
+// Tests verify seeded rolls, end-of-turn return, hand full burn, and Radiant Lucky 1 at 40%.
 #[cfg(test)]
 mod tests {
     use super::script;

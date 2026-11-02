@@ -1,6 +1,5 @@
-// Lesson 3's coach (SPEC §9.10, R2205000, R2434001): spells, and nothing else new. The player finds
-// that a spell does what it says once and is gone, and that one can clear a unit too big to fight.
-// Picks read the view and the legal actions only (CLAUDE.md rule 7).
+// Lesson 3's coach (SPEC §9.10, R2205000, R2434001): spells, and nothing else new. Picks read the view
+// and the legal actions only (CLAUDE.md rule 7).
 
 import type { LessonScript } from "../coach.ts";
 import { either, finishOf, momentOf, playOf } from "./kit.ts";

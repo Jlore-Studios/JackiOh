@@ -61,11 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #58 Permanent Underclassman — SPEC §8.8 row 58, BUILD M10 row M 58: "Cry: summon a random (1)
-// Unit (Radiant: a random Radiant one) and grant it the face's Death (MD-D13, R1420); the grant
-// shows on the Unit, survives a Vanilla, a copy and a JSON round trip, and is lost when the Unit
-// leaves the field; the controller gets the card (a stolen unit's controller too, proved at the
-// engine level); a full board summons nothing and grants nothing".
+// M #58 Permanent Underclassman — SPEC §8.8 row 58, BUILD M10 row M 58 (R1420).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,7 +129,6 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
     }
 
-    /// The Book cards in `seat`'s hand.
     fn books_of(s: &Scenario, seat: PlayerId) -> Vec<CardInstance> {
         s.hand(seat)
             .into_iter()
@@ -184,7 +179,6 @@ mod tests {
             let lines = granted_lines(&s, 2);
             assert_eq!(lines.len(), 1);
             assert!(lines[0].starts_with("Death:"), "{lines:?}");
-            // One Book reaches the controller's hand when it dies.
             kill(&mut s, &summoned);
             assert_eq!(books(&s).len(), 1);
         }

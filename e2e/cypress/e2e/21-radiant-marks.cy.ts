@@ -1,6 +1,5 @@
 // Spec 21: computed values, card references, and Radiant marks (SPEC §10.10; R277, R279, R280).
 // R429: Math Equation's first displayed value is its current formula result.
-// BUILD M8: use a seeded hotseat game, retried assertions, and test ids.
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {

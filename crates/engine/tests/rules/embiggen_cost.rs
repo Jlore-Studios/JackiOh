@@ -1,15 +1,8 @@
 //! #492, R81: the view's `embiggenCost` is what a play at the card's embiggen price then charges.
 //!
-//! An "A embiggen B" card in the viewer's own hand carries `cost`, its normal price as it stands, and
-//! `embiggenCost`, the embiggen price as it stands (`view_for::with_embiggen_cost`), so the client can
-//! show the price the picker's Embiggened card plays at without working one out (CLAUDE.md rule 7).
-//! Both are read by the function the play itself is priced by (`play_choices::embiggen_play_cost`,
-//! `mana::play_cost`), and this proves it from the outside: the number the view shows is the
-//! `costPaid` of the `embiggen: true` play `reduce` then accepts, the mana it takes, and the line
-//! `legalActions` offers that play at, with no cost change and under a discount (the card's own, a
-//! player's, and R363's "(4)+ Cost" threshold, which reaches the embiggen price and not the base one)
-//! and a surcharge, on both faces. Driven with the engine's fixture embiggen Field Spell (`pb-`); the
-//! cards crate proves the real Embiggen cards again (`crates/cards/tests/cross/embiggen_choices.rs`).
+//! An "A embiggen B" card in the viewer's own hand carries `cost` and `embiggenCost` as they stand,
+//! read by the function the play is priced by, so the client never works a price out (CLAUDE.md rule 7).
+//! The cards crate proves the real Embiggen cards (`crates/cards/tests/cross/embiggen_choices.rs`).
 
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
@@ -21,7 +14,7 @@ use crate::rules::fixtures::play_pipeline_b::{embiggen_field, only, pb_playing, 
 const BASE: i32 = 2;
 const EMBIGGEN: i32 = 4;
 
-/// What changes the card's price in a case: its own `costMod`, and the player modifiers on p1.
+/// What changes the card's price in a case: its `cost_mod` and p1's player modifiers.
 struct Prices {
     name: &'static str,
     cost_mod: i32,
@@ -73,8 +66,7 @@ fn cases() -> Vec<Prices> {
             embiggened: EMBIGGEN - 1,
         },
         Prices {
-            // R363: Professor Curvature's shape reads the price the other steps left, so it reaches
-            // the embiggen price of 4 and not the base price of 2.
+            // R363: Professor Curvature's shape reads the price the other steps left: 4 embiggened, not 2.
             name: "a (4)+ Cost discount (R363)",
             cost_mod: 0,
             mods: vec![discount(1, Some(EMBIGGEN))],
@@ -98,8 +90,7 @@ fn cases() -> Vec<Prices> {
     ]
 }
 
-/// p1's main phase with the fixture in hand on the face asked for, the case's price changes in place
-/// and `mana` to spend. Returns the state and the card's id.
+/// p1's main phase, the fixture in hand on the face asked for, the case's price changes, `mana` to spend.
 fn holding(prices: &Prices, radiant: bool, mana: i32) -> (GameState, String) {
     let mut state = pb_playing("embiggen-cost");
     let card = only(&in_hand(&mut state, &embiggen_field().id, PlayerId::P1, 1));
@@ -121,7 +112,6 @@ fn holding(prices: &Prices, radiant: bool, mana: i32) -> (GameState, String) {
     (state, card.id)
 }
 
-/// The card as `view_for` shows it to `viewer`, when that viewer's view lists it.
 fn shown(state: &GameState, viewer: PlayerId, id: &str) -> Option<CardView> {
     let view = view_for(state, viewer);
     let hand = if viewer == PlayerId::P1 {
@@ -135,7 +125,6 @@ fn shown(state: &GameState, viewer: PlayerId, id: &str) -> Option<CardView> {
     }
 }
 
-/// A play of the card into backrow lane 1 at the price asked for.
 fn play(state: &GameState, id: &str, embiggen: bool) -> ReduceResult {
     act_result(
         state,
@@ -164,7 +153,7 @@ fn charged(before: &GameState, result: &ReduceResult) -> (i32, i32) {
     (paid, spent)
 }
 
-/// The prices `legalActions` offers the card at, as its plays' `embiggen` flags.
+/// The prices `legal_actions` offers the card at, as its plays' `embiggen` flags.
 fn offered(state: &GameState, id: &str) -> Vec<Option<bool>> {
     let mut flags: Vec<Option<bool>> = plays_of(state, id, PlayerId::P1)
         .into_iter()
@@ -207,7 +196,7 @@ fn r81_the_views_embiggen_cost_is_what_an_embiggened_play_then_charges_with_no_c
                 (prices.embiggened, prices.embiggened),
                 "{what}: an embiggen: true play charges embiggenCost"
             );
-            // And the normal play charges the view's cost, as before.
+            // And the normal play charges the view's cost.
             let small = charged(&state, &play(&state, &id, false));
             assert_eq!(
                 small,
@@ -254,7 +243,7 @@ fn r81_embiggen_cost_rides_only_the_viewers_own_hand_cards_with_an_embiggen_pric
         Some(None),
         "a one-price card carries no embiggenCost"
     );
-    // The opponent's view lists p1's hand as a count, so no card of it, and no price, reaches p2.
+    // p2's view lists p1's hand as a count: no card of it, and no price, reaches p2.
     assert!(matches!(
         view_for(&state, PlayerId::P2).opponent.hand,
         HandView::Count { .. }
@@ -269,7 +258,7 @@ fn r81_embiggen_cost_rides_only_the_viewers_own_hand_cards_with_an_embiggen_pric
         revealed.embiggen_cost, None,
         "the opponent's revealed card carries no embiggenCost"
     );
-    // The card is played onto the field at its embiggen price: the field's view carries none either.
+    // Played onto the field at its embiggen price, the card's field view carries none either.
     let after = act(
         &state,
         json!({ "type": "play", "instanceId": id, "zone": { "row": "backrow", "lane": 1 }, "embiggen": true, "playerId": "p1" }),

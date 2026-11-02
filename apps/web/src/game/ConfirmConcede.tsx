@@ -1,13 +1,9 @@
 // "Concede this game?": what the board's Concede control opens, in every mode. A concede ends the
 // game at once and cannot be taken back, and the control sits one stray tap from End turn, so it
 // asks first. Only "Concede" sends the action; "Keep playing" is the default: it takes the focus,
-// and Escape, Back (R2127000) or a click outside the panel means the same.
-//
-// It decides nothing (CLAUDE.md rule 7): the caller dispatches `{ type: "concede" }`.
-//
-// An `alertdialog`, modal, labeled by its question and described by its line of consequence. Focus
-// moves in on open, Tab and Shift+Tab stay between the two buttons, and the caller puts the focus
-// back on the Concede control once it closes.
+// and Escape, Back (R2127000) or a click outside the panel means the same. It decides nothing
+// (CLAUDE.md rule 7): the caller dispatches `{ type: "concede" }`. Tab and Shift+Tab stay between the
+// two buttons, and the caller puts the focus back on the Concede control once it closes.
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 

@@ -163,7 +163,8 @@
   padding: 12px;
 }
 
-.tavern.app-shell .collection-cardview__scrim {
+.tavern.app-shell .collection-cardview__scrim,
+.tavern.app-shell .collection-preview__scrim {
   position: absolute;
   inset: 0;
   background: rgba(4, 6, 10, 0.72);
@@ -228,14 +229,16 @@
   min-width: 0;
 }
 
-.tavern.app-shell .collection-cardview__title {
+.tavern.app-shell .collection-cardview__title,
+.tavern.app-shell .collection-preview__name {
   margin: 0;
   font-family: var(--tavern-serif);
   color: var(--tavern-gold-pale);
 }
 
 .tavern.app-shell .collection-cardview__status,
-.tavern.app-shell .collection-cardview__hint {
+.tavern.app-shell .collection-cardview__hint,
+.tavern.app-shell .collection-preview__meta {
   margin: 0;
   font-size: 13px;
   color: var(--tavern-text-dim);
@@ -731,12 +734,6 @@
   padding: 12px;
 }
 
-.tavern.app-shell .collection-preview__scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(4, 6, 10, 0.86);
-}
-
 .tavern.app-shell .collection-preview__panel {
   position: relative;
   display: flex;
@@ -755,16 +752,4 @@
   display: block;
   height: min(70vh, 560px);
   aspect-ratio: 5 / 7;
-}
-
-.tavern.app-shell .collection-preview__name {
-  margin: 0;
-  font-family: var(--tavern-serif);
-  color: var(--tavern-gold-pale);
-}
-
-.tavern.app-shell .collection-preview__meta {
-  margin: 0;
-  font-size: 13px;
-  color: var(--tavern-text-dim);
 }

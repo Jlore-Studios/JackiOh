@@ -84,8 +84,8 @@ function held(hand: SideView["hand"]): number {
 
 /**
  * Whether one folded game has what the replay's tests read off its steps: a third page, both hands holding
- * cards at the end, MIN_TURNS turns with a first and a third of MIN_TURN_STEPS or more, a first animated step
- * before the last whose events the board queues, and a card drawn in the GIF export's clip.
+ * cards at the end, MIN_TURNS turns (the first and third long), an animated step before the last, and a
+ * card in the GIF export's clip.
  */
 function fitsTheReplayTests(steps: readonly ReplayStep[]): boolean {
   const last = steps.at(-1);

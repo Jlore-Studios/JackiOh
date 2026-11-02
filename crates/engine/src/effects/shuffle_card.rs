@@ -1,24 +1,16 @@
 //! Shuffling an EXISTING card into its owner's library (§6.3, R80, R316): Classic #30 Recycle's
-//! "Shuffle your graveyard into your deck". A card-specific verb of the Classic #1–#45 workstream,
-//! beside `shuffle_into.rs`, whose verbs make fresh copies; this one moves a card that already exists,
-//! keeping its id, its `costMod` and everything else R78 carries between zones.
+//! "Shuffle your graveyard into your deck" (of Classic #1–#45). Unlike `shuffle_into.rs`'s fresh copies,
+//! the card keeps its id, its `costMod` and all else R78 carries between zones. It goes through the one
+//! shuffle-in (`draw::shuffle_into_library`): its position blanked for both players (R97), the owner
+//! shown what went in (R311) and R43's arrival roll.
 //!
-//! Each card goes in at a uniformly random position, drawn from the match rng, through the one
-//! shuffle-in the engine has (`draw::shuffle_into_library`): the `shuffledIn` event with its position
-//! blanked for both players (R97), the owner shown what went in (R311) and R43's arrival roll.
+//! R80, R316: `shuffle_into_library` alone decides a full library's refusal. A card in its owner's
+//! graveyard that it refuses STAYS there (it never left: no second `enteredGraveyard`), reported by
+//! `libraryOverflow`; any other refused card goes to its owner's graveyard, or ceases to exist if a
+//! unit-token card (R11).
 //!
-//! R80, R316: a card that would go into a full library does not, and `shuffle_into_library` alone
-//! decides it. It STAYS where it is when it is in its owner's graveyard already — no second move and
-//! no second `enteredGraveyard`, since it never left — and `libraryOverflow { outcome: "graveyard" }`
-//! reports the refusal as for any existing card. A card anywhere else is refused as any existing card
-//! is: to its owner's graveyard, or ceasing to exist if it is a unit-token card (R11).
-//!
-//! R1867006: `player` moves the card into another player's library instead (Stinkyscape #12.3
-//! Psychic Scream's "into your opponent's deck"). The card becomes the new owner's before the move,
-//! owner and controller alike as `new_instance` makes them, so R78's reset and the arrival land on
-//! their card (R12: a steal off the field makes a card the taker's).
-//!
-//! Port of `packages/engine/src/effects/shuffleCard.ts`.
+//! R1867006 (Stinkyscape #12.3 Psychic Scream's "into your opponent's deck"): `player` names another
+//! library; the card becomes that player's first, so R78's reset and the arrival land on their card (R12).
 
 use serde::{Deserialize, Serialize};
 
@@ -40,15 +32,11 @@ pub struct ShuffleCardIntoArgs {
 }
 
 /// §6.3, R80, R316: shuffle the card `instance_id` names into its owner's library at a random position.
-/// A card that no longer exists is skipped. A graveyard card a full library refuses stays in that
-/// graveyard, reported by `libraryOverflow`; any other refused card is handled as `shuffle_into_library`
-/// handles an existing card.
+/// A card that no longer exists is skipped.
 pub fn shuffle_card_into(args: ShuffleCardIntoArgs) -> Effect {
     Effect::new("shuffleCardInto", move |ctx| {
-        // R1867006: the move into another player's deck. The card becomes the new owner's in the
-        // state first — owner and controller alike as `new_instance` makes them — because the move
-        // below refreshes its working copy from the live card, which would drop a change made only
-        // on the clone.
+        // R1867006: the new owner (and controller, as `new_instance` makes them) goes on the live card,
+        // since the move refreshes its working copy from it and would drop a change made on a clone.
         if let Some(spec) = args.player {
             let owner = player_of(ctx, spec);
             if let Some(live) = find_instance_mut(ctx.state, &args.instance_id) {

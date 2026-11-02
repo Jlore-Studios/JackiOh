@@ -1,17 +1,12 @@
-// R1953001 (#1953): a held token, offered only in the locked item's fullscreen preview
-// (collection/ItemPreview.tsx, R2730000). A Rare token covers Common and Rare, an Epic token Epic
-// and below, and no token a chase, a default or a starter (R1305003, §14.2), so the offer shows
-// only where a held token covers the cosmetic; a card token covers any unowned card (§14.5).
+// R1953001 (#1953): a held token, offered only in a locked item's fullscreen preview (ItemPreview.tsx,
+// R2730000), and only where a held token covers it (R1305003, §14.2): no token covers a chase, a
+// default or a starter; a card token covers any unowned card (§14.5).
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The held counts are `GET /api/tokens`' and the offer only
-// hides what the server would refuse: its Confirm sends `POST /api/tokens/redeem-cosmetic` (or
-// `POST /api/tokens/redeem-card`) and renders the answer, its held counts and a re-read of what
-// the account owns, so the item shows owned. A refusal shows the server's words and changes nothing.
+// THE SERVER DECIDES (CLAUDE.md rule 7): the held counts are `GET /api/tokens`' and the offer only
+// hides what the server would refuse. A refusal shows the server's words and changes nothing.
 //
-// R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place:
-// "Unlock {name}? This spends 1 Epic token.", with Confirm and Cancel, Cancel focused. Cancel and
-// Escape spend nothing and put the offer back, focused. The question lives only in the item's
-// preview (R2730000), a modal, so it lies inside the modal.
+// R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place, Cancel
+// focused. The question is drawn inside the offer, so in the preview, a modal, it lies inside the modal.
 
 import { useEffect, useId, useState, type KeyboardEvent, type ReactElement } from "react";
 
@@ -35,9 +30,8 @@ function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
 }
 
 /**
- * The token a locked `cosmetic` is offered for: the lowest held one whose tier covers its rarity on
- * the cosmetic's own scale (R1305003). Null for a chase, a default or a starter, and where nothing
- * held covers it or the held tokens are unread.
+ * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003). Null for a
+ * chase, a default or a starter, and where nothing held covers it or the held tokens are unread.
  */
 export function offerTier(
   cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "chase">,
@@ -76,7 +70,6 @@ export type TokenSpend =
   | { kind: "cosmetic"; tier: CosmeticTokenTier; cosmeticId: string; cardId?: string }
   | { kind: "card"; cardId: string };
 
-/** What the offer's button says: the token it spends and how many of it are held. */
 function offerWords(spend: TokenSpend, held: HeldTokens): string {
   if (spend.kind === "card") {
     return t("Unlock with a card token ({count} held)", { count: formatNumber(held.card) });

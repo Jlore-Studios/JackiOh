@@ -1,10 +1,6 @@
 //! Test-only cards for the starscape map (#1847, R1847000–R1847002): Stinkyscape #148 Alteran Reach's
 //! shape, a Field Spell whose abilities travel its controller's map (`subsystems::starscape_abilities`),
-//! and the card the edge adds, #148.1 Edge of the Universe's. The engine does not depend on
-//! `jackioh-cards`, and no Stinkyscape card exists before the set ships; the real cards' tests will
-//! cover the same cases again.
-//!
-//! Ids are prefixed `ss-` and indexed from 18470, so they collide with no other fixture file's.
+//! and the card the edge adds, #148.1 Edge of the Universe's. Ids `ss-…` from 18470, no other file's.
 
 use std::sync::LazyLock;
 
@@ -13,7 +9,6 @@ use jackioh_engine::testkit::*;
 
 use super::catalog::spell_def;
 
-/// The fixture Reach's id.
 pub const REACH_ID: &str = "ss-reach";
 /// The card the edge adds.
 pub const EDGE_ID: &str = "ss-edge";
@@ -27,7 +22,7 @@ pub static REACH: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// The edge's card: a Spell token that does nothing.
+/// A Spell token that does nothing.
 pub static EDGE: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
         18471,
@@ -58,7 +53,6 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     )])
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_starscape_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

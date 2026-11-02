@@ -1,16 +1,11 @@
-//! The daily super run's last runs (SPEC §9.11, R1935000), which `/stats`'s Daily runs tab listed until
-//! R1973000 took the tab off the page; the route stays for whatever calls it (CLAUDE.md rule 13).
+//! The daily super run's last runs (SPEC §9.11, R1935000). R1973000 took `/stats`'s Daily runs tab
+//! off the page; the route stays for whatever calls it (CLAUDE.md rule 13).
 //!
 //! `GET /api/stats/ci` is open: the last `CI_RUNS_LISTED` runs of `CI_RUNS_WORKFLOW` on
-//! `CI_RUNS_BRANCH`, newest first, read from GitHub's Actions API, each with when it started, its
-//! commit, whether it passed, failed or is still running and, for a finished run that did not pass,
-//! the jobs that did not pass, as the workflow's own report lists them. What GitHub answered is kept
-//! `CI_RUNS_CACHE_TTL_SECONDS` however many ask, as R1583000 keeps the play rates: requests that miss
-//! together wait for one read, and a read that fails is kept for no one and answers `unavailable`. A
-//! finished run attempt's jobs never change, so they are read once and kept while the run is listed.
-//! The repository is public, so a deployment reads it with `CREATE_ISSUES_TOKEN` when that is set,
-//! for GitHub's larger allowance, and without a token otherwise; the end-to-end server reads nothing
-//! and lists no run.
+//! `CI_RUNS_BRANCH`, newest first, from GitHub's Actions API, kept `CI_RUNS_CACHE_TTL_SECONDS` as
+//! R1583000 keeps the play rates (a failed read is kept for no one and answers `unavailable`). A
+//! finished attempt's jobs never change, so they are read once and kept while the run is listed. A
+//! deployment reads with `CREATE_ISSUES_TOKEN` when set; the end-to-end server lists no run.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

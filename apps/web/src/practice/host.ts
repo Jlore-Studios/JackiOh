@@ -1,7 +1,6 @@
-// The core runs in a module worker, or in-thread under jsdom; `request` preserves response order.
-// The in-thread host answers on a macrotask to match worker asynchrony.
-// Type-only imports keep the core out of the page bundle; the worker dynamically imports it.
-// The engine and AI are WebAssembly (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
+// The core runs in a module worker, or in-thread under jsdom (answering on a macrotask, as a worker would).
+// Type-only imports keep the core out of the page bundle. The engine and AI are WebAssembly
+// (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
 
 import { loadWasm, useLuauModule } from "../wasm/index.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";

@@ -42,9 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #161 Faction: Pegasus — SPEC §8.10 row S 161, BUILD M12 row S 161: "adds the 4 named cards in order, each
-// on its base face at its printed cost; a hand with room for fewer keeps the first and burns the rest;
-// radiant all of them Radiant".
+// S #161 Faction: Pegasus — SPEC §8.10 row S 161, BUILD M12 row S 161.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

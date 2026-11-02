@@ -1,7 +1,6 @@
 // R2321001: Training Grounds #15 In a hurry's Rush Tokens wear the engine's `endOfTurn` mark while
-// their destroy at the end of this turn waits (R437's reusable mark). The client knows its words and
-// its color, so the badge, its tooltip and the inspect note say it in words and never fall back to the
-// generic "an effect is waiting".
+// their end-of-turn destroy waits (R437's reusable mark). The client knows its words and color, so the
+// badge, tooltip and inspect note never fall back to the generic "an effect is waiting".
 
 import { describe, expect, it } from "vitest";
 

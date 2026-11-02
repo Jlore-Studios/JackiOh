@@ -1,7 +1,5 @@
 //! ME-TURN's lost refreshes and extra turns (SPEC §2.2, §2.3, R844–R847): Meditative #18,
 //! #19 and #19.1's systems, proved here through fixture-free effects so the engine owns them.
-//!
-//! Port of nothing shipped: no shipped card loses a refresh or owes a turn.
 
 use jackioh_engine::effects::{gain_mana, lose_refreshes, next_turn_mana, take_extra_turn};
 use jackioh_engine::resolve::HookOptions;
@@ -86,7 +84,6 @@ mod r844_lost_refreshes {
         assert_eq!(state.players.p1.mana.next_turn_mod, 0);
         assert_eq!(state.players.p1.lost_refresh_through, None);
 
-        // Turn 5 is normal again.
         state = end_turn(&state);
         state = end_turn(&state);
         assert_eq!(state.turn, 5);
@@ -230,7 +227,6 @@ mod r845_extra_turn_basics {
         assert_eq!(state.players.p1.mana.current, 0);
         assert_eq!(state.players.p1.lost_refresh_through, None);
 
-        // The turn after is normal.
         state = end_turn(&state);
         assert_eq!(state.active, PlayerId::P2);
         state = end_turn(&state);

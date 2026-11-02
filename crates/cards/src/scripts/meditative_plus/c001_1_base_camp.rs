@@ -5,11 +5,8 @@
 //!   Radiant: "Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add
 //!            {coins|Radiant Coin|Radiant Coins} to your hand."
 //!
-//! M #8's Ascent level is R429's play count (R840), so the levels are `raise_times_played` on every
-//! Reach the Summit the caster owns, wherever it is (R1185001): its next play resolves the level it
-//! reached (R841) and costs that much (R842); a level of 10 wins only when the card is played (R850).
-//! A copy made later starts at 0 (R57). Then The Coin (§7), Radiant on the Radiant face, a full hand
-//! burning what does not fit (§2.4).
+//! M #8 Ascent level is R429 play count (R840); `raise_times_played` on owned copies (R1185001, R841, R842, R850, R57).
+//! Adds Coin (§7, §2.4).
 
 use jackioh_engine::prelude::*;
 
@@ -43,11 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #1.1 Base Camp — SPEC §8.9 row 1.1, BUILD M11 row M+ 1.1: "every Reach the Summit its
-// caster owns, in hand, deck and graveyard alike, goes up 2 levels (its next play resolves that
-// level's line, R841, and costs that much, R842); one the opponent owns is untouched; a Reach the
-// Summit at 8 raised to 10 does not win until it is played, then wins (R850); adds 2 Coins, a full
-// hand burning them; levels and coins read through `param()`; radiant 3 levels and 2 Radiant Coins".
+// Meditative+ #1.1 Base Camp — SPEC §8.9 row 1.1, BUILD M11 row M+ 1.1 (R841, R842, R850).
 #[cfg(test)]
 mod tests {
     use super::*;

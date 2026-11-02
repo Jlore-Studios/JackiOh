@@ -41,10 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #23 Enormous Elderberry — SPEC §8.9 row 23, BUILD M11 row M+ 23: "adds one card of the
-// embiggen pool (the twelve other embiggen cards, never itself) whose Embiggened version costs (0) and whose normal
-// version keeps its price, both offered; Embiggened at (4) 3 of them; a full hand burns the rest; both
-// counts read through `param()`; radiant the cards are Radiant".
+// Meditative+ #23 Enormous Elderberry — SPEC §8.9 row 23, BUILD M11 row M+ 23.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -52,10 +49,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
 
-    /// p1 holds the Elderberry (Radiant on `radiant`) and `fillers` fillers, with 10 mana.
     fn game(seed: &str, radiant: bool, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
         hand.extend(std::iter::repeat_n(json!(FILLER), fillers));
@@ -70,7 +65,6 @@ mod tests {
         s.play(ID, if embiggen { json!({ "embiggen": true }) } else { json!({}) });
     }
 
-    /// The cards the Cry added: p1's hand past the fillers it kept.
     fn added(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1)
             .into_iter()
@@ -78,7 +72,6 @@ mod tests {
             .collect()
     }
 
-    /// The card as p1's view shows it.
     fn shown(s: &Scenario, id: &str) -> CardView {
         match s.view(P1).you.hand {
             HandView::Cards(cards) => cards
@@ -89,7 +82,6 @@ mod tests {
         }
     }
 
-    /// The embiggen pool of the sets that ship (R1178001), less this card.
     fn pool() -> Vec<String> {
         crate::query::pool(ID, &crate::query::embiggen_cards())
             .iter()
@@ -97,7 +89,6 @@ mod tests {
             .collect()
     }
 
-    /// Each added card: of the pool, its normal price printed and its Embiggened version at (0).
     fn assert_priced(s: &Scenario, cards: &[CardInstance]) {
         let pool = pool();
         for card in cards {

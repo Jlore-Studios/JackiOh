@@ -18,10 +18,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #12.4 Powder Spray — SPEC §8.7 row 12.4, BUILD M9 Classic+ row C+ 12.4: "3 damage to the enemy
-// hero and to each enemy Unit, separate instances all landing before the state check (R59); Spell
-// Damage raises each hit; an Immune to Spells Unit takes none; your side is untouched; the damage reads
-// through `param()`; radiant 6".
+// C+ #12.4 Powder Spray — SPEC §8.7 row 12.4, BUILD M9 Classic+ row C+ 12.4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -46,7 +43,6 @@ mod tests {
         s
     }
 
-    /// TS `s.stats(s.unit(player, lane) ?? "").health`.
     fn health_at(s: &Scenario, player: PlayerId, lane: i32) -> i32 {
         s.stats(s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()).health
     }

@@ -51,24 +51,16 @@ import {
 import { codeWord, parseRecipeText, recipeText } from "./recipeText.ts";
 import "./craft.css";
 
-/** ME-CRAFT (Meditative #17, R880–R883): the Scratch-style block editor. Blocks snap together for
- * type, stats, keywords, hats and verbs; the meters and the face are the engine's own
- * `craftPreview`, so the client decides nothing (CLAUDE.md rule 7). The turn clock keeps running
- * while the player crafts (R79): this is an answer like any other, and the opponent sees only that
- * a prompt is open. Pointer drag moves blocks with a mouse or a finger; every drag has a click,
- * tap and keyboard equivalent, so nothing needs a drag.
+/** ME-CRAFT (Meditative #17, R880–R883): the Scratch-style block editor. The meters and the face
+ * are the engine's own `craftPreview`, so the client decides nothing (CLAUDE.md rule 7). The turn
+ * clock keeps running while the player crafts (R79): this is an answer like any other, and the
+ * opponent sees only that a prompt is open. Every drag has a click, tap and keyboard equivalent.
  *
  * The prompt's `craftMode` (Meditative+, #1182) changes the frame, never the rules: `potion` and
  * `hugePotion` pin a Spell whose one hat is its When cast (Jazakus and Jazakus Prime, R1182000,
  * R1182001, R1563008), with no type or hat palette; `scratch` opens a code editor, the recipe typed
- * as text (R1563010), with no suggestions, no prices, no tooltips and no refusal reasons, only the
- * blocks by name, the meters and the Craft button (Scratch Pad, R1182002). The palette holds only
- * the prompt's offer, four keywords, two hats and three effects (R1563007), and the verdict is the
- * engine's on the answer, its frame and offer included.
- *
- * Layout: a header (title and meters), the body (palette, canvas and the card), and a footer whose
- * Craft button stays in reach; on a phone the body scrolls between them as one column, the card
- * first. */
+ * as text (R1563010, Scratch Pad, R1182002). The verdict is the engine's on the answer, its frame
+ * and offer included. */
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
@@ -95,7 +87,6 @@ function typeName(type: CardType): string {
   return readerTerms()?.types[type] ?? type;
 }
 
-/** A keyword in the card frame's own words in the reader's language. */
 function keywordName(kind: Keyword["kind"]): string {
   return readerTerms()?.keywords[kind] ?? kind;
 }
@@ -129,7 +120,6 @@ function effectText(effect: CraftEffect): string {
   return label;
 }
 
-/** The editor's title for the prompt's mode. */
 function titleOf(mode: CraftMode | undefined): string {
   if (mode === "scratch") return t("Code a card from scratch");
   if (mode === "potion") return t("Craft a Potion");
@@ -196,7 +186,6 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
     if (read.ok) setCodeRecipe(read.recipe);
   }
 
-  /** A block's name typed at the caret, as a code editor's completion would. */
   function insertCode(snippet: string): void {
     const area = codeArea.current;
     const start = area?.selectionStart ?? code.length;
@@ -244,7 +233,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
 
   // Pointer drag, as Scratch does: press and hold still is a click (or a tap); moving past
   // 8px is a drag whose ghost follows the pointer until release. `dragMoved` is a ref because the
-  // release handler reads it, not the render. Every drag has a click, tap and keyboard equivalent.
+  // release handler reads it, not the render.
   useEffect(() => {
     if (dragStart.current === null) return;
     const start = dragStart.current;
@@ -295,10 +284,9 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
 
   const def = preview.def;
   const face = faceModel({ defId: def.id, def, radiant });
-  // #552: the card being crafted is read as any card is, a hover preview with its glossary and, on a
-  // phone, the long-press sheet, so the words its blocks print are a press away. Lines of code is a
-  // hidden stat in matches (the meters above say this card's). From scratch the glossary is a hint,
-  // so the face is shown and nothing more (R1182002).
+  // #552: the card being crafted is read as any card is, so the words its blocks print are a press
+  // away. Lines of code is a hidden stat in matches (the meters above say this card's). From scratch
+  // the glossary is a hint, so the face is shown and nothing more (R1182002).
   const inspect = useInspectTrigger({ key: "craft-preview", face }, { prefer: "above", showLoc: false });
   /** A price or a refusal, shown except from scratch (R1182002). */
   const hint = (text: string): string | undefined => (scratch ? undefined : text);

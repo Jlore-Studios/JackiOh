@@ -1,18 +1,6 @@
 //! #62 Friend of Felinors (SPEC §8.3, §7, R64).
-//!
-//! Base: "Fill your board with Felinor Tokens". Radiant: "Then your units get +2/+2", which §8's
-//! Conventions read as an addition ("Then") rather than a replacement, so the radiant face fills the
-//! board first and buffs afterwards.
-//!
-//! R64 defines "fill your board": every empty unit zone, left to right (R1136000) — so an occupied
-//! zone is untouched and a full board produces nothing. `fill_board` is that verb; this file never
-//! counts zones itself.
-//!
-//! §8.3's Engine cell for the radiant face is "Permanent buff on those instances", i.e. layer 4 of
-//! §10.4 on each unit rather than an aura, which is what `buff_all_units` writes. Ordering is the
-//! whole of the radiant clause: the tokens are summoned by the effect BEFORE the buff effect in the
-//! same list, and `apply_effects` runs a list in order, so the new tokens are units the controller
-//! has when the buff lands and they get +2/+2 too (BUILD M4-T4 #62).
+//! Base: "Fill your board with Felinor Tokens". Radiant: "Then your units get +2/+2" (§8 Conventions).
+//! Fills empty zones with Felinor tokens (R64, §3.2, §7, R1136000); radiant adds permanent +2/+2 buff (R78, §10.4).
 
 use jackioh_engine::prelude::*;
 
@@ -48,9 +36,6 @@ pub fn script() -> CardScripts {
 }
 
 // #62 Friend of Felinors — SPEC §8.3, BUILD M4-T4 row 62.
-//
-// Must-pass: "Fills empty zones only; radiant then +2/+2 to every unit you control including the
-// new tokens."
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

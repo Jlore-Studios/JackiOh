@@ -15,10 +15,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-053";
 
-/// The Cry's resume step: the permanent picked as it resolves.
 const PLACED_STEP: &str = "placed";
 
-/// A placement of Plague Counters on this card: `counterChanged` for `plague` with `placed`, naming it.
 fn placed_on_this(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(me) = &ctx.self_ else {
         return false;
@@ -64,8 +62,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 2 tokens and draw 2 are its declared numbers, which `param`
-    // reads off the running face.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -100,7 +96,6 @@ mod tests {
         (0..n).map(|_| X).collect()
     }
 
-    /// Every placement so far: one entry per `counterChanged` that carries `placed`.
     fn placements(s: &Scenario) -> Value {
         let entries: Vec<Value> = s
             .events()
@@ -122,7 +117,6 @@ mod tests {
             .count()
     }
 
-    /// The permanents the open prompt offers, each once, in its order.
     fn offered(s: &Scenario) -> Vec<String> {
         let mut ids: IndexSet<String> = IndexSet::new();
         for option in &s.state().pending.as_ref().expect("the Cry's prompt").options {
@@ -285,7 +279,6 @@ mod tests {
                 assert_eq!(s.card(&trap).counters.plague, Some(1));
                 assert_ne!(s.card(&trap).face_up, Some(true));
                 assert!(!js(&s.view(P1)).to_string().contains(UNLICENSED));
-                // Its controller still reads it, tokens and all.
                 assert!(js(&s.view(P2))["you"]["backrow"].to_string().contains(UNLICENSED));
             }
 

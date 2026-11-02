@@ -1,25 +1,15 @@
 //! Duos co-op (#936, fullsend SPEC S4): two players against two, as two ordinary 1v1 games side by
-//! side — duel 0 is A1 (`p1`) against B1 (`p2`), duel 1 is A2 (`p1`) against B2 (`p2`). Duos is not a
-//! four-seat engine: `DuosState` holds the two `GameState`s, and every card in either still sees a 1v1
-//! game, so no card script changes. The wrapper adds exactly three things:
+//! side — duel 0 is A1 (`p1`) against B1 (`p2`), duel 1 is A2 (`p1`) against B2 (`p2`). Every card in
+//! either still sees a 1v1 game, so no card script changes. The wrapper adds three things: a life pool
+//! (own HP plus a team pool, `duos_life.rs`, B12–B18, copied to the other duel after every step, B15,
+//! and the game judged, B16); passing a hand card to the teammate's hand (B19–B22); and turn sync, a
+//! round being one turn in each duel: both round seats act at once, End turn only marks a seat ended,
+//! and once both have it is applied to duel 0, then duel 1 (B4–B9; R82's automatic end is off, the
+//! wrapper applying it to round seats, B9).
 //!
-//!   life pool   each seat has its own HP and its team shares a pool (`duos_life.rs`, B12–B18); after
-//!               every step the wrapper copies each team's pool to the other duel (B15) and judges
-//!               the game (B16).
-//!   passing     a round seat may send a hand card to its teammate's hand for its team's pass cost
-//!               (B19–B22).
-//!   turn sync   a round is one turn in each duel. Both round seats act at once; a seat's End turn
-//!               only marks it ended, and once both have, End turn is applied to duel 0, then duel 1,
-//!               and the next round begins (B4–B9). A duel's players have R82's automatic turn end
-//!               off, and the wrapper applies R82's rule to round seats itself (B9).
-//!
-//! The modules: `state` (the types and `duos_create`), `reduce` (`duos_begin`, `duos_reduce` and the
-//! settle after every step), `legal` (`duos_legal_actions` and the refusals it shares with the
-//! reducer, so a greyed-out button and a refusal cannot disagree, §9.3), `view` (`duos_view_for`) and
-//! `replay` (`duos_hash`, `duos_fold`). The wire types are `crate::wire::duos`.
-//!
-//! A 1v1 game is untouched: every field Duos adds to a `GameState` is an `Option` absent outside a
-//! duel, and the life helpers are today's arithmetic without one (B3).
+//! `legal` shares its refusals with the reducer, so a greyed-out button and a refusal cannot disagree
+//! (§9.3). A 1v1 game is untouched: every field Duos adds to a `GameState` is an `Option` absent outside
+//! a duel, and the life helpers are plain arithmetic without one (B3).
 
 mod legal;
 mod reduce;

@@ -1,14 +1,5 @@
-//! The ranked ladder through the server (SPEC §9.12, R603–R612): opening seasons, rating ranked
-//! games of players and bots, Jlorious, and the three reads the client has.
-//!
-//! The pure rules have their own suites (`tests/api/{glicko2,ladder,season}.rs`); these drive
-//! `crates/server/src/api/ranked.rs` against the fake store, so what is proved here is the reading
-//! and writing around them.
-//!
-//! Ported from `apps/server/test/api/ranked.test.ts` (part 18). TS's test deps ran as patch
-//! `v0.1.1`, so its season was the literal `"v0.1"`; the Rust test app runs as the build's own
-//! patch (`jackioh_cards::catalog_version()`, SURFACE §11.3), so the season here is
-//! `season_id_of` of that, and the "next minor version" is computed from it.
+//! Ranked ladder through server (SPEC §9.12, R603–R612, SURFACE §11.3).
+//! Covers season opening, match rating updates, Jlorious threshold, and client reads.
 
 use std::sync::Arc;
 
@@ -36,9 +27,7 @@ use crate::support::store::{fake_lock, from, q, to_json};
 const A: &str = "profile-a";
 const B: &str = "profile-b";
 
-// ---------------------------------------------------------------------------
 // Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------
 
 /// `{ ...base, ...extra }` on JSON objects.
 fn merged(mut base: Value, extra: Value) -> Value {
@@ -215,9 +204,7 @@ fn live_match(id: &str, seed: &str, ranked: bool) -> MatchRow {
     }))
 }
 
-// ---------------------------------------------------------------------------
 // R609 seasons on the server
-// ---------------------------------------------------------------------------
 
 mod r609_seasons_on_the_server {
     use super::*;
@@ -298,10 +285,7 @@ mod r609_seasons_on_the_server {
             "never-played",
         );
         assert_eq!(to_json(&q!(app, ranked_bot("ai-hard"))), bot_before);
-        // Everyone starts the new season back in placements; the old season's rows are kept. TS read
-        // this through `ownRank({ ...deps, patchVersion: "v0.2.0" }, A)`; the Rust test app runs as
-        // one patch, so the same fact is read off the store: no row in the new season, which
-        // `own_rank` answers as a Raisin with no placements played (R605).
+        // Everyone starts new season back in placements; old rows kept. Unranked yields default Raisin (R605).
         assert!(to_json(&q!(app, ranked_rank(&season_id_of(&next_patch), A))).is_null());
         let seasons: Vec<Value> = to_json(&q!(app, ranked_ranks_of(A)))
             .as_array()
@@ -330,9 +314,7 @@ mod r609_seasons_on_the_server {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R605 placements through rated games
-// ---------------------------------------------------------------------------
 
 mod r605_placements_through_rated_games {
     use super::*;
@@ -390,9 +372,7 @@ mod r605_placements_through_rated_games {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R610 bots
-// ---------------------------------------------------------------------------
 
 mod r610_bots {
     use super::*;
@@ -605,10 +585,7 @@ mod r608_jlorious_through_the_server {
         assert_eq!(JLORIOUS_SIZE, 100);
     }
 
-    /// #2022: GET /api/ranked, the match screen's ranks and the telemetry's tiers read only the rows
-    /// they show and Mythic Grape's, never the whole season, and rank each player as the leaderboard,
-    /// which still reads it whole, does: A in Jlorious mid-list, B the first Mythic Grape player past
-    /// its cut.
+    /// #2022: GET /api/ranked reads visible rows and Mythic Grape rather than whole season.
     #[tokio::test(start_paused = true)]
     async fn r608_the_rank_reads_skip_the_whole_season_and_rank_as_the_leaderboard_does() {
         let app = test_app().await;
@@ -663,9 +640,7 @@ mod r608_jlorious_through_the_server {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R640000 ladder bots on the ladder
-// ---------------------------------------------------------------------------
 
 mod r640000_bots_on_the_ladder {
     use super::*;
@@ -921,9 +896,7 @@ mod r640000_bots_on_the_ladder {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R612 what the client reads
-// ---------------------------------------------------------------------------
 
 mod r612_what_the_client_reads {
     use super::*;
@@ -1228,9 +1201,7 @@ mod r612_what_the_client_reads {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R604 a ranked series through the results writer
-// ---------------------------------------------------------------------------
 
 mod r604_a_ranked_series_through_the_results_writer {
     use super::*;
@@ -1395,9 +1366,7 @@ mod r604_a_ranked_series_through_the_results_writer {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1560000: a bot's rating re-settles after an AI promotion
-// ---------------------------------------------------------------------------
 
 mod r1560000_a_bot_after_an_ai_promotion {
     use super::*;

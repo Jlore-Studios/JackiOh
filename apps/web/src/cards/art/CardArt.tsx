@@ -26,16 +26,12 @@ export type CardArtProps = {
   tags: readonly Tag[];
   type: CardType;
   shape: ArtShape;
-  /** R503's motif name; defaults to the closest catalog. */
   name?: string;
   manifest?: ArtManifest;
   className?: string;
   /** Avoid parsing art for grid cards scrolled past (near.ts); use the theme sky until near. */
   lazy?: boolean;
-  /**
-   * R2249000: the card is a Starship in play (`FaceModel.starship`): it wears the Starship's own art,
-   * drawn from its pieces and its launch, whatever definition its fusions gave it.
-   */
+  /** R2249000: a Starship in play (`FaceModel.starship`) wears its own art, never its fused definition's. */
   starship?: { pieces: number; launched: boolean } | null;
 };
 
@@ -80,7 +76,6 @@ export function CardArt({
   const yard = isTrainingGroundsArt(defId);
   const motif = stinky || yard ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
-  // R2249000: a Starship draws its own art, never a real one its fused definition might name.
   const real = starship === null ? artUrl(artId, radiant, manifest) : null;
 
   if (real !== null && real.src !== failedSrc) {
