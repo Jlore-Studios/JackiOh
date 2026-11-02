@@ -6,6 +6,7 @@ provider "registry.terraform.io/cloudflare/cloudflare" {
   constraints = "5.28.1"
   hashes = [
     "h1:9YL6g+iEfg3OzX6qSZOYsictVO0fNP09D6jRwIZKwQ0=",
+    "h1:QTIohIPsVCqEmknrR2PdbVXyK1fjS805rMaZpEEpzFQ=",
     "h1:aso3s6IuIQju5L/OLrywCfQl7aA5TF+sb5pZzo8JG20=",
     "h1:cxGa9LRKCzwNacgnLjXnHUygkvAEd6pb8g8sRwzPSRE=",
     "h1:t6x20B8TpQAG0TsUlyWLrAWNO+V8JE8K3Ij0hW0feSU=",
@@ -28,6 +29,7 @@ provider "registry.terraform.io/integrations/github" {
     "h1:2kD+4leuV8tBBXv+EPeehmfW6cDhIzVki61OXsGCtRI=",
     "h1:Mug81HyUTKKMngXMOtBxuQ8ge3dVnzt9tGcF9SxLcVE=",
     "h1:RhCWa2aaFVKF/HzeR0fkIxZmoJvkGrv07hE0z09aPQs=",
+    "h1:YS8951MRtP4YNs2CNsDfqE7Mr9tDz/Y7xDSo18zyCkQ=",
     "h1:y0Sujto8gttV86innNp/LTMzq7CqsFpBs7XKH8AlMl4=",
     "zh:0ab29fc21699f34345cf0bbbe44745fd1b143b7c73b410c1dc4abe05ffad0a84",
     "zh:1aed10d06755d420bb3a893bf548ab2932297a9d094c04c5a8501e949ca186ed",
@@ -50,6 +52,7 @@ provider "registry.terraform.io/supabase/supabase" {
   version     = "1.11.0"
   constraints = "1.11.0"
   hashes = [
+    "h1:CJzPqGBmaFDS1gTr1TS3IaRe9WEupi9CciEuUXGWGj8=",
     "h1:GvDcWIiIyDBy1Pk9AzPU1aSYL+D2BmZ2Wo2uIDl65tU=",
     "h1:IkC3UFXO7ZKHTqxD/bRC1G2spk9STS9aMySovlnsgWk=",
     "h1:mDVpJYRuusLfhe7Dvi07z8VHKjx8twb6UaPU+G0TnNY=",

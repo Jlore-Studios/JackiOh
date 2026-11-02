@@ -11,7 +11,7 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 | Purpose | The team sees main as it is now | What players use |
 | Address | https://staging.jackioh.com, behind Cloudflare Access: only the team signs in | https://jackioh.com |
 | Worker | `jackioh-staging` (`wrangler.jsonc` `env.staging`) | `jackioh` (`wrangler.jsonc`'s top level) |
-| Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, once a day by the countdown issue (`promote-production.yml`) |
+| Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, by hand: `/promote` on the production issue, once the super run passed (`promote-production.yml`) |
 | Game server | one `jackioh-staging-server` container | one `jackioh-server` container |
 | Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project), where the development lanes file too | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi`: live games only (section 8) |
 | Routing and headers | `apps/web/public/_redirects` and `_headers`, `wrangler.jsonc` | the same |
@@ -27,7 +27,8 @@ from different commits, and production's server no longer runs a day ahead of it
 
 `main` stays the only branch anyone merges into. `production` is a pointer to "the commit of main
 that is live on jackioh.com". Nothing but `.github/workflows/promote-production.yml` moves it, by
-merging a pull request whose head is a green commit of main, so its files always equal that commit's.
+merging a pull request whose head is a green commit of main that the super run passed, so its files
+always equal that commit's.
 
 ## 2. How a commit reaches each site
 
@@ -39,13 +40,16 @@ merging a pull request whose head is a green commit of main, so its files always
    staging`, which builds the server's image on the runner and deploys the Worker, the static files
    and the container together. It then polls `https://staging.jackioh.com/api/catalog` (through
    Access, with a service token) until the server reports the commit in `x-deployed-commit`.
-3. The open issue labeled `production merge` counts down to 10:00 AM Central (section 2.1). When its
-   time comes, `promote-production.yml` looks up the newest commit of `main` whose push-to-main CI run
-   succeeded, opens a pull request from `promote/<date>-<sha>` into `production` listing the
-   commits, and merges it with a merge commit. GitHub starts this repository's schedules late, if at
-   all, so the same check also runs on every green CI run on `main`: the first one after the time
-   merges, and the cron is only a second chance.
-4. The same run's `deploy` job checks out `production`, builds the web with
+3. Production moves only when someone asks (section 2.1): a `/promote` on the open issue labeled
+   `production merge`. `promote-production.yml` then takes the newest commit of `main` whose
+   push-to-main CI run succeeded (or the one named), and opens a pull request from
+   `promote/<date>-<sha>` into `production` listing the commits.
+4. The daily super run (`super.yml`) runs on that pull request: every fuzz seed, the full AI gates,
+   golden, the daily tests, coverage, every e2e spec, the db rehearsal and the notebooks. When every
+   job passed, `promote-production.yml` merges the pull request with a merge commit. When one failed,
+   it says so on the issue and the pull request waits, and super's report opens "CI: super run failed
+   on a production candidate" for the night bot, as `priority:high` and `difficulty:hard`.
+5. The merging run's `deploy` job checks out `production`, builds the web with
    `apps/web/.env.production`, refuses the bundle if a public setting is missing
    (`apps/web/scripts/check-production-bundle.mjs`), runs `wrangler deploy`, and then checks the live
    site: sign-in configured, `/decks` a 200 with the CSP, an unknown path a 404, and
@@ -55,13 +59,15 @@ The first request after a deploy finds the old server still running (a container
 started with), so the Worker stops it and starts the new one: every live match rebuilds from its
 seed and log when its sockets return (SPEC §9.5), as after any restart.
 
-### 2.1 The countdown issue: hold, delay and fast-forward
+### 2.1 The production issue: promote, skip-super and cancel
 
-One issue labeled `production merge` stays open for good. Its title reads "Merging to production in
-23 hours (2026-10-05 10:00 AM CT)", and every check brings the hours up to date. The first line of
-its body is a hidden state line; leave it alone. Under the countdown it lists every pull request on
-`main` that is not on production yet, with its push-to-main CI (passed, failed, running) and where it
-stands for production (live, the next merge, waits for CI, held).
+Production is manual (#2750; the owner's call of 2026-11-02): no clock and no green run moves it. One
+issue labeled `production merge` stays open for good. Its title says where production stands
+("Production: 4 commits on main are not live yet", "the super run is testing 1a2b3c4 (#2901)", "the
+super run failed on 1a2b3c4 (#2901)", "everything on main is live"). The first line of its body is
+a hidden state line; leave it alone. Under it the issue lists every pull request on `main` that is
+not on production yet, with its push-to-main CI (passed, failed, running) and where it stands for
+production (in the open promotion, the next `/promote`, waits for CI).
 
 Each catalog version is also a GitHub release (`.github/workflows/releases.yml`): a pre-release, "on
 staging", while only `main` holds it, and a release once a merge brings it to `production`, the newest
@@ -71,20 +77,26 @@ Anyone with write access comments on the issue:
 
 | Comment | Effect |
 | --- | --- |
-| `/hold` (a reason after it, if you like) | Nothing merges until `/resume`. The title says "on hold". |
-| `/resume` (or `/release`, `/unhold`) | Lifts the hold. If the time has passed, it merges at once. |
-| `/delay 3h`, `/delay 2d` | Moves the merge later by that long, at most 168 hours at a time. |
-| `/fast-forward` | Merges now, past a hold. |
+| `/promote` (or `/fast-forward`) | Opens the promotion pull request of `main`'s newest green commit into `production`. The super run tests it; it merges and deploys once every job passes. |
+| `/promote <sha>` | The same, for that commit of `main`, which must have passed CI. |
+| `/skip-super <reason>` | The emergency way: merges the open pull request, or `main`'s newest green commit, now, without the super run. The reason is required; the issue and the pull request record who, why and which commit. |
+| `/cancel` | Closes the open pull request. Nothing merges. |
 
-Each command is acknowledged with a 👍 (😕 when refused or not understood). A command may name
-its target first (`/hold production`; `prod` and `cloudflare` mean the same); one that names
-`staging` or `vercel` is refused with a 😕 and changes nothing. Staging takes no command: it deploys
-every green commit of main. `scripts/promote-production.sh` holds the rules, the
-hour (`RELEASE_HOUR`, `RELEASE_TZ`) and the label (`RELEASE_LABEL`).
+Each command is acknowledged with a 👍 (😕 when refused) and a reply saying what came of it. A newer
+`/promote` closes the open pull request as superseded. After a red super run the pull request stays
+open: re-running the run's failed jobs (the run's page, Re-run failed jobs) merges it once they pass,
+and a `/promote` once the fix is on `main` tests the newer commit instead. `/hold`, `/resume` and
+`/delay`, from the old daily countdown, are answered that production moves only on `/promote`.
+Actions -> promote production -> Run workflow does the same as `/promote` for its `sha`, or as
+`/skip-super` when its `skip_super_reason` is filled; its `redeploy` deploys production as it is.
+Staging takes no command: it deploys every green commit of main. `scripts/promote-production.sh`
+holds the rules and the label (`RELEASE_LABEL`).
 
 ### 2.2 The rules the promotion enforces
 
-- The candidate must be on `main` and have a successful push-to-main CI run.
+- The candidate must be on `main` and have a successful push-to-main CI run, and its promotion pull
+  request a super run in which every job passed, unless a person merged it with `/skip-super` and a
+  reason.
 - `production` only receives merges of green main commits: if someone committed to `production`,
   the run fails and changes nothing. It never force-pushes.
 - Promoting an older commit than `production` already has is a no-op, not a rollback.
@@ -128,12 +140,13 @@ percent-encodes it. Step `check-production` writes nothing and says whether thos
 key and an address that reaches JackiOh-Production. The commands below are what it does, for doing it
 by hand.
 
-### Step 1: Hold production, then merge
+### Step 1: Merge
 
-Comment `/hold moving to Cloudflare` on the countdown issue, so no promotion runs before
-production's secrets exist. Then merge the pull request. Its first green CI run on main starts
-`deploy-staging.yml`, which creates `jackioh-staging`. That first deploy's server cannot start until
-step 3 gives it its secrets, so its live check fails once: expected.
+Production moves only on a `/promote` (section 2.1), so nothing promotes it before its secrets exist
+as long as nobody asks; until step 6, don't. (Before 2026-11-02 production merged by itself once a
+day, and this step held it with `/hold`.) Merge the pull request. Its first green CI run on main
+starts `deploy-staging.yml`, which creates `jackioh-staging`. That first deploy's server cannot start
+until step 3 gives it its secrets, so its live check fails once: expected.
 
 ### Step 2: Cloudflare account
 
@@ -165,21 +178,27 @@ created the Worker.
 
 ### Step 4: Staging's address and Access
 
-1. Zero Trust (the dashboard's Zero Trust section): pick a team name and the Free plan (up to 50
-   users). Settings -> Authentication: One-time PIN is on by default; that is the sign-in.
-2. Access -> Service Auth -> Create Service Token, named `deploy-staging`. Save its Client ID and
-   Client Secret as the GitHub repository secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`
-   (the secret is shown once).
-3. Write `infra/terraform.tfvars` with the team's addresses, `staging_team_emails = ["...", "..."]`,
-   then `terraform -chdir=infra plan` and `apply`, both with
-   `-target=cloudflare_workers_custom_domain.staging_jackioh_com
-   -target=cloudflare_zero_trust_access_application.staging` (`infra/README.md`; the Cloudflare token
-   there needs Access: Apps and Policies, Edit). It adds `staging.jackioh.com` to `jackioh-staging`,
-   and the Access application and its two policies. The rest waits for step 6: until then production
-   signs in on the project that becomes staging's, and `infra/supabase.tf` would move that project's
-   Site URL to staging. So add `https://staging.jackioh.com/login` to that project's Redirect URLs by
-   hand (Authentication -> URL Configuration), leaving its Site URL and `https://jackioh.com/login`
-   as they are; step 6's full apply puts it to the file.
+Done on 2026-11-02 through Cloudflare's API, in this order, so staging was behind Access from its
+first request:
+
+1. Zero Trust, team `jackioh` (`jackioh.cloudflareaccess.com`), the Free plan (up to 50 users), with
+   One-time PIN as the sign-in.
+2. The Access application `JackiOh staging` on `staging.jackioh.com` and its two policies, as
+   `infra/cloudflare.tf` declares them, the team's being the two owners' addresses.
+3. `staging.jackioh.com` as `jackioh-staging`'s custom domain. `infra/cloudflare.tf`'s `import`
+   blocks adopt all four at step 6's apply, whose `infra/terraform.tfvars` must list the same
+   addresses (`staging_team_emails`), or the apply changes the policy to the file's.
+4. The service token `JackiOh staging deploy check` (a year), whose pair is the repository secrets
+   `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, for deploy-staging.yml's live check.
+
+To let someone else into staging, add their address to the policy `JackiOh staging: the team` (Zero
+Trust -> Access -> Policies) and to `staging_team_emails`.
+
+Until step 6 production signs in on the project that becomes staging's, and `infra/supabase.tf`
+would move that project's Site URL to staging. So add `https://staging.jackioh.com/login` to that
+project's Redirect URLs (Actions -> cutover, step `production-auth` does it; or by hand,
+Authentication -> URL Configuration), leaving its Site URL and `https://jackioh.com/login` as they
+are; step 6's full apply puts it to the file.
 
 ### Step 5: Verify staging
 
@@ -215,7 +234,7 @@ Replace `$SITE` with `https://staging.jackioh.com`. A browser asks for an Access
    before the copy: its password works, its collection and decks are there.
 5. `terraform -chdir=infra plan`, then `apply`, untargeted: the first full one (`infra/README.md`, The
    first import). Only now may staging's project lose `https://jackioh.com` as its Site URL.
-6. Comment `/resume` on the countdown issue.
+6. From here on production moves as section 2.1 says: `/promote` on the production issue.
 
 ### Step 7: Turn Render and Vercel off
 
@@ -230,17 +249,19 @@ Only once step 6 has run cleanly for a day or so, and with the owners' say-so (C
 ## 5. Day-to-day operation
 
 - **Normal day:** merge to main as usual. Staging updates within minutes of CI passing; production
-  catches up when the countdown issue's time comes.
-- **Now, please:** `/fast-forward` on the countdown issue.
-- **Not yet, I'm mid-change:** `/hold`, and `/resume` when done; or `/delay 6h`.
-- **Ship now (hotfix):** merge the fix, wait for its CI on main, then Actions -> promote production ->
-  Run workflow. It promotes the newest green commit, or the `sha` you give, whatever the hold.
+  stays as it is until someone asks.
+- **Ship to production:** `/promote` on the production issue. The super run tests the pull request
+  (an hour or so) and it merges and deploys once every job passed. A red job goes to the night bot as
+  `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer commit.
+- **Ship now (hotfix):** merge the fix, wait for its CI on main, then `/promote`. If the super run is
+  red for a reason the fix does not touch and it cannot wait, `/skip-super <why>` merges it at once,
+  and the issue records who and why.
 - **Catalog bump:** nothing special. Client and server ship together, on each site's own schedule.
 - **Roll back:** revert the change on main, wait for its CI, and promote it as a hotfix (above):
   the deploy rebuilds the web and the server from that commit, and the first request restarts the
   server on it. Workers & Pages -> the Worker -> Deployments -> Rollback is quicker for the Worker
   and its static files, but check in the deployment's details that it took the container's image
-  back too before relying on it. Either way, `/hold` the countdown until the fix has merged.
+  back too before relying on it. Either way, nobody `/promote`s until the fix has merged.
 - **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
   workflow on deploy staging, or promote production with **redeploy**).
 - **Deploy staging by hand:** Actions -> deploy staging -> Run workflow. With no `sha` it deploys
@@ -259,15 +280,20 @@ Only once step 6 has run cleanly for a day or so, and with the owners' say-so (C
   migrations or the image, so this should be rare. Roll back (above) while fixing it.
 - **A promote run fails with "refusing to allow a GitHub App to create or update workflow":** the
   run had no `BOT_GITHUB_TOKEN`, or the token lost its `workflow` scope or expired. Renew it
-  (`bot/README.md`, "Setting it up"), then run promote production by hand.
+  (`bot/README.md`, "Setting it up"), then `/promote` again.
 - **A promote run fails with "production has diverged":** someone committed to `production` by
   hand. Compare with `git log --oneline --graph origin/main origin/production`. An admin can reset it
   with `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in
   the `production` ruleset; `terraform -chdir=infra apply` puts the rule back, `infra/README.md`).
-- **The countdown issue is missing or doubled:** the hourly check opens one when none is open and
-  closes all but the oldest.
+- **The production issue is missing or doubled:** the next run of promote production (any green
+  push to `main` starts one) opens one when none is open and closes all but the oldest.
+- **A merged super run did not merge its pull request:** the run that merges is promote
+  production's, woken by super's completion; GitHub keeps only one waiting run in its concurrency
+  group, so a wake-up can be dropped. Any later run (a comment, a green push to `main`, or Run
+  workflow) checks the open pull request's super run and merges it.
 - **Scheduled runs stop:** GitHub disables scheduled workflows in a repository with no activity for
-  60 days. Re-enable them in the Actions tab; every green push to `main` runs the same check anyway.
+  60 days. The daily super run is one: re-enable it in the Actions tab. A promotion's super run is
+  not scheduled, so it runs regardless.
 
 ## 6. Cost
 
@@ -322,16 +348,20 @@ build's project is not its own server's `SUPABASE_URL`.
 **Setting up JackiOh-Production,** once, before section 4's step 6: Authentication as
 `docs/architecture.md` §10 steps 1 and 2 say (email confirmations, SMTP, the email templates, MFA,
 and each OAuth provider wanted, whose callback is now this project's); the Site URL and Redirect URLs
-are `infra/supabase.tf`'s. Settings live per project, so none comes over with the data. The new
+are `infra/supabase.tf`'s. Settings live per project, so none comes over with the data. Actions ->
+cutover, step `production-auth` (the repository secret `SUPABASE_ACCESS_TOKEN`, a personal access
+token), copies staging's to production, first with `dry_run` to list the changes. What the API does
+not hand back, SMTP's password and each provider's client secret among them, it leaves out whole and
+names in the run's warnings: those are set by hand. The new
 project has its own signing keys, so every player signs in once more after the switch, with the same
 password. `STATS_DATABASE_URL` moves to a read-only login on this project, made as `training/learn.md`
 makes `stats_importer` but granted only `select`.
 
-**The copy,** at section 4's step 6 with production on `/hold`: Supabase's own way between projects,
-the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the empty production
-project, both through their session pooler URIs as `postgres`, held in a file outside the repository
-(`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, does it all, refuses a
-production project that is not empty, and rolls the whole copy back when the counts differ:
+**The copy,** at section 4's step 6, with nobody promoting production meanwhile: Supabase's own way
+between projects, the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the
+empty production project, both through their session pooler URIs as `postgres`, held in a file outside
+the repository (`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, does it all,
+refuses a production project that is not empty, and rolls the whole copy back when the counts differ:
 
 ```
 supabase db dump --db-url "$STAGING_DB_URL" -f roles.sql --role-only

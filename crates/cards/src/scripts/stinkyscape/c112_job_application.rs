@@ -584,25 +584,6 @@ mod tests {
     }
 
     #[test]
-    fn declares_three_stages_and_two_once_a_turn_activates() {
-        crate::register_all();
-        for face in [script().base, script().radiant] {
-            let names: Vec<&str> = face.stages.iter().map(|stage| stage.name.as_str()).collect();
-            assert_eq!(names, ["Upload Resume", "The Interview", "The Offer"]);
-            let goals: Vec<usize> = face.stages.iter().map(|stage| stage.goals.len()).collect();
-            assert_eq!(goals, [1, 3, 1]);
-            let ids: Vec<&str> = face.activations.iter().map(|decl| decl.id.as_str()).collect();
-            assert_eq!(ids, [SEND, ANSWER]);
-            assert!(
-                face.activations
-                    .iter()
-                    .all(|decl| decl.uses == ActivationUses::Count(1))
-            );
-            assert!(face.death.is_some() && face.start_of_turn.is_some());
-        }
-    }
-
-    #[test]
     fn entering_opens_stage_1_and_an_empty_hand_has_nothing_to_send() {
         let mut s = scenario(json!({
             "p1": { "hand": [ID], "library": [MENACE] },

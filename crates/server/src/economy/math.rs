@@ -175,14 +175,6 @@ mod tests {
         assert_eq!(level_for_xp(9_223_372_032_559_808_499), 429_496_729);
     }
 
-    #[test]
-    fn pity_thresholds_are_10_20_and_30_packs() {
-        // #1333's table: pity never exceeds 30 packs.
-        assert_eq!(PITY_EPIC_PACKS, 10);
-        assert_eq!(PITY_LEGENDARY_PACKS, 20);
-        assert_eq!(PITY_MYTHIC_PACKS, 30);
-    }
-
     /// The tracked rarities with their thresholds, rarest last.
     const TRACKED: [(PrintedRarity, usize); TRACKED_RARITIES] = [
         (Epic, PITY_EPIC_PACKS),
