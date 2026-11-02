@@ -49,6 +49,8 @@ export const routeChunks = {
   hotseat: DEV_ONLY ? routeChunk(() => import("./dev/hotseat.tsx")) : null,
   // #936 B65: the four-seat Duos hotseat.
   duosDev: DEV_ONLY ? routeChunk(() => import("../duos/DevDuosRoute.tsx")) : null,
+  // R2784000: the card-animation motif gallery.
+  fxGallery: DEV_ONLY ? routeChunk(() => import("./dev/fx.tsx")) : null,
   // #936 B61–B64: the networked co-op board.
   duos: routeChunk(() => import("../duos/DuosRoute.tsx")),
   // R768000: the recent games and their replays.

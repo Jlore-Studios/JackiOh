@@ -251,6 +251,11 @@ export type FxPlay = {
   step: number;
   /** Public event types and counts, including the planned event (R202). */
   seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
+  /**
+   * R2784000: the public ids its damage, destroyed, exiled and bounced events landed on, oldest first,
+   * the planned entry's included (at most FX_MEMORY_HITS); absent before the first. A chain hops on from the last.
+   */
+  hits?: readonly string[];
 };
 
 export type FxMemory = {

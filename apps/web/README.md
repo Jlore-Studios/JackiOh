@@ -26,6 +26,7 @@ enforces rules and never sees hidden information.** In practice:
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
   A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
+  A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -311,6 +312,11 @@ the Patch notes page as Markdown, a pre-release while only staging has the versi
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
+
+`/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
+(R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
+(`fx/motifs/`) in any flavor's palette at any gallery scale, and any card whose entry in its set's
+effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,

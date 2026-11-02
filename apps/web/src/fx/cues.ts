@@ -17,7 +17,7 @@ import { sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
-import { castOnDrawCues, planCardFx } from "./cardFx.ts";
+import { castOnDrawCues, planCardFx, planCardMotif } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { rollCues } from "./rolls.ts";
 import { flavorEntranceCues } from "./entrances.ts";
@@ -1243,14 +1243,21 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
 /* Public planners (S6) */
 
 /**
- * Each event's row recipe, in event order. R502: while a card with a signature recipe (`CARD_FX`, cardFx.ts)
- * resolves, that recipe may claim an event of its own resolution first, adding to the row's cues or replacing them.
+ * Each event's row recipe, in event order. R502: while a card with a bespoke recipe (its `{ bespoke }`
+ * entry in its set's effects table, cardFx.ts) resolves, that recipe may claim an event of its own
+ * resolution first, adding to the row's cues or replacing them. R2784000: a card whose entry names a
+ * motif plays it first, over this entry's events it reads, and those it replaces draw no row recipe.
  */
 export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
-  if (entry.sweep !== undefined) return sweepCues(entry, view, env);
+  const motif = planCardMotif(entry, view, env);
+  const replaced = (event: GameEvent): boolean => motif?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? [])];
+  if (entry.sweep !== undefined) {
+    cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
+    return cues;
+  }
   if (entry.zone !== undefined) return zoneCues(entry, view, env);
-  const cues: FxCue[] = [];
   if (entry.cast !== undefined) cues.push(...castCues(entry, view, env));
   for (const event of entry.events) {
     const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
@@ -1258,6 +1265,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;
     }
+    if (replaced(event)) continue;
     const recipe = animationRow(event.type)?.fx?.recipe;
     if (recipe === undefined) continue;
     const tgt = targetFor(event, view);

@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
-import { CARD_FX } from "./cardFx.ts";
+import { FX_CARD_TABLE } from "./cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SLAM_AT } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { ENTRANCES, ENTRANCE_TRAUMA, isEntranceKey, type EntranceKey } from "./entrances.ts";
@@ -18,8 +18,8 @@ import type { FxCardFacts, FxCue, FxPlanEnv } from "./types.ts";
 type CatalogEntry = { name: string; type: string; rarity: string };
 const CATALOG = catalogJson as unknown as Record<string, CatalogEntry>;
 
-const MARQUEE: readonly (readonly [string, EntranceKey])[] = Object.entries(CARD_FX).flatMap(([defId, key]) =>
-  isEntranceKey(key) ? [[defId, key] as const] : [],
+const MARQUEE: readonly (readonly [string, EntranceKey])[] = [...FX_CARD_TABLE].flatMap(([defId, entry]) =>
+  entry.kind === "bespoke" && isEntranceKey(entry.key) ? [[defId, entry.key] as const] : [],
 );
 
 const LEGENDARY_FACTS: FxCardFacts = { rarity: "Legendary", attack: 6, health: 6 };

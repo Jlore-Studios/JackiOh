@@ -278,6 +278,8 @@ export const paths = {
   duos: (matchId: string): string => `/duos/${matchId}`,
   /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
   duosDev: "/dev/duos",
+  /** R2784000: the card-animation motif gallery; production serves a 404 there, as at `hotseat`. */
+  fxGallery: "/dev/fx",
 } as const;
 
 function idUnder(path: string, first: string): string | null {

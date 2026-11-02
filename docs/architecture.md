@@ -74,6 +74,13 @@ SPEC §9.1, restated as channels rather than domains:
 One rule, from SPEC §9.1: **the client sends intent, never state.** "Play instance 7 in zone 3 with
 target 12", never "my deck contains these 25 cards", never "I own a Mythic".
 
+The client's effects layer (`apps/web/src/fx`, SPEC §10.10) decorates what it is sent and reads
+nothing else: the redacted event stream, the view each event was planned against and the bundled
+catalog (R202). A card's signature animation is its entry in its set's effects table
+(`apps/web/src/fx/cards/<set>.json5`, `docs/polish/9-card-animations.md`, R2784000): bundled data,
+keyed by a `defId` the viewer can already read, so a hidden card keys none, and it paces nothing
+(R200).
+
 ---
 
 ## 3. Trust boundaries

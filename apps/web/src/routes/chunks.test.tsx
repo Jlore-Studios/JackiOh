@@ -176,6 +176,8 @@ describe("R2116000 prefetching a screen on intent", () => {
 
     expect(production.routeChunks.hotseat).toBeNull();
     expect(production.routeChunks.duosDev).toBeNull();
+    // R2784000: the motif gallery too.
+    expect(production.routeChunks.fxGallery).toBeNull();
     expect(() => production.prefetchRoute("/dev/hotseat")).not.toThrow();
   });
 });

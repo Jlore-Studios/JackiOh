@@ -14,6 +14,8 @@
 // Hearthstone draws a Discover: no panel, title, count or quest banner, and no Confirm when one tap
 // answers (`immediate` with `min` of at least 1). Folded (#1204), read-only (R2211000) and a lesson's
 // mulligan (`worded`) keep every word, and an `answer` keeps its problem (R420).
+// #2757: a Choose one of lanes (`lane-<n>`, Showdown) is no picker at all: LanePick.tsx lights each lane on the
+// board and R514's board answer picks it, so the modal is only its hint and a play's Cancel.
 
 import {
   Fragment,
@@ -44,7 +46,11 @@ import {
   highlightFor,
   isBuilding,
   isPlaguePlacementPrompt,
+  laneOf,
+  laneZoneTestids,
+  needLaneOptions,
   outstandingNeed,
+  pendingLaneOptions,
   pickInPlay,
   answerAction,
   plagueKey,
@@ -80,6 +86,7 @@ import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { abilityLabel, usesWords } from "./ActivateControl.tsx";
 import { ChoiceCard, choiceSeed } from "./ChoiceCard.tsx";
+import LanePick, { neighbourZone, type LaneChoice } from "./LanePick.tsx";
 import { modeText } from "./modeText.ts";
 import { useWearerSeat } from "./wearer.ts";
 import "./prompt.css";
@@ -199,6 +206,8 @@ type Picker = {
   budget?: { limit: number; costs: ReadonlyMap<string, number> };
   /** R514: the board zones that answer a `cell` prompt, by testid, to the option each answers with. */
   boardKeys?: ReadonlyMap<string, string>;
+  /** #2757: a Choose one of lanes, its lanes in board order: drawn on the board (`LanePick.tsx`), answered by `boardKeys`. */
+  lanes?: readonly LaneChoice[];
   /** R1184000: a sequence question's right answers so far, as the view carries them. */
   streak?: number;
   /** R1563006: the sequence question's choice id, which its countdown keys on. */
@@ -313,6 +322,31 @@ function selectionLabel(view: PlayerView, selection: Selection): string {
   }
 }
 
+/**
+ * #2757: a lane pick's lanes in board order, each in the asking card's words (a card that says nothing of a lane
+ * calls it "Lane 3"), and the four zones of each lane mapped to the option that lane answers with.
+ */
+function laneAnswers(
+  offered: readonly { key: string; option: string }[],
+  source: string | undefined,
+  radiant: boolean,
+): { lanes: LaneChoice[]; boardKeys: Map<string, string> } {
+  const lanes: LaneChoice[] = [];
+  const boardKeys = new Map<string, string>();
+  for (const { key, option } of offered) {
+    const lane = laneOf(option);
+    if (lane === null) continue;
+    const text = modeText(source, option, radiant);
+    lanes.push(
+      text.detail === undefined
+        ? { lane, key, label: t("Lane {lane}", { lane: String(lane) }) }
+        : { lane, key, label: text.label, detail: text.detail },
+    );
+    for (const id of laneZoneTestids(lane)) boardKeys.set(id, key);
+  }
+  return { lanes: lanes.sort((a, b) => a.lane - b.lane), boardKeys };
+}
+
 // Route 1: an open `PendingChoice`.
 
 function pickerForPending(
@@ -375,7 +409,8 @@ function pickerForPending(
   const short = pending.options.length <= DISCOVER_OPTION_LIMIT;
   // R1184000: a sequence's Stop is a button under the answers, never one of them.
   const answers = pending.options.filter((option) => option.key !== ANSWER_STOP).length;
-  const chrome = pending.kind === "mode" && short ? "discover" : pending.kind;
+  const laneModes = pendingLaneOptions(pending);
+  const chrome = pending.kind === "mode" && short && laneModes === null ? "discover" : pending.kind;
   // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`); #2646:
   // so are a few answers (C+ #42) and a quest's rewards (Classic #90), each a choice card.
   const cards =
@@ -422,6 +457,12 @@ function pickerForPending(
   }
   if (pending.kind === "pick" && pending.budget !== undefined) {
     picker.budget = { limit: pending.budget, costs: new Map(pending.options.map((option) => [option.key, option.cost ?? 0])) };
+  }
+  if (laneModes !== null) {
+    const offered = pending.options.map((option, at) => ({ key: option.key, option: laneModes[at] ?? "" }));
+    const answers = laneAnswers(offered, pending.sourceDefId, pending.sourceRadiant === true);
+    picker.lanes = answers.lanes;
+    picker.boardKeys = answers.boardKeys;
   }
   if (pending.kind === "cell") {
     picker.boardKeys = new Map(
@@ -692,7 +733,8 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       const radiant = played?.radiant === true;
       // B5 E18, R81: C #18's number travels in the play's modes, every option a whole number.
       const numbers = need.options.length > 0 && need.options.every((option) => NUMBER_OPTION.test(option));
-      const discover = !numbers && !isDirection(need.options) && need.options.length <= DISCOVER_OPTION_LIMIT;
+      const lanePick = needLaneOptions(need) !== null;
+      const discover = !lanePick && !numbers && !isDirection(need.options) && need.options.length <= DISCOVER_OPTION_LIMIT;
       const picker: Picker = {
         ...common,
         chrome: numbers ? "number" : isDirection(need.options) ? "direction" : discover ? "discover" : "mode",
@@ -709,6 +751,11 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
       if (source !== undefined) picker.sourceDefId = source;
       if (played !== null) picker.sourceCard = played.card;
+      if (lanePick) {
+        const answers = laneAnswers(need.options.map((option) => ({ key: option, option })), source, radiant);
+        picker.lanes = answers.lanes;
+        picker.boardKeys = answers.boardKeys;
+      }
       return picker;
     }
   }
@@ -1010,7 +1057,9 @@ const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
   tribute: "Tap a highlighted unit on the board.",
 };
 
-function BoardHint(props: { chrome: PromptKind }) {
+function BoardHint(props: { chrome: PromptKind; lane?: boolean }) {
+  // #2757: a lane pick says so, its lanes being lit by oblongs and not by the green of a zone pick.
+  if (props.lane === true) return <p className="prompt-board-hint">{t("Tap a highlighted lane.")}</p>;
   const hint = BOARD_HINTS[props.chrome];
   return hint === undefined ? null : <p className="prompt-board-hint">{t(hint)}</p>;
 }
@@ -1187,11 +1236,11 @@ function PromptModal(props: {
   }, [picker.chrome, readOnly]);
 
   // R514: a click on a zone of the board a `cell` prompt offers, or Enter or Space on it, picks that
-  // cell. The board's own handler builds nothing from a zone while a prompt is open, so this is the
+  // cell (#2757: or a lane pick's lane, from any of its four zones). The board's own handler builds nothing from a zone while a prompt is open, so this is the
   // one answer. maxi-tail: document listeners for the one board-answered prompt kind; move them into
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
-  const live = useRef({ pick, keys: picker.boardKeys });
-  live.current = { pick, keys: picker.boardKeys };
+  const live = useRef({ pick, keys: picker.boardKeys, lanes: picker.lanes });
+  live.current = { pick, keys: picker.boardKeys, lanes: picker.lanes };
   const answersOnBoard = picker.boardKeys !== undefined && !readOnly;
   useEffect(() => {
     if (!answersOnBoard) return;
@@ -1206,6 +1255,14 @@ function PromptModal(props: {
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       const target = event.target;
+      // #2757: the arrows walk a lane pick's lit lanes. They ride this handler, so the board gains no key handler (R2126000).
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const to = live.current.lanes === undefined ? null : neighbourZone(live.current.lanes, target, event.key === "ArrowRight" ? 1 : -1);
+        if (to === null) return;
+        event.preventDefault();
+        to.focus();
+        return;
+      }
       if ((event.key !== "Enter" && event.key !== " ") || !(target instanceof Element) || !target.matches(zone)) return;
       const key = keyOf(target);
       if (key !== undefined) live.current.pick(key);
@@ -1462,6 +1519,43 @@ function PromptModal(props: {
         {items.map((item) => (
           <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
         ))}
+      </div>
+    );
+  }
+
+  // #2757: a lane pick is its lanes on the board: no panel, list, count or Confirm. R514's effect above answers
+  // it. The modal is the hint (a replay's title, where nothing answers) and a play's Cancel.
+  if (picker.lanes !== undefined) {
+    return (
+      <div className="prompt-scrim" data-testid="prompt-scrim" data-read-only={readOnly ? "true" : undefined}>
+        <LanePick lanes={picker.lanes} readOnly={readOnly} />
+        <div
+          ref={panel}
+          className={`prompt prompt-${picker.chrome}`}
+          data-testid="prompt-modal"
+          data-prompt-kind={picker.chrome}
+          data-prompt-source={props.source}
+          data-animating={props.animating}
+          data-board-testids={props.boardTestids.join(" ")}
+          data-read-only={readOnly ? "true" : undefined}
+          data-lane-pick="true"
+          role="dialog"
+          aria-modal={false}
+          aria-label={askLabel}
+        >
+          {readOnly ? (
+            <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
+          ) : (
+            <BoardHint chrome={picker.chrome} lane />
+          )}
+          {readOnly || props.onCancel === undefined ? null : (
+            <div className="prompt-actions">
+              <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
+                {t("Cancel")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

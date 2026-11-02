@@ -599,6 +599,50 @@ function narrowByTribute(interaction: Building, instanceId: string): Interaction
   return narrowedBy(interaction, { tributes: appended(interaction.picked.tributes, instanceId) });
 }
 
+// #2757: a lane pick, a Choose one of one lane whose every option is a lane (`lane-<n>`, R81, R831008), is
+// answered on the board from any of the lane's four zones. Keyed on the options, never a card's id.
+const LANE_OPTION = /^lane-([1-9]\d*)$/;
+const LANE_SIDES: readonly Side[] = ["you", "opponent"];
+const LANE_ROWS: readonly Row[] = ["units", "backrow"];
+
+/** The lane a Choose one's option names (`lane-3` is 3), or null when it names none the board has. */
+export function laneOf(option: string): number | null {
+  const lane = Number(LANE_OPTION.exec(option)?.[1]);
+  return LANES.includes(lane) ? lane : null;
+}
+
+/** Is every option of this Choose one a lane? Any other option, mixed in or alone, makes it a plain Choose one. */
+export function isLanePick(options: readonly string[]): boolean {
+  return options.length > 0 && options.every((option) => laneOf(option) !== null);
+}
+
+/** The four zones of a lane, both seats and both rows: the places a click on that lane lands. */
+export function laneZoneTestids(lane: number): string[] {
+  return LANE_SIDES.flatMap((side) => LANE_ROWS.map((row) => testid.zone(side, row, lane)));
+}
+
+/** A play's outstanding mode need that is a lane pick: its options, or null. One lane answers it, so a pick of several stays a list. */
+export function needLaneOptions(need: PlayNeed | null): string[] | null {
+  return need?.kind === "mode" && need.max <= 1 && isLanePick(need.options) ? need.options : null;
+}
+
+/** An engine `mode` prompt for you that is a lane pick: its options' mode strings, in order, or null. */
+export function pendingLaneOptions(pending: PendingView | null): string[] | null {
+  if (pending === null || !pending.forYou || pending.kind !== "mode" || pending.max > 1) return null;
+  const modes = pending.options.map((option) => {
+    const selection = selectionForOption(option);
+    return selection.pick === "mode" ? selection.option : "";
+  });
+  return isLanePick(modes) ? modes : null;
+}
+
+function laneZonesOf(options: readonly string[]): string[] {
+  return options.flatMap((option) => {
+    const lane = laneOf(option);
+    return lane === null ? [] : laneZoneTestids(lane);
+  });
+}
+
 // Highlighting: the set of testids the engine has already blessed.
 
 /** The board controls a listed action type lights. A Heroic Power's is lit by its own instance. */
@@ -704,6 +748,8 @@ export function highlightFor(
         }
       }
     }
+    // #2757: the zones take the click and the focus, unlit; LanePick.tsx draws the lanes.
+    for (const id of laneZonesOf(needLaneOptions(outstandingNeed(interaction)) ?? [])) legalIds.add(id);
     for (const id of sources) glow.delete(id);
     const picked = interaction.picked;
     if (picked.zone !== undefined) selected.add(testid.zone("you", picked.zone.row, picked.zone.lane));
@@ -782,6 +828,8 @@ export function highlightFor(
     legalIds.add(where);
     glow.add(where);
   }
+  // #2757: the zones take the click and the focus, unlit; LanePick.tsx draws the lanes.
+  for (const id of laneZonesOf(pendingLaneOptions(view.pending) ?? [])) legalIds.add(id);
 
   const endTurnListed = legal.some((body) => body.type === "endTurn");
   if (endTurnListed && !canAct && view.pending === null) glow.add(testid.endTurn);
