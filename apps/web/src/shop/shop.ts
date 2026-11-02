@@ -9,13 +9,11 @@
 import { CATALOG } from "@jackioh/cards";
 import { MAX_COPIES } from "@jackioh/engine/config";
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
-import { SHIPPED_SETS, setShips, type CardDef } from "@jackioh/shared";
+import { SHIPPED_SETS } from "@jackioh/shared";
 
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
-import type { CatalogSnapshot } from "@jackioh/validator";
 import { t } from "../i18n/i18n.ts";
 import type { CollectionResponse, CosmeticSlot, CosmeticTokenStep, OwnedCosmeticsResponse } from "../net/api.ts";
-import { matchesFilter, sortPool, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
 
 /** One registry entry, structurally: what the filters read. */
 export type RegistryCosmetic = {
@@ -66,7 +64,6 @@ export const shopTestid = {
   tokenLoading: "token-loading",
   tokenLoadError: "token-load-error",
   tokenRetry: "token-retry",
-  tokenError: "token-error",
   cardBar: "token-card-bar",
   cosmeticBar: "token-cosmetic-bar",
   nextStep: "token-next-step",
@@ -76,12 +73,7 @@ export const shopTestid = {
   heldLegendary: "token-held-legendary",
   heldPack: "token-held-pack",
   cosmeticSpend: "token-cosmetic-spend",
-  cardPick: (id: string) => `token-card-pick-${id}`,
-  cardConfirm: "token-card-confirm",
-  cardCancel: "token-card-cancel",
-  cardDialog: "token-card-dialog",
   cardHint: "token-card-hint",
-  cardNone: "token-card-none",
   packsPanel: "cosmetic-packs-panel",
   packsLoading: "cosmetic-packs-loading",
   packsLoadError: "cosmetic-packs-load-error",
@@ -127,34 +119,6 @@ export function quantitiesOf(collection: CollectionResponse): Map<string, number
 /** Whether the account owns `MAX_COPIES` of a card: no token unlocks it again. */
 export function ownsMax(cardId: string, quantities: Map<string, number>): boolean {
   return (quantities.get(cardId) ?? 0) >= MAX_COPIES;
-}
-
-/**
- * The cards a card token unlocks: not a token, of a set that ships, and owned below `MAX_COPIES` (the
- * server's `redeem_card_token`).
- */
-export function unownedCards(collection: CollectionResponse, defs: readonly CardDef[] = Object.values(CATALOG)): CardDef[] {
-  const quantities = quantitiesOf(collection);
-  return defs.filter((def) => !def.token && setShips(def.set) && !ownsMax(def.id, quantities));
-}
-
-/**
- * The pool the card-token picker browses: the ids of `unowned` that the catalog knows, filtered and
- * sorted as the deck builder sorts. SPEC §14.5 names exactly `unownedCards`: `matchesFilter` never reads
- * `ownedOnly`, so the hidden owned toggle cannot affect it.
- */
-export function tokenPoolIds(
-  unowned: readonly CardDef[],
-  catalog: CatalogSnapshot,
-  filter: PoolFilter,
-  sort: PoolSort,
-): string[] {
-  const byId = new Map(unowned.map((def) => [def.id, def]));
-  const kept = [...byId.keys()].filter((id) => {
-    const def = catalog.cards[id];
-    return def !== undefined && matchesFilter(def, filter);
-  });
-  return sortPool(kept, catalog, sort);
 }
 
 /**

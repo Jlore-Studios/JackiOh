@@ -69,6 +69,11 @@ export const collectionTestid = {
   tokenOfferDialog: (id: string) => `collection-token-offer-dialog-${id}`,
   tokenOfferConfirm: (id: string) => `collection-token-offer-confirm-${id}`,
   tokenOfferCancel: (id: string) => `collection-token-offer-cancel-${id}`,
+  // R2730000: the fullscreen preview a held or inspected item opens, the only place a token is spent.
+  preview: "collection-preview",
+  previewScrim: "collection-preview-scrim",
+  previewClose: "collection-preview-close",
+  previewStatus: "collection-preview-status",
 } as const;
 
 export const COLLECTED_DEFS: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && setShips(def.set));

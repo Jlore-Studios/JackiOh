@@ -103,6 +103,7 @@ hour (`RELEASE_HOUR`, `RELEASE_TZ`) and the label (`RELEASE_LABEL`).
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
+| GitHub secret | `CLOUDFLARE_BILLING_TOKEN`: a custom token with the account's Billing: Read alone | `cf-spend.yml` |
 | GitHub secret | `BOT_GITHUB_TOKEN` (already set) | moving `production` |
 | `infra/terraform.tfvars` (git ignores it) | `staging_team_emails`: who Access lets into staging | `terraform apply` |
 
@@ -266,6 +267,13 @@ instance; the second project's instance is billed on top, and each project's dis
 (`db-size.yml` warns before then). GitHub Actions (a public repository) costs nothing. The levers are `SLEEP_AFTER`
 (`apps/edge/src/index.ts`) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its site's
 server awake through its presence beat.
+
+Cloudflare has no spend cap, so two things watch the usage bill (the plan's $5 aside). The account's
+budget alerts (Notifications -> Budget Alert: one at $1 and the auto-created one at $10) email the
+owner when the period's projected usage spend crosses them. `cf-spend.yml` reads the same figures
+once a day and opens a `human` issue once the period's spend, or its projection, reaches its
+`ALERT_DOLLARS` ($15, about both containers awake all month); it needs `CLOUDFLARE_BILLING_TOKEN`
+(section 3) and says so, green, until it is set.
 
 ## 7. Known gaps
 

@@ -8,8 +8,9 @@
 # The workflow's own token cannot comment on a locked thread, so the threads `github-actions[bot]`
 # opened stay unlocked: the CI alerts (ci-duration.yml, super.yml, patches-ship.yml), the
 # production countdown (promote-production.yml) and the weekly hygiene issues post there with it.
-# patches-ship's "Shipped as" comment on a thread it did not open unlocks, comments and locks again
-# (bot/go/internal/titles, `RetitleShipped`).
+# patches-ship's "Shipped as" comment on a thread it did not open (bot/go/internal/titles,
+# `RetitleShipped`), and its closing comment on a night-bot log whose commits are on main already,
+# each unlock, comment and lock again.
 name: lock conversations
 
 on:
