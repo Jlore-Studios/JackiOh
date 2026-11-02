@@ -57,6 +57,17 @@ function rangedLook(attackerId: string, view: PlayerView): FlavorLook | null {
   return null;
 }
 
+/** R2789000: whether `view` shows `attackerId` with Flying (a Unit standing in a backrow zone included, R1081000). */
+function flies(attackerId: string, view: PlayerView): boolean {
+  for (const side of [view.you, view.opponent]) {
+    const standing = side.backrow.map((slot) => (slot !== null && slot.faceDown === false ? slot.unit : undefined));
+    for (const unit of [...side.units, ...standing]) {
+      if (unit !== null && unit !== undefined && unit.instanceId === attackerId) return hasKeyword(unit.keywords, "Flying");
+    }
+  }
+  return false;
+}
+
 /** #1443: one flavor shot, timed as in `shotCues`; a non-combat damage's volley (cues.ts) fires it on its own. */
 export function shotCue(
   look: FlavorLook,
@@ -161,7 +172,8 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       if (look !== null) return shotCues(look, attacker, target, c);
       const tuning = STAGE_TUNING.contactSpark;
       return [
-        { kind: "lunge", attacker, target, delayMs: 0, durationMs: D },
+        // R2789000: a Flying attacker's lunge arcs over the lane.
+        { kind: "lunge", attacker, target, delayMs: 0, durationMs: D, ...(flies(event.attackerId, view) ? { arc: true as const } : {}) },
         {
           kind: "burst",
           preset: "spark",

@@ -217,7 +217,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId`, `username` and win `streak` (R604, R612, R1436, R2101000), and once a ranked match's rated record is written its `rankBefore` and `rankAfter` off it, a ranked series' on its last game (R2388000) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000); an offer past `REMATCH_OFFER_TTL_MS` of the match's end lapses silently, recording nothing (R2685000) |
-| `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
+| `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436). R2778000: each on `?ladder=` (`constructed`, the default, or `random`), named in the body's `ladder` |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
@@ -684,8 +684,8 @@ series still makes its picks.
   unchanged (R639000).
 - `bots::pool` sizes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
   (`run_bot_pool`): `clamp(BOT_POOL_MIN, round(BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people),
-  BOT_POOL_MAX)` active bots, retiring the youngest accounts and reinstating the most recently
-  retired first.
+  BOT_POOL_MAX)` active bots, one per weekly person between 40 and 400 since R2778001, retiring the
+  youngest accounts and reinstating the most recently retired first.
   A new bot draws a strength (its R610 rating seeded from it), a speed, a persona, a schedule, an
   account age and a username or the default `Player#n`; its two or three Best-of-1 decks are the
   patch's human Best-of-1 decklists, then decks dealt as All Random deals a player's
@@ -697,7 +697,7 @@ series still makes its picks.
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
   open-row sweep (R1450) would delete the skeleton. Each refresh ends by setting grinding the bots
-  `plan_grind` names (R1555000): the top `BOT_GRINDERS` active bots while the season's
+  `plan_grind` names (R1555000), planned on each ladder and grinding every bot either names (R2778000): the top `BOT_GRINDERS` active bots while the season's
   `BOT_GRIND_REFERENCE_RANK`-th placed person is more than `BOT_GRIND_GAP` above every one, until a
   bot is within the gap less `BOT_GRIND_HYSTERESIS` (`bots_set_grinding`). A grinder is on
   `BOT_GRIND_ACTIVE_HOURS` a day (`fallback::scheduled_hours`), and each of its rated wins counts
@@ -1056,6 +1056,20 @@ card's pick may keep its Animated art, the Epic `animated-<slug>` beside its sti
 `full-art-…` or an `animated-…` slug of at most 40 characters, still only beside `full_art = true`.
 Every row 0072's check took, it takes. `tests/sql/42_animated_art.sql` checks the id kept, the shapes
 refused and the re-apply.
+
+Migration 0076 splits the ranked ladder in two (R2778000): Constructed, which the Best of 1 and Conquest
+queues play for, and All Random. `profiles` gains the All Random hidden triple (`random_rating`,
+`random_rating_deviation`, `random_rating_volatility`), copied from the profile's own triple, which stays
+the Constructed one. No client role's column grant reaches the new columns (R612). `season_ranks` and
+`bot_ratings` gain `format` (`constructed` or `random`), which joins each one's key. Every row of the
+newest season and every bot rating is copied onto All Random, so nobody loses a rank, and 0064's ladder
+index is rebuilt over `(season_id, format, ladder)`. `rated_games` records each game's `format`, a row from
+before being Constructed. In the code the ladder is `ranked::ladder::Ladder`:
+- a game's is its mode's (`db::store::ladder_of_mode`);
+- every ranked store read and write takes it;
+- `Profile::glicko` and `BotRow::rating_on` read a rating on it.
+
+`tests/sql/12_ranked.sql` checks the columns, keys, checks and the refusal (R2778000).
 
 ## Tests
 

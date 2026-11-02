@@ -16,6 +16,7 @@ import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
+  FX_CALLOUT_MS,
   FX_CENTER,
   FX_CRACK_TAIL_MS,
   FX_DEATH_EMBER_AT,
@@ -582,7 +583,7 @@ describe("B12 poison", () => {
     expect(first?.keywords.some((k) => k.kind === "Poisonous")).toBe(false);
   });
 
-  it("B12 a Poisonous source fires its flavor's shot and adds a poison burst at the landing", () => {
+  it("R2789000 B12 a Poisonous source's hit plans no poison burst: it fires its flavor's shot as any source does", () => {
     forDs("damage", (D) => {
       const launch = r(FX_SHOT_LAUNCH_AT * D);
       const physical = FLAVOR_LOOKS.Physical;
@@ -590,17 +591,15 @@ describe("B12 poison", () => {
         shot(physical, cardT(POISONER), cardT(ENEMY), launch, D - launch),
         burst("spark", cardT(ENEMY), "point", D),
         splat("damage", 3, cardT(ENEMY), D, D),
-        burst("poison", cardT(ENEMY), "area", D),
         burst(physical.particle, cardT(ENEMY), "area", D),
       ]);
     });
   });
 
-  it("B12 a Poisonous source in combat adds the poison burst at 0 and flies nothing", () => {
+  it("R2789000 B12 a Poisonous source in combat plans no poison burst either: the view's keywords are no longer read", () => {
     expectCues(plan([dmg(POISONER, ENEMY, 7, true)], 300), [
       burst("spark", cardT(ENEMY), "point", 0),
       splat("damage", 7, cardT(ENEMY), 0, 300),
-      burst("poison", cardT(ENEMY), "area", 0),
       burst("dust", cardT(ENEMY, FOOT), "area", 0),
       shake(traumaForShakePx(damageFeel(7).shakePx), 0),
     ]);
@@ -612,12 +611,23 @@ describe("B12 poison", () => {
     expect(cues.find((c) => c.kind === "shot")).toMatchObject({ preset: FLAVOR_LOOKS.Hustle.particle });
   });
 
-  it("B12 Poisonous is read from the planning view: the same unit without it plans no poison", () => {
-    const view = fullBoardView();
-    const second = must(view.you.units[1], "the second unit");
-    view.you.units[1] = { ...second, keywords: second.keywords.filter((k) => k.kind !== "Poisonous") };
-    const cues = plan([dmg(POISONER, ENEMY, 3, false)], 300, { view });
-    expect(cues.some((c) => "preset" in c && c.preset === "poison")).toBe(false);
+  it("R2789000 B12 a death keyed `via: Poisonous` plans the poison burst at 0, and one with no `via` plans none", () => {
+    const died = (via?: "Poisonous"): GameEvent => ({
+      type: "destroyed",
+      instanceId: ENEMY,
+      defId: "core-008",
+      owner: "p2",
+      controller: "p2",
+      attack: 4,
+      maxHealth: 4,
+      killerId: POISONER,
+      ...(via === undefined ? {} : { via }),
+    });
+    const poisons = (cues: readonly FxCue[]): FxCue[] => cues.filter((c) => c.kind === "burst" && c.preset === "poison");
+    for (const D of [ANIMATIONS.destroyed.durationMs, ODD_D]) {
+      expect(poisons(plan([died("Poisonous")], D)).map((c) => `${c.kind}@${String(c.delayMs)}`)).toEqual(["burst@0"]);
+      expect(poisons(plan([died()], D))).toEqual([]);
+    }
   });
 });
 
@@ -1385,6 +1395,8 @@ describe("B16 the recipe table, row by row", () => {
     rangedView.you.units[0] = { ...first, keywords: [...first.keywords, { kind: "Ranged" }] };
     expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], 350, { view: rangedView }), [
       burst("dust", tid(testid.card(MINE), FOOT), "point", 0),
+      // R2789000: its beat adds the keyword's callout over the shooter.
+      { kind: "callout", keyword: "Ranged", at: cardT(MINE), delayMs: 0, durationMs: FX_CALLOUT_MS },
     ]);
     const hiddenView = fullBoardView();
     const hiddenFirst = must(hiddenView.you.units[0], "your first unit");
@@ -1680,9 +1692,10 @@ describe("B20 turn banners", () => {
 
 /* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`. */
+/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's `still` (R2789000). */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
+  callout: ["still"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1696,6 +1709,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   rays: ["kind", "tone", "at", "delayMs", "durationMs"],
   sheen: ["kind", "at", "delayMs", "durationMs"],
   ghost: ["kind", "from", "to", "delayMs", "durationMs"],
+  callout: ["kind", "keyword", "at", "delayMs", "durationMs"],
   arrows: ["kind", "direction", "at", "delayMs", "durationMs"],
   banner: ["kind", "text", "tone", "delayMs", "durationMs"],
   result: ["kind", "outcome", "text", "delayMs", "durationMs"],

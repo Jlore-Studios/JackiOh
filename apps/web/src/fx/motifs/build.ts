@@ -32,6 +32,9 @@ import type { DrawnMotif } from "./names.ts";
 /** What one motif plays with: its look (a flavor's by default), its scale (intensity included) and whether the event rows it draws over still play. */
 export type MotifSpec = { motif: DrawnMotif; look: FlavorLook; scale: number; row: "keep" | "replace" };
 
+/** R2789000: what the cue helpers read of a spec, so a keyword beat (beats.ts) builds with them and names no motif. */
+export type CueSpec = Pick<MotifSpec, "look" | "scale" | "row">;
+
 export type MotifPlanner = {
   /** The event types it draws on. */
   reads: readonly GameEvent["type"][];
@@ -69,7 +72,7 @@ export function timesOf(D: number): MotifTimes {
 
 /** A burst of the look's particle (or `preset`) in the look's colors, its count scaled. */
 export function motifBurst(
-  spec: MotifSpec,
+  spec: CueSpec,
   at: FxAnchor,
   spread: FxSpread,
   delayMs: number,
@@ -80,7 +83,7 @@ export function motifBurst(
 }
 
 /** A glowing straight bolt, or an instant beam, in the look's colors, landing at `delayMs + flightMs`. */
-export function motifShot(spec: MotifSpec, motion: "bolt" | "beam", from: FxAnchor, to: FxAnchor, delayMs: number, flightMs: number): FxShotCue {
+export function motifShot(spec: CueSpec, motion: "bolt" | "beam", from: FxAnchor, to: FxAnchor, delayMs: number, flightMs: number): FxShotCue {
   return {
     kind: "shot",
     shot: motion === "bolt" ? { motion: "bolt", trail: spec.look.particle } : { motion: "beam" },
@@ -94,7 +97,7 @@ export function motifShot(spec: MotifSpec, motion: "bolt" | "beam", from: FxAnch
   };
 }
 
-export function motifRing(spec: MotifSpec, D: number, at: FxAnchor, delayMs: number): FxRingCue {
+export function motifRing(spec: CueSpec, D: number, at: FxAnchor, delayMs: number): FxRingCue {
   return ringCue(D, spec.look.particle, at, delayMs);
 }
 
@@ -188,7 +191,7 @@ export function hitAnchor(view: PlayerView, id: string): FxAnchor | null {
  * The landing on one target at `land`: a burst, and the numbers when the motif replaces the row (a
  * damage's splat and its Armor flash, R1363), and a crack under a card destroyed. Each tail is the row's.
  */
-export function hit(spec: MotifSpec, event: GameEvent, at: FxAnchor, D: number, land: number, tuning: BurstTuning = MOTIF_TUNING.land): FxCue[] {
+export function hit(spec: CueSpec, event: GameEvent, at: FxAnchor, D: number, land: number, tuning: BurstTuning = MOTIF_TUNING.land): FxCue[] {
   const cues: FxCue[] = [motifBurst(spec, at, "area", land, tuning)];
   if (spec.row === "replace" && event.type === "damage") {
     if (event.amount > 0) cues.push({ kind: "splat", tone: "damage", amount: event.amount, at, delayMs: land, durationMs: D - land + FX_SPLAT_HOLD_MS });
