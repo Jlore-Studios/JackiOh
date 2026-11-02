@@ -132,6 +132,22 @@ export const FX_SHOT_LAUNCH_AT = 0.24;
 export const FX_SHOT_SHAKE_TRAUMA = 0.3;
 // #1443: the per-entry cap on non-combat damage shots (one volley starts together).
 export const FX_FLAVOR_VOLLEY_MAX = 4;
+// R2784000: a card's motif (fx/motifs/). Its four phases start at these fractions of the entry, as
+// FX_SLAM_AT does; its scale is the card's rarity × (1 + capped cost × step), at most FX_MOTIF_SCALE_MAX,
+// times the intensity (an X cost counts as FX_MOTIF_X_COST); each motif's shake is FX_MOTIF_TRAUMA's.
+export const FX_MOTIF_PHASES = { gather: 0, travel: 0.2, land: 0.6, linger: 0.75 } as const;
+export const FX_MOTIF_SCALE_PER_COST = 0.08;
+export const FX_MOTIF_COST_CAP = 7;
+export const FX_MOTIF_X_COST = 3;
+export const FX_MOTIF_SCALE_MAX = 2;
+export const FX_MOTIF_RARITY_SCALE = { Common: 1, Rare: 1.1, Epic: 1.25, Legendary: 1.4, Mythic: 1.6, Token: 0.9 } as const;
+export const FX_MOTIF_VOLLEY_MAX = 5;          // volley: the shots one entry fires
+export const FX_MOTIF_BARRAGE_MAX = 8;         // barrage: the hits that land one by one…
+export const FX_MOTIF_BARRAGE_STEP = 0.02;     // …this fraction of D apart, never past linger
+export const FX_MOTIF_CENTER_LANE = 3;         // nova: the lane a one-sided blast centres on
+export const FX_MOTIF_TRAUMA = { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 } as const;
+// R2784000: the scales the /dev/fx gallery offers.
+export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;

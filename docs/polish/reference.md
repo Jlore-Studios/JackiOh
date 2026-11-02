@@ -303,6 +303,7 @@ import and one mount line) and says so in their PR.
 | `apps/web/src/net/navigate.ts` `paths` | 3 (`practice`) | 5 (reset-password path; adds `practice: "/practice"` if it links there before 3 lands; the identical line merges) |
 | `apps/web/src/cards/**` (new), `Card.tsx` internals, `game/deckbuilder/**`, `routes/decks.tsx` | 6 | 7 adds highlight or drag attributes on `Card.tsx`'s root only |
 | `apps/web/src/fx/**` (new), `animations.ts`, `animations.css` | 1 | — |
+| `apps/web/src/fx/motifs/**`, `apps/web/src/fx/cards/**` (#2784, R2784000; `9-card-animations.md`) | 9 card animations (#2782's parts) | each set's pass edits only its own table file (Stinkyscape's two passes one file each) and its recipes in `fx/cards/<set>/` |
 | `apps/web/src/audio/**` (new), `apps/web/scripts/gen-voice.mjs`, `apps/web/public/audio/**` | 2 | — |
 | `apps/web/src/settings/**` (new), `Board.tsx`, `Zone.tsx`, `Hand.tsx`, `board.css`, `prompt.css`, `Prompt.tsx` layout | 7 | — |
 | `apps/web/src/practice/**` (new), `routes/practice.tsx` | 3 | — |
@@ -326,6 +327,7 @@ and `rulings:coverage` compare sets in order, and neither requires the numbers t
 | 1 animations | R200–R202 |
 | 2 sound | R203–R205 |
 | 6 cards | R206–R208 |
+| 9 card animations (#2782's parts) | R2784000 and on, each part in its own issue's block |
 | overflow (any task that fills its range) | R209 and up, first come; the integration merge renumbers any collision |
 
 ### SPEC sections

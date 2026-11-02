@@ -61,6 +61,8 @@ export function screenNameFor(path: string): string | null {
       return import.meta.env.MODE !== "production" ? "Hotseat" : null;
     case paths.duosDev:
       return import.meta.env.MODE !== "production" ? "Duos hotseat" : null;
+    case paths.fxGallery:
+      return import.meta.env.MODE !== "production" ? "Effects gallery" : null;
   }
   if (matchIdOf(path) !== null) return "Match";
   if (seriesIdOf(path) !== null) return "Conquest";
