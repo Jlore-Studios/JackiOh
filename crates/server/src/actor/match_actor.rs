@@ -667,9 +667,12 @@ impl MatchActor {
                 }
                 // R1442: the rank bucket is the tier each player holds as the match arms.
                 if !self.lock().finished {
-                    let tiers =
-                        telemetry::ladder_tiers_or_none(&self.shared.deps, &self.shared.match_row.players)
-                            .await;
+                    let tiers = telemetry::ladder_tiers_or_none(
+                        &self.shared.deps,
+                        &self.shared.match_row.id,
+                        &self.shared.match_row.players,
+                    )
+                    .await;
                     self.lock().tiers = tiers;
                 }
                 if snapshot.result.is_some() {

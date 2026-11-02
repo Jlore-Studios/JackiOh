@@ -32,11 +32,11 @@ use tokio::sync::OnceCell;
 use jackioh_cards::patch_history;
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, GameFigures, GameMode,
-    GameSource, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals, Tally,
-    TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport,
-    add_created, add_stats, card_drills_of, card_family, card_stats_of, card_window, collapse_gameless,
-    created_played_delta, drawn_delta, not_drawn, patch_windows, played_delta, sources_of, win_rate,
-    windowed_card_stats, windowed_game_figures,
+    GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals,
+    Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
+    WindowedReport, add_created, add_stats, adjusted_win_rate, card_drills_of, card_family, card_stats_of,
+    card_window, collapse_gameless, created_played_delta, drawn_delta, not_drawn, patch_windows,
+    played_delta, seen, sources_of, win_rate, windowed_card_stats, windowed_game_figures,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -80,6 +80,9 @@ pub struct PublicCardStat {
     /// R2427000: the drawn win rate minus the never-drawn one; as R654's played delta, it waits for the
     /// sample floor on both its sides.
     pub drawn_delta: Option<f64>,
+    /// R2777000: the drawn delta kept as far as its games back it, read from an even game
+    /// (`adjusted_win_rate`): the page's headline rate and its default order.
+    pub adjusted_win_rate: Option<f64>,
     pub play_rate: f64,
     pub has_enough_games: bool,
     /// R1367000: the card's window and the records its figures count.
@@ -263,8 +266,9 @@ impl PublicStatsPilot {
     }
 }
 
-/// Which match type the public figures count (SPEC §9.11 Queries, R377): every mode, or one of
-/// R257's three modes. `All` counts what the endpoint always counted.
+/// Which match type the public figures count (SPEC §9.11 Queries, R377): every mode, one of R257's
+/// three modes, or (R2777001) Constructed, Best of 1 and Conquest together. `All` counts what the
+/// endpoint always counted.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum PublicStatsMode {
@@ -272,15 +276,17 @@ pub enum PublicStatsMode {
     Bo1,
     Bo3,
     Random,
+    Constructed,
 }
 
 impl PublicStatsMode {
-    /// `?mode=`: one match type, or every mode when missing, `all`, or unrecognized.
+    /// `?mode=`: one match type, `constructed`, or every mode when missing, `all`, or unrecognized.
     pub fn parse(raw: Option<&str>) -> PublicStatsMode {
         match raw.map(|value| value.trim().to_lowercase()).as_deref() {
             Some("bo1") => PublicStatsMode::Bo1,
             Some("bo3") => PublicStatsMode::Bo3,
             Some("random") => PublicStatsMode::Random,
+            Some("constructed") => PublicStatsMode::Constructed,
             _ => PublicStatsMode::All,
         }
     }
@@ -291,15 +297,27 @@ impl PublicStatsMode {
             PublicStatsMode::Bo1 => "Best of 1",
             PublicStatsMode::Bo3 => "Conquest",
             PublicStatsMode::Random => "All Random",
+            PublicStatsMode::Constructed => "Constructed",
         }
     }
 
-    pub fn filter(self) -> Option<GameMode> {
+    pub fn filter(self) -> ModeFilter {
         match self {
-            PublicStatsMode::All => None,
-            PublicStatsMode::Bo1 => Some(GameMode::Bo1),
-            PublicStatsMode::Bo3 => Some(GameMode::Bo3),
-            PublicStatsMode::Random => Some(GameMode::Random),
+            PublicStatsMode::All => ModeFilter::All,
+            PublicStatsMode::Bo1 => ModeFilter::Only(GameMode::Bo1),
+            PublicStatsMode::Bo3 => ModeFilter::Only(GameMode::Bo3),
+            PublicStatsMode::Random => ModeFilter::Only(GameMode::Random),
+            PublicStatsMode::Constructed => ModeFilter::Constructed,
+        }
+    }
+
+    /// R2777002: the games a card's own figures count: under All Random, whose decks are dealt, only the
+    /// decks that saw it (its drawn games, `seen`); a card dealt and never drawn is no game of its. In
+    /// every other mode, every deck that held it.
+    pub fn counted(self, stats: &CardStats) -> Tally {
+        match self {
+            PublicStatsMode::Random => seen(stats),
+            _ => stats.in_deck,
         }
     }
 }
@@ -500,32 +518,43 @@ fn seat_counted(source: GameSource, seat_pilot: Pilot, live_pilot: PilotFilter) 
 /// R1451, amended by R807000: the public report over `totals` for `source`: the live records'
 /// report counting the requested pilot's seats (`counted_pilot`) and the development records'
 /// counting both seats, summed card by card, in catalog-id order as `card_stats` lists them.
-/// R377: `mode` scopes both parts to one match type, or every mode when `None`.
+/// R377: `mode` scopes both parts to one match type, or every mode; R2777001: Constructed's two
+/// modes are read apart and summed as the two sources are.
 fn public_report(
     totals: &StatsTotals,
     source: SourceFilter,
     patch: &str,
     live_pilot: PilotFilter,
-    mode: Option<GameMode>,
+    mode: ModeFilter,
 ) -> CardStatsReport {
-    let filter = |source: SourceFilter, pilot: PilotFilter| CardStatsFilter {
+    let filter = |source: SourceFilter, pilot: PilotFilter, mode: Option<GameMode>| CardStatsFilter {
         source,
         mode,
         patch: Some(patch.to_string()),
         pilot,
     };
     let mut parts: Vec<CardStatsReport> = Vec::new();
-    if matches!(source, SourceFilter::Live | SourceFilter::All) {
-        parts.push(card_stats_of(
-            totals,
-            &filter(SourceFilter::Live, counted_pilot(GameSource::Live, live_pilot)),
-        ));
-    }
-    if matches!(source, SourceFilter::Dev | SourceFilter::All) {
-        parts.push(card_stats_of(
-            totals,
-            &filter(SourceFilter::Dev, counted_pilot(GameSource::Dev, live_pilot)),
-        ));
+    for one in mode.modes() {
+        if matches!(source, SourceFilter::Live | SourceFilter::All) {
+            parts.push(card_stats_of(
+                totals,
+                &filter(
+                    SourceFilter::Live,
+                    counted_pilot(GameSource::Live, live_pilot),
+                    *one,
+                ),
+            ));
+        }
+        if matches!(source, SourceFilter::Dev | SourceFilter::All) {
+            parts.push(card_stats_of(
+                totals,
+                &filter(
+                    SourceFilter::Dev,
+                    counted_pilot(GameSource::Dev, live_pilot),
+                    *one,
+                ),
+            ));
+        }
     }
     let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
     let mut by_created: IndexMap<String, CreatedStats> = IndexMap::new();
@@ -555,6 +584,10 @@ fn public_report(
     cards.sort_by(|a, b| a.card.cmp(&b.card));
     let mut created: Vec<CreatedStats> = by_created.into_values().collect();
     created.sort_by(|a, b| a.card.cmp(&b.card));
+    let one_mode = match mode.modes() {
+        [one] => *one,
+        _ => None,
+    };
     CardStatsReport {
         filter: filter(
             source,
@@ -563,6 +596,7 @@ fn public_report(
             } else {
                 live_pilot
             },
+            one_mode,
         ),
         games,
         decks,
@@ -750,7 +784,7 @@ fn patch_report(
     patch: &str,
     source_param: SourceParam,
     live_pilot: PilotFilter,
-    mode: Option<GameMode>,
+    mode: ModeFilter,
     with_drills: bool,
 ) -> PatchReport {
     let live_games = totals.live_games(patch);
@@ -779,7 +813,7 @@ fn patch_report(
             |key: &TotalsKey| {
                 key.patch == patch
                     && sources.contains(&key.source)
-                    && mode.is_none_or(|mode| key.mode == mode)
+                    && mode.counts(key.mode)
                     && seat_counted(key.source, key.pilot, live_pilot)
             },
             CARD_STATS_CO_PLAYED_TOP,
@@ -833,7 +867,7 @@ async fn kept_report(
 
 /// R2491000: one `?pilot=` and `?mode=`'s patch history, which every card's drill-down reads: each
 /// shipped patch whose live games clear R654's gate, in `patches.json`'s order, with each card's
-/// in-deck tally there as `patch_report` counts it.
+/// in-deck tally there as `patch_report` counts it (R2777002: under All Random, its seen tally).
 struct KeptHistory {
     patches: Vec<(String, IndexMap<String, Tally>)>,
 }
@@ -864,11 +898,15 @@ async fn kept_history(
                     false,
                 );
                 (kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES).then(|| {
+                    // R2777002: under All Random, the decks that saw the card.
                     let cards: IndexMap<String, Tally> = kept
                         .report
                         .cards
                         .into_iter()
-                        .map(|stat| (stat.card, stat.in_deck))
+                        .map(|stat| {
+                            let counted = mode.counted(&stat);
+                            (stat.card, counted)
+                        })
                         .collect();
                     (version.clone(), cards)
                 })
@@ -883,6 +921,9 @@ async fn kept_history(
 
 /// GET /api/stats/cards: public card win rates (R654, R1367000).
 /// Supports pilot filtering (R1451, R807000, R1452) and match modes (R377).
+/// R2777001: `?mode=constructed` reads Best of 1 and Conquest together. R2777002: under `random` a card's
+/// games, rate, play rate and floor read the decks that saw it. R2777000: each card carries its adjusted
+/// win rate, and the cards are listed by it.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
@@ -962,8 +1003,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let stat = held.map(|card| &card.stats);
         let total_decks = held.map(|card| card.decks).unwrap_or(0);
         let window = kept.window_of(id, request);
-        let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
-        let rate = stat.and_then(|stat| win_rate(&stat.in_deck));
+        // R2777002: the games the card's own figures count: under All Random, the decks that saw it.
+        let counted = stat.map(|stat| mode.counted(stat)).unwrap_or_default();
+        let (counted_games, _) = tally_of(&counted);
+        let rate = win_rate(&counted);
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
         let (played_radiant_games, _) = stat.map(|stat| tally_of(&stat.played_radiant)).unwrap_or((0, 0));
         let played_radiant_rate = stat.and_then(|stat| win_rate(&stat.played_radiant));
@@ -993,11 +1036,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .filter(|_| drawn_games >= CARD_STATS_MIN_SAMPLE && not_drawn_games >= CARD_STATS_MIN_SAMPLE)
             .and_then(drawn_delta);
         let play_rate = if total_decks > 0 {
-            in_deck_games as f64 / total_decks as f64
+            counted_games as f64 / total_decks as f64
         } else {
             0.0
         };
-        let has_enough_games = in_deck_games >= CARD_STATS_MIN_SAMPLE;
+        let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
+        // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
+        let adjusted = stat.and_then(adjusted_win_rate);
 
         cards.push(PublicCardStat {
             id: id.clone(),
@@ -1005,7 +1050,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             cost,
             rarity: def.rarity.as_str().to_string(),
             set: def.set.as_str().to_string(),
-            games: in_deck_games,
+            games: counted_games,
             win_rate: rate,
             drawn_games,
             drawn_win_rate: drawn_rate,
@@ -1021,33 +1066,41 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             not_drawn_games,
             not_drawn_win_rate: not_drawn_rate,
             drawn_delta: drawn_gap,
+            adjusted_win_rate: adjusted,
             play_rate,
             has_enough_games,
             window: PublicCardWindow::of(&window),
         });
     }
 
-    cards.sort_by(|a, b| {
-        if a.has_enough_games && !b.has_enough_games {
-            return Ordering::Less;
+    // Enough games first, then the higher rate, the more games and the name. R2777000: the cards are
+    // listed by their adjusted win rate; the summary's best and worst card stay R654's raw rate's.
+    let by = |rate: fn(&PublicCardStat) -> Option<f64>| {
+        move |a: &&PublicCardStat, b: &&PublicCardStat| {
+            if a.has_enough_games && !b.has_enough_games {
+                return Ordering::Less;
+            }
+            if !a.has_enough_games && b.has_enough_games {
+                return Ordering::Greater;
+            }
+            match (rate(a), rate(b)) {
+                (Some(a_rate), Some(b_rate)) if a_rate != b_rate => {
+                    return b_rate.partial_cmp(&a_rate).unwrap_or(Ordering::Equal);
+                }
+                (Some(_), None) => return Ordering::Less,
+                (None, Some(_)) => return Ordering::Greater,
+                _ => {}
+            }
+            b.games
+                .cmp(&a.games)
+                .then_with(|| locale_compare(&a.name, &b.name))
         }
-        if !a.has_enough_games && b.has_enough_games {
-            return Ordering::Greater;
-        }
-        if let (Some(a_rate), Some(b_rate)) = (a.win_rate, b.win_rate)
-            && a_rate != b_rate
-        {
-            return b_rate.partial_cmp(&a_rate).unwrap_or(Ordering::Equal);
-        }
-        b.games
-            .cmp(&a.games)
-            .then_with(|| locale_compare(&a.name, &b.name))
-    });
-
-    let qualifying: Vec<&PublicCardStat> = cards
+    };
+    let mut qualifying: Vec<&PublicCardStat> = cards
         .iter()
         .filter(|card| card.has_enough_games && card.win_rate.is_some())
         .collect();
+    qualifying.sort_by(by(|card| card.win_rate));
     let extreme = |card: &PublicCardStat| PublicStatsExtreme {
         id: card.id.clone(),
         name: card.name.clone(),
@@ -1056,6 +1109,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let best_card = qualifying.first().map(|card| extreme(card));
     let worst_card = qualifying.last().map(|card| extreme(card));
+    let by_adjusted = by(|card| card.adjusted_win_rate);
+    cards.sort_by(|a, b| by_adjusted(&a, &b));
 
     // R2089000: every Created card the catalog holds, tokens among them, with enough games first.
     let mut created: Vec<PublicCreatedStat> = report

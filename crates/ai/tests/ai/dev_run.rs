@@ -76,6 +76,21 @@ mod the_ais_development_run_9_11 {
     }
 
     #[test]
+    fn r2777003_no_development_game_gives_either_seat_a_medium_or_hard_handicap() {
+        // The card figures count only Easy and ladder games: a development game's seats play on a
+        // person's resources, the Easy tier's (R180), forced runs included.
+        register_cards();
+        for n in 1..=4 {
+            assert!(dev_game_config(n, AI_DEV_RUN.series, None).handicaps.is_none());
+            assert!(
+                forced_dev_game_config(n, AI_DEV_RUN.series, None, "core-001")
+                    .handicaps
+                    .is_none()
+            );
+        }
+    }
+
+    #[test]
     fn r1367000_a_run_files_the_build_that_played_it_with_its_ai_generation() {
         register_cards();
         let options = DevRunOptions {

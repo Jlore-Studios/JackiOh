@@ -2,6 +2,7 @@
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields and R2722001 takeovers.
 
+import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
@@ -238,6 +239,26 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       el.setAttribute("data-size", cue.size);
       break;
     }
+    case "callout": {
+      // R2789000: a keyword's icon over the unit, one svg of one path. `data-callout`, not `data-keyword`, which the
+      // card's rules text matches; it names the keyword, never the card (R202).
+      const at = boxes.at ?? null;
+      const icon = KEYWORD_CALLOUT_ICONS[cue.keyword];
+      if (at === null || icon === undefined) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-callout", cue.keyword);
+      if (cue.still === true) el.setAttribute("data-still", "true");
+      const svg = doc.createElementNS(SVG_NS, "svg");
+      svg.setAttribute("class", "fx-callout-icon");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("aria-hidden", "true");
+      const path = doc.createElementNS(SVG_NS, "path");
+      path.setAttribute("d", icon.d);
+      if (icon.line === true) path.setAttribute("data-line", "true");
+      svg.appendChild(path);
+      el.appendChild(svg);
+      break;
+    }
     case "chaos": {
       el.setAttribute("data-text", t(cue.title));
       chaosLines(doc, el, cue.lines);
@@ -339,6 +360,7 @@ export function standInCopy(source: Element): HTMLElement {
   }
   copy.style.removeProperty("--fx-lunge-x");
   copy.style.removeProperty("--fx-lunge-y");
+  copy.style.removeProperty("--fx-lunge-lift");
   copy.classList.add("fx-hold-card");
   return copy;
 }

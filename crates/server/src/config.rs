@@ -1385,13 +1385,15 @@ pub fn expected_elo_for_skill(skill: f64) -> f64 {
     SKILL_ELO_TABLE.last().map_or(RATING_START, |&(_, elo)| elo)
 }
 
-/// R1454: the pool never holds fewer active bots than this, however few people play.
-pub const BOT_POOL_MIN: usize = 8;
-/// R1454: nor more than this, however many do.
-pub const BOT_POOL_MAX: usize = 200;
+/// R1454: the pool never holds fewer active bots than this, however few people play. R2778001: 40
+/// (8 before), so a player grinding the ladder never runs out of bots on, free and not among their
+/// last `BOT_RECENT_OPPONENTS`.
+pub const BOT_POOL_MIN: usize = 40;
+/// R1454: nor more than this, however many do (R2778001: 400, 200 before).
+pub const BOT_POOL_MAX: usize = 400;
 /// R1454: active bots per person who finished a live game in the last
-/// `BOT_POOL_ACTIVE_WINDOW_DAYS`, before the clamp.
-pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 0.25;
+/// `BOT_POOL_ACTIVE_WINDOW_DAYS`, before the clamp (R2778001: one each, a quarter before).
+pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 1.0;
 /// R1454: the window "weekly active" counts people over.
 pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
 /// R1454: how often the server sizes the pool again (and once as it boots).
@@ -1426,10 +1428,12 @@ pub const BOT_RECENT_OPPONENTS: usize = 5;
 /// dealt-deck streams (`{seed}:p1-deck`, R258) and the emote stream (`{seed}:emotes:{seat}`,
 /// R1341), so a fixed seed always seats the same way and a replay folds unchanged.
 pub const SEAT_COIN_LABEL: &str = "seats";
-/// R1454: the fewest hours a day a bot is on (its schedule, `bots.active_hours`).
-pub const BOT_ACTIVE_HOURS_MIN: i32 = 8;
-/// R1454: the most hours a day a bot is on.
-pub const BOT_ACTIVE_HOURS_MAX: i32 = 16;
+/// R1454: the fewest hours a day a bot is on (its schedule, `bots.active_hours`; R2778001: 12, 8
+/// before). A bot drawn before keeps its schedule.
+pub const BOT_ACTIVE_HOURS_MIN: i32 = 12;
+/// R1454: the most hours a day a bot is on (R2778001: 18, 16 before), still under a grinder's
+/// `BOT_GRIND_ACTIVE_HOURS`.
+pub const BOT_ACTIVE_HOURS_MAX: i32 = 18;
 /// R1454: hours in the day a bot's schedule wraps around (UTC).
 pub const BOT_HOURS_PER_DAY: i32 = 24;
 /// R1452: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).

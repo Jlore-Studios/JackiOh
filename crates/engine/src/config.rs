@@ -2184,6 +2184,16 @@ pub const STATS_INTERVAL_Z: f64 = 1.96;
 /// R1994000: a share of the game figures is rounded to this many parts of one (three decimals).
 pub const STATS_SHARE_PRECISION: f64 = 1000.0;
 
+/// R2777000: the adjusted win rate's centre, an even game's win rate: a card that moves its deck's win rate
+/// not at all reads this, and the drawn delta's sampling variance is taken at it, where it is widest.
+pub const ADJUSTED_WIN_RATE_CENTER: f64 = 0.5;
+
+/// R2777000: the spread (one standard deviation) of real card lifts the adjusted win rate assumes, as a
+/// fraction: most cards move their deck's win rate by less than five points. A card's drawn delta is kept
+/// in the share `τ² / (τ² + SE²)`, so at this spread a delta measured over about 100 games seen and 100
+/// never drawn keeps under half its swing, and one over a few thousand keeps nearly all.
+pub const ADJUSTED_WIN_RATE_PRIOR_SPREAD: f64 = 0.05;
+
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
 // ---------------------------------------------------------------------------------------------
