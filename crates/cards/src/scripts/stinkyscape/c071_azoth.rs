@@ -3,14 +3,8 @@
 //!            random targets."
 //!   Radiant: "Cry: Summon every Unit with a Cry from your graveyard. Trigger each of their Cries
 //!            {repeats|time|times}, with random targets."
-//! Engine: Cry (R1), R1869001: C #44 Back from the GY's Radiant summon from the graveyard (`for_each_card`
-//! read once as the clause begins, R113), filtered to the Unit cards with a Cry to trigger
-//! (`has_triggerable_cry`; a granted one is gone there, R78), oldest first (§3), each summoned into R64's
-//! zone with no Cry; with no room the rest stay in the graveyard and none of theirs is triggered. Then
-//! the Cry of each Unit this Cry summoned (`summoned_so_far`, R136), in the order summoned, is triggered
-//! (R467) with every choice of the controller's drawn from the match rng (`trigger_cry`'s `random`, as
-//! R1855001's), so nothing is asked; a declared target with no legal pick is passed by. Radiant: each
-//! Cry fires {repeats} times before the next one's.
+//! Cry (R1, R1869001): summons GY units with Cry (C #44, R113, has_triggerable_cry, R78, §3, R64).
+//! Triggers each summoned Cry in order with random choices (R136, R467, R1855001). Radiant repeats {repeats} times.
 
 use jackioh_engine::prelude::*;
 
@@ -82,8 +76,6 @@ mod tests {
     const SORCERER_DAMAGE: i32 = 4;
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// p1 holds A'Zoth (`radiant` its face) with `graveyard` in its graveyard and `field` on its field;
-    /// p2 has a Vanilla.
     fn holding(seed: &str, radiant: bool, graveyard: Value, field: Value) -> Scenario {
         crate::scenario(json!({
             "seed": seed,
@@ -99,7 +91,6 @@ mod tests {
             .count()
     }
 
-    /// Every hit of the Sorcerer's 4 so far, by target.
     fn sorcerer_hits(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -118,7 +109,6 @@ mod tests {
             let mut s = holding("azoth", false, json!([MR_TOKEN, VANILLA, FELINORS]), json!([]));
             s.play(ID, json!({ "zone": 1 }));
             assert!(s.state().pending.is_none());
-            // A'Zoth, then the two summoned, then their Cries' tokens in the order they were summoned.
             let board: Vec<Option<String>> = (1..=5).map(|lane| s.unit(P1, lane).map(|card| card.def_id)).collect();
             let some = |id: &str| Some(id.to_string());
             assert_eq!(board, vec![some(ID), some(MR_TOKEN), some(FELINORS), some(RUSH_TOKEN), some(FELINORS)]);
@@ -147,15 +137,12 @@ mod tests {
                 sorcerer_hits(&s)
             };
             assert_eq!(run("azoth-seed"), run("azoth-seed"));
-            // And the draw is the rng's: some seed picks another target.
             let first = run("azoth-seed");
             assert!((0..40).any(|n| run(&format!("azoth-seed-{n}")) != first));
         }
 
         #[test]
         fn a_summoned_azoth_triggers_only_what_its_own_cry_summoned() {
-            // The second A'Zoth's Cry finds no Unit with a Cry left in the graveyard, so it triggers
-            // nothing: never its own Cry again, nor the Cry the first one already owes the Mr. Token.
             let mut s = holding("azoth-twice", false, json!([ID, MR_TOKEN]), json!([]));
             s.play(ID, json!({ "zone": 1 }));
             assert!(s.state().pending.is_none());
@@ -201,7 +188,6 @@ mod tests {
                     _ => None,
                 })
                 .collect();
-            // The Felinors' own summon, then two Rush Tokens, then the Felinors' two copies (one fits).
             assert_eq!(order[0], FELINORS);
             assert_eq!(&order[1..3], &[RUSH_TOKEN.to_string(), RUSH_TOKEN.to_string()]);
             assert!(order[3..].iter().all(|def| def == FELINORS));

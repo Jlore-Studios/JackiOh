@@ -89,7 +89,6 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
     );
   }
 
-  // R1751000: When card.activations.length > 1, render a single unified Activate control.
   const anyUnlimited = activations.some((a) => a.usesLeft === null);
   const totalUses = anyUnlimited
     ? null

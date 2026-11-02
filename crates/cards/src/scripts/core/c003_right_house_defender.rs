@@ -3,11 +3,10 @@
 //! so the base script has nothing to do. Never re-grant a printed keyword from a script.
 //! Radiant: "Divine Shield, Reborn; Death: summon a base Right-house defender" (§8 Conventions).
 //!
-//! Engine cell: Death fires on both deaths of a Reborn unit (§4.5's ruling, R8), and the reborn
-//! body keeps the radiant flag (R78), so the radiant form summons twice in total. It summons a NEW
-//! base face (no `radiant: true`), which has no Death hook, so the chain ends. Placement is R64's
-//! leftmost free zone; the dying unit's zone is reserved for its Reborn return, so the summon lands
-//! beside it.
+//! Death fires on both deaths of a Reborn unit (§4.5's ruling, R8) and the reborn body keeps the
+//! radiant flag (R78), so the radiant form summons twice. It summons a new base face, with no Death
+//! hook, so the chain ends. The dying unit's zone is reserved for its Reborn return, so R64's leftmost
+//! free zone is beside it.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -15,7 +14,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-003";
 
 pub fn script() -> CardScripts {
-    /* Printed keywords only (§10.4); an empty Script is the whole base card. */
     let base = Script::default();
     let radiant = Script {
         death: Some(hook(|_ctx| vec![summon(json_as(json!({ "defId": "core-003", "player": "self" })))])),
@@ -24,13 +22,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 3: "Shield eats first hit; dies → returns at 1 without Reborn; radiant Death
-// summons a base Right-house defender on both deaths while Reborn keeps its zone (R8, R64)".
-// Four #8 Mr. Vanilla (3/3, survives the retaliation) give four clean hits in one turn.
-// Divine Shield absorbs a whole hit (§4.4 step 1), so each death costs two hits. The reborn body's
-// shield is back (§4.5 step 4 returns it "as a reset instance (R78)", which clears
-// `divineShieldSpent`); Reborn itself does not come back. R78's list does not name Divine Shield,
-// so this reading deserves its own ruling row.
+// BUILD M4-T4 row 3 (R8, R64).
+// Four #8 Mr. Vanilla (3/3, survives the retaliation) give four hits in one turn; the shield absorbs
+// a whole hit (§4.4 step 1), so each death costs two. The reborn body's shield is back (§4.5 step 4's
+// reset instance, R78, clears `divineShieldSpent`): R78's list does not name Divine Shield, so this
+// reading deserves its own ruling row.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -48,7 +44,6 @@ mod tests {
     mod n3_right_house_defender {
         use super::*;
 
-        /// Taunt on BOTH faces: the enemy has to spend the shield before anything behind it is reachable.
         #[test]
         fn s6_1_taunt_is_printed_on_both_faces_so_the_enemy_must_come_through_it() {
             crate::register_all();
@@ -152,8 +147,7 @@ mod tests {
             let second = foe(&s, 2);
             s.attack(second.as_str(), rhd.as_str()); // first death → Death fires
 
-            // Lane 1 is reserved for the Reborn return (R64), so the summon takes lane 2, and what it
-            // summons is a new BASE Right-house defender, not a copy of the radiant one.
+            // Lane 1 is reserved for the Reborn return (R64), so the summon takes lane 2.
             let reborn = s.unit(PlayerId::P1, 1);
             let summoned = match s.unit(PlayerId::P1, 2) {
                 Some(unit) => unit,

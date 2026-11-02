@@ -5,7 +5,7 @@
 //!   Engine:  "As C+ #65: five independent rolls (`GRAPE_ODDS`), the Radiant's with Lucky 1; the hand cap
 //!            burns extras. Tunes: grapes 5 ↑."
 //!
-//! C+ #65 Two Grapes with five: the same engine verb (`addRolledGrapes`, effects/fruit.ts), the count
+//! C+ #65 Two Grapes with five: the same engine verb (`addRolledGrapes`), the count
 //! its own declared number. The designer's Radiant said 3, read as copied from Two Grapes; it is 5 so
 //! the Radiant face never loses two Grapes (SPEC §8.7 row 66).
 
@@ -35,11 +35,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #66 Vine of Grapes — SPEC §8.7 row 66, BUILD M9 Classic+ row C+ 66: "As Two Grapes with 5 Grapes;
-// the count reads through `param()`; radiant 5 Radiant Grapes, each rolled with Lucky 1".
+// C+ #66 Vine of Grapes — SPEC §8.7 row 66, BUILD M9 Classic+ row C+ 66 (R97).
 //
-// The roll is C+ #65's (`addRolledGrapes`), whose odds are proved in packages/engine/test/
-// effects-fruit.test.ts and through Two Grapes in 065-two-grapes.test.ts.
+// The roll is C+ #65's, whose odds are proved in the engine's `tests/rules/effects_fruit.rs`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,7 +53,6 @@ mod tests {
         GRAPE_ODDS.iter().map(|grape| grape.def_id).collect()
     }
 
-    /// TS `GRAPE_IDS.indexOf(id)`: −1 for an id that is no Grape.
     fn index_of(id: &str) -> i64 {
         grape_ids()
             .iter()
@@ -65,7 +62,7 @@ mod tests {
 
     use crate::js;
 
-    /// One `addedToHand` event of p1's, as TS's `Extract<GameEvent, { type: "addedToHand" }>` reads it.
+    /// One `addedToHand` event of p1's.
     struct Added {
         instance_id: String,
         def_id: String,
@@ -89,7 +86,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `played({ radiant?, seed?, hand? })`.
     fn played(radiant: bool, seed: Option<&str>, hand: Option<usize>) -> Scenario {
         let mut vine = json!({ "def": VINE });
         if radiant {

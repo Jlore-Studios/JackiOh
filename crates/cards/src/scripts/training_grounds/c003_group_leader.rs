@@ -1,11 +1,8 @@
 //! SPEC §8.11 Training Grounds 3 Group leader: (1) Unit, Human, Common, 4/1 → 8/2, a card of the held
 //! Training Grounds set (R1420, R2194000).
-//!
 //! Base:    "Aura: Your other Units have +1 Attack."
 //! Radiant: "Aura: Your other Units have +2 Attack."
-//! Engine: C+ #46 Felinor Flagbearer's aura with no tag test (`include_self: false`) and an attack-only
-//! `StatMod`, computed on read (§10.4 layer 5): each other Unit its controller has on the field, a
-//! standing backrow Unit included (R1081000), never the enemy's; the bonus goes the instant it leaves.
+//! Attack-only StatMod computed on read (§10.4 layer 5) for friendly units (standing backrow included, R1081000; C+ #46).
 
 use jackioh_engine::prelude::*;
 
@@ -39,10 +36,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #3 Group leader — SPEC §8.11 row 3, BUILD M13 row TG 3: "base: each other friendly Unit on the field has
-// +1 Attack, health unchanged; the leader itself does not (4/1); enemy Units are untouched; a Unit played
-// after it gets the bonus; the bonus goes when the leader leaves the field; the aura reads
-// `param("attack")`. radiant 8/2; +2 Attack to each other friendly Unit, not itself".
+// TG #3 Group leader — SPEC §8.11 row 3, BUILD M13 row TG 3.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

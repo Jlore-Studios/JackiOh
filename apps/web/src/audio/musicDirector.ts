@@ -1,7 +1,7 @@
 // The music director (SPEC §10.11, R631; musicPlan.ts) follows one board and only the viewer's own
 // screen (R203). It applies after the board settles and switches stations at readable cards' R204
-// moments; a Trap counts at its first firing. No card plays a theme (R822000): a readable Legendary's
-// or Mythic's intro (R1350) is its music, and R1351 stops it on result, hand-over, dynamic off or exit.
+// moments. No card plays a theme (R822000): a readable Legendary's or Mythic's intro (R1350) is its
+// music, and R1351 stops it on result, hand-over, dynamic off or exit.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
@@ -49,10 +49,8 @@ export type MusicDirectorOptions = {
   rotation?: (first: PlayerView) => number;
 };
 
-/** The viewer's hero at or under this is at low health. */
 export const LOW_HEALTH_AT = Math.floor(HERO_HEALTH * MUSIC_LOW_HEALTH_FRACTION);
 
-/** The rotation each match took, by its first view. */
 const rotations = new WeakMap<PlayerView, number>();
 
 /**
@@ -67,10 +65,7 @@ export function rotationFor(first: PlayerView): number {
   return n;
 }
 
-/**
- * The card a cast names and who cast it, at R204's moments: a unit or spell's play, a trap's first
- * firing. `fired` remembers the trap instances that have fired this match.
- */
+/** The card a cast names and who cast it, at R204's moments (a trap's at its first firing, `fired`). */
 function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { defId: string; player: PlayerId } | null {
   if (event.type === "cardPlayed") {
     if (event.defId === HIDDEN_DEF_ID) return null;
@@ -111,7 +106,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   const fired = new Set<string>();
   /** R1350: the Units whose own play was heard, so their `summoned` opens nothing again (R204). */
   const playedUnits = new Set<string>();
-  /** R1350: the intros already asked to be fetched ahead. */
   const preloaded = new Set<string>();
   let lowHealth = false;
   let opponentTurn = false;
@@ -165,7 +159,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       if (disposed) return;
       latest = view;
       if (viewer === null) {
-        // The match's first view: its rotation, a fresh station memory, and the sting (dynamic only).
         rotation = rotationOf(view);
         sink.resetResume();
         read(view);

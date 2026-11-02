@@ -1,8 +1,7 @@
 /**
  * Procedural particle sprites (docs/polish/1-animations.md, S5). Each sprite is a radial-gradient disc
  * painted once into a small offscreen canvas per (preset, color, dpr) and reused for every particle
- * after that, which is the cheap way to draw soft glowing dots (MDN, "Optimizing canvas"). There are
- * no image assets: every look is a gradient drawn here.
+ * after that, the cheap way to draw soft glowing dots (MDN, "Optimizing canvas"). No image assets.
  */
 import { PARTICLE_PRESETS } from "./presets.ts";
 import { isHeadlessDom } from "./surface.ts";
@@ -12,11 +11,7 @@ export type SpriteSurface = { canvas: CanvasImageSource; ctx: CanvasRenderingCon
 export type SpriteCanvasFactory = (sizePx: number) => SpriteSurface | null;
 
 export type SpriteCache = {
-  /**
-   * A radial-gradient disc for (preset, color index, dpr), drawn once and cached; null without a 2D context.
-   * `colors` (#1447) is a palette that stands in for the preset's own: the index picks from it, and the color it
-   * picks is part of the cache key, so two palettes never share a sprite.
-   */
+  /** Null without a 2D context. `colors` (#1447) stands in for the preset's palette, and the color picked is part of the cache key. */
   get(preset: FxPreset, colorIndex: number, dpr: number, colors?: readonly string[]): CanvasImageSource | null;
   size(): number;
   clear(): void;
@@ -28,9 +23,8 @@ const SPRITE_BASE_PX = 48;
 type SpriteStyle = "glow" | "soft" | "hard" | "paper";
 
 /**
- * How each preset's disc falls off. Glow has a hot white core, soft is a faint puff, hard a solid
- * dot. Paper is not a disc at all: a small flat rectangle with a lit edge, which the particle
- * system's tumble squash turns into a spinning scrap of confetti.
+ * How each preset's disc falls off: glow has a hot white core, soft is a faint puff, hard a solid dot.
+ * Paper is a flat rectangle with a lit edge, which the tumble squash turns into a spinning scrap.
  */
 const SPRITE_STYLE: { readonly [P in FxPreset]: SpriteStyle } = {
   fire: "glow",

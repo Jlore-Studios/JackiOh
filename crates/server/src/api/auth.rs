@@ -1,16 +1,14 @@
-//! The endpoints the invite gate needs: the route half of `apps/server/src/api/auth.ts`. The
-//! provider half (Supabase Auth, the JWT tiers, R194's liveness cache, R665's second factor) is
-//! `crate::auth`.
+//! The endpoints the invite gate needs. The provider half (Supabase Auth, the JWT tiers, R194's
+//! liveness cache, R665's second factor) is `crate::auth`.
 //!
 //! SPEC §9.4 lets a pending account "log in, verify its email and see the code screen, and nothing
 //! else", so `/api/auth/me` is declared `AuthLevel::User` rather than `Active`: it is the code
 //! screen's only read. The gate itself lives in `http.rs` (`assert_active`), never here.
 //!
 //! Routes (SURFACE §11.3): `POST /api/auth/signin` (it answers only under `E2E=1`, where the
-//! fixture provider knows passwords; Supabase answers 503 as TS did), `POST
-//! /api/auth/username-signin` (R1443: a sign-in by username, on any provider), `GET /api/profile`,
-//! `DELETE /api/account`, `GET /api/auth/me`. The age screen and the terms (R757000, R757001) are
-//! `consent.rs`'s. `POST /api/auth/signup` is not ported.
+//! fixture provider knows passwords; Supabase answers 503), `POST /api/auth/username-signin`
+//! (R1443: a sign-in by username, on any provider), `GET /api/profile`, `DELETE /api/account`,
+//! `GET /api/auth/me`. The age screen and the terms (R757000, R757001) are `consent.rs`'s.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -32,9 +30,6 @@ use crate::username::sign_in_name;
 // R160: sign-up and sign-in answer identically for every outcome that depends on whether an
 // account exists ("no such account", "wrong password", "already registered"), so neither endpoint
 // is an account-enumeration oracle; one error per endpoint, since the route already tells them apart.
-//
-// §9.4 does not write these strings; R160 is about their being one string, not about their
-// wording. (Sign-up's own string went with the route, SURFACE §11.3.)
 const SIGN_IN_FAILED_MESSAGE: &str = "That email and password do not match an account.";
 
 // R1443: the one refusal of a sign-in by username, whatever was wrong (R160), and its two answers
@@ -50,7 +45,7 @@ const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str =
 const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str =
     "Finish your Conquest series before you delete your account.";
 
-/// TS `str(body, key)` (http.ts): a non-empty string field, or a 400 naming it.
+/// A non-empty string field, or a 400 naming it.
 fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
     match body.get(key) {
         Some(Value::String(value)) if !value.is_empty() => Ok(value.clone()),
@@ -128,13 +123,11 @@ fn attempt(app: &App, key: &str, now: i64) -> Result<(), ApiError> {
 }
 
 /// `POST /api/auth/username-signin` (`AuthLevel::None`), R1443: a sign-in by username and password.
-/// The provider signs in by email alone and no player may learn another's address, so the server
-/// finds the one profile holding the name (R1434's key and tag) and asks the provider for the
-/// session with its address. The answer is the session, whether the email is verified and the
-/// authenticator app R665 still needs; never the address. No such name, a name that cannot be one
-/// and every refusal of the provider's are one 401 (R160). Every attempt counts against the
-/// caller's address (R190) and, once the name reads, against the name, each
-/// `USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW` per `USERNAME_SIGN_IN_WINDOW_SECONDS` (R192).
+/// No player may learn another's address, so the server finds the profile holding the name (R1434's
+/// key and tag) and signs in with its address; it answers the session, whether the email is verified
+/// and the authenticator app R665 still needs, never the address. No such name and every refusal
+/// of the provider's are one 401 (R160). Every attempt counts against the caller's address (R190)
+/// and, once the name reads, against the name (R192).
 pub async fn username_sign_in(app: &Arc<App>, req: Req) -> ApiResult {
     let username = required_str(&req.body, "username")?;
     let password = required_str(&req.body, "password")?;
@@ -182,12 +175,9 @@ pub async fn username_sign_in(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `GET /api/profile` (`AuthLevel::Active`): the account screen: who you are signed in as, and how
-/// you have done.
-///
-/// Separate from `/api/auth/me` rather than folded into it because `me` is the GATE's read —
-/// every guarded route resolves through it — and counting a profile's whole results history on
-/// each of those would put a scan behind every page load. This one is `active`, so it is only
-/// reachable by an account that can actually have a record.
+/// you have done. Separate from `/api/auth/me` because `me` is the gate's read, which every guarded
+/// route resolves through: counting a profile's results history there would put a scan behind every
+/// page load.
 pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
@@ -212,17 +202,11 @@ pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// `DELETE /api/account` (`AuthLevel::User`): deletes the caller's own account: the profile and
-/// everything only it owns (the store, with migration 0012's foreign keys), then the sign-in itself
-/// (the auth provider). `User`, not `Active`, so a pending or banned account can leave too. 204 with
-/// no body on success.
-///
-/// A player in a live match or a Conquest series is refused with 409 rather than having the
-/// game ended for them: the actor and the series rules own how a game ends, and conceding
-/// first is one click away. A queue ticket or an unjoined room is simply deleted with the
-/// account. The profile goes first, so a provider that fails afterwards leaves nothing but a
-/// sign-in; the same request, retried, removes the fresh pending profile that sign-in gets and
-/// tries the provider again.
+/// `DELETE /api/account` (`AuthLevel::User`): deletes the caller's profile, everything only it owns
+/// and then its sign-in; 204 with no body. `User`, not `Active`, so a pending or banned account can
+/// leave too. A player in a live match or a Conquest series gets 409: the actor and the series rules
+/// own how a game ends. The profile goes first, so a provider that fails leaves only a sign-in, which
+/// the same request, retried, removes.
 pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     remove_account(app, caller).await?;
@@ -311,15 +295,9 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
             // shown the code screen. A banned account is not offered a way out of it.
             "needsInviteCode": needs_invite_code,
             "emailVerified": caller.user.email_verified,
-            // §9.5: non-null while this profile is in a match, cleared by every ending. Without it a
-            // player who was WAITING — the host of a room, or the first ticket in the queue — is never
-            // told the match they are already in: the other player's HTTP response carried the id and
-            // theirs did not, so they sat on /play while their opponent sat on the board. It is also
-            // the only way back into a match after a reload that lost the URL.
-            //
-            // Safe to return to its owner: it is this caller's own profile row, the same row whose
-            // status is already here, and a match id is not a capability — the socket
-            // still authenticates and the actor still stamps the seat from the token (§9.3).
+            // §9.5: non-null while in a match, cleared by every ending. Lets a waiting player or
+            // reloaded client find their match; match id is safe to return as socket still
+            // authenticates and stamps seat from token (§9.3).
             "currentMatchId": profile.in_match_id,
             "currentSeriesId": series.map(|series| series.id),
             "currentDuosMatchId": duos,

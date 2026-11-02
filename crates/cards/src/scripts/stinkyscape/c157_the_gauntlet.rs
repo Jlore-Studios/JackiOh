@@ -71,11 +71,8 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
 
-    /// The refusal of an attack the Gauntlet bars (R1849005).
     const BARRED: &str = "the Gauntlet's Units fight only each other";
 
-    /// p1 has played the Gauntlet (`radiant` its face) and has Vanillas in unit zones 1 and 3; p2 has
-    /// Vanillas in unit zones 1 and 2.
     fn played(radiant: bool) -> Scenario {
         let mut s = crate::scenario(json!({
             "p1": {
@@ -93,7 +90,6 @@ mod tests {
         s
     }
 
-    /// The targets `legal_actions` offers p1's `attacker`.
     fn offered_targets(s: &Scenario, attacker: &CardInstance) -> Vec<String> {
         legal_actions(s.state(), P1)
             .iter()
@@ -146,7 +142,6 @@ mod tests {
             s.play(ID, json!({ "zone": 1 }));
             let outer = s.unit_at(P1, 1);
             let middle = s.unit_at(P1, 3);
-            // p2's start of turn: the Moths, inside, draws the attack of the Unit inside only.
             s.end_turn();
             let forced: Vec<String> = s
                 .last_events()
@@ -171,7 +166,6 @@ mod tests {
             }
             s.end_turn().end_turn();
             s.expect_in_zone(ID, "graveyard");
-            // Gone, it bars nothing: the middle Vanilla may hit the hero.
             s.attack(s.unit_at(P1, 3), "hero");
         }
     }
@@ -185,9 +179,7 @@ mod tests {
             assert_eq!(brittle_count(&s), Some(3));
             s.activate(ID, json!({ "modes": [GAIN_BRITTLE_MODE] }));
             assert_eq!(brittle_count(&s), Some(5));
-            // Once a turn.
             s.expect_refused(|s| s.activate(ID, json!({ "modes": [GAIN_BRITTLE_MODE] })));
-            // The next turn, one step more.
             s.end_turn().end_turn();
             step_param(s.card_mut(ID), "brittleGain", 1);
             let before = brittle_count(&s).expect("a count");
@@ -200,7 +192,6 @@ mod tests {
             let mut s = played(true);
             s.activate(ID, json!({ "modes": [TRIBUTE_MODE] }));
             s.expect_in_zone(ID, "graveyard");
-            // The Gauntlet gone, the middle Vanilla is free.
             s.attack(s.unit_at(P1, 3), "hero");
             s.expect_health(P2, HERO_HEALTH - 4);
         }

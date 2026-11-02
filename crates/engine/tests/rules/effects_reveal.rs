@@ -1,8 +1,6 @@
 //! Reveal (R686): showing a backrow Trap or Field Trap to both players while it stays armed —
 //! Classic #88 Siphon Squad's "Start of Turn: Reveal" and Classic #65 Ace in the Hole's Radiant
-//! "Revealed regardless of the coin flip". Fixtures: `fixtures/field.ts`.
-//!
-//! Port of `packages/engine/test/effects-reveal.test.ts`.
+//! "Revealed regardless of the coin flip".
 
 use jackioh_engine::testkit::*;
 
@@ -19,8 +17,7 @@ use super::fixtures::field::{doom, listener, playing};
 use super::fixtures::harness::{put, slot};
 use crate::rules::fixtures::harness::{live, matches_object};
 
-/// `reveal().apply(makeContext(sinkFor(state), card, {}))`: the rng starts at the state's cursor, as
-/// `fixtures/harness.ts`'s `sinkFor` builds it; TS did not write the cursor back, and neither does this.
+/// `reveal()` applied as `card`, the rng at the state's cursor; the cursor is not written back.
 fn reveal_as(state: &mut GameState, card: &CardInstance) {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();

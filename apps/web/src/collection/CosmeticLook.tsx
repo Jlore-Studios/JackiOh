@@ -1,16 +1,7 @@
-// R1833000: a cosmetic's look, drawn where a surface names one it grants or sells: the card-pack and
-// cosmetic-pack reveals, the token redeem choice and the Chase Shard purchase. A foil, finish or
-// border is its card's face wearing it, drawn unworn (`SampleFace`, as the Collection's card view
-// draws one); a playmat or a backdrop is the Collection's mini board; a card back is the back a game
-// draws; a hero portrait is its art. A full art, or a per-card cosmetic with no card to draw it on,
-// has no look here (`hasLook`), and the surface draws its card as before. R1953001: a Legendary or
-// Mythic one moves wherever it is drawn: a sample as a face in a game does, the mini board's pads as
-// a game's (collection.css), a backdrop and a card back by their own sheets.
-//
-// `SampleFace` gives a face the four attributes `useCosmeticAttributes` would (cards/cosmetics.ts);
-// the Collection's card view (CardCosmeticsView.tsx) draws its previews with it too, and the account
-// tiles (AccountCosmeticTiles.tsx) their mini boards with `MiniBoard`. Presentation only (CLAUDE.md
-// rule 7): nothing here reads what the account owns or writes a pick.
+// R1833000: a cosmetic's look where a surface grants or sells one: a foil, finish or border on its
+// card's face, drawn unworn (`SampleFace`); a playmat or backdrop as the mini board; a card back as a
+// game's; a portrait as its art. A full art, or a per-card one with no card, has none (`hasLook`).
+// R1953001: a Legendary or Mythic one moves wherever it is drawn. Presentation only (CLAUDE.md rule 7).
 
 import { useLayoutEffect, useRef, type ReactElement } from "react";
 
@@ -41,10 +32,9 @@ import "./cosmeticLook.css";
 export const COSMETIC_ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
 
 /**
- * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default. Its foil, and its
- * moving finish or border, moves where `moving` says so and holds still otherwise. R1953001: a
- * sample takes none of the COSMETIC_FOIL_ANIMATED_MAX slots of a game's faces, since the samples a
- * screen draws are bounded by the registry, and `SampleFace` moves only a chase.
+ * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default; a foil, moving
+ * finish or border moves where `moving` says. R1953001: a sample takes none of the
+ * COSMETIC_FOIL_ANIMATED_MAX slots of a game's faces, since the samples a screen draws are bounded.
  */
 export function attributesOf(
   wears: Record<CardSlotKind, CosmeticId>,
@@ -61,9 +51,8 @@ export function attributesOf(
 }
 
 /**
- * `face` drawn unworn, wearing `wears` by the attributes its stylesheet (cards/cosmetics.css) keys on.
- * R1953001: it moves while it wears a chase and the Animated foil setting is on, as a face in a game
- * would; anything else it wears holds still.
+ * `face` drawn unworn, wearing `wears` by the attributes cards/cosmetics.css keys on. R1953001: it
+ * moves while it wears a chase and the Animated foil setting is on, as a face in a game would.
  */
 export function SampleFace({
   face,
@@ -134,7 +123,7 @@ export function CosmeticLook({ id, cardId }: { id: string; cardId: string | null
   if (cosmetic === undefined || !hasLook(id, cardId)) return null;
   const { kind } = cosmetic;
   const portrait = portraitOfCosmetic(id);
-  // A portrait fills the face in its card's place, as it did before it had a look of its own (R1827000).
+  // A portrait fills the face in its card's place (R1827000).
   if (kind === "portrait" && portrait !== null) return <PortraitArt portrait={portrait} className="pack-slot__portrait" />;
   let look: ReactElement | null = null;
   if (isCardSlot(kind) && cardId !== null) {

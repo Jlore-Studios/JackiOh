@@ -1,13 +1,7 @@
-// What one patch did to one card, as both screens print it (R388, R507).
-//
-// A value that changed reads "Cost: (2) Cost → (1) Cost", "Stats: 2/3 → 3/3" (R432's cost style).
-// A face's text that changed prints whole, as the patch left it, with the words and numbers it did
-// not have before marked the way R277 marks a Radiant face — bold and underlined, so the mark does
-// not rest on color alone — but in the patch mark's teal and with a double underline, so it is never
-// read as the Radiant gold or as a reference's dotted line (R279). Under it, when the patch also took
-// words away, the text as it was, with those words struck through ("Was"). Assistive technology
-// hears "new:" and "removed:" before each mark (patches.css), since `<ins>` and `<del>` alone are not
-// announced by every screen reader.
+// What one patch did to one card, as both screens print it (R388, R507), a value in R432's cost style.
+// New words are bold and underlined as R277 marks a Radiant face (so the mark does not rest on color
+// alone), but teal with a double underline, never R277's gold nor R279's dotted reference line. A screen
+// reader hears "new:" and "removed:" (patches.css), since not every one announces `<ins>` and `<del>`.
 
 import type { ReactElement, ReactNode } from "react";
 
@@ -17,7 +11,6 @@ import { isZhCn, t } from "../i18n/i18n.ts";
 import { NONE, NOT_RECORDED, type CardDelta, type FieldChange, type TextChange } from "./diff.ts";
 import { patchTestid } from "./testids.ts";
 
-/** A text with some stretches wrapped: `<ins>` for what a patch added, `<del>` for what it took away. */
 export function MarkedText({
   text,
   ranges,
@@ -125,7 +118,7 @@ function valueOf(field: string, text: string): string {
   }
 }
 
-/** One change as a line of plain words, for the compact list: "Lines of code: not recorded → 15". */
+/** One change as a line of plain words, for the compact list. */
 export function changeSummary(change: FieldChange): string {
   if (change.kind === "text") return t("{label} changed", { label: t(change.label) });
   return `${t(change.label)}${isZhCn() ? "：" : ": "}${valueOf(change.field, change.before)} → ${valueOf(change.field, change.after)}`;
@@ -144,7 +137,6 @@ function ChangeLine({ change }: { change: FieldChange }): ReactElement {
   );
 }
 
-/** Every change of one card in one patch; a card the patch added or removed says so. */
 export function ChangeList({ delta }: { delta: CardDelta }): ReactElement {
   if (delta.kind === "added") return <p className="patch-change-note">{t("Added in this patch.")}</p>;
   if (delta.kind === "removed") return <p className="patch-change-note">{t("Removed in this patch.")}</p>;

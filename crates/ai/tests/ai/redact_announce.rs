@@ -1,9 +1,5 @@
-//! R448 and R185: a card the opponent is setting face-down waits in their resolving zone while its
-//! announce window is open (docs/classic-sets.md B5 E1), and the AI's seat may not read it there any
-//! more than in the backrow (R33) — `redact` hides it, and `determinize` fills its placeholder from
-//! the trap pool, as it fills a face-down backrow card.
-//!
-//! Port of `packages/ai/test/redact-announce.test.ts`.
+//! R448 and R185: opponent card setting face-down waits in resolving zone during announce window
+//! (docs/classic-sets.md B5 E1), hidden from AI (R33); `redact` hides it and `determinize` fills placeholder.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

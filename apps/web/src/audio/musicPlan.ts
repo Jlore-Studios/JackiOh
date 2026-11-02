@@ -1,12 +1,7 @@
 // The music's priority stack (SPEC §10.11 "Music", R631): a pure choice of what plays, from the
-// viewer's own situation. Highest wins:
-//
-//   1. the result: the victory, defeat or draw sting and its loop
-//   2. low health: the station's urgency track
-//   3. the station's in-game track, through the opponent's-turn mix while it is not the viewer's turn
-//
-// No card plays a theme (R822000): a Legendary's or Mythic's intro plays over the stack (R1350).
-// With dynamic music off only the station's in-game track plays, and nothing in the game moves it.
+// viewer's own situation. Highest wins: the result, low health, then the station's in-game track
+// (`chooseMusic`'s order). No card plays a theme (R822000): a Legendary's or Mythic's intro plays over
+// the stack (R1350).
 
 import { MENU_TRACK, RESULT_TRACKS, dangerTrack, stationTracks } from "./musicData.ts";
 import type { MusicManifest, MusicStation } from "./types.ts";

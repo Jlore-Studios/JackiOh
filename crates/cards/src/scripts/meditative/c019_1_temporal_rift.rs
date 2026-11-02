@@ -29,18 +29,11 @@ pub fn script() -> CardScripts {
         cry: Some(hook(cry)),
         ..Script::default()
     };
-    // The Radiant face's riders are its declared numbers; the turn is both faces' one verb.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1: it costs (1);
-// after the turn's cleanup the turn starts again — a whole turn, the turn count and max mana up, its refresh,
-// Brittle tick, start-of-turn triggers and draw, Units no longer summoning sick; the 60-turn cap
-// counts it; cast on the opponent's turn the extra turn follows the next one; a second Rift that
-// game, either face or a copy, grants no turn and resolves the rest; each player has their own flag;
-// the opponent's next-turn effects wait for their own turn; radiant also 2 temporary mana now, 2 next
-// turn (on the extra turn) and draw 2, read through `param()`.
+// Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,7 +85,6 @@ mod tests {
             let library = s.state().players.p1.library.len();
             s.play(RIFT, json!({}));
             s.end_turn();
-            // P1 again: a whole turn — the count grew, max mana with it, and a card was drawn.
             assert_eq!(s.state().active, P1);
             assert_eq!(s.state().turn, 2);
             assert_eq!(s.state().players.p1.turns_started, 2);
@@ -108,10 +100,8 @@ mod tests {
                 })
                 .collect();
             assert_eq!(extras.last(), Some(&Some(true)));
-            // Units are no longer summoning sick on the extra turn.
             let unit = s.unit(P1, 1).expect("the unit stands");
             assert!(!is_sick(s.state(), &unit), "no longer sick on the extra turn");
-            // Afterwards the game goes on: p2's turn follows the extra one.
             s.end_turn();
             assert_eq!(s.state().active, P2);
         }
@@ -290,7 +280,6 @@ mod tests {
             assert_eq!(s.hand(P1).len(), hand + 3 - 1);
             s.end_turn();
             assert_eq!(s.state().active, P1);
-            // Turn 2's max (2) plus the tuned 3.
             assert_eq!(s.state().players.p1.mana.current, 5);
         }
     }

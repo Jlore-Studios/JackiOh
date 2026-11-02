@@ -1,7 +1,7 @@
 // BUILD M8: a seeded hotseat game completes through the UI; its final hash matches replay (V19).
-// The browser records actions, then `jackioh replay` folds and hashes them; equality proves accepted client actions in order (M5-T3).
-// The seed is overridable for §4's 20-seed run; waits use `cy.settled` or retry, and selectors come from `support/testids.ts`.
-// Fixture decks are choice-free, so generic play and attack open no `PendingChoice` (R81); seedGame and board clicks answer M5-T2.
+// `jackioh replay` (§12) hashes the browser's recorded actions: a match proves them accepted in order (M5-T3).
+// Fixture decks are choice-free, so play and attack open no `PendingChoice` (R81). The seed is
+// overridable for §4's 20-seed run.
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -52,7 +52,7 @@ function unitsOf(state: GameStateLike, player: PlayerId): string[] {
   });
 }
 
-/** Ask client `data-legal`, which mirrors engine `legalActions` (BUILD M5-T2). */
+/** `data-legal` mirrors engine `legalActions` (BUILD M5-T2). */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
@@ -81,7 +81,7 @@ function playWhilePossible(budget: number): void {
   });
 }
 
-/** Target an offered hero or unit; Taunt (§4.2 step 3) steers the run. */
+/** Taunt (§4.2 step 3) steers the run. */
 function attackWith(attackers: readonly string[], index: number): void {
   const attacker = attackers[index];
   if (attacker === undefined) return;
@@ -108,7 +108,6 @@ function takeTurns(remaining: number): void {
   cy.gameState().then((state) => {
     expect(remaining, "the game reached a result inside the turn budget").to.be.greaterThan(0);
     if (state.result !== null) return;
-    // Fixture decks are choice-free; a prompt here means contract drift.
     expect(state.pending, "01-aggro-a/b open no prompt once the mulligan is answered").to.eq(null);
 
     const me = state.active;
@@ -147,8 +146,6 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
       cy.get(ts(RESULT_OVERLAY)).should("have.attr", "data-reason", result.reason);
     });
 
-    // `cy.replayCheck` folds the log with `jackioh replay` and compares `hashState` (§12).
-    // It also requires the fold to accept every recorded action.
     cy.replayCheck("01-hotseat-full-game");
   });
 });

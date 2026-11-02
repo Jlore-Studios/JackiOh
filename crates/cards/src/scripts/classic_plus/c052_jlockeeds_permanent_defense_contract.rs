@@ -10,10 +10,9 @@
 //!
 //! `forRestOfGame` (B5 E28, R458) re-enters `delayed` at each of the caster's turn starts with no `self`
 //! (R127), so the numbers are read through `param` as the Spell resolves and carried in the entry's
-//! data (R594). The pool leaves this card out by its def id, which the re-entry carries (R387); the price
-//! lands only on a card that reached the hand (§2.4, R4). The badge is the face as the catalog the game
-//! runs under prints it (`def_of`), so a replay of an older version badges it in that version's words
-//! (R767000).
+//! data (R594); the pool leaves this card out by the def id the re-entry carries. The price lands only on
+//! a card that reached the hand (§2.4, R4). The badge is the face as the catalog the game runs under
+//! prints it (`def_of`), so a replay of an older version badges it in that version's words (R767000).
 
 use jackioh_engine::effects::{add_random_from_catalog, for_rest_of_game};
 use jackioh_engine::prelude::*;
@@ -62,10 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #52 — SPEC §8.7 row 52, BUILD M9 Classic+ row C+ 52: a rest-of-game player modifier (nothing on the
-// field to remove) adds a random non-token Jlockeed card each start of your turn, never this card (R387);
-// two Contracts add two; a full hand burns; hidden from the opponent (R97); count and discount via
-// `param()`; radiant: the card is Radiant and costs (1) less (`costMod` −1, floor 0).
+// C+ #52 Jlockeed's Permanent Defense Contract — SPEC §8.7 row 52, BUILD M9 Classic+ row C+ 52 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -74,12 +70,8 @@ mod tests {
     const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51,
-    /// Meditative #87 Tatches the Totem (all tribes) and #97 Jlockeed's Evil Blueprints (§8.8) and
-    /// Meditative+ #4 Supply Drop (§8.9). Re-pinned for v0.3.5: the Meditative set joins the pool; and
-    /// for v0.3.15 (Meditative+ ships, #1187): M+ #4 joins it; and for the Stinkyscape release (#1884):
-    /// its #124 to #130, Jlockeed's space program. Re-pinned for the Training Grounds release (#2204):
-    /// that set's snapshots #45 Jlockeed's Weapons (of Core #14) and #48 Jlockeed Shredder-10 (of Core
-    /// #13) join it.
+    /// Meditative #87 and #97 (§8.8), Meditative+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and
+    /// Training Grounds #45 and #48 (#2204).
     const POOL: [&str; 17] = [
         "classic-004",
         "classicplus-048",
@@ -150,7 +142,6 @@ mod tests {
             .collect()
     }
 
-    /// p1 ends their turn and p2 theirs: p1's next turn starts.
     fn next_turn(s: &mut Scenario) {
         s.end_turn().end_turn();
     }
@@ -184,7 +175,7 @@ mod tests {
         #[test]
         fn r767000_a_game_on_an_older_version_badges_it_in_that_version_s_words() {
             crate::register_all();
-            // v0.3.7 printed the face with the faction spelled the designer's way (patch v0.3.Y, #1067).
+            // v0.3.7 printed the face with the faction spelled the designer's way (#1067).
             let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             let one = IndexMap::from([("cards".to_string(), 1)]);
             let printed = fill_params(&shipped.defs()[CONTRACT], FaceKind::Base, Some(&one));
@@ -399,8 +390,7 @@ mod tests {
         fn s2_3_the_discount_floors_at_0_a_lobbyist_1_costs_0() {
             let mut checked = false;
             let mut i = 0;
-            // Re-pinned for the Stinkyscape release (#1884): the pool is fifteen, not eight, so the
-            // search for a seed that delivers the Lobbyist runs longer.
+            // The pool is large (#1884), so the search for a seed that delivers the Lobbyist runs long.
             while i < 120 && !checked {
                 let mut s = signed(true, Some(&format!("rfloor-{i}")), None, None);
                 i += 1;

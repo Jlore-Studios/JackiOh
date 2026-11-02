@@ -5,24 +5,17 @@
 //! jackioh-server timing-fit
 //! ```
 //!
-//! Reads every row of `public.action_timings` (DATABASE_URL), leaves out the moves an AI made
-//! (`pilot = 'ai'`), groups the rest by rank bucket, action kind and whether the move was the
-//! seat's first of its turn, and fits each group of at least `TIMING_FIT_MIN_SAMPLES` moves with a
-//! log-normal: the maximum-likelihood `mu` and `sigma` of `ln(think_ms)`. It prints one
-//! `ThinkTimeFit` per bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs`
-//! by hand, as `cargo jackioh sweep` prints its rows (CLAUDE.md rule 9): no number reaches the
-//! ladder bots (#636) without a person reading it first. Every row is read into memory, which is
-//! fine at today's scale.
+//! Reads every row of `public.action_timings` (DATABASE_URL, all of it in memory), leaves out the AI's
+//! moves and fits a log-normal (`mu` and `sigma` of `ln(think_ms)`) to each bucket (rank bucket, action
+//! kind, the turn's first move or not) of at least `TIMING_FIT_MIN_SAMPLES` moves. It prints one
+//! `ThinkTimeFit` per bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs` by
+//! hand, as `cargo jackioh sweep` prints its rows (CLAUDE.md rule 9): no number reaches the ladder bots
+//! (#636) unread by a person.
 //!
 //! R639000: it then prints, from the same people's rows of `action_timings`, `emote_events` and
 //! `match_signals` (each signals row beside its match's result), one row for each of the other fits
-//! a ladder bot reads in `config.rs`: how much longer a busier board and a lethal turn take
-//! (`THINK_COMPLEXITY_SLOPE`, `THINK_LETHAL_SHIFT`), how people concede, answer a draw offer, run
-//! their clock out and rematch (`BOT_CONCEDE_FIT`, `BOT_DRAW_ANSWER_FIT`, `BOT_TIMEOUT_FIT`,
-//! `BOT_REMATCH_FIT`), how long their emotes wait (`BOT_EMOTE_DELAY_FIT`,
-//! `BOT_EMOTE_REPLY_DELAY_FIT`) and which persona their emoting reads as (`BOT_PERSONA_WEIGHTS`).
-//! A fit with fewer than `TIMING_FIT_MIN_SAMPLES` observations behind it prints a comment instead,
-//! and the row's prior stays.
+//! a ladder bot reads in `config.rs`. A fit with fewer than `TIMING_FIT_MIN_SAMPLES` observations
+//! behind it prints a comment instead, and the row's prior stays.
 
 use anyhow::bail;
 use indexmap::IndexMap;
@@ -50,10 +43,8 @@ const USAGE: &str = "Usage: jackioh-server timing-fit
   concession, draw-answer, timeout and rematch rates, the emote delay windows and the persona
   weights, each to paste over the row of its name there. Takes no options; reads DATABASE_URL.";
 
-/// The comment line the printed rows open with.
 const HEADER: &str = "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/server/src/config.rs";
 
-/// The comment line the R639000 rows open with.
 const SIGNALS_HEADER: &str =
     "// jackioh-server timing-fit: paste each over the row of its name, crates/server/src/config.rs";
 
@@ -70,7 +61,6 @@ pub struct BucketFit {
     pub ln_legal_mean: f64,
 }
 
-/// A bucket's key: rank, action kind, first move of the turn.
 type BucketKey = (Option<RankTier>, ActionType, bool);
 
 /// `ln(think_ms)` and `ln(legal_count)` of one human move, each floored at 1 so the logarithm is
@@ -82,7 +72,6 @@ fn logs_of(row: &ActionTimingRow) -> (f64, f64) {
     )
 }
 
-/// The human moves by bucket, in key order, each `logs_of`.
 fn buckets_of(rows: &[ActionTimingRow]) -> IndexMap<BucketKey, Vec<(f64, f64)>> {
     let mut buckets: IndexMap<BucketKey, Vec<(f64, f64)>> = IndexMap::new();
     for row in rows.iter().filter(|row| row.pilot != Pilot::Ai) {
@@ -112,7 +101,7 @@ fn quantile<T: Copy>(sorted: &[T], q: f64) -> T {
 
 /// R1442: every bucket of human moves with at least `min_samples` of them, in key order (no rank
 /// first, then the tiers lowest first; the action kinds in `ActionType`'s order; later moves before
-/// first ones). A think time of 0 counts as 1 ms, so its logarithm is defined.
+/// first ones).
 pub fn fit_think_times(rows: &[ActionTimingRow], min_samples: usize) -> Vec<BucketFit> {
     buckets_of(rows)
         .into_iter()
@@ -156,7 +145,6 @@ pub fn fit_complexity_slope(rows: &[ActionTimingRow], min_samples: usize) -> Opt
     })
 }
 
-/// The seat whose account won the outcome's match, when the outcome says this seat won.
 fn winner_seat(outcome: &SignalOutcomeRow) -> Option<PlayerId> {
     (outcome.won == Some(true)).then_some(outcome.signal.seat)
 }
@@ -180,7 +168,6 @@ pub fn fit_lethal_shift(
                 .is_some_and(|outcome| outcome.signal.pilot == Pilot::Human)
         })
     };
-    // The winner's seat of each such game, and its last turn.
     let lethal: IndexMap<(&str, PlayerId), i64> = outcomes
         .iter()
         .filter(|outcome| outcome.reason == GameOverReason::HeroDeath)
@@ -214,14 +201,12 @@ pub fn fit_lethal_shift(
     })
 }
 
-/// People's signals rows, the AI's left out.
 fn human(outcomes: &[SignalOutcomeRow]) -> impl Iterator<Item = &SignalOutcomeRow> {
     outcomes
         .iter()
         .filter(|outcome| outcome.signal.pilot == Pilot::Human)
 }
 
-/// Every seat's row, by match and seat.
 type BySeat<'a> = IndexMap<(&'a str, PlayerId), &'a SignalOutcomeRow>;
 
 fn by_seat(outcomes: &[SignalOutcomeRow]) -> BySeat<'_> {
@@ -231,18 +216,16 @@ fn by_seat(outcomes: &[SignalOutcomeRow]) -> BySeat<'_> {
         .collect()
 }
 
-/// The other seat's row of the same match, if it is held.
 fn opponent_of<'a>(seats: &BySeat<'a>, outcome: &SignalOutcomeRow) -> Option<&'a SignalOutcomeRow> {
     seats
         .get(&(outcome.signal.match_id.as_str(), outcome.signal.seat.opponent()))
         .copied()
 }
 
-/// R639000: how people concede. The conceders are the people's seats that conceded with a deficit
-/// recorded; `share` is them over the people's seats that lost, `min_turn` the
-/// `TIMING_FIT_CONCEDE_TURN_QUANTILE` quantile of the turns they conceded on, and the deficit's
-/// mean and population standard deviation are theirs. `None` with fewer than `min_samples`
-/// conceders.
+/// R639000: how people concede. The conceders are the people's seats that conceded with a deficit recorded;
+/// `share` is them over the people's seats that lost, `min_turn` the `TIMING_FIT_CONCEDE_TURN_QUANTILE`
+/// quantile of the turns they conceded on, and the deficit's mean and population standard deviation are
+/// theirs. `None` with fewer than `min_samples` conceders.
 pub fn fit_concede(outcomes: &[SignalOutcomeRow], min_samples: usize) -> Option<ConcedeFit> {
     let losers = human(outcomes)
         .filter(|outcome| outcome.won == Some(false))
@@ -359,7 +342,6 @@ pub fn fit_emote_delay(delays: &[i64], min_samples: usize) -> Option<EmoteDelayF
     })
 }
 
-/// People's emotes, the AI's left out.
 fn human_emotes(emotes: &[EmoteEventRow]) -> impl Iterator<Item = &EmoteEventRow> {
     emotes.iter().filter(|emote| emote.pilot == Pilot::Human)
 }
@@ -459,7 +441,6 @@ pub fn fit_signals(
     }
 }
 
-/// The fits as rows of `THINK_TIME_FITS`, after one comment line.
 pub fn render_fits(fits: &[BucketFit]) -> String {
     let mut out = String::from(HEADER);
     out.push('\n');
@@ -481,7 +462,6 @@ pub fn render_fits(fits: &[BucketFit]) -> String {
     out
 }
 
-/// One `pub const` line, or the comment that keeps the prior.
 fn constant_line(name: &str, ty: &str, fields: Option<String>) -> String {
     match fields {
         Some(fields) => format!("pub const {name}: {ty} = {ty} {{ {fields} }};\n"),
@@ -580,7 +560,6 @@ pub struct Telemetry {
     pub outcomes: Vec<SignalOutcomeRow>,
 }
 
-/// Every row `timing-fit` fits, as the store holds them.
 pub async fn telemetry(db: &Db) -> Result<Telemetry, StoreError> {
     let mut tx = db.begin(None).await?;
     let timings = tx.play_telemetry_timings().await?;
@@ -594,13 +573,11 @@ pub async fn telemetry(db: &Db) -> Result<Telemetry, StoreError> {
     })
 }
 
-/// `timing-fit`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
         bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
     }
     let connection_string = database_url()?;
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     let read = telemetry(&db).await;
     db.close().await;

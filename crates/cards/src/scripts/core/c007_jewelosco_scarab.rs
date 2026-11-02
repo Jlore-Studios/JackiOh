@@ -2,14 +2,11 @@
 //! "Cry: Discover a 3-cost card; it costs 1 less". The radiant cell changes the number and ADDS a
 //! clause (§8 Conventions), so the faces differ in the cost bracket and in the permanent discount.
 //!
-//! §8.1's Engine cell is `catalog.query({cost, notTags:["Token"], excludeIndex:7})`:
-//!   - the cost bracket is read per R65 by `catalog::query_cost`, so this file passes a plain number;
-//!   - `notTags: ["Token"]` is stated because §8 states it, though §5.1 already keeps tokens out;
-//!   - #7's own exclusion is not passed: `discover_from_catalog` adds the running card's id (R387,
-//!     §5.1). The pool reaches every set (R380).
-//!
-//! The Cry opens a `discover` prompt (§10.6, R81); the answer re-enters `resume.chosen` with the
-//! pick in `ctx.targets`. An empty pool opens no prompt: the effect fizzles (§8 Conventions).
+//! §8.1's Engine cell is `catalog.query({cost, notTags:["Token"], excludeIndex:7})`. R65's bracket is
+//! read by `catalog::query_cost`, so this file passes a plain number; `notTags` is stated because §8
+//! states it, though §5.1 keeps tokens out; `discover_from_catalog` adds #7's own exclusion (R387,
+//! §5.1). The pool reaches every set (R380). The Cry opens a `discover` prompt (§10.6, R81), answered
+//! in `resume.chosen`; an empty pool opens none and the effect fizzles (§8 Conventions).
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog};
 use jackioh_engine::prelude::*;
@@ -19,8 +16,7 @@ pub const ID: &str = "core-007";
 /// The cost bracket each face Discovers from (§8.1).
 const BASE_COST: i32 = 2;
 const RADIANT_COST: i32 = 3;
-// "It costs (1) less": a permanent `costMod` on the card the radiant face found (§8.1, R65), by the
-// declared number `discount` (R386).
+// "It costs (1) less": a permanent `costMod` on the found card (§8.1, R65) by the declared `discount` (R386).
 
 fn discover(cost: i32) -> Vec<Effect> {
     vec![discover_from_catalog(json_as(json!({
@@ -65,11 +61,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #7 Jewelosco Scarab — SPEC §8.1 row 7, BUILD M4-T4 must-pass: "Discover offers 3 distinct 2-cost
-// non-token cards, never #7; radiant 3-cost pick costs 2".
+// #7 Jewelosco Scarab — SPEC §8.1 row 7, BUILD M4-T4 must-pass.
 //
-// The one prompting card in #1-20: each test answers the prompt (§10.6, R81). Options are read out of
-// `view_for`, not `state.pending`, because only the chooser sees them (§10.8).
+// Options are read out of `view_for`, not `state.pending`, because only the chooser sees them (§10.8).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -155,7 +149,6 @@ mod tests {
             let chosen = offered(&s)[1].clone();
             s.answer(json!(chosen));
 
-            // The prompt is closed and the picked definition is a new card in the chooser's hand.
             assert!(s.view(PlayerId::P1).pending.is_none());
             let added: Vec<CardInstance> =
                 s.hand(PlayerId::P1).into_iter().filter(|card| card.def_id == chosen).collect();
@@ -170,7 +163,6 @@ mod tests {
                 Some(2)
             );
 
-            // The turn carries on after the answer: the rest of the hand is still playable.
             s.play("core-011", json!({}));
             s.expect_stats("core-011", json!({ "attack": 3, "health": 3 }));
         }
@@ -187,7 +179,6 @@ mod tests {
             let ids = offered(&s);
             s.answer(json!(ids[0]));
 
-            // Exactly one card entered the hand: the one that was picked, not the three on offer.
             assert_eq!(s.hand(PlayerId::P1).len(), 1);
             assert_eq!(s.hand(PlayerId::P1)[0].def_id, ids[0]);
         }

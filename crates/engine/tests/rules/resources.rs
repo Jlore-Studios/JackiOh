@@ -1,9 +1,7 @@
 //! Stinkyscape's Resources and Credits (#1840, R1840000–R1840006; #2250, R2250000, R2250001): a
-//! Resource is a card of its holder's hand, gained into it and burned by a full one; it pays its player
-//! Credits as it is played or discarded from there; the public Credits; "Gain a random Resource" by
-//! `RESOURCE_RARITY_ODDS`, a restricted pool and a Radiant gain; "discard a Resource" and "fill your
-//! hand"; and the asteroid's mining node. Proved on the fixtures of `fixtures/resources.rs`; the effect
-//! harness is `effects_jade.rs`'s.
+//! Resource is a card of its holder's hand, gained into it and burned by a full one, and it pays its
+//! player Credits as it is played or discarded from there. Proved on the fixtures of
+//! `fixtures/resources.rs`; the effect harness is `effects_jade.rs`'s.
 
 use jackioh_engine::effects::{cast, discard_random, discard_resource, gain_market_credits, gain_resources};
 use jackioh_engine::testkit::*;
@@ -15,7 +13,6 @@ use crate::rules::fixtures::resources::*;
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-/// The fixture catalog with the Resources and the asteroid, and their scripts.
 fn register() {
     setup_catalog();
     register_catalog(resources_catalog(registered_catalog().clone()));
@@ -50,7 +47,6 @@ fn held_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     held(state, player).into_iter().map(|card| card.id).collect()
 }
 
-/// The Credits each `marketCreditsChanged` of `events` reports, in order.
 fn credit_counts(events: &[GameEvent]) -> Vec<i32> {
     events
         .iter()
@@ -83,7 +79,6 @@ fn plays_naming(state: &GameState, player: PlayerId, id: &str) -> usize {
         .count()
 }
 
-/// The rarity a fixture Resource rolls as.
 fn rarity_of(def_id: &str) -> &'static str {
     RESOURCES
         .iter()
@@ -92,7 +87,6 @@ fn rarity_of(def_id: &str) -> &'static str {
         .unwrap_or_else(|| panic!("{def_id} is no fixture Resource"))
 }
 
-/// `player`'s hand filled to its cap with plain cards.
 fn fill_hand(state: &mut GameState, player: PlayerId) {
     while (state.players[player].hand.len() as i32) < HAND_CAP {
         let card = new_instance(state, "fx-5", player, Zone::Hand { player });

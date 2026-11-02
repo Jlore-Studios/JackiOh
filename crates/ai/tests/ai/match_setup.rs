@@ -2,7 +2,7 @@
 //! and handicaps: dealt seats (R433), last boards (R417, R564) and Glitch boards (R678). Each reaches
 //! the game `play_match` creates and the fold `MatchConfig::fold_args` hands `fold`, a config that sets
 //! none is the game and the JSON it was before, and C+ #29 Portal to the Past, which reads the last
-//! board, can finally resolve in an AI game.
+//! board, resolves in an AI game.
 
 use jackioh_ai::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match};
 use jackioh_engine::testkit::{

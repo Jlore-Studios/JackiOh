@@ -1,7 +1,5 @@
-// R768000: what specs 13 and 39 share about a replay: step it forward and back, and check the last
-// turn's GIF that "Share the last turn" makes. A headless browser has no share sheet, so the GIF
-// downloads, and the File it downloads is read straight off `URL.createObjectURL` rather than out of
-// the downloads folder.
+// R768000: what specs 13 and 39 share about a replay. A headless browser has no share sheet, so the
+// last turn's GIF downloads, and its File is read off `URL.createObjectURL`, not the downloads folder.
 
 import { REPLAY_GIF_MAX_BYTES } from "../../apps/web/src/replay/config.ts";
 import { REPLAY_BACK_STEP, REPLAY_FORWARD_STEP, REPLAY_GIF_SHARE, REPLAY_PLAYER, REPLAY_READOUT, ts } from "./testids.ts";
@@ -12,12 +10,10 @@ export const GIF_TIMEOUT = 120_000;
 /** A GIF's first bytes, "GIF8" (GIF87a or GIF89a). */
 const GIF_MAGIC = [0x47, 0x49, 0x46, 0x38];
 
-/** The player is on step `step`, as its root reads it. */
 export function onStep(step: number): void {
   cy.get(ts(REPLAY_PLAYER), { timeout: 10_000 }).should("have.attr", "data-step", String(step));
 }
 
-/** From step 0: a step forward, then a step back. */
 export function stepForwardAndBack(): void {
   onStep(0);
   cy.get(ts(REPLAY_FORWARD_STEP)).should("not.be.disabled").click();
@@ -26,14 +22,14 @@ export function stepForwardAndBack(): void {
   onStep(0);
 }
 
-/** Before load: no share sheet, so a GIF downloads, and the Blob it downloads is spied on. */
+/** Before load: no share sheet, and the downloaded Blob spied on. */
 export function spyOnDownloads(win: Cypress.AUTWindow): void {
   Object.defineProperty(win.navigator, "share", { value: undefined, configurable: true });
   Object.defineProperty(win.navigator, "canShare", { value: undefined, configurable: true });
   cy.spy(win.URL, "createObjectURL").as("gifUrl");
 }
 
-/** On the last step, the last turn's GIF made, downloaded, a GIF and under the cap. */
+/** On the last step: the last turn's GIF downloads, a GIF under the cap. */
 export function expectLastTurnGif(): void {
   cy.get(ts(REPLAY_READOUT), { timeout: 10_000 })
     .invoke("text")

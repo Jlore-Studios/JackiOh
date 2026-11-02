@@ -1,7 +1,6 @@
-//! Fixture cards for Meditative #40 Feng Shui (R980–R987). The engine never imports
-//! `packages/cards` (CLAUDE.md), so the element cycle, the judgement and Luck are proved on cards of
-//! their shape here. Ids are `fs-*`, indices from 8600, registered on top of the shared fixture
-//! catalog by `with_feng_shui`.
+//! Fixture cards for Meditative #40 Feng Shui (R980–R987): the element cycle, the judgement and Luck,
+//! proved on cards of their shape since the engine never imports the cards crate. Ids are `fs-*`,
+//! indices from 8600, registered on top of the shared fixture catalog by `with_feng_shui`.
 
 use std::sync::LazyLock;
 
@@ -49,8 +48,8 @@ fn def(index: u32, id: &str, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// TS's `FS` object: one definition per key. The units' indices end in 1–5 on purpose: 水 火 木 金
-/// 土 in Hetu order (R980). The Trap ends in 2 (火); the judge ends in 0 (土).
+/// The units' indices end in 1–5 on purpose: 水 火 木 金 土 in Hetu order (R980). The Trap ends in
+/// 2 (火); the judge ends in 0 (土).
 pub struct Fs {
     /// A Unit of each element (indices 8601–8605: Water, Fire, Wood, Metal, Earth).
     pub water: CardDef,
@@ -79,7 +78,7 @@ pub static FS: LazyLock<Fs> = LazyLock::new(|| Fs {
     ),
 });
 
-/// `Object.values(FS)`, in `FS`'s key order.
+/// Every `FS` def, in field order.
 pub static FS_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     let fs = &*FS;
     vec![

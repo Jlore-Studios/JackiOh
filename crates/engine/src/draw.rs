@@ -1,19 +1,12 @@
 //! Drawing, fatigue, the hand cap, cast-on-draw chains and the library cap
 //! (SPEC §2.4, R3, R4, R58, R80), the arrival hook of R151, and — since a cast-on-draw card is a
 //! whole play and a play can ask — both draw loops resuming out of `state.work` across a prompt
-//! (§9.3, §10.6, R113, R117, R122). Patch v0.2.0 adds the draws a player makes each turn (B5 E4), the
+//! (§9.3, §10.6, R113, R117, R122). B5 adds the draws a player makes each turn (E4), the
 //! draw limits a card on the field sets (E3), the `castOnDraw` enchantment (E39) and a Unit cast on draw
 //! with nowhere to stand (R457, R459).
 //!
-//! Port of `packages/engine/src/draw.ts`. TS registered the two loops' work handlers at module scope
-//! (`registerWorkHandler`); here `work.rs`'s dispatcher matches `DRAW_CHAIN_WORK` to
-//! `run_owed_draw_chain` and `DRAW_COUNT_WORK` to `run_owed_draw_count` (SURFACE §6.6), which are `pub`
-//! for it.
-//!
-//! TS handed the live card object around and wrote through it. Here a card that is moved is passed as
-//! `&mut CardInstance` (its zone follows the move, as TS's object did) or by value when the caller has
-//! already taken it out of its pile (`complete_draw`), and a later write to the card where it now lies
-//! goes through `state::find_instance_mut`.
+//! A card that is moved is passed as `&mut CardInstance` (its zone follows the move) or by value once the
+//! caller has taken it out of its pile (`complete_draw`); a later write goes through `find_instance_mut`.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -27,26 +20,11 @@ use crate::wire::{
     opponent_of,
 };
 
-/// R151: a card whose script has a start-of-game hook runs it when it ARRIVES in a hand or a
-/// library, and not only at §2.1 step 4. R43 words the rule as an invariant rather than as a moment —
-/// "at start of game every Heroic Power in either player's hand or library rolls its power … and one
-/// that ends up in a hand or library with no `memory.power` (a bounced or reset instance, R78) rolls
-/// as it arrives" — so a copy that reaches a hand later (#72 Reminisce out of a graveyard, a bounce,
-/// a draw, a card an effect created) has to roll too, or it carries no power and costs 0 for ever.
-///
-/// GENERAL, NOT #98 BY ID: the test is the script's `start_of_game`, the same thing
-/// `setup::finish_setup` reads, so any card that ever grows a start-of-game clause is covered without
-/// the engine naming a catalog id. Re-running it is safe because the hook is the one that owns its own
-/// idempotence: `hero_power::ensure_power` keeps a power a card already rolled ("which is why it is
-/// idempotent rather than a plain roll"), so an arrival costs no rng draw once the card has its answer.
-///
-/// WHY HERE AND NOT IN `zones::move_to_zone`, the single point every zone change goes through: the roll
-/// needs the match rng, and `move_to_zone` takes a `GameState`, which holds only the seed and the stored
-/// cursor. A fresh `Rng::new(&state.seed, state.rng_cursor)` mid-action would repeat draws the action's
-/// own rng has already taken, and `reduce` ends every action with the cursor written back from the
-/// sink's rng, so the cursor it advanced would be discarded — two determinism bugs for one convenience.
-/// These two functions are the sink-holding funnels §2.4 already routes every hand and library arrival
-/// through (see the header of `effects/add_to_hand.rs`: "Both routes end in `../draw`'s `addToHand`").
+/// R151: a start-of-game hook also runs when its card ARRIVES in a hand or a library, not only at §2.1
+/// step 4, as R43 states the roll as an invariant: a copy arriving later (#72 Reminisce, a bounce, a
+/// reset instance, R78) must roll too, or it costs 0 for ever. It reads the script's `start_of_game`,
+/// not #98's id; a rerun is safe, as `hero_power::ensure_power` keeps a rolled power. Not in
+/// `zones::move_to_zone`: the roll needs the sink's rng, which a fresh `Rng` mid-action would repeat.
 pub(crate) fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
     // §9.3, R113: the clause is an effect list like any other, so a question in it pauses the rest of
     // it on `state.work` (`prompts::run_start_of_game`), and a draw loop around it owes its remainder.
@@ -77,7 +55,7 @@ fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardI
     None
 }
 
-/// Where `add_to_hand` put a card (TS `"hand" | "burned"`).
+/// Where `add_to_hand` put a card.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum AddToHandOutcome {
@@ -124,7 +102,7 @@ pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToH
     AddToHandOutcome::Hand
 }
 
-/// Where `shuffle_into_library` put a card (TS `"library" | "dropped"`).
+/// Where `shuffle_into_library` put a card.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum ShuffleInOutcome {
@@ -158,11 +136,9 @@ fn library_overflow(
 /// exist, R11). One already in its owner's graveyard stays there, with no second move and no second
 /// `enteredGraveyard`, since it never left (C #30 Recycle's, `effects/shuffle_card.rs`).
 ///
-/// R316: whichever it is, the refusal is reported by `libraryOverflow`, so the board can show the
-/// full library turning the card away. Nothing else reported a copy that was never made, and an
-/// existing unit-token card that ceased to exist here moved with no event at all (§10.3). `copy_of`
-/// names the card a new copy copies, when it copies one, so a view can keep a face-down trap's copy
-/// as secret as the trap.
+/// R316: whichever it is, `libraryOverflow` reports the refusal (§10.3), so the board can show the full
+/// library turning the card away. `copy_of` names the card a new copy copies, when it copies one, so a
+/// view can keep a face-down trap's copy as secret as the trap.
 pub fn shuffle_into_library(
     sink: &mut EngineSink,
     instance: &mut CardInstance,
@@ -279,11 +255,8 @@ fn into_library(
             ..Default::default()
         },
     );
-    // R311: a shuffle-in is open to the library's owner. Every Core one goes in by a card its owner
-    // watched resolve — a CN-Virus's copies, an Unstable Clone Machine's (of a card the owner played,
-    // a face-down Trap included), the opponent's CN-Viral Injection, whose text names what it
-    // shuffles — so the owner knows what went in, though never where (the slot below stays hidden
-    // from both, R97). (TS wrote through the card now lying in the library; so does this.)
+    // R311: a shuffle-in is open to the library's owner: every Core one goes in by a card its owner
+    // watched resolve, so they know what went in, though never where (the slot stays hidden, R97).
     if let Some(live) = find_instance_mut(sink.state, &instance.id) {
         crate::own_library::show_to_owner(live);
     }
@@ -312,14 +285,11 @@ pub enum DrawOutcome {
     Limited,
 }
 
-// ---------------------------------------------------------------------------
-// ---- v0.2.0: activate and turn (B5 E3 draw limits, E4 draw counts, E39 cast on draw) ----
-// ---------------------------------------------------------------------------
+// Draw limits, draw counts and cast on draw (B5 E3, E4, E39)
 
-/// B5 E4, R457: the draws `player` has made this turn, whoever's turn it is — every draw that happened,
-/// a fatigue draw included, and none a limit stopped. `PlayerState.draws` is kept per turn, so a count
-/// from an earlier turn reads as 0: it resets where the turn log does (§2.2). Setup is no player's turn
-/// (§2.1, `SETUP_TURN`), so the opening deal and the mulligan's draws count toward nothing.
+/// B5 E4, R457: the draws `player` has made this turn, whoever's turn it is, a fatigue draw included
+/// and none a limit stopped; a count from an earlier turn reads as 0 (it resets with the turn log,
+/// §2.2). Setup is no player's turn (§2.1, `SETUP_TURN`), so its draws count toward nothing.
 pub fn draws_this_turn(state: &GameState, player: PlayerId) -> i32 {
     match state.players[player].draws {
         Some(draws) if draws.turn == state.turn => draws.count,
@@ -342,10 +312,9 @@ fn count_draw(state: &mut GameState, player: PlayerId) -> Option<i32> {
     Some(count)
 }
 
-/// The cards whose static text is in force on `player`'s side: the top of each unit pile, the Units its
-/// carriers hold and each backrow card, each once (`zones::acting_on`): a Unit standing in the backrow
-/// among the Units (R1081000, R1824000) — the cards an aura is read from (§10.4 layer 5). A Vanilla card
-/// carries no text (§6.3), and a face-down card's sleeps (R1487000).
+/// The cards whose static text is in force on `player`'s side, each once (`zones::acting_on`), a Unit
+/// standing in the backrow among the Units (R1081000, R1824000): what an aura is read from (§10.4
+/// layer 5). A Vanilla card carries no text (§6.3), and a face-down card's sleeps (R1487000).
 fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
         .into_iter()
@@ -400,10 +369,9 @@ pub fn draw_limit_of(state: &GameState, player: PlayerId) -> Option<i32> {
     lowest
 }
 
-/// R800: whether an effect's discard from `player`'s hand is stopped now — while it is not their turn,
-/// a card acting on the field guards them (`Script.discard_guard`, Meditative #1). Several guards do no
-/// more than one. A discard paid as a price (an Activate's cost, R384; a targeting cost, R450) never
-/// asks (`effects::move_`).
+/// R800: whether an effect's discard from `player`'s hand is stopped now: while it is not their turn,
+/// a card acting on the field guards them (`Script.discard_guard`, Meditative #1), several as one. A
+/// discard paid as a price (an Activate's cost, R384; a targeting cost, R450) never asks.
 pub fn discard_guarded(state: &GameState, player: PlayerId) -> bool {
     if state.active == player {
         return false;
@@ -424,11 +392,10 @@ pub fn discard_guarded(state: &GameState, player: PlayerId) -> bool {
     })
 }
 
-/// B5 E3, R457: whether `player`'s next draw may not happen — they have made as many draws this turn
-/// as their limit allows. A stopped draw does not happen at all: no card moves, no fatigue, nothing is
-/// cast, it is not counted, and `drawLimited` (public, it names no card) is all that is said. Every
-/// draw asks this before it takes its card: `draw_one`, a named draw (`effects::draw::draw_from_library`)
-/// and a draw out of the opponent's deck (B5 E16), which then hands the card to `complete_draw`.
+/// B5 E3, R457: whether `player`'s next draw may not happen: they have made as many draws this turn as
+/// their limit allows. A stopped draw does not happen at all (no card moves, no fatigue, no cast, no
+/// count); `drawLimited` (public, it names no card) is all that is said. Every draw asks this first:
+/// `draw_one`, a named one (`effects::draw::draw_from_library`), one out of the opponent's deck (E16).
 pub fn draw_blocked(sink: &mut EngineSink, player: PlayerId) -> bool {
     let Some(limit) = draw_limit_of(sink.state, player) else {
         return false;
@@ -440,8 +407,7 @@ pub fn draw_blocked(sink: &mut EngineSink, player: PlayerId) -> bool {
     true
 }
 
-/// Whether the card carries the `castOnDraw` enchantment (TS `enchantments.hasEnchantment`; a private
-/// copy).
+/// Whether the card carries the `castOnDraw` enchantment.
 fn enchanted_cast_on_draw(card: &CardInstance) -> bool {
     card.enchantments
         .iter()
@@ -459,50 +425,23 @@ pub fn casts_on_draw(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R459 (Classic+ #26): a Unit cast on draw is played for free into its caster's leftmost open unit
-/// zone (R64, R70); with none open it is not cast and goes to the hand, as R58's cap sends a card
-/// that is not cast. Any other card is cast wherever it lands (a Spell resolves; a cast Field Spell or
-/// Trap with no zone is the cast pipeline's to settle, §10.5, R138).
+/// zone (R64, R70); with none open it goes to the hand uncast, as past R58's cap. Any other card is
+/// cast wherever it lands (a cast Field Spell or Trap with no zone is the cast pipeline's, §10.5, R138).
 fn room_to_cast(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     crate::faces::card_type_of(state, card) != CardType::Unit
         || crate::zones::first_free_zone(state, player, Row::Units).is_some()
 }
 
-// ---------------------------------------------------------------------------
 // Drawing across a prompt (§9.3, §10.6, R113, R117, R122)
-// ---------------------------------------------------------------------------
 
-/// §2.4 has two loops, and a prompt can open in the middle of either one.
-///
-///   * the cast-on-draw CHAIN inside `complete_draw`: the cast is a whole play (R70), and a play can
-///     ask — #7 Jewelosco Scarab's Discover drawn off the top, or anything Call to Chaos reaches.
-///   * the "draw N" loop inside `draw`: N separate draws, each with its own chain (§2.4, R58), so
-///     draw 2 with #95 Call to Chaos is two chains and the first of them can pause.
-///
-/// Both used to walk straight on over the open prompt, drawing cards into a game state the player had
-/// not finished deciding — the same class of bug as any sequence that keeps its place in a local
-/// variable (§9.3: "mid-action choices are state, not callbacks"). So each loop gates on
-/// `work::paused` and parks what it still owes on `state.work`, which the answer's drain picks up
-/// (R113, R122). Two kinds rather than one, because they are two different remainders and each
-/// handler is then exactly its own loop:
-///
-///   * `DRAW_CHAIN_WORK` owes "one more draw, continuing this chain at `chain`" — one item carrying
-///     the counter, so R58's cap still bounds the chain a pause split in half. A resumed chain counts
-///     on from where it stopped and can never restart at zero, which is what would let a chain evade
-///     the cap by pausing.
-///   * `DRAW_COUNT_WORK` owes "`count` more whole draws", each starting a fresh chain at 0.
-///
-/// R117: both are parked at the moment of the pause and never in advance. While the loop is on the
-/// stack the draws it has not made are the loop's alone, so a resolution loop running *inside* one of
-/// them — a cast's Cry can start one — can neither take nor re-run the draws it is standing in.
-/// Pre-parking the remainder is what made a played card's Cry fire twice earlier in this project.
-///
-/// R113's order falls out of `work::push_work` placing at `state.work_cursor`: a chain that pauses parks
-/// its own remainder first and the enclosing "draw N" loop parks after it, so the interrupted chain
-/// finishes before the next whole draw begins. Nothing but plain JSON is held, so a paused draw
-/// survives a JSON round trip and replays exactly (§9.3, §10.1).
-///
-/// The game ending parks nothing: like `traps::owe_window` and `resolve::cast_card`, there is nothing
-/// left to resume into once `state.result` is set, and R3's fatigue is the usual way a draw ends one.
+/// §2.4's two loops can each pause on a prompt: the cast-on-draw chain in `complete_draw` (a cast is a
+/// whole play, R70, and a play can ask) and the "draw N" loop in `draw` (each draw its own chain, R58;
+/// #95 Call to Chaos). Choices are state (§9.3), so each loop gates on `work::paused` and parks what it
+/// owes for the answer's drain (R113, R122): `DRAW_CHAIN_WORK` one more draw at `chain`, so R58's cap
+/// bounds a split chain; `DRAW_COUNT_WORK` `count` whole draws. R117: parked at the pause, never ahead,
+/// so a loop inside one (a cast's Cry) can neither take nor re-run them. `work::push_work` parks at
+/// `state.work_cursor`, so the chain finishes before the next draw (R113); a paused draw replays
+/// exactly (§10.1). An ended game (R3) parks nothing.
 pub const DRAW_CHAIN_WORK: &str = "@drawChain";
 
 const DRAW_CHAIN_STEP: &str = "chain";
@@ -528,8 +467,8 @@ pub struct ChainLink {
     pub owns: bool,
 }
 
-/// TS `ChainLink | number`: the link a repeat passes on, or a count given on its own (a caller
-/// starting a chain part-way, as the engine's tests do).
+/// The link a repeat passes on, or a count given on its own (a caller starting a chain part-way, as
+/// the engine's tests do).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ChainLinkOrCount {
     Link(ChainLink),
@@ -558,8 +497,7 @@ fn link_for(state: &GameState, link: Option<ChainLinkOrCount>) -> ChainLink {
             owns: link.owns,
         };
     }
-    // A count given on its own (a caller starting a chain part-way, as the engine's tests do) is a
-    // chain of its own at that count, unless a running one takes it over.
+    // A count given on its own is a chain of its own at that count, unless a running one takes it over.
     let given = match link {
         Some(ChainLinkOrCount::Count(count)) => count,
         _ => 0,
@@ -589,26 +527,16 @@ pub struct OwedDrawCount {
     pub count: i32,
 }
 
-/// The open prompt's id, standing for TS's object identity in `stopped`'s `pending !== before`: a
-/// prompt id (`q<n>`) is never handed out twice, so a different id is a different prompt.
+/// The open prompt's id: a prompt id (`q<n>`) is never handed out twice, so a different id is a
+/// different prompt.
 fn pending_id(state: &GameState) -> Option<String> {
     state.pending.as_ref().map(|pending| pending.id.clone())
 }
 
-/// Whether a draw loop must stop where it stands and park the rest. `work::paused` is the test — a
-/// prompt is open, or the game is over — with the one qualification R117 already implies: the pause a
-/// sequence owes its remainder for is the one *it* caused.
-///
-/// That qualification is load-bearing here and nowhere else in the engine, because §2.1's mulligan is
-/// the one caller that draws underneath an open prompt: `setup::answer_mulligan` draws the replacements
-/// and only then clears `state.pending`, since R9 wants the replacements drawn before the returned
-/// cards are shuffled back. A prompt that was already open when this draw began is not this draw's
-/// pause, and stopping on it would owe R9's replacement draws to an action that never makes them.
-/// The before/after comparison is the same one `resolve::apply_hook_resumable` makes across the effects
-/// of a single hook, for the same reason.
-///
-/// The game ending is unconditional: `state.result` stops every sequence, and `traps::owe_window` and
-/// `resolve::cast_card` both park nothing past it, because there is nothing left to resume into.
+/// Whether a draw loop must stop and park the rest: `work::paused`, but by R117 only for a pause *it*
+/// caused (as `resolve::apply_hook_resumable` compares): §2.1's mulligan draws under an open prompt
+/// (`setup::answer_mulligan` clears `state.pending` after R9's replacement draws), and stopping on it
+/// would owe those draws to an action that never makes them. The game ending stops every sequence.
 fn stopped(sink: &EngineSink, before: &Option<String>) -> bool {
     if !crate::work::paused(sink) {
         return false;
@@ -712,14 +640,10 @@ fn owe_draws(sink: &mut EngineSink, player: PlayerId, count: i32) {
     crate::work::owe(sink, resume);
 }
 
-/// §2.4's draw from the moment the card has left the library: the game draw counter, the `drawn`
-/// event, R58's cast-on-draw chain and R4's hand cap.
-///
-/// `draw_one` below takes the top card and `effects/draw.rs`'s `draw_from_library` takes a NAMED one
-/// (#30 Archivist's highest and lowest, #94 Genn's Greed's every 2-cost card), and both end here, so
-/// "a draw" means exactly one thing however the card was chosen (§6.3 Draw). The caller splices the
-/// card out of the library first (and hands it over): the pile must already be short by one when a
-/// cast-on-draw card resolves, or its own script would read a library that still holds it.
+/// §2.4's draw once the card has left the library: the draw counter, `drawn`, R58's cast-on-draw chain
+/// and R4's hand cap. `draw_one` and `draw_from_library` (a NAMED card: #30 Archivist, #94 Genn's Greed)
+/// both end here (§6.3 Draw). The caller splices the card out first, or a cast-on-draw card's own
+/// script would read a library that still holds it.
 pub fn complete_draw(
     sink: &mut EngineSink,
     player: PlayerId,
@@ -730,9 +654,8 @@ pub fn complete_draw(
     // B5 E4, R457: the draw's number this turn rides the event, so a trap answering "the 2nd card they
     // draw in a turn" (Classic #9) reads it however much later the loop hands it the event.
     let counted = count_draw(sink.state, player);
-    // B5 E33: the draw that took the last card of the drawer's own library (Classic #90's quest 9). The
-    // card still says where it lay (the caller spliced it out and has not moved it), so a draw out of
-    // the other player's library (E16) empties nothing of the drawer's.
+    // B5 E33: the draw that took the last card of the drawer's own library (Classic #90's quest 9); the
+    // card still says where it lay, so a draw out of the other player's library (E16) empties nothing.
     let emptied = matches!(card.zone, Zone::Library { player: owner } if owner == player)
         && sink.state.players[player].library.is_empty();
     sink.events.push(GameEvent::Drawn {
@@ -774,11 +697,9 @@ pub fn complete_draw(
             },
         );
 
-        // §9.3 and R122: the cast is a whole play and a play can ask, so the repeat of the draw belongs
-        // to the action that answers, not to this one. Drawing on here would put cards in the hand — and
-        // cast more of them — while the player is still being asked about this one. What is owed is one
-        // more draw at the chain's count, which is precisely the count this draw would have passed on, so
-        // R58's cap bounds the resumed chain exactly as it bounds an uninterrupted one (R113, R117).
+        // §9.3 and R122: the cast is a whole play and a play can ask, so the draw's repeat belongs to the
+        // action that answers; drawing on would fill the hand while the player is still being asked. One
+        // more draw is owed at the chain's count, so R58's cap bounds it as an unbroken chain (R113, R117).
         if stopped(sink, &before) {
             stop_chain(sink, player, &at);
             return DrawOutcome::Cast;
@@ -795,14 +716,10 @@ pub fn complete_draw(
     }
 }
 
-/// R748: a cast-on-draw card setup dealt to a hand uncast, cast at the start of the game as its draw
-/// would have cast it: out of the hand into the resolving zone and through the cast, held as a draw
-/// until the cast resolves, so the card knows it is cast on draw (R58, `cast_on_draw_now`). Its draw was
-/// made in setup, so nothing repeats and no chain begins (R58, R217). A card that no longer casts on
-/// draw, or a Unit with no open unit zone (R459), stays in the hand, and this returns false. The state
-/// check follows the cast (R59), unless the cast asked, when the answer's drain owes it.
-///
-/// The card is the one in its hand with this card's id, which is taken out of the hand and cast.
+/// R748: a cast-on-draw card setup dealt to a hand uncast is cast at the start of the game as its draw
+/// would have, held as a draw until it resolves (R58, `cast_on_draw_now`); nothing repeats and no chain
+/// begins (R217). One that no longer casts on draw, or a Unit with no open zone (R459), stays: false.
+/// The state check follows the cast (R59), unless the cast asked, when the answer's drain owes it.
 pub fn cast_dealt_card(sink: &mut EngineSink, card: &CardInstance) -> bool {
     let Zone::Hand { player } = card.zone else {
         return false;
@@ -841,15 +758,10 @@ pub fn cast_dealt_card(sink: &mut EngineSink, card: &CardInstance) -> bool {
     true
 }
 
-/// §2.4's repeat, after a cast-on-draw cast has resolved whole — its Echo repeats and its landing
-/// included, since a cast is §10.5's pipeline (R70). §4.5 and R59 run the state check "after one
-/// cast-on-draw cast", so a hero the cast brought to 0 ends the game here and the draw does not
-/// repeat into the card beneath, and a unit it killed has died before the next card is cast. A Death
-/// hook that asks stops the chain like any other pause, owing the draw it would have made.
-///
-/// The repeat reads the chain's count off the state, not the count this draw passed on: the cast may
-/// have drawn and cast more of the same chain itself (R217). The draw that began the chain closes it
-/// once its repeat is done.
+/// §2.4's repeat, after a cast-on-draw cast has resolved whole (§10.5, R70). §4.5 and R59 run the state
+/// check "after one cast-on-draw cast", so a hero it brought to 0 ends the game before the draw repeats,
+/// and a Death hook that asks stops the chain like any pause. The chain's count is read off the state,
+/// since the cast may have drawn and cast more of it itself (R217).
 fn continue_chain(sink: &mut EngineSink, player: PlayerId, owns: bool, before: &Option<String>) {
     let link = ChainLink {
         chain: sink.state.cast_chain.unwrap_or(0),
@@ -900,9 +812,8 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
                 return DrawOutcome::Token;
             }
         }
-        // No card is drawn, so no `drawn` event: the damage instance is what happened (§2.4, R3).
-        // R315: `fatigue` announces it first, so the board shows the empty library before the hit
-        // lands; it is a report and answers nothing, like the `damageAbsorbed` below (R1362).
+        // No `drawn`: the damage instance is what happened (§2.4, R3). R315: `fatigue` announces it
+        // first, so the board shows the empty library before the hit; a report answering nothing (R1362).
         sink.state.players[player].fatigue_count += 1;
         let fatigue_count = sink.state.players[player].fatigue_count;
         // R457: a draw from an empty library is a draw that happened, and counts toward a limit.
@@ -913,11 +824,9 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
             count: fatigue_count,
             amount,
         });
-        // R240, R1362: a fatigue draw whose hit the hero's Armor takes whole (§4.4 step 2; step 3's cap
-        // only clamps) still happened — the public count moved and the next one deals more (§10.3) —
-        // and the pipeline reports it itself, by `damageAbsorbed` from no source (R1361), which is a
-        // report and no damage instance: nothing answers it (R63, `triggers::dispatch_event`). It keeps
-        // the place in R68's order that R240's `damage` of 0 had, so such a game folds as it did.
+        // R240, R1362: a fatigue draw whose hit the hero's Armor takes whole (§4.4 step 2) still happened
+        // (the count moved, §10.3); the pipeline reports it by `damageAbsorbed` from no source (R1361),
+        // no damage instance (R63), in the place in R68's order R240's `damage` of 0 had.
         let before = sink.events.len();
         let dealt = crate::damage::deal_damage(
             sink,
@@ -945,9 +854,8 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
 }
 
 /// §2.4: "Draw N is N separate draws, each with its own chain" (R58). A draw that pauses stops the
-/// rest of them, which are owed to `state.work` and made by the action that answers (R113, R122) —
-/// so the outcomes this returns are the draws that really happened in this action, and a caller that
-/// counts them reads a short list rather than a list of draws that have not happened yet.
+/// rest, owed to `state.work` for the action that answers (R113, R122), so this returns only the draws
+/// that really happened in this action.
 pub fn draw(sink: &mut EngineSink, player: PlayerId, count: i32) -> Vec<DrawOutcome> {
     let before = pending_id(sink.state);
     let mut out: Vec<DrawOutcome> = Vec::new();
@@ -962,8 +870,7 @@ pub fn draw(sink: &mut EngineSink, player: PlayerId, count: i32) -> Vec<DrawOutc
             i += 1;
             continue;
         }
-        // R117: parked here, at the pause, and never in advance. The chain that stopped has already
-        // parked its own remainder, so this lands behind it and the interrupted chain finishes first.
+        // R117: parked here, at the pause, behind the chain's own remainder, so that chain finishes first.
         if sink.state.result.is_none() {
             owe_draws(sink, player, count - i - 1);
         }
@@ -972,10 +879,9 @@ pub fn draw(sink: &mut EngineSink, player: PlayerId, count: i32) -> Vec<DrawOutc
     out
 }
 
-/// `work.rs`'s handler for a chain a cast-on-draw prompt split (`DRAW_CHAIN_WORK`): the same chain, at
-/// the same count. The cast that paused has finished by now — its own items were parked ahead of this
-/// one (R113) — so the state check it is owed runs before the draw repeats, as it does in an unbroken
-/// chain.
+/// `work.rs`'s handler for a chain a cast-on-draw prompt split (`DRAW_CHAIN_WORK`): the same chain at
+/// the same count. The cast that paused has finished (its items were parked ahead, R113), so its owed
+/// state check runs before the draw repeats, as in an unbroken chain.
 pub fn run_owed_draw_chain(sink: &mut EngineSink, item: &WorkItem) {
     let Some(owed) = owed_draw_chain_of(&item.resume) else {
         return;
@@ -997,7 +903,5 @@ pub fn run_owed_draw_count(sink: &mut EngineSink, item: &WorkItem) {
     draw(sink, owed.player, owed.count);
 }
 
-// Registered at module scope in TS, in the module that owns the sequence, and never from a test: a
-// handler is code, so a suite that wired it up on production's behalf would be green over a
-// production that had no wiring at all (R113). In Rust `work.rs`'s dispatcher names the two handlers
-// above directly (SURFACE §6.6).
+// `work.rs`'s dispatcher names the two handlers above directly (SURFACE §6.6), never a test: a suite
+// that wired them up on production's behalf would be green over a production with no wiring (R113).

@@ -1,18 +1,13 @@
 // The Luau browser module (#919, SPEC §12.10, R915009): `crates/wasm/luau`, the engine with the card
-// kit, which `scripts/build-wasm.sh` builds into `./pkg/luau` (git ignores it). `index.ts`
-// imports this file dynamically, so no page and no worker fetches the module until a practice game
-// with a custom card or the creator asks for it (`useLuauModule`, `checkCustomCard`).
-//
-// The module is an emscripten `MODULARIZE` factory whose boundary is C (v0.4.0's, `da817ba6`): a
-// string crosses as a pointer, copied in with `stringToNewUTF8` and read back with `UTF8ToString`,
-// every pointer freed with the module's own `jackioh_free`. A binding that would have thrown answers
-// NULL (or a negative status) and stows its message for `jackioh_last_error`. `adapt` turns all of
-// that into the very shape of the normal module's wasm-bindgen exports (`LuauBindings`), strings in
-// and strings out, throwing the stowed message, so `index.ts` calls either module the same way.
+// kit, built into `./pkg/luau` by `scripts/build-wasm.sh`. `index.ts` imports this file dynamically, so
+// nothing fetches the module until a practice game with a custom card or the creator asks for it.
+// The module is an emscripten `MODULARIZE` factory with a C boundary (v0.4.0's, `da817ba6`): strings
+// cross as pointers, each freed with `jackioh_free`, and a failing binding answers NULL (or a negative
+// status) with its message in `jackioh_last_error`. `adapt` gives it the normal module's wasm-bindgen
+// shape (`LuauBindings`), throwing that message, so `index.ts` calls either module the same way.
 
 import type { JackiohWasmLuauModule } from "./pkg/luau/jackioh_wasm_luau.js";
 
-/** The normal module's exports, as `index.ts` calls them, and the creator's check. */
 export type LuauBindings = {
   init(): void;
   catalog(): string;
@@ -123,9 +118,8 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
 let loading: Promise<LuauBindings> | null = null;
 
 /**
- * Fetch and instantiate the Luau module, then register the catalog and the official cards' scripts
- * in it (its own `init`). Idempotent; a failed fetch is not cached. `bytes`, when given, are the
- * module's (jsdom tests read them from disk, as `test/setup.ts` does the normal module's).
+ * Fetch and instantiate the Luau module and run its own `init` (the catalog and the official cards'
+ * scripts). Idempotent; a failed fetch is not cached. `bytes`: the module's, in jsdom tests.
  */
 export function loadLuauBindings(bytes?: BufferSource): Promise<LuauBindings> {
   if (loading === null) {

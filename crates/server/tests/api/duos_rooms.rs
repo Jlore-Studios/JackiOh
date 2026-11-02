@@ -1,15 +1,5 @@
-//! B33, B34, B41, B42 (#936, `.fullsend/SPEC.md` S6): the Duos co-op rooms over HTTP. The host makes
-//! a room (`201 {code}`); a second active account joins and starts the match (host A1, guest A2, the
-//! AI on B1 and B2) and both learn its `matchId`; a third gets `409 full`, the host `409 own_room`; an
-//! unjoined room expires `DUOS_ROOM_TTL_MS` after it was made and the host may delete it first;
-//! `GET /api/duos/live` names the caller's live co-op match; the per-match replay answers each human
-//! their own seat of a finished game (409 while it is live, 410 once the retention purge has taken
-//! its log, 422 when this build cannot fold it as it was played) and anyone else 404; a blocked pair
-//! neither reads nor joins the other's room, and a joined room answers its two people alone.
-//!
-//! The whole router over the fake store, from accounts seeded active with a tagged username. The
-//! seats choose `random: true` (the server deals), except where a saved deck is the point. A
-//! refusal's code is read wherever the body carries it (`code_is`).
+//! B33, B34, B41, B42 (#936, .fullsend/SPEC.md S6): Duos co-op rooms over HTTP (B1, B2).
+//! Covers room lifecycle: creation, joining, capacity (409), deletion, live matches, and replays.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -46,10 +36,6 @@ const MS_PER_DAY: i64 = 86_400_000;
 
 /// The one ladder bot `with_ladder_bot` makes.
 const BOT: &str = "bot-ladder";
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 fn millis<T>(value: T) -> u64
 where
@@ -413,9 +399,7 @@ fn ceiling_draw() -> Value {
     json!({ "outcome": "draw", "winner": null, "reason": "ceiling" })
 }
 
-// ---------------------------------------------------------------------------------------------
 // B33 — a room the host holds, a join that starts the match
-// ---------------------------------------------------------------------------------------------
 
 mod b33_rooms {
     use super::*;
@@ -574,9 +558,7 @@ mod b33_rooms {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B34 — expiry and delete
-// ---------------------------------------------------------------------------------------------
 
 mod b34_expiry_and_delete {
     use super::*;
@@ -656,9 +638,7 @@ mod b34_expiry_and_delete {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B41, B42 — the replay route and the live route
-// ---------------------------------------------------------------------------------------------
 
 mod b41_b42_replay_and_live {
     use super::*;
@@ -686,9 +666,7 @@ mod b41_b42_replay_and_live {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B41, §13.9, R767000 — the replay of a finished game, under the catalog it was played on
-// ---------------------------------------------------------------------------------------------
 
 mod b41_the_finished_replay {
     use super::*;
@@ -741,8 +719,7 @@ mod b41_the_finished_replay {
         assert_eq!(held.replays.held(now_ms()), 1, "one fold serves both people");
     }
 
-    /// R1497000: the guest's `DELETE /api/account` empties their seat on the finished match and
-    /// leaves the match and its log, so the host still watches its replay from their own seat.
+    /// R1497000: guest DELETE /api/account empties seat; finished replay remains readable.
     #[tokio::test]
     async fn r1497000_the_teammate_still_opens_the_replay_once_the_other_account_is_gone() {
         let t = three().await;
@@ -848,9 +825,7 @@ mod b41_the_finished_replay {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §13.9 — the retention purge takes a finished co-op game's log
-// ---------------------------------------------------------------------------------------------
 
 mod retention {
     use super::*;
@@ -889,9 +864,7 @@ mod retention {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §13.9 — blocks, and a joined room is its two people's
-// ---------------------------------------------------------------------------------------------
 
 mod room_privacy {
     use super::*;
@@ -1016,9 +989,7 @@ mod room_privacy {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §9.4, R767000 — a host's deck frozen under another catalog
-// ---------------------------------------------------------------------------------------------
 
 mod stale_catalog {
     use super::*;
@@ -1077,14 +1048,10 @@ mod stale_catalog {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915005 — a deck with a custom card plays only in practice
-// ---------------------------------------------------------------------------------------------
 
 mod a_deck_with_a_custom_card_r915005 {
-    //! R915005: a co-op room refuses a deck that names a custom card at both doors, as the 1v1 queue
-    //! and rooms do, with the validator's L7 (`loadout_invalid`, the L7 issue as `details`), before
-    //! anything is claimed.
+    //! R915005: co-op room refuses deck naming custom card with L7 loadout_invalid.
     use super::*;
 
     /// The legal deck with its first card swapped for a custom card: legal by every other rule.
@@ -1147,9 +1114,7 @@ mod a_deck_with_a_custom_card_r915005 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1047000, R1047001 — the ceiling and the sweep's end of a match no actor can be folded back for
-// ---------------------------------------------------------------------------------------------
 
 mod r1047000_r1047001_the_sweep {
     use super::*;
@@ -1240,9 +1205,7 @@ mod r1047000_r1047001_the_sweep {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1047002 — a host's open co-op rooms are bounded
-// ---------------------------------------------------------------------------------------------
 
 mod r1047002_the_room_cap {
     use super::*;
@@ -1281,9 +1244,7 @@ mod r1047002_the_room_cap {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1065000 — a live co-op match holds its players out of 1v1
-// ---------------------------------------------------------------------------------------------
 
 mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
     use super::*;
@@ -1565,9 +1526,7 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1566000 — the account read names the live co-op match
-// ---------------------------------------------------------------------------------------------
 
 mod r1566000_the_account_read_names_the_live_co_op_match {
     use super::*;

@@ -1,14 +1,4 @@
-//! R433 on the server: an All Random match (R258) deals both seats' decks, so neither player is shown
-//! theirs going in, and each seat's own library lists every card as unknown until it leaves (R312).
-//! The registry reads the match's mode off what made it (`matches.modeOf`) and tells `createGame` and
-//! every rebuild's `fold` both seats were dealt; a Best-of-1 match's decks were built and list in full
-//! (R310). The real engine port under the real registry, actor and results writer, over the in-memory
-//! store.
-//!
-//! Port of `apps/server/test/match/dealt-deck.test.ts`. In Rust there is no engine port to inject
-//! and no actor deps to assemble: the registry is the test app's own (`App.matches`), over the fake
-//! store, and it reaches the engine through `actor::engine`'s functions, which call
-//! `jackioh_engine` directly (SURFACE §11.3).
+//! R433, SURFACE §11.3: All Random (R258) deals decks; libraries conceal unknown cards (R312; R310 Bo1 comparison).
 
 use std::sync::Arc;
 
@@ -32,7 +22,7 @@ async fn world() -> Arc<App> {
     app
 }
 
-/// TS `deps.store.seedProfile(...)`: a profile row written straight into the fake store.
+/// A profile row written straight into the fake store.
 async fn seed_profile(app: &App, profile: Value) {
     let Db::Fake(data) = &app.db else {
         panic!("the test app runs on the fake store")

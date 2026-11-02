@@ -49,10 +49,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #85 Prototype-X1 — SPEC §8.10 row 85, BUILD M12 row S 85: Tribute 2 (R101); its Cry asks
-// 2 Discovers in turn, each three Epic Weapons it does not hold, and fuses each pick into it, its
-// Activate usable that turn (R1841002, R1751000); radiant 12/12 and Legendary Weapons. Since #2521 it is
-// no Starship Piece (R1852001).
+// Stinkyscape #85 Prototype-X1 — SPEC §8.10 row 85, BUILD M12 row S 85 (#2521; R101, R1841002,
+// R1751000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,9 +82,6 @@ mod tests {
         "stinkyscape-061",
     ];
 
-    /// Plays it with a p2 Vanilla on the field, two of p1's Vanillas its Tribute, and answers each Discover
-    /// with the first card offered: each a Discover of three `pool` Weapons it does not hold yet (as many as
-    /// are left), each pick adding the Weapon's health. Returns the scenario and the host's id.
     fn arms(radiant: bool, pool: &[&str]) -> (Scenario, String) {
         let mut s = weapon_board(
             "s085",
@@ -123,7 +118,6 @@ mod tests {
             let before = s.stats(host.as_str()).health;
             s.answer(json!(offered[0]));
             // R77: the fusion wears the face its kept host wears, so a Radiant host takes its picks'
-            // Radiant stats, though each goes in unflagged.
             let def = crate::card_def(&offered[0]);
             let gained = if radiant {
                 def.radiant.health

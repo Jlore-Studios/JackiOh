@@ -1,19 +1,14 @@
 //! Play together's social layer (SPEC S7, #936; issues #937, #938, #941): friends by `name#tag`,
-//! blocks, presence, challenges and chat between friends. Migration 0038 holds the rows; the store
-//! methods are `friends_*`, `blocks_*`, `presence_*`, `challenges_*` and `chat_*` (`db/store.rs`).
+//! blocks, presence, challenges and chat between friends.
 //!
 //! - `friends`: the friend list, requests (B43–B45) and blocks (B46).
 //! - `presence`: the heartbeat and each friend's status, `offline`, `online` or `inMatch` (B47).
-//! - `challenges`: a challenge to a friend, which opens a room as `POST /api/rooms` does and is
-//!   accepted by joining it (B48, B49).
-//! - `chat`: messages between friends, the word filter, the unread counts, reports and the
-//!   retention purge (B53).
+//! - `challenges`: a challenge to a friend (B48, B49).
+//! - `chat`: messages between friends and retention purge (B53).
 //!
 //! Every route is `AuthLevel::Active` and acts for its caller, named by the token. A player is
 //! named by profile id everywhere and shown by username (`PlayerRef`, R1436); no log line carries a
 //! username or a message's body. Times leave as ISO-8601 strings (`iso`), as S7's types write them.
-//! A refusal with a code of S7's own (`409 {code: "self"}`, `422 {code: "empty"}`, …) is the API's
-//! one error shape with that code (`refused`); the rest are `ApiErrorCode`'s.
 
 pub mod challenges;
 pub mod chat;
@@ -43,9 +38,7 @@ pub(crate) const MS_PER_HOUR: i64 = 60 * MS_PER_MINUTE;
 /// `Date.prototype.toISOString`'s form, which S7's time strings take: `2026-10-14T12:34:56.789Z`.
 const ISO_FORMAT: &str = "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z";
 
-/// What the social routes keep between requests, one per `App` (as `api::replays::Replays`): their
-/// own allowances, on top of R109's API-wide one. A fresh app starts with empty windows, so one
-/// test's flood cannot leak into the next.
+/// What the social routes keep between requests, one per `App`: their own allowances (R109).
 pub struct Social {
     /// B43: `FRIEND_REQUESTS_PER_HOUR` friend requests an hour per account.
     pub friend_requests: RateLimiter,
@@ -114,10 +107,7 @@ pub(crate) fn try_iso(ms: i64) -> Result<String, time::Error> {
     Ok(at.format(&format)?)
 }
 
-/// A refusal with a code of S7's own, in the API's one error shape (`{ "error": { code, message }
-/// }`, what the client's `ApiRequestError` reads): `409 {code: "self"}` and the like. Not an
-/// `ApiError`, whose codes are `ApiErrorCode`'s; a refusal is an answer, not a failure, so nothing
-/// logs it.
+/// A refusal with a code of S7's own: not logged, answering `{ "error": { code, message } }`.
 pub(crate) fn refused(status: u16, code: &str, message: &str) -> ApiResult {
     Ok(json_response(
         status,
@@ -131,12 +121,10 @@ pub(crate) fn not_found(message: &str) -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, message)
 }
 
-/// 201 with a JSON body.
 pub(crate) fn created(body: Value) -> Response {
     json_response(201, body)
 }
 
-/// 204 with no body (`DELETE /api/account`'s shape).
 pub(crate) fn no_content() -> Response {
     let mut response = Response::new(Body::empty());
     *response.status_mut() = StatusCode::NO_CONTENT;
@@ -146,7 +134,6 @@ pub(crate) fn no_content() -> Response {
     response
 }
 
-/// A `:name` segment of the route's path, or empty (which names nothing).
 pub(crate) fn param(req: &Req, name: &str) -> String {
     req.params.get(name).cloned().unwrap_or_default()
 }

@@ -9,9 +9,8 @@
 //! Engine: `lose_health` on your hero (R18: no pipeline, no Armor, so nothing stops it), then one
 //! weighted roll (ME-WEIGHTED-ROLL: `add_rolled` over `AUSPICIOUS_ROCK_ODDS`, R960, MD-C1). The
 //! token rolled (M #39.2 to #39.4) lands in your hand uncast, on its base face; a burned roll is
-//! lost (§2.4). Lucky is the Rock's printed Lucky — 2 on the Radiant face — each extra roll kept
-//! if it is better, ranked Dud < Jade < Red Jade. A player's Luck (ME-LUCK, M #40) joins in MB11,
-//! not here. "When played" on a Spell is its resolution.
+//! lost (§2.4). Each extra roll of Lucky, or of a player's Luck (ME-LUCK, M #40), is kept if it is
+//! better. "When played" on a Spell is its resolution.
 //! Tunes: life 2 ↓; Lucky 2 ↑, on the Radiant face only.
 
 use jackioh_engine::prelude::*;
@@ -43,11 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #39.1 Auspicious Rock — SPEC §8.8 row 39.1, BUILD M10 row M 39.1: "Your hero loses 2
-// health (R18: Armor and a hero immunity do not stop it), then one roll by `AUSPICIOUS_ROCK_ODDS`
-// adds a base Dud, Jade or Red Jade to your hand uncast (MD-C1), the hand cap burning it; over many
-// seeds the odds hold at 20, 75 and 5; M 40's Luck joins in MB11; life reads through `param();
-// radiant Lucky 2: three rolls keeping the best (Dud < Jade < Red Jade)".
+// Meditative #39.1 Auspicious Rock — SPEC §8.8 row 39.1, BUILD M10 row M 39.1.
 #[cfg(test)]
 mod tests {
     use super::*;

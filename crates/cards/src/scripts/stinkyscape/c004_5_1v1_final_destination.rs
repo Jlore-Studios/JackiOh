@@ -9,12 +9,7 @@
 //! never its controller's own (C #65 Ace in the Hole's `turnEnded` trigger, the other player's), going
 //! to the graveyard as it fires. One lane drawn uniformly from the match rng stays open and
 //! `lock_lane` Locks the other four whole, both sides' unit and backrow zones (C #71's; a Lock evicts
-//! nothing, R688). Then `set_health` puts each hero at 1, no pipeline (R18). Then each player discards
-//! every Spell in their hand, the non-permanents (§5.1), its controller first, in hand order, one
-//! `discard` each, no choice (a guarded hand keeps them, R800); Units, Field Spells and Traps stay. The
-//! Radiant face then fills its controller's hand (their hand size less the cards left after the
-//! discards, a guarded hand's Spells among them, §2.4) with C+ #71 Book of Buff, each at
-//! `costOverride` 0. Its controller's turn comes next, so they strike first (R1870005).
+//! nothing, R688).
 
 use jackioh_engine::effects::{add_to_hand, discard, lock_lane, set_health};
 use jackioh_engine::draw::discard_guarded;
@@ -94,11 +89,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #4.5 1v1 Final Destination — SPEC §8.10 row S 4.5, BUILD M12 row S 4.5: "fires at the end of the
-// opponent's turn, never its controller's; four lanes Locked whole, the open one varying over the
-// seeds; both heroes at 1; both hands lose every Spell and keep their Units, Field Spells and Traps;
-// its controller's turn follows; radiant then its controller's hand is filled with Book of Buff at (0)"
-// (R1870005).
+// S #4.5 1v1 Final Destination — SPEC §8.10 row S 4.5, BUILD M12 row S 4.5 (R1870005).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -118,13 +109,10 @@ mod tests {
     const DISRUPTOR: &str = "meditative-001"; // (2) Field Spell, a discard guard (R800).
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-    /// p1 holds 1v1 Final Destination set face-down, and each hand mixes Spells and permanents; it is
-    /// `active`'s turn.
     fn board(seed: &str, active: &str, radiant: bool) -> Scenario {
         board_with(seed, active, radiant, json!([]))
     }
 
-    /// `board`, with `backrow` beside the trap in p1's backrow.
     fn board_with(seed: &str, active: &str, radiant: bool, backrow: Value) -> Scenario {
         let mut backrow = backrow.as_array().cloned().unwrap_or_default();
         backrow.push(json!({ "def": ID, "radiant": radiant, "faceUp": false, "lane": 3 }));
@@ -144,7 +132,6 @@ mod tests {
         s
     }
 
-    /// p2's turn ends with the trap set: it fires.
     fn fired(seed: &str, radiant: bool) -> Scenario {
         let mut s = board(seed, "p2", radiant);
         s.end_turn();
@@ -155,7 +142,6 @@ mod tests {
         s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
     }
 
-    /// The lanes whose four zones are all Locked, and whether any zone of the others is.
     fn locked_lanes(s: &Scenario) -> Vec<i32> {
         (1..=UNIT_ZONES)
             .filter(|lane| {
@@ -225,7 +211,6 @@ mod tests {
         #[test]
         fn r1870005_spells_discarded_others_kept() {
             let s = fired("final-destination-discards", false);
-            // p1's hand drew a card at the start of its turn: a Vanilla.
             let mut mine = hand_defs(&s, P1);
             mine.sort();
             assert_eq!(mine, vec![GAMBIT, WELL, VANILLA, VANILLA]);
@@ -268,15 +253,12 @@ mod tests {
             for book in books {
                 assert_eq!(book.cost_override, Some(0));
             }
-            // The base face fills nothing.
             let s = fired("final-destination-base", false);
             assert!(s.hand(P1).iter().all(|card| card.def_id != BOOK_OF_BUFF));
         }
 
         #[test]
         fn r1870005_radiant_fill_counts_a_guarded_hand_as_held() {
-            // M #1 Disruptive Disruptor guards p1 on p2's turn: p1 keeps its Spells, and the fill is
-            // counted with them held, so no Book burns.
             let mut s = board_with(
                 "final-destination-guarded",
                 "p2",
@@ -289,7 +271,6 @@ mod tests {
             kept.sort();
             assert_eq!(kept, vec![GAMBIT, FILLER, WELL, VANILLA, LUNAR]);
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize, "filled");
-            // p1's turn's draw then burns a Vanilla, as in the unguarded fill.
             assert!(
                 !s.events()
                     .iter()

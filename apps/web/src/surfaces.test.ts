@@ -1,7 +1,7 @@
-// #2109: the board's corners, stacking and neutral shadows come from one named surface scale,
-// surfaces.css, and no stylesheet gains a radius, a shadow or a layer of its own unless this file
-// says so. Gradients stay only where they mean something: card faces (src/cards/), the main
-// button (--primary-face*), the table (game/table.css and board.css's playmat, `.field`) and the named texture keeps below.
+// #2109: the board's corners, stacking and neutral shadows come from one named surface scale, surfaces.css;
+// no stylesheet gains a radius, a shadow or a layer of its own unless this file says so. Gradients stay only
+// on card faces (src/cards/), the main button (--primary-face*), the table (game/table.css and board.css's
+// `.field`) and the named texture keeps below.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -28,7 +28,7 @@ const SHEETS = files(SRC, ".css").map((path) => relative(SRC, path).replaceAll("
 const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//g, " ");
 
-/** The board's stylesheets, as palette.test.ts has them: index.css and game/'s, but the deck builder's and table.css. */
+/** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
@@ -46,9 +46,7 @@ const LAYERS = [...read("surfaces.css").matchAll(/^\s*--z-([a-z-]+):\s*(-?\d+);$
   Number(match[2]),
 ]);
 
-/** A background gradient the board keeps: the locked/facedown hatch, the countered badge's strike
- * and bubbles, the drag reticle, the cell-pick crosshair and a dying card's burn front. Everything
- * else goes flat. */
+/** The background gradients the board keeps. Everything else goes flat. */
 const GRADIENT_KEEP = [
   /^linear-gradient\(\s*to top,\s*var\(--bg-sunken\) 0%,\s*var\(--bg-sunken\) 36%,/, // B45's burn front: its sunken lower part eats the card as it climbs
   /repeating-(linear|radial|conic)-gradient/, // the locked-zone and facedown hatch weaves
@@ -58,12 +56,10 @@ const GRADIENT_KEEP = [
   /calc\(50% [-+] 1\.5px\)/, // the countered badge's struck-circle strike
 ];
 
-/** The playmat and its marks. The default table (the tavern) is `.field` in board.css, not table.css,
- * and each playmat's tap marks and sand cracks are its own cosmetic (SandSurface's TAP_FAMILY): the
- * issue keeps the table's gradients, so these rules keep their shapes, gradients and shadows. */
+/** The playmat and its marks: the tavern table is board.css's `.field`, and each playmat's tap marks and
+ * sand cracks are its own cosmetic (SandSurface's TAP_FAMILY); these rules keep their gradients and shadows. */
 const TABLE_RULE = /^\.(field|sand-mark(--\w+)?|tap-mark--\w+)$/;
 
-/** `css` without the table's rules (a rule whose every selector is one of TABLE_RULE's). */
 function withoutTable(css: string): string {
   return css.replace(/([^{}]+)\{[^{}]*\}/g, (rule, selector: string) => {
     const parts = selector.split(",").map((part) => part.trim());
@@ -77,7 +73,6 @@ const GLOW =
 /** The fuse spark's thrown particles (clock.css): offset dots in ember, not a shadow with a blur. */
 const SPARK_PARTICLE = /^-?[\d.]+px -?[\d.]+px 0( -?[\d.]+(px)?)? var\(--clock-ember/;
 
-/** Every `box-shadow` layer `css` states off the tokens, outside its comments. */
 function offShadow(css: string): string[] {
   const found: string[] = [];
   for (const match of css.matchAll(/(?<![\w-])box-shadow\s*:\s*([^;]+)/g)) {
@@ -107,7 +102,6 @@ function offShadow(css: string): string[] {
   return found;
 }
 
-/** Every `border-radius`, `z-index` and `background` gradient `css` states off the tokens. */
 function offSurface(css: string): string[] {
   const found: string[] = [];
   for (const match of css.matchAll(/(?<![\w-])(?:border(?:-top|-bottom)?-(?:left|right)-radius|border-radius)\s*:\s*([^;}]+)/g)) {
@@ -189,9 +183,8 @@ describe("#2109 the surface scale", () => {
       ...SHADOWS.map((shadow) => `--shadow-${shadow[0]}`),
       ...LAYERS.map((layer) => `--z-${layer[0]}`),
     ]);
-    // Outside board scope, and frozen there: the inspect overlay (src/cards/, which this
-    // change must not touch) named its own two layers before the scale existed. No sheet
-    // gains a name of its own: a sheet that loses its names empties its entry here.
+    // Outside board scope, and frozen: the inspect overlay's (src/cards/) own two layers. No sheet gains a
+    // name of its own; one that loses its names empties its entry.
     const FOREIGN: Record<string, string[]> = {
       "cards/inspect/inspect.css": ["--z-inspect-hover", "--z-inspect-modal"],
     };

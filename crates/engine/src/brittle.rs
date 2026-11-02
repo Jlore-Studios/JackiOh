@@ -1,14 +1,10 @@
 //! Brittle X (docs/classic-sets.md B3.3, R385): the count on a card instance, its start-of-turn tick
-//! and its crumbling. `turn.rs` runs `brittle_tick` as a stage of the start of a turn, right after the
-//! mana refresh (§2.2, R62), and settles after it: the tick only moves counts, marks and cards and
-//! opens no prompt, so everything it causes resolves in that settle and parks on `state.work` there.
+//! and its crumbling. `turn.rs` runs `brittle_tick` right after the mana refresh (§2.2, R62) and settles
+//! after it: the tick opens no prompt, so everything it causes resolves in that settle.
 //!
-//! A count ticks on the field only (R638); it starts its turn cycle when the card enters the field
-//! (`brittle_count::start_brittle_on_field`).
-//!
-//! Hidden information (R440): a count that ticks on a card the other player may not read — a face-down
-//! trap — ticks silently, since a `counterChanged` there would tell them it is Brittle. Its owner reads
-//! the count on the card (`CardView.brittle`). A crumble is never silent: the card goes to a graveyard, which is public.
+//! A count ticks on the field only (R638), from when the card enters it. Hidden information (R440): a
+//! count on a card the other player may not read (a face-down trap) ticks silently, since a
+//! `counterChanged` would tell them it is Brittle. A crumble is never silent: graveyards are public.
 
 use serde_json::json;
 
@@ -23,15 +19,13 @@ pub use crate::brittle_count::{
     active_brittle_count, gain_brittle_count, give_brittle_count, printed_brittle_of, start_brittle_on_field,
 };
 
-/// B3.3 rule 2, R638: every card whose count this player's start of turn ticks, in R68's order — the
-/// cards they control on the field, units by lane (the top of each pile only, since a card dormant
-/// under a Stack is not on the field, R13), then the backrow by lane. Read once, as copies; the tick
-/// writes through ids.
+/// B3.3 rule 2, R638: every card whose count this player's start of turn ticks, in R68's order: units
+/// by lane (each pile's top only; a card dormant under a Stack is not on the field, R13), then the
+/// backrow by lane. Read once, as copies; the tick writes through ids.
 fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut cards: Vec<CardInstance> = Vec::new();
-    // `zones::active_units_of`: each unit zone's top card in lane order, then the Units its carriers
-    // hold, in backrow lane order (R446).
+    // As `zones::active_units_of`: tops by lane, then carried Units in backrow lane order (R446).
     for lane in 0..UNIT_ZONES.max(0) as usize {
         if let Some(top) = side
             .units
@@ -45,7 +39,6 @@ fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     for held in side.carried.iter().flatten().flatten() {
         cards.push(held.clone());
     }
-    // `zones::slots_of(player, "backrow")` + `zones::card_at`: the acting card of each backrow zone.
     for lane in 0..BACKROW_ZONES.max(0) as usize {
         if let Some(card) = side.backrow.get(lane).and_then(|card| card.as_ref()) {
             cards.push(card.clone());
@@ -54,9 +47,8 @@ fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     cards
 }
 
-/// B3.3 rule 2: a count started on player-turn `since` has had its full turn cycle once the turn is
-/// `since + BRITTLE_FIRST_TICK_TURNS` or later — the rest of the turn it started on and a whole turn of
-/// the other player's (B9 #41's t + 2). After that it ticks at each start of its controller's turn.
+/// B3.3 rule 2: a count's full turn cycle is the rest of the turn it started on (`since`) and a whole
+/// turn of the other player's (B9 #41's t + 2); after it, it ticks at each start of its controller's turn.
 pub fn brittle_due(state: &GameState, card: &CardInstance) -> bool {
     match &card.brittle {
         Some(brittle) => state.turn >= brittle.since + BRITTLE_FIRST_TICK_TURNS,

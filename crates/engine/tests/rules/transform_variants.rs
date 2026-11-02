@@ -1,8 +1,6 @@
-//! The Transform variants of patch v0.2.0 (docs/classic-sets.md B5 E24; §6.3 Transform, R23, R35,
+//! The Transform variants (docs/classic-sets.md B5 E24; §6.3 Transform, R23, R35,
 //! R57): the cards beneath a Stack pile become copies of its top (Classic+ #4 Juhan Biggest Bat), and
 //! a card becomes a random card of a pool (Classic+ #73.1 Classic Golem).
-//!
-//! Port of `packages/engine/test/transform-variants.test.ts`.
 
 use jackioh_engine::effects::{transform_beneath, transform_random};
 use jackioh_engine::testkit::*;
@@ -45,7 +43,6 @@ fn pile(state: &mut GameState, def_ids: &[String], owner: PlayerId) -> Vec<CardI
     placed
 }
 
-/// `state.players.p1.units[index]?.[0]`.
 fn top_of(state: &GameState, index: usize) -> Option<CardInstance> {
     state.players.p1.units[index]
         .as_ref()
@@ -201,8 +198,7 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
         assert_eq!(now.damage, 0);
         assert!(!now.radiant);
         assert!(is_sick(&start.state, &now));
-        // TS read `golem.zone` off the replaced object, now `{ z: "gone", player: "p1" }`: a Rust test
-        // holds no live object, so the card that ceased to exist (R35) is read as gone from the state.
+        // The card that ceased to exist (R35) is read as gone from the state.
         assert!(find_instance(&start.state, &golem.id).is_none());
         assert_eq!(events_of_type(&events, GameEventType::Transformed).len(), 1);
     }

@@ -1,7 +1,6 @@
-// R631 (SPEC §10.11 "Music"): the game's music director. It follows the viewer's own view, starts a
-// station switch at the moment R204 gives a card's cast line and only for a card the viewer can read,
-// and opens a match on its sting. R822000: no card plays a theme.
-// R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it.
+// R631 (SPEC §10.11 "Music"): the game's music director follows the viewer's own view, switches station
+// at the moment R204 gives a readable card's cast line, and opens a match on its sting. R822000: no card
+// plays a theme. R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -367,6 +366,15 @@ describe("R1350 a Legendary's or a Mythic's intro", () => {
     r.director.onEvent(fuse, view);
     r.director.onEvent(fuse, view);
     expect(r.intros).toEqual(["intro-core-096", "intro-classicplus-074"]);
+  });
+
+  it("R2734000 an opponent's Trap the view names opens its intro on the other seat too", () => {
+    // The viewer is p1: p2's My Pawn fired, and the view names it as on its controller's seat.
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent({ type: "trapFired", instanceId: "t9", defId: MY_PAWN, controller: "p2", row: "backrow", lane: 2 }, view);
+    expect(r.intros).toEqual(["intro-core-096"]);
   });
 
   it("R2657001 a Field Trap firing again opens nothing, even for a director that never heard its first firing", () => {

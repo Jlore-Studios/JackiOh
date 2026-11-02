@@ -1,8 +1,6 @@
-// Cloudflare production must match Vercel staging: routes, 404s and security headers.
-// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it,
-// but for the one header only staging sends (`X-Robots-Tag: noindex`, #770).
-// Cloudflare rewrites target `/`, list both slash spellings and use `404-page`.
-// Generated static pages need a folder rule; Vercel serves files before rewrites.
+// Cloudflare production must match Vercel staging (`vercel.json`, the source of truth): routes, 404s and
+// headers, but for the one header only staging sends (#770). Cloudflare rewrites target `/`, list both
+// slash spellings and use `404-page`; generated static pages need a folder rule, as Vercel serves files first.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -31,11 +29,7 @@ const STAGING_ONLY_HEADER: Header = { key: "X-Robots-Tag", value: "noindex" };
 const isStagingOnly = (header: Header): boolean =>
   header.key === STAGING_ONLY_HEADER.key && header.value === STAGING_ONLY_HEADER.value;
 
-/**
- * The header blocks `_headers` must hold for these vercel.json blocks: each path in Cloudflare's
- * spelling (`(.*)` as `*`), and the every-path block without STAGING_ONLY_HEADER. Every other
- * header, value and path is copied as it is, so any other difference fails the comparison.
- */
+/** The `_headers` blocks these vercel.json blocks must become, so that any other difference fails. */
 function productionHeaders(staging: VercelConfig["headers"]): HeaderBlock[] {
   return staging.map((block) => ({
     path: block.source.replace("(.*)", "*"),
@@ -90,7 +84,7 @@ describe("public/_redirects", () => {
 
   it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays, the replay list's old home).
+      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays).
       .filter(([name]) => name !== "hotseat" && name !== "duosDev")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     for (const path of fixed) {
@@ -156,14 +150,10 @@ describe("public/_headers", () => {
       { path: "/fonts/*", headers: [cache] },
     ];
     const differing: VercelConfig["headers"][] = [
-      // Another extra header on every path.
       [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER, { key: "X-Other", value: "1" }] }, fonts],
-      // The header with another value, or spelled another way.
       [{ source: "/(.*)", headers: [shared, { key: "X-Robots-Tag", value: "none" }] }, fonts],
       [{ source: "/(.*)", headers: [shared, { key: "x-robots-tag", value: "noindex" }] }, fonts],
-      // The header on another path.
       [{ source: "/(.*)", headers: [shared] }, { source: "/fonts/(.*)", headers: [cache, STAGING_ONLY_HEADER] }],
-      // A shared header missing or changed, or a block missing.
       [{ source: "/(.*)", headers: [STAGING_ONLY_HEADER] }, fonts],
       [{ source: "/(.*)", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, STAGING_ONLY_HEADER] }, fonts],
       [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] }],

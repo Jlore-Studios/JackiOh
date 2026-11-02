@@ -1,6 +1,5 @@
 //! An event is answered as the board stood when it happened (SPEC §10.3, §4.5, R174, R212).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //! §10.3's loop hands an event to the triggers after whatever ran before it was dispatched: a state
 //! check (with its Death hooks and Reborn) after a combat, an Echo repeat or a whole Cry. So #91 Fed
 //! Fauci or #32 Prem Panther, offered its event, can be a Reborn body, a card drawn since, or a unit
@@ -105,7 +104,6 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
         let fauci = g.unit_at(PlayerId::P2, 1);
         grant_reborn(&mut g, &fauci);
 
-        // p1's start of turn: Moths makes Fauci attack it, and the strike back (1) is lethal.
         g.start_turn();
 
         assert!(died(&g, &fauci));
@@ -138,7 +136,6 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
         assert_eq!(g.card(&fauci.id).counters.plague.unwrap_or(0), 0);
     }
 
-    /// p1's Prem Panther trades with p2's Twisted Sorcerer, with or without Reborn.
     fn trade(reborn: bool) -> Scenario {
         let mut g = scenario(json!({
             "p1": { "hand": [VANILLA], "field": [{ "def": PANTHER, "lane": 1 }], "library": LIBRARY },
@@ -149,7 +146,6 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
             grant_reborn(&mut g, &panther);
         }
         let prey = g.unit_at(PlayerId::P2, 1);
-        // A 5/4 Panther into a 5/5 Twisted Sorcerer: both die.
         g.attack(&panther.id, &prey.id);
         assert!(died(&g, &panther));
         assert!(died(&g, &prey));
@@ -186,8 +182,6 @@ mod r212_a_card_that_arrived_after_a_death_does_not_answer_it {
         let gary = g.unit_at(PlayerId::P2, 1);
 
         g.play(TWINSPELL, json!({}));
-        // Resolution 1 (X = 1): 1 damage kills the 1/1 Gary and draws Mr. Vanilla, and the check before
-        // the repeat collects Gary. Resolution 2 draws Corpse Eater — after Gary died.
         g.play(ADAPTIVE_UI, json!({ "x": 1, "targets": pick::instance(&gary) }));
         answer_repeat_with_hero(&mut g);
 
@@ -200,7 +194,6 @@ mod r212_a_card_that_arrived_after_a_death_does_not_answer_it {
         else {
             panic!("Corpse Eater should have been drawn by the repeat");
         };
-        // "While in your hand: whenever a unit ... dies" — it was still in the library when Gary died.
         assert_eq!(g.card(&eater.id).buffs, AttackHealth { attack: 0, health: 0 });
     }
 }
@@ -211,9 +204,6 @@ mod r212_a_card_answers_for_the_player_who_controlled_it_when_the_event_happened
     #[test]
     fn r212_prem_panther_that_kills_miss_mrow_draws_for_the_player_who_controlled_it_not_for_the_player_mrow_s_death_gave_it_to_8_32_8_conventions()
      {
-        // The Panther destroyed a unit while it was p1's; Mrow's Death then steals every p1 unit, the
-        // Panther included, before the `destroyed` event is dispatched. Hearthstone resolves a minion's
-        // kill trigger for its controller before a Deathrattle takes it.
         let mut g = scenario(json!({
             "p1": { "hand": [RENO], "field": [{ "def": PANTHER, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": MROW, "lane": 1 }], "library": LIBRARY },
@@ -231,8 +221,6 @@ mod r212_a_card_answers_for_the_player_who_controlled_it_when_the_event_happened
         assert_eq!(g.hand(PlayerId::P2).len(), p2_hand);
     }
 }
-
-// The traps answer an event as the board stood when it happened
 
 fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
@@ -254,7 +242,6 @@ fn fixture_def(id: &str, type_: CardType, cost: i32, face: Value) -> CardDef {
     }))
 }
 
-/// A fixture card: a transient def in the match state and its script in the registry (`cost = 0`).
 fn costed_fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, cost: Option<i32>) {
     let face = json!({ "keywords": [], "text": id });
     let def = fixture_def(id, type_, cost.unwrap_or(0), face);
@@ -282,7 +269,6 @@ fn set_trap(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Card
     live.clone()
 }
 
-/// "The enemy's backrow card in lane 2", read as the hook builds its list.
 fn enemy_backrow_lane2(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     card_at(
         &*ctx.state,
@@ -295,7 +281,6 @@ fn enemy_backrow_lane2(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     .cloned()
 }
 
-/// The `trapFired` events among `events` for `instance_id`.
 fn trap_fired_for(events: &[GameEvent], instance_id: &str) -> usize {
     events
         .iter()
@@ -325,9 +310,8 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             },
         }));
         let trap = must(s.backrow(PlayerId::P2, 2), "p2's Bear Honeypot");
-        // A 2-cost Spell (so its own play is no "card costing 1 or less"): "Cast a Hinder, then take
-        // control of the enemy's backrow card in lane 2." (It drew a cast-on-draw Hinder through v0.5.2;
-        // a cast on draw is no play since #2179, R2179002, so no trap answers it.)
+        // A 2-cost Spell, so its own play is no "card costing 1 or less": it casts Hinder, then steals the
+        // enemy's backrow card in lane 2 (a cast on draw would be no play, #2179, R2179002).
         costed_fixture(
             &mut s,
             "edge-r8-draw-then-lift",
@@ -379,8 +363,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             GameEvent::ControlChanged { instance_id, controller: PlayerId::P1, .. } if *instance_id == trap.id
         )));
         // R212: the cast is answered as the board stood when it happened. p2's Honeypot saw its
-        // opponent play a card costing 1 or less, so it fires, and its tokens are p2's (R52's shape:
-        // everything a trap does is its controller's, and that controller is the one the event met).
+        // opponent play a card costing 1 or less, so it fires, and its tokens are p2's (R52's shape).
         assert_eq!(trap_fired_for(s.events(), &trap.id), 1);
         assert_eq!(
             units_of(&s, PlayerId::P2)
@@ -402,7 +385,6 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     fn r212_a_bread_and_butter_an_earlier_trap_of_the_end_of_turn_window_stole_answers_that_turn_end_for_the_player_who_held_it_when_it_ended()
      {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-window-lift",
             "p1": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
             "p2": {
@@ -413,7 +395,6 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             },
         }));
         let bread = must(s.backrow(PlayerId::P2, 2), "p2's Bread and Butter");
-        // A Trap: "At the end of any turn: take control of the enemy's backrow card in lane 2."
         costed_fixture(
             &mut s,
             "edge-r8-window-lifter",
@@ -459,7 +440,6 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     #[test]
     fn r212_r174_a_bear_honeypot_that_arrived_after_a_cast_in_the_same_list_does_not_answer_that_cast() {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-honeypot-late",
             "p1": {
                 "hand": [VANILLA],
@@ -468,7 +448,6 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             },
             "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
         }));
-        // A 2-cost Spell: "Draw a card, then summon a Bear Honeypot face-down for the opponent."
         costed_fixture(
             &mut s,
             "edge-r8-draw-then-gift-trap",
@@ -536,7 +515,6 @@ struct UnitOpts {
     cost: Option<i32>,
 }
 
-/// A fixture Unit: a transient def with stats and keywords, and its script in the registry.
 fn unit_fixture(s: &mut Scenario, id: &str, script: Script, opts: UnitOpts) {
     let face = json!({
         "attack": opts.attack.unwrap_or(2),
@@ -568,7 +546,6 @@ fn unit_on_field(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) ->
         .expect("the placed unit")
 }
 
-/// The index of the first event `pick` matches, or -1.
 fn find_index(events: &[GameEvent], pick: impl Fn(&GameEvent) -> bool) -> i64 {
     events.iter().position(pick).map(|at| at as i64).unwrap_or(-1)
 }
@@ -584,8 +561,7 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
             "p2": { "backrow": [{ "def": HONEYPOT, "lane": 1 }], "hand": [RENO], "library": [RENO, RENO] },
         }));
         // A Unit with Reborn, and a 2-cost Spell whose list casts one (E12, R453) and then destroys every
-        // unit. (It drew a cast-on-draw one through v0.5.2; a cast on draw is no play since #2179,
-        // R2179002, so no trap answers it.)
+        // unit (a cast on draw would be no play, #2179, R2179002, so no trap would answer it).
         unit_fixture(
             &mut s,
             "edge-r10-cast-reborn-unit",
@@ -641,8 +617,6 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
         );
         assert!(resolved_at >= 0);
         assert!(died_at > resolved_at);
-        // Bear Honeypot answers the cast (cost paid 0), but "it" is the stay the cast put on the field,
-        // which has ended: the tokens attack nothing, and the Reborn body stands at 1 health.
         assert!(
             s.events()
                 .iter()
@@ -659,7 +633,6 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
     }
 }
 
-/// The id a `cardPlayed` of the other player's carries, or none.
 fn opponents_play(controller: PlayerId, event: &GameEvent) -> Option<String> {
     match event {
         GameEvent::CardPlayed {
@@ -680,7 +653,7 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
             "p2": { "hand": [RENO], "library": [RENO] },
         }));
         // Two of p2's units answer p1's plays, in lane order (R68): the first destroys the played unit,
-        // the second gives it +5 attack. Both name it by the id the `cardPlayed` event carries.
+        // the second gives it +5 attack.
         unit_fixture(
             &mut s,
             "edge-r10-slayer",
@@ -731,7 +704,6 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
         ));
         s.expect_in_zone(&played.id, "field");
         assert_eq!(s.card(&played.id).reborn_spent, Some(true));
-        // The second trigger was aimed at the unit p1 played; that stay is over, so the buff fizzles.
         assert!(!s.events().iter().any(
             |event| matches!(event, GameEvent::Buffed { instance_id, .. } if *instance_id == played.id)
         ));
@@ -747,7 +719,6 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
     // made, is on the stay it has then, so a buff by id reaches it as the same buff over the board does.
     const HIT_JOB: &str = "core-016";
 
-    /// "Whenever an enemy unit dies, …": p1's fixture units answer p2's unit dying.
     fn enemy_died(controller: PlayerId, event: &GameEvent) -> bool {
         matches!(event, GameEvent::Destroyed { owner, .. } if *owner != controller)
     }
@@ -773,7 +744,6 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
     }
 
     fn board(s: &mut Scenario, per_unit: PerUnit) -> Board {
-        // A 1/1 with Reborn and nothing else (a Right-house defender's Divine Shield would take the hit).
         unit_fixture(
             s,
             "edge-r11-reborn",

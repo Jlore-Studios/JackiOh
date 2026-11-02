@@ -1,7 +1,6 @@
 //! Fixture cards for copying the last Spell's text (docs/classic-sets.md B5 E14; Classic #57 Echo; R399,
-//! R545–R547). The engine never imports the cards crate (CLAUDE.md), so the copier and the Spells it
-//! copies are proved on cards of their shape here. Ids are `ct-*`, indices from 5900, registered on top
-//! of the shared fixture catalog by `with_copied_text`.
+//! R545–R547), on cards of their shape since the engine never imports the cards crate. Ids are `ct-*`,
+//! indices from 5900, registered on top of the shared fixture catalog by `with_copied_text`.
 
 use std::sync::LazyLock;
 

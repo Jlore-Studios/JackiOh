@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73: "a 7/1 Charge Flying Ranged
-// Divine Shield Unit; its Divine Shield takes the first hit; no Starship Piece, so its death fuses
-// nothing (#2521); radiant 14/2 with Pierce (R346)".
+// Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73 (#2521, R346).
 #[cfg(test)]
 mod tests {
     use super::*;

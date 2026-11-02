@@ -1,10 +1,7 @@
-// R1295000: a border is one object on the full face and on the board minion. The full face draws it
-// as its edge, `--cf-edge` (cards.css paints the root with it, cosmetics.css sets it per border: a
-// gradient, Wood's grain, Circuit's traces). The minion's panel covers the root, so its border is a
-// ring layer over the panel painted with that same `--cf-edge`, not a flat rim in one trim color.
-// The test reads the sheets' text, since Vitest stubs CSS imports and jsdom paints nothing; the style
-// engine's side of it, the ring's computed background against the face's, is measured in
-// e2e/cypress/component/card-cosmetics.cy.tsx.
+// R1295000: a border is one object on the full face and on the board minion: the face's edge,
+// `--cf-edge`, and on the minion, whose panel covers the root, a ring over the panel painted with that
+// same `--cf-edge`, not a flat rim in one trim color. Vitest stubs CSS imports and jsdom paints
+// nothing, so this reads the sheets' text; e2e/cypress/component/card-cosmetics.cy.tsx measures it.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

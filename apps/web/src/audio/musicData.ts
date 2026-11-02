@@ -1,10 +1,7 @@
-// Music data access (SPEC §10.11 "Music", R631).
-//
-// `music-manifest.json` (the rendered tracks, written by `apps/web/scripts/gen-music.mjs`) and
-// `music-cards.json` (which cards switch a station or open their play with an intro of their own,
-// R1350; no card plays a theme, R822000) are imported here and nowhere else, and checked once at import, so a malformed
-// table fails at load rather than playing nothing. A card's entry is looked up by a defId the viewer
-// can read: the sentinel is never in the table.
+// Music data access (SPEC §10.11 "Music", R631). `music-manifest.json` (written by
+// `apps/web/scripts/gen-music.mjs`) and `music-cards.json` (a card's station or intro, R1350; no card plays a theme, R822000) are imported
+// here and nowhere else, and checked once at import, so a malformed table fails at load. A card's entry is
+// looked up by a defId the viewer can read: the sentinel is never in the table.
 
 import { MUSIC_ROTATION_KEY, MUSIC_STATIONS } from "./constants.ts";
 import rawCards from "./music-cards.json";
@@ -72,7 +69,6 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
   for (const [defId, entry] of Object.entries(raw.cards)) {
     if (!isRecord(entry)) fail("music-cards.json", defId, "must be an object");
     const out: MusicCardEntry = {};
-    // R822000: no card plays a theme; a card's music is its intro.
     if (entry.theme !== undefined) fail("music-cards.json", `${defId}.theme`, "is retired: no card plays a theme (R822000)");
     if (entry.station !== undefined) {
       const station = MUSIC_STATIONS.find((s) => s === entry.station);
@@ -118,7 +114,6 @@ export function isStationTrack(id: string): boolean {
   return MUSIC_STATIONS.some((station) => id === dangerTrack(station) || stationTracks(station).includes(id));
 }
 
-/** The rotation counter, read inside try/catch: 0 when storage is unavailable. */
 export function readRotation(): number {
   const n = Number(getStored(MUSIC_ROTATION_KEY));
   return Number.isInteger(n) && n >= 0 ? n : 0;

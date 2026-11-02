@@ -1,5 +1,5 @@
-//! Port of `packages/engine/test/zones.test.ts`: adjacency, the rotation rings, Locks and free
-//! zones, Stack piles, tokens leaving a zone, "fill your board" and the slot lists (BUILD M1-T4).
+//! Adjacency, the rotation rings, Locks and free zones, Stack piles, tokens leaving a zone, "fill
+//! your board" and the slot lists (BUILD M1-T4).
 
 use jackioh_engine::testkit::*;
 
@@ -10,7 +10,6 @@ fn rush_token() -> CardDef {
     token_def("rush", [Tag::Token])
 }
 
-/// `{ ...spellDef(900), id: "fx-token-spell", index: "T-spell", token: true, tags: ["Token"] }`.
 fn spell_token() -> CardDef {
     let mut def = spell_def(900, json!({}));
     def.id = "fx-token-spell".to_string();
@@ -32,8 +31,8 @@ fn catalog() -> CardDefs {
     catalog
 }
 
-/// TS's `createGame({ …, catalog })` registered the catalog for the process; the Rust one only
-/// validates against it (part 1), so the test registers it through the testkit override first.
+/// `create_game` only validates against the catalog, so the test registers it through the testkit
+/// override first.
 fn game() -> GameState {
     register_catalog(catalog());
     create_game(&CreateGameOptions {

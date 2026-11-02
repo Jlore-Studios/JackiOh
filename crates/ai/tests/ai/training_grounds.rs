@@ -1,9 +1,7 @@
 //! The Training Grounds set (issue #2193) meets the AI (issue #2203). The set's prompts and choices need
 //! nothing new in the search: `legal_actions` lists every play they allow (a declared target, a lane, a
 //! face-down set), and the search tries each through `reduce`, so a card whose Cry reads its lane is
-//! placed by the evaluation of what each lane's play leaves. These tests hold the AI to answering each
-//! one legally, the random policy and the timeout (R79) too, and to the placements and targets a card
-//! asks judgment of.
+//! placed by the evaluation of what each lane's play leaves.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -45,7 +43,6 @@ fn decide_at(state: &GameState, seed: &str) -> Decision {
     decide(state, AI, &mut AiOptions::new(create_rng(seed, 0))).expect("the AI acts")
 }
 
-/// The instance id of the AI's hand card of `def_id`.
 fn in_hand(state: &GameState, def_id: &str) -> String {
     state.players[AI]
         .hand
@@ -55,7 +52,6 @@ fn in_hand(state: &GameState, def_id: &str) -> String {
         .expect("the card is in the AI's hand")
 }
 
-/// The lane the AI's `decision` plays `card` into, when it is a play of it into the unit row.
 fn played_lane(decision: &Decision, card: &str) -> Option<i32> {
     match &decision.action {
         ActionBody::Play {
@@ -85,7 +81,6 @@ fn candidate_lanes(state: &GameState, card: &str) -> Vec<i32> {
     lanes
 }
 
-/// The AI holds `hand` with `mana` and its `field`; the human's field is `enemy_field`.
 fn board(seed: &str, hand: Value, mana: i32, field: Value, enemy_field: Value) -> GameState {
     register_cards();
     scenario(json!({
@@ -97,8 +92,7 @@ fn board(seed: &str, hand: Value, mana: i32, field: Value, enemy_field: Value) -
     .clone()
 }
 
-/// The random policy and the turn's timeout (R79) answer `state` too: each picks a legal action,
-/// and the timeout's step is accepted.
+/// The random policy and the turn's timeout (R79) answer `state` too.
 fn random_and_timeout_answer(state: &GameState, seed: &str) {
     let mut rng = create_rng(seed, 0);
     let random = random_action(state, AI, &mut rng).expect("the random policy acts");
@@ -409,7 +403,6 @@ fn r2203001_the_ai_kills_an_enemy_floodgates_so_its_death_destroys_their_units()
 // TG #11 Thwomp, #26 Path of Exile, #34 Dino-size, #12 Fortify, #27 Hopeful Jelly Bean, #37 Seance:
 // one declared target, which the AI picks by what the play leaves
 
-/// The id of `player`'s Unit in `lane`.
 fn unit_in(state: &GameState, player: PlayerId, lane: i32) -> String {
     card_at(
         state,
@@ -423,7 +416,6 @@ fn unit_in(state: &GameState, player: PlayerId, lane: i32) -> String {
     .unwrap_or_else(|| panic!("no Unit in {player:?}'s lane {lane}"))
 }
 
-/// The AI's decision plays `card` at `target`, legally; the random policy and a timeout answer too.
 fn aims(state: &GameState, seed: &str, card: &str, target: &str) {
     let spell = in_hand(state, card);
     let decision = decide_at(state, seed);

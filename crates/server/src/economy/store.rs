@@ -1,24 +1,16 @@
 //! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
-//! `FakeTables::economy`). Migration 0047's practice seeds (§14.8, #1303) live here too: a seed is
-//! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`). So
-//! do migration 0067's idempotency keys (R2124000): a spend's key and the answer it committed,
-//! written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`. Migration 0071
-//! keeps a claim with its seed until it settles (R2422000): the burn writes the claim, and the pay
-//! or the refusal marks the seed settled (`economy_practice_seed_settle`), once.
+//! `FakeTables::economy`). Also here: migration 0047's practice seeds (§14.8, #1303), no holding and no
+//! ledger, whose claim burns in place (`economy_practice_seed_claim`); migration 0067's idempotency keys
+//! (R2124000), written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`; and
+//! migration 0071's claim, kept with its seed until a pay or a refusal settles it, once (R2422000,
+//! `economy_practice_seed_settle`).
 //!
-//! Same shape as `duos::store`: every store method is one method on `Tx`, named
-//! `economy_<table>_<verb>`, whose body dispatches to this file's `pg::<name>` or `fake::<name>`.
-//! A grant writes its holding and its ledger row together, in the caller's transaction, and a grant
-//! the holding cannot take (a spend the wallet cannot cover, a quest not held, a cosmetic already
-//! owned) answers `None` or `false` and writes nothing (§14.1, §14.5). A grant the schema refuses
-//! by its checks (a zero change, a `dev` reason without the `dev` mark, a key its item does not
-//! take) is refused here first, before either store, as `StoreError::Other("economy: …")`, so both
-//! answer it alike.
-//!
-//! Lists come in their key's byte order (Postgres's `collate "C"`), a count that fell to zero
-//! included; ledgers come oldest first. Integers are `i64`, times epoch milliseconds, as everywhere
-//! in the store.
+//! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching to
+//! this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and ledger row together, in the
+//! caller's transaction; one the holding cannot take answers `None` or `false`, writing nothing (§14.1,
+//! §14.5); one the schema's checks refuse is refused here first, as `StoreError::Other("economy: …")`.
+//! Lists come in their key's byte order (`collate "C"`), zero counts included; ledgers oldest first.
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -32,9 +24,7 @@ use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::economy::practice::ClaimedResult;
 
-// ---------------------------------------------------------------------------
 // The literals
-// ---------------------------------------------------------------------------
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
 /// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
@@ -123,7 +113,6 @@ pub enum QuestChange {
     Removed,
 }
 
-/// A literal's text, as its column holds it.
 fn literal<T: Serialize>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value)? {
         serde_json::Value::String(text) => Ok(text),
@@ -131,14 +120,11 @@ fn literal<T: Serialize>(value: &T) -> Result<String, StoreError> {
     }
 }
 
-/// A literal read back from its column.
 fn from_literal<T: DeserializeOwned>(text: String) -> Result<T, StoreError> {
     Ok(serde_json::from_value(serde_json::Value::String(text))?)
 }
 
-// ---------------------------------------------------------------------------
 // The rows
-// ---------------------------------------------------------------------------
 
 /// One row of `public.inventory`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -246,11 +232,10 @@ impl FullArtPick {
     }
 }
 
-/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061), what one card of the
-/// account wears of its own: a foil, a finish, a border and its full-art pick ([`FullArtPick`],
-/// R2655000). A kind with no pick is absent and wears its kind's default (R1953001; the Full-art
-/// cards setting, for `full_art`). An id is kept as it was written, one the registry does not know
-/// among them (a newer client's), and judged only where it is worn (`loadout::freeze_loadout`,
+/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
+/// wears of its own: a foil, a finish, a border and its full-art pick ([`FullArtPick`], R2655000). A kind
+/// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
+/// id is kept as written, an unknown one too, and judged only where it is worn (`loadout::freeze_loadout`,
 /// R1834002).
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -374,10 +359,8 @@ pub struct IdempotencyRow {
     pub created_at: i64,
 }
 
-// ---------------------------------------------------------------------------
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
 // whether a dev tool wrote it (`dev`, §14.10).
-// ---------------------------------------------------------------------------
 
 /// One row of `public.jlore_grants`: `delta` Jlore.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -511,9 +494,7 @@ pub struct EconomyTables {
     pub idempotency_keys: Vec<IdempotencyRow>,
 }
 
-// ---------------------------------------------------------------------------
 // What both stores refuse alike: migration 0045's checks
-// ---------------------------------------------------------------------------
 
 fn refused(why: String) -> StoreError {
     StoreError::Other(format!("economy: {why}"))
@@ -610,7 +591,6 @@ const IDEMPOTENCY_STATUSES: std::ops::RangeInclusive<i64> = 200..=299;
 /// Migration 0067's `body_hash ~ '^[0-9a-f]{64}$'`: a SHA-256 in hex.
 const IDEMPOTENCY_BODY_HASH_DIGITS: usize = 64;
 
-/// Migration 0067's checks: a 2xx status, and a body hash of 64 lower-case hex digits.
 fn check_idempotency(row: &IdempotencyRow) -> Result<(), StoreError> {
     if !IDEMPOTENCY_STATUSES.contains(&row.status) {
         return Err(refused(format!(
@@ -657,12 +637,8 @@ fn count_after(held: Option<i64>, delta: i64) -> Option<i64> {
     held.unwrap_or(0).checked_add(delta).filter(|count| *count >= 0)
 }
 
-// ---------------------------------------------------------------------------
 // The store methods
-// ---------------------------------------------------------------------------
 
-/// `economy_dispatch!(self, name(args))`: the same call against whichever store this transaction
-/// is on.
 macro_rules! economy_dispatch {
     ($self:ident, $name:ident ( $($arg:expr),* $(,)? )) => {
         match $self {
@@ -727,9 +703,8 @@ impl Tx<'_> {
         economy_dispatch!(self, tracks_get(profile_id))
     }
 
-    /// Adds a grant's XP, levels and rewards paid to a track (from its first level with no XP when
-    /// it has no row) and writes its ledger row. The track after it, or `None` when that would be no
-    /// track (see `track_after`), which writes nothing.
+    /// Adds a grant's XP, levels and rewards paid to a track and writes its ledger row. The track
+    /// after it, or `None` when that would be no track (see `track_after`), which writes nothing.
     pub async fn economy_tracks_grant(&mut self, grant: &TrackGrant) -> StoreResult<Option<SetTrack>> {
         check_track(grant)?;
         economy_dispatch!(self, tracks_grant(grant))
@@ -811,8 +786,8 @@ impl Tx<'_> {
         economy_dispatch!(self, card_picks_upload(profile_id, picks, at))
     }
 
-    /// R1834005: every cosmetic some person owns, with how many own it where and when the first
-    /// was granted, by cosmetic then card. Read by the ladder bots' wardrobes, never by a client.
+    /// R1834005: every cosmetic some person owns, by cosmetic then card. Read by the ladder bots'
+    /// wardrobes, never by a client.
     pub async fn economy_cosmetic_owners(&mut self) -> StoreResult<Vec<CosmeticOwners>> {
         economy_dispatch!(self, cosmetic_owners())
     }
@@ -822,7 +797,6 @@ impl Tx<'_> {
         economy_dispatch!(self, ledger_get(profile_id))
     }
 
-    /// §14.8, #1303: writes a seed just issued for a practice game.
     pub async fn economy_practice_seed_insert(&mut self, seed: &PracticeSeed) -> StoreResult<()> {
         economy_dispatch!(self, practice_seed_insert(seed))
     }
@@ -957,9 +931,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables.idempotency_keys.retain(|row| row.profile_id != profile_id);
 }
 
-// ---------------------------------------------------------------------------
 // Postgres (migration 0045)
-// ---------------------------------------------------------------------------
 
 mod pg {
     use sqlx::Row;
@@ -1562,7 +1534,6 @@ mod pg {
         .collect()
     }
 
-    /// One statement: the upsert, or the delete of a card left with no pick.
     pub async fn card_picks_put(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -1602,7 +1573,6 @@ mod pg {
         Ok(())
     }
 
-    /// One insert per card, each passing over a card the account already holds a row for.
     pub async fn card_picks_upload(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -1633,8 +1603,6 @@ mod pg {
         Ok(written)
     }
 
-    /// The holdings of every person's account, counted by cosmetic and card, beside each one's
-    /// first grant.
     pub async fn cosmetic_owners(t: &mut PgTx<'_>) -> Result<Vec<CosmeticOwners>, StoreError> {
         run_as(t, None).await?;
         sqlx::query(
@@ -2087,9 +2055,7 @@ mod pg {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The in-memory fake (`FakeTables::economy`)
-// ---------------------------------------------------------------------------
 
 mod fake {
     use super::{

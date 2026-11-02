@@ -46,9 +46,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #88 Siva 2 — SPEC §8.10 row 88, BUILD M12 row S 88: "your Human Units have Poisonous while it acts on
-// the field, this one included, an enemy's not, and lose it as it leaves; radiant 8/8, Cry (played):
-// Bigots until the hand is full".
+// S #88 Siva 2 — SPEC §8.10 row 88, BUILD M12 row S 88.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

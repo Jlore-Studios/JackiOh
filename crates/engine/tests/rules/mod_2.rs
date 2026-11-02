@@ -1,4 +1,4 @@
-//! The ported engine tests from `p` on, in the `rules_2` binary (`tests/rules_2.rs`); `mod.rs`
+//! The engine's rule tests from `p` on, in the `rules_2` binary (`tests/rules_2.rs`); `mod.rs`
 //! has the ones from `a` to `o` and says why they are two (#2090). Both take `fixtures`, so a
 //! module reaches it as `crate::rules::fixtures` in either.
 

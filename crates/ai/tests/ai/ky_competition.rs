@@ -206,7 +206,6 @@ mod r1184002_the_ai_works_a_question_out_from_its_statement {
                 .as_ref()
                 .is_none_or(|pending| pending.kind != PromptKind::Answer)
         );
-        // The turn went on after the sequence and ended: the AI's seat is no longer to act.
         assert_ne!(turn.state.active, AI);
     }
 }

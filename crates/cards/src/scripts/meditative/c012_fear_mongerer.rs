@@ -24,24 +24,13 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts {
-        // The same script: the base face reads its printed `times` (1, R749), the Radiant face its 2.
         radiant: base.clone(),
         base,
     }
 }
 
-// Meditative #12 Fear Mongerer — SPEC §8.8 row 12, BUILD M10 row M 12: "Cry (played or cast, R1):
-// every end-of-turn hook you have now runs once, as the end-of-turn step would queue it (field
-// cards and return Spells in your graveyard), after the Cry's list and in R68's order, and the
-// turn goes on (R824); they run again at the real end of turn; the trap window and delayed
-// effects do not run; M 8 or M 21 in your graveyard returns to hand now and can be played again;
-// under M 9 each hook runs twice; M 13 grows by one per run; radiant 10/14 (12/16 before patch
-// v0.3.10) and two rounds, each settled before the next, times read through `param()`".
-//
-// Core #13 Jlockeed Shredder-10 (end of turn: 2 to the enemy hero) is the hook it triggers;
-// Core #23 Reoccurring Dream stands in for M 8, the graveyard return; Core #39 Recycling
-// Initiative is the delayed effect it does not run; Core #18 Bread and Butter is the trap window
-// it does not open.
+// Meditative #12 Fear Mongerer — SPEC §8.8 row 12, BUILD M10 row M 12, R1, R68.
+// Core #23 Reoccurring Dream stands in for M 8; Core #13, #39 and #18 are as their consts say.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -62,8 +51,7 @@ mod tests {
     const PEA: &str = "meditative-013"; // Gatling Pea: end of turn, 1 to the enemy hero, then grows.
     const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
 
-    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues;
-    /// `extra` replaces its own entries.
+    /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {
         crate::merged(
             json!({ "mana": 10, "hand": [SPARE], "library": [VANILLA, VANILLA, VANILLA] }),
@@ -100,7 +88,6 @@ mod tests {
             }));
             s.play(ID, json!({}));
             s.expect_health(P2, 28);
-            // The turn goes on: P1 is still active with no prompt open.
             assert_eq!(s.state().active, P1);
             assert!(s.state().pending.is_none());
             s.end_turn();
@@ -135,13 +122,11 @@ mod tests {
             s.play(RECYCLING, json!({}));
             s.play(VANILLA, json!({}));
             s.play(ID, json!({}));
-            // The end-of-turn trap window does not open and the delayed copy does not run.
             assert_eq!(bread_tokens(&s, P1), 0);
             assert_eq!(
                 s.hand(P1).iter().filter(|card| card.def_id == VANILLA).count(),
                 0
             );
-            // At the real end of turn the delayed copy still runs.
             s.end_turn();
             assert_eq!(
                 s.hand(P1).iter().filter(|card| card.def_id == VANILLA).count(),

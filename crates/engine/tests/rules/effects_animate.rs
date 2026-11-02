@@ -1,8 +1,6 @@
 //! The `animate` verb (docs/classic-sets.md B3.1 rules 2 and 4, R383, R445): what an Animated trap's list
-//! ends with. The whole system — firing, turn start, cleanup, home zones — is `animated.test.ts`; this is
+//! ends with. The whole system — firing, turn start, cleanup, home zones — is `animated.rs`; this is
 //! the verb's own surface: its target, its position, and every card it leaves alone.
-//!
-//! Port of `packages/engine/test/effects-animate.test.ts`.
 
 use jackioh_engine::effects::animate;
 use jackioh_engine::testkit::*;
@@ -11,8 +9,8 @@ use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{banner, cover, golem, playing, springer, tower, wisp};
 use crate::rules::fixtures::harness::{events_of_type, live, put, slot};
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. Every context
-/// `f` builds on it shares its events, which come back.
+/// A sink whose rng starts at the state's cursor, as reduce does. Every context `f` builds on it
+/// shares its events, which come back.
 fn sink_run(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>)) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -173,7 +171,6 @@ mod animate_b3_1_r383 {
         let events = sink_run(&mut state, |sink| {
             let mut ctx = make_context(sink, Some(&card), as_player(PlayerId::P2));
             (animate(json_as(json!({ "position": "DEF" }))).apply)(&mut ctx);
-            // TS passed the same live object again; here the card is read back as it now stands.
             let now = find_instance(sink.state, &card.id).cloned();
             let mut ctx = make_context(sink, now.as_ref(), as_player(PlayerId::P2));
             (animate(json_as(json!({ "position": "ATK" }))).apply)(&mut ctx);

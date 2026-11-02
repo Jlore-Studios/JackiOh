@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 
 use super::support::{AI, clone, every_card, is_legal, random_policy_states};
 
-/// A table with no keys: the null one `src/policy/weights.json` holds until a fit replaces it.
+/// A table with no keys, as `src/policy/weights.json` holds until a fit replaces it.
 const NULL: PolicyPrior<'static> = PolicyPrior {
     keys_version: POLICY_KEYS_VERSION,
     catalog: "test",
@@ -15,7 +15,6 @@ const NULL: PolicyPrior<'static> = PolicyPrior {
     weights: &[],
 };
 
-/// A table that moves plays of core-008 up, attacks down and the heuristic's first move a little down.
 const TEST: PolicyPrior<'static> = PolicyPrior {
     keys_version: POLICY_KEYS_VERSION,
     catalog: "test",
@@ -23,7 +22,6 @@ const TEST: PolicyPrior<'static> = PolicyPrior {
     weights: &[2.0, -1.0, -0.5],
 };
 
-/// Mid-game states of a random-policy game in a main phase, each with the seat to act there.
 fn states() -> Vec<(GameState, PlayerId)> {
     jackioh_cards::register_all();
     random_policy_states("policy-1171", 5, 200)
@@ -33,9 +31,8 @@ fn states() -> Vec<(GameState, PlayerId)> {
         .collect()
 }
 
-/// Today's expansion, written out: the first `width` candidates that are not End Turn, then the first
-/// `AI_SEARCH.position_switches` stand-downs among those the cut left out (R1759000), then End Turn when
-/// it is one.
+/// Today's expansion: the first `width` candidates but End Turn, then the first `position_switches`
+/// stand-downs the cut left out (R1759000), then End Turn when it is one.
 fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat, Prices::NONE);
     let mut moves: Vec<ActionBody> = candidates
@@ -94,8 +91,7 @@ fn build(seed: &str, p2: Value) -> GameState {
         .clone()
 }
 
-/// The fixture `r1171001_a_move_past_the_prefix_…` searches: core-086 first in the heuristic order,
-/// core-008 second, mana for one of them.
+/// Core-086 first in the heuristic order, core-008 second, mana for one of them.
 fn prefix_fixture() -> GameState {
     jackioh_cards::register_all();
     scenario(json!({
@@ -109,7 +105,6 @@ fn prefix_fixture() -> GameState {
     .clone()
 }
 
-/// The def id the action plays, if it is a play.
 fn played_def<'a>(state: &'a GameState, action: &ActionBody) -> Option<&'a str> {
     match action {
         ActionBody::Play { instance_id, .. } => {
@@ -163,8 +158,7 @@ fn r1171000_r185_two_states_differing_only_in_hidden_cards_label_alike() {
     assert!(!keys.iter().any(|key| key.starts_with("aimcard:")), "{keys:?}");
 }
 
-/// R1171000: over a real game, every candidate's keys are sorted, each once, the same on every call,
-/// and no part of one is an instance id, a hero's target id or the open prompt's id.
+/// R1171000: over a real game, every candidate's keys are sorted, unique and the same on every call.
 #[test]
 fn r1171000_no_key_names_an_instance_a_hero_or_a_prompt() {
     let states = states();
@@ -190,8 +184,7 @@ fn r1171000_no_key_names_an_instance_a_hero_or_a_prompt() {
     }
 }
 
-/// R1171000: the table compiled in was fitted on this build's key layout, its keys sorted and unique,
-/// one finite weight per key.
+/// R1171000: the compiled table's keys are sorted and unique, each with one finite weight.
 #[test]
 fn r1171000_the_compiled_prior_names_this_build_s_key_layout() {
     assert_eq!(POLICY_PRIOR.keys_version, POLICY_KEYS_VERSION);
@@ -200,8 +193,7 @@ fn r1171000_the_compiled_prior_names_this_build_s_key_layout() {
     assert!(POLICY_PRIOR.weights.iter().all(|weight| weight.is_finite()));
 }
 
-/// R1171001: with the switch on Heuristic, whatever the table, or with the null table, whatever the
-/// switch, each line's moves and the beam's lines are today's.
+/// R1171001: Heuristic with any table, or the null table either way, gives today's moves and lines.
 #[test]
 fn r1171001_off_or_null_the_order_is_today_s() {
     let states = states();
@@ -251,9 +243,8 @@ fn r1171001_off_or_null_the_order_is_today_s() {
     }
 }
 
-/// R1171001: the prior returns the moves it was given, every one legal, sorted by score best first
-/// with ties in their own order; the expansion keeps End Turn last exactly when it is a candidate; and
-/// in a Duos duel the order is the heuristic's.
+/// R1171001: the prior sorts the moves it was given by score, ties in their own order; End Turn stays
+/// last exactly when it is a candidate; in a Duos duel the order is the heuristic's.
 #[test]
 fn r1171001_the_prior_reorders_and_never_adds_drops_or_changes_a_move() {
     let mut reordered = 0;
@@ -318,8 +309,8 @@ fn r1171001_the_prior_reorders_and_never_adds_drops_or_changes_a_move() {
     assert!(reordered > 0, "the test table reorders some decision");
 }
 
-/// R1171001: with a root branching of one, the heuristic's first move is the only one the beam opens
-/// with; once the prior ranks core-008 first, the beam opens with it and the line it finds is better.
+/// R1171001: with a root branching of one the beam opens only with the first move; once the prior
+/// ranks core-008 first, it opens with that and finds a better line.
 #[test]
 fn r1171001_a_move_past_the_prefix_is_searched_once_the_prior_ranks_it_first() {
     let state = prefix_fixture();

@@ -3,9 +3,9 @@
 //!   Cry: Discover a card from your deck. Radiant: it costs (1) less.
 //!
 //! A Discover whose pool is your own deck, as Core #51 reveals library cards: up to 3 different cards,
-//! shown to you only (§10.8); the chosen card moves from deck to hand, which is not a draw (no Cast on
-//! draw, no fatigue, no draw limit), and the hand cap burns it; an empty deck offers nothing. The
-//! Radiant discount is a `costMod`, so it stacks with every other (R65). AI cards declare no params.
+//! shown to you only (§10.8); the chosen card moves from deck to hand, which is not a draw, and the hand
+//! cap burns it. The Radiant discount is a `costMod`, so it stacks with every other (R65). AI cards
+//! declare no params.
 
 use jackioh_engine::effects::{add_to_hand, discover_from_library};
 use jackioh_engine::prelude::*;
@@ -44,7 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-1 Helpful Assistant — SPEC §8.7 row T-AI-1, §10.8, R60, R97, R177, BUILD M9 row T-AI-1.
+// T-AI-1 Helpful Assistant — SPEC §8.7 row T-AI-1, BUILD M9 row T-AI-1 (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -72,7 +72,7 @@ mod tests {
         }))
     }
 
-    /// The instance a prompt option's selection names, or "" (TS `pick === "instance" ? instanceId : ""`).
+    /// The instance a prompt option's selection names, or "".
     fn instance_of(selection: &Value) -> String {
         if selection["pick"] == "instance" {
             selection["instanceId"].as_str().unwrap_or_default().to_string()
@@ -155,7 +155,6 @@ mod tests {
                     .collect();
                 s.answer(json!(chosen));
                 s.expect_in_zone(chosen.as_str(), "hand");
-                // The rest stay put, in the order they lay.
                 let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
                 assert_eq!(library, rest);
                 assert_eq!(s.card(chosen.as_str()).cost_mod, 0);

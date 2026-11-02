@@ -54,7 +54,6 @@ struct Numbers {
     draw: i32,
 }
 
-/// The chain's data: the numbers, and which question is being asked (1-based). (TS `Numbers & { n }`.)
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ChainData {
     numbers: Numbers,
@@ -70,7 +69,6 @@ fn read_numbers(ctx: &EffectContext<'_>) -> Numbers {
     }
 }
 
-/// TS `numberIn(data, key)`: `typeof value === "number" && Number.isInteger(value)`, else None.
 fn number_in(data: &IndexMap<String, Value>, key: &str) -> Option<i32> {
     let value = data.get(key)?.as_f64()?;
     if value.is_finite() && value.fract() == 0.0 {
@@ -98,7 +96,6 @@ fn chain_of(ctx: &EffectContext<'_>) -> Option<ChainData> {
     })
 }
 
-/// TS `{ ...chain }`: the chain as the prompt's data carries it.
 fn chain_data(chain: &ChainData) -> Value {
     json!({
         "choices": chain.numbers.choices,
@@ -117,7 +114,6 @@ fn cards(count: i32) -> String {
     }
 }
 
-/// The captions the opponent reads: from their seat, and naming no card.
 fn labels_for(numbers: &Numbers) -> IndexMap<String, String> {
     IndexMap::from([
         (DISCARD.to_string(), format!("Discard {}", cards(numbers.discard))),
@@ -126,16 +122,12 @@ fn labels_for(numbers: &Numbers) -> IndexMap<String, String> {
     ])
 }
 
-/// What an effect built in the same list as the next question will have taken from their piles by
-/// the time that question opens: a question's options are read as its list is built, before the
-/// discards or the exile ahead of it in that list apply, so the count they take is subtracted here.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct Pending {
     hand_loss: Option<i32>,
     deck_loss: Option<i32>,
 }
 
-/// Question `chain.n`, offering only what would do something; nothing once every question is asked.
 fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effect> {
     if chain.n > chain.numbers.choices {
         return vec![];
@@ -165,7 +157,6 @@ fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effe
     })))]
 }
 
-/// The `chosen` step: the opponent's answer to question `n`, then question `n + 1`.
 fn chosen(ctx: &EffectContext<'_>) -> Vec<Effect> {
     let Some(chain) = chain_of(ctx) else {
         return vec![];
@@ -174,8 +165,6 @@ fn chosen(ctx: &EffectContext<'_>) -> Vec<Effect> {
     let enemy = opponent_of(ctx.controller);
     match chosen_options(ctx).first().map(String::as_str) {
         Some(DISCARD) => {
-            // A hand emptied since the question was asked has nothing to discard: on to the next one.
-            // The random discard lands first in the list, so the next question subtracts it (Pending).
             let hand_loss = chain.numbers.discard.min(zone_count(&*ctx.state, enemy, OffFieldZone::Hand));
             if hand_loss == 0 {
                 return ask(ctx, &next, Pending::default());
@@ -216,7 +205,6 @@ fn chosen(ctx: &EffectContext<'_>) -> Vec<Effect> {
 /// The deferred first question's step, re-entered by the `delayed` hook (R1279000).
 const DEFERRED_STEP: &str = "deferred";
 
-/// TS `const pickle: Script`.
 fn pickle() -> Script {
     Script {
         cry: Some(hook(|ctx| {
@@ -252,8 +240,6 @@ fn pickle() -> Script {
 pub fn script() -> CardScripts {
     let base = pickle();
 
-    // The same script: the Radiant face differs only in its declared numbers (discard, exile and draw 2),
-    // which `param` reads off the running face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -277,15 +263,7 @@ pub fn script_v0_3_16() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8: "Three mode prompts held by the opponent,
-// one after another, repeats allowed, the first waiting for the start of their next turn while they
-// are not active (R1279000): they discard a card at random (R682), they exile the bottom card of
-// their deck, or you draw 1; a mode that would do nothing is not offered (discard with an empty
-// hand, exile with an empty deck), and "you draw" always is, fatigue included; each prompt runs on
-// their turn clock and a timeout answers it with the AI policy (R79); your view names none of their
-// remaining hand, their view never names your drawn card, and the mode options name no card; the
-// paused prompts survive a JSON round trip; radiant: discard 2, exile the bottom 2, or draw 2; its
-// tuned numbers (choices, discard, exile, draw) read through `param()` (R386)".
+// C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8 (R1279000, R682, R79, R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,15 +276,12 @@ mod tests {
     const PICKLE: &str = "classic-008";
     const FILLER: &str = "core-005"; // (1) Spell, p1's spare card (§2.5).
     const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals and casts a (1) Spell the opponent plays.
-    // p1's library: distinct definitions, top first.
     const MY_DECK: [&str; 4] = ["core-019", "core-025", "core-012", "core-020"];
-    // p2's hand and library: definitions p1 holds nowhere.
     const THEIR_HAND: [&str; 3] = ["core-008", "core-011", "core-015"];
     const THEIR_DECK: [&str; 4] = ["core-006", "core-035", "core-048", "core-039"];
 
     use crate::js;
 
-    /// TS `JSON.parse(JSON.stringify(state))`.
     fn round_trip(state: &GameState) -> GameState {
         serde_json::from_value(js(state)).expect("the state round-trips")
     }
@@ -369,7 +344,6 @@ mod tests {
                     { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
                 ])
             );
-            // The same script on both faces: only the numbers differ.
             let scripts = script();
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
@@ -391,7 +365,6 @@ mod tests {
                 crate::register_all();
                 let mut s = pickle(false, Piles::default());
                 s.play(PICKLE, json!({}));
-                // No opponent-held prompt opens while its holder is not active.
                 assert!(s.state().pending.is_none());
                 s.end_turn();
                 let pending = open(&s);
@@ -399,7 +372,6 @@ mod tests {
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
                 assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
-                // All three answers, then the piles as ever.
                 s.answer(json!("exile"));
                 s.answer(json!("discard"));
                 s.answer(json!("draw"));
@@ -447,7 +419,6 @@ mod tests {
                 jackioh_engine::with_shipped(Some(shipped), || {
                     let mut s = pickle(false, Piles::default());
                     s.play(PICKLE, json!({}));
-                    // The old script asked at once, answered on the non-active player's clock.
                     let pending = open(&s);
                     assert_eq!(s.state().active, P1);
                     assert_eq!(pending.player_id, P2);
@@ -501,7 +472,6 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("discard"));
-                // No follow-up pick: the random discard landed and the next question is open.
                 assert_eq!(open(&s).kind, PromptKind::Mode);
                 let grave = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(grave.len(), 1);
@@ -517,8 +487,6 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("exile"));
-                // The turn's draw waits behind the open question, so the deck is whole: the
-                // exile takes the bottom card and the library keeps the top three.
                 assert_eq!(def_ids(&s.pile(P2, "exile")), vec![THEIR_DECK[3]]);
                 assert_eq!(def_ids(&s.pile(P2, "library")), THEIR_DECK[..3].to_vec());
             }
@@ -561,8 +529,6 @@ mod tests {
             #[test]
             fn each_question_reads_their_piles_as_it_is_asked_an_exile_that_empties_their_deck_takes_exile_off_the_next() {
                 crate::register_all();
-                // The turn's draw waits behind the open question, so one card in the deck is
-                // one card at the first question.
                 let mut s = pickle(false, Piles { their_deck: Some(vec!["core-006"]), ..Piles::default() });
                 s.play(PICKLE, json!({}));
                 s.end_turn();
@@ -574,7 +540,6 @@ mod tests {
             #[test]
             fn a_discard_that_empties_their_hand_takes_discard_off_the_next_question() {
                 crate::register_all();
-                // No deck to draw from: the one card is offered, then gone.
                 let mut s = pickle(
                     false,
                     Piles { their_hand: Some(vec!["core-008"]), their_deck: Some(vec![]), ..Piles::default() },
@@ -590,7 +555,6 @@ mod tests {
             #[test]
             fn s2_4_you_draw_is_always_offered_and_from_an_empty_deck_it_is_fatigue() {
                 crate::register_all();
-                // Their side keeps cards, so their turn never auto-ends into a fourth fatigue draw.
                 let mut s = pickle(
                     false,
                     Piles {
@@ -605,7 +569,6 @@ mod tests {
                 s.answer(json!("draw"));
                 s.answer(json!("draw"));
                 assert!(s.state().pending.is_none());
-                // Three fatigue draws: 1 + 2 + 3.
                 s.expect_health(P1, 24);
             }
 
@@ -615,12 +578,10 @@ mod tests {
                 let mut s = pickle(false, Piles::default());
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                // A question is open for p2 on their turn; the timeout takes it from here.
                 open(&s);
                 let result = reduce_json(s.state(), json!({ "type": "timeout", "playerId": "p2", "nonce": "pickle-timeout" }));
                 assert!(result.error.is_none());
                 // The turn clock answered every question in turn, then ended the turn (R79):
-                // nothing is open, all three were answered, and p1 is active.
                 assert!(result.state.pending.is_none());
                 assert_eq!(result.state.active, P1);
                 assert_eq!(
@@ -645,7 +606,6 @@ mod tests {
                     assert!(!mine.contains(&format!("\"{}\"", card.id)));
                     assert!(!mine.contains(&card.def_id));
                 }
-                // The random discard itself is public: the graveyard names it.
                 for card in s.pile(P2, "graveyard") {
                     assert!(mine.contains(&card.id));
                 }
@@ -678,7 +638,6 @@ mod tests {
                     labels(&s),
                     vec!["Discard 1 card", "Exile the bottom 1 card of your deck", "Your opponent draws 1 card"]
                 );
-                // p1 reads only that p2 is choosing.
                 assert_eq!(js(&s.view(P1))["pending"], json!({ "forYou": false, "pendingFor": "p2" }));
             }
 
@@ -705,7 +664,6 @@ mod tests {
                 assert!(answered.error.is_none());
                 let third = must(answered.state.pending.clone(), "the third question");
                 assert_eq!(third.player_id, P2);
-                // And the discard pick, paused in turn, round-trips too.
                 let again = round_trip(&answered.state);
                 let picked = reduce_json(
                     &again,
@@ -860,7 +818,6 @@ mod tests {
             #[test]
             fn a_hand_of_one_card_discards_that_one() {
                 crate::register_all();
-                // No deck to draw from, so the one card stays the only card to discard.
                 let mut s = pickle(
                     true,
                     Piles { their_hand: Some(vec!["core-008"]), their_deck: Some(vec![]), ..Piles::default() },
