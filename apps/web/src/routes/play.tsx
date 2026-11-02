@@ -30,6 +30,9 @@ import {
   getMe,
   getOpenRooms,
   getOwnRank,
+  ladderOfMode,
+  ladderPath,
+  type Ladder,
   getPopulation,
   isQueueMode,
   joinRoom,
@@ -624,19 +627,21 @@ function RoomTicket({
   );
 }
 
-function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
+/** R2778000: the rank of the ladder the mode picked plays for, and a link to that ladder's board. */
+function RankPanel({ rank, ladder }: { rank: OwnRankResponse | null; ladder: Ladder }): ReactElement {
+  const board = ladderPath(paths.leaderboard, ladder);
   return (
     <section className="lobby-card play-panel play-panel--rank" aria-labelledby="play-rank-heading">
       <h2 id="play-rank-heading" className="play-panel__heading">
         {t("Your rank")}
       </h2>
       {rank === null ? null : (
-        <p data-testid={playTestid.rank}>
-          <RankCrest rank={rank.rank} size="large" />{" "}
+        <p data-testid={playTestid.rank} data-ladder={ladder}>
+          {t(ladder === "random" ? "All Random" : "Constructed")} · <RankCrest rank={rank.rank} size="large" />{" "}
           {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
         </p>
       )}
-      <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
+      <a href={board} data-testid={playTestid.leaderboard} onClick={followInApp(board)}>
         {t("Leaderboard →")}
       </a>
     </section>
@@ -836,9 +841,13 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     refreshPopulation();
   }, [refreshPopulation]);
 
+  // R2778000: the rank of the mode's ladder, read again when a pick moves to the other ladder.
+  const ladder = ladderOfMode(mode);
   useEffect(() => {
     let canceled = false;
-    attempt(() => getOwnRank(token)).then(
+    // The other ladder's rank is not this one's: none shows until this one's read answers.
+    setRank(null);
+    attempt(() => getOwnRank(token, ladder)).then(
       (next) => {
         if (!canceled) setRank(next);
       },
@@ -847,7 +856,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     return () => {
       canceled = true;
     };
-  }, [token]);
+  }, [token, ladder]);
 
   // R1075000: a reload loses the ticket with the page, so a lobby that opened idle asks for the
   // host's open rooms and shows the newest again.
@@ -1069,7 +1078,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
           <h2 id="play-online-heading" className="play-online__heading">
             {t("Play online")}
           </h2>
-          <RankPanel rank={rank} />
+          <RankPanel rank={rank} ladder={ladder} />
           <section className="lobby-card play-panel play-panel--setup" aria-labelledby="play-setup-heading">
             <h2 id="play-setup-heading" className="play-panel__heading">
               <span className="play-step" aria-hidden="true">

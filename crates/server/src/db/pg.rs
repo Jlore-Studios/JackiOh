@@ -52,7 +52,7 @@ use crate::db::store::{
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
-use crate::ranked::ladder::SeasonRank;
+use crate::ranked::ladder::{Ladder, SeasonRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
 use crate::username::{render_username, username_key};
 
@@ -409,6 +409,9 @@ struct ProfileRow {
     rating: f64,
     rating_deviation: f64,
     rating_volatility: f64,
+    random_rating: f64,
+    random_rating_deviation: f64,
+    random_rating_volatility: f64,
     current_match_id: Option<String>,
     created_at: OffsetDateTime,
     email: Option<String>,
@@ -428,6 +431,9 @@ impl ProfileRow {
             rating: get(row, "rating")?,
             rating_deviation: get(row, "rating_deviation")?,
             rating_volatility: get(row, "rating_volatility")?,
+            random_rating: get(row, "random_rating")?,
+            random_rating_deviation: get(row, "random_rating_deviation")?,
+            random_rating_volatility: get(row, "random_rating_volatility")?,
             current_match_id: uuid_text_or_null(row, "current_match_id")?,
             created_at: get(row, "created_at")?,
             email: get(row, "email")?,
@@ -443,7 +449,7 @@ impl ProfileRow {
 macro_rules! profile_columns {
     () => {
         "p.id, p.kind, p.status, p.rating, p.rating_deviation, p.rating_volatility,
-  p.current_match_id, p.created_at, u.email, p.username_base, p.username_key, p.username_tag,
+  p.random_rating, p.random_rating_deviation, p.random_rating_volatility, p.current_match_id, p.created_at, u.email, p.username_base, p.username_key, p.username_tag,
   p.username_changed_at, p.username_prompted"
     };
 }
@@ -481,6 +487,10 @@ fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
         rating: row.rating,
         rating_deviation: row.rating_deviation,
         rating_volatility: row.rating_volatility,
+        // R2778000: the All Random ladder's triple, since migration 0076.
+        random_rating: row.random_rating,
+        random_rating_deviation: row.random_rating_deviation,
+        random_rating_volatility: row.random_rating_volatility,
         in_match_id: row.current_match_id,
         created_at: ms_of(row.created_at),
     })
@@ -1307,6 +1317,7 @@ fn to_season(row: SeasonDbRow) -> Season {
 struct SeasonRankDbRow {
     season_id: String,
     profile_id: String,
+    format: String,
     games: i32,
     wins: i32,
     losses: i32,
@@ -1324,6 +1335,7 @@ impl SeasonRankDbRow {
         Ok(SeasonRankDbRow {
             season_id: get(row, "season_id")?,
             profile_id: uuid_text(row, "profile_id")?,
+            format: get(row, "format")?,
             games: get(row, "games")?,
             wins: get(row, "wins")?,
             losses: get(row, "losses")?,
@@ -1342,6 +1354,8 @@ fn to_season_rank(row: SeasonRankDbRow) -> SeasonRank {
     SeasonRank {
         season_id: row.season_id,
         profile_id: row.profile_id,
+        // `season_ranks_format_check` (0076) pins the column to the two ladders.
+        format: Ladder::from_literal(&row.format).unwrap_or_default(),
         games: row.games,
         wins: row.wins,
         losses: row.losses,
@@ -1357,6 +1371,7 @@ fn to_season_rank(row: SeasonRankDbRow) -> SeasonRank {
 
 struct BotRatingDbRow {
     bot_id: String,
+    format: String,
     rating: f64,
     deviation: f64,
     volatility: f64,
@@ -1369,6 +1384,7 @@ impl BotRatingDbRow {
     fn read(row: &PgRow) -> Result<BotRatingDbRow, StoreError> {
         Ok(BotRatingDbRow {
             bot_id: get(row, "bot_id")?,
+            format: get(row, "format")?,
             rating: get(row, "rating")?,
             deviation: get(row, "deviation")?,
             volatility: get(row, "volatility")?,
@@ -1382,6 +1398,7 @@ impl BotRatingDbRow {
 fn to_bot_rating(row: BotRatingDbRow) -> BotRating {
     BotRating {
         bot_id: row.bot_id,
+        format: Ladder::from_literal(&row.format).unwrap_or_default(),
         glicko: Glicko {
             rating: row.rating,
             deviation: row.deviation,
@@ -1396,6 +1413,7 @@ fn to_bot_rating(row: BotRatingDbRow) -> BotRating {
 struct RatedGameDbRow {
     id: String,
     kind: String,
+    format: String,
     season_id: String,
     patch_version: String,
     catalog_version: String,
@@ -1423,6 +1441,7 @@ impl RatedGameDbRow {
         Ok(RatedGameDbRow {
             id: uuid_text(row, "id")?,
             kind: get(row, "kind")?,
+            format: get(row, "format")?,
             season_id: get(row, "season_id")?,
             patch_version: get(row, "patch_version")?,
             catalog_version: get(row, "catalog_version")?,
@@ -1449,7 +1468,7 @@ impl RatedGameDbRow {
 
 macro_rules! rated_game_columns {
     () => {
-        "id, kind, season_id, patch_version, catalog_version,
+        "id, kind, format, season_id, patch_version, catalog_version,
   p1_profile_id, p1_bot_id, p1_pilot, p1_before, p1_after, p1_rank_before, p1_rank_after,
   p2_profile_id, p2_bot_id, p2_pilot, p2_before, p2_after, p2_rank_before, p2_rank_after,
   winner_side, reason, ended_at"
@@ -1536,6 +1555,8 @@ fn to_rated_game(row: RatedGameDbRow) -> Result<RatedGameRow, StoreError> {
     Ok(RatedGameRow {
         id: row.id,
         kind: from_literal(&row.kind)?,
+        // `rated_games_format_check` (0076) pins the column to the two ladders.
+        format: Ladder::from_literal(&row.format).unwrap_or_default(),
         season_id: row.season_id,
         patch_version: row.patch_version,
         catalog_version: row.catalog_version,
@@ -1959,27 +1980,38 @@ pub async fn profiles_answer_username_prompt(t: &mut PgTx<'_>, profile_id: &str)
     Ok(())
 }
 
-/// R603: a rated game's whole Glicko triple, one statement.
+/// R603: a rated game's whole Glicko triple on `ladder` (R2778000), one statement.
 pub async fn profiles_set_glicko(
     t: &mut PgTx<'_>,
     profile_id: &str,
+    ladder: Ladder,
     glicko: &Glicko,
 ) -> Result<(), StoreError> {
     run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query(
-        "update public.profiles
-           set rating = $2::double precision,
-               rating_deviation = $3::double precision,
-               rating_volatility = $4::double precision
-         where id = $1::uuid",
-    )
-    .bind(profile_id)
-    .bind(glicko.rating)
-    .bind(glicko.deviation)
-    .bind(glicko.volatility)
-    .execute(&mut **t)
-    .await
-    .map_err(db_error)?;
+    let statement = match ladder {
+        Ladder::Constructed => {
+            "update public.profiles
+               set rating = $2::double precision,
+                   rating_deviation = $3::double precision,
+                   rating_volatility = $4::double precision
+             where id = $1::uuid"
+        }
+        Ladder::Random => {
+            "update public.profiles
+               set random_rating = $2::double precision,
+                   random_rating_deviation = $3::double precision,
+                   random_rating_volatility = $4::double precision
+             where id = $1::uuid"
+        }
+    };
+    let done = sqlx::query(statement)
+        .bind(profile_id)
+        .bind(glicko.rating)
+        .bind(glicko.deviation)
+        .bind(glicko.volatility)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
     if done.rows_affected() == 0 {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     }
@@ -5575,16 +5607,23 @@ pub async fn ranked_create_season(t: &mut PgTx<'_>, season: &Season) -> Result<b
 /// R609's input: every profile a rated game has touched, with its Glicko triple. One EXISTS per
 /// side, over `rated_games_p1_profile_idx` / `p2`; a deleted profile is already gone from
 /// `public.profiles`, so the join needs no liveness check.
-pub async fn ranked_rated_players(t: &mut PgTx<'_>) -> Result<Vec<ResetPlayer>, StoreError> {
+pub async fn ranked_rated_players(t: &mut PgTx<'_>, ladder: Ladder) -> Result<Vec<ResetPlayer>, StoreError> {
     run_as(t, None).await?;
+    // R2778000: the triple on `ladder`; a rated game on either ladder makes a rated player.
     let rows = sqlx::query(
-        "select p.id, p.rating, p.rating_deviation, p.rating_volatility
+        "select p.id,
+                case when $1::text = 'random' then p.random_rating else p.rating end as rating,
+                case when $1::text = 'random' then p.random_rating_deviation
+                     else p.rating_deviation end as rating_deviation,
+                case when $1::text = 'random' then p.random_rating_volatility
+                     else p.rating_volatility end as rating_volatility
            from public.profiles p
           where exists (select 1 from public.rated_games g
                          where (g.p1_profile_id = p.id and g.p1_bot_id is null)
                             or (g.p2_profile_id = p.id and g.p2_bot_id is null))
           order by p.id",
     )
+    .bind(ladder.as_str())
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5602,59 +5641,79 @@ pub async fn ranked_rated_players(t: &mut PgTx<'_>) -> Result<Vec<ResetPlayer>, 
         .collect()
 }
 
-/// One statement for the whole reset (`unnest` is how a set of rows arrives as parameters).
-pub async fn ranked_reset_ratings(t: &mut PgTx<'_>, changes: &[ResetChange]) -> Result<(), StoreError> {
+/// One statement for the whole reset on `ladder` (`unnest` is how a set of rows arrives as
+/// parameters).
+pub async fn ranked_reset_ratings(
+    t: &mut PgTx<'_>,
+    ladder: Ladder,
+    changes: &[ResetChange],
+) -> Result<(), StoreError> {
     if changes.is_empty() {
         return Ok(());
     }
     run_as(t, None).await?;
-    sqlx::query(
-        "update public.profiles p
-            set rating = c.rating, rating_deviation = c.deviation, rating_volatility = c.volatility
-           from unnest($1::uuid[], $2::float8[], $3::float8[], $4::float8[])
-             as c(id, rating, deviation, volatility)
-          where p.id = c.id",
-    )
-    .bind(
-        changes
-            .iter()
-            .map(|change| change.profile_id.clone())
-            .collect::<Vec<String>>(),
-    )
-    .bind(
-        changes
-            .iter()
-            .map(|change| change.after.rating)
-            .collect::<Vec<f64>>(),
-    )
-    .bind(
-        changes
-            .iter()
-            .map(|change| change.after.deviation)
-            .collect::<Vec<f64>>(),
-    )
-    .bind(
-        changes
-            .iter()
-            .map(|change| change.after.volatility)
-            .collect::<Vec<f64>>(),
-    )
-    .execute(&mut **t)
-    .await
-    .map_err(db_error)?;
+    let statement = match ladder {
+        Ladder::Constructed => {
+            "update public.profiles p
+                set rating = c.rating, rating_deviation = c.deviation, rating_volatility = c.volatility
+               from unnest($1::uuid[], $2::float8[], $3::float8[], $4::float8[])
+                 as c(id, rating, deviation, volatility)
+              where p.id = c.id"
+        }
+        Ladder::Random => {
+            "update public.profiles p
+                set random_rating = c.rating, random_rating_deviation = c.deviation,
+                    random_rating_volatility = c.volatility
+               from unnest($1::uuid[], $2::float8[], $3::float8[], $4::float8[])
+                 as c(id, rating, deviation, volatility)
+              where p.id = c.id"
+        }
+    };
+    sqlx::query(statement)
+        .bind(
+            changes
+                .iter()
+                .map(|change| change.profile_id.clone())
+                .collect::<Vec<String>>(),
+        )
+        .bind(
+            changes
+                .iter()
+                .map(|change| change.after.rating)
+                .collect::<Vec<f64>>(),
+        )
+        .bind(
+            changes
+                .iter()
+                .map(|change| change.after.deviation)
+                .collect::<Vec<f64>>(),
+        )
+        .bind(
+            changes
+                .iter()
+                .map(|change| change.after.volatility)
+                .collect::<Vec<f64>>(),
+        )
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
     Ok(())
 }
 
 /// What `ranked_standings` and `ranked_standings_subset` select, up to their `where`: a season row
 /// joined to its player's CURRENT rating, a ladder bot's being the bot's own (R640000, R610).
+/// R2778000: `$2` is the ladder, whose rows, ratings and bot ratings it reads.
 macro_rules! standings_from {
     () => {
-        "select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
-                r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
-                coalesce(b.rating, p.rating) as rating, p.kind
+        "select r.season_id, r.profile_id, r.format, r.games, r.wins, r.losses, r.draws, r.ladder,
+                r.floor, r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+                coalesce(b.rating, case when r.format = 'random' then p.random_rating else p.rating end)
+                  as rating,
+                p.kind
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
-           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text"
+           left join public.bot_ratings b
+             on p.kind = 'bot' and b.bot_id = p.id::text and b.format = r.format"
     };
 }
 
@@ -5672,14 +5731,19 @@ fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
     from_json(standing)
 }
 
-pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
+pub async fn ranked_standings(
+    t: &mut PgTx<'_>,
+    season_id: &str,
+    ladder: Ladder,
+) -> Result<Vec<SeasonStanding>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
         standings_from!(),
-        " where r.season_id = $1::text
+        " where r.season_id = $1::text and r.format = $2::text
           order by r.profile_id"
     ))
     .bind(season_id)
+    .bind(ladder.as_str())
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5692,6 +5756,7 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
 pub async fn ranked_standings_subset(
     t: &mut PgTx<'_>,
     season_id: &str,
+    ladder: Ladder,
     profile_ids: &[String],
     min_ladder: i32,
 ) -> Result<Vec<SeasonStanding>, StoreError> {
@@ -5699,11 +5764,12 @@ pub async fn ranked_standings_subset(
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
         standings_from!(),
-        " where r.season_id = $1::text
-            and (r.profile_id = any($2::uuid[]) or r.ladder >= $3::integer)
+        " where r.season_id = $1::text and r.format = $2::text
+            and (r.profile_id = any($3::uuid[]) or r.ladder >= $4::integer)
           order by r.profile_id"
     ))
     .bind(season_id)
+    .bind(ladder.as_str())
     .bind(ids)
     .bind(min_ladder)
     .fetch_all(&mut **t)
@@ -5716,16 +5782,18 @@ pub async fn ranked_rank(
     t: &mut PgTx<'_>,
     season_id: &str,
     profile_id: &str,
+    ladder: Ladder,
 ) -> Result<Option<SeasonRank>, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(
-        "select season_id, profile_id, games, wins, losses, draws, ladder, floor, streak,
+        "select season_id, profile_id, format, games, wins, losses, draws, ladder, floor, streak,
                 peak_ladder, peak_jlorious, updated_at
            from public.season_ranks
-          where season_id = $1::text and profile_id = $2::uuid",
+          where season_id = $1::text and profile_id = $2::uuid and format = $3::text",
     )
     .bind(season_id)
     .bind(profile_id)
+    .bind(ladder.as_str())
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5737,12 +5805,12 @@ pub async fn ranked_rank(
 pub async fn ranked_ranks_of(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<SeasonRank>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
-                r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at
+        "select r.season_id, r.profile_id, r.format, r.games, r.wins, r.losses, r.draws, r.ladder,
+                r.floor, r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at
            from public.season_ranks r
            join public.seasons s on s.id = r.season_id
           where r.profile_id = $1::uuid
-          order by s.started_at, r.season_id",
+          order by s.started_at, r.season_id, r.format = 'random'",
     )
     .bind(profile_id)
     .fetch_all(&mut **t)
@@ -5759,12 +5827,12 @@ pub async fn ranked_put_rank(t: &mut PgTx<'_>, row: &SeasonRank) -> Result<(), S
     sqlx::query(concat!(
         "insert into public.season_ranks
            (season_id, profile_id, games, wins, losses, draws, ladder, floor, streak,
-            peak_ladder, peak_jlorious, updated_at)
+            peak_ladder, peak_jlorious, updated_at, format)
          values ($1::text, $2::uuid, $3::int, $4::int, $5::int, $6::int, $7::int, $8::int, $9::int,
                  $10::int, $11::int, ",
         ts!("$12"),
-        ")
-         on conflict (season_id, profile_id) do update set
+        ", $13::text)
+         on conflict (season_id, profile_id, format) do update set
            games = excluded.games, wins = excluded.wins, losses = excluded.losses,
            draws = excluded.draws, ladder = excluded.ladder, floor = excluded.floor,
            streak = excluded.streak, peak_ladder = excluded.peak_ladder,
@@ -5785,6 +5853,7 @@ pub async fn ranked_put_rank(t: &mut PgTx<'_>, row: &SeasonRank) -> Result<(), S
     .bind(row.peak_ladder)
     .bind(row.peak_jlorious)
     .bind(row.updated_at)
+    .bind(row.format.as_str())
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5797,6 +5866,7 @@ pub async fn ranked_put_rank(t: &mut PgTx<'_>, row: &SeasonRank) -> Result<(), S
 pub async fn ranked_note_peak_jlorious(
     t: &mut PgTx<'_>,
     season_id: &str,
+    ladder: Ladder,
     profile_id: &str,
     position: i64,
 ) -> Result<(), StoreError> {
@@ -5804,24 +5874,30 @@ pub async fn ranked_note_peak_jlorious(
     run_as(t, Some(profile_id)).await?;
     sqlx::query(
         "update public.season_ranks set peak_jlorious = least(peak_jlorious, $3::int)
-          where season_id = $1::text and profile_id = $2::uuid",
+          where season_id = $1::text and profile_id = $2::uuid and format = $4::text",
     )
     .bind(season_id)
     .bind(profile_id)
     .bind(position)
+    .bind(ladder.as_str())
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
     Ok(())
 }
 
-pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRating>, StoreError> {
+pub async fn ranked_bot(
+    t: &mut PgTx<'_>,
+    bot_id: &str,
+    ladder: Ladder,
+) -> Result<Option<BotRating>, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(
-        "select bot_id, rating, deviation, volatility, games, updated_at, ai_generation
-           from public.bot_ratings where bot_id = $1::text",
+        "select bot_id, format, rating, deviation, volatility, games, updated_at, ai_generation
+           from public.bot_ratings where bot_id = $1::text and format = $2::text",
     )
     .bind(bot_id)
+    .bind(ladder.as_str())
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5832,11 +5908,12 @@ pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRati
 pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), StoreError> {
     run_as(t, None).await?;
     sqlx::query(concat!(
-        "insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at, ai_generation)
+        "insert into public.bot_ratings
+           (bot_id, rating, deviation, volatility, games, updated_at, ai_generation, format)
          values ($1::text, $2::float8, $3::float8, $4::float8, $5::int, ",
         ts!("$6"),
-        ", $7::int)
-         on conflict (bot_id) do update set
+        ", $7::int, $8::text)
+         on conflict (bot_id, format) do update set
            rating = excluded.rating, deviation = excluded.deviation,
            volatility = excluded.volatility, games = excluded.games, updated_at = excluded.updated_at,
            ai_generation = excluded.ai_generation"
@@ -5848,6 +5925,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
     .bind(bot.games)
     .bind(bot.updated_at)
     .bind(bot.ai_generation)
+    .bind(bot.format.as_str())
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5872,6 +5950,7 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
         created_at: ms_of(get(row, "created_at")?),
         retired_at: ms_or_null(get(row, "retired_at")?),
         rating: get::<Option<f64>>(row, "rating")?.unwrap_or(RATING_START),
+        random_rating: get::<Option<f64>>(row, "random_rating")?.unwrap_or(RATING_START),
         in_match_id: uuid_text_or_null(row, "current_match_id")?,
         grinding: get(row, "grinding")?,
         grind_wins: get(row, "grind_wins")?,
@@ -5884,10 +5963,12 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     let rows = sqlx::query(
         "select b.profile_id, b.strength, b.speed, b.persona, b.active_from_hour, b.active_hours,
                 b.decks, b.decks_catalog_version, b.trio, b.trio_catalog_version, b.retired_at,
-                b.grinding, b.grind_wins, b.cosmetics, p.created_at, p.current_match_id, r.rating
+                b.grinding, b.grind_wins, b.cosmetics, p.created_at, p.current_match_id, r.rating,
+                a.rating as random_rating
            from public.bots b
            join public.profiles p on p.id = b.profile_id
-           left join public.bot_ratings r on r.bot_id = b.profile_id::text
+           left join public.bot_ratings r on r.bot_id = b.profile_id::text and r.format = 'constructed'
+           left join public.bot_ratings a on a.bot_id = b.profile_id::text and a.format = 'random'
           order by p.created_at, b.profile_id",
     )
     .fetch_all(&mut **t)
@@ -5941,10 +6022,12 @@ pub async fn bots_create(t: &mut PgTx<'_>, bot: &NewBot) -> Result<(), StoreErro
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
+    // R2778000: the seed rating on both ladders.
     sqlx::query(
-        "insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at)
-           values ($1::text, $2::float8, $3::float8, $4::float8, 0, now())
-           on conflict (bot_id) do update set
+        "insert into public.bot_ratings (bot_id, format, rating, deviation, volatility, games, updated_at)
+           select $1::text, f.format, $2::float8, $3::float8, $4::float8, 0, now()
+             from unnest(array['constructed', 'random']) as f(format)
+           on conflict (bot_id, format) do update set
              rating = excluded.rating, deviation = excluded.deviation,
              volatility = excluded.volatility, games = excluded.games, updated_at = excluded.updated_at",
     )
@@ -6427,13 +6510,13 @@ pub async fn ranked_record_game(t: &mut PgTx<'_>, row: &RatedGameRow) -> Result<
            id, kind, season_id, patch_version, catalog_version,
            p1_profile_id, p1_bot_id, p1_pilot, p1_before, p1_after, p1_rank_before, p1_rank_after,
            p2_profile_id, p2_bot_id, p2_pilot, p2_before, p2_after, p2_rank_before, p2_rank_after,
-           winner_side, reason, ended_at)
+           winner_side, reason, ended_at, format)
          values ($1::uuid, $2::text, $3::text, $4::text, $5::text,
                  $6::uuid, $7::text, $8::text, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb,
                  $13::uuid, $14::text, $15::text, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb,
                  $20::smallint, $21::text, ",
         ts!("$22"),
-        ")
+        ", $23::text)
          on conflict (id) do nothing"
     ))
     .bind(row.id.as_str())
@@ -6458,6 +6541,7 @@ pub async fn ranked_record_game(t: &mut PgTx<'_>, row: &RatedGameRow) -> Result<
     .bind(int_or_null(&row.winner_side)?)
     .bind(literal(&row.reason)?)
     .bind(row.ended_at)
+    .bind(row.format.as_str())
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
