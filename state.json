@@ -14315,6 +14315,8 @@
     "2773": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -14322,19 +14324,32 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2721,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The issue's acceptance says the Rarity foil setting is stored on the device only, but the change syncs it to the account's `cards` group, and fix pass 2 changed this test to require that it be sent to the account.",
+          "evidence": "The acceptance reads 'it is stored on the device only'. `DEVICE_CARD_SETTINGS` (apps/web/src/cards/settings.ts:80) is still `[\"setWatermarks\"]`, so `accountCards()` in settings/groups.ts:42 sends `rarityFoil` to the account and applies it from there. Commit e1b4ed443 edited the R634 test to expect `{\u2026, rarityFoil: false}` in the saved `cards` values. R2718000 is the sibling issue, uses the same wording, and read 'the device only' as `DEVICE_CARD_SETTINGS`; it also explicitly rejected 'syncing the setting with the account as Hover previews does (the issue says the device only\u2026)'. The fix is one more entry in that list, plus the test asserting the opposite.",
+          "severity": "blocking",
+          "where": "apps/web/src/settings/accountSync.test.tsx:281"
+        },
+        {
+          "claim": "The ruling contradicts itself: it says the setting is 'kept on the device and synced by the account's `cards` group'. The pending paragraph says the same, and the PR text describes it as 'stored on the device'.",
+          "evidence": "R2721000.md's 'The setting.' bullet and spec/pending/2721.md both say 'synced by the account's `cards` group as they are ([[R633]])'. That conflicts with the acceptance and with R2718000. It needs rewriting together with the fix above.",
+          "severity": "blocking",
+          "where": "spec/rulings/R2721000.md:23"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-11-02T09:32:09Z",
+      "queued_at": "2026-11-02T09:43:35Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "41421543104",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-02T09:32:42Z",
       "stop_requested": false,
       "taken_asks": [],
