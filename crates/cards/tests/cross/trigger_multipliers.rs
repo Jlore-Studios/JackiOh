@@ -48,7 +48,6 @@ fn r821_r823_fear_mongerer_under_joint_filing_and_double_counting_fires_gatling_
     assert_eq!(s.state().active, P1);
     s.expect_health(P2, 20);
     assert_eq!(damage(&s), 5);
-    // The real end of turn runs the Pea's hook twice more: 5 + 6.
     s.end_turn();
     s.expect_health(P2, 9);
     assert_eq!(damage(&s), 7);

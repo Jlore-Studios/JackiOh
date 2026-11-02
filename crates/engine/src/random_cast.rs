@@ -1,23 +1,14 @@
 //! Random casts and casts that target enemies (docs/classic-sets.md B5 E12, E39, R452).
 //!
-//! A cast (R70) is §10.5's pipeline entered at step 3 (`play_steps::cast_through_pipeline`). A random
-//! cast (Classic+ #47 Jogg's Box, #38.1 Solarius Prime) makes every choice its caster would make at
-//! random from the match rng: its targets, modes and Echo picks, and every prompt opened for the
-//! caster while it resolves (Discover included). Its X is the caster's current mana, at least 1, as
-//! every cast's is. A cast made while it resolves is random too, and the chain is capped
-//! (RANDOM_CAST_CHAIN_CAP); the other player's prompts are asked as usual. A cast that targets enemies
-//! when it can (`targetEnemies`, Classic+ #40 Appropriations, E39) aims each target pick by its
-//! declaration (R656): a harmful pick narrows to the enemies among its options, a helpful one to the
-//! friends, when there is one (its declared targets, its Echo repeats' and the prompts its own text
-//! opens for its caster).
+//! A cast (R70) is §10.5's pipeline entered at step 3. A random cast (Classic+ #47 Jogg's Box, #38.1
+//! Solarius Prime) makes every choice its caster would make at random, every prompt opened for the
+//! caster while it resolves included, and so does a cast made while it resolves (the chain is capped,
+//! RANDOM_CAST_CHAIN_CAP); the other player's prompts are asked as usual.
+//! A cast that targets enemies when it can (`targetEnemies`, Classic+ #40 Appropriations, E39) aims
+//! each target pick by its declaration (R656).
 //!
-//! While a cast's steps run its mode sits on `state.castsResolving` (`with_cast_mode`, read by
-//! `prompts::open_prompt`). The stack is transient: a step that pauses returns through `with_cast_mode`,
-//! which takes the mode off again, so a state at rest, a paused one included, never carries it, and the
-//! owed step puts it back when it is driven again (the run record keeps `random` and `targetEnemies`,
-//! which are JSON). A run whose caster's choices are all random outside any cast (a replaced board's
-//! laid Cries, R1855001) keeps its caster in its data instead (`RANDOM_CHOICES_KEY`), and each of its
-//! continuations puts the mode back as it runs (`prompts::run_resume`).
+//! While a cast's steps run its mode sits on `state.castsResolving`. A step that pauses takes it off,
+//! and the owed step puts it back when driven again (the run record keeps `random` and `targetEnemies`).
 
 use indexmap::IndexSet;
 
@@ -32,8 +23,8 @@ pub fn cast_modes_of(state: &GameState) -> &[CastMode] {
     state.casts_resolving.as_deref().unwrap_or(&[])
 }
 
-/// Run `body` with a cast's mode in force, and take it off again whatever `body` does — a pause, the
-/// end of the game — so the stack is empty whenever the state is at rest. `mode` null runs `body` alone.
+/// Run `body` with a cast's mode in force, and take it off again whatever `body` does (a pause, the end
+/// of the game), so the stack is empty whenever the state is at rest.
 pub fn with_cast_mode<'a, T>(
     sink: &mut EngineSink<'a>,
     mode: Option<CastMode>,
@@ -56,16 +47,13 @@ pub fn with_cast_mode<'a, T>(
     out
 }
 
-/// R1855001: where a run whose caster's choices are all random names that caster: in the card's own
-/// data, which every continuation of the run carries (`prompts::resume_self`, `work::park_work`), as
-/// `resolve::MANA_BEFORE_PLAY_KEY` rides, so the mode the stack drops at a pause comes back with the
-/// answered step and the parked tail (`random_choices_of`). A delayed effect, a run of its own, drops
-/// it (`effects::delay`).
+/// R1855001: where a run whose caster's choices are all random outside any cast (a replaced board's laid
+/// Cries) names that caster: the card's data every continuation carries, so the mode a pause drops comes
+/// back (`random_choices_of`). A delayed effect, a run of its own, drops it (`effects::delay`).
 pub const RANDOM_CHOICES_KEY: &str = "__randomChoices";
 
-/// R1855001: the random mode a continuation runs under, or null when its run's choices are its
-/// caster's own: R452's, for the player its data names (`RANDOM_CHOICES_KEY`), as a cast that makes no
-/// cast of its own (`casts` 0).
+/// R1855001: the random mode a continuation runs under (R452's, for the player `RANDOM_CHOICES_KEY`
+/// names, as a cast that makes no cast of its own), or null.
 pub fn random_choices_of(resume: &Resume) -> Option<CastMode> {
     let player: PlayerId = serde_json::from_value(resume.data.get(RANDOM_CHOICES_KEY)?.clone()).ok()?;
     Some(CastMode {
@@ -96,8 +84,7 @@ fn root_random_cast(state: &GameState, player: PlayerId) -> Option<usize> {
         .position(|entry| entry.player == player && entry.random)
 }
 
-/// R452: whether one more cast may begin under this player's random cast chain — always, when none is
-/// running; otherwise while the chain has made fewer than RANDOM_CAST_CHAIN_CAP casts. A cast verb asks
+/// R452: whether one more cast may begin under this player's random cast chain (capped). A cast verb asks
 /// this before it makes or moves the card, and a cast it refuses resolves into nothing (R28's shape).
 pub fn may_cast_now(state: &GameState, player: PlayerId) -> bool {
     match root_random_cast(state, player) {
@@ -125,9 +112,8 @@ pub struct CastPromptMode {
     pub friends_only: bool,
 }
 
-/// R452: how a prompt opened for `player` is to be answered while casts are being driven: at random
-/// when a random cast of theirs is (with that cast's enemy preference), narrowed to enemies when the
-/// prompt is the own text of a cast of theirs that targets enemies (`resumeInstanceId`), else null.
+/// R452: how a prompt opened for `player` is answered: at random under a random cast of theirs, narrowed
+/// when it is the own text of a cast of theirs that targets enemies (`resumeInstanceId`), else null.
 pub fn cast_mode_for_prompt(
     state: &GameState,
     player: PlayerId,
@@ -163,8 +149,7 @@ fn zone_player(zone: &Zone) -> PlayerId {
     zone.player()
 }
 
-/// R452: whether a pick names one of `chooser`'s enemies — the other player's hero, a card they
-/// control on the field, or a card in one of their piles.
+/// R452: whether a pick names one of `chooser`'s enemies (on the field by control, elsewhere by pile).
 pub fn is_enemy_pick(state: &GameState, chooser: PlayerId, selection: &Selection) -> bool {
     let enemy = opponent_of(chooser);
     match selection {
@@ -183,9 +168,8 @@ pub fn is_enemy_pick(state: &GameState, chooser: PlayerId, selection: &Selection
     }
 }
 
-/// R452: "target enemies when possible" — the options narrowed to the enemies among the target picks
-/// (a mode or a zone option is kept as it is), when there is an enemy to pick and enough of them for
-/// the `required` picks; otherwise every option, since a friendly target is then the legal one.
+/// R452: "target enemies when possible": the target picks narrowed to the enemies, when there are enough
+/// for the `required` picks; otherwise every option, since a friendly target is then the legal one.
 pub fn prefer_enemies<T: Clone>(
     state: &GameState,
     chooser: PlayerId,
@@ -214,8 +198,7 @@ pub fn prefer_enemies<T: Clone>(
     }
 }
 
-/// R656: whether a pick names one of `chooser`'s friendly targets — the chooser's own hero,
-/// a card they control on the field, or a card in one of their piles.
+/// R656: whether a pick names one of `chooser`'s friendly targets, the mirror of `is_enemy_pick`.
 pub fn is_friendly_pick(state: &GameState, chooser: PlayerId, selection: &Selection) -> bool {
     match selection {
         Selection::Hero { player } => *player == chooser,
@@ -233,9 +216,8 @@ pub fn is_friendly_pick(state: &GameState, chooser: PlayerId, selection: &Select
     }
 }
 
-/// R656: "target allies when beneficial" — the mirror of `prefer_enemies`. Under a random cast that
-/// targets enemies, a declaration with `aim: "help"` narrows to friendly targets among the target picks
-/// when there is a friendly target to pick and enough of them for `required`; otherwise every option.
+/// R656: "target allies when beneficial", the mirror of `prefer_enemies`, for a declaration with
+/// `aim: "help"` under a random cast that targets enemies.
 pub fn prefer_friends<T: Clone>(
     state: &GameState,
     chooser: PlayerId,
@@ -264,9 +246,8 @@ pub fn prefer_friends<T: Clone>(
     }
 }
 
-/// R1850004: "cast it for yourself" — the options narrowed strictly to the chooser's own side: their
-/// hero and the cards they control on the field among the target picks (a mode or a zone option is
-/// kept as it is). Nothing else is offered, even when nothing is left.
+/// R1850004: "cast it for yourself": the target picks narrowed strictly to the chooser's hero and the
+/// cards they control on the field, even when none is left (a mode or a zone option is kept).
 pub fn friends_only<T: Clone>(
     state: &GameState,
     chooser: PlayerId,
@@ -285,8 +266,8 @@ pub fn friends_only<T: Clone>(
         .collect()
 }
 
-/// R452: a uniformly random set of between `low` and `high` of `items` (the size first, then the set),
-/// kept in the order they were offered — a declaration's picks are a set, taken in offered order (R221).
+/// R452: a uniformly random set of `low` to `high` of `items` (the size first, then the set), kept in
+/// offered order: a declaration's picks are a set (R221).
 pub fn random_picks<T: Clone>(rng: &mut Rng, items: &[T], low: i32, high: i32) -> Vec<T> {
     let top = 0.max(high.min(items.len() as i32));
     let bottom = 0.max(low.min(top));

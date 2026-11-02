@@ -1,18 +1,10 @@
 //! Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244):
-//! its table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls, announces and resolves —
-//! `call_to_chaos({ radiant, table: CHAOS_MED_EFFECTS })` — so one rule serves every edition: the base face
-//! rolls one entry, the Radiant three different ones resolved in the list's order (R423), the recursion
-//! counts casts of every edition against `CALL_TO_CHAOS_CHAIN_CAP` (R28) and at the cap resolves into
-//! nothing (R87), and both players are told what was rolled (`chaosRolled`, R436).
+//! its table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls, announces and
+//! resolves, so one rule serves every edition.
 //!
-//! Every entry is built when it resolves, not when the Cry returns (a part of the list, `lazy_part`), as
-//! Core's and Classic+'s are: a recursion rolled before it resolves its whole chain first and changes the
-//! hand, the deck and the board each later entry reads (R87), and a pause inside one parks the rest of it
-//! (R113).
-//!
-//! Entry 9 is the engine's own rest-of-game effect (R458, R1241): a start-of-turn effect under
-//! `CHAOS_ETERNAL_HOOK`, whose step `work::script_step_for` answers with `eternal_step` whatever card
-//! made it, so the table never leans on a card file; a player holds at most `CALL_TO_CHAOS_ETERNAL_CAP`.
+//! Every entry is built when it resolves (`lazy_part`), as Core's are: a recursion changes what each
+//! later entry reads (R87), and a pause parks the rest (R113). Entry 9 is the engine's own rest-of-game
+//! effect (R458, R1241), stepped by `eternal_step`, so the table never leans on a card file.
 
 use serde_json::{Value, json};
 
@@ -31,8 +23,7 @@ use crate::subsystems::call_to_chaos::{ChaosEffectDef, cast_random_call_to_chaos
 use crate::subsystems::fuse::{FuseArgs, HandPrice};
 use crate::wire::{KeywordKind, PlayerId, SetName, ZoneName};
 
-/// §7: the tokens this edition summons, by their indices in the Meditative set (B2.2): #39.5 Jade
-/// Beauty and #95.1 CN Golem.
+/// §7: the tokens this edition summons, by their indices in the Meditative set (B2.2).
 const TOKEN_SET: SetName = SetName::Meditative;
 const JADE_BEAUTY_INDEX: &str = "39.5";
 const GOLEM_INDEX: &str = "95.1";
@@ -71,8 +62,7 @@ fn entry(
     })
 }
 
-/// Entries 2 and 3: N independent picks of a pool (R60), each a fresh hand card that costs (0); a full
-/// hand burns it (§2.4).
+/// Entries 2 and 3: independent picks of a pool (R60), each a fresh (0) hand card; a full hand burns (§2.4).
 fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
     entry(name, move |_ctx| {
         vec![crate::effects::add_to_hand::add_random_from_catalog(json_as(
@@ -112,18 +102,14 @@ pub fn eternal_effects_held(state: &GameState, player: PlayerId) -> i32 {
         .count() as i32
 }
 
-/// R1241: the step entry 9's effect re-enters at the start of each of its player's turns: a random
-/// Call to Chaos, cast with no `self` and so as a new chain (cast depth 1, R28's cap per chain), the
-/// cast card a base Call (R28).
+/// R1241: entry 9's step, a random base Call to Chaos cast with no `self`, so a new chain (R28's cap).
 pub fn eternal_step() -> Hook {
     hook(|_ctx| vec![cast_random_call_to_chaos()])
 }
 
-/// 1. R1242: every card in your hand as the entry resolves, in hand order, but the Immutable ones
-///    (R23), fused into one fresh hand card (R77, R102, R469), plus two copies of it (R57's riders),
-///    all three costing (0). One fusable card is not fused: it takes the (0) and the copies. None, and
-///    the entry does nothing. The fusion is a hand card's, so its `fused` event is hidden as the hand
-///    is (R470).
+/// 1. R1242: every non-Immutable card in your hand (R23), in hand order, fused into one fresh hand card
+///    (R77, R102, R469) plus copies (R57's riders), all costing (0); a lone card is not fused but takes
+///    the (0) and the copies. Its `fused` event is hidden as the hand is (R470).
 fn build_fuse() -> Effect {
     entry("fuse", |_ctx| {
         vec![Effect::new("callToChaosMeditative:fuseHand", |ctx| {
@@ -185,8 +171,7 @@ fn build_prime() -> Effect {
     add_free("prime", json!({ "tags": ["Prime"] }), CHAOS_MED_PRIME_CARDS)
 }
 
-/// 4. §6.1's Armor on the hero, kept for the rest of the game (C+ #46's, R124), then a heal of the hero
-///    with no cap (§6.3).
+/// 4. §6.1's Armor kept for the rest of the game (C+ #46's, R124), then an uncapped hero heal (§6.3).
 fn build_armor() -> Effect {
     entry("armor", |_ctx| {
         vec![
@@ -221,9 +206,8 @@ fn build_acclaimed() -> Effect {
     })
 }
 
-/// 7. R1244: every enemy permanent acting on the field — pile tops and face-down cards — bounced
-///    together to its controller's hand (R747; tokens cease to exist, R11; a full hand burns, R4), then
-///    each bounced card that reached a hand Nerfed once (one Degrade, R386), hidden there (R177, R440).
+/// 7. R1244: every enemy permanent acting on the field bounced together (R747, R11, R4), then each one
+///    that reached a hand Nerfed (a Degrade, R386), hidden there (R177, R440).
 fn build_bounce() -> Effect {
     entry("bounce", |ctx| {
         let scope: BoardScope = json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }));
@@ -233,8 +217,7 @@ fn build_bounce() -> Effect {
             .collect();
         vec![
             crate::effects::bounce_all(scope),
-            // The card is aimed at in the hand it reached, not on the stay it left (R174 would refuse
-            // `degrade`'s `instanceId`), so each Nerf is one `tune_once` (B3.4 rule 1).
+            // Aimed at in the hand, not the stay it left (R174), so each Nerf is a `tune_once` (B3.4 rule 1).
             Effect::new("callToChaosMeditative:nerfBounced", move |ctx| {
                 for id in &bounced {
                     let Some(card) = find_instance(ctx.state, id)
@@ -257,10 +240,8 @@ fn build_golem() -> Effect {
     summon_token("golem", GOLEM_INDEX)
 }
 
-/// 9. R458, R1241: "for the rest of the game, at the start of each of your turns, cast a random Call to
-///    Chaos", the caster's own start-of-turn effect from their next turn on, stacking — up to
-///    `CALL_TO_CHAOS_ETERNAL_CAP`. A roll of it for a player at the cap resolves into nothing, with no
-///    re-roll, as R87's recursion at the cap does.
+/// 9. R458, R1241: the rest-of-game effect, stacking up to `CALL_TO_CHAOS_ETERNAL_CAP`; at the cap it
+///    resolves into nothing, with no re-roll, as R87's recursion does.
 fn build_eternal() -> Effect {
     entry("eternal", |ctx| {
         if eternal_effects_held(ctx.state, ctx.controller) >= CALL_TO_CHAOS_ETERNAL_CAP {
@@ -277,8 +258,8 @@ fn build_eternal() -> Effect {
     })
 }
 
-/// §8.8 row 95's ten entries, in the order the card prints them. Each `label` is the clause as the card
-/// prints it (R432's cost words, R373's "deck"), which `chaosRolled` names to both players (R436).
+/// §8.8 row 95's ten entries in printed order, each `label` the printed clause (R432's cost words,
+/// R373's "deck") that `chaosRolled` names to both players (R436).
 pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fuse",

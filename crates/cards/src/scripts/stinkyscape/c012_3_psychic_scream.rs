@@ -4,10 +4,6 @@
 //!   Radiant: "Shuffle all permanents into your opponent's deck. Each costs ({surcharge}) more (up
 //!            to (4))." — surcharge 2, the Radiant face alone.
 //!
-//! Engine: one `cry`. Every permanent on the field of both sides — the unit rows and the backrow,
-//! face-down ones included, in R68 order (the active side's Units by lane, its backrow, then the
-//! opponent's) — each first its surcharge where the Radiant face adds one, then `shuffle_card_into`
-//! with the new `"player": "enemy"`. The move itself is the exile-equivalent removal: no Death, a
 //! reset (R78), a unit token ceasing (R11); a Dormant card and anything beneath a Stack pile never
 //! match the scope (R13, R1839000). The card becomes the opponent's, owner and controller alike
 //! (R12), so it lands in their deck (R311), a full one refusing the rest to the opponent's
@@ -69,12 +65,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #12.3 Psychic Scream — SPEC §8.10 row S 12.3, BUILD M12 row S 12.3: "every Unit and backrow
-// card of both sides, its caster's included, goes into the opponent's deck as the opponent's card,
-// with no Death; a unit token is gone (R11); the deck refuses what passes its cap (R80); the
-// opponent later draws the caster's card as their own; radiant each costs (2) more there, a (3)
-// card (4) and a (4) card still (4); surcharge reads through `param()`" (R1867006, proven here and
-// in the engine's `effects_shuffle_card`).
+// S #12.3 Psychic Scream — SPEC §8.10 row S 12.3, BUILD M12 row S 12.3 (R11, R1867006, R80).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -93,7 +84,6 @@ mod tests {
     const SHEEP: &str = "core-t-sheep"; // Unit token.
     const FILLER: &str = "core-005";
 
-    /// Every `shuffledIn` event's instance, in order.
     fn shuffled(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -121,7 +111,6 @@ mod tests {
 
             s.play(SCREAM, json!({}));
 
-            // Nothing left on the field, and no Death: no `destroyed` event anywhere.
             assert!(s.unit(P1, 1).is_none());
             assert!(s.unit(P2, 1).is_none());
             assert!(s.backrow(P1, 1).is_none());
@@ -169,7 +158,6 @@ mod tests {
             let moved = s.card(&open);
             assert_eq!(moved.owner, P2);
             assert!(matches!(moved.zone, Zone::Library { player: PlayerId::P2 }));
-            // The face-down backrow card went too.
             assert!(s.backrow(P2, 1).is_none());
             assert_eq!(
                 s.pile(P2, "library").iter().filter(|card| card.def_id == SHEEPISH).count(),
@@ -256,7 +244,6 @@ mod tests {
 
             s.play(SCREAM, json!({}));
 
-            // (1) + 3, capped at (4).
             assert_eq!(s.card(&one).cost_mod, 3);
             assert_eq!(effective_cost(s.state(), s.card(&one), Default::default()), 4);
         }

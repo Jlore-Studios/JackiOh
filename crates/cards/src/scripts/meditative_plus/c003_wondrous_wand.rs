@@ -2,17 +2,8 @@
 //!   Base and Radiant: "Draw {draw|card|cards}. They cost ({setCost}). Embiggened (4): Draw
 //!   {embiggenedDraw} instead." (1/2, (1); 2/4, (0) since issue #2179: (0) and 2/5 before)
 //!
-//! C #79 Risky Die's pattern: the caster's library is noted on the resolving card as the Spell
-//! begins (`remember`, so a pause cannot lose it), the draws run (the count read off
-//! `instance.embiggened`, R81), then each noted card now in the hand gets a `costOverride` of 0
-//! (C #79's "they": a card cast on draw never gets there, R58; a burned one isn't there,
-//! §2.4; a card created meanwhile was never in the library; cards already in the hand are
-//! untouched). The override is the card's cost in every zone until it reaches a graveyard or an
-//! exile pile (R766). Issue #2179 moved only declared numbers (`setCost` 1 on the base face,
-//! `embiggenedDraw` 4 on the Radiant), so no script is kept for it.
-//! Both counts are declared and read through `param` (R386), and so is the drawn cards' price,
-//! `setCost` (R1748003). Tunes: draw 1 ↑ (Radiant 2); embiggenedDraw 2 ↑ (Radiant 5); setCost 0 ↓.
-//! Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
+//! C #79 Risky Die pattern: library noted in remember, draws run (R81, R58, §2.4), then drawn cards get costOverride (R766).
+//! Declared parameters read via param (R386, R1748003, #2179). Keeps script_v0_4_4b for replays (R767000).
 
 use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, remember, set_cost_override};
 use jackioh_engine::prelude::*;
@@ -97,10 +88,7 @@ pub fn script_v0_4_4b() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M+ #3 Wondrous Wand — SPEC §8.9 row 3, BUILD M11 row M+ 3: "at (2) draws 1 and the drawn card
-// costs (1); played Embiggened at (4) draws 2, both (1); a card cast on draw is not discounted and
-// the draw repeats (R58); a card burned at a full hand is not either; a card already in the hand
-// keeps its cost; both counts read through `param()`; radiant 2 cards costing (0), Embiggened 4".
+// M+ #3 Wondrous Wand — SPEC §8.9 row 3, BUILD M11 row M+ 3 (R58).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -116,7 +104,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// Instance IDs of cards drawn by `player`.
     fn drawn_ids(events: &[GameEvent], player: PlayerId) -> Vec<String> {
         events
             .iter()
@@ -160,7 +147,6 @@ mod tests {
         crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [CN_VIRUS, MENACE, FILLER] } }));
         s.play(WAND, json!({}));
-        // The one draw took CN-Virus (cast, the draw repeating into Menace).
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
         s.expect_in_zone(CN_VIRUS, "graveyard").expect_in_zone(MENACE, "hand");
         assert_eq!(s.card(CN_VIRUS).cost_override, None);
@@ -170,8 +156,6 @@ mod tests {
     #[test]
     fn s2_4_a_card_burned_at_a_full_hand_is_not_discounted() {
         crate::register_all();
-        // The Wand and nine more: after the Wand is played the hand holds nine, so the first of
-        // the Embiggened two draws fills it and the second burns.
         let mut hand = vec![json!(WAND)];
         hand.extend((0..HAND_CAP - 1).map(|_| json!(VANILLA)));
         let mut s = scenario(json!({ "p1": { "hand": hand, "library": [FILLER, MENACE] } }));

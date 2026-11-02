@@ -1,41 +1,13 @@
-//! SPEC §5.1's one catalog query, as the `packages/cards` surface every card script writes against.
+//! SPEC §5.1's one catalog query: the typed wrapper card scripts import.
+//! The filter lives in `crates/engine/src/catalog.rs`; this file owns the card-facing contract.
+//! Proved by `tests/cross/query.rs`:
+//! 1. Tokens out unless asked (§5.1, R380, R382; row 51.1 KY's Empty Notebook left out).
+//! 2. Generating card excluded when card says so (excludeDefId, R387, B2.2; #95 is exception).
+//! 3. Printed costs read out of play (R65; 0 for X-cost, base for embiggen; #7, #30, #51, #94).
+//! 4. Ascending §5 index order set by set; seeded RNG replays identically (§9.3, R58, R60).
+//! 5. Registered catalog cards only; transient defs never generate.
 //!
-//! "The catalog needs one query function, `catalog.query({type, cost, costRange, tags, notTags,
-//! rarity, set, excludeDefId})`, that every random-generation and Discover effect uses" (§5.1).
-//! ONE function means one implementation: the filter lives in `crates/engine/src/catalog.rs` (the
-//! engine needs it for Recruit, Discover and every `generate` effect), and this file is the thin
-//! typed wrapper card scripts import. Nothing here filters, sorts, excludes tokens or reads a cost —
-//! re-implementing any of that would make two pools out of §5.1's one, which is the bug this file
-//! exists to prevent. What it does own is the card-facing contract below.
-//!
-//! The contract (proved by `tests/cross/query.rs`, which is the reference for card agents):
-//!
-//!   1. Tokens are out unless you ask. §5.1: "Random pools ('a random card', 'Discover a (2) cost
-//!      card') never include Token-tagged cards". `query({})` is therefore every non-token card of
-//!      every set (R380); tokens arrive only for a query that names the token pool — `tags:
-//!      ["Token"]`, `rarity: "Token"`, `token: true`, `withTokens: true` (R382), or naming members
-//!      outright via `defId` — and a Fruit pool holds the Grapes (R382).
-//!      BUILD M4-T4 row 51.1 ("absent from every random pool") needs no extra argument: KY's Empty
-//!      Notebook carries the KY tag, and `query({ tags: ["KY"] })` still leaves it out.
-//!   2. The generating card is out when the card says so. §5.1: pools "never include the generating
-//!      card's own definition, unless the card names the pool itself". That is `excludeDefId`, keyed
-//!      by the catalog id because an index repeats across sets (R387, B2.2), and because it is the
-//!      caller's own id, the caller passes it — see `pool()` below, which makes it impossible to
-//!      forget. The exception is real: #95 Call to Chaos casts "a random Call
-//!      to Chaos" from the tag "which includes #95", so #95 uses plain `query({ tags: [...] })`.
-//!   3. Costs are read out of play (R65): "an embiggen card's printed cost is its base price and an
-//!      X-cost card's is 0". `cost`, `costRange` and `query_cost` all read that one number, so #7's
-//!      brackets, #51's brackets, #30's highest/lowest and #94's odd costs agree.
-//!   4. The result is ordered set by set (Core first), each by SPEC §5 index, ascending, with no
-//!      dependence on the order the registry handed the defs over. A seeded `rng.pick`/`rng.shuffle`
-//!      over a pool therefore replays identically (§9.3, R58, R60).
-//!   5. Only registered catalog cards are reachable. `register_all()` (src/lib.rs) registers the
-//!      catalog before a game starts; until then every pool is empty. Fused and crafted definitions
-//!      live on `state.transient_defs`, so no pool can ever generate one.
-//!
-//! Card scripts get this whole surface through `use crate::query::*;` (and the crate root's
-//! re-export): spec §5.1's `catalog.query(...)` is [`query`] here, with [`pool`] for a pool that
-//! leaves out its own card, [`query_cost`] and [`TRAP_TYPES`].
+//! Scripts reach it through `use crate::query::*;`: [`query`], [`pool`], [`query_cost`], [`TRAP_TYPES`].
 
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, SetName};
 
@@ -47,10 +19,8 @@ pub type CardQuery = CatalogQueryArgs;
 
 /// §5.1's single pool source. Returns the matching definitions in §5 index order.
 ///
-/// Random effects pick from this with `rng` (never the OS, CLAUDE.md rule 4); Discover passes
-/// the result to a `PendingChoice`. A card that generates from a pool almost always wants `pool()`
-/// instead, so that its own definition cannot come back out. TS's default argument `{}` is
-/// `&CardQuery::default()`.
+/// Random effects pick with `rng` (CLAUDE.md rule 4); Discover passes to `PendingChoice`.
+/// A generating card wants `pool()` so its own definition cannot come back out.
 pub fn query(args: &CardQuery) -> Vec<&'static CardDef> {
     jackioh_engine::catalog::query(args)
 }
@@ -64,10 +34,7 @@ pub fn query(args: &CardQuery) -> Vec<&'static CardDef> {
 /// pool("core-067", { type: TRAP_TYPES })     // #67 Zoomerbin Oomen -> Core #18, #41, #60, #71, #85, #96
 /// ```
 ///
-/// TS's `excludeDefId` is `string | string[]`: absent becomes `[ownId]`, one string `s` becomes
-/// `[s, ownId]`, and a list gets `ownId` appended (an id it already holds is not listed twice). The
-/// typed arguments are extended by the engine's `catalog::excluding_def_id`, the helper its own
-/// generating effects use, so they are never written out as JSON and read back.
+/// Arguments are extended by `catalog::excluding_def_id` without serialization round-trips.
 pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
     query(&jackioh_engine::catalog::excluding_def_id(
         None,
@@ -107,23 +74,14 @@ pub fn starship_pieces() -> CardQuery {
     }
 }
 
-/// Both trap types, for a pool or filter that says "Trap". SPEC says "Field Trap counts as Trap" for
-/// §8 #51 (KY's Private Tutor's type choice), #85/R61 (Unlicensed Experimentation's type match) and
-/// R35 (Transmogulate's same-type replacement), so a `type: "Trap"` query — which matches the
-/// `type` field exactly — would silently drop #18 and #71. Ask for both.
-///
-/// TS typed it as a mutable array only because `CatalogQuery["type"]` is `CardType | CardType[]`; it
-/// is a constant here, and `query` never writes to it.
+/// Both trap types, for a pool or filter saying "Trap" (SPEC §8 #51, #85/R61, R35).
+/// Prevents dropping #18 and #71.
 pub const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
 /// R65's out-of-play cost of a definition: an X-cost card reads 0, an embiggen card reads its base
 /// price, everything else its printed cost. This is what `cost` and `costRange` compare against, and
 /// what a card script must use whenever it sorts, brackets or counts costs in a library, hand,
-/// graveyard or pool. The in-play number is the engine's `mana::effective_cost`, which starts from an
-/// instance and adds `cost_mod`, discounts and Professor Curvature.
+/// graveyard or pool. The in-play number is the engine's `mana::effective_cost`.
 pub use jackioh_engine::catalog::query_cost;
 
-// Never sort, filter or de-duplicate a pool after calling `query`: a second sort here would be the
-// duplicated filter §5.1 forbids, and the ordering is the engine comparator's job. (It once
-// returned NaN for two non-numeric indexes and left the shared tokens in insertion order; that is
-// fixed in the engine and guarded by a regression test in `tests/cross/query.rs`.)
+// Never sort, filter or de-duplicate a pool after `query`: §5.1 forbids duplicating the filter.

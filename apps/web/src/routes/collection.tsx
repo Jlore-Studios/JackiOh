@@ -1,16 +1,8 @@
 // `/collection`: the hub of what the account owns and makes (SPEC §14, #1307, #1579, R1579000): four
-// doors. Decks (`/decks`) and the card builder (`/creator`) are screens of their own, so their doors
-// are links; Cards and Cosmetics open in place, by `?section=`, so the browser's Back and Forward
-// move between them and the hub. Cards is the cards the account owns per shipped set, its wallet,
-// its set tracks and its quests; Cosmetics is where a cosmetic is equipped, and the only place.
-// Gated like `/account`: an anonymous visitor goes to `/login` (main.tsx).
-//
-// Every panel renders what the server answered and decides nothing (CLAUDE.md rule 7): `GET
-// /api/collection`, `/api/wallet`, `/api/packs`, `/api/cosmetic-packs`, `/api/tracks`, `/api/quests`
-// and `/api/cosmetics`. Each panel reads for itself and says why in its place when its read fails,
-// so one refused read never blanks the others, and offers Try again (#1691). Until the economy goes live
-// everyone owns every card (§14.12), so the screen shows a full collection. The page never scrolls: a
-// section's body does.
+// doors. Cards and Cosmetics open in place by `?section=`, so Back and Forward move between them and
+// the hub. Gated like `/account` (main.tsx). Every panel renders what the server answered and decides
+// nothing (CLAUDE.md rule 7); each reads for itself, so one refused read never blanks the others (#1691).
+// Until the economy goes live everyone owns every card (§14.12).
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -48,7 +40,6 @@ import "../auth/tavern.css";
 import "./account.css";
 import "../collection/collection.css";
 
-/** What the wallet panel shows: the balance and the two kinds of unopened pack. */
 type WalletRead = { wallet: WalletResponse; packs: PacksResponse; cosmeticPacks: CosmeticPacksResponse };
 
 async function readWallet(token: string): Promise<WalletRead> {
@@ -82,7 +73,6 @@ type Read<T> =
   | { kind: "ready"; value: T }
   | ({ kind: "error"; retry: () => void } & ReadFailure);
 
-/** A panel's first state for `token`: its kept answer, or loading. */
 function startOf<T>(kept: (token: string) => T | undefined, token: string): Read<T> {
   const value = kept(token);
   return value === undefined ? { kind: "loading" } : { kind: "ready", value };
@@ -263,10 +253,9 @@ function CardsSection({ token }: { token: string }): ReactElement {
 }
 
 /**
- * What is equipped, the only place to pick it (R1579000), and what the account owns. R1655000: the
- * playmat, backdrop and card back are tiles, and a card's own picks are set from the card in the
- * Cards section. R1953001: no defaults of every card any more, so a card with no pick of its own
- * wears its kind's default, and a locked tile offers a held cosmetic token in place.
+ * What is equipped, the only place to pick it (R1579000), and what the account owns. R1655000: a
+ * card's own picks are set from the card in the Cards section. R1953001: a card with no pick of its
+ * own wears its kind's default, and a locked tile offers a held cosmetic token in place.
  */
 function CosmeticsSection({ token }: { token: string }): ReactElement {
   const owned = useRead(token, getOwnedCosmetics, keptOwned);

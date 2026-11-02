@@ -1,7 +1,6 @@
 //! SPEC §8.11 Training Grounds 7 Chosen by the Moon: (1) Unit, Common, 3/3 → 6/6, Taunt and Armor 3
 //! (Radiant Armor 6), a card of the held Training Grounds set (R1420, R2194000). Keywords only (§6.1):
-//! Armor is the numbered keyword (R482), taking n off each damage instance at §4.4 step 2 and summing with
-//! Defense Position's; Pierce skips it (R346). As M #92 Unan. TG #16 Celestial Caller summons it.
+//! Armor (R482, §4.4 step 2); Pierce skips it (R346). As M #92. TG #16 summons it.
 
 use jackioh_engine::prelude::*;
 
@@ -14,10 +13,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #7 Chosen by the Moon — SPEC §8.11 row 7, BUILD M13 row TG 7: "base: 3/3 with Taunt and Armor 3;
-// enemies must attack it before a non-Taunt target; a 5-damage hit deals 2; a 3-damage hit deals 0
-// (`damageAbsorbed`); in Defense Position its Armor is 4; a Pierce hit ignores the Armor. radiant 6/6,
-// Taunt, Armor 6; a 7-damage hit deals 1".
+// TG #7 Chosen by the Moon — SPEC §8.11 row 7, BUILD M13 row TG 7.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

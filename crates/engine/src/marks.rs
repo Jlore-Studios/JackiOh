@@ -1,27 +1,19 @@
 //! R437: a card that something still to come is aimed at carries a mark in both players' views —
 //! #50 K-Pop Fanatic's pending steal marks its target, drawn by the client as a corruption sparkle in
-//! the mark's color ("purple"), one effect reusable in other colors for other marks (SPEC §10.8).
+//! the mark's color ("purple") (SPEC §10.8).
 //!
 //! A mark is made by the effect that waits: `effects::delay`'s `delay({ …, watch, mark })` marks the
-//! card it watches (R174) as it schedules itself. A delayed destroy of a scope (Classic #20's Radiant
-//! face, R750) marks every card the scope names instead, kept in step with the board each time events
-//! are collected (`sync_marks`), so a card that arrives while it waits is marked and one that leaves is
-//! not. A mark lasts exactly as long as the delayed effect that made it does, so the record here is
-//! tied to the entry's id and holds nothing the entry does not: when the effect resolves at its R62
-//! point, fizzles, or is dropped because its card left the field
-//! (`zones::forget_watchers`, R76, R174), the entry is gone and so is the mark. `sweep_marks` notices it
-//! at the next point the resolution loop collects events and says so with a `marked` event
-//! (`added: false`), after whatever took the entry away; the one that made the mark said
-//! `added: true`. `view_for` reads `marks_on`, which reads the live entries, so the view never shows a
+//! card it watches (R174). A delayed destroy of a scope (Classic #20's Radiant face, R750) marks every
+//! card the scope names instead, kept in step with the board by `sync_marks`. A mark is tied to its
+//! entry's id and lasts exactly as long as the entry: when the effect resolves (R62), fizzles, or is
+//! dropped as its card leaves the field (`zones::forget_watchers`, R76), `sweep_marks` says so with a
+//! `marked` event (`added: false`), and `marks_on` reads the live entries, so the view never shows a
 //! mark whose effect has gone, even before the sweep has run.
 //!
-//! Hidden information: the mark was made by a public play aimed at a card its maker chose, so it
-//! tells neither player anything the play did not (R437). The event names the card and follows R97
-//! (`view_for::redact_event`): a face-down target is the sentinel to the player who may not read it,
-//! whose view carries the mark on the zone's back instead (R33).
-//!
-//! Port of `packages/engine/src/marks.ts`. TS's `MarkSink = { state, events }` is the engine's
-//! `EngineSink` (SURFACE §6.5).
+//! Hidden information: the mark was made by a public play, so it tells neither player anything the
+//! play did not (R437). The event follows R97 (`view_for::redact_event`): a face-down target is the
+//! sentinel to the player who may not read it, whose view carries the mark on the zone's back (R33).
+//! Marks are written through the engine's `EngineSink` (SURFACE §6.5).
 
 use crate::script::EngineSink;
 use crate::state::{DelayedEffect, GameState, MarkRecord};

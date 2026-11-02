@@ -1,14 +1,5 @@
-// #936 S8 B61–B64: `DuosBoard`, the co-op board. It renders `Game.tsx` for the seat's own duel and
-// wraps the board's moves as `{kind: "duel", body}`; a life strip shows own HP (`duos-own-hp`) and the
-// pool (`duos-pool`) for both teams, the own bar giving way to the pool once spent; the pass control
-// (`duos-pass`) sends `{kind: "pass", instanceId}` only when `legal` holds it; the portal
-// (`duos-portal`) flips the board to the teammate's duel read-only; the teammate strip
-// (`duos-teammate-strip`) always shows their HP, mana, hand count and whether they have ended; and the
-// ping wheel (`duos-ping-wheel`) offers the five pings, a received one marking its card
-// (`duos-ping-marker`) for PING_SHOW_MS.
-//
-// The fixtures are `DuosView`s built from the repo's own `PlayerView` fixtures (`test/fixtures.ts`).
-// The client renders them and decides nothing (CLAUDE.md rule 7).
+// #936 S8 B61–B64: `DuosBoard`, the co-op board. The fixtures are `DuosView`s built from the repo's own
+// `PlayerView` fixtures (`test/fixtures.ts`); the client renders them and decides nothing (CLAUDE.md rule 7).
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi, type Mock } from "vitest";
@@ -78,9 +69,7 @@ const TEAMMATE_HAND = 3;
 const PASSES_LEFT = 8;
 const PASS_COST = 1;
 
-// ---------------------------------------------------------------------------------------------
 // fixtures
-// ---------------------------------------------------------------------------------------------
 
 type Life = { pool: number; poolCap: number; spent: boolean };
 
@@ -189,9 +178,7 @@ const CONCEDED: DuosView["result"] = { outcome: "win", winner: "b", reason: "con
 const END_TURN: DuosActionBody = { kind: "duel", body: { type: "endTurn" } };
 const PASS_H1: DuosActionBody = { kind: "pass", instanceId: "h1" };
 
-// ---------------------------------------------------------------------------------------------
 // rendering and reading the board
-// ---------------------------------------------------------------------------------------------
 
 type Board = {
   onAction: Mock<(body: DuosActionBody) => void>;
@@ -269,10 +256,7 @@ function pointAt(target: Element): () => void {
   };
 }
 
-/**
- * Bring up a control that lives "on a hovered/inspected card": a mouse hover, then a touch long-press,
- * then a right-click, then a plain click, stopping as soon as the control is on the page.
- */
+/** Bring up a control that lives "on a hovered/inspected card", by whichever gesture shows it first. */
 function reveal(target: HTMLElement, id: string): HTMLElement | null {
   const now = (): HTMLElement | null => screen.queryAllByTestId(id)[0] ?? null;
   if (now() !== null) return now();
@@ -312,10 +296,6 @@ afterEach(() => {
   window.localStorage.clear();
   __resetSettingsForTests();
 });
-
-// ---------------------------------------------------------------------------------------------
-// B61: the own duel's board and the life strip
-// ---------------------------------------------------------------------------------------------
 
 describe("B61 the own duel and the life strip", () => {
   it("B61 renders the board for the seat's own duel: its own hand, not the teammate's", () => {
@@ -369,10 +349,7 @@ describe("B61 the own duel and the life strip", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B62: the pass control
-// ---------------------------------------------------------------------------------------------
-
 describe("B62 the pass control", () => {
   it("B62 on a hand card legal lets pass, duos-pass sends {kind: \"pass\", instanceId}", () => {
     const board = renderDuosBoard({ legal: [PASS_H1, END_TURN] });
@@ -433,9 +410,7 @@ describe("B62 the pass control", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B63: the portal, the teammate strip, waiting
-// ---------------------------------------------------------------------------------------------
 
 describe("B63 the portal", () => {
   it("B63 the portal flips the board to the teammate's duel, and back", () => {
@@ -533,10 +508,6 @@ describe("B63 the portal", () => {
     expect(screen.getByTestId(ID.round)).toHaveTextContent(/your team's turn/i);
   });
 });
-
-// ---------------------------------------------------------------------------------------------
-// B64: pings
-// ---------------------------------------------------------------------------------------------
 
 describe("B64 the ping wheel", () => {
   it("B64 no card inspected, no ping wheel", () => {
@@ -649,10 +620,7 @@ describe("B64 received pings", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #965: the result panel's replay door, and the board's replay mode
-// ---------------------------------------------------------------------------------------------
-
 describe("#965 the replay door and the board's replay mode", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
 
@@ -704,10 +672,7 @@ describe("#965 the replay door and the board's replay mode", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1483000: the result panel names the daily cap for a capped seat
-// ---------------------------------------------------------------------------------------------
-
 describe("R1483000 the result panel names the daily cap only for a capped seat", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
 
@@ -723,10 +688,7 @@ describe("R1483000 the result panel names the daily cap only for a capped seat",
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R169: the live-modifier chip in the rail
-// ---------------------------------------------------------------------------------------------
-
 describe("R169 the modifier list on the co-op board", () => {
   const TEAMMATE_MODIFIER = { id: "m9", label: "Your Spells cost (1) less" };
 
@@ -766,10 +728,7 @@ describe("R169 the modifier list on the co-op board", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1664: the result panel plays the seat's economy
-// ---------------------------------------------------------------------------------------------
-
 describe("#1664 the result panel plays what the game paid the seat's person", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
   const economy = {
@@ -814,10 +773,7 @@ describe("#1664 the result panel plays what the game paid the seat's person", ()
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1755: the result panel takes the focus, folds to the rail's Result and opens again
-// ---------------------------------------------------------------------------------------------
-
 describe("#1755 the result panel takes the focus and opens again", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
   const ECONOMY = {
@@ -887,10 +843,7 @@ describe("#1755 the result panel takes the focus and opens again", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R2092000: Play again on the result panel
-// ---------------------------------------------------------------------------------------------
-
 describe("R2092000 Play again on the result panel", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
   const HERE = { youOffered: false, teammateOffered: false, teammateHere: true, matchId: null };
@@ -954,10 +907,7 @@ describe("R2092000 Play again on the result panel", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1146: the team's result waits for the own duel's last burst
-// ---------------------------------------------------------------------------------------------
-
 describe("#1146 the team result waits for the own duel's lethal burst", () => {
   const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 5 }];
   const HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 3, combat: false };
@@ -991,9 +941,7 @@ describe("#1146 the team result waits for the own duel's lethal burst", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R2095000: Both boards, the teammate's duel beside the own one
-// ---------------------------------------------------------------------------------------------
 
 describe("R2095000 both boards render side by side with the teammate's read-only", () => {
   it("R2095000 with the toggle on, both boards render, the teammate's inside duos-board-teammate", () => {
@@ -1158,9 +1106,8 @@ describe("R2095000 the portal hides while both boards show", () => {
     renderDuosBoard();
     expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
     toggleBoth();
-    // The portal stays mounted while both boards show (CSS hides it on a wide screen and
-    // shows it again on a narrowed one, where it is the only flip control), and the toggle
-    // coming back off leaves it in place.
+    // The portal stays mounted while both boards show: CSS hides it on a wide screen and shows it
+    // again on a narrowed one, where it is the only flip control.
     expect(screen.getByTestId(ID.portal)).toBeInTheDocument();
     expect(screen.getAllByTestId("game")).toHaveLength(2);
     toggleBoth();
@@ -1178,8 +1125,7 @@ describe("R2095000 the portal hides while both boards show", () => {
     flipPortal();
     expect(screen.getByTestId("duos-board")).toHaveAttribute("data-showing", "teammate");
     expect(screen.getAllByTestId("game")).toHaveLength(2);
-    // ...and the teammate's once the portal flips to it, with the way back and the rest of the
-    // rail, none of it left on the own board that CSS now hides.
+    // ...and the teammate's once the portal flips to it, none of it left on the hidden own board.
     const own = screen.getByTestId(ID.boardOwn);
     const mate = screen.getByTestId(ID.boardTeammate);
     const back = within(mate).getByTestId(ID.portal);

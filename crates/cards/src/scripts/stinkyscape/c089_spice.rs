@@ -4,7 +4,6 @@
 //!   Radiant: "Can be sold from your hand at the Marketplace, like a Resource.\nDiscover a Radiant
 //!            Stinkyscape card."
 //!
-//! The sale is the engine's (R1861000), set by `StaticFlags.hand_sale` on both faces: while the
 //! Marketplace is open (R1853000), its owner may sell it from their hand in their main phase (R1853003),
 //! at a quote drawn each turn after the Resources' (`HAND_SALE_PRICE`, 3–10,
 //! Radiant 6–20); the public `marketSold` names it, it ceases to exist and its Credits are gained
@@ -62,10 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 89 Spice — SPEC §8.10 row 89, BUILD M12 row S 89: "Discovers a Stinkyscape card, never Spice, its
-// owner choosing among three; with the Marketplace open it can be sold from the hand for Credits, at its
-// quote, 3–10 Credits, Radiant 6–20 (R1861000), and is gone; with it closed it cannot; radiant the pick
-// is Radiant".
+// S 89 Spice — SPEC §8.10 row 89, BUILD M12 row S 89 (R1861000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::gain_market_credits;
@@ -77,7 +73,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    /// Credits that open the Marketplace.
     const OPENING_CREDITS: i32 = 10;
 
     fn spice(seed: &str, radiant: bool) -> Scenario {

@@ -2,12 +2,9 @@
 //! Base: "Draw 2; heal your hero 2". Radiant: "Draw 4; heal 4" — the cell changes only the numbers
 //! of the base clause (§8 Conventions), and "heal 4" is still the hero.
 //!
-//! Engine cell: the hand cap applies. That is the draw pipeline's job (§2.4, R4: hand size 10, a
-//! card drawn into a full hand is burned to the graveyard), so this file just asks for the draws.
-//! A hero has no maximum health (§3), so the heal may take it above 30; `heal` with an `amount` on
-//! a hero adds health with no cap (effects/heal.rs).
-//!
-//! A Spell's on-resolve script hangs off `cry` (§10.5 step 5).
+//! The hand cap (§2.4, R4) is the draw pipeline's job, so this file just asks for the draws. A hero
+//! has no maximum health (§3), so the heal may take it above 30. A Spell's on-resolve script hangs off
+//! `cry` (§10.5 step 5).
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;
@@ -30,11 +27,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5: "Draw 2, heal 2 (hero may exceed 30); hand cap burns;
-// radiant 4/4".
-//
-// §3 gives a hero no maximum health, so the heal runs past 30; R4 caps a hand at 10 and burns what
-// a draw cannot fit to the graveyard. `library[0]` is the top of the library (the next card drawn).
+// SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5.
+// `library[0]` is the top of the library (the next card drawn).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

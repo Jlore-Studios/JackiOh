@@ -1,9 +1,6 @@
 // The human's last practice board, kept on the device (R417, R508; Classic+ #29 Portal to the Past).
-//
-// A worker has no `localStorage`, so the page keeps it: the controller reads it into each start's
-// config and writes what a finished free game's snapshot carries (`PracticeSnapshot.lastBoard`).
-// Storage is untrusted and may be missing (private windows, blocked site data): a read that throws or
-// finds anything malformed is no board, and a write that throws keeps the board before it.
+// A worker has no `localStorage`, so the page keeps it. Storage is untrusted and may be missing: a read
+// that throws or finds anything malformed is no board, and a write that throws keeps the board before it.
 
 import type { LastBoardCard } from "./protocol.ts";
 import { getStored, setStored } from "../net/storage.ts";
@@ -16,7 +13,6 @@ function isCard(value: unknown): value is LastBoardCard {
   return typeof card.defId === "string" && typeof card.radiant === "boolean";
 }
 
-/** The human's last practice board, or none. */
 export function readLastBoard(): LastBoardCard[] {
   try {
     const raw = getStored(LAST_BOARD_STORAGE_KEY);
@@ -27,7 +23,6 @@ export function readLastBoard(): LastBoardCard[] {
   }
 }
 
-/** Keeps `board` as the human's last practice board. */
 export function writeLastBoard(board: readonly LastBoardCard[]): void {
   // Blocked storage: the next game starts with the board kept before, or none.
   setStored(LAST_BOARD_STORAGE_KEY, JSON.stringify(board));

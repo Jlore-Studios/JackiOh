@@ -20,8 +20,8 @@ pub struct LevelReward {
     pub card_tokens: i64,
 }
 
-/// The reward one set-track level pays (SPEC §14.7): the table above, generous early. Past level
-/// 10 every tenth level repeats level 10's, every fifth a pack, and any other a small Jlore purse.
+/// Past level 10 every tenth level repeats level 10's, every fifth a pack, and any other a small
+/// Jlore purse.
 pub fn reward_for_level(level: i64) -> LevelReward {
     match level {
         1 => LevelReward {

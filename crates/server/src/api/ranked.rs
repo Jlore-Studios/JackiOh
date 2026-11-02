@@ -1,20 +1,7 @@
-//! The ranked ladder on the server (SPEC §9.12, R603–R612): opening a season, rating a ranked game,
-//! and the three reads the client has — your own rank, the leaderboard, and both players' ranks on
-//! the match screen. Port of `apps/server/src/api/ranked.ts`.
+//! Ranked ladder management (SPEC §9.12, R603–R612): rating persistence over `crate::ranked`'s rules,
+//! for a ranked match's result (R604), a ranked series' end (R262) and the build's season at boot (R609).
 //!
-//! The rules are pure and live in `crate::ranked`: Glicko-2 (`glicko2.rs`), the ladder
-//! (`ladder.rs`) and the season's soft reset (`season.rs`). This file only reads the store, hands
-//! what it read to them, and writes back what they decided, always inside the caller's transaction.
-//!
-//! Who calls it:
-//!  - `results.rs`, for a ranked match that is not a series game, in the transaction that writes the
-//!    result (R604);
-//!  - `series.rs`, for a ranked series when it ends, in the transaction of its last transition (R262);
-//!  - `app.rs` at boot (`open_season`, SURFACE §11.2), and `cli/season_start.rs` by hand, to open
-//!    the build's season (R609).
-//!
-//! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, each
-//! player's profile id and username (R1436), and the season's badges.
+//! Never exposes raw ratings to clients (R612); returns `VisibleRank`, usernames, and badges (R1436).
 
 use std::sync::Arc;
 
@@ -28,10 +15,12 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{BOT_GRIND_STEP_GAMES, BOT_STRENGTHS};
+use crate::cosmetics::JLORIOUS_CARD_BACK;
 use crate::db::store::{
     BotRating, MatchRow, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide,
     Season, SeasonStanding, SeriesStatus, StoreError, Tx,
 };
+use crate::economy::store::{CosmeticGrant, EconomyReason};
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game_scored, widen_for_promotions};
 use crate::ranked::ladder::{
     self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
@@ -40,9 +29,7 @@ use crate::ranked::ladder::{
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
 
-// ---------------------------------------------------------------------------
 // The game's version (R375) and its season (R609)
-// ---------------------------------------------------------------------------
 
 /// The newest patch's version: the game's version, which names the season (R609). Compiled in
 /// from `crates/cards/patches/patches.json` (SURFACE §11.3), the same version the game records
@@ -51,15 +38,14 @@ pub fn load_patch_version() -> String {
     jackioh_cards::catalog_version().to_string()
 }
 
-/// What opening a season reads: the version that names it (TS also took the clock and the log,
-/// which are `now_ms` and `tracing` here).
+/// Dependencies required for opening a season.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SeasonDeps {
     pub patch_version: String,
 }
 
 impl SeasonDeps {
-    /// This build's: TS's `deps.patchVersion`, read at boot by `src/index.ts`.
+    /// Returns season dependencies for the current build.
     pub fn current() -> SeasonDeps {
         SeasonDeps {
             patch_version: load_patch_version(),
@@ -82,12 +68,9 @@ pub struct OpenedSeason {
 }
 
 /// R609: the build's season, opened inside `t` when it does not exist yet. The first season of all
-/// resets nothing — there is no season before it to come back from — and every later one runs the
-/// soft reset over every rated player in the same transaction as the season row, so a season is
-/// either open and reset or neither. Opens serialize on `ranked_lock_seasons`: two processes
-/// opening at once — the same season or, racing deploys, two different ones — run one after the
-/// other, so the second sees the first's row (or resets over a world that already holds it) and
-/// never soft-resets off a snapshot that predates it.
+/// resets nothing; every later one soft-resets every rated player in the season row's transaction,
+/// so a season is either open and reset or neither. Opens serialize on `ranked_lock_seasons`, so a
+/// second opener (racing deploys too) never soft-resets off a snapshot older than the first's row.
 pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<OpenedSeason, StoreError> {
     let id = build_season_id(deps);
     t.ranked_lock_seasons().await?;
@@ -161,9 +144,7 @@ pub async fn open_season(app: &App) -> Result<OpenedSeason, StoreError> {
     Ok(opened)
 }
 
-// ---------------------------------------------------------------------------
 // Rating one ranked game (R603–R608, R610, R611)
-// ---------------------------------------------------------------------------
 
 /// One side of a ranked game: a player's profile, or one of the AI bots (R610).
 #[derive(serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -212,6 +193,10 @@ pub struct RankedWrites {
     pub glickos: Vec<GlickoWrite>,
     pub ranks: Vec<SeasonRank>,
     pub peaks: Vec<PeakWrite>,
+    /// R2755000: the people this game leaves Jlorious who may not own the Jlorious card back yet:
+    /// its own people in Jlorious and each bystander whose peak it writes. Empty while the economy
+    /// is off (§14.12).
+    pub jlorious: Vec<String>,
 }
 
 /// Everything one ranked game will write, decided before any of it is written. Kept apart from the
@@ -356,16 +341,14 @@ struct RankChange {
 }
 
 /// Plans one ranked game (R603–R608): both sides rated against each other's rating from before it,
-/// each side's season moved toward the rank their new rating calls for, and the Jlorious peaks it
-/// gave anyone. Both targets are read from the season as it stood before the game, with both new
-/// ratings in it, so neither side's placement depends on which of the two is computed first.
-///
-/// R640000: a ladder bot's season row moves as a person's does, its target read against people's
-/// ratings alone, and it never stands in Jlorious. A bot id with no bot profile behind it (R610's
-/// bare rating) holds no row.
+/// each side's season moved toward the rank their new rating calls for, and any Jlorious peaks. Both
+/// targets read the season as before the game with both new ratings in it, so neither placement
+/// depends on which is computed first. R640000: a ladder bot's season row moves as a person's, its
+/// target read against people's ratings alone, never in Jlorious; a bot id with no bot profile
+/// (R610's bare rating) holds no row.
 pub async fn plan_ranked_game(
     t: &mut Tx<'_>,
-    _app: &App,
+    app: &App,
     input: &RankedGameInput,
 ) -> Result<RankedPlan, StoreError> {
     if let Some(recorded) = t.ranked_game(&input.id).await? {
@@ -438,7 +421,6 @@ pub async fn plan_ranked_game(
         [rated.a, rated.b]
     };
 
-    // The season with both new ratings in it, and each player's row as it stood.
     let mut new_rating: IndexMap<String, f64> = IndexMap::new();
     for (index, side) in sides.iter().enumerate() {
         if let Some((profile_id, _)) = ladder_side(side) {
@@ -496,7 +478,6 @@ pub async fn plan_ranked_game(
         );
     }
 
-    // Jlorious after the game, and the peak it gave each member who now stands higher than ever.
     let mut standings_after: Vec<SeasonStanding> = re_rated
         .iter()
         .filter(|standing| !ranks.contains_key(&standing.rank.profile_id))
@@ -511,10 +492,12 @@ pub async fn plan_ranked_game(
     }
     let jlorious_after = jlorious_order(&standings_of(&standings_after));
     let mut peaks: Vec<PeakWrite> = Vec::new();
+    let mut jlorious: Vec<String> = Vec::new();
     for (index, profile_id) in jlorious_after.iter().enumerate() {
         let position = index as i32 + 1;
         if let Some(own) = ranks.get_mut(profile_id) {
             own.after = with_jlorious_peak(&own.after, position);
+            jlorious.push(profile_id.clone());
             continue;
         }
         let standing = standings_after
@@ -527,7 +510,11 @@ pub async fn plan_ranked_game(
                 profile_id: profile_id.clone(),
                 position,
             });
+            jlorious.push(profile_id.clone());
         }
+    }
+    if !app.economy_live {
+        jlorious.clear();
     }
 
     let side_of = |side: &RankedSideInput, index: usize| -> RatedSide {
@@ -594,11 +581,13 @@ pub async fn plan_ranked_game(
             glickos,
             ranks: ranks.values().map(|rank| rank.after.clone()).collect(),
             peaks,
+            jlorious,
         }),
     })
 }
 
-/// Writes a plan inside `t`: both ratings, both season rows, the peaks, and the record (R611).
+/// Writes a plan inside `t`: both ratings, both season rows, the peaks, the Jlorious card back of
+/// each person it leaves Jlorious (R2755000), and the record (R611).
 pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> Result<(), StoreError> {
     let Some(writes) = &plan.writes else {
         return Ok(());
@@ -637,6 +626,20 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
         t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, i64::from(peak.position))
             .await?;
     }
+    // R2755000: a grant to someone who owns it already writes nothing.
+    for profile_id in &writes.jlorious {
+        t.economy_cosmetics_grant(&CosmeticGrant {
+            profile_id: profile_id.clone(),
+            card_id: None,
+            cosmetic_id: JLORIOUS_CARD_BACK.to_string(),
+            delta: 1,
+            reason: EconomyReason::Jlorious,
+            reference: Some(plan.row.id.clone()),
+            dev: false,
+            at,
+        })
+        .await?;
+    }
     t.ranked_record_game(&plan.row).await?;
     Ok(())
 }
@@ -652,9 +655,7 @@ pub async fn rate_ranked_game(
     Ok(plan.row)
 }
 
-// ---------------------------------------------------------------------------
 // What the client reads (R612)
-// ---------------------------------------------------------------------------
 
 /// One profile's rank in a season it has standings for.
 fn rank_in(standings: &[SeasonStanding], jlorious: &[String], profile_id: &str) -> VisibleRank {
@@ -1014,9 +1015,7 @@ pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(Rank
     Ok((tier(&players.0), tier(&players.1)))
 }
 
-// TS's `createRankedRoutes()`, in its order, is three `AuthLevel::Active` rows of `app.rs`'s
-// `ROUTES`: GET /api/ranked → get_ranked; GET /api/leaderboard → get_leaderboard;
-// GET /api/matches/:matchId/ranks → get_match_ranks.
+// Routes
 
 /// `GET /api/ranked`: the caller's own rank, record, streak, username and season badges. Never the
 /// rating (R612).

@@ -27,10 +27,9 @@ fn lethal_on_board() -> GameState {
 
 #[test]
 fn r1452_exact_style_decides_as_decide() {
-    // `decide` is `decide_styled` at the exact style, so comparing the two would prove nothing. What
-    // keeps every practice game and gate where it was is that the exact style takes no draw of its
-    // own: before styles, a decision's only draws were its determinizations', so the cursor must stand
-    // exactly where that many determinizations of the redacted state leave the same rng.
+    // `decide` is `decide_styled` at the exact style, so comparing the two proves nothing. What keeps every
+    // practice game and gate where it was: the exact style takes no draw of its own, so the cursor must
+    // stand where that many determinizations of the redacted state leave the same rng.
     let mut searched = 0;
     for seed in ["style-exact-1", "style-exact-2"] {
         for state in random_policy_states(seed, 7, 140) {
@@ -84,7 +83,6 @@ fn r1452_pick_finalist_spreads_with_temperature() {
             *count += 1;
         }
     }
-    // One draw per pick.
     assert_eq!(rng.cursor(), draws);
     // Weights 1, e^-0.5 ≈ 0.61, e^-5 ≈ 0.007: the best most, the near-best often, the far one rarely.
     let [best, near, far] = picked;

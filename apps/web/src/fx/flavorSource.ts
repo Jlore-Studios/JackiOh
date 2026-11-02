@@ -1,7 +1,7 @@
 // #1443: where a non-combat damage's source card is, read off the viewer's `PlayerView` only
 // (CLAUDE.md rule 7). A hit counts only when the view shows the source face-up with a `defId` the
 // bundled catalog or the match's own definitions know; a hidden card, an unknown id, a hero power
-// or no source fires nothing, and the damage animates as it does today.
+// or no source fires nothing.
 
 import { hasKeyword, type Flavor, type PlayerId, type PlayerView } from "@jackioh/shared";
 
@@ -37,11 +37,7 @@ function sourceOf(defId: string, controller: PlayerId, view: PlayerView, anchor:
   return { anchor, flavor: flavorOfId(defId, view.defs), controller };
 }
 
-/**
- * #1444: the look `defId` draws for the card `instanceId`, or `null` when the view hides it.
- * A hidden id or one neither the bundled catalog nor the match's own definitions know is never
- * looked up (CLAUDE.md rule 7); Chaos picks per instance id.
- */
+/** #1444: the look `defId` draws for the card `instanceId` (Chaos picks per instance), or `null` when the view hides it. */
 export function flavorLookOf(defId: string, instanceId: string, view: PlayerView): FlavorLook | null {
   if (!readable(defId, view)) return null;
   return flavorLook(flavorOfId(defId, view.defs), instanceId);
@@ -67,11 +63,9 @@ export function attackerOf(instanceId: string, view: PlayerView): { defId: strin
 }
 
 /**
- * The card `sourceId` names, as the view shows it, or `null` when no projectile flies. Field hits
- * (a Unit, or a face-up backrow card — R1081000: a Unit standing in a backrow zone wins over the
- * slot's own `defId`) anchor on the source's zone with the object's own `defId` and controller;
- * anywhere else (resolving, graveyard, exile, the viewer's hand) anchors on the seat's hero with
- * that seat as controller. `null` and R97's sentinel never fly.
+ * The card `sourceId` names, as the view shows it, or `null` when no projectile flies (as for R97's sentinel).
+ * A field hit anchors on its zone (R1081000: a Unit standing in a backrow zone wins over the slot's own
+ * `defId`); anywhere else anchors on the seat's hero, with that seat as controller.
  */
 export function flavorSourceOf(sourceId: string | null, view: PlayerView): FlavorSource | null {
   if (sourceId === null || sourceId === HIDDEN_ID) return null;

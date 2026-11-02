@@ -10,11 +10,8 @@
 import type { EmoteId, GameEvent, PlayerId, PlayerView, SideView } from "../wire/index.ts";
 import { EMOTE_IDS, emoteGate, handHolds, opponentOf } from "../wire/index.ts";
 
-// R645: §6 persona configuration; cosmetic only.
-
-/** §6: the situations a persona may answer, named as personas.ts detects them. */
+/** §6: the situations a persona may answer. */
 export const EMOTE_TRIGGERS = [
-  /** The mulligan phase just ended. */
   "mulliganEnd",
   /** The AI's turn started while it is ahead (its health − yours ≥ leadHealth, or leadUnits+ more units). */
   "turnStartAhead",
@@ -24,7 +21,6 @@ export const EMOTE_TRIGGERS = [
   "killedTopUnit",
   /** The AI took bigHit+ damage to its hero in one hit. */
   "tookBigHit",
-  /** The AI lost its highest-attack unit. */
   "lostTopUnit",
   /** Your turn ran past longTurnMs (once per turn). */
   "playerTurnLong",
@@ -44,15 +40,10 @@ export type EmoteReplyKey = (typeof EMOTE_REPLY_KEYS)[number];
 
 /** §6's thresholds and timings — every number the trigger table shares. */
 export const AI_EMOTE = {
-  /** "its health − yours ≥ 10". */
   leadHealth: 10,
-  /** "or 3+ more units". */
   leadUnits: 3,
-  /** "10+ damage to a hero in one hit". */
   bigHit: 10,
-  /** "you kill 2+ of its units in one turn". */
   killsForBigPlay: 2,
-  /** "Your turn runs past 45s (once per turn)". */
   longTurnMs: 45_000,
   /** "a random 0.8–2.5s delay" — every rolled emote waits inside this window. */
   delayMinMs: 800,
@@ -64,11 +55,7 @@ export type PersonaName = "balanced" | "polite" | "bm" | "silent";
 export type PersonaSpec = {
   /** The share of AI opponents dealt this persona at match creation; weights sum to 1. */
   readonly weight: number;
-  /**
-   * §6's caps: most emotes within one of the AI's own turns (`ownTurn`) or one of the player's
-   * (`otherTurn`), and per match (`match`) — the mulligan greeting and the end-of-match emotes
-   * exempted from the last.
-   */
+  /** §6's caps per turn and per match; the mulligan greeting and the end-of-match emotes skip `match`. */
   readonly caps: { readonly ownTurn: number; readonly otherTurn: number; readonly match: number };
   readonly triggers: Partial<Record<EmoteTrigger, { readonly chance: number; readonly pool: readonly EmoteId[] }>>;
   readonly replies: Partial<Record<EmoteReplyKey, { readonly chance: number; readonly pool: readonly EmoteId[] }>>;
@@ -173,13 +160,11 @@ export function pickPersona(rng: () => number): PersonaName {
   return "silent";
 }
 
-/** The uniform pick from a pool, or null for an empty one. */
 function pickFrom(pool: readonly EmoteId[], rng: () => number): EmoteId | null {
   const at = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
   return pool[at] ?? null;
 }
 
-/** §6's "a random 0.8–2.5s delay", drawn inside the window. */
 function rollDelay(rng: () => number): number {
   return AI_EMOTE.delayMinMs + rng() * (AI_EMOTE.delayMaxMs - AI_EMOTE.delayMinMs);
 }
@@ -230,7 +215,6 @@ export function replyKeyOf(emote: EmoteId): EmoteReplyKey | null {
   return REPLY_KEY_OF[emote] ?? null;
 }
 
-/** §6 reply roll, with R1344 hand filtering. */
 export function rollForReply(
   persona: PersonaName,
   emote: EmoteId,
@@ -249,7 +233,6 @@ export function rollForReply(
 
 export type EmotePersona = {
   readonly persona: PersonaName;
-  /** New events and their surrounding views produce gate-checked emote intents. */
   onEvents: (
     fresh: readonly GameEvent[],
     prev: PlayerView | null,
@@ -258,7 +241,6 @@ export type EmotePersona = {
   ) => AiEmote[];
   /** Player emotes only: the AI cannot reply to a reply. */
   onPlayerEmote: (emote: EmoteId, now: number) => AiEmote[];
-  /** §6 long-turn trigger, held once per turn by the turn number. */
   onPlayerTurnLong: (view: PlayerView, now: number) => AiEmote[];
 };
 
@@ -272,7 +254,6 @@ export function createEmotePersona(opts: {
   const { persona, seat, rng, hand = EMOTE_IDS } = opts;
   const spec = AI_PERSONAS[persona];
 
-  // §6/R643 bookkeeping for caps, replies, and kill triggers.
   const sentAt: number[] = [];
   let sentMatch = 0;
   let sentOwnTurn = 0;
@@ -332,7 +313,6 @@ export function createEmotePersona(opts: {
     const moment = { active: view.active, phase: view.phase };
     lastMoment = moment;
 
-    // Mulligan end is the transition away from a previous mulligan view.
     if (prev?.mulligan !== undefined && view.mulligan === undefined) {
       out.push(...emit(rollForTrigger(persona, "mulliganEnd", rng, hand), moment, now, true));
     }
@@ -378,7 +358,6 @@ export function createEmotePersona(opts: {
             if (event.attack >= top) {
               out.push(...emit(rollForTrigger(persona, "lostTopUnit", rng, hand), moment, now, false));
             }
-            // Roll playerBigPlay once when a player turn reaches its kill threshold.
             if (view.active !== seat) {
               killsThisTurn += 1;
               if (killsThisTurn >= AI_EMOTE.killsForBigPlay && bigPlayRolledTurn !== view.turn) {
@@ -398,7 +377,6 @@ export function createEmotePersona(opts: {
         }
         case "gameOver": {
           if (event.winner === seat) {
-            // §6 exempts end-of-match emotes from the match cap.
             out.push(...emit(rollForTrigger(persona, "matchWon", rng, hand), moment, now, true));
           } else if (event.winner === opponentOf(seat)) {
             out.push(...emit(rollForTrigger(persona, "matchLost", rng, hand), moment, now, true));

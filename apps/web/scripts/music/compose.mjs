@@ -219,15 +219,15 @@ export function roots(sec, { ch, octave = -1, vel = 60, hits = null }) {
   }
 }
 
-/** Repeated notes on each chord's root (a pulse): one every `step` beats, accents cycling. */
-export function pulse(sec, { ch, step = 0.5, octave = -1, vel = 60, accent = [1, 0.7], gate = 0.6, tone = "R" }) {
+/** Repeated notes on each chord's root (a pulse): one every `step` beats, accents cycling, none from `until` on. */
+export function pulse(sec, { ch, step = 0.5, octave = -1, vel = 60, accent = [1, 0.7], gate = 0.6, tone = "R", until = Infinity }) {
   let i = 0;
   for (const span of sec.spans) {
     const c = span.chord;
     const d = tone === "5" ? c.root + 4 : c.root;
     const n = pitch(sec.k, d, octave, alterOf(c, d));
     for (let t = 0; t < span.beats - 1e-9; t += step) {
-      note(sec, ch, span.t + t, step * gate, n, vel * accent[i % accent.length]);
+      if (span.t + t < until) note(sec, ch, span.t + t, step * gate, n, vel * accent[i % accent.length]);
       i += 1;
     }
   }
@@ -407,7 +407,74 @@ export const GM = {
   whistle: 78, ocarina: 79, square: 80, saw: 81, calliope: 82, chiff: 83, charang: 84, voiceLead: 85, fifths: 86, bassLead: 87,
   newAge: 88, warmPad: 89, polysynth: 90, choirPad: 91, bowedPad: 92, metalPad: 93, haloPad: 94, sweepPad: 95,
   crystal: 98, atmosphere: 99, brightness: 100, sitar: 104, banjo: 105, kalimba: 108, bagpipe: 109, fiddle: 110,
+  percOrgan: 17, churchOrgan: 19, tangoAccordion: 23, altoSax: 65, tenorSax: 66, shanai: 111, taiko: 116,
 };
 
 /* Drum kits (program on DRUMS). */
 export const KIT = { standard: 0, room: 8, power: 16, electronic: 24, tr808: 25, jazz: 32, brush: 40, orchestra: 48 };
+
+/* ------------------------------------------------------------------------------------------- *
+ * Form and gesture
+ * ------------------------------------------------------------------------------------------- */
+
+/** #51: whatever plays for a long stretch (a station's in-game track) loops two minutes at least. */
+export const MIN_LOOP_S = 120;
+
+/** One bar of a drum, hit at each of `times` at velocity `v`. */
+export const at = (n, v, times) => times.map((t) => [t, n, v]);
+/** Every `step` beats from 0 up to `beats`. */
+export const every = (step, beats = 4) => Array.from({ length: Math.round(beats / step) }, (_, i) => i * step);
+
+/**
+ * The body as a run of sections: `form` is [bars, progression, part names], and each part is
+ * `(section, index)` writing into it. Throws when the loop runs under MIN_LOOP_S.
+ */
+export function arrange(song, parts, form) {
+  form.forEach(([bars, prog, names], i) => {
+    const s = section(song, "body", bars, prog);
+    for (const name of names) {
+      const part = parts[name];
+      if (part === undefined) throw new Error(`${song.id}: no part ${name}`);
+      part(s, i);
+    }
+  });
+  const seconds = (song.parts.body.beats * 60) / song.bpm;
+  if (seconds < MIN_LOOP_S) throw new Error(`${song.id}: its loop runs ${seconds.toFixed(1)} s, under ${MIN_LOOP_S}`);
+  return { song };
+}
+
+/** A section in another key (the parallel minor for a tense passage); the song's key is put back. */
+export function sectionIn(song, where, bars, progression, k) {
+  const home = song.key;
+  song.key = k;
+  try {
+    return section(song, where, bars, progression);
+  } finally {
+    song.key = home;
+  }
+}
+
+/** A drum roll in bar `bar` of a section, from beat `from` to `to` every `step`, swelling `v0` → `v1`. */
+export function roll(s, bar, { n, from = 0, to = s.song.beatsPerBar, step = 0.25, v0 = 30, v1 = 90 }) {
+  const base = bar * s.song.beatsPerBar;
+  const count = Math.round((to - from) / step);
+  for (let i = 0; i < count; i += 1) note(s, DRUMS, base + from + i * step, 0.2, n, v0 + ((v1 - v0) * i) / Math.max(1, count - 1));
+}
+
+/** A volume LFO on CC11 (a wobble or a gate): one cycle every `cycle` beats, `depth` deep. */
+export function wobble(s, { ch, cycle = 0.5, depth = 0.85, from = 0, to = s.beats, shape = "saw" }) {
+  const steps = 8;
+  for (let t = from; t < to - 1e-9; t += cycle) {
+    for (let k = 0; k < steps; k += 1) {
+      const f = k / steps;
+      const lfo = shape === "saw" ? 1 - f : 0.5 + 0.5 * Math.cos(2 * Math.PI * f);
+      cc(s, ch, t + f * cycle, 11, 127 * (1 - depth + depth * lfo));
+    }
+  }
+  cc(s, ch, to - 0.01, 11, 127);
+}
+
+/** CC11 rising from `lo` to full over the section (a swell, or a filter-style build). */
+export function swell(s, { ch, lo = 40, steps = 32 }) {
+  for (let k = 0; k <= steps; k += 1) cc(s, ch, (s.beats * k) / steps - (k === steps ? 0.01 : 0), 11, lo + ((127 - lo) * k) / steps);
+}

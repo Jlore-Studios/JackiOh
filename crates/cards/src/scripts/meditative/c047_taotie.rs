@@ -4,12 +4,10 @@
 //! Radiant: "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck
 //!           into this."
 //! Engine (R62): `end_of_turn` with this as the kept target and one ingredient drawn inside `apply`
-//! from the match rng (ME-FUSE-RANDOM, MD-C20): the base face draws from the enemy permanents on
-//! the field (tops of piles, both rows, face-down cards included, never an Immutable one); the
-//! Radiant face then draws a second ingredient from the opponent's library. The fusion is R77 and
-//! R102's: this keeps its instance, zone, damage and Radiant flag; stats are summed; keywords, tags
-//! and texts joined; the eaten card ceases to exist with no Death. With no enemy permanent, nothing
-//! is fused; an Immutable 饕餮 eats nothing (R23).
+//! from the match rng (ME-FUSE-RANDOM, MD-C20): the enemy permanents on the field (tops of piles,
+//! both rows, face-down cards included, never an Immutable one), then on the Radiant face the
+//! opponent's library. The fusion is R77 and R102's: this keeps its instance, zone, damage and
+//! Radiant flag; the eaten card ceases to exist with no Death. An Immutable 饕餮 eats nothing (R23).
 
 use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::prelude::*;
@@ -46,11 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47: "At your end of turn only, one random enemy
-// permanent (tops of piles, both rows, face-down ones included, never an Immutable one) is fused
-// into it (MD-C20) … with no enemy permanent, nothing; an Immutable 饕餮 eats nothing (R23); the
-// fused definition survives a JSON round trip (R468); radiant 4/4 and also a random non-Immutable
-// card of the opponent's deck".
+// M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47, R468.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -170,7 +164,6 @@ mod tests {
 
                 s.end_turn();
 
-                // p2's turn ended, not p1's: nothing eaten.
                 assert_eq!(s.state().active, P1);
                 assert!(!fused(&s));
                 assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(BODY.to_string()));
@@ -206,7 +199,6 @@ mod tests {
 
                 s.end_turn();
 
-                // The Fiender on top went in; the Big Felinor under it stays in its lane.
                 assert!(fused(&s));
                 s.expect_in_zone(top.id.as_str(), "gone");
                 assert_eq!(
@@ -225,7 +217,6 @@ mod tests {
 
                 s.end_turn();
 
-                // The only enemy permanent is Immutable: nothing to eat.
                 assert!(!fused(&s));
                 assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(WALL.to_string()));
                 let taotie = s.unit(P1, 1).expect("taotie");
@@ -259,10 +250,8 @@ mod tests {
 
                 let after = s.card(id.as_str()).clone();
                 let def = fused_def(&s, &after);
-                // Stats summed (2 + 1 / 2 + 1), the 1 damage kept.
                 s.expect_stats(&after, json!({ "attack": 3, "maxHealth": 3, "health": 2 }));
                 assert_eq!(after.damage, 1);
-                // Keywords, tags and text joined; the cost 饕餮's (4).
                 let keywords = serde_json::to_string(&s.stats(&after).keywords).expect("JSON");
                 assert!(keywords.contains("Can't attack"), "{keywords}");
                 let tags = js(&def.tags);
@@ -278,7 +267,6 @@ mod tests {
                 );
                 assert!(def.base.text.contains("Steal the Unit"), "{}", def.base.text);
                 assert_eq!(def.cost, CardCost::Fixed(4));
-                // The meal ceased to exist with no Death: never destroyed, never in a graveyard.
                 s.expect_in_zone(mrow.id.as_str(), "gone");
                 assert!(!s.events().iter().any(|event| matches!(
                     event,
@@ -351,7 +339,6 @@ mod tests {
                     json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
                 );
 
-                // 饕餮 died, and the Saintess's Death it carried made p1's other Unit Radiant.
                 s.expect_in_zone(id.as_str(), "graveyard");
                 assert!(s.card(&felinor).radiant);
             }
@@ -405,8 +392,6 @@ mod tests {
                 let round_tripped: GameState =
                     serde_json::from_value(js(s.state())).expect("JSON is a state");
                 let same = find_instance(&round_tripped, &after.id).expect("the fused card");
-                // The fusion's transient definition traveled with it: still one fused card with
-                // the summed stats, not two cards and not the printed one.
                 assert_eq!(same.def_id, after.def_id);
                 assert_ne!(same.def_id, TAOTIE);
                 let view = unit_view(&round_tripped, same);
@@ -468,7 +453,7 @@ mod tests {
                 assert_eq!(after.id, before.id);
                 // Both fusions summed their stats (R77), and the kept card is Radiant, so it shows
                 // the fusion's radiant form, the sum of the radiant forms: 4 + 6 + 6 attack and
-                // 4 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.10).
+                // 4 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8).
                 assert!(after.radiant);
                 s.expect_stats(&after, json!({ "attack": 16, "health": 20 }));
             }

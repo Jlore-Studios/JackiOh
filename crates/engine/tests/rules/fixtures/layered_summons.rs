@@ -1,10 +1,6 @@
 //! Test-only cards for layered summons and the lethal guard on a pile (issue #1842): several Units
 //! summoned into one unit zone as a §3.2 Stack pile, bottom first (`summon_pile`, R1842000), and
-//! R1204's lethal guard standing in such a pile (R1842001). Each does it through the engine's own
-//! verbs, as a card script would, so the engine never imports `crates/cards`; the Stinkyscape Drone
-//! Battleship (S07) is the card that will use them.
-//!
-//! Ids are prefixed `ls-` and indexed from 18420, so they collide with no other fixture file's.
+//! R1204's lethal guard standing in such a pile (R1842001). Ids `ls-…` from 18420 are no other file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -19,7 +15,6 @@ use super::harness::{both, spread};
 pub const BOLT: i32 = 10;
 /// What the smite fixture deals: lethal to the guard through its Armor, and to a hero at 20.
 pub const SMITE: i32 = 30;
-/// The guard's printed Armor.
 pub const GUARD_ARMOR: i32 = 4;
 
 fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
@@ -48,7 +43,6 @@ fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords
     }))
 }
 
-/// A replacement as TS's literal `{ id, on, instead }`, with no `where`, `when`, `then` or `by`.
 fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDef {
     ReplacementDef {
         id: id.to_string(),
@@ -61,16 +55,15 @@ fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDe
     }
 }
 
-/// A 3/6 Unit: a pile's bottom layer (the Drone Battleship's Meltdown).
+/// A pile's bottom layer (the Drone Battleship's Meltdown).
 pub static bottom: LazyLock<CardDef> =
     LazyLock::new(|| card(18420, "bottom", "Unit", Some((3, 6)), json!([])));
-/// A 2/6 Unit: a pile's middle layer (Propagation).
+/// A pile's middle layer (Propagation).
 pub static middle: LazyLock<CardDef> =
     LazyLock::new(|| card(18421, "middle", "Unit", Some((2, 6)), json!([])));
-/// A 1/4 Unit the guard watches over.
+/// What the guard watches over.
 pub static ally: LazyLock<CardDef> = LazyLock::new(|| card(18422, "ally", "Unit", Some((1, 4)), json!([])));
-/// A 2/12 Unit with Armor 4: "Fatal damage a friendly ally would take is redirected to this" (R1204;
-/// the Shield Layer's shape).
+/// "Fatal damage a friendly ally would take is redirected to this" (R1204, the Shield Layer's shape).
 pub static guard: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         18423,
@@ -80,32 +73,30 @@ pub static guard: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Armor", "n": GUARD_ARMOR }]),
     )
 });
-/// A 1/1 Unit that asks a question as it arrives (R151).
+/// Asks a question as it arrives (R151).
 pub static asker: LazyLock<CardDef> = LazyLock::new(|| card(18424, "asker", "Unit", Some((1, 1)), json!([])));
-/// A 1/1 Unit: "Whenever you summon a Unit, give it +1/+1".
+/// "Whenever you summon a Unit, give it +1/+1".
 pub static watcher: LazyLock<CardDef> =
     LazyLock::new(|| card(18425, "watcher", "Unit", Some((1, 1)), json!([])));
-/// A Trap with no script: a layer that is no Unit.
+/// A layer that is no Unit.
 pub static trap: LazyLock<CardDef> = LazyLock::new(|| card(18426, "trap", "Trap", None, json!([])));
-/// A Spell: "Summon bottom, middle and guard as one pile, guard on top". Radiant: every layer Radiant.
+/// "Summon bottom, middle and guard as one pile, guard on top". Radiant: every layer Radiant.
 pub static pile: LazyLock<CardDef> = LazyLock::new(|| card(18427, "pile", "Spell", None, json!([])));
-/// A Spell: the same pile into lane 3.
+/// The same pile into lane 3.
 pub static lane_pile: LazyLock<CardDef> =
     LazyLock::new(|| card(18428, "lane-pile", "Spell", None, json!([])));
-/// A Spell: a pile of bottom, trap and guard.
+/// A pile of bottom, trap and guard.
 pub static mixed_pile: LazyLock<CardDef> =
     LazyLock::new(|| card(18429, "mixed-pile", "Spell", None, json!([])));
-/// A Spell: a pile of asker, middle and guard.
+/// A pile of asker, middle and guard.
 pub static asking_pile: LazyLock<CardDef> =
     LazyLock::new(|| card(18430, "asking-pile", "Spell", None, json!([])));
-/// A Spell: 10 damage to a chosen unit or hero.
 pub static bolt: LazyLock<CardDef> = LazyLock::new(|| card(18431, "bolt", "Spell", None, json!([])));
-/// A Spell: 30 damage to a chosen unit or hero.
 pub static smite: LazyLock<CardDef> = LazyLock::new(|| card(18432, "smite", "Spell", None, json!([])));
-/// A Spell: destroy every Unit.
+/// Destroy every Unit.
 pub static wipe: LazyLock<CardDef> = LazyLock::new(|| card(18433, "wipe", "Spell", None, json!([])));
 
-/// A Spell whose Cry summons `def_ids` as one pile, with `extra` (`lane`, `radiant`) beside them.
+/// Summons `def_ids` as one pile, with `extra` (`lane`, `radiant`) beside them.
 fn pile_script(def_ids: Vec<String>, extra: Value) -> Script {
     let args = spread(json!({ "defIds": def_ids }), extra);
     Script {
@@ -119,7 +110,6 @@ fn layers() -> Vec<String> {
     vec![bottom.id.clone(), middle.id.clone(), guard.id.clone()]
 }
 
-/// A Spell that deals `amount` to a chosen unit or hero.
 fn hit(amount: i32) -> CardScripts {
     both(Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))],
@@ -233,7 +223,6 @@ pub static LS_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_layered_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

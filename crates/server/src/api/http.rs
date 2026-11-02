@@ -1,19 +1,12 @@
-//! The HTTP layer: an axum `Request` in, an axum `Response` out, and TS's own router in between
-//! (port of `apps/server/src/api/http.ts`).
+//! The HTTP layer: an axum `Request` in and an axum `Response` out.
 //!
-//! Handlers are plain async functions so every endpoint is unit-testable without a listener, and
-//! the composition root (`app.rs`) mounts `dispatch` as the one fallback of its axum `Router`
-//! (SURFACE §11.2). Route declarations carry their own auth requirement, which is how SPEC §9.4's
-//! "a pending account can see the code screen and nothing else" is enforced in one place instead of
-//! at the top of every handler.
+//! Handlers are plain async functions, so every endpoint is unit-testable without a listener, and
+//! `app.rs` mounts `dispatch` as the one fallback of its axum `Router` (SURFACE §11.2). Route
+//! declarations carry their own auth requirement, so SPEC §9.4's "a pending account can see the code
+//! screen and nothing else" is enforced in one place instead of in every handler.
 //!
-//! TS's matcher is kept rather than axum's routing (SURFACE §11.3): routes are tried in
-//! registration order, and a wrong method on a known path answers **404** `not_found`
-//! "method not allowed for this path".
-//!
-//! `api/deps.ts` is not ported (SURFACE §11.3): its defaults are read from `crate::config`
-//! directly, `floodLimits.apiRequestsPerMinute` is `API_REQUESTS_PER_MINUTE`, and its
-//! `consoleLogger` is `log_info`/`log_warn`/`log_alert` below over `tracing`.
+//! Routes are tried in registration order (SURFACE §11.3), and a wrong method on a known path
+//! answers **404** `not_found` "method not allowed for this path".
 
 use std::collections::VecDeque;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
@@ -36,11 +29,9 @@ use crate::config::{
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 
-// ---------------------------------------------------------------------------
 // Errors
-// ---------------------------------------------------------------------------
 
-/// Every error code the API answers with (TS `ApiErrorCode`), serialized as TS's literals.
+/// Every error code the API answers with, serialized as snake_case literals.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum ApiErrorCode {
@@ -77,7 +68,7 @@ pub enum ApiErrorCode {
 }
 
 impl ApiErrorCode {
-    /// TS's `STATUS` table: the HTTP status each code answers with.
+    /// The HTTP status each code answers with.
     pub fn status(self) -> u16 {
         match self {
             ApiErrorCode::BadRequest => 400,
@@ -147,8 +138,7 @@ impl std::fmt::Display for ApiErrorCode {
 /// The one error shape the client ever sees: `{ "error": { code, message, details? } }`.
 ///
 /// `retry_after_ms` is the wait a `rate_limited` refusal carries (R192); `rate_limited` writes it
-/// both here and as `details.retryAfterMs`, which is what the body shows. An `Internal` error is
-/// TS's "a thrown non-`ApiError`": `dispatch` logs its message and answers "something went wrong".
+/// both here and as `details.retryAfterMs`, which is what the body shows.
 #[derive(Clone, Debug)]
 pub struct ApiError {
     pub code: ApiErrorCode,
@@ -176,18 +166,15 @@ impl ApiError {
         }
     }
 
-    /// TS's `throw new Error(message)` inside a handler: the router turns it into a 500 whose body
-    /// says only "something went wrong", and logs `message` as `handler.threw`.
+    /// A 500 error whose body says only "something went wrong", logging `message` as `handler.threw`.
     pub fn internal(message: impl Into<String>) -> ApiError {
         ApiError::new(ApiErrorCode::Internal, message)
     }
 
-    /// TS `error.status`.
     pub fn status(&self) -> u16 {
         self.code.status()
     }
 
-    /// TS `error.body()`.
     pub fn body(&self) -> Value {
         let mut error = Map::new();
         error.insert("code".to_string(), Value::String(self.code.as_str().to_string()));
@@ -198,7 +185,7 @@ impl ApiError {
         json!({ "error": Value::Object(error) })
     }
 
-    /// The body as the client receives it, its keys in TS's order (`code`, `message`, `details`).
+    /// The body as the client receives it (`code`, `message`, `details`).
     fn body_text(&self) -> String {
         #[derive(Serialize)]
         struct Fields<'a> {
@@ -230,8 +217,8 @@ impl std::fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
-/// A store failure is TS's thrown `Error` from inside a handler: a 500. A fenced claim is the one
-/// store answer a person can do something about, a 503 (R1523000).
+/// A store failure is a 500. A fenced claim is the one store answer a person can do something
+/// about, a 503 (R1523000).
 impl From<StoreError> for ApiError {
     fn from(error: StoreError) -> ApiError {
         match error {
@@ -353,18 +340,16 @@ pub fn error_response(error: &ApiError) -> Response {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Request
-// ---------------------------------------------------------------------------
 
-/// What every handler is handed (TS `ApiRequest`, SURFACE §11.2).
+/// What every handler is handed (SURFACE §11.2).
 ///
-/// - `caller`: set when the route declares `AuthLevel::User` or `Active` (TS `user` and `profile`).
+/// - `caller`: set when the route declares `AuthLevel::User` or `Active`.
 /// - `params`: the `:name` segments of the route's path.
-/// - `query`: the URL's search parameters, the first value of each name (TS `searchParams.get`).
+/// - `query`: the URL's search parameters, the first value of each name.
 /// - `body`: the parsed JSON body; `{}` for a request without one. Anything but a JSON object is
 ///   refused before a handler runs.
-/// - `address`: §9.4, §9.8: the client address is only ever seen hashed (TS `ipHash`).
+/// - `address`: §9.4, §9.8: the client address is only ever seen hashed.
 pub struct Req {
     pub caller: Option<Caller>,
     pub params: IndexMap<String, String>,
@@ -427,17 +412,10 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
 
 /// SPEC §11 R190: the address a per-IP limit counts (§9.4 step 3, R157).
 ///
-/// Behind a proxy every request arrives from the proxy, so the client's address is read from
-/// `X-Forwarded-For` — but only from the entry the deployment's own proxies wrote. Each trusted hop
-/// appends one entry on the right, so with `trusted_proxy_hops` hops the client is
-/// `entries[length - hops]`. Everything to the left of it was written by the caller, who can put
-/// anything there: reading the leftmost entry, as this function once did, let a caller pick a fresh
-/// bucket for every request by changing one header. `CF-Connecting-IP` and `X-Real-IP` are never
-/// read, for the same reason: nothing in this deployment writes them, so a caller can.
-///
-/// With fewer entries than trusted hops (none included), or with `trusted_proxy_hops` 0, the
-/// request came from something other than the proxy chain and is keyed on the socket's peer
-/// address, or on `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
+/// Behind a proxy it is `X-Forwarded-For`'s `entries[length - hops]`, the entry the deployment's own
+/// proxies wrote: everything left of it the caller wrote, and reading it would let a caller pick a
+/// fresh bucket per request. `CF-Connecting-IP` and `X-Real-IP` are never read: nothing here writes
+/// them, so a caller can. With fewer entries than hops, or hops 0, it is the socket's peer address.
 pub fn client_address(headers: &HeaderMap, peer_address: Option<&str>, trusted_proxy_hops: usize) -> String {
     let entries = forwarded_entries(headers);
     if trusted_proxy_hops >= 1
@@ -460,7 +438,7 @@ fn ipv6_groups(address: &str) -> Option<[u16; 8]> {
     address.parse::<Ipv6Addr>().ok().map(|parsed| parsed.segments())
 }
 
-/// TS `isIPv4`: a dotted quad, each octet 0–255 without a leading zero.
+/// A dotted quad, each octet 0–255 without a leading zero.
 fn is_ipv4(address: &str) -> bool {
     address.parse::<Ipv4Addr>().is_ok()
 }
@@ -470,13 +448,12 @@ fn is_digits(text: &str, max: usize) -> bool {
     !text.is_empty() && text.len() <= max && text.bytes().all(|byte| byte.is_ascii_digit())
 }
 
-/// TS `/^\d{1,3}(?:\.\d{1,3}){3}$/`.
 fn is_dotted_quad_shape(text: &str) -> bool {
     let parts: Vec<&str> = text.split('.').collect();
     parts.len() == 4 && parts.iter().all(|part| is_digits(part, 3))
 }
 
-/// TS `/^\[([^\]]+)\](?::\d+)?$/`: the bracketed host, when the address is one.
+/// The bracketed host, when the address is one.
 fn bracketed_host(address: &str) -> Option<&str> {
     let rest = address.strip_prefix('[')?;
     let close = rest.find(']')?;
@@ -496,7 +473,7 @@ fn bracketed_host(address: &str) -> Option<&str> {
     }
 }
 
-/// TS `/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/`: the IPv4 address without its port, when it has one.
+/// The IPv4 address without its port, when it has one.
 fn ipv4_without_port(address: &str) -> Option<&str> {
     let (host, port) = address.split_once(':')?;
     if is_dotted_quad_shape(host) && is_digits(port, usize::MAX) {
@@ -507,20 +484,17 @@ fn ipv4_without_port(address: &str) -> Option<&str> {
 }
 
 /// SPEC §11 R190: the key a per-IP limit counts an address under, before it is hashed, with the
-/// IPv6 prefix at `IPV6_RATE_LIMIT_PREFIX_BITS` (TS's default argument).
+/// IPv6 prefix at `IPV6_RATE_LIMIT_PREFIX_BITS`.
 pub fn rate_limit_address(raw: &str) -> String {
     rate_limit_address_with_prefix(raw, IPV6_RATE_LIMIT_PREFIX_BITS as i64)
 }
 
 /// SPEC §11 R190: the key a per-IP limit counts an address under, before it is hashed.
 ///
-/// An IPv4 address is itself. An IPv6 address is its first `prefix_bits` bits (a /56 by default):
-/// a host holds at least a /64 and often a whole /56 delegation, so keying on the full address gave
-/// one host 2^64 fresh buckets for §9.4 step 3 and R157, and keying on the /64 still gave it 256. An
-/// IPv4-mapped IPv6 address (`::ffff:192.0.2.1`, how a dual-stack socket reports an IPv4 peer) is
-/// the IPv4 address, so one caller is one key whichever way it arrived. Brackets, a zone and an
-/// IPv4 port are dropped first. Anything else (the `UNKNOWN_CLIENT_ADDRESS` marker, a malformed
-/// entry) is keyed as written, lower-cased.
+/// An IPv6 address is its first `prefix_bits` bits: a host holds at least a /64 and often a /56, so
+/// a finer key would give one host many fresh buckets (§9.4 step 3, R157). An IPv4-mapped IPv6
+/// address is the IPv4 address. Brackets, a zone and an IPv4 port are dropped first; anything else
+/// is keyed as written, lower-cased.
 pub fn rate_limit_address_with_prefix(raw: &str, prefix_bits: i64) -> String {
     let lowered = raw.trim().to_lowercase();
     let mut address: &str = &lowered;
@@ -600,7 +574,6 @@ async fn read_body_text(headers: &HeaderMap, body: Body) -> Result<String, ApiEr
         .await
         .map_err(|_| body_too_large())?;
     let text = String::from_utf8_lossy(&bytes).into_owned();
-    // TS's `TextDecoder` drops a leading byte-order mark.
     Ok(match text.strip_prefix('\u{feff}') {
         Some(rest) => rest.to_string(),
         None => text,
@@ -661,22 +634,19 @@ pub fn string_list(body: &Value, key: &str) -> Result<Vec<String>, ApiError> {
         .ok_or_else(|| bad_request(format!("\"{key}\" must be an array of strings")))
 }
 
-// ---------------------------------------------------------------------------
 // Routes
-// ---------------------------------------------------------------------------
 
-/// What a handler returns: its response, or the error `dispatch` answers with. Every handler, here
-/// and in part 19, is `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; `app.rs` boxes each
-/// into its `Handler` with `h!` and lists them in `ROUTES` as `(method, path, AuthLevel, handler)`,
-/// in TS's `allRoutes()` order (TS's `Route`, `route()` and `create*Routes()`).
+/// What a handler returns: its response, or the error `dispatch` answers with. Every handler is
+/// `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; `app.rs` boxes each with `h!` and
+/// lists them in `ROUTES` as `(method, path, AuthLevel, handler)`.
 pub type ApiResult = Result<Response, ApiError>;
 
-/// TS `RouteAuth`.
+/// What a route requires of its caller.
 ///
 /// - `None`: open (the catalog, the public statistics).
-/// - `User`: a valid access token and a profile, whatever its status — the code screen (§9.4).
-/// - `Active`: additionally `profiles.status == active`, which is what gives a pending account a
-///   403 from collection, decks and queue (§9.4, BUILD M6-T1).
+/// - `User`: a valid access token and a profile, whatever its status: the code screen (§9.4).
+/// - `Active`: also `profiles.status == active`, which gives a pending account a 403 from
+///   collection, decks and queue (§9.4, BUILD M6-T1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AuthLevel {
     None,
@@ -684,8 +654,8 @@ pub enum AuthLevel {
     Active,
 }
 
-/// TS `decodeURIComponent`, or none where it would throw: a `%` not followed by two hex digits, or
-/// bytes that are not UTF-8.
+/// Percent-decodes a URI component, or None for a `%` not followed by two hex digits or for bytes that
+/// are not UTF-8.
 fn decode_uri_component(raw: &str) -> Option<String> {
     let bytes = raw.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -761,7 +731,7 @@ fn decode_form_component(raw: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// The URL's search parameters, the first value of each name, as TS's `url.searchParams.get` reads.
+/// URL search parameters, taking the first value of each name.
 fn parse_query(query: &str) -> IndexMap<String, String> {
     let mut out = IndexMap::new();
     for pair in query.split('&') {
@@ -778,12 +748,9 @@ fn parse_query(query: &str) -> IndexMap<String, String> {
 }
 
 /// Resolves the caller. A token that does not verify is 401; a verified user with no profile row
-/// gets one created lazily as `pending` (§9.4: the account exists the moment auth says so, and it
-/// stays pending until a code is redeemed).
-///
-/// SPEC §11 R2478000: a verified user whose account `known_profiles` knows and whose budget is spent
-/// is refused with R192's 429 before the store is read (`path` names the request in the log line);
-/// every profile resolved is remembered there.
+/// gets one created lazily as `pending` (§9.4: the account exists the moment auth says so).
+/// SPEC §11 R2478000: a user `known_profiles` knows whose budget is spent is refused with R192's 429
+/// before the store is read (`path` names it in the log line); every profile resolved is remembered.
 pub async fn resolve_caller(app: &App, headers: &HeaderMap, path: &str) -> Result<Caller, ApiError> {
     let Some(token) = bearer_token(headers) else {
         return Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first"));
@@ -838,9 +805,7 @@ pub fn assert_active(profile: &Profile) -> Result<(), ApiError> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // §9.8's per-account rate limit
-// ---------------------------------------------------------------------------
 
 /// Unit conversion, not configuration: R109 states its API allowance *per minute*, and
 /// `API_REQUESTS_PER_MINUTE` is the number itself.
@@ -857,11 +822,9 @@ pub fn address_key(ip_hash: &str) -> String {
     format!("address:{ip_hash}")
 }
 
-/// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, so a request
-/// from an account whose R109 budget is spent is refused before the store is read. At most `max`
-/// users, the one remembered longest ago dropped first. It only refuses early: every request it
-/// lets by still reads its profile, and a user it does not know reads the store as before. One
-/// per `App`, for the limiter's reason.
+/// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, so a request from
+/// an account whose R109 budget is spent is refused before the store is read. It only refuses early:
+/// every request it lets by still reads its profile. One per `App`, for the limiter's reason.
 pub struct KnownProfiles {
     max: usize,
     ids: Mutex<IndexMap<String, String>>,
@@ -919,11 +882,9 @@ fn spent_account(app: &App, user_id: &str, now: i64) -> Option<(String, i64)> {
 }
 
 /// SPEC §11 R2478000: the profile behind a socket upgrade whose token verified, the upgrade counted
-/// as one request against its account's R109 budget, the bucket `run_route` counts in. A known
-/// account whose budget is spent is refused before the store is read. Otherwise the profile is read
-/// (a socket never creates one: `Ok(None)`), remembered, and the upgrade counted, refused past the
-/// budget. A refusal is R192's `rate_limited`, logged and counted as the router's are (R1717000); a
-/// store fault is its error. `path` names the socket in the log line.
+/// as one request against its account's R109 budget, as `run_route` counts. A known account whose
+/// budget is spent is refused before the store is read; a socket never creates a profile (`Ok(None)`).
+/// A refusal is R192's `rate_limited`, logged and counted as the router's are (R1717000).
 pub async fn upgrade_profile(app: &App, user: &AuthUser, path: &str) -> Result<Option<Profile>, ApiError> {
     let now = now_ms();
     if let Some((key, wait)) = spent_account(app, &user.user_id, now) {
@@ -961,26 +922,11 @@ struct RateLimiterState {
     refusals_swept_at: i64,
 }
 
-/// §9.8: "per-account rate limit at the API", R109: 300 requests per minute per account.
-///
-/// One sliding window per key, the same shape as the actor's per-seat `flood_exceeded`
-/// (`actor/match_actor.rs`) — the other half of the same §9.8 row — so the two limits are one
-/// mechanism read twice rather than two mechanisms that can drift.
-///
-/// A request that is over the limit is **not** recorded: like §9.4's attempt log (`codes.rs`), the
-/// window drains, so a caller who keeps hammering cannot pin their own counter open for ever.
-///
-/// R1717000: a refused request is counted apart, in its key's `Refusals` (`note_rejection`), so a
-/// key the limit keeps refusing raises `api.rejections.unusual` once a window. That record is capped
-/// per key and swept once a window, as `hits` is.
-///
-/// Idle keys are swept once per window rather than left to accumulate, so a long-lived process does
-/// not hold a timestamp list for every account that ever called it.
-///
-/// The limiter is the router's state (TS held it in `createRouter`'s closure), so it also holds the
-/// router's R190 signal, the fewest `X-Forwarded-For` entries seen (see `dispatch`). One lives
-/// on each `App`: a fresh app starts with an empty window, so one test's flood cannot leak into
-/// the next.
+/// §9.8: "per-account rate limit at the API", R109: 300 requests per minute per account. One sliding
+/// window per key, the shape of the actor's per-seat `flood_exceeded` (`actor/match_actor.rs`), so
+/// §9.8's two halves are one mechanism. A request over the limit is not recorded, so a caller who
+/// keeps hammering cannot pin their counter open; refusals are counted apart (R1717000). It also
+/// holds the router's R190 signal. One per `App`, so one test's flood cannot leak into the next.
 pub struct RateLimiter {
     limit: usize,
     window_ms: i64,
@@ -1047,10 +993,9 @@ impl RateLimiter {
     }
 
     /// R1717000: counts one refused request against `key` and answers the count when it raises
-    /// `api.rejections.unusual`: once the key's window holds more than `API_REJECTION_ALERT_THRESHOLD`
-    /// refusals, and then not again until a whole `API_REJECTION_ALERT_WINDOW_MS` has passed since its
-    /// last alert; `None` otherwise. A key keeps at most `API_REJECTION_ALERT_THRESHOLD + 1` refusals,
-    /// and a key with none left in the window is swept once a window, so a flood holds bounded state.
+    /// `api.rejections.unusual`: once the window holds more than `API_REJECTION_ALERT_THRESHOLD`
+    /// refusals, then not again until a whole `API_REJECTION_ALERT_WINDOW_MS` has passed since its last
+    /// alert. Each key's record is capped and swept once a window, so a flood holds bounded state.
     pub fn note_rejection(&self, key: &str, now: i64) -> Option<usize> {
         let window = API_REJECTION_ALERT_WINDOW_MS;
         let mut state = lock(&self.state);
@@ -1097,7 +1042,6 @@ impl RateLimiter {
     }
 }
 
-/// TS `createRateLimiter(limit, windowMs)`.
 pub fn create_rate_limiter(limit: usize, window_ms: i64) -> RateLimiter {
     RateLimiter::new(limit, window_ms)
 }
@@ -1114,31 +1058,16 @@ impl Default for RateLimiter {
     }
 }
 
-/// The router (TS `createRouter(allRoutes(), deps)`'s closure): `routes` (`app.rs`'s `ROUTES`) tried
-/// in order. It is the one fallback of `app::router`, behind the CORS layer, which answers
+/// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, behind the CORS layer, which answers
 /// preflights first.
 ///
-/// §9.8's "per-account rate limit at the API" is `app.limiter`. R137's reasoning applies to this
-/// half of §9.8 as much as to the actor's: a single shared counter lets one caller spend everybody
-/// else's budget, turning the anti-abuse limit into the abuse. So the key is the **account** —
-/// `profiles.id`, the row §9.4 owns, not the auth user id and not the bearer token, either of which
-/// a caller can hold several of for one account.
+/// §9.8's per-account limit is `app.limiter`, keyed (SPEC §11 R157) on `profiles.id` (§9.4), not the
+/// auth user or token a caller can hold several of, since one shared counter lets one caller spend
+/// everybody's budget (R137); a request naming no account (R109) counts against its IP hash.
 ///
-/// SPEC §11 R157 settles what to key a request that names no account on: §9.8 and R109 say "per
-/// account", and an open route and a token that did not verify have none, so such a request "is
-/// counted against its IP hash instead, in a namespace of its own" — never on one shared bucket,
-/// which would be exactly the failure R137 describes. R157 also fixes the account key as
-/// `profiles.id` rather than the auth user or the bearer token. The two namespaces are kept apart
-/// by their prefixes.
-///
-/// R190's operator signal: the FEWEST `X-Forwarded-For` entries any request has carried. A caller
-/// can add entries on the left but never remove the ones the deployment's own proxies append, so
-/// the lowest count seen is the number of hops those proxies add, and `TRUSTED_PROXY_HOPS` must not
-/// be more than it (docs/architecture.md §10). One sample would not do: the first request after a
-/// deploy may be a scanner that wrote its own entries, and raising the hops to its count would
-/// hand the key back to the caller. So a line is logged each time a request carries fewer entries
-/// than any before it. Counts past `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many", so a caller
-/// can cause at most a handful of lines per router. No address is ever logged: two numbers only.
+/// R190's operator signal: a line each time a request carries fewer `X-Forwarded-For` entries than
+/// any before. A caller can add entries but never remove the proxies', so the fewest is the hops they
+/// add, and `TRUSTED_PROXY_HOPS` must not be more (docs/architecture.md §10). No address is logged.
 pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
@@ -1210,7 +1139,7 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
     error_response(&ApiError::new(ApiErrorCode::NotFound, "no such endpoint"))
 }
 
-/// One matched route, from the address hash to the handler (the body of TS's `try`).
+/// One matched route, from the address hash to the handler.
 #[allow(clippy::too_many_arguments)]
 async fn run_route(
     app: &Arc<App>,
@@ -1223,9 +1152,7 @@ async fn run_route(
     trusted_proxy_hops: usize,
     path: &str,
 ) -> ApiResult {
-    // §9.4, §9.8: the client address is only ever seen hashed. Read once, for the limiter and for
-    // the request alike, and read as R190 says: the rightmost trusted hop, then the peer, with an
-    // IPv6 client counted by its /56.
+    // §9.4, §9.8: the client address is only ever seen hashed, read once as R190 says.
     let hashes = crate::api::crypto::hashes_for_pepper(&app.env.code_pepper);
     let address = hashes.ip(&rate_limit_address(&client_address(
         &parts.headers,
@@ -1233,11 +1160,9 @@ async fn run_route(
         trusted_proxy_hops,
     )));
 
-    // An address whose own budget is spent is refused BEFORE its token is resolved. Resolving a
-    // token that does not verify locally can cost a round trip to the auth provider, and a flood of
-    // bad tokens fills exactly this bucket (below), so without this check the limiter counted the
-    // flood but still paid for every request of it. Only looked at, not counted: a request that
-    // names an account is counted against the account, as R157 says.
+    // An address whose own budget is spent is refused BEFORE its token is resolved: resolving a bad
+    // token can cost a round trip to the auth provider, and a flood of bad tokens fills exactly this
+    // bucket. Only looked at, not counted: a request naming an account counts against it (R157).
     if auth != AuthLevel::None {
         let key = address_key(&address);
         let now = now_ms();
@@ -1255,7 +1180,6 @@ async fn run_route(
     if auth != AuthLevel::None {
         match resolve_caller(app, &parts.headers, path).await {
             Ok(resolved) => caller = Some(resolved),
-            // A failure that is not a refusal (the store) is TS's rethrown error: a 500 at once.
             Err(error) if error.code == ApiErrorCode::Internal => return Err(error),
             // R2478000: a known account whose budget is spent, refused before its profile was read;
             // already logged and counted.
@@ -1264,9 +1188,8 @@ async fn run_route(
         }
     }
 
-    // §9.8: "per-account rate limit at the API" (R109: 300 a minute). Checked before the body is
-    // read and before §9.4's gate, so a flood costs the least work this router can manage. A known
-    // account whose budget is spent is refused inside it, before the store (R2478000).
+    // §9.8 (R109): checked before the body is read and before §9.4's gate, so a flood costs the
+    // least work this router can manage.
     let key = match &caller {
         None => address_key(&address),
         Some(resolved) => account_key(&resolved.profile.id),
@@ -1287,10 +1210,8 @@ async fn run_route(
         assert_active(&resolved.profile)?;
     }
 
-    // SPEC §11 R897000: every signed-in request refreshes its caller's queue presence, piggybacked
-    // here so no new route and no client change is needed: a queued client already polls
-    // `GET /api/auth/me` every `SERIES_POLL_SECONDS` from wherever it is. Only requests passing
-    // auth and the gate refresh.
+    // SPEC §11 R897000: every signed-in request passing auth and the gate refreshes its caller's
+    // queue presence; a queued client already polls `GET /api/auth/me`.
     if let Some(resolved) = &caller {
         app.queue_presence.touch(&resolved.profile.id, now_ms());
     }
@@ -1327,18 +1248,14 @@ fn alert_unusual_api_rejections(key: &str, rejected: usize) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // Timing
-// ---------------------------------------------------------------------------
 
-/// TS `timers.now()`: epoch milliseconds, the server's one clock (`app::now_ms`: the wall clock
-/// anchored once and advanced by tokio's, so a test's `tokio::time::pause()` and `advance()` move it;
-/// SURFACE §11.3: `Timers` → `tokio::time`). Re-exported so every API module reads the same clock.
+/// Epoch milliseconds, the server's one clock: the wall clock anchored once and advanced by tokio's,
+/// so a test's `tokio::time::pause()` and `advance()` move it (SURFACE §11.3). Re-exported so every
+/// API module reads the same clock.
 pub use crate::app::now_ms;
 
-// ---------------------------------------------------------------------------
-// Logging (TS `consoleLogger`, SURFACE §11.3: `tracing` JSON lines with the same event names)
-// ---------------------------------------------------------------------------
+// Logging (SURFACE §11.3: `tracing` JSON lines with the same event names)
 
 /// One line at `info`: the event's name and its data.
 pub fn log_info(event: &str, data: Value) {

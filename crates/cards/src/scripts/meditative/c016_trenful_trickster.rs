@@ -6,8 +6,7 @@
 //! Engine: `summon_random` over the Trap types, as Core #67 Zoomerbin Oomen's verb, once per trap: a
 //! non-token Trap or Field Trap of every set that ships (R380, R1420), each face-down into the leftmost
 //! open backrow zone of its controller (R64; no lane is named). The opponent sees only a back and its
-//! cost (R33, R351). With no open zone nothing is summoned and no random number is drawn (R129). The
-//! Radiant's two picks may repeat (R60).
+//! cost (R33, R351). With no open zone nothing is summoned and no random number is drawn (R129).
 
 use crate::query::TRAP_TYPES;
 use jackioh_engine::prelude::*;
@@ -32,16 +31,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #16 Trenful Trickster — SPEC §8.8 row 16, BUILD M10 row M 16: "At your end of turn, summons one random
-// Trap or Field Trap (a shipped non-token card of any set, R380) face-down into your leftmost open backrow
-// zone (R64); nothing at the opponent's end of turn; a full backrow summons nothing and draws no random
-// number (R129); the opponent sees a back and its cost (R33, R351); the trap it sets fires as any set trap
-// does; traps reads through param() (R386); the Radiant face makes two picks, which may repeat (R60)".
-//
+// M #16 Trenful Trickster — SPEC §8.8 row 16, BUILD M10 row M 16; its stats are #2179's.
 // Every game gives p1 no mana, so a Bread and Butter pick stays quiet at its end of turn, and p2 a Unit, so
-// a Siphon Squad pick has something to Tribute but itself. A pick is read off the `summoned` events of the
-// end-of-turn step. The pick is random, so no seed is pinned: a test that needs a particular trap loops
-// seeds until the Trickster sets it.
+// a Siphon Squad pick has something to Tribute but itself. The pick is random, so no seed is pinned: a test
+// that needs a particular trap loops seeds until the Trickster sets it.
 #[cfg(test)]
 mod tests {
     use super::ID;

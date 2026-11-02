@@ -1,16 +1,21 @@
 // Card presentation settings (B28). One localStorage key; every storage access sits in try/catch,
 // because storage can be missing, full, or throw on access (private mode, sandboxed frames). When
 // storage refuses a write the value lives on in memory, so the toggle still works for this page.
-// Task 7's settings panel mounts CARD_SETTINGS_FIELDS at integration.
 //
-// R1834004: `opponentCosmetics` is the viewer's own say over what the other seat wears: on, an
-// opponent's cards and side wear the loadout their seat froze when the match began (game/wearer.ts);
-// off, they draw the defaults, on a live, a watched and a replayed board alike.
+// R1834004: `opponentCosmetics` on, an opponent's cards and side wear the loadout their seat froze
+// when the match began (game/wearer.ts); off, the defaults, on a live, watched or replayed board alike.
+// R2718000: `setWatermarks` (setMark.ts) stays on the device (`DEVICE_CARD_SETTINGS`), never the account.
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
 
-export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean; opponentCosmetics: boolean };
+export type CardSettings = {
+  hoverPreviews: boolean;
+  animatedFoil: boolean;
+  fullArt: boolean;
+  opponentCosmetics: boolean;
+  setWatermarks: boolean;
+};
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
 
@@ -19,6 +24,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   animatedFoil: true,
   fullArt: true,
   opponentCosmetics: true,
+  setWatermarks: true,
 });
 
 type CardSettingsField = {
@@ -48,6 +54,12 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     description: "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.",
   },
   {
+    key: "setWatermarks",
+    section: "visuals",
+    label: "Set watermarks",
+    description: "Each card shows its set's symbol, faint, behind its text. Off prints the text on a plain box.",
+  },
+  {
     key: "opponentCosmetics",
     section: "visuals",
     label: "Show opponents' cosmetics",
@@ -55,7 +67,10 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
   },
 ];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics"];
+/** R2718000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
+export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks"];
+
+const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "setWatermarks"];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`

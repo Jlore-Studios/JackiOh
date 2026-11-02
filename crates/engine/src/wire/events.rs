@@ -623,9 +623,9 @@ pub enum GameEvent {
         lane: i32,
     },
     /// R154: `row` and `lane` say which zone flipped, so a client can point at it without being told
-    /// which card it was. `instanceId` and `defId` follow §10.8's redaction (R97) — the controller
-    /// reads them, the other player reads the sentinel — and a face-down trap is given no instance id
-    /// in the view at all, so without the lane the opponent's side has nothing to animate on.
+    /// which card it was. `instanceId` and `defId` follow §10.8's redaction (R97) on both seats alike
+    /// (R2734000) — and a face-down trap is given no instance id in the view at all, so without the
+    /// lane the opponent's side has nothing to animate on.
     TrapFired {
         instance_id: String,
         def_id: String,

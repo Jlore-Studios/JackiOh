@@ -9,26 +9,21 @@ export const practiceTestid = {
   difficulty: (d: Difficulty): string => `practice-difficulty-${d}`,
   /** A `<select>`; its option values are `deckChoiceValue`'s. */
   deck: "practice-deck",
-  /** Under the deck picker: why no saved deck is offered (signed out, none saved, …); absent when some are. */
+  /** Under the deck picker: why no saved deck is offered; absent when some are. */
   deckHint: "practice-deck-hint",
-  /** The chosen deck: its name, its identity and, once the catalog is in, its curve and cards. */
   deckPreview: "practice-deck-preview",
   /** R1373: beside the Random deck only, "More cards from the newest set", a checkbox. */
   leanNewest: "practice-lean-newest",
   /** In the preview: one bar per cost, `data-cost` and `data-count`. */
   deckCurve: "practice-deck-curve",
-  /** In the preview: one row per card of the chosen deck. */
   deckCard: (defId: string): string => `practice-deck-card-${defId}`,
-  /**
-   * R915005: under the preview, why a saved deck that names custom cards cannot start (one is gone,
-   * or they are still loading or could not be read); Start is off while it shows. role="status".
-   */
+  /** R915005: under the preview, why a saved deck that names custom cards cannot start; Start is off while it shows. role="status". */
   customBlocked: "practice-custom-blocked",
-  /** #1691: beside `customBlocked`, after the custom cards could not be read: Try again reads them again. */
+  /** #1691: beside `customBlocked`, after the custom cards could not be read. */
   customRetry: "practice-custom-retry",
-  /** #1691: beside the deck hint, after the saved decks could not be read: Try again reads them again. */
+  /** #1691: beside the deck hint, after the saved decks could not be read. */
   savedRetry: "practice-saved-retry",
-  /** #1691: in the preview, after the card list could not be loaded: Try again asks the worker again. */
+  /** #1691: in the preview, after the card list could not be loaded. */
   defsRetry: "practice-defs-retry",
   /** #921: `?try=<custom id>` while the account's custom cards are read, before the game starts. */
   tryLoading: "practice-try-loading",
@@ -45,16 +40,12 @@ export const practiceTestid = {
   newGame: "practice-new-game",
   /** Out to the main menu: mid-game it opens `leave` first; once the game is over it leaves at once. */
   menu: "practice-menu",
-  /** "Leave this game?": the confirmation `newGame` or `menu` opens while a game is in progress. */
+  /** "Leave this game?": the confirmation `newGame` or `menu` opens. */
   leave: "practice-leave",
-  /**
-   * In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game"
-   * for a lesson) and go where `newGame` or `menu` goes.
-   */
+  /** In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game" for a lesson). */
   leaveConfirm: "practice-leave-confirm",
   /** R765: in a free game's confirmation, "Save and leave": keep the game for the practice menu's banner. */
   leaveSave: "practice-leave-save",
-  /** In the confirmation: close it and carry on. */
   leaveStay: "practice-leave-stay",
   /** R765: on the setup, after the banner's Resume found no game to pick up; role="status". */
   resumeLost: "practice-resume-lost",
@@ -69,9 +60,7 @@ export const practiceTestid = {
   unearned: "practice-unearned",
   /** In the result dialog: the same difficulty and deck again, with a fresh seed and seat. */
   playAgain: "practice-play-again",
-  /** In the result dialog: back to the setup screen. */
   changeSetup: "practice-change-setup",
-  /** In the result dialog: close it and look at the final board. */
   viewBoard: "practice-view-board",
   /** R768000: in the result dialog of a kept game, its replay from step 0. */
   watchReplay: "practice-watch-replay",
@@ -94,17 +83,14 @@ export const practiceTestid = {
   sandboxSpawnSeat: "practice-sandbox-spawn-seat",
   sandboxSpawnWhere: "practice-sandbox-spawn-where",
   sandboxSpawn: "practice-sandbox-spawn",
-  /** A hero's health and Armor. */
   sandboxHeroSeat: "practice-sandbox-hero-seat",
   sandboxHealth: "practice-sandbox-health",
   sandboxArmor: "practice-sandbox-armor",
   sandboxSetHero: "practice-sandbox-set-hero",
-  /** A player's current and maximum mana. */
   sandboxManaSeat: "practice-sandbox-mana-seat",
   sandboxManaCurrent: "practice-sandbox-mana-current",
   sandboxManaMax: "practice-sandbox-mana-max",
   sandboxSetMana: "practice-sandbox-set-mana",
-  /** A draw. */
   sandboxDrawSeat: "practice-sandbox-draw-seat",
   sandboxDrawCount: "practice-sandbox-draw-count",
   sandboxDraw: "practice-sandbox-draw",

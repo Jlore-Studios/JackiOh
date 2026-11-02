@@ -74,13 +74,11 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
 /** Unit conversion, not configuration. */
 const SECONDS_PER_HOUR = 3600;
 
-/** A section of a page's static text: its heading and its paragraphs or list, as HTML. */
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
  * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
- * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check);
- * /almanac and /patch-notes are written from their data (`almanacList`, `patchList`).
+ * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
@@ -447,7 +445,6 @@ export type StaticPagesInput = {
   pages: readonly PublicPage[];
   cards: CardDefs;
   patches: readonly Patch[];
-  /** R1369000: the technical log, `technical.json`. */
   technical?: readonly TechnicalEntry[];
   /** #2681: one version's catalog snapshot; with it, every patch's release artwork is written beside the pages. */
   snapshot?: (version: string) => Snapshot | null;

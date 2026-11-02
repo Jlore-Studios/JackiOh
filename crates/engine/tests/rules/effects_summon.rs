@@ -1,8 +1,6 @@
 //! Summon, Recruit and "fill your board" (SPEC §6.3, §3.2, §7, R64, BUILD M3-T1).
 //! The fixture defs and scripts these tests need are registered here, on top of the shared fixture
 //! catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-summon.test.ts`.
 
 use jackioh_engine::effects::{
     damage, fill_board, fill_board_random, recruit, recruit_all, summon, summon_random_from_hand,
@@ -13,12 +11,8 @@ use super::fixtures::harness::{
     both, events_of_type, ids_of, in_hand, json_of, live, new_game, put, set_library, slot, spread,
 };
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS `defOfKind`. TS numbered each def from a module counter (`nextIndex`, starting at 700 and
-/// raised before each def); the index each def drew is written out at its call.
 fn def_of_kind(name: &str, index: i32, type_: &str, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("sm-{name}"),
@@ -95,8 +89,7 @@ fn flier() -> CardDef {
     )
 }
 
-/// TS `tokenDef("rush")` from `./fixtures/catalog`, read only for its id: the vanilla fixture
-/// catalog's shared Rush Token (`fx-token-<name>`), which `newGame` registers.
+/// The vanilla fixture catalog's shared Rush Token (`fx-token-<name>`), which `new_game` registers.
 const RUSH_TOKEN: &str = "fx-token-rush";
 
 fn defs() -> Vec<CardDef> {
@@ -127,8 +120,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// A fresh game whose catalog and script registry also carry this file's fixtures. TS's default
-/// seed, "effects-summon", is the one every test here uses.
+/// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game() -> GameState {
     let mut state = new_game("effects-summon", None);
     let mut catalog = registered_catalog().clone();
@@ -143,7 +135,6 @@ fn game() -> GameState {
     state
 }
 
-/// TS `RunOptions = { controller?, self?, targets? }`.
 #[derive(Default)]
 struct RunOptions {
     controller: Option<PlayerId>,
@@ -151,8 +142,8 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// Apply one effect the way a script's hook would, and hand back the events it emitted. TS's
-/// `sinkFor(state)` is the sink built here: its rng starts at the state's cursor, as reduce does.
+/// Apply one effect the way a script's hook would, and hand back the events it emitted; the rng
+/// starts at the state's cursor, as reduce does.
 fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -173,8 +164,7 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     events
 }
 
-/// The def id in each of the row's five lanes, `null` where it is empty (as JSON, so an assertion
-/// reads like TS's array).
+/// The def id in each of the row's five lanes, `null` where it is empty, as JSON.
 fn lanes_of(state: &GameState, player: PlayerId, row: Row) -> Value {
     json_of(
         [1, 2, 3, 4, 5]
@@ -190,7 +180,6 @@ fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardIn
     card
 }
 
-/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
@@ -229,9 +218,7 @@ fn def_ids_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-// ---------------------------------------------------------------------------
 // summon
-// ---------------------------------------------------------------------------
 
 mod summon_s6_3_m3_t1 {
     use super::*;
@@ -535,9 +522,7 @@ mod summon_s6_3_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // recruit
-// ---------------------------------------------------------------------------
 
 mod recruit_s6_3_m3_t1 {
     use super::*;
@@ -545,7 +530,6 @@ mod recruit_s6_3_m3_t1 {
     #[test]
     fn s6_3_takes_the_first_permanent_from_the_top_and_leaves_the_rest_of_the_library_in_order() {
         let mut state = game();
-        // setLibrary hands back the library array itself, so the ids are snapshotted before the move.
         let ids = ids_of(&set_library(
             &mut state,
             PlayerId::P1,
@@ -754,9 +738,7 @@ mod recruit_s6_3_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // fillBoard
-// ---------------------------------------------------------------------------
 
 mod fill_your_board_r64_s7_m3_t1 {
     use super::*;
@@ -876,9 +858,7 @@ mod fill_your_board_r64_s7_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // fillBoardRandom (R1080) and summonRandomFromHand (R1083).
-// ---------------------------------------------------------------------------
 
 /// Two 1/1 Unit fixtures, so the random pool below holds more than one definition.
 fn one_one(name: &str, index: i32) -> CardDef {

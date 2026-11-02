@@ -1,10 +1,6 @@
-//! The library-and-hand family of §6.3: Add to hand (create OR move), the catalog add, the two
-//! library exiles, and Discover with the library as the pool.
-//! SPEC §6.3 (Add to hand, Exile, Discover, Cost), §2.4, §3.2, §5.1, §10.6, §10.7, §10.8;
-//! R4, R11, R50, R57, R60, R65, R78.
-//!
-//! The fixture defs these tests need are registered here, on top of the shared fixture catalog, so
-//! no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
+//! The library-and-hand family of §6.3: Add to hand (create OR move), the catalog add, the two library
+//! exiles, and Discover with the library as the pool (R50, R57, R78). Its fixture defs live here, so
+//! no shared fixture has to grow for them (BUILD §0).
 
 use jackioh_engine::effects::add_to_hand::{add_random_from_catalog, add_to_hand};
 use jackioh_engine::effects::choose::{discover_from_catalog, discover_from_library};
@@ -15,7 +11,6 @@ use crate::rules::fixtures::harness::{events_of_type, in_hand, live, new_game, s
 
 // Fixture cards.
 
-/// `overrides` is spread over the literal (a shallow merge).
 fn make_def(name: &str, index: u32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("lib-{name}"),
@@ -49,7 +44,7 @@ fn gamma() -> CardDef {
     make_def("gamma", 1803, json!({}))
 }
 
-/// Printed cost 4, so R65's "start from the override in place of the printed cost" is visible.
+/// Printed cost 4, so an override standing in place of it is visible (R65).
 fn pricey() -> CardDef {
     make_def("pricey", 1804, json!({ "cost": 4 }))
 }
@@ -76,8 +71,7 @@ fn unit_token() -> CardDef {
     )
 }
 
-// A pool of its own set, so `query({ set: "Boss" })` is exactly these three. Making `ctx.self` one OF
-// the pool makes §5.1's "never offers the card that generated it" observable rather than vacuous.
+// `query({ set: "Boss" })` is exactly these three, `ctx.self` among them, so §5.1's exclusion shows.
 fn pool_a() -> CardDef {
     make_def("pool-a", 1807, json!({ "set": "Boss" }))
 }
@@ -147,7 +141,6 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// A fresh game whose catalog also carries this file's fixtures.
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -159,15 +152,14 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// An off-board instance to be `ctx.self`: a resolving Spell, which is what #51 and #57 are.
+/// `ctx.self` as an off-board, resolving Spell, which is what #51 and #57 are.
 fn resolving_self(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Resolving { player });
     state.players[player].resolving.push(card.clone());
     card
 }
 
-/// The effects applied in order through one context on a fresh sink over `state`; its events. The rng
-/// is not written back.
+/// The rng is not written back.
 fn run(
     state: &mut GameState,
     effects: Vec<Effect>,
@@ -358,8 +350,7 @@ mod add_to_hand_moves_an_existing_card_51_72 {
         assert_eq!(stacked.cost_override, None);
         assert_eq!(effective_cost(&state, stacked, Default::default()), 1); // printed 4, then -3.
 
-        // A costMod starts from the printed cost; an override stands IN PLACE of it. Both exist because
-        // only the first can stack with another discount.
+        // An override stands IN PLACE of the printed cost; only a costMod stacks with another discount.
         let discounted = must(hand.get(1), "the discounted card");
         assert_eq!(discounted.cost_mod, -1);
         assert_eq!(discounted.cost_override, None);
@@ -532,7 +523,6 @@ mod add_random_from_catalog_54_57_59 {
         assert_eq!(state.players[PlayerId::P1].hand.len(), 2);
         for card in &state.players[PlayerId::P1].hand {
             assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece]);
-            // The definition prints none: the keyword is the card's own, given in the hand.
             assert!(def_of(Some(&state), &card.def_id).base.keywords.is_empty());
         }
 
@@ -597,7 +587,6 @@ mod exile_random_from_library_34_42 {
         assert_eq!(exiled.len(), 3);
         assert_eq!(exiled.iter().collect::<IndexSet<_>>().len(), 3);
         assert_eq!(state.players[PlayerId::P1].library.len(), 2);
-        // Nothing was exiled twice and nothing is in both piles.
         for id in ids(&state.players[PlayerId::P1].library) {
             assert!(!exiled.contains(&id));
         }
@@ -685,9 +674,8 @@ mod exile_random_from_library_34_42 {
         assert!(find_instance(&state, &token.id).is_none());
         assert!(!ids(&state.players[PlayerId::P1].exile).contains(&token.id));
         assert_eq!(state.players[PlayerId::P1].exile.len(), 2);
-        // The counter counts only the cards that actually got there.
+        // Only the cards that got there count; the event names all three, so §10.10 can animate them.
         assert_eq!(state.counters.exiled, 2);
-        // The event still reports every card leaving, so §10.10 can animate all three.
         assert_eq!(events_of_type(&events, GameEventType::Exiled).len(), 3);
     }
 }
@@ -721,7 +709,6 @@ mod exile_bottom_of_library_40_65 {
             vec![json!(bottom)]
         );
 
-        // Again: bottom-upward, so the new bottom goes next and the top is still untouched.
         run(
             &mut state,
             vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))],
@@ -769,7 +756,6 @@ mod exile_bottom_of_library_40_65 {
             None,
         );
 
-        // A card that is gone is in no pile, so it is not reachable from the state.
         assert!(find_instance(&state, &token.id).is_none());
         assert_eq!(state.players[PlayerId::P1].exile.len(), 0);
         assert_eq!(state.counters.exiled, 0);

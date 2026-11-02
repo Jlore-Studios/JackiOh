@@ -7,7 +7,6 @@ import type { MusicManifest, MusicTrack } from "./types.ts";
 
 const LOOP: MusicTrack = { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: true, intro: 0, duration: 20, loopStart: 3, loopEnd: 19, handoff: null };
 
-/** Two in-game tracks for Tavern, one for EDM, and none for Lo-fi. */
 const MANIFEST: MusicManifest = {
   version: 1,
   format: "test",
@@ -51,7 +50,7 @@ describe("R631 the music's priority stack", () => {
     expect(defaultTrack("lofi", 0, MANIFEST)).toBe("menu");
   });
 
-  it("R631 the shipped manifest gives every station two in-game tracks to rotate", () => {
+  it("R631 the shipped manifest gives every station at least two in-game tracks to rotate", () => {
     for (const station of ["tavern", "edm", "lofi", "epic"] as const) {
       expect(defaultTrack(station, 0)).toBe(`${station}-1`);
       expect(defaultTrack(station, 1)).toBe(`${station}-2`);

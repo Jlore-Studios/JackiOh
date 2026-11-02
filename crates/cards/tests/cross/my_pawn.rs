@@ -2,7 +2,6 @@
 //! §4.2 step 4, §5.1, §6.3 "Cancel an attack" and Exile, R44, R99, R152). Found by the polish-4
 //! edge-case hunt (docs/polish/4-edge-cases.md, lenses L5 and L7).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //!  - §4.2 step 4, §6.3, R99: a canceled attack resolves no combat, so a second My Pawn stays armed.
 //!  - §3.2, §6.3 Exile: a My Pawn its own AI turn exiled stays in exile. R152, §3.2: its effect is the
 //!    rest of the turn it took, so it is in the graveyard by the time the next turn starts.
@@ -38,7 +37,6 @@ fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         .unwrap_or_else(|| panic!("setup: {player} should hold a backrow card in lane {lane}"))
 }
 
-/// The first match's index, or -1.
 fn find_index(events: &[GameEvent], predicate: impl Fn(&GameEvent) -> bool) -> i64 {
     events.iter().position(predicate).map_or(-1, |at| at as i64)
 }
@@ -88,9 +86,8 @@ mod section_4_2_step_4_the_window_after_a_cancel {
      {
         jackioh_cards::register_all();
         // p2 has nothing to do on turn 10, so R82 ends it inside the first My Pawn's AI turn and p1's
-        // turn 11 begins. That turn is p1's own: nothing may play it for them.
+        // turn 11 begins.
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw2-two-pawns-next",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -121,8 +118,6 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
     fn section_6_3_a_my_pawn_exiled_during_its_own_ai_turn_stays_in_exile_it_is_not_pulled_into_the_graveyard()
      {
         jackioh_cards::register_all();
-        // On this seed the AI turn My Pawn hands over plays p1's Collateral Damage on the face-up My
-        // Pawn itself, which is still in the backrow while its effects run: it goes to p2's exile.
         let mut s = scenario(json!({
             "seed": "hunt-cw2-pawn-exiled-0",
             "p1": { "field": [SORCERER], "hand": [COLLATERAL], "library": [GIGA, GIGA, GIGA] },
@@ -137,7 +132,6 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
 
         s.attack(SORCERER, "hero");
 
-        // The seed's AI does exile it; without that this test proves nothing.
         assert!(
             s.events().iter().any(
                 |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == pawn.id)
@@ -160,7 +154,6 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
         // Gravedigger ("Start of turn: add a random card from your GY to your hand") finds it there — it
         // is the only card in that graveyard.
         let mut g = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "pawn-gravedigger",
             "p1": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": [RENO, RENO] },
             "p2": {
@@ -188,7 +181,6 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw2-two-pawns",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -208,9 +200,6 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
             .count();
         assert_eq!(ended, 1);
 
-        // The scenario began with no history, so the view's stream is exactly this action's events: the
-        // declaration and the cancel first, then the AI's turn end and p2's turn start, each once. The
-        // AI's own actions are part of this one.
         let seen: Vec<GameEventType> = view_for(s.state(), PlayerId::P2)
             .events
             .iter()
@@ -220,9 +209,6 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
         assert_eq!(seen, happened);
     }
 }
-
-// Round 7 (lenses "legality-agreement" and "engine invariants"): the AI turn's questions, and a My
-// Pawn fused onto a My Pawn.
 
 const TEMPO_TIMMY: &str = "core-011";
 const JEWELOSCO_SCARAB: &str = "core-007";
@@ -243,8 +229,6 @@ fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lan
     card
 }
 
-/// A Trap that fires when its controller's opponent plays a card, asks its controller, then runs
-/// `after` (nothing when `None`).
 fn asking_trap(s: &mut Scenario, id: &str, after: Option<Hook>) {
     let after = after.unwrap_or_else(|| hook(|_ctx| vec![]));
     let prompt = format!("{id}: asked");
@@ -286,7 +270,6 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
         // to the AI (R44). The AI plays Jewelosco Scarab, and p2's trap asks p2 about that play at
         // §10.5 step 4, before the Scarab's Cry (Discover a 2-cost card).
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-lock-0",
             "p1": { "field": [TEMPO_TIMMY], "hand": [JEWELOSCO_SCARAB], "library": [RENO, RENO], "mana": 1 },
             "p2": {
@@ -331,7 +314,6 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
             ended == -1 || discover < ended,
             "the Scarab's Cry resolves before p1's turn ends"
         );
-        // And p1 is never left holding a question of its own turn while it is p2's turn.
         let p1_holds_one_on_p2s_turn = s
             .state()
             .pending
@@ -344,8 +326,6 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
     #[test]
     fn r44_r152_a_question_of_the_locked_out_players_that_opens_during_the_ai_turn_is_the_ais_to_answer() {
         jackioh_cards::register_all();
-        // p1 has a unit whose Death asks its controller. p2's trap asks p2 about the AI's play and then
-        // destroys that unit, so p1's question opens during p1's AI turn, inside p2's answer.
         let mut s = scenario(json!({
             "seed": "edge-r7-lock-b",
             "p1": { "field": [TEMPO_TIMMY], "hand": [MR_VANILLA], "library": [RENO, RENO], "mana": 1 },
@@ -399,8 +379,7 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
 
         // §8 #96: "an AI plays the rest of their turn with random legal actions", and §10.7 and R44 have
         // it answer prompts from `legalActions` like any other action, while p1 is locked out until the
-        // end of the turn. So a question p1's card asks during that turn is the AI's to answer; it is
-        // never left open for the locked-out player, whose client does not act while `aiTurn` is set.
+        // end of the turn.
         let held = s.state().pending.clone();
         let locked_out_holds_it =
             held.as_ref().is_some_and(|held| held.player_id == PlayerId::P1) && s.state().players.p1.ai_turn;
@@ -420,7 +399,6 @@ mod r152_the_ai_turns_lockout_ends_with_the_turn_it_was_set_for {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-double-pawn",
             "active": "p2",
             "turn": 10,
@@ -443,7 +421,6 @@ mod r152_the_ai_turns_lockout_ends_with_the_turn_it_was_set_for {
                 .is_some_and(|card| card.def_id.ends_with("core-096+core-096"))
         );
 
-        // p2 swings 8 at p1's 5: the fused trap fires, cancels the attack and hands p2's turn to the AI.
         s.attack(JLOCKEED_SHREDDER, "hero");
         assert!(
             s.last_events()
@@ -474,7 +451,6 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
         // inside this action. The loop hands the window's death to the triggers only after the AI turn
         // (§10.3), but the Eater reached the hand after that death, and R212 says it must not feed on it.
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r11-pawn-eater",
             "p1": { "field": [SORCERER, { "def": MR_VANILLA, "lane": 2 }], "library": [GIGA, GIGA, GIGA] },
             "p2": {

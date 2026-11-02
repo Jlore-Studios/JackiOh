@@ -1,5 +1,4 @@
 // The sound director (docs/polish/2-sound.md, B22 and B24 to B27, and R203's hand-over clause).
-//
 // The director is fed views and runner notifications and sends cues to a recording sink. Entries
 // come from the real `planEntries`, and views from the web fixtures, so an event is the very object
 // the view carries: the director matches events by identity, as the runner hands them out.
@@ -80,7 +79,6 @@ function rig(): { sink: Recorder; director: SoundDirector } {
   return { sink, director: createSoundDirector(sink, LINES) };
 }
 
-/** Every cue sent, as "sfx:id@delay" / "voice:defId/line@delay" / "effect:defId/hook@delay", in the order sent. */
 function sent(sink: Recorder): string[] {
   return sink.sent.map((s) => {
     if (s.kind === "sfx") return `sfx:${s.id}@${String(s.delayMs)}`;
@@ -91,7 +89,6 @@ function sent(sink: Recorder): string[] {
 
 const sfxSent = (sink: Recorder) => sink.sent.filter((s): s is Extract<Sent, { kind: "sfx" }> => s.kind === "sfx");
 const voiceSent = (sink: Recorder) => sink.sent.filter((s): s is Extract<Sent, { kind: "voice" }> => s.kind === "voice");
-/** Voice cues as "defId/line!priority". */
 const linesSent = (sink: Recorder) => voiceSent(sink).map((v) => `${v.defId}/${v.line}!${String(v.priority)}`);
 
 const played = (defId: string, instanceId: string, player: PlayerId = "p1"): GameEvent => ({
@@ -146,7 +143,6 @@ function p2View(events: GameEvent[] = []): PlayerView {
   });
 }
 
-/** Feeds the first view, then one view carrying `events`; returns that view. */
 function begin(director: SoundDirector, events: GameEvent[], first: PlayerView = firstView()): PlayerView {
   director.onView(first);
   const next = withEvents(first, events);
@@ -157,8 +153,6 @@ function begin(director: SoundDirector, events: GameEvent[], first: PlayerView =
 function entriesOf(view: PlayerView, events: readonly GameEvent[], reducedMotion = false): AnimationEntry[] {
   return planEntries(events, view, reducedMotion);
 }
-
-// B24: cues play when an entry starts
 
 describe("B24 cues play when the runner starts an entry", () => {
   it("B24 onView sends nothing to the sink, it only owes the fresh events", () => {
@@ -246,7 +240,6 @@ describe("B24 cues play when the runner starts an entry", () => {
 });
 
 // B25: the flush
-
 describe("B25 events the runner never started are flushed once, condensed, by onIdle", () => {
   it("B25 a reduced-motion burst: SFX deduped in stream order, at most FLUSH_MAX_SFX, FLUSH_GAP_MS apart, one line, gameOver last", () => {
     const { sink, director } = rig();
@@ -375,7 +368,6 @@ describe("B25 events the runner never started are flushed once, condensed, by on
 });
 
 // B26: nothing is voiced twice
-
 describe("B26 no event is voiced twice", () => {
   it("B26 across overlapping event windows, the events both views carry sound once", () => {
     const { sink, director } = rig();
@@ -493,8 +485,6 @@ describe("R203: a hand-over plays nothing the arriving seat's view did not produ
     expect(sink.sent).toEqual([]);
   });
 });
-
-// B22: the director's mana baseline
 
 describe("B22 the mana baseline", () => {
   it("B22 starts at the planned view's mana.current for that player", () => {
@@ -743,7 +733,7 @@ function sheepishGame(): { set: Heard; fire: Heard } | null {
   return null;
 }
 
-describe("R203 against real viewFor redaction: a trap names itself only to its controller", () => {
+describe("R203 R2734000 against real viewFor redaction: a fired trap names itself to both seats", () => {
   const scenario = sheepishGame();
 
   it("R203 a real Sheepish is set and then fires on a real unit play", () => {
@@ -759,27 +749,29 @@ describe("R203 against real viewFor redaction: a trap names itself only to its c
     expect(voiceSent(set.seats.p2)).toEqual([]);
   });
 
-  it("R203 firing it: only the controller's seat hears Sheepish speak, and it outranks the play it answers (R204)", () => {
+  it("R203 R2734000 firing it: both seats hear the sting and Sheepish's line, which outranks the play it answers (R204)", () => {
     const { fire } = must(scenario ?? undefined, "the scenario");
-    expect(sent(fire.seats.p1)).toContain("sfx:trapSting@0");
-    expect(linesSent(fire.seats.p1)).toContain(`${SHEEPISH}/cast!${String(VOICE_PRIORITY.react)}`);
-    expect(sent(fire.seats.p2)).toContain("sfx:trapSting@0");
-    expect(voiceSent(fire.seats.p2).map((v) => v.defId)).not.toContain(SHEEPISH);
-    expect(voiceSent(fire.seats.p2).map((v) => v.defId)).not.toContain(HIDDEN_DEF_ID);
+    for (const seat of [fire.seats.p1, fire.seats.p2]) {
+      expect(sent(seat)).toContain("sfx:trapSting@0");
+      expect(linesSent(seat)).toContain(`${SHEEPISH}/cast!${String(VOICE_PRIORITY.react)}`);
+      expect(voiceSent(seat).map((v) => v.defId)).not.toContain(HIDDEN_DEF_ID);
+    }
     const unitLine = voiceSent(fire.seats.p1).find((v) => v.line === "play");
     expect(unitLine?.priority, "the unit's own play line, which the trap's line cuts in on").toBe(VOICE_PRIORITY.play);
   });
 
-  it("R203 the client's sentinel is the one the engine's viewFor redacts the fired trap to on the other seat", () => {
-    const { fire } = must(scenario ?? undefined, "the scenario");
+  it("R203 R2734000 viewFor names the fired trap to both seats, and the set to the other seat as the client's sentinel", () => {
+    const { set, fire } = must(scenario ?? undefined, "the scenario");
     const fired = (view: PlayerView) => view.events.find((e) => e.type === "trapFired");
     expect(fired(fire.after.p1)).toMatchObject({ defId: SHEEPISH, controller: "p1" });
-    expect(fired(fire.after.p2)).toMatchObject({ defId: HIDDEN_DEF_ID, instanceId: HIDDEN_DEF_ID, controller: "p1" });
+    expect(fired(fire.after.p2)).toEqual(fired(fire.after.p1));
+    // Face-down in the backrow after its set, the trap is the sentinel to the other seat (§10.8).
+    const setPlay = set.after.p2.events.filter((e) => e.type === "cardPlayed" && e.player === "p1").at(-1);
+    expect(setPlay).toMatchObject({ defId: HIDDEN_DEF_ID, instanceId: HIDDEN_DEF_ID });
   });
 });
 
 // B47 end to end: the director into the real engine
-
 describe("B47 a trap that answers a play is heard over that play's line", () => {
   let engine: AudioEngine | null = null;
 
@@ -840,8 +832,6 @@ describe("B47 a trap that answers a play is heard over that play's line", () => 
   });
 });
 
-// A sweep or a whole-pile impact is voiced condensed
-
 describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => {
   function sweptView(): PlayerView {
     return baseView({
@@ -893,7 +883,6 @@ describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => 
 });
 
 // R655: card effects ride the same path as the lines
-
 describe("R655 a card's effect is sent on its hook's moment, through the director", () => {
   /** #66 The Rock: an effect and a line on its play, only an effect on its death; #5 a cast that is only an effect. */
   const FX_LINES: CardAudioTable = {

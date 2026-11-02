@@ -30,9 +30,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-1 Escort Protocol — SPEC §8.10 row T-AI-1, BUILD M12 row S T-AI-1: "a 1/3 Flying whose Cry summons
-// a Drone Interceptor into the leftmost open unit zone; a full unit row puts it in the backrow (R2248000);
-// radiant 2/6 and a Radiant Interceptor".
+// S T-AI-1 Escort Protocol — SPEC §8.10 row T-AI-1, BUILD M12 row S T-AI-1 (R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -46,7 +44,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1 plays Escort Protocol into unit lane `lane` beside `field`.
     fn played(radiant: bool, field: Value, lane: i32) -> Scenario {
         let mut s = scenario(json!({
             "seed": "escort-protocol",

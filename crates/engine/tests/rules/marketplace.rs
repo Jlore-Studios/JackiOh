@@ -4,9 +4,7 @@
 //! weighted by their counts and replacing the ones before; the designer's prices, moved as they are
 //! rolled, and the Resources' quotes, which a Resource played or discarded fetches; `marketBuy` and
 //! `marketSell` in the player's own main phase, for Credits and no mana, listed, refused and shown by
-//! one function each; and a lot an effect adds for the rest of the game. Proved on the fixtures of
-//! `fixtures/marketplace.rs` and `fixtures/resources.rs`, with the fixture table registered; the effect
-//! harness is `resources.rs`'.
+//! one function each; and a lot an effect adds for the rest of the game.
 
 use jackioh_engine::effects::{add_market_lot, discard_resource, gain_market_credits, gain_resources};
 use jackioh_engine::testkit::*;
@@ -19,8 +17,6 @@ use crate::rules::fixtures::resources::*;
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-/// The fixture catalog with the Resources and the Marketplace's cards, their scripts, and the fixture
-/// table.
 fn register() {
     setup_catalog();
     register_catalog(marketplace_catalog(resources_catalog(
@@ -150,7 +146,6 @@ fn offer_view(state: &GameState, viewer: PlayerId, offer: i32) -> Option<MarketO
         .find(|view| view.offer == offer)
 }
 
-/// The fixture Resources' ids.
 fn resource_ids() -> Vec<&'static str> {
     RESOURCES.iter().map(|(id, _)| *id).collect()
 }
@@ -191,7 +186,6 @@ fn r1853000_r2250002_the_first_resource_gained_opens_it_and_rolls_each_player_th
             "{player:?}"
         );
     }
-    // The player whose turn it is first, then the other.
     assert_eq!(market(&state).offers[0].owner, Some(P1));
     assert_eq!(
         market(&state).offers.last().map(|offer| offer.owner),

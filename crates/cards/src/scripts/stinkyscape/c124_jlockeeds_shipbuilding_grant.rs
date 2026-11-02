@@ -33,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #124 Jlockeed's Shipbuilding Grant — SPEC §8.10 row 124, BUILD M12 row S 124: "adds 3 random
-// Starship Pieces to its caster's hand, each a card printing the keyword, by rng picks that replay; a full
-// hand burns what does not fit; the Dormant Starship is never one; cards reads through `param()`; radiant
-// three Radiant pieces".
+// Stinkyscape #124 Jlockeed's Shipbuilding Grant — SPEC §8.10 row 124, BUILD M12 row S 124.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -68,7 +65,6 @@ mod tests {
         "stinkyscape-086",
     ];
 
-    /// p1 holds the Grant and `fillers` more cards.
     fn holding(radiant: bool, seed: &str, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": GRANT, "radiant": radiant })];
         hand.extend((0..fillers).map(|_| json!(FILLER)));
@@ -79,7 +75,6 @@ mod tests {
         }))
     }
 
-    /// The cards the last step added to p1's hand, as (definition, face).
     fn added(s: &Scenario) -> Vec<(String, bool)> {
         s.last_events()
             .iter()
@@ -93,7 +88,6 @@ mod tests {
             .collect()
     }
 
-    /// Whether a definition prints Starship Piece on its base face.
     fn prints_piece(def_id: &str) -> bool {
         has_keyword(&crate::card_def(def_id).base.keywords, KeywordKind::StarshipPiece)
     }
@@ -115,7 +109,6 @@ mod tests {
                 seen.insert(def_id);
             }
         }
-        // Drawn from the whole pool, not one card.
         assert!(seen.len() > 3, "{seen:?}");
     }
 
@@ -145,7 +138,6 @@ mod tests {
 
     #[test]
     fn s2_4_a_full_hand_burns_what_does_not_fit() {
-        // The Grant leaves the hand as it is played: 9 fillers stay, so one piece fits and two burn.
         let mut s = holding(false, "grant-full", 9);
         s.play(GRANT, json!({}));
         assert_eq!(added(&s).len(), 1);

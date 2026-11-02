@@ -1,11 +1,8 @@
-//! Test-only cards for the weapon kit (issue #1841, Stinkyscape's phase 0): an Activate with an extra
-//! turn cooldown (`ActivationCost.extraTurnCooldown`, R1841000), damage that deals half to heroes
-//! (`halfToHeroes`, R1841001), Equip straight into this Unit from a pick (`equip_picks`, R1841002) and
-//! "Float reduces Tribute requirement by 1" (`float_lowers_tribute`, R1841003). Each does it through
-//! the engine's own verbs, as a card script would, so the engine never imports `crates/cards`; the
-//! Stinkyscape cards that use them come later, behind the set's gate.
-//!
-//! Ids are prefixed `wk-` and indexed from 18410, so they collide with no other fixture file's.
+//! Test-only cards for the weapon kit (#1841, Stinkyscape's phase 0): an Activate's extra turn cooldown
+//! (`ActivationCost.extraTurnCooldown`, R1841000), damage halved to heroes (`halfToHeroes`, R1841001),
+//! Equip into this Unit from a pick (`equip_picks`, R1841002) and "Float reduces Tribute requirement by 1"
+//! (`float_lowers_tribute`, R1841003), through the engine's own verbs so the engine never imports
+//! `crates/cards`. Ids are `wk-` from 18410, so they collide with no other fixture file's.
 
 use jackioh_engine::effects::{damage, equip_picks, gain_mana};
 // The verbs as a card script names them, through the prelude (CLAUDE.md rule 5).
@@ -20,36 +17,25 @@ pub const BEAM_DAMAGE: i32 = 7;
 pub const PEA_DAMAGE: i32 = 1;
 /// What the blade's Cry deals the enemy hero, had it run.
 pub const BLADE_CRY_DAMAGE: i32 = 1;
-/// The proto's printed Tribute X.
 pub const PROTO_TRIBUTE: i32 = 3;
-/// The rack's Discover offer: "choose between 2".
 pub const RACK_OPTIONS: i32 = 2;
-/// How many picks the rack, the chest and the statue Equip.
 pub const PICKS: i32 = 2;
 
-/// A 0/4 Unit: "Activate: Deal 7 damage to an enemy Unit or the enemy hero. Has an extra turn
-/// cooldown. Deals half damage to heroes."
 pub const BEAM: &str = "wk-beam";
-/// A 0/2 Unit: "Activate 2: Deal 1 damage to an enemy Unit or the enemy hero. Deals half damage to
-/// heroes." No cooldown.
 pub const PEA: &str = "wk-pea";
 /// A 0/8 Unit with no text: what the beam hits whole.
 pub const WALL: &str = "wk-wall";
-/// A 1/1 Unit with no text.
 pub const PLAIN: &str = "wk-plain";
-/// A 1/1 Unit: "Cry: Deal 1 damage to the enemy hero. Activate: Gain 1 mana." A pick for the rack.
+/// A 1/1 Unit with a Cry and an Activate: a pick for the rack.
 pub const BLADE: &str = "wk-blade";
 /// A 0/3 Unit with no text. A pick for the rack and the chest.
 pub const SHIELD: &str = "wk-shield";
-/// A 2/2 Unit: "Cry: Choose between 2 [Radiant] blades and shields to Equip this, twice."
 pub const RACK: &str = "wk-rack";
-/// A 2/2 Unit: "Cry: A random Radiant blade or shield is Equipped to this, twice."
 pub const CHEST: &str = "wk-chest";
-/// A 2/2 Unit: "Cry: A random shield is Equipped to this, twice." Its pool is one card.
+/// A 2/2 Unit whose Cry Equips a random shield to it, twice: its pool is one card.
 pub const LOCKER: &str = "wk-locker";
 /// A 2/2 Immutable Unit with the rack's Cry (R23).
 pub const STATUE: &str = "wk-statue";
-/// A 3/3 Unit with Tribute 3: "Float reduces Tribute requirement by 1", in hand and deck.
 pub const PROTO: &str = "wk-proto";
 
 fn card(index: u32, id: &str, stats: (i32, i32), keywords: Value) -> CardDef {
@@ -69,12 +55,10 @@ fn card(index: u32, id: &str, stats: (i32, i32), keywords: Value) -> CardDef {
     }))
 }
 
-/// One target: an enemy Unit or the enemy hero.
 fn enemy_target() -> TargetDecl {
     TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "hero"] }))
 }
 
-/// "Activate (N): Deal `amount` damage to the chosen target. Deals half damage to heroes."
 fn halving_shot(id: &str, uses: i32, amount: i32, cost: Option<ActivationCost>) -> ActivationDecl {
     ActivationDecl {
         id: id.to_string(),
@@ -107,7 +91,6 @@ fn rack_cry() -> Hook {
     })
 }
 
-/// "Cry: A random card of `pool` is Equipped to this, twice", Radiant or not.
 fn random_cry(pool: &'static [&'static str], radiant: bool) -> Hook {
     hook(move |_ctx| {
         vec![equip_picks(json_as(json!({

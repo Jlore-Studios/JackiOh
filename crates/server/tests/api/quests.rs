@@ -1,15 +1,6 @@
-//! Daily quests (SPEC §14.9, #1304): their rhythm on the server's clock, what a finished game
-//! moves, the payout of one that completes, `GET /api/quests`, the replace of a held quest and the
-//! dev tools.
-//!
-//! The clock is injected: `top_up_quests` and the reward hook take the time they run at, so a test
-//! walks an account through days in milliseconds. Every count and payout is read through the
-//! constants (`QUEST_INTERVAL_HOURS`, `QUEST_MAX_HELD`, `QUEST_XP_PER_JLORE`) and the pool, so the
-//! tests hold whatever values #1333 sets. R1304000–R1304002's and R2210000's proving tests live
-//! here, beside `rewards.rs`'s ladder game.
-//!
-//! Requests go through the whole app (`support::deps::test_app`, the E2E fixtures): the caller is
-//! `e2e-p1`, the other account `e2e-p2`. The dev tools' tests list `e2e-p1` as a dev account.
+//! Daily quests and progression (`src/api/quests.rs`, SPEC §14.9, #1304, #1333, #2204).
+//! Tests rhythm, game updates, completion payouts, replacing held quests, and dev tools.
+//! Rulings: R1300000, R1304000–R1304002, R2210000.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;

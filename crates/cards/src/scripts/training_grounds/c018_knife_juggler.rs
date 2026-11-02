@@ -2,12 +2,8 @@
 //! Training Grounds set (R1420, R2194000).
 //!   Base and Radiant: "Pierce / After you summon a Unit, deal {damage} damage to a random enemy." — damage
 //!   1, Radiant 3
-//! Engine: S #23 Warp Disruptor's arrival (R1875003) turned to its own side (R2197000): a Unit arriving
-//!   on its controller's side however summoned (a Recruit, a token, a copy, Reborn) at once, a played one
-//!   once it resolves, its Cry first, as C #5 Tesla reads it; this card's own arrival is not one. Each
-//!   arrival deals `damage` to one random enemy, the hero or a standing enemy Unit, drawn from the match
-//!   rng (`damage_random_enemies`, R60). The hit is this Unit's, so its printed Pierce applies (§6.1,
-//!   `damage::pierces`). Tunes: damage 1 ↑.
+//! Arrival trigger (S #23, R1875003, R2197000): friendly unit arrival (Recruit, token, copy, Reborn, resolved play after Cry as C #5; not itself).
+//! Deals damage to random enemy (damage_random_enemies, R60). Source unit prints Pierce (§6.1). Tunes: damage 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -77,12 +73,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #18 Knife Juggler — SPEC §8.11 row 18, BUILD M13 row TG 18: "printed Pierce; you play a Unit: after
-// its Cry, 1 damage to a random enemy (hero or Unit), drawn from the match rng; a token summoned by your
-// Spell, a Recruit and a Reborn return each trigger it; its own arrival does not; a Unit the opponent
-// summons does not; Pierce: an Armor 2 enemy Unit with 1 Health dies to it; two arrivals give two hits;
-// `damage` reads through `param()`; radiant 6/4; 3 damage per arrival". The two arrivals are Core #15 Me
-// and Mr Token's (its token, then itself), TG #16 being another part's (#2196).
+// TG #18 Knife Juggler — SPEC §8.11 row 18, BUILD M13 row TG 18 (Core #15, TG #16, #2196).
 #[cfg(test)]
 mod tests {
     use super::ID;

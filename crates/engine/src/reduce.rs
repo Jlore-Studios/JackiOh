@@ -1,57 +1,17 @@
-//! reduce(state, action) and legalActions (SPEC §9.3, §10.2, §10.5). The reducer is pure: it
-//! clones the state, applies the action, and returns the new state with the events it produced.
-//! Illegal actions come back as an error with the state untouched.
+//! `reduce(state, action)` and `legal_actions` (SPEC §9.3, §10.2, §10.5). The reducer is pure: it
+//! clones the state, applies the action and returns the new state with its events; an illegal action
+//! comes back as an error with the state untouched.
 //!
-//! This file is the action layer and nothing else. Every rule it needs belongs to a module that owns
-//! it, and the two directions of each rule — what `legalActions` offers and what an action is
-//! refused for — come from the same place, so a client's greyed-out button and the reducer's error
-//! can never disagree (§9.3):
+//! The action layer only: each rule lives in the module that owns it, which gives both what `legal_actions`
+//! offers and what an action is refused for, so a greyed-out button and the reducer's error never disagree
+//! (§9.3). An attack can come back with its trap window's prompt open and the combat owed on `state.work`
+//! (R113); a Frozen unit's switch is refused (§4.1, R1174000); `turn` owns draws, concede, End turn and the
+//! turn cap (§2.2, §2.5, R36); a sandbox action is accepted only by a sandbox game and never listed
+//! (R923000–R923003).
 //!
-//!   emote            → `emoted`, legal only while a card hears it (MD-D29, R1127)
-//!
-//!   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
-//!                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
-//!                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
-//!                      lets its player play (E11, R454). Step 1's validation is
-//!                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
-//!                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
-//!                      reads the cost, so the refusal a client's greyed-out button comes from and
-//!                      the refusal this reducer returns are the same call. Nothing of that rule is
-//!                      restated here; a second copy is what would let the two disagree.
-//!   attack           → `combat.declareAttack`, listed by `combat.attackTargets` (§4.2). That call
-//!                      is §4.2 steps 1 to 5 whole, step 4's trap window included, so an `attack`
-//!                      can come back with a prompt open and the combat still owed on `state.work`
-//!                      (R113): the answer action finishes it, exactly as it finishes a Cry.
-//!   switchPosition   → `combat.switchPosition`, listed by `combat.whyCannotSwitch` (§4.1, R20, R49; a Frozen unit's refused, R1174000)
-//!   activate         → `subsystems/activate.activateAbility`, listed by `activateActionsFor` (B3.2,
-//!                      R384); a Heroic Power's power is one of its abilities (R752)
-//!   activatePower    → the alias of `activate` every old log carries, naming the rolled power (R752)
-//!   answer           → `prompts.answerPrompt`, which hands a prompt the play pipeline opened itself
-//!                      to that pipeline's answerer (R122)
-//!   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
-//!   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
-//!   trade            → `trade.apply_trade`, listed and refused by `trade.why_trade_refused` (R1838000)
-//!   marketBuy        → `marketplace.apply_market_buy`, listed and refused by
-//!                      `marketplace.why_market_buy_refused` (R1853003)
-//!   marketSell       → `marketplace.apply_market_sell`, listed and refused by
-//!                      `marketplace.why_market_sell_refused` (R1853003)
-//!   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
-//!   sandbox          → `sandbox.apply_sandbox`, refused by `sandbox.why_sandbox_refused`; accepted
-//!                      only by a sandbox game and never listed (R923000–R923003)
-//!
-//! After the action the resolution loop of §10.3 runs (`triggers.settle`): it dispatches the events
-//! the action emitted, drains whatever a prompt left owed in `state.work`, runs the state check and
-//! pops the trigger queue until nothing is left or a prompt stops it. Then a turn the autopilot owes
-//! is played by it (R1183002, `subsystems::autopilot`; `reduce_unpiloted`, a search's step, leaves it
-//! owed), a turn an effect has cut short ends (B5 E10, R456), and a turn with nothing left to do ends
-//! by itself (R82).
-//!
-//! Port of `packages/engine/src/reduce.ts` (SURFACE §4.1, §6.1). Two departures, both SURFACE's:
-//! `reduce` and `begin_game` take no `rng` (the match rng is always rebuilt from `(state.seed,
-//! state.rng_cursor)` and the cursor written back, as TS did when none was passed), and
-//! `syncFusedScripts` is gone (fused scripts are built on lookup from the state, SURFACE §6.6), so
-//! `reduce` never touches its input. `eachLegalAction`'s generator is a visitor that can stop early
-//! (`ControlFlow`), so `autoEndDue` still stops computing at the first other action (#188).
+//! `reduce` and `begin_game` take no rng: it is rebuilt from `(state.seed, state.rng_cursor)` and the
+//! cursor written back (SURFACE §4.1, §6.1), and fused scripts come from the state (SURFACE §6.6), so
+//! `reduce` never touches its input.
 
 use std::ops::ControlFlow;
 
@@ -88,8 +48,8 @@ use crate::wire::{
 };
 use crate::zones::{active_units_of, card_at, carried_units_of, slots_of, standing_units_of};
 
-/// TS `ReduceResult = { state; events; error? }` (SURFACE §6.1). `error` is `Some` exactly when the
-/// action was refused; then `state` is the input, unchanged, and `events` is empty.
+/// What `reduce` returns. `error` is `Some` exactly when the action was refused; then `state` is the
+/// input, unchanged, and `events` is empty.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ReduceResult {
@@ -99,7 +59,7 @@ pub struct ReduceResult {
     pub error: Option<String>,
 }
 
-/// A refusal: the input state, no events, TS's message (SURFACE §4.4.9).
+/// A refusal: the input state, no events and the error's message (SURFACE §4.4.9).
 fn refused(state: &GameState, error: &str) -> ReduceResult {
     ReduceResult {
         state: state.clone(),
@@ -119,11 +79,9 @@ const MULLIGAN_OPEN_ACTION_TYPES: &[ActionType] = &[
     ActionType::CeilingReached,
 ];
 
-/// The seat the game waits on first: the holder of the open prompt, else the first seat in seat order
-/// that still owes its mulligan (R265), else the active player. A harness that plays both seats asks
-/// this; a live table asks each seat's own `legal_actions`, since both may owe a mulligan at once.
-///
-/// SURFACE §6.1 types the answer `Option`; TS always names a seat, and so does this (always `Some`).
+/// The seat the game waits on first: the open prompt's holder, else the first seat still owing its
+/// mulligan (R265), else the active player (always `Some`). For a harness playing both seats; a live
+/// table asks each seat's own `legal_actions`, since both may owe a mulligan at once.
 pub fn seat_to_act(state: &GameState) -> Option<PlayerId> {
     if let Some(pending) = &state.pending {
         return Some(pending.player_id);
@@ -142,9 +100,9 @@ pub fn attack_target_id(target: &AttackTarget) -> String {
     }
 }
 
-/// The attacker an `attack` action names: any card in this player's unit piles, a dormant one
-/// included, so that §3.2's "not on the field" is `combat`'s refusal to give rather than a lookup
-/// failure here (R13), then a Unit a carrier holds and a Unit standing in a backrow zone.
+/// The attacker an `attack` action names: any card in this player's unit piles, a dormant one included
+/// so §3.2's "not on the field" is `combat`'s refusal (R13), then a Unit a carrier holds or standing in
+/// a backrow zone.
 fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option<CardInstance> {
     // R446: a Unit a carrier holds is one of the player's units too, which `combat` refuses to attack.
     let in_piles = state.players[player]
@@ -171,10 +129,9 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
         .cloned()
 }
 
-/// The target an `attack` action names, looked up among the enemy's active units and the enemy hero
-/// and nothing else, so a friendly target never reaches the validator (§4.2 step 2). A Dormant enemy
-/// card is looked up too (`units_on_field_of`), so that "that card is Dormant" is `combat`'s refusal
-/// to give rather than a lookup failure here (R1839000).
+/// The target an `attack` action names, among the enemy's units on the field (a Dormant one too, so
+/// "that card is Dormant" is `combat`'s refusal, R1839000) and the enemy hero only, so a friendly
+/// target never reaches the validator (§4.2 step 2).
 fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Option<AttackTarget> {
     let enemy = opponent_of(player);
     if target_id == format!("hero-{enemy}") {
@@ -197,9 +154,8 @@ fn attack(
         return Err(EngineError::new(format!("no unit {attacker_id} you control")));
     };
 
-    // R1200: while a Mayor acts the attack names no target — the sentinel `"random"` — and the
-    // engine draws it from the attacker's legal ones. The sentinel with no Mayor, or a named
-    // target while a Mayor acts, is refused.
+    // R1200: while a Mayor acts the attack names the sentinel `"random"` and the engine draws the
+    // target; the sentinel with no Mayor, or a named target with one, is refused.
     if target_id == crate::config::RANDOM_ATTACK_TARGET {
         if !crate::random_targets::targets_random(sink.state) {
             return Err(EngineError::new(format!("no target {target_id}")));
@@ -229,13 +185,10 @@ fn switch_action(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &str)
     switch_position(sink, &unit, Default::default()).map(|_| ())
 }
 
-/// B3.2 rule 10, R384, R752: `activate` and its alias `activatePower`, one routing for both. Since the
-/// Heroic Power patch a Heroic Power's power is one of the card's own Activate abilities
-/// (`heroPower.powerAbilities`), so both go to `activate.activateAbility`, which answers for any card's
-/// "Activate:" abilities. An `activatePower` names no ability: on a Heroic Power it is the power the
-/// card rolled, and on any other card the card's only ability, as an `activate` naming none is.
-///
-/// `action` is TS's `ActivationAction`: the `activate` or the `activatePower` body.
+/// B3.2 rule 10, R384, R752: `activate` and `activatePower`, the alias old logs carry, both go to
+/// `activate_ability`, since a Heroic Power's power is one of its Activate abilities. An
+/// `activatePower` names no ability: on a Heroic Power it is the rolled power, on any other card its
+/// only ability, as for an `activate` naming none.
 fn activate_card(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
@@ -275,9 +228,8 @@ fn activate_card(
     activate_ability(sink, player, &activation).map(|_| ())
 }
 
-/// R384, R752: what `legal_actions` offers for one card acting on the field — every usable "Activate:"
-/// ability with its choices (`activate.activateActionsFor`), a Heroic Power's rolled power among them,
-/// listed once per target it may be dragged to (R81).
+/// R384, R752: what `legal_actions` offers for one card acting on the field: every usable "Activate:"
+/// ability, a Heroic Power's rolled power among them, once per target it may be dragged to (R81).
 fn activation_actions(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
     activate_actions_for(state, player, card)
         .into_iter()
@@ -285,8 +237,8 @@ fn activation_actions(state: &GameState, player: PlayerId, card: &CardInstance) 
         .collect()
 }
 
-/// §4.1 and R49: whether this unit's own switch is on offer at all: `combat.whyCannotSwitch`, the
-/// refusal `switch_position` gives the same switch, so the list and the reducer cannot disagree.
+/// §4.1 and R49: whether this unit's own switch is on offer, by the refusal `switch_position` gives,
+/// so the list and the reducer cannot disagree.
 fn can_switch(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
     why_cannot_switch_in(auras, unit, position_after_switch(unit), true).is_ok()
 }
@@ -334,14 +286,12 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
             target_id,
         } => attack(sink, action.player_id, attacker_id, target_id),
         ActionBody::Activate { .. } | ActionBody::ActivatePower { .. } => {
-            // R43, R384: a power or an ability lives on the instance, and the module that owns it owns
-            // every part of using it — the costs, the choices, and that turn's use.
+            // R43, R384: an ability lives on the instance; its module owns its costs, choices and use.
             activate_card(sink, action.player_id, &action.body)
         }
         ActionBody::Answer { choice_id, selection } => {
-            // §10.6: a card's continuation is re-entered through its script; a prompt an engine sequence
-            // opened for itself (an Echo repeat's fresh pick, §10.5 step 6) goes to that sequence's
-            // answerer, which `answer_prompt` looks up (R122).
+            // §10.6: a card's continuation re-enters through its script; a prompt an engine sequence
+            // opened for itself (an Echo repeat's pick, §10.5 step 6) goes to its answerer (R122).
             let answer = AnswerInput {
                 player_id: action.player_id,
                 choice_id: choice_id.clone(),
@@ -375,8 +325,7 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
         }
         // R1838000: `trade.rs` owns the rule; its refusal is the one `legal_actions` and the view read.
         ActionBody::Trade { instance_id } => crate::trade::apply_trade(sink, action.player_id, instance_id),
-        // R1853003: `marketplace.rs` owns the rule; its refusals are the ones `legal_actions` and the view
-        // read.
+        // R1853003: `marketplace.rs` owns the rule; `legal_actions` and the view read its refusals.
         ActionBody::MarketBuy { offer } => {
             crate::marketplace::apply_market_buy(sink, action.player_id, *offer)
         }
@@ -384,9 +333,8 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
             crate::marketplace::apply_market_sell(sink, action.player_id, instance_id)
         }
         ActionBody::SetAutoEndTurn { enabled } => {
-            // R345: a preference, not a move. It emits nothing, and `maybeAutoEndTurn` reads it after
-            // this reduction as after every other, so turning it back on with nothing left to do ends the
-            // turn at once.
+            // R345: a preference, not a move, emitting nothing; `end_due_turns` reads it after this
+            // reduction too, so turning it back on with nothing left to do ends the turn at once.
             sink.state.players[action.player_id].auto_end_turn = if *enabled { None } else { Some(false) };
             Ok(())
         }
@@ -408,25 +356,18 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
 }
 
 /// R79 and §2.5: `timeout` "answers only the prompts of the player whose clock ran out, using the AI
-/// policy, and ends the turn only when that is the active player". The AI policy answers, so a
-/// timeout is as deterministic as any action.
-///
-/// - The non-active player's clock is a prompt clock: on expiry it answers that one prompt of theirs,
-///   and with none of theirs open it does nothing — it never touches the active player's prompt or
-///   turn.
-/// - The active player's clock is the turn clock: every prompt of theirs that is open, or that an
-///   answer opens in turn (a chain like KY's Private Tutor's), is answered, and then the turn ends.
-///   A prompt the other player holds stops it there, since that one has a clock of its own, and it
-///   stops once the turn has passed, so nothing on the next turn is answered for anybody.
+/// policy, and ends the turn only when that is the active player", as deterministic as any action.
+/// The non-active player's clock is a prompt clock: it answers that one prompt of theirs, or nothing.
+/// The active player's is the turn clock: every prompt of theirs is answered, then the turn ends; it stops
+/// at a prompt the other player holds (that one has its own clock) and once the turn has passed.
 fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
     let who = action.player_id;
     let turn = sink.state.turn;
     let turn_clock = who == sink.state.active;
 
-    // R268: while the mulligans are open (R265) the clock that ran out is the mulligan's, and it
-    // answers only this seat's own mulligan, by keeping the whole hand: Hearthstone confirms the hand
-    // as it stands when its mulligan timer runs out, and nothing is marked to return until the player
-    // marks it. It draws nothing from the rng, and it never answers the other seat's.
+    // R268: while the mulligans are open (R265) the clock that ran out is the mulligan's: it keeps this
+    // seat's whole hand, as Hearthstone confirms the hand when its mulligan timer runs out, drawing
+    // nothing from the rng and never answering the other seat's.
     if sink.state.pending.is_none() && sink.state.mulligan.is_some() {
         let keep: Option<Vec<String>> = mulligan_prompt_for(sink.state, who)
             .map(|prompt| prompt.options.iter().map(|option| option.key.clone()).collect());
@@ -445,10 +386,9 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             if holder != who {
                 return Ok(());
             }
-            // R79: the AI policy answers, and it never concedes (R84), so the draw is over the prompt's
-            // own answers — the concede R211 also offers is not one of them.
-            // R1002: a timeout leaves a night market, drawing nothing; R1184001: it stops a question
-            // sequence the same way.
+            // R79: the AI policy answers and never concedes (R84), so it draws from the prompt's own
+            // answers, not the concede R211 also offers. R1002: a timeout leaves a night market,
+            // drawing nothing; R1184001: it stops a question sequence the same way.
             let quit = crate::subsystems::night_market::leave_answer(sink.state)
                 .or_else(|| crate::prompts::stop_answer(sink.state));
             let pick = if let Some(quit) = quit {
@@ -482,13 +422,10 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
     Ok(())
 }
 
-/// R44, §8 #96: "an AI plays the rest of their turn with random legal actions", and while it does,
-/// that player is locked out — their client does not act while `aiTurn` is set (R152). A question of
-/// theirs can still open outside the AI's own playout: a Death hook of their unit that the other
-/// player's trap destroys inside the other player's answer, or the Cry of a card the AI played once
-/// the other player has answered the trap that asked about it. That question is the AI's to answer,
-/// as every prompt of that turn is (§10.7), and the answer goes on to finish the turn the AI owes
-/// (`aiPolicy.AI_TURN_WORK`). Left open, the turn stalled until the turn clock, which R79 then ended.
+/// R44, §8 #96: "an AI plays the rest of their turn with random legal actions", the player locked out
+/// while `aiTurn` is set (R152). A question of theirs can still open outside the AI's playout (a Death
+/// a trap fires in the other player's answer); it is the AI's to answer, as every prompt of that turn
+/// is (§10.7), and the answer finishes the turn the AI owes, which would otherwise stall (R79).
 fn answer_for_locked_out(sink: &mut EngineSink<'_>) {
     for _guard in 0..=TURN_CAP_PLAYER_TURNS {
         if sink.state.result.is_some() {
@@ -506,9 +443,8 @@ fn answer_for_locked_out(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// B5 E10, R456: the main-phase actions "one more action, then your turn ends" counts — a play, an
-/// attack, a position switch, an activation. An answer is part of the action that asked; ending the
-/// turn uses the rest up by ending it.
+/// B5 E10, R456: the main-phase actions "one more action, then your turn ends" counts; an answer is
+/// part of the action that asked, and ending the turn uses the rest up.
 const TURN_ACTION_TYPES: &[ActionType] = &[
     ActionType::Play,
     ActionType::Attack,
@@ -517,16 +453,16 @@ const TURN_ACTION_TYPES: &[ActionType] = &[
     ActionType::ActivatePower,
 ];
 
-/// The fields of a `turnEnds` modifier this module reads (TS `TurnEndsModifier`).
+/// The fields of a `turnEnds` modifier this module reads.
 struct TurnEndsRider {
     id: String,
     actions_left: i32,
     by_instance_id: Option<String>,
 }
 
-/// B5 E10, R456: the "your turn ends" rider on `player` for the turn running now, or `None` — the
-/// first `turnEnds` modifier whose `thisTurn` expiry, if it has one, is this turn. A private copy of
-/// `modifiers::turn_ends_of` (fullsend rule 5), answering with the fields this module needs.
+/// B5 E10, R456: the "your turn ends" rider on `player` for this turn, or `None`: the first `turnEnds`
+/// modifier whose `thisTurn` expiry, if any, is this turn. A private copy of `modifiers::turn_ends_of`
+/// (fullsend rule 5).
 fn turn_ends_rider(state: &GameState, player: PlayerId) -> Option<TurnEndsRider> {
     for modifier in &state.players[player].mods {
         let ModifierKind::TurnEnds {
@@ -550,9 +486,9 @@ fn turn_ends_rider(state: &GameState, player: PlayerId) -> Option<TurnEndsRider>
     None
 }
 
-/// B5 E10, R456: the rider an action counts against — the acting player's own "your turn ends" rider
-/// with actions still left, as it stood before the action. A rider the action itself puts in place
-/// (Classic+ #26 Radiant drawn by it) is counted from the next action on.
+/// B5 E10, R456: the rider an action counts against: the acting player's own, with actions left, as it
+/// stood before the action, so one the action puts in place (Classic+ #26 Radiant drawn by it) counts
+/// from the next action on.
 fn turn_action_counted(state: &GameState, action: &Action) -> Option<String> {
     if !TURN_ACTION_TYPES.contains(&action.action_type()) {
         return None;
@@ -576,7 +512,6 @@ fn count_turn_action(state: &mut GameState, player: PlayerId, rider_id: &str) {
     if rider.id != rider_id || rider.actions_left <= 0 {
         return;
     }
-    // The rider `turn_ends_rider` found is the first `turnEnds` modifier with this id.
     for modifier in state.players[player].mods.iter_mut() {
         if modifier.id != rider.id {
             continue;
@@ -588,9 +523,9 @@ fn count_turn_action(state: &mut GameState, player: PlayerId, rider_id: &str) {
     }
 }
 
-/// B5 E10, R456: whether the active player's turn is due to end because an effect cut it short: its
-/// rider has no actions left, and what was resolving has resolved — no prompt open, the turn in its
-/// main phase (a rider set during the start of a turn, a cast on draw's, waits for it).
+/// B5 E10, R456: the rider of an active turn an effect cut short, once it has no actions left, no
+/// prompt is open and the turn is in its main phase (one set at a turn's start, a cast on draw's,
+/// waits for it).
 fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
     if state.result.is_some() || state.pending.is_some() || state.phase != Phase::Main {
         return None;
@@ -603,16 +538,11 @@ fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
     }
 }
 
-/// R82, R456: end every turn that is due to end once the action has resolved — one an effect cut
-/// short (`turnCutShort`, then every end-of-turn step, as if End turn were pressed), and one with
-/// nothing but ending it left to do, unless its player turned that off (R345). Either may start a
-/// turn that is due to end in its turn (a Tommy Tempo drawn at its start), hence the loop.
-///
-/// R1183002: first of all, a turn the autopilot owes is played (`run_autopilot`), which ends it or
-/// leaves it waiting on the other player's answer. `drive_autopilot` is off inside the autopilot's
-/// own steps, so it never plays one turn twice over, and in a search's world (`reduce_unpiloted`).
-/// R1844000: before that, an aura's spent count hands the turn back, whoever's answer closed the
-/// last prompt its actions opened.
+/// R82, R456: end every turn due to end once the action has resolved: one an effect cut short, and one
+/// with nothing but ending it left to do unless its player turned that off (R345); either may start another
+/// such turn (a Tommy Tempo drawn at its start), hence the loop. R1844000: first an aura's spent count hands
+/// the turn back; R1183002: then a turn the autopilot owes is played, unless `drive_autopilot` is off (in a
+/// search's world, and in the autopilot's own steps so none plays a turn twice).
 fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
     for _guard in 0..=TURN_CAP_PLAYER_TURNS {
         crate::subsystems::autopilot::release_spent_aura(sink.state);
@@ -641,12 +571,10 @@ fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
     }
 }
 
-/// R1183002, R1183003: the autopilot plays `player`'s turn — `subsystems::autopilot::choose`'s action,
-/// one at a time, each through the reducer's own step (`autopilot_step`), while it is due. At
-/// `AUTOPILOT_MAX_ACTIONS`, or should an action it chose be refused, the rest of the turn is a
-/// timeout's (R79): the player's open prompts answered by the random policy, then the turn ended.
-/// Returns once the turn has ended, the game is over or the other player owes an answer. R1844000:
-/// or an aura's count is spent, its last action's prompts answered.
+/// R1183002, R1183003: the autopilot plays `player`'s turn while it is due, one action at a time
+/// through `autopilot_step`; at `AUTOPILOT_MAX_ACTIONS`, or if a chosen action is refused, the rest is
+/// a timeout's (R79). Returns once the turn has ended, the game is over, the other player owes an
+/// answer or an aura's count is spent (R1844000).
 fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
     let turn = sink.state.turn;
     while sink.state.turn == turn && crate::subsystems::autopilot::due(sink.state) == Some(player) {
@@ -680,10 +608,9 @@ fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
     }
 }
 
-/// R1183002: one autopilot action as `reduce` takes a player's — applied, counted against a "your
-/// turn ends" rider (R456), and settled, then every turn due to end ended — without a second state
-/// copy or a nonce in the log: the action is part of the one that handed the turn over, and its
-/// events are that action's. A refused action leaves the state as it was.
+/// R1183002: one autopilot action as `reduce` takes a player's (applied, counted against R456's rider,
+/// settled, due turns ended) but with no second state copy or nonce in the log: it is part of the
+/// action that handed the turn over, and its events are that one's. A refused one changes nothing.
 fn autopilot_step(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
     let (saved, events_at, rng) = (sink.state.clone(), sink.events.len(), sink.rng.clone());
     let counted = turn_action_counted(sink.state, action);
@@ -702,11 +629,9 @@ fn autopilot_step(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engi
     Ok(())
 }
 
-/// §2.5, R82: when nothing but ending the turn is left, the turn ends by itself — unless the active
-/// player has turned that off for themselves (R345), when the turn waits for their End turn. Only
-/// whether one other action exists matters, so the walk stops at the first (`each_legal_action`): this
-/// runs after every action, the AI's simulated ones included, and listing every play to the end was
-/// nearly a third of a long gate game (#188).
+/// §2.5, R82: when nothing but ending the turn is left, the turn ends by itself, unless the active
+/// player turned that off (R345). The walk stops at the first other action: this runs after every
+/// action, the AI's simulated ones included, and listing every play cost a third of a gate game (#188).
 fn auto_end_due(state: &GameState) -> bool {
     if state.result.is_some() || state.pending.is_some() || state.phase != Phase::Main {
         return false;
@@ -736,17 +661,15 @@ fn remember_nonce(state: &mut GameState, nonce: &str, events: &[GameEvent]) {
 }
 
 /// §9.3, §10.2: apply one action. A refused action comes back with the input state, no events and
-/// TS's message; a replayed nonce comes back with the events it produced the first time.
+/// its message; a replayed nonce comes back with the events it produced the first time.
 pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
     reduce_driving(state, action, true)
 }
 
-/// `reduce` for a search's own world (§9, `crates/ai`'s simulated steps): the same step, except that
-/// a turn the autopilot owes (R1183002) is left owed, not played. A search scores a line where the
-/// turn it hands over begins and never plays that turn for anybody; driven here, one simulated End
-/// turn whose next draw casts Cognitive Offloading would play that whole turn by §10.7's scorer, the
-/// work of hundreds of ordinary steps, inside one node (#1337). A game never goes through this: its
-/// turns, and every replay of them, are `reduce`'s.
+/// `reduce` for a search's own world (§9, `crates/ai`'s simulated steps): a turn the autopilot owes
+/// (R1183002) is left owed, not played: driven, one simulated End turn whose next draw casts Cognitive
+/// Offloading would play that whole turn by §10.7's scorer inside one node (#1337). A game, and every
+/// replay of it, goes through `reduce`.
 pub fn reduce_unpiloted(state: &GameState, action: &Action) -> ReduceResult {
     reduce_driving(state, action, false)
 }
@@ -801,8 +724,8 @@ fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> Red
     }
 
     let mut next = state.clone();
-    // R179: the state's fused scripts, composed on entry when it holds none (it came through JSON), as
-    // TS's `syncFusedScripts` registered them; a Fuse composes the ones it mints as it mints them.
+    // R179: the state's fused scripts, composed on entry when it holds none (it came through JSON); a
+    // Fuse composes the ones it mints as it mints them.
     crate::scripts::sync_fused_scripts(&mut next);
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&next.seed, next.rng_cursor);
@@ -817,8 +740,7 @@ fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> Red
             count_turn_action(sink.state, action.player_id, &rider_id);
         }
 
-        // §10.3: the resolution loop finishes the action — the events it emitted, the work a prompt left
-        // owed, the state check and the trigger queue — and stops where a prompt is waiting.
+        // §10.3: the resolution loop finishes the action and stops where a prompt is waiting.
         settle(&mut sink, SettleOptions::default());
         answer_for_locked_out(&mut sink);
         end_due_turns(&mut sink, drive_autopilot);
@@ -878,12 +800,9 @@ fn mulligan_subsets(ids: &[String]) -> Vec<Vec<String>> {
     out
 }
 
-/// Every action that would not error, for the client's greying-out and for the AI policy (§10.2).
-///
-/// Each kind comes from the module that refuses it, never from a second copy of the rule here: the
-/// plays from `playChoices` (R81's five choice kinds crossed and bounded, R90), the attacks from
-/// `combat.attackTargets`, the powers from `heroPower.whyCannotActivate` and, while a prompt is
-/// open, that prompt's own answers from `prompts.promptAnswers`.
+/// Every action that would not error, for the client's greying-out and for the AI policy (§10.2), each
+/// kind from the module that refuses it (a play's R81 choice kinds crossed and bounded, R90), never
+/// from a second copy of the rule here.
 pub fn legal_actions(state: &GameState, player: PlayerId) -> Vec<ActionBody> {
     let mut out: Vec<ActionBody> = Vec::new();
     let _ = each_legal_action(state, player, &mut |action| {
@@ -894,8 +813,8 @@ pub fn legal_actions(state: &GameState, player: PlayerId) -> Vec<ActionBody> {
 }
 
 /// `legal_actions` one action at a time, in the same order: the one place the list is made, so a
-/// caller that only asks whether some action exists (`auto_end_due`) stops computing at the first.
-/// TS's generator: each `yield` is a call to `visit`, and a `Break` from it ends the walk there.
+/// caller that only asks whether some action exists (`auto_end_due`) stops computing at the first:
+/// a `Break` from `visit` ends the walk there.
 pub(crate) fn each_legal_action(
     state: &GameState,
     player: PlayerId,
@@ -906,10 +825,8 @@ pub(crate) fn each_legal_action(
     }
 
     if let Some(pending) = &state.pending {
-        // R211: a prompt blocks everything but its own answer and the actions that end a game, and
-        // `reduce` accepts a concede from either seat while it is open (§2.5, BUILD M1-T3) — so both
-        // seats are offered it, as they are at every other moment of a live game. §10.7's policy never
-        // takes it (R84), so what the policy draws from is still that prompt's answers alone.
+        // R211: `reduce` accepts a concede from either seat while a prompt is open (§2.5, BUILD M1-T3),
+        // so both are offered it; §10.7's policy never takes it (R84), drawing from the answers alone.
         if pending.player_id != player {
             return visit(ActionBody::Concede);
         }
@@ -938,9 +855,8 @@ pub(crate) fn each_legal_action(
         visit(ActionBody::AnswerDraw { accept: false })?;
     }
 
-    // MD-D29, R1127: either seat may emote while a card hears it — past the prompt and mulligan
-    // windows above, so never with one open. Otherwise `reduce` refuses it, and other games never
-    // list it.
+    // MD-D29, R1127: either seat may emote while a card hears it, never with a prompt or mulligan
+    // open; otherwise `reduce` refuses it.
     if crate::query::emotes_heard(state, player) {
         for emote in crate::wire::EMOTE_IDS.iter() {
             visit(ActionBody::Emote { emote: *emote })?;
@@ -957,8 +873,7 @@ pub(crate) fn each_legal_action(
             visit(ActionBody::from(play))?;
         }
     }
-    // B5 E11, R454: a card in the player's graveyard, while a permission on their field lets them play
-    // it (`graveyardPlay.ts`) — the same `play` action, naming a graveyard card.
+    // B5 E11, R454: a graveyard card a permission on their field lets them play, as a `play` action.
     for card in &side.graveyard {
         for play in graveyard_play_actions_for(state, player, card) {
             visit(ActionBody::from(play))?;
@@ -1005,9 +920,8 @@ pub(crate) fn each_legal_action(
         }
     }
 
-    // MD-D9: an ability either player may use is offered to the other seat too, off the opponent's
-    // cards. A card with no either-player ability is skipped before its choices are built, so a
-    // shipped card lists nothing new here.
+    // MD-D9: an ability either player may use is offered off the opponent's cards too; a card with none
+    // is skipped before its choices are built, so a shipped card lists nothing new here.
     for row in [Row::Units, Row::Backrow] {
         for zone_ref in slots_of(opponent_of(player), row) {
             let Some(card) = card_at(state, zone_ref) else {
@@ -1034,10 +948,9 @@ pub(crate) fn each_legal_action(
             })?;
         }
     }
-    // R1853003: a buy of each Marketplace lot offered to the player, in offer order (R2250002), then a
-    // sale of each hand card that sells from there (R1861000), in hand order, while
-    // `marketplace.rs`'s refusals pass them — the refusals the reducer gives and the view's `reason`
-    // reads. A closed Marketplace lists neither.
+    // R1853003: a buy of each lot offered to the player, in offer order (R2250002), then a sale of each
+    // hand card that sells from there (R1861000), in hand order, while `marketplace.rs`'s refusals (the
+    // view's `reason`) pass them. A closed Marketplace lists neither.
     if let Some(market) = &state.marketplace {
         let offered = crate::marketplace::offered_to(market, player).count() as i32;
         for offer in 0..offered {

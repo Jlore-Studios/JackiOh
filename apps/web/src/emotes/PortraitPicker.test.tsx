@@ -1,11 +1,6 @@
-// The deck builder's portrait picker (issue §8, R641, R644): the deck's current portrait as the
-// collapsed control, a grid of the whole six-portrait roster on open, and each tile's Preview
-// panel whose pool of emotes plays exactly as they would in a match — voice line on the voice channel
-// plus its speech bubble, emoji synth on the effects channel plus the sticker.
-//
-// The engine seam is the module singleton: `setAudioEngineForTests` installs the recording fake
-// the audio suite's own wiring test uses, so "played on the voice channel" is a `playVoice` call
-// and "played on the effects channel" a `playSfx` one — no real AudioContext ever runs.
+// The deck builder's portrait picker (issue §8, R641, R644). `setAudioEngineForTests` installs the
+// recording fake, so "played on the voice channel" is a `playVoice` call and "on the effects channel"
+// a `playSfx` one.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -55,7 +50,6 @@ function picker(portrait: PortraitId = "gary", onPick = vi.fn()): ReactElement {
   return <PortraitPicker portrait={portrait} onPick={onPick} />;
 }
 
-/** The collapsed control, opened. */
 function openPicker(): HTMLElement {
   fireEvent.click(screen.getByTestId("portrait-current"));
   return screen.getByRole("dialog", { name: "Choose a hero portrait" });
@@ -88,7 +82,6 @@ describe("the deck's portrait button (R641)", () => {
       // The tile names the card it draws — the roster is looked up by name, never by number.
       const def = PORTRAIT_DEFS[portrait].def;
       expect(pick.title.startsWith(`${def.name} — `)).toBe(true);
-      // And its Preview toggle is the other control on the tile.
       expect(within(tile).getByTestId(`portrait-preview-${portrait}`).textContent).toBe("Preview");
     }
   });
@@ -160,7 +153,6 @@ describe("the portraits an account owns (R1827000)", () => {
     expect(portraitOfCosmetic("portrait-ulfric")).toBeNull();
     expect(portraitOfCosmetic("table-wood")).toBeNull();
     expect(portraitOfCosmetic("gary")).toBeNull();
-    // The registry holds one portrait cosmetic per roster id, and only `vanilla`'s is a starter.
     const registry = COSMETICS.filter((cosmetic) => cosmetic.kind === "portrait");
     expect(registry.map((cosmetic) => portraitOfCosmetic(cosmetic.id))).toEqual([...PORTRAIT_IDS]);
     expect(registry.filter((cosmetic) => cosmetic.starter).map((cosmetic) => cosmetic.id)).toEqual(["portrait-vanilla"]);
@@ -323,9 +315,7 @@ describe("the picker's place in the deck editor (R641)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The picker where the player meets it: in the open deck's editor (issue §8, R641, D5)
-// ---------------------------------------------------------------------------------------------
 
 const catalog = fixtureCatalog();
 const collection = fixtureCollection();
@@ -359,7 +349,6 @@ describe("the picker in the deck editor (R641)", () => {
       "d1",
     );
 
-    // The collapsed control is the deck's portrait: its card's name, its oval art.
     const current = screen.getByTestId("portrait-current");
     expect(current).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.gary.def.name}`);
     expect(current.querySelector(".cf-art--oval")).not.toBeNull();

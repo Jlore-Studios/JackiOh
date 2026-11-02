@@ -1,32 +1,15 @@
-// The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4): the packs the account
-// holds and the scene that opens one. It is on the Shop screen (`routes/shop.tsx`). The odds and the pity
-// counters the server states are the Purchases page's (#1651), not the panel's.
+// The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), on the Shop screen;
+// the odds and the pity counters are the Purchases page's (#1651).
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `PackScene` never rolls: it draws the slots `POST
-// /api/packs/open` already settled, and nothing on screen changes before that answer. Tearing is a
-// request; skip-all, the holds and the flips only choose how fast an answer already in hand is
-// shown. A refused open leaves the pack sealed on screen with the server's words beside it.
+// /api/packs/open` already settled, and nothing on screen changes before that answer; skip-all, the
+// holds and the flips only choose how fast it is shown, and reduced motion shows it at once. The pack
+// is a `PackObject` (#1663); the token bars (`OpeningBars`, SPEC §14.5) play once every card shows
+// (R1953000, R1999000). A new cosmetic offers Equip (R1955000), a portrait's none. The scene is a
+// modal overlay (#1757).
 //
-// The pack is a `PackObject` (#1663): the sealed button around it takes the tap and the swipe, and the
-// object draws the press and the tear. Once the server has answered, the opening's two token bars
-// (`OpeningBars`, SPEC §14.5) sit pinned at the top of the viewport at their points before, and once
-// every card shows they play: each slot's points fly from its card into them, then they fill
-// (R1953000, R1999000).
-//
-// REDUCED MOTION (the panel's setting or the system's) shows the results at once: no tear, no flip,
-// no hold and no effects. A skip-all shows the same, with the best card's sting played once.
-//
-// EQUIP (R1955000): a revealed slot that granted a new cosmetic offers Equip (collection/EquipButton.tsx),
-// writing the pick the Collection would; a portrait's offers none.
-//
-// THE KEYBOARD (#1757): the scene is a modal overlay as the inspect views are (`useModalOverlay`): its
-// root takes the focus when it opens and gives it back to the opener when it closes, Tab and Shift+Tab
-// stay inside it, and Escape closes it unless an open request is out, when Close is disabled too.
-//
-// ONE SPEND AT A TIME (R2378000): while any spend of the tab is out (`net/spending.ts`), a Shop buy
-// or this panel's own open, Open and Open all wait, disabled and turning a loading wheel
-// (`economy/spend.css`), and the sealed pack, Reveal all on it and Next pack wait too, so a press
-// sends nothing until the spend out has its answer.
+// ONE SPEND AT A TIME (R2378000): while any spend of the tab is out (`net/spending.ts`), Open, Open
+// all, the sealed pack, Reveal all and Next pack wait, disabled (`economy/spend.css`).
 
 import {
   useEffect,
@@ -123,7 +106,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const domRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
 
-  // Focus moves in on open and back out on close, Tab stays inside, and Escape closes as Close does: not while busy.
+  // Escape closes as Close does: not while busy.
   useModalOverlay(onClose, sceneRef, !busy);
 
   // The director lives exactly as long as the canvas and the DOM root it draws into (FxLayer's).

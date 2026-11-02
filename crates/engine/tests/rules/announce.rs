@@ -1,14 +1,6 @@
 //! The announce window and Counter (docs/classic-sets.md B5 E1, E2; R448): §10.5 gains a step between 3
-//! and 4 — the paid-for card moves to its player's resolving zone, `cardAnnounced` goes out, and a
-//! window runs in which Counters answer it, traps first and then the other triggers the announce woke.
-//! The first Counter cancels the play, which then never resolves and is never counted; the card goes to
-//! its owner's graveyard, to exile, or to the countering player's hand as theirs (E2).
-//!
-//! Pinned here, on fixture cards of the shapes Classic #4, #10, #17, #72 and #87 and AI Refusal have:
-//! the timing, what a countered play does not do, the second Counter that stays set, a non-trap
-//! response, a cast's announce, the card out of a discard's reach, a question in the window (pause,
-//! JSON round trip, replay from the log), the steal and its hand cap, and the redaction of a face-down
-//! card's announce.
+//! and 4, where the paid-for card waits in its player's resolving zone while Counters answer it, traps
+//! first. Fixtures have the shapes of Classic #4, #10, #17, #72, #87 and AI Refusal.
 
 use jackioh_engine::announce::open_announces;
 use jackioh_engine::testkit::*;
@@ -38,7 +30,7 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// `{ ...body, playerId, nonce }` reduced; a refusal panics.
+/// `body` with `playerId` and a nonce, reduced; a refusal panics.
 fn reduce_ok(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let mut action = body;
     action["playerId"] = json!(player_id);
@@ -123,7 +115,6 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
                 "lane": 2,
             })]
         );
-        // The Cry resolved, the card stands where it was played, and no window is left open.
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 3);
         assert_eq!(
             card_id_at(after, slot(PlayerId::P1, Row::Units, 2)),
@@ -581,8 +572,7 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
         assert_eq!(taken.map(|card| card.owner), Some(PlayerId::P2));
         assert_eq!(taken.map(|card| card.controller), Some(PlayerId::P2));
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
-        // R97: the thief reads its own hand card. (What the victim reads of a card taken off the stack
-        // is the `stolen` redaction's own rule, which the prompts workstream settles.)
+        // R97: the thief reads its own hand card; what the victim reads is the `stolen` redaction's rule.
         assert_eq!(
             first_field(
                 &view_for(after, PlayerId::P2).events,
@@ -806,7 +796,6 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
                 json!({ "type": "mulligan", "keep": keep }),
             );
         }
-        // p1's first turn passes; p2 sets down its Palantir; p1 plays the Bolt into its question.
         step(&mut state, &mut log, PlayerId::P1, json!({ "type": "endTurn" }));
         let palantir = state
             .players

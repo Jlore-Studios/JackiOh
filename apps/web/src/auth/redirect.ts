@@ -1,7 +1,6 @@
 // Emailed auth links, read once and scrubbed (R193, R323, R324).
 // `/login` exchanges a one-time PKCE code (R323); legacy sessions and errors arrive in fragments or queries (R324).
-// Only `/login` and `/` treat code as auth; parsing never shows provider text and scrubbing happens before rendering.
-// Recovery stays tab-local; email needs server acceptance; navigation after an auth link must use `paths`.
+// Navigation after an auth link must use `paths`.
 
 import { isAuthCode, revokeSignedOutSession } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
@@ -94,7 +93,6 @@ function readParams(params: URLSearchParams): AuthRedirect {
     refreshToken: refreshToken !== null && refreshToken.length > 0 ? refreshToken : null,
     expiresAt: null,
   };
-  // Use this device's clock for `expires_in`; `expires_at` is the fallback.
   const expiresAt = positiveNumber(params.get("expires_at"));
   const expiresIn = positiveNumber(params.get("expires_in"));
   if (expiresIn !== null) {

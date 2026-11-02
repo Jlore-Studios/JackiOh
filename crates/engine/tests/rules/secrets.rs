@@ -156,7 +156,6 @@ fn r864_a_winning_guess_cancels_the_reward_and_reveals() {
         GameEvent::Predicted { player, secret_id: id, guess, outcome }
         if *player == P1 && *id == secret_id && *guess == SecretChoice::Attack && *outcome == PredictOutcome::Won
     ));
-    // The secret and its reward's delayed effect are gone.
     assert!(state.secrets.is_none());
     assert!(state.delayed.is_empty());
 }
@@ -243,8 +242,7 @@ fn r861_resolve_secret_reveals_once_and_removes_the_record() {
 /// R862, R212: a card's graveyard trigger answers the discard that put it there. The report of where
 /// the discard landed (`enteredGraveyard`, B5 E5) is that same move, not a later one, so the card is
 /// on the stay the discard began (`stays::stands_where_it_landed`). Meditative #22.1's discard clause
-/// is the card that needs it; this fixture is its shape, prefixed `sc-` and indexed 862, so no
-/// shared fixture grows for it.
+/// is the card that needs it.
 mod r862_a_discard_clause_answers_its_own_discard {
     use super::*;
     use crate::rules::fixtures::catalog::spell_def;

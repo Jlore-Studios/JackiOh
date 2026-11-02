@@ -1,29 +1,15 @@
-// The TypeScript wrapper over the WebAssembly module (docs/v0.3.0/SURFACE.md §10.3): the one file
-// in apps/web that touches `./pkg`, which `scripts/build-wasm.sh` builds from `crates/wasm` (and git
-// ignores). Everything that runs a rule on the client runs it through here: the hotseat port
-// (`game/engine.ts`), the practice worker (`practice/core.ts`), the deck builder's validator and the
-// `@jackioh/*` aliases (`wire/engine.ts`, `wire/ai.ts`, `wire/validator.ts`).
+// The wrapper over the WebAssembly module (docs/v0.3.0/SURFACE.md §10.3), the one file in apps/web that
+// touches `./pkg` (`scripts/build-wasm.sh` builds it from `crates/wasm`). Every rule the client runs goes
+// through here, as JSON strings in and out (SURFACE §10.1); the client keeps the state behind its opaque
+// `EngineState` brand and never reads it (CLAUDE.md rule 7, SPEC §10.8).
 //
-// JSON strings in and out, nothing else crosses (SURFACE §10.1). Each function below parses and
-// stringifies, and is named as the TypeScript engine named it, so a caller reads exactly as it did:
-// `createGame`, `beginGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`, … The state is
-// the engine's `GameState` as plain JSON; the client keeps it behind its opaque `EngineState` brand
-// and never reads it (CLAUDE.md rule 7, SPEC §10.8).
+// LOADING. Nothing works until `loadWasm()` (which `main.tsx`'s `EngineGate` awaits before any screen
+// that calls the engine, #778, as the deck builder calls the validator synchronously) or `loadWasmSync`
+// has run the module's `init()`, which registers the catalog and the card scripts.
 //
-// LOADING. Nothing here works until the module is instantiated:
-//   - `loadWasm()` fetches and instantiates it (idempotent; one fetch however many callers). The page
-//     starts it at boot, and `main.tsx`'s `EngineGate` holds every screen that calls the engine until
-//     it resolves (#778), because the deck builder calls the validator synchronously; the practice
-//     worker awaits it before it handles a message.
-//   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a file
-//     URL, so `test/setup.ts` reads `pkg/jackioh_wasm_bg.wasm` from disk and hands it over.
-// Both call the module's own `init()` once, which registers the catalog and the card scripts with the
-// engine (what TypeScript's `registerAll()` did; nothing is left for the web to register).
-//
-// ERRORS. Where the TypeScript engine threw (a deck `createGame` refuses, a malformed argument), the
-// binding throws an `Error` with the engine's message. `reduce` and `beginGame` never throw on an
-// illegal action: the refusal is `error` on the result. A panic is an engine invariant broken; the
-// panic hook prints it on the console, and the call throws "the engine panicked".
+// ERRORS. A refused deck or a malformed argument throws the engine's message; `reduce` and `beginGame`
+// answer an illegal action with `error` on the result. A panic (an engine invariant broken) is printed
+// on the console by the panic hook, and the call throws "the engine panicked".
 
 import initWasm, { initSync } from "./pkg/jackioh_wasm.js";
 import * as normal from "./pkg/jackioh_wasm.js";
@@ -51,9 +37,7 @@ import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 
-// ---------------------------------------------------------------------------------------------
 // the module in use (R915009)
-// ---------------------------------------------------------------------------------------------
 
 /** The bindings every call below goes through: the normal module's exports, or the Luau module's. */
 type Bindings = Omit<LuauBindings, "check_custom_card">;
@@ -75,27 +59,21 @@ function luauBindings(bytes?: BufferSource): Promise<LuauBindings> {
 }
 
 /**
- * R915009: from now on run every engine, AI and validator call through the Luau module (`true`),
- * which runs custom cards' scripts, or through the normal module (`false`, the default). The practice
- * worker turns it on for a game with a custom card and off for any other, so a normal game never runs
- * on Luau. `bytes`: the Luau module's, in jsdom tests.
+ * R915009: from now on run every engine, AI and validator call through the Luau module (`true`), which
+ * runs custom cards' scripts, or the normal one (`false`, the default). The practice worker turns it on
+ * only for a game with a custom card. `bytes`: the Luau module's, in jsdom tests.
  */
 export async function useLuauModule(on: boolean, bytes?: BufferSource): Promise<void> {
   engine = on ? await luauBindings(bytes) : NORMAL;
 }
 
-/** Whether the Luau module is the one in use. */
 export function luauModuleInUse(): boolean {
   return engine !== NORMAL;
 }
 
-/**
- * The creator's check of one custom card (#913, #919): the frame's issues, the script's problems and
- * the definition the frame builds, which the preview draws.
- */
+/** The creator's check of one custom card (#913, #919); `def`, the frame's definition, is what the preview draws. */
 export type CustomCardCheck = { frame: CustomIssue[]; script: ScriptProblem[]; def: CardDef };
 
-/** One problem with a custom card's script: its line, when it has one, and what is wrong. */
 export type ScriptProblem = { line?: number; message: string };
 
 /**
@@ -107,9 +85,7 @@ export async function checkCustomCard(card: CustomCard, bytes?: BufferSource): P
   return parsed<CustomCardCheck>(bindings.check_custom_card(json(card)));
 }
 
-// ---------------------------------------------------------------------------------------------
 // loading
-// ---------------------------------------------------------------------------------------------
 
 let loaded = false;
 let loading: Promise<void> | null = null;
@@ -133,9 +109,8 @@ export function whenWasmLoaded(run: () => void): void {
 }
 
 /**
- * Fetch and instantiate the module, then register the catalog and the card scripts. Idempotent: a
- * second call, or a call after `loadWasmSync`, resolves at once. A failed fetch is not cached; the
- * next call tries again.
+ * Idempotent: a second call, or a call after `loadWasmSync`, resolves at once. A failed fetch is not
+ * cached; the next call tries again.
  */
 export function loadWasm(): Promise<void> {
   if (loaded) return Promise.resolve();
@@ -161,7 +136,6 @@ export function loadWasmSync(bytes: BufferSource): void {
   ready();
 }
 
-/** Whether `loadWasm` or `loadWasmSync` has finished. */
 export function wasmLoaded(): boolean {
   return loaded;
 }
@@ -185,17 +159,13 @@ function json(value: unknown): string {
   return JSON.stringify(value);
 }
 
-/** The no-break space `stateJson` puts ahead of a state. */
 const STATE_MARK = "\u00A0";
 
 /**
- * A state as it crosses: `["\u00A0",<the state's JSON>]`, which the bindings unwrap (`crates/wasm`'s
- * `state_of`). wasm-bindgen's glue copies a string into the module one character at a time up to its
- * first non-ASCII character and hands the rest to `TextEncoder.encodeInto`, and a state's JSON is all
- * ASCII, so its ~80 KB went through the per-character loop on every call (0.18 ms of a 0.24 ms crossing,
- * measured in Node). The no-break space third in this text sends all but two characters through
- * `encodeInto`. One `JSON.stringify` writes it, so no second string is built, and it stays one byte a
- * character (a mark outside Latin-1, or one added with `+`, cost more than it saved).
+ * A state as it crosses: `["\u00A0",<the state's JSON>]`, which `crates/wasm`'s `state_of` unwraps.
+ * wasm-bindgen's glue copies a string in one character at a time up to its first non-ASCII one, which
+ * cost an all-ASCII state 0.18 ms of a 0.24 ms crossing (Node); the mark, third, sends the rest through
+ * `TextEncoder.encodeInto`. A mark outside Latin-1, or one added with `+`, cost more than it saved.
  */
 function stateJson(state: GameState): string {
   return JSON.stringify([STATE_MARK, state]);
@@ -205,9 +175,7 @@ function parsed<T>(text: string): T {
   return JSON.parse(text) as T;
 }
 
-// ---------------------------------------------------------------------------------------------
 // the engine (SURFACE §6.1)
-// ---------------------------------------------------------------------------------------------
 
 /** R417, R508: one card of a seat's last board, as `createGame` takes it and `lastBoardFor` gives it. */
 export type LastBoardCard = { defId: string; radiant: boolean };
@@ -233,10 +201,9 @@ export type CreateGameArgs = {
   customCards?: readonly CustomCard[];
 };
 
-/** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */
+/** `error` is the engine's refusal, and then `state` is the input. */
 export type ReduceResult = { state: GameState; events: GameEvent[]; error?: string };
 
-/** `fold`'s input: `createGame`'s setup and the action log. */
 export type FoldInput = CreateGameArgs & { log: readonly Action[] };
 
 /** `fold`'s answer: the state the log folds to, and every action the engine refused on the way. */
@@ -246,7 +213,7 @@ export type FoldResult = { state: GameState; errors: { nonce: string; error: str
 function reduceResult(text: string, input: GameState): ReduceResult {
   const result = parsed<{ state: GameState; events: GameEvent[]; error?: string | null }>(text);
   if (result.error === undefined || result.error === null) return { state: result.state, events: result.events };
-  // A refusal leaves the state as it was: hand back the caller's own object, as TypeScript did.
+  // A refusal leaves the state as it was: hand back the caller's own object.
   return { state: input, events: [], error: result.error };
 }
 
@@ -280,7 +247,7 @@ export function seatToAct(state: GameState): PlayerId | null {
   });
 }
 
-/** SURFACE §5.2's hash: eight hex digits, TypeScript's `hashState` bit for bit. */
+/** SURFACE §5.2's hash: eight hex digits. */
 export function hashState(state: GameState): string {
   return call("hashState", () => engine.hash_state(stateJson(state)));
 }
@@ -310,7 +277,6 @@ export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
   return call("seatPlayedBy", () => engine.seat_played_by(stateJson(state), home) as PlayerId);
 }
 
-/** The card with this instance id, wherever it is, or undefined (TypeScript's `findInstance`). */
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
   return call("findInstance", () => parsed<CardInstance | null>(engine.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
@@ -321,10 +287,9 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
 }
 
 /**
- * R1420: from now on the module treats `sets` as sets that ship (a deck may hold their cards, a pool
- * that names no set reaches them), as the testkit previews a set on a test's thread. Only a module
- * built with crates/wasm's `preview` feature can (scripts/build-wasm.sh; the production bundle's is
- * built without it and throws). The hotseat route calls it for its E2E injection's `preview` alone.
+ * R1420: from now on the module treats `sets` as sets that ship. Only a module built with crates/wasm's
+ * `preview` feature can (scripts/build-wasm.sh; the production bundle's throws). The hotseat route
+ * calls it for its E2E injection's `preview` alone.
  */
 export function previewSets(sets: readonly SetName[]): void {
   call("previewSets", () => {
@@ -334,7 +299,7 @@ export function previewSets(sets: readonly SetName[]): void {
 
 let catalogCache: CardDefs | null = null;
 
-/** The registered catalog (TypeScript's `registeredCatalog()`): the same object on every call. */
+/** The registered catalog: the same object on every call. */
 export function registeredCatalog(): CardDefs {
   return call("registeredCatalog", () => {
     catalogCache ??= parsed<CardDefs>(engine.catalog());
@@ -343,9 +308,8 @@ export function registeredCatalog(): CardDefs {
 }
 
 /**
- * R1011000: the learned evaluation's parity fixture, computed by the normal WASM module: its integer
- * network's correction for each case. Only the tests call it, so it is the normal module's own export
- * and the Luau module (R915009) carries no copy of it.
+ * R1011000: the learned evaluation's parity fixture, its integer network's correction for each case.
+ * Only the tests call it, so it is the normal module's own and the Luau module (R915009) has no copy.
  */
 export function learnedParity(fixtureJson: string): number[] {
   return call("learnedParity", () => parsed<number[]>(normal.learned_parity(fixtureJson)));
@@ -370,34 +334,28 @@ export function carriedVersions(): readonly string[] {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // Duos co-op (#936 S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat
-// ---------------------------------------------------------------------------------------------
 
 declare const duosStateBrand: unique symbol;
 
 /**
- * The engine's `DuosState` (two `GameState`s and the wrapper's own fields), opaque: it holds all four
- * hands and libraries, so the client passes it back and never reads it (CLAUDE.md rule 7). It crosses
- * in the same envelope as a `GameState` (`stateJson`).
+ * The engine's `DuosState`, opaque: it holds all four hands and libraries, so the client passes it back
+ * and never reads it (CLAUDE.md rule 7). It crosses in the same envelope as a `GameState` (`stateJson`).
  */
 export type DuosState = { readonly [duosStateBrand]: never };
 
-/** `duosCreate`'s options (the engine's `DuosCreateOptions`): four decks, one per seat. */
+/** `duosCreate`'s options (the engine's `DuosCreateOptions`). */
 export type DuosCreateArgs = {
   seed: string;
   decks: { a1: readonly string[]; a2: readonly string[]; b1: readonly string[]; b2: readonly string[] };
-  /** Deal from these definitions instead of the registered catalog (tests). */
   catalog?: CardDefs;
   /** Each team's rules; absent, DUOS_HUMAN_TEAM for both. */
   teams?: { a: DuosTeamRules; b: DuosTeamRules };
   /** §9.9's per-seat handicaps; an absent seat is a human's. */
   handicaps?: Partial<Record<DuosSeat, Handicap>>;
-  /** R433: the seats whose deck was dealt rather than built. */
   dealt?: readonly DuosSeat[];
 };
 
-/** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */
 export type DuosReduceResult = { state: DuosState; events: DuosEvent[]; error?: string };
 
 function duosStateJson(state: DuosState): string {
@@ -439,26 +397,21 @@ export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
   return call("duosViewFor", () => parsed<DuosView>(normal.duos_view_for(duosStateJson(state), seat)));
 }
 
-// ---------------------------------------------------------------------------------------------
 // the AI (SURFACE §9)
-// ---------------------------------------------------------------------------------------------
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
   return call("aiToAct", () => engine.ai_to_act(stateJson(state), seat));
 }
 
-/** The AI's own stream as it crosses: its seed and where it stands. */
 export type StreamAt = { rngSeed: string; rngCursor: number };
 
 export type DecideRequest = StreamAt & { budget?: SearchBudget };
 
-/** `decide`'s answer, and the cursor the AI's stream stopped at. */
 export type DecideResult = { decision: Decision | null; rngCursor: number };
 
 /**
  * One AI decision. `deadlineMs` is a `Date.now()` time after which the search answers with its best
- * so far (TypeScript's `shouldStop`); 0 or less is no clock, so the decision depends only on the
- * state, the stream and the budget.
+ * so far; 0 or less is no clock, so the decision depends only on the state, the stream and the budget.
  */
 export function decide(state: GameState, seat: PlayerId, request: DecideRequest, deadlineMs: number): DecideResult {
   return call("decide", () => parsed<DecideResult>(engine.ai_decide(stateJson(state), seat, json(request), deadlineMs)));
@@ -503,9 +456,8 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
 }
 
 /**
- * ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost — a
- * `CraftPreview` — so the block editor shows what the reducer will say and the client decides
- * nothing (CLAUDE.md rule 7).
+ * ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the block
+ * editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
  */
 export function craftPreview(
   recipe: CraftRecipe,
@@ -585,9 +537,7 @@ export function engineTables(): EngineTables {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // the validator (SPEC §9.4: one module, client and server)
-// ---------------------------------------------------------------------------------------------
 
 /** The validator's calls, by their TypeScript names. */
 export type ValidatorCall =

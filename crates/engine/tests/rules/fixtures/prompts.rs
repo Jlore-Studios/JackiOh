@@ -1,6 +1,5 @@
 //! Test-only cards for the prompts-and-movement systems (docs/classic-sets.md B5 E13, E16, E17, E18,
-//! E26). Each reproduces the engine half of a Classic or Classic+ card through the effects library,
-//! so the engine is proved without `jackioh-cards` (CLAUDE.md: the engine never imports it).
+//! E26), each the engine half of a Classic or Classic+ card through the effects library.
 
 use std::sync::LazyLock;
 
@@ -66,7 +65,7 @@ pub fn prize() -> CardDef {
     unit(3101, "prize", 1, 1, json!({}))
 }
 
-/// Classic #8 Pickle's shape: the opponent chooses three times, their own hand pick for "discard".
+/// Classic #8 Pickle: the opponent chooses three times, their own hand pick for "discard".
 pub fn pickle() -> CardDef {
     def(3102, "pickle", "Spell", json!({ "cost": 1 }))
 }
@@ -138,7 +137,7 @@ fn pickle_script() -> Script {
     }
 }
 
-/// Classic #18 Glitch in the System's shape: a `number` declared with the play (R81), 0 to 10.
+/// Classic #18 Glitch in the System: a `number` declared with the play (R81).
 pub fn glitch() -> CardDef {
     def(3103, "glitch", "Spell", json!({ "cost": 0 }))
 }
@@ -157,7 +156,6 @@ fn glitch_script() -> Script {
     }
 }
 
-/// A `number` prompt asked at resolution, 1 to 3: the chosen number is the damage.
 pub fn numberer() -> CardDef {
     def(3104, "numberer", "Spell", json!({ "cost": 0 }))
 }
@@ -205,7 +203,7 @@ fn quiz_script() -> Script {
                     "correct": QUIZ.correct,
                     "data": { "difficulty": "easy" },
                 }))),
-                // The tail after the question: it runs after the answer, and it reads no key.
+                // The tail runs after the answer, and it reads no key.
                 heal_self_hero(1),
             ]
         })),
@@ -389,7 +387,7 @@ pub fn acquire_scripts() -> CardScripts {
     }
 }
 
-/// Classic #44 Back from the GY's shape: graveyard Units costing (5) or less together, summoned.
+/// Classic #44 Back from the GY: graveyard Units costing (5) or less together, summoned.
 pub fn back_from_gy() -> CardDef {
     def(3109, "back-from-gy", "Spell", json!({ "cost": 1 }))
 }
@@ -469,7 +467,7 @@ pub fn mind_melt_scripts() -> CardScripts {
 
 // E16, E2: cards between the players' piles
 
-/// Classic #9 Income Tax's shape: when the opponent draws, they keep one card and give you the rest.
+/// Classic #9 Income Tax: when the opponent draws, they keep one card and give you the rest.
 pub fn income_tax() -> CardDef {
     def(3111, "income-tax", "Trap", json!({ "cost": 2 }))
 }
@@ -503,7 +501,7 @@ fn income_tax_script(radiant: bool) -> Script {
     }
 }
 
-/// Classic+ #12.3 Fluffy Grip's shape: a random Unit of their deck to your hand, costing (0).
+/// Classic+ #12.3 Fluffy Grip: a random Unit of their deck to your hand, costing (0).
 pub fn fluffy_grip() -> CardDef {
     def(3112, "fluffy-grip", "Spell", json!({ "cost": 1 }))
 }
@@ -534,7 +532,7 @@ pub fn fluffy_grip_scripts() -> CardScripts {
     }
 }
 
-/// Classic #58 Common Resources' shape: start of turn, draw the bottom card of their deck.
+/// Classic #58 Common Resources: start of turn, draw the bottom card of their deck.
 pub fn common_resources() -> CardDef {
     def(3113, "common-resources", "Field Spell", json!({ "cost": 2 }))
 }
@@ -564,7 +562,7 @@ fn cast_on_draw_marker_script() -> Script {
 
 // E13: trigger a Cry
 
-/// A Cry with no choices: 2 to the enemy hero, and +1/+1 on "this".
+/// A Cry with no choices.
 pub fn crier() -> CardDef {
     unit(3115, "crier", 2, 3, json!({ "cost": 1 }))
 }
@@ -583,7 +581,7 @@ fn crier_script() -> Script {
     }
 }
 
-/// A Cry with a declared target (R81): 3 damage to it.
+/// A Cry with a declared target (R81).
 pub fn aimer() -> CardDef {
     unit(3116, "aimer", 1, 1, json!({ "cost": 1 }))
 }
@@ -777,7 +775,7 @@ fn type_of(ctx: &EffectContext<'_>, def_id: &str) -> CardType {
     catalog::def_of(Some(&*ctx.state), def_id).type_
 }
 
-/// Classic #66 EU Striker's shape: from your hand, after you play a Unit, summon this (its Cry would ping).
+/// Classic #66 EU Striker: from your hand, after you play a Unit, summon this (its Cry would ping).
 pub fn striker() -> CardDef {
     unit(3122, "striker", 5, 4, json!({ "cost": 2 }))
 }
@@ -808,7 +806,7 @@ fn striker_script() -> Script {
     }
 }
 
-/// Classic+ #37 Wardrum's shape: from your hand or deck, after you play a Spell, summon this.
+/// Classic+ #37 Wardrum: from your hand or deck, after you play a Spell, summon this.
 pub fn wardrum() -> CardDef {
     unit(3123, "wardrum", 5, 5, json!({ "cost": 5 }))
 }
@@ -837,7 +835,7 @@ fn wardrum_script() -> Script {
     }
 }
 
-/// A deck trigger that asks, so its list parks under its id and resumes (R113, `work.scriptStepFor`).
+/// A deck trigger that asks, so its list parks under its id and resumes (R113, `work::script_step_for`).
 pub fn deck_asker() -> CardDef {
     unit(3124, "deck-asker", 1, 1, json!({ "cost": 1 }))
 }
@@ -892,7 +890,7 @@ fn deck_watcher_script() -> Script {
     }
 }
 
-/// Classic #47 Recurring Felinor's shape: in your graveyard, when one of your Traps fires, return this.
+/// Classic #47 Recurring Felinor: in your graveyard, when one of your Traps fires, return this.
 pub fn recurring() -> CardDef {
     unit(3126, "recurring", 3, 2, json!({ "cost": 2 }))
 }
@@ -972,7 +970,7 @@ fn snare_script() -> Script {
     }
 }
 
-/// Mills the top three cards of its controller's library into their graveyard, for a pile to pick from.
+/// Mills the top three of its controller's library: a pile to pick from.
 pub fn mill() -> CardDef {
     def(3130, "mill", "Spell", json!({ "cost": 0 }))
 }
@@ -1004,7 +1002,6 @@ fn mill_script() -> Script {
     }
 }
 
-/// A plain Spell and a plain Unit to play.
 pub fn spark() -> CardDef {
     def(3131, "spark", "Spell", json!({ "cost": 0 }))
 }
@@ -1180,7 +1177,6 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
     PROMPT_SCRIPTS.clone()
 }
 
-/// Add these fixtures to whatever the harness registered.
 pub fn register_prompt_fixtures() {
     let mut all_defs = registered_catalog().clone();
     all_defs.extend(catalog());

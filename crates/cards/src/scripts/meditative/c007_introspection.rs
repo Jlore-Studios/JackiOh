@@ -3,11 +3,9 @@
 //!   {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each
 //!   enemy." (3/6 step 2; 1; 1/2; 2/4)
 //!
-//! An `end_of_turn` hook, which runs only on its controller's turn (`turn.rs`), returning in the
-//! written order: `heal` on `selfHero`, then each of the controller's Units (C+ #19.4 Support Loser's
-//! list); `draw`; a `for_each_card` over the hand with `set_cost_mod { amount: −discount }`; and
-//! `damage_all { side: enemy, heroes: true }`, where every hit lands before the state check (R59).
-//! The draw comes before the discount, so the drawn card is cheaper too. The discount is a `costMod`
+//! An `end_of_turn` hook, which runs only on its controller's turn (`turn.rs`), in the written order;
+//! the Units' heal walks C+ #19.4 Support Loser's list, and every hit lands before the state check
+//! (R59). The draw comes before the discount, so the drawn card is cheaper too. The discount is a `costMod`
 //! (R78: kept until a graveyard takes it off, R766), and it never reaches an X card (R65). One script
 //! serves both faces: every number but the draw is declared per face and read through `param` (R386).
 
@@ -68,11 +66,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #7 Introspection — SPEC §8.8 row 7, BUILD M10 row M 7: "At your end of turn: heal your hero and
-// each of your Units, draw, discount the whole hand (the drawn card included), then hit every enemy
-// (R59); an X card keeps its cost (R65); nothing fires at the opponent's end of turn; radiant heals
-// 2, discounts 2, hits 2 and draws 2 (6, 2, 4 and 1 until #2657); its tuned numbers read through
-// `param()` (R386)".
+// M #7 Introspection — SPEC §8.8 row 7, BUILD M10 row M 7 (R59, R65, #2657, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

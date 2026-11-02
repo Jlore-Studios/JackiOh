@@ -1,23 +1,16 @@
 //! #49 Snom Bunny Mind Control (SPEC §8.2): "Steal an enemy Unit.", radiant "Steal an enemy Unit.
 //! Make it Radiant."
 //!
-//! Reading the radiant cell (§8 Conventions): the second sentence adds an effect and keeps the base
-//! clause, so the radiant face steals the same Unit and then sets its flag.
+//! The radiant face steals the same Unit and then sets its flag (§8 Conventions).
 //!
-//! Unit only since patch v0.3.12 (#1149): the declaration offers the enemy's Units and no Field Spell,
-//! Trap or Field Trap. It is a DECLARED play-time target in the play action's `targets` (R81),
-//! validated by R90, and only the top card of a Stack pile is on offer (R13). An enemy board with no
-//! Unit fizzles and the spell still counts as played (§8 Conventions). Through v0.3.7b it stole any
-//! enemy permanent, a face-down Trap included; `script_v0_3_7b` keeps that for those versions'
-//! replays (R767000).
+//! Unit only since patch v0.3.12 (#1149): a DECLARED play-time target (R81), validated by R90, only
+//! the top card of a Stack pile on offer (R13). No enemy Unit fizzles and the spell still counts as
+//! played. `script_v0_3_7b` keeps the older steal of any enemy permanent for replays (R767000).
 //!
-//! Where the card lands is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12), so
-//! the steal moves `controller` and nothing else: the card keeps its owner, damage, buffs, counters
-//! and position (R78 is about leaving).
-//!
-//! The radiant clause is `set_radiant`, the flag and nothing else (R74): the base stat layer swaps at
-//! once, damage and buffs stay and no Cry re-fires (R22). It resolves the selection by instance id,
-//! so the steal having moved the card between zones cannot make it miss.
+//! Placement is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12): only `controller`
+//! moves; owner, damage, buffs, counters and position stay (R78 is about leaving). `set_radiant` is the
+//! flag alone (R74): the base layer swaps, damage and buffs stay, no Cry re-fires (R22). It resolves by
+//! instance id, so the steal's zone move cannot make it miss.
 
 use jackioh_engine::prelude::*;
 
@@ -64,17 +57,8 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
     }
 }
 
-// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4: "Steal placement per R15; radiant sets the
-// flag on the stolen card".
-//
-// R15 has three clauses, one case each: the same lane when free, the first free zone of the row,
-// and "excess remain with the opponent" when the row is full. R12 is asserted alongside every steal:
-// `controller` moves and `owner` never does.
-//
-// The radiant clause is R22/R74; an already Radiant card is untouched (§6.3 Make Radiant). The
-// props are #25, #20, #45 (4/3 → 8/6, the damage-and-radiant case), #11, #8, #15 (its Cry would
-// summon a Rush Token, which checks "no Cry re-fires"), #41 Sheepish, a face-down Trap, and #14
-// Jlockeed's Weapons, a Field Spell: neither is a Unit, so neither is on offer.
+// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4, R15.
+// Props: #25, #20, #45, #11, #8, #15, #41, and #14 Jlockeed's Weapons.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -134,11 +118,10 @@ mod tests {
 
             assert_eq!(g.unit(PlayerId::P1, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
             assert!(g.unit(PlayerId::P2, 3).is_none());
-            // R12: control is a field-only notion; ownership never moves.
             assert_eq!(g.card(&prey).controller, PlayerId::P1);
             assert_eq!(g.card(&prey).owner, PlayerId::P2);
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-            // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
+            // Cost 4 (#40), out of the harness's 4.
             g.expect_mana(PlayerId::P1, 0);
         }
 
@@ -257,10 +240,8 @@ mod tests {
 
             assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()));
             assert!(g.card(&prey).radiant);
-            // R22: the base layer swaps at once (4/3 → 8/6) and the 2 damage stays.
             g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 4 }));
             assert_eq!(g.card(&prey).damage, 2);
-            // The steal moved the card first; `set_radiant` still found it, because it resolves by id.
             g.expect_events(json!(["controlChanged", "radiantSet"]));
         }
 

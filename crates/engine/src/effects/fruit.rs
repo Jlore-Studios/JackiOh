@@ -5,8 +5,6 @@
 //!
 //! Each is card-specific — no Core card and no generic B5 system asks for any of them — so they live
 //! here, beside the effects library they are written in, and nowhere else.
-//!
-//! Port of `packages/engine/src/effects/fruit.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -24,13 +22,10 @@ use crate::state::{CardInstance, find_instance};
 use crate::wire::{GameEvent, PlayerId, Selection, ZoneName};
 use crate::zones::{OffFieldZone, move_to_zone, report_graveyard_landing};
 
-// `rollGrape` lives beside `query` in `../catalog` now (R382's generic re-roll reads it there too);
-// still exported here, so `@jackioh/engine/effects` keeps one name for it.
+// `roll_grape` lives in `catalog` (R382's generic re-roll reads it there), re-exported for the cards.
 pub use crate::catalog::{roll_grape, roll_weighted};
 
-// ---------------------------------------------------------------------------------------------
 // Grapes (C+ #65, #66)
-// ---------------------------------------------------------------------------------------------
 
 /// §6.1: the Lucky X the card running the script has now — its running face's printed Lucky, as a
 /// Degrade or an Upgrade has moved it (B3.4's X change), plus any it was given (R1438), 0 without one.
@@ -95,12 +90,10 @@ pub struct AddRolledArgs {
 
 /// R960, MD-C1 (Meditative #39.1 Auspicious Rock): "Add one rolled card to your hand" — N
 /// independent rolls (R60) over `table`, each card created in the hand through §6.3's Add to hand,
-/// so a full hand burns it (§2.4, R4). `radiant` makes every card Radiant. The Lucky of the card
-/// running the script applies to every roll (the Rock's Radiant face prints Lucky 2), unless
-/// `lucky` names a number. ME-LUCK's player Luck (R987, MB11) adds to it.
+/// so a full hand burns it (§2.4, R4). The running card's Lucky applies to every roll unless `lucky`
+/// names a number; ME-LUCK's player Luck (R987, MB11) adds to it.
 pub fn add_rolled(args: AddRolledArgs) -> Effect {
     Effect::new("addRolled", move |ctx| {
-        // R987: the controller's Luck rolls extra times beside the card's own Lucky.
         let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
         let lucky = match args.lucky {
             Some(lucky) => lucky + luck,
@@ -117,13 +110,8 @@ pub fn add_rolled(args: AddRolledArgs) -> Effect {
     })
 }
 
-/// C+ #65 Two Grapes, #66 Vine of Grapes: "Add N Grapes to your hand, each rolled" — N independent
-/// rolls (R60), each Grape created in the hand through §6.3's Add to hand, so a full hand burns it (§2.4,
-/// R4). `radiant` makes every Grape Radiant. The Lucky of the card running the script applies to every
-/// roll (the Radiant faces print Lucky 1), unless `lucky` names a number.
-///
-/// Each Grape is rolled and added before the next is rolled, so a fixed seed gives fixed Grapes in a
-/// fixed order (§10.7).
+/// C+ #65 Two Grapes, #66 Vine of Grapes: "Add N Grapes to your hand, each rolled" — `addRolled` on the
+/// Grape table (the Radiant faces print Lucky 1).
 pub fn add_rolled_grapes(args: AddRolledGrapesArgs) -> Effect {
     Effect::new("addRolledGrapes", move |ctx| {
         // R987: the controller's Luck rolls extra times beside the card's own Lucky.
@@ -164,9 +152,7 @@ fn add_rolled_from(
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A hit on an enemy, a heal on a friend (C+ #65.2, #65.3)
-// ---------------------------------------------------------------------------------------------
 
 /// `damageEnemyOrHealFriend`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -176,10 +162,9 @@ pub struct DamageEnemyOrHealFriendArgs {
     pub amount: i32,
 }
 
-/// C+ #65.2 Normal Grape, #65.3 Large Grape: "Deal N damage to an enemy or heal an ally N." The chosen card or hero (the play's declared target, R81) is judged
-/// as the effect resolves: a hero by its seat, a Unit by its controller. An enemy takes one §4.4 hit
-/// from the card running the script (a Spell's, so Spell Damage raises it); a friend is healed (§6.3
-/// Heal, R19). A target gone by then is nothing.
+/// C+ #65.2 Normal Grape, #65.3 Large Grape: "Deal N damage to an enemy or heal an ally N." The declared
+/// target (R81) is judged as the effect resolves, a Unit by its controller: an enemy takes one §4.4 hit
+/// from the running card (Spell Damage raises it), a friend is healed (§6.3 Heal, R19).
 pub fn damage_enemy_or_heal_friend(args: DamageEnemyOrHealFriendArgs) -> Effect {
     Effect::new("damageEnemyOrHealFriend", move |ctx| {
         let Some(picked) = ctx.targets.first().cloned() else {
@@ -212,18 +197,12 @@ pub fn damage_enemy_or_heal_friend(args: DamageEnemyOrHealFriendArgs) -> Effect 
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // A draw whose card takes a price (C+ #65.2, #65.3)
-// ---------------------------------------------------------------------------------------------
 
-/// R596: the card one draw put in a hand, by the `drawn` event that draw made: the first `drawn` of
-/// that player after `from` — a draw's own event comes before anything its card's cast draws (R58) —
-/// and only when the draw ended with the card in a hand (`drawn`, or Infinite Reserves' Rush Token). A
-/// card cast on draw never reaches the hand, and the card its chain's repeat then brings is that repeat's
-/// card, not this draw's; a burned one is in the graveyard, a fatigue draw brings none and a limited
-/// draw none either (§2.4, R4, R58, R457), so each of those has no card.
-///
-/// (TS `ctx: Pick<EffectContext, "state" | "events">`: a sink, which an `EffectContext` derefs to.)
+/// R596: the card one draw put in a hand, by that draw's `drawn` event: the first `drawn` of that
+/// player after `from` (a draw's own event comes before anything its card's cast draws, R58), if the
+/// draw ended with the card in a hand. None for a card cast on draw (its chain's repeat brings that
+/// repeat's card), a burned one, a fatigue draw or a limited draw (§2.4, R4, R457).
 pub fn card_this_draw_put_in_hand(
     sink: &EngineSink<'_>,
     player: PlayerId,
@@ -273,13 +252,10 @@ pub struct DrawPricedArgs {
     pub fill_with_copies: Option<bool>,
 }
 
-/// C+ #65.2 "Draw N. Each costs (1) less." / #65.3 "Draw N. Each costs (0).": ONE draw (§2.4 — "draw N"
-/// is N of these, one effect each, so a draw whose cast-on-draw card asks pauses the rest of the list
-/// and the answer makes the rest, R113), and the card that draw put in the hand takes the price: a
-/// `costMod` that stacks with every other modifier, or a `costOverride` (R65), and with `radiant` the
-/// Radiant face (Meditative #79), and with `fillWithCopies` the hand filled with copies of it (M+ #24
-/// Bob, R1185004). A card cast on draw, a burned card, a fatigue draw and a limited draw take nothing
-/// and are copied by nothing (`cardThisDrawPutInHand`, R596).
+/// C+ #65.2 "Draw N. Each costs (1) less." / #65.3 "Draw N. Each costs (0).": ONE draw (§2.4: "draw N"
+/// is N of these, so a cast-on-draw card that asks pauses the rest of the list, R113), and the card it
+/// put in the hand takes the price — a stacking `costMod` or a `costOverride` (R65) — and the riders. A
+/// draw that put no card in the hand gives nothing (`cardThisDrawPutInHand`, R596).
 pub fn draw_priced(args: DrawPricedArgs) -> Effect {
     Effect::new("drawPriced", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -345,9 +321,7 @@ fn fill_hand_with_copies(ctx: &mut EffectContext<'_>, player: PlayerId, source: 
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A hand replaced card for card (C+ #65.5)
-// ---------------------------------------------------------------------------------------------
 
 /// `replaceHandWithRandom`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -364,12 +338,9 @@ pub struct ReplaceHandWithRandomArgs {
 }
 
 /// C+ #65.5 Mythic Grape: "Replace your hand with random Mythic cards. They cost (0)." Every card in the
-/// player's hand as this resolves goes to its owner's graveyard — moved, NOT discarded: no `discarded`
-/// event, so nothing that answers a discard sees it; `enteredGraveyard` reports it, and a unit-token
-/// card ceases to exist instead (R11) — and as many random cards of `query` arrive, repeats allowed
-/// (R60), each created through §6.3's Add to hand with the riders given (Core #76 Field of Dreams'
-/// reading of "replace your hand"). The card running the script is never one of them (R387). An empty
-/// hand moves nothing and draws nothing from the rng (R129).
+/// hand is moved, NOT discarded (no `discarded` event), to its owner's graveyard (a unit token ceases to
+/// exist, R11), and as many random cards of `query` arrive, repeats allowed (R60), through §6.3's Add to
+/// hand (Core #76's reading), never the running card's own (R387). An empty hand draws no rng (R129).
 pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
     Effect::new("replaceHandWithRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -379,7 +350,6 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
             return;
         }
         for card in &replaced {
-            // The card as it stands now (TS read the live object's zone).
             let Some(mut card) = find_instance(ctx.sink.state, &card.id).cloned() else {
                 continue;
             };

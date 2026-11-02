@@ -1,6 +1,5 @@
 //! A play, and a cast, from §10.5 step 1 to step 8 (SPEC §2.3, §2.4, §4.5, §6.3 Sacrifice and
 //! Tribute, §10.5, R17, R34, R57, R59, R65, R70, R210); see docs/polish/4-edge-cases.md.
-//!
 //!  - R70: a cast is a play, so it runs §10.5's steps — Gifted Program's hook, Quickstriker's and
 //!    /fullsend's granted Combos, its Echo repeats — and a cast-on-draw cast is whole, and the state
 //!    check has run (§4.5, R59), before the draw repeats (§2.4).
@@ -38,7 +37,6 @@ const LIBRARY: &[&str] = &[
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// The first index matching, or -1.
 fn find_index(events: &[GameEvent], matches: impl Fn(&GameEvent) -> bool) -> i64 {
     events.iter().position(matches).map_or(-1, |at| at as i64)
 }
@@ -51,8 +49,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         register_all();
         // p1 has Twinspell's grant up. The start-of-turn draw takes #27 Blood Ridden, which casts itself
         // (R70: a cast Spell takes Twinspell's Echo). Its resolution and its Echo repeat (§10.5 step 6)
-        // find no card in p1's hand to make Radiant; only then does the draw repeat (§2.4), so Mr.
-        // Vanilla stays non-Radiant.
+        // find no card in p1's hand to make Radiant; only then does the draw repeat (§2.4).
         let mut g = scenario(json!({
             "p1": {
                 "hand": [TWINSPELL],
@@ -79,7 +76,6 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         assert_eq!(drawn_after.len(), 1);
         assert_eq!(drawn_after.first().map(|card| card.radiant), Some(false));
 
-        // The cast is whole before the draw repeats: its cardResolved precedes the next drawn card.
         let resolved_at = find_index(
             g.events(),
             |event| matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == BLOOD_RIDDEN),
@@ -97,8 +93,8 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
      {
         register_all();
         // §4.5: the check runs after "one cast-on-draw cast". p1 is at 7 and the start-of-turn draw casts
-        // Blood Ridden Glowy Jelly Bean ("you lose 7 health"): p1's hero is at 0 when that cast resolves,
-        // so the game ends there, and the draw never repeats into the Mr. Vanilla beneath it.
+        // Blood Ridden Glowy Jelly Bean ("you lose 7 health"): p1's hero is at 0 when it resolves, so the
+        // game ends there and the draw never repeats.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -119,10 +115,9 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     #[test]
     fn r2179002_quickstriker_s_x_counts_no_cast_on_draw_so_a_chain_of_two_hinders_deals_nothing_8_38() {
         register_all();
-        // p1 has Quickstriker. At p1's start of turn the draw casts Hinder, the draw repeats and casts a
-        // second Hinder, and the draw repeats again into Mr. Vanilla (§2.4, R58). §8 #38's X is "cards you
-        // played earlier this turn", and a cast on draw is no play (R2179002), so X is 0 for both and p2's
-        // hero takes nothing (through v0.5.2 each was a play, R70, and the second dealt 1).
+        // p1 has Quickstriker. The draw casts Hinder twice and then reaches Mr. Vanilla (§2.4, R58). §8 #38's
+        // X is "cards you played earlier this turn", and a cast on draw is no play (R2179002), so X is 0
+        // for both and p2's hero takes nothing.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -142,9 +137,8 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
      {
         register_all();
         // Gifted Program: "The first card costing 1 or less you play each turn becomes Radiant as it is
-        // played" (§8 #64). p1's start-of-turn draw casts Hinder, which is no play (R2179002; through
-        // v0.5.2 it was the first, R70, and resolved Radiant), so it stays base and the first card p1
-        // plays after it is the one made Radiant.
+        // played" (§8 #64). p1's start-of-turn draw casts Hinder, which is no play (R2179002), so it stays
+        // base and the first card p1 plays after it is the one made Radiant.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -172,13 +166,11 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     fn r70_r2179002_fullsend_s_granted_combo_draw_1_also_fires_for_a_cast_on_draw_card_that_is_no_play_10_5_step_5()
      {
         register_all();
-        // p1 plays /fullsend ("your cards gain 'Combo: draw 1'" this turn), then Mr. Vanilla, whose Combo
-        // draws Hinder, which casts itself. Its granted Combo reads the 2 cards played earlier, so Hinder's
-        // Combo draws a Reno, though the cast is no play itself (R2179002). The Cry's random discard
-        // (R682) resolves after that draw and eats it; the cast-on-draw draw then repeats (§2.4) and
-        // brings the one Reno left.
+        // Mr. Vanilla's Combo draws Hinder, which casts itself; its granted Combo reads the 2 cards played
+        // earlier, so it draws a Reno, though the cast is no play itself (R2179002). The Cry's random discard
+        // (R682) resolves after that draw and eats it; the cast-on-draw draw then repeats (§2.4) and brings
+        // the one Reno left.
         let mut g = scenario(json!({
-            // The Radiant /fullsend: the face that grants "Combo: Draw 1".
             "p1": { "hand": [{ "def": FULLSEND, "radiant": true }, VANILLA], "library": [HINDER, RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [RENO, RENO] },
         }));
@@ -186,7 +178,6 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         g.play(FULLSEND, json!({}));
         g.play(VANILLA, json!({}));
 
-        // Through v0.5.2 the Hinder was the 3rd (R70).
         assert_eq!(g.state().players.p1.turn_log.cards_played, 2);
         g.expect_in_zone(HINDER, "graveyard");
         assert_eq!(g.hand(P1).iter().filter(|card| card.def_id == RENO).count(), 1);
@@ -202,8 +193,7 @@ mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
     #[test]
     fn r2179002_unstable_clone_machine_copies_no_card_cast_on_draw_and_copies_the_next_card_played() {
         register_all();
-        // "After you play a card, shuffle 3 copies of it into your library": the Hinder p1's start-of-turn
-        // draw casts is no play, so nothing copies it (through v0.5.2 it was a play, R70, and copied).
+        // The Hinder p1's start-of-turn draw casts is no play, so Clone Machine copies nothing of it.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -229,8 +219,6 @@ mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
     #[test]
     fn r2179002_bear_honeypot_does_not_reveal_on_a_card_its_opponent_casts_on_draw() {
         register_all();
-        // p2's face-down Honeypot answers p1's (1) Cost or less plays: p1's draw casts Hinder for 0, which
-        // is no play, so it stays face-down.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
@@ -258,10 +246,9 @@ mod r17_unstable_clone_machine_copies_the_card_after_it_resolves {
     fn r17_unstable_clone_machine_shuffles_its_copies_in_after_the_played_spell_resolves_not_before_10_5_step_7()
      {
         register_all();
-        // p1 has Unstable Clone Machine and an empty library, and plays Stockpile ("Draw 2; heal your
-        // hero 2"). R17 and §10.5 step 7: the Clone Machine fires after the card resolves. So Stockpile's
-        // two draws find the library empty (fatigue 1 then 2, §2.4), it heals 2, and only then do the 3
-        // copies go into the library — none of them can be drawn by the Stockpile that made them.
+        // p1 plays Stockpile ("Draw 2; heal your hero 2") with Unstable Clone Machine and an empty library.
+        // R17 and §10.5 step 7: the Clone Machine fires after the card resolves, so Stockpile's two draws
+        // find the library empty (fatigue 1 then 2, §2.4) and only then do the 3 copies go in.
         let mut g = scenario(json!({
             "p1": { "hand": [STOCKPILE], "backrow": [CLONE_MACHINE], "library": [] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [RENO] },
@@ -294,7 +281,6 @@ mod r17_unstable_clone_machine_copies_the_card_after_it_resolves {
         }));
         let timmy = g.card(TIMMY).clone();
         g.play(TIMMY, json!({ "zone": 1 }));
-        // Sheepish answered the play first: the Timmy is gone and a Sheep Token stands in its zone.
         assert!(g.events().iter().any(
             |event| matches!(event, GameEvent::Transformed { instance_id, .. } if *instance_id == timmy.id)
         ));
@@ -379,12 +365,11 @@ mod r210_the_tribute_a_play_pays {
         }));
         let guard = g.card(RIGHT_HOUSE).clone();
         let rock = g.card(ROCK).clone();
-        // Step 1 accepts lane 1; step 2's tribute fires the radiant Death, which summons a base
-        // Right-house defender per R64 — and lane 1 is held for The Rock, so the summon takes lane 3.
+        // Step 1 accepts lane 1; step 2's tribute fires the radiant Death, which summons a base Right-house
+        // defender per R64, and lane 1 is held for The Rock, so the summon takes lane 3.
         g.play(ROCK, json!({ "zone": 1, "tributes": [guard.id] }));
 
-        // §3.2 / §10.5 step 4: the played card is on the field where the player put it, never in no
-        // zone at all, and the Death's base Right-house defender is on the field beside it.
+        // §3.2 / §10.5 step 4: the played card is on the field where the player put it.
         g.expect_in_zone(&rock.id, "field");
         assert_eq!(g.unit(P1, 1).map(|card| card.id.clone()), Some(rock.id.clone()));
         let units: Vec<CardInstance> = g
@@ -411,9 +396,7 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
     fn r217_a_cn_virus_cast_under_fullsend_s_combo_draw_is_one_chain_bounded_by_r58_s_cap_2_4_r70_9_3() {
         register_all();
         // /fullsend gives every card p1 plays this turn "Combo: draw 1", and a cast is a play (R70), so
-        // each CN-Virus cast draws once more before its own script shuffles two copies back in. With the
-        // Armor absorbing the virus's damage and Infinite Reserves standing in for fatigue nothing else
-        // ends it: counted as chains of their own, the nested draws recursed until the call stack ran out.
+        // each CN-Virus cast draws once more before its own script shuffles two copies back in.
         let mut g = scenario(json!({
             "p1": {
                 "hand": [{ "def": FULLSEND, "radiant": true }, VANILLA],
@@ -428,7 +411,6 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
         // §9.3: `reduce` never throws on a legal play; a refusal or a panic fails this test.
         g.play(VANILLA, json!({}));
         assert!(g.state().pending.is_none());
-        // The Vanilla's Combo draw began the chain, and every CN-Virus cast in it counts toward one cap.
         let casts = g
             .last_events()
             .iter()
@@ -449,12 +431,10 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     #[test]
     fn r2067000_r2179002_an_end_turn_s_hinders_beside_both_players_recyclers_stop_at_the_actions_cap() {
         register_all();
-        // Fuzz seed 9688 found the loop: each Hinder cast was a play #33 answered with three more Hinders
-        // (R70), so the library never ran dry, and its discard was answered by #64's draw, a chain of its
-        // own (R217). A cast on draw is no play since #2179 (R2179002), so #33 copies none and one library
-        // runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60 (the 21st of each chain of 20,
-        // R58, goes to the hand and the next chain's first cast discards it). The same action then starts
-        // p2's turn, whose draw sets off p2's Hinders and Recycler, and the cap counts either side's casts.
+        // Fuzz seed 9688's loop of #33's Hinders and #64's draws (R217): a cast on draw is no play (#2179,
+        // R2179002), so one library runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60
+        // (chains of 20, R58). The same action then starts p2's turn, whose draw sets off p2's Hinders and
+        // Recycler, and the cap counts either side's casts.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [VANILLA, VANILLA],
@@ -489,7 +469,6 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
         );
         assert!(s.state().players[P1].library.is_empty());
         assert_eq!(s.state().cast_chain, None);
-        // Past the cap, a Hinder p2 draws goes to the hand uncast.
         assert!(s.hand(P2).iter().any(|card| card.def_id == HINDER));
     }
 }
@@ -549,8 +528,8 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
                 .iter()
                 .any(|event| matches!(event, GameEvent::ShuffledIn { .. }))
         );
-        // Each virus's 1 damage pierces Going Long's Armor 2 (Pierce since patch v0.3.10), as §2.4's
-        // fatigue past an empty library would: p1's hero falls.
+        // Each virus's 1 damage pierces Going Long's Armor 2, as §2.4's fatigue past an empty library
+        // would: p1's hero falls.
         assert_eq!(
             s.state().result,
             Some(GameResult {
