@@ -73,7 +73,7 @@ resource "github_repository_ruleset" "main_merge_queue" {
   }
 }
 
-# docs/deploy-cloudflare.md §4, Step 2: Restrict deletions and Block force pushes on `production`,
+# docs/deploy-cloudflare.md §2.2: Restrict deletions and Block force pushes on `production`,
 # and nothing that would hold back the promotion's pull requests, which no check runs on, or the
 # push that creates the branch. The repository had no ruleset at the first import (2026-10-25), so
 # this one is created rather than imported: it only adds protection.

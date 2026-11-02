@@ -45,8 +45,7 @@ request. The `pr title` check fails a pull request whose title breaks these, the
 - Fill in every section of the template (`.github/pull_request_template.md`). A part of a split
   patch says `Closes #<part>` and `Part of #<tracker>`, never `Closes #<tracker>`.
 - The title becomes the squash commit's subject on `main`. Commits on a branch say what they change
-  in a short subject, with the why in the body when it isn't obvious. Put `[vercel]` in a branch
-  commit's message for a Vercel preview of it (`docs/architecture.md` §4.2).
+  in a short subject, with the why in the body when it isn't obvious.
 - A change to a card goes live through a pending fragment (`cargo jackioh patches "<title>"`, with
   `--plays <ids>` for a card whose script or engine rule changed how it plays); CI's `rust
   (classify)` checks the claims and labels the pull request with its kind and tier. The version rules

@@ -16,7 +16,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, register_cards};
+use super::support::{AI, HUMAN, register_cards, unit};
 
 const TRIGOR: &str = "traininggrounds-025";
 const FLOODGATES: &str = "traininggrounds-030";
@@ -49,13 +49,6 @@ fn prices_of(deaths: Vec<DeathPrice>) -> Prices {
         deaths,
         ..Prices::default()
     }
-}
-
-fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
-    active_units_of(state, player)
-        .into_iter()
-        .find(|unit| unit.def_id == def_id)
-        .expect("the unit is on the field")
 }
 
 fn price_of(prices: &[DeathPrice], def_id: &str) -> f64 {

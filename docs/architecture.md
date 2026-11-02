@@ -50,7 +50,7 @@ deployment decision that can be made later without touching the code.
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320), `game_records` (R376) and `custom_cards` (R915008), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
-| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
+| `jackioh-server` HTTP routes | One process (a Docker image in a Cloudflare container behind the site's Worker) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays (§5.4) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
@@ -218,74 +218,44 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 | One process is one point of failure | The hard ceiling and the reaper (§9.5) guarantee no match and no player is stuck forever, whatever happens to the process. |
 | Horizontal scale needs match affinity | Out of scope at this population (ARCHITECTURE-CCG §6.1: "single digits at 3am"). When it is needed, `matches.status` plus a claim column is the smallest change. |
 
-### 4.2 The two deployment configs
+### 4.2 The deployment config
 
-`vercel.json` (client) and `render.yaml` (server) are the two halves §3's table describes. `vercel.json`
-cannot hold a comment, and three things in them are not obvious:
+`wrangler.jsonc` deploys both halves §3's table describes, the client and the server, as one
+Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `production`
+branch) and `jackioh-staging` at staging.jackioh.com (staging, from main, behind Cloudflare Access).
+`docs/deploy-cloudflare.md` is the runbook and `apps/edge/README.md` the Worker's contract. Four
+things in it are not obvious:
 
-- **The client build emits to a REPO-ROOT `dist`**, not `apps/web/dist`. A build that wrote the
-  latter failed with `No Output Directory named "dist" found after the Build completed` — Vercel
-  looked at the root and did not apply `outputDirectory`. Emitting to the root makes the vite
-  preset's default and `outputDirectory` name the same folder, so which one wins stops mattering.
-- **`vercel.json` rejects unknown keys.** The `"// name"` comment idiom this repo uses in
-  `package.json` is fine for npm and pnpm and is a hard error here, which is why this note is in
-  Markdown instead of beside the setting it explains.
-- **Vercel deploys on the last push, and only when the push can change the site.** The Hobby plan
-  allows 100 deployments a day and counts one for every push to every branch; `[skip ci]` stops
-  GitHub Actions and does nothing here, and the night bot's `bot-state` commits plus its PR branches
-  used the day up (every PR then showed a failed Vercel check: `api-deployments-free-per-day`). Two
-  settings in `vercel.json` hold it down. `git.deploymentEnabled` creates no deployment at all for
-  the branches machines push to (`ai/**`, which `training/loop.sh`'s lanes push every 15 minutes
-  while a session runs, `bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
-  `learned/**`, `night-bot/**`, `patch/**`, `patches/**`, `polish/**`, `production` and `promote/**`, which
-  `promote-production.yml` moves and opens pull requests from, `squishy-state`, `squishy/**`, `wt/**`); main is never listed. `ignoreCommand` runs
-  `scripts/vercel-ignore.sh` for everything else: a commit message containing `[vercel]` builds on
-  any branch (the flag for a preview); any other branch is canceled; and main builds unless every
-  file changed since the last commit Vercel built (`VERCEL_GIT_PREVIOUS_SHA`, and only when that
-  commit is an ancestor of HEAD) is one the web bundle never reads: `bot/`, `.harness/`, `.squishy/`, `.github/`, `docs/`, `reviews/`,
-  `e2e/`, `spec/`, `training/`, `scripts/` (but `scripts/build-wasm.sh`), `crates/server/` and `crates/tools/`
-  (but their manifests, which cargo reads), `render.yaml`, the root docs, a crate's `tests/`, and the
-  client's test files (`*.test.ts(x)`, `apps/web/src/test/`), `apps/web/scripts/` and its README. The
-  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
-  and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
-  the list never names a crate's `src/`. Diffing against the last build, not the previous
-  commit, means a commit whose build was canceled or failed is never skipped past. main also waits
-  an hour (`MIN_GAP_SECONDS`) after the last build: a commit committed sooner is skipped, and the
-  first push after the hour builds it with the rest, since each build stores a whole copy of the
-  site (about 76 MB in October 2026) against the Hobby plan's 10 GB of Deployment Storage; the
-  project's Deployment Retention Policy, a dashboard setting, keeps every kind of deployment 1 day.
-  Any doubt builds: no previous sha, a shallow clone without it, an empty diff, a commit dated
-  before the last build, a path off the list. A canceled build
-  still counts against the 100, which is why the machine branches are switched off outright rather
-  than left to the script. Vercel reads the config from the commit that is pushed, so a branch cut
-  before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
-  `vercel.json` of its own: it needs a root `vercel.json` of `{ "git": { "deploymentEnabled": false } }`,
-  which the bot's `ensure()` does not restore if it ever recreates the branch. The quota resets
-  about 24 hours after the cap was hit; redeploy from the Vercel dashboard (or push a new commit)
-  after it does. Vercel still builds main in parallel with CI, not after it: making it wait for every
-  CI job would take a deploy hook called from `ci.yml` and `deploymentEnabled: { "main": false }`.
-  `apps/web/src/net/deploy-routes.test.ts` holds the branch list in place and `vercel-ignore.test.ts`
-  the script's decisions, over diffs in a throwaway repo.
-- **`render.yaml` builds a Docker image and names no command.** `runtime: docker` builds
-  `crates/server/Dockerfile` with the repository root as its context, because the server crate builds
-  against the engine, cards and AI crates beside it: `rust:1.97-slim-bookworm` stages run `cargo
-  build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
-  workspace's manifests alone, in a layer a change to the sources does not rebuild, and a
-  `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog, the
-  patch history and every migration are compiled into the binary, so nothing at run time needs Node,
-  pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds the
-  catalog and serves; `render.yaml` sets no build or start command, and
-  `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
-  `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
-  `pnpm install`, because the web build compiles the WASM module. Vercel's build cache keeps only
-  `node_modules`, so `scripts/build-wasm.sh` keeps the built modules in
-  `node_modules/.cache/jackioh-wasm`, keyed on what they are built from (`crates/wasm/README.md`).
-  A deploy that changes only the client then compiles no Rust (#997).
+- **The site and the server share an origin.** Every path but `/api/*` and `/ws/*` is a static file
+  from `apps/web/dist`, served without running any Worker code (`assets.run_worker_first`). Those two
+  prefixes reach `apps/edge`'s Worker, which hands them to one container running
+  `crates/server/Dockerfile`'s image, so `VITE_SERVER_HTTP_URL` is the site's own origin and the
+  CSP's `connect-src` names only the site, its socket and Supabase.
+- **One container, which sleeps.** The server holds every live match in memory (§4.1), so every
+  request reaches the same instance (`max_instances: 1`), placed in eastern North America beside
+  Supabase. After ten minutes with no request and no open socket it stops, and the next request
+  starts it again; a live match always has its sockets open, so it never sleeps under one. A daily
+  cron wakes it, so its hourly loops run and the database sees a query.
+- **The image is the whole server.** `rust:1.97-slim-bookworm` stages run `cargo build --release -p
+  jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the workspace's
+  manifests alone, in a layer a change to the sources does not rebuild, and a
+  `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog,
+  the patch history and every migration are compiled into the binary, so nothing at run time needs
+  Node, pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds
+  the catalog and serves. `wrangler deploy` builds it on the deploy job's runner (Docker), with the
+  repository root as its context, because the server crate builds against the engine, cards and AI
+  crates beside it.
+- **A deploy restarts the server.** A container keeps the image it started with, so the first
+  request after a deploy compares the running server's `/healthz` `x-deployed-commit` with the
+  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one; live matches
+  rebuild from `(seed, log)` when their sockets return (§6). The web build and the server deploy in
+  the same job, so a client is never ahead of its server.
 
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
-is a 404 on a cold load. `assets/` is excluded so a missing bundle stays a 404 rather than being
-served `index.html` as JavaScript.
+is a 404 on a cold load. `apps/web/public/_redirects` lists them, each with and without a trailing
+slash, and every other path gets `404.html` with a 404, so a missing bundle stays a 404 rather than
+being served `index.html` as JavaScript.
 
 ### 4.2 Where each clock lives
 
@@ -386,7 +356,7 @@ Notes that matter:
 | The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |
 | Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`, from the checkpoint the last drain stored when it passes (#1169); the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
-| Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
+| Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. The container stops once no request or socket has reached it for ten minutes (`apps/edge`), and the next request boots it, which is a process boot. On Durable Objects this row would read "hibernate". |
 
 The actor reaches the world in four places only: the clock (`tokio::time`), its timers, the store's
 `matches_append_actions`, and its two sockets. A Durable Object port would replace those four, not the
@@ -530,9 +500,9 @@ public by construction; anything without that prefix must never appear in a clie
 | --- | --- | --- |
 | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` | Dashboard → Project Settings → Data API → Project URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` | Dashboard → Project Settings → API Keys → Publishable key |
-| `VITE_SERVER_HTTP_URL` | `https://api.example.com` | wherever `jackioh-server` is deployed |
-| `VITE_SERVER_WS_URL` | `wss://api.example.com/ws` | same host, WebSocket path |
-| `VITE_SITE_ORIGIN` | `https://jackioh.com` | #696: the host the bundle is served from, named by its canonical links, sitemap and robots.txt; `apps/web/.env.production` for production, `vercel.json`'s `buildCommand` for staging; unset, `SITE_ORIGIN` |
+| `VITE_SERVER_HTTP_URL` | `https://jackioh.com` | the site's own origin: its Worker hands `/api/*` and `/ws/*` to the server (§4.2) |
+| `VITE_SERVER_WS_URL` | `wss://jackioh.com/ws/match` | same host, WebSocket path |
+| `VITE_SITE_ORIGIN` | `https://jackioh.com` | #696: the host the bundle is served from, named by its canonical links, sitemap and robots.txt; `apps/web/.env.production` for production, `apps/web/.env.staging` for staging; unset, `SITE_ORIGIN` |
 | `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
 
 The client's catalog version is not a variable: the bundle reads it from
@@ -555,11 +525,11 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `PORT` | no (8787) | listen port | — |
 | `PUBLIC_ORIGINS` | yes | comma-separated allowed origins for CORS and the WebSocket `Origin` check | your web host |
 | `NODE_ENV` | no (`development`) | `development \| test \| production` | — |
-| `CATALOG_VERSION` | no | the catalog version this server accepts (§9.4) | the server always serves and stamps the version compiled into the binary, the newest entry of `crates/cards/patches/patches.json` (`cargo jackioh catalog-version` prints it); `release` stamps it on `public.cards`. `render.yaml` carries it and `patches ship` bumps it there; a stale dashboard value only logs a warning, so a card patch never needs a hand edit in Render (#488) |
+| `CATALOG_VERSION` | no | the catalog version this server accepts (§9.4) | the server always serves and stamps the version compiled into the binary, the newest entry of `crates/cards/patches/patches.json` (`cargo jackioh catalog-version` prints it); `release` stamps it on `public.cards`. neither deployment sets it, and a stale value only logs a warning, so a card patch never needs a hand edit anywhere (#488) |
 | `E2E` | no (`0`) | BUILD M8's test-server mode; refused when `NODE_ENV=production` | — |
-| `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
-| `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
-| `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452, R641000: `on` seats a ladder bot, which this process plays itself, against a ranked ticket of any mode that waited past its fallback time with no person inside its window (a Conquest ticket's in a series), and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
+| `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `wrangler.jsonc` sets it to `1`, the one entry the site's Worker writes (`CF-Connecting-IP`), which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
+| `DEPLOYED_COMMIT` | no | the git commit this deploy was built from: the deploy names it (`wrangler deploy --var DEPLOYED_COMMIT:<sha>`), the site's Worker passes it to the container, and it is unset anywhere else. `GET /api/catalog`, `/healthz` and `/readyz` report it in the `x-deployed-commit` response header (the body is untouched, R163); the deploy jobs' live checks wait for it, and the Worker stops a container whose `/healthz` names another, so a deploy reaches the running server. Only a hex SHA is kept | set by the deploy; leave unset for a local server |
+| `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452, R641000: `on` seats a ladder bot, which this process plays itself, against a ranked ticket of any mode that waited past its fallback time with no person inside its window (a Conquest ticket's in a series), and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as the container's `basic` instance (`wrangler.jsonc`) |
 | `DEV_PROFILE_IDS` | no (none) | SPEC §14.10, R1300000: the dev accounts, comma-separated profile ids; `/api/auth/me` says `isDev` to a listed account, which may use the `/api/dev/*` tools on its own economy (under `E2E=1` the `e2e-econ` fixture is one too, R1310004). Only the server's boot reads it: since no catalog stamp grants anyone (R1310001), `seed-catalog` does not. A malformed id refuses the boot, naming it; the boot logs only how many are listed | the operator: each developer's account secret ID, from `/account` → "Manage sign-in & account" → "Show account secret ID"; leave unset for a local server without dev tools |
 
 `crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
@@ -596,7 +566,7 @@ The same four SQL files, the same server, two connection strings.
 | Studio | `http://127.0.0.1:54323` | the dashboard |
 | Outgoing email | captured locally at `http://127.0.0.1:54324`, nothing is actually sent | your SMTP provider; configure it before inviting anyone, because §9.4 requires a verified email before redemption |
 | Keys | printed by `supabase start` | Project Settings → API Keys |
-| `jackioh-server` | `cargo run --release -p jackioh-server`, with the environment exported | the Docker image on Render, behind TLS |
+| `jackioh-server` | `cargo run --release -p jackioh-server`, with the environment exported | the Docker image in a Cloudflare container, behind the site's Worker |
 | `apps/web` | `pnpm --dir apps/web dev` (Vite, :5173) | static bundle on a CDN |
 
 Notes:
@@ -610,7 +580,7 @@ Notes:
   each migration's transaction, never as a session lock, so it runs over either a **session-mode**
   connection (the direct `:5432` URI, or Supavisor's session port) or a transaction-mode pooler.
   That matters because the image's `release` (migrate, then seed the catalog) runs before every
-  boot on Render over the server's own `DATABASE_URL`, and a session lock taken
+  boot of the container over the server's own `DATABASE_URL`, and a session lock taken
   through a transaction-mode pooler stays held on a pooled backend, where the next deploy's runner
   could wait on it forever. The runtime server is fine on either; transaction-mode pooling is the
   cheaper default for it.
@@ -619,10 +589,13 @@ Notes:
   custom parameter (Postgres 15+ refuses it; set it with `set_config()` in the body, as 0013 does),
   no `alter system`, no extension only a superuser may create. `crates/server/tests/deploy/rehearse.sh`
   applies every migration as such a role; the sql and db suites migrate as a superuser and cannot tell.
-- **Deploys bring the database along.** Steps 4 and 6 of the checklist below run on every Render
-  boot, so a deploy that ships new migrations or a new card patch applies them and reseeds at its
-  `CATALOG_VERSION` before the server listens. Both are idempotent, and a failure keeps the new
-  instance from passing its health check, so the previous deploy keeps serving. A deploy that bumps
+- **Deploys bring the database along.** Steps 4 and 6 of the checklist below run on every boot of
+  the container, so a deploy that ships new migrations or a new card patch applies them and reseeds
+  at its catalog version before the server listens. Both are idempotent. A failure exits the
+  process, and with one container there is no previous instance to keep serving, so the server is
+  down until a fixed deploy: CI's `db` job boots the image against Postgres
+  (`crates/server/tests/deploy/rehearse.sh`) on every change to the migrations or the image, which
+  catches such a failure before any deploy. A deploy that bumps
   the game's **minor** version also opens a new ranked season (R609): the first boot opens it and
   runs the soft reset itself, so the operator's part is only the rehearsal —
   `jackioh-server season-start --dry-run` against a copy of the live data beforehand, which prints
@@ -651,9 +624,10 @@ step that is not yet implemented says which BUILD task delivers it.
    "Confirm email" on. Hosted: configure SMTP now. SPEC §9.4 makes a verified email a precondition of
    redemption, so this is not optional.
    Then Auth → URL Configuration, which decides where every emailed link lands:
-   - **Site URL:** `https://jackioh.vercel.app`. Left at its default (`http://localhost:3000`), every
-     confirmation and reset link pointed at the reader's own machine.
-   - **Redirect URLs:** `https://jackioh.vercel.app/**` and `http://localhost:5173/**`. The client
+   - **Site URL:** the site's origin (`site_url` in `infra/supabase.tf`). Left at its default
+     (`http://localhost:3000`), every confirmation and reset link pointed at the reader's own machine.
+   - **Redirect URLs:** each site's `<origin>/login` (`uri_allow_list` in `infra/supabase.tf`), and
+     `http://localhost:5173/login` for local development. The client
      asks for `<origin>/login` on every mailer (`authRedirectUrl`, B35), and the provider honors it
      only when it matches this allow-list, falling back to the Site URL otherwise.
    The links are PKCE links (R323): the mailers send a `code_challenge`, the link comes back to
@@ -677,8 +651,8 @@ step that is not yet implemented says which BUILD task delivers it.
      authorised redirect URI is `https://<ref>.supabase.co/auth/v1/callback`; then Auth → Sign In /
      Providers → the provider: enabled, its client id and secret pasted in (they stay in Supabase,
      never in this repository or a `VITE_` variable). Then add the provider's name to
-     `VITE_AUTH_OAUTH_PROVIDERS` in `apps/web/.env.production` (and the Vercel project's variables
-     for staging) and let the web app rebuild. The provider returns to `<origin>/login`, already in
+     `VITE_AUTH_OAUTH_PROVIDERS` in `apps/web/.env.production` (and `apps/web/.env.staging` for
+     staging) and let the web app rebuild. The provider returns to `<origin>/login`, already in
      the Redirect URLs. Keep Supabase's default **automatic linking** (an OAuth sign-in whose
      *verified* address matches an existing account signs into that account), and enable only
      providers that report whether an address is verified (all eight the client names do). Leave
@@ -832,17 +806,18 @@ step that is not yet implemented says which BUILD task delivers it.
    code that nobody can ever redeem.
 8. **Start the server and the client.** `target/release/jackioh-server` and
    `pnpm --dir apps/web dev`. The server must refuse to start with a missing env var, naming it.
-   Behind a proxy (Render), calibrate `TRUSTED_PROXY_HOPS` (R190) from the `api.forwarded_for` log
+   Behind a proxy (the site's Worker), calibrate `TRUSTED_PROXY_HOPS` (R190) from the `api.forwarded_for` log
    lines. The server logs one each time a request carries fewer `X-Forwarded-For` entries than any
    before it (`fewestEntries`, next to the configured `trustedProxyHops`, and never an address). A
    caller can add entries on the left but can never remove the ones the deployment's proxies
    append, so the lowest count is the number of hops those proxies add. So:
    1. Right after a deploy, send a request of your own that carries no `X-Forwarded-For`
       (`curl https://<service>/api/catalog`) and read the `fewestEntries` its line shows.
-   2. Set `TRUSTED_PROXY_HOPS` to exactly that count, and redeploy. Render's edge alone gives 1; a
-      CDN in front of it (Cloudflare) adds its own entry, which gives 2. The blueprint's 1 is only
-      the safe starting point: with 2 hops and 1 trusted, every caller behind one CDN edge shares one
-      per-IP bucket, so §9.4 step 3's limit could refuse strangers.
+   2. Set `TRUSTED_PROXY_HOPS` to exactly that count (`wrangler.jsonc`'s `vars`), and redeploy. The
+      Worker replaces the header with the one address Cloudflare saw, which gives 1; if the
+      container's own ingress appends an entry, it is 2. `wrangler.jsonc`'s 1 is only the safe
+      starting point: with 2 hops and 1 trusted, every caller shares the ingress's per-IP bucket,
+      so §9.4 step 3's limit could refuse strangers.
    3. Keep an eye on later lines. A `fewestEntries` below the configured count means a path with
       fewer proxies (lower the setting to it). A higher count on its own proves nothing: a caller can
       write extra entries, so never set the hops above the lowest count any request has shown, since
