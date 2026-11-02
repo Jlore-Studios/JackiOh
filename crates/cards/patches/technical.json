@@ -3904,5 +3904,12 @@
     "pr": 2698,
     "title": "patches ship: v0.5.10b, v0.5.10c",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "414e1586c890a310ab2dfda43413963017f44c46",
+    "pr": 2765,
+    "title": "patches ship: v0.5.10f",
+    "kind": "app"
   }
 ]
