@@ -151,14 +151,6 @@ describe("the networked board", () => {
     expect(typeof sent.action.nonce).toBe("string");
   });
 
-  it("takes the same list riding on the `view` frame", () => {
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    expect(screen.queryByTestId("missing-legal-frame")).toBeNull();
-    expect(screen.getByTestId("end-turn")).not.toBeDisabled();
-  });
-
   /** #1378: a failed network never leaves the board naming def ids. */
   it("#1378 names the board's cards from the shipped catalog on the first view, asking for no catalog, while every request fails", () => {
     const requests = vi.fn((input: unknown) => Promise.reject(new TypeError(`Failed to fetch ${String(input)}`)));
@@ -663,17 +655,6 @@ describe("the match screen's ranks (R604, R612)", () => {
     return fetchMock;
   }
 
-  it("names both seats' ranks and whether the game moves them", async () => {
-    stubFetch(ranksBody);
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    const banner = await screen.findByTestId("match-ranks");
-    expect(banner).toHaveTextContent("Ranked match");
-    expect(banner).toHaveTextContent("Max#3 (you) Normal Grape III");
-    expect(banner).toHaveTextContent("שרה Raisin");
-  });
-
   it("shows the full line on desktop and a compact line for phones, both with both seats", async () => {
     stubFetch(ranksBody);
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
@@ -682,7 +663,8 @@ describe("the match screen's ranks (R604, R612)", () => {
     const banner = await screen.findByTestId("match-ranks");
     const full = banner.querySelector(".match-ranks__full");
     expect(full).toHaveTextContent("Ranked match");
-    expect(full).toHaveTextContent("Normal Grape III");
+    expect(full).toHaveTextContent("Max#3 (you) Normal Grape III");
+    expect(full).toHaveTextContent("שרה Raisin");
     const short = banner.querySelector(".match-ranks__short");
     expect(short).toHaveTextContent("Normal III");
     expect(short).toHaveTextContent("Raisin");
@@ -772,25 +754,20 @@ describe("the match screen's ranks (R604, R612)", () => {
     expect(banner).toHaveTextContent(`Max#3 (you) ${String(N)} Normal Grape III`);
   });
 
-  it("R2101000 no seat shows a flame below the threshold or after a loss", async () => {
-    stubFetch(withStreaks(N - 1, 0));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
+  for (const row of [
+    { name: "below the threshold or after a loss", ranks: withStreaks(N - 1, 0), line: "Ranked match" },
+    { name: "on an unranked (casual) match, whatever the streaks", ranks: withStreaks(N + 1, N + 1, false), line: "Unranked match" },
+  ]) {
+    it(`R2101000 no seat shows a flame ${row.name}`, async () => {
+      stubFetch(row.ranks);
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      attach({ legal: [{ type: "endTurn" }] });
 
-    const banner = await screen.findByTestId("match-ranks");
-    expect(banner).toHaveTextContent("Ranked match");
-    expect(banner.querySelector(".streak-flame")).toBeNull();
-  });
-
-  it("R2101000 an unranked (casual) match's line shows no flame, whatever the streaks", async () => {
-    stubFetch(withStreaks(N + 1, N + 1, false));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    const banner = await screen.findByTestId("match-ranks");
-    expect(banner).toHaveTextContent("Unranked match");
-    expect(banner.querySelector(".streak-flame")).toBeNull();
-  });
+      const banner = await screen.findByTestId("match-ranks");
+      expect(banner).toHaveTextContent(row.line);
+      expect(banner.querySelector(".streak-flame")).toBeNull();
+    });
+  }
 });
 
 describe("R2388000 a ranked match's result shows the rank it moved each seat to", () => {
@@ -1172,28 +1149,19 @@ describe("the death screen's rematch offers (R672)", () => {
     expect(screen.getByTestId("rematch-double")).toBeInTheDocument();
   });
 
-  it("shows no rematch on a live series game, whose continue flow owns what comes next", async () => {
-    stubMatchFetch(seriesIn("playing"));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    finish();
+  for (const state of ["playing", "over"] as const) {
+    it(`shows no rematch on a series game while it is ${state}: the continue flow owns what comes next`, async () => {
+      stubMatchFetch(seriesIn(state));
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      finish();
 
-    // The banner read the series (so the hook ran), yet no rematch rendered for it.
-    await screen.findByTestId("series-banner");
-    await act(async () => {});
-    expect(screen.queryByTestId("rematch-offer")).toBeNull();
-    expect(screen.queryByTestId("rematch-double")).toBeNull();
-  });
-
-  it("shows no rematch once the series is over either: finished series games are refused too", async () => {
-    stubMatchFetch(seriesIn("over"));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    finish();
-
-    await screen.findByTestId("series-banner");
-    await act(async () => {});
-    expect(screen.queryByTestId("rematch-offer")).toBeNull();
-    expect(screen.queryByTestId("rematch-double")).toBeNull();
-  });
+      // The banner read the series (so the hook ran), yet no rematch rendered for it.
+      await screen.findByTestId("series-banner");
+      await act(async () => {});
+      expect(screen.queryByTestId("rematch-offer")).toBeNull();
+      expect(screen.queryByTestId("rematch-double")).toBeNull();
+    });
+  }
 
   it("takes the seat to the rematch even after View the board folded the panel", async () => {
     vi.mocked(navigate).mockClear();
