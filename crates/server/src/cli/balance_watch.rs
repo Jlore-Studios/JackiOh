@@ -5,21 +5,15 @@
 //! jackioh-server balance-watch --patch=<version> [--source=live|all] [--file=<records.jsonl>]…
 //! ```
 //!
-//! Reads one patch's game records through the store (DATABASE_URL) and prints, as Markdown to paste
-//! into #699, the cards whose in-deck win rate stands out against 50%: too strong, too weak, and a
-//! played delta big enough to ask after, each with the games behind it. The bands are `config.rs`
-//! (CLAUDE.md rule 9): a z-score against 50% with at least `BALANCE_WATCH_MIN_GAMES` games, never a
-//! fixed win-rate cut-off, because the same 55% is noise at 40 games and a signal at 700.
+//! Reads one patch's game records through the store (DATABASE_URL) and prints, as Markdown to paste into
+//! #699, the cards whose in-deck win rate stands out against 50%. The bands are `config.rs`
+//! (CLAUDE.md rule 9): a z-score against 50% with at least `BALANCE_WATCH_MIN_GAMES` games, never a fixed
+//! win-rate cut-off, because the same 55% is noise at 40 games and a signal at 700.
 //!
-//! It is advisory and read-only. It changes no card, tunes nothing and files nothing: below the
-//! R654 gate (`PUBLIC_STATS_MIN_LIVE_GAMES` live games) the figures blend AI development runs with
-//! live games and the report says they are provisional, and a big played delta is the sign of a card
-//! the AI pilot cannot use, so every flag asks to be confirmed against live human games, never to be
-//! acted on as it stands. With `--file` it reads record files instead of the store (`stats-export`'s,
-//! `cargo jackioh stats --out`'s, the training lanes'), needs no DATABASE_URL, and prints the store
-//! path's report. Seat counting matches the public endpoint (`api::stats::public_report`,
-//! R1451): live records count their human seats only, development records (read only with
-//! `--source=all` while the gate stands) count every seat.
+//! It is advisory and read-only: it changes no card and files nothing. Below the R654 gate
+//! (`PUBLIC_STATS_MIN_LIVE_GAMES` live games) the figures blend AI development runs with live games and the
+//! report says they are provisional, and a big played delta is the sign of a card the AI pilot cannot use,
+//! so every flag asks to be confirmed against live human games.
 
 use std::cmp::Ordering;
 use std::path::PathBuf;
@@ -98,10 +92,8 @@ pub struct BalanceWatchReport {
     pub not_enough: Vec<String>,
 }
 
-/// Parses `--flag=value` arguments, refusing anything it does not know. `--patch` is required;
 /// `--source` reads live games plus AI development runs unless `live` is named, and `dev` is
-/// refused: a development run is never read on its own, only as the provisional padding. `--file`
-/// may repeat.
+/// refused: a development run is never read on its own, only as the provisional padding.
 pub fn parse_balance_watch_args(argv: &[String]) -> anyhow::Result<BalanceWatchOptions> {
     let mut patch: Option<String> = None;
     let mut source = SourceFilter::All;
@@ -141,7 +133,6 @@ pub fn z_score(wins: i64, games: i64) -> Option<f64> {
     Some((wins as f64 - games as f64 * 0.5) / (games as f64 * 0.25).sqrt())
 }
 
-/// R654's gate: under `PUBLIC_STATS_MIN_LIVE_GAMES` live games the figures are provisional.
 pub fn is_provisional(live_games: i64) -> bool {
     live_games < PUBLIC_STATS_MIN_LIVE_GAMES
 }
@@ -155,12 +146,10 @@ fn merge_into(by_card: &mut IndexMap<String, CardStats>, stat: CardStats) {
     }
 }
 
-/// R377: the report the options ask for, off the totals the store holds (R1044000). One
-/// `StatsTotalsQuery` through `stats_totals_load`, then the counting replicates
-/// `api::stats::public_report` locally (R1451): live records count their human seats only, and
-/// development records count every seat, but only with `--source=all` while the gate stands —
-/// `--source=live` always counts live-only, and once the gate clears development runs are ignored
-/// with no toggle to bring them back.
+/// R377: the report the options ask for, off the totals the store holds (R1044000). The counting replicates
+/// `api::stats::public_report` locally (R1451): live records count their human seats only, development
+/// records every seat, but only with `--source=all` while the gate stands; `--source=live` always counts
+/// live-only, and once the gate clears development runs are ignored with no toggle to bring them back.
 pub async fn balance_watch_report(
     db: &Db,
     options: &BalanceWatchOptions,
@@ -180,8 +169,7 @@ pub async fn balance_watch_report(
 
 /// R377: the same report off record files, with no store. It folds what the store would hold (the
 /// patch's records of the source, one record per id, since the table holds one row per id), so it
-/// builds the store path's report. A file that cannot be read, or a line that is not a record, is an
-/// error naming the file (and the line).
+/// builds the store path's report.
 pub async fn balance_watch_report_from_files(
     paths: &[PathBuf],
     options: &BalanceWatchOptions,
@@ -331,7 +319,6 @@ fn flag_table(out: &mut String, rows: &[FlaggedCard], name_of: &dyn Fn(&str) -> 
     }
 }
 
-/// The report as the script prints it: Markdown to paste into #699.
 pub fn render_balance_watch(report: &BalanceWatchReport, name_of: &dyn Fn(&str) -> Option<String>) -> String {
     let mut out = String::from("# Balance watch");
     out.push_str(&format!(" — {}\n\n", report.patch));
@@ -404,7 +391,6 @@ pub fn render_balance_watch(report: &BalanceWatchReport, name_of: &dyn Fn(&str) 
     out
 }
 
-/// The report off the store: `DATABASE_URL` names it, one connection for the one read.
 async fn report_from_store(options: &BalanceWatchOptions) -> anyhow::Result<BalanceWatchReport> {
     let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
     if connection_string.is_empty() {
@@ -414,7 +400,6 @@ async fn report_from_store(options: &BalanceWatchOptions) -> anyhow::Result<Bala
         );
     }
 
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     let outcome = balance_watch_report(&db, options).await;
     db.close().await;
@@ -422,7 +407,6 @@ async fn report_from_store(options: &BalanceWatchOptions) -> anyhow::Result<Bala
     Ok(report)
 }
 
-/// TS `main()`: `balance-watch`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_balance_watch_args(&args)?;
     let report = if options.files.is_empty() {
@@ -438,7 +422,6 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             .collect();
         balance_watch_report_from_files(&paths, &options).await?
     };
-    // The catalog's names come from the compiled-in catalog (TS read it with `loadCatalog()`).
     let catalog = &*jackioh_cards::CATALOG;
     let name_of = |card: &str| catalog.get(card).map(|def| def.name.clone());
     print!("{}", render_balance_watch(&report, &name_of));

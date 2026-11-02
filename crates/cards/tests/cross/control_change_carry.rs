@@ -1,9 +1,5 @@
-//! Port of `packages/cards/test/control-change-carry.test.ts` (part 27.1).
-//!
 //! What a card's "you" follows once it changes sides (SPEC §6.2, §8 Conventions: "'Your' means the
-//! controller", R30, R171). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens
-//! L1); every case here failed before its fix.
-//!
+//! controller", R30, R171). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L1).
 //!  - #79 Twinspell's "the next Spell you play gains Echo +1" is a modifier the permanent installed,
 //!    and it moves with the permanent to its new controller.
 //!  - §6.2: a start-of-turn hook fires on its controller's own turn start. One queued for that
@@ -24,8 +20,6 @@ const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
-/// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -63,7 +57,6 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
         let twinspell = backrow_at(&g, "p1", 3);
         g.end_turn();
 
-        // p2 takes it with K-Pop Fanatic, so no Spell of p2's is in flight when control changes.
         g.play(KPOP, json!({ "targets": pick::instance(&twinspell) }));
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
@@ -121,15 +114,13 @@ mod s6_2_a_start_of_turn_hook_belongs_to_its_controllers_turn {
         let mrow = g.unit_at("p2", 1);
         let p2_hand = g.hand("p2").len();
 
-        // p1's start of turn queues Moths (lane 1), then Gravedigger (lane 2). Moths compels Mrow, which
-        // dies to the strike back; its Death takes control of the unit that destroyed it (R361): Moths.
+        // Moths compels Mrow, which dies to the strike back; its Death takes control of the unit that
+        // destroyed it (R361): Moths.
         g.start_turn();
         g.expect_in_zone(&mrow, "graveyard");
         assert_eq!(g.card(&moths).controller, PlayerId::P2);
         assert_eq!(g.card(&digger).controller, PlayerId::P1);
 
-        // Gravedigger is still p1's, and this is p1's turn start: its queued hook fires for p1, and
-        // nothing of it reaches the player who took the Moths ahead of it.
         assert!(def_ids(&g.hand("p1")).contains(&POINTMASTER.to_string()));
         assert_eq!(g.hand("p2").len(), p2_hand);
         assert!(def_ids(&g.pile("p2", "graveyard")).contains(&SEVEN_SEVEN.to_string()));

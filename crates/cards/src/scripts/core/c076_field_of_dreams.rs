@@ -5,10 +5,9 @@
 //! "Radiant Reminisce", so every other clause is kept (§8 Conventions): the faces differ by one flag.
 //!
 //! R31: the replacement is a DISCARD of the whole hand, so the old cards land in the graveyard, the pool
-//! #72 Reminisce discovers from (R50); a unit-token card in that hand ceases to exist instead (R11,
-//! `discard`'s rule). N is the hand size AT RESOLUTION: §10.5 step 4 already moved this card to
-//! `resolving`, so it never counts itself. N = 0 discards nothing and still exiles this. R4's cap never
-//! bites: N ≤ HAND_CAP − 1 and the copies arrive into an emptied hand. `discard_hand` is deterministic;
+//! #72 Reminisce discovers from (R50); a unit-token card in that hand ceases to exist instead (R11).
+//! N is the hand size AT RESOLUTION: §10.5 step 4 already moved this card to `resolving`, so it never
+//! counts itself. R4's cap never bites: N ≤ HAND_CAP − 1 and the copies arrive into an emptied hand.
 //! `discard_random` would shift `rng_cursor` and break replay parity (§9.3, §10.7).
 
 use jackioh_engine::effects::{add_to_hand, discard_hand, exile};
@@ -19,10 +18,8 @@ pub const ID: &str = "core-076";
 /// R31: the card the hand is replaced with — #72 Reminisce, by catalog id (the catalog check holds it).
 const REMINISCE: &str = "core-072";
 
-/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. This is the only
-/// read this card makes — N, the caller's hand size at resolution — and it goes through the engine's
-/// read-only `zone_count` (engine/src/query.rs), which is what keeps BUILD M3-T1's and REVIEW B1.7's
-/// `state.players` grep over `src` clean.
+/// §10.9: N, the one read, goes through the read-only `zone_count`, which keeps BUILD M3-T1's and
+/// REVIEW B1.7's `state.players` grep over `src` clean.
 fn hand_size_of(ctx: &EffectContext<'_>) -> i32 {
     zone_count(ctx.state, ctx.controller, OffFieldZone::Hand)
 }
@@ -33,7 +30,6 @@ fn field_of_dreams(radiant: bool) -> Script {
         cry: Some(hook(move |ctx| {
             let count = hand_size_of(ctx);
             let mut effects = Vec::new();
-            // R31: the replaced hand goes to the graveyard, where Reminisce can find it.
             effects.push(discard_hand(json_as(json!({ "player": "self" }))));
             for _ in 0..count {
                 effects.push(add_to_hand(json_as(json!({ "defId": REMINISCE, "radiant": radiant }))));
@@ -53,10 +49,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #76 Field of Dreams — SPEC §8.3, R31, R4, R11, R50.
-//
-// BUILD M4-T4: "Hand of N → N Reminisce, old cards in GY (R31); exiled; radiant gives radiant
-// Reminisce". Covered here for base and radiant separately, plus N = 0 and the R4 hand cap.
+// #76 Field of Dreams — SPEC §8.3, R31, R4, R11, R50; BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -85,7 +78,6 @@ mod tests {
         side
     }
 
-    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -138,7 +130,6 @@ mod tests {
 
             // N = 4: the four filler cards are replaced, Field of Dreams never counts itself (§10.5 step 4).
             assert_eq!(def_ids(&s.pile(P1, "hand")), [REMINISCE, REMINISCE, REMINISCE, REMINISCE]);
-            // R31: "Replaced cards go to the GY", which is the pool Reminisce discovers from (R50).
             assert_eq!(sorted_owned(def_ids(&s.pile(P1, "graveyard"))), sorted(&FILLER));
         }
 
@@ -195,8 +186,7 @@ mod tests {
 
             s.play(FIELD_OF_DREAMS, json!({}));
 
-            // N ≤ HAND_CAP − 1 because Field of Dreams held a slot, and the copies arrive into an empty
-            // hand, so the cap never bites: exactly 9 in hand and exactly the 9 originals in the GY.
+            // Field of Dreams held a slot and the copies arrive into an empty hand: the cap never bites.
             assert_eq!(def_ids(&s.pile(P1, "hand")), vec![REMINISCE; 9]);
             assert_eq!(sorted_owned(def_ids(&s.pile(P1, "graveyard"))), sorted(&NINE));
         }

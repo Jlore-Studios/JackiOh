@@ -1,11 +1,6 @@
-// `/series/<id>`: the Conquest series between its games (R330–R338, R262), from the server's
-// projection.
-//
-// Everything on the screen comes from the `SeriesView` the mocked API answers; the tests show that
-// what the view leaves out (the opponent's pick and deck names, R336) never appears, that a pick
-// (chosen, then locked in, R331) and a forfeit send exactly the player's intent, that both sides'
-// won decks are shown locked (R330), and that the clock is counted from the server's own `now`
-// rather than this device's clock (R333).
+// `/series/<id>`: the Conquest series between its games (R330–R338, R262), from the mocked `SeriesView`:
+// what it leaves out (the opponent's pick and deck names, R336) never appears, a pick (chosen, then
+// locked in, R331) and a forfeit send only intent, and the clock counts from the server's `now`.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -136,7 +131,6 @@ describe("the series screen", () => {
     expect(score).toHaveTextContent(`Win with all ${String(SERIES_WINS_NEEDED)} decks`);
     expect(score).toHaveTextContent(`game 2 of at most ${String(SERIES_MAX_GAMES)}`);
 
-    // Your decks: the one that won is locked, in the standings and in the picker.
     expect(screen.getByTestId(seriesTestid.deck(0))).toHaveAttribute("data-won", "true");
     expect(screen.getByTestId(seriesTestid.deck(0))).toHaveTextContent("won · locked");
     expect(screen.getByTestId(seriesTestid.deck(1))).toHaveAttribute("data-won", "false");
@@ -152,7 +146,6 @@ describe("the series screen", () => {
     expect(status).toHaveTextContent("Opponent is choosing…");
     for (const name of THEIR_SECRET_NAMES) expect(screen.queryByText(new RegExp(name))).toBeNull();
 
-    // The history, from your side.
     const game = screen.getByTestId(seriesTestid.game(1));
     expect(game).toHaveAttribute("data-result", "win");
     expect(game).toHaveTextContent("Game 1: Aggro vs their deck 2");
@@ -195,7 +188,6 @@ describe("the series screen", () => {
     expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("Waiting for your opponent…");
     expect(screen.getByTestId(seriesTestid.picker)).toHaveTextContent("You're playing Control in game 1.");
     expect(screen.getByTestId(seriesTestid.deck(1))).toHaveAttribute("data-picked", "true");
-    // Sealed: no deck can be chosen any more.
     expect(screen.queryByTestId(seriesTestid.pick(2))).toBeNull();
     expect(screen.queryByTestId(seriesTestid.lockIn)).toBeNull();
   });

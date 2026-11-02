@@ -1,9 +1,4 @@
-//! `redact` and fused cards (R185, R77, R179). A fusion of a fusion names its older ingredient in its
-//! id (R179), and the engine rebuilds the fused scripts from that id whenever it is entered, so the
-//! redacted state must keep the whole chain of definitions behind every card the seat can see, and
-//! drop the chain behind a card it cannot.
-//!
-//! Port of `packages/ai/test/redact-fusion.test.ts`.
+//! `redact` and fused cards (R185, R77, R179): keep definition chain for visible cards, drop hidden.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

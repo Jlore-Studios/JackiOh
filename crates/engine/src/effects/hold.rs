@@ -2,16 +2,12 @@
 //! Ticketed's "Stack a permanent under this. Death: return that permanent to its controller", and #135
 //! Sacked's "Stuff it in a 0/4 Sack", whose Sack (#135.1) summons the Unit at its Death.
 //!
-//! The verb takes the card off the field and keeps it in `state.held` beside the card that holds it,
-//! its stay ended there (R78's reset, R174: it has left the field, so every effect aimed at it ends);
-//! `card_on_card::release_held` summons it again at the state check after its holder leaves the field,
-//! any way it leaves. The holder is the card running the script, or one this verb summons for it (the
-//! Sack). A face-down card is never held, so nothing hidden goes beneath a card, and a unit token
-//! ceases to exist as it leaves the field (R11), so there is nothing to hold.
+//! A held card waits in `state.held` beside its holder, its stay ended (R78's reset, R174: every effect
+//! aimed at it ends); `card_on_card::release_held` summons it again at the state check after its holder
+//! leaves the field, any way it leaves. A face-down card is never held: nothing hidden goes beneath one.
 //!
 //! R1865000: Stinkyscape #112 Job Application's "send a card from your hand in as your resume" sets a
-//! hand card aside beneath the running card the same way (`set_aside_from_hand`), and its Interview's
-//! reward gives it back (`return_held_to_hand`); one whose holder leaves the field first is exiled.
+//! hand card aside the same way, and its Interview's reward gives it back.
 
 use serde::{Deserialize, Serialize};
 
@@ -59,12 +55,9 @@ pub struct HoldArgs {
 }
 
 /// R1850003: take the face-up permanent `target` names off the field and hold it beneath the running
-/// card, or beneath a card `holder` summons for it, until that card leaves the field. It leaves as an
-/// exiled card does — no Death, R78's reset, its Stack pile's next card resuming — and `held` reports
-/// it, after the holder's `summoned` when the holder is new. Nothing happens to a card off the field,
-/// a face-down one, or the running card itself, nor when the running card holds and is not on the
-/// field. A new holder that finds no zone leaves the card held by nothing, so the next state check
-/// summons it back for whom it returns to.
+/// card, or a card `holder` summons for it. It leaves as an exiled card does (no Death, R78's reset, its
+/// pile's next card resuming); `held` reports it, after a new holder's `summoned`. A new holder that
+/// finds no zone leaves the card held by nothing, so the next state check summons it back.
 pub fn hold_beneath(args: HoldArgs) -> Effect {
     Effect::new("holdBeneath", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, None, args.target.as_ref()) else {
@@ -143,12 +136,9 @@ pub struct SetAsideArgs {
     pub target: Option<TargetSpec>,
 }
 
-/// R1865000: take the hand card `target` names out of its owner's hand and hold it beneath the running
-/// card, which must be acting on the field on the stay its run began with, until `return_held_to_hand`
-/// gives it back or the holder leaves the field, when the next state check exiles it. It goes as it
-/// was, with no reset, and `held` reports it; it is in no pile while it waits, so both seats read it. A
-/// unit token ceases to exist as it leaves the hand (R11), so nothing is held. Nothing happens to a
-/// card in no hand.
+/// R1865000: take the hand card `target` names out of its owner's hand, as it was (no reset), and hold
+/// it beneath the running card, acting on the field on its run's stay, until `return_held_to_hand` or
+/// the holder leaving the field, when the next state check exiles it. In no pile, so both seats read it.
 pub fn set_aside_from_hand(args: SetAsideArgs) -> Effect {
     Effect::new("setAsideFromHand", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, None, args.target.as_ref()) else {
@@ -199,11 +189,10 @@ pub struct ReturnHeldArgs {
     pub upgrades: Option<i32>,
 }
 
-/// R1865000: every card the running card holds on its stay, in the order they were taken, back to the
-/// hand of the player it returns to. With `cost_override` its price is reset (R766) and set to that
-/// number; once in the hand it is Buffed `upgrades` times (B3.4, `tune_once`). A full hand burns it
-/// unbuffed (§2.4), the printed card again as a burned hand card is (R215). Nothing happens while the
-/// running card is not acting on the field on the stay its run began with.
+/// R1865000: every card the running card holds on its stay, in the order taken, back to the hand of the
+/// player it returns to. With `cost_override` its price is reset (R766) and set; in the hand it is
+/// Buffed `upgrades` times (B3.4). A full hand burns it unbuffed (§2.4), the printed card as a burned
+/// hand card is (R215). Nothing happens while the running card is off the field on its run's stay.
 pub fn return_held_to_hand(args: ReturnHeldArgs) -> Effect {
     Effect::new("returnHeldToHand", move |ctx| {
         let Some(me) = self_on_its_stay(ctx).filter(|me| crate::zones::acts_on_field(ctx.state, me)) else {

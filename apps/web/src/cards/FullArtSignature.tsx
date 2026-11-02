@@ -1,12 +1,11 @@
-// R2655000, R2655003: a Mythic full art signs its card's name across its art, in cursive, as a pen
-// would: the name is drawn in the signature face (`--font-signature`, the self-hosted Dancing Script,
-// fonts.css), and in the motion gate (cosmetics.css) a wipe uncovers it left to right, stroke by
-// stroke, and it then holds on the face. Under reduced motion, or with Animated foil off, the name
-// stands whole from the start. It is always the English name, a Chinese face's too: the face is the
-// card's art, and the script face draws no Chinese.
+// R2655000, R2655003: a Mythic full art signs its card's name across its art, in cursive: the name is
+// drawn in the signature face (`--font-signature`, the self-hosted Dancing Script, fonts.css), and in
+// the motion gate (cosmetics.css) a wipe uncovers it left to right. Under reduced motion, or with
+// Animated foil off, it stands whole. It is always the English name, a Chinese face's too: the script
+// face draws no Chinese.
 //
-// The name is SVG text in a fixed view box, so it scales with the card as one, and a longer name is
-// set smaller to fit the box's width. It is decoration (`aria-hidden`): the name banner below says it.
+// The name is SVG text in a fixed view box, so it scales with the card, and a longer name is set
+// smaller to fit the box's width. It is decoration (`aria-hidden`): the name banner below says it.
 // Presentation only (CLAUDE.md rule 7).
 
 import type { ReactElement } from "react";
@@ -20,10 +19,7 @@ const SIGNATURE_BASELINE = 34;
 export const SIGNATURE_FONT_MAX = 30;
 /** The width the name may fill, in the view box's units, a margin left at each end. */
 export const SIGNATURE_WIDTH = 188;
-/**
- * About how wide one letter of the name is, in ems: what sets a long name's size. Wide enough for a
- * fallback face's bold letters too (the script face's are narrower), so no name runs out of its box.
- */
+/** About how wide one letter is, in ems: what sets a long name's size. Wide enough for a fallback face too. */
 export const SIGNATURE_CHAR_EM = 0.5;
 
 /** The size `name` is signed at, in the view box's units, so it fits `SIGNATURE_WIDTH`. */

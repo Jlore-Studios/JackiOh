@@ -1,11 +1,5 @@
-//! R639000 (SPEC §9.12): a ladder bot's concessions, draw answers, idle turns, rematch plans and aim
-//! leads, each drawn on its own stream from a fitted row (`bots::signals`). These are the pure
-//! draws; `tests/actor/bot_seat.rs` and `tests/api/bots.rs` prove the actor and the rematch route
-//! act on them.
-//!
-//! R2660000: a concession is the temper's share and the caller's proof of a lethal the bot cannot
-//! stop, asked only of a conceder. R2660001: a draw offer is the turn's own roll at a hand-set chance,
-//! only while the bot trails well behind. `tests/bots/seat.rs` proves `seat::play` on them.
+//! Ladder bot signal generation (`src/bots/signals.rs`, SPEC §9.12, R639000, R1442).
+//! R2660000: a concession needs the caller's proof of an unstoppable lethal; R2660001: a draw offer.
 
 use jackioh_engine::PlayerId;
 use jackioh_server::bots::signals::{

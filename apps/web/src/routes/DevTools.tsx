@@ -1,13 +1,9 @@
-// The Dev tools panel (SPEC §14.10, R1300000): a dev account moves its own economy by hand, so each
-// part of the economy can be tried on staging and production. The quest tools (§14.9, #1304) give a
-// quest at once and complete one picked from the held quests, which `GET /api/quests` lists again
-// whenever a request ends. The bar tools (§14.5, R1310003) fill the card or the cosmetic token bar,
-// so it pays its token at once: a card token, or the cosmetic token cycle's next step.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). `/account` mounts this only when `/api/auth/me` says
-// `isDev`, and that is all the client decides: every button sends its request as typed (an amount
-// goes as `Number(text)`, whatever it is), each dev route checks `DEV_PROFILE_IDS` itself, and the
-// line under the buttons shows the server's answer, its refusal's message included, word for word.
+// The Dev tools panel (SPEC §14.10, R1300000): a dev account moves its own economy by hand, to try
+// each part on staging and production. The quest tools (§14.9, #1304) give or complete a quest; the
+// bar tools (§14.5, R1310003) fill a token bar so it pays its token at once.
+// The server decides (CLAUDE.md rule 7): `/account` mounts this only when `/api/auth/me` says `isDev`;
+// every button sends its request as typed (an amount as `Number(text)`), each dev route checks
+// `DEV_PROFILE_IDS` itself, and the line under the buttons shows the server's answer word for word.
 
 import { useEffect, useId, useState, type ReactElement } from "react";
 

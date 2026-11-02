@@ -109,8 +109,6 @@ function throwingStorage(): void {
   });
 }
 
-// B19: defaults, whatever storage holds
-
 describe("B19 the store falls back to the defaults", () => {
   it("B19 with empty storage it reads drag on, confirm off, hover previews on, reduce motion off", () => {
     expect(SETTINGS_STORAGE_KEY).toBe("jackioh.settings");
@@ -178,8 +176,6 @@ describe("B19 the store falls back to the defaults", () => {
     expect(screen.getByTestId("probe-dragToPlay")).toHaveTextContent("true");
   });
 });
-
-// B20: write, persist, notify, parse, reset
 
 describe("B20 writing, parsing and resetting", () => {
   it("B20 writeSettings merges the patch, persists every key as JSON and returns the new snapshot", () => {
@@ -291,8 +287,6 @@ describe("B20 writing, parsing and resetting", () => {
   });
 });
 
-// B21: other tabs
-
 describe("B21 a storage event from another tab", () => {
   it("B21 for jackioh.settings, it updates readSettings and notifies subscribers", () => {
     const listener = vi.fn();
@@ -358,8 +352,6 @@ describe("B21 a storage event from another tab", () => {
     expect(readSettings()).toEqual(DEFAULTS);
   });
 });
-
-// B22: reduce motion on <html>, and its CSS
 
 describe("B22 reduce motion", () => {
   it("B22 true sets <html data-reduce-motion='true'>, and false removes it", () => {
@@ -605,8 +597,6 @@ describe("B23 the settings gears open and close the dialog", () => {
   });
 });
 
-// B24: the panel's contents
-
 describe("B24 the panel's sections, switches, reset and slots", () => {
   const SWITCHES: [SettingKey, string][] = [
     ["dragToPlay", "Drag to play"],
@@ -805,8 +795,6 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
   });
 });
 
-// R2000000: no opt-out from public player statistics
-
 describe("R2000000 Settings has no public player statistics opt-out", () => {
   it("R2000000 the panel has no public stats switch, and a publicStats an older device stored is dropped", () => {
     store({ dragToPlay: false, publicStats: false });
@@ -822,7 +810,6 @@ describe("R2000000 Settings has no public player statistics opt-out", () => {
 });
 
 // R345: "End turn automatically" is sent to the engine, which holds it
-
 describe("R345 the End turn automatically switch reaches the engine as setAutoEndTurn", () => {
   function sentPreferences(onAction: ReturnType<typeof vi.fn>): unknown[] {
     return onAction.mock.calls.map(([body]) => body).filter((body) => (body as { type: string }).type === "setAutoEndTurn");

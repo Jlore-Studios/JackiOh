@@ -1,10 +1,9 @@
 // What the cue planner remembers across the entries of one FxLayer mount (docs/polish/1-animations.md
 // S6): who played which card, which zone a trap fired from, the last few events (so a `cardPlayed` right
 // after its own `drawn` is a cast on draw, `castOnDraw.ts`) and the plays still resolving, innermost
-// last: a `cardPlayed` opens one, its `cardResolved` or `countered` closes it (R502). A per-card recipe
-// (`cardFx.ts`) decorates the events inside its card's resolution (#21 Hinder, #27 Blood Ridden).
-// R202: only ids the viewer may read are kept; a hidden play stays a hidden play, so every hidden card
-// looks the same to the planner. Each map keeps at most `limit` entries, the oldest evicted first.
+// last, for `cardFx.ts`'s recipes (#21 Hinder, #27 Blood Ridden): a `cardPlayed` opens one, its
+// `cardResolved` or `countered` closes it (R502). R202: only ids the viewer may read are kept, so every
+// hidden card looks the same to the planner.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 

@@ -1,5 +1,4 @@
 // Practice presets are token-free Core decks, checked under §2.6 and outside AI's shadow ban (R186).
-// A saved deck is offered only when complete and the validator finds no §2.6 fault in it (§9.9, `savedDeckRefusal`).
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 
@@ -135,8 +134,8 @@ const refusals = new WeakMap<PracticeSavedDeck, string | null>();
 
 /**
  * §9.9: why the worker's `createGame` would refuse a complete saved deck, as the validator's first issue
- * (`practiceDeckIssues`: a repeated, unknown, Token or unshipped card), or null when it would start it.
- * Also null for an R250 draft short of `DECK_SIZE`, whose label already says so. The worker still judges every deck.
+ * (`practiceDeckIssues`); null too for an R250 draft short of `DECK_SIZE`, whose label already says so.
+ * The worker still judges every deck.
  */
 export function savedDeckRefusal(deck: PracticeSavedDeck): string | null {
   if (deck.cards.length !== DECK_SIZE) return null;

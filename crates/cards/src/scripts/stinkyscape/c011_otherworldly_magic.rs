@@ -41,9 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #11 Otherworldly Magic — SPEC §8.10 row S 11, BUILD M12 row S 11: "adds one base Frostbolt,
-// Arcane Missiles and Flame Strike (S 11.1 to 11.3) to its caster's hand, in that order; a full
-// hand burns them; radiant all three are Radiant".
+// S #11 Otherworldly Magic — SPEC §8.10 row S 11, BUILD M12 row S 11.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -77,7 +77,6 @@ mod tests {
 
     const MELT: &str = "classic-011";
     const FILLER: &str = "core-005"; // (1) Spell, p1's spare card (§2.5).
-    // p2's hand: five distinct definitions no other pile holds, so a def id in a view names exactly one card.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const SEVEN: &str = "core-025"; // (4) Unit 7/7
     const FELINORS: &str = "core-012"; // (2) Unit 3/4
@@ -92,7 +91,6 @@ mod tests {
 
     use crate::js;
 
-    /// Each hand entry is a def id or `{ def, costMod }`.
     fn melt(radiant_face: bool, their_hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": MELT, "radiant": radiant_face }, FILLER] },
@@ -153,7 +151,6 @@ mod tests {
                 })
                 .collect();
             assert_eq!(offered, THEIR_HAND);
-            // You read them: your view of the prompt names each card.
             let mine = js(&s.view(P1))["pending"].clone();
             assert!(!mine.is_null(), "p1's view of the prompt");
             assert_eq!(mine["forYou"], json!(true));
@@ -189,7 +186,6 @@ mod tests {
             let theirs = js(&s.view(P2))["pending"].clone();
             assert!(!theirs.is_null(), "p2's view of the prompt");
             assert_eq!(theirs, json!({ "forYou": false, "pendingFor": "p1" }));
-            // p2 knows their own hand, so the check is that the prompt itself carries no option.
             assert!(!theirs.to_string().contains("Menace"));
         }
 
@@ -272,7 +268,6 @@ mod tests {
 
         #[test]
         fn r65_the_options_are_their_hand_grouped_by_the_cost_each_would_be_played_for_now() {
-            // Duplicating Felinors (2) with costMod −1 costs (1) now, so it joins Mr. Vanilla's group.
             let mut s = melt(true, mixed_hand());
             s.play(MELT, json!({}));
             let pending = open(&s);
@@ -323,7 +318,6 @@ mod tests {
             let mut s = melt(true, json!(THEIR_HAND));
             s.play(MELT, json!({}));
             assert_eq!(js(&s.view(P2))["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
-            // Your view reads the cards of each cost.
             assert!(js(&s.view(P1))["pending"].to_string().contains("Midrange Menace"));
         }
 

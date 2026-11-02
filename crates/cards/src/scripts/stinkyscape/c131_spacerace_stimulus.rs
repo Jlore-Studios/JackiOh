@@ -12,9 +12,7 @@
 //! as any Trap does (R17), its reveal being the animation and nothing more: `animate` into its own
 //! lane's unit zone or the leftmost open one (Animated, R64, R383), a 6/6 Unit with Starship Piece whose
 //! death fuses a copy into its owner's Dormant Starship (R1852000); with no open unit zone it stays
-//! face-up. It reveals once (R831007's shape, as C #5 Tesla): the firing remembers `revealed`, and it
-//! answers nothing after that, wherever it stands, nor anywhere but its backrow zone. Declares no
-//! numbers: its stats are the catalog's.
+//! face-up.
 
 use jackioh_engine::effects::{animate, remember};
 use jackioh_engine::prelude::*;
@@ -77,10 +75,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #131 Spacerace Stimulus — SPEC §8.10 row 131, BUILD M12 row S 131: "set face-down, it reveals on
-// either player's Starship launch and animates as a 6/6 Unit with Starship Piece in its lane's unit zone,
-// else the leftmost open one, staying face-up with none; a piece played does not reveal it; radiant 12/12
-// and it also reveals when either player plays a Starship Piece".
+// S #131 Spacerace Stimulus — SPEC §8.10 row 131, BUILD M12 row S 131.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -122,7 +117,6 @@ mod tests {
         let stats = s.stats(card.id.as_str());
         assert_eq!((stats.attack, stats.health), (6, 6));
         assert!(stats.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::StarshipPiece));
-        // The reveal is the animation.
         assert!(s.last_events().iter().any(|event| event.event_type() == GameEventType::Animated));
     }
 
@@ -176,8 +170,6 @@ mod tests {
 
     #[test]
     fn r1859003_radiant_a_piece_set_face_down_or_its_own_play_reveals_nothing() {
-        // p1 sets a Stimulus of its own: face-down, no piece is played, so p2's stays set, and p1's own
-        // play does not reveal it either.
         let (mut s, _ship, id) = setup("r1859003-face-down", true, json!([{ "def": ID, "radiant": true }]));
         let mine = s
             .state()

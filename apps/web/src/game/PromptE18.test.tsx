@@ -68,8 +68,6 @@ function answered(onAction: ReturnType<typeof vi.fn>, selection: unknown[]): voi
 
 const NUMBERS = Array.from({ length: 11 }, (_, at) => String(at));
 
-// number
-
 describe("number (C #18)", () => {
   function numberView(): PlayerView {
     return baseView({
@@ -105,7 +103,6 @@ describe("number (C #18)", () => {
     expect(document.activeElement).toBe(screen.getByTestId("prompt-option-mode:6"));
     fireEvent.keyDown(document.activeElement ?? pad, { key: "ArrowUp" });
     expect(document.activeElement).toBe(screen.getByTestId("prompt-option-mode:0"));
-    // Past the edge the focus stays where it is.
     fireEvent.keyDown(document.activeElement ?? pad, { key: "ArrowUp" });
     expect(document.activeElement).toBe(screen.getByTestId("prompt-option-mode:0"));
     expect(onAction).not.toHaveBeenCalled();
@@ -135,8 +132,6 @@ describe("number (C #18)", () => {
     expect(screen.queryByTestId("prompt-cancel")).toBeNull();
   });
 });
-
-// answer
 
 describe("answer (C+ #42)", () => {
   const PROBLEM = "∫₀¹ 2x dx = ?\n(choose one)";
@@ -230,8 +225,6 @@ describe("a question sequence (Meditative+ #20 KY's Competition)", () => {
     expect(screen.queryByTestId("prompt-option-none")).toBeNull();
   });
 });
-
-// cell
 
 describe("cell (C+ #62)", () => {
   const LANES_LEFT = [1, 3, 4, 5];
@@ -351,8 +344,6 @@ describe("cell (C+ #62)", () => {
   });
 });
 
-// reward
-
 describe("reward (C #90)", () => {
   it("R404 offers a completed quest's rewards as tiles under Quest complete!, and a tile takes its reward", () => {
     const onAction = renderPrompt(
@@ -377,8 +368,6 @@ describe("reward (C #90)", () => {
     answered(onAction, [{ pick: "mode", option: "B" }]);
   });
 });
-
-// pick
 
 describe("pick (C #44)", () => {
   /** C #44 Back from the GY: Units from your graveyard with a total cost of (5) or less. */

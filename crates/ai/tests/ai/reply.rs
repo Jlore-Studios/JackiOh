@@ -1,13 +1,10 @@
-//! The opponent's reply (reply.ts, docs/polish/3-ai.md "The opponent's reply", SPEC §9.9): after a
+//! The opponent's reply (docs/polish/3-ai.md "The opponent's reply", SPEC §9.9): after a
 //! line hands the opponent the turn, the opponent swings by a fixed trading rule and ends its turn,
 //! every step a real `reduce` that costs one node, and the line is scored at the seat's next decision.
 //!
 //! Every board here is a `scenario()` with the AI as p1 on turn 9. The AI ends its turn through the
 //! reducer, which hands p2 its turn 10; `simulateReply` then plays p2's reply.
-//!
-//! Port of `packages/ai/test/reply.test.ts`. TS's defaulted `hidden` argument (`hiddenCardIds` of the
-//! state handed in) is passed explicitly wherever TS left it out. #1036's tests also show the opponent
-//! using the Activates it can see and never a face-down one.
+//! #1036's tests also show the opponent using the Activates it can see and never a face-down one.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -25,7 +22,6 @@ const CRACKER: &str = "classic-006";
 /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
 const BARKER: &str = "classicplus-013";
 
-/// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
 fn spread(base: Value, over: Option<&Value>) -> Value {
     let mut out = base;
     if let (Some(target), Some(Value::Object(extra))) = (out.as_object_mut(), over) {
@@ -36,7 +32,6 @@ fn spread(base: Value, over: Option<&Value>) -> Value {
     out
 }
 
-/// An action body from TS's object literal.
 fn body(literal: Value) -> ActionBody {
     json_as(literal)
 }
@@ -60,7 +55,6 @@ fn handed_over(setup: Value) -> GameState {
 mod simulate_reply {
     use super::*;
 
-    /// B41 swings an unblocked unit at the open face, ends the turn, and stops at the seat's next main phase
     #[test]
     fn b41_swings_an_unblocked_unit_at_the_open_face_ends_the_turn_and_stops_at_the_seats_next_main_phase() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
@@ -73,12 +67,10 @@ mod simulate_reply {
         assert_eq!(reply.turn, TURN + 2);
         assert_eq!(reply.phase, Phase::Main);
         assert!(reply.pending.is_none());
-        // Mr. Vanilla's 4 to the face; the attack and the endTurn are one node each.
         assert_eq!(reply.players[AI].hero.health, 26);
         assert_eq!(counter.used(), 2);
     }
 
-    /// B41 takes lethal when the face is in reach
     #[test]
     fn b41_takes_lethal_when_the_face_is_in_reach() {
         let state = handed_over(json!({ "p1": { "health": 4 }, "p2": { "field": ["core-008"] } }));
@@ -96,10 +88,8 @@ mod simulate_reply {
         );
     }
 
-    /// B41 does not throw a unit into a Defense-Position wall it cannot hurt, and ends its turn instead
     #[test]
     fn b41_does_not_throw_a_unit_into_a_defense_position_wall_it_cannot_hurt_and_ends_its_turn_instead() {
-        // The 7/7 in Defense Position has Taunt and 8 Armor: Mr. Vanilla's 4 does nothing and it dies.
         let state = handed_over(json!({
             "p1": { "field": [{ "def": "core-025", "position": "DEF" }] },
             "p2": { "field": ["core-008"] },
@@ -110,7 +100,6 @@ mod simulate_reply {
         assert!(on_field(&reply, HUMAN, "core-008"));
         assert_eq!(reply.players[AI].hero.health, 30);
         assert_eq!(reply.active, AI);
-        // The trial switch to Defense Position, dropped (#1696), then the endTurn.
         assert_eq!(counter.used(), 2);
     }
 
@@ -123,10 +112,8 @@ mod simulate_reply {
             .expect("Deft Duelist is on p2's field")
     }
 
-    /// switches a Deft unit out of Defense Position and swings it at the open face
     #[test]
     fn switches_a_deft_unit_out_of_defense_position_and_swings_it_at_the_open_face() {
-        // R49: Deft Duelist's switch to Attack spends only its switch, so it still attacks.
         let state = handed_over(json!({ "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
         let counter = create_node_counter(20, None);
         let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
@@ -134,11 +121,9 @@ mod simulate_reply {
         assert_eq!(reply.players[AI].hero.health, 26);
         assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Atk);
         assert_eq!(reply.active, AI);
-        // The switch, the attack and the endTurn, one node each.
         assert_eq!(counter.used(), 3);
     }
 
-    /// leaves a unit without Deft in Defense Position and ends its turn
     #[test]
     fn leaves_a_unit_without_deft_in_defense_position_and_ends_its_turn() {
         let state = handed_over(json!({ "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
@@ -150,11 +135,8 @@ mod simulate_reply {
         assert_eq!(counter.used(), 1);
     }
 
-    /// keeps a Deft unit in Defense Position when no attack after the switch is its own
     #[test]
     fn keeps_a_deft_unit_in_defense_position_when_no_attack_after_the_switch_is_its_own() {
-        // The 7/7 in Defense Position has Taunt and 8 Armor: the Duelist's 4 does nothing and it dies, so
-        // the trial switch is dropped.
         let state = handed_over(json!({
             "p1": { "field": [{ "def": "core-025", "position": "DEF" }] },
             "p2": { "field": [{ "def": "core-045", "position": "DEF" }] },
@@ -164,15 +146,11 @@ mod simulate_reply {
             .expect("a reply");
         assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Def);
         assert_eq!(reply.players[AI].hero.health, 30);
-        // The trial switch, then the endTurn.
         assert_eq!(counter.used(), 2);
     }
 
-    /// B41 trades into a unit worth more than the face damage it gives up
     #[test]
     fn b41_trades_into_a_unit_worth_more_than_the_face_damage_it_gives_up() {
-        // Midrange Menace survives Pointmaster's First Strike 7 and kills it: an 11-point unit for free
-        // beats 9 to the face.
         let state = handed_over(json!({ "p1": { "field": ["core-020"] }, "p2": { "field": ["core-019"] } }));
         let reply = simulate_reply(
             &state,
@@ -223,10 +201,8 @@ mod simulate_reply {
         assert_eq!(reply.players[AI].hero.health, 30);
     }
 
-    /// stops at the seat's own start-of-turn prompt, which is where its next decision begins
     #[test]
     fn stops_at_the_seats_own_start_of_turn_prompt_which_is_where_its_next_decision_begins() {
-        // Masochism Mask asks p1 at the start of each of its turns.
         let state = handed_over(json!({ "p1": { "backrow": ["core-065"] } }));
         let reply = simulate_reply(
             &state,
@@ -241,7 +217,6 @@ mod simulate_reply {
         assert_eq!(reply.pending.as_ref().map(|pending| pending.player_id), Some(AI));
     }
 
-    /// replays the units the seat's own Flood bounced into the opponent's hand, and nothing it held unseen
     #[test]
     fn replays_the_units_the_seats_own_flood_bounced_into_the_opponents_hand_and_nothing_it_held_unseen() {
         jackioh_cards::register_all();
@@ -249,11 +224,9 @@ mod simulate_reply {
             "seed": "reply-flood",
             "active": "p1",
             "turn": TURN,
-            // Flood costs (4) since patch v0.2.0.
             "p1": { "hand": ["core-017"], "mana": 4, "library": LIBRARY },
             "p2": { "field": ["core-019"], "hand": ["core-008"], "library": LIBRARY },
         }));
-        // The seat's view when the decision began: p2's hand and library are what it cannot see.
         let hidden = hidden_card_ids(s.state(), AI);
         let menace = s.unit(HUMAN, 1).map(|card| card.id.clone()).unwrap_or_default();
         assert!(!hidden.contains(&menace));
@@ -276,7 +249,6 @@ mod simulate_reply {
         assert!(on_field(&reply, HUMAN, "core-019"));
         assert!(!on_field(&reply, HUMAN, "core-008"));
 
-        // Without that history every card in p2's hand is unseen, and the reply plays none of them.
         let blind = simulate_reply(
             &ended,
             AI,
@@ -289,7 +261,6 @@ mod simulate_reply {
         assert!(!on_field(&blind, HUMAN, "core-008"));
     }
 
-    /// returns null without a node to spend
     #[test]
     fn returns_null_without_a_node_to_spend() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
@@ -309,7 +280,6 @@ mod simulate_reply {
 mod reply_score {
     use super::*;
 
-    /// scores a passed line at the seat's next decision, where it swings first, less its unspent crystals
     #[test]
     fn scores_a_passed_line_at_the_seats_next_decision_where_it_swings_first_less_its_unspent_crystals() {
         jackioh_cards::register_all();
@@ -347,11 +317,9 @@ mod reply_score {
             Some(finalist_score(&after, AI, NextSwing::Seat, Prices::NONE) - AI_EVAL.unspent_mana * 2.0)
         );
         assert_eq!(counter.used(), 2);
-        // The state it was scored at carries the reply's 4 damage.
         assert_eq!(after.players[AI].hero.health, 26);
     }
 
-    /// keeps the static score of a line that ended the game, with no node spent
     #[test]
     fn keeps_the_static_score_of_a_line_that_ended_the_game_with_no_node_spent() {
         jackioh_cards::register_all();
@@ -383,7 +351,6 @@ mod reply_score {
         assert_eq!(counter.used(), 0);
     }
 
-    /// is null when the counter runs out during the reply
     #[test]
     fn is_null_when_the_counter_runs_out_during_the_reply() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
@@ -426,7 +393,6 @@ mod duos_life_r964000 {
         assert!(chip < AI_EVAL.win);
         assert_eq!(reply_face_value(&unspent, AI, 40), AI_EVAL.win, "all 40 of it");
 
-        // Spent: the hero's health is the pool, and 20 empties it.
         assert_eq!(reply_face_value(&with_pool(&state, true), AI, 20), AI_EVAL.win);
     }
 }
@@ -497,7 +463,6 @@ mod visible_activations {
         })
     }
 
-    /// The seat passes at 2 health into a face-up The Power to Punish it can see: its 2 damage ends the game
     #[test]
     fn a_face_up_power_to_punish_is_lethal_on_the_seat_at_2_health_and_the_line_scores_as_that_loss() {
         let state = handed_over(json!({ "p1": { "health": 2 }, "p2": { "backrow": [PUNISH] } }));
@@ -524,7 +489,6 @@ mod visible_activations {
         assert_eq!(score, loss_score(&state));
     }
 
-    /// A Heroic Power that rolled Ping finishes the seat at 1 health through the activate legal_actions lists
     #[test]
     fn a_heroic_power_that_rolled_ping_is_lethal_on_the_seat_at_1_health_through_its_listed_activate() {
         let mut state = handed_over(json!({ "p1": { "health": 1 }, "p2": { "backrow": [HEROIC] } }));
@@ -539,7 +503,6 @@ mod visible_activations {
             .expect("the Heroic Power")
             .memory
             .insert(subsystems::POWER_KEY.to_string(), json!("ping"));
-        // Ping is an `activate` (R752), the action the engine offers for it.
         assert!(is_legal(
             &state,
             HUMAN,
@@ -572,14 +535,12 @@ mod visible_activations {
         assert_eq!(score, loss_score(&state));
     }
 
-    /// The activation aimed at the seat's hero is tried first, though legal_actions lists the units first
     #[test]
     fn tries_the_activation_aimed_at_the_seats_hero_first_so_a_busy_board_never_hides_the_lethal() {
         let state = handed_over(json!({
             "p1": { "health": 2, "field": ["core-008", "core-008", "core-008", "core-008"] },
             "p2": { "backrow": [PUNISH] },
         }));
-        // The premise: in legal_actions order, the hit on p1's hero is past the cap.
         let at_hero = legal_actions(&state, HUMAN)
             .iter()
             .filter(|action| matches!(action, ActionBody::Activate { .. }))
@@ -601,7 +562,6 @@ mod visible_activations {
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
     }
 
-    /// A card set face-down is one the seat cannot see, so the reply never uses its Reveal
     #[test]
     fn never_reveals_a_card_set_face_down_that_the_seat_cannot_see() {
         let state = cracker_set();
@@ -626,7 +586,6 @@ mod visible_activations {
         assert_eq!(reply.players[AI].hero.health, state.players[AI].hero.health);
     }
 
-    /// Nor a card a determinization filled in face-down: it is a sample, whatever it was drawn as
     #[test]
     fn never_reveals_a_card_a_determinization_filled_in_face_down() {
         let state = cracker_set();
@@ -666,7 +625,6 @@ mod visible_activations {
         assert!(checked > 0, "no world filled the set card in as a Cloaked set");
     }
 
-    /// decide heals rather than pass at 2 health into a face-up The Power to Punish
     #[test]
     fn decide_heals_rather_than_pass_at_2_health_into_a_face_up_power_to_punish() {
         jackioh_cards::register_all();
@@ -696,7 +654,6 @@ mod visible_activations {
         );
     }
 
-    /// decide exiles a face-up The Power to Punish rather than play a bigger body and pass into it
     #[test]
     fn decide_exiles_a_face_up_power_to_punish_rather_than_play_a_bigger_body_and_pass_into_it() {
         jackioh_cards::register_all();
@@ -734,10 +691,9 @@ mod open_lethal_1634 {
     use super::*;
 
     /// B41, #1634: two attackers whose hits only together reach the seat's hero take the face, not a
-    /// kill worth more than one hit
+    /// kill worth more than one hit.
     #[test]
     fn b41_takes_a_lethal_that_needs_both_attacks_over_a_kill_worth_more_than_one_hit() {
-        // Mr. Vanilla's worth outranks one 7 at the face, and either 7/7 kills it: 7 + 7 is lethal on 8.
         let state = handed_over(json!({
             "p1": { "health": 8, "field": ["core-008"] },
             "p2": { "field": ["core-025", "core-025"] },
@@ -751,7 +707,6 @@ mod open_lethal_1634 {
             Some(Winner::from(HUMAN))
         );
         assert!(on_field(&reply, AI, "core-008"));
-        // The two face hits, one node each.
         assert_eq!(counter.used(), 2);
 
         // One hit at a time, the kill outranks the face: Mr. Vanilla dies and the seat lives on 1.
@@ -789,7 +744,6 @@ mod open_lethal_1634 {
         assert!(run.end.result.is_none(), "{}", trace(&run.turn));
         let after = all_out_attack(&run.end, HUMAN);
         let survives = after.result.as_ref().map(|result| result.winner) != Some(Winner::from(HUMAN));
-        // `decide` reads the shipped switch: on, it sees the two swings coming; off, it plays as before.
         assert_eq!(survives, AI_REPLY.open_lethal, "{}", trace(&run.turn));
     }
 }
@@ -838,7 +792,6 @@ mod defense_switch_1696 {
         );
         assert_eq!(reply.players[HUMAN].hero.health, 7);
         assert_eq!(reply.active, AI);
-        // The trial switch, kept, then the endTurn.
         assert_eq!(counter.used(), 2);
     }
 
@@ -860,7 +813,6 @@ mod defense_switch_1696 {
             Position::Atk
         );
         assert_eq!(reply.active, AI);
-        // The trial switch, dropped, then the endTurn.
         assert_eq!(counter.used(), 2);
     }
 
@@ -880,7 +832,6 @@ mod defense_switch_1696 {
             unit_view(&reply, &unit_of(&reply, "core-045")).position,
             Position::Def
         );
-        // The attack, the trial switch and the endTurn.
         assert_eq!(counter.used(), 3);
     }
 }

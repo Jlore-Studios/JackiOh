@@ -78,7 +78,6 @@ mod r1143_a_hand_size_for_the_rest_of_the_game {
         run(&mut state, sets(99), P1);
         assert_eq!(hand_cap_of(&state, P1), HAND_CAP_MAX);
         assert_eq!(HAND_CAP_MAX, 14);
-        // The other player's is their own.
         assert_eq!(hand_cap_of(&state, P2), HAND_CAP);
         let side = serde_json::to_value(&state.players[P1]).expect("a player serializes");
         assert_eq!(side["handCap"], json!(14));

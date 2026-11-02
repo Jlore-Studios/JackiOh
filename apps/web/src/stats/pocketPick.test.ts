@@ -9,13 +9,12 @@ import { loadPocketPick, pocketPick } from "./pocketPick.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
-/** A device tally of `games` games, each card played as many times as `played` says. */
 function tally(games: number, played: Record<string, number>): PlayerStats {
   const cards = Object.fromEntries(Object.entries(played).map(([id, n]) => [id, { ...NO_COUNTS, played: n }]));
   return { ...EMPTY_STATS, games, cards };
 }
 
-/** The server's play rates, each card at the rate given, in key order. */
+/** The server's play rates, in key order. */
 function rates(byCard: Record<string, number>): PlayRatesResponse {
   return { decks: 1000, cards: Object.entries(byCard).map(([id, rate]) => ({ id, rate })) };
 }

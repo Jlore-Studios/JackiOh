@@ -1,20 +1,11 @@
 // The two bars of an opening (#1658, part of #1651, SPEC §14.5, R1305000, R1953000): the card token
 // bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
-// on screen. Each slot's points (R1999000) fly from the slot into the HUD, labeled and tinted by the slot's
-// rarity, a bigger rarity landing in a bigger burst; once the last has landed each bar fills from where
-// the opening found it to where it left it, a full one pulsing and glowing as it bursts, and the reward
-// of every fill is revealed as it does. The pack-opening scene and the cosmetic packs mount it with the
-// opening's answer.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer: the points before and after,
-// the size, how often each bar paid, what the cosmetic bar paid (R1305001) and each slot's points
-// (R1953000), which `flights` carry. Nothing here counts a point or picks a reward, and both bars are
-// drawn whether or not the opening moved them.
-//
-// `play` holds the opening back (the scene's cards still face down): both bars rest at their points
-// before. REDUCED MOTION (the panel's, the system's or the effects' own), or the effects' intensity
-// off, flies nothing, sweeps nothing and pulses nothing: the bars show their final fill at once, every
-// reward revealed (FillBar draws the end state at once, `still` carrying the intensity off to it).
+// on screen. Each slot's points (R1999000) fly from the slot into the HUD, tinted by rarity.
+// THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer, what the cosmetic bar paid
+// (R1305001) and each slot's points included; nothing here counts a point or picks a reward, and both
+// bars are drawn whether or not the opening moved them.
+// REDUCED MOTION, or the effects' intensity off, flies, sweeps and pulses nothing (`still` carries
+// the intensity off to FillBar).
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -50,7 +41,6 @@ type Phase = "waiting" | "flights" | "fill";
 /** Where a flight takes off and how far it travels to the HUD's center, in viewport pixels. */
 type Course = { x: number; y: number; dx: number; dy: number };
 
-/** The center of an element's box on the viewport. */
 function centerOf(element: Element): { x: number; y: number } {
   const box = element.getBoundingClientRect();
   return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
@@ -70,7 +60,6 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
   const [rewards, setRewards] = useState<readonly RevealItem[]>([]);
   const hud = useRef<HTMLDivElement | null>(null);
 
-  // The opening plays: its points take off, or with none to fly the bars fill.
   useEffect(() => {
     if (phase === "waiting" && play) setPhase(next);
   }, [phase, play, next]);

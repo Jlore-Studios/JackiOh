@@ -3,32 +3,9 @@
 //! Base: "30% chance a random card in your hand becomes Radiant. End of turn: returns from the GY to
 //! your hand". Radiant restates the roll only — "Lucky 1 (two rolls, keep the success) at 40%" — so
 //! the return-from-the-graveyard clause is kept (§8 Conventions).
-//!
-//! The pick is `setRadiantRandom`, which is R60's random pick: it draws from the non-Radiant cards of
-//! the zone and does nothing when none are left. The spell itself is in `resolving` while its script
-//! runs (§10.5), so it can never pick itself.
-//!
-//! Both rolls go through the seeded `ctx.rng` (CLAUDE.md rule 4), the base one roll at the declared
-//! `chance` (30%) and the radiant `lucky(1, …)` — two rolls at its 40%, keeping a success, which is §6.1's Lucky X read on a
-//! yes/no roll. The X is the face's printed Lucky as it always was (0, or 1 on the Radiant face; a
-//! Nerf or a Buff never reaches it, D14) plus any Lucky given (`given_lucky_on`, R1438), so a base
-//! face given Lucky 1 rolls twice at 0.3, and a Radiant face given Lucky 1 three times at 0.4. No
-//! effect verb gates on a probability, so the hook does the roll and returns either
-//! the effect or nothing; see the report for the `chanceOf` verb this wants. With an empty hand the
-//! effect has nothing to do, so it rolls nothing (R129, R60). A hand that is all Radiant is rolled
-//! like any other: whether the hand holds a base-face card is the hand's (§9.1), so neither the roll
-//! nor the cue may hang on it — a success over it cues the pick it could not make on a Radiant card
-//! (R177's `cueUnpicked`), and the hand's size, which decides the roll, is public (R177).
-//!
-//! §5.1: "Spells with 'End of turn: add this back to your hand' are flagged
-//! `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn, as
-//! graveyard triggers (R68)". No effect verb sets that flag yet (reported), so the hook gates on the
-//! flag OR this turn's play log, which is the same set of cards for a spell played normally: a copy
-//! that reached the graveyard by being discarded or milled is not in the log and stays there.
-//!
-//! Tunes: chance 30 ↑ (Radiant 40), a percentage stepping 10 up to 100 (R1748003); the Radiant face's
-//! Lucky 1 stays fixed (D14). Through v0.4.4b the chances were printed, not declared;
-//! `script_v0_4_4b` keeps that (R767000).
+//! Seeded RNG roll (CLAUDE.md rule 4, R60; Lucky X §6.1).
+//! Graveyard trigger in §2.2 cleanup (R68, §10.5) returns to hand (burns if full, R4, §2.4; R129, R987, R177, §9.1).
+//! Radiant stays through zone moves (R1438). Kept face v0.4.0f (R767000, R1748003).
 
 use jackioh_engine::prelude::*;
 
@@ -76,7 +53,6 @@ fn lucky(ctx: &EffectContext<'_>, printed: i32) -> i32 {
 /// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
 /// its owner's hand, and a full hand burns it (§2.4, R4) — both of which `bounce` does.
 fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
-    // TS read the live `ctx.self`: the card as it stands now.
     let Some(self_) = ctx.live_self() else {
         return false;
     };
@@ -142,17 +118,8 @@ pub fn script_v0_4_4b() -> CardScripts {
     dream(false)
 }
 
-// #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23: "Seeded 30% roll on a non-Radiant hand
-// card (R60); returns to hand at end of turn; hand full → burned; radiant two rolls at 40% keeping
-// a success".
-//
-// Every roll goes through the seeded rng, so each fixture pins its seed and asserts the outcome
-// that seed produces. The gate itself is asserted across one fixed seed list used by both faces,
-// which is also how "Lucky 1 at 40%" is proved to be strictly luckier than "30%": at the same seed
-// and the same rng cursor a base hit (roll < 0.3) is always a radiant hit (roll < 0.4), and the
-// radiant face rolls a second time on top of that, so its hit set is a strict superset of the base
-// one. Whether any individual seed hits is not asserted: that would pin the rng's internals, not
-// the card.
+// #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23 (R60).
+// Tests verify seeded rolls, end-of-turn return, hand full burn, and Radiant Lucky 1 at 40%.
 #[cfg(test)]
 mod tests {
     use super::script;

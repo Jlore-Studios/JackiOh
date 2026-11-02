@@ -1,7 +1,6 @@
 // "Concede this game?" (ConfirmConcede.tsx), on its own and as Game.tsx mounts it for every mode:
 // the board's Concede control only asks, and only the dialog's Concede sends `{ type: "concede" }`.
-// Keep playing, Escape, Back (R2127000) and a click outside close it; the focus starts on Keep
-// playing, Tab stays inside, and the focus goes back to the Concede control when it closes.
+// Keep playing, Escape, Back (R2127000) and a click outside close it.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -71,7 +70,6 @@ describe("ConfirmConcede on its own", () => {
     );
     // The panel itself can hold the focus, so a click on its text leaves it inside.
     expect(screen.getByTestId("concede-dialog")).toHaveAttribute("tabindex", "-1");
-    // Wherever the focus has gone, the next Tab lands on a button of the dialog, never behind it.
     for (const shiftKey of [false, true]) {
       (document.activeElement as HTMLElement | null)?.blur();
       fireEvent.keyDown(document.body, { key: "Tab", shiftKey });

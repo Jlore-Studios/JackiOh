@@ -1,10 +1,6 @@
-// #936 S8 B60: `CoopPanel`, the co-op room on /together. It creates a room (a difficulty, and a deck
-// or a random one: exactly one of `deckId` and `random: true`, S6), shows the room's code, invites a
-// friend by sending them the code in chat, joins a room by code, and takes both players to
-// `/duos/:matchId` once the guest has joined: the guest from the join's answer, the host once the
-// server says the room has its match. A refusal (B33: full, own room, no such room) is shown in the
-// server's words and moves nobody. R2031000: the Random deck offers "More cards from" on the
-// device's online pick, sent as `leanSet` on the create and the join.
+// #936 S8 B60: `CoopPanel`, the co-op room on /together: create a room, share its code, join by code,
+// and both players go on to `/duos/:matchId`. A refusal (B33) is shown in the server's words and moves
+// nobody. R2031000: the Random deck offers "More cards from", sent as `leanSet` on the create and join.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -121,7 +117,6 @@ function chooseDifficulty(value: "easy" | "medium" | "hard"): void {
   fireEvent.click(must(choice, `the ${value} difficulty`));
 }
 
-/** The room the server was asked to create, once. */
 async function created(server: StubServer): Promise<Record<string, unknown>> {
   await waitFor(() => {
     expect(server.to("POST", "/api/duos/rooms")).toHaveLength(1);
@@ -267,7 +262,6 @@ describe("B60 creating a room", () => {
         const server = serve(room);
         await renderPanel();
         await createRoom(server);
-        // The host's own read on mount, answered before anything wakes.
         await waitFor(() => {
           expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(1);
         }, SLOW);
@@ -288,7 +282,6 @@ describe("B60 creating a room", () => {
         expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
         expect(window.location.pathname).toBe("/together");
 
-        // The guest joined while the tab slept: the wake finds the match and takes the host there.
         room.guestJoined = true;
         setVisibility("visible");
         await waitFor(() => {
@@ -618,7 +611,6 @@ describe("R2094000 a co-op link fills the join form", () => {
   });
 
   it("R2094000 the join deck starts on the last co-op pick, else the first saved deck, else Random", async () => {
-    // The last co-op pick, still saved, wins over the first saved deck.
     window.localStorage.setItem(COOP_DECK_KEY, "d-control");
     const control = { ...must(DECKS.decks[0], "the saved deck"), id: "d-control", name: "Control" };
     serve({ created: false, guestJoined: false }, (call) =>
@@ -634,7 +626,6 @@ describe("R2094000 a co-op link fills the join form", () => {
     cleanup();
     window.sessionStorage.clear();
 
-    // Without a remembered pick, the first saved deck wins.
     window.localStorage.removeItem(COOP_DECK_KEY);
     at("/together");
     serve({ created: false, guestJoined: false });
@@ -648,7 +639,6 @@ describe("R2094000 a co-op link fills the join form", () => {
     cleanup();
     window.sessionStorage.clear();
 
-    // With no saved deck at all, the join starts on a random deal.
     at("/together");
     serve({ created: false, guestJoined: false }, (call) =>
       call.method === "GET" && call.path === "/api/decks"
@@ -675,7 +665,6 @@ describe("R2094000 a co-op link fills the join form", () => {
     }, SLOW);
     await flush();
     expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("random");
-    // The Random deck's own picker is drawn, as the select shows.
     expect(screen.getByTestId("coop-lean-newest")).toBeInTheDocument();
     await createRoom(server);
     expect(await created(server)).toEqual({ difficulty: "easy", random: true });
@@ -693,7 +682,6 @@ describe("R2094000 a co-op link fills the join form", () => {
     cleanup();
     window.sessionStorage.clear();
 
-    // A later visit keeps the Random deal although a deck is saved.
     at("/together");
     serve({ created: false, guestJoined: false });
     await renderPanel();
@@ -796,7 +784,6 @@ describe("R2094000 a co-op link fills the join form", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/duos/dm-9");
     }, SLOW);
-    // The picked deck is remembered for the next join.
     expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("d-aggro");
   });
 });

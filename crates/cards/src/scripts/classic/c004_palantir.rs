@@ -32,15 +32,12 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-004";
 
-/// Where the Radiant face counts the Spells it has stolen so far.
 const STOLEN: &str = "stolen";
 
 /// Patch v0.3.10 (#831): the Spells it answers are the (1) Cost ones (R65: a card's own cost as it
 /// stands out of play, an X Spell 0), Books or not.
 const STOLEN_COST: i32 = 1;
 
-/// The opponent's announced (1) Cost Spell, or None: the announced card's instance id, which is what
-/// this answers.
 fn answered(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     let GameEvent::CardAnnounced { player, instance_id, card_type, .. } = event else {
         return None;
@@ -55,7 +52,6 @@ fn answered(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     Some(instance_id.clone())
 }
 
-/// TS `const drawLimit: Script["drawLimit"]`: the opponent may draw `drawLimit` cards a turn.
 fn draw_limit() -> DrawLimitHook {
     read_hook(|args| {
         vec![DrawLimit {
@@ -75,7 +71,6 @@ fn steal_and_cast(spell: &str) -> Vec<Effect> {
     ]
 }
 
-/// Base: "Tribute this to steal and cast it" — no question, the price is paid to steal.
 fn steal_one() -> TriggerDef {
     TriggerDef::new("palantir-steal", &[GameEventType::CardAnnounced], |ctx, event| {
         let Some(spell) = answered(ctx, event) else {
@@ -142,19 +137,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4: "Aura: the opponent's draws beyond 1 in a
-// turn, on either player's turn and the start-of-turn draw included, do not happen at all: no card
-// moves, no fatigue, nothing is cast on draw (§2.4); a draw made earlier that turn counts; with another
-// limit the lowest holds; lifted when Palantir leaves; the opponent playing a (1) Cost Spell (a cast
-// included, R70) opens the announce window (§10.5), where the base face steals with no "you may":
-// Palantir is Tributed, the Spell is countered (never played by them: not counted, its mana spent)
-// and you cast it, every choice at random and aimed your way (R831001), the card ending in your
-// graveyard as yours; no prompt opens; another Spell opens no prompt either; the resolved steal
-// survives a JSON round trip and replays; radiant: every such Spell is stolen and cast with no
-// prompt, and Palantir Tributes itself once it has stolen 3, not before; its tuned numbers (draw
-// limit, never below 1; radiant threshold) read through `param()` (R386)".
-//
-// Palantir sits face-up in p1's backrow; p2, the opponent, is active and plays or draws. The (1) Cost
+// C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4 (§2.4, R70, §10.5, R831001, R386).
 // Spells are C #24 Book of Knowledge ("Draw 3") and #5 Stockpile ("Draw 2. Heal your hero 2."), whose
 // resolution shows in whoever's draws.
 #[cfg(test)]
@@ -203,7 +186,6 @@ mod tests {
         }))
     }
 
-    /// Stockpile with (1) more on its cost: a draw Spell Palantir does not steal, for the Aura's tests.
     fn dear_stockpile() -> Value {
         json!({ "def": STOCKPILE, "costMod": 1 })
     }
@@ -223,7 +205,6 @@ mod tests {
         s.card(palantir).memory.get("stolen").cloned()
     }
 
-    /// Whether the card lies in p1's graveyard, p1 its owner.
     fn in_your_graveyard(s: &Scenario, card: &CardInstance) -> bool {
         matches_object(&js(&s.card(&card.id).zone), &json!({ "z": "graveyard", "player": "p1" }))
             && s.card(&card.id).owner == P1
@@ -353,7 +334,6 @@ mod tests {
                     json!({ "hand": [dear_stockpile(), VANILLA] }),
                     false,
                 );
-                // A Degrade moves a limit toward more draws: this one allows 2, the other still 1.
                 let Some(lenient) = s.backrow(P1, 2) else {
                     panic!("fixture");
                 };
@@ -390,7 +370,6 @@ mod tests {
             fn the_limit_is_lifted_when_palantir_leaves_the_field() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-                // p2 plays the Book and p1 takes it, Tributing Palantir: the limit goes with it.
                 s.play(BOOK, json!({}));
                 s.play(STOCKPILE, json!({}));
 
@@ -413,7 +392,6 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 assert_eq!(count(s.events(), "promptOpened"), 0);
                 s.expect_in_zone(&palantir, "graveyard");
-                // Countered for them (never their play), then cast by you: you draw 2 and heal 2.
                 assert_eq!(count(s.events(), "countered"), 1);
                 assert_eq!(s.state().players.p2.turn_log.cards_played, 0);
                 assert_eq!(draws_by(s.events(), P2), 0);
@@ -480,7 +458,6 @@ mod tests {
 
                 assert_eq!(s.hand(P1).len(), 10);
                 assert!(in_your_graveyard(&s, &stockpile));
-                // Cast from your graveyard, where the steal left it: you heal 2.
                 s.expect_health(P1, 32);
             }
 
@@ -636,7 +613,6 @@ mod tests {
 
                 s.end_turn();
 
-                // p2 drew the CN-Virus and its cast on draw was stolen: you take its 1, not them.
                 assert_eq!(s.state().active, P2);
                 s.expect_health(P1, 29);
                 s.expect_health(P2, 30);

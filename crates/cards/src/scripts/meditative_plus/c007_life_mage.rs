@@ -3,14 +3,8 @@
 //!   Radiant: "Divine Shield\nAura: Your Spells have Lifesteal, and healing your hero and Units is twice
 //!            as effective."
 //!
-//! Divine Shield is catalog data. The aura is the engine's Spell-wide keyword aura (R1180002,
-//! `layers::spells_have_aura`): while Life Mage acts, each Spell its controller is resolving — not a
-//! Field Spell or a Trap, nor a Spell set face-down — has Lifesteal, so damage step 8 heals their hero
-//! by each hit (R85); two Life Mages give it once, and it ends when the Mage leaves. The Radiant face
-//! adds the healing multiplier (R1180003, `doublesHealing`): every heal of its controller's hero and
-//! Units is doubled after any replacement (a heal Blood Moon turns into damage is not), Lifesteal's
-//! included, two Radiant Mages quadrupling; the opponent's heals are untouched. Declares no numbers:
-//! the doubling is the rule's `HEAL_MULTIPLIER`.
+//! Spell-wide Lifesteal aura (R1180002, spells_have_aura; R85).
+//! Radiant adds doublesHealing multiplier (R1180003, HEAL_MULTIPLIER).
 
 use jackioh_engine::prelude::*;
 
@@ -34,11 +28,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #7 Life Mage — SPEC §8.9 row 7, BUILD M11 row M+ 7: "Divine Shield; while it acts, each of your
-// Spells that deals damage heals your hero by the damage dealt, once per hit (R85), a Field Spell, a
-// Trap and the opponent's Spells not; leaving the field ends it; two give Lifesteal once; radiant 2/4,
-// and every heal of your hero and Units is doubled (a Lifesteal heal included), two Radiant Life Mages
-// quadrupling, the opponent's heals untouched".
+// M+ #7 Life Mage — SPEC §8.9 row 7, BUILD M11 row M+ 7 (R85).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -47,23 +37,14 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (1) Spell, Pierce: 4 damage to a declared Unit or hero (8 Radiant).
     const TRUE_STRIKE: &str = "core-044";
-    /// (2) Field Spell: your next Spell gains Echo +1.
     const TWINSPELL: &str = "core-079";
-    /// (1) Spell: draw 2, heal your hero 2.
     const STOCKPILE: &str = "core-005";
-    /// (1) Spell: heal a target 9.
     const BOOK_OF_HEAL: &str = "classic-003";
-    /// (3) Spell: destroy a Unit.
     const HIT_JOB: &str = "core-016";
-    /// (2) Field Spell: start of turn, damage to the enemy hero equal to the cards in your exile.
     const ECHOES: &str = "core-040";
-    /// (4) 7/7 Armor 7 (14/14 Radiant).
     const BIG: &str = "core-025";
-    /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
-    /// (2) Trap: a lethal hit is canceled, then heal and draw.
     const TRAP: &str = "classic-052";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
@@ -90,8 +71,6 @@ mod tests {
         json!([{ "pick": "hero", "player": player.as_str() }])
     }
 
-    /// `amount` damage to p2's hero with p1's face-up Trap in backrow zone 1 as the running card, then
-    /// the state check.
     fn trap_hits_enemy_hero(s: &mut Scenario, amount: i32) {
         let trap = s.backrow(P1, 1).expect("the trap");
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
@@ -279,7 +258,6 @@ mod tests {
         );
         let big = s.unit(P1, 2).expect("the 14/14");
         s.play(BOOK_OF_HEAL, json!({ "targets": pick::instance(&big) }));
-        // 9 doubled is 18: every point of its 13 damage, where 9 would have left 4.
         assert_eq!(s.card(&big.id).damage, 0);
     }
 

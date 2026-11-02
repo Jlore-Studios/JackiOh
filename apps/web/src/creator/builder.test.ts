@@ -1,5 +1,4 @@
-// R915010, #920: the creator's builder writes card-kit Luau, a pure function of its model, and the
-// card's numbers and text beside it; every script it writes passes the Luau module's check.
+// R915010, #920: the creator's builder writes card-kit Luau, a pure function of its model.
 
 import { afterEach, describe, expect, it } from "vitest";
 

@@ -92,10 +92,7 @@ export function info(options: Common & { done?: CoachStep["done"]; moot?: CoachS
   return { kind: "info", ...options };
 }
 
-/**
- * R2205000: pose a question and wait for the player to find what it sets up. Shows on the player's
- * own main phase, or with `prompt` on their own open prompt, when `when` holds; never holds the AI (R314).
- */
+/** R2205000: pose a question and wait for the player to find what it sets up; never holds the AI (R314). */
 export function moment(
   options: Omit<Common, "holdAi"> & {
     discovers: readonly string[];

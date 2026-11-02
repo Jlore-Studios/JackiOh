@@ -43,7 +43,7 @@ fn targets(
     .collect()
 }
 
-/// TS `audit(enemyOnly): Script["cry"]`: one `forEachCard` over the permanents the run would exile, read
+/// One `forEachCard` over the permanents the run would exile, read
 /// once as the list reaches it, each exiled by id.
 fn audit(enemy_only: impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'static) -> Hook {
     let enemy_only: Arc<dyn Fn(&EffectContext<'_>) -> bool + Send + Sync> = Arc::new(enemy_only);
@@ -112,8 +112,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #45 Complexity Audit — SPEC §8.7 row 45, E36, R13, R177, R280, R583, BUILD M9 row C+ 45: C+ #44
-// with the comparison reversed. The sweep is `subsystems.auditTargets` (packages/engine/test/audit.test.ts);
-// its preview is pinned in test/preview.test.ts. Every `loc` is read off the catalog and guarded.
+// with the comparison reversed. Every `loc` is read off the catalog and guarded.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -131,7 +130,6 @@ mod tests {
     const ALL: &str = "All permanents";
     const THEIRS: &str = "Only your opponent's";
 
-    /// TS `const LOC = cardDef(AUDIT).loc ?? 0`.
     fn loc() -> i32 {
         crate::card_def(AUDIT).loc.unwrap_or(0)
     }
@@ -156,8 +154,6 @@ mod tests {
 
     use crate::merged;
 
-    /// TS `audit({ radiant?, p1?, p2? })`: the Audit and a filler in p1's hand, a filler in p2's, and
-    /// each side's extra setup spread over that.
     fn audit(radiant: bool, p1: Value, p2: Value) -> Scenario {
         scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": AUDIT, "radiant": radiant }, FILLER] }), p1),

@@ -5,12 +5,6 @@
 //!          Piece fused into it."
 //! Radiant: "Starship Piece\nWhen launched, your Starship gains +{per}/+{per} for each Starship Piece
 //!          fused into it." Per 1, Radiant 2.
-//! Engine: its death fuses a copy into its owner's Dormant Starship (R1852000); When launched
-//! (`when_launched`, R1852003) runs only as part of that Starship. The Starship's memory
-//! (`starship_pieces_of`, R1852005) counts its pieces, each copy of the same card counted, this one's
-//! copy left out on the base face and counted on the Radiant face (R1859004); then `buff` +N/+N per
-//! piece on the Starship, lasting, nothing with none to count. Per is read on the face the piece fused
-//! on (`piece_number`, R1859001). Tunes: per 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -45,9 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #133 Ultra Capacitor — SPEC §8.10 row 133, BUILD M12 row S 133: "when the Starship it fused into
-// launches holding it and three other pieces, the Starship gains +3/+3; alone in it, nothing; per read on
-// the face it fused on (R1859001); radiant 4/4 and +2/+2 for each of the four, +8/+8".
+// S #133 Ultra Capacitor — SPEC §8.10 row 133, BUILD M12 row S 133 (R1859001).
 #[cfg(test)]
 mod tests {
     use super::ID;

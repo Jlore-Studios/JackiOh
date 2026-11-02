@@ -26,12 +26,12 @@ fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
         && matches!(target, Some(AttackTarget::Hero { player }) if player == ctx.controller)
 }
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed: instance ids.
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -81,17 +81,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #2 Groom Shroom — SPEC §8.7 row 2, BUILD M9 Classic+ row C+ 2: "Same window as C+ #1; fills
-// every empty, unreserved unit zone of yours, a Locked one included (R1136000), with a random non-token
-// Felinor Unit of any set (R64, R380; Felinor-tagged Units, never a Felinor Spell, R405; repeats
-// allowed, R60), summoned with no Cry (R1) and granted Taunt; the declared attack still hits your hero
-// and is never moved to a new Taunt, which arrived after §4.2 step 3 (R405); a full board summons
-// nothing and draws no random number (R129); trap consumed; hidden until it fires (R33); radiant the
-// Felinors are Radiant".
-//
-// Groom Shroom sits face-down in p1's backrow lane 1; p2 is active and attacks with a 3/3 Tempo Timmy.
-// The two engine setups below (`lockZone`, `reserveZone`) put a Lock and a Reborn reservation on a
-// zone, which no Core card can do to a unit zone.
+// C+ #2 Groom Shroom — SPEC §8.7 row 2, BUILD M9 Classic+ row C+ 2 (§4.2 step 3, R129, R33).
+// The engine setups `lock_zone` and `reserve_zone` put a Lock and a Reborn reservation on a zone,
+// which no Core card can do to a unit zone.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -103,10 +95,9 @@ mod tests {
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
     /// Every non-token Felinor-tagged Unit of every set (R405, R380): Meditative's are §8.8 #25, #30,
-    /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet). Re-pinned for
-    /// v0.3.5: the Meditative set joins the pool, and for the Stinkyscape release (#1884) its #87 Siva 1.
-    /// Re-pinned for the Training Grounds release (#2204): the set's Felinor Units join the pool, #17,
-    /// #22, #23 and #33 and the snapshots #44 (of Core #12) and #51 (of Core #43).
+    /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet); Stinkyscape's
+    /// #87 Siva 1 (#1884); Training Grounds' #17, #22, #23 and #33 and the snapshots #44 (of Core #12)
+    /// and #51 (of Core #43) (#2204).
     const FELINOR_UNITS: &[&str] = &[
         "core-012",
         "core-043",

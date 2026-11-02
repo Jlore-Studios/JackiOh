@@ -1,6 +1,4 @@
-// #2125 (R2125000): the menus' kept answers: keyed by path and account, emptied by sign-out and an
-// account switch, folded forward by a write's answer, bounded, and never holding what a match, a
-// duos room, a watch or a replay reads.
+// #2125 (R2125000): the menus' kept answers (`readCache.ts`).
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 

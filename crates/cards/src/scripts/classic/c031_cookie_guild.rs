@@ -27,7 +27,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's two scans are its declared `units`, which `param` reads off the running face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -72,7 +71,6 @@ mod tests {
             .collect()
     }
 
-    /// The five lanes: a def id, or `None`.
     fn lanes(defs: [Option<&str>; 5]) -> Vec<Option<String>> {
         defs.into_iter().map(|def| def.map(str::to_string)).collect()
     }

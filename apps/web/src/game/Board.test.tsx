@@ -1,7 +1,4 @@
-// BUILD M5-T1 acceptance. Every assertion here is about what the board draws from one
-// `PlayerView` and about what it refuses to draw: the opponent's hand as backs only, a
-// face-down trap with no identity anywhere in its subtree, the cards under a Stack as a number.
-//
+// BUILD M5-T1 acceptance: what the board draws from one `PlayerView` and what it refuses to draw.
 // The fixture is the only input. If a component needed something a `PlayerView` does not carry,
 // no test here could pass without inventing it, which is the point (src/test/fixtures.ts).
 
@@ -111,9 +108,8 @@ describe("Board", () => {
   });
 
   it("is given the fixture BUILD M5-T1 asks for: 10 units, 10 backrow cards and a stacked pile", () => {
-    // The acceptance names the fixture's contents, so the fixture is asserted rather than trusted:
-    // one `null` in a backrow lane made this 9 backrow cards while every test above still passed,
-    // because none of them counts. Both sides are counted, since "10 units" is the board's total.
+    // The acceptance names the fixture's contents, so the fixture is asserted rather than trusted.
+    // Both sides are counted, since "10 units" is the board's total.
     const view = fullBoardView();
     const units = [...view.you.units, ...view.opponent.units].filter((unit) => unit !== null);
     const backrow = [...view.you.backrow, ...view.opponent.backrow].filter((slot) => slot !== null);
@@ -122,8 +118,7 @@ describe("Board", () => {
     expect(backrow, "BUILD M5-T1: the fixture board holds 10 backrow cards").toHaveLength(10);
     expect(units.filter((unit) => unit.buried > 0), "BUILD M5-T1: a stacked pile").not.toHaveLength(0);
 
-    // And the board draws all twenty: a card for every unit, and a card or a back for every
-    // backrow slot — so a fixture that grew a lane cannot pass while the board drops it.
+    // And the board draws all twenty, so a fixture that grew a lane cannot pass while the board drops it.
     render(<Board view={view} />);
     const drawn = FIELD_SLOTS.flatMap((slot) =>
       LANES.map((lane) => screen.getByTestId(testid.zone(slot.side, slot.row, lane))),
@@ -134,9 +129,7 @@ describe("Board", () => {
   it("renders every zone of every lane, with no element wider than the viewport", () => {
     // jsdom has no layout engine, so this is structural: `document.body.scrollWidth` is always 0
     // there and asserting on it would be a fake pass. The real pixel check at 1280x720 and
-    // 390x844 is the Cypress spec's job (BUILD M8); what is checkable here is that the DOM has
-    // every lane at both sizes, that nothing declares a width wider than the viewport, and that
-    // the grid itself is built out of `minmax(0, 1fr)` columns.
+    // 390x844 is the Cypress spec's job (BUILD M8).
     for (const [width, height] of [
       [1280, 720],
       [390, 844],
@@ -341,8 +334,6 @@ describe("Board", () => {
       const list = screen.getByTestId(`modifiers-${side}`);
       const badges = [...list.querySelectorAll(".modifier-badge")];
 
-      // Equal as a list, in order: same ids, same captions, same length. A badge the view does not
-      // carry, or a modifier the panel drops, fails here.
       expect(badges.map((badge) => badge.getAttribute("data-modifier-id"))).toEqual(
         modifiers.map((modifier) => modifier.id),
       );
@@ -393,7 +384,6 @@ describe("Board", () => {
     expect(hero.getAttribute("data-animating")).toBe("healthLost");
     expect(hero.querySelector(".loss-pop")).toHaveTextContent("5");
 
-    // Nothing pops on an element the runner is not animating.
     expect(screen.getByTestId(testid.hero("opponent")).querySelector(".loss-pop")).toBeNull();
   });
 
@@ -505,14 +495,13 @@ describe("Board", () => {
   });
 });
 
-/** The sorted testids of every element the board marks `data-counted` (#991). */
+// The sorted testids of every element the board marks `data-counted` (#991).
 function countedIn(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll('[data-counted="true"]'))
     .map((element) => element.getAttribute("data-testid") ?? "")
     .sort();
 }
 
-/** The view with its first hand card carrying `preview` (#991), and that card's instance id. */
 function withHandPreview(view: PlayerView, preview: PreviewValue[] | undefined): { view: PlayerView; handId: string } {
   const hand = view.you.hand;
   if (!Array.isArray(hand)) throw new Error("the fixture's own hand is cards");
@@ -521,7 +510,6 @@ function withHandPreview(view: PlayerView, preview: PreviewValue[] | undefined):
   return { view: { ...view, you: { ...view.you, hand: [{ ...first, preview }, ...rest] } }, handId: first.instanceId };
 }
 
-/** Two field units on both sides of the board: an opponent's and one of yours. */
 function twoUnits(view: PlayerView): [string, string] {
   const theirs = view.opponent.units[0]?.instanceId;
   const yours = view.you.units[1]?.instanceId;

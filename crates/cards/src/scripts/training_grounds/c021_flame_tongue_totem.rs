@@ -1,18 +1,15 @@
 //! TG #21 Flame Tongue Totem (SPEC §8.11 row 21; R2197001): (1) Unit, Rare, 0/4 → 0/8, a card of the held
 //! Training Grounds set (R1420, R2194000).
 //!   Base and Radiant: "Aura: Adjacent Units have +{attack} Attack." — attack 3, Radiant 6
-//! Engine: an aura (§10.4 layer 5) over §3.1's adjacency of the Totem's own zone (R2197001): the Units in
-//!   lane N−1 and lane N+1 of its side and row, never itself, never across sides. A Totem standing in the
-//!   backrow (R1081000) reaches only the Units standing beside it there. Only a pile's top projects an
-//!   aura and none reaches a card dormant beneath one (`layers::aura_sources`, R13); a Vanilla'd Totem has
-//!   no script. `applies` reads instance data only (zones), so the aura follows the Totem's zone as it
-//!   stands. Tunes: attack 3 ↑.
+//! Engine: an aura (§10.4 layer 5) over §3.1's adjacency of the Totem's own zone (R2197001): lanes N−1
+//!   and N+1 of its side and row, never itself; in the backrow (R1081000), the Units standing beside it.
+//!   Only a pile's top projects or gets an aura (`layers::aura_sources`, R13). `applies` reads zones only,
+//!   so the aura follows the Totem as it stands. Tunes: attack 3 ↑.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-021";
 
-/// R2197001: "Adjacent Units have +{attack} Attack": the Units in the zones beside this one.
 fn totem_aura() -> AuraHook {
     aura_hook(|a| {
         let Some(slot) = slot_of(a.state, a.self_) else {
@@ -45,11 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #21 Flame Tongue Totem — SPEC §8.11 row 21, BUILD M13 row TG 21: "a Unit in lane N−1 and one in lane
-// N+1 each read +3 Attack, Health unchanged; the Totem itself reads 0; a Unit two lanes away, an enemy Unit
-// in lane N, and a backrow card read nothing; a Unit beneath a Stack pile next to it gets nothing, and the
-// top does; the bonus leaves when the Totem leaves the field or when the neighbour moves away; a Vanilla'd
-// Totem gives nothing; the number reads through `param()`. radiant 0/8, +6 Attack to each neighbour".
+// TG #21 Flame Tongue Totem — SPEC §8.11 row 21, BUILD M13 row TG 21.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -64,8 +57,6 @@ mod tests {
     const PRINTED: i32 = 4;
     const AURA: i32 = 3;
 
-    /// p1 has the Totem (`radiant` its face) in lane 3 and Mr. Vanillas in lanes 2, 4 and 5; p2 has a
-    /// Mr. Vanilla in lane 3. p1's hand holds a Hit Job.
     fn board(radiant: bool) -> Scenario {
         crate::scenario(json!({
             "seed": "flame-tongue-totem",

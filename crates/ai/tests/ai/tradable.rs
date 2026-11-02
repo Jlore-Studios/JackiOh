@@ -1,8 +1,8 @@
-//! The Trade in the AI's search (R1838003): `legal_actions` lists it, the move order tries it after
-//! the plays and answers and before the other attacks, and the AI may trade or not. Every line runs on
-//! a determinized copy whose deck order is resampled (R185), so the card a Trade would draw never
-//! steers the decision. The cards: Meditative #98 Showdown, Tradable, which the AI cannot play at 0
-//! mana; Mr. Vanilla (core-008) and Stockpile (core-005) in the decks.
+//! The Trade in the AI's search (R1838003): `legal_actions` lists it, the move order tries it after the plays
+//! and answers and before the other attacks, and the AI may trade or not. Every line runs on a determinized
+//! copy whose deck order is resampled (R185), so the card a Trade would draw never steers the decision. The
+//! cards: Meditative #98 Showdown, Tradable, which the AI cannot play at 0 mana; Mr. Vanilla and Stockpile in
+//! the decks.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

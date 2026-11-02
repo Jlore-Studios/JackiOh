@@ -129,8 +129,7 @@ mod tests {
     const GOOD: &str = "core-008";
     const BAD: &str = "core-t-felinor";
     /// A (0) Spell p1 never plays: with it in hand p1's turn does not end by itself once Pareto is out
-    /// (R82), which it did before #2179 only because the new Cane could switch to Defense, which an
-    /// Indestructible card may not since (R2179000).
+    /// (R82), the Indestructible Cane having no switch to Defense (#2179, R2179000).
     const SPARE: &str = "core-010";
 
     /// The Cane `pareto` remembers.
@@ -172,9 +171,8 @@ mod tests {
             "p2": { "field": ["core-007"] },
         }));
         s.play(ID, json!({}));
-        // The Cane went to the leftmost open backrow zone behind Pareto (lane 2), remembered under
-        // "cane". It is Animated on your turn and entered on its controller's turn, so it animated
-        // as it entered (R383): it stands in the unit zone of its lane.
+        // The Cane took backrow lane 2 behind Pareto and, entering on its controller's turn, animated
+        // as it entered (R383).
         let cane_id = remembered_cane(&s, ID).expect("Pareto remembers its Cane");
         let cane = s.card(&cane_id);
         assert_eq!(cane.def_id, CANE);
@@ -211,8 +209,7 @@ mod tests {
     fn non_optimal_sends_cane() {
         let mut s = pareto_game(false);
         let cane = remembered_cane(&s, ID).expect("Pareto remembers its Cane");
-        // The 1/1 under the 4/4 at the same price: the worse-scored play sends the Cane, which
-        // animates for the one forced attack and goes home after it, it being p2's turn.
+        // The 1/1 under the 4/4 at the same price: the worse-scored play sends the Cane.
         s.play(BAD, json!({}));
         s.expect_events(json!([
             "cardResolved",
@@ -230,7 +227,6 @@ mod tests {
     #[test]
     fn optimal_or_own_play_does_not() {
         let mut s = pareto_game(false);
-        // The best-scored play sends nothing.
         s.play(GOOD, json!({}));
         assert!(
             !last_kinds(&s).contains(&"attackDeclared"),
@@ -281,7 +277,6 @@ mod tests {
     #[test]
     fn radiant_cane_emote_sends_it() {
         let mut s = pareto_game(true);
-        // The Radiant face summoned a Radiant Cane.
         let cane = remembered_cane(&s, ID).expect("Pareto remembers its Cane");
         assert!(s.card(&cane).radiant);
         // The opponent's emote is an action while Pareto hears it, and it sets the Cane off.
@@ -446,8 +441,6 @@ mod tests {
 
     #[test]
     fn judge_rates_the_better_body_optimal() {
-        // The judge behind the two plays above: from p2's own view, the 4/4 for (1) is the top
-        // score and the 1/1 for (1) is not, so only the second sends the Cane.
         let s = pareto_game(false);
         let hand = s.hand(P2);
         let id_of = |def_id: &str| {

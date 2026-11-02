@@ -3,8 +3,6 @@
 //! the seat's turn (or where it yields or the game ends) and scored there. `decide` scores the best
 //! of them again after the opponent's reply (reply.rs), and re-scores its finalists on the other
 //! determinizations with `score_line`.
-//!
-//! Port of `packages/ai/src/search.ts`.
 
 use std::cmp::Ordering;
 
@@ -41,18 +39,18 @@ struct OpenLine {
     score: f64,
 }
 
-/// `b.score - a.score` as a comparator: best first; a NaN difference reads as a tie, as `sort` read it.
+/// `b.score - a.score` as a comparator: best first; a NaN difference reads as a tie.
 fn by_score_desc(a: f64, b: f64) -> Ordering {
     b.partial_cmp(&a).unwrap_or(Ordering::Equal)
 }
 
-/// Best first; equal scores keep their order (`sort_by` is stable, as Array.prototype.sort is).
+/// Best first; equal scores keep their order (`sort_by` is stable).
 fn best_first_open(mut lines: Vec<OpenLine>) -> Vec<OpenLine> {
     lines.sort_by(|a, b| by_score_desc(a.score, b.score));
     lines
 }
 
-/// Best first; equal scores keep their order (`sort_by` is stable, as Array.prototype.sort is).
+/// Best first; equal scores keep their order (`sort_by` is stable).
 fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
     lines.sort_by(|a, b| by_score_desc(a.score, b.score));
     lines
@@ -138,18 +136,9 @@ fn expand(
     moves
 }
 
-/// Beam search on one determinization. The frontier starts at `det`. Each open line expands its first
-/// rootBranching (depth 0, of `root_expansion`, every placement kept, #1635) or branching (deeper)
-/// candidates, in the order `AI_MOVE_ORDER` names (`expansion`, R1171001), plus endTurn. Every child is
-/// simulated and scored with `evaluate`, a child waiting on the seat's own prompt where its answers
-/// lead (`own_prompt_score`, #1112); children whose status is not "open" become complete lines scored by
-/// terminalScore; an open child whose position (`search_signature` with `unit_lanes`, #1797) an earlier
-/// child reached is dropped; the best beamWidth open children (stable) form the next frontier. A child
-/// that differs from an earlier one only in its units' lanes is a lane variant (#1797): it takes no
-/// place in the frontier, at most `AI_SEARCH.zone_variants` - 1 of a position are kept, and when the
-/// frontier keeps the earlier one, the variant is closed after the loop, after the open lines. The loop
-/// stops at maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns
-/// complete lines, best first.
+/// Beam search on one determinization expanding `root_expansion` (#1635) then `expansion` (R1171001).
+/// Scores intermediate states (`own_prompt_score` #1112), drops transposition duplicates, tracks
+/// lane variants (#1797), and returns complete lines best first.
 pub fn beam_search(
     det: &GameState,
     seat: PlayerId,
@@ -285,7 +274,7 @@ pub fn beam_search_with(
 
     // Open lines at maxDepth, or where the counter refused, are closed where they stand; then the lane
     // variants (#1797), after every line the beam would close without them, so a tie goes to the first
-    // lane as before.
+    // lane.
     let open_lines = left_open
         .into_iter()
         .map(|line| (line.state, line.actions))
@@ -295,8 +284,7 @@ pub fn beam_search_with(
             continue;
         }
         let end = close_line(&state, seat, root_turn, counter, prices);
-        // TS asked whether `closeLine` handed back the very state it was given (no step was taken):
-        // a step always moves the state on, so equality answers the same question.
+        // Equality means `close_line` took no step: a step always moves the state on.
         let score = if end == state {
             line_score(&end, seat, NextSwing::Enemy, prices)
         } else {
@@ -314,15 +302,9 @@ pub fn beam_search_with(
     best_first_lines(complete)
 }
 
-/// Replay `actions` on another determinization. At the first action whose action_key is not in that
-/// state's candidate_actions (the first action's: the root's, `root_candidate_set`, #1635) the line is
-/// truncated, unless the seat's own prompt is open there (#1636): each world draws its own Discover
-/// offer, so the line's answer may not be one of this world's. The seat then answers the prompt as
-/// `own_prompt_score` does (`best_auto_answer`, nonce `line:${counter.used}`, each answer tried one
-/// node), at most AI_SEARCH.max_auto_answers prompts, drops the line's answer (any other action is
-/// tried again) and plays on. What is left ends its turn and is scored: after the opponent's reply
-/// when `reply` is set (`reply_score`, with `hidden` as there, by default the opponent's unseen cards
-/// in `det`), statically otherwise. `None` if the counter ran out.
+/// Replay `actions` on another determinization (`root_candidate_set`, #1635). If the line diverges
+/// at an own-prompt, auto-answers up to `max_auto_answers` (#1636). Closes turn and scores either
+/// with `reply_score` or statically.
 pub fn score_line(
     det: &GameState,
     seat: PlayerId,
@@ -342,7 +324,7 @@ pub fn score_line(
             break;
         }
         // Membership asks for the candidates' set only (candidate_set), not their move order, and an
-        // action is its own key: `==` on the body answers what action_key equality did.
+        // action is its own key, so `==` on the body is the test.
         let candidates = if at == 0 {
             root_candidate_set(&state, seat)
         } else {

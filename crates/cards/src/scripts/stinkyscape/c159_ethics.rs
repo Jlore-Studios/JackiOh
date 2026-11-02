@@ -45,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #159 Faction: ETHICS — SPEC §8.10 row S 159, BUILD M12 row S 159: "adds the 6 named cards in order, each
-// on its base face at its printed cost; a hand with room for fewer keeps the first and burns the rest;
-// radiant all of them Radiant".
+// S #159 Faction: ETHICS — SPEC §8.10 row S 159, BUILD M12 row S 159.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

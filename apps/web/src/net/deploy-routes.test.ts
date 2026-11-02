@@ -49,7 +49,7 @@ describe("vercel.json", () => {
 
   it("routes every screen in the route table, with or without a trailing slash", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays, the replay list's old home).
+      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays).
       .filter(([name]) => name !== "hotseat" && name !== "duosDev")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     expect(fixed).toContain(paths.privacy);
@@ -146,7 +146,6 @@ describe("vercel.json deployment flag", () => {
       "ai/improve-stack",
       "bot-state",
       "bot/issue-63",
-      // Squishy's state and issue branches.
       "squishy-state",
       "squishy/issue-63",
       "claude/stoic-tesla-837kse",

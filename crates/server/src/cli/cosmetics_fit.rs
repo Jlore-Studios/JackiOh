@@ -5,29 +5,15 @@
 //! jackioh-server cosmetics-fit
 //! ```
 //!
-//! Reads the loadouts people's seats froze over the last `BOT_COSMETIC_FIT_WINDOW_DAYS`
-//! (`matches.loadouts`, migration 0061; a ladder bot's seat is never one) and what each of those
-//! people owns now (the ledger), and buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`):
-//! a seat by its account's age as its match began, a person by their age at their latest match.
-//! Each bucket of at least `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be
-//! pasted into `BOT_COSMETIC_FITS` in `crates/server/src/config.rs` by hand (CLAUDE.md rule 9), and
-//! a bucket under it prints a comment, so its row keeps the prior. A row holds:
-//!
-//!  - `slots`: each cosmetic's share of the seats wearing it in its slot, the six of a seat's
-//!    loadout, defaults included;
-//!  - `per_card_share`: the share of seats with a card of their own picks (a foil, a finish or a
-//!    border of its own), and `cards_per_deck_mean` the mean number of such cards those seats hold;
-//!  - `card_picks`: each default's and starter's foil, finish and border's share of those cards'
-//!    picks of one, which every card may wear, so the share holds on any card a bot dresses;
-//!  - `earned_wear`: each earned foil, finish and border on its card (it is owned only on a card,
-//!    so never in `slots`, and a share pooled over every card would hold on none): of the seats
-//!    whose person owns it there and whose deck holds the card, the share whose card wears it
-//!    (ownership read now, as for `full_art_wear`);
-//!  - `full_art_wear`: of the seats whose person owns a full art and whose deck holds its card, the
-//!    share that printed that one, of its card's tiers (R2655000; ownership read now, so a full art
-//!    granted after a match counts it as not printed);
-//!  - `ownership`: each non-starter's share of the bucket's people that own it, on its card for a
-//!    per-card one.
+//! Reads the loadouts people's seats froze over the last `BOT_COSMETIC_FIT_WINDOW_DAYS` (`matches.loadouts`,
+//! migration 0061; a ladder bot's seat is never one) and what each of those people owns now (the ledger),
+//! and buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`): a seat by its account's age as its
+//! match began, a person by their age at their latest match. Each bucket of at least
+//! `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be pasted into `BOT_COSMETIC_FITS` in
+//! `crates/server/src/config.rs` by hand (CLAUDE.md rule 9); a smaller one prints a comment, so its row
+//! keeps the prior. Ownership is read now, so a full art or an earned foil, finish or border granted after
+//! a match counts as not worn there; `full_art_wear` is the share that printed that one of its card's
+//! tiers (R2655000).
 //!
 //! The output is aggregates only: no account id or username.
 
@@ -53,7 +39,6 @@ const USAGE: &str = "Usage: jackioh-server cosmetics-fit
   paste into BOT_COSMETIC_FITS in crates/server/src/config.rs. Takes no options; reads
   DATABASE_URL.";
 
-/// The comment line the printed rows open with.
 const HEADER: &str =
     "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs";
 
@@ -73,7 +58,6 @@ pub struct BucketCosmetics {
     pub ownership: Vec<(String, Option<String>, f64)>,
 }
 
-/// The buckets in the order they print: each bound's, then the one past the last.
 fn buckets() -> Vec<Option<i64>> {
     BOT_COSMETIC_AGE_BUCKETS_DAYS
         .iter()
@@ -397,13 +381,11 @@ pub async fn read_samples(
     Ok((samples, owned))
 }
 
-/// `cosmetics-fit`'s arguments after the subcommand (`main.rs`): none.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
         bail!("Unrecognized argument {}.\n\n{USAGE}", quoted(arg));
     }
     let connection_string = database_url()?;
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     let since = crate::app::now_ms() - BOT_COSMETIC_FIT_WINDOW_DAYS * MS_PER_DAY;
     let read = read_samples(&db, since).await;

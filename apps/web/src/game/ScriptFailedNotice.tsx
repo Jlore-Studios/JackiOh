@@ -1,8 +1,8 @@
 // R915004: a custom card's hook that failed did nothing, and the board says so (SPEC §12.5). The
 // engine's `scriptFailed` names the card and the reason; this notice shows the newest one a view
-// brings, "{card}'s script failed: {message}", beside the board until the player dismisses it or the
-// next failure replaces it. The log keeps every one (Log.tsx), the animation table fades the card
-// (animations.ts) and the cue sounds (audio/cues.ts); this is the line a player cannot miss.
+// brings beside the board until the player dismisses it or the next failure replaces it. The log
+// keeps every one (Log.tsx), the animation table fades the card (animations.ts) and the cue sounds
+// (audio/cues.ts); this is the line a player cannot miss.
 //
 // Read off the NEWEST view, as the draw offer's notices are: it changes no board position. Only the
 // events a view adds count (`newEventsSince`, as the runner reads them), so a resumed game or a
@@ -18,7 +18,6 @@ import { newEventsSince } from "./animations.ts";
 import { CatalogContext, withMatchDefs } from "./catalog.ts";
 import "./notices.css";
 
-/** The notice and its dismiss button. */
 export const scriptFailedTestid = {
   notice: "script-failed-notice",
   dismiss: "script-failed-dismiss",

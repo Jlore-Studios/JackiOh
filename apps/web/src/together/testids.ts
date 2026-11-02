@@ -6,10 +6,9 @@ export const togetherTestid = {
   root: "together",
   addInput: "together-add-input",
   addSubmit: "together-add-submit",
-  /** The server's refusal of an add (B55), in its own words. */
+  /** B55: the server's refusal of an add. */
   addError: "together-add-error",
   addSent: "together-add-sent",
-  /** A refusal of any other action on the page. */
   error: "together-error",
   /** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
   friendRow: "together-friend-row",
@@ -22,7 +21,7 @@ export const togetherTestid = {
   unread: "together-unread",
   remove: "together-remove",
   block: "together-block",
-  /** The inline "are you sure" of Block; Remove asks nothing and offers Undo (R2119000). */
+  /** Block's inline question; Remove asks nothing (R2119000). */
   confirm: "together-confirm",
   keep: "together-keep",
   /** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`. */
@@ -36,12 +35,10 @@ export const togetherTestid = {
   challengeForm: "together-challenge-form",
   challengeDeck: "together-challenge-deck",
   challengeTrio: "together-challenge-trio",
-  /** R2031000: under All Random only, "More cards from" (R924000), a select. */
   challengeLean: "together-challenge-lean",
   challengeSend: "together-challenge-send",
   challengeClose: "together-challenge-close",
   challengeError: "together-challenge-error",
-  /** #1568: a failed deck read offers Try again beside the alert. */
   challengeDecksRetry: "together-challenge-decks-retry",
   /** R915005: under a deck or trio picker that lists one naming a custom card: why it is off. */
   challengePracticeOnly: "together-challenge-practice-only",
@@ -54,12 +51,10 @@ export const togetherTestid = {
   noShared: "together-no-shared",
   /** #1568: a failed shared list offers Try again beside the alert. */
   sharedRetry: "together-shared-retry",
-  /** #1691: a failed friends list says why, and Try again reads it again. */
   friendsError: "together-friends-error",
   friendsRetry: "together-friends-retry",
 } as const;
 
-/** A mode's radio in the challenge form: `together-challenge-mode-bo1|bo3|random`. */
 export function challengeModeTestid(mode: "bo1" | "bo3" | "random"): string {
   return `together-challenge-mode-${mode}`;
 }
@@ -74,7 +69,7 @@ export const chatTestid = {
   close: "chat-close",
   error: "chat-error",
   join: "chat-join",
-  /** #1898: a failed read of the conversation says why, and Try again reads it again. */
+  /** #1898: a failed read of the conversation. */
   readError: "chat-read-error",
   retry: "chat-retry",
   earlier: "chat-earlier",
@@ -82,23 +77,21 @@ export const chatTestid = {
   reportReason: "chat-report-reason",
   reportSend: "chat-report-send",
   reported: "chat-reported",
-  /** R2120000: one per message sent from this panel that no answer has replaced yet: `data-state` (`sending|failed`), `data-from="you"`. */
+  /** R2120000: a send no answer has replaced yet: `data-state` (`sending|failed`), `data-from="you"`. */
   pending: "chat-pending",
   pendingRetry: "chat-pending-retry",
   pendingDiscard: "chat-pending-discard",
 } as const;
 
-/** #1831: the Friends button every signed-in screen has at the top right, and its panel. */
+/** #1831: the Friends button and its panel. */
 export const friendsTestid = {
   button: "friends-button",
-  /** What needs the player: incoming requests, incoming challenges and unread chats. */
   badge: "friends-badge",
   panel: "friends-panel",
   close: "friends-close",
   copy: "friends-copy",
   /** A refusal of a request answered from the panel. */
   error: "friends-error",
-  /** #1691: a failed friends list says why, and Try again reads it again. */
   listError: "friends-list-error",
   listRetry: "friends-list-retry",
   /** The link to all of Play together. */
@@ -116,7 +109,7 @@ export const challengeToastTestid = {
   practiceOnly: "challenge-toast-practice-only",
   /** R2031000: an All Random challenge's "More cards from" (R924000), a select. */
   lean: "challenge-toast-lean",
-  /** R767's way in: `/play` with the room's code filled in, offered after a refused join. */
+  /** R767: `/play` with the room's code filled in, after a refused join. */
   lobby: "challenge-toast-lobby",
   error: "challenge-toast-error",
 } as const;
@@ -124,14 +117,13 @@ export const challengeToastTestid = {
 export const watchTestid = {
   /** `data-connection` (`connecting|open|closed|refused`). */
   screen: "watch-screen",
-  /** The panel before the first view: the wait, or (#1599) the notice that the reopens ran out. */
   waiting: "watch-waiting",
   refused: "watch-refused",
   /** #1599: the sentence that stands in for the wait once the reopens ran out before any view. */
   gone: "watch-gone",
   status: "watch-status",
   back: "watch-back",
-  /** #1570: "Reconnect now", once the screen's own reopens have run out on a game still running. */
+  /** #1570: "Reconnect now", once the reopens ran out on a game still running. */
   reconnect: "watch-reconnect",
 } as const;
 

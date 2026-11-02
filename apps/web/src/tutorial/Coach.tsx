@@ -1,8 +1,6 @@
 // Coach bubble and anchor ring (SPEC §9.10, R292): wait for board animation and keep controls clear.
-// R2434003: on a desktop the bubble docks to a corner, never the middle of the board; the ring is the
-// pointing at a target.
-// R314: it never skips or blocks play; focus stays in prompts and dialogs.
-// CLAUDE.md rule 7: anchors come from view testids.
+// R2434003: on a desktop the bubble docks to a corner; the ring does the pointing. R314: it never skips
+// or blocks play; focus stays in prompts and dialogs. CLAUDE.md rule 7: anchors come from view testids.
 
 import {
   useCallback,

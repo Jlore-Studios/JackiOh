@@ -1,5 +1,4 @@
 // The collection as the builder reads it, and the shelf of cards the pool offers.
-//
 // NO RULE LIVES HERE (CLAUDE.md rule 7). Whether a deck or a trio is legal is
 // `@jackioh/validator`'s alone (SPEC §9.4, R253), called from workshop.ts; this module only turns
 // `GET /api/collection` into the validator's `Collection` and lists the cards a deck could hold.
@@ -27,10 +26,8 @@ export function collectionFrom(
 /**
  * The cards offered in the pool: everything the profile owns that the catalog knows about, in
  * catalog order (every non-token card when `collection` is null). Tokens are left out because
- * R251 and L3 keep them out of every deck, and so are the cards of a set that has not shipped
- * (R1420) — the pool is a shelf of cards a deck can hold, and the validator still has the last word
- * on anything that reaches a deck by another route (an import). A custom card the screen put in the
- * catalog is the player's own (set `Custom`, R915005), so it is shelved though its set never ships.
+ * R251 and L3 keep them out of every deck: the pool is a shelf of cards a deck can hold, and the
+ * validator still has the last word on anything that reaches a deck by another route (an import).
  */
 export function poolFrom(catalog: CatalogSnapshot, collection: Collection | null): readonly string[] {
   const ids = Object.keys(catalog.cards).filter((id) => {

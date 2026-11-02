@@ -1,6 +1,5 @@
 // #1442: each flavor's look, and a Ranged attacker firing its flavor's shot instead of lunging.
-// `#1444` turned `FX_FLAVOR_LIVE` on, so every plan here runs with flavor live. Every plan here is
-// `planStage`'s, against a view's public facts alone (R202).
+// Every plan here runs with flavor live (`FX_FLAVOR_LIVE`, #1444), against a view's public facts alone (R202).
 
 import type { CardDef, Flavor, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -39,7 +38,6 @@ const ENEMY = "u6";
 
 const tid = (testid: string): FxAnchor => ({ kind: "testid", testid });
 
-/** `fullBoardView` with the unit `id` given Ranged (and whatever else `over` sets). */
 function rangedBoard(id: string, over: Partial<UnitView> = {}): PlayerView {
   const view = fullBoardView();
   const patch = (unit: UnitView | null): UnitView | null =>
@@ -128,7 +126,6 @@ describe("#1442 the looks", () => {
       Chaos: { motion: "bolt", trail: "prismatic" },
     };
     for (const flavor of FLAVORS) expect(FLAVOR_LOOKS[flavor].projectile, flavor).toMatchObject(shots[flavor]);
-    // Only Brute's boulder shakes the board.
     for (const flavor of FLAVORS) {
       const shot = FLAVOR_LOOKS[flavor].projectile;
       expect(shot.motion === "arc" && shot.shake === true, flavor).toBe(flavor === "Brute");
@@ -148,7 +145,6 @@ describe("#1442 the looks", () => {
     }
     // It varies with the id, and over enough ids it reaches more than a couple of the fourteen.
     expect(seen.size).toBeGreaterThan(2);
-    // Every other flavor draws its own row.
     expect(flavorLook("Fire", "u1")).toBe(FLAVOR_LOOKS.Fire);
   });
 });
@@ -247,7 +243,6 @@ describe("#1442 a Ranged attacker fires its flavor's shot", () => {
     expect(cues[1]).toMatchObject({ kind: "shot", shot: FLAVOR_LOOKS.Brute.projectile, preset: "dust" });
     expect(cues[2]).toEqual({ kind: "shake", trauma: FX_SHOT_SHAKE_TRAUMA, delayMs: D });
     expect(FX_SHOT_SHAKE_TRAUMA).toBe(0.3);
-    // The shake follows the intensity.
     expect(attack(view, MINE, ENEMY, { D, intensity: FX_INTENSITY_SCALE.high })[2]).toMatchObject({
       kind: "shake",
       trauma: Math.min(1, FX_SHOT_SHAKE_TRAUMA * FX_INTENSITY_SCALE.high),

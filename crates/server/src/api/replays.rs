@@ -1,39 +1,15 @@
-//! Online replays (SPEC §9.3, R768, issue #510): a finished match, a page of steps at a time, for
-//! the two accounts that played it.
+//! Online replays (SPEC §9.3, R768, #510).
 //!
-//! `GET /api/replays?offset=` lists the caller's finished matches whose action log the retention
-//! purge has not taken yet (`MATCH_ACTION_RETENTION_DAYS`), newest first, `REPLAY_LIST_PAGE` to a
-//! page: each one's id, mode, end, the seat the caller began in, the result for the caller, its turns
-//! and steps, both seats' portraits (R641, R642), the opponent's profile id and username, read now as
-//! the match screen reads them (R1436), and, when it is known without folding it that this build
-//! cannot show it, part 1's reason (`unavailable`): a catalog version it neither is nor carries
-//! (R767000), or an opening still kept that refused it (#1825).
+//! `GET /api/replays?offset=` lists caller's finished matches within `MATCH_ACTION_RETENTION_DAYS`,
+//! paginated by `REPLAY_LIST_PAGE` with portraits (R641, R642) and opponent usernames (R1436).
+//! Flags unplayable replays under unsupported catalog versions (R767000, #1825).
 //!
-//! `GET /api/replays/:matchId?from=&count=` answers steps `[from, from + n)` of the caller's replay,
-//! `n` at most `count` and `REPLAY_PAGE_STEPS`, and fewer where a Glitch's swap moves the caller to
-//! the other seat or where the engine's page ends early (R768); the next page starts at
-//! `from + steps.len()`. A step is `view_for` of the seat the caller played at that step (R677) and
-//! its turn, which is exactly what that seat's live view showed (R97, CLAUDE.md rule 7). R1834002,
-//! R1834003: beside the steps, both seats' loadouts as the match froze them (every default for a
-//! match from before them), and the card picks of the cards the page's steps show, by the rule the
-//! live sockets keep (`loadout::shown_defs`). Nothing else leaves: no seed, no log, no state, no
-//! deck. An account that held no seat gets the same 404 as a
-//! match that does not exist, so a match id's existence never leaks, unless a seat holder still its
-//! friend shared the replay with it (B52, `replay_reader`), when it reads the sharer's seat's steps
-//! as the sharer would. A match still open or live is 409; one whose log is purged 410 `gone`; one
-//! this build cannot show 422 `replay_unavailable`, with part 1's reason in `details.reason`.
+//! `GET /api/replays/:matchId?from=&count=` streams seat-filtered steps (R677, R97, CLAUDE.md rule 7),
+//! loadouts (R1834002, R1834003), and support for shared replays (B52).
+//! Replays fold under original catalog versions and All Random deals (R433, R112).
 //!
-//! The fold is the actor's rebuild's (`registry.rs`): the row's seed, frozen decks, last boards and
-//! Glitch boards, its log, and the dealt seats of an All Random match (R433), under the catalog
-//! version the match was played on when this build carries it (R767000). It is held to the final
-//! hash the result recorded (migration 0035). A match that ended before 0035, or that the reaper
-//! resolved (R112), has none, so its fold is held to its results row instead: the same winner, reason
-//! and turn count, and then to the hash of the state it ends on.
-//!
-//! Bounded cost: an opened replay (its checkpoints, R768) is kept in memory for at most
-//! `REPLAY_CACHE_TTL_SECONDS`, at most `REPLAY_CACHE_MATCHES` of them, the one used longest ago going
-//! first; a list opens none; and both routes together are held to
-//! `REPLAY_REQUESTS_PER_MINUTE` an account, a second limiter of the kind R109's is.
+//! Cached in memory (up to `REPLAY_CACHE_MATCHES`, `REPLAY_CACHE_TTL_SECONDS`), rate limited
+//! to `REPLAY_REQUESTS_PER_MINUTE` per account (R109).
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
@@ -598,7 +574,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     })
 }
 
-// ---- Social: watching and shared replays (#939, #940) ----
+// Social: watching and shared replays (#939, #940)
 
 use crate::db::store::{MatchSeats, StoreError, Tx};
 
@@ -628,4 +604,3 @@ async fn replay_reader(
         .find(|sharer| seats.players.contains(sharer));
     Ok(sharer.map(|sharer| (seats, sharer)))
 }
-// ---- end Social: watching and shared replays ----

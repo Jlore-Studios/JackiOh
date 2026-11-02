@@ -36,9 +36,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #147.2 Wardrum Blob — SPEC §7 row 147.2, BUILD M12 row S 147.2: "while it stands, your view marks the
-// optimal hand cards on each of your turns (R1844001); Start of turn: the perfect pool's top card cast
-// free, the same state casting the same card, counted as a play (R1844002); radiant: the pick Radiant".
+// S #147.2 Wardrum Blob — SPEC §7 row 147.2, BUILD M12 row S 147.2 (R1844001, R1844002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -52,7 +50,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1 with the Blob face-up in the backrow, `active` to act.
     fn fielded(seed: &str, radiant: bool, active: &str, hand: Value) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -66,7 +63,6 @@ mod tests {
         }))
     }
 
-    /// The instance ids of p1's hand cards their own view marks optimal.
     fn marked(s: &Scenario) -> Vec<String> {
         let HandView::Cards(hand) = s.view(P1).you.hand else {
             panic!("p1's own hand is full cards");
@@ -77,7 +73,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's plays among `events`: the instance, its def and what it cost.
     fn plays(events: &[GameEvent]) -> Vec<(String, String, i32)> {
         events
             .iter()
@@ -94,7 +89,6 @@ mod tests {
             .collect()
     }
 
-    /// p2 ends their turn, so p1's begins with the Blob standing.
     fn helped(seed: &str, radiant: bool) -> (Scenario, Vec<(String, String, i32)>) {
         let mut s = fielded(seed, radiant, "p2", json!([VANILLA]));
         s.end_turn();

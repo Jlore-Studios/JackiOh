@@ -66,10 +66,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97 Jlockeed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97: "Discovers one of three
-// different buildings out of the nine (M 97.1 to M 97.9), shown to you only (MD-F11), the pick to
-// your hand, the hand cap burning it; every building can be offered, and never a card outside the
-// nine; the opponent sees a prompt and a hidden card; radiant the building is Radiant".
+// M 97 Jlockeed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97 (MD-F11).
 #[cfg(test)]
 mod tests {
     use super::{BUILDINGS, ID};
@@ -206,7 +203,6 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
             }));
 
-            // P1 hand has 11 cards (ID + 10 FILLER). Playing ID consumes 1 card, leaving 10 in hand.
             s.play(ID, json!({}));
             assert_eq!(s.hand(P1).len(), 10, "hand is full (10 cards) after play");
 
@@ -230,7 +226,7 @@ mod tests {
                 open_pending(s.state()).prompt.clone()
             };
             assert_eq!(prompt(), "Jlockeed's Evil Blueprints: Discover a building");
-            // v0.3.7 printed the name with the faction spelled the designer's way (patch v0.3.Y, #1067).
+            // Older versions spelled the faction the designer's way (#1067).
             let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             let named = &shipped.defs()[ID].name;
             assert_ne!(*named, crate::card_def(ID).name);

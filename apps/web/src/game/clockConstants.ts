@@ -7,9 +7,8 @@
 export const MS_PER_SECOND = 1000;
 
 /**
- * R439: the final stretch of a turn clock. From here the readout turns urgent: red, labeled, with a
- * gauge, and on the viewer's own clock the ember fuse and the heartbeat. The readout rounds up
- * (`formatClock`), so the stretch starts exactly when it first reads "30s".
+ * R439: the final stretch of a turn clock. The readout rounds up (`formatClock`), so the stretch
+ * starts exactly when it first reads "30s".
  */
 export const TURN_CLOCK_FINAL_MS = 30 * MS_PER_SECOND;
 

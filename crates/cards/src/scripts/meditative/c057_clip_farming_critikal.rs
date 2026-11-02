@@ -55,7 +55,6 @@ fn critikal(radiant: bool) -> Script {
             let Some(card) = previous_play(ctx.state, ctx.controller, ctx.live_self()) else {
                 return vec![];
             };
-            // From your graveyard or exile it moves to your hand ("Return … to hand", R746).
             if matches!(card.zone, Zone::Graveyard { player } | Zone::Exile { player } if player == ctx.controller)
             {
                 return vec![add_to_hand(json_as(json!({
@@ -63,8 +62,6 @@ fn critikal(radiant: bool) -> Script {
                     "radiant": radiant,
                 })))];
             }
-            // A permanent you control is Bounced (R692, R747); the Radiant face makes it Radiant
-            // first, so the Bounce carries it home. Anywhere else nothing happens.
             if matches!(card.zone, Zone::Field { .. }) && card.controller == ctx.controller {
                 if radiant {
                     return vec![
@@ -97,12 +94,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #57 Clip-Farming Critikal — SPEC §8.8 row 57, BUILD M10 row M 57: "Combo: played after another
-// card this turn, that previous play (a cast counting, R70) returns from your graveyard or exile
-// to your hand, or is Bounced from your side of the field (R1081); a unit token vanishes; a card
-// in a deck or a hand, one that has ceased to exist, or one on the opponent's side, nothing;
-// played first, nothing; the hand cap burns it; radiant 8/2 (10/2 before patch v0.3.10) and the returned card is made
-// Radiant".
+// M #57 Clip-Farming Critikal — SPEC §8.8 row 57, BUILD M10 row M 57.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,8 +160,7 @@ mod tests {
             fn r1081_r2179002_a_cast_on_draw_is_no_previous_play() {
                 crate::register_all();
                 // The Love Bomb on top of the library casts on the opening draw: a cast on draw is no
-                // play (R2179002), so Critikal is the turn's first card and returns nothing (through
-                // v0.5.2 it was a play, R70, and the Bomb came back).
+                // play (R2179002), so Critikal is the turn's first card and returns nothing.
                 let mut s = scenario(json!({
                     "seed": "critikal-cast",
                     "p1": {

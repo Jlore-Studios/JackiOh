@@ -42,9 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-7 Combat Subroutine — SPEC §8.10 row T-AI-7, BUILD M12 row S T-AI-7: "its Cry gives each other Unit
-// its controller has one random combat keyword it lacks, each drawn on its own (R1881004); itself and the
-// enemy's Units none; radiant 4/4 and two each".
+// S T-AI-7 Combat Subroutine — SPEC §8.10 row T-AI-7, BUILD M12 row S T-AI-7 (R1881004).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

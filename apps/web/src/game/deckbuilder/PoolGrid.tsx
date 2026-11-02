@@ -1,53 +1,15 @@
-// The card pool as a grid of full cards (docs/polish/6-cards.md, Surface D).
-//
-// Every pool entry is a `div.db-item` holding two buttons:
-//   - `card-pool-<id>`, the card itself: `data-card`, `data-legal` ("false" when the open deck will
-//     not take it), `data-in-deck="true"` when the open deck holds it, `data-unavailable="true"` and
-//     `data-held-by="<deck name>"` when a deck it is being compared with holds it (R251: a card is
-//     its catalog id, so one copy per trio), `data-refused`, `data-owned`, `aria-disabled` and
-//     `draggable`. It draws the base face as a `CardFace` and badges where the card already is
-//     (`.db-held`: "In deck", or "In <deck name>").
-//   - `db-add-<id>`, the "+" that puts the card in the open deck in one tap.
-//
-// A click on the card opens its detail view, as the brief asks ("in the deck builder, a click opens
-// a detail view with both faces side by side and a glossary"), and the detail's "Add to <deck>"
-// adds it. So does a right-click, or a touch long-press, which is why the inspect trigger here
-// hands both gestures to `onInspect`. Adding takes one gesture still: the "+", or a drag onto the
-// deck. A resting mouse opens no preview, but on a card whose face prints less than its whole text
-// (issue #1017: a short form or a clamp, cards/CardFace.tsx `faceText`): its preview has the whole
-// text on the face's left.
-//
-// A card of the newest shipped set wears a small "New" ribbon (`.db-new`) for the patch that ships
-// the set and the one after (R1383, patches/ribbon.ts); its accessible name says "new".
-//
-// The card's accessible name is the card, not just its name: cost, type, rarity, the deck that
-// holds it, and what a click does. The face inside is decoration to a screen reader (it repeats
-// the name), and the detail view reads the rules out in full.
-//
-// READ-ONLY, for the Card Almanac (R630): given none of the deck editor's props, the grid has no
-// "+", no card is draggable, and no card carries `data-legal`, `data-in-deck`, `data-unavailable`,
-// `data-held-by`, `data-refused`, `data-owned` or `aria-disabled`, since there is no deck to put
-// it in. A click, a right-click and a long-press still open the detail.
-//
-// R1956000: a card the viewer owns is drawn as their own copy and wears their picks for it (the
-// foil, finish, border and full art of R1655000): below the deck builder's `OwnCopy` every card
-// the collection does not say is unowned, and in a read-only grid the cards `own` names, behind the
-// ownership it carries (the signed-in Almanac's). Every other card draws the defaults.
-//
-// #2266: the Almanac draws about 700 cards, so each card is memoized (`PoolCard`) and gets the grid's
-// own handlers, which never change and call the screen's latest. A filter, a sort, an ownership
-// change, an opened detail or a card the deck takes re-renders only the cards it changes. A pool
-// that grows (the first render, a cleared search) keeps the cards it drew until a background render
-// (`useDeferredValue`), which yields to input, has drawn the rest. The first render draws
-// POOL_FIRST_CARDS at once.
-//
-// #2334: the Almanac's grid is `virtual`: it mounts only the rows of cards near what is in view
-// (poolWindow.ts, usePoolWindow.ts), since even staged, the 700 cards of its pool cost more to mount
-// than the 481 it once held. The grid's own rows keep the height of the rows left out, so the
-// scrollbar and each card's place are the whole pool's. A card that has focus stays mounted where
-// the pool scrolls away from it, and the cards just past the view are mounted before the keyboard
-// reaches them, so every card is reachable by Tab. The browser's find-in-page sees only the
-// cards that are mounted. A page with no layout to read (a test's jsdom) draws every card.
+// The card pool as a grid of full cards (docs/polish/6-cards.md, Surface D). Every entry is a `div.db-item`
+// holding the card, `card-pool-<id>` (`data-held-by` when a compared deck holds it, R251: a card is its
+// catalog id, so one copy per trio), and `db-add-<id>`, the "+" that adds it in one tap. A click, right-click
+// or long-press opens the detail view ("Add to <deck>"). A resting mouse opens a preview only on a card whose
+// face prints less than its whole text (#1017). The face is decoration to a screen reader. READ-ONLY, for the
+// Card Almanac (R630): given none of the deck editor's props, no "+", no drag, no `data-*` or `aria-disabled`.
+// R1956000: a card the viewer owns is drawn as their own copy with their picks (R1655000's foil, finish,
+// border, full art): below the deck builder's `OwnCopy` every card the collection does not say is unowned,
+// in a read-only grid the cards `own` names. #2266: the Almanac draws ~700 cards, so each is memoized
+// (`PoolCard`). #2334: a `virtual` grid mounts only rows near the view (poolWindow.ts, usePoolWindow.ts), its row
+// tracks keep the rest's height, and cards just past the view mount so every card is reachable by Tab.
+// Find-in-page sees only mounted cards; a page with no layout (a test's jsdom) draws every card.
 
 import {
   memo,
@@ -79,8 +41,7 @@ import type { Holder } from "./workshop.ts";
 
 /**
  * How many of the pool's cards a grid's first render draws (#2266): more than any screen shows at
- * once. The rest follow in a render that yields to the pointer and the keyboard; in a virtual grid,
- * they are the rows its layout puts near the view, read before the first paint.
+ * once. The rest follow in a render that yields to the pointer and the keyboard.
  */
 export const POOL_FIRST_CARDS = 48;
 
@@ -91,9 +52,8 @@ export type PoolPlace = "deck" | Holder | null;
 export type OwnCopies = { cards: ReadonlySet<string>; owned: CardOwnership };
 
 /**
- * R1956000: `children` drawn as the viewer's own copy of `cardId`, owning what `own.owned` holds,
- * when `own` names the card; as the providers above say otherwise. It always renders both
- * providers, so a face below it keeps its place in the tree when `own` arrives.
+ * R1956000: `children` drawn as the viewer's own copy of `cardId`, owning what `own.owned` holds, when `own`
+ * names the card. It always renders both providers, so a face below keeps its place when `own` arrives.
  */
 export function AsOwnCopy({
   own,
@@ -113,7 +73,6 @@ export function AsOwnCopy({
   );
 }
 
-/** What every grid needs: the cards to show and the detail view a card opens. */
 type PoolGridBaseProps = {
   /** The visible pool, already filtered and sorted (`visiblePool`, or the almanac's `almanacPool`). */
   ids: readonly string[];
@@ -133,7 +92,6 @@ export type PoolGridDeckProps = {
   deckName: string;
   /** Null when the collection could not be read: then nothing claims to be owned or unowned. */
   collection: Collection | null;
-  /** The cards the open deck holds. */
   inDeck: ReadonlySet<string>;
   /** Card id → the compared deck that holds it (R251). */
   holders: ReadonlyMap<string, Holder>;
@@ -171,7 +129,6 @@ type PoolItemProps = {
   onInspect: (cardId: string) => void;
 };
 
-/** The grid's handlers, the same functions on every render, each calling the screen's latest. */
 type PoolHandlers = Pick<PoolItemDeck, "onAdd" | "onDragStart" | "onDragEnd"> & { onInspect: (cardId: string) => void };
 
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
@@ -181,10 +138,8 @@ export function placeWords(place: PoolPlace): string | null {
 }
 
 /**
- * The pool card's accessible name: "Bigot, Unit, (2) Cost, Common, in Control, unavailable. Show details" (R432).
- * A read-only card (the almanac) has no place and no ownership: "Bigot, Unit, (2) Cost, Common. Show details".
- * A token that prints a rarity (R503) is named by both, as its face shows both (R1177001):
- * "Top Loser, Unit, (2) Cost, Token, printed Legendary. Show details".
+ * The pool card's accessible name (R432). A token that prints a rarity (R503) is named by both, as
+ * its face shows both (R1177001).
  */
 export function poolCardLabel(
   def: CardDef,
@@ -211,11 +166,8 @@ const SEES_NEAR =
   typeof HTMLElement !== "undefined" && "oncontentvisibilityautostatechange" in HTMLElement.prototype;
 
 /**
- * A pool card's face, drawn the first time the browser un-skips its holder and kept after. A face
- * still skipped holds nothing: reading the style of anything inside a skipped face forces a layout
- * of the whole page, so a pool of skipped faces, each built at once, cost a page layout per face to
- * whatever reads them all (axe, in spec 38, ran past its timeout once Stinkyscape joined the pool).
- * A browser without the event draws every face at once, as before.
+ * A pool card's face, drawn the first time the browser un-skips its holder and kept after; a skipped face
+ * holds nothing, since reading its style forces a layout of the whole page. No event: every face at once.
  */
 function PoolFace({ children }: { children: ReactNode }): ReactElement {
   const holder = useRef<HTMLSpanElement>(null);
@@ -273,9 +225,8 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
         className="db-card"
         data-testid={poolCardId(cardId)}
         data-card={cardId}
-        // `e2e/support/testids.ts` already exports this as ILLEGAL (M5-T2's vocabulary): a card the
-        // builder will not put in the open deck, because it is there already or a compared deck
-        // holds it.
+        // `e2e/support/testids.ts` exports this as ILLEGAL: a card the builder will not put in the
+        // open deck, because it is there already or a compared deck holds it.
         data-legal={deck === null ? undefined : place === null ? "true" : "false"}
         data-in-deck={place === "deck" ? "true" : undefined}
         data-unavailable={place !== null && place !== "deck" ? "true" : undefined}
@@ -370,7 +321,6 @@ function samePoolItem(before: PoolItemProps, after: PoolItemProps): boolean {
 /** A filter, sort, ownership or deck change re-renders only the cards it changes (#2266). */
 const PoolCard = memo(PoolItem, samePoolItem);
 
-/** One card's share of the deck editor's props, or null for a read-only grid. */
 function itemDeck(props: PoolGridProps, cardId: string, handlers: PoolHandlers): PoolItemDeck | null {
   if (props.onAdd === undefined) return null;
   const { deckName, collection, inDeck, holders, refusedCardId } = props;
@@ -442,8 +392,7 @@ function StagedPool(props: PoolGridProps): ReactElement {
   const handlers = usePoolHandlers(props);
   // A pool that grows draws only as many of its own cards as the last render drew, until the
   // background render has drawn the rest, so the grid never shows a card the pool no longer holds;
-  // one that shrinks or reorders is drawn at once (a plain deferred list made a narrowing search
-  // slower).
+  // one that shrinks or reorders is drawn at once.
   const deferred = useDeferredValue(ids, ids.slice(0, POOL_FIRST_CARDS));
   const shown = ids.length > deferred.length ? ids.slice(0, deferred.length) : ids;
 
@@ -454,7 +403,6 @@ function StagedPool(props: PoolGridProps): ReactElement {
   );
 }
 
-/** The grid area of the card at `at`: its row and column, and the lines they end on. */
 function cellOf(at: number, columns: number): string {
   const row = Math.floor(at / columns) + 1;
   const column = (at % columns) + 1;

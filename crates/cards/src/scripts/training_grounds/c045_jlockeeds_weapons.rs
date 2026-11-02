@@ -54,12 +54,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +3 attack, Rush, First Strike
-// while present; later summons get it; gone when destroyed; radiant +6". The keywords are tested
-// through the rules: Rush (§4.1) as a fresh unit attacking, First Strike (§4.3 step 1) as the ally
-// killing Bigot (4/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
-// CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed on the ally Field Spell (its target
-// is unnarrowed, §8 Conventions), the only in-game way a test can take a Field Spell off the board.
+// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14, §4.1, §4.3 step 1, R1, #36, §8 Conventions).
+// Allies gain attack, Rush, First Strike while present; removed via #36 Magic Jammed.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

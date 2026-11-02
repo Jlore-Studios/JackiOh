@@ -1,6 +1,5 @@
-// The opponent's-play showcase as the player sees it (CardShowcase.tsx): held up for about a second
-// from the redacted view alone, click-through, never for the viewer's own play, a back for a card
-// the view hides (R97, R227), per viewer on a hotseat device, and gone on Escape or a pointer down.
+// The opponent's-play showcase as the player sees it (CardShowcase.tsx): from the redacted view
+// alone, with a back for a card the view hides (R97, R227).
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -36,7 +35,6 @@ function played(player: "p1" | "p2", instanceId: string, defId: string): GameEve
   return { type: "cardPlayed", player, instanceId, defId, costPaid: 2 };
 }
 
-/** The first view has no "since"; the second brings `events` after it. */
 function mountThen(events: GameEvent[], before: PlayerView = withEvents(baseView(), [TURN])): { next: (view: PlayerView) => void } {
   const { rerender } = render(withCatalog(<CardShowcase view={before} />));
   const next = (view: PlayerView): void => {
@@ -222,7 +220,19 @@ describe("issue #1493 trap reveals are held up", () => {
     expect(screen.getByTestId(T.ordinal)).toHaveTextContent("#2");
   });
 
-  it("issue #1493 gives the other seat the same reveal popup without leaking the trap", () => {
+  it("R2734000 the other seat's reveal shows the trap's face and names it", () => {
+    // p1 is the viewer: p2's trap, fired into its graveyard, is named on this seat as on its controller's.
+    mountThen([fired("p2", "b1", SHEEPISH)]);
+    const showcase = screen.getByTestId(T.root);
+    expect(showcase).toHaveAttribute("data-showcase", "trap");
+    expect(showcase).toHaveAttribute("data-showcase-def", SHEEPISH);
+    expect(screen.getByTestId(T.face)).toHaveTextContent(SHEEPISH_NAME);
+    expect(screen.queryByTestId(T.back)).toBeNull();
+    expect(screen.getByTestId(T.caption)).toHaveTextContent(TRAP_REVEAL_TEXT.caption);
+    expect(screen.getByTestId(T.live)).toHaveTextContent(`the opponent's trap ${SHEEPISH_NAME} fired`);
+  });
+
+  it("issue #1493 a trap behind the sentinel (R763) reveals as a back without leaking it", () => {
     mountThen([fired("p2", "hidden", "hidden")]);
     const showcase = screen.getByTestId(T.root);
     expect(showcase).toHaveAttribute("data-showcase", "trap");

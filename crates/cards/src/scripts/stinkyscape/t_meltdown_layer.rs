@@ -33,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-meltdown-layer — SPEC §8.10 row T-meltdown-layer, BUILD M12 row S T-meltdown-layer: "on top of its
-// pile it attacks twice the turn it resumes, striking first; at its controller's end of turn it takes 6
-// itself, dying in two turns from 12 health; its Brittle 3 ticks only once it tops the pile; selfDamage
-// reads through `param()`; radiant 24/24, Brittle 6".
+// S T-meltdown-layer — SPEC §8.10 row T-meltdown-layer, BUILD M12 row S T-meltdown-layer.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -47,13 +44,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MELTDOWN: &str = "stinkyscape-t-meltdown-layer";
-    /// S #36 Drone Core X: summon the Drone Battleship, the Meltdown Layer at the bottom.
     const CORE_X: &str = "stinkyscape-036";
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
     const STRIKER: &str = "classic-049"; // (3) 9/9 Rush.
     const FILLER: &str = "core-005";
 
-    /// The Meltdown Layer alone in p1's lane 1 (Radiant on `radiant`).
     fn alone(radiant: bool) -> (Scenario, String) {
         let s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": MELTDOWN, "radiant": radiant }], "library": filler(6) },
@@ -63,7 +58,6 @@ mod tests {
         (s, id)
     }
 
-    /// p1 casts Drone Core X: the Battleship in lane 1, the Meltdown Layer buried at its bottom.
     fn battleship(p2: Value) -> (Scenario, String) {
         let mut p2 = p2;
         p2["library"] = filler(6);
@@ -79,7 +73,6 @@ mod tests {
         (s, meltdown.id)
     }
 
-    /// Hit Job the top of p1's lane 1.
     fn clear_top(s: &mut Scenario) {
         let top = s.unit(P1, 1).expect("the pile's top").id;
         s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": top }] }));
@@ -95,11 +88,9 @@ mod tests {
         clear_top(&mut s);
         clear_top(&mut s);
         assert_eq!(s.unit(P1, 1).expect("the top").id, meltdown, "both layers above are gone");
-        // Charge: summoned this turn, it attacks at once; First Strike: the 9/9 never hits back.
         s.attack(meltdown.as_str(), STRIKER);
         s.expect_in_zone(STRIKER, "graveyard");
         assert_eq!(s.card(meltdown.as_str()).damage, 0);
-        // Windfury: a second attack.
         s.attack(meltdown.as_str(), "hero");
         s.expect_health(P2, HERO_HEALTH - 12);
         s.expect_refused(|s| s.attack(meltdown.as_str(), "hero"));

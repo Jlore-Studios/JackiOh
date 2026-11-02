@@ -50,10 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #78 Ozark — SPEC §8.10 row 78, BUILD M12 row S 78: "its Cry fuses one random Miner (v1 to
-// v5) into it, the Miner's Activate with it, by one rng pick that replays; nothing passes through a hand
-// and no Miner's text is played (R1841002); radiant 8/8 and two different Radiant Miners". Since #2521 it
-// is no Starship Piece, its Miners leaving it none (R1852001), and its death fuses nothing.
+// Stinkyscape #78 Ozark — SPEC §8.10 row 78, BUILD M12 row S 78 (#2521; R1841002, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,7 +70,6 @@ mod tests {
         (s, host)
     }
 
-    /// The Miners fused into `host`, read off its fused definition.
     fn miners_in(s: &Scenario, host: &str) -> Vec<String> {
         self_def_ids(Some(s.state()), &s.card(host).def_id)
             .into_iter()

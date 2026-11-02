@@ -2,7 +2,7 @@
 // Hints only (CLAUDE.md rule 7): nothing here listens for a key, and no shortcut is added.
 import { INSPECT_KEY_SHORTCUT } from "../cards/inspect/keys.ts";
 
-/** A shortcut's keys in order: `MOD` is Ctrl, or ⌘ on an Apple device; the rest are `KeyboardEvent.key` values. */
+/** Keys in order: `MOD` is Ctrl, or ⌘ on an Apple device; the rest are `KeyboardEvent.key` values. */
 export type Shortcut = readonly string[];
 export const MOD = "Mod";
 
@@ -27,7 +27,6 @@ const ARROWS = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown:
 const APPLE_LABELS: Readonly<Record<string, string>> = { ...ARROWS, [MOD]: "⌘", Shift: "⇧" };
 const OTHER_LABELS: Readonly<Record<string, string>> = { ...ARROWS, [MOD]: "Ctrl", Shift: "Shift" };
 
-/** Whether a user agent is an Apple device's: a Mac, an iPhone, an iPad or an iPod. */
 export function isApplePlatform(userAgent: string): boolean {
   return /Mac|iPhone|iPad|iPod/u.test(userAgent);
 }
@@ -42,13 +41,13 @@ export function shortcutText(keys: Shortcut, apple: boolean): string {
   return keys.map((key) => labels[key] ?? key).join(apple ? "" : "+");
 }
 
-/** `aria-keyshortcuts` for `keys`, `MOD` as both Control and Meta: "Control+Z Meta+Z". */
+/** `aria-keyshortcuts` for `keys`, `MOD` as both Control and Meta. */
 export function ariaKeyshortcuts(keys: Shortcut): string {
   if (!keys.includes(MOD)) return keys.join("+");
   return ["Control", "Meta"].map((mod) => keys.map((key) => (key === MOD ? mod : key)).join("+")).join(" ");
 }
 
-/** A tooltip naming its shortcut, "Undo (Ctrl+Z)", or the bare label where hints are hidden. */
+/** A tooltip naming its shortcut, or the bare label where hints are hidden. */
 export function shortcutTitle(label: string, keys: Shortcut, hints: ShortcutHints): string {
   return hints.shown ? `${label} (${shortcutText(keys, hints.apple)})` : label;
 }
@@ -62,12 +61,11 @@ function touchQuery(): MediaQueryList | null {
   }
 }
 
-/** Whether the device is touch-only now: no hover and a coarse pointer. A host without `matchMedia` is not. */
+/** A host without `matchMedia` is not touch-only. */
 export function touchOnly(): boolean {
   return touchQuery()?.matches === true;
 }
 
-/** Calls `onChange` each time the touch-only answer flips; returns the unsubscribe. */
 export function subscribeTouchOnly(onChange: () => void): () => void {
   const query = touchQuery();
   if (query === null || typeof query.addEventListener !== "function") return () => undefined;

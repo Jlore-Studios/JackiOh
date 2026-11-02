@@ -77,12 +77,10 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
 
-    /// 2/12: lives through a 9-attack hit.
     fn fauci() -> Value {
         json!({ "def": "core-091", "radiant": true })
     }
 
-    /// p1 has Tmack Trav (`radiant` its face) in unit zone 1; p2 has `p2_field`.
     fn board(radiant: bool, p2_field: Value) -> Scenario {
         crate::scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "radiant": radiant }], "library": crate::filler(4) },
@@ -141,7 +139,6 @@ mod tests {
             assert!(s.unit(P2, 1).is_none(), "the Vanilla died");
             s.attack(&tmack, "hero");
             s.expect_health(P2, HERO_HEALTH - 9);
-            // A hit on the hero frees nothing.
             s.expect_refused(|s| s.attack(&tmack, "hero"));
         }
 
@@ -219,7 +216,6 @@ mod tests {
 
         #[test]
         fn r1869002_a_forced_kill_frees_it_too() {
-            // Moths at 4 health: the attack its controller's start of turn forces kills it.
             let mut s = board(false, json!([{ "def": MOTHS, "damage": 10 }]));
             let tmack = s.unit_at(P1, 1);
             s.attack(&tmack, "hero");

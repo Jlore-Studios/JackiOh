@@ -1,26 +1,8 @@
 // BUILD M5-T4, the assertion that matters: **every row of the animation table names an element the
-// client actually renders.**
-//
-// `animations.test.ts` already pins the table's durations, its keyframes and the testid each row
-// resolves to. What it could not do is check that the testid is a real element, because it renders
-// nothing — its "resolves a target for every event type without throwing" only ever proved that a
-// *string* came back. A row can therefore point at a name no component has ever rendered and stay
-// green forever, which is exactly what `modifierChanged` did: it animated `modifiers-<side>`, no
-// component rendered it, `SideView` carried no modifier list at all, and so a player could not see
-// that #77 Professor Curvature or #78 /fullsend was active on them. R169 put the list in the view
-// and `Hero.tsx` renders it; this file is the test that would have caught the gap.
-//
-// The proof is the whole client (`Game`, so the shell's banner, toast, overlay and modal are in the
-// tree alongside the board) rendered from one `PlayerView`, and then, for every member of
-// `GameEvent["type"]`, one sample event built against THAT view: the target must resolve, and the
-// element must be in the document.
-//
-// Three rows resolve to `null` by design, and the test knows the difference rather than excusing
-// it: `promptOpened` and `promptAnswered` on the seat that is not holding the prompt, and
-// `drawOffered` on the seat that made the offer. Each shows nothing at all — §10.6 gives the other
-// player no modal, and the offerer no toast — so `null` is the right answer and the table says so.
-// Every other row must produce an element on every sample, and the null-able set is asserted to be
-// exactly those three, so a new row cannot join them by accident.
+// client actually renders.** `animations.test.ts` renders nothing, so a row can name an element no component
+// renders and stay green, as `modifierChanged` did: a player could not see that #77 Professor Curvature or
+// #78 /fullsend was active on them (R169 put the list in the view). The proof is the whole client (`Game`)
+// rendered from one `PlayerView`, with one sample event of every `GameEvent["type"]` built against THAT view.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerView } from "@jackioh/shared";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -33,9 +15,7 @@ import { must } from "../test/stubServer.ts";
 
 afterEach(cleanup);
 
-/* --------------------------------------------------------------------------------------------- *
- * The view: a full board, plus the three pieces of chrome that only appear on a condition.
- * --------------------------------------------------------------------------------------------- */
+/* The view: a full board, plus the three pieces of chrome that only appear on a condition. */
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;
@@ -48,10 +28,9 @@ function faceUpBackrowIds(view: PlayerView): string[] {
 }
 
 /**
- * `Game` renders the banner unconditionally, but the prompt modal, the draw toast and the result
- * overlay each wait on something: an open prompt, a standing draw offer (R269's `drawOffer`), and a
- * result. All three are in the view at once here — they are chrome, a single tree lets one render
- * prove every row — though the engine never sends an offer with a result (R216).
+ * The prompt modal, the draw toast (R269's `drawOffer`) and the result overlay each wait on something; all
+ * three are in the view at once here, so one render proves every row (the engine never sends an offer with
+ * a result, R216).
  */
 function chromeView(): PlayerView {
   return fullBoardView({
@@ -63,9 +42,7 @@ function chromeView(): PlayerView {
   });
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * One sample per event type, every id taken from the view above.
- * --------------------------------------------------------------------------------------------- */
+/* One sample per event type, every id taken from the view above. */
 
 function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent, { type: K }> } {
   const unit = must(view.you.units[0], "your unit in lane 1").instanceId;
@@ -122,7 +99,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
     emoted: { type: "emoted", player: "p2", emote: "greetings" },
     gameOver: { type: "gameOver", winner: "p1", reason: "concede" },
-    // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+    // docs/classic-sets.md B3, B5.
     cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: hand, defId: "core-002", cardType: "Unit", costPaid: 1, targets: [] },
     countered: { type: "countered", player: "p1", instanceId: hand, defId: "core-002", byInstanceId: trap, to: "graveyard" },
     stolen: { type: "stolen", instanceId: hand, defId: "core-002", from: "p2", to: "p1", zone: "hand" },
@@ -178,11 +155,9 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
 }
 
 /**
- * The rows that show nothing on one of the two seats (§10.6's "the opponent's view shows only that
- * a prompt is open", and the toast that belongs to the seat which owes the answer). These are the
- * only legitimate `null`s — and the set is not merely declared here: the third test swaps the
- * player on every sample and proves that every OTHER row still lands on a rendered element, so a
- * row that starts going dark joins this list by failing, not by being added to it.
+ * The only legitimate `null`s: §10.6's "the opponent's view shows only that a prompt is open", and the toast
+ * that belongs to the seat which owes the answer. The third test swaps the player on every sample, so a row
+ * that starts going dark fails instead of joining this list.
  */
 const SEAT_CONDITIONAL: readonly GameEventType[] = ["promptOpened", "promptAnswered", "drawOffered"];
 

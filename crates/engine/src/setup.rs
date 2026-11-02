@@ -1,15 +1,9 @@
 //! Shuffle, the opening draw table, Quickdraw, the mulligan, The Coin and start-of-game effects
 //! (SPEC §2.1, R9, R43, R244).
 //!
-//! Cast on draw cards sit out the deal (R635): the opening draw and the mulligan's replacements take
-//! one only when no other card is left, and once both mulligans are resolved the rest are shuffled
-//! into their owner's library (`shuffle_in_set_aside`). One a hand had to take waits there uncast and
-//! is cast at the start of the game, before turn 1 (R748). A Quickdraw card replaces an opening draw,
-//! so a seat is dealt at most as many as it has draws (R640).
-//!
-//! The mulligan is concurrent (R265): both seats' prompts open at once and an answer is sealed until
-//! the other seat has answered too (R266). The second answer resolves both in seat order, so the game
-//! is the same whichever seat answered first. `work.rs`'s dispatcher calls `run_owed_setup` (SURFACE §6.6).
+//! Cast on draw cards sit out the deal and are shuffled in after the mulligans (R635, R748). The mulligan
+//! is concurrent and an answer sealed until both are in (R265, R266), so the game is the same whichever
+//! seat answered first. `work.rs`'s dispatcher calls `run_owed_setup` (SURFACE §6.6).
 
 use indexmap::IndexSet;
 use serde::Serialize;
@@ -36,7 +30,7 @@ fn seat_of(player: PlayerId) -> usize {
     player.seat()
 }
 
-/// §2.1, R2368000: the seat's entry in the opening-draw table, the source of truth, not two constants.
+/// §2.1, R2368000: the seat's entry in the opening-draw table.
 pub fn opening_draw_for(player: PlayerId) -> i32 {
     OPENING_DRAW
         .get(seat_of(player))
@@ -46,8 +40,7 @@ pub fn opening_draw_for(player: PlayerId) -> i32 {
 }
 
 /// §2.1, R182: the seat's opening-draw table entry plus its handicap's extra cards. Quickdraw cards
-/// replace draws out of this total, so it is the size of the hand the mulligan sees. Hard carries
-/// Medium's one extra card rather than a second one of its own.
+/// replace draws out of this total, so it is the size of the hand the mulligan sees.
 pub fn opening_hand_size(state: &GameState, player: PlayerId) -> i32 {
     opening_draw_for(player) + handicap_of(&state.players[player]).extra_opening_cards
 }
@@ -90,10 +83,8 @@ fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
     }
 }
 
-/// §2.1 step 3, R265: both seats' prompts, opened together in seat order once the opening deal is
-/// done. They are not `state.pending`, which stays the one prompt §10.1 allows: every caller opens
-/// them only once nothing is waiting (a cast's question during the deal owes them instead,
-/// `SETUP_WORK`). Each prompt takes its id in seat order, before either is answered.
+/// §2.1 step 3, R265: both seats' prompts, opened together in seat order. Not `state.pending`, which
+/// stays the one prompt §10.1 allows, so they open only once nothing is waiting.
 fn open_mulligans(sink: &mut EngineSink) {
     if sink.state.pending.is_some() || sink.state.mulligan.is_some() {
         return;
@@ -135,9 +126,8 @@ pub fn mulligan_prompt_for(state: &GameState, player: PlayerId) -> Option<&Pendi
     Some(&seat.prompt)
 }
 
-/// R265, R266: why this seat's mulligan answer is refused, or `Ok` (SURFACE §4.4.9). The reducer asks
-/// this before it answers, and `legal_actions` offers the mulligan exactly when there is no reason to
-/// refuse it.
+/// R265, R266: why this seat's mulligan answer is refused (SURFACE §4.4.9): the reducer asks before it
+/// answers, and `legal_actions` offers the mulligan exactly when there is no reason.
 pub fn why_mulligan_refused(state: &GameState, player: PlayerId, keep: &[String]) -> Result<(), EngineError> {
     if state.pending.is_some() || state.mulligan.is_none() {
         return Err(EngineError::new("no mulligan is open"));
@@ -154,33 +144,25 @@ pub fn why_mulligan_refused(state: &GameState, player: PlayerId, keep: &[String]
     Ok(())
 }
 
-/// R113: the `resume.hook` of what setup still owes when a clause asks during it. A card setup deals
-/// is never cast while it deals (R635, R748), so only a start-of-game clause on arrival (R151) can ask
-/// there, as the opening draw and R9's replacement draws arrive (R224). The question is state until it
-/// is answered (§9.3) and §10.1 allows one prompt at a time, so setup owes the rest of itself — the
-/// other seats' draws and the mulligans, or the shuffle-back and the game — and the answer's drain
-/// brings it back (R122); start-of-game clauses and R748's casts owe what follows them and turn 1 the
-/// same way. `work.rs`'s dispatcher runs it (`run_owed_setup`).
+/// R113: the `resume.hook` of what setup still owes when a clause asks during it: only a start-of-game
+/// clause on arrival (R151) can, as the opening draw and R9's replacement draws arrive (R224), since a
+/// dealt card is never cast while it deals (R635, R748). §10.1 allows one prompt at a time, so setup owes
+/// the rest of itself and the answer's drain brings it back (R122).
 pub const SETUP_WORK: &str = "@setup";
 
-/// Which part of setup is owed: the opening deal from a seat on, a seat's Quickdraw cards and then
-/// the seats after it, or the end of one seat's mulligan and the seats after it (R265).
+/// Which part of setup is owed, each then the seats after it: the deal from a seat on, a seat's
+/// Quickdraw cards, or the end of a seat's mulligan (R265).
 const DEAL_STEP: &str = "deal";
 const QUICKDRAW_STEP: &str = "quickdraw";
 const MULLIGAN_STEP: &str = "mulligan";
-/// §2.1 step 4: the start-of-game clauses from a card on, then R748's casts and turn 1.
 const START_OF_GAME_STEP: &str = "startOfGame";
-/// R748: the casts of the cards a hand had to take uncast, from the next one on, then turn 1.
 const SUSPENDED_STEP: &str = "suspended";
 
-/// R748: the mark on a cast-on-draw card setup dealt uncast because nothing else could fill the hand.
-/// It is cast at the start of the game unless the mulligan returned it, which takes the mark off. On
-/// the card's memory, which no view carries (§9.1), so it says nothing the `drawn` it was dealt with
-/// did not (R225).
+/// R748: the mark on a cast-on-draw card setup dealt uncast, on the card's memory, which no view
+/// carries (§9.1), so it says nothing the `drawn` it was dealt with did not (R225).
 const SUSPENDED_CAST_KEY: &str = "@suspendedCast";
 
-/// Shuffle both libraries with the match rng, move Quickdraw cards into the opening hand and draw
-/// the rest of the opening hand, then open both mulligans (§2.1, R265).
+/// §2.1: deal both opening hands, then open both mulligans (R265).
 pub fn begin_setup(sink: &mut EngineSink) {
     deal_from(sink, 0);
 }
@@ -189,10 +171,8 @@ fn is_quickdraw(state: &GameState, card: &CardInstance) -> bool {
     flags_of(state, card).quickdraw == Some(true)
 }
 
-/// R635: how many cards setup may still draw from `player`'s library: all of it but the cards set
-/// aside at its bottom, the ones that cast on draw. Setup draws no more than this, so it never draws a
-/// set-aside card, which would cast it, and never draws from an empty library (R3's fatigue): what a
-/// hand still lacks is dealt from the set-aside cards uncast (R748, `deal_suspended`).
+/// R635: how many cards setup may still draw, the set-aside cast-on-draw cards left out, so it never
+/// casts one by drawing it nor draws from an empty library (R3's fatigue).
 fn drawable_count(state: &GameState, player: PlayerId) -> i32 {
     state.players[player]
         .library
@@ -203,24 +183,17 @@ fn drawable_count(state: &GameState, player: PlayerId) -> i32 {
 
 /// §2.1 steps 1 and 2 for each seat from `seat` on, then both mulligans (R265).
 ///
-/// R225, R640: each Quickdraw card replaces one of the last opening draws (§2.1, §6.2), so a seat is
-/// dealt at most as many as its hand holds (the first ones in the shuffle's order); the others stay in
-/// the library as ordinary cards. The other cards are drawn first, then each Quickdraw card goes to
-/// the hand as the draw it replaces (R55's counter, reported as a draw), so nothing the opponent sees
-/// says whether the hand holds one: #100's price, the deal's events, the counts while a clause is
-/// asking (R224) or the hand's size (§9.1).
-///
-/// R635: the cards that cast on draw wait just above the Quickdraw cards at the bottom of the library,
-/// out of the draws' reach, and are shuffled in once the mulligans are done. R748: when too few other cards
-/// remain, the rest of the hand is dealt from them uncast (`deal_suspended`), so setup never deals a
-/// fatigue draw.
+/// R225, R640: each Quickdraw card replaces one of the last opening draws (§2.1, §6.2), at most as many
+/// as the hand holds; the others stay in the library as ordinary cards. Each goes to the hand as the draw
+/// it replaces (R55's counter), so nothing the opponent sees says whether the hand holds one: #100's
+/// price, the deal's events, the counts while a clause is asking (R224), the hand's size (§9.1). R635: the
+/// cast-on-draw cards wait just above them, out of the draws' reach.
 fn deal_from(sink: &mut EngineSink, seat: usize) {
     for (at, &player) in PLAYER_IDS.iter().enumerate().skip(seat) {
         let size = opening_hand_size(sink.state, player);
         let shuffled = sink.rng.shuffle(&sink.state.players[player].library);
         let (quickdraw, set_aside, drawable) = {
             let state: &GameState = &*sink.state;
-            // R182: a handicapped seat's extra opening cards are part of the same total Quickdraw replaces.
             let quickdraw: Vec<CardInstance> = shuffled
                 .iter()
                 .filter(|card| is_quickdraw(state, card))
@@ -251,12 +224,12 @@ fn deal_from(sink: &mut EngineSink, seat: usize) {
         library.extend(quickdraw);
         sink.state.players[player].library = library;
 
-        // R748: the other cards first; what the hand still lacks comes from the set-aside cards, uncast.
+        // R748: what the other cards cannot fill comes from the set-aside cards, uncast.
         let others = 0_i32.max((size - quickdraw_count).min(drawable_len));
         deal_suspended(sink, player, size - quickdraw_count - others);
         draw(sink, player, others);
-        // An arrival clause of the opening draw is asking (R158: the draw has owed its own remainder), so
-        // this seat's Quickdraw cards, the seats after it and the mulligan wait behind it.
+        // R158: an arrival clause of the opening draw is asking, so this seat's Quickdraw cards, the
+        // seats after it and the mulligan wait behind it.
         if paused(sink) {
             if sink.state.result.is_none() {
                 owe_setup(sink, json!({ "step": QUICKDRAW_STEP, "seat": at }));
@@ -269,10 +242,8 @@ fn deal_from(sink: &mut EngineSink, seat: usize) {
     open_mulligans(sink);
 }
 
-/// R225, R640: the Quickdraw cards `deal_from` left at the very bottom of the library, which are the
-/// ones it deals: a run of them from the end, no longer than the opening hand. Read off the library
-/// rather than remembered, so the owed `quickdraw` step (R113) names no card and the seat's Quickdraw
-/// cards stay out of `state.work`, where the other seat's AI could read them (R185).
+/// R225, R640: the Quickdraw cards `deal_from` left at the very bottom of the library, read off it so
+/// the owed `quickdraw` step (R113) names no card the other seat's AI could read in `state.work` (R185).
 fn dealt_quickdraw(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let library = &state.players[player].library;
     let size = opening_hand_size(state, player);
@@ -289,8 +260,7 @@ fn dealt_quickdraw(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     dealt
 }
 
-/// R225: a card the deal puts into the hand from the library arrives as a draw does: counted
-/// (`counters.drawn`) and reported (`drawn`, no turn draw and nothing emptied, then `addedToHand`).
+/// R225: a card the deal puts into the hand from the library arrives as a draw does, counted and reported.
 fn deal_as_draw(sink: &mut EngineSink, player: PlayerId, mut card: CardInstance) {
     move_to_zone(
         sink.state,
@@ -314,17 +284,15 @@ fn deal_as_draw(sink: &mut EngineSink, player: PlayerId, mut card: CardInstance)
     });
 }
 
-/// R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces, in the library's order.
+/// R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces.
 fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
     for card in dealt_quickdraw(sink.state, player) {
         deal_as_draw(sink, player, card);
     }
 }
 
-/// R748: `count` of the set-aside cards (`deal_from`), dealt to fill a hand the other cards cannot: each
-/// goes to the hand uncast, as a draw (R225's report and count), marked to be cast at the start of the
-/// game (`cast_suspended`). The first ones in the library's order, never a Quickdraw card (R635). Short
-/// only when the library runs out of them.
+/// R748: `count` of the set-aside cards (never a Quickdraw card, R635), dealt uncast as draws (R225)
+/// and marked to be cast at the start of the game.
 fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
     if count <= 0 {
         return;
@@ -349,8 +317,8 @@ fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
     }
 }
 
-/// R265, R266: a seat's answer is sealed — recorded, announced as answered, and read by nothing —
-/// until the other seat has answered as well. The second answer resolves both.
+/// R265, R266: a seat's answer is sealed, read by nothing until the other seat has answered as well;
+/// the second answer resolves both.
 pub fn answer_mulligan(sink: &mut EngineSink, player: PlayerId, keep: &[String]) {
     let Some(open) = sink.state.mulligan.as_mut() else {
         return;
@@ -371,8 +339,8 @@ pub fn answer_mulligan(sink: &mut EngineSink, player: PlayerId, keep: &[String])
         .collect();
     seat.keep = Some(kept);
     let choice_id = seat.prompt.id.clone();
-    // §10.6: the answer names the prompt it answers, as every other does. That a seat has answered is
-    // public — the other seat is told it is ready — and what it kept is not (R266, §9.1).
+    // §10.6: the answer names the prompt it answers. That a seat has answered is public, and what it
+    // kept is not (R266, §9.1).
     sink.events.push(GameEvent::PromptAnswered {
         player,
         choice_id: Some(choice_id),
@@ -394,7 +362,7 @@ struct SealedMulligan {
     keep: Vec<String>,
 }
 
-/// R265: both answers are in. The sealed record goes, and the seats resolve in seat order.
+/// R265: both answers are in, so the seats resolve in seat order.
 fn resolve_mulligans(sink: &mut EngineSink) {
     let Some(open) = sink.state.mulligan.as_ref() else {
         return;
@@ -420,15 +388,14 @@ fn resolve_mulligans(sink: &mut EngineSink) {
     resolve_from(sink, &sealed);
 }
 
-// R9 (`MULLIGAN_ORDER`): `resolve_from` draws the replacements and `finish_mulligan` then shuffles
-// the returned cards back, the one order this file plays.
+// R9: the one `MULLIGAN_ORDER` this file plays.
 const _: () = assert!(
     matches!(MULLIGAN_ORDER.as_bytes(), b"draw-then-shuffle"),
     "R9: setup.rs draws the mulligan's replacements, then shuffles the returned cards back"
 );
 
 /// R9: the replacements are drawn first, then the returned cards are shuffled back, which is what
-/// "without replacement" means. One seat at a time, in seat order (R265), then the game.
+/// "without replacement" means. One seat at a time, then the game.
 fn resolve_from(sink: &mut EngineSink, sealed: &[SealedMulligan]) {
     let Some((next, rest)) = sealed.split_first() else {
         finish_setup(sink);
@@ -450,16 +417,14 @@ fn resolve_from(sink: &mut EngineSink, sealed: &[SealedMulligan]) {
         }
     }
 
-    // R635, R748: the replacements come off the cards setup may draw, so a seat that returns more than
-    // the library holds besides the set-aside cards is dealt the rest from them, uncast, and never a
-    // fatigue draw.
+    // R635, R748: what the library cannot replace besides the set-aside cards is dealt from them, uncast,
+    // and never as a fatigue draw.
     let returned_count = returned.len() as i32;
     let others = returned_count.min(drawable_count(sink.state, next.player));
     deal_suspended(sink, next.player, returned_count - others);
     draw(sink, next.player, others);
-    // An arrival clause of a replacement is asking (R224): the shuffle-back, the seats after this one
-    // and the game wait for the answer, and the returned cards wait with them, in the owed item — they
-    // are in no pile until they go back.
+    // R224: an arrival clause of a replacement is asking, so the shuffle-back, the seats after this one
+    // and the game wait in the owed item, with the returned cards, which are in no pile until then.
     if paused(sink) {
         if sink.state.result.is_none() {
             owe_setup(
@@ -519,10 +484,9 @@ fn finish_mulligan(
     resolve_from(sink, rest);
 }
 
-/// R224, §9.1: the cards a mulligan returned that wait, in the owed item, for their shuffle-back while
-/// a replacement draw's cast is asking. They are in no pile, so `find_instance` does not see them, and
-/// §10.8 reads them as the library cards they are about to be: nobody reads them (§3), their owner
-/// included, exactly as once they are back (`view_for`).
+/// R224, §9.1: the cards a mulligan returned that wait in the owed item for their shuffle-back, in no
+/// pile (`find_instance` misses them). §10.8 reads them as the library cards they are about to be: nobody
+/// reads them (§3), their owner included.
 pub fn returned_awaiting_shuffle(state: &GameState) -> Vec<String> {
     state
         .work
@@ -545,7 +509,6 @@ pub fn returned_awaiting_shuffle(state: &GameState) -> Vec<String> {
         .collect()
 }
 
-/// `owed` is the `OwedSetup` record, its `step` among its keys.
 fn owe_setup(sink: &mut EngineSink, owed: Value) {
     let step = owed
         .get("step")
@@ -567,8 +530,7 @@ fn owe_setup(sink: &mut EngineSink, owed: Value) {
     );
 }
 
-/// `work.rs`'s handler for `SETUP_WORK`: setup, continued where a cast's question stopped it (R113,
-/// R122).
+/// `work.rs`'s handler for `SETUP_WORK`: setup, continued where a question stopped it (R113, R122).
 pub fn run_owed_setup(sink: &mut EngineSink, item: &WorkItem) {
     let Some(owed) = item.resume.data.get("owed").and_then(Value::as_object) else {
         return;
@@ -658,19 +620,10 @@ fn sealed_in(raw: Option<&Value>) -> Vec<SealedMulligan> {
         .collect()
 }
 
-/// §2.1 step 3's close, R244: once both mulligans are answered, each seat is dealt its
-/// `OPENING_COINS` copies of The Coin — the seat going second one, the first none — as the last cards
-/// of its hand. After the mulligan, so a Coin is never returned, redrawn or shuffled in (R9); and
-/// whatever the seat's handicap, whose extra opening card the mulligan has already seen (R182).
-///
-/// It is §6.3's add to hand, not a draw: `draw::add_to_hand` puts it in, or burns it off a full hand
-/// (§2.4, R4, which no Core opening hand reaches), and emits `addedToHand` alone, leaving #100's draw
-/// counter where it was (R55). It takes the next instance id and no rng draw, so
-/// `(seed, decks, handicaps, log)` still folds exactly (§9.3, R187).
-///
-/// A registered catalog without The Coin deals none. The shipped catalog always holds it (the cards'
-/// catalog tests count it); the engine's tests register partial fixture catalogs, and a rule that
-/// threw on them would make each carry a card none of its tests is about.
+/// §2.1 step 3's close, R244: each seat's `OPENING_COINS`, dealt after both mulligans so a Coin is never
+/// returned, redrawn or shuffled in (R9), whatever the seat's handicap (R182). §6.3's add to hand, not a
+/// draw (§2.4, R4, R55), and no rng draw, so `(seed, decks, handicaps, log)` folds exactly (§9.3, R187).
+/// A catalog without The Coin (the engine's partial fixtures) deals none.
 pub fn deal_coins(sink: &mut EngineSink) {
     if sink.state.result.is_some() {
         return;
@@ -687,11 +640,8 @@ pub fn deal_coins(sink: &mut EngineSink) {
     }
 }
 
-/// R635: both mulligans are resolved, so each seat's cast-on-draw cards, which waited at the bottom of
-/// its library, are put back one at a time at a uniform random place among the rest, with the match
-/// rng (left where they lay they would be the last cards drawn). A seat with none takes no rng draw.
-/// Nothing is reported: a `shuffledIn` per card would tell the other seat how many the deck holds
-/// (§9.1, R97).
+/// R635: each seat's cast-on-draw cards go back one at a time at a uniform random place. Nothing is
+/// reported: a `shuffledIn` per card would tell the other seat how many the deck holds (§9.1, R97).
 fn shuffle_in_set_aside(sink: &mut EngineSink) {
     for player in PLAYER_IDS {
         let waiting: Vec<CardInstance> = {
@@ -735,10 +685,9 @@ pub fn finish_setup(sink: &mut EngineSink) {
     start_of_game_from(sink, &cards);
 }
 
-/// §2.1 step 4 over the cards from `ids` on, then R748's casts and turn 1. A clause that asks pauses
-/// it (§9.3, `prompts::run_start_of_game`): the clauses after it and the first turn are owed behind its
-/// tail (`START_OF_GAME_STEP`, R113, R117), so turn 1 never begins with a question of setup's still
-/// open.
+/// §2.1 step 4 over the cards from `ids` on, then R748's casts and turn 1. A clause that asks owes the
+/// clauses after it and the first turn behind its tail (R113, R117), so turn 1 never begins with a
+/// question of setup's still open.
 fn start_of_game_from(sink: &mut EngineSink, ids: &[String]) {
     for at in 0..ids.len() {
         let Some(card) = find_instance(sink.state, &ids[at]).cloned() else {
@@ -776,15 +725,13 @@ fn next_suspended(state: &GameState) -> Option<CardInstance> {
     None
 }
 
-/// R748: after the start-of-game clauses, each card a hand had to take uncast is cast as its draw
-/// would have cast it (`draw::cast_dealt_card`), with a state check after each (R59) and no draw
-/// repeated; a Unit with no open zone stays in the hand (R459). A cast that asks pauses the rest: the
-/// casts after it and turn 1 are owed behind its tail (`SUSPENDED_STEP`, R113), so turn 1 waits for
-/// the answer (R224). Then turn 1.
+/// R748: each card a hand had to take uncast is cast as its draw would have cast it, with a state check
+/// after each (R59) and no draw repeated; a Unit with no open zone stays in the hand (R459). A cast that
+/// asks owes the rest and turn 1 (R113, R224).
 ///
-/// Setup is turn 0 (BUILD M1-T1), no player's turn (§2.1 step 5): a Spell cast during it was played on
-/// no turn of its controller's, so the return §10.5 step 7 flagged it for is over before turn 1, as a
-/// turn's cleanup ends it (R155). `start_turn` empties the logs that cleanup reads, so setup clears it first.
+/// Setup is turn 0 (BUILD M1-T1), no player's turn (§2.1 step 5), so a Spell cast in it has its §10.5
+/// step 7 return ended before turn 1 as a turn's cleanup ends it (R155); `start_turn` empties the logs
+/// that cleanup reads, so setup clears it first.
 fn cast_suspended(sink: &mut EngineSink) {
     while let Some(mut card) = next_suspended(sink.state) {
         card.memory.shift_remove(SUSPENDED_CAST_KEY);

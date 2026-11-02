@@ -2,8 +2,8 @@
 // red X where it landed, instead of silently snapping back to the hand.
 //
 // Presentation only (CLAUDE.md rule 7). DragLayer decides when a drop was onto a locked zone (it
-// reads the board's `data-locked`, which Zone.tsx writes off the view); this file draws the mark and
-// takes it down again. The mark never takes a hit, so `document.elementsFromPoint` sees through it.
+// reads the board's `data-locked`, which Zone.tsx writes off the view). The mark never takes a hit,
+// so `document.elementsFromPoint` sees through it.
 //
 // It holds for BLOCKED_MARK_MS whatever the motion setting, because that is how long a player needs
 // to read it. Reduced motion (`--anim-scale: 0`) only removes the shake, never the mark.
@@ -12,7 +12,6 @@ import { useEffect, type ReactElement } from "react";
 
 import "./blocked.css";
 
-/** How long the mark stays on the zone before it is taken down. */
 export const BLOCKED_MARK_MS = 700;
 
 /** Where a refused drop landed: the locked zone's center and its size. `key` renews the mark. */

@@ -2,10 +2,9 @@
 //!
 //! Base:    "Cry: Fill your board with random 1/1 Units."
 //! Radiant: "Cry: Fill your board with random Radiant 1/1 Units."
-//! Engine: `fill_board_random` with `{ type: Unit, stats: {1, 1}, withTokens: true }` (R1080): every
-//! empty unit zone (R1136000), left to right, gets its own pick from the match rng, repeats allowed,
-//! from the Units whose printed base face is 1/1, tokens included, never Devin Bot itself (R387).
-//! Summons fire no Cry (R1). It has had no Reborn since patch v0.3.10.
+//! Engine: `fill_board_random` (R1080): every empty unit zone (R1136000), left to right, gets its own
+//! pick from the match rng, repeats allowed, from the Units whose printed base face is 1/1, tokens
+//! included, never Devin Bot itself (R387). Summons fire no Cry (R1). It has no Reborn.
 
 use jackioh_engine::prelude::*;
 
@@ -34,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "No Reborn (patch v0.3.10); Cry (played or
-// cast, R1): each empty unit zone of yours, a Locked one included (R1136000), left to right, gets its
-// own random Unit whose printed base face is 1/1, tokens included, never Devin Bot (R1080); a full
-// board draws no random number (R129); it dies for good; radiant 2/2 and the 1/1s are Radiant".
+// M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,7 +100,6 @@ mod tests {
                 let s = played("devin-fill", false);
 
                 let units = units_of(&s, P1);
-                // Five unit zones: Devin Bot plus four summons.
                 assert_eq!(units.len(), 5);
                 let lanes: Vec<i32> = units
                     .iter()
@@ -269,8 +264,7 @@ mod tests {
                 let mut before: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 before.sort();
                 assert_eq!(before.len(), 5);
-                // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill. With no Reborn
-                // (patch v0.3.10) the four it summoned stay and nothing new arrives.
+                // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill.
                 s.end_turn();
                 let me = s.card(BOT).id.clone();
                 s.play(ECLIPSE, eclipse(&me));

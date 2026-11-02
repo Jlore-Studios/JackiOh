@@ -1,14 +1,8 @@
 //! #48 5pek Controller (SPEC §8.2): "Switch the position of every unit", radiant "Choose: all enemy
 //! units, or all units". The radiant cell restates the whole clause (§8 Conventions), so it replaces
 //! the base one; "all units" is the base behavior offered as one of the two options.
-//!
-//! R81 lists #48: the radiant choice is a DECLARED mode, so it travels in the play action's `modes`
-//! and never pauses resolution, no `PendingChoice`. The base face declares nothing.
-//!
-//! R20 (§8.2 Engine cell): a spell's position switch spends no exertion, so a unit that already
-//! attacked this turn still flips (§4.1's one exertion per turn is the player's own switch action).
-//! §4.1: "Spikey Pillow cannot be switched to Defense", by action or effect (#65.1); it is skipped
-//! and the rest flip. Only the top card of a Stack pile is touched (R13).
+//! R81: radiant choice is a DECLARED mode in play action (`chosen_options`).
+//! Switches combat positions (§4.1, §4.6, R91; Attack <-> Defense; top of Stack only, R13).
 
 use jackioh_engine::effects::{chosen_options, switch_all_positions};
 use jackioh_engine::prelude::*;
@@ -43,10 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #48 5pek Controller — SPEC §8.2, BUILD M4-T4: "Every unit switches, exertion untouched (R20),
-// Spikey Pillow stays ATK; radiant enemy-only mode". R20 is asserted twice: no `exertion.switched`
-// moved, and a unit that already attacked still flips (§4.1). R81 is asserted as an absence: the
-// declared mode opens no `PendingChoice`. #65.1 Spikey Pillow is §4.1's case; the rest are props.
+// #48 5pek Controller — SPEC §8.2, BUILD M4-T4 (R20). R20 is asserted twice: no `exertion.switched` moved,
+// and a unit that already attacked still flips (§4.1). R81 is asserted as an absence: the declared mode opens
+// no `PendingChoice`. #65.1 Spikey Pillow is §4.1's case; the rest are props.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
