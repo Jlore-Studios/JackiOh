@@ -308,6 +308,8 @@ describe("R1578000 the Play hub", () => {
 
   const WAYS: readonly (readonly [string, string])[] = [
     [playTestid.practice, paths.practice],
+    // B13: the Play hub links the Dungeon Run.
+    [playTestid.dungeon, paths.dungeon],
     [playTestid.together, paths.together],
     [playTestid.replays, paths.replays],
   ];

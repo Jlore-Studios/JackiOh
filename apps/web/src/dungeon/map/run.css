@@ -1,0 +1,355 @@
+/* The dungeon run's screens between fights (DR14 part F, #2707): the HUD, the map, the packs,
+   the tiles and the run-over screen. Colors, radii, layers, shadows and sizes are the tokens'
+   (palette.css, surfaces.css, typescale.css). */
+
+/* One screen: the HUD and the refusal stay put while the phase's body scrolls. */
+.dungeon-run-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  gap: 8px;
+  padding: 12px;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.dungeon-run-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The HUD: one wrapping row of tabular numbers, readable on a phone. */
+.dungeon-run-hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  font-variant-numeric: tabular-nums;
+}
+
+.dungeon-run-hud__stat {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.dungeon-run-hud__relics {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.dungeon-run-hud__label {
+  color: var(--text-dim);
+}
+
+.dungeon-run-hud__empty {
+  color: var(--text-dim);
+}
+
+.dungeon-run-hud__relic {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  font-size: var(--type-sm);
+  white-space: nowrap;
+}
+
+/* Phase titles, notes and action rows. */
+.dungeon-run-title {
+  margin: 0 0 8px;
+}
+
+.dungeon-run-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
+.dungeon-run-section__title {
+  margin: 0;
+}
+
+.dungeon-run-note {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.dungeon-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dungeon-run-actions button {
+  min-height: var(--hit-min);
+}
+
+/* The map: one row per map row, nodes across. */
+.dungeon-run-map {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dungeon-run-map__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dungeon-run-map__node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 96px;
+  min-height: var(--hit-min);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.dungeon-run-map__node:disabled {
+  opacity: 0.55;
+}
+
+.dungeon-run-map__node[data-live="true"] {
+  border-width: 2px;
+}
+
+.dungeon-run-map__node[data-current="true"] {
+  box-shadow: var(--shadow-2);
+}
+
+.dungeon-run-map__icon {
+  font-size: var(--type-2xl);
+  line-height: 1;
+}
+
+.dungeon-run-map__label {
+  font-weight: 700;
+}
+
+.dungeon-run-map__enemy,
+.dungeon-run-map__relic,
+.dungeon-run-map__current {
+  font-size: var(--type-sm);
+}
+
+.dungeon-run-map__enemy,
+.dungeon-run-map__relic {
+  color: var(--text-dim);
+}
+
+.dungeon-run-map__current {
+  font-weight: 700;
+}
+
+/* Card and choice grids: faces keep their aspect in a responsive grid. */
+.dungeon-run-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dungeon-run-cards__item {
+  min-width: 0;
+}
+
+.dungeon-run-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: inherit;
+}
+
+button.dungeon-run-card {
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+button.dungeon-run-card:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.dungeon-run-card[data-selected="true"] {
+  border-color: var(--line);
+  border-width: 2px;
+  box-shadow: var(--shadow-2);
+}
+
+.dungeon-run-card__face {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+}
+
+.dungeon-run-card__face > * {
+  width: 100%;
+  height: 100%;
+}
+
+.dungeon-run-card__buffs {
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.dungeon-run-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dungeon-run-choice {
+  width: 100%;
+  min-height: var(--hit-min);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-align: start;
+}
+
+/* A relic or blessing: its name, its standing, and its words. */
+.dungeon-run-passive {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: start;
+}
+
+.dungeon-run-passive__meta,
+.dungeon-run-passive__level {
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.dungeon-run-passive__text {
+  font-size: var(--type-sm);
+  line-height: 1.3;
+}
+
+.dungeon-run-passive-row {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
+/* The shop's stock: what it is, its price, and its buy button. */
+.dungeon-run-stock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
+/* A card for sale is a card grid's column wide, not the whole row (its face keeps 5:7). */
+.dungeon-run-stock > .dungeon-run-card {
+  width: 140px;
+}
+
+.dungeon-run-stock__price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.dungeon-run-stock__sold {
+  color: var(--text-dim);
+}
+
+/* The run-over screen's stats. */
+.dungeon-run-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.dungeon-run-stats__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.dungeon-run-stats__key {
+  color: var(--text-dim);
+}
+
+.dungeon-run-stats__value {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.dungeon-run-end__score {
+  font-size: var(--type-2xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.dungeon-run-end__embers {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* A narrow screen stacks the map's nodes and narrows the card grid; the body keeps the page's
+   only scrollbar. */
+@media (max-width: 560px) {
+  .dungeon-run-screen {
+    padding: 8px;
+  }
+
+  .dungeon-run-map__node {
+    min-width: 0;
+    flex: 1 1 40%;
+  }
+
+  .dungeon-run-cards {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  }
+
+  .dungeon-run-stats {
+    grid-template-columns: 1fr;
+  }
+}
