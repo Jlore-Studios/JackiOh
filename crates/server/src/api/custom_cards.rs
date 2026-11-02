@@ -1,24 +1,15 @@
-//! Custom cards on the account (SPEC §12.9, R915008; issue #918).
-//!
-//! An active account keeps up to `CUSTOM_CARDS_PER_ACCOUNT` custom cards (§12.1, R915000), private
-//! to it: only the owner reads its rows (row-level security, as for saved decks) and only these
-//! routes write them (migration 0037).
-//!
-//! - **A create** (`POST`) mints the card's id, `custom-` and 32 lowercase hex digits, and starts it
-//!   at version 1. The id is the server's, never the client's, so no player can name a card into
-//!   another's id space.
-//! - **An update** (`PUT`) replaces the card whole and names the version it replaces: the store
-//!   counts the save (that version and one) under the card's lock, and a version another save has
-//!   moved past is a 409 that names the current one, so a stale tab or device never overwrites a
-//!   newer save.
-//! - **Every save** is judged by `jackioh_engine::custom::validate_custom_card` (R915001), the one
-//!   check the creator, the practice worker and a game's setup make too, and refused with its
-//!   issues as `details`. No limit is restated here.
+//! Custom cards on the account (SPEC §12.9, R915008; issue #918): up to `CUSTOM_CARDS_PER_ACCOUNT`
+//! per active account (§12.1, R915000), only the owner reads them and only these routes write them.
+//! - A create (`POST`) mints the id (`custom-` and 32 hex digits) at version 1: the server's, never
+//!   the client's, so no player can name a card into another's id space.
+//! - An update (`PUT`) replaces the card whole and names the version it replaces; one another save
+//!   has moved past is a 409 naming the current one, so a stale tab never overwrites a newer save.
+//! - Every save is judged by `jackioh_engine::custom::validate_custom_card` (R915001), the check the
+//!   creator, the practice worker and a game's setup make too; its issues are the `details`.
 //!
 //! The server never compiles or runs a script: it does not link `jackioh-luau` (#902 V4), and a
-//! source is text it stores, bounded by the validator's `CUSTOM_SOURCE_MAX_BYTES`. The creator checks
-//! a script with the browser's Luau module before it saves it (§12.9). A deleted card leaves the
-//! decks that name it as they are; it then fails their practice game's setup until it is replaced.
+//! source is text bounded by `CUSTOM_SOURCE_MAX_BYTES`. A deleted card leaves the decks that name it
+//! as they are, failing their practice game's setup until it is replaced.
 
 use std::sync::Arc;
 
@@ -52,7 +43,6 @@ pub const LIMITS: CustomCardLimits = CustomCardLimits {
     cards: CUSTOM_CARDS_PER_ACCOUNT as i64,
 };
 
-/// A create's status: the card is a new resource.
 const CREATED: u16 = 201;
 
 fn not_found() -> ApiError {

@@ -6,11 +6,8 @@
 //!
 //! THE CHAIN (§10.6). Each Discover is a `PendingChoice` whose `resume` names the next step in the
 //! card's own `resume` table (`prompts::hook_for`): no callback or closure in state (§9.3). The picks
-//! ride in `data`, the only place a chained effect keeps anything; `resume_self` merges it onward.
-//! FUSE (R77, `subsystems/fuse.rs`): no `target`, `toHand` the caster, both faces fused into
-//! `state.transientDefs`, cost overridden to 0 on the instance (`CRAFTED_CARD_COST`), not the def.
-//! The ingredients are Discovered definitions never on a board, so nothing a player could see ceases
-//! to exist.
+//! ride in `data`; `resume_self` merges it onward. FUSE (R77, `subsystems/fuse.rs`): both faces fused
+//! into `state.transientDefs`, cost 0 on the instance (`CRAFTED_CARD_COST`), not the def.
 
 use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
 use jackioh_engine::prelude::*;
@@ -25,9 +22,8 @@ const THIRD: &str = "third";
 /// The `data` key the picks travel in; `data` is the only place a chained step may keep anything.
 const PICKS: &str = "picks";
 
-/// §6.3 Discover: 1 of 3 Units, drawn without replacement and shown only to the chooser. A plain
-/// `type` filter drops tokens (§5.1), and each Discover is an independent draw over the same pool,
-/// so a Unit can be offered twice; §8.5 and R77 don't forbid it, and R60 lets generated cards repeat.
+/// §6.3 Discover: 1 of 3 Units. A plain `type` filter drops tokens (§5.1), and each Discover is an
+/// independent draw over the same pool, so a Unit can be offered twice (R60 lets generated cards repeat).
 fn discover_unit(step: &'static str, picks: &[String]) -> Effect {
     discover_from_catalog(json_as(json!({
         "step": step,
@@ -62,16 +58,15 @@ fn with_answer(ctx: &EffectContext<'_>) -> Vec<String> {
 }
 
 /// R77: two or three definitions, no target on the field, and a fresh non-Radiant hand card with
-/// `costOverride` 0. Fewer than `FUSE_MIN_INGREDIENTS` is not a fusion — "Fewer is not a fusion" —
-/// so a chain that lost an answer fizzles and the spell still counts as played (§8 Conventions).
+/// `costOverride` 0. Fewer than `FUSE_MIN_INGREDIENTS` is not a fusion, so a chain that lost an answer
+/// fizzles and the spell still counts as played (§8 Conventions).
 fn craft(picks: &[String]) -> Vec<Effect> {
     if picks.len() < subsystems::FUSE_MIN_INGREDIENTS {
         return vec![];
     }
     // No target: R77 takes the ingredients' shared type ("Unit") and "your hand" is the caster's
-    // (§8.5). `fuse_cards` wraps `subsystems/fuse.rs`, taking catalog ids (`defIds`) where `fuse`
-    // takes instances and a sink, so no state is mutated here (CLAUDE.md rule 5); each pick is an
-    // ingredient in no pile (`{ z: "gone" }`, R86) and R102 composes the result.
+    // (§8.5). `fuse_cards` takes catalog ids, so no state is mutated here (CLAUDE.md rule 5); each
+    // pick is an ingredient in no pile (R86) and R102 composes the result.
     vec![fuse_cards(json_as(json!({ "defIds": picks, "toHand": "self" })))]
 }
 
@@ -104,9 +99,7 @@ pub fn script() -> CardScripts {
 }
 
 // #99 Craft a Card — SPEC §8.5, §6.3 (Fuse, Discover), §10.5, §10.6, R4, R23, R60, R65, R77, R86,
-// R102, R113; BUILD M4-T4 row 99. R102's "the whole verb does nothing at all" guards are
-// unreachable from a #99 play, so they are asserted against `subsystems::fuse`, where that rule
-// lives. `FUSE_COST_CAP` and `HAND_CAP` are R77's and R4's numbers, in `config.rs`.
+// R102, R113; BUILD M4-T4 row 99. `FUSE_COST_CAP` and `HAND_CAP` are R77's and R4's numbers.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,8 +223,7 @@ mod tests {
             .collect()
     }
 
-    /// The rng a sink over the live state starts from; the sink itself is built where it is used,
-    /// since it borrows the state.
+    /// The rng a sink over the live state starts from; the sink borrows the state, so is built where used.
     fn rng_for(s: &Scenario) -> Rng {
         Rng::new(&s.state().seed, s.state().rng_cursor)
     }
@@ -308,9 +300,6 @@ mod tests {
             assert_eq!(second["options"].as_array().map(Vec::len), Some(3));
             assert_eq!(events_of(&s, "promptOpened").len(), 2);
 
-            // The second pool is an independent draw over the same query: nothing is narrowed by the
-            // first pick, so the same Unit can be offered — and picked — twice (R60, and §8.5 forbids
-            // neither).
             let units = unit_ids();
             for id in option_ids(&second) {
                 assert!(units.contains(&id));
@@ -326,8 +315,8 @@ mod tests {
         #[test]
         fn r60_the_second_discover_can_offer_the_card_the_first_one_gave_over_the_seeds() {
             crate::register_all();
-            // Proves the second pool is not narrowed: some seed offers the first pick again. A repeat is
-            // rare and a card joining the pool makes it rarer, so the search runs to the testkit's bound.
+            // A repeat is rare and a card joining the pool makes it rarer, so the search runs to the
+            // testkit's bound.
             let mut offered_again = false;
             let mut n = 0;
             while n < SEED_SEARCH_BOUND && !offered_again {
@@ -488,7 +477,6 @@ mod tests {
             s.play(&card, json!({}));
             let landed = must(s.unit(P1, 1), "the crafted Unit on the field");
             assert_eq!(landed.def_id, fused.id);
-            // It cost 0, so the 4 left after #99 is untouched.
             s.expect_mana(P1, 4);
         }
 
@@ -527,8 +515,6 @@ mod tests {
 
             let names: Vec<&str> = ingredients.iter().map(|def| def["name"].as_str().unwrap_or_default()).collect();
             assert_eq!(fused["name"], json!(names.join(" + ")));
-            // R77: the base form sums the base faces and the radiant form the radiant faces, all three of
-            // each, and each unions its own faces' keywords.
             for key in ["base", "radiant"] {
                 let (attack, health) = face_sums(&picks, key);
                 assert_eq!(fused[key]["attack"], json!(attack), "the fused {key} attack");
@@ -550,7 +536,6 @@ mod tests {
             let (base_attack, base_health) = face_sums(&picks, "base");
             s.expect_stats(&card, json!({ "attack": base_attack, "maxHealth": base_health }));
 
-            // Made Radiant in hand, it reads the three-way fused radiant face.
             s.play(GLOWY, json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] }));
             assert!(s.card(&card).radiant);
             let (radiant_attack, radiant_health) = face_sums(&picks, "radiant");
@@ -561,8 +546,7 @@ mod tests {
         fn r4_the_crafted_card_goes_through_s2_4_s_pipeline_and_takes_the_slot_n99_vacated() {
             crate::register_all();
             // §2.4's cap is HAND_CAP. #99 leaves the hand at step 4, so a full hand has one slot free
-            // by the time the fusion lands: the crafted card fits and nothing burns. A burn would need
-            // a card added between #99 leaving and the fusion landing, so this is R4's reachable half.
+            // when the fusion lands. A burn would need a card added in between: this is R4's reachable half.
             let filler = vec![json!(SPARE); (HAND_CAP - 2) as usize];
             let (s, _) = craft(CraftOpts { p1: Some(json!({ "hand": filler, "mana": 8 })), ..CraftOpts::default() });
             let fused = fused_def_of(s.state());
@@ -608,8 +592,7 @@ mod tests {
         #[test]
         fn r4_with_the_hand_full_the_crafted_card_still_lands_and_nothing_burns() {
             crate::register_all();
-            // #99 leaves the hand to resolve and the crafted card takes that slot, so the hand ends at
-            // HAND_CAP with no draw after it to burn.
+            // The crafted card takes the slot #99 left, and no draw follows it to burn.
             let filler = vec![json!(SPARE); (HAND_CAP - 2) as usize];
             let (s, _) = craft(CraftOpts {
                 radiant_face: true,
@@ -636,7 +619,8 @@ mod tests {
         }
     }
 
-    // R102's "the whole verb does nothing at all", asserted where the rule lives.
+    // R102's "the whole verb does nothing at all" is unreachable from a #99 play, so it is asserted
+    // against `subsystems::fuse`, where the rule lives.
 
     mod fuse_does_nothing_at_all_r102_r23 {
         use super::*;

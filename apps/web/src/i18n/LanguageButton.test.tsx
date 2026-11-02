@@ -62,7 +62,6 @@ describe("R1916000 the language button once the device has settled", () => {
   });
 
   it("R1916000 a language change from settings or the button, or settings' reset, sets the count to 0 and brings the button back", async () => {
-    // From settings.
     settleDevice();
     render(
       <>
@@ -78,7 +77,6 @@ describe("R1916000 the language button once the device has settled", () => {
     expect(window.localStorage.getItem(LOCALE_VISITS_STORAGE_KEY)).toBe("0");
     expect(getLocale()).toBe("zh-CN");
 
-    // From the button.
     act(() => {
       for (let i = 0; i < LANGUAGE_SETTLED_VISITS - 1; i++) countLocaleVisit();
     });
@@ -94,7 +92,6 @@ describe("R1916000 the language button once the device has settled", () => {
     // Without the reset the count would have passed LANGUAGE_SETTLED_VISITS and the button would be gone.
     expect(screen.getByTestId("language-nav")).toBeInTheDocument();
 
-    // From settings' reset.
     settleDevice();
     expect(screen.queryByTestId("language-nav")).toBeNull();
     act(() => {

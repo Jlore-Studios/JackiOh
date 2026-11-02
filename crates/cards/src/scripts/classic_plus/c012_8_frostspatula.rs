@@ -15,8 +15,7 @@ pub const ID: &str = "classicplus-012-8";
 
 const KILLS: &str = "kills";
 
-/// TS `type Kill = { id: string; defId: string; radiant: boolean }`: one remembered kill, as it rides
-/// the card's memory (plain JSON, R383).
+/// One remembered kill, as it rides the card's memory (plain JSON, R383).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct Kill {
@@ -25,7 +24,7 @@ struct Kill {
     radiant: bool,
 }
 
-/// TS `killsOf(ctx)`: the kills this card remembers; anything but a list reads as none.
+/// The kills this card remembers; anything but a list reads as none.
 fn kills_of(ctx: &EffectContext) -> Vec<Kill> {
     kills_in(recalled(ctx, KILLS).as_ref())
 }
@@ -122,22 +121,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.8 Frostspatula — SPEC §8.7 row 12.8, R383, R409, BUILD M9 Classic+ row C+ 12.8: "Animated on
-// your turn (R383): played on your turn it animates at once into its own lane's unit zone, else the
-// leftmost open, unlocked, unreserved one, summoning sick the turn it enters, so its Rush reaches units
-// only; from your next start of turn it is not (R1062, live in every game since v0.3.5 shipped the
-// Meditative set; before that it was sick on every animation, D14); it returns to its backrow zone at
-// the end of your cleanup, after your end-of-turn steps, and animates again after your next mana
-// refresh and Brittle tick; on the opponent's turn it can't be attacked, "all Units" effects skip it
-// and backrow effects reach it; while animated its
-// backrow zone is reserved; both moves keep damage, buffs and memory (R78 does not apply); with no open
-// unit zone it stays in the backrow; […]; it remembers each Unit it killed (R42) as `{ defId, radiant }`,
-// and its Death, as a Unit or destroyed in the backrow (§4.5), summons a fresh copy of each for you,
-// tokens included, until your board is full, the originals staying in their owners' graveyards (R409);
-// `animated` and `deanimated` are public; radiant 14/6 and the copies are Radiant" (10/3 and 20/6
-// before patch v0.3.10).
-
-/// `describe("C+ #12.8 Frostspatula")`.
+// C+ #12.8 Frostspatula — SPEC §8.7 row 12.8, BUILD M9 Classic+ row C+ 12.8, R383, R409, R1062; both
+// moves keep damage, buffs and memory (R78 does not apply); its Death fires in the backrow too (§4.5).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,12 +167,10 @@ mod tests {
         s.card(SPATULA).id.clone()
     }
 
-    /// TS `eventsOf(s, type).length`.
     fn count_of(events: &[GameEvent], kind: GameEventType) -> usize {
         events.iter().filter(|event| event.event_type() == kind).count()
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -250,7 +233,6 @@ mod tests {
             assert!(matches_object(&js(&s.card(SPATULA).zone), &json!({ "z": "field", "row": "backrow" })));
             assert_eq!(s.card(SPATULA).damage, 1);
             s.end_turn();
-            // Back on your turn, after the refresh: animated again, damage kept.
             assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(spatula_id(&s)));
             s.expect_stats(SPATULA, json!({ "health": 2 }));
         }
@@ -284,7 +266,6 @@ mod tests {
             s.expect_in_zone(SPATULA, "graveyard");
         }
 
-        /// R409 it remembers each Unit it killed, and its Death summons a fresh copy of each for you, with no Cry
         #[test]
         fn r409_it_remembers_each_unit_it_killed_and_its_death_summons_a_fresh_copy_of_each_for_you_with_no_cry() {
             let mut s = played(false, 1, json!({}), json!({ "hand": [MAGIC_JAMMED, FILLER] }));
@@ -322,7 +303,6 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id).as_deref(), Some(RUSH));
         }
 
-        /// R409 the copies go in until your board is full
         #[test]
         fn r409_the_copies_go_in_until_your_board_is_full() {
             let mut s = played(
@@ -336,7 +316,6 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id).as_deref(), Some(RUSH));
         }
 
-        /// its kills survive its moves between the rows (R383: memory is kept)
         #[test]
         fn its_kills_survive_its_moves_between_the_rows_r383_memory_is_kept() {
             let mut s = played(false, 1, json!({}), json!({ "field": [TOKENS, TOKENS] }));
@@ -351,13 +330,9 @@ mod tests {
             );
         }
 
-        /// R1062 R383 animated again at your next start of turn it is not summoning sick and its Rush reaches the hero.
-        /// Live in every game since v0.3.5 shipped the Meditative set, with no preview: the closed-set
-        /// test (sick on every animation, D14) is folded in here, as only the arrival turn is sick now.
         #[test]
         fn r1062_r383_animated_again_at_your_next_start_of_turn_it_is_not_summoning_sick_and_its_rush_reaches_the_hero() {
             let mut s = played(false, 1, json!({}), json!({}));
-            // R83: the turn it arrives it is sick, its Rush reaching Units only.
             s.expect_refused(|s| s.attack(SPATULA, "hero"));
             s.expect_health(P2, HERO_HEALTH);
             s.end_turn().end_turn();
@@ -402,7 +377,6 @@ mod tests {
             assert!(drawn > animated);
         }
 
-        /// R383 both moves keep its buffs
         #[test]
         fn r383_both_moves_keep_its_buffs() {
             let mut s = played(false, 2, json!({ "hand": [{ "def": SPATULA }, SURGERY, FILLER] }), json!({}));
@@ -429,7 +403,6 @@ mod tests {
             s.expect_in_zone(TOKENS, "graveyard");
         }
 
-        /// R383 a Stack over it keeps it a Unit, dormant, through your cleanup, its backrow zone still held
         #[test]
         fn r383_a_stack_over_it_keeps_it_a_unit_dormant_through_your_cleanup_its_backrow_zone_still_held() {
             let mut s = played(false, 2, json!({ "hand": [{ "def": SPATULA }, FIENDER, FILLER] }), json!({}));
@@ -445,7 +418,6 @@ mod tests {
             assert_eq!(count_of(s.events(), GameEventType::Deanimated), 0);
         }
 
-        /// R383 a new controller keeps it a Unit until its own cleanup, then it goes to their leftmost open backrow zone
         #[test]
         fn r383_a_new_controller_keeps_it_a_unit_until_its_own_cleanup_then_it_goes_to_their_leftmost_open_backrow_zone() {
             // It kills "Miss" Mrow, whose Death hands it to p2 on p1's turn.
@@ -468,7 +440,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 

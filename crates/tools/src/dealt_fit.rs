@@ -1,19 +1,10 @@
-//! `cargo jackioh stats fit-dealt <file>…` (SPEC §9.11, R378; `training/README.md`'s unban lane): a
-//! refit of `crates/ai/src/shadow_ban.rs`'s `DEALT_Q` and `DEALT_Q_PRIOR` over arena record files,
-//! printed to paste, as `sweep` prints `SHADOW_BAN`'s rows. Nothing is written back.
-//!
-//! Only `self-vs-bin-…` games count: agent `a`, this build's AI at full skill, against a parent
-//! build. `a`'s seat is read off the record id (`arena::record_id`, `arena::game_setup`): the
-//! `:p1`/`:p2` a paired game ends with, else the parity of the game number its seed ends with.
-//! `DEALT_Q_PRIOR` is the candidate's share of the games it won, each card's `q` that share
-//! shrunk toward it, `(w + 60 x prior) / (n + 60)`, over the candidate's decks that held it (a card
-//! twice in one deck counts once). An id read twice counts once, as the store holds one row per id,
-//! and a draw is not won.
-//!
-//! The output is the prior line and the rows by id, each as `shadow_ban.rs` writes it, plus an
-//! advisory table for `UNBANNED_PREFER`: a person's choice on the sweep's numbers, never made here.
-//!
-//! Tooling, so it may read files and the console; `crates/ai` stays pure.
+//! `cargo jackioh stats fit-dealt <file>…` (SPEC §9.11, R378; `training/README.md`'s unban lane):
+//! refits `crates/ai/src/shadow_ban.rs`'s `DEALT_Q` and `DEALT_Q_PRIOR` over arena record files and
+//! prints the rows to paste; nothing is written back. Only `self-vs-bin-…` games count, `a`'s seat
+//! read off the record id. The prior is the candidate's share of the games won, each card's `q` that
+//! share shrunk toward it, `(w + 60 x prior) / (n + 60)`; an id read twice counts once, a draw is not
+//! won. The `UNBANNED_PREFER` table is advisory: a person's choice, never made here. Tooling, so it
+//! may read files; `crates/ai` stays pure.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;

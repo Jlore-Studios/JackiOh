@@ -1,7 +1,6 @@
-// R2119000: the undo toast a held deletion shows (`hold.ts`): its words ("Deck deleted") and Undo.
-// It is a status, so a reader hears it without the focus moving: nothing here takes the focus, and
-// Undo is the next stop of the keyboard's own order. It sits inside the safe-area insets and slides
-// in, or simply appears under Reduce motion (the media query, or the settings panel's switch).
+// R2119000: the undo toast a held deletion shows (`hold.ts`). It is a status, so a reader hears it
+// without the focus moving: nothing here takes the focus, and Undo is the next stop of the keyboard's
+// own order. Under Reduce motion (the media query or the settings switch) it appears, not slides in.
 
 import type { ReactElement } from "react";
 

@@ -6,11 +6,9 @@
 //! - **Play-time pick:** a declared target (`TargetDecl` of kind target, `of: [unit, backrow]` on
 //!   either side, `notTags: [CN]`, `aim: help`, `required`, R81). A face-down card its chooser
 //!   cannot read is always offered, whatever its tags (MD-B16, R924).
-//! - **On resolution:** NEW `grant_tag` adds CN to a NEW `CardInstance.granted_tags`; ME-CN sets
-//!   `chinese` on the card; `buff` gives +stats/+stats (layer 4, stored even on a backrow card,
-//!   where it applies if the card animates); `upgrade({ target: chosen, times })`. As the designer
-//!   asked, the printed text never says Chinese.
-//! - A target that is CN by the time the Spell resolves fails its filter and fizzles (§10.5).
+//! - **On resolution:** `grant_tag` adds CN to `CardInstance.granted_tags`; ME-CN sets `chinese`;
+//!   `buff` is layer 4, stored even on a backrow card, where it applies if the card animates. As
+//!   the designer asked, the printed text never says Chinese.
 
 use jackioh_engine::prelude::*;
 
@@ -58,20 +56,13 @@ fn rcta() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // Both faces share the one script: the declared `stats` (2, radiant 4) and `times` (1,
-    // radiant 2) are what differ.
+    // Both faces share the one script: only the declared `stats` and `times` differ.
     let base = rcta();
     let radiant = rcta();
     CardScripts { base, radiant }
 }
 
-// M #35 RCTA (CN) — SPEC §8.8 row 35, BUILD M10 row M 35: "The declared target is a non-CN
-// permanent on either side, a face-down card its chooser cannot read always offered (MD-B16); it
-// gains the CN tag as a granted tag that every instance-level read sees (M 34's scopes, M 78's
-// filter, Core 2's pick) while pools do not, kept in every zone and by a copy, dropped by a
-// Transform (MD-B15), and the `chinese` flag, which makes it CN too (MD-B11, R1176000); then +2/+2
-// permanently and one Buff; a target that is CN by resolution fizzles; stats and times read through
-// `param()`; radiant +4/+4 and two Buffs".
+// M #35 RCTA (CN) — SPEC §8.8 row 35, BUILD M10 row M 35, MD-B11, MD-B15.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,7 +168,6 @@ mod tests {
                 let victim = s.unit(P1, 1).expect("the Vanilla");
                 s.play(RCTA, pick(&victim.id));
                 let changed = s.card(&victim.id).clone();
-                // The granted tag, the flag, the permanent stats and the one Buff.
                 assert_eq!(changed.granted_tags, Some(vec![Tag::Cn]));
                 assert_eq!(changed.chinese, Some(true));
                 assert_eq!((changed.buffs.attack, changed.buffs.health), (2, 2));
@@ -203,9 +193,6 @@ mod tests {
 
             #[test]
             fn r1176000_a_translated_permanent_is_no_target() {
-                // Translated (M 32's "get ready to learn Chinese"), the Vanilla is CN (R1176000):
-                // the target filter `notTags: [CN]` refuses it, and with no other permanent the
-                // play is refused.
                 let mut s = casting("rcta-translated", false);
                 let victim = s.unit(P1, 1).expect("the Vanilla").id;
                 apply_for_p1(&mut s, &[translate(json_as(json!({ "instanceId": victim })))]);
@@ -217,8 +204,6 @@ mod tests {
 
             #[test]
             fn r924_an_enemy_face_down_trap_is_a_legal_pick() {
-                // The enemy's face-down Sheepish is a legal pick, whatever its tags: the play
-                // resolves onto it, granting CN, Chinese, stats and a Buff.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "rcta-trap",
@@ -242,8 +227,6 @@ mod tests {
 
             #[test]
             fn a_target_that_is_cn_by_resolution_fizzles() {
-                // CN by the time the Spell resolves: the effect fizzles on it — no flag, no
-                // stats, no Buff.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "rcta-fizzle",
@@ -298,7 +281,6 @@ mod tests {
             #[test]
             fn r923_every_instance_level_read_sees_the_tag_while_pools_do_not() {
                 let (mut s, victim) = granted("rcta-reads");
-                // The instance reads CN; the definition, and so every pool, does not.
                 assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
                 assert!(!crate::card_def(VANILLA).tags.contains(&Tag::Cn));
                 let pool = jackioh_engine::catalog::query(&json_as(json!({ "tags": ["CN"] })));
@@ -318,7 +300,6 @@ mod tests {
 
             #[test]
             fn r923_kept_in_every_zone_and_by_a_copy_dropped_by_a_transform() {
-                // Kept by a copy.
                 let (mut s, victim) = granted("rcta-copy");
                 apply_for_p1(
                     &mut s,
@@ -326,18 +307,15 @@ mod tests {
                 );
                 let copy = s.unit(P1, 2).expect("the copy");
                 assert_eq!(copy.granted_tags, Some(vec![Tag::Cn]));
-                // Kept in a hand.
                 apply_for_p1(&mut s, &[bounce(json_as(json!({ "target": instance(&victim) })))]);
                 assert!(matches!(s.card(&victim).zone, Zone::Hand { .. }));
                 assert_eq!(s.card(&victim).granted_tags, Some(vec![Tag::Cn]));
-                // Kept in a graveyard.
                 apply_for_p1(
                     &mut s,
                     &[destroy(json_as(json!({ "target": instance(&copy.id) })))],
                 );
                 s.expect_in_zone(&copy.id, "graveyard");
                 assert_eq!(s.card(&copy.id).granted_tags, Some(vec![Tag::Cn]));
-                // Dropped by a Transform.
                 let (mut s, victim) = granted("rcta-transform");
                 apply_for_p1(
                     &mut s,

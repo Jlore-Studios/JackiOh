@@ -1,11 +1,7 @@
-// The shell's gate after the adversarial panel (docs/polish/5-sign-in.md, B40, R193, R194): one gate
-// per screen, so a move re-reads the account; a check that runs long offers a way out; the error
-// panel speaks plainly and waits out a stated rate limit; and an emailed link that lands on any path
-// is scrubbed and handed to `/login`.
-//
-// Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
-// mounts itself outside vitest), a session and a stubbed `fetch`. A session is seeded in
-// `localStorage` under the key an older build used (R632 moves it into the tab on the first read).
+// The shell's gate (docs/polish/5-sign-in.md, B40, R193, R194): one gate per screen, so a move re-reads
+// the account; a long check offers a way out; the error panel waits out a stated rate limit; an emailed
+// link on any path is scrubbed and handed to `/login`. `main.tsx` mounts itself outside vitest, hence
+// `await import`; a session is seeded under an older build's `localStorage` key (R632 moves it).
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -126,7 +122,6 @@ describe("B40 one gate per screen", () => {
     }, SLOW);
     fireEvent.click(submit);
 
-    // The screen says the code worked, then the player takes the way on.
     fireEvent.click(await screen.findByTestId(inviteTestid.goToDecks, undefined, SLOW));
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.decks);
@@ -188,7 +183,7 @@ describe("B40 one gate per screen", () => {
       expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
     }, SLOW);
 
-    // The other tab signs out: it clears the shared storage, and this tab hears the storage event.
+    // Another tab signs out.
     window.localStorage.clear();
     window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY, newValue: null }));
     await act(async () => {
@@ -269,9 +264,7 @@ describe("B40 the gate's error panel", () => {
     );
     at(paths.account);
     render(<App />);
-    // Every step here runs on promises and faked timers (/account is in the entry chunk and the
-    // stubbed fetch answers at once), so flushing them settles the screen without waiting on the
-    // wall clock, however loaded the machine is.
+    // /account is in the entry chunk and the stub answers at once: flushing settles it, no wall clock.
     await flushMicrotasks();
     expect(screen.getByTestId(shellTestid.error)).toBeInTheDocument();
     expect(screen.getByTestId(shellTestid.retry)).toBeDisabled();
@@ -298,7 +291,7 @@ describe("B40 the gate's error panel", () => {
     });
     at(paths.account);
     render(<App />);
-    // As above: promises and faked timers only, so the test never waits on the wall clock.
+    // As above: no wait on the wall clock.
     await flushMicrotasks();
 
     const panel = screen.getByTestId(shellTestid.error);
@@ -334,8 +327,7 @@ describe("R193 an emailed link that lands anywhere but /login", () => {
     expect(window.location.href).not.toContain(token);
     expect(window.location.href).not.toContain("live-refresh");
     expect(window.location.pathname).toBe(paths.login);
-    // `/login` asks the server whose token it is before the link decides anything; until then
-    // nothing is stored and nothing is filled in.
+    // `/login` asks the server whose token it is first; until then nothing is stored or filled in.
     expect(await screen.findByTestId(loginTestid.checkingLink, undefined, SLOW)).toBeInTheDocument();
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
     expect(screen.getByTestId(loginTestid.email)).toHaveValue("");
@@ -431,7 +423,6 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     at(paths.play);
     render(<App />);
     expect(await screen.findByTestId(playTestid.screen, undefined, SLOW)).toBeInTheDocument();
-    // No sign-in bounce: the visitor reads the hub where they are, and nothing is asked of the server.
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(loginTestid.form)).toBeNull();
     expect(urls).toEqual([]);
@@ -465,7 +456,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     at(`${paths.play}?room=abc234&mode=bo3`);
     render(<App />);
     await screen.findByTestId(loginTestid.form, undefined, SLOW);
-    // The link is out of the address bar, and what waits is the code and the mode, never a path (B35).
+    // What waits is the code and the mode, never a path (B35).
     expect(window.location.pathname).toBe(paths.login);
     expect(window.location.search).toBe("");
     const kept = window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY);
@@ -477,6 +468,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
     // The Play door opens the hub, whose online panel is the lobby (R1578000); the test walks there directly.
+    // The Play door opens the hub, whose online panel is the lobby; the test walks there directly.
     act(() => {
       navigate(paths.play);
     });
@@ -506,7 +498,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     at(`${paths.together}?coop=abc234`);
     render(<App />);
     await screen.findByTestId(loginTestid.form, undefined, SLOW);
-    // The link is out of the address bar, and what waits is the code alone, never a path (B35).
+    // What waits is the code alone, never a path (B35).
     expect(window.location.pathname).toBe(paths.login);
     expect(window.location.search).toBe("");
     const kept = window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY);

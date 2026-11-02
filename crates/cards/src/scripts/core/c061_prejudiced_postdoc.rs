@@ -1,16 +1,9 @@
 //! #61 Prejudiced Postdoc (SPEC §8.3, R23, R57, R64, R81, R90).
 //! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
 //! unit", which per §8's Conventions restates only which units the pick may name.
-//!
-//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) with three
-//! deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla flag is
-//! on, so it is at its printed stats with no buffs (R781003), and it has no granted keywords (BUILD
-//! M4-T4 #8). R23: Immutable blocks Vanilla on the
-//! Immutable card ITSELF, so an Immutable target is a legal pick. Auras (§10.4) are computed on read.
-//!
-//! R81/R90: the pick travels in the `play` action, so resolution never pauses. The Postdoc is still in
-//! hand when the play's choices are validated (§10.5 step 1), so it needs no `excludeSelf`. A pick the
-//! board cannot satisfy fizzles the Cry and the unit still enters (§8 Conventions, R90).
+//! Copy is R57 with summon_copy args (CLAUDE.md rule 5): Vanilla (R781003) and no granted keywords.
+//! Immutable blocks Vanilla on Immutable target itself (R23); auras computed on read (§10.4).
+//! Pick travels in play action (R81, R90; §10.5 step 1; leftmost free zone R64; §8).
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
@@ -51,9 +44,6 @@ pub fn script() -> CardScripts {
 }
 
 // #61 Prejudiced Postdoc — SPEC §8.3, BUILD M4-T4 row 61.
-//
-// Must-pass: "Vanilla copy of a Human keeps the target's form at its printed stats, no buffs (R781003), no keywords or text, no
-// damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit."
 #[cfg(test)]
 mod tests {
     use super::script;

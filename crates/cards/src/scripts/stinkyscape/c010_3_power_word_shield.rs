@@ -35,9 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #10.3 Power Word Shield — SPEC §8.10 row S 10.3, BUILD M12 row S 10.3: "at (0) a chosen Unit
-// gains +2 Health, current and max, and its caster draws 1; an enemy Unit may be chosen; health and
-// draw read through `param()`; radiant +4 Health and 2 cards".
+// S #10.3 Power Word Shield — SPEC §8.10 row S 10.3, BUILD M12 row S 10.3.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

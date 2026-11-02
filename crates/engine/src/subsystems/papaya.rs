@@ -1,26 +1,13 @@
 //! Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422; docs/classic-sets.md B5 E32).
 //!
-//! The grid is the board's 20 cells from the caster's seat: x the lane less one on both sides (§3.1),
-//! y 0 the caster's backrow, 1 their units, 2 the opponent's units, 3 the opponent's backrow. The curve
-//! is the Lagrange polynomial through 1 to `PAPAYA_MAX_CELLS` cells in different lanes, in exact
-//! rationals so "y = p(x) exactly" is an integer test; a cell is on it when p(x) is a whole row 0 to 3 (R422).
+//! The grid is the board's 20 cells from the caster's seat: x the lane less one (§3.1), y 0 to 3 from
+//! the caster's backrow out. The curve is the Lagrange polynomial through 1 to `PAPAYA_MAX_CELLS` cells
+//! in different lanes, in exact rationals so "y = p(x) exactly" is an integer test (R422).
 //!
-//! Cells are Discovered one prompt at a time (patch v0.3.10, R831003): each is a `mode` prompt of
-//! random cells drawn from the match rng among the unused lanes' cells (option `"x,y"`, in lane order),
-//! `PAPAYA_BASE_OFFERS` on the base face and `PAPAYA_OFFERS` on the Radiant, until `PAPAYA_MAX_CELLS`
-//! are picked (R1704000), so `legal_actions`, the fuzz suite and the AI reach every answer while the
-//! player's control over the curve stays limited. The cells so far ride the prompt's resume data as
-//! plain points (R113); options are cells, never cards (R177). Then the curve is announced in a public
-//! `curveDrawn` naming its zones, the board is read once and the top of the pile at each cell on the
-//! curve is destroyed (R1704000): face-down cards too, a dormant card beneath resuming (§3.2, R13); the
-//! Radiant face only the enemy's rows 2 and 3.
-//!
-//! Through v0.4.0f (`PAPAYA_RULES_V0_4_0F`, R767000) both faces offered `PAPAYA_OFFERS` cells, "done"
-//! ended the picks after the first, and the curve exiled its cards (openly, once in exile, R97; tokens
-//! ceasing to exist, R11).
-//!
-//! A card script: `cry: hook(|_| subsystems::papaya_begin())`,
-//! `resume: [(subsystems::PAPAYA_STEP, hook(subsystems::papaya_answered))]`.
+//! Cells are Discovered one `mode` prompt at a time (R831003) from random cells of the unused lanes, so
+//! `legal_actions`, the fuzz suite and the AI reach every answer while the player's control stays
+//! limited; options are cells, never cards (R177). The curve's pile tops are destroyed (R1704000),
+//! face-down cards too, a dormant card beneath resuming (§3.2, R13); the Radiant face only the enemy's.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -36,7 +23,7 @@ use crate::state::GameState;
 use crate::wire::{GameEvent, PlayerId, Row, ZoneRef, opponent_of};
 use crate::zones::{ZoneSlot, zone_contents};
 
-/// R422: a cell of the grid from the caster's seat — x the lane less one, y the row.
+/// R422: a cell of the grid from the caster's seat.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct PapayaPoint {
@@ -47,7 +34,6 @@ pub struct PapayaPoint {
 /// R422: the lanes the curve is read at (§3.1: both rows have as many).
 pub const PAPAYA_LANES: i32 = UNIT_ZONES;
 
-/// One row of the grid: whose side it is on, and which row of that side.
 struct GridRow {
     enemy: bool,
     row: Row,
@@ -79,7 +65,6 @@ fn is_cell(point: &PapayaPoint) -> bool {
     (0..PAPAYA_LANES).contains(&x) && (0..PAPAYA_ROWS).contains(&y)
 }
 
-/// The grid row a `y` names, or `None` off the grid.
 fn grid_row(y: i32) -> Option<&'static GridRow> {
     usize::try_from(y).ok().and_then(|at| GRID_ROWS.get(at))
 }
@@ -129,8 +114,7 @@ fn rational(num: i64, den: i64) -> Rational {
     }
 }
 
-/// R422: the curve through the cells (Lagrange), read at x exactly. Panics on points that are not 1
-/// to `PAPAYA_MAX_CELLS` grid cells in different lanes.
+/// R422: the curve through the cells, read at x exactly; panics on cells that make no curve.
 pub fn curve_at(points: &[PapayaPoint], x: i32) -> Rational {
     let lanes: IndexSet<i32> = points.iter().map(|point| point.x).collect();
     if points.is_empty()
@@ -172,8 +156,7 @@ pub fn cells_on_curve(points: &[PapayaPoint]) -> Vec<PapayaPoint> {
         .collect()
 }
 
-/// R422: the ids of the cards the curve hits — the top of each pile on it, the enemy's rows only when
-/// `enemy_only`.
+/// R422: the ids of the tops of the piles on the curve.
 pub fn cards_on_curve(
     state: &GameState,
     controller: PlayerId,
@@ -203,8 +186,7 @@ pub const PAPAYA_POINTS_KEY: &str = "papayaPoints";
 /// R831003: the option that ends the picks (through v0.4.0f, R1704000).
 pub const PAPAYA_DONE: &str = "done";
 
-/// R1704000: the rules a Papaya's curve runs under — its base face's offers, whether "done" may end
-/// the picks, and whether the curve destroys its cards or exiles them.
+/// R1704000: the rules a Papaya's curve runs under.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PapayaRules {
     pub base_offers: i32,
@@ -219,8 +201,8 @@ pub const PAPAYA_RULES: PapayaRules = PapayaRules {
     destroys: true,
 };
 
-/// R831003, R767000: the curve through v0.4.0f — 1 to 4 Discovers of `PAPAYA_OFFERS` cells, then the
-/// exiles.
+/// R831003, R767000: the curve through v0.4.0f: 1 to 4 Discovers of `PAPAYA_OFFERS` cells on both
+/// faces, then the exiles (openly, once in exile, R97; tokens ceasing to exist, R11).
 pub const PAPAYA_RULES_V0_4_0F: PapayaRules = PapayaRules {
     base_offers: PAPAYA_OFFERS,
     done: true,
@@ -232,7 +214,7 @@ fn cell_option(point: &PapayaPoint) -> String {
     format!("{},{}", point.x, point.y)
 }
 
-/// R831003: the cell an option names, or `None` for "done" or anything else.
+/// R831003: the cell an option names.
 fn option_cell(option: &str) -> Option<PapayaPoint> {
     let (x, y) = option.split_once(',')?;
     let point = PapayaPoint {
@@ -253,9 +235,8 @@ fn cell_label(point: &PapayaPoint) -> String {
     format!("Lane {}, {side}", point.x + 1)
 }
 
-/// R831003, R1704000: the Discover of the next cell — random cells of the lanes the curve has not used,
-/// drawn as the prompt opens (`PAPAYA_OFFERS` on the Radiant face, the rules' on the base), then "done"
-/// once a cell is picked where the rules allow it.
+/// R831003, R1704000: the Discover of the next cell, drawn as the prompt opens, then "done" once a cell
+/// is picked where the rules allow it.
 fn ask_cell(points: Vec<PapayaPoint>, rules: PapayaRules) -> Effect {
     Effect::new("papayaCell", move |ctx| {
         let offers = if ctx.radiant {
@@ -319,14 +300,12 @@ fn held_points(data: Option<&Value>) -> Vec<PapayaPoint> {
         .unwrap_or_default()
 }
 
-/// R422, R831003, R1704000: an answer — the next Discover while cells are being added, else the curve:
-/// its public `curveDrawn`, then its destroys.
+/// R422, R831003, R1704000: an answer: the next Discover while cells are being added, else the curve.
 pub fn papaya_answered(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     papaya_answered_with(PAPAYA_RULES, ctx)
 }
 
-/// R422, R831003, R1704000: `papaya_answered` under `rules`: the curve's cards destroyed, or exiled
-/// through v0.4.0f.
+/// `papaya_answered` under `rules`.
 pub fn papaya_answered_with(rules: PapayaRules, ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let held = held_points(ctx.data.get(PAPAYA_POINTS_KEY));
     let used: Vec<i32> = held.iter().map(|point| point.x).collect();

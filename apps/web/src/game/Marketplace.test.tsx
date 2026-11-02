@@ -1,8 +1,7 @@
 // R1853003, R2250002: the Marketplace's shop (Marketplace.tsx), mounted by Game and read off the view and
-// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it (each of the
-// viewer's offers' index, face, price and copies left, the engine's `reason` on one it refuses, the
-// viewer's priced hand cards that sell, R1861000); the shop must send exactly the `marketBuy` or
-// `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
+// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it, the
+// viewer's priced hand cards that sell among it (R1861000); the shop must send exactly the `marketBuy`
+// or `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
 // R2127000: Back closes the open shop, as Escape does.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -61,7 +60,6 @@ function marketSent(onAction: ReturnType<typeof renderGame>): ActionBody[] {
   return onAction.mock.calls.map(([body]) => body).filter((body) => body.type === "marketBuy" || body.type === "marketSell");
 }
 
-/** Opens the shop with its toggle. */
 function openShop(): HTMLElement {
   fireEvent.click(screen.getByTestId(testid.marketplace));
   return screen.getByTestId(testid.marketplacePanel);
@@ -81,7 +79,6 @@ describe("R1853003 the Marketplace's shop", () => {
 
   it("R1853003 a listed offer's Buy sends exactly its marketBuy", () => {
     const onAction = renderGame(marketView(MARKET), [BUY_0, SELL_R9, END_TURN]);
-    // Closed until the toggle opens it; it says the Credits and that the offers renew each turn.
     expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
     const panel = openShop();
     expect(panel).toHaveTextContent("45 Credits");
@@ -98,7 +95,6 @@ describe("R1853003 the Marketplace's shop", () => {
     const sent = marketSent(onAction);
     expect(sent).toEqual([BUY_0]);
     expect(sent[0]).toBe(BUY_0);
-    // The toggle closes it again.
     fireEvent.click(screen.getByTestId(testid.marketplace));
     expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
   });
@@ -113,7 +109,6 @@ describe("R1853003 the Marketplace's shop", () => {
     const lot = refused.closest("li");
     expect(lot).toHaveTextContent("60 Credits");
     expect(lot).toHaveTextContent("1 left");
-    // A Radiant lot is drawn on the face it is sold on.
     expect(lot?.querySelector('[data-radiant-face="true"]')).not.toBeNull();
     fireEvent.click(refused);
     expect(marketSent(onAction)).toEqual([]);

@@ -1,9 +1,4 @@
-//! `POST /api/account/consent` and what `GET /api/auth/me` says is owed (`src/api/consent.rs`): the
-//! age screen (R757000) and the terms a player agrees to (R757001).
-//!
-//! Every account here is seeded with `"consent": false`, so it starts with neither an age check nor
-//! an agreement recorded. What the store keeps is read back through the port (`consent_get`); the
-//! store's own rules are `tests/store/contract.rs`'s and `tests/sql/18_account_consent.sql`'s.
+//! `POST /api/account/consent` and `GET /api/auth/me`: age gate (R757000) and terms agreement (R757001).
 
 use std::sync::Arc;
 

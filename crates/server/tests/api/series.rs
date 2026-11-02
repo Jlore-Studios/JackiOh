@@ -1,29 +1,5 @@
 //! The Conquest series through the server (`src/api/series.rs`, `src/api/results.rs`, SPEC §9.5,
-//! R330–R336, R259–R262). `series_rules.rs` holds the exhaustive rule tables; this file shows each ruling
-//! holding end to end: a series made the way pairing makes it (`start_series`), picks and forfeits
-//! through the router, games started through the match directory, and games finished through the
-//! same `record_result` the actor calls.
-//!
-//! The match directory here writes the match row (`createFakeMatchDirectory(store)` in TS), as the real
-//! registry does, so "the game started" is a row in the store and a result can finish it. Time is the
-//! manual clock, so the pick clock (R333) is driven by `timers.advance` and the sweeper.
-//!
-//! Port of `apps/server/test/api/series.test.ts`. What changed with the port:
-//!
-//! - The match directory is the real registry (`app.matches`), which writes the row and runs the
-//!   game's actor on the real engine. So the trios' decks are real: six disjoint slices of the
-//!   catalog's playable cards (`cards`), where TS made up two ids per deck. TS's record of the starts
-//!   (`deps.matches.started`) is read back off the rows the registry wrote (`started`).
-//! - The router is the whole app's (`support::deps::call`), and the three players sign in as the E2E
-//!   fixture accounts (`e2e-token-p1`, `e2e-token-p2`, `e2e-token-pending`, SURFACE §11.2's
-//!   `test_app()`), whose profiles this file seeds after emptying the fixtures.
-//! - The manual clock is tokio's paused clock (`start_paused`, `tokio::time::advance`), which the
-//!   server's clock follows (SURFACE §11.3: `Timers` → `tokio::time`). The sweeper is
-//!   `run_sweeper` spawned as a task, and stopping it is aborting the task.
-//! - TS wrapped `matches.discardOpen` to record its argument, and set `onCall` to fail a method; the
-//!   fake's one seam is `on_call`, which sees the method's name, so the harness counts the calls
-//!   (the only id a series releases is its reserved game 1 id) and forwards to a test's fault.
-//! - Rows and views are compared as their JSON (TS's keys).
+//! R330–R336, R259–R262, R333). Surface contract: SURFACE §11.2, §11.3.
 
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex, OnceLock};
@@ -62,9 +38,7 @@ const ALICE_ACCOUNT: (&str, &str) = ("e2e-p1", "e2e-token-p1");
 const BOB_ACCOUNT: (&str, &str) = ("e2e-p2", "e2e-token-p2");
 const STRANGER_ACCOUNT: (&str, &str) = ("e2e-pending", "e2e-token-pending");
 
-// ---------------------------------------------------------------------------
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
-// ---------------------------------------------------------------------------
 
 /// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
@@ -84,7 +58,6 @@ async fn match_row(app: &App, id: &str) -> Value {
     to_json(&store!(app, |t| t.matches_get(id)))
 }
 
-/// The catalog version the series is made at (TS's `deps.catalog.version`).
 fn catalog_version() -> &'static str {
     jackioh_cards::catalog_version()
 }
@@ -104,9 +77,7 @@ fn pool() -> &'static [String] {
     })
 }
 
-/// The cards of `owner`'s deck in trio slot `slot`: TS's `${owner}-card-${slot}a` and `…b`, now a
-/// legal deck of real cards, and no card in two of the six decks, so a deck is told by its cards and
-/// alice's cards are as easy to look for in bob's view as her name.
+/// Cards for trio slot: legal deck of real cards disjoint across the six decks.
 fn cards(owner: &str, slot: usize) -> Vec<String> {
     let first = match owner {
         "alice" => 0,
@@ -173,9 +144,7 @@ impl Logs {
 /// A fault a test injects (TS: a throwing `store.onCall`).
 type Fault = Box<dyn Fn(&str) -> Result<(), StoreError> + Send>;
 
-// ---------------------------------------------------------------------------
 // The file's own helpers, in TS order
-// ---------------------------------------------------------------------------
 
 /// The tokens the three players sign in with.
 struct Tokens {
@@ -358,8 +327,7 @@ async fn row(h: &Harness) -> Value {
     to_json(&series)
 }
 
-/// TS's `h.deps.matches.started`: every match the directory started, in order, as the start was
-/// asked for (`StartMatchInput`). The registry writes each one's row as it starts it, so the rows say it.
+/// Every match started in order.
 async fn started(h: &Harness) -> Vec<Value> {
     let rows = fake_read(&h.app, |data| to_json(&data.tables.matches)).await;
     rows.as_array()
@@ -569,7 +537,6 @@ mod r259_the_series_through_the_api {
         finish_game(&h, ALICE, None).await;
         let (status, locked) = pick(&h, h.tokens.alice, json!(0)).await;
         assert_eq!(status, 400);
-        // TS: `toMatch(/already won .* locked/u)`.
         let message = locked["error"]["message"].as_str().unwrap_or_default();
         let won = message.find("already won ");
         assert!(
@@ -927,7 +894,7 @@ mod r334_endings_inside_a_series {
     async fn r334_a_forfeit_before_game_1_releases_the_match_id_the_pairing_reserved_r261_r263() {
         let h = harness_at_1000().await;
         assert_eq!(forfeit(&h, h.tokens.alice).await.0, 200);
-        // TS: `discarded` is `[FIRST_MATCH]`; the one id a series with no game played releases.
+        // Released match id when series has no game played.
         assert_eq!(h.discarded(), 1);
         assert!(started(&h).await.is_empty());
         assert_match(
@@ -1131,7 +1098,7 @@ mod r333_the_pick_clock {
      {
         let h = harness_at_1000().await;
         let sweeper = tokio::spawn(run_sweeper(h.app.clone()));
-        // The task's first wait is armed before the clock moves (TS armed it in `startSeriesSweeper`).
+        // First wait is armed before clock moves.
         flush().await;
 
         let failures = Arc::new(AtomicI32::new(1));
@@ -1158,7 +1125,6 @@ mod r333_the_pick_clock {
             json!([cards("alice", 0)[0], cards("bob", 1)[0]]),
         );
 
-        // TS: `sweeper.stop()`, after which no timer of it is pending, however far the clock moves.
         sweeper.abort();
         flush().await;
         assert!(sweeper.is_finished());
@@ -1206,9 +1172,7 @@ mod r890000_a_seat_taken_mid_start {
     }
 }
 
-/// R1834002: a Conquest game freezes the loadout of the deck each side picked for it, its slots
-/// frozen into the trio with it (as R642 freezes its portrait), the account's picks filling what
-/// the deck leaves out.
+/// R1834002, R642: Conquest game freezes loadout of picked deck into trio.
 mod r1834002_a_conquest_game_wears_the_picked_deck {
     use super::*;
     use jackioh_server::loadout::DeckSlots;

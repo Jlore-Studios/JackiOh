@@ -1,9 +1,7 @@
 //! The turn cap doubled (docs/classic-sets.md B4.3, R389, rewriting R2): 60 player-turns, 30 each, then
-//! the game is a draw. Its knock-on is proved too: two 25-card decks that do nothing now fatigue out
+//! the game is a draw. Its knock-on is proved too: two 25-card decks that do nothing fatigue out
 //! before the cap, so fatigue is the usual end of a long game and the cap a backstop for games that
 //! never fatigue (§2.4, R3).
-//!
-//! Port of `packages/engine/test/turn-cap.test.ts`.
 
 use jackioh_engine::testkit::*;
 

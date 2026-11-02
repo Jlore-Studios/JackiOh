@@ -1,6 +1,5 @@
-// The opponent's-play showcase as the player sees it (CardShowcase.tsx): held up for about a second
-// from the redacted view alone, click-through, never for the viewer's own play, a back for a card
-// the view hides (R97, R227), per viewer on a hotseat device, and gone on Escape or a pointer down.
+// The opponent's-play showcase as the player sees it (CardShowcase.tsx): from the redacted view
+// alone, with a back for a card the view hides (R97, R227).
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -36,7 +35,6 @@ function played(player: "p1" | "p2", instanceId: string, defId: string): GameEve
   return { type: "cardPlayed", player, instanceId, defId, costPaid: 2 };
 }
 
-/** The first view has no "since"; the second brings `events` after it. */
 function mountThen(events: GameEvent[], before: PlayerView = withEvents(baseView(), [TURN])): { next: (view: PlayerView) => void } {
   const { rerender } = render(withCatalog(<CardShowcase view={before} />));
   const next = (view: PlayerView): void => {

@@ -1,15 +1,9 @@
-// The pack-opening scene's model (#1308, SPEC §14.3, §14.4): its constants, its test ids and the pure
-// helpers behind the scene, the pack object and the odds and pity the Purchases page shows (#1651), all
-// of them plain data in and out.
+// The pack-opening scene's model (#1308, SPEC §14.3, §14.4): constants, test ids and pure helpers for
+// the scene, the pack object and the odds and pity the Purchases page shows (#1651).
 //
-// EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7). `GET /api/packs` says the odds, the
-// pity counters and their thresholds; `POST /api/packs/open` says every slot before anything
-// animates. Nothing here rolls, counts or decides: `withOpening` copies the server's counters into
-// the panel, `tierPercents` only formats the server's odds, and the constants below are timings and
-// looks, never a rate.
-//
-// `CardShowcase` and `FxLayer` read a game's `PlayerView`, and a pack has none, so the scene draws
-// `CardFace` itself and mounts the fx director itself (`PackOpening.tsx`), over the cues built here.
+// EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7): nothing here rolls, counts or decides,
+// and the constants below are timings and looks, never a rate. A pack has no `PlayerView`, so the scene
+// draws `CardFace` and mounts the fx director itself (`PackOpening.tsx`), over the cues built here.
 
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 import type { PrintedRarity } from "@jackioh/shared";
@@ -25,7 +19,6 @@ import { COSMETICS } from "../wire/generated/cosmetics.ts";
 export const PACK_TEAR_MS = 900;
 /** How long a card of Epic or above is held before it turns over. */
 export const PACK_HOLD_MS = 600;
-/** How long a card takes to turn over. */
 export const PACK_FLIP_MS = 350;
 /** How far a swipe across the sealed pack must travel to open it. */
 export const PACK_SWIPE_PX = 40;
@@ -35,7 +28,6 @@ export const PACK_RAYS_MS = 1200;
 export const PACK_TILT_DEG = 8;
 /** The pack object's name for the cosmetic pack; a card pack is a shipped set's name or `GLOBAL_PACK_NAME`. */
 export const COSMETIC_PACK = "cosmetic";
-/** The decimals an odds figure is shown to. */
 export const PACK_ODDS_DECIMALS = 1;
 
 /** Rarities lowest first. */
@@ -97,7 +89,7 @@ export const packTestid = {
   equip: (index: number) => `pack-slot-${String(index)}-equip`,
 } as const;
 
-/** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros: 0.29 is "29%", 0.082 "8.2%". */
+/** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros. */
 export function percent(rate: number): string {
   return `${String(Number((rate * 100).toFixed(PACK_ODDS_DECIMALS)))}%`;
 }
@@ -121,28 +113,24 @@ export function bestRarity(slots: readonly PackSlot[]): PrintedRarity {
   );
 }
 
-/** Whether a card of this rarity turns over only after a hold: Epic and above. */
 export function holdsToFlip(rarity: PrintedRarity): boolean {
   return RARITY_ORDER.indexOf(rarity) >= RARITY_ORDER.indexOf("Epic");
 }
 
-/** A pack in a player's words: the global pack, the cosmetic pack, or a set's. */
 export function packName(pack: string): string {
   if (pack === GLOBAL_PACK_NAME) return t("Global pack");
   if (pack === COSMETIC_PACK) return t("Cosmetic pack");
   return t("{set} pack", { set: t(pack) });
 }
 
-/** A cosmetic's name from the registry, else its id. */
 export function cosmeticName(id: string): string {
   return COSMETICS.find((cosmetic) => cosmetic.id === id)?.name ?? id;
 }
 
 /**
- * What a slot became, as the server decided it (R1301002): a spent duplicate says `points`, the
- * opening's `slotPoints` for the slot, which it added to each bar (R1953000). Every slot adds its
- * points since R1999000, and its flight into the bars shows them; only a spent duplicate, which
- * grants nothing else, says them too.
+ * What a slot became, as the server decided it (R1301002). Every slot adds its `points`, the opening's
+ * `slotPoints`, to each bar (R1953000, R1999000), and its flight shows them; only a spent duplicate,
+ * which grants nothing else, says them too.
  */
 export function slotOutcome(slot: PackSlot, points: number): string {
   switch (slot.grant.kind) {
@@ -166,7 +154,7 @@ export function withOpening(info: PacksResponse, opened: OpenedPackResponse): Pa
   };
 }
 
-/** The sting a reveal plays on the existing audio buses: the played-card sting below Legendary, the entrance from it up. */
+/** The sting a reveal plays on the existing audio buses. */
 export function playStinger(rarity: PrintedRarity): void {
   const audio = getAudioEngine();
   switch (rarity) {
@@ -188,7 +176,6 @@ export function playStinger(rarity: PrintedRarity): void {
   }
 }
 
-/** A reveal's effects on the card at `testid`: none for Common, a burst for Rare and Epic, rays and a burst above. */
 export function revealCues(rarity: PrintedRarity, testid: string, intensity: number): FxCue[] {
   const at = tid(testid);
   switch (rarity) {

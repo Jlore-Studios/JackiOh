@@ -1,6 +1,5 @@
 // R658: pointer-driven follow-up choices through `<Game/>`.
 // jsdom's `elementsFromPoint` is stubbed; presses target elements and moves/releases target `window`.
-// Expected bodies come from `legal` and are compared with click-click actions.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -10,8 +9,6 @@ import Game from "../../game/Game.tsx";
 import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit } from "../fixtures.ts";
-
-// The fixture.
 
 /** c1's Cry targets e1 or the hero after lane 3; fs1 activates on the board without a target. */
 function boardView(over: Partial<PlayerView> = {}): PlayerView {
@@ -55,8 +52,6 @@ const FS1: ActionBody = { type: "activate", instanceId: "fs1", ability: "punish"
 const LEGAL: readonly ActionBody[] = [C1_E1, C1_HERO, FS1, { type: "endTurn" }, { type: "concede" }];
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
-
-// The pointer.
 
 const POINTER = 1;
 const START = { x: 200, y: 400 };
@@ -103,8 +98,6 @@ afterEach(() => {
   localStorage.clear();
   __resetSettingsForTests();
 });
-
-// A play's second choice
 
 describe("R658 after a drop places a card, its Cry target is dragged to from the zone", () => {
   it("R658 the zone a card was dropped in lifts the play again: the arrow starts there and its targets glow", () => {
@@ -180,8 +173,6 @@ describe("R658 after a drop places a card, its Cry target is dragged to from the
   });
 });
 
-// A backrow card whose ability aims at nothing
-
 describe("R658 a backrow card whose ability aims at nothing is dragged onto the board", () => {
   it("R658 it lifts as a ghost of the card and a drop on the board sends what its click would", () => {
     const onAction = vi.fn();
@@ -206,8 +197,6 @@ describe("R658 a backrow card whose ability aims at nothing is dragged onto the 
     expect(onAction).not.toHaveBeenCalled();
   });
 });
-
-// A prompt's options
 
 const DISCOVER = pendingFor("discover", [
   { key: "mode:core-043", label: "Flood", defId: "core-043" },

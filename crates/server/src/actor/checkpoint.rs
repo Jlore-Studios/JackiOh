@@ -2,17 +2,11 @@
 //!
 //! When the restart drain stops a live match's actor (`Registry::stop_all`), the actor stores what it
 //! holds after the log's newest row (`MatchActor::checkpoint`): the engine state, the play telemetry's
-//! recorder (R1442) and the turn each bot last moved in (R639000), as one JSON `body`, stamped with
-//! that row's seq and nonce, the match's catalog, this build's rules fingerprint (`build.rs`), the
-//! checkpoint version (`MATCH_CHECKPOINT_VERSION`) and the body's FNV-1a hash. The store keeps it only
-//! while the match is live and its log holds that row, and drops it when the match ends.
+//! recorder (R1442) and the turn each bot last moved in (R639000), as one JSON `body`.
 //!
 //! The next rebuild (`Registry::rebuild`) resumes all three of its folds from a checkpoint that
-//! passes every check in `verify`, and folds only the rows after it. One that fails any check is
-//! refused, and the whole log is folded as it always was: the log stays whole and authoritative, the
-//! seq counter and the nonce map are still rebuilt from it, the clocks from the match row, and no
-//! replay (R768, `api/replays.rs`) reads a checkpoint. A refusal logs its reason, never the body,
-//! which holds both hands and both libraries.
+//! passes every check in `verify`, and folds only rows after it. On refusal, the whole log is
+//! folded; no replay (R768) reads a checkpoint. A refusal logs its reason, never the body.
 
 use serde::{Deserialize, Serialize};
 
@@ -61,19 +55,12 @@ pub fn checkpoint_row(
 /// Why a checkpoint was refused, in the order `verify` checks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Refusal {
-    /// Written under another `MATCH_CHECKPOINT_VERSION`.
     Version,
-    /// Written under other rules (`RULES_FINGERPRINT`).
     Rules,
-    /// Stamped with another catalog than the match row's.
     Catalog,
-    /// Its seq is not a row of the log.
     Seq,
-    /// The log's row at its seq holds another nonce.
     Nonce,
-    /// Its body does not hash to its `body_hash`.
     Hash,
-    /// Its body does not read as a `CheckpointBody`.
     Body,
     /// Its body reads, but does not write back to the same text: it holds something this build drops.
     Shape,

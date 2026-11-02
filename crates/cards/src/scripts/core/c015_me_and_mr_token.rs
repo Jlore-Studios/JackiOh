@@ -1,14 +1,10 @@
 //! #15 Me and Mr Token (SPEC §8.1): 1/1 → 2/2 Unit, Human, cost 1. Base "Cry: summon a Rush Token",
 //! radiant "Cry: summon 3 Rush Tokens". §8's Engine cell is "Board full → fewer".
 //!
-//! The Rush Token is the §7 token `core-t-rush` (3/3, Rush), so the token's stats and keyword come
-//! from its own catalog face and are never restated here.
-//!
-//! "Board full → fewer" needs no check of its own: R64 gives a laneless summon the leftmost empty,
-//! unlocked, unreserved unit zone and `summon` fizzles silently when the row has none. So the radiant
-//! face is three independent summons — with two zones free it makes two tokens and the third does
-//! nothing, which is exactly what the row asks for. Nothing about the Cry is conditional, so no hook
-//! reads state at all.
+//! The Rush Token is the §7 token `core-t-rush` (3/3, Rush), its stats and keyword from its own
+//! catalog face. "Board full → fewer" needs no check: R64 gives a laneless summon the leftmost empty,
+//! unlocked, unreserved unit zone and `summon` fizzles silently when the row has none, so the radiant
+//! face is three independent summons.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -37,16 +33,14 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #15 Me and Mr Token (SPEC §8.1, BUILD M4-T4 row 15): "1 Rush Token; radiant 3; fewer when the
-// board is nearly full". The "fewer" clause is R64: a laneless summon takes the leftmost empty,
-// unlocked, unreserved unit zone and fizzles silently when the row has none.
+// #15 Me and Mr Token (SPEC §8.1, BUILD M4-T4 row 15).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// Make the hand copy radiant (`SideSetup.hand` takes def ids only), then play it.
+    /// Makes the hand copy radiant, then plays it.
     fn play_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
         let id = s.card(card).id.clone();
         match find_instance_mut(s.state_mut(), &id) {
@@ -90,7 +84,6 @@ mod tests {
                     row(&s, PlayerId::P1),
                     ids(&[Some("core-015"), Some(RUSH_TOKEN), None, None, None])
                 );
-                // §7: the token's stats and its Rush come from its own catalog face, never from this card.
                 s.expect_stats("core-015", json!({ "attack": 1, "health": 1 }));
                 let token = s.card(RUSH_TOKEN).clone();
                 s.expect_stats(&token, json!({ "attack": 3, "health": 3 }));
@@ -148,8 +141,7 @@ mod tests {
 
                 play_radiant(&mut s, "core-015");
 
-                // One zone was left after the unit itself landed, so one token; the other two summons
-                // found no zone and did nothing — no error, no burn, no replacement.
+                // One zone was left after the unit landed, so one token; the other two summons did nothing.
                 assert_eq!(
                     row(&s, PlayerId::P1),
                     ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-015"), Some(RUSH_TOKEN)])

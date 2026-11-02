@@ -1,16 +1,13 @@
 //! Test-only cards for Meditative+ #20 KY's Competition's question sequence (`subsystems::ky_competition`,
-//! R1184000, R1184001) and `summon`'s X (R1184003): `kc-competition` runs the card's own sequence and
-//! summons `kc-kenny`, a token that prints 0/0 with X stats 1/1 (Radiant 2/2) and has Rush while its X
-//! is at least `KENNY_RUSH_AT`, so the engine is proved without `crates/cards` (CLAUDE.md: the engine
-//! never imports it). The real cards, Lil' Kenny's six thresholds included, are proved again in
-//! `crates/cards/src/scripts/meditative_plus/`.
+//! R1184000, R1184001) and `summon`'s X (R1184003), without `crates/cards`: `kc-kenny` is a token printing
+//! 0/0 with X stats 1/1 (Radiant 2/2) and Rush while its X is at least `KENNY_RUSH_AT`.
 
 use jackioh_engine::subsystems::ky_competition::ky_competition_script;
 use jackioh_engine::testkit::*;
 
 use super::harness::spread;
 
-/// The fixture Kenny's one threshold: Rush from this X on, read off its X, never its stats.
+/// Kenny has Rush from this X on, read off its X, never its stats.
 pub const KENNY_RUSH_AT: i32 = 4;
 
 fn def(index: u32, id: &str, extra: Value) -> CardDef {
@@ -32,7 +29,6 @@ fn def(index: u32, id: &str, extra: Value) -> CardDef {
     ))
 }
 
-/// `kc-competition`: the fixture KY's Competition, a (1) Spell.
 pub fn competition() -> CardDef {
     def(
         3501,
@@ -41,7 +37,7 @@ pub fn competition() -> CardDef {
     )
 }
 
-/// `kc-competition-qd`: the same with Quickdraw, so a replayed game deals it in the opening hand.
+/// With Quickdraw, so a replayed game deals it in the opening hand.
 pub fn competition_qd() -> CardDef {
     def(
         3502,
@@ -50,7 +46,6 @@ pub fn competition_qd() -> CardDef {
     )
 }
 
-/// `kc-kenny`: the fixture Lil' Kenny, a (1) Unit token printing 0/0 with X stats 1/1 → 2/2.
 pub fn kenny() -> CardDef {
     def(
         3503,

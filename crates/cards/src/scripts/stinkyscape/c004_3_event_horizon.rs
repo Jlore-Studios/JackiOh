@@ -26,9 +26,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #4.3 Event Horizon — SPEC §8.10 row S 4.3, BUILD M12 row S 4.3: "its caster takes the next turn
-// too, a whole turn (max mana grows, the turn cap counts it), as often as it is cast in a game;
-// radiant two extra turns in a row" (R1870003).
+// S #4.3 Event Horizon — SPEC §8.10 row S 4.3, BUILD M12 row S 4.3 (R1870003).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -42,7 +40,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
 
-    /// p1's first turn, so the extra turn is turn 2 and its max mana 2.
     fn board(hand: Value) -> Scenario {
         scenario(json!({
             "seed": "event-horizon",
@@ -57,7 +54,6 @@ mod tests {
         }))
     }
 
-    /// Who takes each turn from here, `turns` turns ahead.
     fn next_turns(s: &mut Scenario, turns: usize) -> Vec<PlayerId> {
         (0..turns)
             .map(|_| {
@@ -77,7 +73,6 @@ mod tests {
             s.play(HORIZON, json!({}));
             assert_eq!(s.state().players.p1.extra_turns, Some(1));
             s.end_turn();
-            // P1 again, a whole turn: the turn count and max mana grew, and a card was drawn.
             assert_eq!(s.state().active, P1);
             assert_eq!(s.state().turn, 2, "the turn cap counts it");
             assert_eq!(s.state().players.p1.turns_started, 2);
@@ -85,7 +80,6 @@ mod tests {
             assert_eq!(s.state().players.p1.library.len(), library - 1);
             let unit = s.unit(P1, 1).expect("the unit stands");
             assert!(!is_sick(s.state(), &unit));
-            // Then the game goes on.
             s.end_turn();
             assert_eq!(s.state().active, P2);
         }

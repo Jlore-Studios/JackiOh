@@ -3904,5 +3904,175 @@
     "pr": 2698,
     "title": "patches ship: v0.5.10b, v0.5.10c",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "418aa09434478df4d80a5b47d5fbe83e58efa35b",
+    "pr": 2710,
+    "title": "a hard cap of 90% on claude-5 that nothing lifts and no call spills past",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "fc088fd8bf877d4d559f2a4aa0a75df66b8e33c6",
+    "pr": 2700,
+    "title": "bot: build pass 1 for #2620",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "29baab124dbc60a5f70b252d8d02ee083995a13c",
+    "pr": 2712,
+    "title": "the dungeon run's plan and its core crate",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "fd475c139abeb472b23a16da13ff6cab8af8ac39",
+    "pr": 2711,
+    "title": "chat masks every word the usernames' filter refuses, look-alike letters and a number beside a word included",
+    "kind": "app",
+    "player": "Chat now masks the same words a username can't hold, look-alike spellings included."
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5f4e3a6958536aaa8771f9dc95791c75db9cdd02",
+    "pr": 2713,
+    "title": "Back closes the home screen's Quests scroll, the match's modifier list and the emote menus, as it closes every other sheet",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "ff19c998332c6d2bbda9a8b2802240633d46acc1",
+    "pr": 2716,
+    "title": "buying a chase asks first, since one press spends the whole Chase Shard bar",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "b01fd16d4dc53dd54fd9a5a799472439b40e2881",
+    "pr": 2717,
+    "title": "patches log: 1dc9eef..ff76fd6",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "42fdeef7831e85cea16472534a48fa82448479b1",
+    "pr": 2732,
+    "title": "a player's repeated hellos on a match socket are answered at most once a second, as a watcher's are",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "169e6961cc222869596a7347423f3e0f19c54bf3",
+    "pr": 2726,
+    "title": "a 1v1 rematch offer is taken only within ten minutes of the match's end, as a co-op one is",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "91cce562d7331322e3fc8794c76f13adc02248f6",
+    "pr": 2740,
+    "title": "the AI prices a Unit's “when this attacks” and “after this attacks” effects while it stands on the board",
+    "kind": "ai",
+    "player": "The AI now counts what a Unit's \"when this attacks\" or \"after this attacks\" text will give when it weighs that Unit on the board, its own and the opponent's."
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f4dba9ddd965ab5837411150a8865eb2ed8fcf6c",
+    "pr": 2719,
+    "title": "the daily run's spec 11 plays under Knockoff Temu's 1 cost, and #2666's voice lines are rendered",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "e72980ec2f2588342587a0f86db206fdfe5067ff",
+    "pr": 2744,
+    "title": "the harness drops the test-only and write-only names its port carried over",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "10022554f98fc3ed12893c109dd7376ba03bcd87",
+    "pr": 2741,
+    "title": "the engine's duplicate live_or, token-id and FNV-1a copies call one helper each",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c70d46295e117e89bd527341507003977de19aaf",
+    "pr": 2742,
+    "title": "the server's duplicated guards, refusals, socket authentication and time units each keep one copy",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f5648aebf1c461ea79fab590ba9e4048fc42fc06",
+    "pr": 2745,
+    "title": "the server, economy and engine rules tests share their word-for-word helper copies",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "33eeb5c1b44d943ef7d359bc26c07d737cadb344",
+    "pr": 2747,
+    "title": "the JackiOh logo, on the loading screens over the tavern's wood and on the menus' skeletons",
+    "kind": "app",
+    "player": "Loading screens show the JackiOh logo on the tavern's wooden table, and menus show the logo while they load."
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "f0493b9e3cfa79c5ad56c9557a1364838b96656f",
+    "pr": 2746,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "cd3b4634512e4015fda31b7597e4eb205d9514b0",
+    "pr": 2735,
+    "title": "Add art for each release",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "6432a0a4c23aa1a132d5de011630e5e54e72785f",
+    "pr": 2751,
+    "title": "the JackiOh logo and its cards alone, each on the tavern's wood",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "28834de8847fbf58e840444e87c551d11abf4e77",
+    "pr": 2737,
+    "title": "the fuzz monitor checks that no unit token reaches a pile and that a position switch spends the exertion an attack needs",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "2a1cfd1cdd4df2470634ad730de16adf5b5c6d2a",
+    "pr": 2754,
+    "title": "the server's test binary compiles again: the co-op gate test's `add_user` import",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "376f42f099170ea6f3eeb622651fad4c537bbaaf",
+    "pr": 2760,
+    "title": "an opponent's Trap reveal names the Trap to both seats",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "4474472b4edaa9e3552873242143bce70b6952f8",
+    "pr": 2761,
+    "title": "patches ship: v0.5.10d, v0.5.10e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "348e9a04dc2304d250257d30f5691710c599d557",
+    "title": "Merge pull request #2763 from Jlore-Studios/claude/zen-bell-tzduzo",
+    "kind": "app"
   }
 ]

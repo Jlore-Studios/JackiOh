@@ -1,14 +1,10 @@
 // Card presentation settings (B28). One localStorage key; every storage access sits in try/catch,
 // because storage can be missing, full, or throw on access (private mode, sandboxed frames). When
 // storage refuses a write the value lives on in memory, so the toggle still works for this page.
-// Task 7's settings panel mounts CARD_SETTINGS_FIELDS at integration.
 //
-// R1834004: `opponentCosmetics` is the viewer's own say over what the other seat wears: on, an
-// opponent's cards and side wear the loadout their seat froze when the match began (game/wearer.ts);
-// off, they draw the defaults, on a live, a watched and a replayed board alike.
-//
-// R2718000: `setWatermarks` shows each set's watermark behind a card's rules text (setMark.ts). It is
-// the viewer's own and stays on the device (`DEVICE_CARD_SETTINGS`): the account never carries it.
+// R1834004: `opponentCosmetics` on, an opponent's cards and side wear the loadout their seat froze
+// when the match began (game/wearer.ts); off, the defaults, on a live, watched or replayed board alike.
+// R2718000: `setWatermarks` (setMark.ts) stays on the device (`DEVICE_CARD_SETTINGS`), never the account.
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";

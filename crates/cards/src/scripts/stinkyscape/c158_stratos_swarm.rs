@@ -36,10 +36,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158: "fills every open unit
-// zone of its caster's with Stratos, 3/1 Flying Ranged Units, no Cry, then every empty backrow zone
-// (R2248000); a Dormant card's zone is not filled; a full board, both rows, summons none; radiant
-// Radiant Stratos, 6/2" (#2521: no Starship Pieces).
+// Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158 (R2248000). (#2521: no Starship
+// Pieces).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,14 +53,12 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
     const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow zone.
 
-    /// The def ids in p1's five unit zones, `None` where empty.
     fn row(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(PlayerId::P1, lane).map(|unit| unit.def_id))
             .collect()
     }
 
-    /// The def ids in p1's five backrow zones, `None` where empty.
     fn backrow(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.backrow(PlayerId::P1, lane).map(|card| card.def_id))
@@ -185,7 +181,6 @@ mod tests {
                 .count();
             assert_eq!(summoned, 5);
 
-            // Both rows full: none.
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [SWARM, ANCHOR],

@@ -1,12 +1,7 @@
-// useEmotes: the React half of the emote session (R643, R644). The pure half is proved in
-// session.test.ts; what this file proves is what only the hook does — a send shows and sounds
-// locally without waiting for the relay, a muted or device-muted emote never reaches the audio
-// engine, a newer emote's expiry timer is the only one that lands, `globalMute` spares the
-// seat `you` names, and a send outside the seat's dealt hand goes nowhere (R1342, R1343).
-//
-// The engine seam is SoundSink's two methods, so it is a pair of spies. The expiry timers are
-// `window.setTimeout`, which `vi.useFakeTimers()` owns — `useEmotes` injects no clock of its own,
-// so the faked `Date.now` drives both the session's `until` and the timeout's delay.
+// useEmotes: the React half of the emote session (R643, R644), the dealt hand's R1342 and R1343
+// included; the pure half is proved in session.test.ts. The engine seam is SoundSink's two methods,
+// so it is a pair of spies. `useEmotes` injects no clock of its own, so the faked `Date.now` drives
+// both the session's `until` and the expiry timeout's delay.
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -83,7 +78,6 @@ describe("R643 a local send", () => {
     });
 
     expect(sent).toBe(true);
-    // The bubble is up already: the sender's own line text, for that portrait.
     expect(result.current.visible("p1")).toMatchObject({
       emote: "greetings",
       text: "Hey there, friend! Feeling lucky?",
@@ -303,7 +297,6 @@ describe("R643 one emote per player, expiring on its own span", () => {
     const shown = result.current.visible("p2");
     expect(shown?.emote).toBe("laugh");
 
-    // The first sticker's timer fires inside the second's span and must not expire it.
     act(() => {
       vi.advanceTimersByTime(EMOTE_EMOJI_MS / 2);
     });

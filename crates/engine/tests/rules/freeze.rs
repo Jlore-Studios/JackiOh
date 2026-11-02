@@ -1,8 +1,7 @@
-// R1174000 (issue #1174): Frozen, a Hearthstone-style status (SPEC §6.1), set by the Freeze verb
-// (§6.3): a Frozen Unit loses its next attack or position switch and thaws at the end of the turn in
-// which it could have made one. `combat::has_exertion_in` answers false for a Frozen Unit, so
-// `legal_actions` and the reducer's refusal agree (BUILD M2-T1); the thaw is stamped as the freeze
-// lands (`freeze::thaw_turn`) and done at its controller's cleanup (`freeze::thaw_at_cleanup`).
+// R1174000 (#1174): a Frozen Unit (SPEC §6.1; the Freeze verb, §6.3) loses its next attack or switch and
+// thaws at the end of the turn it could have made one. `combat::has_exertion_in` is false for it, so
+// `legal_actions` and the reducer agree (BUILD M2-T1); the thaw is stamped as the freeze lands
+// (`freeze::thaw_turn`) and done at its controller's cleanup (`freeze::thaw_at_cleanup`).
 
 mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -16,8 +15,7 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
 
     const FROZEN: &str = "that Unit is Frozen";
 
-    /// `active`'s turn 9, its main phase; both sides hold `hand`s (and plain cards to draw, so no turn
-    /// ends by itself, §2.5) and the given fields and backrows.
+    /// `active`'s turn 9, its main phase, with plain cards to draw so no turn ends by itself (§2.5).
     fn board(active: &str, p1_hand: Value, p1_field: Value, p2_hand: Value, p2_field: Value) -> Scenario {
         register_freeze_fixtures();
         scenario(json!({
@@ -342,8 +340,8 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         s.attack(unit.as_str(), "hero");
         s.play(chill.id.as_str(), pick(&unit));
         assert_eq!(thaw_of(&s, &unit), Some(10));
-        // A fresh exertion gives it an action left, which a freeze landing now would thaw after
-        // this turn; the later thaw it already has stands.
+        // A fresh exertion leaves it an action, which a freeze landing now would thaw after this turn;
+        // the later thaw it has stands.
         s.play(rally.id.as_str(), pick(&unit));
         assert!(
             !offers_attack(&s, &unit),

@@ -1,7 +1,6 @@
 // The Field Guide's entries (SPEC §9.10, R2205000): each mechanic a lesson lets the player find, its
-// one-line rule, and how the coach recognizes it from the human's view alone (R292): the fresh events,
-// the view, the legal actions and the public catalog (§5.1). A predicate decides nothing; it reads what
-// the board already shows (CLAUDE.md rule 7).
+// one-line rule, and how the coach recognizes it from the human's view and the public catalog alone
+// (R292, §5.1). A predicate decides nothing; it reads what the board already shows (CLAUDE.md rule 7).
 
 import type { CardDef, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -11,7 +10,6 @@ import { freshOf, heroTargetId, myHand, unitsOf } from "./steps.ts";
 export type Discovery = {
   /** A stable slug, kept in the device's Field Guide (R2205002). */
   id: string;
-  /** The mechanic's name, as the bubble and the Field Guide print it. */
   name: string;
   /** The rule in one line, after "You found {name}:". */
   rule: string;
@@ -46,7 +44,6 @@ function unitHas(unit: UnitView | undefined, kind: string): boolean {
   return unit?.keywords.some((keyword) => keyword.kind === kind) === true;
 }
 
-/** Your own plays in this batch, with their public definitions. */
 function myPlays(ctx: CoachCtx): { event: Extract<GameEvent, { type: "cardPlayed" }>; def: CardDef | undefined }[] {
   return freshOf(ctx, "cardPlayed")
     .filter((event) => event.player === ctx.view.viewer)
@@ -75,7 +72,6 @@ function myAttacks(ctx: CoachCtx): Extract<GameEvent, { type: "attackDeclared" }
   return freshOf(ctx, "attackDeclared").filter((event) => !event.forced && ownIds.has(event.attackerId));
 }
 
-/** The enemy unit an attack went at, or its definition once it is gone. */
 function attackedDef(ctx: CoachCtx, targetId: string): { unit?: UnitView; def?: CardDef } {
   const unit = theirs(ctx.view, targetId);
   if (unit !== undefined) return { unit, def: defOf(ctx, unit.defId) };
@@ -100,7 +96,6 @@ function anyEffect(ctx: CoachCtx): boolean {
   return ctx.fresh.some((event) => EFFECTS.has(event.type)) || freshOf(ctx, "summoned").length > 1;
 }
 
-/** A unit of yours stands above its printed Attack. */
 function aboveFace(ctx: CoachCtx, unit: UnitView): boolean {
   const def = defOf(ctx, unit.defId);
   const face = unit.radiant ? def?.radiant : def?.base;

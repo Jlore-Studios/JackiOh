@@ -192,7 +192,6 @@ mod script_when_attacks {
             .cloned()
             .expect("the wall stands where the grunt stood");
         assert_eq!(wall_now.def_id, wall.id);
-        // The 3/3 hit the 1/8 for 3 and took its 1 back.
         assert_eq!(wall_now.damage, 3);
         assert_eq!(
             find_instance(state, &attacker.id).map(|card| card.damage),

@@ -42,9 +42,8 @@ pub struct ActivationOfArgs {
 }
 
 /// R1876000: "It can't use its own Activate" — the card named, on the field, is refused every use of
-/// its abilities for as long as it stays there (`subsystems::activate`'s refusal reads the mark). No
-/// zone is Locked, and another card may still run its ability (`run_activation`). A card off the
-/// field is not marked.
+/// its abilities while it stays there (`subsystems::activate` reads the mark). No zone is Locked, and
+/// another card may still run its ability (`run_activation`).
 pub fn refuse_own_activate(args: ActivationOfArgs) -> Effect {
     Effect::new("refuseOwnActivate", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
@@ -63,17 +62,13 @@ pub fn refuse_own_activate(args: ActivationOfArgs) -> Effect {
 
 /// R1876001: "Activate your Universities" — the named card's ability (`ability`, else its first that
 /// declares no target or mode) runs its effect as an ability of the running card, for the running
-/// card's controller: the card is its `self`, on the face it wears, so the ability reads its own
-/// numbers and "your other permanents" are the card's others. No cost is paid and, without `spend_use`,
-/// no use is spent, its once-a-turn and a refusal of its own use (R1876000) are not read, and it is no
-/// play (R384). An ability that declares a target or a mode is never run, having no choice to run with;
-/// nor a card that does not act on the field (R13).
+/// card's controller, with the card as its `self` on the face it wears. No cost, no play (R384); without
+/// `spend_use` no use is spent and neither its once-a-turn nor a refusal of its own use (R1876000) is read.
+/// An ability that declares a target or a mode is never run, nor a card that does not act on the field (R13).
 ///
-/// R2521003: with `spend_use` the ability runs only while it has a use left this turn — its own
-/// count, as an `activate` reads it (`uses_allowed` against `ability_uses_this_turn`, B3.2 rules 1, 3
-/// and 9) — and the run spends one (`mark_use`), so the card's own Activate and every other run
-/// with `spend_use` share them. Still no cost, no `activated` event, no play, and a refusal of its
-/// own use (R1876000) is not read.
+/// R2521003: with `spend_use` the ability runs only while it has a use left this turn (`uses_allowed`
+/// against `ability_uses_this_turn`, B3.2 rules 1, 3 and 9) and the run spends one (`mark_use`), so the
+/// card's own Activate and every run with `spend_use` share them. Still no cost, no `activated` event.
 pub fn run_activation(args: ActivationOfArgs) -> Effect {
     Effect::new("runActivation", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())

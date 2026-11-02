@@ -1,15 +1,13 @@
-// A finished practice game's claim (SPEC §14.8, R1303000–R1303002, R2560000): what the worker hands
-// the page for the server to check, and the game the server's tests check it against.
+// A finished practice game's claim (SPEC §14.8, R1303000–R1303002, R2560000): what the worker hands the page for the
+// server to check, and the game the server's tests check it against.
 //
-// The REAL core plays here, as in `core.test.ts`, but at the browser's own budget, AI_BUDGET, with a
-// frozen clock (`now: () => 0`), so the wall-clock cap never cuts a decision short and the game is the
-// same on every run. The server no longer re-runs the AI's moves (R2560000). The first test's game is
-// the fixture `crates/server/tests/fixtures/practice-claim.json`, which the server's
-// `r1303002_r2560000_the_game_the_worker_played_folds_and_pays` folds and pays; after an AI, card or
+// The REAL core plays here at the browser's own budget, AI_BUDGET, with a frozen clock (`now: () => 0`), so the game is
+// the same on every run. The first test's game is the fixture `crates/server/tests/fixtures/practice-claim.json`, which
+// the server's `r1303002_r2560000_the_game_the_worker_played_folds_and_pays` folds and pays; after an AI, card or
 // engine change that plays it differently, record it again with
-// `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`.
-// A training lane's promotion records it with its gate (learn.yml; training/README.md, What a lane
-// may change): it is the one file outside crates/ai/** and training/history/** a lane may change.
+// `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`. A training lane's
+// promotion records it with its gate (learn.yml; training/README.md, What a lane may change): it is the one file
+// outside crates/ai/** and training/history/** a lane may change.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -35,9 +33,7 @@ import type {
 } from "./protocol.ts";
 import { snapshotOf } from "../test/fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // the driver (core.test.ts's, at the browser's budget)
-// ---------------------------------------------------------------------------------------------
 
 const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_BUDGET };
 
@@ -145,9 +141,7 @@ describe("R1303002 the claim the server folds", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // what the worker answers
-// ---------------------------------------------------------------------------------------------
 
 describe("R1303001 a claim names the seed its game began on", () => {
   it("R1303001 a game resumed after a reload claims on the seed it began on", () => {

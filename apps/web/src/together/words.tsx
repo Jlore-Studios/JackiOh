@@ -1,5 +1,4 @@
-// Words Play together's screens share: the modes as the lobby names them (R330 calls `bo3` Conquest),
-// a friend's status, and a sentence with a player's username set into it.
+// Words Play together's screens share (R330 calls `bo3` Conquest).
 
 import type { ReactElement } from "react";
 

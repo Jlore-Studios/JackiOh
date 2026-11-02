@@ -1,13 +1,10 @@
-//! Port of `packages/engine/test/mana.test.ts`: R65's cost calculation (M1-T6), `canAfford`, and
-//! §2.3's mana refresh.
+//! R65's cost calculation (M1-T6), `canAfford`, and §2.3's mana refresh.
 
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::new_game;
 use crate::rules::fixtures::scripts::{going_long, heroic_power, x_bolt};
 
-/// TS `handCard`: a new instance of `def_id` pushed onto p1's hand. Answers its id: the card is read
-/// back from the state by id (TS held the live object).
 fn hand_card(state: &mut GameState, def_id: &str) -> String {
     let card = new_instance(state, def_id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
     let id = card.id.clone();
@@ -23,14 +20,11 @@ fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).expect("the card is in the state")
 }
 
-/// `effectiveCost(state, card)`.
 fn cost(state: &GameState, id: &str) -> i32 {
     mana::effective_cost(state, card(state, id), CostOptions::default())
 }
 
-/// `addModifier(sinkFor(state), player, { kind…, expiry })`: the modifier's kind and expiry written
-/// as TS's literal. The sink's rng starts at the state's cursor, as `sinkFor` did; nothing writes the
-/// cursor back, as TS did not.
+/// The sink's rng starts at the state's cursor, and nothing writes the cursor back.
 fn add_mod(state: &mut GameState, player: PlayerId, kind: Value, expiry: Value) {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -46,7 +40,6 @@ fn add_mod(state: &mut GameState, player: PlayerId, kind: Value, expiry: Value) 
 mod r65_cost_calculation_m1_t6 {
     use super::*;
 
-    /// "starts from the printed cost and adds the instance's costMod"
     #[test]
     fn starts_from_the_printed_cost_and_adds_the_instances_cost_mod() {
         let mut state = new_game("cost-base", None);
@@ -204,7 +197,6 @@ mod r65_cost_calculation_m1_t6 {
         assert_eq!(cost(&state, &power), 0);
     }
 
-    /// "canAfford compares against current mana, temporary mana included"
     #[test]
     fn can_afford_compares_against_current_mana_temporary_mana_included() {
         let mut state = new_game("afford", None);

@@ -1,5 +1,4 @@
 // Tutorial path coverage (SPEC §9.10; R290, R291, R294, R314).
-// BUILD M8: each lesson has its own seed and retried waits.
 
 import { TUTORIAL_HUMAN } from "../../../apps/web/src/wire/engineConfig.ts";
 import { TUTORIAL_HANDICAP, TUTORIAL_PROGRESS_VERSION, constants, timeouts } from "../../support/config.ts";

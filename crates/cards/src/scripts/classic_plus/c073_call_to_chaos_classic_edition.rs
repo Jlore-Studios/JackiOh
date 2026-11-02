@@ -42,13 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M9 Classic+ row C+ 73, one test per entry of the ten: the Fruit pool (R382), Upgrade twice (R386),
-// fuse with Immutable skipped (R23), the Golem (C+ #73.1), a deck of either edition (R387), and recast,
-// where the chain counts both editions (R28) and a roll at the cap resolves into nothing (R87). Both
-// players read which effects rolled (R436); deck and hand changes stay hidden (R97, R177, R311); fused
-// deck cards survive JSON (R179); the Radiant resolves its three in the list's order (R423).
-// The roll is the play's first rng draw: setting `state.rng_cursor` pins it, and `cursor_for` finds the
-// cursor of each entry by asking the engine's own roll with this card's table.
+// BUILD M9 Classic+ row C+ 73 (R382, R386, R23, R387, R97, R177, R311, R179).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,10 +55,8 @@ mod tests {
     const CHAOS: &str = "classicplus-073";
     const CORE_CHAOS: &str = "core-095";
     const MEDITATIVE_CHAOS: &str = "meditative-095";
-    /// The "Call to Chaos" pool: every edition, #95, this card and M #95 (§8.7 row 73, R1240, R1420).
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool, M #95 with it; and for the Stinkyscape
-    /// release (#1884): its #150 and #151; and for the Training Grounds release (#2204): its #39
-    /// (R2200004).
+    /// The "Call to Chaos" pool: every edition, #95, this card, M #95, Stinkyscape #150 and #151 (#1884)
+    /// and Training Grounds #39 (#2204, R2200004) (§8.7 row 73, R1240, R1420).
     const EDITIONS: [&str; 6] = [
         CORE_CHAOS,
         CHAOS,
@@ -150,7 +142,6 @@ mod tests {
             .insert(subsystems::CHAOS_CHAIN_KEY.to_string(), json!(chain));
     }
 
-    /// The events of one type, as their JSON.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events().iter().filter(|event| event.event_type().as_str() == kind).map(js).collect()
     }
@@ -642,7 +633,6 @@ mod tests {
             let Some(s) = found else {
                 panic!("no roll casts the Hinder through the recursion");
             };
-            // Nothing of the Radiant's own roll ran twice, and it landed in the graveyard once the chain was done.
             assert_eq!(events_of(&s, "chaosRolled").iter().filter(|event| event["defId"] == json!(CHAOS)).count(), 1);
             assert_eq!(events_of(&s, "summoned").iter().filter(|event| event["defId"] == json!(GOLEM)).count(), 1);
             assert_eq!(s.pile(P1, "graveyard").iter().filter(|card| card.def_id == CHAOS).count(), 1);

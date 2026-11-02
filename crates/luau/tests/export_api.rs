@@ -118,10 +118,9 @@ mod generator {
 
     /// Converts a TypeScript declaration into Luau.
     ///
-    /// The declaration is flattened first (doc comments go — Luau 0.740
-    /// rejects `/** */` blocks between a table type's fields — and newlines
-    /// become spaces), so braces balance on the one line and variants split
-    /// cleanly; the Rust docs stay the source of truth.
+    /// The declaration is flattened first (doc comments go — Luau 0.740 rejects `/** */` blocks between a
+    /// table type's fields — and newlines become spaces), so braces balance on the one line and variants
+    /// split cleanly; the Rust docs stay the source of truth.
     fn ts_to_luau(ts_decl: &str) -> String {
         let mut flat = String::new();
         for raw in ts_decl.lines() {
@@ -139,9 +138,8 @@ mod generator {
         }
         let flat = flat.trim_end().strip_suffix(';').unwrap_or(&flat).trim_end();
         let mut lines = Vec::new();
-        // An intersection (`export type P = { base } & (V1 | V2)`): the base
-        // table, then the parenthesised union's variants, then the group
-        // close. Luau forbids mixing `&` and `|` without the parentheses.
+        // An intersection (`export type P = { base } & (V1 | V2)`): the base table, then the parenthesised
+        // union's variants, then the group close. Luau forbids mixing `&` and `|` without the parentheses.
         if let Some(amp) = flat.find(" & (") {
             let (base, group) = flat.split_at(amp);
             let group = group
@@ -163,11 +161,10 @@ mod generator {
                     .collect();
                 if let Some(mut expanded) = split_variants("(", group, 0) {
                     expanded.remove(0);
-                    // Distributable when every variant is a table: `B & (V1 | V2)` becomes the
-                    // union of the flattened tables, which strict checks a literal against arm
-                    // by arm — an intersection of a table with a union checks no literal at
-                    // all (#464 gap 15, classic-035's `mod`). Anything else keeps the
-                    // intersection rather than guessing joints.
+                    // Distributable when every variant is a table: `B & (V1 | V2)` becomes the union of the
+                    // flattened tables, which strict checks a literal against arm by arm — an intersection of
+                    // a table with a union checks no literal at all (#464 gap 15, classic-035's `mod`).
+                    // Anything else keeps the intersection rather than guessing joints.
                     let distributable = !base_fields.is_empty()
                         && expanded.last().is_some_and(|last| last == "}")
                         && expanded
@@ -237,38 +234,34 @@ mod generator {
             .join("\n")
     }
 
-    /// Splits a declaration head's variants at top-level `|`, then each
-    /// variant's fields. Returns `None` for a single variant, leaving the
-    /// line to the normal path.
+    /// Splits a declaration head's variants at top-level `|`, then each variant's fields. Returns `None` for
+    /// a single variant, leaving the line to the normal path.
     fn split_head_union(body: &str) -> Option<Vec<String>> {
         let open = body.find('{')?;
-        // Depth starts inside the head's brace, so a field's own union
-        // (`mana: number | nil`) never counts as a variant edge.
+        // Depth starts inside the head's brace, so a field's own union (`mana: number | nil`) never counts as
+        // a variant edge.
         split_variants(&body[..open], &body[open + 1..], 1)
     }
 
-    /// The variants of `head { ... } | { ... }`, one field per line with
-    /// `} | {` joints.
+    /// The variants of `head { ... } | { ... }`, one field per line with `} | {` joints.
     fn split_variants(head: &str, rest: &str, initial_depth: i32) -> Option<Vec<String>> {
         let variants = split_top_level_char(rest, '|', initial_depth);
         if variants.len() < 2 {
             return None;
         }
-        // A variant's close brace is never emitted mid-union: a following
-        // joint's `} | {` closes it. The last table variant keeps its own
-        // `}`, which ends the declaration.
+        // A variant's close brace is never emitted mid-union: a following joint's `} | {` closes it. The last
+        // table variant keeps its own `}`, which ends the declaration.
         let mut out = Vec::new();
         for (i, variant) in variants.iter().enumerate() {
             let piece = variant.trim();
             if i == 0 {
                 if piece.matches('{').count() == 0 && !piece.trim_end().ends_with('}') {
-                    // A literal first (`"a" | {...}`): leave the whole
-                    // declaration one line rather than guess joints.
+                    // A literal first (`"a" | {...}`): leave the whole declaration one line rather than guess
+                    // joints.
                     return None;
                 }
                 out.push(format!("{} {{", head.trim_end()));
-                // The group path hands the first variant its brace; the head
-                // path consumed it already.
+                // The group path hands the first variant its brace; the head path consumed it already.
                 let piece = piece.strip_prefix('{').unwrap_or(piece);
                 let inner = piece.strip_suffix('}').unwrap_or(piece);
                 push_fields(&mut out, inner);
@@ -366,9 +359,8 @@ mod generator {
         parts
     }
 
-    /// Luau's reserved words, which a table type cannot name bare (`end: T`
-    /// is a syntax error; `["end"]: T` parses, and scripts build the value
-    /// table the same way).
+    /// Luau's reserved words, which a table type cannot name bare (`end: T` is a syntax error; `["end"]: T`
+    /// parses, and scripts build the value table the same way).
     const RESERVED: &[&str] = &[
         "and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local",
         "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
@@ -392,9 +384,8 @@ mod generator {
         l.to_string()
     }
 
-    /// `"kind": T` becomes `["kind"]: T`: Luau type tables take no bare
-    /// string keys (only `["lit"]:` parses), while values (`: "lit"`) and
-    /// union arms (`| "lit"`) stay bare.
+    /// `"kind": T` becomes `["kind"]: T`: Luau type tables take no bare string keys (only `["lit"]:` parses),
+    /// while values (`: "lit"`) and union arms (`| "lit"`) stay bare.
     fn quote_string_keys(l: &str) -> String {
         let mut out = String::new();
         let chars: Vec<(usize, char)> = l.char_indices().collect();
@@ -506,8 +497,8 @@ mod generator {
         // null / undefined -> nil
         l = l.replace("null", "nil").replace("undefined", "nil");
 
-        // field?: Type | nil -> field: Type? (`?` already says nil, so the
-        // union arm goes); field?: Type -> field: Type?
+        // field?: Type | nil -> field: Type? (`?` already says nil, so the union arm goes); field?: Type ->
+        // field: Type?
         if let Some(colon_idx) = l.find("?:") {
             let field_part = l[..colon_idx].trim_end();
             let mut type_part = l[colon_idx + 2..].trim().to_string();
@@ -948,17 +939,16 @@ mod generator {
 
         out.push_str("export type EffectCall = {\n\tverb: string,\n\targs: any,\n}\n\n");
 
-        // Luau reads types before their use, so every translated declaration
-        // comes before the hand-written stubs that name them.
+        // Luau reads types before their use, so every translated declaration comes before the hand-written
+        // stubs that name them.
         for ts_decl in decls.values() {
             let luau_decl = ts_to_luau(ts_decl);
             out.push_str(&luau_decl);
             out.push_str("\n\n");
         }
 
-        // The context type: one line per method `register_ctx` binds in
-        // crates/luau/src/reads.rs, in the same order, so the stub and the
-        // binding cannot drift (tests/api.rs proves every name).
+        // The context type: one line per method `register_ctx` binds in crates/luau/src/reads.rs, in the same
+        // order, so the stub and the binding cannot drift (tests/api.rs proves every name).
         out.push_str("export type EffectContext = {\n");
         let effect_context_readers = [
             "\tcontroller: (self: EffectContext) -> PlayerId,",
@@ -1101,10 +1091,9 @@ mod generator {
         }
         out.push_str("}\n\n");
 
-        // Hand-written (Plan Risk: ts-rs cannot derive these — each carries Rust
-        // closures — so their declaration shapes are written here, matching what
-        // crates/luau/src/script.rs reads off a face table), with every shared reader added to
-        // each pure-read context's type.
+        // Hand-written (Plan Risk: ts-rs cannot derive these — each carries Rust closures — so their
+        // declaration shapes are written here, matching what crates/luau/src/script.rs reads off a face
+        // table), with every shared reader added to each pure-read context's type.
         out.push_str(&with_shared_readers(
             "-- A trigger a card registers while it is in a zone (Script.triggers and\n\
              -- handTriggers/deckTriggers/graveyardTriggers entries).\n\

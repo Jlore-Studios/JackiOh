@@ -1,20 +1,8 @@
-//! How a verb names cards anywhere a player keeps them — on the field, in a hand, in a deck — which
-//! patch v0.2.0's instance-data verbs need (docs/classic-sets.md B3.3, B3.4, B5 E38, E39): Brittle
-//! given to a hand, "Buff every card in your hand and deck twice", "your Units on the field, in your
-//! hand and in your deck get +2X Attack and Rush", "Nerf 4 random cards in your opponent's deck".
-//!
-//! `targets::BoardScope` names cards on the field only, so this is the wider vocabulary, and each verb
-//! that takes it walks `cards_in_card_scope`. A card dormant under a Stack is not on the field (§3.2,
-//! R13) and is never in a scope.
-//!
-//! The walk is in R242's order: the cards everyone reads first (a unit, a face-up backrow card), then
-//! the cards only their owner reads (a hand, a face-down trap: §9.1, R33), then the cards nobody reads
-//! (a deck, §3) — each group side by side (the active player's first, R68), and within a side in the
-//! zones' own order (units by lane, backrow by lane, hand order, deck top down). A verb that reports
-//! its changes one card at a time reports them in this order, so a hidden card's place among the
-//! events says only which group it was in (R242), never which zone.
-//!
-//! Port of `packages/engine/src/effects/cardScope.ts`.
+//! How a verb names cards on the field, in a hand or in a deck (docs/classic-sets.md B3.3, B3.4, B5
+//! E38, E39); `targets::BoardScope` names the field only. A card dormant under a Stack (§3.2, R13) is
+//! in no scope. The walk is in R242's order: what everyone reads, then what only its owner reads (§9.1,
+//! R33), then what nobody reads (§3), each side by side (the active player's first, R68), so a hidden
+//! card's place among a verb's events says only its group.
 
 use serde::{Deserialize, Serialize};
 
@@ -108,9 +96,8 @@ pub fn readers_of(state: &GameState, card: &CardInstance) -> Readers {
     }
 }
 
-/// R177: the players who may not read a card where it sits — both for a deck card, the other player for
-/// a hand card or a face-down trap — which an event about a change made there records (`hiddenFrom`),
-/// so a view keeps it unread for good.
+/// R177: the players who may not read a card where it sits, which an event about a change there
+/// records (`hiddenFrom`), so a view keeps it unread for good.
 pub fn unreadable_by(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
     let readers = readers_of(state, card);
     if readers == Readers::Nobody {
@@ -126,7 +113,7 @@ pub fn unreadable_by(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
     vec![opponent_of(reader)]
 }
 
-/// Whether a card passes a scope's filters (type, tags, self). Where it is is the walk's business.
+/// Whether a card passes a scope's filters (type, tags, self), wherever it is.
 pub fn matches_card_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &CardScope) -> bool {
     if scope.exclude_self == Some(true)
         && let Some(this) = &ctx.self_
@@ -157,9 +144,7 @@ pub fn matches_card_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &
 fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardInstance> {
     rows.iter()
         .flat_map(|row| {
-            // R446, R1081000, R1824000: the unit row is the side's Units, as `zones::acting_on` lists them
-            // among the Units — unit zones' tops, carried Units, standing Units — and as
-            // `targets::cards_in_scope` has them. A scope goes row by row, so it takes that half of the walk.
+            // R446, R1081000, R1824000: the unit row is the side's Units, as `zones::acting_on` lists them.
             if *row == Row::Units {
                 return active_units_of(state, player).into_iter().cloned().collect();
             }
@@ -176,11 +161,9 @@ fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardIns
         .collect()
 }
 
-/// Every card the scope reaches, in R242's order (this file's header). `wholeHiddenPiles` keeps every
-/// card the scope reaches that someone may not read — a hand's, a deck's, a face-down trap — the ones
-/// its filters reject marked `matches: false`: a verb that reports each card of a hidden pile it
-/// changes must cue the whole pile, or the count of its cues would tell the other player how many
-/// cards there passed the filter (R440). Otherwise the walk keeps the matching cards only.
+/// Every card the scope reaches, in R242's order. `wholeHiddenPiles` also keeps the hidden cards its
+/// filters reject (`matches: false`): a verb cueing each card of a hidden pile it changes must cue the
+/// whole pile, or the count would say how many passed the filter (R440).
 pub fn cards_in_card_scope(
     ctx: &EffectContext<'_>,
     scope: &CardScope,

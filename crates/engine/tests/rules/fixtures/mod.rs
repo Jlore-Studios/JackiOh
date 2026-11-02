@@ -1,6 +1,5 @@
-//! `packages/engine/test/fixtures/*.ts`: the test-only card scripts and catalogs the engine tests
-//! register through the testkit's thread-local override (SURFACE §8). Written once by part 1; the
-//! files are part 24's.
+//! The test-only card scripts and catalogs the engine tests register through the testkit's
+//! thread-local override (SURFACE §8).
 
 pub mod activate;
 pub mod ai_wheel;

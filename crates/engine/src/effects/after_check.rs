@@ -1,15 +1,11 @@
-//! "…, then …" after the deaths a list's destroys caused (SPEC §4.5, R59, R113, R174): Classic #43
-//! Plague Nuke's "Destroy all Units. Gain 1 mana for each Plague Counter that was on them. Then summon …".
+//! "…, then …" after the deaths a list's destroys caused (SPEC §4.5, R59, R113, R174; Classic #43).
 //!
-//! A destroy only marks, and §4.5's check follows the whole effect (R59), so nothing later in the same
-//! list sees them dead. `after_state_check` runs the check mid-list (one check, §4.5 steps 1–5), then
-//! builds the rest of the text and applies it on a fresh stay mark (R174): the run's own `exits_from`
-//! calls a card the check moved gone wherever it is, and a Reborn body the check put back is a new
-//! arrival (R83).
+//! A destroy only marks and §4.5's check follows the whole effect (R59), so `after_state_check` runs
+//! one check mid-list (§4.5 steps 1–5), then builds and applies the rest on a fresh stay mark (R174),
+//! so a Reborn body the check put back is a new arrival (R83).
 //!
-//! A Death hook in the check may ask something (R113): `prompts::run_resumable_list` parks a part by its
-//! index and memo, the check effect is the part's first entry and the rest its second, so a resume
-//! re-enters the part at the rest, built after the answer and run once; the mark is kept as the rest's memo.
+//! A Death hook in the check may ask (R113): the check and the rest are the part's two entries, so a
+//! resume re-enters at the rest, built after the answer; the mark is kept as the rest's memo.
 
 use std::sync::Arc;
 
@@ -23,8 +19,7 @@ use crate::stays::exit_mark;
 /// `after_state_check`'s `build`: the rest of the text, built once the check is over.
 pub type AfterCheckBuild = Arc<dyn Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync>;
 
-/// Run `f` on the context with its `exits_from` set to `exits_from`, then put the context's own mark
-/// back.
+/// Run `f` with `exits_from` set, then put the context's own mark back.
 fn with_exits_from<R>(
     ctx: &mut EffectContext<'_>,
     exits_from: u32,
@@ -36,7 +31,7 @@ fn with_exits_from<R>(
     out
 }
 
-/// The same effect, applied — and, for a part, built and its entries applied — with the fresh mark.
+/// The same effect (for a part, built and its entries too), applied with the fresh mark.
 fn at_mark(effect: Effect, exits_from: u32) -> Effect {
     let apply = effect.apply.clone();
     let expand: Option<EffectExpand> = effect.expand.clone().map(|expand| -> EffectExpand {
@@ -74,9 +69,8 @@ fn check_now() -> Effect {
     })
 }
 
-/// §4.5, R59: run the state check here, then build the rest of the text with `build` and apply it,
-/// on a stay that begins after the check (R174). `build` is called once the check is over — after the
-/// answer, when a Death hook in it asked (R113) — with a context whose `exits_from` is that stay's.
+/// §4.5, R59: run the state check here, then build the rest with `build` (after any answer a Death hook
+/// asked, R113) and apply it on a stay that begins after the check (R174).
 pub fn after_state_check(
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
 ) -> Effect {
@@ -107,8 +101,7 @@ pub fn after_state_check(
                         },
                     ),
                 ],
-                // A memo that survives JSON as it is (a pause records one per part it stands in, and a bare
-                // `undefined` there would come back from a round trip as `null`); the part's shape needs none.
+                // A memo a JSON round trip keeps (a pause records one per part); the part's shape needs none.
                 memo: Some(Value::String(PART_MEMO.to_string())),
             }
         },

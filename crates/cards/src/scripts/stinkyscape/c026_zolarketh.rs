@@ -218,10 +218,8 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26: "Cry (played), choose one: a University
-// summoned (Radiant from the Radiant face), its own Activate its own; or ZolarKeth gains 'Activate: a
-// random Starship Piece summoned', once a turn (Radiant: a Radiant piece); without that choice it has no
-// Activate; radiant 4/18". The tests of v0.5.9f's University runs fold under the kept script.
+// S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26. The tests of v0.5.9f's University runs fold under
+// the kept script.
 //
 // A Buff is counted by the `upgraded` events naming each card. A University never Buffs itself, so one
 // no other University stands beside keeps its printed `times` (2) and its one use (R386's Buffs could
@@ -265,7 +263,6 @@ mod tests {
             .expect("a University")
     }
 
-    /// The Buffs the last step put on `card`.
     fn buffs(s: &Scenario, card: &CardInstance) -> usize {
         s.last_events()
             .iter()

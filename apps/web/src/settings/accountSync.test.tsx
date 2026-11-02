@@ -1,6 +1,5 @@
-// R633, R634: a player's game settings kept on the account as well as on the device. The sync is
-// driven here against the real stores (`groups.ts`) and `localStorage`, with a fake API that merges
-// the way the server does (a group replaces the stored one only when strictly later).
+// R633, R634: game settings kept on the account as well as the device, against the real stores
+// (`groups.ts`) and a fake API that merges as the server does: only a strictly later group replaces.
 
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,7 +47,6 @@ type FakeApi = SettingsAccountApi & {
   gate: Promise<void> | null;
 };
 
-/** The server's side of R634 in a dozen lines: a strictly later group replaces, the rest stay. */
 function fakeApi(initial: Record<string, PlayerSettingsGroup> = {}): FakeApi {
   const api: FakeApi = {
     account: structuredClone(initial),
@@ -167,7 +165,6 @@ describe("R634 loading: group by group, the newer side wins", () => {
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["audio"]);
     expect(sent["audio"]).toMatchObject({ at: T0 - 1_000, values: { master: 0.2 } });
-    // And the account's gameplay group, which this device never changed, was adopted.
     expect(readSettings().dragToPlay).toBe(false);
     expect(api.account["audio"]?.values).toMatchObject({ master: 0.2 });
   });
@@ -185,9 +182,7 @@ describe("R634 loading: group by group, the newer side wins", () => {
     start(api);
     await settleSyncs();
 
-    // Audio: the account's is later (T0 - 2000 > T0 - 8000), so it is taken.
     expect(readAudioSettings().master).toBe(0.9);
-    // Gameplay: this device's is later, so it is sent and kept.
     expect(readSettings().confirmEndTurn).toBe(true);
     expect(api.account["gameplay"]).toMatchObject({ at: T0 - 1_000, values: { confirmEndTurn: true } });
     expect(Object.keys((api.save.mock.calls[0] as [string, Record<string, unknown>])[1])).toEqual(["gameplay"]);
@@ -321,12 +316,10 @@ describe("R634 after the load, each change is sent as it happens", () => {
     writeCosmetics({ table: "table-felt", cardBack: "card-back-blueprint" });
     await pass(SETTINGS_SYNC_DEBOUNCE_MS);
 
-    // One group, the same one the card slots are in, holding all six kinds.
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cosmetics"]);
     expect(sent["cosmetics"]?.values).toEqual({ ...DEFAULT_CARD_COSMETICS, table: "table-felt", cardBack: "card-back-blueprint" });
 
-    // A new device loads them back.
     for (const sync of started.splice(0)) sync.stop();
     __resetSettingsSyncForTests();
     localStorage.clear();
@@ -349,7 +342,6 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).not.toHaveBeenCalled();
     expect(readCardPicks("core-004")).toEqual({ foil: "foil-rainbow", border: "border-bone", fullArt: true });
 
-    // The account's group keeps exactly its six keys, and none of a card's picks rides it.
     writeCosmetics({ foil: "foil-holo-sweep" });
     await pass(SETTINGS_SYNC_DEBOUNCE_MS);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
@@ -358,7 +350,6 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(JSON.stringify(sent)).not.toMatch(/core-004|fullArt/);
     expect(JSON.stringify(api.account)).not.toMatch(/core-004|fullArt/);
 
-    // A new device loads the account's copy and has no card's picks: they stay on the device they were made on.
     for (const sync of started.splice(0)) sync.stop();
     __resetSettingsSyncForTests();
     localStorage.clear();

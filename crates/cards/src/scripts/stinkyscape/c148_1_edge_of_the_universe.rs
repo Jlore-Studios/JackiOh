@@ -9,7 +9,6 @@
 //! that closes its list, a hero at 0 losing first (R850). The game ends `fled`, a win for the caster and
 //! a draw for the other player on the ladder, the record and every seat's result (R1843004). Radiant: a
 //! `mode` prompt as it resolves, a draw or a loss for the opponent, the loss ending it `fled-decisive`
-//! (R1843003), which the AI, the random policy and a timeout answer like any other. Declares no numbers.
 
 use jackioh_engine::prelude::*;
 
@@ -51,10 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #148.1 Edge of the Universe — SPEC §7 row 148.1, BUILD M12 row S 148.1: "cast, the game ends at the
-// state check, a win for its caster and a draw for the other player (`fled`); a hero already at 0 in the
-// same list loses first; radiant a two-option prompt, a draw or a loss, the loss ending it
-// `fled-decisive`, the AI, the random policy and a timeout answering it".
+// S #148.1 Edge of the Universe — SPEC §7 row 148.1, BUILD M12 row S 148.1.
 #[cfg(test)]
 mod tests {
     use super::{DRAW, ID, LOSS, script};
@@ -63,16 +59,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (1) 4/4 with no text.
     const VANILLA: &str = "core-008";
-    /// (1) Spell: draw 2, heal your hero 2.
     const FILLER: &str = "core-005";
 
     /// The health loss that kills a hero outright, whatever it stands at (losing health is not damage,
     /// R18).
     const LETHAL: i32 = 100 * HERO_HEALTH;
 
-    /// p1 casts the Edge (its Radiant face where `radiant`), with a Unit on p2's side.
     fn cast(seed: &str, radiant: bool) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -88,7 +81,6 @@ mod tests {
         (result.winner, result.reason)
     }
 
-    /// The `fled` events, as (the fleer, what it left the other player).
     fn flights(events: &[GameEvent]) -> Vec<(PlayerId, FleeOpponent)> {
         events
             .iter()
@@ -99,7 +91,6 @@ mod tests {
             .collect()
     }
 
-    /// The last two event types, newest first.
     fn tail(events: &[GameEvent]) -> Vec<GameEventType> {
         events.iter().rev().take(2).map(GameEvent::event_type).collect()
     }
@@ -111,8 +102,6 @@ mod tests {
             .collect()
     }
 
-    /// One list that kills p1's hero and then runs the base face's cry, the Edge in p1's hand the running
-    /// card, then the state check that closes it. Answers the events.
     fn lethal_then_escape(s: &mut Scenario) -> Vec<GameEvent> {
         let edge = s.card(ID).clone();
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
@@ -200,7 +189,6 @@ mod tests {
                 let offered = answers(state, P1);
                 assert_eq!(offered.len(), 2);
                 assert!(answers(state, P2).is_empty(), "the other seat answers nothing");
-                // The reducer refuses the other seat's answer, as `legal_actions` offers it none.
                 let refused = reduce(state, &Action::new(offered[0].clone(), P2, "p2-answers".to_string()));
                 assert!(refused.error.is_some(), "the other seat may not answer the caster's question");
                 assert!(

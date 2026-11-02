@@ -5,10 +5,6 @@
 //!
 //! docs/polish/3-ai.md's six steps, in order. `rng` is the AI's own stream and every draw below comes
 //! from it in a fixed order, so the same public state and the same rng give the same world.
-//!
-//! Port of `packages/ai/src/determinize.ts`. TS set a placeholder's `defId` through the live object
-//! while it tried candidate traps; here the card is addressed by where it sits (side, row, lane) and
-//! written in place on the clone, in the same order.
 
 use indexmap::IndexSet;
 use jackioh_engine::prelude::json_as;
@@ -180,7 +176,7 @@ fn set_slot_def(state: &mut GameState, side: PlayerId, slot: TrapSlot, def_id: &
     }
 }
 
-/// What `trapFor` closed over in TS: the trap pools, what the board shows, and the two id sets.
+/// What a trap's sampling reads: the trap pools, what the board shows, and the two id sets.
 struct TrapSampler<'a> {
     trap_pool: &'a [String],
     aura_traps: &'a [String],
@@ -249,8 +245,7 @@ impl TrapSampler<'_> {
     }
 }
 
-/// `rng.int(2 ** 31)`: 2³¹ is past `Rng::int`'s `i32`, so the same draw is made here by hand
-/// (`Math.floor(next() * n) % n`, rng.ts).
+/// `rng.int(2 ** 31)`: 2³¹ is past `Rng::int`'s `i32`, so the same draw is made here by hand.
 fn int_2_31(rng: &mut Rng) -> u64 {
     const N: f64 = 2_147_483_648.0;
     ((rng.next() * N).floor() as u64) % (N as u64)
@@ -262,13 +257,10 @@ fn query_ids(args: serde_json::Value) -> Vec<String> {
     query(&args).into_iter().map(|def| def.id.clone()).collect()
 }
 
-/// What a determinization reads off `public_state` before its first draw: the opponent's shown def
-/// ids (step 2's `seen`), the trap pools, the aura baseline `shown` and each side's widened slot
-/// pool (step 3's head), and step 4/5's card pool. Every determinization of one decision starts from
-/// the same `public_state`, so all of it is identical call to call; `decide` computes it once
-/// (`det_ground`) and hands it to each (`determinize_on`). A side's `cloakable` reads only the auras
-/// that reach that side's own hand (R783007's `cloak_hand_aura` applies where `player == controller`),
-/// so the walk's sampling of the other side's slots first does not change it.
+/// What a determinization reads off `public_state` before its first draw: identical for every
+/// determinization of one decision, so `decide` computes it once (`det_ground`). A side's `cloakable`
+/// reads only the auras that reach its own hand (R783007), so sampling the other side's slots first
+/// does not change it.
 pub struct DetGround {
     seen: IndexSet<String>,
     trap_pool: Vec<String>,

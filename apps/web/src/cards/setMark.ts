@@ -1,20 +1,16 @@
-// The set mark on a card's frame (R503): a small glyph that says which set a card is from, the way a
-// printed card carries its expansion symbol. Core is a ringed orb, Classic a columned temple, and
-// Classic+ the same temple with a plus beside it, Meditative an ensō, a brushed open circle in
-// ink with a small red seal (R503), Meditative+ the same ensō with a plus (R2718000), and Stinkyscape a green planet in deep space, its ring tilted, a
-// star beside it and three stink lines rising off it (R1883000), and Training Grounds a straw
-// archery target, red rings on its face, over two crossed wooden practice swords (R2202000); a set
-// with no glyph of its own (the reserved Boss sets, or one this client does not know yet) gets a plain
-// diamond, so every card still shows one.
-//
-// R2718000: the same glyph, as one flat ink silhouette, large and faint, is the set's watermark behind
-// a face's rules text (`watermarkOf`, below; CardFace.tsx and the inspect panels draw it). It is cut
-// from the glyph by an SVG filter, so a set that ships later needs only its mark, and a set with no
-// glyph of its own (Boss, Boss-X, Custom, or one newer than this build) prints none, not the diamond.
+// The set mark on a card's frame (R503), as a printed card carries its expansion symbol: Core a ringed
+// orb, Classic a columned temple (Classic+ with a plus), Meditative an ensō with a red seal (Meditative+
+// with a plus, R2718000), Stinkyscape a green planet with stink lines (R1883000), Training Grounds a
+// straw target over two crossed practice swords (R2202000); any other set (the reserved Boss sets, one
+// this client does not know yet) a plain diamond, so every card shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
 // rule 7). Each glyph is an original SVG drawn as an `<img>` of a `data:` URI with no <text> and no
 // <title>, as icons.tsx draws the face's other glyphs, so a face stays span, strong and img (B12).
+//
+// R2718000: the same glyph, as one faint flat silhouette cut by an SVG filter, is the set's watermark
+// behind a face's rules text (`watermarkOf`), so a later set needs only its mark; a set with no glyph of
+// its own (Boss, Boss-X, Custom, one newer than this build) prints none, not the diamond.
 
 import { t } from "../i18n/i18n.ts";
 
@@ -150,7 +146,7 @@ const KINDS: Readonly<Record<string, WatermarkKind>> = {
   "Training Grounds": "training-grounds",
 };
 
-/** The mark a card of `set` wears. A set name this client has no glyph for gets the diamond. */
+/** The mark a card of `set` wears, the diamond for a set with no glyph. */
 export function setMarkOf(set: string): SetMark {
   const kind = Object.hasOwn(KINDS, set) ? (KINDS[set] ?? "unknown") : "unknown";
   return { kind, label: t("{set} set", { set: t(set) }), src: SRC[kind] };

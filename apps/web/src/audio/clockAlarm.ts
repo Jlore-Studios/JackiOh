@@ -1,10 +1,7 @@
-// Audible final-30-second turn-clock cues (R439, R506).
-//
-// It observes only the server clock (R79; CLAUDE.md rule 7), for the viewer's running turn after
-// audio unlock (§10.11 Autoplay).
-//
-// Schedule each second once ahead of repainting; skip beats late beyond CLOCK_ALARM_LATE_MS and
-// reset when a clock moves up.
+// Audible final-30-second turn-clock cues (R439, R506), from the server clock only (R79;
+// CLAUDE.md rule 7), for the viewer's running turn after audio unlock (§10.11 Autoplay). Each second is
+// scheduled once ahead of repainting; beats late beyond CLOCK_ALARM_LATE_MS are skipped; a clock moving
+// up resets.
 
 import {
   CLOCK_ALARM_BEAT_MS,
@@ -55,7 +52,6 @@ export function planClockAlarm(
   if (!own || remainingMs === null || !Number.isFinite(remainingMs)) return { memory: CLOCK_ALARM_IDLE, beats: [] };
 
   let last = memory.lastSecond;
-  // A clock moving up starts a new countdown.
   if (last !== null && remainingMs > last * CLOCK_ALARM_BEAT_MS + CLOCK_ALARM_LOOKAHEAD_MS) last = null;
 
   const top = Math.min(FROM_SECONDS, Math.floor((remainingMs + CLOCK_ALARM_LATE_MS) / CLOCK_ALARM_BEAT_MS));

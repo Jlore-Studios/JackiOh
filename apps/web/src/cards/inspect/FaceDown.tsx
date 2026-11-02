@@ -1,14 +1,8 @@
-// The inspect overlays of a face-down backrow card (R370): what a resting mouse, a long-press, a tap
-// or Enter opens on a back. There is no face to show, so they show what the view does give — that
-// it is a face-down trap and, since v0.1.1, its cost and its Plague Counters (R471) — and say that
-// only the player who set it can see what it is. They take the one inspect slot like a card's
-// preview and sheet (B23), through `useInspectTrigger`'s `render`.
-//
-// - `FaceDownPreview`: fixed beside the back, click-through and hidden from assistive tech, like
-//   HoverPreview; the back itself carries the same words as its label.
-// - `FaceDownSheet`: a modal dialog with Close, as InspectSheet is (useModalOverlay).
-//
-// R2121000: a swipe down closes it too, as InspectSheet's does (useSheetSwipe.tsx).
+// The inspect overlays of a face-down backrow card (R370). With no face to show, they show what the
+// view gives (a face-down trap, its cost and its Plague Counters, R471) and that only its setter can
+// see it, in the one inspect slot (B23) through `useInspectTrigger`'s `render`. `FaceDownPreview` is
+// click-through and aria-hidden like HoverPreview (the back carries its words as its label);
+// `FaceDownSheet` is a modal dialog like InspectSheet, closed by a swipe down too (R2121000).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";

@@ -1,27 +1,8 @@
 // 42 — Play together (#936, SPEC S7, S8): two accounts become friends, chat, and challenge each other,
-// the browser playing seat one and `cy.request` playing seat two, as spec 06 splits them.
-//
-// Key assertions (B54–B58): Play together opens behind the gate for an active account (#1577: the
-// landing offers no door to it anymore, so the spec visits it directly); the add form takes a
-// `name#tag` and shows the server's refusal in its words; a request from
-// the other side can be declined from the page, and one sent from the page, once accepted, makes a
-// friend row; Chat opens the conversation, a message sent is shown, and the friend's reply arrives
-// within a poll; a friend's challenge is a toast whose Accept joins the room with the remembered deck
-// and reaches the game (R1831000); a challenge sent from a friend row of the Friends panel (#1831),
-// from a screen that is not Play together, leaves the challenger there until the friend joins its
-// room, which takes the challenger to the game.
-//
-// In a live match between the two (seat p1 the browser, seat p2 `wsPlayer`): seat two's aim draws the
-// arrow from public ends only, a backrow zone's smuggled fields stripped and an aim at seat one's hand
-// dropped (R738); an emote shows its bubble, and once muted a relayed one shows nothing (R643, R1342);
-// the Friends button badges an unread message and its panel opens the chat, which carries messages both ways (B58); the replay shared
-// from the result screen is listed under the friend's Shared with me and opens (B52, B59).
-//
-// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only, as
-// every spec outside scripts/shard-specs.mjs's SMOKE. No wait depends on a server clock: every wait is a
-// retried DOM or HTTP assertion bounded by the poll that brings it: the friends list's
-// (`PRESENCE_HEARTBEAT_MS`), the challenges' (`SOCIAL_POLL_MS`), an open chat's (`CHAT_POLL_MS`) or an
-// emote bubble's longest hold (`EMOTE_BUBBLE_MAX_MS`).
+// the browser playing seat one and `cy.request` playing seat two, as spec 06 splits them (B54–B58).
+// Networked (`E2E=1 cargo run --release -p jackioh-server`); daily only, as every spec outside
+// scripts/shard-specs.mjs's SMOKE. No wait depends on a server clock: every wait is a retried DOM or HTTP
+// assertion bounded by the poll that brings it.
 
 import { EMOTE_BUBBLE_MAX_MS, EMOTE_BUBBLE_MIN_MS, EMOTE_EMOJI_MS } from "../../../apps/web/src/emotes/config.ts";
 import { EMOTE_COOLDOWN_MS } from "../../../apps/web/src/wire/emotes.ts";
@@ -74,37 +55,31 @@ import {
 } from "../../support/testids.ts";
 import type { ActionInput, PlayerId } from "../../support/types.ts";
 
-// Constants
-
-/** Play together's route, mirroring `paths.together` in apps/web/src/net/navigate.ts. */
+/** Mirrors `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
 
-/** A change to the friends list (a request, a friend, a status) lands within its poll and a render. */
+/** A change to the friends list lands within its poll and a render. */
 const FRIENDS_TIMEOUT_MS = PRESENCE_HEARTBEAT_MS + timeouts.view;
 
-/** A challenge lands within the challenges' poll and a render. */
 const CHALLENGE_TIMEOUT_MS = SOCIAL_POLL_MS + timeouts.view;
 
-/** An open conversation's reply lands within the chat's poll and a render. */
 const CHAT_TIMEOUT_MS = CHAT_POLL_MS + timeouts.view;
 
 /** The challenger's follow: a poll to see the join, the "Match found!" beat, then the board's path. */
 const FOLLOW_TIMEOUT_MS = CHALLENGE_TIMEOUT_MS + MATCH_FOUND_NAV_DELAY_MS + timeouts.view;
 
-/** A match page, capturing its id. */
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 
 /** A name no fixture account holds, in the `name#tag` shape the add form takes. */
 const UNKNOWN_NAME = "nosuchplayer#9999";
 
-/** What seat one says, and seat two's answer: words the username filter leaves alone. */
+/** Words the username filter leaves alone. */
 const HELLO = "Good luck and have fun";
 const REPLY = "You too, see you at the table";
 
 /** No deck to bring: the server deals both seats one (R257), so the challenge needs no loadout. */
 const MODE: QueueMode = "random";
 
-/** The `wsPlayer` client that plays seat two of the live match. */
 const SEAT_TWO = "seat-two";
 
 /** The room's host is seat p1 (§9.5), the browser; the joiner is p2, `wsPlayer`. */
@@ -114,10 +89,9 @@ const TWO_SEAT: PlayerId = "p2";
 /** The seed fixes the deal (R143), so a retry plays the same match. */
 const SEED = seedFor("42-together-live");
 
-/** The match socket's path, mirroring `WS_PATH`: the frames recorded are the ones it carries. */
+/** Mirrors `WS_PATH`: the frames recorded are the ones it carries. */
 const MATCH_SOCKET_PATH = "/ws/match";
 
-/** The unread badge lands within the unread poll and a render. */
 const UNREAD_TIMEOUT_MS = SOCIAL_POLL_MS + timeouts.view;
 
 /** A bubble is gone within its longest hold and a render. */
@@ -131,7 +105,7 @@ const UNREAD = "A message for you while you play";
 const MID_HELLO = "Nice opening, good game so far";
 const MID_REPLY = "Thanks, it is close";
 
-/** Seat two's aims (R738): over nothing, and over seat one's hero, both from its first hand card. */
+/** Seat two's aims (R738), both from its first hand card. */
 const HAND_SOURCE = { at: "hand", player: TWO_SEAT, index: 0 };
 const AIM_HELD = { source: HAND_SOURCE, target: null };
 const AIM_AT_HERO = { source: HAND_SOURCE, target: { at: "hero", player: ONE_SEAT } };
@@ -171,7 +145,6 @@ function challengesOf(account: E2EAccount): Cypress.Chainable<ChallengesBody> {
     .its("body");
 }
 
-/** A friend row of the page, by the profile it shows. */
 function friendRow(profileId: string, status?: string): string {
   const row = `${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${profileId}"]`;
   return status === undefined ? row : `${row}[data-status="${status}"]`;
@@ -185,8 +158,8 @@ function landedOn(pattern: RegExp, timeout: number): Cypress.Chainable<string> {
 }
 
 /**
- * Leave nothing between the two accounts that an earlier run (or a failed one) left: no block either
- * way, no friendship, no request and no open challenge. The E2E server keeps its state for its life.
+ * Leave nothing between the two accounts that an earlier run (or a failed one) left: the E2E server keeps
+ * its state for its life.
  */
 function separate(pairs: readonly [E2EAccount, string][]): void {
   for (const [self, otherId] of pairs) {
@@ -476,9 +449,8 @@ describe("42 Play together — friends, chat and challenges between two accounts
       cy.concedeAs(one, matchId);
     });
 
-    // B48, B56, #1831: seat one challenges seat two from its Friends panel, on a screen that is not
-    // Play together; seat two joins the room, and the shell takes seat one to the game
-    // (ChallengeToast's follow).
+    // B48, B56, #1831: seat one challenges seat two from its Friends panel, off Play together; seat two joins
+    // the room, and the shell takes seat one to the game (ChallengeToast's follow).
     cy.request({ method: "POST", url: apiUrl("/api/presence"), headers: bearerHeaders(two.token) }).its("status").should("eq", 204);
     cy.visitAs(one, routes.replays());
     cy.get(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
@@ -537,7 +509,6 @@ describe("42 Play together — friends, chat and challenges between two accounts
     let secondEmote = "";
     let bubblesBeforeMute = 0;
 
-    // Two friends, the room's host (seat one) and its joiner (seat two), and a match between them.
     cy.freeAccount(one);
     cy.freeAccount(two);
     me(one).then((body) => {
@@ -555,8 +526,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
       ]);
       befriend(two, one, oneName, twoId);
     });
-    // R1989000 pins the host to seat one beside the seed, so the spec keeps the seats it was
-    // written for.
+    // R1989000 pins the host to seat one beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<RoomBody>({
         method: "POST",
@@ -584,7 +554,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
     });
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
 
-    // Both keep their hands; seat two reads the id of a card it holds, which is what its aim will smuggle.
+    // Seat two reads the id of a card it holds, which is what its aim will smuggle.
     cy.keepMulligans();
     seatTwoKeepsHand();
     cy.wsPlayer({ action: "awaitView", name: SEAT_TWO, where: { turnAtLeast: 1 } });
@@ -631,8 +601,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
       });
     });
 
-    // R738: a position in seat one's own hand is no public end. The aim is dropped, and the arrow
-    // the board showed is cleared instead.
+    // R738: a position in seat one's own hand is no public end: the aim is dropped, and the board's arrow cleared.
     cy.wsPlayer({
       action: "sendFrame",
       name: SEAT_TWO,
@@ -739,7 +708,6 @@ describe("42 Play together — friends, chat and challenges between two accounts
       expect(result.view?.result ?? null, "the match was still running while they chatted").to.eq(null);
     });
 
-    // Seat one concedes, and the result panel offers the replay.
     cy.concede();
     cy.expectResult("Loss");
     cy.wsPlayer({ action: "awaitView", name: SEAT_TWO, where: { hasResult: true } });

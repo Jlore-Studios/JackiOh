@@ -1,5 +1,5 @@
-// M5-T1: verify the fixture board at its practice viewports with 4, 7, and 10-card hands.
-// The route shell must keep the hand, R169 modifiers, counters, and Stack count visible (§10.8, B46).
+// M5-T1: the practice board, with 4, 7 and 10-card hands, keeps the hand, R169 modifiers, counters
+// and Stack count visible (§10.8, B46).
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import "../../../apps/web/src/practice/practice.css";
@@ -39,7 +39,7 @@ function mountTable(handSize: number): void {
   );
 }
 
-/** B46: a hand card shows its top 24 px, cost, and name (mobile-ux.cy.tsx). */
+/** B46: a hand card shows its top 24 px, its cost and name (mobile-ux.cy.tsx). */
 const HAND_CARD_SHOWING_PX = 24;
 
 function expectHandCardOnScreen(element: Element, label: string, width: number, height: number): void {

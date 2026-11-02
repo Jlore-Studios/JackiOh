@@ -6,7 +6,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-009";
 
-/// `of` is TS `TargetFilter["of"]`, written as its literal.
+/// `of` is the target filter's `of`, written as its literal.
 fn silence(of: Value) -> Script {
     Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": of }))],
@@ -22,13 +22,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9: "Vanilla a target Unit on either side:
-// printed keywords and text gone, back to its printed stats (its buffs gone, R781003), damage and granted
-// keywords kept (§10.4), a Unit the lost stats would kill left at 1 health; an Immutable Unit in play is
-// no target (R781001) and unchanged (R23); radiant any permanent (R407): a Vanilla Field Spell's aura stops, a Vanilla
-// face-down trap never fires and sits inert, an Animated card loses Animated where it stands and no
-// longer moves; an enemy face-down trap is offered by id only and the Vanilla on it names nothing to the
-// caster (R97, R177)".
+// C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9 (§10.4, R781001, R781003, R97, R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

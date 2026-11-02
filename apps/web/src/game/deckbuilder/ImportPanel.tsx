@@ -1,8 +1,7 @@
-// The import panel: paste a deck code, see what it holds, and make it a new deck (SPEC §9.4,
-// R255). An import always makes a NEW deck, so it never overwrites work.
-//
-// Cards the player does not own are KEPT and only flagged: they are judged when the deck is queued
-// (R253). At the deck cap the import is off, with the reason beside it; the pasted code stays.
+// The import panel: paste a deck code, see what it holds (SPEC §9.4, R255). An import always makes
+// a NEW deck, so it never overwrites work. Cards the player does not own are KEPT and only flagged:
+// they are judged when the deck is queued (R253). At the deck cap the import is off, with the reason
+// beside it; the pasted code stays.
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 

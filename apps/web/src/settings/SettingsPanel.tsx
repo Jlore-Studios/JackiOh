@@ -28,7 +28,7 @@ import "./settings.css";
 
 export type SettingsPanelProps = {
   onClose: () => void;
-  /** The controls other tasks mount. Defaults to `SETTINGS_SLOTS`. */
+  /** The controls other tasks mount. */
   slots?: readonly SettingsSlot[];
   /** Opens this tab ahead of the remembered one when it exists. */
   initialTab?: SettingsSectionId;
@@ -136,7 +136,6 @@ export default function SettingsPanel({
   // R2127000: Back closes the panel as Close does.
   useBackLayer(onClose);
 
-  // Omit empty sections.
   const sections = SECTIONS.filter(
     (section) => section.controls.length > 0 || slots.some((slot) => slot.section === section.id),
   );
@@ -331,7 +330,6 @@ export default function SettingsPanel({
             data-testid="settings-reset"
             onClick={() => {
               resetSettings();
-              // Reset every mounted slot too.
               for (const slot of slots) slot.reset?.();
             }}
           >

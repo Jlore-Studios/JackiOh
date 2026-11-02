@@ -1,23 +1,13 @@
-// R1584000: the floor's showcase. One stat at a time: its title, its card as a real card face, the
-// player's number for it and the board's own animation for that stat, played on a one-card stage
-// (showcaseStage.ts) that carries the board's testids, so the board's keyframes (game/animations.css)
-// and effects (fx/) run on it unchanged. No effect is new.
-//
-// The showcase steps on its own every `SHOWCASE_INTERVAL_MS`, and the player steps it by hand with a
-// click, a tap, Enter or Space. It holds like the home hand (R639): under reduced motion (the page's,
-// the panel's or the effects setting), a pointer or focus on it, and while the page is hidden. A card
-// already moving finishes its animation first. Reduced motion shows the still card and its number,
-// and a click still steps it. It reads only what the device logged and the Pocket Pick's public
-// rates (CLAUDE.md rule 7).
-//
-// R1743000: the stats come in a shuffled bag drawn from the page's random source (`nextInBag`): each
-// once before any repeats, never the one just shown first in a new round. There is no arrow and no dot
-// (a dot for each would give away how many there are), and the showcase is itself the one control.
-//
-// R2649000: a script's `aura` (Brittle's or Temporary's last count, the board's own) is drawn on the card
-// from its way in until the first beat, which waits a beat's gap more so the warning reads first; under
-// reduced motion the still card wears it. Each step draws the card afresh, so a beat played twice in a
-// row (`stamp`, `windfury`, `thaw`) starts its keyframe again.
+// R1584000: the floor's showcase, one stat at a time, its card playing the board's own animation for it on
+// a one-card stage (showcaseStage.ts) that carries the board's testids, so the board's keyframes and effects
+// run on it unchanged. It steps every `SHOWCASE_INTERVAL_MS` or by hand (a click, a tap, Enter or Space), and
+// holds like the home hand (R639) under reduced motion, a pointer or focus on it, or a hidden page. It reads
+// only what the device logged and the Pocket Pick's public rates (CLAUDE.md rule 7).
+// R1743000: the stats come in a shuffled bag (`nextInBag`), each once before any repeats. No arrow and no
+// dot (a dot each would give away how many there are): the showcase is itself the one control.
+// R2649000: a script's `aura` (Brittle's or Temporary's last count) is drawn on the card from its way in
+// until the first beat, which waits a beat's gap more so the warning reads first. Each step draws the
+// card afresh, so a beat played twice in a row (`stamp`, `windfury`, `thaw`) starts its keyframe again.
 
 import {
   useEffect,
@@ -59,11 +49,11 @@ const NO_SHAKE: FxShakeSink = { apply: () => undefined, clear: () => undefined }
 type Step = "enter" | number | "rest";
 
 export type StatShowcaseProps = {
-  /** The stats to show, in order; the showcase draws nothing while there are none. */
+  /** In order; nothing is drawn while there are none. */
   stats: readonly ShowcaseStat[];
   /** The page's reduced motion (landing.tsx's); the effects setting's is read here. */
   reduced: boolean;
-  /** R1743000: where the order of the stats is drawn from; `Math.random` on the page, a seeded source in tests. */
+  /** R1743000: where the order of the stats is drawn from (a seeded source in tests). */
   random: RandomSource;
 };
 
@@ -144,7 +134,6 @@ export function StatShowcase({ stats, reduced, random }: StatShowcaseProps): Rea
 
 type StatStageProps = { stat: ShowcaseStat; still: boolean; fxOn: boolean; intensity: number };
 
-/** One stat's card and its animation: it comes in, plays each beat of its script in turn, then rests. */
 function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactElement | null {
   // By what it plays, not by the stat's identity: a Pocket Pick arriving rebuilds every stat and must not restart this one.
   const { animation, cardId: defId, side: stageSide } = stat;
@@ -156,7 +145,6 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
 
-  // The beats come one after another once the card is in, each held for its animation and a gap.
   useEffect(() => {
     if (still) return undefined;
     const timers: number[] = [];

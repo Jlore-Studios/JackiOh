@@ -1,15 +1,13 @@
 // Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R655).
 //
-// `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits'
-// emote voices), `voice-text.json` (the words those hooks and portraits speak, which
-// crates/tools/tests/export_card_text.rs writes from crates/cards/card-text.yaml, #2498) and
-// `voice-manifest.json` (which rendered files exist, written by `apps/web/scripts/gen-voice.mjs`)
-// are imported here and nowhere else. The table is JSON5, read as text, joined to its words and
-// parsed once at import against the catalog, so a malformed table fails loudly at load, naming the
-// path of the problem, instead of speaking garbage. Each card's kind comes from
-// its catalog type: the file never states it. Everything here reads a `PlayerView` or a defId
-// and nothing else (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is
-// never in the table, so it never yields a sound.
+// `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits' emote voices),
+// `voice-text.json` (the words those hooks and portraits speak, which crates/tools/tests/export_card_text.rs
+// writes from crates/cards/card-text.yaml, #2498) and `voice-manifest.json` (which rendered files exist,
+// written by `apps/web/scripts/gen-voice.mjs`) are imported here and nowhere else. The table is JSON5, read as
+// text, joined to its words and parsed once at import against the catalog, so a malformed table fails loudly
+// at load, naming the path of the problem. Everything here reads a `PlayerView` or a defId and nothing else
+// (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is never in the table, so it never
+// yields a sound.
 
 import JSON5 from "json5";
 
@@ -41,9 +39,7 @@ import voiceTextJson from "./voice-text.json";
 import { isRecord } from "../wire/json.ts";
 import { messageOf } from "../net/errors.ts";
 
-/* ------------------------------------------------------------------------------------------- *
- * Parsing
- * ------------------------------------------------------------------------------------------- */
+/* Parsing */
 
 /** The file's name in every error, so a designer knows which file to open. */
 const FILE = "card-audio.json5";
@@ -260,11 +256,9 @@ function parseEmoteEntry(raw: unknown, path: string, voices: Record<string, Pers
 }
 
 /**
- * The parsed file, checked against `catalog`. Throws Error("card-audio.json5: <path>: <problem>") on
- * a shape error: an unknown section, voice, effect, recipe, hook or field, a missing text, a value
- * out of range, or a card id the catalog does not hold. Does NOT check that every catalog card has
- * its lines, or the word limits: the tests do (B33, B34). The `emotes` section is optional, so a
- * small test table without it still parses; the shipped file carries it (R644).
+ * The parsed file, checked against `catalog`; throws Error("card-audio.json5: <path>: <problem>") on a shape
+ * error. That every catalog card has its lines, and the word limits, the tests check (B33, B34). The
+ * `emotes` section (R644) is optional, so a small test table without it still parses.
  */
 export function parseCardAudio(raw: unknown, catalog: CatalogTypes): CardAudioTable {
   const root = record(raw, "(root)");
@@ -302,9 +296,8 @@ export function parseCardAudio(raw: unknown, catalog: CatalogTypes): CardAudioTa
 const WORD = /[\w$+\-.]+/y;
 
 /**
- * The path of the first key written twice in one object, or null. JSON5.parse keeps the last of
- * them without a word, so a second entry for a card pasted in by hand (or left by a merge) would
- * silently replace the first. `source` has already parsed, so it is well formed.
+ * The path of the first key written twice in one object, or null: JSON5.parse silently keeps the last,
+ * so a second entry left by a merge would replace the first. `source` has already parsed, so it is well formed.
  */
 function duplicateKeyPath(source: string): string | null {
   type Frame = { path: string; keys: Set<string> | null; key: string | null };
@@ -368,12 +361,10 @@ function duplicateKeyPath(source: string): string | null {
 
 /**
  * R655, #2498: the raw table with its words filled in from `voiceText` (`voice-text.json`'s shape,
- * `{ cards: { <id>: { <hook>: <line>, trigger: [<line>, …] } }, emotes: { <portrait>: { <line id>:
- * <line> } } }`): each hook that names a voice gets its card's line for that hook as its `text` (a
- * trigger its list as its `lines`), and each portrait its five lines. Nothing else moves, and the
- * table keeps its order. Throws when the table writes a line itself (a hook's `text` or `lines`, a
- * portrait's line), which is the YAML's to write, when the YAML has a line no voice speaks, and when
- * a voice has nothing to speak: a voiced hook or a portrait with no lines in the YAML.
+ * `{ cards: { <id>: { <hook>: <line>, trigger: [<line>, …] } }, emotes: { <portrait>: { <line id>: <line> } } }`):
+ * each hook that names a voice gets its card's line as its `text` (a trigger its list as its `lines`), and
+ * each portrait its five lines. Nothing else moves. Throws when the table writes a line itself, which is the
+ * YAML's to write, when the YAML has a line no voice speaks, and when a voiced hook or a portrait has no lines.
  */
 export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
   if (!isRecord(raw)) return raw;
@@ -444,9 +435,8 @@ export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
 }
 
 /**
- * `parseCardAudio` of JSON5 text, its words filled in from `voiceText` when it is given
- * (`withVoiceText`). A syntax error is reported the same way, with its line and column, and so is a
- * key written twice in one object.
+ * `parseCardAudio` of JSON5 text, its words filled in from `voiceText` when it is given (`withVoiceText`).
+ * A syntax error or a key written twice in one object is reported with its line and column.
  */
 export function parseCardAudioText(source: string, catalog: CatalogTypes, voiceText?: unknown): CardAudioTable {
   let raw: unknown;
@@ -468,9 +458,7 @@ export const CARD_AUDIO: CardAudioTable = parseCardAudioText(
 /** Generated by gen-voice.mjs and checked against the files by its `--check` (B35, B37). */
 export const VOICE_MANIFEST = rawManifest as VoiceManifest;
 
-/* ------------------------------------------------------------------------------------------- *
- * Lookups
- * ------------------------------------------------------------------------------------------- */
+/* Lookups */
 
 export function voiceKey(defId: string, line: PlayableLineKind): VoiceKey {
   return `${defId}-${line}`;
@@ -481,9 +469,8 @@ export function voiceUrl(key: VoiceKey): string {
 }
 
 /**
- * The table entry for a card this viewer may name, or null. This is R203's "readable": the defId is
- * not the redaction sentinel (R97, R154) and the table has an entry for it (a fused transient
- * definition, R77, has none).
+ * The table entry for a card this viewer may name (R203's "readable"), or null: not the redaction
+ * sentinel (R97, R154) and in the table (a fused transient definition, R77, has no entry).
  */
 export function entryFor(table: CardAudioTable, defId: string): CardAudioEntry | null {
   if (defId === HIDDEN_DEF_ID || !Object.hasOwn(table.cards, defId)) return null;
@@ -496,10 +483,8 @@ export function hookFor(table: CardAudioTable, defId: string, hook: CardHook): H
 }
 
 /**
- * The hook's line: its text and the voice that speaks it, or null when the hook has no line.
- * R644: an emote line (`greetings` and the rest) resolves through the emotes table instead, the
- * way a card's resolves through `cards` — which is what lets `playVoice` carry emote defIds
- * (`emote-vanilla` etc.) unchanged (engine.ts).
+ * The hook's line and the voice that speaks it, or null. R644: an emote line resolves through the
+ * emotes table instead, which lets `playVoice` carry emote defIds (`emote-vanilla`) unchanged (engine.ts).
  */
 export function lineFor(
   table: CardAudioTable,
@@ -544,10 +529,7 @@ function emotePortraitOf(defId: string): string {
   return defId.startsWith("emote-") ? defId.slice("emote-".length) : defId;
 }
 
-/**
- * A portrait's bubble text and emote voice for one issue-§3 line, or null. `portrait` is the
- * portrait id (`vanilla`, …); passing the `emote-<portrait>` wire defId also works.
- */
+/** A portrait's bubble text and emote voice for one issue-§3 line, or null; `emote-<portrait>` also works. */
 export function emoteLineFor(
   table: CardAudioTable,
   portrait: string,
@@ -571,9 +553,8 @@ export function emoteVoiceDef(portrait: PortraitId): string {
 }
 
 /**
- * Keys worth preloading for a view, deduped, in this order: the viewer's hand (unit → play, spell →
- * cast; traps none), every unit on both boards (death), the viewer's own units (attack, R655), the
- * viewer's own face-up backrow traps (cast). Only hooks that have a line: an effect renders no file.
+ * Keys worth preloading for a view, deduped, in order: the viewer's hand, every unit on both boards (death),
+ * the viewer's own units (attack, R655), their face-up backrow traps (cast). Only hooks that have a line.
  */
 export function voiceKeysForView(view: PlayerView, table: CardAudioTable): VoiceKey[] {
   const keys: VoiceKey[] = [];

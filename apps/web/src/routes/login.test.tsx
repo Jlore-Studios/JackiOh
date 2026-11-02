@@ -1,7 +1,6 @@
-// `/login`: the password reveal, and the mode toggle it shares a screen with.
-//
-// The reveal matters most while CREATING a password: a value you cannot read is a value you
-// cannot check before submitting, and getting it wrong there costs an email round trip.
+// `/login`: the password reveal, and the mode toggle it shares a screen with. The reveal matters
+// most while CREATING a password: a value you cannot read is a value you cannot check before
+// submitting, and getting it wrong there costs an email round trip.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -44,7 +43,6 @@ describe("the password reveal", () => {
     expect(field).toHaveValue("hunter22222");
   });
 
-  /** The reveal has to survive the switch, since sign-up is where it earns its keep. */
   it("is available when creating an account, not only when signing in", async () => {
     render(<LoginRoute />);
     await userEvent.click(screen.getByTestId("login-mode"));

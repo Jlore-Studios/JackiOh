@@ -4,14 +4,11 @@
 //! Base: "Deal 2 damage to a target, Lifesteal"; radiant: "Deal 4" (§8's cell; R276 gave the token a
 //! Radiant face, R275 doubles its number). The faces print "Lifesteal / Deal 2 damage." (R372).
 //!
-//! §7: spell tokens live in hand and library and go to the graveyard after resolving, yet stay out of
-//! random pools and Discover unless named. Both are data: `token: true` with `type: "Spell"` keeps it
-//! out of `catalog.query` (§5.1) and it is no unit token, so after §10.5 step 7 it reaches the
-//! graveyard (R11), where R50 lets #72 Reminisce Discover it back. "A target" is a DECLARED
-//! play-time choice, never a prompt (R81, §10.6); no target fizzles the damage but the spell still
-//! counts as played (§8 Conventions).
-//! Lifesteal is also passed as a flag: §8 states it as part of the EFFECT (R85, §4.4 step 8). The
-//! sources are ORed, so it heals once, by the amount dealt (R63's zero rule, Armor and the cap apply).
+//! §7: a spell token stays out of random pools and Discover unless named: `token: true` with `type:
+//! "Spell"` keeps it out of `catalog.query` (§5.1), and as no unit token it reaches the graveyard after
+//! §10.5 step 7 (R11), where R50 lets #72 Reminisce Discover it back. "A target" is a DECLARED play-time
+//! choice (R81, §10.6); no target fizzles the damage (§8 Conventions). Lifesteal is also a flag, as §8
+//! states it in the EFFECT (R85, §4.4 step 8); the sources are ORed, so it heals once (R63).
 
 use jackioh_engine::prelude::*;
 
@@ -41,10 +38,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #93.1 Combo-Fodder (SPEC §8.4, §7; R11, R81, R85, R275, R276). BUILD M4-T4 row 93.1: "2 damage to
-// a target, Lifesteal; radiant 4". The token's own cases, on its own: how #93 Combo-Index hands it out
-// (one each start of turn, a full hand burning it), the rest of R81's target set and its place in no
-// random pool are in `c093_combo_index.rs`, beside the card that makes it.
+// #93.1 Combo-Fodder (SPEC §8.4, §7; R11, R81, R85, R275, R276). BUILD M4-T4 row 93.1.
+// How #93 Combo-Index hands it out, the rest of R81's target set and
+// its place in no random pool are tested in `c093_combo_index.rs`.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

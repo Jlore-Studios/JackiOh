@@ -49,7 +49,6 @@ function declOf(body: string, name: string): string | undefined {
   return new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(body)?.[1]?.trim().replace(/\s+/g, " ");
 }
 
-/** The `.cf` face inside a board card's root. */
 function faceOf(id: string): HTMLElement {
   return must(screen.getByTestId(testid.card(id)).querySelector<HTMLElement>(".cf"), `a face inside ${id}`);
 }

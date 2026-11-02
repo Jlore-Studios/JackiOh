@@ -1,10 +1,9 @@
-// R1839000–R1839003 (issue #1839): Dormant, Stinkyscape's Hearthstone-style status (SPEC §6.1), with
-// its §6.2 trigger "When this awakens" and its §6.3 verb Awaken. A Dormant card is on the field and
-// fills its zone, and until it awakens nothing else reaches it: `zones::active_units_of` leaves it out,
-// `zones::acts_on_field` answers false, `restrictions::unaffected_by` passes it by, and its lasting text
-// is off (`preview::lasting_text_off`). Its countdown runs at its controller's turn start, after the
-// Brittle tick (`slumber::awaken_at_turn_start`), and its own Activate may awaken it instead (the one
-// ability it keeps, `StaticFlags.slumber.wakesBy`). Proved on the fixtures of `fixtures/slumber.rs`.
+// R1839000–R1839003 (issue #1839): Dormant, Stinkyscape's Hearthstone-style status (SPEC §6.1), with its
+// §6.2 trigger "When this awakens" and its §6.3 verb Awaken. A Dormant card is on the field and fills its
+// zone, and until it awakens nothing else reaches it (`zones::active_units_of`, `zones::acts_on_field`,
+// `restrictions::unaffected_by`) and its lasting text is off (`preview::lasting_text_off`). Its countdown
+// runs at its controller's turn start, after the Brittle tick (`slumber::awaken_at_turn_start`), and its own
+// Activate may awaken it instead (`StaticFlags.slumber.wakesBy`). Proved on `fixtures/slumber.rs`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -350,8 +349,7 @@ mod r1839000_a_dormant_card_fills_its_zone_and_nothing_reaches_it {
         assert_eq!(slumber_of(&s, &dormant), dormant_for(2));
     }
 
-    /// Hearthstone's Magtheridon: a card played Dormant runs its Cry as it is played, and the Cry, like
-    /// any effect, passes the Dormant card itself by.
+    /// Hearthstone's Magtheridon: a card played Dormant runs its Cry as it is played.
     #[test]
     fn r1839000_its_cry_runs_as_it_is_played_and_passes_it_by() {
         let mut s = board(
@@ -465,7 +463,6 @@ mod r1839001_dormant_for_n_turns_counts_its_controllers_turns {
         s.end_turn();
         assert_eq!(awakened_ids(s.last_events()), vec![id.clone()]);
         assert_eq!(slumber_of(&s, &id), None);
-        // Awake, the Cry's "give this +2/+2" is long gone: it stays a 2/2.
         s.expect_stats(&id, json!({ "attack": 2, "health": 2 }));
     }
 }
@@ -556,7 +553,6 @@ mod r1839002_awakening_by_its_own_activate_and_the_awaken_verb {
             HERO_HEALTH - AWAKENING_DAMAGE,
             "its \"When this awakens\" answered once"
         );
-        // Awake, its aura is on: the plain beside it has +1 Attack.
         s.expect_stats(id_at(&s, P1, 2).as_str(), json!({ "attack": 4, "health": 3 }));
     }
 }

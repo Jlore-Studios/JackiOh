@@ -1,10 +1,7 @@
-// The frame plan of a shared GIF (#513, R513000, decision D5): a pure function from a clip's steps
-// (each step's view and its redacted events) to a list of frames, each a display list of rectangles,
-// text, card faces and backs, and portraits. It reads nothing but those views (CLAUDE.md rule 7), so
-// a card the step's view hides is a back, each hand is a count, and no account name can reach a
-// frame. Its clock is the fixed frame rate in its options, not the wall clock, and neither the
-// device's settings nor its locale change it: the text is plain English, never `t()`'s. The raster
-// (`raster.ts`) draws a plan and the encoder (`encoder.ts`) packs the pixels.
+// The frame plan of a shared GIF (#513, R513000, decision D5): a pure function from a clip's steps to
+// frames, each a display list. It reads nothing but their views (CLAUDE.md rule 7), so a card the
+// step's view hides is a back, each hand is a count, and no account name can reach a frame. Its clock
+// is its options' frame rate, never the device's settings or locale: the text is plain English, never `t()`'s.
 
 import type { ReplayStep } from "@jackioh/engine";
 import type { PlayerId, PlayerView, PortraitId, Row } from "@jackioh/shared";

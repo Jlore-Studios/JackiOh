@@ -1,8 +1,6 @@
-//! effects/perks.ts: C+ #46 Felinor Flagbearer's Armor for the rest of the game and C+ #49 Jay Fungus's
+//! effects/perks.rs: C+ #46 Felinor Flagbearer's Armor for the rest of the game and C+ #49 Jay Fungus's
 //! discount on a random hand card. Applied straight to fixture cards; the real cards' tests cover the
-//! same cases again (packages/cards/test/classic-plus/046-felinor-flagbearer.test.ts, 049-jay-fungus.test.ts).
-//!
-//! Port of `packages/engine/test/effects-perks.test.ts`.
+//! same cases again.
 
 use jackioh_engine::testkit::*;
 
@@ -38,8 +36,8 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// One effect applied as p1's, on a sink whose rng starts at the state's cursor (`sinkFor`); the
-/// cursor is written back, and the events it emitted are handed back.
+/// One effect applied as p1's, on a sink whose rng starts at the state's cursor; the cursor is
+/// written back, and the events it emitted are handed back.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, PlayerId::P1)
 }

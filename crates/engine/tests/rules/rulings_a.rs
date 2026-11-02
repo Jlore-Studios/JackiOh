@@ -120,7 +120,6 @@ fn ra_unit(next: &mut i32, name: &str, attack: i32, health: i32, keywords: Value
     json_as(def)
 }
 
-/// A Core fixture of any type without stats.
 fn ra_card(next: &mut i32, name: &str, card_type: &str, extra: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -683,7 +682,6 @@ fn pluck(events: &[Value], key: &str) -> Vec<Value> {
     events.iter().map(|event| event[key].clone()).collect()
 }
 
-/// Index of the first match, -1 when none.
 fn find_index(events: &[GameEvent], mut matches: impl FnMut(isize, &Value) -> bool) -> isize {
     for (index, event) in events.iter().enumerate() {
         let index = index as isize;
@@ -724,7 +722,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r1_fires_cry_only_on_a_play_from_hand_or_a_cast_never_on_a_summon_recruit_or_transform() {
-        // Played from hand: the Cry resolves.
         let mut played = playing("r1");
         let card = at(&in_hand(&mut played, CRIER, P1, 1), 0);
         let result = play(&played, &card.id, "r1-play");
@@ -776,9 +773,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(TURN_CAP_PLAYER_TURNS, 60);
 
         let mut state = playing("r2");
-        // R389: two DECK_SIZE-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so both
-        // seats hold #75 Infinite Reserves, whose empty-library draws never fatigue, and the cap is what
-        // ends the game.
+        // R389: two DECK_SIZE-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so
+        // both seats hold #75 Infinite Reserves, which never fatigues, and the cap ends the game.
         let reserves = infinite_reserves().id;
         put(&mut state, &reserves, slot(P1, BACKROW, 1), json!({}));
         put(&mut state, &reserves, slot(P2, BACKROW, 1), json!({}));
@@ -914,7 +910,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let unit = put(&mut state, REBORN_PINGER, slot(P1, UNITS, 1), json!({}));
 
         kill_and_check(&mut state, &unit);
-        // First death: the Death trigger fired and Reborn brought it back at 1 health without Reborn.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         let back = must(card_at(&state, slot(P1, UNITS, 1)), "reborn unit").clone();
         assert_eq!(back.id, unit.id);
@@ -922,7 +917,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(!unit_has(&state, &back, KeywordKind::Reborn));
 
         kill_and_check(&mut state, &back);
-        // Second death: Death fires again and the unit stays in its owner's graveyard.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
         assert_eq!(ids(&state.players.p1.graveyard), vec![unit.id.clone()]);
         assert!(card_at(&state, slot(P1, UNITS, 1)).is_none());
@@ -1159,7 +1153,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             backrow_card.id
         );
 
-        // A Locked destination takes the card (R831000; it bounced it before patch v0.3.10).
+        // A Locked destination takes the card (R831000).
         let mut locked = game("r14b");
         let entering = put(&mut locked, BODY, slot(P1, UNITS, 2), json!({}));
         lock_zone(&mut locked, slot(P1, UNITS, 3));
@@ -1317,8 +1311,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let result = play(&state, &card.id, "r17-play");
         assert_eq!(result.error, None);
-        // The Cry ran first — the crier's 3 reached p2's hero — and then the trap answered the play's
-        // resolution: the played unit is a Sheep.
+        // The Cry ran first (the crier's 3 reached p2's hero), then the trap answered the play's resolution:
+        // the played unit is a Sheep.
         assert_eq!(result.state.players.p2.hero.health, health - 3);
         assert_eq!(
             must(card_at(&result.state, slot(P1, UNITS, 1)), "sheep").def_id,
@@ -1947,7 +1941,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_ne!(replacement.id, unit.id);
         assert_eq!(replacement.position, Some(Position::Def));
         assert_eq!(replacement.owner, P1);
-        // Ceased to exist: no graveyard, no exile pile, no Death.
         assert!(state.players.p1.graveyard.is_empty());
         assert!(!state.players.p1.exile.iter().any(|card| card.id == unit.id));
 
@@ -2129,7 +2122,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             sink.events.clone()
         };
 
-        // R2179002: no count of plays takes it (through v0.5.2 it counted as one, R40).
+        // R2179002, R40: no count of plays takes it.
         assert_eq!(state.players.p1.turn_log.cards_played, played_before);
         assert!(!state.players.p1.turn_log.played_ids.contains(&spell.id));
         assert_eq!(state.counters.played, counter_before);
@@ -2143,7 +2136,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(played["costPaid"], json!(0));
         assert_eq!(played["onDraw"], json!(true));
         assert_eq!(state.players.p1.mana.current, mana_before);
-        // The script ran and the spell reached the graveyard (R70).
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == spell.id));
     }
@@ -2234,8 +2226,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(!options.contains(&sel(&hungry)));
         assert!(!options.contains(&sel(&beside)));
 
-        // What it ate lives on its own instance and drives the Death copies, read from the last-known
-        // state of the instance as it left the field (R78).
+        // What it ate lives on its own instance and drives the Death copies, read from its last-known state
+        // (R78).
         run(
             &mut state,
             effects::remember(json_as(json!({ "key": "eaten", "value": TRAP }))),

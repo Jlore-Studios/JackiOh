@@ -1,30 +1,8 @@
-//! The shadow-ban sweep (R186, R390, docs/polish/3-ai.md B25, docs/classic-sets.md B4.4): force one
-//! card into AI decks, play them against the greedy baseline, and flag what went wrong with that card.
-//! `cargo jackioh sweep` (SURFACE §12; TS `scripts/sweep.ts`) runs it over every non-token card of
-//! every set at every tier in AI_SWEEP.tiers and prints the rows that `shadow_ban.rs` is filled from.
+//! The shadow-ban sweep (R186, R390, docs/polish/3-ai.md B25, docs/classic-sets.md B4.4, SURFACE §12):
+//! forces cards into AI decks against greedy baselines across tiers (AI_SWEEP.tiers) to identify failures.
 //!
-//! Why more than one tier. The ban keeps a card out of the AI's decks at every difficulty, and a
-//! tier's resources decide what the AI can do with a card: at Easy's four crystals a 6-cost card is
-//! never affordable at all, so an Easy-only sweep has no evidence either way, and a card the AI
-//! never played on four crystals may well be played on seven. So each card is swept at the
-//! cheapest tier (Easy) and the richest (Hard): a flag at either bans it (the reason names the
-//! tier), and a card that was never once affordable at any tier is reported as unswept rather than
-//! passed as clean.
-//!
-//! Two passes (R390). Pass 1 (`sweep_card`) is the sweep above. A card is at risk (`at_risk_ids`) when
-//! pass 1's numbers meet a flag's condition at half strength (`half_flags`), or it is banned already
-//! or on `SHADOW_WATCH`. Pass 2 (`sweep_at_risk`) forces each at-risk card into more games, on seeds of
-//! its own, with every at-risk card's filler weight boosted, and counts every at-risk card the AI was
-//! dealt, forced or not. A `neverPlayed`, `selfHarm` or `selfKill` ban needs pass 2's numbers; `error`
-//! and `timeout` ban from any game whose forced card the card was (`sweep_verdict`).
-//!
-//! Pure like the rest of src/: the clock arrives as `now`, which the CLI passes and a test leaves
-//! out, so a test's sweep never times out on a slow machine. A decision the clock finds slow is handed
-//! to `retime` as a `SlowDecision` (R977000); the CLI times it again against the perf gate's
-//! yardstick, and only one still slow counts in `timeouts`, while `rawTimeouts` counts every one.
-//!
-//! Port of `packages/ai/src/sweep.ts`. TS's `try`/`catch` around dealing and playing a game is
-//! `catch_unwind`: a deck that cannot be dealt, or a game that panics where TS threw, is an error.
+//! Evaluates cards across two tiers (Easy, Hard) and two passes (R390) for flags (`neverPlayed`, `selfHarm`,
+//! `selfKill`, `error`, `timeout`). Retimes slow decisions against perf gate (R977000).
 
 use std::ops::{Deref, DerefMut};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -56,7 +34,7 @@ pub enum SweepFlag {
 }
 
 impl SweepFlag {
-    /// The literal, as TS writes it (and as a SHADOW_BAN reason starts with it).
+    /// The literal (as a SHADOW_BAN reason starts with it).
     pub fn as_str(self) -> &'static str {
         match self {
             SweepFlag::Error => "error",
@@ -83,7 +61,7 @@ pub struct AiSweep {
     pub seeds_per_card: i32,
     pub decision_ms: i32,
     pub max_actions: i32,
-    /// R2425000: pass 1's neverPlayed needs this many playable turns (the name is from when it counted affordable ones).
+    /// R2425000: pass 1's neverPlayed needs this many playable turns.
     pub min_affordable_turns: i32,
     pub self_harm_delta: f64,
     /// selfHarm needs at least this many plays, so one play into a trap does not ban a card.
@@ -150,10 +128,8 @@ pub struct SweepStats {
 }
 
 /// One card at one tier. `unswept` is a card that was never once affordable in hand, so its games
-/// say nothing about whether the AI can play it (a report, never a ban flag).
-///
-/// TS `SweepStats & { tier; flags; unswept }`: the stats are flattened beside the three, as TS writes
-/// the object, and the result reads as its stats (`Deref`).
+/// say nothing about whether the AI can play it (a report, never a ban flag). The stats are flattened
+/// beside `tier`, `flags` and `unswept`, and the result reads as its stats (`Deref`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SweepResult {
@@ -228,12 +204,11 @@ pub struct SlowDecision<'a> {
     pub rng: &'a Rng,
 }
 
-/// `sweepCard`'s and `sweepAtRisk`'s options (TS's anonymous `{ seeds?, now?, tier? }`, and R977000's
-/// `retime`).
+/// `sweepCard`'s and `sweepAtRisk`'s options, with R977000's `retime`.
 #[derive(Clone, Copy, Default)]
 pub struct SweepOptions<'a> {
     pub seeds: Option<i32>,
-    /// The clock, in milliseconds (TS `performance.now`); absent, no decision ever times out.
+    /// The clock, in milliseconds; absent, no decision ever times out.
     pub now: Option<&'a dyn Fn() -> f64>,
     /// R977000: whether a decision the clock found slow is still slower than decisionMs timed again
     /// (`cargo jackioh sweep`: against the perf gate's yardstick); absent, every one counts.
@@ -335,8 +310,6 @@ pub fn ban_flags(reason: &str) -> Vec<SweepFlag> {
 /// R390: the at-risk cards — every card some tier's pass-1 numbers meet at half strength
 /// (`half_flags`), and every card on `ban` or `watch` (today's SHADOW_BAN and SHADOW_WATCH by
 /// default). A pure function of pass 1's results and the two tables, sorted.
-///
-/// TS's defaults: pass `SHADOW_BAN` and `SHADOW_WATCH`.
 pub fn at_risk_ids(pass1: &[SweepResult], ban: &[(&str, &str)], watch: &[(&str, &str)]) -> Vec<String> {
     let mut ids: IndexSet<String> = ban
         .iter()
@@ -356,8 +329,6 @@ pub fn at_risk_ids(pass1: &[SweepResult], ban: &[(&str, &str)], watch: &[(&str, 
 /// R390: the cards pass 2's filler never deals — banned for `error` or `timeout` today, or flagged so
 /// by pass 1 — so a known bug is never filler. A card banned for `neverPlayed`, `selfHarm` or
 /// `selfKill` is at risk, and pass 2's filler lifts its ban.
-///
-/// TS's default: pass `SHADOW_BAN`.
 pub fn pass2_keep_out(pass1: &[SweepResult], ban: &[(&str, &str)]) -> Vec<String> {
     let bug = |flags: &[SweepFlag]| -> bool {
         flags.contains(&SweepFlag::Error) || flags.contains(&SweepFlag::Timeout)
@@ -548,8 +519,7 @@ pub fn record_sweep_play(stats: &mut SweepStats, before: &GameState, after: &Gam
 /// R2425000: one AI turn start, counted into each of `cards`. A card `seat` holds an instance of at
 /// an `effective_cost` within its mana counts an affordable turn; a card one of whose instances in
 /// hand `legal_actions` lists a `Play` of (the action `play_sweep_game` counts as a play) counts a
-/// playable turn, so a Tribute it cannot pay, a target that is not there or an unmet play condition
-/// counts none. `legal_actions` runs only when one of `cards` is in hand.
+/// playable turn. `legal_actions` runs only when one of `cards` is in hand.
 pub fn record_sweep_turn(cards: &mut [SweepStats], state: &GameState, seat: PlayerId) {
     let mana = state.players[seat].mana.current;
     let hand = zone_cards(state, seat, OffFieldZone::Hand);
@@ -581,13 +551,8 @@ pub fn record_sweep_turn(cards: &mut [SweepStats], state: &GameState, seat: Play
     }
 }
 
-/// One sweep game, counted for each `tracked` card the AI's deck holds (games 1): drawn (drawnGames
-/// 1), the turns it sat in hand affordable and the turns it was playable at the AI's turn start (`record_sweep_turn`, R2425000), and its
-/// plays (`record_sweep_play`). The game's errors (throws, rejected or "fallback" AI actions, panics
-/// the AI's search caught (#1429); a game that cannot even be dealt is one) and timeouts (a decision
-/// whose `now()` duration > decisionMs, or maxActions hit) come back beside them. A decision the clock
-/// found slow counts in `timeouts` only when the re-timer, if there is one, finds it slow again
-/// (R977000); `raw_timeouts` counts them all.
+/// Simulates one sweep game, recording affordable/playable turns (R2425000), plays, errors (#1429),
+/// and timeouts (retimed via R977000).
 fn play_sweep_game(
     seed: &str,
     def_id: &str,
@@ -918,16 +883,7 @@ fn numbers_of(stats: &SweepStats) -> String {
     )
 }
 
-/// One card's verdict over its tiers and passes (R186, R390). `pass1` is the card's own pass-1
-/// results; `pass2` may be every pass-2 result of the sweep, since the card's numbers are read out of
-/// each, forced or filler. Per tier: `error` and `timeout` from the card's own games of either pass;
-/// `neverPlayed` from pass 2's numbers alone, banAffordableTurns playable turns (R2425000) and no play;
-/// `selfHarm` from pass 2's, at least banHarmPlays plays averaging below selfHarmDelta; `selfKill` from
-/// pass 2's, at least banLosingPlays lost games. A flag at any tier bans the card, every flagging
-/// tier named. Unswept when no tier of either pass ever saw it affordable. Watched (R600) when it is
-/// not banned and its own numbers this sweep, of either pass, meet a flag at half strength.
-///
-/// TS's default `pass2 = []`: pass `&[]`.
+/// Card's shadow-ban sweep verdict across tiers and passes (R186, R390, R2425000, R600).
 pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdict {
     let def_id = pass1
         .first()

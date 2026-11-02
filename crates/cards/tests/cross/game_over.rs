@@ -1,6 +1,5 @@
 //! Nothing happens after the game is over (SPEC §2.5, §4.5 step 2, R96, R216); the fuzz monitor's I5
 //! checks the same thing in every random game.
-//!
 //! The check that finds a hero at 0 or less ends the game at once. Whatever was still to resolve then
 //! does not: the rest of the effect list the check ran inside, owed work, queued triggers, or a trap's
 //! consumption after the AI turn it handed over has ended the game. A game conceded under an open
@@ -29,7 +28,6 @@ fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
 
-/// What follows the first `gameOver`: the whole list when there is none.
 fn after_game_over(types: &[GameEventType]) -> Vec<GameEventType> {
     let from = types
         .iter()
@@ -70,9 +68,7 @@ mod r216_nothing_happens_after_the_game_is_over {
             })
         );
         let types = types_of(s.last_events());
-        // gameOver is the last thing that happens: no heal, draw or anything else after it.
         assert_eq!(after_game_over(&types), Vec::<GameEventType>::new());
-        // The state that says p1 lost by hero death still shows p1's hero dead.
         assert!(s.state().players.p1.hero.health <= 0);
     }
 
@@ -82,7 +78,6 @@ mod r216_nothing_happens_after_the_game_is_over {
         // rest of p2's turn to the AI (R44), which has nothing left but to end it. Shredder's
         // end-of-turn 2 damage kills p1 and the game is over (§2.5) — and nothing then consumes the trap.
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-pawn-after-game-over",
             "active": "p2",
             "p1": { "health": 2, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "hand": [RENO] },
@@ -108,7 +103,7 @@ mod r216_nothing_happens_after_the_game_is_over {
         // Two Radiant /fullsends make two "Combo: draw 1" riders, so the Vanilla played after them owes
         // two draws. The first draws Hinder, cast on its draw (R70), which owes two draws of its own from
         // an empty library (fatigue 1, then 2); the check after that cast finds p1 at 0 or less and the
-        // game is over. The Vanilla's second Combo draw must not happen.
+        // game is over.
         let mut g = scenario(json!({
             "p1": {
                 "hand": [{ "def": FULLSEND, "radiant": true }, { "def": FULLSEND, "radiant": true }, VANILLA],
@@ -191,7 +186,6 @@ mod r216_a_question_still_open_when_the_game_ends_is_closed_with_it {
     #[test]
     fn r216_r211_a_game_that_ends_while_a_prompt_is_open_leaves_no_prompt_open_2_5() {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-concede-at-prompt",
             "p1": { "hand": [SCARAB], "mana": 4 },
             "p2": { "field": [POINTMASTER] },
@@ -209,10 +203,7 @@ mod r216_a_question_still_open_when_the_game_ends_is_closed_with_it {
                 reason: GameOverReason::Concede
             })
         );
-        // Nothing can answer the Discover any more: legalActions offers nothing once the game is over...
         assert_eq!(legal_actions(&over.state, P1), Vec::<ActionBody>::new());
-        // ...so the finished game does not still hold it open, nor show it to either seat, and
-        // `gameOver` is the action's last event.
         assert!(over.state.pending.is_none());
         assert!(view_for(&over.state, P1).pending.is_none());
         assert!(view_for(&over.state, P2).pending.is_none());

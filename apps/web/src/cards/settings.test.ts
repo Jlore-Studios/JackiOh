@@ -1,11 +1,7 @@
-// Polish 6, slice C: the card settings store (docs/polish/6-cards.md, B28).
-//
-// One localStorage key, `jackioh.cards.settings.v1`, with every read and write inside try/catch.
-// What a page load sees is tested on a freshly imported module (`vi.resetModules()`), so the
-// answer does not depend on whether the store caches what it read. Storage failures are a
-// `Storage.prototype` stub that throws, as the Tests section asks.
-//
-// This file is .ts, so the one component it renders is built with `createElement`.
+// Polish 6, slice C: the card settings store (docs/polish/6-cards.md, B28). A page load is tested on a
+// freshly imported module (`vi.resetModules()`), so the answer does not depend on whether the store
+// caches what it read; storage failures are a `Storage.prototype` stub that throws. This file is .ts,
+// so the one component it renders is built with `createElement`.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { createElement, type ReactElement } from "react";

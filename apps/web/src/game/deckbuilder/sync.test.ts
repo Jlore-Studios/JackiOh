@@ -825,8 +825,6 @@ describe("the name a save sends", () => {
   });
 });
 
-// A trio import (R340, R341)
-
 describe("a trio import", () => {
   const code = {
     name: "Shared trio",
@@ -941,7 +939,6 @@ describe("a trio import", () => {
 });
 
 // The deck's playmat, backdrop and card back (R1297000)
-
 describe("the deck's playmat, backdrop and card back (R1297000)", () => {
   it("R1297000 a deck's picks ride the snapshot, the mirror and the PUT, and null clears one", async () => {
     const server = fakeServer();
@@ -949,14 +946,12 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     const clock = manualClock();
     const store = open({ api: server.api, clock, storage });
 
-    // A created deck carries its picks, in the snapshot and the mirror before any save.
     const id = store.createDeck({ name: "Aggro", tableCosmetic: "table-felt", cardBackCosmetic: "card-back-blueprint" }) ?? "";
     expect(store.getSnapshot().decks[0]).toMatchObject({ tableCosmetic: "table-felt", cardBackCosmetic: "card-back-blueprint" });
     expect(store.getSnapshot().decks[0]?.fieldCosmetic).toBeUndefined();
     const mirrored = parseMirror(storage.data.get(mirrorKey(PROFILE)) ?? null);
     expect(mirrored?.decks[0]?.item).toMatchObject({ tableCosmetic: "table-felt", cardBackCosmetic: "card-back-blueprint" });
 
-    // The PUT sends the picks it has and leaves out the rest.
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.decks.get(id)).toEqual({
       name: "Aggro",
@@ -967,7 +962,6 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
       cardBackCosmetic: "card-back-blueprint",
     });
 
-    // A new pick merges in; an unrelated edit keeps every pick.
     store.updateDeck(id, { fieldCosmetic: "field-rain" });
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
     store.updateDeck(id, { name: "Aggro v2" });
@@ -1032,7 +1026,6 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
 });
 
 // The deck's portrait (R641)
-
 describe("the deck's portrait (R641)", () => {
   it("R641 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
     const server = fakeServer();
@@ -1047,7 +1040,6 @@ describe("the deck's portrait (R641)", () => {
     expect(mirrored?.decks[0]?.item.portrait).toBe("gary");
 
     await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
-    // D5: PUT round-trips the portrait.
     const put = server.calls.find((call) => call.op === "putDeck")?.body as DeckInput | undefined;
     expect(put?.portrait).toBe("gary");
     expect(server.decks.get(id)?.portrait).toBe("gary");
@@ -1098,7 +1090,6 @@ describe("the deck's portrait (R641)", () => {
 
   it("R641 a mirror row written before the portrait column reads back `null`", () => {
     const storage = memoryStorage();
-    // Missing portrait data must preserve the mirror row as null.
     storage.setItem(
       mirrorKey(PROFILE),
       JSON.stringify({
@@ -1147,8 +1138,6 @@ describe("the deck's portrait (R641)", () => {
   });
 });
 
-// A deck's kept versions (R2100000)
-
 describe("a deck's kept versions (R2100000)", () => {
   const AGGRO = [fixtureCardId(1), fixtureCardId(2)];
 
@@ -1159,7 +1148,6 @@ describe("a deck's kept versions (R2100000)", () => {
     ];
   }
 
-  /** A store over the one deck the server holds, "Aggro" with a portrait, and its two kept versions. */
   function seeded(server: ReturnType<typeof fakeServer>, clock = manualClock()): DeckStore {
     server.decks.set("d1", { name: "Aggro", cards: [...AGGRO], catalogVersion: CATALOG_VERSION, portrait: "gary" });
     server.versions.set("d1", kept());
@@ -1176,7 +1164,6 @@ describe("a deck's kept versions (R2100000)", () => {
     expect(server.calls.map((call) => `${call.op} ${call.versionId ?? call.id}`)).toEqual(["putDeck d1", "restoreDeckVersion v1"]);
     expect(server.decks.get("d1")).toMatchObject({ name: "First", cards: [fixtureCardId(3)], catalogVersion: CATALOG_VERSION });
     expect(result).toEqual({ ok: true, versions: [{ ...kept()[1], id: "v1-restored", savedAt: RESTORED_AT }, ...kept()] });
-    // The server's deck, as saved: the version's name and cards, the deck's portrait, the restore's time.
     expect(store.getSnapshot().decks[0]).toMatchObject({ id: "d1", name: "First", cards: [fixtureCardId(3)], portrait: "gary", updatedAt: RESTORED_AT });
     expect(store.getSnapshot().unsynced.has("d1")).toBe(false);
     expect(store.getSnapshot().status.state).toBe("saved");

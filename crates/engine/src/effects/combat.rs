@@ -1,22 +1,14 @@
 //! Forced attack, Cancel an attack and the AI turn, as card-script verbs (SPEC §6.3's "Forced
 //! attack" and "Cancel an attack" rows, §4.2, §4.5, §10.7's AI bullet, R44, R53, R84).
 //!
-//! WHY THIS FILE EXISTS. `effects/index.ts`'s header said these verbs "live outside it and are not
-//! part of the card-script surface", which was true while nothing needed them from a hook. It is
-//! not true any more: #9 Moths to the Flame forces attacks from `startOfTurn`, #60 Bear Honeypot
-//! from a trap trigger, and #96 My Pawn cancels an attack and hands the turn to the AI from another.
-//! A hook returns `Vec<Effect>` and has no `EngineSink` of its own (CLAUDE.md rules 4 and 5), while
-//! `crate::combat`'s `force_attack`/`force_attacks_on` and `crate::subsystems::ai_policy`'s
-//! `play_out_turn` all take a sink — so every verb here is a THIN wrapper and nothing here
-//! re-implements combat, R53's stop rule or §10.7's policy. `EffectContext` derefs to its
-//! `EngineSink`, so `ctx` is passed straight through as the sink.
+//! Hooks need them (#9 Moths to the Flame from `startOfTurn`, #60 Bear Honeypot and #96 My Pawn from
+//! trap triggers), but a hook returns `Vec<Effect>` and has no `EngineSink` (CLAUDE.md rules 4 and 5),
+//! so every verb here is a THIN wrapper over the sink-taking `crate::combat` and `play_out_turn`, and
+//! nothing here re-implements combat, R53's stop rule or §10.7's policy. `ctx` derefs to its sink.
 //!
-//! NAMING. The card-facing spellings keep the "d" (`forced_attacks_on`, `forced_attacks`) where
-//! `crate::combat` spells them `force_attacks_on`/`force_attack`. That is deliberate: the effect
-//! returns an `Effect` and the engine function takes a sink, so one letter keeps a card file from
-//! importing the wrong one, and an import of both in this file reads unambiguously.
-//!
-//! Port of `packages/engine/src/effects/combat.ts`.
+//! NAMING. The card-facing spellings keep the "d" (`forced_attacks_on`) where `crate::combat` spells
+//! them `force_attacks_on`: the effect returns an `Effect`, the engine function takes a sink, and one
+//! letter keeps a card file from importing the wrong one.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -91,11 +83,8 @@ pub struct ForcedAttacksOnArgs {
 }
 
 /// §6.3 Forced attack: "every enemy unit attacks this" (#9 Moths to the Flame). The named side's
-/// active units attack the named target in lane order, and `force_attacks_on` is the whole of R53 —
-/// §4.2 steps 1 to 3 skipped (position, summoning sickness and Taunt all ignored), no exertion
-/// spent, the target still striking back, each attack its own combat with its own state check, and
-/// the run stopping as soon as the target has left the field. A target that resolves to nothing
-/// fizzles silently and the card still resolves.
+/// active units attack the named target in lane order, and `force_attacks_on` is the whole of R53.
+/// A target that resolves to nothing fizzles silently and the card still resolves.
 pub fn forced_attacks_on(args: ForcedAttacksOnArgs) -> Effect {
     Effect::new("forcedAttacksOn", move |ctx| {
         let Some(target) = resolve_target(ctx, &args.target) else {
@@ -126,21 +115,10 @@ pub struct ForcedAttackerFilter {
     pub random: Option<bool>,
 }
 
-/// "summon 2 Rush Tokens; if it was a Unit, they attack it" (#60 Bear Honeypot). "They" is the
-/// tokens this same effect list just summoned, not every Rush Token the controller happens to own.
-///
-/// Nothing in state records that, and nothing needs to: the `summoned` events those summons pushed
-/// are already in `ctx.events`, because an effect list appends to the sink's event array as it
-/// applies and this effect runs after them. Reading the ids back out of `ctx.events` is therefore
-/// pure, deterministic and replay-stable — the event list is the same on every fold of the log — and
-/// it needs no new `GameState` field, no callback and no mutable scratch on the context.
-///
-/// R136 closes the window `ctx.events` alone leaves open: the sink's list is the whole action's, so
-/// a `summoned` event from something earlier in it — a second copy of a card, or a trap that fired
-/// mid-action — would read as this script's own. `ctx.events_from` is where this script's events
-/// begin, set by `resolve::make_context` when the context was built, so the walk starts there and a
-/// card reads only what it did itself. A context built by hand (`EffectContext::new`) opens its
-/// window where the event list stood then.
+/// "summon 2 Rush Tokens; if it was a Unit, they attack it" (#60 Bear Honeypot): "they" is the tokens
+/// this effect list just summoned, read back from its `summoned` events (pure, replay-stable). R136: the
+/// walk starts at `ctx.events_from` (`resolve::make_context`), so an earlier summon in the same action is
+/// not read as this script's own.
 fn freshly_summoned(ctx: &EffectContext<'_>) -> IndexSet<String> {
     // A list a prompt split resumes in a later action, whose event list begins after the pause, so
     // what its head summoned comes with the continuation (`prompts::summoned_so_far`, R113).
@@ -243,26 +221,15 @@ pub struct CancelAttackArgs {
 }
 
 /// §6.3 Cancel an attack and R44: inside §4.2 step 4's trap window, mark the open `declaredAttack`
-/// canceled so no combat resolves, and emit `attackCancelled` in its place. The attacker's
-/// exertion was spent on the declaration, so the attack is gone either way — which is why nothing
-/// here gives it back. The event names the card that canceled, so a call with no `self` (nothing
-/// for `byInstanceId` to be) fizzles silently rather than inventing a source.
+/// canceled (`combat::declare_attack` then skips step 5) and emit `attackCancelled`; the exertion
+/// spent declaring is not given back. Outside a window it fizzles, as it does with no `self` for
+/// `byInstanceId`, so a trap on a later dispatch cannot cancel a combat already fought. R121: a forced
+/// attack opens no window, so this never cancels one (the rule, not an omission).
 ///
-/// Marking the record is the whole of the verb: `combat::declare_attack` reads it back when the window
-/// closes and skips step 5 (`resolve_declared_attack`). The window is the only moment there is
-/// anything to mark — §6.3 says so, "call off an attack already declared, before any damage" — so
-/// outside one this fizzles, which is also what keeps a trap that fires on some later dispatch of
-/// the same declaration from canceling a combat that has already happened.
-///
-/// R121: a forced attack opens no window and writes no `declaredAttack`, so this can never cancel
-/// one. That is the rule, not an omission (see `combat::force_attack`).
-///
-/// `destroyAttacker` (R283, Radiant #96) destroys the attacker of the attack this cancels, as part of
-/// the cancel: an ordinary §6.3 destroy of the unit the declaration names, on the stay it declared
-/// from (R174), so an Indestructible attacker is knocked down at the next check (R46) and a Reborn
-/// one comes back. Tied to the cancel, it happens only where the cancel does — inside the window, on
-/// an attack not yet canceled — so a My Pawn fused onto a My Pawn, whose second half runs once the
-/// first has played the turn out and the window has closed (R102), destroys nothing a second time.
+/// `destroyAttacker` (R283, Radiant #96) destroys the attacker as part of the cancel, on the stay it
+/// declared from (R174): an Indestructible one is knocked down at the next check (R46), a Reborn one
+/// comes back, and only where the cancel happens, so a My Pawn fused onto a My Pawn destroys nothing
+/// a second time (R102).
 pub fn cancel_attack(args: CancelAttackArgs) -> Effect {
     Effect::new("cancelAttack", move |ctx| {
         let Some(by_instance_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
@@ -308,14 +275,9 @@ pub struct RedirectAttackArgs {
 }
 
 /// §6.3 Redirect, the attack half (MD-D19, R1122): inside §4.2 step 4's trap window, re-aim the open
-/// `declaredAttack` at another unit, so §4.3 resolves a combat between allies — the neighbour strikes
-/// back, and the death and kill rules hold as usual. §6.3's Spell-target half is
-/// `targeting_point.rs`'s; this is the same verb for attacks, setting `declared_attack.target_id`
-/// inside the window the way `cancel_attack` marks it.
-///
-/// On an open, uncanceled declaration only: outside a window, or on one already canceled, this
-/// fizzles, which is also what keeps a trap that fires on some later dispatch of the same
-/// declaration from re-aiming a combat that has already happened.
+/// `declaredAttack` at another unit, so §4.3 resolves a combat between allies. The Spell-target half
+/// is `targeting_point.rs`'s. Outside a window, or on a canceled declaration, this fizzles, so a trap
+/// firing on a later dispatch cannot re-aim a combat already fought.
 pub fn redirect_attack(args: RedirectAttackArgs) -> Effect {
     Effect::new("redirectAttack", move |ctx| {
         let Some(by_instance_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
@@ -355,35 +317,19 @@ pub struct AiPlaysOutTurnArgs {
     pub settle_first: Option<bool>,
 }
 
-/// R44 and R84: "an AI plays the rest of their turn with random legal actions" (#96 My Pawn). Two
-/// steps, both somebody else's code. `ai_turn` on that player's `PlayerState` is the lockout R44
-/// describes — the client refuses to act while it is set, and `turn::cleanup` clears it at the end of
-/// the turn it was set for (R152; `start_turn` keeps a backstop clear) — and the turn itself goes to
-/// `play_out_turn`, whose uniform draw over `legal_actions` minus `AI_SKIPPED_ACTIONS` IS §10.7's
-/// policy, `concede`, `offerDraw` and `answerDraw` included out. Nothing here re-implements the
-/// policy or decides an action.
+/// R44 and R84: "an AI plays the rest of their turn with random legal actions" (#96 My Pawn). Sets
+/// `ai_turn`, R44's lockout (`turn::cleanup` clears it at the end of that turn, R152), and hands the
+/// turn to `play_out_turn`, whose uniform draw over `legal_actions` minus `AI_SKIPPED_ACTIONS` IS
+/// §10.7's policy; nothing here decides an action. `play_out_turn` adopts a fresh state into the sink
+/// field by field, so no later effect may hold a `CardInstance` read before it: #96's list ends here.
 ///
-/// `play_out_turn` drives `reduce`, which hands back a fresh state that it adopts into the sink's
-/// state field by field: `ctx.state` stays the same object, but every instance inside it is new
-/// afterwards, so no effect after this one may hold a `CardInstance` it read before it — `#96`'s
-/// list ends here for that reason.
+/// `settleFirst` (R283, R59) settles the board before the AI's first action (Radiant #96): `destroy`
+/// only marks (§6.3), and the check collecting the mark would otherwise run inside the playout's first
+/// `reduce`, after the AI chose from a board still holding it (a #89 Corpse Eater in the AI's hand eats
+/// it before the AI can play it; R212). Off by default.
 ///
-/// `settleFirst` (R283, R59) settles the board once the lockout is set and before the AI's first
-/// action. `destroy` only marks (§6.3), and the check that collects a mark runs after each whole
-/// effect (R59) — which, for a list that ends in this effect, is inside the playout's first
-/// `reduce`, after the AI has already chosen from a board that still holds the marked unit. Radiant
-/// #96 destroys the attacker it stopped and then hands the turn over, and R283 has the AI take over a
-/// settled board, so its face asks for `settle_before_playout` here: the check collects the attacker,
-/// the traps answer what it said, and the ordinary triggers it woke resolve — a #89 Corpse Eater in
-/// the AI's hand eats the attacker before the AI can play it (R212 would have it answer nothing
-/// once it has moved). The destroy before this effect is whole, so this is R59's check between two
-/// effects, never one between the hits of one. A check that ends the game ends the effect with it,
-/// and a question it opens leaves the AI turn to `play_out_turn`, which owes it behind the answer.
-/// Off by default, so every other list, base #96's included, plays out exactly as before.
-///
-/// (TS's note on the static import cycle effects → aiPolicy → reduce → playSteps → effects does not
-/// carry over: one Rust crate calls across its modules directly, SURFACE §6.6. §9.3 and CLAUDE.md
-/// rule 4 still ban anything asynchronous inside `reduce`.)
+/// One crate calls across its modules directly (SURFACE §6.6); §9.3 and CLAUDE.md rule 4 still ban
+/// anything asynchronous inside `reduce`.
 pub fn ai_plays_out_turn(args: AiPlaysOutTurnArgs) -> Effect {
     Effect::new("aiPlaysOutTurn", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -404,12 +350,10 @@ pub fn ai_plays_out_turn(args: AiPlaysOutTurnArgs) -> Effect {
     })
 }
 
-/// R1183002 (Meditative+ #18 Cognitive Offloading): "the AI plays the rest of your turn". The
-/// caster's autopilot is engaged for the turn running (`subsystems::autopilot::engage`) — on the
-/// caster's own turn only, so on the opponent's it does nothing — and `reduce` plays that turn by
-/// the §10.7 scorer once the action that engaged it has settled (`reduce::end_due_turns`), never
-/// here: the rest of this list, and of whatever cast it, finishes first. My Pawn's
-/// `ai_plays_out_turn` above is its random cousin.
+/// R1183002 (Meditative+ #18 Cognitive Offloading): "the AI plays the rest of your turn". Engages the
+/// caster's autopilot on their own turn only (`subsystems::autopilot::engage`); `reduce` plays that
+/// turn by the §10.7 scorer once the engaging action has settled (`reduce::end_due_turns`), never
+/// here, so the rest of this list, and of whatever cast it, finishes first.
 pub fn autopilot() -> Effect {
     Effect::new("autopilot", move |ctx| {
         let player = ctx.controller;
@@ -431,13 +375,12 @@ pub fn pareto_hint() -> Effect {
     })
 }
 
-/// R283: what the list before an AI turn has done, settled before the AI acts — the state check, the
-/// traps' answers to its events, and the ordinary triggers those events woke, each followed by the
-/// check again (§10.3, §4.5, R59) — as the loop settles between two actions of a turn, which the AI's
-/// are. Only the triggers woken here run: whatever the enclosing action had queued before this list
-/// keeps its place and waits for that action's own loop (R117). Stops at a question or a result.
+/// R283: what the list before an AI turn has done, settled before the AI acts, as the loop settles
+/// between two actions (§10.3, §4.5, R59): the state check, the traps' answers, the triggers it woke.
+/// Only the triggers woken here run: what the enclosing action had queued waits for that action's own
+/// loop (R117). Stops at a question or a result.
 fn settle_before_playout(ctx: &mut EffectContext<'_>) {
-    // TS `const sink: SettleSink = ctx`: the same sink; the frontier it shares is the loop's count.
+    // The same sink; the frontier it shares is the loop's count.
     let settle: &mut SettleSink<'_> = &mut ctx.sink;
     let waiting: IndexSet<String> = settle
         .state
@@ -468,9 +411,7 @@ fn settle_before_playout(ctx: &mut EffectContext<'_>) {
     panic!("the board before the AI turn did not settle in {SETTLE_PASS_CAP} passes (R283)");
 }
 
-// ---------------------------------------------------------------------------
 // B5 E35: forced attacks on "a random enemy" and on the unit's own hero
-// ---------------------------------------------------------------------------
 
 /// `forced_attack_random`'s arguments (TS's inline object). `among` is TS's `"enemies" | "enemyUnits"`,
 /// the type `combat::force_attacks_random` takes.
@@ -486,11 +427,9 @@ pub struct ForcedAttackRandomArgs {
 }
 
 /// B5 E35: "it attacks a random enemy" (Classic #78 Mutate Spell, twice on its Radiant face) and "this
-/// attacks a random enemy Unit" (Classic+ #19.2 Jungle Loser). A forced attack (R53), so position,
-/// sickness and Taunt are waived, but each target is drawn (match rng) from the targets the attacker
-/// may attack under the unit restrictions as that attack begins — "an enemy" is a unit or the hero,
-/// "an enemy Unit" a unit. `times` attacks, each its own combat and state check; the run ends once the
-/// attacker is gone or has nothing it may attack (`combat::force_attacks_random`).
+/// attacks a random enemy Unit" (Classic+ #19.2 Jungle Loser). A forced attack (R53), but each target
+/// is drawn (match rng) from those the attacker may attack under the unit restrictions as that attack
+/// begins; `times` attacks, each its own combat (`combat::force_attacks_random`).
 pub fn forced_attack_random(args: ForcedAttackRandomArgs) -> Effect {
     Effect::new("forcedAttackRandom", move |ctx| {
         let Some(attacker) = instance_of(ctx, &args.attacker) else {

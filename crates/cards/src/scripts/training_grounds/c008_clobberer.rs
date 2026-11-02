@@ -1,7 +1,5 @@
 //! SPEC §8.11 Training Grounds 8 Clobberer: (3) Unit, Human, Common, 14/7 → 42/14, a card of the held
-//! Training Grounds set (R1420, R2194000). A vanilla Unit, as TG #1 and C #86 Genn: no text on either face;
-//! its Radiant face triples the attack and doubles the health, the designer's numbers
-//! (`docs/radiant-audit.md`).
+//! Training Grounds set (R1420, R2194000). Vanilla Unit (as TG #1, C #86; `docs/radiant-audit.md`).
 
 use jackioh_engine::prelude::*;
 
@@ -14,8 +12,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #8 Clobberer — SPEC §8.11 row 8, BUILD M13 row TG 8: "base: a 14/7 Human with no text or keyword;
-// summoning-sick on its turn. radiant 42/14 with no text".
+// TG #8 Clobberer — SPEC §8.11 row 8, BUILD M13 row TG 8.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
