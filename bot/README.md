@@ -847,7 +847,9 @@ anything, and no weak review runs go out.
 - Votes are kept per commit, one per review (each review run, and each run's own reviewer, is
   one; a deliver job run again does not count its review twice), with the tier of the model that
   cast them and its subscription (`provider`), and the subscription whose run built the commit
-  (`built_by`, "" when no run of the bot's did, a person's push say), from the plan job's own
+  (`built_by`, "" when no run of the bot's did, a person's push say, or when the pool holds no
+  other subscription that may give a shipping review, Squishy's one account, whose own approval
+  then ships as before: `providers.Pool.AnotherReviews`), from the plan job's own
   record of who ran, never from the model job. Votes recorded before #2748 name no `built_by`
   and keep the rule they were cast under: one strong approval, from any subscription
   (`reviewrule.Counted`, `reviewrule.Tiers`).
@@ -1279,7 +1281,9 @@ suggestions. On top of a plain build it has four modes.
 | Subscriptions | the pool above | `claude-squishy` only (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`): Opus for every role, always on GitHub's runners |
 
 Everything else is the night bot's: the run's shape, the review loop and the review rule, CI
-fixes, handoffs, the rules about `human` and priorities, and the paths no change may touch.
+fixes, handoffs, the rules about `human` and priorities, and the paths no change may touch. With
+one subscription, no other can give the final audit, so Squishy's own reviewer's approval ships
+what it built, as before #2748 ([the review rule](#difficulty-and-tiers)).
 
 **Its modes.** Each is a command, or a label beside its queue label:
 

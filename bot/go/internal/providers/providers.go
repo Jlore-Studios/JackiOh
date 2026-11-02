@@ -637,6 +637,16 @@ func (x *Pool) BestSeat(provider *Provider, floor string /* = "weak" */) *Seat {
 	return best
 }
 
+// AnotherReviews is whether the pool holds a subscription other than `providerID` that may review
+// (`roles`) on a seat whose approval can ship anything (medium or strong), switched on or not:
+// whether a head that subscription built can be audited by another (#2748). Squishy's pool holds
+// one subscription, so its own approval ships what it builds.
+func (x *Pool) AnotherReviews(providerID string) bool {
+	return slices.ContainsFunc(x.providerList(), func(p *Provider) bool {
+		return p.ID != providerID && slices.Contains(p.Roles, "review") && x.BestSeat(p, "medium") != nil
+	})
+}
+
 // FamilyTier is the strongest tier any seat of `family` has: how a vote with no tier recorded
 // counts.
 func (x *Pool) FamilyTier(family string) string {

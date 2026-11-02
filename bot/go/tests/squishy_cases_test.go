@@ -295,6 +295,29 @@ func TestSquishyCases_TheBuilderIsToldToRunFullsendAndItsChangeShipsLikeAnyBuild
 	}
 }
 
+// Squishy's pool holds one subscription, so no other can give the final audit that ships a head
+// (#2748): its own reviewer's approval ships what it built, as before, and auto-merge turns on.
+func TestSquishyCases_ItsOwnApprovalShipsWithNoOtherSubscription(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertFalse(t, world.cfg.Pool.AnotherReviews("claude-squishy"))
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	build := func(request *runner.RunRequest) *runner.RunResult {
+		writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+		return runner.NewRunResult(true, squishyCasesDone)
+	}
+	planned, result := world.run(workFake(map[string]runner.Handler{"build": build,
+		"plan": func(r *runner.RunRequest) *runner.RunResult {
+			return runner.NewRunResult(true, "1. Edit src/game.txt.")
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"claude-squishy", "approved"})
+	pull := world.gh.ListPulls("open", "squishy/issue-12", 200)[0]
+	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+	assertNotIn(t, config.LabelCross, world.gh.LabelNames(pull.Int("number")))
+	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", fmt.Sprint(pull.Int("number")), "votes", "built_by"), "")
+}
+
 // ------------------------------------------------------------------ SplitCases
 
 // squishyCasesSplit is SplitCases.split(mode, tree=TREE): a big issue in `mode`, and the planner's

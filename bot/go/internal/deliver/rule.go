@@ -71,7 +71,7 @@ func (x *Deliverer) Vote(pr int, head string, approve bool, builder bool, carrie
 		if head == "" || current.Get("sha") != head {
 			by, builtBy := "", ""
 			if builder {
-				by, builtBy = x.Provider.Family, x.Provider.ID
+				by, builtBy = x.Provider.Family, x.builtBy()
 			}
 			current = freshVotes(head, by, builtBy)
 		}
@@ -138,7 +138,7 @@ func (x *Deliverer) approved(pr int, head string, merge bool /* = True */, vote 
 		} else {
 			by, builtBy := "", ""
 			if builder {
-				by, builtBy = x.Provider.Family, x.Provider.ID
+				by, builtBy = x.Provider.Family, x.builtBy()
 			}
 			votes = x.voteReset(pr, head, by, builtBy)
 		}
@@ -266,7 +266,7 @@ func (x *Deliverer) carryLine(record *pyjson.Object, carry *pyjson.Object, whyNo
 // A change no model in its run could review: its commit has no vote yet, and it waits
 // for a review run.
 func (x *Deliverer) awaitReview(pr int, head string, queueIt bool /* = True */) string {
-	votes := x.voteReset(pr, head, x.Provider.Family, x.Provider.ID)
+	votes := x.voteReset(pr, head, x.Provider.Family, x.builtBy())
 	if !queueIt {
 		x.holdAutoMerge(pr)
 		return ""
@@ -312,6 +312,17 @@ func (x *Deliverer) voteReset(pr int, head string, builder string /* = "" */, bu
 	votes := freshVotes(head, builder, builtBy)
 	x.remember(pr, pyjson.New("votes", votes))
 	return votes
+}
+
+// builtBy is what a head this run built records as its builder's subscription (`built_by`):
+// this run's, whose approval then does not ship it (#2748), or "" where the pool holds no other
+// subscription that may review (Squishy's one account), so the head's own approval ships it as
+// before.
+func (x *Deliverer) builtBy() string {
+	if !x.Cfg.Pool.AnotherReviews(x.Provider.ID) {
+		return ""
+	}
+	return x.Provider.ID
 }
 
 // freshVotes is a head's votes before any review: who built it, as the family of its model
