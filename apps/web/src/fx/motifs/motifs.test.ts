@@ -86,8 +86,8 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   rise: ["ghost@80", "burst@240", "ring@240", "shake@240"],
   // The glyph rings the lane while the unit sinks where it stood.
   offering: ["ring@0", "burst@0", "burst@240", "ring@300", "shake@240"],
-  // Every one of the ten units walks its own path across the centre line.
-  shift: [...repeat(10, "ghost@80", "burst@240"), "shake@240"],
+  // Every one of the ten units, then the ten backrow cards, walks its own path across the centre line.
+  shift: [...repeat(20, "ghost@80", "burst@240"), "shake@240"],
   bind: ["ring@0", "burst@240", "shake@240"],
   tether: ["shot@80", "burst@240", "shake@240"],
   // The double peels off unseen (its copy is not on the board yet): a sheen and a landing flare.
@@ -176,7 +176,7 @@ describe("R2784000 the damage and removal motifs", () => {
   });
 
   it("R2784000 with `row: keep` a motif draws no numbers, leaving them to the event's own recipe", () => {
-    expect(planned("bolt", 400, { row: "keep" }).some((cue) => cue.kind === "splat")).toBe(false);
+    for (const motif of FX_DRAWN_MOTIFS) expect(planned(motif, 400, { row: "keep" }).some((cue) => cue.kind === "splat"), motif).toBe(false);
   });
 
   it("R2784000 reduced motion and the effects off: no shake, no flash, nothing at all", () => {
@@ -386,6 +386,61 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
         env.memory.remember(entry.events);
         expect(planCardMotif(entry, entry.view, env), defId).toBeNull();
       }
+    }
+  });
+});
+
+describe("R2784000 the board and life motifs follow the rules they draw", () => {
+  /** Every ghost `shift` plans for a rotation of `direction` while `player`'s card resolves (none: no play), as `from>to` zone testids. */
+  function rotationPaths(direction: "left" | "right", player: PlayerId | null): string[] {
+    const view = fullBoardView();
+    const env = envOf();
+    if (player !== null) env.memory.remember([played(player, "ex", "core-052")]);
+    const entry = { ...galleryEntry([{ type: "rotated", direction }], view), durationMs: 400 };
+    return planMotif(specOf("shift"), entry, view, env).flatMap((cue) =>
+      cue.kind === "ghost" && cue.from.kind === "testid" && cue.to.kind === "testid" ? [`${cue.from.testid}>${cue.to.testid}`] : [],
+    );
+  }
+
+  /** R14's ring from the viewer's seat, one step right: their lanes 1 to 5, then the opponent's 5 down to 1. */
+  function viewerRingRight(row: "units" | "backrow"): string[] {
+    const ring = [...[1, 2, 3, 4, 5].map((lane) => testid.zone("you", row, lane)), ...[5, 4, 3, 2, 1].map((lane) => testid.zone("opponent", row, lane))];
+    return ring.map((zone, k) => `${zone}>${ring[(k + 1) % ring.length] ?? ""}`);
+  }
+
+  it("R14 R2784000 shift walks a rotation along each row's ring from the rotating player's seat: an end card crosses, the far side steps the other way", () => {
+    const right = rotationPaths("right", "p1");
+    expect(right).toEqual([...viewerRingRight("units"), ...viewerRingRight("backrow")]);
+    expect(right).toContain(`${testid.zone("you", "units", 5)}>${testid.zone("opponent", "units", 5)}`);
+    expect(right).toContain(`${testid.zone("opponent", "units", 1)}>${testid.zone("you", "units", 1)}`);
+    expect(right).toContain(`${testid.zone("opponent", "units", 3)}>${testid.zone("opponent", "units", 2)}`);
+    // Left is the same ring run backwards.
+    const back = (path: string): string => path.split(">").reverse().join(">");
+    expect([...rotationPaths("left", "p1")].sort()).toEqual(right.map(back).sort());
+    // The ring turns from its player's seat: the opponent's left is the viewer's right, and its right is not.
+    expect([...rotationPaths("left", "p2")].sort()).toEqual([...right].sort());
+    expect([...rotationPaths("right", "p2")].sort()).toEqual(right.map(back).sort());
+  });
+
+  it("R14 R2784000 with no play resolving, which way a rotation ran is unknown: shift draws no path for it", () => {
+    expect(rotationPaths("right", null)).toEqual([]);
+  });
+
+  it("R2784000 drain shows a life loss's number once: in place of its row under replace, left to the row under keep", () => {
+    const view = fullBoardView();
+    const env = envOf();
+    const events = [played("p1", "ex", "core-035"), ...motifFixture("drain", view, "ex", "p1")];
+    env.memory.remember(events);
+    const entry = { ...galleryEntry(events.slice(1), view), durationMs: 400 };
+    const losses = (cues: readonly FxCue[]): number => cues.filter((cue) => cue.kind === "splat" && cue.tone === "loss").length;
+    // With no play resolving, the rows alone draw the entry: the life row's number.
+    expect(losses(planFx(entry, view, envOf()))).toBe(1);
+    for (const row of ["replace", "keep"] as const) {
+      const table: ReadonlyMap<string, FxCardEntry> = new Map([["core-035", { kind: "hooks", hooks: { cast: { motif: "drain", row } } }]]);
+      const motif = planCardMotif(entry, view, env, table);
+      expect(motif, row).not.toBeNull();
+      const rows = planFx({ ...entry, events: entry.events.filter((event) => motif?.replaces.has(event) !== true) }, view, envOf());
+      expect(losses(motif?.cues ?? []) + losses(rows), row).toBe(1);
     }
   });
 });

@@ -49,10 +49,14 @@ function drainGainer(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): F
   return tid(testid.hero(sideOf(view, play.player)));
 }
 
-/** drain: a stream from the victim to the gainer, which can be the hero or a unit. */
+/**
+ * drain: a stream from the victim to the gainer, which can be the hero or a unit. Like the damage
+ * motifs (build.ts `hit`) it draws the loss's number only in place of the life row it replaces, and
+ * under `keep` leaves it to that row, so one life loss shows one number.
+ */
 export const drain: MotifPlanner = {
   reads: DRAIN_READS,
-  replaces: [],
+  replaces: [...DRAIN_READS],
   plan(spec, entry, view, env) {
     const hits = readEvents(entry, view, env, DRAIN_READS);
     if (hits.length === 0) return [];
@@ -65,7 +69,7 @@ export const drain: MotifPlanner = {
       if (gainer !== null && flies(h.at, gainer)) cues.push(projectile(spec.scale, "blood", h.at, gainer, t.T, t.L - t.T));
       cues.push(motifBurst(spec, h.at, "area", t.L, MOTIF_TUNING.land));
       const loss = h.event.type === "healthLost" ? h.event.amount : setLoss(h.event, view);
-      if (loss !== 0) {
+      if (spec.row === "replace" && loss !== 0) {
         cues.push({
           kind: "splat",
           tone: loss > 0 ? "loss" : "heal",

@@ -104,33 +104,60 @@ function otherSide(side: Side): Side {
   return side === "you" ? "opponent" : "you";
 }
 
-/** Every unit on the board, and the lane each stands in. */
-function unitsLanes(view: PlayerView): { side: Side; lane: number; anchor: FxAnchor }[] {
-  const units: { side: Side; lane: number; anchor: FxAnchor }[] = [];
-  for (const side of ["you", "opponent"] as const) {
-    view[side].units.forEach((unit, k) => {
-      if (unit !== null) units.push({ side, lane: k + 1, anchor: tid(testid.card(unit.instanceId)) });
-    });
-  }
-  return units;
+type BoardZone = { side: Side; lane: number };
+
+/** The rows a board swap and a rotation carry (the engine's SWAP_ROWS and ROTATION_ROWS). */
+const BOARD_ROWS = ["units", "backrow"] as const;
+
+/** Whether a card stands on the zone (a face-down trap's marker included: that it is there is public, §10.8). */
+function occupied(view: PlayerView, row: (typeof BOARD_ROWS)[number], zone: BoardZone): boolean {
+  const side = view[zone.side];
+  return ((row === "units" ? side.units : side.backrow)[zone.lane - 1] ?? null) !== null;
+}
+
+/** R14's ring of one row from the rotating player's seat: their lane 1 to 5, then the other side's 5 down to 1. */
+function ringOf(rotator: Side): BoardZone[] {
+  return [...LANES.map((lane) => ({ side: rotator, lane })), ...[...LANES].reverse().map((lane) => ({ side: otherSide(rotator), lane }))];
 }
 
 /**
- * Where a board-wide move carries one unit: across the centre line for a board swap, one lane
- * along for a rotation (wrapping round the row's end), nowhere for anything else. `swapped` and
- * `rotated` name no instances (R1855000, B3), so the path is drawn for every unit on the board.
+ * Each zone a board-wide move carries a card from, and the zone it lands on, in both rows: across the
+ * centre line for a board swap; one step along R14's ring for a rotation, "right" forward from the
+ * rotating player's seat, so an end card crosses to the other side and the two sides step opposite ways.
+ * `swapped` and `rotated` name no instances (R1855000, B3), so the path is drawn for every card on the
+ * board. The ring turns from the seat of the player whose card rotates it (Silly Silas's controller, the
+ * engine's `RotationArgs.perspective`), the play resolving now; with none, which way it ran is unknown and
+ * no path is drawn.
  */
-function shiftTo(event: GameEvent, side: Side, lane: number): FxAnchor {
-  if (event.type === "swapped" && event.what === "board") return tid(testid.zone(otherSide(side), "units", lane));
+function boardMoves(event: GameEvent, view: PlayerView, env: FxPlanEnv): { from: FxAnchor; to: FxAnchor }[] {
+  let zones: BoardZone[];
+  let landing: (zone: BoardZone, k: number) => BoardZone | undefined;
   if (event.type === "rotated") {
-    const count = LANES.length;
-    const next = event.direction === "left" ? ((lane + count - 2) % count) + 1 : (lane % count) + 1;
-    return tid(testid.zone(side, "units", next));
+    const play = env.memory.resolving();
+    if (play === undefined) return [];
+    const ring = ringOf(sideOf(view, play.player));
+    const step = event.direction === "left" ? -1 : 1;
+    zones = ring;
+    landing = (_zone, k) => ring[(k + step + ring.length) % ring.length];
+  } else {
+    zones = (["you", "opponent"] as const).flatMap((side) => LANES.map((lane) => ({ side, lane })));
+    landing = (zone) => ({ side: otherSide(zone.side), lane: zone.lane });
   }
-  return tid(testid.zone(side, "units", lane));
+  const moves: { from: FxAnchor; to: FxAnchor }[] = [];
+  for (const row of BOARD_ROWS) {
+    zones.forEach((zone, k) => {
+      const to = landing(zone, k);
+      if (to === undefined || !occupied(view, row, zone)) return;
+      moves.push({ from: tid(testid.zone(zone.side, row, zone.lane)), to: tid(testid.zone(to.side, row, to.lane)) });
+    });
+  }
+  return moves;
 }
 
-/** shift: the path of every unit that moved: swapped, rotated, switched position or flickered. */
+/**
+ * shift: the path of every unit that moved: swapped, rotated, switched position or flickered; a board
+ * swap or a rotation carries the backrow too, so its cards walk their paths as well.
+ */
 export const shift: MotifPlanner = {
   reads: SHIFT_READS,
   replaces: [],
@@ -155,7 +182,7 @@ export const shift: MotifPlanner = {
         path(tid(animTestid.library("you")), tid(animTestid.library("opponent")));
         cues.push(motifBurst(spec, tid(animTestid.library("you")), "point", t.L, MOTIF_TUNING.small));
       } else {
-        for (const unit of unitsLanes(view)) path(unit.anchor, shiftTo(event, unit.side, unit.lane));
+        for (const move of boardMoves(event, view, env)) path(move.from, move.to);
       }
     }
     if (cues.length === 0) return [];

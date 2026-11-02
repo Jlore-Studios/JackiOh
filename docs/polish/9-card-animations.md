@@ -48,14 +48,14 @@ and three parameters:
 
 | Motif | Reads | Replaces | What it looks like |
 |---|---|---|---|
-| `drain` | healthLost, healthSet | nothing | a liquid stream from the victim to the gainer (the entry's healed target, else the resolving play's hero), pooling where it lands |
+| `drain` | healthLost, healthSet | healthLost, healthSet | a liquid stream from the victim to the gainer (the entry's healed target, else the resolving play's hero), pooling where it lands; the loss's number only in place of the row |
 | `bless` | buffed, upgraded, keywordGranted | all three | arrows up, a sheen and a burst over a card made better |
 | `curse` | degraded, buffed, keywordGranted | all three | arrows down and a void burst over a card made worse |
 | `ward` | damageAbsorbed, divineShieldLost | both | Armor's full shield over a hit it took whole; gold and shards where a Divine Shield broke |
 | `conjure` | summoned | nothing | a summoning circle where the card arrives: a gather, a landing and an afterglow |
 | `rise` | summoned, animated, awakened | nothing | the card rising out of its zone, from below to where it stands |
 | `offering` | destroyed | nothing | the unit sinking under a glyph in its lane: a cost paid, never a kill |
-| `shift` | swapped, rotated, positionSwitched, flickered | nothing | the path of every unit that moved |
+| `shift` | swapped, rotated, positionSwitched, flickered | nothing | the path of every unit that moved; a board swap or a rotation walks both rows, a rotation along R14's ring from the resolving play's seat |
 | `bind` | locked, unlocked | both | frost and chains over a Locked unit; gold shards when it releases |
 | `tether` | stolen, controlChanged, held | nothing | an arcane line from where the card was to whose it is now |
 | `mirror` | transformed | nothing | a translucent double peeling off the source toward the copy |
