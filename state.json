@@ -14374,11 +14374,13 @@
     "what": "build #2800 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-02T20:30:17Z",
+    "at": "2026-11-02T20:38:54Z",
     "notes": [
-      "delivered review #2863 on claude-6 (run 41518734044): reviewed",
-      "delivered build #2851 on muse (run 41488509671): approved",
-      "started review #2866 on claude-8 (run 41520140137)",
+      "delivered review #2866 on claude-8 (run 41520140137): reviewed",
+      "delivered plan #2800 on claude-3 (run 41516901808): planned",
+      "delivered build #2844 on claude-5 (run 41509924203): approved",
+      "started revise #2866 on claude-8 (run 41521521368)",
+      "started build #2800 on claude-6 (run 41521597856)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15085,7 +15087,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T20:30:17Z",
+  "loop_tick": "2026-11-02T20:38:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
