@@ -12,6 +12,7 @@
 // the audio layer needs no handle on this controller), and is timed from the idle.
 
 import { opponentOf, type ActionBody, type CardDefs, type PlayerId, type PlayerView } from "@jackioh/shared";
+import type { RunAction } from "@jackioh/run";
 
 import type { PracticePacing } from "./config.ts";
 import type { PracticeHost } from "./host.ts";
@@ -66,6 +67,11 @@ export type PracticeController = {
    * for a game not on a server seed, as the worker refuses them.
    */
   claim(): Promise<PracticeClaim>;
+  /**
+   * DR14, R2706000: a finished run fight's `FightOver`, for the run; rejected with the run's refusal,
+   * while the game runs and for a game that is no fight, as the worker refuses them.
+   */
+  runReport(): Promise<RunAction>;
   /**
    * R768000: the replay of a game the worker kept (the finished game's snapshot names it, `replay`),
    * its pages asked behind any request already queued, as every request to the worker is.
@@ -209,8 +215,9 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
     syncSequence(snapshot.view);
     if (snapshot.view.result !== null) {
-      // R668: a finished game is not resumed.
-      clearPracticeResume();
+      // R668: a finished game is not resumed. R2706000: a run fight was never remembered, and the
+      // free game the page remembers is still there to resume.
+      if (state.config?.run === undefined) clearPracticeResume();
       // R508: a finished free game's board becomes the human's last practice board.
       if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
       clearTimer();
@@ -292,7 +299,8 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         if (!disposed && gen === generation) {
           if (response.type === "started") {
             // R668: a free game is remembered from its deal on; a lesson's start forgets any.
-            writePracticeResume(config);
+            // R2706000: a run fight leaves the page's memory of the free game as it was.
+            if (config.run === undefined) writePracticeResume(config);
             applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
           } else {
             // A save that does not fold is no game to come back to.
@@ -322,8 +330,9 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     start(config: PracticeStartConfig): Promise<void> {
       // R508: the human brings their last practice board (the worker ignores it for a lesson).
       // R1303003: a game on a server seed brings the one the server kept, already in its config.
+      // R2706000: a run fight brings none.
       const board = readLastBoard();
-      const keep = config.earning === true || board.length === 0;
+      const keep = config.earning === true || config.run !== undefined || board.length === 0;
       return begin(config, { type: "start", config: keep ? config : { ...config, lastBoard: board } });
     },
 
@@ -369,6 +378,20 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         send({ type: "claim" }, (response) => {
           if (response.type === "claim") resolve(response.claim);
           else reject(new Error(unexpected(response)));
+        });
+      });
+    },
+
+    runReport(): Promise<RunAction> {
+      return new Promise<RunAction>((resolve, reject) => {
+        if (disposed) {
+          reject(new Error(CLOSED_MESSAGE));
+          return;
+        }
+        send({ type: "runReport" }, (response) => {
+          if (response.type !== "runReport") reject(new Error(unexpected(response)));
+          else if ("action" in response) resolve(response.action);
+          else reject(new Error(response.error));
         });
       });
     },

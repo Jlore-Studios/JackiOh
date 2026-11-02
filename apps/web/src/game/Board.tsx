@@ -389,6 +389,7 @@ function Seat({
   pops,
   notices,
   emotes,
+  aside,
 }: {
   view: PlayerView;
   side: Side;
@@ -399,6 +400,8 @@ function Seat({
   pops: ReadonlyMap<string, Pops>;
   notices: OverflowNotices;
   emotes?: BoardProps["emotes"];
+  /** The route's chrome beside this seat's hero (`HeroAside`), drawn outside the hero's own clicks. */
+  aside?: ReactNode;
 }): ReactElement {
   const seat = sideView(view, side);
   // R1297000: the viewer's deck wears their card back; R1834004: the other seat's its loadout's, else
@@ -420,6 +423,11 @@ function Seat({
         pops={pops.get(testid.hero(side))}
         emotes={emotes?.(side)}
       />
+      {aside === undefined || aside === null ? null : (
+        <div className="hero-aside" data-side={side}>
+          {aside}
+        </div>
+      )}
       <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
       {/* R1847000: the seat's starscape map, both seats' once its player has first traveled. */}
       {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
@@ -547,6 +555,7 @@ export default function Board({
   turnClock,
   matchStatus,
   boardRail,
+  heroAside,
   boardNotices,
   market,
   sandDisabled = false,
@@ -690,6 +699,7 @@ export default function Board({
           pops={pops}
           notices={notices}
           emotes={emotes}
+          aside={heroAside?.enemy}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
@@ -716,7 +726,7 @@ export default function Board({
           ))}
         </div>
 
-        <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
+        <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
         <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>

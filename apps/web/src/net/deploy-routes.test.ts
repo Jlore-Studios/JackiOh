@@ -107,6 +107,8 @@ describe("public/_redirects", () => {
       "/loginx",
       "/almanac/extra",
       "/login/extra",
+      "/dungeon/extra",
+      "/dungeon/stats/extra",
       "/match",
       "/match/",
       "/match/a/b",
