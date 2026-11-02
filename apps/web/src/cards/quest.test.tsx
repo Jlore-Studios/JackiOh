@@ -329,8 +329,9 @@ describe("R404 In Too Deep through the real engine", () => {
     render(withCatalog(<Prompt view={asked} legal={game.legal("p1")} onAction={onAction} />, catalog));
     const modal = screen.getByTestId("prompt-modal");
     expect(modal.getAttribute("data-prompt-kind")).toBe("reward");
-    expect(screen.getByTestId("prompt-quest-complete").textContent).toBe("Quest complete!");
-    expect(modal.querySelector(".prompt-title")?.textContent).toBe("Draw 2 cards");
+    expect(screen.queryByTestId("prompt-quest-complete")).toBeNull();
+    expect(modal.querySelector(".prompt-title")).toBeNull();
+    expect(modal.getAttribute("aria-label")).toBe("Quest complete! Draw 2 cards");
     const tiles = Array.from(modal.querySelectorAll<HTMLElement>("[data-testid^='prompt-option-']"));
     // #2646: each reward is a choice card, its words its text.
     expect(tiles.map((tile) => tile.querySelector(".choice-card-text")?.textContent)).toEqual(["Heal your hero 6", "Deal 3 damage to a target"]);

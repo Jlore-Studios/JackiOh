@@ -25,6 +25,7 @@ enforces rules and never sees hidden information.** In practice:
   both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
+  A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -143,7 +144,7 @@ The view says so: a seat that still owes sees its own `pending` mulligan, one th
 present for exactly that window.
 
 - The picker (`Prompt.tsx`) keeps its testids (`prompt-modal` with `data-prompt-kind="mulligan"`,
-  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the count,
+  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the cards,
   `mulligan-opponent-status` (`data-ready="true|false"`) says "Opponent is choosing…" or holds
   `mulligan-opponent-ready`, "Opponent is ready".
 - After Ready, until the game starts: `mulligan-waiting`, "Waiting for your opponent…", with the
