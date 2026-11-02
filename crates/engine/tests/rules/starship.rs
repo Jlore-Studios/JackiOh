@@ -1,10 +1,9 @@
 // R1852000–R1852007 (issue #1852): the Starship, Stinkyscape's mechanic ahead of its cards (SPEC §6.1
 // Starship Piece and Starship, §6.2 When launched, §6.3 Launch). A Starship Piece that dies fuses a copy
-// of itself into its owner's Dormant Starship, summoning one first (`starship::fuse_dead_piece`, the
-// death pass's last step); the Dormant Starship's one ability is the engine's launch, Activate: (3),
-// whose awakening fires its fused Cries and then its fused "When launched"; it remembers its pieces; and
-// a Stack card played onto it is exiled before it resolves. Proved on the fixtures of
-// `fixtures/starship.rs`, the Dormant Starship among them under the id the engine summons.
+// of itself into its owner's Dormant Starship, summoning one first (`starship::fuse_dead_piece`); the
+// Dormant Starship's one ability is the engine's launch, Activate: (3), whose awakening fires its fused
+// Cries and then its fused "When launched"; it remembers its pieces; and a Stack card played onto it is
+// exiled before it resolves. Proved on the fixtures of `fixtures/starship.rs`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -215,7 +214,6 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         let piece = id_at(&s, P1, 2);
         assert!(!building_a_ship(s.state(), P1));
         bolt_at(&mut s, &piece);
-        // The original goes to its graveyard as usual.
         assert_eq!(s.card(&piece).zone.z(), ZoneName::Graveyard);
         // The Starship stands in the middle of the backrow (R2249000), Dormant, holding the piece.
         let ship = ship_of(&s, P1);
@@ -583,7 +581,6 @@ mod r1852003_the_launch {
         let mut s = built_ship(json!([]), None);
         let ship = ship_of(&s, P1);
         let enemy = id_at(&s, P2, 1);
-        // Its one ability is the launch, offered, and named with its price on its controller's view.
         assert!(offers_launch(&s, P1, &ship.id));
         let view = s.view(P1);
         let unit = ship_unit(&view.you, &ship.id);
@@ -641,7 +638,6 @@ mod r1852003_the_launch {
                 .is_some_and(|last| last > cry_hit),
             "the When launched hits after the Cry: {answer_events:?}"
         );
-        // A launched Starship has no launch left, and it is a Unit now.
         assert!(!offers_launch(&s, P1, &ship.id));
         assert!(
             active_units_of(s.state(), P1)
@@ -673,7 +669,6 @@ mod r1852003_the_launch {
         let ability = &unit.activations.as_ref().expect("the launch is on the view")[0];
         assert!(!ability.usable);
         assert_eq!(ability.reason.as_deref(), Some(reason.as_str()));
-        // Nor may the other seat launch it, and it is offered nothing else.
         assert!(!offers_launch(&s, P2, &ship.id));
     }
 
@@ -803,7 +798,6 @@ mod r1852003_the_launch {
         let from = s.events().len();
         bolt_at(&mut s, &piece);
         let ship = ship_of(&s, P1);
-        // Summoned this turn, the Starship entered the field this turn.
         assert_eq!(s.card(&ship.id).summoned_turn, Some(s.state().turn));
         assert_eq!(
             monitor.after(&s.events()[from..], s.state()),
@@ -856,7 +850,6 @@ mod r1852003_the_launch {
             "{theirs:?}"
         );
         assert_eq!(theirs[1]["defId"], json!(HIDDEN_ID));
-        // Its owner reads its own hand.
         assert!(
             starship_events(&s, P1)
                 .iter()
@@ -1066,7 +1059,6 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
         let health = health_of(&s, P2);
         assert_eq!(id_at(&s, P1, lane), ship.id);
         s.play(lander.id.as_str(), json!({ "zone": lane }));
-        // It was played, and exiled before its Cry.
         assert!(
             s.last_events()
                 .iter()
@@ -1084,7 +1076,6 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
             .expect("the lander is in exile");
         assert_eq!(lander_card.zone.z(), ZoneName::Exile);
         assert_eq!(health_of(&s, P2), health, "its Cry never resolved");
-        // The Starship tops its zone again, still Dormant.
         assert_eq!(id_at(&s, P1, lane), ship.id);
         assert!(is_dormant_starship(s.card(&ship.id)));
     }
@@ -1116,7 +1107,6 @@ mod r1857001_the_dormant_starship_is_in_no_pool_and_no_deck {
         ] {
             assert!(!pool(args.clone()).contains(&hull.id), "{args}");
         }
-        // The pieces are cards like any other.
         assert!(pool(json!({ "type": "Unit" })).contains(&booster.id));
         assert_eq!(pool(json!({ "defId": [hull.id] })), vec![hull.id.clone()]);
         assert!(made_by_a_rule(&hull));
@@ -1215,7 +1205,6 @@ mod r2249000_a_dormant_starship_arrives_in_the_middle_of_the_backrow {
         let s = summoned_with(&[3], &backrow);
         assert_eq!(ship_zone(&s), (Row::Units, 2));
         let s = summoned_with(&[2, 3, 4, 5], &backrow);
-        // The bolted booster's own zone, lane 1, is the one left.
         assert_eq!(ship_zone(&s), (Row::Units, 1));
     }
 }

@@ -6,14 +6,12 @@ import type { PredictOutcome, SecretChoice } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 
-/** What a revealed choice is called: "Greed", "Attack", "Defend". */
 export const SECRET_WORDS: Record<SecretChoice, string> = {
   greed: "Greed",
   attack: "Attack",
   defend: "Defend",
 };
 
-/** What a prediction's outcome means for the reward and the penalty. */
 export const PREDICTED_WORDS: Record<PredictOutcome, string> = {
   won: "the reward is canceled",
   same: "the same, nothing happens",

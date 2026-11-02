@@ -1,14 +1,12 @@
-//! `duos_view_for` (#936 B23): what one seat may see. Its own duel as a 1v1 seat sees it, its
-//! teammate's duel from the teammate's seat (their hand and face-down cards, nothing more of the
-//! opponents' than the teammate's own 1v1 view shows), and both teams' life. Who has ended and how
-//! many passes are left is the seat's own team's business: the enemy's read false and 0.
+//! `duos_view_for` (#936 B23): what one seat may see: its own duel as its 1v1 seat, its teammate's
+//! as the teammate's own 1v1 view shows it, and both teams' life. Who has ended and how many passes
+//! are left is the seat's own team's business: the enemy's read false and 0.
 
 use crate::view_for::view_for;
 use crate::wire::{DuosSeat, DuosSideLife, DuosTeamView, DuosView, Team};
 
 use super::state::DuosState;
 
-/// Everything `seat` may see now.
 pub fn duos_view_for(state: &DuosState, seat: DuosSeat) -> DuosView {
     let mate = seat.teammate();
     DuosView {
@@ -58,7 +56,7 @@ fn has_ended(state: &DuosState, seat: DuosSeat) -> bool {
     state.round > 0 && state.round_seats[duel] == seat && state.ended[duel]
 }
 
-/// B22: the passes `seat` may still make this round, its team's cap less the ones it has made.
+/// B22: the passes `seat` may still make this round.
 fn passes_left(state: &DuosState, seat: DuosSeat) -> i32 {
     let duel = seat.duel();
     let made = if state.round_seats[duel] == seat {

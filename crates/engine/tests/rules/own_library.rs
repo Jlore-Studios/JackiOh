@@ -1,12 +1,9 @@
 //! SPEC §10.8, R310–R312: a player's own library as `viewFor` gives it to them — which cards are
-//! left, never in what order, and only what they were shown going in (`ownLibrary.ts`).
+//! left, never in what order, and only what they were shown going in.
 //!
 //! The engine owns the rule, so these tests drive it with the fixture catalog and the effect verbs
 //! the real cards use; the cards that bring it about (#33, #42, #83, #87, #90) prove it again in
-//! packages/cards.
-//!
-//! Port of `packages/engine/test/ownLibrary.test.ts`. TS's module `const` definitions are functions
-//! here (`cheap()`), each building the same `CardDef` from the same literal.
+//! `crates/cards`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -116,7 +113,6 @@ fn to_json(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("serializes")
 }
 
-/// R310 the viewer's own library, without its order
 mod r310_the_viewer_s_own_library_without_its_order {
     use super::*;
 
@@ -215,7 +211,6 @@ mod r310_the_viewer_s_own_library_without_its_order {
             rotated.extend_from_slice(&cards[..3]);
             rotated
         }
-        // TS `(x, y) => (x.id < y.id ? 1 : -1)`: by id, descending.
         fn by_id_descending(cards: &[CardInstance]) -> Vec<CardInstance> {
             let mut sorted = cards.to_vec();
             sorted.sort_by(|x, y| y.id.cmp(&x.id));
@@ -263,7 +258,6 @@ mod r310_the_viewer_s_own_library_without_its_order {
     }
 }
 
-/// R311 what the owner was shown going in
 mod r311_what_the_owner_was_shown_going_in {
     use super::*;
 
@@ -401,7 +395,6 @@ mod r311_what_the_owner_was_shown_going_in {
     }
 }
 
-/// R312 cards the owner was never shown
 mod r312_cards_the_owner_was_never_shown {
     use super::*;
 

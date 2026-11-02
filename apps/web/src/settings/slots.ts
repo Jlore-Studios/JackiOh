@@ -1,5 +1,5 @@
-// Integration seam for feature-owned settings (docs/polish/7-mobile-ux.md S8).
-// Mount each store in its section; panel-level hover and motion switches remain their only handles.
+// Feature-owned settings, each store mounted in its section (docs/polish/7-mobile-ux.md S8).
+// Hover and motion keep their panel-level switches.
 
 import { createElement, type ReactNode } from "react";
 
@@ -16,6 +16,7 @@ import {
   LanguageSelect,
   OpponentCosmeticsSwitch,
   RarityFoilSwitch,
+  SetWatermarksSwitch,
   VibrationSwitch,
 } from "./controls.tsx";
 
@@ -23,7 +24,7 @@ export type SettingsSectionId = "gameplay" | "visuals" | "audio";
 
 export type SettingsSlot = {
   section: SettingsSectionId;
-  /** Unique within the list: the React key and the slot wrapper's `data-settings-slot`. */
+  /** Unique: the React key and the wrapper's `data-settings-slot`. */
   id: string;
   render: () => ReactNode;
   reset?: () => void;
@@ -69,6 +70,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(FullArtSwitch),
     reset: () => {
       writeCardSettings({ fullArt: CARD_SETTINGS_DEFAULTS.fullArt });
+    },
+  },
+  {
+    section: "visuals",
+    id: "card-set-watermarks",
+    render: () => createElement(SetWatermarksSwitch),
+    reset: () => {
+      writeCardSettings({ setWatermarks: CARD_SETTINGS_DEFAULTS.setWatermarks });
     },
   },
   {

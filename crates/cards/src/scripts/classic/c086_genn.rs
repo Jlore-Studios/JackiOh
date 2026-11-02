@@ -43,7 +43,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] }`.
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": spare_library() })
     }
@@ -52,7 +51,6 @@ mod tests {
         json!([VANILLA, VANILLA])
     }
 
-    /// TS `expect(script).toEqual({})`: no hook, no declaration and no flag on the script.
     fn is_empty_script(script: &Script) -> bool {
         script.cost.is_none()
             && script.cry.is_none()
@@ -92,7 +90,6 @@ mod tests {
             && script.start_of_opponent_turn.is_none()
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -108,7 +105,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
@@ -118,7 +114,6 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "field": [{ "def": GENN, "radiant": true }] } }));
             s.expect_stats(GENN, json!({ "attack": 42, "health": 42 }));
             assert_eq!(json!([def().radiant.text, js(&def().radiant.keywords)]), json!(["", []]));
-            // TS `expect(radiant).toBe(base)`: the one empty script on both faces.
             let scripts = script();
             assert!(is_empty_script(&scripts.radiant) && is_empty_script(&scripts.base));
         }

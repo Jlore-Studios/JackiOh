@@ -1,6 +1,5 @@
-// The GIF encoder of a shared replay (#513, R513000): the same frames give the same bytes, and the
-// bytes decode, with a decoder written here from the format's own rules, as the frames, sizes and
-// delays that went in. The decoder is the test's alone: nothing in the client reads a GIF.
+// The GIF encoder of a shared replay (#513, R513000), read back by a decoder written here from the
+// format's own rules. The decoder is the test's alone: nothing in the client reads a GIF.
 
 import { describe, expect, it } from "vitest";
 
@@ -103,7 +102,6 @@ function decode(bytes: Uint8Array): Decoded {
   }
 }
 
-/** A frame of `width * height` pixels from `pixel(x, y)`, as RGBA. */
 function frame(width: number, height: number, pixel: (x: number, y: number) => [number, number, number]): Uint8ClampedArray {
   const rgba = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y += 1) {

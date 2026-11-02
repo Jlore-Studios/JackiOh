@@ -1,8 +1,7 @@
 // BUILD M8: §9.4 and §9.8 require identical bad-code responses; R107 hides branch timing.
-// The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption; M6-T1 tests timing tightly.
-// R111's activation grant is the starter cards since the economy went live (R1310000, §14.12): enough
-// for a deck Best of 1 accepts (L2, L3, L5, L6; R250, R253), not for a trio's three DECK_SIZE decks of
-// distinct cards (L4).
+// The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption.
+// R111's activation grant is the starter cards (R1310000, §14.12): enough for a deck Best of 1 accepts
+// (L2, L3, L5, L6; R250, R253), not for a trio's three DECK_SIZE decks of distinct cards (L4).
 // Test order leaves the fixture active.
 
 import {
@@ -123,8 +122,7 @@ describe("10 invite gate — a pending account", () => {
     ]) {
       expectWellFormedInviteCode(code);
     }
-    // R144: the server puts back the account this file activates and the code it spends, so the
-    // file passes run after run against one server, with no restart.
+    // R144: the server reseeds the account and code this file spends, so it passes run after run.
     cy.request<ReseedBody>({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).should((response) => {
       expect(response.status, "R144: an E2E server reseeds on demand").to.eq(200);
       expect(response.body.codes, "the good, expired and exhausted codes; never the missing one").to.deep.eq([
@@ -187,9 +185,8 @@ describe("10 invite gate — a pending account", () => {
     }
 
     cy.visitAs(accounts.pending(), routes.deckbuilder());
-    // The redirect is the gate's own read of /api/auth/me (net/gate.ts), which the requests above
-    // just answered as pending. When it never comes, say which panel held the page: still checking
-    // (the read never answered), the gate's error (it failed), or no app at all.
+    // The redirect is the gate's own read of /api/auth/me (net/gate.ts), just answered as pending.
+    // When it never comes, the message names the panel that held the page.
     cy.window().should((win) => {
       const shown = win.document.body.innerText.replace(/\s+/gu, " ").slice(0, 400);
       expect(win.location.pathname, `the gate sends a pending account to /invite; the page shows: ${shown}`).to.eq(
@@ -214,8 +211,7 @@ describe("10 invite gate — a pending account", () => {
     cy.get(ts(INVITE_PAUSED)).should("not.exist");
     cy.get(ts(INVITE_NOT_NEEDED)).should("not.exist");
 
-    // R104 normalizes lower-case input to the canonical formatted code.
-    // §9.4 permits exactly this UI failure before the three HTTP failures and valid redemption.
+    // R104 normalizes lower-case input; this is §9.4's one screen failure.
     cy.get(ts(INVITE_CODE_INPUT)).type(inviteCodes.missing().toLowerCase());
     cy.get(ts(INVITE_CODE_INPUT)).should("have.value", inviteCodes.missing());
     cy.get(ts(INVITE_SUBMIT)).should("not.be.disabled").click();
@@ -300,8 +296,7 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.needsInviteCode).to.eq(false);
     });
 
-    // Read R111's grant from the §9.1 ledger: since the economy went live it is `STARTER_CARDS`
-    // (R1310000), every one a non-token card of the catalog the server serves.
+    // Read R111's grant from the §9.1 ledger: `STARTER_CARDS` (R1310000).
     cy.request<CatalogBody>({ method: "GET", url: apiUrl("/api/catalog") }).then((response) => {
       for (const id of STARTER_CARDS) {
         const def = response.body.defs[id];

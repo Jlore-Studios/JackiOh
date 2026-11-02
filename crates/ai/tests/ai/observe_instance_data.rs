@@ -1,8 +1,4 @@
-//! What the AI may know of patch v0.2.0's instance data (SPEC §9.9, R185; R385, R386, B5 E39): a
-//! hidden card's Brittle count, its tuning and its enchantments are the card's, so `redact` drops them
-//! with its face, and two true states that differ only in them redact to the same hash.
-//!
-//! Port of `packages/ai/test/observe-instance-data.test.ts`.
+//! SPEC §9.9, R185, R385, R386, B5 E39: hidden card's Brittle count, tuning, enchantments redacted.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

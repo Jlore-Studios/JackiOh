@@ -14,7 +14,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-t-ai-07";
 
-/// TS's `{ base, radiant } as const`: one number per face.
 #[derive(Clone, Copy)]
 struct ByFaceTax {
     base: i32,
@@ -44,11 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-7 Alignment Tax — SPEC §8.7 row T-AI-7, BUILD M9 Classic+ row T-AI-7: "A player modifier on the
-// opponent: their cards cost (1) more during their next turn only, inert for the rest of this turn,
-// active through their next turn and gone at its cleanup (R48's timing turned outward, R363); X-cost
-// cards are untouched (R65); two Taxes add; a price the tax lifts past their mana drops the play from
-// `legalActions`; radiant (2) more".
+// T-AI-7 Alignment Tax — SPEC §8.7 row T-AI-7, BUILD M9 Classic+ row T-AI-7.
 #[cfg(test)]
 mod tests {
     use crate::merged;

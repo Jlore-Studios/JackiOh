@@ -1,12 +1,7 @@
-//! Port of `packages/engine/test/fixtures/kyTest.ts`.
-//!
-//! Test-only cards for Classic+ #42 KY's Test's question bank (`subsystems/kyTest.ts`, R420, R580): a
-//! fixture KY's Test running `kyTestScript` over a fixture bank, and one card for each reward pool, so
-//! the engine is proved without `packages/cards` (CLAUDE.md). The named rewards are registered under
-//! the real ids `config.KY_TEST_REWARDS` names (The Coin, KY's Gift), as stand-ins.
-//!
-//! TS numbered the definitions from a module counter (`nextIndex = 3300`, one step per `def`); each
-//! index is written out here in the order TS made them.
+//! Test-only cards for Classic+ #42 KY's Test's question bank (`subsystems::ky_test`, R420, R580): a
+//! fixture KY's Test running `ky_test_script` over a fixture bank, and one card for each reward pool, so
+//! the engine is proved without `crates/cards` (CLAUDE.md). The named rewards are registered under
+//! the real ids `config::KY_TEST_REWARDS` names (The Coin, KY's Gift), as stand-ins.
 
 use std::sync::LazyLock;
 
@@ -145,12 +140,12 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id (the brief's `catalog()`).
+/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     defs().into_iter().map(|card| (card.id.clone(), card)).collect()
 }
 
-/// This file's scripts, by id (the brief's `scripts()`).
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     scripts_table()
 }

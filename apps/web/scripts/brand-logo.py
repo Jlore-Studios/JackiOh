@@ -18,6 +18,7 @@ gold over a #3a1f0c edge. The colors are the palette's (src/palette.css) and the
     jackioh-logo-wood.*     the mark above the wordmark on the tavern's wood, opaque, as the loading screens show it
     jackioh-mark.*          the mark alone, 1024 and 256 px (transparent)
     jackioh-mark-wood.*     the mark alone on the tavern's wood, opaque, square
+    jackioh-card-back.*     the J and its star alone, transparent, a card's shape: the Jlorious card back's art
     jackioh-mark-small.*    the front card alone, for 16 to 48 px, where the back card is noise
     jackioh-icon.*          the mark on the tavern's dark wood, opaque, for app and avatar icons
 """
@@ -129,6 +130,18 @@ def front_card(fcx, fcy, ang, W, H, j_size, star_dx, star_dy, star_r):
             f'<path d="{jd}" fill="url(#gold)" stroke="#2b1800" stroke-width="{j_size*0.019}" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/>'
             f'<path d="{star(fcx + star_dx, fcy + star_dy, star_r, star_r*0.215)}" fill="#fff6d6" stroke="#f0c04a" stroke-width="{star_r*0.06}" stroke-linejoin="round" filter="url(#lift)"/>'
             '</g>')
+
+def card_back_art():
+    """The front card's gold J, its star and its glow, untilted on a card's 82:112 (index.css's
+    --card-w by --card-h) and transparent: the Jlorious card back draws it over its own violet
+    field (src/cards/cosmetics.css)."""
+    W, H = 820, 1120
+    cx, cy = W / 2, H / 2
+    jd, _ = centered_text("J", 760, cx - W * 0.027, cy + H * 0.045)
+    return svg(W, H,
+               f'<circle cx="{cx}" cy="{cy}" r="{W * 0.46}" fill="url(#glow)"/>'
+               f'<path d="{jd}" fill="url(#gold)" stroke="#2b1800" stroke-width="{760 * 0.019}" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/>'
+               f'<path d="{star(cx + W * 0.25, cy - H * 0.27, W * 0.16, W * 0.16 * 0.215)}" fill="#fff6d6" stroke="#f0c04a" stroke-width="{W * 0.16 * 0.06}" stroke-linejoin="round" filter="url(#lift)"/>')
 
 def mark_group():
     """Two fanned cards: a face-down trap behind, and in front a face with the gold J and its star."""
@@ -273,6 +286,7 @@ def main():
             "jackioh-logo-wood": (wood, [(ww, wh, "")]),
             "jackioh-mark": (mark(), [(1024, 1024, ""), (256, 256, "-256")]),
             "jackioh-mark-wood": (mark_on_wood, [(mw, mh, "")]),
+            "jackioh-card-back": (card_back_art(), [(410, 560, "")]),
             "jackioh-mark-small": (mark_small(), [(32, 32, "-32")]),
             "jackioh-icon": (app_icon(), [(512, 512, "-512"), (180, 180, "-180")])}
     jobs = []

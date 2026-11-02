@@ -1,12 +1,6 @@
 // Spec 17: card showcases, inspection, and current in-play display (SPEC §10.8, §10.10; R97, R202, R247, R313, R752).
-// #32 Prem Panther is the inspected card-reference fixture.
-// It uses `seedFor`, settled assertions, and support/testids selectors; the page-side recorder measures showcase duration.
-//
-// Run it with:
-//   pnpm build:e2e
-//   pnpm --dir apps/web exec vite preview --port 5182 --strictPort
-//   E2E_BASE_URL=http://localhost:5182 pnpm --dir e2e exec cypress run --browser chrome \
-//     --spec cypress/e2e/17-card-showcase-and-hovers.cy.ts
+// #32 Prem Panther is the inspected card-reference fixture; the page-side recorder measures showcase duration.
+// Run it against a built client (`pnpm build:e2e`, then `vite preview`) with `--browser chrome`.
 
 import { CARD_NAMES } from "../../support/cards.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -82,7 +76,7 @@ const PROMPT_BUDGET = 10;
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
 const ROWS: readonly Row[] = ["units", "backrow"];
 
-/** Catalog display name (SPEC §8). */
+// Catalog display name (SPEC §8).
 function nameOf(defId: string): string {
   const name = CARD_NAMES[Number(defId.replace(/^core-/, ""))];
   expect(name, `SPEC §8 names ${defId}`).to.not.eq(undefined);
@@ -198,7 +192,6 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string; seat: PlayerId | "" };
 
-/** Play the first offered kind, ending and handing over turns until one is available. */
 function playOffered(kinds: ReadonlySet<string>, played: Played, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered such a card inside the turn budget").to.be.greaterThan(0);
@@ -260,7 +253,7 @@ function aiHasPlayed(win: Cypress.AUTWindow): boolean {
   );
 }
 
-/** Read prompt and turn from a settled snapshot so a prompt is never answered twice. */
+/** Reads prompt and turn from one settled snapshot, so no prompt is answered twice. */
 function waitForShowcaseOrHuman(): Cypress.Chainable<Waited> {
   const classify = (win: Cypress.AUTWindow): Waited | null => {
     if (aiHasPlayed(win)) return "showcase";
@@ -532,9 +525,8 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
     cy.get(`${inHand("core-095")} .card-text`).should("have.text", "???");
 
     cy.playByName("KY's Trial");
-    // R831004: three sets first, each with its mark; the names below are Core's, so Core when offered.
-    // The engine asks a `mode` prompt, which the board draws as a Discover pop-up, since it offers
-    // DISCOVER_OPTION_LIMIT options or fewer (Prompt.tsx; `boardKind` in support/playthrough.ts).
+// R831004: three sets first, each with its mark; the names below are Core's, so Core when offered.
+// The `mode` prompt draws as a Discover pop-up, offering DISCOVER_OPTION_LIMIT or fewer (`boardKind` in support/playthrough.ts).
     cy.get(promptOf("discover"), { timeout: timeouts.view }).should("be.visible");
     cy.get(`${promptOf("discover")} [data-set]`).should("have.length", 3);
     cy.get(promptOf("discover")).then(($sets) => {

@@ -1,8 +1,6 @@
-// BUILD M5-T1 measures the 10-unit, 10-backrow, stacked-pile fixture in a real browser.
-// B28 and B46 extend it to the mobile and tablet viewports without horizontal or vertical overflow.
-// Mount `Game` in `.app-shell--wide`, its narrowest product container; a bare `Board` gets space it
-// never has. The width checks, full-card visibility, and board span distinguish overflow from a
-// clipped or collapsed board.
+// BUILD M5-T1 measures the 10-unit, 10-backrow, stacked-pile fixture in a real browser; B28 and B46
+// extend it to the mobile and tablet viewports, without overflow either way. Mount `Game` in
+// `.app-shell--wide`, its narrowest product container; a bare `Board` gets space it never has.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
@@ -26,7 +24,6 @@ const BOARD = '[data-testid="board"]';
 const FIELD_CARDS = `${BOARD} .field .card`;
 const FIELD_CARD_COUNT = 20;
 
-/** One measured viewport, as it reaches the terminal. */
 type Measurement = {
   viewport: string;
   viewportWidth: number;
@@ -35,7 +32,6 @@ type Measurement = {
   boardScrollWidth: number;
   boardRight: number;
   boardWidth: number;
-  /** Recorded, never asserted — see the note where these are filled in. */
   documentScrollHeight: number;
   boardHeight: number;
   boardBottom: number;
@@ -107,7 +103,6 @@ describe("BUILD M5-T1 — the full fixture board fits 1280x720, 844x390, 768x102
         expect(m.bodyScrollWidth, `the body fits ${where}`).to.be.at.most(viewport.width);
         expect(m.boardScrollWidth, `the board's contents fit ${where}`).to.be.at.most(viewport.width);
         expect(m.boardRight, `the board's right edge is inside ${where}`).to.be.at.most(viewport.width);
-        // B46: the game screen fills the viewport without vertical scrolling.
         expect(m.documentScrollHeight, `the document fits ${where} vertically`).to.be.at.most(viewport.height);
 
         // Prevent a collapsed board from trivially fitting.
@@ -176,11 +171,10 @@ describe("R504 an empty hand keeps its place at every size", () => {
   }
 });
 
-// #2330: where the board has the room the four rows are one height and the lanes fill the field,
-// and a DEF card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. At every
-// size no field card, a turned DEF card included, leaves its zone. #2556: on a phone, upright or on
-// its side, a DEF card's footprint fills its unit zone's inside, its width or its height, whichever
-// runs out first, unless the card is already at full size.
+// #2330: where the board has the room the four rows are one height and a DEF card is drawn at full
+// size; on a phone the backrow keeps B29's 44 px floor, and no field card leaves its zone. #2556: on a
+// phone a DEF card's footprint fills its unit zone's width or height, whichever runs out first, unless
+// it is already at full size.
 describe("#2330 equal board rows, and DEF cards only as small as their zone needs", () => {
   /** The issue's sizes; `roomy` is the 761px-and-up layouts (a desktop, a tablet held upright). */
   const SIZES = [

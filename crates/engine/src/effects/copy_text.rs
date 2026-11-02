@@ -24,10 +24,10 @@ pub struct CopyUnitTextArgs {
 
 /// R1850000: the running card copies the text of a Unit on the field — the text that Unit runs now
 /// (a copier's copy, a fused card's fused text), on the face it wears or, with `radiant`, its Radiant
-/// face: its keywords, aura, triggers, Death, abilities and declared numbers. Its own name, cost,
-/// type, tags and stats stay. Reported as a Vanilla is, by an in-place `transformed`. Nothing happens
-/// when the running card is off the field or Immutable (§6.1, R23), or when the target is no Unit on
-/// the field, is the running card itself, or is Vanilla, with no text to copy (§6.3).
+/// face: keywords, aura, triggers, Death, abilities and declared numbers; its name, cost, type, tags
+/// and stats stay. Reported by an in-place `transformed`. Nothing happens when the running card is off
+/// the field or Immutable (§6.1, R23), or the target is no Unit on the field, is the running card, or
+/// is Vanilla, with no text to copy (§6.3).
 pub fn copy_unit_text(args: CopyUnitTextArgs) -> Effect {
     Effect::new("copyUnitText", move |ctx| {
         let Some(copier) = ctx

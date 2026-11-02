@@ -4,15 +4,8 @@
 //!            of Drone Core, add the next tier to your hand."
 //!   Radiant: "Add a Radiant Drone Core I to your hand. For the rest of the game, the first time you play
 //!            each tier of Drone Core, add a Radiant one of the next tier to your hand."
-//! Engine: Quickdraw (R640) deals it in the opening hand: the static flag `setup.rs` reads, beside the
-//!   catalog tag. Its resolution adds Drone Core I (S #27), then sets R1863000's play watcher on its caster
-//!   (`watch_first_plays`, a `never` player modifier, §10.1): the first resolved play of each of Drone
-//!   Core I to IX from then on, a cast included (R70) and a countered one not, re-enters this card's step,
-//!   which adds the next tier (S #28–#36) to the hand, once per tier; Drone Core X adds none, and a full
-//!   hand burns the card (§2.4). The watcher is its caster's whatever becomes of the card, runs with no
-//!   `self` (R127) under the face it was made with, and each cast keeps its own, so two stack. Its badge is
-//!   the face as the catalog the game runs under prints it (R169, R767000). Radiant: every card it adds is
-//!   Radiant.
+//! Quickdraw deals in opening hand (R640). Adds Drone Core I (S #27).
+//! Sets watch_first_plays on caster (R1863000, §10.1, R70, S #28–#36, §2.4, R127, R169, R767000): next tier added on first play of each tier.
 
 use jackioh_engine::effects::{WatchFirstPlaysArgs, watch_first_plays};
 use jackioh_engine::prelude::*;
@@ -84,10 +77,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #44 Great Replacement Theory — SPEC §8.10 row 44, BUILD M12 row S 44: "adds Drone Core I; playing it
-// then adds Drone Core II, and so on to Drone Core X; a second play of the same tier adds nothing; a Drone
-// Core played before it counts for nothing; a countered Drone Core adds nothing and its tier stays watched
-// (R1863000); it starts in the opening hand (R640); radiant every added card Radiant".
+// S #44 Great Replacement Theory — SPEC §8.10 row 44, BUILD M12 row S 44 (R1863000, R640).
 #[cfg(test)]
 mod tests {
     use super::{ID, TIERS, script};
@@ -104,7 +94,6 @@ mod tests {
     const COUNTERSPELL: &str = "classic-017"; // (2) Trap: counter the opponent's Spell.
     const FILLER: &str = "core-005";
 
-    /// p1 holds `hand` (Great Replacement Theory among it, as written) and fillers, with 40 mana.
     fn setup(hand: Value, p2: Value) -> Scenario {
         let mut cards = hand.as_array().cloned().unwrap_or_default();
         cards.extend([json!(FILLER), json!(FILLER), json!(FILLER)]);
@@ -120,7 +109,6 @@ mod tests {
         }))
     }
 
-    /// The faces of the cards of `def_id` in `player`'s hand (`true` for Radiant).
     fn held(s: &Scenario, player: PlayerId, def_id: &str) -> Vec<bool> {
         s.hand(player)
             .into_iter()
@@ -129,7 +117,6 @@ mod tests {
             .collect()
     }
 
-    /// Every Drone Core in `player`'s hand.
     fn cores(s: &Scenario, player: PlayerId) -> usize {
         s.hand(player)
             .iter()
@@ -137,7 +124,6 @@ mod tests {
             .count()
     }
 
-    /// The definitions each of p1's play watches still names.
     fn watched(s: &Scenario) -> Vec<Vec<String>> {
         s.state().players.p1.mods
             .iter()
@@ -213,7 +199,6 @@ mod tests {
         );
         s.play(THEORY, json!({}));
         s.end_turn();
-        // p2 sets the Counterspell on their turn.
         s.play(COUNTERSPELL, json!({}));
         s.end_turn();
         s.play(CORE_II, json!({}));
@@ -238,7 +223,6 @@ mod tests {
 
     #[test]
     fn r1863000_a_full_hand_burns_the_next_tier_and_the_tier_is_spent() {
-        // Two watches, so the one play of Drone Core II adds two IIIs into a hand with room for one.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [THEORY, THEORY, CORE_II, CORE_II, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],

@@ -1,17 +1,5 @@
-//! What the AI's seat may know (R185, SPEC §9.9). This is the only module that reads a true
-//! `GameState`: `decide` calls `ai_to_act` and `redact` on it and nothing else, and every later step
-//! works on the redacted copy or on a determinization of it (`determinize.rs`).
-//!
-//! `redact` follows docs/polish/3-ai.md's seven steps in order. What it keeps is kept on purpose:
-//! board cards (buried Stack cards included), damage and buffs, exertion, summoning turns, positions,
-//! graveyards, exiles, `resolving`, turn logs, modifiers, delayed effects, counters, hero health and
-//! armor, mana, draw offers and handicaps are public history the seat watched happen. Instance ids of
-//! hidden cards are kept too: they give away a deck-list position, which the AI cannot map to an
-//! identity.
-//!
-//! Port of `packages/ai/src/observe.ts`. TS rebuilt the queue entries it kept with object spreads;
-//! here they are edited in place on the clone `redact` returns, which is the same state. The loose
-//! JSON TS walked (a captured event, setup's owed mulligan) is walked as `serde_json::Value`.
+//! What the AI's seat may know (R185, SPEC §9.9). Redacts hidden opponent information from
+//! `GameState` before determinization and search, preserving public history (docs/polish/3-ai.md).
 
 use std::cmp::Ordering;
 
@@ -184,12 +172,8 @@ fn face_down_to(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool 
     ) && backrow_hidden_from(state, card, seat)
 }
 
-/// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every backrow card the seat cannot read, the cards in the seat's own library that
-/// were minted for the opponent's opening deck (#87 Pocket Chaos's library swap, R73), and every card
-/// in the seat's own library it was never shown (no `knownAs`, R312: a library swapped in, or swapped away and
-/// back, and #83 Transmogulate's picks), which its own `viewFor` list counts as unknown too. A card
-/// the seat's own open prompt offers as an option is shown to the seat by `viewFor` (§10.8), so it
-/// is not hidden, unless the view offers it as a face-down card (`face_down_to`, R177).
+/// Instance ids `redact` hides from `seat`: opponent hand/library, unrevealed backrow, opponent-minted
+/// cards in own library (#87, R73), unshown cards (R312, #83), unless exposed by prompts (§10.8, R177).
 pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let opp = seat.opponent();
     let mut hidden: IndexSet<String> = IndexSet::new();
@@ -340,11 +324,7 @@ fn is_hidden_value(value: Option<&Value>, hidden: &IndexSet<String>) -> bool {
     is_hidden_id(value.and_then(Value::as_str), hidden)
 }
 
-/// Step 5: every `defId` that sits next to a hidden instance id becomes the placeholder id,
-/// and the fields `view_for`'s `redact_event` drops or replaces for such a card go too (R97, R177,
-/// R227, R448, R1046, R1180005). The ids stay, as every hidden card's do here. Only optional fields
-/// are removed and a required one takes the view's sentinel, so the engine still reads the event
-/// back (`event_of_queued`).
+/// Step 5: replaces hidden `defId` with placeholder and sanitizes redacted fields (R97, R177, R227, R448, R1046, R1180005).
 fn scrub_event_value(state: &GameState, seat: PlayerId, event: &mut Value, hidden: &IndexSet<String>) {
     let Some(copy) = event.as_object_mut() else {
         return;
@@ -482,11 +462,7 @@ fn without_answer_key(resume: &mut Resume) {
     resume.data.shift_remove(ANSWER_KEY);
 }
 
-/// R266, R185: setup's owed mulligan item (R224, R265) carries two things the seat may not read: the
-/// sealed answers of the seats still to resolve (`rest`), and, while a seat's own resolution waits on
-/// a question (an arrival clause's, R151), the cards it returned (`returned`, full instances until
-/// they go back). The opponent's sealed answer becomes "keeps everything it was offered", which says
-/// nothing, and its returned cards become placeholders.
+/// R266, R185: redacts setup's owed mulligan (R224, R265) sealed answers and returned cards (R151).
 fn scrub_owed_mulligan(resume: &mut Resume, opp: PlayerId) {
     if resume.hook != SETUP_WORK {
         return;
@@ -563,12 +539,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
     }
 
-    // Step 3: every hidden card becomes a placeholder. R351: a face-down backrow card's cost is shown
-    // to both players, so its placeholder keeps that number as its price, and whatever trap
-    // `determinize` puts there shows the seat the same cost the true board does. A card that is a
-    // placeholder already (the state was redacted before: the training arena sends each agent
-    // `redact(state, seat)`, and `decide` redacts what it is given, SURFACE §14.1) has no definition
-    // to price, and already shows its price, so redacting twice is redacting once.
+    // Step 3: every hidden card becomes a placeholder (R351 face-down backrow cost, SURFACE §14.1 idempotence).
     for (player, place) in every_place(&next) {
         let Some(card) = card_at(&next, player, place) else {
             continue;
@@ -718,11 +689,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             referenced.insert(resume.def_id.clone());
         }
     }
-    // A kept fusion of a fusion names its older ingredient in its id (R179), so that ingredient's
-    // definition stays too: the id already says what it is, and its faces are public, summed into
-    // the kept def's own.
-    // R915007: a custom card is known only once a card the seat may read names it: its definition and
-    // its script go with the rest of what a hidden card would tell.
+    // Fusion definitions stay (R179). Custom definitions stay only if referenced (R915007).
     next.custom_defs.retain(|def_id, _| referenced.contains(def_id));
     next.custom_cards.retain(|def_id, _| referenced.contains(def_id));
     let mut transient: IndexSet<String> = IndexSet::new();

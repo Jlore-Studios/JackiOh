@@ -1,15 +1,8 @@
-//! The Conquest series as pure transitions over `SeriesRow` (SPEC §9.5, R330–R337, with R262–R264).
+//! Conquest series pure transitions over `SeriesRow` (SPEC §9.5, R330–R337, R262–R264).
 //!
-//! Conquest is the trio mode (`bo3`): a player takes the series by winning one game with EACH of
-//! their three decks. A deck that has won is locked; one that lost or drew may be picked again
-//! (R330). Both players pick at once, sealed until both are in (R331); one deck left is picked for
-//! its player (R332).
-//!
-//! Every rule of a series lives here; `series.rs` and `results.rs` apply it by compare-and-set.
-//! Nothing here reads a clock, a store or an id minter, so a CAS retry can re-apply a transition to
-//! the row it re-read. Each transition returns a NEW row with `version` one more (`series_update`
-//! writes only over the version before, R263). Which decks have won is read off `games` (R259's
-//! row, R337).
+//! Winning with each of three decks locks them (R330). Simultaneous sealed picks (R331);
+//! single remaining deck auto-picked (R332). State changes advance `version` for CAS updates (R263).
+//! Deck win history is derived from `games` (R259, R337).
 
 use indexmap::IndexSet;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
@@ -27,9 +20,7 @@ const SEATS: [SeriesSeat; 2] = [SeriesSeat::P1, SeriesSeat::P2];
 
 // The projection's shape
 
-/// What `GET /api/series/:id` answers: `SeriesView` in `apps/web/src/net/api.ts`, field for field.
-/// It is restated rather than imported because the web module reads `import.meta.env`, which the
-/// server's program does not compile; `tests/api/series_rules.rs` pins the key set.
+/// What `GET /api/series/:id` answers: client wire representation of a series.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesView {
@@ -380,7 +371,6 @@ pub fn series_score(series: &SeriesRow) -> Option<f64> {
 
 // Transitions
 
-/// A copy of the row to transition.
 fn copy(series: &SeriesRow) -> SeriesRow {
     series.clone()
 }
@@ -525,12 +515,11 @@ pub fn new_series(input: &NewSeriesInput, now: i64) -> SeriesRow {
     }
 }
 
-/// R331: `seat` picks trio slot `slot` for the next game. A pick is final once in (`pick_sealed`,
-/// checked first; `series.rs` answers a repeat of the same slot as a success) and the other side
-/// learns only that it is in. A `game_no` other than the one being picked for is `stale_pick`, so
-/// game n's late duplicate never becomes game n + 1's. The pick that completes both begins the
-/// game. Refused after the clock ran out (R333), for a slot the trio lacks, and for a won deck
-/// (R330).
+/// R331: `seat` picks trio slot `slot` for the next game. A pick is final once in (`pick_sealed`, checked
+/// first; `series.rs` answers a repeat of the same slot as a success) and the other side learns only that
+/// it is in. A `game_no` other than the one being picked for is `stale_pick`, so game n's late duplicate
+/// never becomes game n + 1's. The pick that completes both begins the game. Refused after the clock ran
+/// out (R333), for a slot the trio lacks, and for a won deck (R330).
 pub fn pick_deck(
     series: &SeriesRow,
     seat: SeriesSeat,
@@ -596,11 +585,11 @@ pub fn begin_game(series: &SeriesRow, now: i64) -> Result<SeriesRow, SeriesRefus
     Ok(stamp(next, series, now))
 }
 
-/// R330, R334: the game in play ended. `winner` is the series seat that won it, whose deck is locked
-/// from now on, or `Draw`, which counts for neither and locks nothing. A side at
-/// `SERIES_WINS_NEEDED` wins takes the series (`decided`); after `SERIES_MAX_GAMES` games more wins
-/// takes it and equal wins is a draw (`exhausted`). Otherwise the next pick phase opens under
-/// `new_match_id` (R263), picks made for a side with one deck left (R332).
+/// R330, R334: the game in play ended. `winner` is the series seat that won it, whose deck is locked from
+/// now on, or `Draw`, which counts for neither and locks nothing. A side at `SERIES_WINS_NEEDED` wins takes
+/// the series (`decided`); after `SERIES_MAX_GAMES` games more wins takes it and equal wins is a draw
+/// (`exhausted`). Otherwise the next pick phase opens under `new_match_id` (R263), picks made for a side
+/// with one deck left (R332).
 pub fn game_ended(
     series: &SeriesRow,
     winner: Winner,

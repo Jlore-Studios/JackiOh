@@ -84,9 +84,8 @@ pub struct DuosTeam {
     pub pool: i32,
 }
 
-/// What a Duos step answers, as `ReduceResult` does a 1v1 one: `error` is `Some` exactly when the
-/// action was refused, and then `state` is the input, unchanged, and `events` is empty. On the wire
-/// the error is its message, as a 1v1 refusal is.
+/// What a Duos step answers, as `ReduceResult` does a 1v1 one: on a refusal `error` is `Some`, `state`
+/// the input unchanged and `events` empty. On the wire the error is its message, as a 1v1 refusal is.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosReduceResult {
@@ -97,7 +96,6 @@ pub struct DuosReduceResult {
 }
 
 impl DuosReduceResult {
-    /// A refusal: the input state, no events, the reason.
     pub(super) fn refused(state: &DuosState, error: EngineError) -> DuosReduceResult {
         DuosReduceResult {
             state: state.clone(),
@@ -130,13 +128,10 @@ pub fn duos_duel_seed(seed: &str, duel: usize) -> String {
     format!("{seed}:duel{duel}")
 }
 
-/// A Duos game at setup (B1, B12): two `create_game`s with the seats' decks and handicaps (each as
-/// given, B30), each player's R82 automatic turn end off (the wrapper ends turns, B9), each hero at
-/// its team's own HP and each seat holding its team's pool. `duos_begin` deals.
-///
-/// A Glitch reset (R676) deals a duel again without any of this; the wrapper puts it back on the
-/// next step (`reduce::sync_pools`, `duos_seat`). Panics as `create_game` does on a deck or handicap
-/// it refuses.
+/// A Duos game at setup (B1, B12): two `create_game`s with the seats' decks and handicaps (as given,
+/// B30), R82's automatic turn end off (the wrapper ends turns, B9), each hero at its team's own HP and
+/// each seat holding its team's pool; `duos_begin` deals. A Glitch reset (R676) skips this, and the
+/// wrapper puts it back next step (`reduce::sync_pools`, `duos_seat`). Panics as `create_game` does.
 pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
     duos_create_as(options, SetupKind::New)
 }
@@ -232,8 +227,8 @@ fn create_duel(
     game
 }
 
-/// B9, B12: what makes a duel's side a Duos seat — R82's automatic turn end off, the hero at its
-/// team's own HP, unspent, and the team's pool, `pool` of `rules.pool_health`.
+/// B9, B12: what makes a duel's side a Duos seat, as `duos_create` says; its pool is `pool` of
+/// `rules.pool_health`, unspent.
 pub(super) fn duos_seat(side: &mut PlayerState, rules: &DuosTeamRules, pool: i32) {
     side.auto_end_turn = Some(false);
     side.hero.health = rules.own_health;

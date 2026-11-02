@@ -1,33 +1,14 @@
 // MN09 (#552), mobile: the prompt kinds the Meditative set adds, at phone width with a touch hold
-// (docs/polish/7-mobile-ux.md: the prompt as a bottom sheet, 44 px touch targets, no horizontal scroll;
-// R2617000: on a touch screen a card is read by holding it, which shows its hover preview).
-//
-//   craft   ME-CRAFT (Meditative #17, R880): the block editor docked as one sheet
-//   market  ME-MARKET (Meditative #42): the night market's stall
-//
-// At 360x780 (the narrowest phone the client is laid out for) and 390x844 (BUILD M5-T1's phone), each
-// prompt is a bottom sheet across the whole width resting on the bottom edge, never taller than the
-// screen; nothing in it scrolls sideways, every control is a 44 px target, and the card it shows has
-// a box inside the sheet. A touch held on that card shows its hover preview on the screen while the
-// finger is down, and the hold itself picks nothing: a lot is read, not bought.
-//
-// The play-time choices (R81) the set adds are no prompt kind of their own: a card's modes, declared
-// with the play, picked in a "Choose one" before it is sent (#617):
-//
-//   secret      #22 Mind Games' secret choice (ME-SECRET): Greed, Attack or Defend
-//   prediction  #22.1 Fortify Mind's guess at it
-//   lane        #98 Showdown's lane, the target that names a lane: Lane 1 to Lane 5
-//
-// Each opens from a tap on the card in hand as the same sheet, under the same checks; its options are
-// words, so the card is read from its name in the title, and a hold there shows its preview.
-//
-// The Created status (ME-CREATED, R943) of a card in hand at both phone sizes: no mark on its face
-// (R2647000), and a hold on the card shows its preview, which says it was made during the game.
-//
-// The mount is mobile-ux.cy.tsx's (`Game` inside `.app-shell.app-shell--wide`, the narrowest box the
-// board is ever given), with the real catalog, since the market draws its lots from it. The block
-// editor's meters and face are the engine's own `craftPreview`, so the WebAssembly module is loaded
-// first, as `main.tsx` loads it before anything renders.
+// (docs/polish/7-mobile-ux.md; R2617000: a touch screen reads a card by holding it, which shows its preview):
+// ME-CRAFT (Meditative #17, R880), the block editor docked as one sheet, and ME-MARKET (Meditative #42), the stall.
+// At 360x780 and 390x844 each prompt is a bottom sheet across the whole width, never taller than the screen; nothing in
+// it scrolls sideways, every control is a 44 px target, and the card it shows has a box inside the sheet. A hold on
+// that card shows its preview and picks nothing: a lot is read, not bought.
+// The play-time choices (R81) the set adds are a card's modes, picked in a "Choose one" before the play is sent (#617),
+// each the same sheet under the same checks: #22 Mind Games' secret (ME-SECRET), #22.1 Fortify Mind's guess at it, and
+// #98 Showdown's lane. The Created status (ME-CREATED, R943) of a card in hand draws no mark on its face (R2647000).
+// The mount is mobile-ux.cy.tsx's, with the real catalog (the market draws its lots from it); the block editor's meters
+// and face are the engine's own `craftPreview`, so the WebAssembly module loads first.
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PendingOption, PlayerView } from "@jackioh/shared";
@@ -58,7 +39,7 @@ function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-/* ------------------------------------------------------------------------------------- views */
+/* views */
 
 /** ME-CRAFT's presets, as `viewFor` sends them: a Unit and a Spell the points cover at cost 2. */
 const UNIT_PRESET: CraftRecipe = { cost: 2, type: "Unit", adjective: "Pure", noun: "Closure", attack: 5, health: 6, keywords: [], echo: 0, hats: [] };
@@ -148,7 +129,6 @@ const KINDS: readonly Kind[] = [
   choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"], "mode"),
 ];
 
-/** Opens the kind's sheet: it is open on mount, or a tap on the card in hand opens a play-time choice. */
 function openSheet(entry: Kind): void {
   mount(entry.view(), entry.legal);
   if (entry.open !== undefined) cy.get(entry.open).click();
@@ -173,8 +153,8 @@ function hold(selector: string, whileHeld: (preview: HTMLElement) => void): void
   });
   // The press lifts where it began: forced, since the preview may lie over the finger.
   cy.get(selector).trigger("pointerup", { eventConstructor: "PointerEvent", pointerType: "touch", pointerId: 7, isPrimary: true, button: 0, force: true });
-  // The lift's own click, as the browser sends it after a long-press: a lone click event, since
-  // `cy.click()` would play a fresh tap (a new pointerdown first) that no finger made.
+  // The lift's lone click, as the browser sends it after a long-press: `cy.click()` would play a
+  // fresh tap (a new pointerdown first) that no finger made.
   cy.get(selector).trigger("click", { force: true });
   cy.get(ts(INSPECT_HOVER)).should("not.exist");
 }
@@ -187,7 +167,7 @@ function expectOnScreen(preview: HTMLElement, width: number, label: string): voi
   expect(box.top, `${label}: the preview is on the screen`).to.be.at.least(-EPSILON);
 }
 
-/* ----------------------------------------------------------------------------------- helpers */
+/* helpers */
 
 const sent: ActionBody[] = [];
 
@@ -247,7 +227,7 @@ function nameOf(element: Element): string {
   return `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").split(/\s+/)[0] ?? ""} "${name}"`;
 }
 
-/* ------------------------------------------------------------------------------------- specs */
+/* specs */
 
 describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", () => {
   beforeEach(() => {
@@ -286,7 +266,7 @@ describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", 
   }
 });
 
-/* ------------------------------------------------------------------------------- the Created mark */
+/* the Created mark */
 
 /** ME-CREATED (R943): a card made during the game, in hand beside one dealt with the deck. */
 const CREATED = "h-created";

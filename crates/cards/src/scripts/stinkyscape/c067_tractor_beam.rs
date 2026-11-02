@@ -35,10 +35,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 67 Tractor Beam — SPEC §8.10 row 67, BUILD M12 row S 67: "at its controller's start of turn gains
-// one random Resource into the hand (the rarity table over the seeds), none at the opponent's; equipped
-// onto a Unit, that Unit gains it and is no piece; it dies and fuses into a Dormant Starship (R1852000);
-// radiant 0/4, Radiant Resources".
+// S 67 Tractor Beam — SPEC §8.10 row 67, BUILD M12 row S 67 (R1852000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

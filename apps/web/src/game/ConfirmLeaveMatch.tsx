@@ -2,11 +2,10 @@
 // match socket, and the server's disconnect grace runs: back within DISCONNECT_GRACE_SECONDS, or the
 // match counts as a loss (§9.5). Stay is the default: it takes the focus, and Escape, Back (R2127000)
 // or a click outside the panel means the same. It decides nothing (CLAUDE.md rule 7): Leave makes
-// the move the route's leave guard held (R1754000). It wears "Concede this game?"'s panel (notices.css).
+// the move the route's leave guard held (R1754000).
 //
-// An `alertdialog`, modal, labelled by its question and described by its line of consequence. Focus
-// moves in on open, and Tab and Shift+Tab stay between the two buttons. Its keys are `useModalKeys`'s
-// (R2126000: a board route takes no key handler of its own).
+// An `alertdialog`, modal, labelled by its question and described by its line of consequence. Its
+// keys are `useModalKeys`'s (R2126000: a board route takes no key handler of its own).
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 

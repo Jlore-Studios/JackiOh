@@ -1,6 +1,5 @@
-// Result-panel rematch offers are responsive at 1280x800 and 390x844 (R672).
-// They match the panel buttons, stay in-panel, avoid sideways overflow, and do not widen actions.
-// jsdom cannot measure layout, so this mounts the match route in a browser, stubs status fetches, and reduces motion.
+// Result-panel rematch offers are responsive at 1280x800 and 390x844 (R672). jsdom cannot measure
+// layout, so this mounts the match route in a browser with status fetches stubbed and motion reduced.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import RematchButtons from "../../../apps/web/src/routes/Rematch.tsx";

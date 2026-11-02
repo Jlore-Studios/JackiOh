@@ -2,9 +2,8 @@
 //! R218): from the opponent's exile newest first under your control, N at once, with filters, and
 //! "your entire deck" — each permanent until its row is full, Spells staying.
 //!
-//! Port of `packages/engine/test/recruit-variants.test.ts`. TS's `sinkFor(state)` sink is kept for the
-//! test's length so its events can be read after the run; the rng cursor is not written back, as TS
-//! did not.
+//! A test keeps its `sink_for` sink to read its events after the run; the rng cursor is not written
+//! back.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -31,13 +30,12 @@ fn run(sink: &mut EngineSink<'_>, effects: Vec<Effect>) {
     }
 }
 
-/// TS `run(sinkFor(state), effects)` when the test reads no event.
+/// `run` when the test reads no event.
 fn run_on(state: &mut GameState, effects: Vec<Effect>) {
     let mut sink = sink_for(state);
     run(&mut sink, effects);
 }
 
-/// The ids of a pile, read now (a Recruit splices the very array `setLibrary` returned).
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
@@ -56,7 +54,6 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<CardInstan
         .cloned()
 }
 
-/// TS `units.flatMap((pile) => (pile === null ? [] : [pile[0]?.id]))`.
 fn unit_ids(side: &PlayerState) -> Vec<Option<String>> {
     side.units
         .iter()
@@ -79,7 +76,6 @@ fn face_down_marker() -> BackrowView {
     })
 }
 
-/// E25 Recruit from the opponent's exile (Classic #1 Radiant)
 mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
     use super::*;
 

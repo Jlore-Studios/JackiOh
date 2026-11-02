@@ -1,6 +1,5 @@
-// Polish 1: B28 checks clamped DPR, B35 board shake, and B40 that browser effects draw without blocking the board.
-// Mount a real `Game`, append events, then watch page frames before the effects begin.
-// The watcher must see the splat before synchronous `getImageData`: a delayed read can miss R200's short-lived effect.
+// Polish 1: B28 clamped DPR, B35 board shake, B40 effects draw without blocking the board.
+// The watcher must see the splat before synchronous `getImageData`: a later read can miss R200's brief effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
 import { FX_MAX_DPR } from "../../../apps/web/src/fx/constants.ts";
@@ -59,7 +58,7 @@ function litNear(canvas: HTMLCanvasElement, box: DOMRect, margin: number): boole
   return false;
 }
 
-/** Page-time watcher budget, beyond every effect tail. */
+/** Page-time watcher budget, past every effect tail. */
 const WATCH_MS = 6_000;
 
 type Seen = {
@@ -73,7 +72,7 @@ function unseen(): Seen {
   return { splatOverIdleCard: false, clickLandsOnCard: false, litNearCard: false, lastHit: "" };
 }
 
-/** Samples animation frames until complete or WATCH_MS; reads pixels only after the splat. */
+/** Samples frames until done or WATCH_MS; reads pixels only after the splat. */
 function watchFrames(win: Window, card: string, seen: Seen): () => void {
   const doc = win.document;
   const start = win.performance.now();
@@ -164,14 +163,14 @@ describe("Polish 1: the effects layer over a real board", () => {
         ));
       });
 
-      // B40: the splat leaves the idle card clickable and lights its canvas area.
+      // B40.
       cy.wrap(seen).should((saw: Seen) => {
         expect(saw.splatOverIdleCard, "its damage splat is on screen after the card's own damage motion has finished").to.eq(true);
         expect(saw.clickLandsOnCard, `elementFromPoint at the card's center is inside the card, and the board fits (last hit: ${saw.lastHit})`).to.eq(true);
         expect(saw.litNearCard, "a lit canvas pixel near the damaged card").to.eq(true);
       });
 
-      // B28: backing store equals CSS size times clamped device pixel ratio.
+      // B28.
       cy.window().then((win) => {
         const dpr = Math.min(Math.max(win.devicePixelRatio || 1, 1), FX_MAX_DPR);
         cy.get(CANVAS).should(($canvas) => {
@@ -189,7 +188,7 @@ describe("Polish 1: the effects layer over a real board", () => {
         expect(($root[0] as HTMLElement).childElementCount, "fx-dom is empty").to.eq(0);
       });
 
-      // B35: shake mutates `translate` then restores prior inline values.
+      // B35.
       cy.get(BOARD).should(($board) => {
         const board = $board[0] as HTMLElement;
         expect(

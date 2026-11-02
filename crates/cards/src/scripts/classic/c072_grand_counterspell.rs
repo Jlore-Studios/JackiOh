@@ -96,7 +96,6 @@ mod tests {
             .collect()
     }
 
-    /// p1 holds a Grand Counterspell face-down; p2 is to play.
     fn armed(radiant: bool, p2_hand: &[&str], p1_hand: Option<Vec<&str>>, p2_library: &[&str]) -> Scenario {
         let mut hand: Vec<&str> = p2_hand.to_vec();
         hand.push(FILLER);
@@ -133,7 +132,6 @@ mod tests {
         );
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
@@ -191,7 +189,6 @@ mod tests {
                 .map(|card| card.def_id.clone())
                 .collect();
             assert!(p1_graveyard.iter().any(|id| id == HONEYPOT));
-            // Its announce named only its zone to p1; the counter made it public.
             let seen = s.view(P1).events;
             let announced: Vec<&GameEvent> = seen
                 .iter()
@@ -212,7 +209,6 @@ mod tests {
             s.expect_in_zone(BREAD, "graveyard");
         }
 
-        /// a Unit play leaves it set
         #[test]
         fn a_unit_play_leaves_it_set() {
             let mut s = armed(false, &[VANILLA], None, &[]);
@@ -222,7 +218,6 @@ mod tests {
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id).as_deref(), Some(GRAND));
         }
 
-        /// its controller's own plays leave it set
         #[test]
         fn its_controllers_own_plays_leave_it_set() {
             let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, FILLER], "backrow": [GRAND], "library": [VANILLA, VANILLA] } }));
@@ -282,7 +277,6 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
@@ -301,7 +295,6 @@ mod tests {
             assert!(!any_card_played(&s));
         }
 
-        /// steals a Field Spell before it reaches the backrow
         #[test]
         fn steals_a_field_spell_before_it_reaches_the_backrow() {
             let mut s = armed(true, &[ARMOR], None, &[]);
@@ -328,7 +321,6 @@ mod tests {
             );
         }
 
-        /// steals a Trap set face-down: it never reaches the backrow and is yours in hand
         #[test]
         fn steals_a_trap_set_face_down_it_never_reaches_the_backrow_and_is_yours_in_hand() {
             let mut s = armed(true, &[HONEYPOT], None, &[]);
@@ -353,7 +345,6 @@ mod tests {
             assert!(s.last_events().iter().any(|event| event.event_type() == GameEventType::Burned));
         }
 
-        /// a Unit play leaves it set, as on the base face
         #[test]
         fn a_unit_play_leaves_it_set_as_on_the_base_face() {
             let mut s = armed(true, &[VANILLA], None, &[]);
@@ -362,7 +353,6 @@ mod tests {
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id).as_deref(), Some(GRAND));
         }
 
-        /// the stolen card is playable by its thief as their own
         #[test]
         fn the_stolen_card_is_playable_by_its_thief_as_their_own() {
             let mut s = armed(true, &[STOCKPILE], None, &[]);

@@ -5,15 +5,13 @@
 //! Radiant: "Destroy every enemy permanent that is neither CN nor KY. Buff each of your CN or KY
 //!           permanents {times|time|times}."
 //! Engine:
-//! - **Destroy:** `destroy_all({ side, rows: [units, backrow], notTags: [CN, KY] })` (§6.3
-//!   Destroy). Indestructible cards, cards Immune to Spells (E35) and #25's immunity (ME-TRIBAL)
-//!   survive it.
-//! - **Buff:** `upgrade({ scope: { zones: [field], side, tags: [CN, KY] }, times })` (B3.4). A card
-//!   scope's `tags` means any of them, so the scope takes permanents with either tag (MD-B14).
+//! - **Destroy** (§6.3): Indestructible cards, cards Immune to Spells (E35) and #25's immunity
+//!   (ME-TRIBAL) survive it.
+//! - **Buff** (B3.4): a card scope's `tags` means any of them, so the scope takes permanents with
+//!   either tag (MD-B14).
 //! - The destroyed cards leave at the state check after the whole list (R59), and the two sets
 //!   never overlap. Tags are read with the tags effects have granted (#35, `tags_of`, MD-B15) and
 //!   the CN of a card in Chinese (R1176000).
-//! - On the Radiant face the destroy is `side: enemy` and the Buffs `side: self`.
 
 use jackioh_engine::prelude::*;
 
@@ -45,18 +43,12 @@ fn gaokao(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The Radiant face destroys enemy permanents only and Buffs only yours, three times.
     let base = gaokao(false);
     let radiant = gaokao(true);
     CardScripts { base, radiant }
 }
 
-// M #34 高考 — SPEC §8.8 row 34, BUILD M10 row M 34: "Destroys every permanent on both sides and
-// rows that has neither CN nor KY (face-down ones included), Indestructible cards, cards Immune to
-// Spells and M 25 surviving (MD-B1); then Buffs each permanent with either tag twice, on both
-// sides (MD-B14), a CN tag M 35 granted counting (MD-B15); one state check after both; the Buffs on
-// face-down cards are reported per R440; times reads through `param()`; radiant destroys enemy
-// permanents only and Buffs only yours, three times".
+// M #34 高考 — SPEC §8.8 row 34, BUILD M10 row M 34, MD-B1, R440.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,8 +112,7 @@ mod tests {
                 let p1_brother = brother(&s, P1);
                 let p2_brother = brother(&s, P2);
                 s.play(GAOKAO, json!({}));
-                // Neither tag on either side: both Vanillas and the face-down Honeypot are gone
-                // (besides the resolved Spell itself).
+                // Neither tag: both Vanillas and the face-down Honeypot are gone, besides the Spell.
                 for card in s
                     .state()
                     .players
@@ -136,7 +127,6 @@ mod tests {
                         card.def_id
                     );
                 }
-                // Either tag: both Brothers stand, Buffed twice each; the Wall stands, unbuffed.
                 assert_eq!(upgraded_for(s.events(), &p1_brother), 2);
                 assert_eq!(upgraded_for(s.events(), &p2_brother), 2);
                 let wall = s.unit(P1, 3).expect("the Wall stands");
@@ -146,7 +136,6 @@ mod tests {
 
             #[test]
             fn r923_a_granted_cn_unit_survives_and_is_buffed() {
-                // RCTA grants the Vanilla CN; Gaokao then spares it and Buffs it.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "gaokao-granted",
@@ -173,8 +162,6 @@ mod tests {
 
             #[test]
             fn r1176000_a_translated_unit_survives_and_is_buffed() {
-                // A Vanilla in Chinese is CN (R1176000): Gaokao spares it and Buffs it twice, and
-                // destroys the English Vanilla beside it.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "gaokao-translated",
@@ -235,7 +222,6 @@ mod tests {
                     },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
-                // The Vanilla is Immune to Spells.
                 let shielded = s.unit(P1, 2).expect("the Vanilla").id;
                 s.card_mut(&shielded)
                     .granted_keywords
@@ -318,14 +304,11 @@ mod tests {
                 let p1_brother = brother(&s, P1);
                 let p2_brother = brother(&s, P2);
                 s.play(GAOKAO, json!({}));
-                // Yours stand: your Vanilla, your Brother, the Wall, the Honeypot.
                 assert!(s.unit(P1, 1).is_some());
                 assert!(s.unit(P1, 2).is_some());
                 assert!(s.unit(P1, 3).is_some());
-                // The enemy Vanilla is gone; the enemy Brother stands, Buffed not at all.
                 assert!(s.unit(P2, 1).is_none());
                 assert_eq!(upgraded_for(s.events(), &p2_brother), 0);
-                // Yours Buffed three times.
                 assert_eq!(upgraded_for(s.events(), &p1_brother), 3);
             }
         }

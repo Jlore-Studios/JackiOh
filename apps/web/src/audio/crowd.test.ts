@@ -42,7 +42,6 @@ describe("issue #57 crowd director", () => {
     expect(firstPatron.ms).toBeGreaterThanOrEqual(CROWD_FEEL.patronMinMs);
     expect(firstPatron.ms).toBeLessThanOrEqual(CROWD_FEEL.patronMaxMs);
     firstPatron.run();
-    // The patron is a one-shot murmur at an independent, non-center position, and the next one is queued.
     const patronPan = audio.nodesOf("stereoPanner").at(-1);
     expect(patronPan).toBeDefined();
     expect(patronPan?.param("pan").settled()).not.toBe(0);
@@ -60,7 +59,6 @@ describe("issue #57 crowd director", () => {
     crowd.observeDamage(15);
     crowd.observeDamage(25);
     const reaction = scheduled.filter((task) => task.ms === CROWD_FEEL.reactionDebounceMs);
-    // Each later hit replaces the earlier quiet-period deadline, so the last timer alone lives.
     expect(reaction.filter((task) => !task.canceled)).toHaveLength(1);
     reaction.at(-1)?.run();
     expect(audio.nodes.filter((node) => node.kind === "bufferSource")).toHaveLength(2);
@@ -70,7 +68,6 @@ describe("issue #57 crowd director", () => {
     expect(reactionPan).toBeDefined();
     expect(reactionPan?.param("pan").settled()).not.toBe(0);
 
-    // A GIGA roar carries its promised applause tail.
     const applause = scheduled.find((task) => task.ms === CROWD_FEEL.applauseDelayMs && !task.canceled);
     if (applause === undefined) throw new Error("GIGA roar must schedule an applause tail");
     applause.run();
@@ -104,7 +101,6 @@ describe("issue #57 crowd director", () => {
 describe("background: the page hides mid-game and comes back (issue #2034)", () => {
   type Task = Scheduled & { ran: boolean };
 
-  /** A running engine, its started crowd and the crowd's timers. */
   function rig(): { factory: FakeContextFactory; engine: MatchFeelAudioEngine; crowd: CrowdDirector; tasks: Task[] } {
     const factory = fakeContextFactory({ state: "running" });
     const engine = createAudioEngine({ createContext: factory.create, lifecycle: null, speech: null });
@@ -133,7 +129,6 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
     }
   }
 
-  /** The crowd's sounds on `audio`: its started sources that reach the crowd bus. */
   function heard(audio: FakeAudio, crowdBus: FakeNode): FakeNode[] {
     return audio.startedSources().filter((n) => audio.reaches(n, crowdBus));
   }
@@ -185,10 +180,8 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
     const audio = r.factory.last();
     expect(audio).not.toBe(closed);
     const bus = crowdBusOf(r.engine, audio);
-    // The next patron murmurs on the rebuilt context …
     due(r.tasks);
     expect(heard(audio, bus)).toHaveLength(1);
-    // … and so do a hit's roar and the patron after it, none of them on the dead one.
     r.crowd.observeDamage(25);
     due(r.tasks);
     expect(heard(audio, bus)).toHaveLength(3);

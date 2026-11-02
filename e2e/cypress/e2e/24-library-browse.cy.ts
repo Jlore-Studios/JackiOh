@@ -1,6 +1,5 @@
 // Library browsing and tutorial coverage (SPEC §10.8, §10.10, §9.10; R310, R313, R314, R373).
 // #32 Prem Panther is the browse fixture's visible card.
-// BUILD M8: seeds come from `seedFor`; waits are retried rather than fixed.
 
 import { CARD_NAMES } from "../../support/cards.ts";
 import { seedFor } from "../../support/config.ts";
@@ -42,7 +41,7 @@ const ORDER_HIDDEN = /order hidden/i;
 type Seat = PlayerId;
 type LibraryCard = { defId: string };
 
-/** Catalog ids map to SPEC §8 names. */
+// Catalog ids map to SPEC §8 names.
 function nameOf(defId: string): string {
   const match = /^core-(\d{3})$/.exec(defId);
   const name = match === null ? undefined : CARD_NAMES[Number(match[1])];

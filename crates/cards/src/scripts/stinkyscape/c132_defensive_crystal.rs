@@ -27,10 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #132 Defensive Crystal — SPEC §8.10 row 132, BUILD M12 row S 132: "a 3/6 Starship
-// Piece; its Death gives its controller's hero Armor 1 for the rest of the game, each hit on the
-// hero 1 less (R124); then a copy fuses into its owner's Dormant Starship (R1852000); heroArmor
-// reads through `param()`; radiant 6/12 and 2".
+// Stinkyscape #132 Defensive Crystal — SPEC §8.10 row 132, BUILD M12 row S 132 (R124, R1852000).
 #[cfg(test)]
 mod tests {
     use super::*;

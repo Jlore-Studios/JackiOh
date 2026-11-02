@@ -3,14 +3,8 @@
 //!   Radiant: "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana,
 //!            and has Echo 1."
 //!
-//! Health as the price (R1180004, `effects::price_next_spell_in_health`): a `HealthPrice` player
-//! modifier on the caster, until a Spell uses it. The next Spell they play from their hand, face-up,
-//! costs no mana and `multiple` times its cost after every modifier (R65; an X Spell its X) in health,
-//! lost with the play (R18); `legal_actions` offers a Spell only the health affords, and paying to 0
-//! loses at the state check, as Hearthstone's Bloodbloom. A Field Spell, a Trap, a Spell set face-down,
-//! a play from a graveyard and a cast (R70) never use it; a (0) Spell uses it for 0; the newest
-//! replaces an older one. The Radiant face's price also gives that Spell Echo 1 (R30's shape), queued
-//! with its own as it is played. Tunes: multiple 3 ↓.
+//! Health as price via price_next_spell_in_health (R1180004): HealthPrice modifier on caster (R65, R18, R70).
+//! Radiant price gives that Spell Echo 1 (R30).
 
 use jackioh_engine::prelude::*;
 
@@ -39,12 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #6 Bloodbloom — SPEC §8.9 row 6, BUILD M11 row M+ 6: "the next Spell you play costs no mana and
-// 3 × its cost in health (a (2) Spell 6), offered by `legalActions` when only health affords it; a
-// discount lowers the health (R65); a Field Spell, a Trap and a cast do not use it; it lasts until a
-// Spell uses it, across turns; paying to 0 health loses at the state check; a second Bloodbloom
-// replaces the first; multiple reads through `param()`; radiant that Spell also resolves twice
-// (Echo 1)".
+// M+ #6 Bloodbloom — SPEC §8.9 row 6, BUILD M11 row M+ 6 (R65).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -53,7 +42,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (2) Spell: shuffle a CN-Virus into the opponent's deck.
     const INJECTION: &str = "core-090";
     /// A CN-Viral Injection at (2), the price these cases are written at: it costs (1) since #2657, and
     /// a `costMod` of 1 puts it back.
@@ -61,15 +49,10 @@ mod tests {
         json!({ "def": INJECTION, "costMod": 1 })
     }
     const CN_VIRUS: &str = "core-090-1";
-    /// (4) Spell: refresh 3 mana; your cards cost (1) less this turn.
     const FULLSEND: &str = "core-078";
-    /// (2) Field Spell: your next Spell gains Echo +1.
     const TWINSPELL: &str = "core-079";
-    /// (1) Trap.
     const MY_PAWN: &str = "core-096";
-    /// (1) Spell, Cast on draw: make a random card in your hand Radiant, lose its `loss` in health.
     const JELLY_BEAN: &str = "core-027";
-    /// A (1) 4/4 with no text: a hand card and a library filler.
     const FILLER: &str = "core-008";
 
     fn game(seed: &str, p1: Value) -> Scenario {
@@ -209,7 +192,6 @@ mod tests {
     fn r1180004_a_second_bloodbloom_replaces_the_first() {
         let mut s = game("m+006-twice", json!({ "hand": [ID, { "def": ID, "radiant": true }, injection()] }));
         s.play(s.hand(P1)[0].clone(), json!({}));
-        // The second is a (0) Spell: it uses the first price for 0 health, and its own replaces it.
         s.play(s.hand(P1)[0].clone(), json!({}));
         assert_eq!(health(&s, P1), 30);
         assert_eq!(

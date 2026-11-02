@@ -1,13 +1,8 @@
 //! #34 Collateral Damage (SPEC §8.2 row 34): "Exile target permanent and a random card from the
 //! opponent's library", radiant "Also the permanents adjacent to the target in its row".
-//!
-//! "Also …" adds a clause and keeps every base clause (§8 Conventions), so the radiant form exiles
-//! the target, its two neighbours and a library card. Exile (§6.3) bypasses Indestructible and bumps
+//! "Also …" keeps every base clause (§8 Conventions). Exile (§6.3) bypasses Indestructible and bumps
 //! the exile counter in the engine's verb (R55); a unit token ceases to exist instead (R11).
-//!
-//! R81: "target permanent" is a unit or a backrow card on either side, declared here and carried in
-//! the `play` action; resolution never pauses.
-//!
+//! R81: the target is declared and carried in the `play` action; resolution never pauses.
 //! §3.1: adjacent is lane N−1 and N+1 on the SAME side and row, no wrap (`zones.adjacent`). Exile
 //! moves the card at once, so the neighbours go FIRST, while the target still stands in its lane.
 
@@ -48,9 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #34 Collateral Damage — SPEC §8.2 row 34, BUILD M4-T4 must-pass row 34:
-// "Exiles an Indestructible permanent and a random opponent library card; radiant same-row
-//  neighbours too".
+// #34 Collateral Damage — SPEC §8.2 row 34, BUILD M4-T4 must-pass row 34.
 // #66 The Rock is a 10/10 with printed Indestructible, so it is the must-pass's Indestructible
 // permanent (placed by the setup, so its Tribute cost is not in the way).
 #[cfg(test)]

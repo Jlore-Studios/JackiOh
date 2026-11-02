@@ -1,9 +1,7 @@
-//! #892: `layers::AuraTable` asks each aura source's hook once for a whole sweep, and a unit read
-//! through it is the unit `layers::unit_view` reads alone (§10.4 layer 5): the same sources in the
-//! same order (each side's acting units by lane, its carried Units, then its backrow by lane), none
-//! from a Vanilla'd source (§6.1, §6.3), none onto a card dormant under a Stack (§3.2, R13), a
-//! carried Unit both a source and a target (R446), and the last set-attack in aura order holding.
-//! `legal_actions` and `view_for` each build one table, which the hook counts below prove.
+//! #892: `layers::AuraTable` asks each aura source's hook once a sweep, and a unit read through it is the
+//! unit `layers::unit_view` reads alone (§10.4 layer 5): the same sources in the same order (each side's
+//! acting units by lane, its carried Units, then its backrow by lane), Vanilla (§6.1, §6.3), Stack (§3.2,
+//! R13) and carried Units (R446) included. `legal_actions` and `view_for` each build one table.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
@@ -221,8 +219,7 @@ fn the_last_set_attack_in_aura_order_holds_through_a_table() {
     );
     let state = s.state();
     let table = AuraTable::new(state);
-    // p2's backrow comes last in aura order, and its lane 2 last within it: a reordered side or lane
-    // would leave a set-two holding.
+    // p2's backrow lane 2 comes last in aura order: a reordered side or lane would leave a set-two holding.
     for player in [P1, P2] {
         let card = s.unit_at(player, 1);
         assert_eq!(

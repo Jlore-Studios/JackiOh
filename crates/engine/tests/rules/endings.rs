@@ -1,8 +1,6 @@
 //! Issue #1843's two endings (SPEC §2.5, R1843000–R1843003): a player removed from the game by a full
-//! tally of votes, and a player who flees. Proved on fixture scripts (`fixtures/endings.rs`) through
-//! the testkit's `scenario()`, so the engine owns both before any Stinkyscape card exists.
-//!
-//! Port of nothing shipped: no shipped card votes or flees, so no shipped game reaches either.
+//! tally of votes, and a player who flees. Proved on fixture scripts (`fixtures/endings.rs`), so the
+//! engine owns both before any Stinkyscape card exists.
 
 use jackioh_engine::effects::{FleeArgs, flee, vote_out, win_game};
 use jackioh_engine::resolve::{HookOptions, make_context};
@@ -20,7 +18,6 @@ const P2: PlayerId = PlayerId::P2;
 /// A library on each side, so no turn here meets fatigue.
 const LIBRARY: [&str; 4] = ["fx-1", "fx-2", "fx-3", "fx-4"];
 
-/// A scenario with the fixtures installed and a library on each side that names none.
 fn table(p1: Value, p2: Value) -> Scenario {
     register_endings_fixtures();
     let (mut p1, mut p2) = (p1, p2);
@@ -32,14 +29,12 @@ fn table(p1: Value, p2: Value) -> Scenario {
     scenario(json!({ "seed": "endings", "p1": p1, "p2": p2 }))
 }
 
-/// The three Brains on one side, lanes 1 to 3.
 fn brains() -> Value {
     json!([melchior.id, balthasar.id, casper.id])
 }
 
-/// Apply each run's effects the way a resolving card would (its card, if any, and its controller), one
-/// after another with no check between them, then settle once: the board settles and the state check's
-/// game-end point runs. Answers the events.
+/// Each run's effects as a resolving card applies them, with no check between them, then one settle:
+/// the board settles and the state check's game-end point runs.
 fn run(state: &mut GameState, runs: &[(Option<CardInstance>, PlayerId, Vec<Effect>)]) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -62,8 +57,7 @@ fn run(state: &mut GameState, runs: &[(Option<CardInstance>, PlayerId, Vec<Effec
     events
 }
 
-/// The `voteCast` events against `player`, as (the card's definition, the tally after it, the tally
-/// that removes).
+/// The `voteCast` events against `player`: (card definition, tally after it, tally that removes).
 fn cast(events: &[GameEvent], player: PlayerId) -> Vec<(String, i32, i32)> {
     events
         .iter()
@@ -100,7 +94,6 @@ fn flights(events: &[GameEvent]) -> Vec<(PlayerId, FleeOpponent)> {
         .collect()
 }
 
-/// The last two event types, newest first.
 fn tail(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().rev().take(2).map(GameEvent::event_type).collect()
 }
@@ -110,8 +103,7 @@ mod r1843000_the_vote {
 
     #[test]
     fn r1843000_three_cards_voting_at_their_controllers_start_of_turn_remove_them() {
-        // p1 has more Units (MELCHIOR), p2 is below half its starting life (BALTHASAR), and CASPER
-        // always votes.
+        // p1 has more Units (MELCHIOR), p2 is under half its starting life (BALTHASAR), CASPER always votes.
         let mut s = table(
             json!({ "field": ["fx-1", "fx-2"], "hand": ["fx-3"] }),
             json!({ "backrow": brains(), "health": 10, "hand": ["fx-4"] }),
@@ -148,7 +140,7 @@ mod r1843000_the_vote {
         // Removed at the start-of-turn triggers, before the turn's draw (R62).
         assert_eq!(s.hand(P2).len(), 1);
 
-        // Both seats read the agreement and the ending from their own view (CLAUDE.md rule 7).
+        // Both seats read the agreement and the ending (CLAUDE.md rule 7).
         for viewer in [P1, P2] {
             let view = s.view(viewer);
             let shown = view.result.expect("the view shows the result");
@@ -165,7 +157,6 @@ mod r1843000_the_vote {
             );
             assert_eq!(cast(&view.events, P2).len(), 3, "{viewer} reads each vote");
         }
-        // The other player wins, the removed one loses.
         let result = s.state().result.expect("over");
         assert_eq!(outcome_for(&result, P1), SeatOutcome::Win);
         assert_eq!(outcome_for(&result, P2), SeatOutcome::Loss);
@@ -228,7 +219,7 @@ mod r1843000_the_vote {
                 (casper.id.clone(), 2, VOTE_TALLY_SIZE)
             ]
         );
-        // A second vote from one card in the same turn adds nothing and says nothing.
+        // A second vote from one card in a turn adds and says nothing.
         let mut state = s.state().clone();
         let again = s.backrow(P2, 3).expect("CASPER");
         let events = run(
@@ -241,8 +232,7 @@ mod r1843000_the_vote {
 
     #[test]
     fn r1843000_a_vote_once_the_game_is_over_counts_nothing() {
-        // DOOM, left of the Brains, ends the game at the same start of turn (R68's lane order): the
-        // Brains never vote, and the tally stays absent.
+        // DOOM, left of the Brains, ends the game first at that start of turn (R68's lane order): no vote.
         let mut s = table(
             json!({ "field": ["fx-1", "fx-2"], "hand": ["fx-3"] }),
             json!({ "backrow": [doom.id, melchior.id, balthasar.id, casper.id], "health": 10, "hand": ["fx-4"] }),
@@ -252,7 +242,7 @@ mod r1843000_the_vote {
         assert!(cast(s.last_events(), P2).is_empty());
         assert_eq!(s.state().players.p2.votes, None);
 
-        // And the verb itself, run on the finished game, records nothing and announces nothing.
+        // And the verb, run on the finished game, records and announces nothing.
         let mut state = s.state().clone();
         let brain = s.backrow(P2, 2).expect("MELCHIOR");
         let events = run(
@@ -315,7 +305,7 @@ mod r1843000_the_vote {
             assert!(state["players"][side].get("votes").is_none());
             assert!(state["players"][side].get("fled").is_none());
         }
-        // Every ending before #1843 reads the same for both seats as it always did.
+        // Every ending older than #1843 reads the same for both seats.
         for reason in GAME_OVER_REASONS.iter().copied() {
             if LOSER_DRAWS_REASONS.contains(&reason) {
                 continue;
@@ -388,7 +378,7 @@ mod r1843001_removed_from_the_game {
                 .collect()
         };
 
-        // p2's tally fills in the list that also wins p2 the game outright: the removal comes first.
+        // p2's tally fills in a list that also wins p2 the game: the removal comes first.
         let mut state = s.state().clone();
         let mut runs = p2_votes(&s);
         runs.push((None, P2, vec![win_game(json_as(json!({})))]));
@@ -443,8 +433,7 @@ mod r1843002_fleeing {
 
     #[test]
     fn r1843002_fleeing_with_the_hero_at_0_loses_first() {
-        // The list kills its caster and then flees: the hero check runs first (R850), and the flight,
-        // though held, never ends the game.
+        // It kills its caster, then flees: the hero check runs first (R850); the held flight ends nothing.
         let mut s = table(
             json!({ "hand": [doomed_escape.id] }),
             json!({ "field": ["fx-1"] }),
@@ -461,8 +450,7 @@ mod r1843002_fleeing {
 
     #[test]
     fn r1843002_the_other_hero_at_0_is_a_loss_for_them_not_a_draw() {
-        // The list kills the enemy hero and then flees: the hero check comes first here too, so the
-        // other player loses outright.
+        // The list kills the enemy hero, then flees: the hero check comes first, so the other player loses.
         let mut s = table(json!({ "hand": [parting_shot.id] }), json!({ "field": ["fx-1"] }));
         s.play(parting_shot.id.as_str(), json!({}));
         assert_eq!(result_of(&s), (Winner::P1, GameOverReason::HeroDeath));

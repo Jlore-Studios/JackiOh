@@ -5,10 +5,9 @@
 //! across its own lane (`lane_multiplier_for`; M #97.5 Bunker, R1283), and the strike back is the
 //! defender's attack times its own multiplier, never bonused.
 //!
-//! The cards: Mr. Vanilla (core-008) 4/4 Human, Big Felinor (core-043) 3/10 Felinor, Genn
-//! (classic-086) 14/14 untagged, Economic Anxiety (meditative-052, +3 while attacking a Unit that
-//! shares no tag; Radiant: the controller's Units only, with Poisonous) and Bunker
-//! (meditative-097-5) 5/10, Armor 3, Can't attack, First Strike, 3× on the Unit across its lane.
+//! The cards: Mr. Vanilla 4/4 Human, Big Felinor 3/10 Felinor, Genn 14/14 untagged, Economic Anxiety
+//! (+3 while attacking a Unit that shares no tag; Radiant: the controller's Units only, with
+//! Poisonous) and Bunker 5/10, Armor 3, Can't attack, First Strike, 3× on the Unit across its lane.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -153,10 +152,9 @@ mod reply {
         .expect("a reply")
     }
 
-    /// The AI's Mr. Vanilla behind its Economic Anxiety, facing the enemy's Big Felinor: the base face
-    /// bonuses the enemy's attacker too, so its 3 + 3 kills the 4/4 and it survives the 4 back, a
-    /// unit worth more than 3 to the face. The Radiant face bonuses only its controller's Units, so
-    /// the enemy's 3 chips and it goes face instead.
+    /// The AI's Mr. Vanilla behind its Economic Anxiety, facing Big Felinor: the base face bonuses the
+    /// enemy's attacker too, so its 3 + 3 kills the 4/4 and survives the 4 back, worth more than 3 to
+    /// the face; the Radiant face bonuses only its controller's Units, so the enemy goes face.
     #[test]
     fn the_reply_takes_the_kill_the_base_bonus_gives_the_enemy_and_not_the_radiant_one() {
         for (radiant, kills) in [(false, true), (true, false)] {

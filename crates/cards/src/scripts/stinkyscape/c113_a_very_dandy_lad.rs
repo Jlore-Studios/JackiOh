@@ -39,11 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #113 A Very Dandy Lad — SPEC §8.10 row 113, BUILD M12 row S 113: "played for Tribute 2; at each state
-// check a face-up permanent of cost (2) or less on either side is exiled, this card never, a face-down one
-// never, an arrival after its Cry (R1850002); leaving the field ends it; radiant 18/30, only the enemy's".
-// The aura's board order, the Dormant card and the arrival's Cry are the engine's, proven by its tests
-// (R1850002).
+// S #113 A Very Dandy Lad — SPEC §8.10 row 113, BUILD M12 row S 113 (R1850002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -61,8 +57,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
 
-    /// p1 holds the Lad (`radiant` its face) beside two Vanillas to tribute, a Timmy, a Pointmaster and a
-    /// face-down Trap; p2 has a Vanilla, a Menace and a face-up Field Spell.
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {

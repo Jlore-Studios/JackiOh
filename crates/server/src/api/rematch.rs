@@ -1,35 +1,15 @@
-//! Rematch offers after a finished non-series match (SPEC §9.5, R672).
+//! Rematch offers after a finished non-series match (SPEC §9.5, R672). Surface contract:
+//! docs/v0.3.0/SURFACE.md §11.2. Either seat may offer, normal or double-or-nothing; a game is made
+//! only when both seats offer equal stakes. A Conquest series game offers none: its continue flow
+//! owns what comes next.
 //!
-//! Either seat may offer a rematch, normal or double-or-nothing; a new match is created only when
-//! both seats offer equal stakes. "The opponent is still here" is their match socket being open
-//! (`Registry::presence_of`). Games of a Conquest series offer nothing: the series' continue flow
-//! owns what comes next. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
-//!
-//! R1372, R924000: an All Random rematch deals fresh decks, each seat's offer carrying its player's
-//! "More cards from" pick (`leanSet`, absent = none, or R1372's `leanNewest` from an older client; the
-//! latest offer's stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
-//!
-//! R915005: the frozen decks are asked the validator's L7 before a rematch is made, so a deck with a
-//! custom card, which plays only in practice, is refused here as at the queue (`loadout_invalid`).
-//!
-//! R1638000: a match played on a catalog version other than the server's offers no rematch. An
-//! offer on it, a person's or a ladder bot's, is `409 update_required` before it is recorded, as a
-//! room's join refuses a stale catalog (§9.4): a rematch would play the old cards, or deal today's
-//! under the old rules.
-//!
-//! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
-//!
-//! R2685000: an offer is taken only within `REMATCH_OFFER_TTL_MS` of the finished match's end (its
-//! row's `finished_at`), as a co-op Play again's is (R1398000). Past it an offer lapses silently:
-//! nothing is recorded and no game is made, but an entry that already made one still answers its id.
-//! One entry's `at` is only its latest offer's time, so a seat's mismatched offers can no longer
-//! keep an older seat's offer alive past the match's window.
-//!
-//! The offers live in memory, one map per `App` (`RematchOffers`): rendezvous state for two sockets,
-//! not rows, so a restart drops them and both clients re-offer. An entry without a created game is
-//! swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so a late poller
-//! still learns where to go. The reaper's tick sweeps every entry past that window whose finished
-//! match no actor holds (`sweep_rematch_offers`).
+//! R1372, R924000: an All Random rematch deals fresh decks on each seat's latest "More cards from"
+//! pick (`leanSet`, or R1372's `leanNewest` from an older client); a Best-of-1 one replays its frozen
+//! decks, which R915005 asks the validator's L7 first. R1638000: a match on another catalog version
+//! is `409 update_required` before any offer is recorded (§9.4). R2685000: an offer counts only
+//! within `REMATCH_OFFER_TTL_MS` of the match's `finished_at`, as a co-op Play again's (R1398000).
+//! Offers live in memory, one map per `App`: a restart drops them and both clients re-offer.
+//! Responses carry only stakes, presence booleans and ids (CLAUDE.md rule 7).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -112,11 +92,7 @@ pub fn rematch_offer_count(app: &App) -> usize {
     offers(app).len()
 }
 
-/// The reaper's tick (`api::results::run_reaper`, after `Registry::reap_finished`): drops each
-/// entry whose latest offer is older than `REMATCH_OFFER_TTL_MS` and whose finished match no actor
-/// holds any more. An unanswered one is what `live_entry` sweeps on a read nobody makes; one that
-/// made a game goes too, since both seats' `in_match_id` already names that game. An open socket
-/// keeps its actor, and so its offers. Answers how many it dropped.
+/// Sweeps expired rematch offers older than `REMATCH_OFFER_TTL_MS` with no live actor.
 pub fn sweep_rematch_offers(app: &App, now: i64) -> usize {
     let mut map = offers(app);
     let before = map.len();
@@ -193,11 +169,7 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
     None
 }
 
-/// Creates the rematch both seats offered, as `queue.rs`'s `start_paired_match` makes a paired
-/// match: a Best-of-1 replays the frozen decks and portraits under a fresh seed, an All Random deals
-/// fresh decks from it, each leaning on the set its seat picked, if any (`leans`, R1372, R924000).
-/// R1989000 swaps the seats: the finished match's P2 takes P1, its P1 takes P2, each profile's
-/// deck, portrait, slots and lean traveling with it; All Random redeals are keyed by the new seat.
+/// Creates a rematch from equal offers, swapping seats (R1989000, R1372, R924000).
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,
@@ -406,13 +378,10 @@ async fn create_rematch(
         Ok::<_, ApiError>(taken)
     }
     .await;
-    // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant), a
-    // fenced write and a write that failed (a database hiccup) all undo the rematch: kept without
-    // its flags it would refuse every socket and end in a draw nobody played. Stop the actor, then
-    // erase the live match with no result (R679), whose `on delete set null` releases the winner
-    // seat's flag and any bot flags `bots_claim_for_rematch` set, while a taken seat is untouched.
-    // The caller clears the offer claim and the seats re-offer; the lease gives the ledger's seats
-    // back as it drops.
+    // A seat taken mid-start (the compare-and-set's refusal), a fenced write and a failed write all
+    // undo the rematch: kept without its flags it would refuse every socket and end in a draw nobody
+    // played. Erasing the live match with no result (R679) lets `on delete set null` release the
+    // winner seat's flag and any bot flags `bots_claim_for_rematch` set; a taken seat is untouched.
     let refused = match seated {
         Err(error) => {
             // A fenced write (`unavailable`) is a newer server taking over, not a failure.
@@ -476,11 +445,7 @@ async fn is_series_game(app: &App, match_id: &str) -> Result<bool, ApiError> {
 
 // Routes
 
-/// `POST /api/matches/:matchId/rematch` (active): offer a rematch (or meet one). `AuthLevel::Active`
-/// is §9.4's gate, as on the queue and the rooms; a seat of another match — or of none — learns
-/// nothing beyond "no such match" (§9.1).
-///
-/// It takes `&Arc<App>` because equal offers start the match and `Registry::start` needs one.
+/// `POST /api/matches/:matchId/rematch` (active): offers or meets a rematch (§9.4, §9.1).
 pub async fn offer_rematch(app: &Arc<App>, req: Req) -> ApiResult {
     offer_rematch_route(app, req).await
 }
@@ -499,10 +464,7 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// R639000: a ladder bot's offer (or its answer to a person's), made for the seat it began
-/// `match_id` in, as a person's offer is made: the same refusals, the same map and the same start.
-/// Nothing unless `LADDER_BOTS` is on and the match is held. A bot leans on no set (R1372). Answers
-/// the game the offer made, if it made one.
+/// Submits a rematch offer for a ladder bot (R639000, R1372).
 pub async fn offer_for_bot(
     app: &Arc<App>,
     match_id: &str,
@@ -519,10 +481,7 @@ pub async fn offer_for_bot(
     offer_as(app, &match_row, seat, stakes, None).await
 }
 
-/// The offer of `seat` (the seat its account began the match in) once the caller is known: the
-/// refusals, the claim on the offers map, the start of the rematch equal offers make, and the
-/// telemetry. R639000: an offer that made no rematch is told to the match's actor, if it is still in
-/// memory, so a ladder bot opposite can meet it.
+/// Handles a rematch offer for `seat`, creating a game if matched (R639000).
 async fn offer_as(
     app: &Arc<App>,
     match_row: &MatchRow,
@@ -637,9 +596,7 @@ async fn offer_as(
     Ok(match_id)
 }
 
-/// `GET /api/matches/:matchId/rematch` (active): what each seat offered, whether the opponent is
-/// still on the match, and the created game. A seat's own row only: anyone else gets the same "no
-/// such match" as for a missing id (§9.1).
+/// `GET /api/matches/:matchId/rematch` (active): rematch status for caller's seat (§9.1).
 pub async fn rematch_status(app: &Arc<App>, req: Req) -> ApiResult {
     rematch_status_route(app, req).await
 }

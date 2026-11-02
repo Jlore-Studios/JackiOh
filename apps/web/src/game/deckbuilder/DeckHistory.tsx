@@ -1,11 +1,9 @@
 // R2100000: the open deck's kept versions, behind a button in the editor's head after the deck's
-// name, in the cosmetics picker's popover (DeckCosmeticsPicker.tsx: outside press and Escape close
-// it). The top bar has no room left for it on a phone's first screen (BUILD M5-T1). Each open reads
-// the list again, newest first: each version's name and date, and the cards in and out since the
-// version kept before it. Every version but the newest offers Restore, which the server keeps as a
-// new version, so the one it replaced stays listed, and ends the workshop's Undo and Redo of the deck
-// (#2099), whose steps were taken on the deck it replaced. The server decides what a version is and
-// whether a restore stands (CLAUDE.md rule 7); this shows its list and its refusal.
+// name, in the cosmetics picker's popover (DeckCosmeticsPicker.tsx). The top bar has no room left for
+// it on a phone's first screen (BUILD M5-T1). Every version but the newest offers Restore, which the
+// server keeps as a new version, so the one it replaced stays listed, and ends the workshop's Undo and
+// Redo of the deck (#2099), whose steps were taken on the deck it replaced. The server decides what a
+// version is and whether a restore stands (CLAUDE.md rule 7); this shows its list and its refusal.
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
 
@@ -91,7 +89,6 @@ export default function DeckHistory({
   onRestored,
 }: {
   deckId: string;
-  /** The workshop's store, which reads the list and asks for a restore (sync.ts). */
   store: Pick<DeckStore, "deckVersions" | "restoreDeckVersion">;
   catalog: CatalogSnapshot;
   /** A restore stood: the workshop ends the deck's Undo and Redo (#2099). */

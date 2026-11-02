@@ -1,7 +1,6 @@
-// A Stack pile opened as a wheel (issue #124, §3.2): the pile's top card with its face, every
-// card beneath it as a back (the view names their number only, never which they are), so
-// what is above and below what is obvious. The dialog borrows the inspect layer's scrim and modal
-// behavior (focus trap, scrim and Escape dismiss, focus restore).
+// A Stack pile opened as a wheel (#124, §3.2): its top card face up, every card beneath as a back (the
+// view names their number only). The dialog borrows the inspect layer's modal behavior (focus trap,
+// scrim and Escape dismiss, focus restore).
 
 import { useRef, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -14,7 +13,6 @@ import CardWheel, { type WheelItem } from "./CardWheel.tsx";
 
 import "./wheel.css";
 
-/** Test ids of the stack sheet. */
 export const stackTestid = {
   sheet: "stack-sheet",
   title: "stack-title",
@@ -24,7 +22,6 @@ export const stackTestid = {
 /** What the sheet calls a card it may not name (R312's word for a back). */
 export const STACK_UNKNOWN_NAME = "Unknown card";
 
-/** What every Stack pile's sheet is called (§3.2). */
 export const STACK_TITLE = "Stack pile";
 
 /** The words under each place on the wheel. */

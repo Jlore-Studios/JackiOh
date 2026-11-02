@@ -6,10 +6,8 @@
 //! Quickdraw tag and the start-of-turn timing are kept.
 //!
 //! §8.3's Engine cell: "Two sequential pending choices; 'lose' is not damage". §6.2: Quickdraw is
-//! the `quickdraw` static flag, which `setup.rs` reads. §10.6, §10.1: a choice made during
-//! resolution is a `PendingChoice`, so each face's `start_of_turn` opens one mode prompt whose answer
-//! re-enters a named `resume` step, and the radiant first step applies its pick, then opens the
-//! second prompt. The prompt effect is LAST in every list, correct under `apply_resumable` (parks a
+//! the `quickdraw` static flag. §10.6, §10.1: each prompt is a `PendingChoice` re-entering a named
+//! `resume` step. The prompt effect is LAST in every list, correct under `apply_resumable` (parks a
 //! tail) and `resolve::apply_effects` (does not; `turn.rs` runs start-of-turn hooks with it).
 //! R18: "lose 3 health" is not damage: `lose_health` skips the §4.4 pipeline. R62: start-of-turn
 //! triggers run before the draw, so "the bottom card" is the bottom before this turn's draw.
@@ -22,15 +20,13 @@ pub const ID: &str = "core-065";
 /// #65.1, the token this card defines (§7, §8.3).
 const SPIKEY_PILLOW: &str = "core-065-1";
 
-// The option names, worded as §8.3's two cells list them and in that order. These are prompt
-// options, not declared modes (R81), so they reach the client through `state.pending.options` and a
-// test reads them back from there rather than off the Script.
+// The option names in §8.3's order: prompt options, not declared modes (R81), so they reach the
+// client through `state.pending.options`.
 const EXILE_BOTTOM: &str = "exile bottom";
 const SUMMON_PILLOW: &str = "summon Spikey Pillow";
 const NOTHING: &str = "nothing";
 
-/// "lose 3", named with the health it loses: the declared number `loss` (R386), less being better,
-/// as the card stands when the prompt opens.
+/// "lose 3": the declared number `loss` (R386) as the card stands when the prompt opens.
 fn lose_option(ctx: &EffectContext<'_>) -> String {
     format!("lose {}", param(ctx, "loss"))
 }
@@ -104,9 +100,8 @@ fn radiant() -> Script {
             })))]
         })),
         resume: IndexMap::from([
-            // The first pick resolves, then the second prompt opens — the same option may be picked again,
-            // because these are two separate prompts and the "picked twice" check in `prompts.rs` is
-            // per-prompt.
+            // The first pick resolves, then the second prompt opens; the same option may be picked
+            // again, as the "picked twice" check in `prompts.rs` is per-prompt.
             (
                 STEP_FIRST,
                 hook(|ctx| {
@@ -140,9 +135,6 @@ pub fn script() -> CardScripts {
 }
 
 // #65 Masochism Mask — SPEC §8.3, §10.6, BUILD M4-T4 row 65.
-//
-// Must-pass: "In opening hand (Quickdraw); start-of-turn mode prompt; 'lose 3' ignores armor;
-// radiant two picks including 'nothing'."
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -156,8 +148,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const POSTDOC: &str = "core-061"; // the bottom card of the library in the exile test
 
-    // The prompt options as §8.3's two cells word them. They travel to the client in
-    // `state.pending.options` (a prompt, not a declared mode, R81), so this is where they are pinned.
+    // The prompt options as §8.3 words them, pinned where the client reads them (R81).
     const EXILE_BOTTOM: &str = "exile bottom";
     const LOSE_THREE: &str = "lose 3";
     const SUMMON_PILLOW: &str = "summon Spikey Pillow";
@@ -205,8 +196,7 @@ mod tests {
 
         #[test]
         fn s6_2_quickdraw_both_faces_carry_the_flag_that_starts_the_card_in_the_opening_hand() {
-            // `setup.rs` reads the flag and swaps one opening draw for it; that placement is the engine's
-            // own setup test. What this card owes is the flag, on both faces.
+            // The placement is `setup.rs`'s own test; what this card owes is the flag, on both faces.
             crate::register_all();
             let faces = script();
             assert_eq!(faces.base.static_flags.and_then(|flags| flags.quickdraw), Some(true));
@@ -249,7 +239,6 @@ mod tests {
             s.start_turn().answer(json!(LOSE_THREE));
 
             s.expect_health(P1, 27);
-            // The Armor is still there: nothing was spent on a non-damage loss.
             assert_eq!(s.state().players.p1.hero.armor, 5);
             s.expect_events(json!(["promptAnswered", "healthLost"]));
             assert!(!s.events().iter().any(|event| event.event_type().as_str() == "damaged"));
@@ -288,7 +277,6 @@ mod tests {
 
             s.answer(json!(NOTHING));
 
-            // The first step opened the second prompt, so a second pick is pending.
             assert!(s.state().pending.is_some());
             assert_eq!(option_labels(&s), [NOTHING, EXILE_BOTTOM, LOSE_THREE, SUMMON_PILLOW]);
 
@@ -327,7 +315,6 @@ mod tests {
             let mut s = mask_scenario(true);
             s.start_turn().answer(json!(LOSE_THREE));
 
-            // The step applied its own effect and then opened the next prompt, in that order.
             s.expect_health(P1, 27);
             assert!(s.state().pending.is_some());
 

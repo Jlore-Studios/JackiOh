@@ -1,12 +1,7 @@
 //! Trigger multipliers (docs/meditative-set.md M5, ME-TRIG; R820–R823): how many extra times a
-//! player's hooks of one kind run.
-//!
-//! Two kinds, each a pure-read script hook a card asks while it acts on its controller's field:
-//!   - `TurnHooks` (`Script.turn_hook_extra`, Meditative #9 Joint Filing): the player's start-of-turn
-//!     and end-of-turn hooks, read as they are queued (`triggers::queue_hooks_in_trigger_order`, R821);
-//!   - `CryAndDeath` (`Script.cry_death_extra`, Meditative #10 Double Counting): a permanent's Cry as it
-//!     runs for the player (`play_steps`, `cry_trigger`, R822, R823) and the Death of a card that died
-//!     under their control (`state_check::collect`, R823).
+//! player's hooks of one kind run, a pure-read script hook a card asks while it acts on its
+//! controller's field: `TurnHooks` (Meditative #9 Joint Filing) as the turn's hooks are queued (R821),
+//! `CryAndDeath` (Meditative #10 Double Counting) as a Cry runs (R822, R823) and a Death is collected.
 //!
 //! Multipliers never stack: the highest acting one holds (R820), as Hearthstone's Drakkari Enchanter
 //! and Brann Bronzebeard do. A face-down card acts on nothing, so it multiplies nothing.
@@ -34,15 +29,13 @@ impl Multiplied {
     }
 }
 
-/// R820: the extra runs `player`'s hooks of `kind` get now — the highest any card acting on their side
-/// of the field gives (`zones::acting_on`, each once: the top of each unit pile, the Units its carriers
-/// hold, a Unit standing in the backrow among them, R1081000, R1824000, then each backrow card that is
-/// not face-down, R1487000), or `TRIGGER_EXTRA_NONE` when none does.
+/// R820: the extra runs `player`'s hooks of `kind` get now: the highest any card acting on their side
+/// gives (`zones::acting_on`, a Unit standing in the backrow among them, R1081000, R1824000; not a
+/// face-down card, R1487000), or `TRIGGER_EXTRA_NONE` when none does.
 pub fn extra_runs(state: &GameState, player: PlayerId, kind: Multiplied) -> i32 {
     let cards = crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits);
     let mut highest = TRIGGER_EXTRA_NONE;
     for card in cards {
-        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
         if crate::preview::lasting_text_off(state, card) {
             continue;
         }
