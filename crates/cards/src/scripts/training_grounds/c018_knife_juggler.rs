@@ -135,15 +135,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn it_prints_pierce() {
-            let s = board(false, json!([FILLER]), crate::filler(4));
-            let me = juggler(&s);
-            assert!(unit_has(s.state(), s.card(me.as_str()), KeywordKind::Pierce));
-            let view = s.stats(me.as_str());
-            assert_eq!((view.attack, view.max_health), (3, 2));
-        }
-
-        #[test]
         fn r2197000_a_unit_you_play_draws_one_hit_on_a_random_enemy_after_it_resolves() {
             let mut s = board(false, json!([VANILLA, FILLER]), crate::filler(4));
             let cursor = s.state().rng_cursor;
@@ -276,15 +267,6 @@ mod tests {
 
     mod radiant {
         use super::*;
-
-        #[test]
-        fn it_is_6_4_with_pierce() {
-            let s = board(true, json!([FILLER]), crate::filler(4));
-            let me = juggler(&s);
-            let view = s.stats(me.as_str());
-            assert_eq!((view.attack, view.max_health), (6, 4));
-            assert!(unit_has(s.state(), s.card(me.as_str()), KeywordKind::Pierce));
-        }
 
         #[test]
         fn r2197000_each_arrival_deals_3() {

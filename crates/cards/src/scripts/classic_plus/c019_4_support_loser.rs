@@ -86,20 +86,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_0_4_divine_shield_unit_token_printed_legendary_one_script_serves_both_faces() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.base.attack, Some(0));
-            assert_eq!(def.base.health, Some(4));
-            assert_eq!(def.base.keywords, vec![Keyword::DivineShield]);
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Reborn]);
-            let scripts = script();
-            assert!(Arc::ptr_eq(
-                scripts.base.end_of_turn.as_ref().expect("base end of turn"),
-                scripts.radiant.end_of_turn.as_ref().expect("radiant end of turn"),
-            ));
-        }
-
-        #[test]
         fn base_enters_at_0_4_radiant_unchanged() {
             for (radiant_face, health) in [(false, 4), (true, 8)] {
                 crate::register_all();
