@@ -13772,14 +13772,21 @@
       "taken_asks": []
     },
     "2850": {
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-02T17:07:40Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:d175c4db-1793639346",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-02T17:09:22Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2851": {
       "failures": 0,
@@ -13814,9 +13821,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T17:08:53Z",
+    "at": "2026-11-02T17:09:22Z",
     "url": "",
-    "what": "build #2849 on muse"
+    "what": "build #2850 on muse"
   },
   "last_sweep": {
     "at": "2026-11-02T16:58:59Z",
