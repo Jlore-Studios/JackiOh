@@ -14400,11 +14400,13 @@
         "by": "`claude` (strong)",
         "sha": "5dc7a370b3d1aa36bc66fcf755a924d5f2251b3c"
       },
+      "closed_at": "2026-11-02T21:33:49Z",
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-11-02T19:26:13Z",
       "issue": 2844,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
