@@ -10,6 +10,7 @@ import { MIN_ENTRY_MS, createAnimationQueue, planEntries, type AnimationEntry } 
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import {
   FX_CONCEAL_AT,
+  FX_FLYING_LUNGE_LIFT,
   FX_HOLD_MAX_MS,
   FX_INTENSITY_SCALE,
   FX_LUNGE_CONTACT_AT,
@@ -587,6 +588,23 @@ describe("B48 aiming the lunge in the page", () => {
     expect(y).toBeLessThan(-FX_LUNGE_MIN_PX);
     expect(y).toBeGreaterThan(-200);
     h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
+  });
+
+  it("R2789000 a Flying lunge arcs and release clears --fx-lunge-lift", () => {
+    const attacker = boardElement(`card-${MINE}`, { x: 300, y: 300, width: 60, height: 82 });
+    boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    const h = directorHarness();
+    // A walker's lunge carries no lift.
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350 }]);
+    expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
+    h.director.release();
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350, arc: true }]);
+    expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-lift"))).toBe(FX_FLYING_LUNGE_LIFT);
+    // It still aims along the line to the target.
+    expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-y"))).toBeLessThan(-FX_LUNGE_MIN_PX);
+    h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
     expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
   });
 

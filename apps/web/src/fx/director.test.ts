@@ -486,6 +486,23 @@ describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock
     expect(h.root.querySelectorAll('[data-fx="splat"]')).toHaveLength(1);
   });
 
+  it("R2789000 a callout replaces one of the same keyword over the same unit, and keeps every other", () => {
+    const h = harness();
+    const callout = (keyword: "Cleave" | "Pierce", card: string, delayMs = 0): FxCue => ({ kind: "callout", keyword, at: at(card), delayMs, durationMs: 600 });
+    h.director.play([callout("Cleave", "card-a"), callout("Pierce", "card-a"), callout("Cleave", "hero-opponent")]);
+    h.frame(T0);
+    expect(h.root.querySelectorAll('[data-fx="callout"]')).toHaveLength(3);
+    // A second Cleave over card-a (a Cleave's next neighbour) takes the first's place; the others stay.
+    h.director.play([callout("Cleave", "card-a")]);
+    h.frame(T0 + 300);
+    const shown = [...h.root.querySelectorAll('[data-fx="callout"]')].map((el) => el.getAttribute("data-callout"));
+    expect(shown).toHaveLength(3);
+    expect(shown.filter((keyword) => keyword === "Cleave")).toHaveLength(2);
+    h.pumpTo(T0 + 300 + 600 + 50);
+    expect(h.root.querySelectorAll('[data-fx="callout"]')).toHaveLength(0);
+    expect(h.director.active()).toBe(0);
+  });
+
   it("dismissBanner takes the turn banner and its rays at once, and leaves everything else", () => {
     const h = harness();
     h.director.play([

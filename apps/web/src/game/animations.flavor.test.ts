@@ -199,13 +199,14 @@ describe("#1442 a Ranged attacker fires its flavor's shot", () => {
     const cues = attack(flyer([{ kind: "Flying" }, { kind: "Ranged" }]), "bird-1", ENEMY, { D });
     expect(cues[0]).toEqual({ kind: "lunge", attacker: "card-bird-1", target: `card-${ENEMY}`, delayMs: 0, durationMs: D, still: true });
     expect(cues[1]).toMatchObject({ kind: "shot", shot: FLAVOR_LOOKS.Brute.projectile, from: tid("card-bird-1"), to: tid(`card-${ENEMY}`) });
-    // Without Ranged it lunges as a unit-zone attacker does.
+    // Without Ranged it lunges as a unit-zone attacker does; R2789000: a Flying one arcs over the lane.
     expect(attack(flyer([{ kind: "Flying" }]), "bird-1", ENEMY, { D })[0]).toEqual({
       kind: "lunge",
       attacker: "card-bird-1",
       target: `card-${ENEMY}`,
       delayMs: 0,
       durationMs: D,
+      arc: true,
     });
   });
 
@@ -341,8 +342,10 @@ describe("#1444 a Ranged attack into combat damage plays live", () => {
     });
 
     const fxCues = planFx({ ...attackEntry, durationMs: attackD }, shown, attackEnv);
-    expect(fxCues).toHaveLength(1);
-    expect(fxCues[0]).toMatchObject({ kind: "burst", preset: "dust", delayMs: 0 });
+    // R2789000: and its callout over the shooter.
+    expect(fxCues).toHaveLength(2);
+    expect(fxCues.find((cue) => cue.kind === "burst")).toMatchObject({ preset: "dust", delayMs: 0 });
+    expect(fxCues.find((cue) => cue.kind === "callout")).toMatchObject({ keyword: "Ranged", delayMs: 0 });
 
     const damageEnv: FxPlanEnv = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
     damageEnv.memory.remember(damageEntry.events);

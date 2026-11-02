@@ -36,6 +36,8 @@ export const statsTestid = {
   sortSelect: "stats-sort-select",
   sortDir: "stats-sort-dir",
   modeSelect: "stats-mode-select",
+  /** R2777000: a card row's adjusted win rate. */
+  adjustedCell: "stats-adjusted-cell",
   playersTable: "stats-players-table",
   playersPager: "stats-players-pager",
   playersPrev: "stats-players-prev",
