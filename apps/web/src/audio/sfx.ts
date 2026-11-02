@@ -938,7 +938,8 @@ const cancel: SfxRecipe = (ctx, out, at) => {
  * stand beside its orchestral intro: a band-passed swell rising into the downbeat at a quarter
  * second, where a sub boom, a brass chord opening through a low-pass and a cymbal's wash land
  * together under high glints; a Mythic's glints are more and faster and shimmer, over a choir of
- * detuned saws. Its loudest moment is no louder than the gong and brass it replaced (B57).
+ * detuned saws. Its loudest moment, Mythic or not, is no louder than the Legendary gong and brass it
+ * replaced (B15, B57).
  */
 const entrance: SfxRecipe = (ctx, out, at, params) => {
   const len = 1.3;
@@ -956,7 +957,7 @@ const entrance: SfxRecipe = (ctx, out, at, params) => {
   chain(swell, band, rise, out);
   run(k, swell, 0, hit + 0.08);
   // The downbeat: a sub boom, the brass chord opening, the cymbal.
-  fmBell(k, out, 49, 1.5, 90, hit, 0.008, 0.34, len);
+  fmBell(k, out, 49, 1.5, 90, hit, 0.008, 0.33, len);
   const brass = biquad(k, "lowpass", 400, 0);
   glide(k, brass.frequency, 3200, hit + 0.45);
   const voices = level(k, 0.5);
@@ -970,15 +971,18 @@ const entrance: SfxRecipe = (ctx, out, at, params) => {
   chain(wash, biquad(k, "highpass", 6000, 0), envelope(k, hit, 0.005, 0.12, len), out);
   run(k, wash, hit, len);
   if (mythic) {
+    // The voices start with their envelope: a gain is 1 until its first event, so a voice that
+    // sounded before the envelope's start would ring at full level for that gap.
+    const sing = hit + 0.05;
     const choir = biquad(k, "lowpass", 2200, 0);
     const swing = tremolo(k, 5.5, 0.25);
-    chain(choir, heldEnvelope(k, hit + 0.05, 0.3, 0.12, 1, 0.08, len), swing, out);
+    chain(choir, heldEnvelope(k, sing, 0.3, 0.12, 1, 0.08, len), swing, out);
     for (const hz of [392, 494, 587]) {
       for (const cents of [-9, 9]) {
-        const voice = oscillator(k, "sawtooth", hz, hit);
-        voice.detune.setValueAtTime(k.cents + cents, time(k, hit));
+        const voice = oscillator(k, "sawtooth", hz, sing);
+        voice.detune.setValueAtTime(k.cents + cents, time(k, sing));
         chain(voice, choir);
-        run(k, voice, hit, len);
+        run(k, voice, sing, len);
       }
     }
   }
@@ -987,7 +991,7 @@ const entrance: SfxRecipe = (ctx, out, at, params) => {
   chain(shimmer, out);
   glints.forEach((hz, i) => {
     const start = hit + 0.05 + (mythic ? 0.06 : 0.08) * i;
-    tone(k, shimmer, "sine", hz, start, 0.003, 0.1, start + 0.45);
+    tone(k, shimmer, "sine", hz, start, 0.003, mythic ? 0.08 : 0.1, start + 0.45);
   });
   return len;
 };
