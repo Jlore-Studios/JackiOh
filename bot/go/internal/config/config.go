@@ -707,6 +707,10 @@ type Config struct {
 	// OwnReviewReserveMinutes: how long the lane stays reserved for that own review run once the
 	// build delivered (`own_review_reserve_minutes`, 30 when it is left out).
 	OwnReviewReserveMinutes int // default: 30
+	// UsageHistory: the status loop records every subscription's usage over time on the usage
+	// branch (#2749, `usage.go`, `internal/usage`). The config's `usage_history`; off when it is
+	// left out, as Squishy's is.
+	UsageHistory bool // default: False
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`

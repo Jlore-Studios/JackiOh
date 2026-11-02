@@ -13,6 +13,7 @@
     "branch_prefix": "squishy/",
     "state_branch": "squishy-state",
     "journal_branch": "squishy-journal",
+    "usage_branch": "",
     "workflow": "squishy-run.yml",
     "marker": "<!-- jackioh-squishy -->",
     "trust": ".harness/trust.txt",
@@ -88,6 +89,7 @@
   "fullsend_adopt": false,
   "fullsend_send_backs": 0,
   "own_review_run": false,
+  "usage_history": false,
   "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
     { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },

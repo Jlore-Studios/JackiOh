@@ -295,6 +295,11 @@ func labelled(ctx *hctx.Context, issue *pyjson.Object) {
 // Update is update; a variable so the tests can replace it.
 var Update = update
 
+// Looked is given each rewrite's view once the rewrite is done (or has failed), by `update`: the
+// status loop's usage history records its tick from it (`usage.Recorder.Tick`, #2749), so a tick
+// reads nothing from GitHub twice. nil, outside the loop, gives it to nothing.
+var Looked func(ctx *hctx.Context, view *View)
+
 // update is update: rewrite the status issue, opening and pinning it first if there is none.
 // `extra` are the other bots' sections (`section`), drawn by their own processes.
 //
@@ -312,6 +317,9 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 		statsExtra = func() []string { return nil }
 	}
 	view := Look(ctx)
+	if Looked != nil {
+		defer Looked(ctx, view)
+	}
 	view.Found = ReadRunners(ctx)
 	view.Learn = LearnLane(ctx, view.Found)
 	state := view.State

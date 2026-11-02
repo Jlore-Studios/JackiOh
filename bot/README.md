@@ -1701,6 +1701,166 @@ days.
 | read what the model did | the `work` artifact of the run: `result.json` and the bundle (set `upload_transcripts` to keep the full sessions too) |
 | change the rounds, budgets or checks | edit `.harness/config.json` in a pull request |
 | let someone else command it | add a line to `.harness/trust.txt` |
+| see how each subscription's usage works out over time | the CSV files on the `bot-usage` branch ([The usage history](#the-usage-history)), which any spreadsheet opens; `harness usage backfill` in `bot/` reads the journal into them again |
+
+## The usage history
+
+The limits in `.harness/providers.json` (each subscription's caps, hours, lanes and headroom) were
+set by hand from a few readings, and the state file keeps only each subscription's newest one. So
+the status loop records every subscription's usage over time (#2749), as CSV files any
+spreadsheet opens, on the unprotected orphan branch **`bot-usage`**
+([`go/internal/usage/`](go/internal/usage/)): the identity's `usage_branch`, turned on by
+`usage_history` in `.harness/config.json`. Squishy keeps none: its config leaves the key off and
+its identity names no usage branch. The branch starts with a `vercel.json` that switches Vercel
+off for it, as `bot-state`'s and `bot-journal`'s do; Cloudflare needs nothing, since its own Git
+builds are disconnected and only `promote-production.yml` deploys there
+([docs/deploy-cloudflare.md](../docs/deploy-cloudflare.md), step 3). A record, never a gate: a
+failed read or write is a warning, and the loop, the run and the delivery go on.
+
+**The files**, under `usage/`: `readings-YYYY-MM.csv`, `ticks-YYYY-MM.csv`, `pools-YYYY-MM.csv`,
+`sessions-YYYY-MM.csv` and `runs-YYYY-MM.csv` by the month (UTC) of each row's own time, and
+`weeks.csv` whole, with `backfill.json`, the backfill's marker. Times are UTC in RFC3339
+(`2026-11-02T03:04:05Z`), numbers plain decimals, utilizations percent from 0 to 100 with at most
+one decimal, flags 1 or 0, and anything unknown an empty cell. The issue's columns come first, in
+its order; the ones the history adds come last, and a column only ever joins at the end of its
+header (a file written under an older header is rewritten under the new one before rows are added
+to it). No file holds a row twice: a reading is one per subscription and `observed_at`, a run one
+per `run_id`, a tick one per subscription and `at`, a session or a week one per subscription and
+reset.
+
+**Where the rows come from.** A run keeps every reading it takes in its `result.json`
+(`readings`, numbers and times only): the start ping, what each call streams (every 15 seconds,
+`work.Worker.noteReading`), Muse's and agy's `/usage` before, every ten minutes during and after
+each call, and a refusal, each with the caps in force on it as the run holds them (its hours, late
+week, last hour and hard cap). It keeps a reading only when a window moved a point or more, a
+reset, status, cap or refusal changed, or ten minutes passed (`ThinPoints`, `ThinEvery`), at most
+400 a run (`MaxRunReadings`). Its delivery, wherever it runs (inside the loop, `controller.Deliver`,
+or a night run's deliver job), puts those readings, in the same write as its usage
+(`providers.NoteUsage`), and then the run's own row in a small spool in the state file
+(`usage_spool`, at most 2,000 lines of each kind, `SpoolMax`), so no delivery pushes the branch.
+Its claim leaves in the plan what that row reads (`usage_facts`: when it was queued and claimed,
+the thread's last subscription, and why its item changed hands). The loop, at every five-minute
+tick, takes from what the status issue already read, with no GitHub call of its own
+(`dashboard.Looked`): the spool's rows, the state file's newest reading of each subscription when
+no run handed it on (one equal to the subscription's newest reading the history holds is the one
+its delivery re-dated, and adds nothing), a tick row per subscription when anything in it changed
+(and at least hourly, `TickEvery`), and the pools' row. Every 30 minutes (`FlushEvery`, the
+statistics' cadence), and once more when the loop ends, it writes them to a clone of the branch it
+keeps in `RUNNER_TEMP` for its lifetime (shallow, its tip alone), derives the sessions and weeks
+that closed, commits and pushes, with the job's own token, whose pushes start no workflow; it then
+takes what it pushed out of the spool. A push the branch's moving refused is fetched and written
+again on its new tip, up to three times (`PushAttempts`); any other failure keeps the rows, in
+memory and in the spool, for the next flush. That flush is also where the usage issue is to be
+drawn from these files (`usage.Draw`, #2749 section 2).
+
+**Sessions and weeks** are derived once a window's reset is six hours past (`SettleAfter`, longer
+than a run's job budget, so its readings have been delivered): a loop's first flush looks 40 days
+back for them (`DeriveLookback`, the backfill's among them), each later one two days
+(`DeriveRecent`), so a flush reads days of rows, not weeks. Each is derived once: a window is its subscription and the reset its readings name, within
+10 minutes for a session and 3 hours for a week (`ResetSlack`, `WeekSlack`: Muse's and agy's
+`/usage` give "resets in 2h 13m"), so deriving again adds nothing. `unused_at_reset` is 100 minus
+the last reading before the reset, the share of the whole window never spent, whatever cap held
+it; the share under the cap left unspent is `cap_max - util_last_read`.
+
+**The backfill.** The first flush that finds the branch without `usage/backfill.json` reads the
+journal by itself, from a shallow fetch of `bot-journal` (not file by file): a runs row for every
+run whose section is dated 2026-10-06 or later (`BackfillSince`), and a readings row for each cut-off
+whose line names the reading and its reset (or a refusal and its end), then derives what it can.
+An older section lacks some lines (tokens, steps, the session): their cells stay empty. A run's
+previous subscription is the one of the section before it in the same file; a cut-off's reading is
+dated by its stop step's clock, else the section's heading. `harness usage backfill
+[--since YYYY-MM-DD]` reads it again whenever a person asks, and adds only the rows the branch
+lacks.
+
+**What it never records:** a prompt, the model's text, tool output, a reason's or a note's words,
+a token or a secret. A run's words are the history's own (`source`, `during`, `stop_reason`,
+`state`, …); a status, outcome or model that is not a short id is left empty, since the model job's
+`result.json` is not trusted. No model call is made to read usage: a Claude account is read only
+by its runs (each tick says how old its newest reading is), and so are Muse and agy.
+
+`usage/readings-YYYY-MM.csv`, one row per real reading:
+
+| Column | Meaning | Unit | From |
+|---|---|---|---|
+| `observed_at` | when it was read | time | the run's clock; the state file's `observed_at` (a delivery's time) for the loop's |
+| `subscription` | whose | id | the run's subscription |
+| `source` | `ping` (a Claude account's Haiku turn before a run), `stream` (what a call streamed: Claude's, Codex's), `usage-command` (Muse's and agy's `/usage`), `refusal`; empty for one the loop found in the state file that no run handed on | word | the run's CLI |
+| `during` | `before` (the run's start), `call` (during a call, or its end), `after` (Muse's and agy's reading after a call), `tick` (the loop's) | word | |
+| `run_id` | the night run that took it | id | deliver's run id; empty for the loop's |
+| `util_5h`, `util_7d` | the 5-hour session's and the week's usage | percent | the reading |
+| `resets_5h`, `resets_7d` | when each window resets | time | the reading |
+| `status` | the reading's status (`allowed`, `allowed_warning`, `rejected`, …) | word | the reading |
+| `cap_5h_in_force`, `cap_7d_in_force` | the cap the run held the reading to then; empty for none of its own | percent | `providers.Provider.CapsAt`, with the run's last hour |
+| `refused_until` | added: a refusal's end | time | the runner's reset |
+
+`usage/ticks-YYYY-MM.csv`, one row per subscription per tick when anything in it changed, and at
+least hourly; a row stands until the next one (at most 75 minutes, `TickCovers`):
+
+| Column | Meaning | Unit | From |
+|---|---|---|---|
+| `at`, `subscription` | the tick, and whose | time, id | the loop |
+| `enabled`, `suspended`, `in_hours` | switched on (and not past `off_from`), suspended, inside its `schedule` | flag | providers.json, the state file |
+| `last_hour_now`, `late_week_now` | its session's last hour lifts its 5-hour cap now; its late week holds | flag | `providers.LastHourOf`, `LateWeekHolds` |
+| `cap_5h_now`, `cap_7d_now`, `hard_cap`, `start_headroom_5h` | the caps in force now, its hard cap, the 5-hour start headroom | percent | `CapsAt`, providers.json |
+| `util_5h`, `util_7d`, `reading_at`, `reading_age_min`, `resets_5h`, `resets_7d` | its newest reading, when it was taken and how old it is (a reset before `at` means the window reset since) | percent, time, minutes | the state file |
+| `refused_until` | a refusal not over yet | time | the state file |
+| `lanes_allowed`, `lanes_held`, `runs_held`, `planning_held` | the lanes in force for a run starting now (`lanes_by_cap`), its own lanes its runs hold, all its runs, its planning runs | count | the lanes the status issue read |
+| `state` | `working` (a run of it is going), `ready` (the planner gives it an item at the next run), `idle` (it may start, nothing queued is for it), `capped` (its usage holds it, reviews-only included), `outside-hours`, `backing-off` (its last run could not work), `off` (switched off, suspended, no secret, or halted), `no-runner` (it may start, no runner slot is free where it runs) | word | the status issue's subscription boxes (`waiting.Subscriptions`), `usage.States` |
+| `queued_for_it`, `waiting_for_it` | queued items it has a seat to take, and of them those no run takes at the next run | count | the status issue's queue |
+| `held_for_it` | added: items held for it (`bot:waiting`) | count | the holds |
+| `runs_plan`, `runs_build`, `runs_revise`, `runs_review` | added: its runs by kind | count | the state file's records |
+
+`usage/pools-YYYY-MM.csv`, the pools at a tick, when anything changed and at least hourly (a file
+of its own, so the ticks file keeps one row shape):
+
+| Column | Meaning | Unit | From |
+|---|---|---|---|
+| `at` | the tick | time | |
+| `github_slots_used`, `aws_slots_used`, `plan_lanes_used` | this bot's runs on GitHub's runners and the AWS boxes, and its planning runs | count | the lanes |
+| `queued_<kind>_<difficulty>` | the queue by what its next run does (`plan`, `build`, `revise`, `review`) and difficulty (`medium`, `hard`, `unrated`): twelve columns | count | the queue |
+| `oldest_wait_min` | how long the longest-queued item has waited | minutes | its `queued_at` |
+| `github_slots`, `aws_slots`, `plan_lanes` | added: their limits (`max_parallel`, `machine_parallel`, `plan_lanes`) | count | providers.json |
+| `queued`, `held_for_owner` | added: the whole queue, and the items held for their owner | count | the queue |
+
+`usage/sessions-YYYY-MM.csv`, one row per closed 5-hour session (by its reset's month):
+
+| Column | Meaning | Unit | From |
+|---|---|---|---|
+| `subscription`, `started_at`, `reset_at` | whose, and its five hours (`started_at` is the reset less five hours) | id, time | the readings' `resets_5h` |
+| `cap_min`, `cap_max` | the lowest and highest 5-hour cap in force in it | percent | its readings and ticks |
+| `peak_util`, `util_last_read`, `unused_at_reset` | its highest reading, its last, and 100 minus the last | percent | its readings |
+| `hit_cap_at` | its first reading at or over the cap in force then (100 where it had none), refusal, or tick at or over its cap | time | |
+| `minutes_capped`, `minutes_capped_with_work_queued` | its ticks' minutes in `capped`, and of them those with work queued that it may take | minutes | its ticks |
+| `last_hour_used` | how many points its usage rose in its last hour | points | its readings |
+| `runs`, `model_minutes`, `cut_offs`, `refusals` | the runs that ended in it, their model minutes, and those stopped at a 5-hour cap or by a refusal | count, minutes | the runs |
+| `overshoot_max` | its highest reading minus the cap in force then (negative: it stayed under) | points | its readings |
+| `readings` | added: how many readings it was derived from | count | |
+
+`usage/weeks.csv`, one row per closed week:
+
+| Column | Meaning | Unit | From |
+|---|---|---|---|
+| `subscription`, `reset_at` | whose, and its reset | id, time | the readings' `resets_7d` |
+| `peak_util`, `util_at_reset`, `unused_at_reset` | its highest reading, its last, and 100 minus the last | percent | its readings |
+| `first_capped_at` | its first reading at or over its weekly cap (100 where it had none), or tick at or over it | time | |
+| `days_refused` | the days, to a tenth, between a refusal and its end, within the week | days | its readings and ticks |
+| `runs`, `model_hours`, `tokens`, `usd_reported` | the runs that ended in it, their model hours, tokens in and out, and reported USD | count, hours, tokens, USD | the runs |
+| `readings` | added: how many readings it was derived from | count | |
+
+`usage/runs-YYYY-MM.csv`, one row per delivered run, its journal section's numbers:
+
+| Column | Meaning | Unit | From |
+|---|---|---|---|
+| `ended_at`, `run_id`, `subscription` | when it ended, its night run, whose | time, id | the result's `finished_at` (the delivery's time when it names none, and the journal heading's in the backfill) |
+| `models`, `kind`, `item`, `difficulty` | its seats' models (joined with `+`), what it did (`plan`, `build`, `revise`, `review`, `suggest`), its thread, its difficulty | ids | the plan |
+| `outcome`, `stop_reason` | how it ended; why it stopped short: `5-hour cap`, `weekly cap`, `refusal`, `time budget`, `halt`, `stop`, `infra`, `died`, empty when it was not cut off | words | the result (`usage.StopReason`) |
+| `model_minutes`, `tokens_in`, `tokens_out`, `tokens_cached`, `usd_reported` | as its journal section says them (USD is the Claude CLI's API-price figure, not a bill) | minutes, tokens, USD | the result |
+| `util_5h_start`, `util_5h_end`, `util_7d_start`, `util_7d_end` | its first and last readings of each window | percent | its readings |
+| `queue_wait_min` | how long it was queued before its claim | minutes | `usage_facts` |
+| `previous_subscription` | the subscription the thread's last run was on | id | `usage_facts`; the section before it in the backfill |
+| `session` | added: `resumed` (its Claude call went on in the item's kept session), `fresh`, `none` | word | the result's `session` |
+| `handed_off` | added: why its item came to it from another subscription: `cap` (the owner's usage held it, a hold that ran out), `time budget`, `person` (`/harness handoff`), `other` (its hours, its lanes, …), empty when it did not change hands | word | the claim's `owner_why` |
+| `model_calls` | added | count | the result |
 
 ## Squishy
 
@@ -1715,7 +1875,7 @@ suggestions. On top of a plain build it has four modes.
 | Commands | `/harness <verb>`, `@jgoetzmann-bot <verb>` | `/squishy <verb>`, `@squishy-squooby <verb>` |
 | Labels | `bot:build`, `bot:building`, … | `squishy:build`, `squishy:building`, …: the same live labels, `squishy:merging` and `squishy:waiting`, and a thread still labelled the retired `squishy:working` reads as held |
 | Lanes | a Claude account's by its 5-hour cap in force (`lanes_by_cap`) | its account's own `lanes` (2): its `providers.json` has no `lanes_by_cap` |
-| Branches, state, journal | `bot/issue-<n>`, `bot-state`, `bot-journal` | `squishy/issue-<n>`, `squishy-state`, `squishy-journal` |
+| Branches, state, journal, usage | `bot/issue-<n>`, `bot-state`, `bot-journal`, `bot-usage` | `squishy/issue-<n>`, `squishy-state`, `squishy-journal`, and no usage history |
 | Switches | `.harness/` (`config.json`, `providers.json`, `HALT`) | `.squishy/` (the same; the trust list is `.harness/trust.txt`) |
 | Workflows | `bot-night.yml`, `bot-commands.yml` | `squishy-run.yml`, `squishy-commands.yml` |
 | Subscriptions | the pool above | `claude-squishy` only (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`): Opus for every role, always on GitHub's runners |
@@ -1853,6 +2013,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/cardsets/` | which set's cards win most, in the status issue's statistics: each set's pooled, mean and median card win rate over the last three patches with 1,000 games or more, read once a day from production's public `/api/stats/cards` and kept in the issue between reads |
 | `go/internal/state/`, `go/internal/status/`, `go/internal/clock/` | the state file on `bot-state`, the status report, time and windows |
 | `go/internal/journal/` | each item's journal on `bot-journal`: a section per run, read into the next run's plan (#342) |
+| `go/internal/usage/` | the usage history on `bot-usage` (#2749): its files and their rows, a run's readings in its result, the state file's spool deliver hands them on in, the loop's ticks, its clone of the branch and its flush, the sessions and weeks derived from them, and the backfill from `bot-journal` |
 | `go/internal/cli/` | the command line (`go/cmd/harness/` is the binary, a few lines around it): every subcommand, the companion process, `$GITHUB_OUTPUT` and the step summary |
 | `go/internal/herr/` | the harness's errors (`GitHubError`, `ConfigError`, …), raised as typed panics and caught where the Python caught them |
 | `go/internal/pyjson/` | JSON as the Python held it: key order kept, written byte for byte as `json.dumps` writes it (the state file, the plans, `result.json`) |

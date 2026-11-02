@@ -33,6 +33,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sweep"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
@@ -388,6 +389,40 @@ func TestSquishyCases_ItKeepsItsOneRunFlow(t *testing.T) {
 	assertNotIn(t, "squishy:reviewing", world.gh.LabelNames(pull.Int("number")))
 	assertEqual(t, len(queue.OwnReviewsWaiting(world.ctx.Store.Load())), 0)
 	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+}
+
+// Squishy keeps no usage history (#2749): its config leaves `usage_history` off and its identity
+// names no usage branch, so its runs keep no readings, its claims note nothing for one, its
+// deliveries spool nothing, and its loop clones and pushes nothing.
+func TestSquishyCases_ItKeepsNoUsageHistory(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertEqual(t, config.Identity.UsageBranch, "")
+	assertFalse(t, world.cfg.UsageHistory)
+	assertFalse(t, world.cfg.RecordsUsage())
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	r := workFake(map[string]runner.Handler{
+		"build": func(request *runner.RunRequest) *runner.RunResult {
+			assertTrue(t, request.UsageSeen == nil, "no watch for the history")
+			writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+			result := runner.NewRunResult(true, squishyCasesDone)
+			result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
+			return result
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }})
+	planned, result := world.run(r)
+	assertEqual(t, result.Get("status"), "approved")
+	assertFalse(t, result.Has(usage.ResultKey))
+	assertFalse(t, planned.Has(plan.UsageFacts))
+	assertFalse(t, world.ctx.Store.Load().Has(usage.SpoolKey))
+	scratch := filepath.Join(world.root, "scratch")
+	defer func(was func() string) { usage.Scratch = was }(usage.Scratch)
+	usage.Scratch = func() string { return scratch }
+	recorder := usage.NewRecorder(func(line string) { t.Errorf("Squishy's loop logged %q", line) })
+	recorder.Tick(world.ctx, usage.TickFacts{State: world.ctx.Store.Load(), Live: pyjson.New()})
+	recorder.Close(world.ctx)
+	assertEqual(t, recorder.Root(), "")
+	assertFalse(t, exists(scratch))
 }
 
 // ------------------------------------------------------------------ SplitCases

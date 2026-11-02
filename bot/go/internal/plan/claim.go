@@ -22,6 +22,12 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/threads"
 )
 
+// UsageFacts is where a claim puts in the plan what the run's row in the usage history reads when
+// it is delivered (#2749, `usage.RunOf`): `queued_at` and `claimed_at`, `previous_provider` (the
+// subscription the thread's last run was on) and `handed_off` (its item's `owner_why` when the
+// claim took it from another owner, "" when it did not). Only with `usage_history`.
+var UsageFacts = "usage_facts"
+
 // providerFields is what the model job needs to know about the subscription it runs on. The
 // secret's value is never here: the workflow hands the model job only the secret named.
 func providerFields(ctx *hctx.Context, provider *providers.Provider) *pyjson.Object {
@@ -363,13 +369,26 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	var taken []string
 	ctx.Store.Update(func(state *pyjson.Object) any {
 		entry := hstate.Item(state, number)
+		previous := entry.Get("provider")
 		entry.Update(pyjson.New("run_id", cfg.RunID, "started_at", clock.ISO(ctx.Now()), "kind", kind,
 			"action", assignment.Action, "stop_requested", false, "pending_request", false,
 			"provider", provider.ID, "runs_on", planned.Get("runs_on"), "live", live))
+		handedOff := ""
 		if kind != "review" {
 			// The subscription that takes it up owns it (#2748); a held item waits no more.
+			was := queue.OwnerOf(state, number)
 			takeOver(state, number, provider.ID, assignment, ctx.Now())
+			why := recordOf(state, strconv.Itoa(queue.OwnerItem(state, number))).Str("owner_why")
+			if was != provider.ID && (was != "" || strings.Contains(why, "released")) {
+				handedOff = why // from another owner, or released from one: not a first claim
+			}
 			entry.Pop("hold")
+		}
+		if cfg.RecordsUsage() {
+			// What the run's row in the usage history reads at delivery (#2749): how long it was
+			// queued, the subscription its last run was on, and why it changed hands, if it did.
+			planned.Set(UsageFacts, pyjson.New("queued_at", candidate.QueuedAt,
+				"claimed_at", clock.ISO(ctx.Now()), "previous_provider", previous, "handed_off", handedOff))
 		}
 		if reserved := queue.OwnReviewOf(entry); candidate.OwnReview && reserved != nil {
 			// Its own review run takes it up (#2748): the lane its build reserved is this run's now.

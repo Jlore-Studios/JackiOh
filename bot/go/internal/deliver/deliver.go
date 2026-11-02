@@ -54,6 +54,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	usagemod "github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/vault"
 )
 
@@ -206,6 +207,7 @@ func (x *Deliverer) Run() *pyjson.Object {
 	minutes, _ := py.Float(py.Or(x.Result.Get("minutes"), 0))
 	tokens := pyjson.Obj(x.Result.Get("tokens"))
 	cost, _ := py.Float(py.Or(x.Result.Get("cost_usd"), 0))
+	readings := x.usageReadings()
 	x.Ctx.Store.Update(func(s *pyjson.Object) any {
 		var spent *float64
 		if cost > 0 {
@@ -213,6 +215,9 @@ func (x *Deliverer) Run() *pyjson.Object {
 		}
 		providers.NoteUsage(s, x.Provider.ID, pyjson.Obj(usage), py.OrStr(resetAt, ""), x.Ctx.Now(),
 			minutes, tokens, spent)
+		// The run's readings for the usage history (#2749), in the same write: the loop never sees
+		// the newest reading here without them.
+		usagemod.Spool(s, readings...)
 		return nil
 	}, "usage "+x.Provider.ID)
 	x.machineDisk()
@@ -227,6 +232,7 @@ func (x *Deliverer) Run() *pyjson.Object {
 	default:
 		return pyjson.New("status", "nothing", "log", []any{"nothing was planned"})
 	}
+	x.recordRun() // its row for the usage history, as it ended (#2749)
 	x.Chain_()
 	return pyjson.New("status", x.Result.Get("status"), "log", pyjson.ListOf(x.Log))
 }

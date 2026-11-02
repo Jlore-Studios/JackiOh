@@ -120,6 +120,12 @@ type Row struct {
 	// True for an item the planner leaves out of the queue (`human`, a blocker, open parts).
 	Held   bool // default: False
 	Forced bool // default: False
+	// Able is the subscriptions with a seat that may take its next step (`Able`), whatever holds
+	// them now; HeldFor the one it is held for (`bot:waiting`, #2748), "" for none; QueuedAt when
+	// it was queued. The usage history counts the queue for each subscription from them (#2749).
+	Able     []string // default: ()
+	HeldFor  string   // default: ""
+	QueuedAt string   // default: ""
 }
 
 // Explained is waiting.Explained.
@@ -417,7 +423,13 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 		}
 		start, _ := starts.Get(strconv.Itoa(c.Number)).(*plan.Assignment)
 		row := &Row{Number: c.Number, Title: c.Title, Step: step, Difficulty: difficulty, Tier: tier,
-			TierWhy: why, Priority: priority, Starts: start, Forced: c.Forced}
+			TierWhy: why, Priority: priority, Starts: start, Forced: c.Forced, QueuedAt: c.QueuedAt}
+		for _, p := range Able(ctx.Cfg.Pool, c, step, tier) {
+			row.Able = append(row.Able, p.ID)
+		}
+		if held := holds[c.Number]; held != nil {
+			row.HeldFor = held.Owner
+		}
 		if row.Starts == nil {
 			row.Waiting = halted
 			if held := holds[c.Number]; held != nil {
@@ -544,10 +556,10 @@ func Subscriptions(ctx *hctx.Context, s *pyjson.Object, lanes *plan.Lanes, after
 	return found
 }
 
-// Why no run takes `c` now: the kind of model it needs, and which of them frees up first.
-// `now` is Subscriptions' result.
-func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step string, tier string, lanes *plan.Lanes, now *pyjson.Object) string {
-	pool := ctx.Cfg.Pool
+// Able is the subscriptions with a seat at `tier` or above that may take `step` of `c`, in the
+// usage order, whatever holds them now: a spot-check never goes to its builder's subscription,
+// and an own review run only to its owner's.
+func Able(pool *providers.Pool, c *queue.Candidate, step string, tier string) []*providers.Provider {
 	role, ok := plan.RoleOf[step]
 	if !ok {
 		role = step
@@ -564,6 +576,18 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 			able = append(able, p)
 		}
 	}
+	return able
+}
+
+// Why no run takes `c` now: the kind of model it needs, and which of them frees up first.
+// `now` is Subscriptions' result.
+func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step string, tier string, lanes *plan.Lanes, now *pyjson.Object) string {
+	pool := ctx.Cfg.Pool
+	role, ok := plan.RoleOf[step]
+	if !ok {
+		role = step
+	}
+	able := Able(pool, c, step, tier)
 	if len(able) == 0 {
 		return fmt.Sprintf("⚠️ no subscription has a %s seat that may %s it", tier, role)
 	}

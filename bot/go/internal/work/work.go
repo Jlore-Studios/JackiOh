@@ -54,6 +54,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/resolve"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/verdicts"
 )
 
@@ -434,6 +435,11 @@ type Worker struct {
 	GH gh.Client
 	// ciRead is what the last CI reading found (`ciRed`), for the round's record and the reviewer.
 	ciRead string
+	// readings is every usage reading this run took, for the usage history (#2749,
+	// `usage.Note`), which its result carries; readingsMu guards it, since a call's watch adds to
+	// it from a goroutine of its own. None is kept without `usage_history`.
+	readings   []any
+	readingsMu sync.Mutex
 
 	sigMu sync.Mutex
 	sigCh chan os.Signal
@@ -872,6 +878,10 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 	if x.Provider.Limits.Stops().Len() > 0 {
 		usageStop = x.usageStop
 	}
+	var usageSeen func(*pyjson.Object)
+	if x.Cfg.RecordsUsage() {
+		usageSeen = func(reading *pyjson.Object) { x.noteReading(reading, x.callSource(), "call", time.Time{}) }
+	}
 	request := &runner.RunRequest{
 		Role:            role,
 		Prompt:          prompt,
@@ -886,6 +896,7 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 		Transcript:      transcript,
 		ExtraDirs:       x.gitDirs(cwd),
 		UsageStop:       usageStop,
+		UsageSeen:       usageSeen,
 	}
 	// The call, and its tally on `step`: in its own session's continuation when the item's last
 	// run here kept one, else (and whenever that fails) fresh (`session.go`, #2748).
@@ -897,6 +908,7 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 	if result.Usage.Len() > 0 {
 		x.LastUsage = result.Usage
 	}
+	x.noteCall(result)
 	if result.Extra.Truthy("usage_stop") {
 		herr.Raise(NewInterrupt(fmt.Sprintf("`%s` stops mid-call: %s", x.Provider.ID,
 			py.Str(result.Extra.Get("usage_stop"))), "usage", ""))
@@ -947,6 +959,52 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 	return py.MustInt(v)
 }
 
+// noteReading keeps one usage reading for the usage history (#2749, `usage.Note`), read now from
+// `source` `during` the run, with the caps in force on it as the run holds them (its off hours,
+// late week, last hour and hard cap: `refusal`'s), and a refusal's end. Nothing without
+// `usage_history`.
+func (x *Worker) noteReading(reading *pyjson.Object, source, during string, refusedUntil time.Time) {
+	if !x.Cfg.RecordsUsage() {
+		return
+	}
+	now := x.Now()
+	observed := reading.Copy()
+	observed.Set("observed_at", clock.ISO(now))
+	caps := x.Provider.CapsAt(now, x.Cfg.Timezone, observed, x.LastHour)
+	x.readingsMu.Lock()
+	defer x.readingsMu.Unlock()
+	x.readings = usage.Note(x.readings, now, source, during, reading, caps, refusedUntil)
+}
+
+// noteCall keeps what a model call's end says of its subscription's usage: its refusal, or its
+// last reading (what it streamed; Muse's and agy's `/usage` after it).
+func (x *Worker) noteCall(result *runner.RunResult) {
+	switch {
+	case result.RateLimited():
+		x.noteReading(result.Usage, "refusal", "call", usage.RefusalEnd(result.ResetAt, x.Now()))
+	case result.Usage.Len() > 0 && x.polls():
+		x.noteReading(result.Usage, "usage-command", "after", time.Time{})
+	case result.Usage.Len() > 0:
+		x.noteReading(result.Usage, "stream", "call", time.Time{})
+	}
+}
+
+// polls is: this run's CLI streams no usage and reads it with its own command (Muse's and agy's
+// `/usage`, `runner.PollsUsage`).
+func (x *Worker) polls() bool {
+	poller, ok := x.Runner.(interface{ PollsUsage() bool })
+	return ok && poller.PollsUsage()
+}
+
+// callSource is where a reading during a call comes from: Muse's and agy's own `/usage`, or what
+// the call streamed.
+func (x *Worker) callSource() string {
+	if x.polls() {
+		return "usage-command"
+	}
+	return "stream"
+}
+
 // While a call runs: the reading it just streamed, against the provider's caps (and
 // its `off_hours` ones outside its window). A reason stops the call there.
 func (x *Worker) usageStop(usage *pyjson.Object) string {
@@ -991,7 +1049,13 @@ func (x *Worker) startCheck() {
 		return
 	}
 	x.LastUsage = x.StartUsage
-	if reason := x.refusal(x.StartUsage, x.planIn("action", LongActions...)); reason != "" {
+	reason := x.refusal(x.StartUsage, x.planIn("action", LongActions...))
+	source := "ping" // a Claude account's Haiku turn (`cmd_work`)
+	if x.polls() {
+		source = "usage-command"
+	}
+	x.noteReading(x.StartUsage, source, "before", time.Time{})
+	if reason != "" {
 		herr.Raise(NewInterrupt(fmt.Sprintf("`%s` stops before it starts: %s", x.Provider.ID,
 			reason), "usage", ""))
 	}
@@ -1018,6 +1082,11 @@ func (x *Worker) WriteResult(checkpoint bool /* = False */) string {
 	mkdirAll(x.OutDir)
 	x.keepSession() // the builder's session as it stands, sealed beside the result (#2748)
 	x.Result.Set("usage", objOrNone(x.LastUsage))
+	x.readingsMu.Lock()
+	if len(x.readings) > 0 { // the usage history's (#2749): numbers and times only
+		x.Result.Set(usage.ResultKey, pyjson.DeepCopy(x.readings))
+	}
+	x.readingsMu.Unlock()
 	x.Result.Set("finished_at", clock.ISO(x.Now()))
 	x.Result.Set("model_calls", x.Calls)
 	x.Result.Set("minutes", py.RoundN(x.Minutes, 1))

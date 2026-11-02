@@ -414,6 +414,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	if c.OwnReviewReserveMinutes < 0 {
 		raiseConfig("own_review_reserve_minutes: must be 0 (no lane kept) or more")
 	}
+	c.UsageHistory = pyjson.Truthy(raw.GetOr("usage_history", optional.Get("usage_history")))
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
 		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))

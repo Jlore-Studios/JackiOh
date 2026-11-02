@@ -389,6 +389,9 @@ type RunRequest struct {
 	// UsageStop is asked with each usage reading the CLI streams while the call runs (Claude's
 	// `rate_limit_event`): a reason stops the call there, "" (None) lets it go on.
 	UsageStop func(*pyjson.Object) string // default: None
+	// UsageSeen is given each usage reading the call's watch sees, as UsageStop is, whether or not
+	// it stops anything: the run keeps them for the usage history (#2749). nil sees none.
+	UsageSeen func(*pyjson.Object) // default: None
 	// Resume is the id of an earlier session this call goes on in (`claude --resume`, #2748),
 	// "" for a fresh one. Only Claude's backend reads it: Codex's `codex exec resume <id>`, and
 	// whatever Muse and agy offer, would each go in its own Argv.
