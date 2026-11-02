@@ -165,21 +165,27 @@ created the Worker.
 
 ### Step 4: Staging's address and Access
 
-1. Zero Trust (the dashboard's Zero Trust section): pick a team name and the Free plan (up to 50
-   users). Settings -> Authentication: One-time PIN is on by default; that is the sign-in.
-2. Access -> Service Auth -> Create Service Token, named `deploy-staging`. Save its Client ID and
-   Client Secret as the GitHub repository secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`
-   (the secret is shown once).
-3. Write `infra/terraform.tfvars` with the team's addresses, `staging_team_emails = ["...", "..."]`,
-   then `terraform -chdir=infra plan` and `apply`, both with
-   `-target=cloudflare_workers_custom_domain.staging_jackioh_com
-   -target=cloudflare_zero_trust_access_application.staging` (`infra/README.md`; the Cloudflare token
-   there needs Access: Apps and Policies, Edit). It adds `staging.jackioh.com` to `jackioh-staging`,
-   and the Access application and its two policies. The rest waits for step 6: until then production
-   signs in on the project that becomes staging's, and `infra/supabase.tf` would move that project's
-   Site URL to staging. So add `https://staging.jackioh.com/login` to that project's Redirect URLs by
-   hand (Authentication -> URL Configuration), leaving its Site URL and `https://jackioh.com/login`
-   as they are; step 6's full apply puts it to the file.
+Done on 2026-11-02 through Cloudflare's API, in this order, so staging was behind Access from its
+first request:
+
+1. Zero Trust, team `jackioh` (`jackioh.cloudflareaccess.com`), the Free plan (up to 50 users), with
+   One-time PIN as the sign-in.
+2. The Access application `JackiOh staging` on `staging.jackioh.com` and its two policies, as
+   `infra/cloudflare.tf` declares them, the team's being the owner's address alone.
+3. `staging.jackioh.com` as `jackioh-staging`'s custom domain. `infra/cloudflare.tf`'s `import`
+   blocks adopt all four at step 6's apply, whose `infra/terraform.tfvars` must list the same
+   addresses (`staging_team_emails`), or the apply changes the policy to the file's.
+4. The service token `JackiOh staging deploy check` (a year), whose pair is the repository secrets
+   `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, for deploy-staging.yml's live check.
+
+To let someone else into staging, add their address to the policy `JackiOh staging: the team` (Zero
+Trust -> Access -> Policies) and to `staging_team_emails`.
+
+Until step 6 production signs in on the project that becomes staging's, and `infra/supabase.tf`
+would move that project's Site URL to staging. So add `https://staging.jackioh.com/login` to that
+project's Redirect URLs (Actions -> cutover, step `production-auth` does it; or by hand,
+Authentication -> URL Configuration), leaving its Site URL and `https://jackioh.com/login` as they
+are; step 6's full apply puts it to the file.
 
 ### Step 5: Verify staging
 
@@ -322,7 +328,11 @@ build's project is not its own server's `SUPABASE_URL`.
 **Setting up JackiOh-Production,** once, before section 4's step 6: Authentication as
 `docs/architecture.md` §10 steps 1 and 2 say (email confirmations, SMTP, the email templates, MFA,
 and each OAuth provider wanted, whose callback is now this project's); the Site URL and Redirect URLs
-are `infra/supabase.tf`'s. Settings live per project, so none comes over with the data. The new
+are `infra/supabase.tf`'s. Settings live per project, so none comes over with the data. Actions ->
+cutover, step `production-auth` (the repository secret `SUPABASE_ACCESS_TOKEN`, a personal access
+token), copies staging's to production, first with `dry_run` to list the changes. What the API does
+not hand back, SMTP's password and each provider's client secret among them, it leaves out whole and
+names in the run's warnings: those are set by hand. The new
 project has its own signing keys, so every player signs in once more after the switch, with the same
 password. `STATS_DATABASE_URL` moves to a read-only login on this project, made as `training/learn.md`
 makes `stats_importer` but granted only `select`.

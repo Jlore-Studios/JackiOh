@@ -51,6 +51,13 @@ resource "cloudflare_workers_custom_domain" "staging_jackioh_com" {
   service    = "jackioh-staging"
 }
 
+# Made through the API on 2026-11-02, with the Access application and its two policies below, so
+# staging was behind Access from its first request; these blocks adopt them at the first apply.
+import {
+  to = cloudflare_workers_custom_domain.staging_jackioh_com
+  id = "${local.cloudflare_account_id}/d82eb1df005a97fe5d9bafaf09a03245ca6917cc"
+}
+
 # Staging is internal: Access answers every request to staging.jackioh.com, the API and the sockets
 # included, with a sign-in (a one-time code by email) and lets in only the team's addresses. A
 # signed-in browser carries Access's cookie on the same-origin API calls and WebSockets, so the app
@@ -67,6 +74,11 @@ resource "cloudflare_zero_trust_access_policy" "staging_team" {
   include    = [for email in var.staging_team_emails : { email = { email = email } }]
 }
 
+import {
+  to = cloudflare_zero_trust_access_policy.staging_team
+  id = "${local.cloudflare_account_id}/c7a64c29-e1cf-432a-a40f-2ce74e650bac"
+}
+
 # deploy-staging.yml's live check: a service token (made in the dashboard, so its secret stays out of
 # the state; its pair is the CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET repository secrets).
 resource "cloudflare_zero_trust_access_policy" "staging_service_tokens" {
@@ -74,6 +86,11 @@ resource "cloudflare_zero_trust_access_policy" "staging_service_tokens" {
   name       = "JackiOh staging: deploy checks"
   decision   = "non_identity"
   include    = [{ any_valid_service_token = {} }]
+}
+
+import {
+  to = cloudflare_zero_trust_access_policy.staging_service_tokens
+  id = "${local.cloudflare_account_id}/2f4b49c6-3431-4392-837c-406accc64dde"
 }
 
 resource "cloudflare_zero_trust_access_application" "staging" {
@@ -86,4 +103,9 @@ resource "cloudflare_zero_trust_access_application" "staging" {
     { id = cloudflare_zero_trust_access_policy.staging_team.id, precedence = 1 },
     { id = cloudflare_zero_trust_access_policy.staging_service_tokens.id, precedence = 2 },
   ]
+}
+
+import {
+  to = cloudflare_zero_trust_access_application.staging
+  id = "accounts/${local.cloudflare_account_id}/e196957e-0899-490e-9471-1f8d84c69d55"
 }
