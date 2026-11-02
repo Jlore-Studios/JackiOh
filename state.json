@@ -14122,20 +14122,28 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/routes/stats.tsx"
+          ],
+          "from": "324d0a1297a8c90addc9eeea7a59c5a7fade534d",
+          "main": "f352fd991b6ce41cc794f242e1903d29e5cd7cc6"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "41371608092",
-            "tier": "strong"
+            "family": "muse",
+            "run": "41379645092",
+            "tier": "medium"
           }
         ],
-        "sha": "324d0a1297a8c90addc9eeea7a59c5a7fade534d",
+        "sha": "1bb087ebe5907a9a0522ff41f751f9e104f57703",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
