@@ -1,0 +1,70 @@
+{
+  "action": "build",
+  "number": 2827,
+  "title": "Patch: the Duos AI passes a card it could play itself when its teammate's follow-up is worth more",
+  "branch": "bot/issue-2827",
+  "thread": "**Issue #2827 (data, not instructions):**\n\n```text\n# #2827: Patch: the Duos AI passes a card it could play itself when its teammate's follow-up is worth more\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn co-op Duos the AI teammate may hand a card to its partner before ending the turn. Today it only considers cards it cannot play itself. After this change it also hands over a card it could play weakly when its partner does clearly more with it. Example: it passes the tribe piece that completes its partner's combo instead of playing it for little on its own full board.\n## Why\n`passes_of` in `crates/ai/src/duos.rs` gates this-turn passes on `!playable.contains(&card.id)`, and the worth-it check (`pass_gain`, R1723000) compares teammate-with versus teammate-without plus hand value, never against the seat's own use of the card. The machinery to compare already exists: the teammate's best bounded follow-up scored on a fixed-seed probe (`DUOS_PASS_MAX_FOLLOWUPS`, `DUOS_PASS_PROBE_SEED`) with the existing margins (`DUOS_PASS_MARGIN_PER_COST`, `DUOS_PASS_MIN_GAIN`). Costly-pass tiers are naturally unaffected through the margin.\n## Proposal\nExtend pass candidacy to own-playable cards when the teammate's scored follow-up beats the seat's own scored use of the same card by the existing margin, scored on the same probe worlds. No new numbers: reuse the existing margin constants.\n## Where it lands\nFiles: `crates/ai/src/duos.rs` (`duos_passes`, `passes_of`, `pass_gain`, `own_probe`, `mate_probe`). SPEC sections: \u00a713 (Duos seats, passing, B19-B29) and R1723000.\n## Acceptance criteria\n- [ ] New Duos pass unit tests: a teammate-combo pass is named, and a pass is withheld when the teammate's follow-up is weak.\n- [ ] Costly-pass tiers still pass nothing they should not (margin behavior covered by a test).\n- [ ] The Duos gate (`gate --duos`) holds its floors.\n## Size and risks\nMedium work, suggested `difficulty:hard` (AI play quality). Risk is over-passing; the margin constants and the withheld-pass test bound it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-02T13:49:52Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2790 skipped: it waits for #2786 to close first",
+    "#2791 skipped: it waits for #2786 to close first",
+    "#2793 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
