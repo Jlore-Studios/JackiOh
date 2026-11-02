@@ -21775,15 +21775,15 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-02T04:10:00Z",
+          "resets_at": "2026-11-02T09:10:00Z",
           "utilization": 0.53
         },
-        "observed_at": "2026-11-02T00:56:23Z",
+        "observed_at": "2026-11-02T09:10:43Z",
         "seven_day": {
-          "resets_at": "2026-11-02T09:00:00Z",
-          "utilization": 0.91
+          "resets_at": "2026-11-09T09:00:00Z",
+          "utilization": 0.0
         },
-        "status": "allowed_warning"
+        "status": "allowed"
       }
     },
     "claude-6": {
