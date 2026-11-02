@@ -13931,6 +13931,10 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-11-02T17:09:51Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `crates/tools/src/fuzz.rs:3654`: The issue says to fold tests that differ only by input into one table loop, but four fuzz probe tests that have exactly the shap"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
