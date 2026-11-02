@@ -14298,15 +14298,25 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/CardFace.tsx",
+            "apps/web/src/cards/fullArt.ts",
+            "spec/10-engine-guide.md"
+          ],
+          "from": "1fb15560afdfa637da7bcccf593dbb7f7a012eb4",
+          "main": "0042c19a3c6a26fef5448f00cb8c0aa26a7b4fd2"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41412984960",
+            "run": "41418689918",
             "tier": "strong"
           }
         ],
-        "sha": "1fb15560afdfa637da7bcccf593dbb7f7a012eb4",
+        "sha": "b0414c48756c3675742ec3ee76e217fec920c0ed",
         "tiers": {
           "claude": "strong"
         }
