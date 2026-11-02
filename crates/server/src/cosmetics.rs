@@ -16,7 +16,8 @@
 //!
 //! R1827000: the hero portraits (R641) are account cosmetics, one `portrait-<id>` per `PortraitId`,
 //! `portrait-vanilla` the default and a starter. R1833000: #1833 appends 36, none a default or a starter; a
-//! deck's save refuses one its account does not own ([`owns_account_cosmetic`], [`owns_portrait`]).
+//! deck's save refuses one its account does not own ([`owns_account_cosmetic`], [`owns_portrait`]). A
+//! Legendary token reaches a Legendary chase, and no token a Mythic (R2728000).
 //! R1834001: every write of a pick is held to [`check_pick`], and a loadout freezes nothing else
 //! (`loadout::freeze_loadout`, R1834002).
 
@@ -179,9 +180,9 @@ pub struct Cosmetic {
     /// R1833000).
     #[serde(default)]
     pub starter: bool,
-    /// §14.2: a chase cosmetic, true exactly for a Legendary or Mythic one (R1333000). No token pays
-    /// for one; the Chase Shard bar buys one, and a duplicate's roll or a pack slot landing on its
-    /// tier drops one (§14.6).
+    /// §14.2: a chase cosmetic, true exactly for a Legendary or Mythic one (R1333000). A Legendary token
+    /// buys a Legendary one, and no token a Mythic (R2728000); the Chase Shard bar buys one, and a
+    /// duplicate's roll or a pack slot landing on its tier drops one (§14.6).
     #[serde(default)]
     pub chase: bool,
     /// R2755000: owned only by reaching Jlorious (§9, R608). No roll, pack, token, Chase Shard bar,

@@ -1,0 +1,17 @@
+{
+  "title": "Patch: Training Grounds' Legacy cards redrawn in the yard's own art style",
+  "sources": "#2724",
+  "notes": "Each Training Grounds Legacy card (#41–#60) draws its Core card's subject in the set's training yard, with a touch of its own, on both faces (R2724000). How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Legacy cards get their own art",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Each Training Grounds Legacy card now has art of its own: its Core card's picture redrawn in the training yard, with a touch of its own."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

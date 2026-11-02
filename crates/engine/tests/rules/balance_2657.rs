@@ -215,8 +215,11 @@ mod r2657005_the_buffs_and_the_nerfs_keywords {
             let id = s.card(quiet().id.as_str()).id.clone();
             tune(&mut s, &id, TuneDirection::Upgrade);
             let kinds = kinds_of(&s, &id);
+            // R2727000: in a hand a Spell may take Cloaked instead.
             assert!(
-                kinds.iter().all(|kind| *kind == KeywordKind::Flashback),
+                kinds
+                    .iter()
+                    .all(|kind| matches!(kind, KeywordKind::Flashback | KeywordKind::Cloaked)),
                 "{kinds:?}"
             );
             gained |= kinds.contains(&KeywordKind::Flashback);

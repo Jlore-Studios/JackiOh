@@ -2,8 +2,8 @@
 # Builds crates/wasm into apps/web/src/wasm/pkg, the module the web client loads
 # (docs/v0.3.0/SURFACE.md §10.2), then crates/wasm/luau into apps/web/src/wasm/pkg/luau, the Luau
 # module (#919, SPEC §12.10), unless JACKIOH_WASM_LUAU=0. apps/web/package.json's `predev`,
-# `prebuild`, `prebuild:e2e` and `pretest` run it, so `pnpm --filter @jackioh/web
-# dev|build|build:e2e|test` always has both fresh. The Luau module sits inside pkg/ so everything
+# `prebuild`, `prebuild:staging`, `prebuild:e2e` and `pretest` run it, so `pnpm --filter
+# @jackioh/web dev|build|build:staging|build:e2e|test` always has both fresh. The Luau module sits inside pkg/ so everything
 # that handles the normal module's output (.gitignore, eslint's ignores, CI's `web-build` artifact)
 # carries it too. JACKIOH_WASM_NORMAL=0 builds the Luau module alone (below).
 #
@@ -17,17 +17,18 @@
 #     .cache/emsdk (gitignored) and installed there when missing: `emsdk install` fetches the
 #     toolchain once, `emsdk activate` rewrites its `.emscripten` config. CI's setup action caches
 #     .cache/emsdk keyed on the EMSDK_VERSION line;
-#   - cargo rebuilds only what changed, and wasm-bindgen rewrites the same pkg.
+#   - cargo rebuilds only what changed, and wasm-bindgen rewrites the same pkg. Both deploys build on
+#     GitHub's runners, whose setup action restores target/ (Swatinem/rust-cache) and .cache/emsdk,
+#     so nothing here keeps the built modules (#997 kept them for Vercel, which kept only
+#     node_modules between builds).
 #
 # The output is apps/web/src/wasm/pkg/{jackioh_wasm.js, jackioh_wasm.d.ts, jackioh_wasm_bg.wasm,
 # jackioh_wasm_bg.wasm.d.ts}, gitignored; `--target web` makes the glue an ES module whose default
 # export fetches the .wasm and whose `initSync` takes its bytes (apps/web/src/wasm/index.ts).
 #
 # Needs a Rust toolchain (rust-toolchain.toml pins it), and for the Luau module git and python3 (the
-# emsdk's). On Vercel, scripts/vercel-install.sh (the
-# installCommand) uses the build image's own rustup, under /rust and already on PATH, and installs
-# rustup only where there is none; a shell that installed it in an earlier step but never re-read
-# its profile is covered by sourcing ~/.cargo/env below.
+# emsdk's). A shell that installed rustup in an earlier step but never re-read its profile is covered
+# by sourcing ~/.cargo/env below.
 
 # JACKIOH_WASM_PREVIEW: 1 (the default) builds the module with crates/wasm's `preview` feature, R1420's
 # `previewSets` (the engine's testkit), which the hotseat route's E2E injection uses to play a set
@@ -96,46 +97,6 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ]; the
   echo "build-wasm: JACKIOH_WASM_NORMAL=0 with JACKIOH_WASM_LUAU=0 builds nothing" >&2
   exit 1
 fi
-
-# #997: on Vercel (VERCEL=1) the built modules are kept for the next deploy. Vercel's build cache
-# keeps only node_modules directories, so target/ and .cache/emsdk start empty and every deploy
-# built both modules from nothing (about 10 of a 12-minute build). The modules go in
-# node_modules/.cache/jackioh-wasm/<key>, the key a hash of everything they are built from: the
-# crates they compile (MODULE_CRATES, held to the workspace's path dependencies by
-# apps/web/src/net/build-wasm-cache.test.ts), every manifest, the lockfile, .cargo/, the toolchain
-# pin, this script (the wasm-bindgen and emsdk pins) and the JACKIOH_WASM_* flags. A deploy with the
-# same key copies them back and builds nothing; any other builds and keeps its own modules in place
-# of the last. Anywhere else nothing is kept: cargo's own cache already makes a rebuild quick.
-MODULE_CRATES="crates/engine crates/cards crates/ai crates/luau crates/wasm"
-CACHE_DIR="$ROOT/node_modules/.cache/jackioh-wasm"
-key=""
-if [ "${VERCEL:-}" = 1 ]; then
-  if command -v sha256sum >/dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
-  # shellcheck disable=SC2086 # MODULE_CRATES and sum are word lists.
-  key=$(
-    {
-      echo "preview=${JACKIOH_WASM_PREVIEW:-1} duos=${JACKIOH_WASM_DUOS:-0} normal=${JACKIOH_WASM_NORMAL:-1} luau=${JACKIOH_WASM_LUAU:-1}"
-      find $MODULE_CRATES crates/*/Cargo.toml Cargo.toml Cargo.lock .cargo rust-toolchain.toml scripts/build-wasm.sh \
-        -type f -print0 | LC_ALL=C sort -zu | xargs -0 $sum
-    } | $sum | cut -c1-32
-  )
-  # An empty key (no hasher) keeps and restores nothing.
-  if [ -n "$key" ] && [ -d "$CACHE_DIR/$key" ]; then
-    mkdir -p "$OUT_DIR"
-    cp -R "$CACHE_DIR/$key/." "$OUT_DIR/"
-    echo "build-wasm: restored the modules from Vercel's build cache ($key); nothing to build"
-    exit 0
-  fi
-fi
-# What this run built, kept under its key (above) in place of whatever was kept before.
-keep() {
-  [ -n "$key" ] || return 0
-  rm -rf "$CACHE_DIR"
-  mkdir -p "$CACHE_DIR"
-  cp -R "$OUT_DIR" "$CACHE_DIR/$key.partial"
-  mv "$CACHE_DIR/$key.partial" "$CACHE_DIR/$key"
-  echo "build-wasm: kept the modules in Vercel's build cache ($key)"
-}
 
 if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
   # The target. rust-toolchain.toml lists it, but a toolchain installed before that line existed has
@@ -215,10 +176,7 @@ fi
 # `jackioh_wasm_luau.d.ts` for the factory's types (written here, since `emcc` emits none).
 case "${JACKIOH_WASM_LUAU:-1}" in
   1) ;;
-  0)
-    keep
-    exit 0
-    ;;
+  0) exit 0 ;;
   *)
     echo "build-wasm: JACKIOH_WASM_LUAU is 1 (the default) or 0, not \"$JACKIOH_WASM_LUAU\"" >&2
     exit 1
@@ -233,11 +191,10 @@ if command -v rustup >/dev/null 2>&1; then
 fi
 
 # emsdk, cloned and installed once into .cache/emsdk. A .cache/emsdk without the `emsdk` script is
-# no clone, only what a build cache gave back of one: Vercel's restores every node_modules it saved,
-# and an installed emsdk holds two (its Node's and emscripten's), so a deploy found those alone and
-# `git clone` refused the non-empty directory. Only this script writes there, so it starts over.
-# So does an installed emsdk that cannot activate this pin: one shared through JACKIOH_CACHE_DIR, or
-# restored from a cache, can be another pin's, from the branch the job started on (#1263).
+# no clone, only part of one a cache gave back, and `git clone` refuses the non-empty directory.
+# Only this script writes there, so it starts over. So does an installed emsdk that cannot activate
+# this pin: one shared through JACKIOH_CACHE_DIR, or restored from a cache, can be another pin's,
+# from the branch the job started on (#1263).
 if [ -x "$EMSDK_DIR/emsdk" ] && [ -d "$EMSDK_DIR/upstream/emscripten" ] \
   && ! (cd "$EMSDK_DIR" && ./emsdk activate "$EMSDK_VERSION" >/dev/null 2>&1); then
   echo "build-wasm: $EMSDK_DIR cannot activate emsdk $EMSDK_VERSION; cloning it again"
@@ -328,4 +285,3 @@ declare const createModule: (options?: { wasmBinary?: BufferSource }) => Promise
 export default createModule;
 TYPES
 echo "build-wasm: wrote $LUAU_OUT_DIR"
-keep

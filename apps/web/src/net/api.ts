@@ -585,11 +585,18 @@ export type BarSettle = { before: number; after: number; size: number; pays: num
 /**
  * What an opening did to both token bars (R1305000, R1305001): `cosmeticPaid` is the steps the cosmetic
  * bar paid, in order (`cosmetic.pays` long), `slotPoints` each slot's points, by its rolled rarity (R1953000).
+ * The cosmetic bar's `size` is the step's it stands at after the opening (R2728000).
  */
 export type OpeningBarsAnswer = {
   card: BarSettle;
   cosmetic: BarSettle;
   cosmeticPaid: CosmeticTokenStep[];
+  /**
+   * R2728000: the size of each step the cosmetic bar's sweep crosses: each step paid, then the step
+   * it stands at after (`cosmetic.size`); `pays + 1` entries. Absent only from an answer kept before
+   * #2728 (R2124000).
+   */
+  cosmeticSizes?: number[];
   slotPoints: number[];
 };
 
@@ -674,14 +681,17 @@ export async function buyPack(token: string, pack: string): Promise<BoughtPackRe
 
 export type TokenBarState = { points: number; size: number };
 
-export type CosmeticTokenStep = "rare" | "epic" | "cosmeticPack";
+export type CosmeticTokenStep = "rare" | "epic" | "legendary" | "cosmeticPack";
 
-/** `GET /api/tokens` (R1305004); both redeem routes answer the same after they spend. */
+/**
+ * `GET /api/tokens` (R1305004); both redeem routes answer the same after they spend. The cosmetic bar's
+ * size is its current step's (R2728000).
+ */
 export type TokenBarsResponse = {
   cardBar: TokenBarState;
   cosmeticBar: TokenBarState;
   nextStep: CosmeticTokenStep;
-  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticPack: number };
+  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticLegendary: number; cosmeticPack: number };
 };
 
 export function getTokens(token: string): Promise<TokenBarsResponse> {
@@ -694,8 +704,8 @@ export async function redeemCardToken(token: string, cardId: string): Promise<To
   return answer;
 }
 
-/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
-export type CosmeticTokenTier = "Rare" | "Epic";
+/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003, R2728000). */
+export type CosmeticTokenTier = "Rare" | "Epic" | "Legendary";
 
 /** A per-card cosmetic names its card; an account one sends none. */
 export async function redeemCosmeticToken(
