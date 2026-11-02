@@ -1,11 +1,7 @@
 //! ME-ALLURE (Meditative #39.5 Jade Beauty; docs/meditative-set.md M5, Group C's systems): "Allure
-//! every enemy Unit" marks each one `allure` (pink, R437), and at the start of the Allurer's next turn
-//! each marked Unit still under the opponent's control is stolen in lane order (R15), summoning sick
-//! (R171), or destroyed with no open unit zone — an ordinary destroy, so Death and Reborn apply and an
-//! Indestructible Unit stays (R46, R963, MD-C4). A marked Unit that leaves the field loses its mark and
-//! is not taken (R174); the Allure lands even after the Allurer has left (R76); a Unit already its
-//! taker's is neither stolen nor destroyed. Through fixture scripts (fixtures/jade.rs); Jade Beauty's
-//! own tests cover the same cases again (`crates/cards/src/scripts/meditative/`).
+//! every enemy Unit" marks each one `allure` (pink, R437); at the Allurer's next start each marked Unit
+//! still the opponent's is stolen in lane order (R15), summoning sick (R171), or, with no open zone,
+//! destroyed as any destroy is: Death, Reborn and Indestructible apply (R46, R963, MD-C4; fixtures/jade.rs).
 
 use jackioh_engine::effects::delay::DELAYED_ALLURE_HOOK;
 use jackioh_engine::effects::destroy::{DestroyArgs, destroy};
@@ -60,12 +56,10 @@ fn play(state: &mut GameState, player: PlayerId, def_id: &str, extra: Value) -> 
     act_ok(state, body)
 }
 
-/// Play the Allure Spell for `player`.
 fn allure(state: &mut GameState, player: PlayerId) -> ReduceResult {
     play(state, player, &jade_allure.id, json!({}))
 }
 
-/// End the active player's turn.
 fn pass(state: &GameState) -> ReduceResult {
     act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
 }
@@ -203,8 +197,8 @@ fn r963_a_marked_unit_that_left_the_field_is_not_taken() {
     let mut state = playing("left");
     let victim = put(&mut state, "fx-1", slot(P2, Row::Units, 1), json!({}));
     allure(&mut state, P1);
-    // Destroyed meanwhile through the real path (R174): `destroy` marks, §4.5's state check
-    // collects the mark and drops the waiting entry with the stay, so the next start takes nothing.
+    // Destroyed meanwhile through the real path (R174): §4.5's state check collects the mark and
+    // drops the waiting entry with the stay, so the next start takes nothing.
     let spell = {
         let mut card = new_instance(&mut state, "fx-mana-well", P2, Zone::Resolving { player: P2 });
         card.radiant = false;
@@ -298,8 +292,7 @@ fn r963_one_already_yours_is_neither_stolen_nor_destroyed() {
     assert!(find_instance(&mine, &victim.id).is_none_or(|card| card.zone.z() != ZoneName::Field));
 }
 
-/// One `steal` aimed by id at `victim_id`, run as P1 over `state`; its events. The taker's row is
-/// full, so the steal cannot land.
+/// One `steal` by id at `victim_id`, run as P1 into a full row, so it cannot land; its events.
 fn run_full_row_steal(
     state: &mut GameState,
     victim_id: &str,
@@ -364,7 +357,7 @@ fn r963_steal_otherwise_destroy_needs_no_room_to_destroy() {
     assert_eq!(top_id(&state, P2, 1), Some(victim.id));
 }
 
-/// Apply `effect` for `controller` with no card running it, then settle, as a resolving card's would.
+/// Apply `effect` for `controller` with no card running it, then settle.
 fn apply_settled(state: &mut GameState, controller: PlayerId, effect: Effect) -> Vec<GameEvent> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);

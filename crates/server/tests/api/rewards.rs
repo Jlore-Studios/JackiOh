@@ -1,21 +1,5 @@
-//! A finished ladder game pays Jlore and XP (SPEC §14.8, #1302): through the one reward hook,
-//! in the same transaction as its results row, onto every active set track.
-//!
-//! Won and lost games pay exactly `JLORE_LADDER_WIN`/`JLORE_LADDER_LOSS`; XP counts the log's
-//! actions plus the win bonus up to `XP_GAME_CAP`; the second track unlocks at
-//! `SET_TRACK_UNLOCK_LEVEL`; and draws, concedes, reaper-resolved games, the moves that count and
-//! a track's last level pay per R1302000–R1302005, whose proving tests live here. Room games and
-//! the games of a Conquest series pay their own rates and a co-op game pays each of its people
-//! (R1502000); voided matches and bot sides pay nothing. Every level position is read through the
-//! constants and the level curve, so the tests hold whatever values #1333 sets.
-//!
-//! The day's cap on what games pay (`JLORE_GAMES_DAILY_CAP`, R1483000) clamps the game that crosses
-//! it, pays the ones after it no Jlore with no row, leaves XP and the track's own Jlore alone, and
-//! starts again with the next UTC day; a room game and a co-op game fall under it as a ladder game
-//! does (R1502000).
-//!
-//! The engine is driven for real where the outcome matters (a win, a mutual-lethal draw, a
-//! concede); the action log the hook counts is appended as rows, which need no engine legality.
+//! Finished ladder game Jlore and XP rewards (SPEC §14.8, #1302, #1333).
+//! Rulings: R1302000–R1302005, R1502000 (co-op and rooms), R1483000 (daily cap).
 
 use std::sync::Arc;
 
@@ -102,8 +86,7 @@ fn seat_of(profile_id: Value, player: &str, deck: Value) -> MatchSeat {
         .expect("a MatchSeat")
 }
 
-/// The two seats every scenario plays, on filler decks: the log the hook counts is appended as
-/// rows, and outcomes the engine must really emit go through `play`, so the decks never decide.
+/// Two seats played on filler decks for scenario tests.
 fn seats() -> (MatchSeat, MatchSeat) {
     (
         seat_of(json!(A), "p1", json!(fake_deck(&[]))),
@@ -169,10 +152,7 @@ async fn record_on_at(app: &Arc<App>, match_id: &str, outcome: TerminalOutcome, 
     .expect("the result is written")
 }
 
-/// Runs the engine with the scripted cards to a terminal state and hands back the outcome the
-/// actor would pass to `record_result`, so the reasons under test are the ones `reduce` really
-/// emits. A scenario on turn 1 with both scripted cards in p1's hand; both seats switch off
-/// R345's automatic end of turn first, so a turn ends only when an input ends it.
+/// Runs engine with scripted cards to terminal state, disabling automatic turn end (R345).
 fn play(inputs: &[Value]) -> TerminalOutcome {
     let s = jackioh_engine::testkit::scenario(json!({
         "seed": "seed-1",
@@ -652,8 +632,7 @@ mod rulings {
     async fn r1302004_server_rows_and_the_auto_end_setting_earn_no_xp() {
         install_test_cards();
         let app = scenario().await;
-        // A takes four moves; around them the log holds A's automatic-end setting and the rows
-        // the server writes itself. B's every row is the server's: a clock that ran out each turn.
+        // A takes four moves; server writes auto-end and clock timeout rows.
         let mut log = actions_of("p1", 4);
         log.extend([
             json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }),
@@ -774,9 +753,7 @@ mod level_rewards_once {
     async fn each_level_pays_once_and_a_repeated_write_pays_nothing() {
         install_test_cards();
         let app = scenario().await;
-        // A's newest track sits two small losses below its next level, every level it holds paid,
-        // and short of the unlock level, so no older track's rewards join the ledger. Every
-        // position is read through the constants, so the premises hold whatever #1333 sets.
+        // #1333: newest track sits two small losses below next level; verify payout.
         let one_game = game_xp(1, false);
         let level = i64::from(SET_TRACK_UNLOCK_LEVEL) - 2;
         let next = u32::try_from(level + 1).expect("a level");
@@ -1783,9 +1760,7 @@ mod coop {
     }
 }
 
-// #1657: a finished game's answer carries what it paid each seat: each set track it moved, as
-// `GET /api/tracks` reads it before and after, every level it paid with that level's rewards, and
-// the quests it completed, as `GET /api/quests` names them.
+// #1657: finished game answer carries payout per seat: tracks moved, level rewards, completed quests.
 
 mod the_answer_carries_what_it_paid {
     use super::*;

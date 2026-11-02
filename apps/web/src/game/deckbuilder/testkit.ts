@@ -1,6 +1,5 @@
-// Test fakes for the deck workshop: saved decks and trios as `GET /api/decks` returns them, an
-// in-memory server with the refusals that matter to the store (R256), an in-memory storage and a
-// manual clock. Only tests import this file.
+// Test fakes for the deck workshop: an in-memory server with the refusals that matter to the store
+// (R256), an in-memory storage and a manual clock. Only tests import this file.
 
 import {
   DECK_NAME_MAX_LENGTH,
@@ -108,7 +107,6 @@ export type ServerCall = {
   op: "putDeck" | "deleteDeck" | "putTrio" | "deleteTrio" | "importTrio" | "getDeckVersions" | "restoreDeckVersion";
   id: string;
   body?: DeckInput | TrioInput | TrioImportInput;
-  /** R2100000: the version a restore names. */
   versionId?: string;
   /** R2119000: the request was sent with `keepalive`, as the page went away. */
   keepalive?: true;
@@ -132,7 +130,6 @@ export function fakeDeckServer() {
   const calls: ServerCall[] = [];
   const state = {
     offline: false,
-    /** A refusal per id, thrown until removed. */
     refusals: new Map<string, ApiRequestError>(),
   };
 
@@ -202,7 +199,6 @@ export function fakeDeckServer() {
     },
   };
 
-  /** Seeds the server with what a `GET /api/decks` answer says it holds. */
   function seed(response: DecksResponse): void {
     for (const deck of response.decks) {
       decks.set(deck.id, { name: deck.name, cards: deck.cards, catalogVersion: deck.catalogVersion });

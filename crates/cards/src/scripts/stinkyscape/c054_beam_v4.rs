@@ -4,16 +4,13 @@
 //!            cooldown." — damage 7
 //!   Radiant: the same text — damage 14
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
-//! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
+//! Starship Piece and Equip are catalog keywords the engine plays: onto one of your Units it fuses
+//! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
-//! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero: since #2521 the enemy
-//! hero is no legal target, and the old "deals half damage to heroes" is gone. Cleave is the same hit
-//! on each Unit beside the target, read before the first hit, and Pierce is `ignoreArmor` (R346). Once
-//! a turn (R384), with an extra turn cooldown (R1841000). The number is the declared `damage` (R386),
-//! read through `param`.
-//! Through v0.5.11 the enemy hero was a target too, its hit halved (R1841001), which `script_v0_5_11`
-//! keeps (R767000).
+//! R1862000: the target is a declared enemy Unit (R81), never a hero (#2521). Cleave is the same hit
+//! on each Unit beside the target, read before the first hit; Pierce is `ignoreArmor` (R346). Once a
+//! turn (R384), with an extra turn cooldown (R1841000); the number is the declared `damage` (R386),
+//! read through `param`. `script_v0_5_11` keeps the older, hero-hitting one (R767000, R1841001).
 
 use jackioh_engine::effects::{
     BoardScope, DamageEffectArgs, DamageFlagArgs, TargetSpec, adjacent_to_aimed, damage,
@@ -133,11 +130,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #54 Beam v4 — SPEC §8.10 row 54, BUILD M12 row S 54: its Activate deals 7 to a chosen
-// enemy Unit and 7 to each Unit beside it, through Armor (Pierce); the enemy hero is never offered as
-// its target, and aiming at it is refused; once a turn, a second use refused; refused on its user's next
-// turn and usable the turn after, a bounce clearing it (R1841000, R78); equipped onto a Unit, the host
-// takes the Activate; damage reads through `param()`; radiant 0/12, 14 damage.
+// Stinkyscape #54 Beam v4 — SPEC §8.10 row 54, BUILD M12 row S 54 (R1841000, R78).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,7 +174,6 @@ mod tests {
             .collect()
     }
 
-    /// p2's Menaces in lanes 1 to 3, the middle one with Armor 3, and a Vanilla in lane 4.
     fn wall(radiant: bool) -> (Scenario, [String; 4]) {
         let mut s = beam_on(
             radiant,

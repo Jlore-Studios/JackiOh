@@ -1,8 +1,4 @@
-//! Play telemetry through the actor (SPEC §9.11, R1442): a real match over the fake store, on tokio's
-//! paused clock, so every think time is exact. It writes its think times, emotes and end-of-game
-//! signals once the result has landed; a failed write costs nothing; and `timing-backfill` folds the
-//! log the match left into the same action timings, less the clock and the rank the log does not
-//! hold. The store's half is `tests/store/contract.rs`'s `r1442_play_telemetry`.
+//! Play telemetry through the actor (SPEC §9.11, R1442).
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;

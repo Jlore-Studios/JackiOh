@@ -2,13 +2,10 @@
 //! `conditionActive`, and each test proves the flag agrees with the branch the card's own resolution
 //! then takes. The flag is read from `s.view(...)` (the viewer's `viewFor`), the branch from the
 //! scenario's own assertions after a real `s.play(...)` or `s.endTurn()`.
-//!
 //! The key is present and `true`, or absent: `glows` below fails on a key that is present with any
 //! other value.
-//!
 //! R196 closes the file: a fusion's hook is its ingredients' hooks or-ed, checked by crafting #53 Reno
 //! with #68 Twisted Sorcerer (R77's hand path, the one #99 Craft a Card takes) and playing the result.
-//!
 //! These are the per-card proofs §10.9 asks of a card with `conditionMet` (crates/cards/README.md §5),
 //! and the last test pins the set of cards that declare the hook to R195's list.
 
@@ -17,7 +14,6 @@ use serde::Serialize;
 
 type Instance = CardInstance;
 
-/// The harness with every card script registered: the engine's testkit cannot name the cards crate.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -37,7 +33,6 @@ fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
         .unwrap_or_else(|| panic!("{instance_id} is not in the viewer's hand"))
 }
 
-/// `true` when the view carries the key (which must then be exactly `true`), `false` when absent.
 fn glows<T: Serialize>(card: Option<&T>) -> bool {
     let card = card.unwrap_or_else(|| panic!("no card at that place in the view"));
     let json = serde_json::to_value(card).unwrap();
@@ -50,7 +45,6 @@ fn glows<T: Serialize>(card: Option<&T>) -> bool {
     }
 }
 
-/// Every copy of a def in p1's hand, in hand order.
 fn copies_in_hand(s: &Scenario, def_id: &str) -> Vec<Instance> {
     s.hand("p1")
         .into_iter()
@@ -64,7 +58,6 @@ fn nth<T: Clone>(list: &[T], index: usize) -> T {
         .unwrap_or_else(|| panic!("nothing at index {index}"))
 }
 
-/// Does p1's copy of `defId` in hand glow in p1's own view right now?
 fn hand_glows(s: &Scenario, instance: &Instance) -> bool {
     glows(Some(&hand_card(&s.view("p1"), &instance.id)))
 }
@@ -76,7 +69,6 @@ fn count_of(s: &Scenario, type_: &str) -> usize {
         .count()
 }
 
-/// The unit's id, or a reference that names nothing.
 fn unit_ref(s: &Scenario, player: &'static str, lane: i32) -> String {
     s.unit(player, lane).map(|card| card.id).unwrap_or_default()
 }
@@ -114,12 +106,10 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
         let library = s.pile("p1", "library").len();
         s.play(&first, json!({}));
 
-        // The flag was off, and the resolution agreed: no draw.
         assert_eq!(s.pile("p1", "library").len(), library);
         let ids: Vec<String> = s.hand("p1").into_iter().map(|card| card.id).collect();
         assert_eq!(ids, std::slice::from_ref(&second.id));
 
-        // That copy counted as a play, so the other one now finds three earlier plays.
         assert!(hand_glows(&s, &second));
         s.play(&second, json!({}));
 
@@ -130,7 +120,6 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
     #[test]
     fn r195_b5_the_radiant_face_glows_on_the_same_count_and_then_draws_6() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-010-radiant",
             "p1": {
                 "hand": ["core-011", "core-011", "core-011", { "def": "core-010", "radiant": true }],
@@ -158,7 +147,6 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
     #[test]
     fn r195_b5_on_the_opponents_turn_it_never_glows_its_controllers_three_plays_over_with_their_turn() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-010-their-turn",
             "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },
             "p2": { "hand": ["core-005"], "library": ["core-016", "core-016", "core-016"] },
@@ -182,7 +170,6 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
     #[test]
     fn r195_b5_the_opponents_view_never_carries_the_flag_its_hand_is_a_count() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-010-opponent-view",
             "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },
             "p2": { "field": ["core-020"] },
@@ -215,7 +202,6 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     fn r195_b6_below_30_it_glows_in_hand_and_its_cry_then_sets_the_hero_to_30() {
         for health in [29, 12, 1] {
             let mut s = setup(
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 json!({ "seed": format!("r195-053-low-{health}"), "p1": { "hand": ["core-053"], "health": health } }),
             );
 
@@ -229,7 +215,6 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     fn r195_b6_at_30_or_above_it_does_not_glow_and_its_cry_heals_nothing() {
         for health in [30, 35] {
             let mut s = setup(
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 json!({ "seed": format!("r195-053-high-{health}"), "p1": { "hand": ["core-053"], "health": health } }),
             );
 
@@ -249,7 +234,6 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     fn r195_b6_the_radiant_face_glows_below_60_and_raises_the_hero_to_60() {
         for health in [59, 35, 12] {
             let mut s = setup(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": format!("r195-053-radiant-low-{health}"),
                 "p1": { "hand": [{ "def": "core-053", "radiant": true }], "health": health },
             }));
@@ -264,7 +248,6 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     fn r195_b6_the_radiant_face_at_60_or_above_does_not_glow_and_heals_nothing() {
         for health in [60, 70] {
             let mut s = setup(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": format!("r195-053-radiant-high-{health}"),
                 "p1": { "hand": [{ "def": "core-053", "radiant": true }], "health": health },
             }));
@@ -284,7 +267,6 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     #[test]
     fn r195_b6_a_low_opponent_does_not_light_it_your_hero_is_the_controllers() {
         let mut s = setup(
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             json!({ "seed": "r195-053-their-hero", "p1": { "hand": ["core-053"], "health": 30 }, "p2": { "health": 5 } }),
         );
 
@@ -299,7 +281,6 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
     fn r195_b6_a_reno_on_the_field_never_carries_the_flag_even_with_its_controllers_hero_low() {
         for active in ["p1", "p2"] {
             let s = setup(json!({
-                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": format!("r195-053-field-{active}"),
                 "active": active,
                 "p1": { "field": ["core-053", { "def": "core-053", "radiant": true }], "health": 12, "hand": ["core-005"] },
@@ -328,7 +309,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     /// A free Spell that keeps the turn open (§2.5's auto-end); never played.
     const ANCHOR: &str = "core-010";
 
-    /// The scenario with ANCHOR added at the end of p1's hand.
     fn board(mut opts: Value) -> Scenario {
         let root = opts.as_object_mut().expect("scenario options are an object");
         let p1 = root.entry("p1").or_insert_with(|| json!({}));
@@ -350,7 +330,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     #[test]
     fn r195_b7_below_10_it_glows_in_hand_and_its_cry_then_deals_8() {
         let mut s = board(
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             json!({ "seed": "r195-068-low", "p1": { "hand": [SORCERER], "health": 9 }, "p2": { "field": [SPONGE] } }),
         );
 
@@ -363,7 +342,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     #[test]
     fn r195_b7_at_exactly_10_it_does_not_glow_and_its_cry_deals_4() {
         let mut s = board(
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             json!({ "seed": "r195-068-ten", "p1": { "hand": [SORCERER], "health": 10 }, "p2": { "field": [SPONGE] } }),
         );
 
@@ -376,7 +354,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     #[test]
     fn r195_b7_the_radiant_face_glows_below_10_and_deals_16() {
         let mut s = board(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-068-radiant-low",
             "p1": { "hand": [{ "def": SORCERER, "radiant": true }], "health": 9 },
             "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
@@ -391,7 +368,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     #[test]
     fn r195_b7_the_radiant_face_at_exactly_10_does_not_glow_and_deals_8() {
         let mut s = board(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-068-radiant-ten",
             "p1": { "hand": [{ "def": SORCERER, "radiant": true }], "health": 10 },
             "p2": { "field": [SPONGE] },
@@ -406,7 +382,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     #[test]
     fn r195_b7_a_low_opponent_does_not_light_it_and_the_cry_deals_4() {
         let mut s = board(
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             json!({ "seed": "r195-068-their-hero", "p1": { "hand": [SORCERER], "health": 30 }, "p2": { "field": [SPONGE], "health": 3 } }),
         );
 
@@ -418,7 +393,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
 
     #[test]
     fn r195_b7_a_twisted_sorcerer_on_the_field_never_carries_the_flag() {
-        // Arbitrary seed: no pool or random roll decides this test (audited under #848).
         let s = board(json!({ "seed": "r195-068-field", "p1": { "field": [SORCERER], "health": 3 } }));
 
         assert!(!glows(s.view("p1").you.units[0].as_ref()));
@@ -435,7 +409,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     fn r195_b8_in_the_backrow_it_glows_at_3_cards_to_1_the_opponent_still_sees_a_face_down_card_and_it_fires_at_the_turns_end()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-ahead",
             "p1": { "backrow": ["core-071"], "library": ["core-001", "core-003", "core-005"], "hand": ["core-005"] },
             "p2": { "library": ["core-005"], "hand": ["core-005"] },
@@ -462,7 +435,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     #[test]
     fn r195_b8_with_equal_libraries_it_does_not_glow_and_the_trap_does_not_fire() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-equal",
             "p1": { "backrow": ["core-071"], "library": ["core-001", "core-003"], "hand": ["core-005"] },
             "p2": { "library": ["core-005", "core-023"], "hand": ["core-005"] },
@@ -477,7 +449,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     #[test]
     fn r195_b8_with_a_smaller_library_it_does_not_glow_and_the_trap_does_not_fire() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-behind",
             "p1": { "backrow": ["core-071"], "library": ["core-003"], "hand": ["core-005"] },
             "p2": { "library": ["core-005", "core-023", "core-035"], "hand": ["core-005"] },
@@ -492,7 +463,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     fn r195_b8_on_the_opponents_turn_the_backrow_copy_still_glows_for_its_controller_and_fires_at_that_turns_end()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-their-turn",
             "active": "p2",
             "p1": { "backrow": ["core-071"], "library": ["core-001", "core-003", "core-005"], "hand": ["core-005"] },
@@ -514,7 +484,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     #[test]
     fn r195_b8_the_radiant_face_glows_on_the_same_condition_and_recruits_up_to_cost_2() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-radiant",
             "p1": {
                 "backrow": [{ "def": "core-071", "radiant": true }],
@@ -533,7 +502,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     #[test]
     fn r195_b8_in_hand_it_glows_while_the_library_is_larger_and_keeps_glowing_once_played_to_the_backrow() {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-hand-ahead",
             "p1": { "hand": ["core-071", "core-005"], "library": ["core-001", "core-003", "core-005"] },
             "p2": { "library": ["core-005"], "hand": ["core-005"] },
@@ -555,7 +523,6 @@ mod c71_intern_stimmy_lights_up_while_its_controllers_library_is_larger_r195_b8 
     #[test]
     fn r195_b8_in_hand_with_equal_libraries_it_does_not_glow() {
         let s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-071-hand-equal",
             "p1": { "hand": ["core-071", "core-005"], "library": ["core-001", "core-003"] },
             "p2": { "library": ["core-005", "core-023"], "hand": ["core-005"] },
@@ -573,9 +540,7 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
     use super::*;
 
     const COMBO_INDEX: &str = "core-093";
-    /// Keyword-only units: a play is only a play.
     const FODDER: [&str; 3] = ["core-003", "core-008", "core-011"];
-    /// Cards that sit in hand as material for the cascade's steps.
     const HELD: [&str; 3] = ["core-005", "core-010", "core-056"];
 
     fn fodder_and_held() -> Vec<&'static str> {
@@ -590,7 +555,6 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
         glows(s.view("p1").you.backrow[0].as_ref())
     }
 
-    /// `entry` is a def id or `{ def, counters?, radiant? }`.
     fn board(seed: &str, entry: Value) -> Scenario {
         setup(json!({
             "seed": seed,
@@ -606,7 +570,6 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
         assert!(!index_glows(&s));
         s.play(FODDER[0], json!({}));
         assert!(index_glows(&s));
-        // A Field Spell is public, but the flag is still the controller's alone.
         assert!(!glows(s.view("p2").opponent.backrow[0].as_ref()));
 
         s.end_turn();
@@ -691,7 +654,6 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
         let mut hand = vec![COMBO_INDEX];
         hand.extend(fodder_and_held());
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r195-093-hand",
             "p1": { "hand": hand, "library": ["core-016"], "mana": 10 },
             "p2": { "hand": ["core-005"], "library": ["core-016"] },
@@ -726,7 +688,6 @@ mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condi
             "p2": { "field": [SPONGE] },
         }));
         let ingredients = vec![s.card(RENO).clone(), s.card(SORCERER).clone()];
-        // A sink of its own, whose events and rng cursor are dropped afterwards.
         let fused = {
             let state = s.state_mut();
             let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -1081,7 +1042,6 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
             json!(GROWTH)
         };
         setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": format!("r195-cp050-{mine}-{theirs}-{radiant}"),
             "p1": { "hand": [card, "core-005"], "field": vec![VANILLA; mine] },
             "p2": { "hand": ["core-005"], "field": vec![VANILLA; theirs] },
@@ -1155,12 +1115,10 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
 
 // Meditative #57 Clip-Farming Critikal (hand only): Combo, a card played earlier this turn
 
-/// Meditative #57 Clip-Farming Critikal lights up in hand once a card was played this turn (R195)
 mod meditative_c57_clip_farming_critikal_lights_up_in_hand_once_a_card_was_played_this_turn_r195 {
     use super::*;
 
     const CRITIKAL: &str = "meditative-057";
-    /// (1) Spell: draws and heals, then waits in the graveyard for the Combo to return it.
     const STOCKPILE: &str = "core-005";
 
     fn critikal(radiant: bool) -> Scenario {
@@ -1170,7 +1128,6 @@ mod meditative_c57_clip_farming_critikal_lights_up_in_hand_once_a_card_was_playe
             json!(CRITIKAL)
         };
         setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": format!("r195-m057-{radiant}"),
             "p1": { "hand": [STOCKPILE, card, "core-010"], "library": ["core-020", "core-020", "core-020"] },
             "p2": { "hand": ["core-010"], "library": ["core-020", "core-020"] },
@@ -1225,7 +1182,6 @@ mod r195_the_cards_that_declare_condition_met {
     #[test]
     fn r195_r662_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_meditative_c57_and_r662s_c18_c60_c70_c85_c96_and_c100_on_both_faces_so_a_new_hook_cannot_land_untested()
      {
-        // One entry per script file present: the registry `scripts_of` builds.
         let cards = jackioh_cards::scripts_of();
         let mut hooked: Vec<String> = cards
             .iter()
@@ -1293,7 +1249,6 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     fn with_a_token_it_glows_and_strikes_first(radiant: bool) {
         let face = if radiant { "radiant" } else { "base" };
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": format!("r195-c069-{face}-on"),
             "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "radiant": radiant, "counters": { "plague": 1 } }] },
             "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -1310,7 +1265,6 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     fn with_no_token_it_is_dark_and_is_struck_back(radiant: bool) {
         let face = if radiant { "radiant" } else { "base" };
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": format!("r195-c069-{face}-off"),
             "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "radiant": radiant }] },
             "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -1347,7 +1301,6 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
 
     #[test]
     fn r195_r78_in_hand_it_never_glows_a_card_there_holds_no_tokens() {
-        // Arbitrary seed: no pool or random roll decides this test (audited under #848).
         let s = setup(json!({ "seed": "r195-c069-hand", "p1": { "hand": [CHARGER, FILLER] } }));
         let charger = s.card(CHARGER).clone();
         assert!(!hand_glows(&s, &charger));
@@ -1356,7 +1309,6 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     #[test]
     fn r195_the_opponents_plagued_charger_carries_no_flag_in_your_view() {
         let s = setup(
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             json!({ "seed": "r195-c069-theirs", "p1": { "hand": [FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }] } }),
         );
         assert!(!glows(s.view("p1").opponent.units[0].as_ref()));

@@ -1,25 +1,8 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B41 to B43 and R655: the lookups in
-// `voiceData.ts` that the engine, the cue table and the hook read, its parser of `card-audio.json5`,
-// and the file's layout.
-//
-//   B41  `voiceKey` joins "<defId>-<line>" (defIds contain "-"), `voiceUrl` serves it from
-//        BASE_URL's `audio/voice/`, and `lineFor` returns the line's text with the voice its hook
-//        names, or null for the sentinel, an unknown id, a hook the card's kind does not have, or a
-//        hook that is only an effect.
-//   B42  `parseCardAudio` accepts the shipped file, adding only each card's kind and each effect's
-//        default pitch and gain, and rejects a malformed one with `card-audio.json5: <path>:
-//        <problem>`; it does not check word limits or the lines every card must have (B33, B34 do).
-//   B43  `voiceKeysForView` lists, deduped and in this order, the viewer's hand (unit -> play,
-//        spell -> cast, traps none), every unit on both boards (death), the viewer's own units
-//        (attack, R655) and the viewer's own face-up backrow traps (cast); a card it cannot name, or
-//        a hook with no line, adds nothing.
-//   R655 every shape error names its path, JSON5's comments and trailing commas parse, a card's kind
-//        comes from its catalog type, and `hookFor`, `lineFor` and `effectFor` read a hook that is a
-//        line, an effect or both. `withVoiceText` joins the words of `voice-text.json` (written from
-//        crates/cards/card-text.yaml, #2498) to the hooks and portraits that speak them, refusing a
-//        line the table writes itself, a line no voice speaks and a voice with nothing to speak.
-//
-// Plus the file's layout: voices sorted by name, cards in catalog order, a trailing newline.
+// `voiceData.ts` that the engine, the cue table and the hook read (B41, B43), its parser of
+// `card-audio.json5` (B42, R655), and the file's layout. The parser does not check word limits or
+// the lines every card must have (B33, B34 do). `withVoiceText` joins the words of `voice-text.json`
+// (written from crates/cards/card-text.yaml, #2498) to the hooks and portraits that speak them.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -158,8 +141,8 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
   });
 
   it("B41 lineFor speaks core-016 in a voice of its own, the hustler at rate 170 and pbas 32", () => {
-    // docs/polish/2-sound.md, Personas: core-016 is the hustler with `rate 170, pbas 32`, once a
-    // per-card override and now the voice `hustler-hitman` (R655).
+    // docs/polish/2-sound.md, Personas: core-016 is the hustler with `rate 170, pbas 32`, the voice
+    // `hustler-hitman` (R655).
     const entry = CARD_AUDIO.cards["core-016"];
     if (entry?.kind !== "spell" || entry.cast?.voice === undefined || !("text" in entry.cast)) {
       throw new Error("core-016 should be a spell with a cast line");
@@ -193,8 +176,7 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     expect(lineFor(CARD_AUDIO, "core-005", "death")).toBeNull();
     expect(lineFor(CARD_AUDIO, "core-041", "death")).toBeNull();
     expect(lineFor(CARD_AUDIO, "core-041", "cast")).not.toBeNull();
-    // An attack hook that is an effect and nothing else has no line. Every shipped unit's attack hook
-    // has a line since #103, so the fixture's core-004 carries the effect-only hook.
+    // An effect-only attack hook has no line; every shipped unit's has one (#103), so the fixture carries it.
     const table = parseCardAudio(fixture(), CATALOG);
     expect(hookFor(table, "core-004", "attack")).toEqual({ effect: "zip" });
     expect(lineFor(table, "core-004", "attack")).toBeNull();
@@ -241,7 +223,7 @@ describe("B42 parseCardAudio", () => {
   it("B42 names the path and the problem of a malformed table", () => {
     expect(parseError([])).toBe("card-audio.json5: (root): must be an object");
 
-    // The old file's version key, and its personas section, are a layout error now.
+    // A version key, and a personas section, are a layout error.
     const versioned = { version: 1, ...fixture() };
     expect(parseError(versioned)).toBe(
       "card-audio.json5: (root): must hold voices, effects, cards, in that order (found version, voices, effects, cards)",
@@ -255,7 +237,7 @@ describe("B42 parseCardAudio", () => {
     spellWithPlay.cards["core-005"] = { ...spellWithPlay.cards["core-005"], play: { voice: "crone", text: "Hi." } };
     expect(parseError(spellWithPlay)).toBe("card-audio.json5: cards.core-005.play: a spell has no play hook");
 
-    // The old file's per-card kind is no hook.
+    // A per-card kind is no hook.
     const kinded = fixture();
     kinded.cards["core-004"] = { kind: "unit", ...kinded.cards["core-004"] };
     expect(parseError(kinded)).toBe(
@@ -777,7 +759,7 @@ describe("B43 voiceKeysForView", () => {
   }
 
   it("B43 R655 R1448 lists the hand, every unit's death line, the viewer's own units' attack lines, then their face-up traps, each key once", () => {
-    // Since #103 every shipped unit has an attack line: core-012's is spoken over its catChirp.
+    // #103: every shipped unit has an attack line; core-012's is spoken over its catChirp.
     expect(hookFor(CARD_AUDIO, "core-012", "attack")).toMatchObject({ voice: "cat", effect: "catChirp" });
     expect(voiceKeysForView(viewWith(), CARD_AUDIO)).toEqual([
       "core-004-play",

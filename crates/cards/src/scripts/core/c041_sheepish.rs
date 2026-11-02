@@ -1,17 +1,14 @@
 //! #41 Sheepish (SPEC §8.2). Trap, cost 1, Epic.
 //!   Base:    "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token."
 //!   Radiant: the same, "Add a Lava Golem to your hand. It costs (0)." (keeps every clause of base, §8, R277).
-//!
 //! TIMING (R427; rewrites R17's Sheepish half): it answers §10.5 step 7's `cardResolved`, after the Cry and
 //! every Echo repeat (a cast Unit too, R70). Not `summoned`, which also covers Recruit, copies, tokens and
 //! Reborn, none of them a play (R1, R61). A `run` returning `[]` still consumes the trap, so every
-//! condition lives in `when`: a Spell, a backrow card or the controller's own Unit leaves it armed (R61).
-//! A Unit that left the field in its own resolution still fires it: nothing to Transform (it never reaches
-//! a hand, a graveyard or a Reborn body, R83), the trap consumed, the Lava Golem still added (R120). One an
-//! earlier trap took off the field is no play left to answer: it stays set (R174). Immutable (R17, R23):
-//! `transform` refuses it and `fireTrap` consumes the trap regardless. A face-down trap's identity is the
-//! view's (R33). No glow (R662): the trap waits on an event, and what a glow would tell, a Unit in the
-//! opponent's hand, is hidden (§9.1).
+//! condition lives in `when` (R61). A Unit that left the field in its own resolution still fires it, with
+//! nothing to Transform (R83) and the Lava Golem still added (R120); one an earlier trap took off the
+//! field is no play left to answer (R174). Immutable (R17, R23): `transform` refuses it and the trap is
+//! consumed regardless. A face-down trap's identity is the view's (R33). No glow (R662): what a glow
+//! would tell, a Unit in the opponent's hand, is hidden (§9.1).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{add_to_hand, transform};
@@ -93,9 +90,8 @@ pub fn script() -> CardScripts {
 }
 
 // #41 Sheepish (SPEC §8.2, §5.1, §10.3, §10.5 step 7; R17, R23, R33, R61, R70, R120, R174, R427).
-// Must-pass row (BUILD M4-T4 #41, as R427 rewrites it): "Opponent's Unit becomes a Sheep after its Cry
-// resolves; trap consumed; Immutable target → consumed with no effect; radiant adds 0-cost Lava Golem."
-// "After its Cry" is proved with an observable Cry: #53 Reno heals a p1 hero left at 10 up to 30.
+// Must-pass row: BUILD M4-T4 #41, as R427 rewrites it. That the Sheep comes after the Cry is proved with an
+// observable Cry: #53 Reno heals a p1 hero left at 10 up to 30.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -146,7 +142,6 @@ mod tests {
             // §10.5 step 5 runs the Cry, step 7 emits `cardResolved`, and only then does the trap fire.
             s.expect_events(json!(["cardPlayed", "healed", "cardResolved", "trapFired", "transformed"]));
             assert_eq!(unit_def(&s, "p1", 1).as_deref(), Some("core-t-sheep"));
-            // #53 Reno's Cry healed p1's hero to 30 before the Unit became a Sheep.
             s.expect_health("p1", 30);
         }
 
@@ -179,8 +174,6 @@ mod tests {
 
         #[test]
         fn r17_an_immutable_target_still_fires_the_trap_which_is_consumed_with_no_effect_r23() {
-            // A Radiant #19 Midrange Menace is Immutable, and R23 makes Immutable refuse Transform on the
-            // card itself.
             let mut s = trap_set(immutable(), false);
             s.play("core-019", json!({ "zone": 1 }));
 
@@ -223,7 +216,6 @@ mod tests {
             assert!(!fired_trap(s.events()));
             s.expect_in_zone("core-041", "field");
             assert_eq!(unit_def(&s, "p2", 1).as_deref(), Some("core-053"));
-            // Reno's own Cry ran, because nothing interrupted it.
             s.expect_health("p2", 30);
         }
 
@@ -257,7 +249,6 @@ mod tests {
             assert_eq!(fired, vec!["core-060".to_string()]);
             assert!(!transformed(s.events()));
             s.expect_in_zone(&mrow, "graveyard");
-            // Still face-down in its zone, armed for the next Unit, and no Lava Golem came of it.
             assert_eq!(s.backrow("p2", 2).map(|card| card.def_id).as_deref(), Some("core-041"));
             assert!(s.backrow("p2", 2).and_then(|card| card.face_up).is_none());
             assert!(!s.hand("p2").iter().any(|card| card.def_id == "core-055"));
@@ -281,7 +272,6 @@ mod tests {
             assert!(fired_trap(s.events()));
             assert!(!transformed(s.events()));
             s.expect_in_zone("core-041", "graveyard");
-            // R120: the Radiant face's Lava Golem is its own clause, and still lands.
             assert!(
                 s.hand("p2")
                     .iter()
@@ -340,7 +330,6 @@ mod tests {
 
             let golem = s.hand("p2").into_iter().find(|card| card.def_id == "core-055");
             let golem = golem.expect("a Lava Golem in p2's hand");
-            // R65: a `costOverride` of 0 is what "It costs (0)" means, and it survives every zone.
             assert_eq!(golem.cost_override, Some(0));
         }
 

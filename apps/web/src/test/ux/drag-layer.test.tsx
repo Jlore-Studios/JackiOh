@@ -11,8 +11,6 @@ import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, card, emptySide, unit } from "../fixtures.ts";
 
-// The fixture.
-
 /** h1 plays in lanes 3 or 4; s1 has one candidate; n1 has no play; u1 attacks e1 or the hero; u2 only switches. */
 function dragView(): PlayerView {
   return baseView({
@@ -55,8 +53,6 @@ function renderGame(onAction = vi.fn()) {
 }
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
-
-// The pointer.
 
 const POINTER = 1;
 const START = { x: 200, y: 400 };
@@ -117,13 +113,10 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   delete (document as Partial<Document>).elementsFromPoint;
-  // Isolate DOM state.
   document.documentElement.removeAttribute("data-dragging");
   localStorage.clear();
   __resetSettingsForTests();
 });
-
-// B36: dragging a hand card onto a zone
 
 describe("B36 dragging a hand card onto a glowing zone plays it", () => {
   it("B36 a press on a legal hand card and an 8 px move lift it: its zones glow, the ghost shows, <html data-dragging=play>", () => {
@@ -228,7 +221,6 @@ describe("B36 dragging a hand card onto a glowing zone plays it", () => {
 });
 
 // B37: dragging an attacker onto the enemy hero
-
 describe("B37 dragging an attacker shows the arrow and attacks where it is released", () => {
   it("B37 an attacker lifted past the threshold shows the arrow from its card and no ghost", () => {
     const { onAction } = renderGame();
@@ -300,7 +292,6 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
 });
 
 // B38: every way a drag is canceled
-
 describe("B38 a canceled drag goes back to idle, sends nothing, and swallows the click after the release", () => {
   const CANCELS: [string, () => void][] = [
     ["Escape", () => fireEvent.keyDown(window, { key: "Escape" })],
@@ -439,8 +430,6 @@ describe("B38 a canceled drag goes back to idle, sends nothing, and swallows the
     expect(source).not.toHaveAttribute("data-selected");
   });
 });
-
-// B39: clicks keep working
 
 describe("B39 a short press is a click, and click-click works with drag to play on or off", () => {
   it("B39 a press that moves 7 px starts no drag, and click-click then plays the card", () => {

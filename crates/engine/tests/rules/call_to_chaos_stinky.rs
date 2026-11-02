@@ -1,8 +1,7 @@
-//! Stinkyscape #150 Call to Chaos (Stinky Edition)'s table (`subsystems/call_to_chaos_stinky.rs`),
-//! rolled by Core #95's subsystem (R28, R87, R423, R436): the ten entries in the card's order, the
-//! entries that add or summon the set's cards by index against `fixtures::call_to_chaos_stinkyscape`,
-//! the freeze (R1882003), and the rest-of-game death watch with its cap (R1882004) and its casts a turn
-//! (R2176001). The real card's tests (S #150) cover the same entries against the real catalog.
+//! Stinkyscape #150 Call to Chaos (Stinky Edition)'s table (`subsystems/call_to_chaos_stinky.rs`), rolled
+//! by Core #95's subsystem (R28, R87, R423, R436): the ten entries in the card's order, those that add or
+//! summon the set's cards by index against `fixtures::call_to_chaos_stinkyscape`, the freeze (R1882003),
+//! and the rest-of-game death watch with its cap (R1882004) and its casts a turn (R2176001).
 
 use jackioh_engine::config::{
     CHAOS_STINKY_DEATH_WATCH_CAP, CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN, CHAOS_STINKYSCAPE_COST,
@@ -28,7 +27,6 @@ fn entry(name: &str) -> Effect {
     (found.build)()
 }
 
-/// Run `effect` as p1's, from a resolving fixture card, then the state check.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     let me = new_instance(&mut *state, ETHICS, P1, Zone::Resolving { player: P1 });
     let mut events: Vec<GameEvent> = Vec::new();

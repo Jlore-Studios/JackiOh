@@ -49,10 +49,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable, no target → enters
-// anyway; radiant clears every enemy non-Human, Humans survive".
-// Non-Human: #25 (no tags, no hooks) and #12 Duplicating Felinors (its Cry never fires on a board
-// the harness placed). Human: #8 Mr. Vanilla and #20 Pointmaster.
+// BUILD M4-T4 row 2: destroys enemy non-Human (#25, #12); Humans (#8, #20) not targetable / survive.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -145,7 +142,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-002, on both faces: the Cry destroys the chosen non-Human, or every one on the Radiant face.
+    /// R2195003: the snapshot plays exactly as core-002, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_002() {
         for radiant in [false, true] {

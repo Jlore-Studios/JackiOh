@@ -1,4 +1,3 @@
-// Browser session and pending-auth storage.
 // CLAUDE.md rule 7: bearer tokens are not game state, so browser storage stays in this module.
 // Per-tab `sessionStorage` limits token persistence (R632); migrate shared tokens and prefer it to the
 // M8 fixture in `localStorage` (e2e/README.md A6). Pending addresses are non-secret; recovery stays per tab (R193).
@@ -87,7 +86,6 @@ export function clearSession(): void {
 
 export const PENDING_EMAIL_STORAGE_KEY = "jackioh.auth.pendingEmail";
 
-/** Guards recovery links against account swaps. */
 export const PENDING_RESET_STORAGE_KEY = "jackioh.auth.pendingReset";
 
 type RememberedAddress = { address: string; at: number };
@@ -103,7 +101,6 @@ function rememberAddress(key: string, email: string): void {
 
 export type PendingAddress = { readonly address: string; readonly at: number };
 
-/** Reject missing, expired, or malformed remembered addresses. */
 function rememberedEntry(key: string): PendingAddress | null {
   if (typeof window === "undefined") return null;
   const raw = getStored(key);
@@ -159,7 +156,6 @@ export function pendingReset(): string | null {
   return rememberedAddress(PENDING_RESET_STORAGE_KEY);
 }
 
-/** Uses the same provider interval (R192). */
 export function pendingResetEntry(): PendingAddress | null {
   return rememberedEntry(PENDING_RESET_STORAGE_KEY);
 }

@@ -53,7 +53,6 @@ const FOUR: readonly ShowcaseStat[] = showcaseStats(tally({ "core-004": { defeat
   (stat) => KEYS.includes(stat.key),
 );
 
-/** One of the four alone, for a test of what its card plays. */
 function only(key: ShowcaseKey): ShowcaseStat[] {
   return FOUR.filter((stat) => stat.key === key);
 }
@@ -66,7 +65,6 @@ function root(): HTMLElement {
   return screen.getByTestId(landingTestid.showcase);
 }
 
-/** The line the stat on show says, by its key. */
 function lineShown(): string {
   return FOUR.find((stat) => stat.key === shown())!.line();
 }
@@ -105,7 +103,6 @@ describe("R1584000 the cycle", () => {
       show(FOUR, false, seeded(7));
       const order: string[] = [shown()!];
       for (let i = 1; i < KEYS.length * rounds; i += 1) {
-        // A stat shows for SHOWCASE_INTERVAL_MS, then the next of the bag.
         advance(SHOWCASE_INTERVAL_MS - 1);
         expect(shown()).toBe(order[i - 1]);
         advance(1);
@@ -123,7 +120,6 @@ describe("R1584000 the cycle", () => {
       if (i > 0) expect(key).not.toBe(order[i - 1]);
     });
     expect(run()).toEqual(order);
-    // Another seed is another order.
     show(FOUR, false, seeded(8));
     expect(shown()).toBe(shuffled(KEYS, seeded(8))[0]);
   });
@@ -147,13 +143,12 @@ describe("R1584000 the cycle", () => {
     order.push(shown());
     expect(fireEvent.keyDown(root(), { key: " " })).toBe(false);
     order.push(shown());
-    // Four stops: the first round, every stat once, and each a different stat than the one before.
+    // Four stops make the first round: every stat once.
     expect([...order].sort()).toEqual([...KEYS].sort());
     const now = shown();
     expect(fireEvent.keyDown(root(), { key: "a" })).toBe(true);
     expect(fireEvent.keyDown(root(), { key: "Tab" })).toBe(true);
     expect(shown()).toBe(now);
-    // The next round starts with another stat than the last one of this.
     fireEvent.click(root());
     expect(shown()).not.toBe(now);
   });

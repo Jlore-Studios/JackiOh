@@ -17,9 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #98 Hull Booster — SPEC §8.10 row 98, BUILD M12 row S 98: "a 1/1 Armor 2 Starship
-// Piece, each hit on it 2 less; played as an Equip, the host gains +1/+1 and Armor 2, which stacks
-// with its own (§6.1); radiant 2/2 and Armor 4".
+// Stinkyscape #98 Hull Booster — SPEC §8.10 row 98, BUILD M12 row S 98 (§6.1).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,7 +82,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(BOOSTER, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 1/1, with Armor 2.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 5, "health": 5 }));
         assert_eq!(s.stats(host.id.as_str()).armor, 2);

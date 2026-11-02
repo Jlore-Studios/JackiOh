@@ -18,7 +18,6 @@ export const DEFAULT_FX_SETTINGS: FxSettings = {
 };
 Object.freeze(DEFAULT_FX_SETTINGS);
 
-/** A finite number clamped to [FX_SPEED_MIN, FX_SPEED_MAX]; anything else is the default speed. */
 export function normalizeSpeed(speed: unknown): number {
   if (typeof speed !== "number" || !Number.isFinite(speed)) return FX_SPEED_DEFAULT;
   return Math.min(FX_SPEED_MAX, Math.max(FX_SPEED_MIN, speed));
@@ -35,7 +34,6 @@ function normalizeMotion(motion: unknown): FxMotion {
   return motion === "system" || motion === "reduce" ? motion : DEFAULT_FX_SETTINGS.motion;
 }
 
-/** Field by field: each unknown or missing value becomes its default, and speed is clamped. */
 export function normalizeFxSettings(raw: unknown): FxSettings {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return DEFAULT_FX_SETTINGS;
   const record = raw as Record<string, unknown>;
@@ -80,13 +78,11 @@ function persist(settings: FxSettings): void {
 let current: FxSettings | null = null;
 const listeners = new Set<(settings: FxSettings) => void>();
 
-/** The in-memory current value, loaded from storage once, on first read. */
 export function getFxSettings(): FxSettings {
   if (current === null) current = loadFxSettings();
   return current;
 }
 
-/** Merges `patch` over the current value, normalizes, persists in try/catch and notifies synchronously. */
 export function setFxSettings(patch: Partial<FxSettings>): FxSettings {
   const merged: Record<string, unknown> = { ...getFxSettings() };
   for (const [key, value] of Object.entries(patch)) {

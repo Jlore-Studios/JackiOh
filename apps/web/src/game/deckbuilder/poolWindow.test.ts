@@ -16,7 +16,6 @@ import {
   type PoolShape,
 } from "./poolWindow.ts";
 
-/** Four cards to a row, each row 100 px tall with a 10 px gap under it. */
 const SHAPE: PoolShape = { columns: 4, rowHeight: 100, rowGap: 10, paddingTop: 10 };
 const PITCH = SHAPE.rowHeight + SHAPE.rowGap;
 /** 100 cards fill 25 rows. */
@@ -36,7 +35,6 @@ describe("#2334 the rows a virtual pool mounts", () => {
 
     expect(mounted.firstRow).toBe(Math.floor((band.top - reach) / PITCH));
     expect(mounted.lastRow).toBe(Math.floor((band.bottom + reach) / PITCH));
-    // Every row the view touches is in it, and a pool of 25 rows is not mounted whole.
     expect(mounted.firstRow).toBeLessThanOrEqual(Math.floor(band.top / PITCH));
     expect(mounted.lastRow).toBeGreaterThanOrEqual(Math.floor(band.bottom / PITCH));
     expect(mounted.lastRow - mounted.firstRow + 1).toBeLessThan(LAST_ROW);

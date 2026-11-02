@@ -43,10 +43,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #67 Pear — SPEC §8.7 row 67, BUILD M9 Classic+ row C+ 67: "Summons 2 random non-token Units of any
-// set printed at (1) Cost and Common rarity (R380; out-of-play cost, R65), no Cry (R1), repeats allowed;
-// one on a nearly full board, none on a full one and no random draw (R129); the count reads through
-// `param()`; radiant the Units are Radiant".
+// C+ #67 Pear — SPEC §8.7 row 67, BUILD M9 Classic+ row C+ 67.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,7 +69,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `pear({ radiant?, seed?, field? })`.
     fn pear(radiant: bool, seed: Option<&str>, field: Option<usize>) -> Scenario {
         let mut card = json!({ "def": PEAR });
         if radiant {

@@ -2,12 +2,7 @@
 //! Spell, Common, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Give a Unit +{health} Health, +{armor} Armor and Taunt." — 3, 1.
 //!   Radiant: "… +{health} Health, +{armor} Armor, Taunt and Divine Shield." — 6, 2.
-//!
-//! Engine: S #10.3 Power Word Shield's target and buff (any Unit on either side, R90; +Health current
-//! and max), then S #15 Arg Arg Defender's grants on the chosen Unit: Armor n, which stacks with the
-//! Armor it prints and is its own until it leaves the field (§6.1 Armor X, R78), and Taunt, a set, so a
-//! Unit that has it gets no second copy and an Indestructible one never has it (R347). The Radiant face
-//! grants Divine Shield too, which brings back a spent one (`grant_onto`).
+//! Targets any Unit (R90; S #10.3); grants Armor n (§6.1, R78) and Taunt (R347 Indestructible ignores; S #15). Radiant grants Divine Shield.
 
 use jackioh_engine::prelude::*;
 

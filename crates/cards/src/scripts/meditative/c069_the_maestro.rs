@@ -4,10 +4,8 @@
 //!          Activate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from
 //!          their field, hand, deck and graveyard."
 //! Radiant: the same text, two exiles per zone.
-//! Engine: the `manaSpent` event (MD-D26) — a field trigger answers the controller's own spending
-//! with one placement per mana (R212 already keeps the Maestro from answering its own play, and the
-//! opponent's spending is never its controller's); the Activate refuses below {price} Plague
-//! Counters and exiles {exiles} per zone (MD-D27), two per zone on the Radiant face.
+//! Engine: the `manaSpent` event (MD-D26) feeds a field trigger; the Activate refuses below {price}
+//! Plague Counters and exiles {exiles} per zone (MD-D27).
 
 use jackioh_engine::prelude::*;
 
@@ -35,9 +33,7 @@ fn mana_trigger() -> TriggerDef {
     })
 }
 
-/// "Activate: Spend ({price}) Plague Counters: Exile {exiles} from each of the opponent's field,
-/// hand, deck, and graveyard zones."
-/// Its label is that template itself: the client fills `{price}` and `{exiles}` from the card's
+/// Its label is a template: the client fills `{price}` and `{exiles}` from the card's
 /// current numbers (R386), so a tuned number shows as the one the ability uses.
 fn exile_ability() -> ActivationDecl {
     ActivationDecl {
@@ -83,9 +79,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #69 The Maestro — SPEC §8.8 row 69, BUILD M10 row M 69: "Counters per mana (MD-D26: its own
-// play and the opponent's spending not counted); refused below 4; one exile per zone, empty zones
-// skipped (MD-D27); two per zone on the Radiant face".
+// M #69 The Maestro — SPEC §8.8 row 69, BUILD M10 row M 69.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,7 +128,6 @@ mod tests {
             let mut s = staged("maestro-counters", false, 0);
             let maestro = s.unit("p1", 1).expect("the Maestro");
             assert_eq!(plague(&s, &maestro.id), 0);
-            // Two (1)s spend 2 mana: 2 counters.
             s.state_mut().players.p1.mana.current = 2;
             s.play(FILLER, json!({}));
             s.play(FILLER, json!({}));
@@ -149,7 +142,6 @@ mod tests {
             s.play(MAESTRO, json!({ "zone": 1 }));
             let maestro = s.unit("p1", 1).expect("the Maestro");
             assert_eq!(plague(&s, &maestro.id), 0);
-            // The opponent's spending is never its controller's.
             s.end_turn();
             s.state_mut().players.p2.mana.current = 2;
             s.play(FILLER, json!({}));
@@ -241,7 +233,6 @@ mod tests {
                 .memory
                 .insert(jackioh_engine::subsystems::POWER_KEY.to_string(), json!("draw"));
             s.activate(HEROIC_POWER, json!({}));
-            // Life Tap's price is (1): one counter.
             assert_eq!(plague(&s, &maestro.id), 1);
         }
 
@@ -311,7 +302,6 @@ mod tests {
         fn r386_price_and_exiles_read_through_param() {
             let mut s = full_enemy("maestro-param", false, 3);
             let maestro = s.unit("p1", 1).expect("the Maestro");
-            // The price set to 3 and exiles to 2 per zone: the Activate reads both off the card.
             set_param(s.card_mut(&maestro.id), "price", 3);
             set_param(s.card_mut(&maestro.id), "exiles", 2);
             activate_exile(&mut s);
@@ -382,8 +372,7 @@ mod tests {
     }
     /// R1850000, R1884005: a copier running the Maestro's text (S #20 Tnack Trav copying a Legendary
     /// fusion of the Maestro and Core #92 Felinor Fiender) reads the Activate's price off the copied
-    /// text, as `param` does, and its legality check no longer panics on the copier's own card
-    /// (handicapped fuzz seed 1087 of the Stinkyscape release).
+    /// text, as `param` does, and its legality check does not panic on the copier's own card.
     #[test]
     fn r1884005_a_copier_of_the_maestro_s_text_reads_its_price_off_the_copy() {
         const TNACK_TRAV: &str = "stinkyscape-020";

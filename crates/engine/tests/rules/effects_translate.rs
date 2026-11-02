@@ -1,8 +1,6 @@
 //! ME-CN's verb and flag (docs/meditative-set.md, group B's Systems, ME-CN; MD-B11, MD-B12): `translate`
 //! shows a card in Chinese from now on, over a named card or a card scope. The flag is presentation
-//! only (R1300): Immutable does not stop it, nothing removes it, a copy keeps it and a Transform's new
-//! card is without it. It is public as the card is (R1301): on every view of a card the viewer may
-//! read and on no hidden one, and `translated` reaches both players only where both read the card.
+//! only (R1300) and public as the card is (R1301): on every view the viewer may read, on no hidden one.
 
 use jackioh_engine::effects::{add_library_copies, shuffle_into, summon_copy, transform, translate};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
@@ -127,7 +125,7 @@ mod r1300_the_flag_and_its_verb {
         for card in cards {
             assert_eq!(card.chinese, Some(true), "{} {}", card.id, card.def_id);
         }
-        // The Spell itself was resolving, in neither pile, so it stays as it was.
+        // The resolving Spell was in neither pile, so it stays as it was.
         assert_eq!(live(&state, &spell.id).chinese, None);
         assert!(
             !result
@@ -402,7 +400,7 @@ mod r1301_who_sees_it {
             sent(&mut state, events.clone(), P2),
             json!([{ "type": "translated", "instanceId": unit.id }])
         );
-        // Bounced since, the card is in its owner's hand, which only its owner reads (R97).
+        // Bounced since, it is in its owner's hand, which only the owner reads (R97).
         let mut moving = live(&state, &unit.id);
         move_to_zone(
             &mut state,

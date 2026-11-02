@@ -1,20 +1,10 @@
-//! Migrations are append-only (`src/db/migrate.rs`): a database refuses to start the server when a
-//! file it already applied has changed, and Render runs the migration on every deploy. #325's
-//! repo-wide rename of "Plague Tokens" edited a comment in 0020_plague_tag.sql, and every deploy
-//! from 97a00bd6 on exited at `db:migrate` ("0020_plague_tag.sql was already applied but its
-//! contents changed (1384d000 -> 621182a3)"). CI never saw it, since it migrates a fresh database.
-//! So every migration's checksum is pinned here: an edit to one fails this test, and a new
-//! migration adds its line.
-//!
-//! (← `apps/server/test/db/migrations-pinned.test.ts`.) The Rust runner embeds the files with
-//! `include_str!` (SURFACE §11.3), so one more check rides along: every `.sql` file in the
-//! directory is one the runner embeds, under its own name and with its bytes.
+//! Migrations are append-only (`src/db/migrate.rs`, #325, SURFACE §11.3).
+//! Pins checksums of all migrations to prevent drift and ensure embedded runner sync.
 
 use std::path::PathBuf;
 
 use jackioh_server::db::migrate::{MIGRATIONS, REWRITTEN, checksum};
 
-/// The directory part 1 copied byte for byte from `apps/server/src/db/migrations/`.
 fn migrations_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("migrations")
 }
@@ -105,7 +95,7 @@ fn pinned(name: &str) -> Option<&'static str> {
     PINNED.iter().find(|(file, _)| *file == name).map(|(_, sum)| *sum)
 }
 
-/// The `.sql` files in the directory, sorted (TS `readdirSync(…).filter(…).sort()`).
+/// The `.sql` files in the directory, sorted.
 fn migrations() -> Vec<String> {
     let mut names: Vec<String> = std::fs::read_dir(migrations_dir())
         .expect("crates/server/migrations is readable")
@@ -122,7 +112,7 @@ fn migrations() -> Vec<String> {
     names
 }
 
-/// The text of one migration file, read the way TS read it (`readFileSync(…, "utf8")`).
+/// The text of one migration file.
 fn read(name: &str) -> String {
     std::fs::read_to_string(migrations_dir().join(name)).expect("a migration file is readable UTF-8")
 }

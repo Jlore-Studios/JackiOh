@@ -33,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #27 Drone Core I — SPEC §8.10 row 27, BUILD M12 row S 27: "discards one random card of its caster's
-// hand (none with an empty hand, the summon still made) and summons a Drone Interceptor into the leftmost
-// open unit zone; a full unit row puts it in the backrow (R2248000); radiant the Interceptor is Radiant
-// (4/4, two random combat keywords)".
+// S #27 Drone Core I — SPEC §8.10 row 27, BUILD M12 row S 27 (R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::drawn_combat_keywords;

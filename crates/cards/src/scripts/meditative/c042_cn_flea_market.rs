@@ -5,13 +5,12 @@
 //!   Radiant: "Open a night market. You have {yuan} yuan to buy its cards, and you may barter cards
 //!             from your hand."
 //!
-//! The whole card is the engine's night market (`subsystems/night_market.rs`): the stall rolled once
-//! as the Spell resolves, the yuan prices, the `market` prompt that reopens after each deal until the
-//! caster leaves, and the barter the Radiant face opens (it reads the face that cast it). This file
-//! hands it the shelves: three different random CN cards (never this one, R387), two Auspicious Rocks
-//! (M #39.1) and one random AI generated card (the fourteen C+ #78 names since #1563, read off their AI tag). Each lot
-//! is sold on its base face or, at its Radiant price, its Radiant face (patch v0.3.10, R831002). The
-//! yuan is the declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
+//! The whole card is the engine's night market (`subsystems/night_market.rs`): stall, prices, prompt
+//! and the Radiant face's barter (it reads the face that cast it). This file hands it the shelves:
+//! three different random CN cards (never this one, R387), two Auspicious Rocks (M #39.1) and one
+//! random AI generated card (the fourteen C+ #78 names since #1563, read off their AI tag). Each lot
+//! is sold on its base face or, at its Radiant price, its Radiant face (R831002). The yuan is the
+//! declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
 //!
 //! Voice audio is owed: the `card-audio.json5` entry and its `card-text.yaml` lines are written, and
 //! a person with macOS renders it (`docs/ADDING_CARDS.md` §7).
@@ -52,16 +51,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #42 CN Flea Market — SPEC §8.8 row 42, ME-MARKET, R97, R113, R387, R1000–R1002.
-//
-// BUILD M10 row M 42: "Rolls one stall as it resolves (3 different CN cards, 2 Auspicious Rocks and 1
-// AI generated card; R1000), priced 10 yuan a printed mana plus 5 a rarity rank; a `market` prompt
-// offers only the lots within the yuan left, none while the hand is full, and Leave; each lot is offered
-// on its base face and on its Radiant face at twice the price (R831002); each buy adds the card on the
-// face it was sold on at its printed cost and reopens the prompt (R113); … unspent yuan is gone on
-// Leave; the opponent sees only an open prompt and hidden cards arriving; a timeout leaves (R1002);
-// yuan reads through `param()`; radiant 80 yuan, and one barter per hand card that exiles it and adds
-// its price, doubled if it is Radiant (R1001)".
+// Meditative #42 CN Flea Market — SPEC §8.8 row 42, ME-MARKET, R97, R113, R387, R1000–R1002 (the barter
+// R1001), BUILD M10 row M 42.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,10 +63,8 @@ mod tests {
 
     const FILLER: &str = "core-005";
 
-    /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1 Base
-    /// Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two AI
-    /// tokens join the AI shelf's pool, and #1563's #1.3 and #1.4 after them; and for the Stinkyscape
-    /// release (#1884): its T-AI-1 to T-AI-10.
+    /// The AI generated cards of the sets that ship (§7, R1421): C+ T-AI-1 to T-AI-10, M+ #1.1 to
+    /// #1.4 (#1187, #1563) and Stinkyscape's T-AI-1 to T-AI-10 (#1884).
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
         ids.extend((1..=4).map(|n| format!("meditativeplus-001-{n}")));

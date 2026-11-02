@@ -1,17 +1,9 @@
 // The XP reveal (#1664, part of #1651, SPEC §14.7–§14.9): what a finished game did to the set tracks,
-// shown after every game that paid (the 1v1 result panel, the co-op result and a paid practice
-// game's result dialog). Each track the game moved is a bar that fills from where it stood to where
-// it stands, level by level; each level it reaches pops its number and flies out what it paid, one
-// reward at a time with the sting; each quest the game completed is listed with its pay. A quest
-// only ever completes inside a game's payout (§14.9), so this is where a completion shows.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). The tracks and the quests are the answer's (`xp.ts`): the
-// client computes no curve and picks no reward, it plays the answer. Levels span different XP, so
-// a track is played as one bar for each level it passes through (`stagesOf`), each of the size the
-// answer gives; the level a bar fills to, and so the rewards that fly out, follow its bursts.
-//
-// REDUCED MOTION (the panel's setting or the system's) draws every track's end state and every
-// reward at once, one sting, as the bars and the reveal do under it.
+// shown after every game that paid. A quest only ever completes inside a game's payout (§14.9), so
+// this is where it shows.
+// THE SERVER DECIDES (CLAUDE.md rule 7): the tracks and quests are the answer's (`xp.ts`). Levels span
+// different XP, so a track plays as one bar per level it passes through (`stagesOf`), each the size
+// the answer gives. REDUCED MOTION draws every end state and reward at once, with one sting.
 
 import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -34,7 +26,6 @@ export type XpRevealProps = {
   testid?: string;
 };
 
-/** What each part of a level's reward is, in the reveal's kinds and the answer's fields. */
 const REWARD_PARTS: readonly (readonly [RevealKind, keyof TrackRewards])[] = [
   ["jlore", "jlore"],
   ["setPack", "setPacks"],

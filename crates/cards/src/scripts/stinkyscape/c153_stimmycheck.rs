@@ -12,9 +12,7 @@
 //! turn" is a delayed add at the end of the turn it is cast on, whoever's (R350, ST-S14-11), not an
 //! End of turn trigger, the card being in the graveyard by then: `delay` re-enters this script's
 //! `resume` step (R62), whose data carries the copy's chance, 10 higher and never past 100
-//! (`next_inflation_chance`), written into the copy's memory as `add_to_hand` makes it. The Radiant
-//! face's Lucky 1 is its catalog keyword, which `inflate` reads (a miss kept on its caster's own
-//! cards, R1440), and its copy is Radiant.
+//! (`next_inflation_chance`), written into the copy's memory as `add_to_hand` makes it.
 
 use jackioh_engine::prelude::*;
 
@@ -75,12 +73,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #153 Stimmycheck — SPEC §8.10 row S 153, BUILD M12 row S 153: "at (0) it gains 1 mana; each card
-// in its caster's hand and deck costs (1) more on a roll under 15 (hits and misses seen over the
-// seeds), an X card never; nothing is announced to the opponent; at the turn's end a Stimmycheck is
-// added whose rolls hit under 25, and the one it adds under 35; mana and chance read through
-// `param()`; radiant Lucky 1: each card rolls twice and is spared if either misses, and the copy is
-// Radiant" (R1848006).
+// S #153 Stimmycheck — SPEC §8.10 row S 153, BUILD M12 row S 153 (R1848006).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::prelude::INFLATION_CHANCE_KEY;
@@ -95,7 +88,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005";
 
-    /// How many seeds the hit counts are read over.
     const SEEDS: usize = 20;
 
     fn stimmy_board(seed: &str, radiant: bool) -> Scenario {
@@ -110,7 +102,6 @@ mod tests {
         }))
     }
 
-    /// The `costMod` of every card of p1's hand and deck, the No-No Words left out.
     fn cost_mods(s: &Scenario) -> Vec<i32> {
         let side = &s.state().players[P1];
         side.hand
@@ -121,7 +112,6 @@ mod tests {
             .collect()
     }
 
-    /// The chance the Stimmycheck in p1's hand (the copy) carries, if one is there and carries one.
     fn copy_chance(s: &Scenario) -> Option<i64> {
         s.hand(P1)
             .into_iter()
@@ -129,7 +119,6 @@ mod tests {
             .and_then(|card| card.memory.get(INFLATION_CHANCE_KEY).and_then(Value::as_i64))
     }
 
-    /// Hits over the seeds `stimmy-0..`, on the face given.
     fn hits_over_seeds(radiant: bool) -> usize {
         (0..SEEDS)
             .map(|i| {

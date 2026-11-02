@@ -1,10 +1,7 @@
-// `main.tsx`: the route table and SPEC §9.4's gate, asserted through the real modules — a session
-// in `localStorage`, `GET /api/auth/me` over a stubbed `fetch`, and `window.location.pathname` as
-// the answer, because that is what specs 09 and 10 read.
-//
-// The gate enforces nothing (CLAUDE.md rule 7). The server 403s `account_pending` at every door and
-// `wsServer.ts` runs the same check on the upgrade; what is asserted here is only that the browser
-// is sent to the screen §9.4 says the account may see.
+// `main.tsx`: the route table and SPEC §9.4's gate, through the real modules, with
+// `window.location.pathname` as the answer because that is what specs 09 and 10 read. The gate
+// enforces nothing (CLAUDE.md rule 7; the server 403s `account_pending` at every door): asserted
+// here is only that the browser is sent to the screen §9.4 says the account may see.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,18 +17,15 @@ import { SKELETON_DELAY_MS } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, jsonResponse, meBody, signIn } from "../test/stubServer.ts";
 
-// `main.tsx` is the app's entry point and mounts itself, except under vitest — see the guard at the
-// foot of that file. This assertion is what makes the guard's condition explicit: if vitest ever
-// stops reporting `MODE === "test"`, this fails instead of the suite silently double-mounting.
+// `main.tsx` mounts itself except under vitest (the guard at its foot): if vitest ever stops
+// reporting `MODE === "test"`, this fails instead of the suite silently double-mounting.
 it("vitest runs in MODE=test, which is what main.tsx's mount guard keys on", () => {
   expect(import.meta.env.MODE).toBe("test");
 });
 
 const { App, Gated, Loading, redirectFor, resetUsernamePromptForTests } = await import("../main.tsx");
 
-// ---------------------------------------------------------------------------------------------
 // the stubbed server
-// ---------------------------------------------------------------------------------------------
 
 type Status = "pending" | "active" | "banned";
 
@@ -56,8 +50,7 @@ function serveAs(status: Status | "unauthorized", username?: OwnUsername): void 
       if (url.endsWith("/api/catalog")) {
         return Promise.resolve(jsonResponse(200, { version: "v1", defs: {} }));
       }
-      // The reads `/decks` makes for itself (another task owns that screen); stubbed so this file
-      // asserts the gate rather than a deckbuilder failing to load.
+      // The reads `/decks` makes, so this file asserts the gate, not a deckbuilder failing to load.
       if (url.endsWith("/api/loadout")) {
         return Promise.resolve(jsonResponse(200, { catalogVersion: "v1", loadout: null }));
       }
@@ -74,19 +67,12 @@ function serveAs(status: Status | "unauthorized", username?: OwnUsername): void 
   );
 }
 
-/**
- * A lazily-imported route chunk plus a stubbed round trip can outrun testing-library's 1 s default
- * when the whole suite runs at once. Still an assertion retried against the DOM, never a sleep.
- */
+/** A lazily-imported route chunk plus a stubbed round trip can outrun testing-library's 1 s default. */
 const SLOW = { timeout: 5_000 } as const;
 
 /**
- * The gate has answered and the gated screen has mounted. `gate-loading` is both the gate's own
- * holding panel and the route table's Suspense fallback, so its absence covers the lazy chunk too.
- *
- * Deliberately not an assertion on the screen's own markup: `/decks` and `/invite` belong to other
- * tasks and their contents are theirs to change. What this file owns is which screen the browser
- * ends up at, which is exactly what specs 09 and 10 assert.
+ * The gate has answered and the gated screen has mounted: `gate-loading` is both the gate's panel
+ * and the Suspense fallback. Not the screen's own markup: other tasks own `/decks` and `/invite`.
  */
 async function gateOpened(): Promise<void> {
   await waitFor(() => {
@@ -110,9 +96,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
 // redirectFor: the whole decision, with no DOM in the way
-// ---------------------------------------------------------------------------------------------
 
 describe("redirectFor", () => {
   it("sends an account with no session to /login", () => {
@@ -149,9 +133,7 @@ describe("redirectFor", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the three redirect outcomes, through the real route table
-// ---------------------------------------------------------------------------------------------
 
 describe("the gate, as specs 09 and 10 read it", () => {
   it("anonymous: /decks sends the browser to /login", async () => {
@@ -199,7 +181,6 @@ describe("the gate, as specs 09 and 10 read it", () => {
     await waitFor(() => {
       expect(pathname()).toBe("/invite");
     }, SLOW);
-    // And the code screen (another task's) is what renders there.
     await gateOpened();
   });
 
@@ -211,7 +192,6 @@ describe("the gate, as specs 09 and 10 read it", () => {
     await waitFor(() => {
       expect(pathname()).toBe("/invite");
     }, SLOW);
-    // And the code screen (another task's) is what renders there.
     await gateOpened();
   });
 
@@ -311,9 +291,7 @@ describe("R2108000 the shell's wait", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the username prompt (R1435)
-// ---------------------------------------------------------------------------------------------
 
 describe("R1435 the username prompt at the gate", () => {
   const OWED: OwnUsername = { name: "Player#7", nextChangeAt: null, promptOwed: true };
@@ -363,8 +341,7 @@ describe("R1435 the username prompt at the gate", () => {
     render(<Gated>{({ me }) => <p>{me.username === undefined ? "the gate opened" : "the gate read again"}</p>}</Gated>);
     expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
 
-    // A server that now owes the prompt (one that gained usernames meanwhile), read in the background:
-    // the screen takes the new read and stays.
+    // A background re-read that now owes the prompt: the screen takes the new read and stays.
     serveAs("active", OWED);
     announceAccountChange();
     expect(await screen.findByText("the gate read again", undefined, SLOW)).toBeInTheDocument();
@@ -378,8 +355,7 @@ describe("R1435 the username prompt at the gate", () => {
     expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
     cleanup();
 
-    // The server now owes the prompt, and the player moves on (the match a queue just paired): the
-    // next screen's own gate reads it, and opens its screen all the same.
+    // The server now owes the prompt, and the player moves on (the match a queue just paired).
     serveAs("active", OWED);
     render(<Gated>{({ me }) => <p>{me.username?.promptOwed === true ? "the next screen" : "a stale read"}</p>}</Gated>);
     expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
@@ -455,9 +431,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // routes that need no gate
-// ---------------------------------------------------------------------------------------------
 
 describe("the route table", () => {
   it("/login is ungated: it is the door the gate sends people to", async () => {
@@ -475,9 +449,7 @@ describe("the route table", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // /match/<id>
-// ---------------------------------------------------------------------------------------------
 
 describe("/match/<id>", () => {
   /** The match route opens a real `WebSocket`; jsdom has one and nothing to connect it to. */

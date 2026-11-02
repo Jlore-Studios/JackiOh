@@ -321,7 +321,6 @@ describe("Log: a line about a card opens that card", () => {
     );
     const lines = cardLines();
     expect(lines.map((line) => line.getAttribute("data-def-id"))).toEqual(["core-002", "core-002"]);
-    // "A unit attacked a unit" names nothing, so it opens nothing.
     expect(screen.getByText("A unit attacked a unit").querySelector(`[data-testid="${LOG_CARD_TESTID}"]`)).toBeNull();
   });
 
@@ -548,10 +547,8 @@ describe("R1850003 a permanent held beneath a card", () => {
   });
 });
 
-// #552 (MN09): the lines the Meditative play-through turned up, read as English. A line that opens on
-// a card the viewer may not read opens with a capital; a hidden card turned into another hidden card
-// says only that it changed; a craft prompt is a card to craft; and the lines about one card shown in
-// Chinese name it in Chinese, whichever field the event names it by (R1301).
+// #552 (MN09): the lines the Meditative play-through turned up, read as English. The lines about one
+// card shown in Chinese name it in Chinese, whichever field the event names it by (R1301).
 describe("#552 the log reads as English on the Meditative cards' events", () => {
   const lookup = lookupFromDefs(CATALOG);
   const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
@@ -800,20 +797,18 @@ describe("#2252 a play names what it aimed at, and a hit off combat what dealt i
   });
 
   it("R745 keeps a play's aim once it leaves the window, pairs each play with its own announce, and reads as before when its announce is out of reach", () => {
-    // (a) The aim survives into history: the turn's own lines are kept as they arrived.
     const filler: GameEvent[] = Array.from({ length: 32 }, (_, i) => ({ type: "healthLost", player: "p1", amount: i + 1 }));
     const turn = [announce(["u1"]), play(), hit()];
     const views = [withEvents(board(), turn), withEvents(board(), [...turn, ...filler.slice(0, 29)]), withEvents(board(), filler)];
     const history = views.reduce((kept, view) => advanceLogHistory(kept, view, keptLineFor(view, lookup)), EMPTY_LOG_HISTORY);
     expect(history.seats.p1?.kept.map((line) => line.text)).toEqual([AIMED, DEALT]);
 
-    // (b) Each play pairs with its own announce, by the event itself.
+    // Each play pairs with its own announce, by the event itself.
     expect(lines(withEvents(board(), [announce(["u1"]), play(), announce(["hero-p1"]), { ...play() }]))).toEqual([
       AIMED,
       `Opponent played ${nameOf(SPELL)} for 1, aiming at your hero`,
     ]);
 
-    // (c) The announce out of reach: the play reads as it always did, the hit still names the spell it was played as.
     expect(lines(withEvents(board(), [play(), hit()]))).toEqual([`Opponent played ${nameOf(SPELL)} for 1`, DEALT]);
   });
 });

@@ -1,20 +1,12 @@
 //! Meditative+ #20 KY's Competition's question sequence (SPEC §8.9 row 20, R1184000, R1184001).
 //!
-//! C+ #42 KY's Test's `answer` prompt (R420, R465) asked again after each right answer. Each step is a
-//! plain-data continuation — the streak rides the prompt's resume data under `KY_COMPETITION_STREAK`
-//! — so a paused game survives JSON and replays (§9.3, `work.rs`):
+//! C+ #42 KY's Test's `answer` prompt (R420, R465) asked again after each right answer, the streak
+//! riding the prompt's resume data under `KY_COMPETITION_STREAK`, so a paused game survives JSON and
+//! replays (§9.3, `work.rs`). A wrong answer or Stop (a timeout's answer, R1184001) ends it, and the
+//! card's Kenny is summoned with X the streak (`summon`'s `x`, R1184003).
 //!
-//!   cry     the first question, the streak 0.
-//!   graded  a right answer raises the streak and asks the next question, until the streak reaches
-//!           `KY_COMPETITION_MAX`; a wrong answer or Stop (a timeout's answer, R1184001) ends it. An
-//!           ended sequence summons the card's Kenny with X the streak (`summon`'s `x`, R1184003),
-//!           Radiant on the Radiant face; a streak of 0 summons nothing.
-//!
-//! A question is rolled from the match rng, never drawn from a bank: two operands from the face's
-//! range (`KY_COMPETITION_OPERANDS`, the Radiant face's `KY_COMPETITION_EASY_OPERANDS`), added or
-//! subtracted with equal chance, a subtraction's larger operand first, and three wrong options, the
-//! answer moved by three different misses of the face's list, never below 0. `choose_answer` shows the
-//! four in an rng-shuffled order under letters and keeps the right letter where no view reaches (R465).
+//! A question is rolled from the match rng, never drawn from a bank; `choose_answer` shows the options
+//! in an rng-shuffled order and keeps the right letter where no view reaches (R465).
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
@@ -33,8 +25,7 @@ pub const KY_COMPETITION_STREAK: &str = "kyCompetitionStreak";
 /// The step a question's answer re-enters.
 const GRADED: &str = "graded";
 
-/// R1184000: a question's two operations, drawn with equal chance. The minus is Unicode's (§8.7's
-/// plain text with Unicode maths), so a statement reads as it is written.
+/// R1184000: a question's two operations, drawn with equal chance; the minus is Unicode's (§8.7).
 const PLUS: &str = "+";
 const MINUS: &str = "−";
 const OPERATIONS: [&str; 2] = [PLUS, MINUS];
@@ -50,9 +41,8 @@ fn operand(rng: &mut Rng, range: IntRange) -> i32 {
     range.min + rng.int(range.max - range.min + 1)
 }
 
-/// R1184000: a question rolled from the match rng, three-digit on the base face and one- or two-digit
-/// on the Radiant face (`easy`): `a + b` or `a − b` with a ≥ b, and three wrong options, each the
-/// answer moved by a different miss, none below 0, so the four always differ.
+/// R1184000: `a + b` or `a − b` with a ≥ b (smaller operands on the Radiant face, `easy`), and three
+/// wrong options, each the answer moved by a different miss, none below 0, so the four always differ.
 pub fn competition_question(rng: &mut Rng, easy: bool) -> KyCompetitionQuestion {
     let (range, misses) = if easy {
         (KY_COMPETITION_EASY_OPERANDS, KY_COMPETITION_EASY_MISSES)
@@ -137,8 +127,7 @@ pub struct KyCompetitionScript {
 /// sequence summons with X the streak (Meditative+ #20.1).
 pub fn ky_competition_script(kenny: &'static str) -> KyCompetitionScript {
     let graded: Hook = hook(move |ctx| {
-        // A wrong answer and Stop alike end the sequence with the right answers before them, every
-        // one of them in a row, since the first miss ends it.
+        // A wrong answer and Stop alike end the sequence, its streak the right answers before them.
         let right = answered_correctly(ctx);
         let streak = streak_of(&ctx.data) + i32::from(right);
         if right && streak < KY_COMPETITION_MAX {

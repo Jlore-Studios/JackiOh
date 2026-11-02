@@ -1,15 +1,7 @@
 //! #65.1 Spikey Pillow (SPEC §8.3, §4.1, §10.4, §7; the token #65 summons).
-//!
 //! Base 0/2: "Cannot be in Defense Position. Aura: your units have −2 attack".
-//! Radiant 0/4: "Aura: your non-Spikey-Pillow units have −2 attack" — a restated clause, so it
-//! replaces the base aura while the Defense-Position ban is kept (§8 Conventions, §5.2).
-//!
-//! §8.3's Engine cell: "Position validator flag; aura floors attack at 0". The ban is the
-//! `never_defense` flag, enforced by `reduce.rs` and `combat.rs` (§4.1, §3, R20, #48 5pek Controller).
-//! §10.4 layer 5: the aura is computed on read, so the −2 goes the instant the Pillow leaves, and
-//! `layers.rs` floors attack at 0. `applies` reads INSTANCE fields only, never `unit_view`, or the
-//! layers would recurse. "Your units" is the controller's (§8 Conventions), and a card dormant under
-//! a Stack pile is not on the field for this (R13).
+//! Radiant 0/4: "Aura: your non-Spikey-Pillow units have −2 attack" (§8 Conventions, §5.2).
+//! Defense Position prohibited (§4.1, R91; R46 Indestructible; R13, #48, R20, §3). Aura computed on read (§10.4 layer 5, §7).
 
 use jackioh_engine::prelude::*;
 
@@ -60,9 +52,6 @@ pub fn script_v0_5_9f() -> CardScripts {
 }
 
 // #65.1 Spikey Pillow — SPEC §8.3, §4.1, §10.4, BUILD M4-T4 row 65.1.
-//
-// Must-pass: "Cannot switch to DEF; your units −2 attack floored at 0; radiant excludes other
-// Pillows."
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

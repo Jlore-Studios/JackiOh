@@ -1,8 +1,7 @@
 //! Fixtures for the field workstream's systems (docs/classic-sets.md B3.1 Animated, B5 E20 Lock variants
-//! and Unlock, E21 backrow piles and carriers, E22 Flicker). Test-only scripts, since the engine never
-//! imports `crates/cards` (CLAUDE.md): each is the shape of a Classic or Classic+ card that uses the
-//! system, cut down to the part the engine test exercises. Defs are prefixed `fd-` and indexed from
-//! 9400, so they collide with no other file's catalog (BUILD §0).
+//! and Unlock, E21 backrow piles and carriers, E22 Flicker), test-only since the engine never imports
+//! `crates/cards`: each a Classic or Classic+ card's shape, cut to the part the engine test exercises.
+//! Defs are prefixed `fd-` and indexed from 9400, so they collide with no other file's catalog (BUILD §0).
 
 #![allow(non_upper_case_globals)]
 
@@ -110,8 +109,7 @@ pub static golem: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// A stat-less Animated Field Spell: with no stats it never animates (R2280000; it fought as a 0/1
-/// before issue #2280, R657).
+/// A stat-less Animated Field Spell: with no stats it never animates (R2280000 of issue #2280, over R657).
 pub static wisp: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "wisp",

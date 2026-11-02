@@ -1,7 +1,5 @@
-// Lesson 1's coach (SPEC §9.10, R2205000, R2434001): a welcome, then three moments that ask rather
-// than tell, and nothing a later lesson teaches. The player finds mana and playing a unit, that a ready
-// unit can hit the enemy hero, and what two units do when they fight; the last moment ends with the
-// win. Every pick reads the view and the legal actions (CLAUDE.md rule 7).
+// Lesson 1's coach (SPEC §9.10, R2205000, R2434001): a welcome, then moments that ask rather than tell,
+// and nothing a later lesson teaches. Every pick reads the view and the legal actions (CLAUDE.md rule 7).
 
 import type { LessonScript } from "../coach.ts";
 import { info, myHand } from "../steps.ts";

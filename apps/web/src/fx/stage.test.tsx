@@ -1,10 +1,6 @@
-// Polish 1 (docs/polish/1-animations.md, B46–B48): the stage cues.
-//
-// The board shows the view from before a burst until the whole burst has played (BUILD M5-T4), so
-// the layer carries a moved card with a stand-in (B46), hides a card the burst has taken away (B47)
-// and aims an attacker's lunge at what it attacks (B48). This file covers the planner (`stage.ts`,
-// pure), the director's side (real elements, with their rectangles stubbed because jsdom has no
-// layout) and the layer releasing everything the moment the board shows the next view.
+// Polish 1 (docs/polish/1-animations.md, B46–B48): the stage cues. The board shows the view from before
+// a burst until the whole burst has played (BUILD M5-T4), so the layer carries a moved card with a
+// stand-in (B46), hides a card the burst has taken away (B47) and aims an attacker's lunge (B48).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
@@ -81,9 +77,7 @@ const summon = (player: "p1" | "p2", instanceId: string, lane = 3): GameEvent =>
   lane,
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The planner
- * ------------------------------------------------------------------------------------------- */
+/* The planner */
 
 describe("B46 stand-ins are planned for every card the burst moves onto the board", () => {
   it("B46 a unit played from the viewer's hand flies from its hand card to its zone and lands on the slam; the hand card hides at once", () => {
@@ -223,9 +217,7 @@ describe("R200 stage cues pace nothing", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The DOM side
- * ------------------------------------------------------------------------------------------- */
+/* The DOM side */
 
 /** jsdom lays nothing out, so every element the director measures gets a fixed rectangle. */
 function place(element: Element, box: FxBox): void {
@@ -337,12 +329,10 @@ describe("B46 the stand-in in the page", () => {
     expect(hold.style.getPropertyValue("--fx-x")).toBe(`${land.x}px`);
     expect(hold.style.getPropertyValue("--fx-h")).toBe(`${land.height}px`);
     expect(hold.style.getPropertyValue("--fx-land-ms")).toBe(`${Math.round(FX_SLAM_AT * 400)}ms`);
-    // It starts where the hand card was.
     const dx = HAND_BOX.x + HAND_BOX.width / 2 - (land.x + land.width / 2);
     expect(hold.style.getPropertyValue("--fx-dx")).toBe(`${dx}px`);
     // The card it stands in for is hidden in the same task, so no paint shows both or neither.
     expect(hand.getAttribute("data-fx-concealed")).toBe("now");
-    // Exactly one element with the card's testid is left in the document.
     expect(document.querySelectorAll(`[data-testid="hand-card-${HAND}"]`)).toHaveLength(1);
   });
 
@@ -403,8 +393,7 @@ describe("B46 the stand-in in the page", () => {
   });
 
   it("B46 a parked stand-in keeps no frame loop running and measures nothing until the board moves under it", () => {
-    // Review: every frame re-measured the zone and rewrote left/top/width/height, forcing a layout per
-    // frame for the rest of the burst (93 layouts against 30 without the summon, on a phone at 4x CPU).
+    // Re-measuring the zone every frame forced a layout per frame for the rest of the burst.
     const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
     hand.className = "card";
     const zone = boardElement("zone-you-units-3", ZONE_BOX);
@@ -433,7 +422,6 @@ describe("B46 the stand-in in the page", () => {
     expect(hold.style.getPropertyValue("--fx-x")).toBe(left);
     expect(h.pendingFrames()).toBe(0);
 
-    // Back where it was placed: no offset left.
     place(zone, ZONE_BOX);
     h.scroll();
     h.frameAt(1048);
@@ -464,7 +452,6 @@ describe("B46 the stand-in in the page", () => {
       if (h.pendingFrames() > 0) expect(shift).toBeCloseTo(offsets.at(-1) ?? 0, 6);
     }
     expect(offsets.length).toBeGreaterThan(3);
-    // The shake is over, the board is back, and so is the stand-in; nothing keeps the loop alive.
     expect(h.pendingFrames()).toBe(0);
     expect(hold.style.getPropertyValue("translate")).toBe("");
   });
@@ -489,7 +476,6 @@ describe("B46 the stand-in in the page", () => {
     await Promise.resolve();
     expect(copy.hasAttribute("data-animating")).toBe(false);
 
-    // Released: the copy is gone and nothing watches the hand card any more.
     h.director.release();
     hand.setAttribute("data-animating", "damage");
     await Promise.resolve();
@@ -644,9 +630,7 @@ describe("B46 standInCopy and landingBox", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The layer: the release lands in the same commit as the new board
- * ------------------------------------------------------------------------------------------- */
+/* The layer: the release lands in the same commit as the new board */
 
 describe("B46 FxLayer releases the stage when the shown view changes", () => {
   it("B46 a stand-in lives while the runner holds the view back and is gone in the render that shows the next view", () => {

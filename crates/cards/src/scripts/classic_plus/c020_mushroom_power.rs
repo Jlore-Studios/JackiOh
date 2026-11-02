@@ -33,10 +33,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #20 Mushroom Power — SPEC §8.7 row 20, BUILD M9 Classic+ row C+ 20: "Cry gives the Units in the
-// unit zones beside it on its side (lanes N−1 and N+1) +2/+2 permanently: one neighbour in lane 1 or 5,
-// nothing across the lane or in the backrow, nothing when the neighbours are empty; the buffs stay
-// after it leaves; the buff reads through `param()`; radiant +4/+4".
+// C+ #20 Mushroom Power — SPEC §8.7 row 20, BUILD M9 Classic+ row C+ 20.
 #[cfg(test)]
 mod tests {
     use super::*;

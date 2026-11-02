@@ -8,7 +8,7 @@
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) plus multi-pool fusion (MD-D14) — the
 //! summoned Unit is granted `meditative-059#fusedBookDeath` as plain data; the hook fuses one pick
 //! from each pool, the Book first so the fused type falls back to it, into the controller's hand at
-//! (min(sum,4)) (R469). The Radiant face's fused card is Radiant.
+//! (min(sum,4)) (R469).
 
 use jackioh_engine::prelude::*;
 
@@ -61,11 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #59 Permanent Upperclassman — SPEC §8.8 row 59, BUILD M10 row M 59: "Cry: summon a random (4)
-// Unit (Radiant: a random Radiant one) and grant it the face's Death (MD-D13, R1420); the grant
-// shows on the Unit and is lost when the Unit leaves the field; at the death one Book and one AI
-// card fuse into the controller's hand (MD-D14), a non-token Spell at (min(sum,4)), the Book first
-// so the fused type falls back to it; the Radiant face's fused card is Radiant".
+// M #59 Permanent Upperclassman — SPEC §8.8 row 59, BUILD M10 row M 59 (R1420).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,7 +122,6 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
     }
 
-    /// The fused cards in `seat`'s hand.
     fn fused_of(s: &Scenario, seat: PlayerId) -> Vec<CardInstance> {
         s.hand(seat)
             .into_iter()
@@ -238,7 +233,6 @@ mod tests {
             assert_eq!(ingredients.len(), 2);
             assert!(crate::card_def(&ingredients[0]).tags.contains(&Tag::Book));
             assert!(crate::card_def(&ingredients[1]).tags.contains(&Tag::Ai));
-            // (min(sum,4)): the fused card costs no more than 4.
             assert!(
                 cost_now(s.state(), &made[0]) <= 4,
                 "{}",
@@ -317,7 +311,6 @@ mod tests {
         #[test]
         fn a_full_hand_burns_the_fused_card() {
             let (mut s, unit) = mortal("upperclassman-burn", false);
-            // Fill p1's hand to the cap.
             while s.hand("p1").len() < HAND_CAP as usize {
                 let card = new_instance(
                     s.state_mut(),
@@ -382,8 +375,7 @@ mod tests {
         fn the_radiant_face_summons_radiant_and_fuses_radiant() {
             crate::register_all();
             use jackioh_engine::prelude::keywords_of;
-            // Re-pinned for the Stinkyscape release (#1884): the seed's summon became Core #66 The Rock,
-            // which is Indestructible and never dies, so the test takes the first seed whose summon can.
+            // The first seed whose summon can die: Core #66 The Rock is Indestructible (#1884).
             let (mut s, summoned) = (0..20)
                 .map(|n| {
                     let mut s = casting(&format!("upperclassman-radiant-{n}"), true);

@@ -1,12 +1,4 @@
-//! Usernames (SPEC §9.4, R1432–R1435): the form a name must have, the light filter, and the
-//! routes a player picks one through (`src/username/`, `src/api/username.rs`).
-//!
-//! The form and the filter are pure functions and are asserted on them directly. The routes go
-//! through the whole app (`support::deps::test_app`) as a client calls them, each caller a fresh
-//! active account seeded in the fake store with the default a new account gets. Uniqueness, tags
-//! and concurrency are the store's and are asserted against both stores in
-//! `tests/store/contract.rs` (`r1434_usernames`); the database's half is
-//! `tests/sql/15_usernames.sql`.
+//! Username validation and route handlers (SPEC §9.4, R1432, R1434, R1435).
 
 use std::sync::Arc;
 
@@ -70,9 +62,7 @@ fn refusal_of(raw: &str) -> Option<UsernameRefusal> {
     normalize_username(raw).err()
 }
 
-// ---------------------------------------------------------------------------
 // R1432: the form
-// ---------------------------------------------------------------------------
 
 mod the_form_r1432 {
     use super::*;
@@ -137,9 +127,7 @@ mod the_form_r1432 {
 
     #[test]
     fn r1432_refuses_invisible_characters_whose_category_is_a_letter_or_a_mark() {
-        // Default_Ignorable_Code_Point: the combining grapheme joiner and the variation selectors are
-        // `Mn`, the Hangul fillers `Lo` (the halfwidth one becomes U+1160 under NFKC). Each would
-        // render as `Max`, or as nothing, beside a real name.
+        // Default_Ignorable_Code_Point refused to prevent invisible rendering differences.
         for name in [
             "Max\u{034F}",
             "Max\u{FE0F}",
@@ -181,9 +169,7 @@ mod the_form_r1432 {
         assert_eq!(refusal_of("ヤ김"), Some(UsernameRefusal::MixedScripts));
         assert!(normalize_username("ヤマダ太郎").is_ok());
         assert!(normalize_username("김太").is_ok());
-        // Only digits and `_` go with any script: a modifier letter of no script (`ˈ`, `ː`) joins
-        // none, and an Arabic vowel sign does not sit on a Latin letter, while the kana length mark
-        // goes with kana.
+        // Modifier letters and mixed scripts refused.
         assert_eq!(refusal_of("Max\u{02C8}"), Some(UsernameRefusal::MixedScripts));
         assert_eq!(refusal_of("Max\u{02D0}"), Some(UsernameRefusal::MixedScripts));
         assert_eq!(refusal_of("Ma\u{064E}x"), Some(UsernameRefusal::MixedScripts));
@@ -246,9 +232,7 @@ mod the_form_r1432 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1433: the light filter
-// ---------------------------------------------------------------------------
 
 mod the_filter_r1433 {
     use super::*;
@@ -337,9 +321,7 @@ mod the_filter_r1433 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1435: the routes
-// ---------------------------------------------------------------------------
 
 mod the_routes_r1435 {
     use super::*;

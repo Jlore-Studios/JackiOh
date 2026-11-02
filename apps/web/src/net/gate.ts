@@ -1,9 +1,7 @@
 // Client view of SPEC §9.4's server gate (CLAUDE.md rule 7): `/api/auth/me` sends pending accounts
-// to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401; refusal
-// ends a session as `expired`, and transient failure leaves it retryable. R632 re-reads a tab-owned
-// session after storage or back/forward-cache changes; background reads keep a ready screen when safe.
-// R2630000: a new screen's gate starts from the page's last answer for an active account that owes
-// nothing (kept with the menus' answers, `readCache.ts`) and reads again behind it.
+// to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401. R632
+// re-reads a tab-owned session after storage or back/forward-cache changes. R2630000: a new screen's
+// gate starts from the page's last answer for an active account that owes nothing and reads again.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -26,17 +24,12 @@ import {
 import { messageOf } from "./errors.ts";
 
 export type Account =
-  /** The `/api/auth/me` round trip has not answered yet. */
   | { kind: "loading" }
-  /**
-   * No session in storage, or the server refused the token. `reason: "expired"` means a renewal
-   * the provider refused just ended the session (R194), and the session has been cleared.
-   */
+  /** No session, or the server refused the token; `expired`: a refused renewal cleared it (R194). */
   | { kind: "anonymous"; reason?: "expired" }
   /**
-   * The server or the provider could not be reached, or answered something unexpected. `retry`
-   * runs the read again without a page load (the gate's `gate-retry`). `retryAfterMs` is the wait a
-   * rate limit stated (R192), which the gate counts down before it offers `retry`.
+   * Unreachable, or an unexpected answer. `retry` reads again without a page load (`gate-retry`);
+   * `retryAfterMs` is a rate limit's wait (R192), counted down before `retry` is offered.
    */
   | { kind: "error"; message: string; retry?: () => void; retryAfterMs?: number }
   | {
@@ -49,11 +42,10 @@ export type Account =
       renewable?: boolean;
     };
 
-/** The refresh token when this session can be renewed at all, else null. */
 function renewableToken(session: Session): string | null {
   const token = session.refreshToken;
   if (typeof token !== "string" || token.length === 0) return null;
-  // A build with no provider configured cannot renew anything; it behaves as it always did.
+  // A build with no provider configured cannot renew anything.
   if (authConfig() === null) return null;
   return token;
 }
@@ -65,11 +57,7 @@ function isUnauthorized(cause: unknown): boolean {
 /** What the gate says for R109's API limit; the wait is counted down beside it (R192). */
 export const GATE_RATE_LIMITED_MESSAGE = "Too many requests from this account or network. Wait a moment, then try again.";
 
-/**
- * The error's own sentence: a transport failure's is already a plain one (`ApiUnreachableError`),
- * and any other refusal is the server's, as it always was. A rate limit gets our sentence and its
- * wait, which the gate counts down before it offers to try again (R192).
- */
+/** The error's own sentence (a transport failure's is already plain); a rate limit gets ours and its wait (R192). */
 function errorAccount(cause: unknown, retry: () => void): Account {
   if (cause instanceof ApiRequestError && (cause.status === 429 || cause.code === "rate_limited")) {
     const wait = retryAfterMsOf(cause);
@@ -86,7 +74,6 @@ function errorAccount(cause: unknown, retry: () => void): Account {
 /** A screen's own failed read: the error's own sentence, and the wait a rate limit stated (R192). */
 export type ReadFailure = { message: string; retryAfterMs?: number };
 
-/** What a failed read of this screen's own says: the error's sentence and the wait it stated, if any. */
 export function readFailureOf(cause: unknown): ReadFailure {
   const wait = retryAfterMsOf(cause);
   return {
@@ -144,8 +131,7 @@ const ME_PATH = "/api/auth/me";
 
 /**
  * R2630000: an answer a new screen may open on before the server answers again: an active account
- * that owes nothing. A redirect (pending, anonymous), the banned panel and the consent and username
- * prompts always wait for the read, so none of them ever rests on a kept answer.
+ * that owes nothing. A redirect, the banned panel and a prompt never rest on a kept answer.
  */
 function opensAtOnce(me: MeResponse): boolean {
   return (
@@ -211,13 +197,11 @@ async function resolveAccount(retry: () => void): Promise<Account> {
   }
 }
 
-/** Fired by `announceAccountChange`; every mounted `useAccount` reads the account again. */
 const ACCOUNT_CHANGED = "jackioh:account-changed";
 
 /**
- * Tells every screen in this tab that the account or its session changed under it: a request of a
- * screen's own renewed the session, or the server answered as if the account's status had moved on
- * (a redemption refused because another tab already redeemed). Each `useAccount` reads it again.
+ * Tells every `useAccount` in this tab to read again: a screen's own request renewed the session, or
+ * the server answered as if the account's status had moved on (another tab already redeemed).
  */
 export function announceAccountChange(): void {
   if (typeof window === "undefined") return;
@@ -231,10 +215,7 @@ export type UnauthorizedOutcome =
   | { kind: "renewed"; token: string }
   /** The session is over: sign in again. `expired` when the provider refused the renewal (R194). */
   | { kind: "signedOut"; expired: boolean }
-  /**
-   * The device is now signed in as another account (another tab signed in meanwhile). Nothing is
-   * retried: a request made for one account is never sent again as another.
-   */
+  /** Another tab signed in as another account: a request made for one is never sent again as another. */
   | { kind: "switched" }
   /** The provider could not be reached; the session is kept. */
   | { kind: "failed" };
@@ -245,9 +226,8 @@ function renewedAs(token: string, next: string): UnauthorizedOutcome {
 }
 
 /**
- * R194 for a request a screen makes itself (the gate covers `/api/auth/me`): the API refused
- * `token` as unauthorised, so the stored session is renewed once, sharing the provider call with
- * any renewal already in flight, and the request can be retried with the new token.
+ * R194 for a screen's own request (the gate covers `/api/auth/me`) refused as unauthorised: renew the
+ * stored session once, sharing the provider call with any renewal already in flight.
  */
 export async function renewAfterUnauthorized(token: string): Promise<UnauthorizedOutcome> {
   const session = readSession();
@@ -264,20 +244,15 @@ export async function renewAfterUnauthorized(token: string): Promise<Unauthorize
   return { kind: "failed" };
 }
 
-/**
- * What `callWithRenewal` hands back: the call's answer, the news that the session is over, or that
- * the device has moved to another account (every screen has been told to read it again).
- */
+/** `switched`: the device moved to another account, and every screen has been told to read it again. */
 export type RenewedCall<T> =
   | { kind: "ok"; value: T }
   | { kind: "signedOut"; expired: boolean }
   | { kind: "switched" };
 
 /**
- * R194 for one of a screen's own requests: `call` with `token`, and if the API refuses it as
- * unauthorised, renew once (`renewAfterUnauthorized`) and call again with the new token. Every
- * screen in this tab is told the session changed, so each reads the renewed one. A refusal that is
- * not a 401, or a renewal that could not reach the provider, is thrown as the call's own error.
+ * R194: `call` with `token`; on a 401 renew once, tell every screen in this tab, and call again. A
+ * refusal that is not a 401, or a renewal that could not reach the provider, is the call's own error.
  */
 export async function callWithRenewal<T>(token: string, call: (token: string) => Promise<T>): Promise<RenewedCall<T>> {
   try {
@@ -298,9 +273,7 @@ const SIGNED_OUT = { code: "unauthorized", message: "Sign in to continue." } as 
 
 /**
  * `call` as the tab's signed-in account (#936: the social and Duos wrappers, whose S8 signatures
- * take no token): the session is read when it is called, so a renewal made meanwhile is the one
- * sent, and a 401 renews once (`callWithRenewal`). No session, or one that ended or moved to another
- * account, is thrown as the 401 `ApiRequestError` a signed-out request gets.
+ * take no token), read at each call so a renewal made meanwhile is the one sent.
  */
 export async function withSession<T>(call: (token: string) => Promise<T>): Promise<T> {
   const session = readSession();
@@ -316,16 +289,14 @@ function sameSession(a: string, b: string): boolean {
   return first !== null && first === sessionIdFromToken(b);
 }
 
-/** A ready account whose token is within the renewal margin of expiring (or past it). */
 function tokenNearExpiry(account: Extract<Account, { kind: "ready" }>, now: number): boolean {
   const expiresAt = account.expiresAt;
   return typeof expiresAt === "number" && expiresAt - now <= AUTH_SESSION_REFRESH_MARGIN_SECONDS * 1000;
 }
 
 /**
- * What a read of the account leaves on screen, given what is there now (see A RE-READ IN THE
- * BACKGROUND KEEPS THE SCREEN). A first read and the player's own retry start from `loading`, so
- * they always show what they found.
+ * What a read of the account leaves on screen, given what is there now. A first read and the
+ * player's own retry start from `loading`, so they always show what they found.
  */
 export function settleAccount(previous: Account, next: Account, now: number): Account {
   if (previous.kind !== "ready") return next;
@@ -374,9 +345,8 @@ function useRenewalBeforeExpiry(account: Account, reread: () => void): void {
       window.clearTimeout(timer);
       timer = window.setTimeout(fire, Math.min(Math.max(0, earliest() - Date.now()), LONGEST_TIMER_MS));
     };
-    // A timer measures from the event loop's cached clock, which a long task leaves behind the
-    // wall clock, so it can come due a little before `Date.now()` says: then it waits out the rest
-    // rather than dropping the renewal until the page is next woken.
+    // A timer runs on the event loop's cached clock, which a long task leaves behind the wall clock,
+    // so it can come due before `Date.now()` says: then it waits out the rest rather than drop the renewal.
     function fire(): void {
       if (Date.now() < earliest()) {
         schedule();

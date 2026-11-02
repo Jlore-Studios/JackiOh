@@ -1,13 +1,4 @@
-//! SPEC §9.4's entitlement ledger, and §9.8's first row ("Claiming unowned cards → the collection
-//! is server-owned").
-//!
-//! Two of BUILD M6-T2's acceptance items are proved here:
-//!  - a grant with `reason` writes both tables or neither (the fake store's `on_call` seam fails one
-//!    of the two writes mid-transaction, once each way round);
-//!  - no endpoint inserts directly, asserted over `app::ROUTES` so a mutating route cannot be added
-//!    without this file going red.
-//!
-//! The catalog is the real one (`jackioh_cards`, compiled in); every expectation is computed from it.
+//! Card entitlement ledger (SPEC §9.4, §9.8, app::ROUTES).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -649,9 +640,7 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R1310000: the starter cards
-// ---------------------------------------------------------------------------
 
 mod r1310000_the_starter_cards {
     use super::*;

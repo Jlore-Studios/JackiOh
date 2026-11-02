@@ -5,12 +5,6 @@
 //! it can span a prompt and must be resumable through `state.work`: only the event and the ids of
 //! the traps that have not seen it, as plain JSON (§9.3, R113).
 //!
-//!   * R113: a trap that prompts stops the window; the rest is owed, and the answer fires it in the
-//!     window's order. A JSON round trip of the paused game resumes identically.
-//!   * R100 and R33: the resumed window offers the event only to the traps still owed it, so the
-//!     Field Trap that prompted does not fire twice.
-//!   * R62: the window finishes before the end-of-turn delayed effects and cleanup, prompt or not.
-//!
 //! Fixtures are this file's own: `tw-` defs indexed from 2200 (BUILD §0).
 
 use jackioh_engine::testkit::*;

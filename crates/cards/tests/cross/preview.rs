@@ -1,38 +1,6 @@
-//! Port of `packages/cards/test/preview.test.ts` (v0.3.0 part 27.5).
-//!
-//! R280 (SPEC §10.8, §10.9, §10.10): the number a Core card's formula comes to now, as `viewFor`
-//! carries it (`preview`), for the six Core cards whose text computes one from the board by more than
-//! a plain X. Each test reads the value off `s.view(...)` and then lets the card resolve, so the value
-//! is proved against what the card's own resolution does, not against a second copy of the formula.
-//!
-//! What each formula may read (R280), stated here and proved by the "reads nothing hidden" test at
-//! the end, which makes every library and every hand throw on access:
-//!
-//!   #18 Bread and Butter        the active player's current mana (public, §10.8)
-//!   #31 KY's Math Equation      its own count of plays (the card's own instance, R429)
-//!   #38 Quickstriker            its controller's count of plays this turn (public)
-//!   #40 Echoes of the Forgotten its controller's exile count (public, §3)
-//!   #70 Spiteful Stab           its controller's hero health and exile count (public)
-//!   #91 Fed Fauci               its own Plague Counters (its counters travel on its view, §10.8)
-//!   C #19 Lizard's Breath       its controller's deck, graveyard and exile SIZES (public, §10.8), never
-//!                               their contents — so it has its own proof below rather than the fence
-//!                               at the end, which walls a library off whole
-//!
-//! None reads a library's contents or order, or a hand's contents: the value shows to every viewer
-//! who may read the card — the other seat too, for a card on the field — so it must say nothing more
-//! than the card and the public board do. And the view shows it only where the viewer may read the
-//! card: a #31 in the opponent's hand, or the opponent's face-down #18, carries none (§10.8).
-//!
-//! Not previewed, on purpose (R280): #92's stats, #100's cost and #89's hand stats are on the face
-//! already, and #24's and #74's X is chosen at play. The set test pins the six.
-//!
-//! Rust port note (recorded in `78f131c^:.fullsend/notes/spec-gaps-part-27-5.md`): TS proved "a pure read" by
-//! handing the hook a deep-frozen `structuredClone` whose libraries, hands and `state.active` throw on
-//! access (`Proxy`, `Object.defineProperty`). Rust has neither. A preview hook takes `&GameState`, so
-//! it cannot write; the reads are fenced by perturbation instead (`fenced` below): the hook is handed
-//! a copy whose fenced piles are emptied (or, where TS let the length through, rewritten card by card
-//! at the same length) and whose `active` is the other seat, and it must still answer exactly what the
-//! view of the real state shows.
+//! R280 (SPEC §10.8, §10.9, §10.10, R429): preview formula values for cards whose text computes numbers
+//! from public state (#18, #31, #38, #40, #70, #91, #19, #92, #100, #89, #24, #74; SPEC §3).
+//! Proved against resolution and fenced against hidden state access.
 
 use jackioh_cards::{card_def, scripts_of};
 use jackioh_engine::subsystems::FuseArgs;
@@ -138,12 +106,10 @@ const BIG_D_FENDER: &str = "core-001"; // 2-cost Unit
 const MENACE: &str = "core-019"; // library filler, and a 9/9 target that survives
 const STOCKPILE: &str = "core-005";
 
-/// TS `AT_ENEMY_HERO`'s one selection: `{ pick: "hero", player: "p2" }`.
 fn at_enemy_hero() -> Value {
     json!({ "pick": "hero", "player": "p2" })
 }
 
-/// TS `type Face = "base" | "radiant"` is the wire's `FaceKind`.
 const FACES: [FaceKind; 2] = [FaceKind::Base, FaceKind::Radiant];
 
 fn radiant_of(face: FaceKind) -> bool {
@@ -158,13 +124,11 @@ fn face_of(radiant: bool) -> FaceKind {
     }
 }
 
-/// `cardDef(id)[face].text`.
 /// A face's text as it is printed: its declared numbers filled in at their printed values (R386, R482).
 fn text_of(id: &str, face: FaceKind) -> String {
     fill_params(&card_def(id), face, None)
 }
 
-/// TS `CARDS[id]?.[face].preview`.
 fn preview_hook(id: &str, face: FaceKind) -> Option<PreviewHook> {
     let scripts = scripts_of();
     let card = scripts.get(id)?;
@@ -174,7 +138,6 @@ fn preview_hook(id: &str, face: FaceKind) -> Option<PreviewHook> {
     }
 }
 
-/// A view part as the JSON the client receives (`null` for an empty place).
 fn json_of<T: Serialize>(part: &T) -> Value {
     serde_json::to_value(part).expect("a view serializes")
 }
@@ -196,7 +159,6 @@ fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
     }
 }
 
-/// The list the view carries, or `None` when the key is absent; a key holding `[]` fails here.
 fn shown(card: &Value) -> Option<Vec<PreviewValue>> {
     assert!(!card.is_null(), "no card at that place in the view");
     let list = card.get("preview")?;
@@ -211,7 +173,6 @@ fn shown_of<T: Serialize>(card: &T) -> Option<Vec<PreviewValue>> {
     shown(&json_of(card))
 }
 
-/// The one value a card's view carries, failing unless there is exactly one.
 fn value_of<T: Serialize>(card: &T) -> i32 {
     let list = shown_of(card);
     assert!(list.is_some(), "the card carries a preview");
@@ -220,7 +181,6 @@ fn value_of<T: Serialize>(card: &T) -> i32 {
     list.first().map(|entry| entry.value).unwrap_or(i32::MIN)
 }
 
-/// The amounts of every `damage` event on a hero so far, in order: one entry per hit.
 fn hits_on(s: &Scenario, player: PlayerId) -> Vec<i32> {
     let hero = format!("hero-{player}");
     s.events()
@@ -234,13 +194,10 @@ fn hits_on(s: &Scenario, player: PlayerId) -> Vec<i32> {
         .collect()
 }
 
-/// The first card of `player`'s hand with `def_id`, as it stands.
 fn held(s: &Scenario, player: PlayerId, def_id: &str) -> Option<CardInstance> {
     s.hand(player).iter().find(|card| card.def_id == def_id).cloned()
 }
 
-/// TS `subsystems.fuse({ state: s.state, events: [], rng }, args)`: a fresh sink over the live state,
-/// its rng cursor not written back (as TS did not).
 fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     let mut events: Vec<GameEvent> = vec![];
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -248,22 +205,12 @@ fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     subsystems::fuse(&mut sink, args)
 }
 
-// =============================================================================================
-// A read of what the controller may read, and nothing else
-// =============================================================================================
-
-/// How `fenced` walls off a pile a preview must not read (TS: a getter that throws, or a `Proxy` that
-/// answers `length` and throws on anything else).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Fence {
-    /// TS threw on any read of the pile: the copy's pile is empty.
     Whole,
-    /// TS let `length` through and threw on the cards: the copy's pile keeps its length, but every
-    /// card in it is another card, in the reverse order.
     SizeOnly,
 }
 
-/// The card a sealed pile is filled with: what a size-only pile's cards are rewritten to.
 const SEALED: &str = "core-008";
 
 fn seal(pile: &mut Vec<CardInstance>, fence: Fence, player: PlayerId, what: &str) {
@@ -281,8 +228,6 @@ fn seal(pile: &mut Vec<CardInstance>, fence: Fence, player: PlayerId, what: &str
 
 /// A copy of `state` for a preview hook to answer on, with every library and every hand fenced as
 /// given and, when `flip_active`, the other seat active (a hook reads `yourTurn` instead, README §1).
-/// `self` is found before its zone is fenced off, so a hand card's hook still has itself. The hook
-/// takes `&GameState`, so TS's `deepFreeze` (no write) holds by the type.
 fn fenced(
     state: &GameState,
     self_id: &str,
@@ -313,14 +258,9 @@ fn fenced(
     (copy, self_)
 }
 
-/// TS `guarded`: no library, no hand and no `state.active` may be read.
 fn guarded(state: &GameState, self_id: &str) -> (GameState, CardInstance) {
     fenced(state, self_id, Fence::Whole, Fence::Whole, true)
 }
-
-// =============================================================================================
-// The set, and the labels
-// =============================================================================================
 
 mod r280_the_core_cards_that_declare_preview {
     use super::*;
@@ -448,9 +388,7 @@ mod r280_the_core_cards_that_declare_preview {
     }
 }
 
-// =============================================================================================
 // #18 Bread and Butter: the active player's current mana
-// =============================================================================================
 
 mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
     use super::*;
@@ -545,9 +483,7 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
     }
 }
 
-// =============================================================================================
 // #31 KY's Math Equation: its own count of plays (R429)
-// =============================================================================================
 
 mod c31_kys_math_equation_previews_its_damage_r280 {
     use super::*;
@@ -566,7 +502,6 @@ mod c31_kys_math_equation_previews_its_damage_r280 {
         s
     }
 
-    /// TS's `CASES` loop: one `it` per `[face, timesPlayed, costMod, damage]`.
     fn previews_and_deals(face: FaceKind, times_played: i32, cost_mod: i32, damage: i32) {
         jackioh_cards::register_all();
         let mut s = equation(face, times_played, cost_mod);
@@ -630,7 +565,6 @@ mod c31_kys_math_equation_previews_its_damage_r280 {
 
         let p1_view = s.view(PlayerId::P1);
         assert_eq!(p1_view.opponent.hand, HandView::Count { count: 1 });
-        // p1's own Equation carries one; nothing else in p1's view does, least of all p2's hand card.
         assert_eq!(json_of(&p1_view).to_string().matches("\"preview\"").count(), 1);
 
         let theirs = must(
@@ -641,14 +575,11 @@ mod c31_kys_math_equation_previews_its_damage_r280 {
     }
 }
 
-// =============================================================================================
 // #38 Quickstriker: its controller's plays this turn
-// =============================================================================================
 
 mod c38_quickstriker_previews_x_the_count_the_next_play_reads_r280 {
     use super::*;
 
-    /// TS's `for (const face of FACES)` loop: one `it` per face.
     fn x_follows_the_turn(face: FaceKind) {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
@@ -673,7 +604,6 @@ mod c38_quickstriker_previews_x_the_count_the_next_play_reads_r280 {
 
         // The same X on both faces; the Radiant face deals it twice over, as one hit (R281).
         assert_eq!(hits_on(&s, PlayerId::P2), vec![x1 * multiple, x2 * multiple]);
-        // It is public: the other seat sees the same X.
         assert_eq!(value_of(&s.view(PlayerId::P2).opponent.backrow[0]), 3);
     }
 
@@ -701,9 +631,7 @@ mod c38_quickstriker_previews_x_the_count_the_next_play_reads_r280 {
     }
 }
 
-// =============================================================================================
 // #40 Echoes of the Forgotten: its controller's exile count
-// =============================================================================================
 
 mod c40_echoes_of_the_forgotten_previews_its_start_of_turn_damage_r280 {
     use super::*;
@@ -740,9 +668,7 @@ mod c40_echoes_of_the_forgotten_previews_its_start_of_turn_damage_r280 {
     }
 }
 
-// =============================================================================================
 // #70 Spiteful Stab: its controller's hero health and exile count
-// =============================================================================================
 
 mod c70_spiteful_stab_previews_its_damage_r280 {
     use super::*;
@@ -755,7 +681,6 @@ mod c70_spiteful_stab_previews_its_damage_r280 {
         }))
     }
 
-    /// TS's `CASES` loop: one `it` per `[face, health, exiled, damage]`.
     fn previews_and_deals(face: FaceKind, health: i32, exiled: usize, damage: i32) {
         jackioh_cards::register_all();
         let mut s = stab(
@@ -801,9 +726,7 @@ mod c70_spiteful_stab_previews_its_damage_r280 {
     }
 }
 
-// =============================================================================================
 // #91 Fed Fauci: its own Plague Counters
-// =============================================================================================
 
 mod c91_fed_fauci_previews_the_mana_its_next_start_of_turn_gives_r280 {
     use super::*;
@@ -821,7 +744,6 @@ mod c91_fed_fauci_previews_the_mana_its_next_start_of_turn_gives_r280 {
         }));
 
         assert_eq!(value_of(&s.view(PlayerId::P1).you.units[0]), expected);
-        // A unit is public: the other seat sees the same number.
         assert_eq!(value_of(&s.view(PlayerId::P2).opponent.units[0]), expected);
 
         s.end_turn(); // p2 ends; p1's turn starts: the refresh, then the hook (R62)
@@ -850,10 +772,6 @@ mod c91_fed_fauci_previews_the_mana_its_next_start_of_turn_gives_r280 {
     }
 }
 
-// =============================================================================================
-// T-AI-6 Datacenter Fire: the Field Spells its sweep dooms, times its face's number
-// =============================================================================================
-
 mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
     use super::*;
 
@@ -865,7 +783,6 @@ mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
         json!({ "def": def_id, "faceUp": true, "lane": lane })
     }
 
-    /// TS `LABELS[face]`.
     fn label(face: FaceKind) -> &'static str {
         match face {
             FaceKind::Base => "Deal 1 damage to each hero for each one destroyed",
@@ -875,13 +792,11 @@ mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
 
     fn board(face: FaceKind) -> Scenario {
         scenario(json!({
-            // Not a Twinspell of p1's: it would spend itself on this Spell as it is played, before the sweep.
             "p1": { "hand": [{ "def": DATACENTER_FIRE, "radiant": radiant_of(face) }, RAPID_REPLENISH], "backrow": [up(FARM, 1)] },
             "p2": { "backrow": [up(TWINSPELL, 1), up(FARM, 2), up(HEROIC_POWER, 3)] },
         }))
     }
 
-    /// TS's `for (const face of FACES)` loop: one `it` per face.
     fn previews_each_hit(face: FaceKind) {
         jackioh_cards::register_all();
         let value = if face == FaceKind::Base { 3 } else { 4 };
@@ -964,9 +879,7 @@ mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
     }
 }
 
-// =============================================================================================
 // A fused card's list (R102)
-// =============================================================================================
 
 mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
     use super::*;
@@ -1120,9 +1033,7 @@ mod r2476000_a_fused_card_previews_what_each_ingredient_remembers {
     }
 }
 
-// =============================================================================================
 // Classic #19 Lizard's Breath: the pile or piles that count now (R280)
-// =============================================================================================
 
 mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
     use super::*;
@@ -1263,7 +1174,6 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
             Some("Deck".to_string())
         );
 
-        // Stockpile draws 2 (deck 3 → 1) and lands in the graveyard (2 → 3).
         s.play(STOCKPILE, json!({}));
 
         assert_eq!(
@@ -1315,7 +1225,6 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
                 preview_hook(LIZARDS_BREATH, face_of(card.radiant)),
                 "the Breath's hook",
             );
-            // A pile that answers its length and nothing else: the sizes are public, the cards are not.
             let (copy, self_) = fenced(s.state(), &card.id, Fence::SizeOnly, Fence::SizeOnly, true);
 
             let answer = hook(ConditionContext {
@@ -1351,7 +1260,6 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
         zone: ConditionZone,
     }
 
-    /// Every previewed card, both faces, in hand and — for a permanent — on the field, on either turn.
     fn placements() -> Vec<Placement> {
         let mut out = vec![];
         for id in PREVIEWED {
@@ -1397,7 +1305,6 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
         jackioh_cards::register_all();
         for Placement { name, opts, id, zone } in placements() {
             let s = scenario(opts);
-            // p1's copy: p2 holds an Equation too, and `s.card` would look at the active side first.
             let card = must(
                 if zone == ConditionZone::Hand {
                     held(&s, PlayerId::P1, id)
@@ -1480,15 +1387,12 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
             vec![json!({ "def": MATH_EQUATION, "costMod": 1 })],
             vec![json!(STOCKPILE)],
         );
-        // p1 may not read p2's hand or either library: change all three, and p1's view is the same.
         let for_p1 = board(
             &[BIG_D_FENDER, BIG_D_FENDER, RAPID_REPLENISH],
             vec![json!({ "def": MATH_EQUATION, "costMod": 1 })],
             vec![json!(SPITEFUL_STAB)],
         );
         assert_eq!(previews(&for_p1, PlayerId::P1), previews(&one, PlayerId::P1));
-        // p2 may not read p1's hand or either library: change all three, and p2's view is the same —
-        // however much p1's hidden Equation or Stab would deal.
         let for_p2 = board(
             &[BIG_D_FENDER, RAPID_REPLENISH, RAPID_REPLENISH],
             vec![json!({ "def": MATH_EQUATION, "costMod": 4, "radiant": true })],
@@ -1496,7 +1400,6 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
         );
         assert_eq!(previews(&for_p2, PlayerId::P2), previews(&one, PlayerId::P2));
 
-        // Not vacuous: each seat sees previews, and p1's own changed: its hidden Equation is its own.
         assert!(
             previews(&one, PlayerId::P1)
                 .iter()
@@ -1515,10 +1418,6 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
     }
 }
 
-// =============================================================================================
-// C #1 Curse of the Forgotten Classic: the damage per card times the opponent's exile size
-// =============================================================================================
-
 mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
     use super::*;
 
@@ -1529,7 +1428,6 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
         }))
     }
 
-    /// TS's first `it` inside the `for (const face of FACES)` loop.
     fn label_is_the_formula(face: FaceKind) {
         jackioh_cards::register_all();
         let s = curse(face, 2);
@@ -1548,7 +1446,6 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
         }
     }
 
-    /// TS's `for (const exiled of [0, 3])` `it`s inside the face loop.
     fn exile_previews_and_deals(face: FaceKind, exiled: usize) {
         jackioh_cards::register_all();
         let mut s = curse(face, exiled);
@@ -1640,9 +1537,7 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
     }
 }
 
-// =============================================================================================
 // C #43 Plague Nuke: the mana it would give, the Plague Counters on the Units on the field
-// =============================================================================================
 
 mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
     use super::*;
@@ -1665,7 +1560,6 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
         s.view(PlayerId::P1).you.mana.current
     }
 
-    /// TS's first `it` inside the `for (const face of FACES)` loop.
     fn label_is_the_formulas_words(face: FaceKind) {
         jackioh_cards::register_all();
         let s = nuke(face, 1, 1);
@@ -1683,7 +1577,6 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
         assert!(!LABEL.contains(['{', '}']));
     }
 
-    /// TS's second `it` inside the face loop.
     fn tokens_preview_and_give(face: FaceKind) {
         jackioh_cards::register_all();
         let mut s = nuke(face, 2, 3);
@@ -1782,7 +1675,6 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
 mod r280_r583_c_44_and_45_preview_the_permanents_they_would_exile {
     use super::*;
 
-    /// p1's Radiant Audit in hand over a board of both sides, an enemy face-down card among it.
     fn board(audit: &str, enemy_trap: &str, active: PlayerId) -> Scenario {
         scenario(json!({
             "active": active,
@@ -1826,7 +1718,6 @@ mod r280_r583_c_44_and_45_preview_the_permanents_they_would_exile {
                         .collect::<Vec<String>>(),
                     vec!["all permanents", "only your opponent's"]
                 );
-                // Each label sits in the Radiant text, and each value counts its ids.
                 for entry in &answer {
                     assert!(text_of(audit, FaceKind::Radiant).contains(&entry.label));
                     assert_eq!(
@@ -1842,7 +1733,6 @@ mod r280_r583_c_44_and_45_preview_the_permanents_they_would_exile {
     fn r177_r583_two_boards_that_differ_only_in_an_enemy_face_down_card_show_the_same_preview() {
         jackioh_cards::register_all();
         for audit in AUDITS {
-            // Intern Stimmy's loc is below both Audits', Bear Honeypot's above: one of them is always a target.
             let low = board(audit, "core-071", PlayerId::P1);
             let high = board(audit, "core-060", PlayerId::P1);
             let of = |s: &Scenario| -> Option<Vec<PreviewValue>> {
@@ -1855,9 +1745,7 @@ mod r280_r583_c_44_and_45_preview_the_permanents_they_would_exile {
     }
 }
 
-// =============================================================================================
 // C+ #74 Twice Forward One Step Backwards: the opponent's plays since it was set, its controller's alone
-// =============================================================================================
 
 mod c_74_twice_forward_previews_the_plays_it_has_counted_to_its_controller_alone_r280_r33 {
     use super::*;
@@ -1877,12 +1765,10 @@ mod c_74_twice_forward_previews_the_plays_it_has_counted_to_its_controller_alone
         }))
     }
 
-    /// TS `const at = () => shown(s.view("p1").you.backrow[0])`.
     fn at(s: &Scenario) -> Option<Vec<PreviewValue>> {
         shown_of(&s.view(PlayerId::P1).you.backrow[0])
     }
 
-    /// TS's `for (const face of FACES)` loop: one `it` per face.
     fn counts_the_plays(face: FaceKind) {
         jackioh_cards::register_all();
         let mut s = counted(face);
@@ -1946,9 +1832,7 @@ mod c_74_twice_forward_previews_the_plays_it_has_counted_to_its_controller_alone
     }
 }
 
-// =============================================================================================
 // C #59 Plague Doctor: N, every Plague Counter on the field and its Cry's own placement
-// =============================================================================================
 
 mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     use super::*;
@@ -1956,7 +1840,6 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     const DOCTOR_LABEL: &str = "the number of Plague Counters on the field";
     const PAWN: &str = "core-096";
 
-    /// Tokens on both sides, a face-down trap's included: 2 + 1 + 3 = 6 on the field.
     fn plagued(face: FaceKind, active: PlayerId) -> Scenario {
         scenario(json!({
             "active": active,
@@ -1994,7 +1877,6 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
         }
     }
 
-    /// TS's `for (const [face, expected] of …)` loop: one `it` per face.
     fn in_hand_previews_the_hit(face: FaceKind, expected: i32) {
         jackioh_cards::register_all();
         let mut s = plagued(face, PlayerId::P1);
@@ -2022,7 +1904,6 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
         jackioh_cards::register_all();
         let mut s = plagued(FaceKind::Radiant, PlayerId::P1);
         s.play(PLAGUE_DOCTOR, json!({ "targets": [at_enemy_hero()] }));
-        // 6 on the field, 2 more on the Doctor: 8 tokens now, and a Cry now would add 2 more.
         let lane = match &s.card(PLAGUE_DOCTOR).zone {
             Zone::Field { lane, .. } => Some(*lane),
             _ => None,
@@ -2030,7 +1911,6 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
         let lane = must(lane, "the Doctor's lane");
         let at = usize::try_from(lane - 1).expect("a lane is 1-based");
         assert_eq!(value_of(&s.view(PlayerId::P1).you.units[at]), 10);
-        // A unit is public: the other seat sees the same number.
         assert_eq!(value_of(&s.view(PlayerId::P2).opponent.units[at]), 10);
     }
 
@@ -2110,9 +1990,7 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     }
 }
 
-// =============================================================================================
 // C #88 Siphon Squad: X, twice the Units its controller's opponent controls (base face only)
-// =============================================================================================
 
 mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r280 {
     use super::*;
@@ -2170,8 +2048,6 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
         assert_eq!(shown_of(&s.view(PlayerId::P1).you.backrow[0]), None);
         assert_eq!(s.stats(menace.as_str()).attack, 9);
 
-        // Revealed, still face-down: its controller sees X, and it is what the aura takes off each
-        // enemy Unit.
         reveal(&mut s);
         let value = value_of(&s.view(PlayerId::P1).you.backrow[0]);
         assert_eq!(value, 4);
@@ -2261,16 +2137,12 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     }
 }
 
-// =============================================================================================
 // C #46 Divine Favor: the draws it asks for now (SPEC §8.6 row 46)
-// =============================================================================================
 
 mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
     use super::*;
 
-    // "Draw until you have {multiplier}× as many cards in hand as your opponent": the preview is the
-    // draws it asks for, the opponent's hand times the multiplier less yours — without this card in
-    // hand, which will have left it when it resolves. It reads both hands' sizes, which are public
+    // It reads both hands' sizes, which are public
     // (§10.8), and nothing of what is in them.
     const LABEL: &str = "Draw";
 
@@ -2297,7 +2169,6 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
         }
     }
 
-    /// TS's `for (const [face, opponentHand, yours, expected] of …)` loop: one `it` per row.
     fn previews_and_draws(face: FaceKind, opponent_hand: usize, yours: usize, expected: i32) {
         jackioh_cards::register_all();
         let mut hand = vec![json!({ "def": DIVINE_FAVOR, "radiant": radiant_of(face) })];
@@ -2365,7 +2236,6 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
             json!({ "p1": { "hand": [DIVINE_FAVOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE, STOCKPILE, STOCKPILE] } }),
         );
         let card = s.card(DIVINE_FAVOR).id.clone();
-        // Each hand keeps its size and none of its cards; each library is walled off whole.
         let (copy, self_) = fenced(s.state(), &card, Fence::Whole, Fence::SizeOnly, false);
         let hook = must(preview_hook(DIVINE_FAVOR, FaceKind::Base), "Divine Favor's hook");
         let ctx = ConditionContext {
@@ -2407,8 +2277,6 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
         }));
         s.play(DIVINE_FAVOR, json!({}));
         let echo = s.card("classic-057").id.clone();
-        // Radiant (2×): the opponent's 2 cards make a mark of 4. Divine Favor drew 2 (Echo and the Filler
-        // left made 2), so p1 holds 3 cards besides Echo, which leaves when it resolves: 1 more draw.
         assert_eq!(s.hand(PlayerId::P1).len(), 4);
         assert_eq!(
             json_of(&shown_of(&hand_card(&s.view(PlayerId::P1), &echo))),

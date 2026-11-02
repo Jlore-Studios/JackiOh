@@ -1,7 +1,6 @@
 // The language button (#711, R711000): the top bar's control beside the settings gear, and the
-// board's, in the same corner. It shows the current language's short name ("EN", "中文") and one
-// click switches to the next of LOCALES, live: the store notifies and the screen redraws in it.
-// It stays only until the device has settled on its language (R1916000); settings' Language row is always there.
+// board's. One click switches to the next of LOCALES, live. It stays only until the device has
+// settled on its language (R1916000); settings' Language row is always there.
 
 import type { ReactElement } from "react";
 

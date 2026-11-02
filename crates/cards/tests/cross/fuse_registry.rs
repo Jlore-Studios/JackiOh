@@ -1,12 +1,10 @@
 //! A fused card's scripts across matches in one process (SPEC §9.2, §9.3, R77, R102, R179). Found by
-//! the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L7); it failed before its fix.
-//!
+//! the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L7).
 //! A fused definition is match state, but its scripts are code the process registers under the
 //! definition's id. A server runs every match in one process and folds a match's log to rebuild it,
 //! so two matches that fused different pairs into the same slot must not share an id: R179 has the id
 //! name its ingredients, so the later fusion can no longer replace the earlier match's scripts.
-//!
-//! Port of `packages/cards/test/fuse-registry.test.ts` (SURFACE §4.1, §8). In Rust a fused card's
+//! Test paths: SURFACE §4.1, §8.
 //! scripts are built on lookup from the state (SURFACE §6.6), so this holds by construction; the test
 //! still proves it end to end.
 
@@ -23,7 +21,6 @@ const LIBRARY: [&str; 6] = [RENO; 6];
 
 use super::scenario;
 
-/// p1 plays Pointmaster into p2's Unlicensed Experimentation, which fuses it onto p2's lane-1 unit.
 fn fused_onto(big_unit: &str) -> Scenario {
     let mut g = scenario(json!({
         "p1": { "hand": [POINTMASTER, RENO, RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 5 }], "library": LIBRARY },
@@ -38,13 +35,11 @@ fn fused_onto(big_unit: &str) -> Scenario {
     g
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`: only the state's JSON is kept, as a match actor keeps it.
 fn through_json(state: &GameState) -> GameState {
     let text = serde_json::to_string(state).expect("a state serializes");
     serde_json::from_str(&text).expect("a state's JSON parses back")
 }
 
-/// From a saved state: p1 ends the turn, then p2 does; p1's hero health after it.
 fn hero_after_p2_ends_turn(saved: &GameState) -> i32 {
     let mut state = through_json(saved);
     for player in [P1, P2] {
@@ -73,14 +68,11 @@ mod r179_a_fused_definitions_id_names_its_ingredients {
         let saved_a = through_json(a.state());
         assert_eq!(hero_after_p2_ends_turn(&saved_a), 28);
 
-        // Match B, same process, same fusion slot, a different pair (Midrange Menace heals itself at the
-        // end of the turn and deals no damage): a different id, so its scripts register beside A's.
         let b = fused_onto(MENACE);
         let fused_b = b.card(&b.unit_at(P2, 1).id).def_id.clone();
         assert_eq!(fused_b, format!("t-1:{POINTMASTER}+{MENACE}"));
         assert_ne!(fused_b, fused_a);
 
-        // Back in A, from the very same saved state: nothing about A changed, so neither may the result.
         assert_eq!(hero_after_p2_ends_turn(&saved_a), 28);
     }
 }

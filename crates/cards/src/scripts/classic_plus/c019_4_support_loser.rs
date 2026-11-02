@@ -36,11 +36,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #19.4 Support Loser — SPEC §8.7 row 19.4, BUILD M9 Classic+ row C+ 19.4: "Divine Shield, 0 attack,
-// so it never declares an attack and strikes back with no damage instance (R63); at its controller's
-// end of turn heals your hero 3 (past 30 allowed) and each of your Units 3 up to max health, itself
-// included; an opposing Blood Moon turns each of those heals into Pierce damage (R413); the heal reads
-// through `param()`; radiant 0/8 Divine Shield, Reborn, heal 6".
+// C+ #19.4 Support Loser — SPEC §8.7 row 19.4, BUILD M9 Classic+ row C+ 19.4 (R63, R413).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,7 +71,6 @@ mod tests {
         }
     }
 
-    /// TS wrote through the live instance `loser(s)` handed back.
     fn loser_mut(s: &mut Scenario) -> &mut CardInstance {
         let id = loser(s).id;
         find_instance_mut(s.state_mut(), &id).expect("no Support Loser in lane 3")

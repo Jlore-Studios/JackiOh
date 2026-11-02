@@ -1,22 +1,10 @@
 //! `GET /api/duos/matches/:matchId/replay` (fullsend SPEC S6, B41): a finished co-op match, step by
-//! step, as the caller's own seat saw it: `200 { seat, steps }`, `steps` being
-//! `duos_view_for(state, seat)` as the game began and after each logged action, which is exactly what
-//! that seat's live view showed (B23, CLAUDE.md rule 7). Nothing else leaves: no seed, no log, no
-//! state, no deck.
+//! step, as the caller's seat saw it (B23, CLAUDE.md rule 7): `200 { seat, steps }`.
 //!
-//! Only the two people who played it may read it; anyone else, and an id no match has, get the same
-//! 404, so a match id's existence never leaks (R768's rule). As the 1v1 route answers: a match still
-//! live is 409 (§13.9: a finished co-op game); one whose log the retention purge has taken
-//! (`MATCH_ACTION_RETENTION_DAYS` after it ended) is 410 `gone`; one this build cannot show is 422
-//! `replay_unavailable` with the reason in `details.reason`: `earlier_patch` for a catalog version
-//! this build neither is nor carries, `rules_changed` for a log that no longer folds to its end or
-//! to the result the match recorded. The fold runs under the catalog the match was played on
-//! (R767000) and is never cut short: an action it refuses refuses the whole replay.
-//!
-//! Bounded cost: the fold runs on the blocking pool, once per match: both people's steps are kept
-//! (`DuosReplayCache`, in the co-op registry) for `REPLAY_CACHE_TTL_SECONDS`, at most
-//! `REPLAY_CACHE_MATCHES` of them, the one used longest ago going first, as the 1v1 replays are; and
-//! the route shares the 1v1 replays' allowance (`REPLAY_REQUESTS_PER_MINUTE` an account, R768).
+//! Only the two people who played it may read it; anyone else gets 404 (R768). A live match is 409
+//! (§13.9); a purged log is 410 `gone`; an unsupported match is 422 `replay_unavailable`. The fold
+//! runs under the catalog the match was played on (R767000) on the blocking pool, cached in
+//! `DuosReplayCache` (`REPLAY_CACHE_TTL_SECONDS`, `REPLAY_CACHE_MATCHES`).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;

@@ -1,8 +1,7 @@
 /**
  * What every flavor looks like (#1442, docs/polish/8-flavor.md): its colors, its particle shape and
- * its projectile. The one table every flavor effect reads: the Ranged shot here, then the damage
- * projectile, casts, melee impacts, summons, deaths and trap reveals of the later parts of #1436.
- * Pure data, so a flavor with no look fails `typecheck`.
+ * its projectile, the one table every flavor effect of #1436 reads. Pure data, so a flavor with no
+ * look fails `typecheck`.
  */
 import type { Flavor } from "@jackioh/shared";
 
@@ -87,23 +86,16 @@ export const FLAVOR_LOOKS: Readonly<Record<Flavor, FlavorLook>> = {
   },
 };
 
-/** The flavors Chaos can take the look of: every one but itself. */
 const CHAOS_PICKS = (Object.keys(FLAVOR_LOOKS) as Flavor[]).filter(
   (flavor): flavor is Exclude<Flavor, "Chaos"> => flavor !== "Chaos",
 );
 
-/**
- * Which flavor a Chaos card takes the look of: drawn from its instance id, so one card always throws
- * the same thing and a test can name it. Never Chaos. Every later flavor effect uses this one pick.
- */
+/** A Chaos card's look, drawn from its instance id so one card always throws the same thing; every flavor effect uses this pick. */
 export function chaosFlavor(instanceId: string): Exclude<Flavor, "Chaos"> {
   return CHAOS_PICKS[Math.floor(createRng(hashId(instanceId))() * CHAOS_PICKS.length)] ?? FLAVOR_FALLBACK;
 }
 
-/**
- * The look `flavor` draws for the card `instanceId`: its own, or for Chaos the pick above. Chaos's own
- * row exists for the later parts' accents; its shot is never fired.
- */
+/** The look `flavor` draws for the card `instanceId`. Chaos's own row is for accents; its shot is never fired. */
 export function flavorLook(flavor: Flavor, instanceId: string): FlavorLook {
   return FLAVOR_LOOKS[flavor === "Chaos" ? chaosFlavor(instanceId) : flavor];
 }

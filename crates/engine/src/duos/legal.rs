@@ -1,15 +1,9 @@
 //! What each Duos seat may send (#936 B2, B4, B6, B9, B10, B19) and why the reducer refuses the rest.
-//! `duos_legal_actions` and `duos_reduce` ask the same functions — `why_duel_refused`,
-//! `why_pass_refused` — so a greyed-out button and a refusal cannot disagree (§9.3).
-//!
-//! A seat's duel actions are its duel's own `legal_actions` for its player, filtered by the round:
-//!   - an answer to a prompt it holds, and its mulligan, always (B2, B6);
-//!   - a main-phase action (a play, an attack, a switch, an activation, an emote, End turn) only while
-//!     it is its duel's round seat and has not ended (B4, B6) — never during the mulligans (B2);
-//!   - never a draw offer or answer, the duel's own concede, or the setting R82 reads (B9, B10).
-//!
-//! The wrapper applies R82 itself (B9, §13.3): a round seat left with nothing but End turn in its
-//! duel, and no pass it may make, is ended for it.
+//! `duos_legal_actions` and `duos_reduce` ask the same functions, so a greyed-out button and a
+//! refusal cannot disagree (§9.3). A seat's duel actions are its duel's own `legal_actions` filtered by
+//! the round: a prompt's answer and its mulligan always (B2, B6); a main-phase action only as its duel's
+//! round seat before it ends (B4); never a draw offer, the duel's concede or the setting R82 reads (B9,
+//! B10). The wrapper applies R82 itself (§13.3).
 
 use std::ops::ControlFlow;
 
@@ -21,8 +15,7 @@ use crate::zones::OffFieldZone;
 
 use super::state::DuosState;
 
-/// R82's "nothing left but ending the turn" (B9): the duel actions that leave a round seat with
-/// nothing to do — End turn itself, concede, the draw offers, and an emote, which R82 never counts.
+/// R82's "nothing left but ending the turn" (B9); R82 never counts an emote as something to do.
 const NOTHING_LEFT: &[ActionType] = &[
     ActionType::EndTurn,
     ActionType::Concede,
@@ -31,9 +24,8 @@ const NOTHING_LEFT: &[ActionType] = &[
     ActionType::Emote,
 ];
 
-/// Every action `seat` may send now, in order: its duel actions (as its duel lists them), its passes
-/// (hand order), then concede — unless its own concede offer already stands (B11). Nothing once the
-/// game is over.
+/// Every action `seat` may send now, in order: its duel actions, its passes (hand order), then concede
+/// unless its own offer stands (B11).
 pub fn duos_legal_actions(state: &DuosState, seat: DuosSeat) -> Vec<DuosActionBody> {
     if state.result.is_some() {
         return Vec::new();
@@ -71,14 +63,12 @@ pub fn duos_seats_to_act(state: &DuosState) -> Vec<DuosSeat> {
         .collect()
 }
 
-/// Whether a duel action its duel lists for `seat` is one Duos offers it. The R79 clock actions are
-/// the server's to send, never on offer (a duel never lists them anyway).
+/// Whether Duos offers `seat` this duel action; the R79 clock actions are the server's to send.
 fn offered(state: &DuosState, seat: DuosSeat, body: &ActionBody) -> bool {
     body.action_type() != ActionType::CeilingReached && why_duel_refused(state, seat, body).is_ok()
 }
 
-/// Why Duos refuses `body` from `seat` before its duel sees it, or `Ok` (the duel's own `reduce`
-/// then judges it as in any 1v1 game).
+/// Why Duos refuses `body` from `seat` before the duel's own `reduce` judges it.
 pub(super) fn why_duel_refused(
     state: &DuosState,
     seat: DuosSeat,
@@ -96,8 +86,7 @@ pub(super) fn why_duel_refused(
         ActionType::SetAutoEndTurn => Err(EngineError::new(
             "in Duos the round ends a turn with nothing left to do",
         )),
-        // B37, B38: the server's clocks act through the seats' own actions, and a team never loses
-        // to a disconnect.
+        // B37, B38: the clocks act through the seats' actions; a team never loses to a disconnect.
         ActionType::Timeout | ActionType::DisconnectExpired => Err(EngineError::new(
             "in Duos the clocks act through the seats' own actions",
         )),
@@ -114,8 +103,7 @@ pub(super) fn why_duel_refused(
     }
 }
 
-/// B2, B4, B6: a main-phase action needs round 1 to have begun, `seat` to be its duel's round seat,
-/// and that seat not to have ended.
+/// B2, B4, B6: a main-phase action needs the round begun and `seat` its duel's round seat, not ended.
 fn may_take_turn_actions(state: &DuosState, seat: DuosSeat) -> Result<(), EngineError> {
     if state.result.is_some() {
         return Err(EngineError::new("the game is over"));
@@ -137,8 +125,7 @@ fn may_take_turn_actions(state: &DuosState, seat: DuosSeat) -> Result<(), Engine
     Ok(())
 }
 
-/// What the duel's own reducer checks of an action on the active player's turn, for the actions Duos
-/// handles itself (End turn, a pass): the duel is live, no prompt is open, and it is `seat`'s main phase.
+/// What the duel's own reducer would check of the actions Duos handles itself (End turn, a pass).
 fn may_act_in_main_phase(state: &DuosState, seat: DuosSeat) -> Result<(), EngineError> {
     let game = &state.duels[seat.duel()];
     if game.result.is_some() {
@@ -153,9 +140,8 @@ fn may_act_in_main_phase(state: &DuosState, seat: DuosSeat) -> Result<(), Engine
     Ok(())
 }
 
-/// B19: a pass is legal for a round seat that has not ended, in its main phase with no prompt open,
-/// holding that hand card, with mana for its team's pass cost, under its team's pass cap this round,
-/// and whose teammate's hand is below its hand cap.
+/// B19: a pass needs a round seat in its main phase, holding the card, with its team's pass cost in
+/// mana, under its team's pass cap this round, and a teammate's hand below its cap.
 pub(super) fn why_pass_refused(
     state: &DuosState,
     seat: DuosSeat,
@@ -192,10 +178,8 @@ pub(super) fn why_pass_refused(
     Ok(())
 }
 
-/// B9, R82: whether the wrapper ends `duel`'s round seat now — a round seat that has not ended, in
-/// its main phase with no prompt open, whose duel offers it nothing but End turn, concede and the
-/// draw offers, and which has no pass it may make: a card it could still pass keeps it in the round
-/// (§13.3).
+/// B9, R82: whether the wrapper ends `duel`'s round seat now, its duel offering it only `NOTHING_LEFT`;
+/// a card it could still pass keeps it in the round (§13.3).
 pub(super) fn auto_end_due(state: &DuosState, duel: usize) -> bool {
     if state.result.is_some() || state.round == 0 || state.ended[duel] {
         return false;

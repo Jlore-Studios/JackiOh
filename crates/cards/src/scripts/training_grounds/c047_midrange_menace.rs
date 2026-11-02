@@ -41,14 +41,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19.
-//
-// Must-pass (M4-T4): "Taunt enforced; heals to full at own end of turn; radiant Immutable refuses
-// Sheepish". §4: damage stays on a unit until a heal (§6.3) or leaving the field (R78) takes it off.
-//
-// R23's "refuses Sheepish": the transform half belongs to #41 Sheepish's file. This file owns the half
-// that makes R23 apply: the radiant face carries Immutable, printed and visible in the view, and the
-// base face does not. Both faces are asserted for the keyword list and the end-of-turn heal.
+// #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19 (§4, §6.3, R78, R23, #41).
+// Taunt enforced; heals to full at end of turn; radiant Immutable refuses #41 Sheepish.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

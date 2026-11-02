@@ -1,20 +1,11 @@
-// R670: the bespoke entrances of a handful of marquee Legendary and Mythic Units.
+// R670: the bespoke entrances of a handful of marquee Legendary and Mythic Units (#100 Ceaseless Void
+// "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom", #56 Spell Tyrant "tyrantSigil"),
+// in place of its rarity's (cues.ts `summon`) for a card listed under one of these keys in `CARD_FX` (cardFx.ts).
+// It keys off the `summoned` event's own `defId`, which a hidden summon never has (R202), and decorates the
+// entry the runner already timed, so it paces nothing (R200, R201).
 //
-// A card listed in `CARD_FX` (cardFx.ts) under one of these keys gets its own entrance instead of its
-// rarity's (cues.ts `summon`): its recipe claims the `summoned` into a unit zone. It keys off that
-// event's own `defId`, which a hidden summon never has (R202), and decorates the entry the runner
-// already timed, so it paces nothing (R200, R201): a delay lands inside the entry, and a tail is gone
-// within FX_MAX_TAIL_MS.
-//
-//   #100 Ceaseless Void "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom",
-//   #56 Spell Tyrant "tyrantSigil".
-//
-// #1445: the per-flavor summon entrances one of those replaces for a marquee card, and the
-// `summon` recipe (cues.ts) appends for every other face-up Unit. Each is additive over the
-// motion underneath (the dust ring and burst, the rarity rays, the slam shake stay) and built
-// only from existing cue kinds. Every delay is 0 or the landing beat and every tail reuses an
-// existing tail constant, so an entrance paces nothing (R200); the flavor resolves through
-// `flavorLookOf`, so a hidden summon keeps today's dust (R202).
+// #1445: the per-flavor entrances `summon` appends for every other face-up Unit, additive over the motion
+// underneath, their delays 0 or the landing beat and their tails existing tail constants.
 
 import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -125,11 +116,9 @@ const tyrantSigil: Entrance = ({ D, tgt, intensity: i }) => {
 
 export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil };
 
-/* ------------------------------------------------------------------------------------------- *
- * #1445: one summon entrance per flavor
- * ------------------------------------------------------------------------------------------- */
+/* #1445: one summon entrance per flavor */
 
-/** What a flavor entrance plans against: the entry's duration, the zone's testid, the intensity, the landing beat and the summoned card's instance id. */
+/** An `EntrancePlan` plus the landing beat and the summoned card's instance id. */
 export type FlavorEntrancePlan = { D: number; tgt: string; intensity: number; landAt: number; instanceId: string };
 
 export type FlavorEntrance = (p: FlavorEntrancePlan) => FxCue[];
@@ -273,10 +262,9 @@ export const FLAVOR_ENTRANCES: Readonly<Record<Flavor, FlavorEntrance>> = {
 };
 
 /**
- * #1445: the flavor entrance a face-up `summoned` (or `animated`) appends to the motion
- * underneath, or nothing when the view hides the card. A summon the view does not show face-up
- * (a face-down set never reaches here; a hidden or unknown `defId` resolves to null through
- * `flavorLookOf`, CLAUDE.md rule 7) and reduced motion (every duration is 0) keep today's cue.
+ * #1445: the flavor entrance a face-up `summoned` (or `animated`) appends to the motion underneath.
+ * A hidden or unknown `defId` resolves to null through `flavorLookOf` (CLAUDE.md rule 7), so it and
+ * reduced motion (every duration is 0) get nothing.
  */
 export function flavorEntranceCues(opts: {
   defId: string;

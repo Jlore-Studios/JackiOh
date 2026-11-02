@@ -37,12 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #21 Moonberry — SPEC §8.10 row S 21, BUILD M12 row S 21: "adds one Other-Origins token to its
-// caster's hand, each of C+ 32.1 to 32.3 seen over the seeds (and S 10.1 to 12.3 under
-// `preview_sets`), never a non-token card; played again from the graveyard once by Flashback, then
-// not again; radiant the card is Radiant and costs 1 less, a (0) one staying (0); discount reads
-// through `param()`" (R1867007; the Flashback mechanic itself is proven in the engine's
-// `flashback` tests).
+// S #21 Moonberry — SPEC §8.10 row S 21, BUILD M12 row S 21 (R1867007).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -54,10 +49,8 @@ mod tests {
     const MOONBERRY: &str = "stinkyscape-021";
     const FILLER: &str = "core-005";
 
-    /// C+ #32.1–#32.3, the Other-Origins tokens of the sets that ship now.
     const SHIPPED_TOKENS: [&str; 3] = ["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"];
 
-    /// S #10.1–#12.3, the set's nine Other-Origins tokens since it shipped (#1884).
     const STINKYSCAPE_TOKENS: [&str; 9] = [
         "stinkyscape-010-1",
         "stinkyscape-010-2",
@@ -70,7 +63,6 @@ mod tests {
         "stinkyscape-012-3",
     ];
 
-    /// A play of one Moonberry over `seed`; the def it added.
     fn added_def(seed: &str, radiant: bool) -> String {
         crate::register_all();
         let mut s = scenario(json!({
@@ -82,7 +74,6 @@ mod tests {
         s.hand(P1).into_iter().find(|card| card.def_id != FILLER).map(|card| card.def_id).unwrap_or_default()
     }
 
-    /// A play of one Moonberry over `seed`; the card it added.
     fn added_card(seed: &str, radiant: bool) -> CardInstance {
         crate::register_all();
         let mut s = scenario(json!({
@@ -94,7 +85,6 @@ mod tests {
         s.hand(P1).into_iter().find(|card| card.def_id != FILLER).expect("a card added")
     }
 
-    /// What the added card costs now, read as a play would price it.
     fn priced(state: &GameState, card: &CardInstance) -> i32 {
         effective_cost(state, card, Default::default())
     }
@@ -153,8 +143,7 @@ mod tests {
 
     /// A play of a graveyard card (B5 E11), sent to `reduce` as `legalActions` offers it: the
     /// harness's `play` takes a card from a hand, so a graveyard play is reduced here (C #28 Second
-    /// Wind's shape). Every attempt needs its own nonce, or `reduce`'s dedupe replays the last
-    /// result instead of applying this one.
+    /// Wind's shape).
     fn graveyard_play(state: &GameState, id: &str, attempt: u32) -> (Option<String>, GameState) {
         let action = json_as::<Action>(json!({
             "type": "play",
@@ -177,14 +166,12 @@ mod tests {
         let grave =
             s.pile(P1, "graveyard").into_iter().find(|card| card.def_id == MOONBERRY).expect("played");
 
-        // Once more from the graveyard, at its cost: the hand holds the first add and this one.
         let (error, state) = graveyard_play(s.state(), &grave.id, 1);
         assert!(error.is_none(), "{error:?}");
         let added: Vec<&CardInstance> =
             state.players.p1.hand.iter().filter(|card| card.def_id != FILLER).collect();
         assert_eq!(added.len(), 2);
 
-        // Then not again: the keyword is spent, and no permission offers it.
         let spent = state
             .players
             .p1
@@ -228,7 +215,6 @@ mod tests {
                     zeros += 1;
                 }
             }
-            // A (0) card stays (0): the pool's zeroes came up and priced at 0.
             assert!(zeros > 0, "a (0) card stays (0)");
         }
 

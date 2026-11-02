@@ -1,28 +1,14 @@
 //! Heroic Power (SPEC §8 #98, R43, R103, R352, R752–R761): the thirteen powers, the roll that picks
-//! one, and each power as the Activate ability it is since the Heroic Power patch.
+//! one, and each power as the Activate ability it is.
 //!
-//! R43 puts everything about the card on its instance: `memory.power` is the power it rolled. Nothing
-//! here is a module variable, so two Heroic Powers in one game never share a roll or a use, and a
-//! serialized game resumes knowing both (§10.1). The roll goes through the match rng, so a replay rolls
-//! the same power (§9.3).
+//! R43 puts everything about the card on its instance (`memory.power`), so two Heroic Powers in one
+//! game never share a roll or a use and a serialized game resumes knowing both (§10.1). The roll goes
+//! through the match rng, so a replay rolls the same power (§9.3).
 //!
-//! R752: the card costs (0) and playing it uses nothing. Each power is an "Activate: Spend (X): …"
-//! ability (R384, `activate.ts`): once per turn, its X paid in mana as it is activated, its target —
-//! Ping's — declared with the activation (R81), so the client can drag the power onto it. The card
-//! declares all thirteen (`powerAbilities`) and has only the one it rolled (`ActivationDecl.has`), so
-//! `legalActions`, the refusal, the view and a resumed tail all read the one Activate subsystem, and
-//! `activatePower` is an alias that names the rolled power's ability (`reduce.ts`).
-//!
-//! Three powers pause on a Discover (§6.3): Witness Value, Stitching and Terminus Tricks. Each is one
-//! builder that reads the answer: with one it does the work, without one it opens the Discover and
-//! names `POWER_RESUME` as the step to come back to. The answer re-enters `heroPower` below with the
-//! pick in the context, which runs the same builder down its other branch — so a paused activation is a
-//! `PendingChoice` in state and never a callback (§9.3, §10.6).
-//!
-//! Port of `packages/engine/src/subsystems/heroPower.ts`. The numbers (`LIFE_TAP_DAMAGE` …
-//! `STITCHING_MAX_COST`) live in `crate::config` (CLAUDE.md rule 9, SURFACE §6.4). `HERO_POWERS` is a
-//! `const` table whose builders are `fn` items, and `hero_power` is a plain function a card wraps
-//! with `hook(subsystems::hero_power)` (TS `heroPower: Hook`).
+//! R752: the card costs (0); each power is a once-per-turn "Activate: Spend (X): …" ability (R384,
+//! R81), of which the card has only the one it rolled (`ActivationDecl.has`). Three powers pause on a
+//! Discover (§6.3) whose answer re-enters `hero_power`: a `PendingChoice`, never a callback (§10.6).
+//! Numbers: `crate::config` (CLAUDE.md rule 9, SURFACE §6.4).
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -48,9 +34,7 @@ use crate::wire::{CardType, SetName, TargetDecl, opponent_of};
 /// R43: where the rolled power lives on the instance.
 pub const POWER_KEY: &str = "power";
 
-/// The resume step a power that opened a Discover comes back to (§10.6). `prompts.ts` stores it as
-/// the `step` of the `Resume` a prompt carries and looks the answer up in the card's own step table,
-/// so #98's script wires the pair together in one line:
+/// The resume step a power that opened a Discover comes back to (§10.6), wired in #98's script:
 ///
 /// ```ignore
 /// resume: IndexMap::from([(POWER_RESUME, hook(subsystems::hero_power))]),
@@ -67,17 +51,12 @@ pub const GHOUL_TOKEN_INDEX: &str = "T-ghoul";
 /// B2.2: the set whose indices those are, since an index is unique only within its set.
 const TOKEN_SET: SetName = SetName::Core;
 
-/// R754: Steady Shot's declared number ("{shot}"); how far its Radiant face raises it per use is
-/// `STEADY_SHOT_RAISE` (`crate::config`). It is the Steady Shot power's own (`power: "burn"`, R1430).
+/// R754: Steady Shot's declared number ("{shot}"), its power's own (`power: "burn"`, R1430).
 pub const STEADY_SHOT_PARAM: &str = "shot";
 
-/// B3.4 rule 5 (#493): the other numbers #98 declares, one per power's number. Each is printed in
-/// `crate::config` and moved by the card's tuning (`power_number`), so a Degrade, an Upgrade or KY's
-/// Constant changes the power the card has as its text says. R1430: the catalog names each number's
-/// power (`Param.power`, the power's stored name), so a Degrade, an Upgrade or KY's Constant reaches
-/// only the numbers of the power the card has now, and a number of another power keeps its tuning for
-/// when a reroll (Tank Up, R757) brings that power back. Life Tap's damage is the base face's alone
-/// (`tunedOn: "base"`, R1431).
+/// B3.4 rule 5 (#493): #98's other numbers, moved by the card's tuning (`power_number`). R1430: each
+/// names its power (`Param.power`), so a Degrade, an Upgrade or KY's Constant reaches only the power the
+/// card has now; another keeps its tuning for a reroll (R757). Life Tap's damage is base-only (R1431).
 pub const LIFE_TAP_DRAW_PARAM: &str = "tapDraw";
 pub const LIFE_TAP_DAMAGE_PARAM: &str = "tapDamage";
 pub const PING_PARAM: &str = "ping";
@@ -87,9 +66,8 @@ pub const BRAINSTORM_PARAM: &str = "discount";
 pub const PLUCK_PARAM: &str = "fruitCost";
 pub const STITCHING_PARAM: &str = "stitchCost";
 
-/// A power's number as the card stands (#493): `printed`, the engine's number for the face running,
-/// moved by as much as the card's tuning has moved its declared number `key` (`params::declared_or`).
-/// A card that declares no `key` (a test's fixture) reads `printed` as it is.
+/// A power's number as the card stands (#493): `printed` moved as far as the card's tuning moved its
+/// declared `key` (`params::declared_or`); a card that declares no `key` reads `printed`.
 fn power_number(ctx: &EffectContext<'_>, key: &str, printed: i32) -> i32 {
     match ctx.live_self() {
         Some(card) => crate::params::declared_or(&*ctx.sink.state, card, key, printed),
@@ -111,8 +89,7 @@ fn ping_targets() -> Vec<TargetDecl> {
 /// R761: Terminus Tricks Discovers a Trap; a Field Trap is a Trap.
 const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
-/// R103: the stored power names. They are state, so they stay stable across versions and a new power
-/// is added at the end: the eight of v0.1.1, then the five the Heroic Power patch added (R752).
+/// R103: the stored power names. They are state, so they stay stable and a new power is added at the end.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum HeroPowerName {
@@ -149,7 +126,7 @@ impl HeroPowerName {
         HeroPowerName::Tricks,
     ];
 
-    /// The stored name, as TS writes it (the Activate ability's id).
+    /// The stored name (the Activate ability's id).
     pub fn as_str(self) -> &'static str {
         match self {
             HeroPowerName::Recruit => "recruit",
@@ -191,7 +168,6 @@ pub struct HeroPower {
     pub radiant_label: &'static str,
     /// What the activation declares (R81): Ping's target. A builder, so the table stays `const`.
     pub targets: Option<fn() -> Vec<TargetDecl>>,
-    /// The effects one activation runs. `radiant` picks the Radiant face (§5.2).
     pub build: HeroPowerBuild,
 }
 
@@ -287,12 +263,10 @@ fn cat_cafe(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     summon_token(FELINOR_TOKEN_INDEX, false)
 }
 
-/// Ping (R756): Pierce, 1 damage to the unit or hero declared with the activation. The Radiant face
-/// then asks, after the state check that follows the hit (R59), whether the unit left the field in it
-/// (`leftFieldAfter` against the activation's own mark, which a pause keeps, R174) — killed, a Reborn
-/// body put back included — and if so summons a Ghoul Token for you with that unit's attack and health
-/// as it stood before the hit (its health undamaged: at its printed 1 damage Ping kills only a unit
-/// left on 1, and a tuned `ping` (#493) may kill more).
+/// Ping (R756): Pierce, {ping} damage to the unit or hero declared with the activation. The Radiant face
+/// then asks, after the state check (R59), whether the unit left the field (`leftFieldAfter` against the
+/// activation's own mark, which a pause keeps, R174; a Reborn body put back included), and if so
+/// summons you a Ghoul Token with the unit's attack and undamaged health from before the hit.
 fn ping(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     let hit = crate::effects::damage(json_as(json!({
         "to": { "of": "chosen" },
@@ -329,8 +303,7 @@ fn ping(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     ]
 }
 
-/// Witness Value. §6.3 Discover: 1 of 3 Units, shown only to the chooser. The pick comes back as a mode
-/// selection carrying a def id, and the Unit goes to hand — Radiant when the power is (R103).
+/// Witness Value: §6.3 Discover a Unit to hand, Radiant when the power is (R103).
 fn witness_value(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     if let Some(picked) = crate::effects::chosen_options(ctx).first().cloned() {
         return vec![crate::effects::add_to_hand(json_as(json!({
@@ -347,7 +320,7 @@ fn witness_value(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     })))]
 }
 
-/// The picks a paused Stitching has made so far, read back out of the captured data.
+/// The picks a paused Stitching has made so far.
 fn stitched_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     match ctx.data.get(STITCHING_PICKS_KEY).and_then(Value::as_array) {
         None => vec![],
@@ -358,11 +331,9 @@ fn stitched_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     }
 }
 
-/// R352: "Discover two (2) Cost or less Units. Fuse them." Two chained Discovers, each answer
-/// re-entering `heroPower` with the picks so far in the prompt's data; the second answer fuses the two
-/// per R77 into the activating player's hand at R77's fused cost, min(sum, 4). On the Radiant face the
-/// Units are Radiant and so is the result. A Discover with no pool left fizzles, and fewer than two
-/// picks fuse nothing.
+/// R352: "Discover two (2) Cost or less Units. Fuse them." Two chained Discovers, each answer re-entering
+/// `heroPower` with the picks so far in the prompt's data; the second fuses them per R77 into the hand at
+/// R77's fused cost (Radiant on the Radiant face). Fewer than two picks fuse nothing.
 fn stitching(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     let max_cost = power_number(ctx, STITCHING_PARAM, STITCHING_MAX_COST);
     let answered = crate::effects::chosen_options(ctx).first().cloned();
@@ -390,8 +361,7 @@ fn stitching(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     })))]
 }
 
-/// TS wrote through the live `ctx.self`: the card in the state, and the context's own copy of it, so
-/// later effects of the same context read the change as TS's did.
+/// Writes the card in the state and the context's own copy, so later effects of the context see it.
 fn write_memory(ctx: &mut EffectContext<'_>, id: &str, key: &str, value: Value) {
     if let Some(card) = crate::state::find_instance_mut(&mut *ctx.sink.state, id) {
         card.memory.insert(key.to_string(), value.clone());
@@ -401,9 +371,8 @@ fn write_memory(ctx: &mut EffectContext<'_>, id: &str, key: &str, value: Value) 
     }
 }
 
-/// R757: the power refreshes into a different one — it rolls again among the other twelve (the match
-/// rng, as the first roll did) and gives back the use this activation spent, so the new power may be
-/// activated this turn too, paying its own X.
+/// R757: the power rerolls among the other twelve (the match rng) and gives back the use this
+/// activation spent, so the new power may be activated this turn too, paying its own X.
 pub fn refresh_power() -> Effect {
     Effect::new("refreshPower", |ctx| {
         let Some(mut card) = ctx.live_self().cloned() else {
@@ -429,9 +398,8 @@ pub fn refresh_power() -> Effect {
     })
 }
 
-/// Armor Up (R757): 2 hero Armor until your next turn — a player modifier that lasts through the
-/// opponent's next turn, so it is gone when yours begins. Tank Up, its Radiant face: 4 Armor your hero
-/// keeps, then the power refreshes (`refreshPower`).
+/// Armor Up (R757): hero Armor as a player modifier through the opponent's next turn, gone when yours
+/// begins. Tank Up, its Radiant face: Armor your hero keeps, then the power refreshes.
 fn armor_up(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     if radiant {
         let armor = power_number(ctx, ARMOR_PARAM, TANK_UP_ARMOR);
@@ -460,7 +428,7 @@ fn better_insect_pick(state: &GameState) -> impl Fn(InsectPick, InsectPick) -> I
         let view = unit_view(state, card);
         view.attack + view.health
     };
-    // TS `slotOf(state, card)?.lane ?? Number.MAX_SAFE_INTEGER`: past every lane.
+    // A card with no slot sorts past every lane.
     let lane = move |card: &CardInstance| -> i64 {
         crate::zones::slot_of(state, card).map_or(i64::MAX, |at| i64::from(at.lane))
     };
@@ -482,8 +450,8 @@ fn better_insect_pick(state: &GameState) -> impl Fn(InsectPick, InsectPick) -> I
     }
 }
 
-/// Die Insect (R758): {insect} (8) damage to a random enemy — one pick over the enemy Units acting on
-/// the field and the enemy hero, each as likely. The Radiant face is Lucky 1: two picks, the better kept.
+/// Die Insect (R758): {insect} damage to a random enemy Unit acting on the field or the enemy hero,
+/// each as likely. The Radiant face is Lucky 1: two picks, the better kept.
 fn die_insect(radiant: bool, amount: i32) -> Effect {
     Effect::new("dieInsect", move |ctx| {
         let mut pool: Vec<InsectPick> =
@@ -512,7 +480,7 @@ fn die_insect(radiant: bool, amount: i32) -> Effect {
     })
 }
 
-/// TS `(_ctx, radiant) => [dieInsect(radiant)]`, as a named builder so the table stays `const`.
+/// A named builder, so the table stays `const`.
 fn die_insect_power(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     vec![die_insect(
         radiant,
@@ -567,9 +535,8 @@ fn pluck(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     vec![crate::effects::add_random_from_catalog(json_as(args))]
 }
 
-/// Terminus Tricks (R761): Discover a Trap (a Trap or Field Trap of every set) and summon it — face-down
-/// into your leftmost free backrow zone (§3.2, R64), fizzling with none (R47). The Radiant face offers
-/// Radiant Traps and summons the pick Radiant.
+/// Terminus Tricks (R761): Discover a Trap and summon it face-down into your leftmost free backrow zone
+/// (§3.2, R64), fizzling with none (R47); Radiant on the Radiant face.
 fn terminus_tricks(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     if let Some(picked) = crate::effects::chosen_options(ctx).first().cloned() {
         let args = if radiant {
@@ -587,7 +554,7 @@ fn terminus_tricks(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     })))]
 }
 
-/// The thirteen powers of §8 #98 (R752), in R103's stored order: the eight of v0.1.1, then the five added.
+/// The thirteen powers of §8 #98 (R752), in R103's stored order.
 pub const HERO_POWERS: &[HeroPower] = &[
     HeroPower {
         name: HeroPowerName::Recruit,
@@ -721,16 +688,14 @@ pub const HERO_POWERS: &[HeroPower] = &[
     },
 ];
 
-/// TS `HERO_POWERS.map((power) => power.name)`: the stored names in the table's order.
+/// The stored names in the table's order.
 pub const HERO_POWER_NAMES: &[HeroPowerName] = HeroPowerName::ALL;
 
 pub fn power_by_name(name: &str) -> Option<&'static HeroPower> {
     HERO_POWERS.iter().find(|power| power.name.as_str() == name)
 }
 
-// ---------------------------------------------------------------------------
 // The power on the instance (R43).
-// ---------------------------------------------------------------------------
 
 /// The power this card rolled, or null for a card that has not rolled one yet.
 pub fn power_of(instance: &CardInstance) -> Option<&'static HeroPower> {
@@ -746,10 +711,8 @@ pub fn power_title_of(power: &HeroPower, radiant: bool) -> &'static str {
     if radiant { power.radiant_title } else { power.title }
 }
 
-/// R43's roll: a Heroic Power that has no power picks one from the match rng and remembers it, and
-/// one that already has a power keeps it. #98 calls this from `startOfGame` for every copy in a hand
-/// or library (§6.2), and again whenever a copy arrives somewhere without one — a bounced or reset
-/// instance (R78, R151) — which is why it is idempotent rather than a plain roll.
+/// R43's roll, idempotent: #98 calls it from `startOfGame` for every copy in a hand or library (§6.2)
+/// and again whenever a copy arrives without a power (a bounced or reset instance, R78, R151).
 pub fn ensure_power(sink: &mut EngineSink<'_>, instance: &mut CardInstance) -> Option<&'static HeroPower> {
     if let Some(existing) = power_of(instance) {
         return Some(existing);
@@ -765,7 +728,6 @@ pub fn ensure_power(sink: &mut EngineSink<'_>, instance: &mut CardInstance) -> O
 /// (CLAUDE.md rule 5).
 pub fn roll_power() -> Effect {
     Effect::new("rollPower", |ctx| {
-        // TS rolled onto the live `ctx.self`: roll onto the card as it stands, then write its power back.
         let Some(mut card) = ctx.live_self().cloned() else {
             return;
         };
@@ -777,10 +739,9 @@ pub fn roll_power() -> Effect {
     })
 }
 
-/// R752: the card's thirteen Activate abilities, one per power, on the face `radiant` names: each pays
-/// its power's X (`cost.mana`), declares what it targets (Ping's, R81), and is the card's only while
-/// the card rolled that power (`has`). The ability's id is the stored name (R103), so a fused card's
-/// ids (R102), a resumed tail (`activation:<id>`) and the alias all name the same power.
+/// R752: the thirteen Activate abilities on the face `radiant` names, each paying its power's X,
+/// declaring its targets (R81) and the card's only while it rolled that power (`has`). The id is the
+/// stored name (R103), so a fused card's ids (R102), a resumed tail and the alias name the same power.
 pub fn power_abilities(radiant: bool) -> Vec<ActivationDecl> {
     HERO_POWERS
         .iter()
@@ -810,10 +771,7 @@ pub fn power_abilities(radiant: bool) -> Vec<ActivationDecl> {
         .collect()
 }
 
-/// The continuation a Discover comes back to: `prompts.ts` re-enters the step the prompt's `Resume`
-/// names — `POWER_RESUME`, which #98's `resume` table points here — with the pick in the context
-/// (§10.6). The power's own builder finishes the activation, so the prompted and the unprompted path
-/// are one piece of code.
+/// The step a Discover comes back to (§10.6): the power's own builder finishes the activation.
 pub fn hero_power(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let named = ctx
         .data

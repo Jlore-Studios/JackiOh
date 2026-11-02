@@ -4,12 +4,10 @@
 //!
 //! The whole card is the engine's question-bank subsystem (E31): the reward rolls, the two prompts,
 //! the Easy generator and the grade. This file hands it the bank of Medium and Hard problems, which is
-//! card data (`crate::ky_test_bank`). Both faces run the same script: the grade step reads the face
-//! that asked, so the Radiant face's reward cards are Radiant.
+//! card data (`crate::ky_test_bank`).
 //!
 //! Issue #2179 (R2179003): the Easy problems are four-digit sums and differences, v0.5.2's whole bank
-//! is Medium, and the Hard bank is graduate mathematics. `script_v0_5_2` asks v0.5.2's two-digit
-//! sums from its bank, for those replays (R767000).
+//! is Medium, and the Hard bank is graduate mathematics.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::subsystems::ky_test::{KyTestEasy, KyTestProblem, ky_test_script_with};
@@ -411,9 +409,8 @@ mod tests {
             assert_eq!(gained(&s), vec![coin.clone(), coin.clone(), coin]);
         }
 
-        /// Re-pinned for the Stinkyscape release (#1884): the 2-cost KY cards were Conjure KY, C+ #62 and
-        /// M+ #20, which the pinned seed dealt as Conjure KY; the set's #25 KY's Tricknology joins them,
-        /// so the seeds now show the whole pool rather than one pick.
+        /// The 2-cost KY cards are Conjure KY, C+ #62, M+ #20 and Stinkyscape #25 (#1884): the seeds
+        /// show the whole pool rather than one pick.
         #[test]
         fn r420_easy_a_random_2_cost_ky_card_conjure_ky_among_them() {
             const TWO_COST_KY: [&str; 4] = [CONJURE_KY, "classicplus-062", "meditativeplus-020", "stinkyscape-025"];
@@ -672,8 +669,6 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.2 and before, whose Easy problems were
-    /// two-digit sums (R580) and whose Hard ones were v0.5.2's.
     mod v0_5_2 {
         use super::*;
 

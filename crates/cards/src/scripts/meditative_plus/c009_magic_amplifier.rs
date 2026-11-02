@@ -4,18 +4,9 @@
 //!             damage to your hand."" (2)
 //!   Radiant: "… a random Radiant Spell or Field Spell that deals damage …" (4)
 //!
-//! Spell Damage beyond Units (R1180000): the engine's `spellDamageAura` static flag, for both players.
-//! While the Amplifier acts on the field — face-up, in its controller's backrow — each player's Spell
-//! Damage, the one sum §4.4 step 0 raises every hit of their Spells by (`damage::spell_damage_of`),
-//! gains its number, beside their Units' keyword and any "this turn" modifier (M+ #11). A Field
-//! Spell's or a Trap's hit is not a Spell's and is never raised; face-down or gone it gives nothing.
-//! The number is the declared `spellDamage`, read through `params::declared_or` as each hit lands, so
-//! a Nerf or a Buff moves it (R386). Tunes: spellDamage 2 ↑ (Radiant 4).
-//!
-//! Issue #2179 made it an embiggen card (§6.3 Embiggen, R81): its Embiggened version also has a Cry
-//! (R1), one random non-token Spell or Field Spell of every set that deals damage (`dealsDamage`,
-//! R1748001, R380), repeats allowed (R60), Radiant on the Radiant face; the hand cap burns it (§2.4).
-//! Through v0.5.2 it had no Cry, which `script_v0_5_2` keeps (R767000).
+//! Spell Damage aura for both players via spellDamageAura (R1180000, §4.4 step 0; M+ #11). Read via declared_or (R386).
+//! Embiggened version adds random damage Spell/Field Spell via dealsDamage (#2179, §6.3, R81, R1, R1748001, R380, R60, §2.4).
+//! Keeps script_v0_5_2 for replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -82,10 +73,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// M+ #9 Magic Amplifier — SPEC §8.9 row 9, BUILD M11 row M+ 9: "while it acts face-up, every hit of
-// either player's Spells deals 2 more, added to Units' Spell Damage (C+ 38, M+ 8); a Field Spell's and
-// a Trap's hits do not; face-down or gone it gives nothing; spellDamage reads through `param()`;
-// radiant +4".
+// M+ #9 Magic Amplifier — SPEC §8.9 row 9, BUILD M11 row M+ 9.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -95,17 +83,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (1) Spell, Pierce: 4 damage to a declared Unit or hero.
     const TRUE_STRIKE: &str = "core-044";
-    /// (2) 3/2, Spell Damage +2.
     const SOLARIUS: &str = "classicplus-038";
-    /// (2) Field Spell: start of turn, damage to the enemy hero equal to the cards in your exile.
     const ECHOES: &str = "core-040";
-    /// (2) Field Trap: reveals when the opponent summons a Unit, 4 damage to it.
     const TESLA: &str = "classic-005";
-    /// (4) Spell: exile a permanent, and a random card from the opponent's deck.
     const COLLATERAL: &str = "core-034";
-    /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
@@ -249,7 +231,6 @@ mod tests {
         assert_eq!(health(&s, P2), 22);
     }
 
-    /// The cards the play added to p1's hand.
     fn added(s: &Scenario) -> Vec<CardInstance> {
         let ids: Vec<String> = s
             .events()
@@ -309,7 +290,6 @@ mod tests {
         assert_eq!(spell_damage_of(s.state(), P1), 4);
     }
 
-    /// R767000: the script kept for the replays of v0.5.2 and before, which had no Cry.
     #[test]
     fn r767000_a_game_on_v0_5_2_adds_nothing_played_at_either_price() {
         crate::under_kept(ID, super::script_v0_5_2(), || {

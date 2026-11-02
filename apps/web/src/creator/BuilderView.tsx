@@ -1,7 +1,6 @@
 // The creator's no-code builder (#920, K3): the card as blocks picked from menus, every word one of
-// the card kit's (`builder.ts`). A Cry, a Death, a start or end of turn each hold effects and may
-// hold a condition; a Unit may also have an aura and an Activate. Each amount is one of the card's
-// numbers, whose Radiant value the numbers table sets.
+// the card kit's (`builder.ts`). Each amount is one of the card's numbers, whose Radiant value the
+// numbers table sets.
 
 import { useState, type ReactElement } from "react";
 
@@ -105,8 +104,7 @@ function NumberInput({
   max?: number;
   onChange: (value: number) => void;
 }): ReactElement {
-  // An emptied field stays empty until the next digit, so clearing it and typing 2 gives 2, not 0
-  // and then 20; leaving it shows the card's number again.
+  // An emptied field stays empty until the next digit; leaving it shows the card's number again.
   const [draft, setDraft] = useState<string | null>(null);
   return (
     <input

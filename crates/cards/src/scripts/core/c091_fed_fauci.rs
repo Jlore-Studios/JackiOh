@@ -2,16 +2,14 @@
 //!
 //! Base: "Rush. Whenever this takes damage, +1 Plague Counter. Start of turn: +1 mana per Plague
 //! Token". Radiant: "Rush; +2 mana per token". The radiant cell lists Rush without "Plus", so Rush
-//! is its COMPLETE keyword list (§8 Conventions): the catalog prints it on both faces and nothing
-//! here grants it (§10.4 layer 1). The base's damage→token clause is kept, as the cell restates
-//! only the mana number.
+//! is its COMPLETE keyword list (§8 Conventions), printed by the catalog (§10.4 layer 1); the cell
+//! restates only the mana number, so the damage→token clause is kept.
 //!
 //! The count is `counters.plague` (§10.1), written only by the `plague` effect (CLAUDE.md rule 5).
 //! R63: a 0 hit emits no `damage` event, so the trigger counts EVENTS, one per instance. R78: leaving
 //! the field resets counters. The condition is R99's `when`, read as the queued trigger resolves
-//! (R2271000), and also a guard in `run`. R280: the preview is the mana it gives at its controller's next
-//! start of turn, `mana_now` off its own Plague Counters, which travel on its public view (§10.8); a
-//! card in hand holds none (R78).
+//! (R2271000), and also a guard in `run`. R280: the preview is the mana its next start of turn gives,
+//! off its own Plague Counters (public, §10.8).
 
 use jackioh_engine::prelude::*;
 
@@ -20,8 +18,7 @@ pub const ID: &str = "core-091";
 /// §8: "+1 Plague Counter" — one per damage instance.
 const TOKENS_PER_DAMAGE: i32 = 1;
 
-// §8: base "+1 mana per Plague Counter"; radiant "+2 mana per token" — the declared number `mana`
-// (R386), read off the face that is up.
+// The rate is the declared number `mana` (R386), read off the face that is up.
 
 /// "Whenever THIS takes damage": the event carries the target, so a hit this card DEALT — its own
 /// strike-back, its Trample overflow — is not a hit it took.
@@ -59,8 +56,7 @@ fn mana_now(self_: Option<&CardInstance>, per_token: i32) -> i32 {
 }
 
 /// "Start of turn: +N mana per Plague Counter" (§2.2, R62: after the refresh, before the draw). With
-/// no tokens the card gains nothing and returns no effect at all, so it emits no `manaChanged` for a
-/// change of zero.
+/// no tokens it returns no effect, so it emits no `manaChanged` for a change of zero.
 fn mana_from_tokens() -> Hook {
     hook(|ctx| {
         let amount = mana_now(ctx.self_.as_ref(), param(&*ctx, "mana"));
@@ -96,13 +92,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91: "One Plague Counter per damage instance; +1 mana per
-// token at start of turn (radiant +2); counters reset on leaving").
+// #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91).
 //
-// Fauci is 1/6 → 2/12, so #61 Postdoc (2/4, no keywords; its Cry never fires because the harness
-// places it, R1) can hit it twice without killing it. #68 (5/5) finishes it for R78, #4 Gary (1/1)
-// is R63's zero-hit striker. A test that crosses a turn boundary gives BOTH sides a card in hand, or
-// the engine auto-ends the turn (R82) and fires the start-of-turn hook more than once.
+// #61 Postdoc (2/4; placed, so its Cry never fires, R1) hits the 1/6 twice without killing it; #68 (5/5)
+// finishes it. A test crossing a turn gives BOTH sides a card in hand, or R82 auto-ends the turn.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,7 +232,6 @@ mod tests {
 
             s.attack(&postdoc, &fauci);
 
-            // Fauci struck back for 1, which is a damage event on the Postdoc, and gave no second token.
             assert_eq!(damage_events_on(s.events(), &postdoc.id).len(), 1);
             assert_eq!(plague_on(&s, &fauci), 1);
         }
@@ -297,7 +289,6 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [{ "def": FAUCI, "radiant": true }] } }));
             s.expect_stats(FAUCI, json!({ "attack": 2, "health": 12, "maxHealth": 12 }));
-            // §8 Conventions: the cell lists "Rush" without "Plus", so that is the complete list.
             assert_eq!(kinds(&keywords_in_lane(&s, P1, 1)), vec!["Rush".to_string()]);
         }
 

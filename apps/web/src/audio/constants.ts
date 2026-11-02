@@ -1,14 +1,11 @@
-// Every audio number another module or a test reads (CLAUDE.md rule 9, applied to the client the way
-// `animations.ts` names its durations). The frequencies and envelope times inside one SFX recipe are
-// that recipe's data and stay local to `sfx.ts`, the way keyframes are `animations.css`'s data.
+// Every audio number another module or a test reads (CLAUDE.md rule 9). The frequencies and envelope
+// times inside one SFX recipe are that recipe's data and stay local to `sfx.ts`.
 
 import type { CardHook, CardKind, SfxId } from "./types.ts";
 
 /**
- * R655: the hooks a card's sounds play on, in the order a card entry of `card-audio.json5` lists
- * them, each with the kinds of card that may carry it. This is the one list: the parser accepts a
- * hook name only from here, so a new hook (an Activate, a Trap's reveal, a turn's start) is a new
- * row here and a place that plays it.
+ * R655: the hooks a card's sounds play on, in `card-audio.json5`'s order, each with the kinds of card
+ * that may carry it. The parser accepts a hook name only from here, so a new hook is a row here.
  */
 export const CARD_HOOKS = {
   /** A Unit played, or put onto the field by an effect (R204). */
@@ -30,12 +27,9 @@ export const SFX_MAX_VOICES = 12;        // concurrent sfx cues still sounding
 export const SFX_RETRIGGER_MS = 40;      // same SfxId again within this window is refused
 export const VOICE_LATE_MS = 600;        // a line not ready this long after it takes the channel is dropped
 /**
- * A line's claim on the one voice channel. A higher number cuts in on a lower one; an equal or
- * lower one waits in the queue. A death line and a firing trap's line ("react") answer something
- * that just happened and would be meaningless a second later, so they take the channel from a play
- * or cast line; a unit an effect summons ("summon") speaks only if nothing else is talking. A Unit
- * the viewer picks up to attack ("pickup", R655) answers their own hand at once: it cuts in on any
- * line, an earlier pick-up's included.
+ * A line's claim on the one voice channel: a higher number cuts in, an equal or lower one queues. A
+ * "react" line (a death, a firing trap) is stale a second later; "summon" speaks only into silence; a
+ * "pickup" (R655) answers the viewer's own hand, so it cuts in on any line, a pick-up's included.
  */
 export const VOICE_PRIORITY = { summon: 0, play: 1, react: 2, pickup: 3 } as const;
 export const VOICE_QUEUE_MAX = 2;        // lines waiting behind the one speaking
@@ -54,9 +48,9 @@ export const VOICE_SPEECH_MAX_MS = 4000; // speech fallback holds the voice chan
 export const VOICE_PRELOAD_MAX = 24;     // new keys fetched per preloadVoices call
 export const IMPACT_AMOUNT_CAP = 10;
 /**
- * #57: the tiered impact's level scale. Its noise and thump peak together, so without it a Big hit
- * (amount 10 and above in the recipe test, B15) renders just over full scale; with it that hit stays
- * under 1 and still sits within B57's band of a voice line. A GIGA hit is caught by the limiter.
+ * #57: the tiered impact's level scale: its noise and thump peak together, so without it a Big hit
+ * renders just over full scale (B15); with it it stays under 1, within B57's band of a voice line.
+ * The limiter catches a GIGA hit.
  */
 export const IMPACT_HEADROOM = 0.9;
 export const GAIN_SMOOTHING_S = 0.015;   // setTargetAtTime time constant for bus changes
@@ -66,10 +60,7 @@ export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed
 export const FLUSH_MAX_SFX = 4;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
-/**
- * R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+, to 12 MiB
- * for Meditative (R1448) and to 16 MiB for Stinkyscape (R1884000).
- */
+/** R501: §10.11's cap on the pre-rendered voice set (R1448, R1884000). */
 export const VOICE_BUDGET_BYTES = 16 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 /** An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest. */
@@ -90,34 +81,29 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
   // R1175000: an embiggen card's text labels its dearer version Embiggened.
   "Embiggened",
-  // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5), Degrade and Upgrade read as Nerf and Buff since
-  // patch v0.3.4 (R1320).
+  // docs/classic-sets.md B3, B5; Degrade and Upgrade read as Nerf and Buff (R1320).
   "Animated", "Activate", "Brittle", "Nerf", "Buff", "Spell Damage", "Immune to Spells", "Counter",
   "Flicker", "Plague Counter",
 ];
 
-/**
- * B34: the share of voice lines that may restate rules vocabulary (`BANNED_RULES_WORDS`) before the
- * test fails. A line is "Taunt" for a Taunt unit only by accident; the designer allows the odd one
- * to stand (issue #115), but never as many as two in a hundred.
- */
+/** B34: the share of voice lines that may use `BANNED_RULES_WORDS`: the odd one may stand (issue #115). */
 export const BANNED_WORDS_MAX_SHARE = 0.02;
 
-// ---- Patch v0.2.0 sound: card moments, Call to Chaos, marks and the turn clock (R506) ----
+// Card moments, Call to Chaos, marks and the turn clock (R506)
 /** #21 Hinder: its rider on the victim's next refresh is heard as a mana crack (cues.ts, R506). */
 export const HINDER_DEF_ID = "core-021";
 /** #27 Blood Ridden Glowy Jelly Bean: each card it turns Radiant is a blood drain and a gold burst. */
 export const BLOOD_BEAN_DEF_ID = "core-027";
 /**
- * The id `modifierChanged` names the next refresh's rider by (crates/engine/src/mana.rs
- * NEXT_REFRESH_MODIFIER_ID, R169): the web reaches no engine module for a string, as HIDDEN_DEF_ID.
+ * The next refresh's rider's id in `modifierChanged` (crates/engine/src/mana.rs NEXT_REFRESH_MODIFIER_ID,
+ * R169): the web reaches no engine module for a string, as HIDDEN_DEF_ID.
  */
 export const NEXT_REFRESH_MODIFIER_ID = "nextTurnMana";
 /** On #27's `radiantSet`, the gold burst lands this long after the blood drain begins. */
 export const GOLD_BURST_DELAY_MS = 280;
 /** Call to Chaos's roll dings once per effect it names (R436), at most this many: the Radiant face's three. */
 export const CHAOS_REVEAL_MAX = 3;
-/** Plays the director keeps open at once (a cast inside a play inside a play); the oldest is forgotten past it. */
+/** Plays the director keeps open at once (a cast inside a play); the oldest is forgotten past it. */
 export const PLAY_STACK_MAX = 8;
 /** R439: the turn clock's alarm beats through the last this-many ms of the viewer's own turn clock. */
 export const CLOCK_ALARM_FROM_MS = 30_000;
@@ -130,7 +116,7 @@ export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
 /** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
 export const CLOCK_ALARM_LATE_MS = 250;
 
-// ---- #51's music (SPEC §10.11 "Music", R631) ----
+// #51's music (SPEC §10.11 "Music", R631)
 /** The stations, in the order the picker lists them. */
 export const MUSIC_STATIONS = ["tavern", "edm", "lofi", "epic"] as const;
 /** The match counter that rotates each station's in-game tracks, kept per device. */
@@ -180,7 +166,7 @@ export const MUSIC_BUDGET_BYTES = 42 * 1024 * 1024;
 export const STING_DELAY_MS = 40;
 /** The pan of a sound about a unit in the outermost lane; the middle lane is centered. */
 export const LANE_PAN_MAX = 0.6;
-/** The effects' gain under a voice line, and how fast they dip and recover (the music's duck, for the effects). */
+/** The effects' gain under a voice line, and how fast they dip and recover. */
 export const SFX_VOICE_DUCK_GAIN = 0.7;
 export const SFX_DUCK_ATTACK_TC_S = 0.03;
 export const SFX_DUCK_RELEASE_TC_S = 0.2;
@@ -195,7 +181,7 @@ export const REVERB_VOICE_SEND = 0.3;
 /** The impulse's noise is filled from this seed, so every run of the mix is identical. */
 export const REVERB_SEED = 0x52564242; // "RVBB"
 
-// ---- Patch v0.3.X sound (docs/meditative-set.md M8, MN05): Armor and the niche moments ----
+// Armor and the niche moments (docs/meditative-set.md M8, MN05)
 /** R1364: a hit is overkill when what it does beyond the health left is at least this, and at least that health. */
 export const OVERKILL_MIN_EXCESS = 3;
 /** R1364: the overkill crunch lands this long after the hit's impact, so the two read as one blow. */
@@ -205,13 +191,13 @@ export const SHEEP_DEF_IDS: readonly string[] = ["core-t-sheep"];
 /** R1365: the bleat starts this long into the transform's puff, as the Sheep comes out of it. */
 export const BLEAT_DELAY_MS = 120;
 
-// ---- Patch v0.3.X sound (docs/meditative-set.md M8, MN04): a Legendary's or a Mythic's intro ----
+// A Legendary's or a Mythic's intro (MN04)
 /** R1350: the bed (every other track the music plays) under a card's intro, for the intro's span. */
 export const MUSIC_INTRO_DUCK_GAIN = 0.35;
 /** R1350: how fast the bed dips as an intro starts, and comes back as its music ends (about three of these). */
 export const MUSIC_INTRO_DUCK_ATTACK_TC_S = 0.04;
 export const MUSIC_INTRO_DUCK_RELEASE_TC_S = 0.15;
-/** R1351: an intro cut short (by another, the game's end, a hand-over, the board leaving) fades out over this. */
+/** R1351: an intro cut short (by another, the game's end, the board leaving) fades out over this. */
 export const MUSIC_INTRO_CUT_FADE_S = 0.15;
 /** R1351: an intro whose file is not ready this long after its card's moment is dropped, never played late. */
 export const MUSIC_INTRO_LATE_S = 1;
@@ -219,8 +205,8 @@ export const MUSIC_INTRO_LATE_S = 1;
 export const MUSIC_INTRO_BYTES_MAX = 12;
 export const MUSIC_INTRO_DECODED_MAX = 4;
 /**
- * R1352: an intro's music runs at least this long to its last bar line, and its whole file, ring-out
- * included, at most MUSIC_INTRO_MAX_S (gen-music.mjs renders them; scripts/music/tracks.mjs INTRO_SPAN_S).
+ * R1352: an intro's music runs at least this long to its last bar line, and its whole file at most
+ * MUSIC_INTRO_MAX_S (scripts/music/tracks.mjs INTRO_SPAN_S).
  */
 export const MUSIC_INTRO_MIN_S = 3;
 export const MUSIC_INTRO_MAX_S = 6;

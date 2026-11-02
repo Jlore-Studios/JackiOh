@@ -5,65 +5,21 @@
 //! cargo jackioh promote --lane improve|unban|learn --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 //! ```
 //!
-//! The candidate is this build's AI (`self`). It plays deals against the parent, the AI on `main`
-//! (`bin:<parent-bin>`, SURFACE §14.1): deal `d`'s seed is `"<lane>:<tree>:<d>"`, where `<tree>` is
-//! `git rev-parse HEAD:crates/ai/src`, so committing `generation.json` (or the history line) does not
-//! change them, and each deal is played twice with the seats swapped (R850000), as game `2d − 1` (the
-//! candidate p1) and game `2d` (the candidate p2). Those deals are the lane's hold-out set (R850001):
-//! named for the committed AI, read only by it, and never a screen's (`arena` refuses their base).
-//! Each seat's deck is `build_ai_deck` over every set that ships minus its own
-//! AI's shadow ban (R186), with no handicap (Easy both, R180), both seats by that one rule and
-//! neither shaped (R976000). The games run on rayon's pool (`RAYON_NUM_THREADS` is respected); no
-//! result depends on the thread count.
+//! The candidate, this build's AI (`self`), plays deals against the parent, the AI on `main`
+//! (`bin:<parent-bin>`, SURFACE §14.1), each twice with the seats swapped (R850000). Deal `d`'s seed is
+//! `"<lane>:<tree>:<d>"`, `<tree>` the git tree of `crates/ai/src`, so committing `generation.json`
+//! moves no seed. Those deals are the lane's hold-out set (R850001), read only by the committed AI they
+//! are named for (`dirty_refusal`) and never by a screen. Each seat's deck is `build_ai_deck` over every
+//! set that ships minus its own AI's shadow ban (R186), Easy both (R180), neither shaped (R976000). No
+//! result depends on rayon's thread count.
 //!
-//! It promotes when the lane's sequential test passes (R1679000, `TRAINING_GATE`): the deals are
-//! played `batch_deals` (100) at a time and read in deal order, each as its edge for the candidate,
-//! and the test stops at the first deal from the 100th on whose log-likelihood ratio leaves its bounds
-//! (`sprt`), a pass above, a fail below; one still undecided at the 1,000th deal fails. The games it
-//! counts are those of the deals it read, and the rest of their batch is played and set aside, so
-//! where it stops never depends on the thread count. The lanes alike:
-//!
-//! | Lane      | vs parent                                  | shadow bans                      |
-//! |-----------|--------------------------------------------|----------------------------------|
-//! | `improve` | the test passes                            | —                                |
-//! | `unban`   | the test passes                            | strictly fewer than the parent's |
-//! | `learn`   | the test passes, on hold-out deals its own | —                                |
-//!
-//! and every game it counts is clean on either seat (R1489000): no refused action, throw, fallback
-//! or panic caught in an AI's search, and a log that folds back to its hash; each other game is a
-//! failure naming its seed and the candidate's seat.
-//!
-//! The `learn` lane is the learned evaluation's (#1012, R1012000): a network a script retrained, no
-//! LLM in the loop (`training/learn.md`), gated like `improve` on hold-out deals of its own.
-//!
-//! It plays no games against SPEC §10.7's random policy (R732001): the lanes dropped them once
-//! generation 9, the first AI dealt the Meditative set (issue #732), had beaten random in at least 90
-//! of 100, and a promotion's record says `"vsRandom": null`. The daily quality gates (`cargo jackioh
-//! gate --full`) still hold the AI on `main` to their floor against random.
-//!
-//! A draw is not a win, and neither is a game without a result. Without `--dry-run` or `--verify`, a
-//! pass writes `crates/ai/generation.json` and appends the same object to
-//! `training/history/<lane>.jsonl`. `--verify` (CI) recomputes and compares with the branch's
-//! `generation.json`. The report (Markdown, the lane's pull request body) goes to stdout. Exit 0 on a
-//! pass, 1 on a failed gate.
-//!
-//! Every run that plays its games, whatever its mode and whether it passes, also rewrites
-//! `$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set (the training box sets it; CI does
-//! not): the latest pass, in Markdown, which `training/loop.sh` puts at the top of the lane's draft
-//! pull request. It counts the games the candidate won against the parent, the AI on `main`, as p1,
-//! as p2 and in all, and shows each game as a square of a grid (`last_pass`).
-//!
-//! The unban lane has nothing to do while the parent keeps no card out of its decks (generation 8
-//! lifted the last shadow ban, #668, and generation 9's sweep of the Meditative set banned cards
-//! again, #732): no candidate has strictly fewer bans than none, so the gate cannot pass, and against
-//! such a parent `promote --lane unban` says so and exits 1, with any flag, before it plays a game or
-//! writes anything (`lane_done`).
-//!
-//! Because the seeds come from the committed AI, a promotion (and a verification) refuses to run on
-//! a `crates/ai/src` with uncommitted changes: they would be measured on another AI's seeds. A gate's
-//! hold-out deals are read only by the committed AI they are named for, so a dry run refuses them too
-//! (R850001, `dirty_refusal`); since every lane's gate plays paired deals (R1679000), the unban lane's
-//! dry run does as well.
+//! It promotes when the lane's sequential test passes (R1679000, `sprt`), every game it counts is clean
+//! on either seat (R1489000, `unclean_games`) and the lane's own rule holds (`Lane`; `learn` is #1012's,
+//! R1012000). It plays no games against SPEC §10.7's random policy (R732001), which generation 9, the
+//! first AI dealt the Meditative set (#732), beat; the daily `gate --full` still holds `main` to it.
+//! Without `--dry-run` or `--verify`, a pass writes `crates/ai/generation.json` and appends it to
+//! `training/history/<lane>.jsonl`; `--verify` (CI) recomputes and compares with the branch's. The
+//! report goes to stdout; exit 0 on a pass, 1 on a failed gate.
 
 use std::path::{Path, PathBuf};
 
@@ -274,11 +230,10 @@ pub(crate) fn gate_failures(lane: Lane, counts: &GateCounts) -> Vec<String> {
     failures
 }
 
-/// The refusal to give when the lane has nothing to do, else `None`. The unban lane has nothing to do
-/// while its parent, the AI on `main`, keeps no card out of its own decks: no candidate has strictly
-/// fewer shadow bans than none, so its gate fails whatever the games say, and `run` plays none
-/// (#668). It reads the parent's list, not this build's `SHADOW_BAN`: a candidate with none against a
-/// parent with one is the promotion that emptied the table (generation 8's).
+/// The refusal to give when the lane has nothing to do, else `None`: the unban lane while its parent
+/// keeps no card out of its own decks, since no candidate has strictly fewer shadow bans than none, so
+/// `run` plays no games (#668). It reads the parent's list, not this build's `SHADOW_BAN`: a candidate
+/// with none against a parent with one is the promotion that emptied the table (generation 8's).
 pub(crate) fn lane_done(lane: Lane, parent: &Entrant) -> Option<String> {
     (lane == Lane::Unban && parent.shadow_ban.is_empty()).then(|| {
         format!(
@@ -359,10 +314,9 @@ pub(crate) fn is_gate_seed_base(base: &str) -> bool {
     })
 }
 
-/// Why a run in `mode` refuses a `crates/ai/src` with uncommitted changes. A promotion or a
+/// Why a run in `mode` refuses a `crates/ai/src` with uncommitted changes: a promotion or a
 /// verification would measure them on another AI's seeds, and a dry run would read the lane's
-/// hold-out deals with an AI they are not named for (R850001): every lane's gate plays paired deals
-/// since R1679000, the unban lane's too, so no run measures uncommitted changes.
+/// hold-out deals with an AI they are not named for (R850001).
 pub(crate) fn dirty_refusal(lane: Lane, mode: &str) -> String {
     if mode != "dry run" {
         return format!(
@@ -1181,7 +1135,7 @@ mod tests {
         assert!(held_out.contains("arena --set improve-dev"), "{held_out}");
         assert!(dirty_refusal(Lane::Improve, "verify").contains("commit the change first"));
         assert!(dirty_refusal(Lane::Improve, "promotion").contains("commit the change first"));
-        // Since R1679000 the unban lane's gate is paired too, so its dry run refuses them as well.
+        // The unban lane's dry run refuses them as well.
         assert!(dirty_refusal(Lane::Unban, "dry run").contains("R850001"));
         // Nor does a screen play the gate's deals: its base names neither lane.
         assert!(is_gate_seed_base("improve"));
@@ -1415,7 +1369,7 @@ mod tests {
             "{promoted}"
         );
         assert!(!promoted.contains("Short of the gate"), "{promoted}");
-        // Since R1679000 the unban gate is paired too: its games are deals, and it reads their edge.
+        // The unban gate is paired too: its games are deals, and it reads their edge.
         assert!(
             promoted.contains(
                 "Deals `unban:4b825dc:1` to `unban:4b825dc:50`, each played twice with the seats swapped"
@@ -1593,7 +1547,7 @@ mod tests {
         assert!(mismatches[0].starts_with("generation:"));
         assert!(mismatches[1].starts_with("vsParent:"));
 
-        // Generation 0's record (the port) never verifies as a promotion. Its text, not the live
+        // Generation 0's record never verifies as a promotion. Its text, not the live
         // crates/ai/generation.json, which every promotion replaces and no lane may test around.
         let port = json!({
             "generation": 0,

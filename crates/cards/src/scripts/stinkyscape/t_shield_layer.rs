@@ -34,10 +34,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S T-shield-layer — SPEC §8.10 row T-shield-layer, BUILD M12 row S T-shield-layer: "on top of its pile, a
-// lethal hit on its controller's hero or another of their Units is dealt to it instead, through Armor 4;
-// it never attacks; enemies must attack it first (Taunt); dead, the Propagation Layer resumes; radiant
-// 24/24, Armor 8".
+// S T-shield-layer — SPEC §8.10 row T-shield-layer, BUILD M12 row S T-shield-layer.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -55,11 +52,8 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
     const FILLER: &str = "core-005";
 
-    /// What the tests' Burn deals: lethal to the 4/4 ally, and through Armor 4 to the Shield Layer.
     const HIT: i32 = 9;
 
-    /// The Drone Battleship's pile in p1's lane 1, Meltdown at the bottom and the Shield (Radiant on
-    /// `radiant`) on top, and the ally in lane 2; p2 is active, holding a Burn of 9 and `p2`'s rest.
     fn guarded(radiant: bool, p1: Value, p2: Value) -> Scenario {
         let p1 = crate::merged(
             json!({
@@ -161,7 +155,6 @@ mod tests {
         let shield = top(&s).id;
         s.play(HIT_JOB, json!({ "targets": [at(&shield)] }));
         assert_eq!(top(&s).def_id, PROPAGATION);
-        // The Propagation Layer guards nothing: the 9 kills the ally.
         let ally = s.card(ALLY).id.clone();
         burn(&mut s, at(&ally));
         s.expect_in_zone(ally.as_str(), "graveyard");

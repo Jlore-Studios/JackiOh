@@ -1,16 +1,7 @@
-// The username prompt (R1435): what an active account that has neither picked a username nor
-// skipped sees before anything else on the gated screens (main.tsx `Gated`).
-//
-// The gate decides nothing here either (CLAUDE.md rule 7): whether the prompt is owed is the
-// server's `promptOwed` on `/api/auth/me`, and a pending account never gets this far. A pick is the
-// account page's own field (`UsernameField`); "Skip for now" is `POST /api/username/skip`, which
-// keeps `Player#n`. Either way the gate is told (`onAnswered`) and opens the screen the player came
-// for, and the answer is announced, so the gate reads `/api/auth/me` again for the new name. The
-// screen does not wait on that read: one that fails leaves the account as it was, prompt owed and
-// all, and the player has answered.
-//
-// THE GATE'S FRAME. It wears `ShellPanel`'s markup (main.tsx), written out here because main.tsx
-// imports this file. And like every panel the gate draws, it has a way out: Sign out.
+// The username prompt (R1435). The gate decides nothing (CLAUDE.md rule 7): the prompt is owed by
+// `/api/auth/me`'s `promptOwed`. After a pick or a skip nothing waits on the gate's re-read, so one that
+// fails leaves the prompt owed, and the player has answered.
+// THE GATE'S FRAME is `ShellPanel`'s markup, written out here because main.tsx imports this file.
 
 import { useState, type ReactElement } from "react";
 

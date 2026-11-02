@@ -1,21 +1,13 @@
-//! Usernames (SPEC §9.4, R1432–R1436): the checks a proposed name passes, the form it is stored in,
-//! the key two names clash on, and the light filter. No I/O: the store keeps the names
-//! (`profiles.username_base`, `username_key`, `username_tag`, migration 0028) and the routes are
-//! `api/username.rs`.
+//! Usernames (SPEC §9.4, R1432–R1436): the checks a proposed name passes, its stored form, the key two
+//! names clash on, and the light filter. No I/O: the store keeps the names (`profiles.username_base`,
+//! `username_key`, `username_tag`, migration 0028); the routes are `api/username.rs`.
 //!
 //! A username is a base name plus, when the base is taken, a numeric tag: `Max`, `Max#1`, `Max#2`.
-//! The server is the only judge of a name (§9.1, CLAUDE.md rule 7): the client proposes one, asks
-//! for a preview and renders what comes back. A username is only a display label; every table,
-//! request and log names a player by profile id (R1436).
+//! The server is the only judge of a name (§9.1, CLAUDE.md rule 7). It is only a display label: every
+//! table, request and log names a player by profile id (R1436).
 //!
-//! - [`normalize_username`] checks a proposed base name (R1432, R1433) and answers its stored form,
-//!   NFKC, so fullwidth `ＭＡＸ` is stored and previewed as `MAX`.
-//! - [`username_key`] is the NFKC case fold two names clash on (R1434): `Max`, `max` and `ＭＡＸ` are
-//!   one name, and so are `Straße` and `STRASSE`. Both stores call it, and Postgres collation never
-//!   decides.
-//! - [`render_username`] and [`parse_username`] go between `(base, tag)` and `Max#3`.
-//! - [`sign_in_name`] reads a username typed at sign-in as the key and tag of the one profile that
-//!   holds it (R1443).
+//! [`username_key`] is the NFKC case fold two names clash on (R1434). Both stores call it; Postgres
+//! collation never decides.
 
 use caseless::default_case_fold_str;
 use unicode_normalization::UnicodeNormalization;
@@ -69,30 +61,20 @@ impl UsernameRefusal {
     }
 }
 
-/// R1432, R1433: a proposed base name's stored form, NFKC, or why it is refused. The checks run in
-/// this order, so a name with a bad character is refused for that before its length is counted:
-///
-/// 1. The input is trimmed. More than `USERNAME_INPUT_MAX_CHARS` characters is too long, refused
-///    before anything else reads it; a character outside the Basic Multilingual Plane is refused.
-/// 2. NFKC.
-/// 3. Every character is a letter (`L*`), a decimal digit (`Nd`), `_`, or a combining mark (`M*`)
-///    that follows a letter, at most `USERNAME_MAX_MARKS` in a row, and in the BMP.
-/// 4. One script: digits, `_` and a mark that takes its letter's script go with any script;
-///    otherwise every character shares one (by its `Script_Extensions`, so the kana length mark `ー`
-///    goes with either kana and an Arabic vowel sign with Arabic only), except Han with Hiragana and
-///    Katakana (Japanese) and Han with Hangul (Korean). A letter Unicode files under no script, not
-///    even by extension (`Common`: modifier letters such as `ˈ` and `ː`), is a script of its own, so
-///    it joins no other.
-/// 5. `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended grapheme clusters.
-/// 6. The light filter.
+/// R1432, R1433: a proposed base name's stored form, NFKC, or why it is refused. The checks run in this
+/// order, so a bad character is refused for that before the length is counted: trim (more than
+/// `USERNAME_INPUT_MAX_CHARS` characters is too long, refused before anything else reads it; a character
+/// outside the Basic Multilingual Plane is refused), NFKC, characters (a letter `L*`, a decimal digit
+/// `Nd`, `_`, or a combining mark `M*` after a letter, at most `USERNAME_MAX_MARKS` in a row), one script
+/// (`Script_Extensions`, as `writings` reads it), `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended
+/// grapheme clusters, then the light filter.
 pub fn normalize_username(raw: &str) -> Result<String, UsernameRefusal> {
     let trimmed = raw.trim();
     if trimmed.chars().count() > USERNAME_INPUT_MAX_CHARS {
         return Err(UsernameRefusal::TooLong);
     }
-    // R1432: every character in the Basic Multilingual Plane, as typed. Checked before NFKC too,
-    // which would otherwise turn the supplementary plane's mathematical letters (`𝐌𝐚𝐱`) into the
-    // BMP's.
+    // R1432: BMP only, checked as typed: NFKC would turn supplementary-plane mathematical letters
+    // (`𝐌𝐚𝐱`) into BMP ones.
     if trimmed.chars().any(|ch| !in_bmp(ch)) {
         return Err(UsernameRefusal::Characters);
     }
@@ -118,7 +100,6 @@ pub fn username_key(display: &str) -> String {
     default_case_fold_str(display).nfkc().collect()
 }
 
-/// A username as it is shown: `Max`, or `Max#3` when it carries a tag.
 pub fn render_username(base: &str, tag: Option<i64>) -> String {
     match tag {
         Some(tag) => format!("{base}#{tag}"),
@@ -126,9 +107,9 @@ pub fn render_username(base: &str, tag: Option<i64>) -> String {
     }
 }
 
-/// A username as shown, split back into its base and tag: `Max#3` is `("Max", Some(3))`, `Max` is
-/// `("Max", None)`. None when the part after the last `#` is not a whole number of at least 1. The
-/// base is not checked here; a base never holds a `#` (R1432), so the last one starts the tag.
+/// A username as shown, split back into its base and tag. None when the part after the last `#` is
+/// not a whole number of at least 1. The base is not checked here; a base never holds a `#` (R1432),
+/// so the last one starts the tag.
 pub fn parse_username(shown: &str) -> Option<(&str, Option<i64>)> {
     match shown.rsplit_once('#') {
         None => Some((shown, None)),
@@ -143,12 +124,9 @@ pub fn parse_username(shown: &str) -> Option<(&str, Option<i64>)> {
 }
 
 /// R1443: the key and tag of the username typed at sign-in, which name its one holder (R1434's
-/// unique key and tag): `Max#3`, `max#3` and fullwidth `ＭＡＸ＃３` all name `("max", Some(3))`. The
-/// text is trimmed and read in NFKC, split as [`parse_username`] splits a shown name, and its base
-/// keyed as a claim's is ([`username_key`]). None when nothing was typed, when the text is longer
-/// than `USERNAME_INPUT_MAX_CHARS` (refused before it is normalized, as a claim's is), or when the
-/// part after the last `#` is not a tag. The base is not checked against R1432 on purpose: it only
-/// has to match a name someone holds, and a name a later filter would refuse still names its holder.
+/// unique key and tag). None when nothing was typed, the text is longer than `USERNAME_INPUT_MAX_CHARS`
+/// or the part after the last `#` is not a tag. The base is not checked against R1432 on purpose: it
+/// only has to match a name someone holds; a name a later filter would refuse still names its holder.
 pub fn sign_in_name(typed: &str) -> Option<(String, Option<i64>)> {
     let trimmed = typed.trim();
     if trimmed.is_empty() || trimmed.chars().count() > USERNAME_INPUT_MAX_CHARS {
@@ -178,12 +156,10 @@ fn is_digit(ch: char) -> bool {
     ch.general_category() == GeneralCategory::DecimalNumber
 }
 
-/// Unicode's `Default_Ignorable_Code_Point` ranges (DerivedCoreProperties.txt): characters a
-/// renderer draws as nothing. Some of them are letters or marks by category (the Hangul fillers are
-/// `Lo`, the combining grapheme joiner and the variation selectors `Mn`), so the category test alone
-/// would let `Max` plus an invisible joiner stand as a second bare name beside `Max`, or a name of
-/// fillers render blank. The `Cf` ones are refused by category already and are listed for
-/// completeness.
+/// Unicode's `Default_Ignorable_Code_Point` ranges (DerivedCoreProperties.txt): characters a renderer
+/// draws as nothing. Some are letters or marks by category (Hangul fillers `Lo`, the grapheme joiner and
+/// variation selectors `Mn`), so the category test alone would let `Max` plus an invisible joiner stand
+/// as a second bare name. The `Cf` ones are refused by category already, listed for completeness.
 const DEFAULT_IGNORABLE: &[(char, char)] = &[
     ('\u{00AD}', '\u{00AD}'),
     ('\u{034F}', '\u{034F}'),
@@ -246,12 +222,10 @@ enum Writing {
     Korean,
 }
 
-/// The writings a character may stand in, or None when it goes with any: a digit, whichever script
-/// Unicode files it under (Arabic-Indic digits are Arabic), `_`, and a mark that takes the script
-/// of the letter before it (`Inherited`, with no extension naming scripts). A mark whose extension
-/// names its scripts goes with those alone, so an Arabic vowel sign on a Latin letter is a mix. A
-/// character Unicode files under no script, not even by extension (`Common`), is a writing of its
-/// own: the issue lets only digits and `_` go with any script.
+/// The writings a character may stand in, or None when it goes with any: a digit (Arabic-Indic digits
+/// are Arabic), `_`, and a mark that takes the script of the letter before it (`Inherited`, with no
+/// extension naming scripts). A mark whose extension names scripts goes with those alone, so an Arabic
+/// vowel sign on a Latin letter is a mix. A character under no script (`Common`) is a writing of its own.
 fn writings(ch: char) -> Option<Vec<Writing>> {
     if is_digit(ch) || ch == '_' {
         return None;
@@ -300,9 +274,7 @@ fn check_scripts(name: &str) -> Result<(), UsernameRefusal> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The light filter (R1433)
-// ---------------------------------------------------------------------------------------------
 
 /// Words refused wherever they appear (slurs and the strongest profanity).
 const BLOCKLIST_ANYWHERE: &str = include_str!("blocklist_anywhere.txt");
@@ -389,12 +361,9 @@ enum ReadBack {
 }
 
 /// R1433: an NFKC name with its substitution digits read back as letters where they sit in a run of
-/// letters (all of them, or only the inner ones: [`ReadBack`]), before it is split into tokens. A
-/// run is the letters, marks and substitution digits between underscores and other digits; a run
-/// with no letter in it keeps its digits, so they still split off as a token of digits alone and the
-/// `455` of `Bob_455` is never read as `ass`. `Bob455` reads as the one token `Bobass`. A letter read
-/// back takes the case of the nearest letter before it in the run, or else after it, so it never
-/// makes a camelCase split of its own: `C0CK` reads `COCK`, not `CoCK`.
+/// letters ([`ReadBack`]), before it is split into tokens. A run with no letter keeps its digits, so
+/// `Bob_455` is never read as `ass`. A letter read back takes the case of the nearest letter before
+/// it, or else after it, so it never makes a camelCase split.
 fn read_back_digits(name: &str, digits: ReadBack) -> String {
     fn flush(run: &mut Vec<char>, out: &mut String, digits: ReadBack) {
         if !run.iter().copied().any(is_letter) {
@@ -475,10 +444,8 @@ fn tokens(name: &str) -> Vec<String> {
 
 /// R1433: whether the light filter refuses an NFKC name, or a chat message's NFKC word (B53, SPEC
 /// §9.5: chat masks what the usernames' filter catches). The token list is matched against the
-/// tokens of the name with its digits read back both ways ([`read_back_digits`], [`ReadBack`]), so
-/// `a55`, `d1ck` and `Dick1` are each refused and `Tit4n` is not. A token without a letter is never
-/// matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
-/// innocent `Bob_455`.
+/// name's tokens with its digits read back both ways ([`read_back_digits`], [`ReadBack`]); a token
+/// without a letter is never matched, so an innocent `Bob_455` stands.
 pub(crate) fn is_blocked(name: &str) -> bool {
     let folded = fold(name);
     if words(BLOCKLIST_ANYWHERE).any(|word| folded.contains(word)) {
@@ -564,7 +531,6 @@ mod tests {
         assert!(check_scripts("ラーメン").is_ok());
         assert!(check_scripts("らーめん").is_ok());
         assert!(check_scripts("東京ラーメン").is_ok());
-        // The Arabic tatweel goes with Arabic.
         assert!(check_scripts("محـمد").is_ok());
         // A modifier letter of no script, even by extension, joins no other; one whose extension
         // names Latin (the modifier apostrophe) goes with Latin.
@@ -577,7 +543,6 @@ mod tests {
         // A mark goes with the scripts its extension names: Arabic vowel signs on Arabic, not on Latin.
         assert!(check_scripts("مُحَمَّد").is_ok());
         assert_eq!(check_scripts("Ma\u{064E}x"), Err(UsernameRefusal::MixedScripts));
-        // Digits, `_` and inherited marks go with any.
         assert!(check_scripts("Zoe\u{308}_99").is_ok());
         assert!(check_scripts("محمد_٣").is_ok());
     }

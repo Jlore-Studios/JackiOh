@@ -86,11 +86,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #88 The True Sheep — SPEC §8.8 row 88, BUILD M10 row M 88: "Cry (played or cast): Discovers one
-// of three different non-token cards with a Tribute cost to your hand (R1221, R1222), shown to you
-// only, costing (1) (patch v0.3.10); the Sheep stays on the field; as a Tribute it pays a whole Tribute 2 or 3 alone, a set of
-// one (R101); worth reads through `param()`; radiant 2/2, worth 500, the Discovered card Radiant and
-// costing (0)".
+// M #88 The True Sheep — SPEC §8.8 row 88, BUILD M10 row M 88.
 #[cfg(test)]
 mod tests {
     use super::{ID, OFFERED};
@@ -148,7 +144,6 @@ mod tests {
                 s.play(ID, json!({ "zone": 1 }));
                 let options = option_ids(&open(s.state()));
                 assert_eq!(options.len(), OFFERED as usize);
-                // Three different non-token cards, every one carrying a Tribute cost.
                 let mut sorted = options.clone();
                 sorted.sort();
                 sorted.dedup();
@@ -167,15 +162,10 @@ mod tests {
             #[test]
             fn r1221_the_tribute_query_holds_the_fifteen_shipped_tribute_cost_cards() {
                 crate::register_all();
-                // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row
-                // 88 lists them: Lava Golem, The Rock, Nature Titan, Plague-Bringer Goliath, BOOM! Big
-                // Max, M #25 Blue-Eyes White Felinor and M #91 Windfast, and since the Stinkyscape
-                // release (#1884) S #74 Paragon-X, #80 Galaxy, #85 Prototype-X1, #86 Prototype-X2, #113 A
-                // Very Dandy Lad and #115 Scornboi. Re-pinned for the Training Grounds release (#2204):
-                // TG #25 Trigor and #54 The Rock, the snapshot of Core #66.
-                // Turtinator's Tribute is an
-                // Activate's cost, not a play cost, and M #97's Tribute buildings are tokens, so
-                // neither is one of them.
+                // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row 88
+                // lists them, M #25 and #91, S #74, #80, #85, #86, #113 and #115 (#1884), TG #25 and #54
+                // (Core #66's snapshot, #2204). Turtinator's Tribute is an Activate's cost, not a play
+                // cost, and M #97's Tribute buildings are tokens, so neither is one of them.
                 let pool: Vec<&str> = jackioh_engine::catalog::query(&CatalogQueryArgs {
                     tribute: Some(true),
                     ..CatalogQueryArgs::default()
@@ -219,7 +209,6 @@ mod tests {
                 let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
                 let hand = s.hand(P1).len();
                 s.answer(json!(picked));
-                // The pick reaches the hand, not Radiant, and the Sheep stands where it was played.
                 let after = def_ids(&s.hand(P1));
                 assert_eq!(after.len(), hand + 1);
                 assert!(after.contains(&picked));
@@ -230,7 +219,6 @@ mod tests {
 
             #[test]
             fn r1222_the_pick_costs_1() {
-                // Patch v0.3.10 (#831): "It costs (1)", a `costOverride` read through `param()`.
                 let mut s = holding("sheep-costs", false);
                 s.play(ID, json!({ "zone": 1 }));
                 let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");

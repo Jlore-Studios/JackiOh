@@ -1,15 +1,9 @@
 // Open deck sidebar: count, curve, tiles, comparison, verdict and actions (docs/polish/6-cards.md,
-// Surface D; SPEC §9.4, R250–R251).
-//
-// Tile order is display-only; the deck's order is saved.
-//
-// R251 conflicts are marked, never removed for the player.
-//
-// A card the validator's verdict names (L3, L5, L6, L7) wears the same flag, with the verdict's words.
-//
-// On phones the list folds but stays mounted (deckbuilder.css).
-//
-// Tiles support preview, inspect, and keyboard detail view (I, the context-menu key or Shift+F10).
+// Surface D; SPEC §9.4, R250–R251). Tile order is display-only; the deck's order is saved. R251
+// conflicts are marked, never removed for the player; a card the validator's verdict names (L3, L5,
+// L6, L7) wears the same flag, with the verdict's words. On phones the list folds but stays mounted
+// (deckbuilder.css). Tiles support preview, inspect, and keyboard detail view (I, the context-menu
+// key or Shift+F10).
 //
 // R1956000: a tile is the viewer's own copy below the deck builder's `OwnCopy`, unless the collection
 // says the card is unowned, and its art strip wears the foil that copy wears (deckbuilder.css).
@@ -51,9 +45,7 @@ const FULL_PERCENT = 100;
 
 const EDGE_SLACK_PX = 1;
 
-/**
- * Marks hidden deck-list ends for CSS fades. Hidden panels and jsdom report `none`.
- */
+/** Marks hidden deck-list ends for CSS fades. Hidden panels and jsdom report `none`. */
 function useScrollEdges(ref: RefObject<HTMLElement | null>, count: number): void {
   useLayoutEffect(() => {
     const element = ref.current;
@@ -76,9 +68,7 @@ function useScrollEdges(ref: RefObject<HTMLElement | null>, count: number): void
   }, [ref, count]);
 }
 
-/**
- * Duplicate-safe keys keep existing tiles mounted so only inserted tiles replay their entrance.
- */
+/** Duplicate-safe keys keep existing tiles mounted so only inserted tiles replay their entrance. */
 function tileKeys(ordered: readonly string[]): [string, string][] {
   const seen = new Map<string, number>();
   return ordered.map((cardId) => {

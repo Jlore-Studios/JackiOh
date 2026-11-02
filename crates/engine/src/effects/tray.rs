@@ -1,19 +1,6 @@
 //! Stinkyscape's Resources (#1840, R1840000–R1840006; #2250, R2250000, R2250001): the verbs a card
-//! composes over Resources and Credits, each a front for `crate::resources`' rule. The file keeps the
-//! name of the Resource tray these verbs once filled; a Resource is a hand card since #2250.
-//!
-//! - `gain_resources` — "Gain N random Resources", from the catalog's Resources or a pool the card
-//!   names, Radiant on a Radiant gain (R1840002), each added to the gainer's hand, a full hand burning
-//!   it (R2250000); "Fill your hand with Resources" gains as many as the hand has room for (`fill`).
-//! - `discard_resource` — "Discard a Narcor": the oldest Resource of those definitions in the hand is
-//!   discarded, a hand discard like any other, which pays its Credits (R2250000, R2250001).
-//! - `gain_market_credits` — "Gain N Credits" (R1840005).
-//! - `add_market_lot` — "add a lot to the Marketplace for the rest of the game", Call to Chaos (Scape
-//!   Edition)'s "a Call to Chaos at 20": one card of a pool offered to its caster alone at a fixed
-//!   price (R1853005, `crate::marketplace`).
-//!
-//! R1855002: a card laid by a board replacement may carry a `resourcePool` rider in its memory
-//! (`RESOURCE_POOL_KEY`), the pool its own gains come from in place of the one its text names.
+//! composes over Resources (hand cards) and Credits, each a front for `crate::resources`' rule, and
+//! `add_market_lot`, Call to Chaos (Scape Edition)'s "a Call to Chaos at 20" (`crate::marketplace`).
 
 use serde::{Deserialize, Serialize};
 
@@ -22,9 +9,8 @@ use crate::marketplace::add_fixed_market_lot;
 use crate::resources::{add_market_credits, gain_resource, is_resource_card, roll_resource};
 use crate::script::Effect;
 
-/// R1855002: the memory key a card's rider names its own Resource pool under (a list of definition
-/// ids), which its own gains come from in place of the pool its text names (`effects::replace_board`'s
-/// preset entries carry it).
+/// R1855002: the memory key of a board replacement's rider naming the card's own Resource pool (a list
+/// of definition ids), which its gains come from in place of the pool its text names.
 pub const RESOURCE_POOL_KEY: &str = "resourcePool";
 
 /// `gainResources`' argument: how many Resources, whose hand (default the controller's own), whether

@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #38.1 Solarius Prime (SPEC §8.7): Cry casts 5 random non-token Spells of any set (R380),
-// aimed by declaration (R656), each a play (R70) raised by Spell Damage, additions hidden (R97).
-// Tests read casts off the event stream at depth 1 (until `cardResolved`), handling nested casts.
+// C+ #38.1 Solarius Prime (SPEC §8.7): each cast a play (R70), what it adds to a hand hidden (R97).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -75,7 +73,7 @@ mod tests {
         depth: usize,
     }
 
-    /// Everything announced during the Prime's play, each with how deep in nested casts it was made.
+    /// Everything announced during the Prime's play.
     fn casts_during(s: &Scenario, prime_id: &str) -> Vec<Cast> {
         let mut open: Vec<String> = Vec::new();
         let mut out: Vec<Cast> = Vec::new();
@@ -219,9 +217,7 @@ mod tests {
                     sets.insert(def_of(Some(s.state()), &text(&event, "defId")).set.to_string());
                 }
             }
-            // Re-pinned for v0.3.5: the Meditative set joins the pool; for v0.3.15 (Meditative+ ships,
-            // #1187): the Meditative+ set joins it; for the Stinkyscape release (#1884): that set; and for
-            // the Training Grounds release (#2204): that set.
+            // Every shipped set (Meditative+ #1187, Stinkyscape #1884, Training Grounds #2204).
             assert_eq!(
                 sets.into_iter().collect::<Vec<_>>(),
                 vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]
@@ -230,8 +226,8 @@ mod tests {
 
         #[test]
         fn r656_each_pick_aims_by_its_declaration_harm_never_at_your_hero_help_never_at_an_enemy() {
-            // The helpful Spells a random cast can pick: their target declarations aim "help". Re-pinned for
-            // v0.3.5: the Meditative set joins the pool, M #35 RCTA (CN) with it.
+            // The helpful Spells a random cast can pick (M #35 RCTA (CN) among them): their target
+            // declarations aim "help".
             let help: IndexSet<&str> = [
                 "classic-003",
                 "classicplus-010",
@@ -255,8 +251,7 @@ mod tests {
                 foe.extend(s.state().players.p2.units.iter().flatten().flatten().map(|card| card.id.clone()));
                 foe.extend(s.pile(P2, "graveyard").into_iter().map(|card| card.id));
                 // Only the Prime's own picks aim (depth 1): a Jogg's Box among them casts truly at random,
-                // with no `targetEnemies` (R656), so its casts may hit your hero. Re-pinned for v0.3.5: the
-                // Meditative set joins the pool, and one seed's Box now casts a Lunar Eclipse at your hero.
+                // with no `targetEnemies` (R656), so its casts may hit your hero.
                 for Cast { event, .. } in casts_during(&s, &prime).into_iter().filter(|cast| cast.depth == 1) {
                     let def_id = text(&event, "defId");
                     for target in event["targets"].as_array().cloned().unwrap_or_default() {
@@ -279,8 +274,7 @@ mod tests {
         fn r70_each_cast_is_a_play_the_turns_log_counts_all_of_them() {
             // The log is the turn's, so it is read on the seeds whose casts leave p1's turn running: a
             // Twisting Nether and a discard among them can leave p1 nothing to do, and R82 then ends the
-            // turn and its log with it. Re-pinned for v0.3.5: the Meditative set joins the pool, and the
-            // first seed's casts now end the turn.
+            // turn and its log with it.
             let mut checked = 0;
             for seed in seeds() {
                 let (s, prime) = play_prime(&seed, PrimeOptions::default());

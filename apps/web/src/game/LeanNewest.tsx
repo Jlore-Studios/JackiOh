@@ -1,14 +1,10 @@
 // "More cards from" (R1372, R1373, R924000): the picker beside every random deck a player is dealt
-// (All Random's in the lobby and the rematch, practice's Random deck, and R2031000's: an All Random
-// challenge's, sent and accepted, and a Duos room's Random deck). It deals nothing (CLAUDE.md
-// rule 7): with a pick, the dealer leans on that set, at least `AI_DECK.leanMinShare` of the deck
-// (R1370). "Newest" names the set from `newestShippedSet()` (R1371) and the dealer resolves it when
-// it deals; the other choices are the sets that ship (R1420). The share is read from WASM (rule 9).
-//
-// The online pick (every one of those but practice's) is kept on the device (`playLean.ts`, which
-// this module re-exports), so a pick made in one carries to the next. Practice keeps its own
-// (`routes/practice.tsx`). This module reads the AI's numbers, so a screen that may paint before the
-// engine loads shows the picker through `LeanSetPickerLazy.tsx` (#778).
+// (R2031000). It deals nothing (CLAUDE.md rule 7): with a pick, the dealer leans on that set, at least
+// `AI_DECK.leanMinShare` of the deck (R1370). "Newest" names the set from `newestShippedSet()` (R1371)
+// and the dealer resolves it when it deals; the other choices are the sets that ship (R1420).
+// The online pick (every one but practice's, which `routes/practice.tsx` keeps) is kept on the device
+// (`playLean.ts`), so a pick made in one carries to the next. The share is read from WASM (rule 9), so
+// a screen that may paint before the engine loads shows the picker through `LeanSetPickerLazy.tsx` (#778).
 
 import { useId, type ReactElement } from "react";
 
@@ -23,12 +19,11 @@ import "./leanNewest.css";
 
 export { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, readPlayLean, writePlayLean } from "./playLean.ts";
 
-/** R924000: the picker's words before its choices. */
 export function leanLabel(): string {
   return t("More cards from");
 }
 
-/** R924000: a choice's words: "newest" names the set it is now ("The newest set (Meditative)"). */
+/** R924000: "newest" names the set it is now. */
 export function leanChoiceLabel(pick: LeanPick | null): string {
   if (pick === null) return t("No set in particular");
   if (pick === LEAN_NEWEST) return t("The newest set ({set})", { set: t(newestShippedSet()) });
@@ -50,7 +45,6 @@ export function leanNote(pick: LeanPick, size: number = DECK_SIZE): string {
 }
 
 export type LeanSetPickerProps = {
-  /** The pick, or `null` for none. */
   value: LeanPick | null;
   onChange(pick: LeanPick | null): void;
   /** On the `<select>` itself, as the lobby's mode radios carry theirs. */
@@ -58,7 +52,6 @@ export type LeanSetPickerProps = {
   disabled?: boolean;
 };
 
-/** A labeled `<select>`: none, "newest", then every set that ships, with the note when one is picked. */
 export function LeanSetPicker({ value, onChange, testid, disabled = false }: LeanSetPickerProps): ReactElement {
   const noteId = useId();
   return (

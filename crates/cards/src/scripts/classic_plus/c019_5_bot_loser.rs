@@ -177,7 +177,6 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [{ "def": BOT, "lane": 2 }], "library": DECK },
                     "p2": { "hand": [FILLER], "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }], "library": DECK },
                 }));
-                // p2's start of turn: every enemy Unit attacks Moths.
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
@@ -222,12 +221,10 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                // The end of p1's turn: 4 to p1's own hero.
                 s.expect_health(P1, 26);
                 let me = bot(&s, P1);
                 s.expect_stats(&me, json!({ "health": 4 }));
                 s.end_turn();
-                // The start of p1's next turn: 4 more.
                 s.expect_health(P1, 22);
                 let own: Vec<bool> = s
                     .events()

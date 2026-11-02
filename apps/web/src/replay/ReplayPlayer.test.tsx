@@ -1,8 +1,6 @@
-// The replay player (#511): its controls reach the steps they name, the board it draws offers nothing,
-// a step forward animates and any other move remounts, Play follows the table's speed, the last step
-// shows both hands, the rail's modifier list follows the step on the board (R169), and each way a
-// replay can fail says so. Over a fake source of one seeded game's steps (`test/replay.ts`), the
-// player's own contract: no log, seed or state reaches it.
+// The replay player (#511) over a fake source of one seeded game's steps (`test/replay.ts`), the
+// player's own contract: no log, seed or state reaches it. The rail's modifier list follows the step
+// on the board (R169).
 
 import { CATALOG } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
@@ -30,7 +28,6 @@ import { REPLAY_FAILURE_TEXT, ReplayFailure } from "./source.ts";
 
 const steps = foldedReplaySteps();
 const LAST = steps.length - 1;
-/** Each turn's first step, read off the steps themselves. */
 const TURN_STARTS = steps.flatMap((step, index) => (index === 0 || steps[index - 1]?.turn !== step.turn ? [index] : []));
 const lookup = lookupFromDefs(CATALOG);
 
@@ -90,7 +87,6 @@ async function jump(index: number): Promise<void> {
   await flush();
 }
 
-/** The step on the board, as the player says it. */
 function shownStep(): number {
   return Number(screen.getByTestId(replayTestid.player).getAttribute("data-step"));
 }
@@ -133,7 +129,6 @@ describe("the replay player", () => {
     };
     const [, second = 0, third = 0] = TURN_STARTS;
 
-    // The first step: nothing goes back.
     for (const id of ids.backs) expect(screen.getByTestId(id), id).toBeDisabled();
     for (const id of ids.forwards) expect(screen.getByTestId(id), id).toBeEnabled();
 
@@ -233,7 +228,6 @@ describe("the replay player", () => {
     expect(shownStep()).toBe(third);
     await key({ key: "ArrowLeft", shiftKey: true });
     expect(shownStep()).toBe(second);
-    // At either end a key goes nowhere.
     await key({ key: "ArrowLeft", shiftKey: true });
     await key({ key: "ArrowLeft" });
     await key({ key: "ArrowLeft" });
@@ -278,7 +272,6 @@ describe("the replay player", () => {
     await advance(REPLAY_PLAY_GAP_MS);
     expect(shownStep()).toBe(2);
 
-    // Twice the speed halves the gap.
     act(() => {
       setFxSettings({ speed: 2 });
     });
@@ -294,7 +287,6 @@ describe("the replay player", () => {
     await advance(4 * REPLAY_PLAY_GAP_MS);
     expect(shownStep(), "paused").toBe(4);
 
-    // A move of the viewer's own stops it too.
     await press(replayTestid.play);
     await press(replayTestid.forwardStep);
     expect(shownStep()).toBe(5);
@@ -302,7 +294,6 @@ describe("the replay player", () => {
     await advance(4 * REPLAY_PLAY_GAP_MS);
     expect(shownStep()).toBe(5);
 
-    // Playing runs out at the last step and stops there.
     await jump(LAST - 1);
     await press(replayTestid.play);
     await advance(REPLAY_PLAY_GAP_MS / 2);
@@ -325,7 +316,7 @@ describe("the replay player", () => {
   });
 });
 
-/** The first step, from the third on (the first two have almost nothing to log), whose own events animate: a step forward onto it runs the queue. */
+/** The first step from the third on (the first two log almost nothing) whose own events animate. */
 function firstAnimatedStep(): number {
   const found = steps.findIndex(
     (step, index) =>
@@ -378,7 +369,6 @@ describe("the board a replay draws", () => {
     // The one thing a click does is the hand's own lift of the card it touched, a look and not a move.
     expect(board.innerHTML.replaceAll(' data-lifted="true"', "")).toBe(before);
 
-    // Looking still works: resting the pointer on a card in hand opens it large.
     fireEvent.pointerEnter(screen.getByTestId(testid.handCard(hand.instanceId)), { pointerType: "mouse" });
     act(() => {
       vi.advanceTimersByTime(HOVER_DELAY_MS);
@@ -393,7 +383,6 @@ describe("the board a replay draws", () => {
     const board = shownBoard();
     expect(screen.queryByTestId("animation-queue")).toBeNull();
 
-    // Forward: the same board takes the next view, and the queue plays its events.
     await press(replayTestid.forwardStep);
     expect(shownStep()).toBe(animated);
     expect(shownBoard()).toBe(board);
@@ -403,7 +392,6 @@ describe("the board a replay draws", () => {
     expect(gaps()).toBe(0);
     expect(document.querySelectorAll("[data-event]").length, "the log has lines to read").toBeGreaterThan(0);
 
-    // Back: a fresh board on the earlier view, with nothing in flight.
     await press(replayTestid.backStep);
     expect(shownStep()).toBe(animated - 1);
     expect(shownBoard()).toBe(board + 1);
@@ -411,7 +399,6 @@ describe("the board a replay draws", () => {
     expect(gaps()).toBe(0);
     expect(document.querySelectorAll("[data-event]").length).toBeGreaterThan(0);
 
-    // A jump, forward or back, is the same.
     await jump(LAST);
     expect(shownBoard()).toBe(board + 2);
     expect(screen.queryByTestId("animation-queue")).toBeNull();
@@ -421,7 +408,6 @@ describe("the board a replay draws", () => {
     expect(screen.queryByTestId("animation-queue")).toBeNull();
     expect(gaps()).toBe(0);
 
-    // And a step forward after them carries on from the board they left.
     await press(replayTestid.forwardStep);
     expect(shownBoard()).toBe(board + 3);
   });
@@ -480,7 +466,6 @@ function withModifiersAt(at: number): ReplayStep[] {
   }));
 }
 
-/** `steps` with `pending` at step `at`, as that step's view carries it. */
 function withPendingAt(at: number, pending: PendingView): ReplayStep[] {
   return steps.map((step, index) => (index === at ? { ...step, view: { ...step.view, pending } } : step));
 }
@@ -513,7 +498,6 @@ describe("R2211000 a replay shows the seat's own choices, read-only", () => {
     expect(modal()).toHaveAttribute("data-collapsed", "true");
     expect(options()).toEqual([]);
 
-    // Unfolded, every card is greyed and a click on it picks nothing.
     fireEvent.click(screen.getByTestId("prompt-peek"));
     expect(options()).toHaveLength(opening.options.length);
     expect(options().length).toBeGreaterThan(0);
@@ -527,7 +511,6 @@ describe("R2211000 a replay shows the seat's own choices, read-only", () => {
     expect(screen.queryByTestId("prompt-submit")).toBeNull();
     expect(shownStep()).toBe(0);
 
-    // The toolbar is in reach and does what it does anywhere else.
     await press(replayTestid.forwardStep);
     expect(shownStep()).toBe(1);
     await press(replayTestid.backStep);

@@ -1,10 +1,4 @@
-//! Custom cards on the account (`crates/server/src/api/custom_cards.rs`, SPEC §12.9, R915008).
-//!
-//! Not a test of §12.2's limits: those are the engine's validator's (`custom::validate_custom_card`,
-//! R915001) and are tested there. Here the questions are the routes' own: is the id the server's,
-//! does the version count and refuse a stale save, are the validator's issues passed through
-//! untouched, what does each store outcome answer, is another profile's card indistinguishable from
-//! a missing one, and does a card at every limit fit the request the router reads.
+//! Custom cards on account (`crates/server/src/api/custom_cards.rs`, SPEC §12.9, §12.2, R915008, R915001, #902, R915000).
 
 use std::sync::Arc;
 use std::time::Duration;

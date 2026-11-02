@@ -1,12 +1,5 @@
-//! R602 and R403: a face-down trap with no reveal condition is live, and the units its aura changes
-//! show it to both players. `redact` hides the card (R185, R33), so without more the AI's
-//! determinizations would give its units their stats back and it would declare attacks the engine
-//! refuses. It keeps every unit's shown Attack and Health instead, and the card stays a placeholder.
-//! C #88 Siphon Squad's aura shrank the enemy's Attack from the moment it was set until patch v0.3.12,
-//! which makes it dormant until it is revealed (R1149000): set and unrevealed it changes nothing, and
-//! revealed, both players read the card and the drop.
-//!
-//! Port of `packages/ai/test/redact-live-face-down.test.ts`.
+//! R602, R403, R185, R33: live face-down trap stats kept shown on units; card stays placeholder.
+//! R1149000, C #88: dormant until revealed.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

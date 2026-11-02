@@ -4,14 +4,11 @@
 //!   Radiant: the Aura, plus "Cry: Draw {draw} and gain {mana} mana." (2, 2)
 //!
 //! The Aura is a discard guard (R800): a pure-read hook beside `draw_limit` (R457), read off the cards
-//! acting on the field while it is not the guarded player's turn. An effect's discard (`discard`,
-//! `discard_random`, `discard_hand`) from a guarded hand moves nothing, draws no random number (R129)
-//! and reports one public `discardPrevented`. A discard paid as a price (an Activate's cost, R384; a
-//! targeting cost, R450) never asks the guard, and several Disruptors do no more than one.
-//!
-//! The Cry is an ordinary `draw`, then on the Radiant face `gain_mana` (R1: fires when played or cast).
-//! Both numbers are declared and read through `param` (R386); the base face prints no mana (R749,
-//! R824000). Patch v0.3.10 (#831) gave the base face its Cry and the Radiant face a draw of 2, not 1.
+//! acting on the field while it is not the guarded player's turn. An effect's discard from a guarded
+//! hand moves nothing, draws no random number (R129) and reports one public `discardPrevented`. A
+//! discard paid as a price (an Activate's cost, R384; a targeting cost, R450) never asks the guard.
+//! The Radiant Cry's mana comes when played or cast (R1). Both numbers are declared and read through
+//! `param` (R386); the base face prints no mana (R749, R824000).
 
 use jackioh_engine::effects::{draw, gain_mana};
 use jackioh_engine::prelude::*;
@@ -35,7 +32,6 @@ pub fn script() -> CardScripts {
             ..disruptor()
         },
         radiant: Script {
-            // "Cry: Draw {draw} and gain {mana} mana": the declared numbers `draw` and `mana` (R386).
             cry: Some(hook(|ctx| {
                 vec![
                     draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
@@ -47,11 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #1 Disruptive Disruptor — SPEC §8.8 row 1, BUILD M10 row M 1: "Aura: an effect's discard from
-// your hand while it is not your turn moves nothing, draws no rng and reports `discardPrevented`
-// (R800); a discard you pay still happens; two Disruptors report once; in the graveyard it guards
-// nothing; its Cry draws 1 (patch v0.3.10); radiant Cry draws 2 and gains 2 mana; its tuned numbers (draw, mana) read through
-// `param()` (R386)".
+// M #1 Disruptive Disruptor — SPEC §8.8 row 1, BUILD M10 row M 1.
 #[cfg(test)]
 mod tests {
     use super::*;

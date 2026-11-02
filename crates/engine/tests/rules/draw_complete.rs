@@ -1,12 +1,8 @@
-//! Port of `packages/engine/test/draw-complete.test.ts`.
-//!
 //! The draw-complete point of a cast-on-draw draw (SPEC §2.4, R58, R70; Classic #9 Income Tax's shape).
 //!
-//! R58: a cast-on-draw card is cast as it is drawn, and the draw is complete once that cast has
-//! resolved, so a trap or trigger answering the draw answers it after the cast. The cast's own windows
-//! (its announce, R448, and its step 4) offer every event so far to the traps, which used to hand them
-//! the `drawn` that found the card mid-cast; the draw now holds that event back until its cast's
-//! pipeline has finished, across a question the cast asks too.
+//! R58: the draw completes once its cast-on-draw card's cast resolves. The cast's windows (its announce,
+//! R448, and step 4) offer the traps every event so far, so the draw holds its `drawn` back until the
+//! cast's pipeline is done, across a question the cast asks too.
 
 use jackioh_engine::draw::draw;
 use jackioh_engine::effects::damage;
@@ -14,7 +10,6 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{both, new_game, put, slot};
 
-/// TS `def(name, type)`, its module `nextIndex` (from 5600) written out per definition.
 fn def(name: &str, type_: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("dc-{name}"),
@@ -136,7 +131,7 @@ fn on_top(state: &mut GameState, def_id: &str) -> CardInstance {
     card
 }
 
-/// TS `events.findIndex(match)`: -1 when none matches.
+/// -1 when none matches.
 fn index_of(events: &[GameEvent], found: impl Fn(&GameEvent) -> bool) -> i64 {
     events.iter().position(found).map_or(-1, |at| at as i64)
 }
@@ -149,7 +144,7 @@ fn fired_of(id: &str) -> impl Fn(&GameEvent) -> bool + '_ {
     move |event| matches!(event, GameEvent::TrapFired { instance_id, .. } if instance_id == id)
 }
 
-/// TS `sinkFor(state)` held across `draw` and `settle`: one events list and one rng, lent with the state.
+/// One events list and one rng held across `draw` and `settle`.
 fn draw_and_settle(state: &mut GameState) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -179,7 +174,6 @@ mod r58_a_draw_that_casts_is_complete_once_its_cast_has_resolved {
         let fired = index_of(&events, fired_of(&trap.id));
         assert!(resolved >= 0);
         assert!(fired > resolved);
-        // Both happened: the cast's 1 to p2, the trap's 2 to p1.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 2);
         assert_eq!(state.held_draws, None);

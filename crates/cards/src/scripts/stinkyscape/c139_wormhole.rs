@@ -54,10 +54,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #139 Wormhole — SPEC §8.10 row 139, BUILD M12 row S 139: "set, it reveals on an enemy Spell aimed at
-// the enemy's own Unit and casts it on a Unit of its controller's, its controller choosing the target; a
-// Spell aimed at a Unit of its controller's does not reveal it, nor does a Spell with no target; the Spell
-// lands in its controller's graveyard; radiant it resolves Radiant and lands Radiant".
+// S #139 Wormhole — SPEC §8.10 row 139, BUILD M12 row S 139.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -72,8 +69,6 @@ mod tests {
     const BUFF: i32 = 5;
     const RADIANT_BUFF: i32 = 10;
 
-    /// p1, active with 10 mana, has a Vanilla in unit zone 1 and holds a Book of Stats; p2 has Wormhole
-    /// (`radiant` its face) set in backrow zone 1, and a Vanilla and a Greaser in unit zones 1 and 2.
     fn trapped(radiant: bool) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": "wormhole",
@@ -113,7 +108,6 @@ mod tests {
             let mine = s.unit_at(P1, 1);
             s.play(BOOK, json!({ "targets": pick::instance(&mine) }));
             assert!(fired(&s));
-            // p2 casts it, offered its own Units alone.
             let pending = s.state().pending.clone().expect("the cast's target prompt");
             assert_eq!(pending.player_id, P2);
             let greaser = s.unit_at(P2, 2);

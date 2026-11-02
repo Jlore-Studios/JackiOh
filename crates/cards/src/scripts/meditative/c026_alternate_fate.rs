@@ -9,8 +9,8 @@
 //!   Max mana is still computed; current mana becomes the next-turn rider only.
 //! - **End of turn** (the controller's, §6.2): `fill_board` with `row: backrow, side: any` summons a
 //!   Core #6 Mana Well into every empty, unlocked backrow zone of both players, the active player's
-//!   side first (R68), each owned and controlled by the player whose zone it is (MD-B3, R942). The
-//!   Radiant face passes `radiantFor: self`. Summoned, so no Cry (R1).
+//!   side first (R68), each owned and controlled by the player whose zone it is (MD-B3, R942).
+//!   Summoned, so no Cry (R1).
 
 use jackioh_engine::prelude::*;
 
@@ -79,7 +79,6 @@ mod tests {
         }))
     }
 
-    /// Every backrow card of `player`, lane 1 upward.
     fn backrow_defs(s: &Scenario, player: PlayerId) -> Vec<(i32, String, bool)> {
         (1..=5)
             .filter_map(|lane| s.backrow(player, lane).map(|card| (lane, card.def_id, card.radiant)))
@@ -114,11 +113,9 @@ mod tests {
         }
         s.play(FATE, json!({ "zone": 1 }));
         s.expect_in_zone(FATE, "field");
-        // p1 ends: Fate's end-of-turn fires (no room for a Well), then p2's refresh is zeroed …
         s.end_turn();
         assert_eq!(s.state().players[P2].mana.current, 0, "no natural mana for p2");
         assert!(s.state().players[P2].mana.max > 0, "max mana is still set");
-        // … and p1's own next refresh too.
         s.end_turn();
         assert_eq!(s.state().players[P1].mana.current, 0, "no natural mana for p1 either");
         assert!(s.state().players[P1].mana.max > 0, "max mana is still set");
@@ -141,7 +138,6 @@ mod tests {
         let before = s.state().players[P1].mana.current;
         s.play(COIN, json!({}));
         assert_eq!(s.state().players[P1].mana.current, before + 1, "the Coin still gains");
-        // A summoned Well's start-of-turn gain arrives after the empty refresh.
         s.end_turn();
         s.end_turn();
         assert!(
@@ -152,7 +148,6 @@ mod tests {
 
     #[test]
     fn r941_off_the_field_the_next_refresh_is_natural() {
-        // Fate in hand acts nowhere: the next refresh is natural.
         let mut s = casting("fate-hand", false);
         let max_before = s.state().players[P1].mana.max;
         let _ = max_before;
@@ -167,7 +162,6 @@ mod tests {
     fn r942_end_of_turn_summons_a_well_into_every_empty_unlocked_backrow_zone_for_its_owner_without_a_cry()
      {
         let mut s = casting("fate-fill", false);
-        // Lock p2's lane-5 backrow zone: it gets no Well.
         {
             let state = s.state_mut();
             let slot = ZoneSlot { player: P2, row: Row::Backrow, lane: 5 };
@@ -176,7 +170,6 @@ mod tests {
         s.play(FATE, json!({ "zone": 1 }));
         let mark = s.events().len();
         s.end_turn();
-        // p1's backrow: Fate in lane 1, Wells in lanes 2–5.
         assert_eq!(
             backrow_defs(&s, P1),
             vec![
@@ -187,7 +180,6 @@ mod tests {
                 (5, WELL.to_string(), false),
             ]
         );
-        // p2's backrow: Wells in lanes 1–4, the Locked lane 5 empty.
         assert_eq!(
             backrow_defs(&s, P2),
             vec![
@@ -197,7 +189,6 @@ mod tests {
                 (4, WELL.to_string(), false),
             ]
         );
-        // Each Well belongs to the player whose zone it is.
         for lane in 2..=5 {
             let well = s.backrow(P1, lane).expect("p1's well");
             assert_eq!(well.owner, P1);
@@ -208,7 +199,6 @@ mod tests {
             assert_eq!(well.owner, P2);
             assert_eq!(well.controller, P2);
         }
-        // Summoned, so no Cry: every Well arrived by `summoned`, none by a Cry trigger.
         let summoned = s.events()[mark..].iter().filter(|event| matches!(event, GameEvent::Summoned { .. })).count();
         assert_eq!(summoned, 8, "eight Wells summoned");
     }
@@ -320,7 +310,6 @@ mod tests {
         // p2's five Wells, one each, on top of an empty refresh.
         assert_eq!(s.state().players[P2].mana.current, 5);
         s.end_turn();
-        // p1's four.
         assert_eq!(s.state().players[P1].mana.current, 4);
     }
 

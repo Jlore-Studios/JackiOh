@@ -1,10 +1,9 @@
 // R738: this seat's aim, sent to the opponent as it changes.
 //
 // It reads the board's own `interaction` — what a drag lifts and what a click-select picks are the
-// same state — and the target under the pointer, read off the DOM with the drag layer's own reader
-// (`pickDropSpot`) against `aimTargets`, so a drag and a hover over click-selected targets aim alike.
-// Only a change is sent (`aimKey`), the server coalesces the rest (`AIM_RELAY_INTERVAL_MS`), and an
-// aim that ends, or a board that unmounts mid-aim, sends `null`. Nothing here decides a rule.
+// same state — and the target under the pointer with the drag layer's own reader (`pickDropSpot`)
+// against `aimTargets`, so a drag and a hover over click-selected targets aim alike. Only a change is
+// sent (`aimKey`), the server coalesces the rest (`AIM_RELAY_INTERVAL_MS`). Nothing here decides a rule.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 

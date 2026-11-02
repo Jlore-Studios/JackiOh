@@ -1,7 +1,6 @@
 //! Forced attacks and whose side their target is on, and when a run is over (SPEC §4.2, §6.3 Forced
 //! attack, R53, R96, R173, R174). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md,
-//! lenses L1 and L5); every case here failed before its fix.
-//!
+//! lenses L1 and L5).
 //!  - R173: a forced attack is made on an enemy. When #86 "Miss" Mrow dies to #9 Moths to the
 //!    Flame's strike back and its Death steals Moths, the rest of the run is on Moths's new side and
 //!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit that #52
@@ -10,7 +9,7 @@
 //!    and (round 4, lens L2) an attacker the run named that died in an earlier combat of the run and
 //!    is back through Reborn is passed over, like one that is gone (R96).
 //!
-//! Port of `packages/cards/test/forced-attacks.test.ts` (SURFACE §4.1, §8).
+//! Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -31,7 +30,6 @@ const LIBRARY: [&str; 6] = [VANILLA; 6];
 
 use super::scenario;
 
-/// One `attackDeclared` event's fields.
 #[derive(Clone, Debug, PartialEq)]
 struct Declared {
     attacker_id: String,
@@ -39,7 +37,6 @@ struct Declared {
     forced: bool,
 }
 
-/// TS `declared(events)`: the `attackDeclared` events, in order.
 fn declared(events: &[GameEvent]) -> Vec<Declared> {
     events
         .iter()
@@ -75,8 +72,8 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
         let mrow = g.unit_at(P2, 1);
         let vanilla = g.unit_at(P2, 2);
 
-        // p1's start of turn: "every enemy unit attacks this". Mrow goes first and dies to the strike
-        // back; its Death takes control of the unit that destroyed it — Moths — for p2 (R361).
+        // Mrow goes first and dies to the strike back; its Death takes control of the unit that destroyed it
+        // — Moths — for p2 (R361).
         g.start_turn();
         g.expect_in_zone(&mrow.id, "graveyard");
         assert_eq!(g.card(&moths.id).controller, P2);
@@ -111,8 +108,6 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
             how: None,
         }));
 
-        // p2's trap answers p1's play (radiant: any card) and fills p2's board with Rush Tokens. "If it
-        // was a Unit, they attack it" — but the unit is on their own side now.
         assert!(
             g.events()
                 .iter()
@@ -134,12 +129,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
     #[test]
     fn r174_r53_r83_a_forced_run_stops_once_its_target_has_left_the_field_even_though_reborn_brings_it_back()
     {
-        // p1's Radiant Bear Honeypot answers p2's 1-cost Right-house defender (1/1, Taunt, Divine
-        // Shield, Reborn): five Rush Tokens attack it. The first spends its shield, the second kills
-        // it; Reborn returns it at 1 health, and the other three tokens do not attack the body that
-        // came back.
         let mut g = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-reborn-run",
             "active": "p2",
             "p1": { "backrow": [{ "def": HONEYPOT, "radiant": true, "faceUp": false, "lane": 3 }] },

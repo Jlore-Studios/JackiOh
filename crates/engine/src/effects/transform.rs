@@ -3,11 +3,7 @@
 //! position, with no Cry (R1); the card it replaces ceases to exist rather than reaching a graveyard
 //! (R35). Vanilla is a flag the layers read (§10.4): stats, buffs and damage are other layers and
 //! must survive it, and the definition is shared by every copy of the card, so it is never edited.
-//!
-//! Port of `packages/engine/src/effects/transform.ts`. TS wrote through the live instances it held;
-//! here every write finds the card again by id (`state::find_instance_mut`), and the old card a
-//! Replace retires is handed to `zones::cease_to_exist` as the copy this file read, which is what TS
-//! did too: the old object had already left its pile.
+//! A retired card goes to `zones::cease_to_exist` as the copy read here: it has already left its pile.
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -46,12 +42,9 @@ pub struct TransformTarget {
     pub instance_id: Option<String>,
 }
 
-/// §6.3 Replace: the same zone and position, with the old card's owner and controller. The new card
-/// takes the old one's place (`zones::replace_in_zone`) rather than being summoned into an emptied zone:
-/// a Transform result is no summon (§6.2), so the Lock §3.2 puts on a zone — "accepts no summons … the
-/// current occupant is unaffected" — does not refuse it, and neither does a reservation (R64). #36
-/// Magic Jammed locks the zone of a Heroic Power it could not destroy (R46), and radiant #36 locks
-/// the zone of a card it could not steal (R15); R35 still replaces either. A Stack pile keeps its
+/// §6.3 Replace: the same zone and position, owner and controller. The new card takes the old one's
+/// place (`zones::replace_in_zone`): a Transform result is no summon (§6.2), so neither a §3.2 Lock nor
+/// a reservation (R64) refuses it, #36's locks (R46, R15) included (R35). A Stack pile keeps its
 /// dormant cards beneath the replacement (§3.2).
 fn replace_on_field(
     ctx: &mut EffectContext<'_>,
@@ -60,8 +53,7 @@ fn replace_on_field(
     radiant: bool,
 ) -> Option<CardInstance> {
     let at = slot_of(ctx.state, old)?;
-    // R446: a Unit a carrier holds stands in a backrow zone as a Unit, and a Unit may take its place there;
-    // so does one standing in a backrow zone itself (R1081000).
+    // R446, R1081000: a Unit a carrier holds, or one standing in a backrow zone, is replaced as a Unit.
     let row_here = if is_carried(ctx.state, old) || crate::zones::stands_in_backrow(ctx.state, old) {
         Row::Units
     } else {
@@ -77,8 +69,7 @@ fn replace_on_field(
     if old.position.is_some() {
         replacement.position = old.position;
     }
-    // R659: a new body enters the field this turn, so it is summoning sick like a summoned card (§4.1);
-    // only text that says otherwise lifts it (R424).
+    // R659: a new body is summoning sick like a summoned card (§4.1) unless text lifts it (R424).
     replacement.summoned_turn = Some(turn);
     crate::generators::record_generator(ctx, &replacement);
     let replacement_id = replacement.id.clone();
@@ -86,8 +77,7 @@ fn replace_on_field(
     if !replace_in_zone(&mut *ctx.state, old, &mut replacement) {
         return None;
     }
-    // The replaced card ceases to exist: no graveyard, no exile pile, no Death trigger (§6.3, R35) —
-    // and it has left the field, which R174 counts like any departure (`zones::cease_to_exist`).
+    // §6.3, R35: no graveyard, no exile, no Death trigger; R174 still counts it as leaving the field.
     let mut retired = old.clone();
     cease_to_exist(&mut *ctx.state, &mut retired);
     // §3.2: a Field Spell is public where a Trap stays face-down until it fires (R33).
@@ -99,7 +89,6 @@ fn replace_on_field(
     find_instance(ctx.state, &replacement_id).cloned()
 }
 
-/// `player`'s pile of an off-field zone.
 fn off_field_pile(ctx: &EffectContext<'_>, player: PlayerId, at: OffFieldZone) -> Vec<CardInstance> {
     let side = &ctx.state.players[player];
     match at {
@@ -110,9 +99,8 @@ fn off_field_pile(ctx: &EffectContext<'_>, player: PlayerId, at: OffFieldZone) -
     }
 }
 
-/// R35's other zones: Transmogulate replaces hand, library, graveyard and exile cards too, "same
-/// counts" per zone. A library and a hand keep their order, so the replacement takes the old card's
-/// index there; `move_to_zone` appends in the other piles.
+/// R35's other zones ("same counts" per zone). A library and a hand keep their order, so the
+/// replacement takes the old card's index there; `move_to_zone` appends in the other piles.
 fn replace_off_field(
     ctx: &mut EffectContext<'_>,
     old: &CardInstance,
@@ -127,8 +115,7 @@ fn replace_off_field(
         ZoneName::Exile => OffFieldZone::Exile,
         ZoneName::Field | ZoneName::Resolving | ZoneName::Gone => return None,
     };
-    // R11: a unit-token card cannot sit in a graveyard or exile, so a replacement that would cease
-    // to exist on arrival is refused instead of thinning the zone.
+    // R11: a unit token would cease to exist in a graveyard or exile, so it is refused, not thinning it.
     if matches!(at, OffFieldZone::Graveyard | OffFieldZone::Exile) && def.token && def.type_ == CardType::Unit
     {
         return None;
@@ -141,8 +128,7 @@ fn replace_off_field(
 
     let mut retired = old.clone();
     cease_to_exist(&mut *ctx.state, &mut retired);
-    // R312: a new instance with no `knownAs`, so a library replacement is a card its owner was never
-    // shown, and their list counts it unknown (the `transformed` event names it to nobody, R177).
+    // R312: no `knownAs`, so its owner's list counts a library replacement unknown (R177).
     let zone = match at {
         OffFieldZone::Hand => Zone::Hand { player: owner },
         OffFieldZone::Library => Zone::Library { player: owner },
@@ -166,8 +152,7 @@ fn replace_off_field(
     // R671: a hand keeps its order too, so a card swapped in hand stays where its owner put it.
     if at == OffFieldZone::Hand {
         let hand = &mut ctx.state.players[owner].hand;
-        // TS: `hand.splice(hand.indexOf(replacement), 1); hand.splice(index, 0, replacement)`, and a
-        // `splice(-1, 1)` takes the last card when the replacement is not there.
+        // When the replacement is not in the hand, the last card gives way to it.
         let moved = match hand.iter().position(|card| card.id == replacement_id) {
             Some(now) => Some(hand.remove(now)),
             None => {
@@ -200,9 +185,8 @@ pub struct TransformArgs {
     pub chinese: Option<bool>,
 }
 
-/// MD-B10, R921: what a Transform's replacement carries of the riders: `costOverride` only for a
-/// live card in a hand or a library — a price, which R766 takes off a card that reaches a graveyard
-/// or an exile pile — and `chinese` wherever the replacement is.
+/// MD-B10, R921: `costOverride` only on a card in a hand or a library (a price, which R766 takes off
+/// a card in a graveyard or exile), and `chinese` wherever the replacement is.
 fn apply_transform_riders(
     ctx: &mut EffectContext<'_>,
     id: &str,
@@ -222,9 +206,7 @@ fn apply_transform_riders(
     }
 }
 
-/// §6.3 Transform: a new instance of `defId` where the old card was, no Cry (R1), and the old card
-/// ceases to exist. Immutable refuses it (R23), and so does a definition that cannot live in the
-/// zone the old card occupies (§5.1).
+/// §6.3 Transform into `defId` (R1, R23), refused where the old card's zone cannot hold it (§5.1).
 pub fn transform(args: TransformArgs) -> Effect {
     Effect::new("transform", move |ctx| {
         let Some(old) = instance_by_id_or_spec(
@@ -245,10 +227,8 @@ pub fn transform(args: TransformArgs) -> Effect {
     })
 }
 
-/// R23: Immutable blocks a Transform, which is what a Replace is on the field (§6.3). Off the field a
-/// Replace is no Transform — the card is not rewritten, it ceases to exist and another takes its
-/// place — so R35's "other zones: any card from the pool, same counts" replaces an Immutable card too,
-/// and a library keeps its count whatever it held (§9.1).
+/// R23: Immutable blocks a Transform, which a Replace is on the field (§6.3). Off it the card is not
+/// rewritten but replaced, so R35 replaces an Immutable card too and a library keeps its count (§9.1).
 fn transformable(ctx: &EffectContext<'_>, old: &CardInstance) -> bool {
     !(old.zone.z() == ZoneName::Field && unit_has(ctx.state, old, KeywordKind::Immutable))
 }
@@ -284,10 +264,9 @@ fn replace_card(
     Some(replacement)
 }
 
-/// R177: who could not read this card where it is, read before it ceases to exist there — a library
-/// card is hidden from both players (§9.1), a hand card from the other one, and a face-down trap from
-/// everyone but its controller (R33). A card that ceases to exist leaves no zone of its own to be
-/// judged by later, so the event records this for the view.
+/// R177: who could not read this card where it is (a library card: both, §9.1; a hand card: the
+/// opponent; a face-down trap: all but its controller, R33), recorded on the event because a card
+/// that ceases to exist leaves no zone to be judged by later.
 fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> {
     match card.zone {
         Zone::Library { .. } => PLAYER_IDS.to_vec(),
@@ -306,10 +285,9 @@ fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> 
     }
 }
 
-/// R781003: a Vanilla returns a card to the attack and health printed on the face it wears (§6.3):
-/// its buffs and the stat half of its `tuning` go, and the rest of its tuning (cost, X, numbers,
-/// keywords) stays. A summon's X/X (`statsOverride`) is what it was summoned as, not a buff, so it stays,
-/// and so does the Radiant flag, so a Radiant card keeps its Radiant face's numbers.
+/// R781003: a Vanilla returns a card to the stats printed on the face it wears (§6.3): its buffs and
+/// its `tuning` stats go; the rest of its tuning, a summon's X/X (`statsOverride`, not a buff) and the
+/// Radiant flag stay.
 pub(crate) fn to_printed_stats(card: &mut CardInstance) {
     card.buffs = AttackHealth { attack: 0, health: 0 };
     if let Some(tuning) = card.tuning.as_mut() {
@@ -321,12 +299,9 @@ pub(crate) fn to_printed_stats(card: &mut CardInstance) {
     }
 }
 
-/// §6.3 Vanilla: the card's text stops applying — its printed keywords and its scripts — and it
-/// returns to its printed stats (`to_printed_stats`, R781003), while its damage stays: a Unit that
-/// would die from the stats it loses stays alive at 1 health, its damage capped at its max health
-/// minus 1. Immutable refuses it (R23), and a card that is already Vanilla is unchanged. The flag
-/// lives on the instance; the layers read it (§10.4) and R78 clears it when the card leaves the
-/// field. (TS default argument `{}`.)
+/// §6.3 Vanilla: its printed keywords and scripts stop applying and it returns to its printed stats
+/// (R781003), keeping its damage, but a Unit the lost stats would kill stays alive at 1 health.
+/// Immutable refuses it (R23); the layers read the flag (§10.4) and R78 clears it off the field.
 pub fn vanilla(args: TransformTarget) -> Effect {
     Effect::new("vanilla", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
@@ -355,8 +330,7 @@ pub fn vanilla(args: TransformTarget) -> Effect {
                 stored.damage = (view.max_health - 1).max(0);
             }
         }
-        // No instance is created and no definition changes, so both sides of `transformed` name the
-        // same card and the same def: the event the client animates is the text going away.
+        // Both sides of `transformed` name the same card: the client animates the text going away.
         ctx.events.push(GameEvent::Transformed {
             instance_id: card.id.clone(),
             from_def_id: card.def_id.clone(),
@@ -370,14 +344,10 @@ pub fn vanilla(args: TransformTarget) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
-// Patch v0.2.0: the Transform variants (docs/classic-sets.md B5 E24; §6.3 Transform, R23, R35).
-// ---------------------------------------------------------------------------------------------
+// The Transform variants (docs/classic-sets.md B5 E24; §6.3 Transform, R23, R35).
 
-/// Whether `def` could take `old`'s place: on the field only a definition of the same row, as R35
-/// keeps a board card's type (a Unit for a Unit); in a graveyard or exile never a unit token (R11).
-///
-/// R1081000: a Unit standing in a backrow zone is replaced as a Unit, by a Unit.
+/// Whether `def` could take `old`'s place: on the field one of the same row (R35; a Unit standing in a
+/// backrow zone counts as a Unit, R1081000); in a graveyard or exile never a unit token (R11).
 fn can_replace(state: &GameState, old: &CardInstance, def: &CardDef) -> bool {
     match old.zone {
         Zone::Field { .. } if crate::zones::stands_in_backrow(state, old) => {
@@ -438,25 +408,17 @@ pub struct TransformRandomArgs {
     pub arrives: Option<bool>,
 }
 
-/// E24, Classic+ #73.1 Classic Golem: "that Unit transforms into a random Classic or Classic+ Unit" (the
-/// Unit it attacks, R2285002). A §6.3
-/// Transform into a definition drawn with `ctx.rng` from `query` (§5.1's one pool, never the running
-/// card or its ingredients, B4.1), narrowed to the definitions that could take the card's place — on
-/// the field, one of its row (R35) — so the draw never lands on one the zone would refuse. Immutable
-/// refuses it (R23), and a refusal or an empty pool draws nothing (R129). `radiant` is the new card's
-/// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` was Classic Golem's
-/// "the new Unit may attack again this turn" before it transformed its target instead (R424, R2285002):
-/// the new body on the field is not summoning sick this turn (a new instance's exertion is already
-/// fresh).
+/// E24, Classic+ #73.1 Classic Golem (the Unit it attacks, R2285002): a §6.3 Transform into a definition
+/// drawn with `ctx.rng` from `query` (§5.1's one pool, never the running card or its ingredients, B4.1),
+/// narrowed to those that could take the card's place (R35), so the draw never lands on a refusal.
+/// Immutable refuses it (R23); a refusal or an empty pool draws nothing (R129). `readyToAttack` lifts the
+/// new body's summoning sickness (R424).
 ///
-/// MD-B10, R921 (Meditative #32): with `scope`, every card of the scope is replaced instead of the
-/// target's; with `same`, one definition is drawn for them all — from the definitions every one of
-/// them could take — and each is replaced in its place (R31, R671; an Immutable hand card too, R35),
-/// carrying `costOverride` and `chinese`, each a card generated into a hand or a deck for R673's own
-/// Glitch roll. Without either, one card is drawn for exactly as before.
+/// MD-B10, R921 (Meditative #32): `scope` replaces each card of the scope instead, and `same` draws one
+/// definition all of them could take, each replaced in its place (R31, R671; an Immutable hand card too,
+/// R35). Each replacement in a hand or a deck rolls for Glitch on its own (R673).
 pub fn transform_random(args: TransformRandomArgs) -> Effect {
     Effect::new("transformRandom", move |ctx| {
-        // The cards to replace: the scope's, or the one the target names.
         let olds: Vec<CardInstance> = match &args.scope {
             // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
             Some(scope) => cards_in_card_scope(
@@ -493,9 +455,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             &args.query.clone().unwrap_or_default(),
             own.as_deref(),
         );
-        // With `same`, one definition for them all: drawn from the definitions every old card could
-        // take, so the draw never lands on one a zone would refuse. Without it, each card draws its
-        // own from the definitions it could take, exactly as before.
+        // With `same`, one definition every old card could take; without it, each draws its own below.
         let shared: Option<CardDef> = if args.same == Some(true) {
             let pool: Vec<&CardDef> = query(&asked)
                 .into_iter()
@@ -510,8 +470,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
         }
         for old in &olds {
             // R673: a card transformed in a hand or a deck is generated there and may be Glitch; one on
-            // the field may not, since Glitch is only ever played. Each held replacement rolls on its
-            // own, the shared draw included.
+            // the field may not, since Glitch is only ever played.
             let held = matches!(old.zone, Zone::Hand { .. } | Zone::Library { .. });
             let def: Option<CardDef> = match &shared {
                 Some(shared) if held => Some(glitch_or_not(ctx.sink.rng, shared, &*ctx.sink.state).clone()),
@@ -565,12 +524,10 @@ pub struct TransformBeneathArgs {
     pub of: Option<TargetSpec>,
 }
 
-/// E24, Classic+ #4 Juhan Biggest Bat: "the cards beneath it become copies of this". Every card dormant
-/// beneath the top of the unit pile `of` names (default the running card, which must be that top) is
-/// Replaced (§6.3) by a copy of the top — R57's copy, with the top's face, buffs, granted keywords,
-/// Vanilla state and X/X — that keeps the old card's owner and controller, its position and its place
-/// in the pile, and stays dormant (R13): when the top leaves, the next copy resumes. An Immutable card
-/// stays as it is (R23). Each replaced card ceases to exist (R35) with a `transformed` event.
+/// E24, Classic+ #4 Juhan Biggest Bat: "the cards beneath it become copies of this". Each card dormant
+/// beneath the top of the pile `of` names (default the running card, which must be that top) is Replaced
+/// (§6.3) by R57's copy of the top, keeping its owner, controller, position and place in the pile, and
+/// stays dormant (R13). An Immutable card stays as it is (R23); each replaced one ceases to exist (R35).
 pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
     Effect::new("transformBeneath", move |ctx| {
         let spec = args.of.clone().unwrap_or(TargetSpec::SelfCard);
@@ -637,16 +594,10 @@ pub struct SwapBookArgs {
     pub from: String,
 }
 
-/// Classic #55 Book of Wildfire, R671: "Becomes a different Book at the end of your turn" — the card
-/// `instanceId` names, while it is in a hand, is Replaced (§6.3, R35) by a Book drawn with `ctx.rng`
-/// from §5.1's pool: every non-token Book of every set (R380) but the one it is now and the card that
-/// started the swap (`from`, Wildfire itself). The new Book keeps the old card's face (a Radiant card
-/// becomes the Radiant face of the Book) and its place in the hand, and carries the swap on as the
-/// `swapsBook` enchantment, so it changes again at its owner's next end of turn. It is otherwise a new
-/// card, as any Transform result is (its cost changes and its other enchantments stay behind), except
-/// that a Temporary card's new Book is Temporary too (R637), with the count the old card had left
-/// (R2179001): the swap comes before cleanup, and a Temporary card must not leave the turn as a card
-/// that stays.
+/// Classic #55 Book of Wildfire, R671: "Becomes a different Book at the end of your turn". The hand card
+/// `instanceId` names is Replaced (§6.3, R35) by a Book from §5.1's pool, any non-token Book (R380) but
+/// its own and `from`'s, keeping its face and hand place and carrying `swapsBook` on. A Temporary card's
+/// Book stays Temporary with its count (R637, R2179001): the swap comes before cleanup.
 pub fn swap_book(args: SwapBookArgs) -> Effect {
     Effect::new("swapBook", move |ctx| {
         let Some(old) = instance_on_its_stay(ctx, &args.instance_id) else {
@@ -663,7 +614,6 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
         let Some(def) = pick_generated(ctx.sink.rng, &pool, None) else {
             return;
         };
-        // R2179001: the new Book keeps the old card's Temporary as it stands, its count included.
         let temporary = is_temporary_card(ctx.state, &old)
             .then(|| crate::temporary::temporary_number(&crate::layers::card_keywords(ctx.state, &old)))
             .flatten();

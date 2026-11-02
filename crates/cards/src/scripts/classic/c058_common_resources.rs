@@ -59,19 +59,15 @@ mod tests {
 
     use crate::js;
 
-    /// The `drawn` events of `player`'s, as JSON.
     fn drawn_by(events: &[GameEvent], player: PlayerId) -> Vec<Value> {
         let player = js(&player);
         events.iter().map(js).filter(|event| event["type"] == "drawn" && event["player"] == player).collect()
     }
 
-    /// `opts[key]`, or `fallback` where it is absent.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// p1's Common Resources face-up in the backrow, on p2's turn; `endTurn()` starts p1's turn.
-    /// `opts`: `radiant`, `p1Library`, `p2Library`, `p1Hand`, `p2Field`.
     fn waiting(opts: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -107,7 +103,6 @@ mod tests {
                     def_ids(&s.pile(PlayerId::P2, "library")),
                     vec![VANILLA],
                 );
-                // Then the turn's own draw, from your own deck.
                 assert_eq!(
                     drawn_by(s.last_events(), PlayerId::P1).iter().map(|event| event["defId"].clone()).collect::<Vec<Value>>(),
                     vec![json!(MENACE), json!(STOCKPILE)],
@@ -161,7 +156,6 @@ mod tests {
                     .expect("the cast's cardPlayed event");
                 assert_eq!(cast["player"], "p1");
                 assert_eq!(cast["costPaid"], 0);
-                // "Take 1 damage" is its caster's: p1's hero.
                 assert!(
                     s.last_events()
                         .iter()
@@ -285,7 +279,6 @@ mod tests {
                         assert!(!event["position"].is_number());
                     }
                 }
-                // Its new owner reads it.
                 assert!(js(&s.view(PlayerId::P1).you.hand).to_string().contains(&bottom));
             }
 

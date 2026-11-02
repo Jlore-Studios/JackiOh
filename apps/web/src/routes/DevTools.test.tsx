@@ -1,7 +1,6 @@
 // The Dev tools panel (SPEC §14.10, R1300000): each tool is a request to its dev route, sent as
-// typed, and the line under the buttons says what the server answered, a refusal in its own words.
-// The quest tools (§14.9, #1304) complete a quest picked from what `GET /api/quests` lists. The bar
-// tools (§14.5, R1310003) fill the card or the cosmetic token bar.
+// typed, and the line under the buttons says what the server answered. The quest tools (§14.9,
+// #1304) pick from `GET /api/quests`; the bar tools (§14.5, R1310003) fill a token bar.
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -17,7 +16,6 @@ const QUESTS: QuestView[] = [
   { questId: "traps-3", title: "Play 3 Traps", progress: 0, target: 3, jlore: 60, xp: 3000, arrivedAt: 2 },
 ];
 
-/** A response with `status` and `body`. */
 function response(status: number, body?: unknown): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -26,7 +24,6 @@ function response(status: number, body?: unknown): Response {
   } as unknown as Response;
 }
 
-/** Whether a request is the panel's own `GET /api/quests`, which lists the held quests. */
 function listsQuests(url: string, init?: RequestInit): boolean {
   return new URL(url, "http://localhost").pathname === "/api/quests" && (init?.method ?? "GET") === "GET";
 }
@@ -43,7 +40,6 @@ function devCalls(fetchMock: ReturnType<typeof answer>): [url: string, init?: Re
   return fetchMock.mock.calls.filter(([url, init]) => !listsQuests(url, init));
 }
 
-/** The path and the parsed body of the `n`th request to a dev route `fetchMock` saw. */
 function sent(fetchMock: ReturnType<typeof answer>, n: number): { path: string; method: string | undefined; body: unknown } {
   const [url, init] = devCalls(fetchMock)[n] ?? [];
   return {
@@ -124,7 +120,7 @@ describe("R1300000 the Dev tools panel", () => {
     });
     cleanup();
 
-    // A refusal reads in the server's own words, as every tool's does.
+    // A refusal reads in the server's own words.
     vi.stubGlobal("fetch", answer(403, { error: { code: "forbidden", message: "Only a dev account may use the dev tools." } }));
     render(<DevTools token={TOKEN} />);
     await userEvent.click(screen.getByTestId(devToolsTestid.fillCosmeticBar));

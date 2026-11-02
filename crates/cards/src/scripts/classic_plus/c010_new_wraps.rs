@@ -19,7 +19,7 @@ fn give_reborn() -> Effect {
 }
 
 pub fn script() -> CardScripts {
-    // One effect, as TS's module constant `giveReborn`, shared by both faces' Cries.
+    // One effect, shared by both faces' Cries.
     let give = give_reborn();
     let on_base = give.clone();
     let on_radiant = give;
@@ -37,10 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #10 New Wraps — SPEC §8.7 row 10, BUILD M9 Classic+ row C+ 10: "A target Unit gains Reborn as a
-// granted keyword (kept by a Vanilla, lost on leaving the field, R78), so its next death returns it at
-// 1 health without Reborn; a Unit that has Reborn gains nothing; radiant also makes it Radiant, its
-// Radiant face applying at once with damage and buffs kept and no Cry (§5.2)".
+// C+ #10 New Wraps — SPEC §8.7 row 10, BUILD M9 Classic+ row C+ 10.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

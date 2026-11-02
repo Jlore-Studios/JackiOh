@@ -1,32 +1,13 @@
 //! The read-only board queries a card script asks its questions with (BUILD M3-T1, SPEC §10.9).
 //!
-//! §10.9 lets a hook READ state to compute an effect's arguments and forbids it writing; BUILD M3-T1
-//! asks, more strictly, that `grep -r "state.players[" packages/cards` come back empty. A raw
-//! `ctx.state.players[…]` read satisfies the spec and fails the acceptance grep, and the grep is
-//! right for a reason the spec does not state: fifteen card files spelling out the shape of
-//! `PlayerState` means `PlayerState` cannot change shape without editing fifteen card files. This
-//! module is the fix — the read half of the card-facing surface, next to `effects/mod.rs`,
-//! which is the write half.
+//! §10.9 forbids a hook writing state, and BUILD M3-T1 bars card files from reading `state.players[…]`,
+//! so `PlayerState` can change shape without editing cards. A verb a card needs lives in `effects`, a
+//! fact here or among the root's other readers (`zones.rs`'s, `layers.rs`'s (§10.4), `def_of` and
+//! `find_instance`). Nothing here can change the game: every function takes `(state, player, …)` and
+//! returns numbers, booleans or a fresh copy, no reference the caller can write through.
 //!
-//! So: a verb a card needs lives in `effects`; a FACT a card needs lives here. The existing
-//! readers a card file already imports off the root stay where they are and are part of the
-//! same surface — `active_units_of`, `dormant_units_of`, `card_at`, `slots_of`, `slot_of` (`zones.rs`, which
-//! owns the field because it owns the lanes), `face_of`, `stats_with_buffs` (`layers.rs`, §10.4),
-//! `def_of` (`catalog.rs`), `find_instance` (`state.rs`). What had no home was everything ABOUT a
-//! player rather than about a card or a lane: the hero block, the off-field piles and the turn log.
-//!
-//! Why a module of its own rather than more of `zones.rs`: `zones.rs` is a mutator module — it owns
-//! `place_on_field`, `move_to_zone`, `lock_zone`, `reset_instance` — and its readers are there because
-//! they read the thing it writes. The hero block and the turn log are not zones at all, and putting
-//! a read-only surface among the writers hides the one property that makes it a surface: nothing
-//! here can change the game. Every function below takes `(state, player, …)`, returns numbers,
-//! booleans or a fresh copy, and holds no reference the caller can write through.
-//!
-//! NAMING: `catalog.rs` owns the CARD-POOL query of §5.1 (`catalog::query`, wrapped for cards by
-//! `jackioh_cards::query`). This module queries the BOARD. Two different questions; the
-//! names below say which is which, and neither exports a bare `query`.
-//!
-//! Port of `packages/engine/src/query.ts`.
+//! `catalog::query` (wrapped by `jackioh_cards::query`) asks §5.1's card pool, this module the board;
+//! neither exports a bare `query`.
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -40,10 +21,8 @@ use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayReco
 use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of};
 
-/// A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
-/// write a hero's health by assigning through the result (which the acceptance grep could not catch
-/// and `state_check` would then disagree with). Not the view's `wire::HeroView`; `lib.rs` resolves the
-/// root name to this one.
+/// A hero's block as a card may see it (§10.1), copied so a script cannot write through it. Not the
+/// view's `wire::HeroView`; `lib.rs` resolves the root name to this one.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct HeroView {
@@ -51,8 +30,7 @@ pub struct HeroView {
     pub armor: i32,
 }
 
-/// TS `CardInstance | string | null`: a card, its instance id, or no card (`played_earlier`,
-/// `was_played_this_turn`). `From` lets a caller hand over whichever it holds.
+/// A card, its instance id, or no card (`played_earlier`, `was_played_this_turn`).
 #[derive(Clone, Copy, Debug)]
 pub enum CardOrId<'a> {
     Card(&'a CardInstance),
@@ -87,10 +65,8 @@ impl<'a> From<Option<&'a CardInstance>> for CardOrId<'a> {
     }
 }
 
-/// §10.1's hero block for one player. `health` is the current total that §4.4 damages and §2.6 reads
-/// for the loss check; `armor` is the stored field §4.4 step 2 subtracts, not a computed total, so a
-/// card that wants "the Armor this hero has right now" wants the damage pipeline's own reader and
-/// not this (#73, #84).
+/// §10.1's hero block for one player (`health` is what §2.6's loss check reads). `armor` is the field
+/// §4.4 step 2 subtracts, not a computed total: Armor right now is the damage pipeline's (#73, #84).
 pub fn hero_of(state: &GameState, player: PlayerId) -> HeroView {
     let hero = &state.players[player].hero;
     HeroView {
@@ -105,9 +81,8 @@ pub fn starting_health_of(state: &GameState, player: PlayerId) -> i32 {
     crate::state::starting_hero_health(state.players[player].handicap.as_ref())
 }
 
-/// The live pile, for this module's own use only. The zone -> pile mapping is `zones.rs`'s
-/// (`pile_for`), which is private there because handing a card file a live pile hands it a `push`
-/// into a zone; every export below copies before it returns.
+/// The live pile, for this module only: `zones.rs` keeps `pile_for` private because a live pile hands
+/// a card file a `push` into a zone, so every export below copies.
 fn pile_of(state: &GameState, player: PlayerId, zone: OffFieldZone) -> &Vec<CardInstance> {
     let side = &state.players[player];
     match zone {
@@ -118,18 +93,13 @@ fn pile_of(state: &GameState, player: PlayerId, zone: OffFieldZone) -> &Vec<Card
     }
 }
 
-/// One of a player's off-field piles, in zone order, as a copy: `library[0]` is the top (the next
-/// card drawn, `draw.rs`), a hand and a graveyard are in arrival order, and an exile pile is in
-/// exile order (§3). The field is not a pile — `active_units_of`, `dormant_units_of` and `card_at` read
-/// the lanes, because R13 makes the top of a Stack the only card that acts.
-///
-/// The list is fresh, so iterating it is safe while the effects it builds resolve and mutate the
-/// real pile (#83 replaces every card in three of them).
+/// One of a player's off-field piles as a copy, in zone order: `library[0]` is the top (the next card
+/// drawn), the others in arrival order (§3), safe to iterate while effects mutate the real pile (#83
+/// replaces every card in three of them).
 pub fn zone_cards(state: &GameState, player: PlayerId, zone: OffFieldZone) -> Vec<CardInstance> {
     pile_of(state, player, zone).clone()
 }
 
-/// How many cards are in one of a player's off-field piles (§3).
 pub fn zone_count(state: &GameState, player: PlayerId, zone: OffFieldZone) -> i32 {
     pile_of(state, player, zone).len() as i32
 }
@@ -177,9 +147,8 @@ pub fn resources_in_hand_of(state: &GameState, player: PlayerId) -> Vec<CardInst
         .collect()
 }
 
-/// R1881007: whether a card of one of these definitions is mid-resolution for this player (§10.5: a
-/// Spell sits in `resolving` between its play and its graveyard), as S #138 Pocket Peptides asks of its
-/// controller's CN Peptides cast.
+/// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
+/// player, as S #138 Pocket Peptides asks of its controller's CN Peptides cast.
 pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
     state.players[player]
         .resolving
@@ -189,8 +158,7 @@ pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bo
 
 /// R1861001: "if Brittle destroyed this" (Stinkyscape #39 The Narcor Project): the card's Brittle count
 /// in force is spent, at 0. A Death hook reads it off its snapshot, taken before R78's reset drops the
-/// spent count (`state_check.rs`'s collect, R441), so a crumble's death reads true and any other
-/// destroy of a card with a count left reads false.
+/// spent count (`state_check.rs`'s collect, R441), so only a crumble's death reads true.
 pub fn brittle_spent(card: &CardInstance) -> bool {
     crate::brittle_count::active_brittle_count(card) == Some(0)
 }
@@ -200,36 +168,27 @@ pub fn market_credits_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].market_credits.unwrap_or(0)
 }
 
-/// The mana this player holds now and has not spent: `turnEnded.unspentMana` is this number as the
-/// turn ends (R62), which #18 Bread and Butter's X reads, so its preview (R280) reads the same number
-/// off the same function for the turn as it stands. Mana is public (§10.8).
+/// The mana this player holds unspent now, which `turnEnded.unspentMana` records as the turn ends (R62):
+/// #18 Bread and Butter's X and its preview (R280) read the same number. Mana is public (§10.8).
 pub fn unspent_mana_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].mana.current
 }
 
-/// §10.5 step 4's count of the cards this player has played this turn, cleared by `start_turn`.
-/// The card being played is already counted when its own script and any `cardPlayed` trigger run —
-/// §6.2's Combo X reads "played EARLIER this turn", so a card counting the plays before itself
-/// subtracts one (#38).
+/// §10.5 step 4's count of this player's plays this turn (cleared by `start_turn`), the card being
+/// played included, so a Combo X (§6.2, "played EARLIER") counting plays before it subtracts one (#38).
 pub fn cards_played_this_turn(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].turn_log.cards_played
 }
 
-/// The instance ids this player has played this turn, in play order, as a copy. The ids are enough
-/// to name the cards: `find_instance` turns one into its instance wherever it has landed since (R98).
+/// The ids this player has played this turn, in order, as a copy (`find_instance` finds each, R98).
 pub fn played_ids_this_turn(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player].turn_log.played_ids.clone()
 }
 
-/// §6.2 Combo X: how many cards this player played earlier this turn than this card's play — its
-/// place in the turn's log, which §10.5 step 4 wrote as it played the card ("`turnLog.cardsPlayed`
-/// checked at play time", §8 #10). A card the play itself goes on to cast (a cast-on-draw card that
-/// /fullsend's Combo draw takes at step 5, R70) is played after it, never earlier, so the count does
-/// not move while the play resolves. A card played twice this turn is counted from its latest play.
-/// A card still in a hand, or one the log does not hold, has not been played: every play this turn
-/// is earlier than the one it would be. No card (`CardOrId::Nothing`) is a script running with no
-/// instance (`ctx.self` of a card that has ceased to exist, R127): its play is taken as the latest one
-/// in the log, so every play but that one is earlier.
+/// §6.2 Combo X: how many cards this player played this turn before this card's play, its place in
+/// the log §10.5 step 4 wrote (§8 #10). A card the play itself casts (R70) comes after it; a card
+/// played twice counts from its latest play; for a card in a hand or not in the log every play is
+/// earlier; no card (`ctx.self` gone, R127) is the log's latest play.
 pub fn played_earlier<'a>(state: &GameState, player: PlayerId, card: impl Into<CardOrId<'a>>) -> i32 {
     let log = &state.players[player].turn_log;
     let (id, instance): (&str, Option<&CardInstance>) = match card.into() {
@@ -246,11 +205,9 @@ pub fn played_earlier<'a>(state: &GameState, player: PlayerId, card: impl Into<C
     }
 }
 
-/// Whether this player played this card this turn — the one-shot gate §5.1's "End of turn: add this
-/// back to your hand" spells need (#23, #24, #31, R68): the card returns on the turn it was played
-/// and not at every end of turn thereafter, and a copy that reached the graveyard by being discarded
-/// or milled was never played and stays there. `player` is explicit because a card's owner and its
-/// controller can differ and each card says which log it means.
+/// Whether this player played this card this turn: the one-shot gate of §5.1's "End of turn: add this
+/// back to your hand" spells (#23, #24, #31, R68); a copy discarded or milled into the graveyard was
+/// never played. `player` is explicit, as a card's owner and controller can differ.
 pub fn was_played_this_turn<'a>(state: &GameState, player: PlayerId, card: impl Into<CardOrId<'a>>) -> bool {
     let id = match card.into() {
         CardOrId::Card(card) => card.id.as_str(),
@@ -264,11 +221,9 @@ pub fn was_played_this_turn<'a>(state: &GameState, player: PlayerId, card: impl 
         .any(|played| played == id)
 }
 
-/// R429, R766 (issues #557, #572): the price a Spell whose return keeps it (`StaticFlags.returnKeepsPrice`,
-/// #31 KY's Math Equation) has had from its own returns — its climb, and no other change to its price —
-/// as it carries it in a hand and into its play, and as §10.5 step 7 notes it again while it lies in its
-/// graveyard flagged for its end-of-turn return (R155). 0 for any other card, and for one that has not
-/// climbed (`resolve::RETURN_PRICE_KEY`).
+/// R429, R766 (#557, #572): the climb a Spell whose return keeps its price (`StaticFlags.returnKeepsPrice`,
+/// #31 KY's Math Equation) has had from its own returns alone, in hand, in play and in its graveyard
+/// awaiting its end-of-turn return (§10.5 step 7, R155); else 0 (`resolve::RETURN_PRICE_KEY`).
 pub fn return_price_of(card: &CardInstance) -> i32 {
     card.memory
         .get(crate::resolve::RETURN_PRICE_KEY)
@@ -276,11 +231,9 @@ pub fn return_price_of(card: &CardInstance) -> i32 {
         .map_or(0, |price| price as i32)
 }
 
-/// R427, R174: whether the card a play's `cardResolved` names has left the field since the play
-/// resolved — taken off it by something answering the play, an earlier trap of the same dispatch —
-/// rather than during its own resolution, before the event (its `permanent` was already false then).
-/// #41 Sheepish answers a Unit that left in its own resolution, and is not offered one a trap before
-/// it already took (the stays `traps::standing_event` judges, §10.3). Any other event: false.
+/// R427, R174: whether the card a play's `cardResolved` names has left the field since it resolved,
+/// taken by something answering the play (an earlier trap of the same dispatch), not in its own
+/// resolution, which #41 Sheepish answers (`traps::standing_event`, §10.3). Any other event: false.
 pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
     match event {
         GameEvent::CardResolved {
@@ -292,9 +245,8 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
     }
 }
 
-/// R2179002: whether a `cardPlayed` or a `cardResolved` reports a card cast on draw, a cast that is no
-/// play, which a card answering a play ("after you play", "when your opponent plays") passes by. Any
-/// other event: false.
+/// R2179002: whether a `cardPlayed` or `cardResolved` reports a cast on draw, which is no play, so a card
+/// answering a play passes it by. Any other event: false.
 pub fn cast_on_draw_event(event: &GameEvent) -> bool {
     matches!(
         event,
@@ -308,9 +260,8 @@ pub fn cast_on_draw_event(event: &GameEvent) -> bool {
     )
 }
 
-/// R174, R2199007: the field's departures so far, a mark a card keeps to ask later, through
-/// `left_field_since_mark`, whether a card has left the field since (Training Grounds #31 Level Up!'s
-/// per-Unit counts: a Unit that left and came back is a new arrival).
+/// R174, R2199007: the field's departures so far, a mark to ask `left_field_since_mark` with later
+/// (Training Grounds #31 Level Up!: a Unit that left and came back is a new arrival).
 pub fn field_exit_mark(state: &GameState) -> u32 {
     crate::stays::exit_mark(state)
 }
@@ -321,28 +272,21 @@ pub fn left_field_since_mark(state: &GameState, mark: u32, instance_id: &str) ->
     crate::stays::left_field_after(state, mark, instance_id)
 }
 
-/// What the card running a script remembers under `key` (§10.1: #22 Carnivorous Cube's meal), read
-/// the way `effects/memory::remember` wrote it. On a fused card each ingredient remembers apart (R102),
-/// so an ingredient reads its own and nothing else — two Cubes crafted into one card copy two meals —
-/// and a card a Fuse kept reads what it remembered before at the path its text now runs at, where the
-/// Fuse moved it (`work::reroot_remembered`, R77), while the texts fused onto it read nothing of it. The
-/// value is handed back as stored, JSON, for the card to read defensively.
+/// What the card running a script remembers under `key` (§10.1: #22 Carnivorous Cube's meal), as stored
+/// JSON: a fused card's ingredients remember apart (R102), and a card a Fuse kept reads it where the Fuse
+/// moved it (`work::reroot_remembered`, R77).
 pub fn recalled(ctx: &EffectContext<'_>, key: &str) -> Option<Value> {
-    // TS read the live `ctx.self`, so a memory an earlier effect of the list wrote is read here.
+    // The live `ctx.self`, so a memory an earlier effect of the list wrote is read here.
     let card = ctx.live_self()?;
     card.memory
         .get(&crate::work::part_memory_key(&ctx.data, key))
         .cloned()
 }
 
-/// R42, R361: the Unit that destroyed a card, asked by the card's own Death hook (#86 "Miss" Mrow's
-/// "take control of the Unit that destroyed this"). `card` is the dying card as the hook reads it —
-/// its last-known state (R78), which still carries R42's credit for the hit that doomed it. The
-/// answer is the card that dealt that hit only while it is a Unit acting on the field: the top of its
-/// pile, never a card dormant under a Stack (R13). So a card no hit doomed — destroyed by an effect,
-/// tributed, starved by an aura — names nobody (R42), and so does one a Spell's damage killed, or
-/// whose killer has since died or left the field (a mutual combat death, R78). The card is handed
-/// back for its id; a card file reads it and never writes it (CLAUDE.md rule 5).
+/// R42, R361: the Unit that destroyed a card, asked by its Death hook (#86 "Miss" Mrow), from the dying
+/// card's last-known state (R78), which keeps R42's credit for the hit that doomed it: that hit's dealer
+/// while it is a Unit atop its pile on the field (R13), else nobody (no hit doomed it, a Spell's damage
+/// did, or the killer has died or left). A card file reads it and never writes it (CLAUDE.md rule 5).
 pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Option<&'a CardInstance> {
     let id = card?.last_damaged_by.as_ref()?;
     let killer = find_instance(state, id)?;
@@ -360,23 +304,16 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
     Some(killer)
 }
 
-// ---- v0.2.0 board facts, by workstream: generation (B5 E19, R471) ----
-// Plague Counters are read here like every other board fact; the counter's rules are `plague.rs`'s.
-//   `plague_on(card)`             the tokens on one permanent (Classic #39, #43, #69, #87; C+ #3)
-//   `plague_on_field(state, p?)`  every token on the field, or one side's (Classic #59)
-//   `permanents_on_field(state)`  every permanent on the field in R68's order, face-down included
-//   `plague_multiplier_of(s, c)`  what a placement onto that card is multiplied by (Classic #27)
+// Board facts by workstream: generation (B5 E19, R471)
+// Plague Counters, read here, ruled by `plague.rs` (Classic #27, #39, #43, #59, #69, #87; C+ #3);
+// `permanents_on_field` is every permanent on the field in R68's order, face-down included.
 pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
 
-// ---------------------------------------------------------------------------
-// v0.2.0 readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
-// ---------------------------------------------------------------------------
+// Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 
-/// B5 E4: how many cards this player has played this turn of the given types — the type each was
-/// played as (B2.7) — casts included (R70), countered plays never (R448). Counted on both players'
-/// turns and cleared with the rest of "this turn" at every start of turn (Classic+ #37 Wardrum's
-/// Spells, Field Spells and Traps, a Field Trap being a Trap, §5.1). (TS took one type or several:
-/// one is `&[t]`.)
+/// B5 E4: how many cards this player has played this turn of these types, each as the type it was
+/// played as (B2.7), casts included (R70), countered plays never (R448), on both players' turns and
+/// cleared every start of turn (Classic+ #37 Wardrum; a Field Trap is a Trap, §5.1).
 pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[CardType]) -> i32 {
     let counts = state.players[player].turn_log.played_by_type.as_ref();
     let wanted: IndexSet<CardType> = types.iter().copied().collect();
@@ -391,9 +328,8 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
         .sum()
 }
 
-/// MD-B15, R923, R1176000: every tag a card instance carries — its definition's tags, then each
-/// granted tag (`CardInstance.granted_tags`, Meditative #35) it lacks, in order, then CN when the card
-/// is in Chinese (`CardInstance.chinese`, R1300) and lacks it. Every instance-level tag read goes
+/// MD-B15, R923, R1176000: every tag a card instance carries: its definition's, then each granted tag
+/// (Meditative #35) it lacks, then CN when it is in Chinese (R1300). Every instance-level tag read goes
 /// through this; catalog pools read definitions and never see a granted tag or a translation.
 pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
     let mut tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
@@ -404,24 +340,21 @@ pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
             }
         }
     }
-    // R1176000: every card in Chinese is CN, for as long as it is in Chinese (which is for good).
     if card.chinese == Some(true) && !tags.contains(&CHINESE_TAG) {
         tags.push(CHINESE_TAG);
     }
     tags
 }
 
-/// §6.1, R1438: the Lucky X a card instance has — the Lucky its running face prints, as a Degrade or
-/// an Upgrade has moved it (B3.4), plus every Lucky it was given (a granted keyword, B5 E38) — or 0.
-/// Every luck-based roll a card makes reads its Lucky here, so given Lucky counts wherever printed
-/// Lucky does. The auras of the field are the unit's (`unit_view`), not the card's.
+/// §6.1, R1438: a card's Lucky X: what its running face prints, as a Degrade or Upgrade moved it (B3.4),
+/// plus every Lucky it was given (B5 E38), or 0. Every luck roll reads it here, so given Lucky counts
+/// wherever printed Lucky does; the field's auras are the unit's (`unit_view`), not the card's.
 pub fn lucky_on(state: &GameState, card: &CardInstance) -> i32 {
     crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Lucky).unwrap_or(0)
 }
 
-/// §6.1, R1438: only the Lucky a card instance was given (granted keywords, B5 E38), never its
-/// printed Lucky. A shipped card whose roll always counted a fixed printed Lucky (#23 Reoccurring
-/// Dream, #42 Eugenics) adds this to that fixed number, so tuning still never reaches its roll (D14).
+/// §6.1, R1438: only the Lucky a card instance was given (B5 E38), never its printed Lucky; #23
+/// Reoccurring Dream and #42 Eugenics add it to their fixed roll, so tuning never reaches it (D14).
 pub fn given_lucky_on(card: &CardInstance) -> i32 {
     crate::tuning::numbered_sum(&card.granted_keywords, KeywordKind::Lucky).unwrap_or(0)
 }
@@ -431,8 +364,7 @@ pub fn is_created(card: &CardInstance) -> bool {
     card.created == Some(true)
 }
 
-/// MD-B6, R943: the ids of the Created cards in the player's library, in order (index 0 is the
-/// top, the next card drawn).
+/// MD-B6, R943: the ids of the Created cards in the player's library, top (next drawn) first.
 pub fn created_in_library(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
         .library
@@ -453,8 +385,8 @@ pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) 
         .unwrap_or(0)
 }
 
-/// B5 E4, R451: the last Spell either player played (Classic #57 Echo) — as its play recorded it, so a
-/// played Echo is the Spell it copied — or `None` before any. A copy, so a script cannot write it.
+/// B5 E4, R451: the last Spell either player played (Classic #57 Echo) as its play recorded it (a
+/// played Echo is the Spell it copied), or `None`. A copy.
 pub fn last_spell_played(state: &GameState) -> Option<PlayRecord> {
     state.last_spell.clone()
 }
@@ -502,18 +434,17 @@ pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<
     Some((cap - crate::damage::own_turn_redirect_moved(state, card)).max(0))
 }
 
-// ---------------------------------------------------------------------------
-// v0.2.0 readers: the Classic #1–#45 cards (card-specific, the cards-classic-a workstream)
-// ---------------------------------------------------------------------------
+// Readers for the Classic #1–#45 cards (card-specific)
 
 /// §2.3's max mana, which the refresh fills current mana to: Classic #36 Burn's Radiant face, "if your
-/// max mana is 4 or more" (SPEC §8.6 row 36). Mana is public (§10.8), so a `conditionMet` may read it.
+/// max mana is 4 or more" (SPEC §8.6 row 36). Public (§10.8).
 pub fn max_mana_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].mana.max
 }
 
-/// R1064: every point of Armor on the field: each acting Unit's on both sides through the §10.4 layers (printed,
-/// Defense Position's +1, auras) and both heroes' as §4.4 step 2 reads it (`hero_armor_of`, R124). Public (§10.8).
+/// R1064: every point of Armor on the field: each acting Unit's on both sides through the §10.4 layers
+/// (printed, Defense Position's +1, auras) and both heroes' as §4.4 step 2 reads it (`hero_armor_of`,
+/// R124). Public (§10.8).
 pub fn armor_on_field(state: &GameState) -> i32 {
     crate::wire::PLAYER_IDS
         .iter()
@@ -527,9 +458,7 @@ pub fn armor_on_field(state: &GameState) -> i32 {
         .sum()
 }
 
-// ---------------------------------------------------------------------------
 // The yellow glow's facts for the cards R195 left out (R662)
-// ---------------------------------------------------------------------------
 
 /// Every permanent that acts for this player: the tops of their unit piles, the Units their carriers
 /// hold (R446, R1824000) and their backrow (§3.2), in `zones::acting_on`'s order.
@@ -540,13 +469,10 @@ fn permanents_held_by(state: &GameState, player: PlayerId) -> Vec<CardInstance> 
         .collect()
 }
 
-/// R662: whether a card this player plays now from their hand would take a Combo branch a permanent
-/// or a modifier grants it — #38 Quickstriker's "Combo X: deal X damage" (its flag on a permanent of
-/// theirs, or a `quickstrikerDamage` rider), #78 /fullsend's Radiant "Combo: draw 1" (a `comboDraw`
-/// rider). §10.5 step 5 resolves both only when the play has a card played earlier this turn before it
-/// (`play_steps::quickstriker_combo`, `combo_draw_step`), and a card still in a hand has every play this
-/// turn before it (`played_earlier`), so this is "one of them is in place, and a card has been played".
-/// Plays and modifiers are public (§10.8).
+/// R662: whether a card played now from this player's hand would take a granted Combo branch, #38
+/// Quickstriker's (a permanent's flag or a `quickstrikerDamage` rider) or #78 /fullsend's Radiant draw
+/// (a `comboDraw` rider). §10.5 step 5 resolves both after any earlier play this turn, and a card in
+/// hand has every play before it, so: one is in place and a card has been played.
 pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
     if cards_played_this_turn(state, player) < 1 {
         return false;
@@ -576,8 +502,7 @@ pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
 }
 
 /// R662, R213: whether #64 Gifted Program would make this card from this player's hand Radiant if
-/// they played it now — the question §10.5 step 3 asks (`gifted_makes_radiant`), with the cost a play
-/// of it pays now (R56). A card that is Radiant already gains nothing, so it is never one.
+/// played now (§10.5 step 3's `gifted_makes_radiant`, at the cost it pays now, R56).
 pub fn gifted_would_make_radiant(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     if card.radiant {
         return false;
@@ -585,10 +510,9 @@ pub fn gifted_would_make_radiant(state: &GameState, player: PlayerId, card: &Car
     crate::play_choices::gifted_makes_radiant(state, player, crate::mana::play_cost(state, card))
 }
 
-/// R662, R44: the units acting on the other side whose attack on this player's hero would be lethal
-/// now, by #96 My Pawn's own projection (`subsystems::is_lethal`: after Armor and the Anti-oneshot cap,
-/// net of a Lifesteal strike back). It asks whether the blow is on the board, not whether it can be
-/// declared this moment. Stats, keywords and health are public (§10.8).
+/// R662, R44: the units acting on the other side whose attack on this player's hero would be lethal now
+/// by #96 My Pawn's projection (`subsystems::is_lethal`: after Armor and the Anti-oneshot cap, net of a
+/// Lifesteal strike back): whether the blow is on the board, not whether it can be declared now.
 pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let target = DamageTarget::Hero { player };
     active_units_of(state, opponent_of(player))
@@ -598,10 +522,9 @@ pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInsta
         .collect()
 }
 
-/// R987, Meditative #40 Feng Shui: the player's Luck — the sum of the "You have Luck X" auras
-/// acting on their side (§3.2), each read through the card's declared number `luck` where it
-/// declares one (R386's shape, as `damage::hero_armor_of` reads `armor`). 0 with no Feng Shui, so
-/// every roll draws as before (D14).
+/// R987, Meditative #40 Feng Shui: the player's Luck, the sum of the "You have Luck X" auras acting on
+/// their side (§3.2), each at the card's declared `luck` where it declares one (R386, as
+/// `damage::hero_armor_of` reads `armor`). 0 with no Feng Shui, so every roll draws as before (D14).
 pub fn luck_of(state: &GameState, player: PlayerId) -> i32 {
     let mut sum = 0;
     for card in crate::damage::acting_texts_of(state, player) {
@@ -615,11 +538,9 @@ pub fn luck_of(state: &GameState, player: PlayerId) -> i32 {
     sum
 }
 
-/// R1180003 (Meditative+ #7 Life Mage's Radiant face): how many times as large a heal of this
-/// player's hero or Units is — `HEAL_MULTIPLIER` for each "healing is twice as effective" text acting
-/// on their side (§3.2: the units on top of their piles and the face-up backrow), multiplied, so two
-/// Radiant Life Mages make it 4. 1 with none, so every heal is what it was (D9). The opponent's texts
-/// never reach this player's heals.
+/// R1180003 (Meditative+ #7 Life Mage's Radiant face): the factor of a heal of this player's hero or
+/// Units: `HEAL_MULTIPLIER` per "healing is twice as effective" text acting on their side (§3.2),
+/// multiplied, so two make it 4; 1 with none (D9). The opponent's texts never reach these heals.
 pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
     let mut multiple: i32 = 1;
     for card in crate::damage::acting_texts_of(state, player) {
@@ -632,9 +553,8 @@ pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
     multiple
 }
 
-/// R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
-/// permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
-/// (R23). The types are the trap's to match when a permanent is played.
+/// R662: the permanents #85 Unlicensed Experimentation could fuse a played permanent onto: every one
+/// acting for this player but `except` (the trap) that is not Immutable (R23); the trap matches types.
 pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option<&str>) -> Vec<CardInstance> {
     permanents_held_by(state, player)
         .into_iter()
@@ -642,10 +562,9 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
         .collect()
 }
 
-/// Whether any card acting for this player carries the picked static flag — the active units and
-/// the face-up backrow tops, `damage.rs`'s `acting_texts_of` (a face-down Trap's text is in nobody's
-/// use until it fires, R33, or is revealed, R1487000). What the Pareto judge and the emote gate ask
-/// (MD-D28, MD-D29, R1125, R1127).
+/// Whether any card acting for this player (`damage::acting_texts_of`: active units, face-up backrow
+/// tops; a face-down Trap's text sleeps until it fires, R33, or is revealed, R1487000) carries the picked
+/// static flag, as the Pareto judge and the emote gate ask (MD-D28, MD-D29, R1125, R1127).
 pub fn acting_with_flag(state: &GameState, player: PlayerId, pick: fn(&StaticFlags) -> Option<bool>) -> bool {
     crate::damage::acting_texts_of(state, player)
         .iter()
@@ -657,9 +576,8 @@ pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
     acting_with_flag(state, opponent_of(player), |flags| flags.hears_emotes)
 }
 
-/// MD-D19, R1122: the acting Units adjacent to the attacker on its own side that it may attack, in
-/// lane order — the neighbours a redirect may re-aim the attack at. Taunt is ignored: the target
-/// must pass §4.2 step 2's restrictions, never step 3's wall.
+/// MD-D19, R1122: the acting Units beside the attacker on its own side that a redirect may re-aim it at,
+/// in lane order: §4.2 step 2's restrictions apply, never step 3's Taunt wall.
 pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
     let Some(at) = slot_of(state, attacker) else {
         return Vec::new();
@@ -684,12 +602,9 @@ pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<Ca
         .collect()
 }
 
-/// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest cost
-/// among the permanents acting for this player, the tops of their unit piles, the Units their carriers
-/// hold and their backrow (R13, R1824000), each read at R396's `cost_now`: an X card at the X it was
-/// played for, 0 without one, any other at its cost as it stands. A face-down card is never an X card,
-/// so it counts at `effective_cost`, the cost R351's view shows both players. `None` when the side
-/// holds no permanent.
+/// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest R396
+/// `cost_now` among the permanents acting for this player (R13, R1824000): an X card's X (0 without
+/// one), a face-down card's `effective_cost` (R351's view), any other's cost as it stands; else `None`.
 pub fn highest_permanent_cost(state: &GameState, player: PlayerId) -> Option<i32> {
     permanents_held_by(state, player)
         .iter()
@@ -720,15 +635,14 @@ pub fn is_untributable_in(auras: &AuraTable<'_>, card: &CardInstance) -> bool {
     auras.unit_has(card, KeywordKind::Untributable)
 }
 
-/// R1225: whether this player borrowed mana this turn — at least one spend went past their current
-/// mana. Jlarna's base face reads it at the end of its controller's turn.
+/// R1225: whether this player borrowed mana this turn (a spend went past their current mana), as
+/// Jlarna's base face asks at its controller's end of turn.
 pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
     state.players[player].turn_log.mana_borrowed.unwrap_or(0) > 0
 }
 
-/// R831008 (Meditative #98 Showdown's "an empty lane"): whether every zone of this lane is empty —
-/// both players' unit zones and backrow zones. A face-down backrow card occupies its zone, as any
-/// card does: its owner's opponent sees that the zone is taken, never what is in it.
+/// R831008 (Meditative #98 Showdown's "an empty lane"): whether both players' unit and backrow zones of
+/// this lane are empty. A face-down card occupies its zone: the opponent sees it taken, never by what.
 pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
     [PlayerId::P1, PlayerId::P2].into_iter().all(|player| {
         [Row::Units, Row::Backrow]
@@ -737,10 +651,9 @@ pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
     })
 }
 
-/// R1850004 (Stinkyscape #139 Wormhole, "when your opponent casts a beneficial Spell on themselves or a
-/// permanent they control"): the id of the Spell `event` announces when every target its player chose
-/// is their own hero or a card they control on the field — one it chose none for is not beneficial,
-/// and a card being set face-down announces no Spell. `None` for any other event.
+/// R1850004 (Stinkyscape #139 Wormhole, "a beneficial Spell on themselves or a permanent they control"):
+/// the id of the Spell `event` announces when its player chose targets, all their own hero or cards they
+/// control on the field (a face-down set announces no Spell). `None` for any other event.
 pub fn beneficial_on_own_side(state: &GameState, event: &GameEvent) -> Option<String> {
     let GameEvent::CardAnnounced {
         player,

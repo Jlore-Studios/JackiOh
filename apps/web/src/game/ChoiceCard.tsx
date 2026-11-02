@@ -1,13 +1,9 @@
 // #2646: a choice card, the face a short choice's option wears in the card picker (Prompt.tsx
-// `ChoiceOption`), the way Hearthstone draws a Choose One. It is prompt chrome, not a card: it has no
-// cost gem, stats, rarity, set mark, foil or Radiant shimmer, and no card id, and it never reaches a
-// zone, the log, the collection, an inspect overlay or a long-press sheet. Nothing in the engine
-// treats it as a card either: the option it draws is the engine's, answered by its key.
-//
-// Its picture is `CardArt`'s procedural art seeded by the option (`choiceSeed`), so each option has
-// its own, and the same option always the same; its name is the option's label, which also picks the
-// art's motif; its text is the option's detail, drawn with `RulesText` so keywords keep their tips.
-// R831004: an option that names a set wears the set's mark as its picture.
+// `ChoiceOption`), the way Hearthstone draws a Choose One. Prompt chrome, not a card: no cost gem,
+// stats, rarity, foil or card id, and it never reaches a zone, the log or the collection; the option
+// it draws is the engine's, answered by its key. Its picture is `CardArt` seeded by `choiceSeed`, its
+// name the option's label, its text the option's detail. R831004: an option that names a set wears
+// the set's mark as its picture.
 
 import type { ReactElement } from "react";
 
@@ -16,8 +12,7 @@ import { setMarkOf } from "../cards/setMark.ts";
 
 /**
  * The art seed of option `key`: the asking card's id and the option, or the prompt kind's when no card
- * asks. An engine prompt's `mode:` prefix is dropped, so a card's option draws the same picture
- * whether a play or an engine prompt offers it.
+ * asks. The `mode:` prefix is dropped, so a play's and an engine prompt's option draw the same picture.
  */
 export function choiceSeed(source: string | undefined, kind: string, key: string): string {
   return `${source ?? kind}:${key.replace(/^mode:/, "")}`;

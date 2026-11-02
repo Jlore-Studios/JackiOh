@@ -13,12 +13,9 @@ export function rectOf(element: Element): Rect {
 type PreviewSide = "right" | "left" | "above" | "below";
 
 /**
- * Which side the preview tries first. "beside" is B27's order (left, right, above, below; #912 put
- * the left first, where #814 asked for a card's full text), for a card with neighbours all round,
- * such as a minion on the board or a tile in the deck list.
- * "above" tries above first, then the same order: a card in a row (the hand, the resolving strip)
- * has its neighbours left and right, and a preview beside it would cover the next card the pointer
- * is on its way to, so it rises over the card instead, as Hearthstone lifts a hand card.
+ * "beside" is B27's order (#912 put the left first, where #814 asked for a card's full text), for a
+ * card with neighbours all round. "above" goes first for a card in a row (the hand, the resolving
+ * strip), as Hearthstone lifts a hand card: beside it, it would cover the card the pointer heads for.
  */
 export type PreviewPrefer = "beside" | "above";
 
@@ -33,12 +30,7 @@ function clamp(start: number, size: number, extent: number): number {
   return Math.max(PREVIEW_MARGIN_PX, Math.min(start, max));
 }
 
-/**
- * The first side of the anchor the preview fits on, in the order `prefer` names (B27's left,
- * right, above, below by default), and the preview's top-left corner there. Beside the anchor the
- * preview is centered on it vertically, above or below it is centered horizontally, and the cross
- * axis is clamped into the viewport. When no side fits, it goes below, clamped.
- */
+/** The first side in `prefer`'s order the preview fits on, and its top-left corner there; if none, below. */
 export function placePreview(
   anchor: Rect,
   viewport: { width: number; height: number },

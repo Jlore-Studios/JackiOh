@@ -1,27 +1,10 @@
 //! The token bars and their tokens (SPEC §14.5; #1305): what a full bar pays, what a token
 //! buys and what both read back.
 //!
-//! - [`settle_bar`]: the pure split of a bar's points into payouts and overflow (R1305000).
-//! - [`card_bar_points`] and [`cosmetic_bar_points`]: the points each opened slot adds to each
-//!   bar, whatever it grants, by the card or cosmetic rarity it rolled (R1953000, R1999000).
-//! - [`redeem_card_token`]: a card token unlocks one chosen new card of a set that ships, in one
-//!   transaction (R1305002).
-//! - [`redeem_cosmetic_token`]: a Rare or Epic cosmetic token buys one cosmetic at its tier or
-//!   below, in one transaction (R1305003).
-//! - [`redeem_card_token_once`] and [`redeem_cosmetic_token_once`]: either under an optional
-//!   `Idempotency-Key`, answering the tokens after it, read in its transaction, under which a
-//!   retry answers as its first try did and spends nothing again (R2124000).
-//! - [`read_tokens`]: both bars' points and sizes, the cosmetic cycle's next step and the tokens
-//!   held (R1305004).
-//! - The routes, all `AuthLevel::Active`: `GET /api/tokens`, `POST /api/tokens/redeem-card`
-//!   (`{ cardId }`) and `POST /api/tokens/redeem-cosmetic` (`{ token, cosmeticId, cardId? }`), each
-//!   redemption in the account's spend turn (`economy::spend_slots`, R2378000).
-//!
 //! A pack opening pays its bars through [`settle_bar`] in its own transaction
 //! (`economy::packs::open_pack`, R1305000, R1305001); the cycle's stored position is the
 //! `CosmeticTokenCycle` counter. Every redemption runs under the account's lock (R1301003), so a
-//! token spent and a bar paying cannot interleave, and commits whole or not at all (§14.11): a
-//! refusal returns before the commit and spends nothing.
+//! token spent and a bar paying cannot interleave, and commits whole or not at all (§14.11).
 
 use std::sync::Arc;
 
@@ -101,7 +84,6 @@ fn token_key(token: CosmeticRarity) -> String {
     token.as_str().to_string()
 }
 
-/// How many of `item` under `key` the inventory rows hold.
 pub(crate) fn held(inventory: &[InventoryEntry], item: InventoryItem, key: &str) -> i64 {
     inventory
         .iter()
@@ -110,11 +92,7 @@ pub(crate) fn held(inventory: &[InventoryEntry], item: InventoryItem, key: &str)
 }
 
 /// §14.5: a card token unlocks any new card of a set that ships that the account chooses, in one
-/// transaction: the collection's two writes (reason [`CARD_TOKEN_GRANT_REASON`], R1305002), then
-/// one `CardToken` spent (reason `token_redeem`), all with the same `at`; one commit. Refuses
-/// with 409, writing nothing, when the catalog names no such card, it is a token, its set does
-/// not ship, the account already owns it, or no card token is held. With no key,
-/// [`redeem_card_token_once`]'s redemption.
+/// transaction, every row with the same `at`. With no key, [`redeem_card_token_once`]'s redemption.
 pub async fn redeem_card_token(app: &App, profile_id: &str, card_id: &str) -> Result<(), ApiError> {
     redeem_card_token_once(app, profile_id, card_id, None)
         .await?
@@ -206,7 +184,6 @@ pub(crate) struct Choice {
     pub owned: bool,
 }
 
-/// [`Choice`] of `cosmetic` on `card_id`, over the copies `owned` and the account's `cosmetics`.
 pub(crate) fn choice_of(
     cosmetic: &Cosmetic,
     card_id: Option<&str>,
@@ -237,16 +214,10 @@ pub(crate) fn choice_of(
     }
 }
 
-/// §14.5: a cosmetic token buys any cosmetic at its tier or below (§14.2's scale, Common to
-/// Mythic; a token is a [`CosmeticRarity`] too, so the two compare on that scale alone): a per-card cosmetic for a card the account owns, or
-/// an account cosmetic, never a chase, in one transaction: the cosmetics grant, then one
-/// `CosmeticToken` of `token`'s rarity spent (reason `token_redeem`), all with the same `at`; one
-/// commit. A token outside Rare and Epic is 400, as is an unknown cosmetic id. Refuses with 409,
-/// writing nothing, when no such token is held, the cosmetic is a chase, it sits above the
-/// token's tier (so Legendary and Mythic are unreachable: no token exceeds Epic), a per-card
-/// cosmetic names no owned card (a full art names its own card alone, R1313000), an account
-/// cosmetic is given one, or it is already owned (a ledger row, or a default or starter, which
-/// §14.2 gives every account). With no key, [`redeem_cosmetic_token_once`]'s redemption.
+/// §14.5: a cosmetic token buys any cosmetic at its tier or below on §14.2's scale (no token exceeds Epic,
+/// so never a chase): a per-card cosmetic for a card the account owns, or an account cosmetic ([`Choice`]),
+/// in one transaction, every row with the same `at`. A token outside Rare and Epic is 400, as is an unknown
+/// cosmetic id. With no key, [`redeem_cosmetic_token_once`]'s redemption.
 pub async fn redeem_cosmetic_token(
     app: &App,
     profile_id: &str,
@@ -261,10 +232,9 @@ pub async fn redeem_cosmetic_token(
     Ok(())
 }
 
-/// [`redeem_cosmetic_token`] under an `Idempotency-Key` (R2124000), answering the tokens after it,
-/// read in its transaction: right after the account's lock, before anything held is read, a key
-/// already committed answers what it kept, and a redemption's answer is kept in its own
-/// transaction.
+/// [`redeem_cosmetic_token`] under an `Idempotency-Key` (R2124000), as [`redeem_card_token_once`] runs a
+/// card token's: the key is read in its transaction right after the account's lock, before anything held
+/// is read, and a redemption's answer is kept in its own transaction.
 pub async fn redeem_cosmetic_token_once(
     app: &App,
     profile_id: &str,
@@ -344,7 +314,6 @@ pub async fn redeem_cosmetic_token_once(
     Ok(Spent::Now(bars))
 }
 
-/// One token bar's points and size.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarState {
@@ -425,7 +394,7 @@ pub async fn get_tokens(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `POST /api/tokens/redeem-card` (`AuthLevel::Active`): `{ cardId }`, with an optional
 /// `Idempotency-Key` (R2124000); [`redeem_card_token_once`], in the account's spend turn
-/// (R2378000), answering the tokens after it.
+/// (R2378000).
 pub async fn post_redeem_card(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let card_id = str(&req.body, "cardId")?;
@@ -438,8 +407,7 @@ pub async fn post_redeem_card(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `POST /api/tokens/redeem-cosmetic` (`AuthLevel::Active`): `{ token, cosmeticId, cardId? }`
 /// over the shipped registry, with an optional `Idempotency-Key` (R2124000);
-/// [`redeem_cosmetic_token_once`], in the account's spend turn (R2378000), answering the tokens
-/// after it.
+/// [`redeem_cosmetic_token_once`], in the account's spend turn (R2378000).
 pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let token = str(&req.body, "token")?;
@@ -483,8 +451,6 @@ mod tests {
 
     #[test]
     fn r1305000_settle_bar_keeps_counting_past_its_size() {
-        // A bar that kept counting before bars paid (R1301002) settles whole: every size it
-        // holds pays, and the remainder keeps counting.
         assert_eq!(
             settle_bar(CARD_TOKEN_BAR_SIZE + 2, 1, CARD_TOKEN_BAR_SIZE),
             (1, 3)
@@ -498,7 +464,6 @@ mod tests {
 
     #[test]
     fn r1953000_points_follow_the_rarity_and_a_bar_at_195_gaining_10_pays_once_keeping_5() {
-        // Common, Rare, Epic, Legendary, Mythic: 1, 2, 3, 5 and 10, a card's and a cosmetic's alike.
         let cards = [
             PrintedRarity::Common,
             PrintedRarity::Rare,
@@ -511,7 +476,6 @@ mod tests {
         assert_eq!(cards, [1, 2, 3, 5, 10]);
         assert_eq!(cosmetics, [1, 2, 3, 5, 10]);
         assert_eq!(cards.iter().sum::<i64>(), 21);
-        // A Mythic's 10 on a bar of 200 at 195 pays once and keeps the 5 over.
         assert_eq!(CARD_TOKEN_BAR_SIZE, 200);
         assert_eq!(COSMETIC_TOKEN_BAR_SIZE, 200);
         assert_eq!(settle_bar(195, 10, CARD_TOKEN_BAR_SIZE), (1, 5));

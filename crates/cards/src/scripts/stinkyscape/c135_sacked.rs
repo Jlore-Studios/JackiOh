@@ -3,15 +3,8 @@
 //!   Base:    "Reveals when your opponent plays a Unit: After it resolves, stuff it into a Sack they
 //!            control."
 //!   Radiant: the same, "a Sack you control".
-//! Engine: set face-down, it answers §10.5 step 7's `cardResolved` of a Unit its controller's opponent
-//! played, after its Cry and every Echo repeat, as Core #41 Sheepish does (R427, R1875004); every
-//! condition lives in `when`, so a Spell, a backrow card or its own side's Unit leaves it set (R61), and
-//! a Unit an earlier answer already took off the field is no play left to answer (R174). `hold_beneath`
-//! with a new holder (R1850003): an S #135.1 Sack is summoned first, R64's zone, for the Unit's controller
-//! (Radiant: for the Trap's, R1875004), then the Unit leaves the field beneath it as an exiled card does,
-//! no Death (R78); `summoned` comes before `held`. When the Sack leaves the field the Unit is summoned for
-//! the Sack's controller (S #135.1). A Sack that finds no zone holds nothing, so the Unit comes back at
-//! the next check; a unit token ceases to exist as it is taken (R11). Declares no numbers.
+//! Answers §10.5 cardResolved of opponent's played Unit (R427, R1875004, Core #41; R61, R174).
+//! Summons Sack (S #135.1, R1850003, R64); holds unit beneath via hold_beneath (R78, R11).
 
 use jackioh_engine::effects::hold_beneath;
 use jackioh_engine::prelude::*;
@@ -75,10 +68,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #135 Sacked — SPEC §8.10 row 135, BUILD M12 row S 135: "set, it reveals on an enemy Unit's play;
-// after the Unit's Cry the Unit is gone beneath a 0/4 Sack on its controller's side, no Death fired; the
-// Sack's death summons it again for that player, summoning sick and with no Cry; radiant the Sack stands
-// on its caster's side and its death summons the Unit for its caster".
+// S #135 Sacked — SPEC §8.10 row 135, BUILD M12 row S 135.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -92,8 +82,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
     const ZAP: &str = "core-036"; // (1) Spell Magic Jammed: no Unit, it leaves the trap set.
 
-    /// p1, active with 10 mana, holds `hand`; p2 has Sacked (`radiant` its face) set in backrow zone 1
-    /// and a Hit Job. No turn ends by itself.
     fn trapped(radiant: bool, hand: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": "sacked",
@@ -131,7 +119,6 @@ mod tests {
             let mut s = trapped(false, json!([SORCERER, FILLER]));
             let sorcerer = s.card(SORCERER).id.clone();
             s.play(SORCERER, json!({ "zone": 2, "targets": [{ "pick": "hero", "player": "p2" }] }));
-            // The Cry came first.
             s.expect_health(P2, HERO_HEALTH - 4);
             assert_eq!(held_ids(&s), vec![sorcerer]);
             let sack = sack_of(&s, P1).expect("p1's Sack");
@@ -163,7 +150,6 @@ mod tests {
             let back = s.card(sorcerer.as_str()).clone();
             assert!(matches!(back.zone, Zone::Field { player: P1, row: Row::Units, .. }), "{:?}", back.zone);
             assert_eq!(back.summoned_turn, Some(s.state().turn), "summoning sick");
-            // No Cry: p2 took only the first 4.
             s.expect_health(P2, HERO_HEALTH - 4);
         }
 
@@ -171,7 +157,6 @@ mod tests {
         fn r61_a_spell_or_its_own_sides_unit_leaves_it_set() {
             let mut s = trapped(false, json!([ZAP, FILLER]));
             s.play(ZAP, json!({ "targets": pick::id(&s.backrow(P2, 1).expect("set").id) }));
-            // Magic Jammed destroyed it: a Spell is no Unit to answer, so it did not fire first.
             assert!(!s.last_events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
             let mut own = crate::scenario(json!({
                 "p1": {

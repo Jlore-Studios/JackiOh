@@ -1,8 +1,5 @@
-// R438: keyword visuals on the board (issue #40). Every keyword kind that acts on the field (R2577000) has a treatment on the board
-// minion, each drawn by shape and found by `data-keyword-fx`; several compose inside their layers'
-// caps with at most AMBIENT_MAX loops; reduced motion (the media query and the settings panel's
-// attribute) stops every loop and leaves the still mark; a Vanilla unit shows only what its view
-// lists. The pixel half (sizes, overlaps, the picture) is e2e/cypress/component/keyword-visuals.cy.tsx.
+// R438: keyword visuals on the board (issue #40), for every keyword kind that acts on the field
+// (R2577000). The pixel half (sizes, overlaps, the picture) is e2e/cypress/component/keyword-visuals.cy.tsx.
 //
 // Vitest stubs CSS imports, so keywords.css is read as text and parsed the way fx/css.test.ts reads
 // fx.css: into rules (selectors, declarations, the @media they sit in) and keyframes bodies.
@@ -35,9 +32,7 @@ afterEach(() => {
   cleanup();
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Rendering
- * ------------------------------------------------------------------------------------------- */
+/* Rendering */
 
 const DEF_ID = "core-004";
 
@@ -165,9 +160,7 @@ function animatedProperties(body: string): string[] {
   return out;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The map
- * ------------------------------------------------------------------------------------------- */
+/* The map */
 
 describe("R438 the keyword visuals map", () => {
   it("R438 every KeywordKind has a visual: a total map with a layer, a shape and a unique priority", () => {
@@ -210,9 +203,7 @@ describe("R438 the keyword visuals map", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * One keyword at a time
- * ------------------------------------------------------------------------------------------- */
+/* One keyword at a time */
 
 describe("R438 a unit with each keyword renders its treatment", () => {
   for (const kind of FIELD_KINDS) {
@@ -304,9 +295,7 @@ describe("R438 a unit with each keyword renders its treatment", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Composition
- * ------------------------------------------------------------------------------------------- */
+/* Composition */
 
 describe("R438 several keywords compose", () => {
   it("R438 a unit with every keyword draws each layer within its cap, in priority order, with at most AMBIENT_MAX loops", () => {
@@ -413,9 +402,7 @@ describe("R438 several keywords compose", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Vanilla
- * ------------------------------------------------------------------------------------------- */
+/* Vanilla */
 
 describe("R438 a Vanilla unit shows only what its view lists", () => {
   it("R438 a Vanilla unit with no keywords draws no treatment, not even from animated", () => {
@@ -430,9 +417,7 @@ describe("R438 a Vanilla unit shows only what its view lists", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Motion and reduced motion (keywords.css)
- * ------------------------------------------------------------------------------------------- */
+/* Motion and reduced motion (keywords.css) */
 
 describe("R438 motion is cheap, capped and stops under reduced motion", () => {
   /** Every rule that starts a loop: any animation declaration but the reduced-motion blocks' `none`. */

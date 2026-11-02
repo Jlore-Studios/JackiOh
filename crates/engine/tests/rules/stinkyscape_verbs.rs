@@ -133,7 +133,6 @@ mod r1849000_immune_to_spell_damage {
         // A Field Spell is no Spell: its hit takes the Divine Shield.
         s.play(EMBER, json!({}));
         assert!(types_of(s.last_events()).contains(&GameEventType::DivineShieldLost));
-        // A Unit's strike lands.
         let grunt = id_at(&s, P1, 1);
         s.attack(grunt.as_str(), immune.as_str());
         s.expect_stats(immune.as_str(), json!({ "health": 1 }));
@@ -628,7 +627,6 @@ mod r1849006_units_cannot_be_in_defense {
             })
             .collect();
         assert_eq!(switched, vec![mine.clone(), theirs.clone()]);
-        // No exertion was spent: the unit may still attack this turn.
         assert!(!s.card(mine.as_str()).exertion.switched);
         s.attack(mine.as_str(), theirs.as_str());
     }
@@ -898,7 +896,6 @@ mod r1875006_would_die_in_combat {
         // The 3/3 took 3 and was given +10 Health before anything moved: the re-check spares it.
         s.expect_in_zone(grunt.as_str(), "field");
         s.expect_stats(grunt.as_str(), json!({ "health": REPRIEVE_HEALTH }));
-        // Its attacker had no reprieve and dies in the check that starts over.
         s.expect_in_zone(attacker.as_str(), "graveyard");
     }
 

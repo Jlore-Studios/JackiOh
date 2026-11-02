@@ -1,13 +1,7 @@
 // Test helper for the audio suite (docs/polish/2-sound.md, "Tests"). It is not a test file.
-//
 // `FakeAudio` implements only the permitted Web Audio subset (see CONTEXT_KEYS, PARAM_KEYS and
-// `createNode`), plus the engine's compressor, decoding, lifecycle, panner and convolver (R669).
-//
-// Every object is a Proxy: unsupported or invalid Web Audio calls throw and record a violation.
-//
-// Its unseen controller records calls, controls context and decode behavior, and advances ended
-// sources. It also provides fake speech, fetch and clock services, and a fake engine for the tests
-// that swap the singleton.
+// `createNode`), plus the engine's compressor, decoding, lifecycle, panner and convolver (R669). Every
+// object is a Proxy: unsupported or invalid Web Audio calls throw and record a violation.
 
 import { vi, type Mock } from "vitest";
 
@@ -131,7 +125,6 @@ export class FakeParam {
     return this.defaultValue;
   }
 
-  /** Every `setTargetAtTime` call, oldest first. */
   targets(): TargetEvent[] {
     return this.events.filter((e): e is TargetEvent => e.method === "setTargetAtTime");
   }
@@ -276,7 +269,6 @@ export class FakeAudio {
   /** The strict AudioContext handed to the code under test. */
   readonly context: AudioContext;
   readonly destination: FakeNode;
-  /** Every node, in creation order (the destination first). */
   readonly nodes: FakeNode[] = [];
   readonly buffers: FakeBuffer[] = [];
   /** Every AudioParam call on every node, in order. */
@@ -285,7 +277,6 @@ export class FakeAudio {
   readonly violations: string[] = [];
   readonly resume: Mock<() => Promise<void>>;
   readonly close: Mock<() => Promise<void>>;
-  /** The bytes handed to `decodeAudioData`, in order. */
   readonly decodeCalls: ArrayBuffer[] = [];
   currentTime: number;
   readonly sampleRate: number;
@@ -370,7 +361,6 @@ export class FakeAudio {
     return this.nodes.filter((n) => n.started);
   }
 
-  /** Moves `currentTime` on and fires `onended` for every source whose end has now passed. */
   advance(seconds: number): void {
     this.currentTime += seconds;
     for (const node of this.nodes) {
@@ -392,7 +382,7 @@ export class FakeAudio {
     for (const hung of this.hungDecodes.splice(0)) hung.reject(namedError("EncodingError", "the fake could not decode"));
   }
 
-  /* ----- construction ----- */
+  /* construction */
 
   private makeContext(): AudioContext {
     const v = this.violations;
@@ -753,7 +743,6 @@ export type FetchMode = "resolve" | "reject" | "hang";
 
 type HungFetch = { url: string; resolve: (bytes: ArrayBuffer) => void; reject: (error: unknown) => void };
 
-/** Test-controlled `fetchBytes`: resolve, reject or hang. */
 export class FakeFetch {
   mode: FetchMode = "resolve";
   readonly modes = new Map<string, FetchMode>();
@@ -823,8 +812,7 @@ export type FakeAudioEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> }
 
 /**
  * A stand-in for the singleton (`setAudioEngineForTests`): every member a spy, every sink call
- * accepted, the context running and none made, nothing logged and nothing spoken. `overrides`
- * replaces members.
+ * accepted, the context running and none made. `overrides` replaces members.
  */
 export function fakeAudioEngine(overrides: Partial<FakeAudioEngine> = {}): FakeAudioEngine {
   return {

@@ -1,7 +1,6 @@
 //! A card's return to its hand: the price it returns with, and §5.1's end-of-turn return (SPEC §2.4,
 //! §5.1, §10.5 step 7, R4, R78, R153, R155). Polish-4 edge-case hunt: docs/polish/4-edge-cases.md.
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //!  - R4: a price a card is given as it returns to a hand (#31's "+1", #37r's "costs 1 less") is its
 //!    price in that hand. A full hand burns the card instead (§2.4), and the burned card keeps its cost.
 //!  - R155, R153: the end-of-turn return belongs to the Spell its own play landed in the graveyard. One
@@ -56,12 +55,10 @@ fn recasts_core(events: &[GameEvent]) -> bool {
         .is_some_and(|def_id| def_id == CHAOS)
 }
 
-/// The target list naming p2's hero.
 fn at_p2() -> Value {
     json!([{ "pick": "hero", "player": "p2" }])
 }
 
-/// `[...head, ...fillers]` for a setup's hand.
 fn with_fillers(head: &[&'static str], count: usize) -> Vec<&'static str> {
     head.iter()
         .copied()
@@ -149,7 +146,6 @@ mod r155_the_end_of_turn_return_belongs_to_the_landing_the_spells_own_play_made 
 
         g.end_turn();
 
-        // What lies in the graveyard now arrived by a discard, not by its own play's step 7.
         g.expect_in_zone(&dream.id, "graveyard");
     }
 }
@@ -180,7 +176,6 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
         g.expect_in_zone(&prey.id, "graveyard");
         assert_eq!(g.stats(&eater.id).attack, 6);
 
-        // Zao Gao discards it; back on p1's next turn, Reminisce brings it back from the graveyard.
         g.play(ZAO_GAO, json!({}));
         g.expect_in_zone(&eater.id, "graveyard");
         g.end_turn();
@@ -189,7 +184,6 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
         g.answer(json!(eater.id));
         g.expect_in_zone(&eater.id, "hand");
 
-        // The card that went to the graveyard and came back is the printed card, not the one that fed.
         assert_eq!(g.card(&eater.id).buffs, AttackHealth { attack: 0, health: 0 });
         assert_eq!(g.stats(&eater.id).attack, 2);
         assert_eq!(g.stats(&eater.id).max_health, 2);
@@ -208,7 +202,6 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
         assert_eq!(g.state().active, P1);
         assert_eq!(g.hand(P1).len(), 10);
         g.play(CRAFT, json!({}));
-        // Twinspell's Echo +1: two crafts. The first lands in the hand, which is then full again.
         let mut i = 0;
         while i < 4 {
             let Some(pending) = g.state().pending.as_ref() else {
@@ -243,11 +236,10 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     #[test]
     fn r215_r28_r87_a_call_to_chaos_cast_at_the_end_of_a_chain_taken_back_from_the_graveyard_and_played_starts_a_chain_of_its_own()
      {
-        // The played #95 stands in for the 19th link of a chain, as 095's own tests pin R28's counter. Its
-        // roll casts the 20th link, which R87 sends to the graveyard as it resolves, and #72 Reminisce takes
-        // it back. Played from hand it is a new play, a new chain from nothing, so its "cast a random Call
-        // to Chaos" casts one where the old link at the cap cast nothing.
-        // The seed is arbitrary: each play's cursor is searched for a roll that casts #95 itself.
+        // The played #95 stands in for the 19th link (R28's counter); its roll casts the 20th, which R87
+        // sends to the graveyard and #72 Reminisce takes back. Played from hand it starts a chain of its
+        // own, so its recast casts one where the link at the cap cast nothing. Any seed: the cursor is
+        // searched.
         let seed = "inv-r5-chaos-chain";
         let at_cap = |cursor: u32| {
             let mut s = scenario(
@@ -283,7 +275,6 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
             None => panic!("the chain's 20th cast"),
         };
         s.expect_in_zone(&last_link, "graveyard");
-        // It landed as the printed card: the chain's count stayed with the chain.
         assert!(
             s.card(&last_link)
                 .memory
@@ -317,8 +308,6 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     }
 }
 
-// Round 7 (lens L8): a return Spell cast on the other player's turn.
-
 const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
 const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; whenever it attacks, draw 2 per Unit destroyed
 const RENO: &str = "core-053";
@@ -329,11 +318,9 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
     #[test]
     fn r155_r70_a_return_spell_cast_on_the_opponents_turn_does_not_come_back_at_the_end_of_its_casters_next_turn_5_1_6_2()
      {
-        // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther (5/4)
-        // attack it; the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top card is a
-        // cast-on-draw Spell with #23 Reoccurring Dream's "End of turn: returns from the GY to your hand"
-        // (the flag R155 writes), so p1 casts it on p2's turn (§2.4, R70). A cast on draw is no play
-        // (R2179002), so cleanup finds its flag in the graveyard rather than in a turn log.
+        // p2's #9 Moths makes the Panther attack and kill it, so p1 draws 2 on p2's turn (R426): a
+        // cast-on-draw Spell with #23's end-of-turn return (R155's flag), cast on p2's turn (§2.4, R70). A
+        // cast on draw is no play (R2179002), so cleanup finds its flag in the graveyard, not a turn log.
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
@@ -376,8 +363,7 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
         ));
         s.expect_in_zone(&cod.id, "graveyard");
 
-        // p2's turn ends. §5.1: the Spell returns "at the end of that turn", and R155's cleanup clears
-        // the flag "at the end of that turn" — whichever reading, nothing of that return is left once
+        // §5.1 and R155: whichever reading of "at the end of that turn", nothing of the return is left once
         // the turn it was played on is over.
         s.end_turn();
         assert_eq!(s.state().active, P1);
@@ -390,7 +376,6 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
             );
         }
 
-        // p1's own next turn ends: a Spell p1 did not play on this turn does not come back now.
         s.end_turn();
         let returned = s.last_events().iter().any(|event| match event {
             GameEvent::Bounced { instance_id, .. } | GameEvent::AddedToHand { instance_id, .. } => {
@@ -447,8 +432,6 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
 mod r766_r429_only_kys_math_equations_own_return_gives_back_a_price_its_climb {
     use super::*;
 
-    /// p1 plays `def` from its hand at a `costMod` of 2 (a (3) card), the turn ends and the card has
-    /// made its end-of-turn return: its `costMod` and what it costs back in hand.
     fn returned_at_a_price_of_2(def: &str, opts: Value) -> (i32, i32) {
         let mut g = scenario(json!({
             "p1": {

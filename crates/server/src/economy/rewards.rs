@@ -1,48 +1,23 @@
 //! The one reward hook (SPEC §14.8, #1302): a finished game's summary in, ledger rows out.
 //!
-//! Every payout goes through [`pay_game_rewards`], which takes a finished game's summary (the
-//! account, the result, the actions taken and what the game did), pays it, and moves the account's
-//! set tracks (§14.7) and its quests (§14.9, `quests::move_quests`, [[R1304001]]). Practice
-//! earning calls into this same hook: it owns no transaction of its own, so each caller pays in
-//! the transaction that records its game, and a failure rolls the game back with it. A bot's side
-//! is paid nothing and moves no quest: a ladder bot earns nothing ([[R1454]]). It answers what it
-//! paid as the game's [`GameEconomy`], which its callers hand the seat it paid (#1657).
+//! Every payout, practice earning's too, goes through [`pay_game_rewards`], which pays a finished game's
+//! summary and moves the account's set tracks (§14.7) and its quests (§14.9, `quests::move_quests`,
+//! [[R1304001]]). It owns no transaction: each caller pays in the transaction that records its game, so a
+//! failure rolls the game back with it.
 //!
-//! - Where the server ran the match, it counts the actions from its own log and pays in the
-//!   transaction that records the result; the client reports nothing. `api::results`'s write pays
-//!   every 1v1 match it records (ladder, unranked and Conquest games), and `duos::finish_match`
-//!   pays a co-op game, counting each person's own moves ([[R1502000]]). An action counts when
-//!   [`is_player_action`] says the player took it ([[R1302004]]): every caller counts with it.
-//! - The summary names its [`GameMode`]. Jlore is [`game_jlore`]: on the ladder `JLORE_LADDER_WIN`
-//!   for a win and `JLORE_LADDER_LOSS` otherwise, in practice `JLORE_PRACTICE_WIN` and
-//!   `JLORE_PRACTICE_LOSS`, and for an unranked game, a game of a Conquest series and a co-op game
-//!   `JLORE_UNRANKED_*`, `JLORE_CONQUEST_*` and `JLORE_COOP_*` the same way ([[R1502000]]).
-//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together,
-//!   counted over the UTC day the game ended in ([[R1483000]]). The game that crosses
-//!   the cap is paid the part that fits and the ones after it no Jlore, with no Jlore row; XP and
-//!   quests are paid in full. Quest and track Jlore neither count nor stop. [`GameEconomy`] says
-//!   what was paid and whether the cap held some back.
-//! - XP is [`game_xp`]: `XP_PER_ACTION` for each counted action, `XP_WIN_BONUS` more for a win,
-//!   never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it; a practice game earns
-//!   that times `XP_PRACTICE_SCALE`, rounded down, and a co-op game that times `XP_COOP_SCALE`
-//!   ([[R1502000]]). It goes to every
-//!   active track, each gaining all of it; the newest set's track is active from the start, and
-//!   an older set's once it unlocks, one at a time, once the newest reaches
-//!   `SET_TRACK_UNLOCK_LEVEL` ([[R1302003]]). A level pays its [`reward_for_level`](super::track_rewards::reward_for_level)
-//!   once, as ledger rows, when its track reaches it; a track's last level is
-//!   `SET_TRACK_LEVELS`, and XP past it lands but reaches no level ([`track_level`], [[R1302005]]).
-//!   [`pay_xp`] is that payout, and a completed quest's XP goes through it too.
+//! - Where the server ran the match, it counts the actions from its own log; the client reports
+//!   nothing. `api::results`'s write pays every 1v1 match it records (ladder, unranked and Conquest),
+//!   and `duos::finish_match` a co-op game, counting each person's own moves ([[R1502000]]).
+//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together, over the
+//!   UTC day the game ended in ([[R1483000]]): the game that crosses it is paid the part that fits, the
+//!   ones after it no Jlore (and no Jlore row); XP and quests are paid in full. Quest and track Jlore
+//!   neither count nor stop.
+//! - A new account starts with its tracks' first rewards ([`pay_starting_rewards`], [[R1310000]]); an
+//!   older set's track pays its first level when it unlocks ([`pay_xp`], [[R1302003]]).
 //!
-//! - A new account starts with its tracks' first rewards (§14.12, [[R1310000]]):
-//!   [`pay_starting_rewards`] pays the newest set's track its first level when the account's
-//!   redemption makes it active, the only track active from the start; an older set's pays its
-//!   first level when it unlocks, as above.
-//!
-//! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on, so a build
-//! behind the switch changes nothing a player owns. `api::results` is that caller for a 1v1 match,
-//! `duos::finish_match` for a co-op game, and `api::codes`'s redemption for the starting rewards.
-//!
-//! Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
+//! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on (the two above, and
+//! `api::codes`'s redemption for the starting rewards). Every number is a [`crate::config`] constant
+//! (CLAUDE.md rule 9).
 
 use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
 use jackioh_engine::{ActionBody, PlayerId};
@@ -80,11 +55,9 @@ pub enum GameMode {
 
 /// A finished game's summary, as the reward hook takes it (SPEC §14.8).
 pub struct GameSummary {
-    /// The kind of game, which sets the rates.
     pub mode: GameMode,
     /// Whose account is paid.
     pub profile_id: String,
-    /// Which seat they played.
     pub player: PlayerId,
     /// `Some(true)` for a win, `Some(false)` for a loss, `None` for a draw ([[R1302000]]).
     pub won: Option<bool>,
@@ -115,7 +88,6 @@ pub struct TrackPoint {
 }
 
 impl TrackPoint {
-    /// A track on `level` holding `xp` XP.
     pub fn at(level: i64, xp: i64) -> TrackPoint {
         let next = level < i64::from(SET_TRACK_LEVELS);
         TrackPoint {
@@ -199,9 +171,8 @@ pub struct XpPayout<'a> {
 
 /// Whether a logged action is one the player took, so earns `XP_PER_ACTION` (SPEC §14.8,
 /// [[R1302004]]): every move of the game, an emote a card hears (MD-D29) among them. The server's
-/// own rows are not ([[R79]]: a clock that ran out, a disconnect that expired, the hard ceiling),
-/// nor [[R345]]'s automatic-end setting, nor a practice sandbox's tool ([[R923000]]). Every kind is
-/// named, so a new one is counted or not by a decision, never by default.
+/// own rows are not ([[R79]]), nor [[R345]]'s automatic-end setting, nor a practice sandbox's tool
+/// ([[R923000]]). Every kind is named, so a new one is counted or not by a decision, never by default.
 pub fn is_player_action(body: &ActionBody) -> bool {
     match body {
         ActionBody::Mulligan { .. }
@@ -229,15 +200,16 @@ pub fn is_player_action(body: &ActionBody) -> bool {
 }
 
 /// The level a set track with `total_xp` XP stands on (SPEC §14.7, [[R1302005]]): the level
-/// curve's, never past the track's last level, `SET_TRACK_LEVELS`.
+/// curve's, never past the track's last level, `SET_TRACK_LEVELS`; XP past it lands but reaches no
+/// level.
 pub fn track_level(total_xp: i64) -> i64 {
     i64::from(level_for_xp(total_xp).min(SET_TRACK_LEVELS))
 }
 
 /// A game's XP (SPEC §14.8): `XP_PER_ACTION` for each action taken, `XP_WIN_BONUS` more for a
-/// win, the total never above `XP_GAME_CAP`; a practice game earns that times `XP_PRACTICE_SCALE`,
-/// and a co-op game that times `XP_COOP_SCALE`, each rounded down ([[R1502000]]); an unranked game
-/// and a game of a Conquest series earn what the ladder does.
+/// win, the total never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it; a practice
+/// game earns that times `XP_PRACTICE_SCALE`, and a co-op game that times `XP_COOP_SCALE`, each
+/// rounded down ([[R1502000]]).
 pub fn game_xp(mode: GameMode, actions: i64, won: bool) -> i64 {
     let bonus = if won { i64::from(XP_WIN_BONUS) } else { 0 };
     let ladder = i64::from(XP_PER_ACTION)
@@ -275,10 +247,9 @@ pub fn utc_day_bounds(at: i64) -> (i64, i64) {
 }
 
 /// Pays one finished game's rewards in the caller's transaction: its Jlore, held to the account's
-/// daily cap ([[R1483000]]), its XP on every active set track ([`pay_xp`]), and then moves its
-/// quests, which may pay too ([[R1304001]]). A bot's side writes nothing. Answers what it paid,
-/// each track's gain read off the account's tracks before and after the whole payout, so a
-/// completed quest's XP is in the same gain as the game's.
+/// daily cap ([[R1483000]]), its XP on every active set track ([`pay_xp`]), and then moves its quests,
+/// which may pay too ([[R1304001]]). A bot's side writes nothing. Answers what it paid, each track's
+/// gain read off the tracks before and after the whole payout, so a completed quest's XP is in it.
 pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<GameEconomy> {
     if summary.bot {
         return Ok(GameEconomy::default());
@@ -331,9 +302,8 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
 }
 
 /// A [`TrackGain`] for each shipped set's track that differs from `before` to `after`, in catalog
-/// order. A track with no row stands on its first level with no XP and no level paid, as
-/// [`pay_xp`] reads it ([`held_track`]); the levels a gain lists are those paid in between,
-/// `(claimed, claimed']`.
+/// order, each read as [`pay_xp`] reads it ([`held_track`]). The levels a gain lists are those
+/// paid in between, `(claimed, claimed']`.
 fn track_gains(before: &[SetTrack], after: &[SetTrack]) -> Vec<TrackGain> {
     SHIPPED_SETS
         .iter()
@@ -542,7 +512,6 @@ mod tests {
     /// The seats of R1333001's games: two to each of the 40.
     const MEASURED_SEATS: usize = 80;
 
-    /// A measured game, as far as its XP reads it.
     #[derive(serde::Deserialize)]
     struct MeasuredGame {
         log: Vec<Action>,
@@ -707,8 +676,7 @@ mod tests {
 
     #[test]
     fn game_summary_carries_the_seat_the_caller_counted() {
-        // The hook's input shape, as the parallel practice and quest callers construct it: whose
-        // account, which seat's actions were counted, the result, and what to stamp the rows with.
+        // The hook's input shape, as the practice and quest callers construct it.
         let summary = GameSummary {
             mode: GameMode::Ladder,
             profile_id: "profile-a".to_string(),

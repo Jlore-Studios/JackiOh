@@ -1,8 +1,5 @@
-// The full audio panel (SPEC §10.11 "Settings"): master, effects, voice and music volume, mute, voice
-// lines on or off, and the music's station, dynamic music, ducking and whether it plays on in a
-// background tab (R631). Task 7's
-// settings panel mounts it at integration. Every control reads and writes the audio settings store,
-// which is the only place these values live.
+// The full audio panel (SPEC §10.11 "Settings", R631). Every control reads and writes the audio settings
+// store, the only place these values live.
 //
 // A volume is set by ear (B54): moving the master or effects slider ticks at the new level (the
 // engine's retrigger guard keeps a drag from rattling), and letting go of the voice slider speaks a

@@ -36,9 +36,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-10 Salvage Protocol — SPEC §8.10 row T-AI-10, BUILD M12 row S T-AI-10: "a 1/2 Starship Piece; its
-// death fuses a copy into its owner's Dormant Starship and adds a random Starship Piece card to its
-// controller's hand; radiant 2/4 and a Radiant piece".
+// S T-AI-10 Salvage Protocol — SPEC §8.10 row T-AI-10, BUILD M12 row S T-AI-10.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

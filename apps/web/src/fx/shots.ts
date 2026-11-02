@@ -1,21 +1,16 @@
 /**
- * Flavor shots (#1442, docs/polish/8-flavor.md): what a Ranged attacker fires at its target. Four
- * motions, each drawn procedurally on the effects canvas, never from an image (B27): an `arc` throws
- * sprites on a lob, a `bolt` is a glowing shot on a straight line with a particle trail, a `beam` is
- * an instant line and a `swipe` is a claw-slash crescent. Each shot ends exactly when its flight is
- * up, bursting its preset where it lands, so nothing outlives its entry (R200).
- *
- * Glow comes from layered strokes and circles under `lighter` blending, with no canvas blur or text,
- * and every random choice comes from the injected `FxRng`.
+ * Flavor shots (#1442, docs/polish/8-flavor.md): what a Ranged attacker fires at its target, drawn on the
+ * effects canvas, never from an image (B27). Each ends exactly when its flight is up, so nothing outlives its
+ * entry (R200). Glow is layered strokes under `lighter` blending; every random draw is `FxRng`'s.
  */
 import type { ParticleSystem, EmitOptions } from "./particles.ts";
 import type { FxRng } from "./rng.ts";
 import type { FxBox, FxPreset, FxShot, FxShotSprite, FxVec } from "./types.ts";
 
 export type Shots = {
-  /** Starts `shot` from `from` to `to` over `flightMs`: `colors` run hot first, `preset` bursts where it lands, `density` scales the trail and that burst. */
+  /** `colors` run hot first; `preset` bursts where it lands; `density` scales the trail and that burst. */
   add(shot: FxShot, colors: readonly string[], preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density: number): void;
-  /** `dtMs` (clamped frame time) paces the trail; `ageMs` (real time) ages shots, so a stalled frame never stretches one past its end (R200). */
+  /** `dtMs` (clamped) paces the trail; `ageMs` (real time) ages shots, so a stalled frame never stretches one (R200). */
   step(dtMs: number, ageMs: number): void;
   draw(ctx: CanvasRenderingContext2D): void;
   alive(): number;
@@ -24,18 +19,16 @@ export type Shots = {
 
 /** CLAUDE.md rule 9: every shot number in one place. Lengths are CSS px. */
 const SHOT = {
-  /** An arc's control point sits this fraction of the chord up the screen from the chord's midpoint. */
+  /** An arc's control point: this fraction of the chord above the chord's midpoint. */
   arcLift: 0.3,
-  /** Sprites of one volley land this far apart across the path… */
+  /** A volley's sprites land this far apart; a scattering one's also drift and bend this much. */
   fanPx: 26,
-  /** …and a scattering volley's also drift up to this far on each axis, each arc bending this much more or less. */
   scatterPx: 30,
   scatterBendMin: 0.6,
   scatterBendMax: 1.4,
-  /** A spinning sprite turns this many radians per ms, each sprite of a volley this far ahead of the last. */
+  /** Radians per ms, and each sprite of a volley this far ahead of the last. */
   spinPerMs: 0.02,
   spinStagger: 1.3,
-  /** A floating sprite bobs and tilts at this rate. */
   floatHz: 3,
   floatBobPx: 6,
   floatTilt: 0.25,
@@ -44,37 +37,35 @@ const SHOT = {
   trailPerMs: 0.3,
   trailMinPerStep: 1,
   trailPower: 0.35,
-  /** Each trail particle is born this far (either way) off the path, so the trail has body. */
+  /** Trail particles are born this far off the path, so the trail has body. */
   trailJitter: 3,
-  /** The burst where a shot lands: its count is shared by the sprites of a volley. */
+  /** The landing burst; a volley's sprites share its count. */
   arrivalCount: 16,
   arrivalPower: 1.3,
-  /** A bolt's head: three discs, widest first, radii and alphas. */
+  /** A bolt's head: three discs, widest first. */
   haloPx: 20,
   haloAlpha: 0.25,
   bodyPx: 9,
   bodyAlpha: 0.85,
   corePx: 4,
-  /** A bolt's comet tail: this many past head positions, as a tapering stroke. */
+  /** A bolt's tail: this many past head positions, as a tapering stroke. */
   tailPoints: 8,
   tailWidth: 12,
   tailAlpha: 0.5,
-  /** A wisp weaves this many whole cycles about its line, this far to either side. */
   waveCycles: 2,
   waveAmpPx: 14,
-  /** A beam: three strokes of one line, widest and faintest first: [width multiple, alpha]. */
+  /** A beam's three strokes, widest and faintest first: [width multiple, alpha]. */
   beamWidthPx: 6,
   beamPasses: [
     [3, 0.18],
     [1.6, 0.45],
     [0.5, 1],
   ],
-  /** A swipe: three crescents side by side, each this radius, spanning ± this many radians about its heading. */
+  /** A swipe: three crescents side by side, spanning ± `swipeSpan` radians about its heading. */
   swipeRadiusPx: 26,
   swipeSpan: 1.1,
   swipeGapPx: 8,
   swipeWidthPx: 4,
-  /** A swipe's glow stroke is this much wider than its core. */
   swipeGlowMul: 2.4,
   swipeGlowAlpha: 0.35,
 } as const;
@@ -124,7 +115,6 @@ const SPRITE_SHAPE = {
   billHeight: 0.55,
   billInset: 0.18,
   billSeal: 0.16,
-  /** A heart's two curves: the lower control points reach out `heartSide` and sit `heartCurve` below the middle, the upper `heartTop` out and `heartShoulder` above it; the tip hangs `heartTip` below and the cleft dips `heartDip` above. */
   heartSide: 1.2,
   heartCurve: 0.1,
   heartTop: 0.8,
@@ -182,7 +172,6 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-/** The flight's trail, if its motion leaves one. */
 function trailOf(shot: FxShot): FxPreset | undefined {
   return shot.motion === "arc" || shot.motion === "bolt" ? shot.trail : undefined;
 }

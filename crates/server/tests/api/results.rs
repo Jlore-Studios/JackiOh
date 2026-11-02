@@ -1,17 +1,5 @@
-//! BUILD M7-T2: "one integration test per reason".
-//!
-//! §2.5's seven endings each get a test — `hero-death`, `both-heroes-dead`, `concede`,
-//! `draw-accepted`, `turn-cap`, `disconnect`, `match-ceiling` — and each one drives the scripted
-//! engine to produce the outcome rather than hand-writing it, so the reason strings under test are
-//! the ones `reduce` really emits. Then the two things §9.5 asks of the writer itself: it is
-//! idempotent, and the reaper resolves anything past the ceiling.
-//!
-//! The scripted engine is the real one: `support::engine` installs the scripted cards as real
-//! scripts and `play` drives `reduce` from a testkit `scenario()`, so every outcome and turn count
-//! is one the engine emitted. A scenario starts its match through the registry (`app.matches`); one
-//! backdated past its ceiling is written to the store with no actor, the crashed-actor case §9.5's
-//! reaper exists for. Rows are compared as their JSON, so the cases depend on the port types' wire
-//! shape (`docs/v0.3.0/SURFACE.md` §11.2, §11.3).
+//! BUILD M7-T2: integration tests for §2.5's game endings and §9.5's results writer.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -177,12 +165,7 @@ fn seats() -> (MatchSeat, MatchSeat) {
     )
 }
 
-/// Runs the engine with the scripted cards (`support/engine.rs`) to a terminal state and hands back
-/// the outcome and turn count the actor would pass to `record_result`.
-///
-/// The game is a testkit `scenario()` on turn 1 with both scripted cards in p1's hand. An input
-/// names a card by its id; `play` puts the instance id in. Both seats switch off R345's automatic
-/// end of turn first, so a turn ends only when an input ends it.
+/// Runs engine with scripted cards (`support/engine.rs`) to terminal state (R345).
 fn play(inputs: &[Value]) -> (TerminalOutcome, i32) {
     play_from(1, inputs)
 }
@@ -380,9 +363,7 @@ async fn append_log_for(app: &App, match_id: &str, inputs: &[Value]) {
     store!(app, |t| t.matches_append_actions(&rows));
 }
 
-/// The log of a game on `decks` under the scenario's seed that ends at p1's play of `card` on turn 1:
-/// both mulligans keep the whole hand, then p1 plays it. The instance ids are the ones the seed and
-/// decks deal, read off the game's own opening.
+/// Log of game on decks under scenario seed ending at p1 play of card on turn 1.
 fn p1_plays_log(decks: &(Vec<String>, Vec<String>), card: &str) -> Vec<Value> {
     let opening = begun_game("seed-1", decks.clone());
     let played = hand_card(&opening, PlayerId::P1, card).expect("the card is dealt to p1");
@@ -472,11 +453,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn both_heroes_dead_both_heroes_dying_in_the_same_check_is_a_draw_and_rates_as_one_2_5() {
-        // The seventh reason `api/results.rs`'s own header names and `0004_matches.sql`'s `reason`
-        // CHECK allows. It is the one ending that is a *draw produced by lethal damage*, so the thing
-        // to prove is that the writer scores it 0.5/0.5 and names no winner, deciding on the
-        // outcome's winner alone; a writer that read the reason instead (or
-        // that treated "somebody died" as a win) would name A here.
+        // Draw produced by lethal damage: scored 0.5/0.5 with no winner (0004_matches.sql).
         install_test_cards();
         let app = scenario(ScenarioOptions {
             ratings: Some((1200.0, 1000.0)),
@@ -639,9 +616,7 @@ mod results_m7_t2 {
         .await;
     }
 
-    /// R1843004: a ranked game the engine ends by `fled` is the fleer's win and the other player's
-    /// draw: each side rated with its own score (1 and 0.5) against the other's rating from before,
-    /// each season moved by its own result, and each record counting a win and a draw.
+    /// R1843004: ranked game engine ends by fled rates fleer win and other player draw.
     #[tokio::test]
     async fn r1843004_a_fled_game_rates_the_fleers_win_and_the_others_draw() {
         install_test_cards();
@@ -804,15 +779,7 @@ mod results_m7_t2 {
     async fn returns_the_racing_first_writers_row_when_two_writes_collide_on_the_result_key_9_5() {
         install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
-        // Two writers — an actor and the reaper — pass `getByMatch` together, each inside its own
-        // transaction. The first commits; the second's insert meets `results_pkey`, which the port
-        // reports as `StoreError::Duplicate`. Simulate exactly that: this
-        // store's first `results.insert` refuses as if the collision had happened, and the racing
-        // writer's row lands before the loser's retry reads, so the next `getByMatch` — run inside
-        // the retry's fresh transaction — sees the row the winner committed.
-        //
-        // `on_call` injects the `Duplicate` on the first insert; `before_call` lands the winner's
-        // row inside the retry's own `getByMatch`, so no thread or wait stages the race.
+        // Race resolution: Duplicate collision returns first committed result row via retry.
         let winner_row: ResultRow = serde_json::from_value(json!({
             "matchId": MATCH_ID,
             "players": [A, B],
@@ -1091,9 +1058,7 @@ mod results_m7_t2 {
             assert!(row.get("finalHash").is_none());
         }
 
-        /// R833000: the actor's result write never landed (R1437) and no socket came back to rebuild
-        /// it, so the reaper folds the log it finds and records the real ending, with its rating
-        /// move, turn count, last boards, final hash and game record, rather than a ceiling draw.
+        /// R833000: if result write never landed (R1437), reaper folds terminal log and records real win.
         #[tokio::test]
         async fn r833000_reaped_terminal_log_records_the_real_win() {
             install_test_cards();
@@ -1556,9 +1521,7 @@ mod results_m7_t2 {
     }
 }
 
-/// #2213: a finished match's log is folded once, before the result's transaction, and the quests and
-/// the game record both read that one fold. `TEST_FOLD_GATE`'s plays count the folds (`FoldGate::passes`):
-/// each fold of a log that plays it runs it once.
+/// #2213: finished match log folded once before transaction; quests and game record share it.
 mod one_fold_per_result {
     use super::*;
 

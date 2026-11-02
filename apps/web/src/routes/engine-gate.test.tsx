@@ -1,9 +1,6 @@
 // #778: the screens that never call the engine paint without waiting for its WebAssembly module, and
-// every other screen waits for it in the route table's `EngineGate` (`main.tsx`).
-//
-// `wasm/index.ts` is mocked over the module test/setup.ts loaded: every entry point throws until the
-// test lets the module arrive, and `loadWasm()` answers a download the test holds, completes or fails.
-// `main.tsx` is imported once the mock is in place, so everything it imports reaches it.
+// every other screen waits for it in the route table's `EngineGate` (`main.tsx`). `main.tsx` is
+// imported once the `wasm/index.ts` mock is in place, so everything it imports reaches it.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,7 +54,6 @@ vi.doMock("../wasm/index.ts", async (importOriginal) => {
 const wasm = await import("../wasm/index.ts");
 const { App } = await import("../main.tsx");
 
-/** The held download arrives: the module's entry points answer from now on. */
 async function arrive(): Promise<void> {
   await act(async () => {
     arrived = true;
@@ -76,9 +72,7 @@ async function fail(): Promise<void> {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // the stubbed server
-// ---------------------------------------------------------------------------------------------
 
 /** Stub `/api/auth/me` and the reads `/decks` makes, for one account status. */
 function serveAs(status: "pending" | "active"): void {
@@ -131,9 +125,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
 // the screens that never call the engine
-// ---------------------------------------------------------------------------------------------
 
 describe("#778 the screens that never call the engine", () => {
   it("#778 the mock holds: before the module arrives its entry points throw", () => {
@@ -172,9 +164,7 @@ describe("#778 the screens that never call the engine", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // a screen that calls the engine
-// ---------------------------------------------------------------------------------------------
 
 describe("#778 a screen that calls the engine", () => {
   it("#778 /practice waits in the loading panel until the module is in", async () => {

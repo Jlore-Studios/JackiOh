@@ -3,14 +3,11 @@
  * where every particle number lives. Blood and frost are R502's (#27 Blood Ridden's price, #21
  * Hinder's cracked crystals) and serve any card's mark drawn in crimson or cyan (R437). Every
  * `life[1]` stays at or under FX_MAX_PARTICLE_LIFE_MS, so no burst outlives the runner's tail (R200).
- *
- * `stretch` draws a fast particle as a streak along its velocity; `flash` gives every burst of the
- * preset a short bloom at its origin, which the director asks canvasFx for when the burst fires.
  */
 import type { FxPreset } from "./types.ts";
 
 export type ParticlePresetSpec = {
-  /** ms, max ≤ FX_MAX_PARTICLE_LIFE_MS */
+  /** ms */
   life: readonly [number, number];
   /** CSS px per second */
   speed: readonly [number, number];
@@ -23,7 +20,6 @@ export type ParticlePresetSpec = {
   /** max radians per second */
   spin: number;
   blend: "lighter" | "source-over";
-  /** CSS colors the sprites are drawn in */
   colors: readonly string[];
   /** size eases to 0 over life */
   shrink: boolean;
@@ -35,10 +31,7 @@ export type ParticlePresetSpec = {
   flash?: FlashSpec;
 };
 
-/**
- * `scale` sizes the bloom against the anchor box (its shorter side), and `ms` is how long it lives.
- * `core` is the hot center, `color` the halo it cools to.
- */
+/** `scale` sizes the bloom against the anchor box's shorter side; `core` is its hot center, `color` the halo it cools to. */
 export type FlashSpec = { core: string; color: string; scale: number; ms: number };
 
 export const PARTICLE_PRESETS: { readonly [P in FxPreset]: ParticlePresetSpec } = {

@@ -1,6 +1,5 @@
-//! The integer network (#1011, `docs/learned-eval.md` D7), the one that ships:
-//! `training/ml/jackioh_ml/quantize.py` makes it from a float one, and `quantize.correction` is its
-//! reference.
+//! The integer network (#1011, `docs/learned-eval.md` D7), the one that ships: made from a float one by
+//! `training/ml/jackioh_ml/quantize.py`, whose `quantize.correction` is its reference.
 //!
 //! The first layer takes the raw dense features (the fit's standardizer folded into its weights),
 //! i16 weights at the scale `A·2^shift`, `A` a clipped activation's one (127). Each head layer and the
@@ -27,7 +26,6 @@ pub struct IntNetwork<'a> {
     pub features_version: u32,
     pub catalog: &'a str,
     pub width: usize,
-    /// How many dense features it reads.
     pub dense: usize,
     /// A clipped activation's one (127).
     pub activation: i64,
@@ -174,9 +172,8 @@ fn words<const N: usize, T>(bytes: &[u8], read: fn([u8; N]) -> T) -> Option<Vec<
     )
 }
 
-/// An integer network read at run time from weights.json's object (`"format": 2`), owned: the
-/// parity fixture's, natively and in the WASM build (R1011000). The compiled-in network never comes
-/// this way: `build.rs` makes it constant.
+/// An integer network read at run time from weights.json's object (`"format": 2`), owned: the parity
+/// fixture's (R1011000). The compiled-in network never comes this way: `build.rs` makes it constant.
 #[derive(Clone, Debug, PartialEq)]
 pub struct OwnedIntNetwork {
     features_version: u32,
@@ -311,7 +308,7 @@ impl OwnedIntNetwork {
             .collect()
     }
 
-    /// The network lent as an `IntNetwork`, over `keys` (from `key_refs`) and `layers` (`layers`).
+    /// The network lent as an `IntNetwork`, over what `key_refs` and `layers` return.
     pub fn view<'a>(&'a self, keys: &'a [&'a str], layers: &'a [IntLayer<'a>]) -> IntNetwork<'a> {
         IntNetwork {
             features_version: self.features_version,
@@ -337,7 +334,7 @@ impl OwnedIntNetwork {
 }
 
 /// R1011000: the parity fixture's answers (`crates/ai/tests/fixtures/learned-parity.json`): its
-/// network's correction for each case, as JSON numbers. Natively and in the WASM build alike.
+/// network's correction for each case, as JSON numbers.
 pub fn parity_answers(fixture: &serde_json::Value) -> Result<Vec<f64>, String> {
     let owned = OwnedIntNetwork::from_json(fixture.get("network").ok_or("no network")?)?;
     let keys = owned.key_refs();

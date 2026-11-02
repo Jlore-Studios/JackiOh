@@ -1,7 +1,5 @@
-// C+ #62 KY's Papaya's curve on the effects layer (R831003): `curveDrawn` names the zones the curve
-// passes through, in lane order, and the `curve` recipe runs an arcane bolt from each to the next with a
-// ring at each as the line reaches it. R200 binds it: every cue starts inside its entry, a bolt lands by
-// its end, and a ring is gone within the tail.
+// C+ #62 KY's Papaya's curve on the effects layer (R831003), cell to cell in lane order. R200 binds it:
+// every cue starts inside its entry, a bolt lands by its end, and a ring is gone within the tail.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

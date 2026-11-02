@@ -1,7 +1,5 @@
-//! Test-only cards for Frozen and Freeze (SPEC §6.1, §6.3, R1174000): each freezes, or does what a
-//! freeze test needs done to a Frozen Unit, through the engine's own verbs. No shipped card freezes
-//! yet (M+ #24 Bob is the first, #1185), so the engine never imports `crates/cards` for this.
-//!
+//! Test-only cards for Frozen and Freeze (SPEC §6.1, §6.3, R1174000): each freezes, or does to a Frozen
+//! Unit what a freeze test needs, through the engine's own verbs (it never imports `crates/cards`, #1185).
 //! Ids are prefixed `fz-` and indexed from 11740, so they collide with no other fixture file's.
 
 #![allow(non_upper_case_globals)]
@@ -48,8 +46,7 @@ pub static chill: LazyLock<CardDef> = LazyLock::new(|| def(11740, "chill", "Spel
 pub static blizzard: LazyLock<CardDef> = LazyLock::new(|| def(11741, "blizzard", "Spell", json!([])));
 /// A 2/4 Unit: "Cry: Freeze every enemy Unit", Bob's shape on a Unit.
 pub static frost: LazyLock<CardDef> = LazyLock::new(|| def(11742, "frost", "Unit", json!([])));
-/// A 2/4 Unit: "End of turn: Freeze each other friendly Unit, then destroy this" — a freeze in its
-/// controller's End phase, once.
+/// A 2/4 Unit: "End of turn: Freeze each other friendly Unit, then destroy this", one End-phase freeze.
 pub static shiver: LazyLock<CardDef> = LazyLock::new(|| def(11743, "shiver", "Unit", json!([])));
 /// A Trap: "When an enemy Unit attacks, Freeze it" — a freeze inside a declared attack's window.
 pub static ice_trap: LazyLock<CardDef> = LazyLock::new(|| def(11744, "ice-trap", "Trap", json!([])));

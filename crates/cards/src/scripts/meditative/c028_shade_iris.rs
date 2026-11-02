@@ -32,10 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #28 Shade-iris — SPEC §8.8 row 28, BUILD M10 row M 28: "Cry (played or cast): one Ancient Curse
-// (M 28.1) shuffled into the opponent's deck at a random position, theirs, recorded in their list
-// (R311), refused by a full deck (R80); curses reads through `param()`; radiant 14/8 and two
-// Curses".
+// M #28 Shade-iris — SPEC §8.8 row 28, BUILD M10 row M 28, R311.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,7 +84,6 @@ mod tests {
                 assert_eq!(curse.owner, P2);
                 assert_eq!(curse.controller, P2);
                 assert!(!curse.radiant);
-                // Nothing was added to the caster's own library.
                 assert_eq!(library_of(&s, P1).len(), 3);
                 assert!(!def_ids(&library_of(&s, P1)).contains(&CURSE.to_string()));
                 s.expect_events(json!(["cardPlayed", "shuffledIn"]));

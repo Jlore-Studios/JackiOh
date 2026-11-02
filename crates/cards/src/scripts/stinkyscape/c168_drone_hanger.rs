@@ -29,9 +29,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #168 Drone Hanger — SPEC §8.10 row 168, BUILD M12 row S 168: "at its controller's start of turn
-// summons a Drone Interceptor, none at the opponent's; a full unit row puts it in the backrow (R2248000);
-// radiant a Radiant one".
+// S #168 Drone Hanger — SPEC §8.10 row 168, BUILD M12 row S 168 (R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

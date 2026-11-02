@@ -4,26 +4,18 @@
 //!            End of turn: Add an API Key Fishing to your hand." (2; 5 step 2)
 //!   Radiant: the same, but "End of turn: Add a Radiant API Key Fishing to your hand." (4; 10 step 2)
 //!
-//! `cost: { base: 0, embiggen: 1 }` (§2.3; the script reads `ctx.embiggened`). At resolution the hook
-//! draws one `ctx.rng.chance(p / 100)`; on success it runs `give_from_hand { from: enemy, cards:
-//! all }`: the cards become their taker's (E2/E16, R12), the hand cap burns the overflow into the
-//! taker's graveyard, and `stolen` is hidden per zone (R97). Against an empty hand there is nothing
-//! to take, so it rolls nothing (R129).
-//!
-//! The `end_of_turn` hook works from the graveyard on the turn the card was played (the return flag,
-//! R153, R155): `add_to_hand { defId: "meditative-021" }` adds a fresh card, while this one stays in
-//! the graveyard. The added card is a new API Key Fishing: a base one from the base face (a generated
-//! card isn't Radiant unless said, §5.2; R805), and since issue #1828 a Radiant one from the Radiant
-//! face, whose text says so (R1828000). Both numbers are declared and read through `param` (R386).
-//! Through v0.4.9 the Radiant face added a base copy; `script_v0_4_9` keeps that for those versions'
-//! replays (R767000).
+//! Embiggen per §2.3. A success gives the opponent's whole hand: the cards become their taker's
+//! (E2/E16, R12), the hand cap burns the overflow into the taker's graveyard, and `stolen` is hidden
+//! per zone (R97). The `end_of_turn` hook works from the graveyard on the turn the card was played
+//! (the return flag, R153, R155) and adds a fresh copy while this one stays: a base one from the base
+//! face (a generated card isn't Radiant unless said, §5.2; R805), a Radiant one from the Radiant face
+//! (#1828, R1828000). Both numbers are read through `param` (R386).
 
 use jackioh_engine::effects::{add_to_hand, give_from_hand};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-021";
 
-/// A percent roll is out of a hundred.
 const PERCENT: i32 = 100;
 
 /// §5.1 and R68, as Core #23 Reoccurring Dream reads them: at the end of the turn it was played on,
@@ -66,7 +58,6 @@ fn fishing(adds_radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // R1828000: the Radiant face adds a Radiant copy; its numbers are read through `param`.
     CardScripts {
         base: fishing(false),
         radiant: fishing(true),
@@ -81,12 +72,7 @@ pub fn script_v0_4_9() -> CardScripts {
     }
 }
 
-// M #21 API Key Fishing — SPEC §8.8 row 21, BUILD M10 row M 21: "At (0) one 2% roll, paid (1) 5% (§2.3): a
-// success moves every card of the opponent's hand into yours as your cards (R12), the hand cap burning the
-// overflow into your graveyard, the opponent learning only how many; a failure takes nothing; at your end of
-// turn, on the turn it was played, it adds a new base API Key Fishing to your hand from the graveyard
-// (MD-A25) while this one stays there; not on later turns; the chances read through `param()`; radiant 4% and
-// paid 10%, and the card added is a Radiant API Key Fishing (R1828000)".
+// M #21 API Key Fishing — SPEC §8.8 row 21, BUILD M10 row M 21 (MD-A25).
 #[cfg(test)]
 mod tests {
     use super::*;

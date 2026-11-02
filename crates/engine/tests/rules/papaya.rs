@@ -49,7 +49,6 @@ fn key(x: i32, y: i32) -> String {
     format!("mode:{x},{y}")
 }
 
-/// The "done" option's key.
 fn done() -> String {
     format!("mode:{PAPAYA_DONE}")
 }
@@ -521,7 +520,6 @@ mod r422_every_card_on_the_curve_is_exiled {
             Default::default(),
         );
         draw_curve(&mut state, &[(0, 2)], false);
-        // A card that ceased to exist is in no zone of the state.
         assert!(find_instance(&state, &made.id).is_none());
         assert!(state.players.p2.exile.is_empty());
     }

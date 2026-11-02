@@ -1,35 +1,15 @@
 //! The card catalog is static data shipped with the client (§9.4), so the engine reads it from a
-//! registry rather than carrying it in GameState, which stays serializable. Fused and crafted
-//! definitions live in `state.transientDefs` and win over the registry.
+//! registry, a `OnceLock` set once by `register_catalog` (SURFACE §3, §6.6, §8): a mutable static
+//! would let one game see another's cards when the tools run games on many threads. GameState stays
+//! serializable; its fused and crafted definitions (`transient_defs`) win over the registry, and a
+//! digest id's ingredients (R468) are read off its fused definition, so those readers take the state.
 //!
-//! Port of `packages/engine/src/catalog.ts`. Three changes of shape, none of behavior (SURFACE §3,
-//! §6.6, §8):
-//!
-//! - The registry is a `OnceLock`, set once by `register_catalog` (which `jackioh_cards::register_all`
-//!   calls) and read-only after: a mutable static would let one game see another's cards when the
-//!   tools run games on many threads. Under the `testkit` feature a thread-local override the testkit
-//!   sets (`testkit::scenario::register_catalog`) is consulted first.
-//! - Every reader that took TS's `TransientHolder` takes `Option<&GameState>`: the transient defs are
-//!   the state's.
-//! - The process-global digest table (TS `digestIngredients`, R468) is not ported, and with it
-//!   `registerFusedIngredients`: a digest id's ingredients are read off the fused definition itself
-//!   (`CardDef.ingredients`, which a Fuse always writes) in `state.transient_defs`. So the readers of a
-//!   fused id's parts (`fused_id_specs`, `fused_id_parts`, `self_def_ids`, `excluding_def_id`) take the
-//!   state too; without one, a digest id reads as no fused id, as an unknown digest did in TS.
-//!
-//! R767000: a replay folds under the catalog version its game was played on. The build registers
-//! where its shipped catalogs are found (`register_shipped`, a `OnceLock` like the registry), and
-//! `with_shipped` sets the one a fold runs under on the calling thread for that call alone, putting
-//! the previous one back after it; while one is set, every reader here and `scripts::registered_entry`
-//! answer from it first. R1329000: so does every compiled table the engine reads while it folds, the
-//! win-rate table among them, or a ruling says why it does not. The code blocks (`code_block_of`)
-//! stay the build's: no final hash holds them.
-//!
-//! R2173000 (meeting R1846003's obligation): the BUSTED and complicated lists (`card_metrics`,
-//! R1846000) answer from the shipped catalog a fold runs under when its version kept lists of its own
-//! (`with_card_lists`, from the version that ships the first card that reads them on), and from the
-//! build's for a version that kept none, which no game on it could read. The code lines stay the
-//! build's: no card reads a count.
+//! R767000: a replay folds under the catalog version its game was played on (`with_shipped`, for one
+//! call on the calling thread); every reader here and `scripts::registered_entry` answer from it first.
+//! R1329000: so does every compiled table the engine reads while it folds, or a ruling says why not;
+//! the code blocks (no final hash holds them) and code lines (no card reads a count) stay the build's.
+//! R2173000 (R1846003's obligation): the BUSTED and complicated lists (R1846000) answer from the shipped
+//! catalog when its version kept lists of its own, else from the build's, which no game on it could read.
 
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -50,10 +30,9 @@ use crate::wire::{
     FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
 };
 
-/// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
-/// up thousands of times a turn, where SipHash's defense against chosen keys buys nothing, since the
-/// keys are the catalog's own. A map's iteration order is its insertion order whatever its hasher, so
-/// this changes how fast an id is found and nothing else.
+/// A hasher for the registries' card ids: short strings looked up thousands of times a turn, where
+/// SipHash's defense against chosen keys buys nothing (the keys are the catalog's own). A map's
+/// iteration order is its insertion order whatever its hasher, so this changes speed and nothing else.
 #[derive(Default, Clone, Copy)]
 pub struct IdHasher(u64);
 
@@ -96,11 +75,9 @@ impl std::hash::Hasher for IdHasher {
     }
 }
 
-/// `IdHasher` as a map's hasher.
 pub type IdHash = std::hash::BuildHasherDefault<IdHasher>;
 
-/// The registered catalog and its version (TS's two module `let`s, set together), and where each id
-/// sits in it, hashed with `IdHasher` (`find_def` reads through it).
+/// The registered catalog, its version and where each id sits in it (`find_def` reads through it).
 struct Registered {
     defs: CardDefs,
     version: String,
@@ -115,7 +92,7 @@ pub type CodeBlocks = &'static [(&'static str, &'static str)];
 
 static REGISTERED: OnceLock<Registered> = OnceLock::new();
 
-/// What `registered_catalog` answers before anything is registered (TS `let registered = {}`).
+/// What `registered_catalog` answers before anything is registered.
 static EMPTY: OnceLock<CardDefs> = OnceLock::new();
 
 /// SURFACE §8: the testkit's thread-local catalog, when the calling thread's test set one.
@@ -144,10 +121,9 @@ fn registered() -> &'static CardDefs {
     }
 }
 
-/// TS `registerCatalog(defs, catalogVersion = "test")`, with the compiled win-rate table (ME-STATS,
-/// MD-D1) and the compiled code blocks (R1183004) beside them. Set once per process: a second call
-/// is ignored (the registry is a `OnceLock`, SURFACE §3); a test that needs another catalog sets the
-/// testkit's override instead (SURFACE §8).
+/// Registers the catalog with its compiled win-rate table (ME-STATS, MD-D1) and code blocks (R1183004).
+/// Set once per process: a second call is ignored (SURFACE §3); a test that needs another catalog sets
+/// the testkit's override instead (SURFACE §8).
 pub fn register_catalog(
     defs: CardDefs,
     catalog_version: &str,
@@ -182,9 +158,8 @@ fn find_code_block(blocks: CodeBlocks, def_id: &str) -> Option<&'static str> {
         .map(|at| blocks[at].1)
 }
 
-/// ME-STATS: the win-rate table CN Tech reads — while a replay folds under a shipped catalog, the
-/// one that version shipped with (R1266000), else the testkit's override, else the registered table,
-/// else an empty table held in a `OnceLock` (nothing registered yet).
+/// ME-STATS: the win-rate table CN Tech reads: a shipped catalog's while a replay folds under it
+/// (R1266000), else the testkit's override, else the registered table, else an empty one.
 pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
     if let Some(shipped) = folding() {
         return &shipped.win_rates;
@@ -199,7 +174,6 @@ pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
     }
 }
 
-/// What `registered_win_rates` answers before anything is registered.
 static EMPTY_WIN_RATES: OnceLock<crate::win_rates::WinRateTable> = OnceLock::new();
 
 pub fn registered_catalog() -> &'static CardDefs {
@@ -220,8 +194,8 @@ pub fn def_id_by_index(set: SetName, index: &str) -> Option<String> {
     def_by_index(set, index).map(|def| def.id.clone())
 }
 
-/// The registered catalog's version: "0" before one is registered, and TS's default "test" while a
-/// test's override is in force. While a replay folds under a shipped catalog, that one's (R767000).
+/// The registered catalog's version: "0" before one is registered, "test" while a test's override is
+/// in force, and while a replay folds under a shipped catalog, that one's (R767000).
 pub fn catalog_version() -> &'static str {
     if let Some(shipped) = folding() {
         return &shipped.version;
@@ -235,7 +209,7 @@ pub fn catalog_version() -> &'static str {
     }
 }
 
-/// TS `TransientHolder = { transientDefs }`: what holds the transient definitions — the state.
+/// What holds the transient definitions: the state.
 pub type TransientHolder = GameState;
 
 pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a CardDef> {
@@ -257,13 +231,11 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     registered.defs.get_index(at).map(|(_, def)| def)
 }
 
-// ---------------------------------------------------------------------------
 // R767000: the shipped catalogs a replay folds under.
-// ---------------------------------------------------------------------------
 
 /// R767000: a shipped catalog version this build carries: its definitions, in order, where each id
 /// sits in them, and the scripts kept for it (`<id>@<version>`, R388). A card with no script kept
-/// runs the build's own. It also holds the win-rate table the version shipped with (R1266000).
+/// runs the build's own.
 pub struct ShippedCatalog {
     version: String,
     defs: CardDefs,
@@ -279,9 +251,7 @@ pub struct ShippedCatalog {
 /// R2173000: a shipped version's own BUSTED and complicated lists (R1846000), each sorted by id.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CardLists {
-    /// The BUSTED cards as the version shipped them.
     pub busted: Vec<&'static str>,
-    /// The complicated cards as the version shipped them.
     pub complicated: Vec<&'static str>,
 }
 
@@ -300,7 +270,6 @@ impl ShippedCatalog {
         }
     }
 
-    /// The catalog version it is.
     pub fn version(&self) -> &str {
         &self.version
     }
@@ -318,7 +287,6 @@ impl ShippedCatalog {
         }
     }
 
-    /// R1266000: the win-rate table its version shipped with.
     pub fn win_rates(&self) -> &crate::win_rates::WinRateTable {
         &self.win_rates
     }
@@ -361,8 +329,7 @@ impl std::fmt::Debug for ShippedCatalog {
 /// `jackioh_cards::register_all()`.
 static SHIPPED: OnceLock<fn(&str) -> Option<&'static ShippedCatalog>> = OnceLock::new();
 
-/// R767000: set where the shipped catalogs are found. Set once per process, like `register_catalog`:
-/// a second call is ignored.
+/// R767000: set where the shipped catalogs are found, once per process like `register_catalog`.
 pub fn register_shipped(find: fn(&str) -> Option<&'static ShippedCatalog>) {
     let _ = SHIPPED.set(find);
 }
@@ -387,9 +354,8 @@ pub fn shipped_catalog(version: &str) -> Option<&'static ShippedCatalog> {
     SHIPPED.get().and_then(|find| find(version))
 }
 
-// CLAUDE.md rule 4's scoped exception (R767000): the shipped catalog the calling thread's fold runs
-// under, set by `with_shipped` for that one call and put back after it, so a fold reads the same
-// catalog on any thread and nothing outlives the call.
+// CLAUDE.md rule 4's scoped exception (R767000): the shipped catalog this thread's fold runs under,
+// set by `with_shipped` for that one call and put back after it, so nothing outlives the call.
 thread_local! {
     static FOLDING: Cell<Option<&'static ShippedCatalog>> = const { Cell::new(None) };
 }
@@ -417,9 +383,8 @@ pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnc
     run()
 }
 
-// CLAUDE.md rule 4's scoped exception (R2201001): whether the call in flight on this thread is a
-// step of a game that holds its pools, set by `with_pool_hold` for that one call and put back after
-// it, so every pool `query` builds inside the step reads the game's hold without the state.
+// CLAUDE.md rule 4's scoped exception (R2201001): whether this thread's step in flight holds its
+// game's pools, set by `with_pool_hold` for that one call, so every pool `query` builds reads it.
 thread_local! {
     static POOL_HOLD: Cell<bool> = const { Cell::new(false) };
 }
@@ -439,10 +404,9 @@ pub fn held_out(def: &CardDef) -> bool {
 }
 
 /// R2201001: `run` with this thread's pools held as `state`'s handicaps say (`state::holds_pools`),
-/// for that call alone. The hold it ran under before is put back after it, a panic included, so a
-/// step of a held game nested in an unheld one (or the reverse: the AI's search, the autopilot) reads
-/// its own game's hold and nothing outlives the call. Every engine entry point that steps a game
-/// runs under it (`reduce`, `reduce_unpiloted`, `begin_game`); `create_game` draws from no pool.
+/// the previous hold put back after it (a panic included), so a held step nested in an unheld one (the
+/// AI's search, the autopilot) reads its own game's hold. Every entry point that steps a game runs
+/// under it (`reduce`, `reduce_unpiloted`, `begin_game`); `create_game` draws from no pool.
 pub fn with_pool_hold<T>(state: &GameState, run: impl FnOnce() -> T) -> T {
     struct Restore(bool);
     impl Drop for Restore {
@@ -462,9 +426,7 @@ pub fn def_of<'a>(state: Option<&'a GameState>, def_id: &str) -> &'a CardDef {
     }
 }
 
-// ---------------------------------------------------------------------------
 // §5.1's one query function, and the cost every filter reads (R65).
-// ---------------------------------------------------------------------------
 
 /// R65 outside play: "an embiggen card's printed cost is its base price and an X-cost card's is 0".
 /// Every pool, filter and comparison that looks at a *definition* rather than at a played instance
@@ -480,11 +442,7 @@ pub fn query_cost(def: &CardDef) -> i32 {
 
 /// §5.1's `catalog.query({type, cost, costRange, tags, notTags, rarity, set, excludeDefId})`, plus the
 /// identity fields a card needs to name a pool by hand. Every field is a narrowing filter, and `{}` is
-/// every non-token card of every set (R380).
-///
-/// (TS `CatalogQuery & { defId?, token? }`: the wire query's fields written out beside the two of its
-/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`; R1221's
-/// `tribute` came after the port, on this side only.)
+/// every non-token card of every set (R380). A card writes one as `json_as(json!({ … }))`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -719,7 +677,6 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
         return false;
     }
 
-    // `tags` means "has every listed tag"; `notTags` means "has none of them".
     if let Some(tags) = &args.tags
         && !tags.iter().all(|tag| def.tags.contains(tag))
     {
@@ -730,7 +687,6 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     {
         return false;
     }
-    // R1422: `anyTags` means "has at least one of them".
     if let Some(any_tags) = &args.any_tags
         && !any_tags.iter().any(|tag| def.tags.contains(tag))
     {
@@ -739,19 +695,16 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     if args.luck_based == Some(true) && !is_luck_based(def) {
         return false;
     }
-    // R1178001: an embiggen card is one that prints two prices.
     if let Some(wanted) = args.embiggen
         && is_embiggen_card(def) != wanted
     {
         return false;
     }
-    // R1221: the Tribute-cost filter, read off the registered script.
     if let Some(wanted) = args.tribute
         && has_tribute_cost(def) != wanted
     {
         return false;
     }
-    // R1846000: the BUSTED and complicated filters, read off the compiled card metrics.
     if let Some(wanted) = args.busted
         && is_busted(&def.id) != wanted
     {
@@ -817,8 +770,7 @@ pub fn self_def_ids(state: Option<&GameState>, def_id: &str) -> Vec<String> {
 /// R179: the ingredient ids a fused id (`t-<n>:<a>+<b>`, a fused ingredient in parentheses) names,
 /// split at the top-level `+` signs; `None` for any other id. `fuse::fused_ingredients` is its reader
 /// with R77's two-ingredient minimum. R469's Radiant mark (`<a>*`) is dropped here, since what a
-/// card stands for is the definition, whichever face went in; R468's digest id (`t-<n>:#<hex>`)
-/// reads its list off its fused definition in the state (the TS digest table is not ported).
+/// card stands for is the definition, whichever face went in.
 pub fn fused_id_parts(state: Option<&GameState>, def_id: &str) -> Option<Vec<String>> {
     fused_id_specs(state, def_id).map(|specs| specs.into_iter().map(|spec| spec.def_id).collect())
 }
@@ -861,8 +813,7 @@ pub(crate) fn copy_spec(entry: &FusedIngredient) -> FusedIngredient {
 /// R179, R468, R469: the ingredients a fused id names, in order, each with its Radiant mark; `None`
 /// for an id no Fuse minted, or a digest the state holds no definition of. A readable id is split at
 /// its top-level `+` signs (a fused ingredient in parentheses, a Radiant one followed by `*`); a digest
-/// id's list is its fused definition's `ingredients` (TS looked it up in the process's digest table,
-/// which every minted or entered fused definition wrote).
+/// id's list is its fused definition's `ingredients`.
 pub fn fused_id_specs(state: Option<&GameState>, def_id: &str) -> Option<Vec<FusedIngredient>> {
     let head = fused_head_len(def_id)?;
     if is_digest_id(def_id) {
@@ -932,8 +883,8 @@ pub fn excluding_def_id(
     }
 }
 
-/// §5's index as a number, so "2" sorts before "10" and a token index ("T-rush") sorts last.
-/// (`Number.parseFloat`, SURFACE §4.4.4: no catalog index hits JS's lenient-prefix case.)
+/// §5's index as a number (SURFACE §4.4.4), so "2" sorts before "10" and a token index ("T-rush")
+/// sorts last.
 pub(crate) fn index_rank(index: &str) -> f64 {
     match index.parse::<f64>() {
         Ok(parsed) if parsed.is_finite() => parsed,
@@ -975,23 +926,18 @@ pub fn deckable(def: &CardDef) -> bool {
 
 /// R2204001, R2511001: the key a Discover from the catalog offers once. A definition that names the
 /// Core card it copied (`CardDef.snapshot_of`) shares that card's key; every other card is its own.
-/// The build's catalog names none, so every card is its own key and an offer may show a Core card
-/// and its Legacy card both; the catalogs shipped from v0.5.5 to v0.5.7 name one for each of
-/// Training Grounds #41–#60, so a replay folded under one (R767000) offers what its game offered.
-/// Only the two Discovers read it (`effects::choose`'s offer and `subsystems::scorer::top_three`); a
-/// deck holds both cards (R2511001).
+/// The build's catalog names none, so an offer may show a Core card and its Legacy card both; the
+/// catalogs shipped from v0.5.5 to v0.5.7 name one for each of Training Grounds #41–#60, so a replay
+/// folded under one (R767000) offers what its game offered. Only the two Discovers read it
+/// (`effects::choose`'s offer and `subsystems::scorer::top_three`); a deck holds both cards (R2511001).
 pub fn pair_key(def: &CardDef) -> &str {
     def.snapshot_of.as_deref().unwrap_or(&def.id)
 }
 
-/// §5.1's single source of random pools and Discover: every definition the filters allow, set by set
-/// (catalog order, `CATALOG_SETS`: Core, Classic, Classic+, Meditative), each set in §5 index order. The order is a strict total order (set, index as a
-/// number, then the index itself, then the unique catalog id), so it never depends on the order the
-/// registry happened to hand the defs over and a seeded `rng.pick`/`rng.shuffle` over the result
-/// replays identically (R58, R60, §9.3).
-///
-/// Only the registered catalog is searched: fused and crafted definitions live on the instance's
-/// `transientDefs` and are not catalog cards, so no pool can generate one.
+/// §5.1's single source of random pools and Discover: every definition the filters allow, in a strict
+/// total order (set by `CATALOG_SETS`, §5 index as a number, the index, then the catalog id), so a
+/// seeded `rng.pick`/`rng.shuffle` over it replays identically (R58, R60, §9.3). Only the registered
+/// catalog is searched, so no pool can generate a fused or crafted definition.
 pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
     let tokens_allowed = asks_for_tokens(args);
     let mut pool: Vec<&'static CardDef> = registered()
@@ -1005,9 +951,7 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
             return set_a.cmp(&set_b);
         }
         // Compared, not subtracted: two token indexes are both +Infinity, and `Infinity - Infinity`
-        // is NaN, which `sort` reads as 0 while `NaN !== 0` is true — so subtracting returned early
-        // with NaN and skipped both tie-breaks, leaving the tokens in registry insertion order and
-        // breaking the total order this function promises (R58, R60, §9.3).
+        // is NaN, which would skip both tie-breaks and break the total order (R58, R60, §9.3).
         let rank_a = index_rank(&a.index);
         let rank_b = index_rank(&b.index);
         if rank_a != rank_b {
@@ -1025,14 +969,11 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
     pool
 }
 
-// ---------------------------------------------------------------------------
 // Grapes (C+ #65, #66; R382)
-// ---------------------------------------------------------------------------
 
 /// R960: one weighted roll over `table` — one draw of the match rng over the percents' sum,
 /// walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
 /// the later entry, since the table runs from worst to best. Returns the rolled entry's def id.
-/// (TS's `lucky = 0` default: pass 0.)
 pub fn roll_weighted(rng: &mut Rng, table: &[RollOdds], lucky: i32) -> String {
     // R2201001: a held game's table leaves out the entries a held pool would, and rolls the rest by
     // their own percents. A table left empty rolls nothing. An unheld game rolls the table as given.
@@ -1071,10 +1012,8 @@ pub fn roll_weighted(rng: &mut Rng, table: &[RollOdds], lucky: i32) -> String {
     entry.map(|entry| entry.def_id.to_string()).unwrap_or_default()
 }
 
-/// R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
-/// sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
-/// the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
-/// Returns the Grape's def id. (TS's `lucky = 0` default: pass 0.)
+/// R382, BUILD §2: one Grape, `roll_weighted` on `GRAPE_ODDS`, which runs from worst to best (Rotten <
+/// Normal < Large < Golden < Mythic). Returns the Grape's def id.
 pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
     roll_weighted(rng, GRAPE_ODDS, lucky)
 }
@@ -1084,16 +1023,13 @@ fn is_grape_def_id(def_id: &str) -> bool {
     GRAPE_ODDS.iter().any(|grape| grape.def_id == def_id)
 }
 
-/// R673: what the Glitch roll reads — the match's count of "… in the System" plays
-/// (`GameState.systemPlays`). TS typed it `{ readonly systemPlays?: number }` and every caller passed
-/// the state, so it is the state.
+/// R673: what the Glitch roll reads: the match's count of "… in the System" plays (`system_plays`).
 pub type GlitchOdds = GameState;
 
-/// R382: draw the generated card from a pool — as `rng.pick` today, except that a Grape pick is
-/// rolled again on `GRAPE_ODDS` and the Grape that roll names is generated instead, so the Grape
-/// rarity pool persists across every kind of Grape generation. One extra rng draw, only when a
-/// Grape was picked; every other pick draws exactly as before. A caller generating into a hand or a
-/// deck passes the state as `glitch`, and the pick may then become Glitch (R673).
+/// R382: draw the generated card from a pool with `rng.pick`, except that a Grape pick is rolled again
+/// on `GRAPE_ODDS` (one extra draw, only then), so the Grape rarity pool persists across every kind of
+/// Grape generation. A caller generating into a hand or a deck passes the state as `glitch`, so the pick
+/// may become Glitch (R673).
 pub fn pick_generated<'a>(
     rng: &mut Rng,
     pool: &[&'a CardDef],
@@ -1114,8 +1050,8 @@ pub fn pick_generated<'a>(
 }
 
 /// R673: after a card is picked for a hand or a deck, n/10000 that it is Glitch instead, n the match's
-/// System plays. One rng draw, and only when n is above 0, so a match no System card was played in
-/// draws exactly as before; a catalog without Glitch keeps the pick.
+/// System plays. One rng draw, and only when n is above 0, so a match with no System card draws as
+/// before; a catalog without Glitch keeps the pick.
 pub fn glitch_or_not<'a>(rng: &mut Rng, def: &'a CardDef, glitch: &GlitchOdds) -> &'a CardDef {
     let plays = glitch.system_plays.unwrap_or(0);
     if plays <= 0 {
@@ -1128,15 +1064,11 @@ pub fn glitch_or_not<'a>(rng: &mut Rng, def: &'a CardDef, glitch: &GlitchOdds) -
     find_def(None, GLITCH_DEF_ID).unwrap_or(def)
 }
 
-// ---------------------------------------------------------------------------
 // R1846000: the card metrics, BUSTED and complicated cards (Stinkyscape #109, #111).
-// ---------------------------------------------------------------------------
 
-/// R1846000: the card metrics `crates/cards/build.rs` compiles in from the card scripts, and
-/// `jackioh_cards::register_all` hands to the engine (`register_card_metrics`): each script's code
-/// lines (the lines above its tests that hold code once its comments are taken out), and the two
-/// lists they make, every catalog entry's, a token's included. Each is sorted by id, so the engine
-/// finds an id by binary search.
+/// R1846000: the card metrics `crates/cards/build.rs` compiles in and `jackioh_cards::register_all`
+/// hands over: each script's code lines (those above its tests that hold code once comments are out)
+/// and the two lists they make, every catalog entry's, a token's included, each sorted by id.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CardMetrics {
     /// Each catalog entry's script's code lines, by catalog id.

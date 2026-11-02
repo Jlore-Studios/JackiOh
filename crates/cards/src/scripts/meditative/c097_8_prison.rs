@@ -123,11 +123,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M 97.8 Prison — SPEC §8.8 row 97.8, BUILD M10 row M 97.8: "Tribute 2; after each Unit the opponent plays
-// or casts has resolved, its Cry included, a 50% roll moves it, still on the field, beneath Prison under your
-// control, dormant, its damage kept and its owner unchanged (MD-F16), `controlChanged` public, a card it
-// uncovered resuming on their side; a failure leaves it; summons are not captured; when Prison leaves, the
-// newest captive resumes under your control; chance reads through `param()`; radiant 0/32 and Lucky 1: 75%".
+// M 97.8 Prison — SPEC §8.8 row 97.8, BUILD M10 row M 97.8.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -197,14 +193,12 @@ mod tests {
                 },
             }));
 
-            // Set chance to 100 on Prison.
             set_param(s.card_mut(ID), "chance", 100);
 
             s.end_turn(); // P2's turn.
 
             s.play(VANILLA, json!({ "zone": 2 }));
 
-            // VANILLA resolved and was captured beneath Prison in P1 lane 1!
             let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(pile.len(), 2);
             assert_eq!(pile[0].def_id, ID);
@@ -212,7 +206,6 @@ mod tests {
             assert_eq!(pile[1].controller, P1);
             assert!(jackioh_engine::zones::is_buried(s.state(), &pile[1]));
 
-            // P2 lane 2 is empty!
             assert!(s.unit(P2, 2).is_none());
         }
 
@@ -230,8 +223,7 @@ mod tests {
 
         #[test]
         fn r2271000_its_own_controllers_unit_is_not_captured() {
-            // §8.8: "After your opponent plays a Unit". Its condition was read for no trigger but a
-            // trap's, so a sure capture took its own controller's Unit too.
+            // §8.8: "After your opponent plays a Unit".
             let mut s = prison_at_100(json!([VANILLA]), json!([FILLER]));
             let cursor = s.state().rng_cursor;
             s.play(VANILLA, json!({ "zone": 2 }));
@@ -289,7 +281,6 @@ mod tests {
                 s.end_turn();
                 s.play(VANILLA, json!({ "zone": 2 }));
 
-                // If not captured, VANILLA remains in P2 lane 2!
                 if s.unit(P2, 2).is_some() {
                     missed = true;
                     break;
@@ -315,12 +306,10 @@ mod tests {
                 },
             }));
 
-            // Even at chance 100...
             set_param(s.card_mut(ID), "chance", 100);
 
             s.end_turn(); // P2's turn.
 
-            // P2 plays Felinors into lane 2.
             s.play(FELINORS, json!({ "zone": 2 }));
 
             // The played Felinors in lane 2 is captured.
@@ -333,7 +322,6 @@ mod tests {
         #[test]
         fn r1284_capturing_felinor_fiender_uncovers_p2_unit_beneath() {
             crate::register_all();
-            // P2 has VANILLA in lane 1.
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -352,15 +340,12 @@ mod tests {
 
             s.end_turn(); // P2's turn.
 
-            // P2 plays Fiender stacking onto lane 1!
             s.play(FIENDER, json!({ "zone": 1 }));
 
-            // Fiender is captured beneath Prison in P1 lane 1!
             let p1_pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
             assert_eq!(p1_pile.len(), 2);
             assert_eq!(p1_pile[1].def_id, FIENDER);
 
-            // VANILLA on P2 lane 1 is uncovered and resumes!
             let p2_unit = s.unit(P2, 1).expect("uncovered unit in lane 1");
             assert_eq!(p2_unit.def_id, VANILLA);
             assert_eq!(p2_unit.controller, P2);
@@ -393,10 +378,8 @@ mod tests {
             s.end_turn(); // Back to P1's turn.
 
             let prison_id = s.card(ID).id.clone();
-            // P1 casts Hit Job destroying Prison!
             s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": prison_id }] }));
 
-            // Prison is destroyed, and the captive (VANILLA) resumes in lane 1 under P1!
             let resumed = s.unit(P1, 1).expect("captive resumed in lane 1");
             assert_eq!(resumed.def_id, VANILLA);
             assert_eq!(resumed.controller, P1);

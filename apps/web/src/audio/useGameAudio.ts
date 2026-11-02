@@ -1,11 +1,7 @@
-// Game's audio hook (SPEC §10.11): feeds views, entry starts and idles to the sound director;
-// installs the gesture unlock, UI ticks and debug handle; preloads likely voice lines; and shares
-// events with music (R631) and haptics (R669).
-//
-// ORDER MATTERS: call after `const runner = queue.current;` but before Game's layout effects, so
-// cues are owed by the runner's first entry and a reduced-motion burst flushes with its own view.
-//
-// No AudioContext (jsdom) or sound failure is a no-op.
+// Game's audio hook (SPEC §10.11): feeds the sound director and shares events with music (R631) and
+// haptics (R669). ORDER MATTERS: call after `const runner = queue.current;` but before Game's layout
+// effects, so cues are owed by the runner's first entry and a reduced-motion burst flushes with its own
+// view. No AudioContext (jsdom) or sound failure is a no-op.
 
 import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
@@ -47,10 +43,8 @@ export function cueCard(lookup: CardLookup | null, defId: string): CueCard | und
 }
 
 /**
- * R2095000: `silent` feeds no audio at all — no view feed, entry subscription, gesture/debug
- * install, crowd, music enter, or preload — for the Duos both-boards view's teammate board, so
- * two mounted boards play only the own duel's cues. The hook itself is still called; only its
- * effects return early. Absent, off.
+ * R2095000: `silent` feeds no audio at all, for the Duos both-boards view's teammate board, so two
+ * mounted boards play only the own duel's cues. The hook is still called; only its effects return early.
  */
 export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = false): void {
   // Use a ref so the persistent director sees a catalog that arrives after it.
@@ -92,7 +86,6 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
   }, [director, view, silent]);
 
   // Keep engine and music busy during entries (B58), so the idle flush preempts preload/prefetch.
-  // Clear both if Game unmounts mid-burst.
   useLayoutEffect(() => {
     if (silent) return undefined;
     const engine = getAudioEngine();

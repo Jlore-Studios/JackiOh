@@ -1,17 +1,5 @@
-//! B3.4 rule 5: the numbers Degrade, Upgrade and KY's Constant may move are declared in the catalog
-//! as `params`, and each face's text writes them as `{key}`. `fill_params` (the engine's wire, TS
-//! packages/shared) is the one function that turns a face's text into what a player reads, from the
-//! printed values or from an instance's current ones; the client, R277's diff and the text tests all
-//! read a face through it.
-//!
-//! R482 fixes how: every item of a Classic or Classic+ card's Numbers line (docs/classic-sets.md
-//! B6–B7; the AI generated cards of B8 have none) is one param, written `{key}` in each face's text
-//! that shows that number and nowhere as a literal; a count and the words that agree with it are
-//! written `{key|singular|plural}`, so the text reads right at every value a Degrade or an Upgrade can
-//! move it to; a numbered keyword (Armor, Lucky, Brittle, Spell Damage) and an Echo, Tribute or
-//! Activate count is no param, since B3.4's X change tunes those.
-//!
-//! Port of `packages/cards/test/params.test.ts`.
+//! B3.4 rule 5, R277, R482: numbers Degrade/Upgrade move are declared as `params` (docs/classic-sets.md
+//! B6–B7, B8). `fill_params` turns `{key}` into player-facing text.
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, card_def};
@@ -22,13 +10,11 @@ fn entries() -> Vec<&'static CardDef> {
     CATALOG.values().collect()
 }
 
-/// `fillParams(card, face, { [key]: value })`.
 fn filled_with(card: &CardDef, face: FaceKind, key: &str, value: i32) -> String {
     let values: IndexMap<String, i32> = [(key.to_string(), value)].into_iter().collect();
     fill_params(card, face, Some(&values))
 }
 
-/// `expect(actual).toMatchObject(expected)` on JSON: every key `expected` names holds the same value.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual.as_object(), expected.as_object()) {
         (Some(actual), Some(expected)) => expected.iter().all(|(key, value)| actual.get(key) == Some(value)),
@@ -36,7 +22,6 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// The first param a card declares, as JSON (`cardDef(id).params?.[0]`).
 fn first_param(id: &str) -> Value {
     let def = card_def(id);
     let first = def.params.as_ref().and_then(|params| params.first());
@@ -47,9 +32,9 @@ fn is_word(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
-/// `\b<number> <noun>\b` for a number `accept` takes and a noun of `nouns`: a run of digits that
-/// starts at a word boundary, one space, the noun, and a word boundary after it (the hand-written
-/// form of the two regular expressions R482's last check uses; there is no regex crate).
+/// `\b<number> <noun>\b` for a number `accept` takes and a noun of `nouns`: a run of digits that starts at a
+/// word boundary, one space, the noun, and a word boundary after it (the hand-written form of the two regular
+/// expressions R482's last check uses; there is no regex crate).
 fn number_then_noun(text: &str, accept: impl Fn(&str) -> bool, nouns: &[&str]) -> bool {
     let bytes = text.as_bytes();
     let mut at = 0;
@@ -77,7 +62,6 @@ fn number_then_noun(text: &str, accept: impl Fn(&str) -> bool, nouns: &[&str]) -
     false
 }
 
-/// `/\b1 (cards|times|Plague Counters|Units|Spells)\b/`: a lone 1 before a plural noun.
 fn one_with_a_plural(text: &str) -> bool {
     number_then_noun(
         text,
@@ -86,8 +70,6 @@ fn one_with_a_plural(text: &str) -> bool {
     )
 }
 
-/// `/\b([2-9]|\d{2,}) (card|time|Plague Counter|Unit|Spell)\b(?!s)/`: a number above 1 before a
-/// singular noun.
 fn many_with_a_singular(text: &str) -> bool {
     number_then_noun(
         text,
@@ -195,8 +177,6 @@ mod b3_4_params_the_numbers_a_card_declares {
             json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
         );
         assert!(!card_def("classic-006").base.text.contains("{mana}"));
-        // A stated step and a lower-is-better threshold with a stated floor (Flame Lance deals 10 [20],
-        // balance patch 1).
         assert!(matches_object(
             &first_param("classic-083"),
             &json!({ "key": "damage", "base": 10, "radiant": 20, "step": 2 })
@@ -205,7 +185,7 @@ mod b3_4_params_the_numbers_a_card_declares {
             &first_param("classic-038"),
             &json!({ "key": "plays", "base": 3, "radiant": 2, "better": "down", "min": 2 })
         ));
-        // A percentage: step 10, never above 100, at its bound on both faces since issue #1828.
+        // A percentage: step 10, never above 100, at its bound on both faces (#1828).
         assert!(matches_object(
             &first_param("classicplus-019-2"),
             &json!({ "key": "chance", "base": 100, "radiant": 100, "step": 10, "max": 100 })
@@ -222,14 +202,11 @@ mod b3_4_params_the_numbers_a_card_declares {
                 .map(|param| param.key)
                 .collect()
         };
-        // Solarius prints Spell Damage +2; its Cry (which drew 1) is gone on both faces (balance
-        // patch 1), so no number is a param.
         assert_eq!(
             serde_json::to_value(&card_def("classicplus-038").base.keywords).expect("keywords serialize"),
             json!([{ "kind": "Spell Damage", "n": 2 }])
         );
         assert_eq!(keys("classicplus-038"), Vec::<String>::new());
-        // Top Loser's Armor, Twice Forward's printed Brittle, Brother Ping's Activate, Echo's Echo 1.
         assert_eq!(keys("classicplus-019-1"), Vec::<String>::new());
         assert_eq!(
             keys("classicplus-074"),
@@ -237,7 +214,6 @@ mod b3_4_params_the_numbers_a_card_declares {
         );
         assert_eq!(keys("classicplus-076-1"), vec!["damage".to_string()]);
         assert!(card_def("classic-057").params.is_none());
-        // No param shares its name with a keyword kind.
         for card in entries() {
             for param in card.params.iter().flatten() {
                 let named_like_a_keyword = ["armor", "lucky", "brittle", "spellDamage", "echo", "activate"]
@@ -265,7 +241,6 @@ mod b3_4_params_the_numbers_a_card_declares {
                 .expect("placeholders serialize"),
             json!([{ "key": "draw", "one": "card", "many": "cards" }, { "key": "damage" }])
         );
-        // No filled face leaves a count disagreeing with its noun ("1 cards", "2 card").
         let mut wrong: Vec<String> = Vec::new();
         for card in entries() {
             for param in card.params.iter().flatten() {
@@ -288,8 +263,8 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_declares_no_params_on_the_ten_ai_generated_cards_b8_gives_them_no_numbers_line() {
-        // The ten are T-AI-1 to T-AI-10. Meditative+ #1.1 Base Camp and #1.2 Spa Day, the AI cards the
-        // Meditative+ brief defines for Bob's Plan, tune their numbers as their §8.9 rows say (R1185000).
+        // Meditative+ #1.1 Base Camp and #1.2 Spa Day, the AI cards the Meditative+ brief defines for Bob's
+        // Plan, tune their numbers as their §8.9 rows say (R1185000).
         let with_params: Vec<String> = entries()
             .into_iter()
             .filter(|card| {
@@ -385,13 +360,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 assert_ne!(read(&s, &plain), param.base, "{} {}", card.id, param.key);
             }
         }
-        // The thirteen numbers patch v0.3.3 marked (issue #556) and issue #1748's two (#21's discards and
-        // #42's chance, R1748003), and the Meditative set's own, which §8.8 tunes "on the base face
-        // only": M #14's draws, M #37's surcharge (R1748003), M #49.1's picks (#529) and M #76's marks.
-        // The Meditative+ set, held until it ships (R1178000), joins batch by batch (M+ #4's
-        // `embiggenedCards`); each of its numbers is held to the rule above, and the pinned lists are
-        // the shipped sets'. So is the held Stinkyscape set's (R1857000), until its release re-pins them.
-        // The held Training Grounds set's are too (R2194000), its snapshots' among them (R2195003).
+        // The thirteen numbers issue #556 marked and issue #1748's two (#21's discards and #42's chance,
+        // R1748003), and the Meditative set's own, which §8.8 tunes "on the base face only": M #14's draws,
+        // M #37's surcharge (R1748003), M #49.1's picks (#529) and M #76's marks. The held sets join batch
+        // by batch (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000, its snapshots'
+        // among them, R2195003): each number is held to the rule above; the pinned lists are the shipped.
         base_only.retain(|entry| {
             !entry.starts_with("meditativeplus-")
                 && !entry.starts_with("stinkyscape-")
@@ -465,18 +438,16 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 assert_ne!(read(&s, &shining), param.radiant, "{} {}", card.id, param.key);
             }
         }
-        // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen marked
-        // before (C #46's and C #54's among them, R749), less C #59's tokens, which both faces print
-        // since patch v0.3.10, and C #75's draw, which both faces print since #2020; and the
-        // Meditative set's twenty-three, less M #1's draw, printed on both faces since then too,
-        // with M #37's and M #38's `setCost` (R1748003).
+        // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
+        // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
+        // print (#2020); and the Meditative set's twenty-three, less M #1's draw (both faces), with M #37's
+        // and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
-        // The Meditative+ set, held until it ships (R1178000), joins the count batch by batch; each
-        // of its numbers is held to the rule above, and the pinned counts are the shipped sets'. So
-        // does the Stinkyscape set (R1857000), and the held Training Grounds set (R2194000).
+        // The held sets (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000) join the
+        // count batch by batch: each number is held to the rule above; the pinned counts are the shipped.
         let held = radiant_only
             .iter()
             .filter(|entry| {
@@ -529,8 +500,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
 }
 
 /// R1748003 (issue #1748): every number a Spell or a Field Spell prints is a declared number, written
-/// `{key}`, or is fixed for one of the reasons below, each card's reason named here. A number a reason
-/// no longer covers fails, and so does a card here that prints none any more.
+/// `{key}`, or is fixed for one of the reasons below, each card's reason named here.
 mod r1748003_the_numbers_a_spell_or_field_spell_prints {
     use super::*;
     use jackioh_engine::CardType;
@@ -540,16 +510,9 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
     /// A price: a cost a filter or a threshold names, an Embiggened or other dearer play's price, or a
     /// cap on a cost, which the cost row and R65 own.
     const PRICE: &str = "a price a filter, a threshold, a dearer play or a cap names";
-    /// A table the engine holds: Call to Chaos's outcomes, Combo-Index's grades, Heroic Power's powers,
-    /// Craft a Card's recipe, Quickstriker's Combo, Auspicious Rock's odds, AI Slop's and Papaya's grids.
     const ENGINE: &str = "a table the engine holds, not one number the card declares";
-    /// A term of a formula (X+1, Fib, a health step against 30, Book of Tokens' 1–2), which no step moves
-    /// as one number.
     const FORMULA: &str = "a term of a formula, which no step moves as one number";
-    /// What the card is built on: a list's ordinals, Ascent levels, a quest's count, a duration, a
-    /// floor of one counter, KY's Constant's 3.
     const STRUCTURE: &str = "what the card's text is built on, not an amount";
-    /// How many cards the play declares (Glowy Jelly Bean's targets).
     const TARGETS: &str = "how many cards the play declares";
     /// A number whose better way hangs on the target, so neither a Buff nor a Nerf has a way to move it:
     /// a hero's health set to 13, Malzahar's Recycler's discard that draws as many, CN Peptides' 50%
@@ -559,8 +522,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
     const AI_PRINTED: &str = "an AI generated card's printed number (R482)";
     /// An Immutable card's number: neither a Buff nor a Nerf reaches it (R386).
     const IMMUTABLE: &str = "an Immutable card's number, which nothing tunes";
-    /// A digit in the name of a card the text names (the Stinkyscape set's Siva 1, Paragon Mk1,
-    /// Scanning Probe Mk1, Shockwave447, RR-5000, Trila 3, 1v1 Final Destination), which is no amount.
     const CARD_NAME: &str = "a digit in a card name the text names";
 
     const FIXED: &[(&str, &str)] = &[
@@ -680,7 +641,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-160", CARD_NAME),
     ];
 
-    /// A face's text with every `{…}` placeholder taken out: what it prints as a literal.
     fn literal(text: &str) -> String {
         let mut out = String::new();
         let mut depth = 0usize;
@@ -732,7 +692,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
             "a card here that prints no number any more"
         );
         assert!(FIXED.iter().all(|(_, reason)| !reason.is_empty()));
-        // Each reason says a why of its own.
         let reasons = [
             KEYWORD, PRICE, ENGINE, FORMULA, STRUCTURE, TARGETS, EITHER_WAY, AI_PRINTED, IMMUTABLE, CARD_NAME,
         ];

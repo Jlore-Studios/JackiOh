@@ -1,16 +1,9 @@
-//! The engine half of the Core patches and cosmetics (docs/classic-sets.md B0):
-//!
-//!   R429  §10.5 step 4 counts a card's plays on its instance when its script asks
-//!         (`StaticFlags.countsPlays`, `timesPlayed`), which #31 KY's Math Equation reads; and, with
-//!   R766  step 7 notes the price a Spell whose return keeps it was played at
-//!         (`StaticFlags.returnKeepsPrice`), which #31's return gives back;
-//!   R433  `createGame` learns the seats that were dealt a deck, whose library lists as unknown;
-//!   R434  once the game is over, each view carries the other player's hand;
-//!   R437  a delayed effect aimed at a card marks it in both views while it waits.
-//!
+//! The engine half of the Core patches and cosmetics (docs/classic-sets.md B0), one section a ruling:
+//! R429, §10.5 step 4 counting a card's plays when its script asks (`StaticFlags.countsPlays`, read by
+//! #31 KY's Math Equation); R766, step 7 noting the price a Spell whose return keeps it was played at
+//! (`StaticFlags.returnKeepsPrice`); R433, a dealt seat's library listing as unknown; R434 and R437.
 //! R426 (#32 Prem Panther) rides `Script.afterAttack`. Every behavior runs through fixture scripts;
-//! the real cards prove it again in `crates/cards`. Pauses are JSON round-tripped mid-way, and the
-//! games that can be folded from `(seed, decks, log)` are folded and compared (§9.3).
+//! the real cards prove it again in `crates/cards`.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::marks::marks_on;
@@ -75,7 +68,6 @@ fn instance_ids(events: &[GameEvent], ty: GameEventType) -> Vec<Value> {
         .collect()
 }
 
-/// The events a view carries of one type, as JSON.
 fn view_events_of(view: &Value, ty: &str) -> Vec<Value> {
     view["events"]
         .as_array()
@@ -89,7 +81,6 @@ fn view_events_of(view: &Value, ty: &str) -> Vec<Value> {
         .unwrap_or_default()
 }
 
-/// The sum of a library list's entry counts.
 fn listed(list: &Value) -> i64 {
     list["cards"]
         .as_array()
@@ -208,8 +199,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     use jackioh_engine::query::return_price_of;
     use jackioh_engine::resolve::{RETURN_PRICE_KEY, add_return_price};
 
-    /// p1 plays its copy of `def` from hand at `cost_mod`, `climb` of it the price its own earlier
-    /// returns gave it: the state after the play, and the card's id.
+    /// p1 plays `def` from hand at `cost_mod`, `climb` of it from earlier returns: the state and its id.
     fn play_at(seed: &str, def: &CardDef, cost_mod: i32, climb: i32) -> (GameState, String) {
         let mut state = board(seed);
         put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -226,7 +216,6 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
         (played, card.id)
     }
 
-    /// The card under `id` in p1's graveyard.
     fn lying(state: &GameState, id: &str) -> CardInstance {
         state
             .players
@@ -249,8 +238,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
         // R766: lying in the graveyard it is its printed card, price included.
         assert_eq!(card.cost_mod, 0);
         assert_eq!(effective_cost(&state, &card, Default::default()), 1);
-        // R429: the climb it was played at, and not the surcharge, waits for its return, and survives
-        // JSON (§9.3).
+        // R429: the climb, not the surcharge, waits for its return, and survives JSON (§9.3).
         assert_eq!(return_price_of(&card), 2);
         assert_eq!(return_price_of(&lying(&round_trip(&state), &id)), 2);
     }
@@ -276,8 +264,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
 
     #[test]
     fn r766_r155_the_note_goes_with_the_flag_as_the_card_leaves_the_graveyard_and_as_the_turn_ends() {
-        // Taken out of the graveyard (a return, #72's Discover, a play from there): the landing it was
-        // noted for is spent.
+        // Taken out of the graveyard (a return, #72's Discover, a play from there): its note is spent.
         let (mut state, id) = play_at("r766-leaves", &priced_return, 2, 2);
         let mut card = lying(&state, &id);
         move_to_zone(
@@ -292,8 +279,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
         assert!(held.memory.get(RETURN_PRICE_KEY).is_none());
         assert_eq!(held.cost_mod, 0);
 
-        // Left lying there to the end of the turn (this fixture's return does nothing): cleanup ends
-        // the return, and the note with it.
+        // Left there to the turn's end (this return does nothing): cleanup ends it, and the note.
         let (state, id) = play_at("r766-cleanup", &priced_return, 2, 2);
         let ended = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         let card = lying(&ended, &id);
@@ -303,8 +289,8 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
 
     #[test]
     fn r766_a_spell_whose_return_keeps_its_price_reaching_its_graveyard_any_other_way_has_nothing_noted() {
-        // Discarded from a hand at a price and a climb: never played, never flagged, so R766's reset is
-        // all there is, and the climb goes with the rest of its memory (R78).
+        // Discarded, never played or flagged: R766's reset is all there is, and the climb goes with
+        // the rest of its memory (R78).
         let mut state = board("r766-discarded");
         let card = first_in_hand(&mut state, &priced_return.id, P1, "the returning Spell");
         let held = find_instance_mut(&mut state, &card.id).expect("the Spell in hand");
@@ -357,8 +343,8 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
         );
         assert!(left_field_since_resolved(&state, &event));
 
-        // A play whose card had already left as it resolved (its own resolution took it, R427): its
-        // event's mark is after the departure, so nothing has taken it since.
+        // A play whose card left as it resolved (its own resolution took it, R427): its event's mark
+        // is after the departure, so nothing took it since.
         let mut later = json_of(resolved_now(&state));
         later["permanent"] = json!(false);
         assert!(!left_field_since_resolved(&state, &json_as(later)));
@@ -367,7 +353,6 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
 
 // R433: a dealt deck
 
-/// Both mulligans answered keeping everything, in seat order.
 fn keep_all(state: GameState, log: &mut Vec<Action>) -> GameState {
     let mut next = state;
     for player in [P1, P2] {
@@ -417,7 +402,6 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
             listed(&json_of(own_library_view(&state, P2))),
             i64::from(DECK_SIZE)
         );
-        // The view carries it so: the list, and nothing else of the library (§9.1).
         assert_eq!(
             json_of(view_for(&state, P1))["you"]["ownLibrary"],
             json!({ "cards": [], "unknown": DECK_SIZE })
@@ -448,8 +432,7 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         )
         .state;
 
-        // The one returned card went in openly (R311) and is listed while it is there; every other card
-        // of the library, the dealt ones, stays unknown.
+        // The returned card went in openly (R311), listed while there; the dealt rest stays unknown.
         let list = json_of(own_library_view(&state, P1));
         let known = listed(&list);
         let still_there = state.players.p1.library.iter().any(|card| card.id == returned);
@@ -521,7 +504,7 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
             json!({ "count": 2 })
         );
 
-        // p2 concedes: the game is decided (§2.5).
+        // The game is decided (§2.5).
         let over = act_ok(&state, json!({ "type": "concede", "playerId": "p2" })).state;
         assert!(over.result.is_some());
 
@@ -560,7 +543,7 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
         put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
         put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         in_hand(&mut state, &uncounted.id, P1, 1);
-        // p1 ends the turn; p2's draw names a card p1 may not read.
+        // p2's draw names a card p1 may not read.
         let turned = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         let draw_event = view_events_of(&json_of(view_for(&turned, P1)), "drawn")
             .into_iter()
@@ -624,7 +607,6 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         }
     }
 
-    /// `TEST_MARK` as the views and events carry it.
     fn mark() -> Value {
         json_of(TEST_MARK)
     }
@@ -677,7 +659,6 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         } = act_ok(&state, json!({ "type": "endTurn", "playerId": "p2" }));
         state = back;
 
-        // The hit landed at p1's start of turn, and the mark is gone from both views.
         assert_eq!(state.active, P1);
         assert!(
             events_of_type(&events, GameEventType::Damage)
@@ -763,7 +744,6 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
             &p1_event,
             &json!({ "instanceId": HIDDEN_ID, "mark": mark()["mark"], "color": mark()["color"], "added": true })
         ));
-        // p2 reads its own trap, mark and all, and the event names it.
         let p2_view = json_of(view_for(&played, P2));
         assert!(matches_object(
             &p2_view["you"]["backrow"][0],

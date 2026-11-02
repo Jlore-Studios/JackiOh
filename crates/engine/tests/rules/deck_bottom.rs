@@ -9,7 +9,6 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{grunt, playing};
 use crate::rules::fixtures::harness::sink_for;
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -40,7 +39,6 @@ mod r80_the_named_end_of_the_library {
             })))],
             &mut make_context(&mut sink, None, by(P1)),
         );
-        // The fresh card is last, the rest untouched — and the rng cursor never moved.
         let after: Vec<String> = sink
             .state
             .players

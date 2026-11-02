@@ -1,5 +1,5 @@
 // The Duos screens' testids (#936 S8), mirrored in `e2e/support/testids.ts`. The first block is S8's
-// frozen list; the rest are this slice's own chrome, each named for what it holds.
+// frozen list; the rest are this slice's own chrome.
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { PingKind } from "../net/duos.ts";
@@ -21,7 +21,7 @@ export const duosTestid = {
   ping: (kind: PingKind): string => `duos-ping-${kind}`,
   pingMarker: "duos-ping-marker",
 
-  // The panel's own: the deck choice, the lean, the open room's controls, its status and refusals.
+  // The panel's own.
   coopDeck: "coop-deck",
   /** R2031000: beside the Random deck only, "More cards from" (R924000), a select. */
   coopLeanNewest: "coop-lean-newest",
@@ -38,7 +38,7 @@ export const duosTestid = {
   coopDecksRetry: "coop-decks-retry",
   /** #1900: a failed read of the live co-op game offers Try again beside the alert. */
   coopLiveRetry: "coop-live-retry",
-  // The board's own: the rail's pieces, the concede offer and the result.
+  // The board's own.
   board: "duos-board",
   /** R2095000: the rail's Both boards toggle, and each board's own wrapper. */
   both: "duos-both",
@@ -55,12 +55,12 @@ export const duosTestid = {
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
   resultJlore: "duos-result-jlore",
-  /** #1755: the rail's "Result", while "View the board" has folded the result panel; it opens it again. */
+  /** #1755: the rail's "Result", while "View the board" has folded the result panel. */
   resultReopen: "duos-result-reopen",
   /** R2092000: the result panel's Play again, and its status line. */
   resultAgain: "duos-result-again",
   resultAgainStatus: "duos-result-again-status",
-  // The route's own: before the first view, its clock, and its connection line and Reconnect now.
+  // The route's own.
   connecting: "duos-connecting",
   refused: "duos-refused",
   /** #1599: the sentence that stands in for a socket closed for good before any view (a voided match). */

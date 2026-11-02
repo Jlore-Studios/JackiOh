@@ -1,6 +1,4 @@
 //! Random split damage (docs/classic-sets.md B5 E37): "deal N damage split among enemies".
-//!
-//! Port of `packages/engine/src/effects/split.ts`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -53,11 +51,9 @@ pub struct DamageRandomEnemiesArgs {
     pub amount: i32,
 }
 
-/// ST-S03-5 (R1860004): `amount` damage as one §4.4 instance each to `count` different random
-/// enemies — the enemy hero or an enemy Unit — drawn from the match rng among those still standing
-/// (above 0 health and not marked destroyed or exiled, the same `standing` as above), fewer when
-/// fewer stand, and nothing at 0. Unlike `damage_split` above, which re-draws per hit and can hit
-/// one enemy twice, each enemy here takes at most one hit.
+/// ST-S03-5 (R1860004): `amount` damage as one §4.4 instance each to `count` different random enemies
+/// still `standing` (the hero or a Unit), fewer when fewer stand. Unlike `damage_split`, which re-draws
+/// per hit, each enemy here takes at most one hit.
 pub fn damage_random_enemies(args: DamageRandomEnemiesArgs) -> Effect {
     Effect::new("damageRandomEnemies", move |ctx| {
         let count = args.count.max(0) as usize;
@@ -70,7 +66,6 @@ pub fn damage_random_enemies(args: DamageRandomEnemiesArgs) -> Effect {
         }
         let enemy = opponent_of(ctx.controller);
         let scope: BoardScope = json_as(json!({ "side": "enemy" }));
-        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
         let units: Vec<CardInstance> = cards_in_scope_aimed(ctx, &scope, crate::wire::TargetAim::Harm)
             .into_iter()
             .collect();
@@ -81,7 +76,6 @@ pub fn damage_random_enemies(args: DamageRandomEnemiesArgs) -> Effect {
             }
         }
         pool.push(DamageTarget::Hero { player: enemy });
-        // One shuffle, then the first `count`: every enemy takes at most one hit.
         let order = ctx.sink.rng.shuffle(&pool);
         let source = ctx.live_self().cloned();
         for target in order.into_iter().take(count) {
@@ -101,14 +95,10 @@ pub fn damage_random_enemies(args: DamageRandomEnemiesArgs) -> Effect {
     })
 }
 
-/// B5 E37: `amount` damage dealt as hits of `per_hit` (1 unless the card says otherwise — Classic+ #3's
-/// "1 damage for each Plague Counter", which an Upgrade may make 2), each hit a damage instance of its
-/// own (§4.4) on an enemy drawn from the match rng among the ones still standing as that hit is dealt:
-/// the enemy hero ("an enemy"; left out for "an enemy Unit") and every enemy unit acting on the field
-/// still standing — above 0 health and not marked destroyed, since the state check does not run
-/// between the hits of one effect (R59). A last hit smaller than `per_hit` takes what is left. A Spell's split passes
-/// a unit immune to Spells by, as every scope does (`effects/targets.rs`), and each hit is raised by
-/// Spell Damage like any other hit of a Spell (E6).
+/// B5 E37: `amount` damage dealt as hits of `per_hit` (an Upgrade may make Classic+ #3's 2), each its
+/// own §4.4 instance on an enemy drawn from the match rng among those still `standing` as that hit is
+/// dealt, since the state check does not run between one effect's hits (R59); the hero is left out for
+/// "an enemy Unit". A Spell's hits pass Spell-immune units by and take Spell Damage (E6).
 pub fn damage_split(args: DamageSplitArgs) -> Effect {
     Effect::new("damageSplit", move |ctx| {
         let per_hit = args.per_hit.unwrap_or(1).max(1);

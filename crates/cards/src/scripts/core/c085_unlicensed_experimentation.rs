@@ -4,18 +4,14 @@
 //!   Radiant: "Onto every such permanent": only the targets change (§8 Conventions); R77 fuses the
 //!            played permanent onto each matching permanent separately, one fusion at a time.
 //!
-//! ARMING vs FIRING (R61): what must leave the trap armed and face-down (your own play, a Spell, a
-//! token, a Recruit, copy, Reborn or Transform result, a type matching nothing of yours) lives in
-//! `when`, never in `run`, whose empty list means "fired for nothing". An Immutable permanent of
-//! yours still counts in `when` ("one you control") but `run` never picks it (R23).
-//! EVENT: `CardResolved` (§10.5 step 7, R17, R70), not `CardPlayed` (step 4, #41 Sheepish's moment):
-//! the trap fires after the played permanent's Cry, and `event.permanent` says it is still in play.
+//! ARMING vs FIRING (R61): what must leave the trap armed and face-down lives in `when`, never in
+//! `run`, whose empty list means "fired for nothing". An Immutable permanent of yours still counts in
+//! `when` but `run` never picks it (R23). EVENT: `CardResolved` (§10.5 step 7, R17, R70), not
+//! `CardPlayed` (#41 Sheepish's moment): the trap fires after the played permanent's Cry.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-085";
-
-// §10.5 step 7's event: a play or a cast that has finished resolving (R17, R70), `GameEvent::CardResolved`.
 
 /// R61 and §5.1: "Field Trap counts as Trap", in both directions, so both read as one key.
 fn type_key(type_: CardType) -> CardType {
@@ -27,8 +23,7 @@ fn type_key(type_: CardType) -> CardType {
 }
 
 /// The permanent this play put on the opponent's field, or `None` when the event is not one this trap
-/// answers: the controller's own play, a Spell or anything else that is no longer in play (R61's
-/// `permanent`), a token (R61), or a card the instance table can no longer name.
+/// answers.
 fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardInstance> {
     let GameEvent::CardResolved {
         player,
@@ -44,9 +39,8 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
     if *player == ctx.controller || cast_on_draw_event(event) {
         return None;
     }
-    // R61: "played permanents only". Step 7 read this as it landed, so no board check is needed: a
-    // Spell, a Unit an earlier trap took off the field and R138's cast permanent that found no zone
-    // are out by the same test.
+    // R61: "played permanents only". Step 7 read this as it landed, so no board check is needed (a
+    // Spell, a Unit an earlier trap took, R138's cast permanent that found no zone).
     if !*permanent {
         return None;
     }
@@ -61,11 +55,10 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
     Some(card.clone())
 }
 
-/// "a permanent of yours of that type" (§8), which R61 narrows twice: the firing trap is "neither
-/// matched nor fused onto", and R13 leaves a card dormant under a Stack off the field. Never the
-/// played card either: #52 Silly Silas rotated onto this side (§3.1) would be counted, then fused onto
-/// himself, which `fuse` refuses, spending the trap for nothing although another permanent of the
-/// type was there (R61 spends it only with no legal target). Left out of both, the trap stays armed when he is the only match (R99).
+/// "a permanent of yours of that type" (§8): never the firing trap (R61), a card dormant under a Stack
+/// (R13), or the played card: #52 Silly Silas rotated onto this side (§3.1) would be fused onto himself,
+/// which `fuse` refuses, spending the trap although another match was there. Left out of both, the trap
+/// stays armed when he is the only match (R99).
 fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardInstance) -> Vec<CardInstance> {
     let wanted = type_key(type_);
     let self_id = ctx.self_.as_ref().map(|card| card.id.clone());
@@ -121,9 +114,8 @@ fn experimentation(on_all: bool) -> TrapTrigger {
                 return vec![];
             }
 
-            // R77, §6.3: one fusion per target, each its own transient definition. One effect names all
-            // the targets because `fuse_cards` holds the resolved ingredient across them (after the first
-            // fusion the played card is gone and no id reaches it); the base face's random pick is
+            // R77, §6.3: one fusion per target. One effect names all the targets because after the first
+            // fusion the played card is gone and no id reaches it; the base face's random pick is
             // `ctx.rng` inside that effect, so the draw stays in the reducer (§9.3, §10.7).
             let pick = if on_all { "all" } else { "random" };
             vec![fuse_cards(json_as(json!({
@@ -164,7 +156,6 @@ pub fn script() -> CardScripts {
         condition_met: Some(condition_met.clone()),
         ..Script::default()
     };
-    // "Onto every such permanent" (R77: one fusion at a time, each target keeping its own instance).
     let radiant = Script {
         triggers: vec![experimentation(true)],
         condition_met: Some(condition_met),
@@ -174,11 +165,8 @@ pub fn script() -> CardScripts {
 }
 
 // #85 Unlicensed Experimentation — SPEC §8.4 row 85, BUILD M4-T4 row 85. Every test puts the trap
-// face-down in p1's backrow lane 3 with p2 active: a Trap answers the OPPONENT's action and resolves
-// to completion before that action continues (§10.3). The "arming" tests are R99's proof: an event
-// the trap must ignore leaves it on the field, face-down. R61 and R23 say what fires it (an Immutable
-// match fires it and takes no Fuse), R17 times it after the Cry, R77/R102/R86 compose the Fuse (the
-// other ingredient ceases to exist, with no Death trigger and no destroyed counter).
+// face-down in p1's backrow lane 3 with p2 active: a Trap answers the OPPONENT's action (§10.3). The
+// "arming" tests are R99's proof: an event the trap must ignore leaves it on the field, face-down.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,9 +313,8 @@ mod tests {
             expect_still_armed(&s);
         }
 
-        /// R1177000: a token fused with a real card is a real card (R102's `token`, every ingredient
-        /// a token), and it no longer keeps the Token tag that held the trap off it, so the
-        /// opponent's play of one sets the trap off as any real permanent's does.
+        /// R1177000: a token fused with a real card is a real card (R102's `token`: every ingredient a
+        /// token) without the Token tag, so the opponent's play of one sets the trap off.
         #[test]
         fn r1177000_r61_a_token_fused_with_a_real_card_is_a_real_card_whose_play_sets_it_off() {
             crate::register_all();
@@ -378,7 +365,6 @@ mod tests {
 
             s.play(CALL_TO_ARMS, json!({}));
 
-            // The Recruit really happened — units reached p2's board — and the trap still did not fire.
             assert!(count_of(&s, GameEventType::Summoned) > 0);
             expect_still_armed(&s);
         }
@@ -513,11 +499,9 @@ mod tests {
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
 
-            // It fired and was consumed — an Immutable permanent still counts as "one you control" (R61).
             s.expect_events(json!(["cardPlayed", "trapFired"]));
             assert_eq!(count_of(&s, GameEventType::TrapFired), 1);
             s.expect_in_zone(&trap, "graveyard");
-            // …and did nothing: no fusion, the Immutable body untouched, the played permanent still there.
             assert_eq!(count_of(&s, GameEventType::Fused), 0);
             s.expect_stats(&vanilla, json!({ "attack": 18, "maxHealth": 18 }));
             s.expect_in_zone(&played, "field");

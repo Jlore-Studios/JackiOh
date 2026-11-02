@@ -49,8 +49,6 @@ mod tests {
     const RESERVES: &str = "core-075"; // (0) Field Spell: a backrow card to destroy.
     const ROCK: &str = "core-066"; // (4) 10/10 Tribute 1.
 
-    /// p1 has the Disintegrex (`radiant` its face) and `p1_field` on its field and `p1_hand` in hand;
-    /// p2 has `p2_field` and a backrow Reserves.
     fn board(radiant: bool, p1_hand: Value, p1_field: Value, p2_field: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];
         field.extend(p1_field.as_array().cloned().unwrap_or_default());
@@ -116,7 +114,6 @@ mod tests {
             for card in [&disintegrex, &vanilla, &reserves] {
                 s.expect_in_zone(card, "exile");
             }
-            // A Divine Shield does not stop a destroy; the Defender's Reborn never fires from exile.
             s.expect_in_zone(&defender, "exile");
             assert!(s.unit(P2, 1).is_none(), "no Reborn body");
             // Exiled, so no death: it fuses into no Starship (R1852000).

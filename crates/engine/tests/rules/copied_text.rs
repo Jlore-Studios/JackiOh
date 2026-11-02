@@ -38,7 +38,6 @@ fn game(seed: &str, mana: i32) -> GameState {
     ready
 }
 
-/// `act_result` with the player apart from the body.
 fn attempt(state: &GameState, player: PlayerId, body: Value) -> ReduceResult {
     act_result(
         state,
@@ -49,7 +48,6 @@ fn attempt(state: &GameState, player: PlayerId, body: Value) -> ReduceResult {
     )
 }
 
-/// `act_ok` with the player apart from the body.
 fn act_as(state: &GameState, player: PlayerId, body: Value) -> ReduceResult {
     act_ok(
         state,
@@ -60,7 +58,6 @@ fn act_as(state: &GameState, player: PlayerId, body: Value) -> ReduceResult {
     )
 }
 
-/// The refusal text, or nothing when the action was accepted.
 fn error_of(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
@@ -114,12 +111,10 @@ fn plays_of(state: &GameState, player: PlayerId, instance_id: &str) -> Vec<Actio
         .collect()
 }
 
-/// One field of every play, as JSON.
 fn field_of_plays(plays: &[ActionBody], key: &str) -> Vec<Value> {
     plays.iter().map(|play| json_of(play)[key].clone()).collect()
 }
 
-/// The top of `player`'s pile in `lane`.
 fn top_unit(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
     state.players[player]
         .units
@@ -339,10 +334,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         );
     }
 
-    /// The last Spell can be a fused card since gone where no player sees it (part 40's sweep: a deck
-    /// card fused by Classic+ #73, keeping its cost, R470, played, then sent to its deck's bottom). Its
-    /// definition stays in the state (`transient_defs`), so the copier still reads its X; only the AI's
-    /// `redact` made a state without it, which panics `def_of` (`crates/ai/tests/ai/redact_play_records.rs`).
+    /// The last Spell can be a fused card (Classic+ #73, keeping its cost, R470) since sent where no
+    /// player sees it: its definition stays in `transient_defs`, so the copier still reads its X; a
+    /// state without it panics `def_of` (`crates/ai/tests/ai/redact_play_records.rs`).
     #[test]
     fn r545_r399_a_fused_x_cost_last_spell_back_in_its_deck_keeps_its_definition_and_the_copier_chooses_its_x()
      {
@@ -387,7 +381,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         assert!(state.transient_defs.contains_key(&fused.def_id));
 
         let echo = hand(&mut state, P1, &CT.echo.id, false);
-        // 3 mana once the fused bolt's X of 1 is paid: the copier costs 1, so X is 1 or 2.
+        // 3 mana once the fused bolt's X of 1 is paid, so X is 1 or 2.
         for state in [state.clone(), round_trip(&state)] {
             assert_eq!(
                 field_of_plays(&plays_of(&state, P1, &echo.id), "x"),
@@ -495,7 +489,6 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         state = act_as(&state, P1, json!({ "type": "play", "instanceId": echo.id })).state;
         let pending = state.pending.clone().expect("a prompt");
         assert_eq!(pending.player_id, P1);
-        // The continuation names the copied Spell's definition and face, with the copier as its card.
         assert_eq!(pending.resume.def_id, CT.asker.id);
         assert!(pending.resume.radiant);
         assert_eq!(pending.resume.instance_id.as_deref(), Some(echo.id.as_str()));
@@ -528,8 +521,8 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
             json_of(last_spell_played(&state)),
             json!({ "defId": CT.ping.id, "radiant": false })
         );
-        // Every caster play leaves the ping it cast as the last Spell, so the record is set to the one a
-        // caster that had cast nothing would leave; then a Radiant copier copies it.
+        // A caster play leaves its ping as the last Spell, so set the record one that cast nothing
+        // would leave; then a Radiant copier copies it.
         state.last_spell = Some(PlayRecord {
             def_id: CT.caster.id.clone(),
             radiant: false,

@@ -21,7 +21,6 @@ export function castOnDrawAt(events: readonly GameEvent[], at: number): boolean 
     const before = events[i];
     if (before === undefined) return false;
     if (before.type === "cardAnnounced" && before.player === played.player && same(before.instanceId)) continue;
-    // Its caster's choices can occur before it is announced.
     if ((before.type === "promptOpened" || before.type === "promptAnswered") && before.player === played.player) continue;
     return before.type === "drawn" && before.player === played.player && same(before.instanceId);
   }

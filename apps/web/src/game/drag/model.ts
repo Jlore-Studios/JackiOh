@@ -6,17 +6,12 @@
 // (without settling it), asks `highlightFor` where that interaction may land, and on the drop
 // hands the landing spot to the same `onClickTarget` a click would reach (CLAUDE.md rule 7).
 //
-// R384, R510: an activation is dragged the same way. A press on an Activate control (or a Heroic
-// Power's button) lifts its activation, and a press on a card you control that has nothing to
-// attack with lifts the one ability its control would; both draw the targeting arrow, and the drop
-// is the target click that narrows it. An activation with no target to aim at has nothing to drag
-// to: its press stays a click, except on a backrow card of yours, which is dragged onto the board
-// as a spell with no target is (R658).
+// R384, R510: an activation is dragged the same way. An activation with no target to aim at has
+// nothing to drag to: its press stays a click, except on a backrow card of yours, which is dragged
+// onto the board as a spell with no target is (R658).
 //
-// R658: a play or an activation that a drop (or a click) has narrowed but not finished, such as a
-// Unit placed in its zone whose Cry still wants a target, is lifted again from what it has picked
-// so far: a press on the chosen zone, Tribute or target draws the arrow from there to what is left,
-// with everything picked kept. Released on nothing, it goes back to the build it was, not to idle.
+// R658: a play or an activation that a drop (or a click) has narrowed but not finished is lifted
+// again from what it has picked so far, with everything picked kept.
 //
 // Pure: no DOM, no React, no state of its own.
 
@@ -57,9 +52,9 @@ export type DragPlan = {
   sourceTestid: string;
   /** What the drag holds while in flight: every candidate for the source, NOT settled. */
   lifted: Playing | Attacking | Activating;
-  /** `highlightFor(view, legal, lifted).glow ?? new Set()`: the testids a drop may land on. */
+  /** The testids a drop may land on. */
   dropTestids: ReadonlySet<string>;
-  /** kind "play" and (dropTestids is empty, or outstandingNeed(lifted) === null): a drop anywhere on the board commits. */
+  /** A drop anywhere on the board commits. */
   freeDrop: boolean;
   /** kind "attack" or "activate", or a play where no remaining candidate has a zone and some has targets. Otherwise a card ghost. */
   arrow: boolean;
@@ -158,9 +153,9 @@ function aims(candidates: readonly ActivationBody[]): boolean {
 
 /**
  * R384: an activation lifted from its control: every listed activation the control stands for
- * (`activationsFor`), unsettled, with the arrow. Null when none is listed, or none aims at anything
- * and `unaimed` is not set. R658: with `unaimed` (a backrow card of yours), an activation that aims
- * at nothing is lifted as a card ghost and dropped anywhere on the board, as a spell with no target is.
+ * (`activationsFor`), unsettled, with the arrow. R658: with `unaimed` (a backrow card of yours), an
+ * activation that aims at nothing is lifted as a card ghost and dropped anywhere on the board, as a
+ * spell with no target is.
  */
 function planActivation(
   view: PlayerView,
@@ -210,10 +205,9 @@ function planCardActivation(
 }
 
 /**
- * R658: a build in flight lifted again from one of its picks. `pressed` is the testid pressed; it
- * must be a pick the board shows as selected (the chosen zone, a Tribute, a declared target, or the
- * card whose ability is built), not the hand card of the play, whose press lifts it afresh. Null
- * when nothing is picked yet or nothing is left to aim at on the board (a picker's choice is next).
+ * R658: a build in flight lifted again from one of its picks. `pressed` must be a pick the board shows
+ * as selected, not the hand card of the play, whose press lifts it afresh. Null when nothing is picked
+ * yet or nothing is left to aim at on the board (a picker's choice is next).
  */
 function planContinue(
   view: PlayerView,
@@ -250,16 +244,8 @@ function planContinue(
 }
 
 /**
- * hand source: the `play`s naming it, or null if none, or if a play or activation is in flight and
- * the card's testid is in the current glow (it's a declared target; its press stays a click).
- * unit source (`side: "you"`): the `attack`s naming it; with none, its one Activate ability's
- * aimed activations (R384); null if neither, or while a play or activation is in flight.
- * backrow source (`side: "you"`): its one Activate ability's activations, aimed (the arrow) or not
- * (a ghost dropped on the board, R658).
- * activate source (a control): the activations it stands for, when one of them aims at something.
  * R658: with `pressed` (the testid pressed) one of the picks of a build in flight, the build itself,
- * lifted again with its picks kept; this comes before all of the above.
- * Anything else: null.
+ * lifted again with its picks kept; this comes before the source's own plan.
  */
 export function planDrag(
   view: PlayerView,
@@ -288,12 +274,6 @@ export function planDrag(
   return null;
 }
 
-/**
- * target spot in dropTestids: r = onClickTarget(view, legal, plan.lifted, spot.target); return
- * r if r.action is set or r.interaction !== plan.lifted, else { interaction: plan.missed ?? IDLE }.
- * board spot and plan.freeDrop: pickInPlay(plan.lifted, {}), which is an action, or a play still
- * needing a picker. Anything else: { interaction: plan.missed ?? IDLE } and no action.
- */
 export function resolveDrop(
   view: PlayerView,
   legal: readonly ActionBody[],

@@ -2,18 +2,15 @@
 //!
 //! Base:    "Start of turn: Add a random Radiant KY or CN card to your hand."
 //! Radiant: "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
-//! Engine: at the start of its controller's turn, `add_random_from_catalog({ query: { anyTags:
-//! [KY, CN] }, radiant: true })`, with `costOverride: 0` on the Radiant face. `anyTags` asks for
-//! any one of the tags (R1422); the Printer itself is excluded (R387), and R673 applies. The cards
-//! it makes are not Chinese (⚠ designer). Tunes: setCost 0 ↓, on the Radiant face only (R824000,
-//! R1748003). Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that
-//! (R767000).
+//! Engine: `anyTags` asks for any one of the tags (R1422); the Printer itself is excluded (R387),
+//! and R673 applies. The cards it makes are not Chinese (⚠ designer). Tunes: setCost 0 ↓, on the
+//! Radiant face only (R824000, R1748003).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-038";
 
-/// The Radiant face's "It costs (0)", as v0.4.4b printed it before it was the declared `setCost`.
+/// The Radiant face's printed "It costs (0)", which `script_v0_4_4b` keeps.
 const FREE: i32 = 0;
 
 /// One face; the Radiant face's card is priced at the declared `setCost`, or at the printed (0) when
@@ -32,7 +29,6 @@ fn printer(radiant: bool, declared: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // Both faces add a Radiant KY or CN card; the Radiant face's costs (0).
     let base = printer(false, true);
     let radiant = printer(true, true);
     CardScripts { base, radiant }
@@ -47,10 +43,7 @@ pub fn script_v0_4_4b() -> CardScripts {
     }
 }
 
-// M #38 H1B Printer — SPEC §8.8 row 38, BUILD M10 row M 38: "At your start of turn only, adds one
-// random Radiant non-token card with the KY tag, the CN tag or both (`anyTags`, MD-B20), never
-// itself (R387), at its printed cost and not Chinese; a card with neither tag never appears; the
-// hand cap burns it; hidden from the opponent; radiant it costs (0)".
+// M #38 H1B Printer — SPEC §8.8 row 38, BUILD M10 row M 38, MD-B20.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,7 +72,6 @@ mod tests {
         }))
     }
 
-    /// Whether the catalog prints `def_id` with the KY tag, the CN tag or both.
     fn is_ky_or_cn(def_id: &str) -> bool {
         let def = crate::card_def(def_id);
         def.tags.contains(&Tag::Ky) || def.tags.contains(&Tag::Cn)
@@ -141,7 +133,6 @@ mod tests {
                 assert!(!crate::card_def(&printed.def_id).token);
                 assert_eq!(printed.chinese, None);
                 assert_eq!(printed.cost_override, None);
-                // Hidden from the opponent: a count, never the card.
                 let view: Value = js(&view_for(s.state(), P2));
                 assert_eq!(view["opponent"]["hand"], json!({ "count": hand.len() }));
             }
@@ -150,10 +141,8 @@ mod tests {
             fn nothing_on_the_opponent_s_turn() {
                 let mut s = standing("printer-foe", false);
                 let before = s.hand(P1).len();
-                // p2's whole turn: p1's hand does not move.
                 s.end_turn();
                 assert_eq!(s.hand(P1).len(), before);
-                // p1's next start of turn: exactly one printed card arrives.
                 let ids: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.end_turn();
                 let held = s.hand(P1);
@@ -227,7 +216,6 @@ mod tests {
                 let mut s = standing("printer-hidden", false);
                 let printed = printed_at_start(&mut s);
                 let (id, def_id) = printed[0].clone();
-                // p2 reads a count of p1's hand, and no event of its stream names the card.
                 let view = s.view(P2);
                 let text = serde_json::to_string(&view).expect("the view serializes");
                 assert!(!text.contains(&id), "p2 never reads the printed card's id");

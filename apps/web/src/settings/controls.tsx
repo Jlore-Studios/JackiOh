@@ -1,7 +1,6 @@
 // The panel's controls for the stores tasks 1 and 6 own (slots.ts mounts them). Each reads its own
-// store and writes straight back, like the built-in switches, so a change applies at once: the
-// animation runner reads the effects speed at every enqueue (R201), the effects layer re-renders on
-// the intensity, and every card face on the foil switch.
+// store and writes straight back, so a change applies at once: the animation runner reads the effects
+// speed at every enqueue (R201).
 
 import { useId, type CSSProperties, type ReactElement } from "react";
 
@@ -11,7 +10,6 @@ import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
 import { LOCALES, parseLocale, setLocale, t, useLocale, useLocaleSettled } from "../i18n/i18n.ts";
 
-/** Every intensity the effects layer knows, in the order the picker lists them. */
 const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
   { value: "off", label: "Off" },
   { value: "low", label: "Low" },
@@ -22,21 +20,18 @@ const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
 /** The readout rounds the speed to hundredths: "0.25×", never "0.2500000001×". */
 const SPEED_LABEL_SCALE = 100;
 
-/** "1.5×", "0.25×": the speed as the slider's readout and its value text say it (R435). */
+/** The speed as the slider's readout and its value text say it (R435). */
 export function speedLabel(speed: number): string {
   return `${String(Math.round(speed * SPEED_LABEL_SCALE) / SPEED_LABEL_SCALE)}×`;
 }
 
-/** Where on the track `speed` sits, 0 to 1, for the filled part of the slider. */
 function trackFill(speed: number): number {
   return (speed - FX_SPEED_MIN) / (FX_SPEED_MAX - FX_SPEED_MIN);
 }
 
 /**
- * R435: the effects speed as a slider from FX_SPEED_MIN to FX_SPEED_MAX in FX_SPEED_STEP steps, with
- * its value beside it. A native range input, so the arrow keys, Page Up/Down, Home and End move it and
- * assistive tech reads it; the row is the 44px touch target. Ticks mark the slowest, the default and
- * the fastest.
+ * R435: the effects speed. A native range input, so the keys move it and assistive tech reads it; the
+ * row is the 44px touch target.
  */
 function SpeedSlider(props: { speed: number; onChange: (speed: number) => void }): ReactElement {
   const id = useId();
@@ -122,7 +117,6 @@ export function SelectRow(props: {
   );
 }
 
-/** Task 1's effects speed (R201, R435) and intensity. */
 export function FxControls(): ReactElement {
   const [settings, set] = useFxSettings();
   return (
@@ -225,7 +219,7 @@ export function VibrationSwitch(): ReactElement {
   );
 }
 
-/** R711000: the reader's language, each named in its own words; the button at the top switches it too, until the device settles (R1916000). */
+/** R711000: each language named in its own words. */
 const LANGUAGE_OPTIONS = Object.entries(LOCALES).map(([value, spec]) => ({ value, label: spec.name }));
 
 /** R711000: the language every screen and card reads in, on this device; the one control left once the device has settled (R1916000). */

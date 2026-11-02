@@ -1,18 +1,9 @@
-//! The one seam between the co-op server and the engine's Duos wrapper (fullsend SPEC S4), as
-//! `actor/engine.rs` is the 1v1's: `jackioh_cards::register_all()` before anything reads the
-//! catalog, the engine's functions under the names the actor reads, and the decks a co-op match is
-//! dealt. Nothing here decides a rule (CLAUDE.md rule 7): the wrapper owns turns, passes, the pool
-//! and the result, and the server only folds its log and relays its views.
+//! The seam between the co-op server and the engine's Duos wrapper (fullsend SPEC S4,
+//! CLAUDE.md rule 7): the server folds logs and relays views, registering cards first.
 //!
-//! Every function that reads the catalog runs under the match's `Pinned` catalog (R767000): a co-op
-//! match records the catalog version it began on (`DuosMatchOptions::catalog_version`), and its
-//! play, its rebuilds and its replay all read that version's catalog, the build's own or a shipped
-//! one this build carries, so a patch deployed under a match never changes what its log folds to.
-//!
-//! The decks: a person's saved deck as frozen at the room, or All Random's deal (R258) from the match
-//! seed and their seat, leaning on the newest set when they asked (R1372); an AI seat's deck from the
-//! AI's own random deck-builder at its tier's handicap, as practice deals the AI (§9.9: shadow ban
-//! and soft gate on, the handicap's deck size and mana cap), on `{seed}:{seat}-deck`.
+//! Every function that reads the catalog runs under the match's `Pinned` catalog (R767000).
+//! Decks: a person's saved deck or All Random deal (R258, R1372); an AI seat's deck from its
+//! random deck-builder at its tier's handicap (§9.9) on `{seed}:{seat}-deck`.
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::config::{AI_DIFFICULTY, DUOS_HUMAN_TEAM, Difficulty, HUMAN_HANDICAP, duos_ai_team};
@@ -118,8 +109,7 @@ fn person_deck(choice: &DuosChoice, seed: &str, seat: DuosSeat) -> Vec<String> {
     }
 }
 
-/// S6: an AI seat's deck, as practice deals the AI its own (`buildAiDeck(rng, handicap.deckSize,
-/// { manaCap })`): the AI's shadow ban and soft gate, its tier's deck size and mana cap.
+/// S6: an AI seat's deck: shadow ban and soft gate, its tier's deck size and mana cap.
 fn ai_deck(seed: &str, seat: DuosSeat, handicap: &Handicap) -> Vec<String> {
     registered();
     build_ai_deck(
@@ -132,11 +122,9 @@ fn ai_deck(seed: &str, seat: DuosSeat, handicap: &Handicap) -> Vec<String> {
     )
 }
 
-/// S6, B30: everything a co-op match between the room's two choices is created with. The people are
-/// team A under `DUOS_HUMAN_TEAM` with no handicap; the AI is team B under `duos_ai_team(difficulty)`
-/// with `AI_DIFFICULTY[difficulty]` on each of its seats. A person's random deck is dealt (R433), an
-/// AI's never (practice's rule: R185's redaction would hide the AI's own library from itself). The
-/// match is pinned to `catalog_version`, the catalog it is dealt from (R767000); `pinned` is it.
+/// S6, B30: match options created with `DUOS_HUMAN_TEAM` (no handicap) and `duos_ai_team(difficulty)`.
+/// A person's random deck is dealt (R433), an AI's never (R185: redaction hides its own library).
+/// Pinned to `catalog_version` (R767000).
 pub fn match_options(
     pinned: Pinned,
     catalog_version: &str,

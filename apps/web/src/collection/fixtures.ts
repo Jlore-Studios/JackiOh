@@ -1,15 +1,11 @@
-// Fixture responses for the collection screen's tests and its component spec (#1307): what
-// `GET /api/collection`, `GET /api/tracks` and `GET /api/quests` answer, as the server's JSON. The
-// wallet and the packs come from `shop/fixtures.ts` and `packs/fixtures.ts`. No number is a shipped
-// one where a test reads it, so a test that finds one on screen has found the response's value and
-// not a copy of the server's config.
+// Fixture responses for the collection screen's tests and component spec (#1307), as the server's
+// JSON. No number a test reads is a shipped one, so one found on screen is the response's value.
 
 import { SHIPPED_SETS, newestShippedSet } from "@jackioh/shared";
 
 import type { CollectionResponse, QuestsResponse, TrackView, TracksResponse } from "../net/api.ts";
 import { COLLECTED_DEFS } from "./collection.ts";
 
-/** `GET /api/collection` for an account owning one copy of each of `ids`. */
 export function collectionOwning(ids: readonly string[]): CollectionResponse {
   return { catalogVersion: "test", entries: ids.map((cardId) => ({ cardId, quantity: 1 })) };
 }

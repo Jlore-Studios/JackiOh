@@ -1,6 +1,5 @@
-// R2202000: the Training Grounds set's own art (issue #2202, traininggrounds.ts). Each family draws
-// one look, both faces share their geometry, the snapshots keep their Core card's picture, and no
-// other set's card reaches any of it, so every picture R503 pinned stays as it was.
+// R2202000: the Training Grounds set's own art (issue #2202, traininggrounds.ts). No other set's card
+// reaches it, so every picture R503 pinned stays as it was.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

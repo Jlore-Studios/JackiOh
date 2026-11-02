@@ -1,9 +1,7 @@
-//! Test-only definitions and scripts for ME-JADE and ME-ALLURE (Meditative #39.2 Jade, #39.4 Red
-//! Jade, #39.5 Jade Beauty; docs/meditative-set.md M5, Group C's systems). The engine does not depend
-//! on `jackioh-cards`, so the Jade Beauty and the three rolled tokens are stand-ins under the ids
-//! `JADE_BEAUTY_DEF_ID` and `AUSPICIOUS_ROCK_ODDS` name, with the CN tag and the Token rarity the real
-//! ones carry; the real cards' tests cover the same cases again
-//! (`crates/cards/src/scripts/meditative/`).
+//! Test-only definitions and scripts for ME-JADE and ME-ALLURE (Meditative #39.2 Jade, #39.4 Red Jade,
+//! #39.5 Jade Beauty; docs/meditative-set.md M5): the engine does not depend on `jackioh-cards`, so the
+//! Jade Beauty and the three rolled tokens are stand-ins with the CN tag and Token rarity the real ones
+//! carry.
 
 #![allow(non_upper_case_globals)]
 

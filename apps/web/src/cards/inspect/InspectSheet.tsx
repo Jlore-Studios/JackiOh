@@ -1,18 +1,9 @@
-// The bottom sheet a touch long-press opens (B24, B25): the live face, its glossary and Close, over
-// a scrim. Focus moves to Close on open and back on close; Escape, the scrim and Close all close it.
-// A face in play whose printed text differs (SPEC §10.10) has that text beside it as well. A touch
-// sheet is where a reference in the text is a control (R279): tapping a name shows the card it
-// names in a tooltip.
-//
-// Patch v0.2.0 (SPEC §10.8): the face's states in words (StateNotes.tsx: the tuned ribbon R386,
-// Brittle R385, enchantments E39, standing as a Unit R383) and its lines of code (E36) stand with the
-// printed text and the glossary, in the column beside the face (inspect.css), with the card's flavour
-// line and artist credit (R660, Flavour.tsx) after the glossary.
-//
-// Issue #1017: a face that prints less than its whole text has the whole text under it (Extended.tsx),
-// and a Summit in a game prints its next Ascent line (R280).
-//
-// Issue #2121 (R2121000): a swipe down closes it too, as Close does (useSheetSwipe.tsx).
+// The bottom sheet a touch long-press opens (B24, B25) over a scrim: focus moves to Close on open and
+// back on close; Escape, the scrim, Close and a swipe down (#2121, R2121000) all close it. Here a
+// reference in the text is a control (R279). Beside the face: its states in words (StateNotes.tsx:
+// tuned R386, Brittle R385, enchantments E39, a Unit R383; SPEC §10.8), its printed text where it
+// differs (§10.10), the glossary, flavour (R660) and lines of code (E36). #1017: a face that prints
+// less than its whole text has it under it, and a Summit its next Ascent line (R280).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";

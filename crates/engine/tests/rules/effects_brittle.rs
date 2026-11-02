@@ -1,8 +1,6 @@
 //! Brittle X's verbs (docs/classic-sets.md B3.3 rule 4; R385, R440, R441): "Give Brittle N" sets the
 //! count and starts it now, "gain +N Brittle" adds to it, on a named card anywhere or over a card scope,
 //! and what each reports to whom; "lower Brittle by N" takes from it and crumbles at 0 (R1861001).
-//!
-//! Port of `packages/engine/test/effects-brittle.test.ts`.
 
 use jackioh_engine::effects::{gain_brittle, give_brittle, lower_brittle};
 use jackioh_engine::testkit::*;
@@ -19,8 +17,7 @@ fn game() -> GameState {
     state
 }
 
-/// TS `run(state, effect, { self, ...hook })`: the effect applied for p1 (unless `hook` names another
-/// controller) on a sink over `state`, the rng cursor written back; its events.
+/// The effect applied for p1 (or `hook`'s controller) over `state`, rng cursor written back; its events.
 fn run(
     state: &mut GameState,
     effect: Effect,
@@ -247,7 +244,7 @@ mod b3_3_rule_4_give_and_gain_r385 {
             ),
             Vec::<GameEvent>::new()
         );
-        // TS read the detached object, which nothing can reach: it is in no zone of the state.
+        // Nothing can reach the detached card: it is in no zone of the state.
         assert!(find_instance(&state, &held.id).is_none());
         assert_eq!(held.brittle, None);
     }

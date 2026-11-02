@@ -7,12 +7,6 @@
 //! offset from the reference, and the reference's own rating comes from its rated games against
 //! people, or, until those are read, from the seed of record shifted by the AI promotions since.
 //! A seed is that anchor plus the strength's offset.
-//!
-//! Each game is a function of its seed: its decks, its engine rng and each seat's AI stream are all
-//! drawn from it, and the AI's search is held to a node budget with no clock, so the tallies are the
-//! same whatever the thread count. A game is the ladder bot's own decision (`decide_styled` at its
-//! strength, its skill's roll and its skill miss included (R747000, R2214000)) and nothing of its
-//! manner: no think time, no concession, no idle turn.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -33,11 +27,9 @@ use crate::db::store::{BotRow, Pilot, RatedGameRow};
 /// R748000: the strength the others are measured against: the strongest, the last of `BOT_STRENGTHS`.
 pub const REFERENCE_STRENGTH: usize = BOT_STRENGTHS.len() - 1;
 
-/// What a drawn game scores each side (definitional, as Elo's).
 const DRAW_SCORE: f64 = 0.5;
 
-/// One pair of strengths' games, `a < b`: how each ended, counted by strength, and how many were
-/// left unfinished (`play_game` came back with no result) and so are not in the others.
+/// One pair of strengths' games (`a < b`): outcomes and unfinished count.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PairTally {
     pub a: usize,
@@ -77,16 +69,10 @@ pub fn game_seed(base: &str, a: usize, b: usize, n: usize) -> String {
     format!("{base}:{a}v{b}:{n}")
 }
 
-/// R748000: one game between two strengths with All Random decks (R258), as the engine plays it: the
-/// game has no wall clock, no concession and no idle turn, so its result is a function of `seed`
-/// alone. A seat that the AI gives no move it may play, or whose move the engine refuses, plays the
-/// bot seat's fallback; a game that has neither, runs `BOT_CALIBRATION_MAX_ACTIONS` moves, or has a
-/// turn of more than `BOT_CALIBRATION_MAX_TURN_ACTIONS` actions (with no clock to end it, a loop that
-/// grows its own cost) has no result and is `None`.
-///
+/// R748000: one game between two strengths with All Random decks (R258), as the engine plays it: its
+/// result is a function of `seed` alone. Unfinished games return `None`.
 /// The winner is the strength that began in that seat (`Winner::P1` is `p1`'s), whichever seat a
-/// Glitch left it in (R677): each strength keeps its own stream and its own deck through a swap, as
-/// an account does.
+/// Glitch left it in (R677).
 pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winner> {
     // Calibration plays on this build's own catalog.
     let pinned = Pinned::default();
@@ -249,8 +235,7 @@ pub fn elo_of_score(points: f64, games: f64) -> f64 {
 /// R748000: the Bradley-Terry fit of `tallies` over `strengths` strengths, each strength's offset
 /// from `reference` in Elo points (0 for the reference) and its standard error. Every pair's tally
 /// has `BOT_CALIBRATION_PRIOR_GAMES` drawn game added, a draw is half a win each, and unfinished
-/// games are not counted. The fit is the minorization-maximization iteration, `BOT_CALIBRATION_FIT_ITERATIONS`
-/// steps, each normalized so the reference's strength is 1.
+/// games are not counted.
 pub fn fit_offsets(tallies: &[PairTally], strengths: usize, reference: usize) -> Vec<StrengthOffset> {
     let mut games = vec![vec![0.0_f64; strengths]; strengths];
     let mut points = vec![0.0_f64; strengths];
@@ -331,11 +316,8 @@ pub fn promotion_shift(promotions: &[Promotion], after: i64, through: i64) -> f6
         })
 }
 
-/// R748000: the rating a player held to `(opponent rating, score)` games performed at, and its
-/// standard error: the `R` at which the games' expected scores, with `BOT_CALIBRATION_PRIOR_GAMES`
-/// drawn game against the mean opponent added, sum to the scores' (found by `BOT_CALIBRATION_BISECTIONS`
-/// halvings between `BOT_CALIBRATION_SEARCH_SPAN` below the lowest opponent and above the highest).
-/// `None` with no games.
+/// R748000: performance rating and standard error from `(opponent rating, score)` games, with
+/// prior games added. `None` with no games.
 pub fn performance_rating(games: &[(f64, f64)]) -> Option<(f64, f64)> {
     if games.is_empty() {
         return None;
@@ -383,11 +365,7 @@ pub fn performance_rating(games: &[(f64, f64)]) -> Option<(f64, f64)> {
     Some((rating, GLICKO_SCALE / information.sqrt()))
 }
 
-/// R748000: the reference's games against people, as `(the person's rating before the game, the
-/// reference's score)`, in the games' order: a rated game with a bot of `strength` on one side
-/// (`bots` says which strength a bot id is) and a person on the other. A win scores 1, a draw
-/// (`winner_side` null) 0.5 and a loss 0. A game between two bots, or with a bot of another
-/// strength, is not one.
+/// R748000: reference games against people as `(opponent rating, score)` pairs for `strength`.
 pub fn reference_observations(games: &[RatedGameRow], bots: &[BotRow], strength: usize) -> Vec<(f64, f64)> {
     let is_reference = |bot_id: &Option<String>| {
         bot_id.as_ref().is_some_and(|id| {

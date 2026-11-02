@@ -1,9 +1,7 @@
 //! #35 Lunar Eclipse (SPEC §8.2 row 35): "Deal 3 damage to a target; the next Spell you play this
 //! turn costs 1 less", radiant "6 damage; 2 less".
-//!
 //! The radiant cell changes only the two numbers, so both clauses stay (§8 Conventions).
 //! R81: the target travels in the `play` action and resolution never pauses.
-//!
 //! The discount is a player-level `PlayerModifier`. `onlyType: "Spell"` keeps a unit play from using
 //! it; `{ until: "used" }` would leak past cleanup (R30 needs #79 Twinspell's rider to survive it),
 //! so the expiry stays `thisTurn` (§2.2 names this card) and `oncePerTurn` consumes it on the first
@@ -56,10 +54,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #35 Lunar Eclipse — SPEC §8.2 row 35, BUILD M4-T4 must-pass row 35:
-// "3 damage; next spell this turn −1; a unit play does not consume it; expires at cleanup;
-//  radiant 6 / −2".
-//
+// #35 Lunar Eclipse — SPEC §8.2 row 35, BUILD M4-T4 must-pass row 35.
 // The second spell is #16 Hit Job, a (3) Cost Spell: at full price p1 would be left with 0 mana,
 // with the discount 1 (and 2 with the radiant −2).
 #[cfg(test)]
@@ -76,7 +71,6 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// `{ targets: [{ pick: "instance", instanceId }] }` for the unit in that lane.
     fn at_unit(s: &Scenario, seat: &str, lane: i32, what: &str) -> Value {
         let unit = must(s.unit(seat, lane), what);
         json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] })
@@ -107,7 +101,6 @@ mod tests {
             let mut s = board();
             let prey = must(s.unit("p2", 1), "p2 lane 1");
             s.play("35", json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-            // A 1/1 dies to 3.
             s.expect_in_zone(&prey, "graveyard");
         }
 
@@ -121,7 +114,6 @@ mod tests {
 
             let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
             s.play("16", hit_job);
-            // Hit Job's printed 3, less 1.
             s.expect_mana("p1", 1);
         }
 
@@ -135,7 +127,6 @@ mod tests {
             s.play("15", json!({}));
             s.expect_mana("p1", 2);
 
-            // Hit Job's printed 3, less the 1 the unit play left standing.
             let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
             s.play("16", hit_job);
             s.expect_mana("p1", 0);
@@ -154,7 +145,6 @@ mod tests {
             let first = at_unit(&s, "p2", 1, "p2 lane 1");
             s.play("16", first);
             s.expect_mana("p1", 3);
-            // The discount was consumed by the first Spell, so this one pays its printed 3.
             let second = at_unit(&s, "p2", 2, "p2 lane 2");
             s.play("16", second);
             s.expect_mana("p1", 0);
@@ -168,7 +158,6 @@ mod tests {
 
             s.end_turn();
 
-            // §2.2: cleanup expires every "this turn" effect, the Lunar Eclipse discount by name.
             assert_eq!(s.state().players.p1.mods.len(), 0);
         }
 
@@ -256,7 +245,6 @@ mod tests {
             s.expect_mana("p1", 3);
             let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
             s.play("16", hit_job);
-            // Hit Job's printed 3, less the discount.
             s.expect_mana("p1", discount);
         }
     }

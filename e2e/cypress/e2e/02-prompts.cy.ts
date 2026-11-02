@@ -1,8 +1,7 @@
 // BUILD M8: each picker is answered whether it is a `play` choice or a `PendingChoice` (R81, R123; §10.6).
 // Mulligans are simultaneous per seat (R9, R265; §2.1, §10.2); short mode menus use Discover.
 // Seeded one-kind specs avoid the hand cap (R4; §2.4).
-// Fixtures: #7 Jewelosco Scarab, #15 Me and Mr Token, #17 Flood, #24 Efficiency Dividend, and
-// #30 Archivist cover choices; #46 Suppressive Aura, #55 Lava Golem, and #67 Zoomerbin Oomen cover zones.
+// Fixture cards #7, #15, #17, #24 and #30 cover choices; #46, #55 and #67 cover zones.
 
 import { constants, seedFor } from "../../support/config.ts";
 import {
@@ -65,7 +64,7 @@ function openGame(seed: string, mulligan: "keep" | "manual" = "keep"): void {
   cy.seedGame({ seed, a: "02-prompts-a", b: "02-prompts-b", mulligan });
 }
 
-/** Reach player 1's turn `k` (odd player-turn; §10.1) with its mana (§2.3). */
+/** Reach player 1's turn `k` (odd player-turn; §10.1). */
 function toP1Turn(k: number, budget = 12): void {
   cy.gameState().then((state) => {
     expect(budget, `player 1's turn ${k} is reachable inside the budget`).to.be.greaterThan(0);
@@ -79,7 +78,6 @@ function toP1Turn(k: number, budget = 12): void {
   });
 }
 
-/** M5-T2: card click starts the R81 play. */
 function select(name: string): void {
   cy.handCardByName(name).then((instanceId) => {
     cy.get(ts(handCardId(instanceId))).click();
@@ -102,7 +100,6 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     pickerOpensOnce("mulligan");
 
     cy.gameState().then((state) => {
-      // R265: simultaneous mulligans live in `state.mulligan`, not `state.pending` (§10.1).
       expect(state.pending, "R265: the mulligans are not `state.pending`").to.eq(null);
       expect(state.mulligan, "R265: both seats' mulligans are open").to.not.eq(undefined);
       expect(state.mulligan?.p1.keep, "player 1 owes its mulligan").to.eq(null);
@@ -134,7 +131,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
         expect(mid.phase, "the game is still in the mulligan").to.eq("mulligan");
       });
 
-      // BUILD M5-T3 switches to player 2's already-open picker, so it must not be absent.
+      // BUILD M5-T3 switches to player 2's already-open picker.
       cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
       pickerOpensOnce("mulligan");
       cy.get(promptOf("mulligan"))
@@ -254,7 +251,6 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
     cy.handCardByName("Jewelosco Scarab").then((scarab) => {
       select("Glowy Jelly Bean");
-      // R81 makes a declared hand pick a play choice.
       pickerOpensOnce("hand");
       cy.gameState().should((state) => {
         expect(state.pending, "R81: a declared hand pick is not a PendingChoice").to.eq(null);
@@ -358,7 +354,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     cy.fieldCardByName("Tempo Timmy").then((timmy) => {
       select("Silly Silas");
 
-      // R81 direction is a play choice before the M5-T2 zone click.
+      // The direction comes before the M5-T2 zone click.
       pickerOpensOnce("direction");
       cy.gameState().should((state) => {
         expect(state.pending, "R81: a declared direction travels in the play action").to.eq(null);

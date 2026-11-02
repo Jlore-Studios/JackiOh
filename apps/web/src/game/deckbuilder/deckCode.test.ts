@@ -1,7 +1,6 @@
-// R255: deck codes. Encode and decode are proved against each other (a legal deck survives the
-// round trip exactly) and decode is proved total (no input makes it throw). The byte-level cases
-// build payloads by hand with `rawCode`, which carries its own copy of the format's checksum so a
-// test can write exactly the bytes it means, including ones `encodeDeckCode` would never produce.
+// R255: deck codes. The byte-level cases build payloads by hand with `rawCode`, which carries its own
+// copy of the format's checksum so a test can write exactly the bytes it means, including ones
+// `encodeDeckCode` would never produce.
 
 import { Buffer } from "node:buffer";
 
@@ -64,7 +63,7 @@ const catalogWithToken: CatalogSnapshot = {
   cards: { ...catalog.cards, [WHOLE_TOKEN_ID]: unitDef(WHOLE_TOKEN_ID, String(WHOLE_TOKEN_NUMBER), true) },
 };
 
-// --- a hand-built payload, with its own copy of the checksum -------------------------------------
+// A hand-built payload
 
 function fnv1a16(bytes: readonly number[]): number {
   let hash = 0x811c9dc5;
@@ -130,8 +129,6 @@ const nameArb = fc
 const deckArb = fc.shuffledSubarray([...DECKABLE], { minLength: 0, maxLength: DECK_SIZE });
 
 const BASE64URL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split("");
-
-// ---------------------------------------------------------------------------------------------
 
 describe("the round trip", () => {
   it("R255 decode(encode(name, cards)) is the same name and the same cards, in order, for any legal deck", () => {
@@ -232,7 +229,6 @@ describe("refusals", () => {
     const padded = code + " ".repeat(DECK_CODE_MAX_INPUT_LENGTH - code.length + 1);
     expect(padded.length).toBe(DECK_CODE_MAX_INPUT_LENGTH + 1);
     expect(decodeDeckCode(padded, catalog, collection)).toEqual({ ok: false, message: DECK_CODE_MESSAGES.tooLong });
-    // One character shorter is read.
     expect(decodeDeckCode(padded.slice(0, -1), catalog, collection).ok).toBe(true);
   });
 
@@ -260,7 +256,7 @@ describe("refusals", () => {
   });
 
   it("R255 an older or otherwise unknown version is refused with its own sentence", () => {
-    // Version 1 is still read (every code minted before patch v0.2.0 is one); version 0 never was.
+    // Version 1 is still read; version 0 never was.
     expect(DECK_CODE_CORE_ONLY_VERSION).toBe(DECK_CODE_VERSION - 1);
     const older = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION - 1)}.${code.slice(HEADER.length)}`;
     expect(decodeDeckCode(older, catalog, collection)).toEqual({ ok: false, message: DECK_CODE_MESSAGES.older });
@@ -480,10 +476,7 @@ describe("R1410 the Meditative set's numbers: 3000 + n (the release, issue #553)
     },
   };
 
-  /**
-   * A version 2 code of Core, Classic and Classic+ cards, exactly as this client wrote it before
-   * the Meditative set had an offset (encoded with the offsets of patch v0.2.0 and pinned here).
-   */
+  /** A version 2 code exactly as this client wrote it before the Meditative set had an offset. */
   const MINTED_BEFORE = "JKO2.EkJlZm9yZSB0aGUgcmVsZWFzZQUrkwieEAHpB0eO";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, fixtureCardId(1), CLASSIC_1];
 
@@ -491,9 +484,7 @@ describe("R1410 the Meditative set's numbers: 3000 + n (the release, issue #553)
     expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({ Core: 0, Classic: 1000, "Classic+": 2000, Meditative: 3000 });
     expect(catalogNumberOf({ set: "Meditative", index: "1" })).toBe(3001);
     expect(catalogNumberOf({ set: "Meditative", index: "102" })).toBe(3102);
-    // The set's tokens carry "N.k" indices, so no code can name one, as for every set.
     expect(catalogNumberOf({ set: "Meditative", index: "39.1" })).toBeUndefined();
-    // The other sets' numbers are the ones every earlier code carries.
     expect(catalogNumberOf({ set: "Core", index: "43" })).toBe(43);
     expect(catalogNumberOf({ set: "Classic", index: "43" })).toBe(1043);
     expect(catalogNumberOf({ set: "Classic+", index: "78" })).toBe(2078);
@@ -571,10 +562,7 @@ describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.4.0, is
     cards: Object.fromEntries(Object.entries(fiveSets.cards).filter(([, def]) => def.set !== "Meditative+")),
   };
 
-  /**
-   * A version 2 code of Core, Classic, Classic+ and Meditative cards, exactly as this client wrote it
-   * before the Meditative+ set had an offset (encoded with the offsets of v0.3.5 and pinned here).
-   */
+  /** A version 2 code exactly as this client wrote it before the Meditative+ set had an offset. */
   const MINTED_BEFORE = "JKO2.EkJlZm9yZSBNZWRpdGF0aXZlKwYrkwieELkXnhgBIfE";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_1, MEDITATIVE_102, fixtureCardId(1)];
 
@@ -582,9 +570,7 @@ describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.4.0, is
     expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({ Core: 0, Classic: 1000, "Classic+": 2000, Meditative: 3000, "Meditative+": 4000 });
     expect(catalogNumberOf({ set: "Meditative+", index: "1" })).toBe(4001);
     expect(catalogNumberOf({ set: "Meditative+", index: "26" })).toBe(4026);
-    // The set's tokens carry "N.k" indices, so no code can name one, as for every set.
     expect(catalogNumberOf({ set: "Meditative+", index: "16.1" })).toBeUndefined();
-    // The other sets' numbers are the ones every earlier code carries.
     expect(catalogNumberOf({ set: "Core", index: "43" })).toBe(43);
     expect(catalogNumberOf({ set: "Classic", index: "43" })).toBe(1043);
     expect(catalogNumberOf({ set: "Classic+", index: "78" })).toBe(2078);
@@ -626,7 +612,6 @@ describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.4.0, is
     const decoded = expectOk(decodeDeckCode(code, withoutSet, null));
     expect(decoded.cards).toEqual([fixtureCardId(1), MEDITATIVE_102]);
     expect(decoded.dropped.unknown).toEqual([4001, 4026]);
-    // A version 1 code's numbers are Core's, so 4001 there was never a Meditative+ card.
     const v1 = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION)}.`;
     expect(expectOk(decodeDeckCode(rawCode("Old", [1, 4001], [], v1), fiveSets, null)).dropped.unknown).toEqual([4001]);
   });
@@ -668,16 +653,12 @@ describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #188
       },
     },
   };
-  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
   const withoutSet: CatalogSnapshot = {
     version: catalog.version,
     cards: Object.fromEntries(Object.entries(sixSets.cards).filter(([, def]) => def.set !== "Stinkyscape")),
   };
 
-  /**
-   * A version 2 code of Core, Classic, Classic+, Meditative and Meditative+ cards, exactly as this
-   * client wrote it before the Stinkyscape set had an offset (encoded before the release and pinned here).
-   */
+  /** A version 2 code exactly as this client wrote it before the Stinkyscape set had an offset. */
   const MINTED_BEFORE = "JKO2.EkJlZm9yZSBTdGlua3lzY2FwZQYrkwieEJ4Yuh8BTLs";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_102, MEDITATIVE_PLUS_26, fixtureCardId(1)];
 
@@ -695,7 +676,6 @@ describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #188
     // Its tokens carry "N.k" or "T-…" indices, so no code can name one, as for every set.
     expect(catalogNumberOf({ set: "Stinkyscape", index: "4.1" })).toBeUndefined();
     expect(catalogNumberOf({ set: "Stinkyscape", index: "T-drone-interceptor" })).toBeUndefined();
-    // The other sets' numbers are the ones every earlier code carries.
     expect(catalogNumberOf({ set: "Core", index: "43" })).toBe(43);
     expect(catalogNumberOf({ set: "Meditative", index: "102" })).toBe(3102);
     expect(catalogNumberOf({ set: "Meditative+", index: "26" })).toBe(4026);
@@ -737,7 +717,6 @@ describe("R1410 the Stinkyscape set's numbers: 5000 + n (the release, issue #188
     const decoded = expectOk(decodeDeckCode(code, withoutSet, null));
     expect(decoded.cards).toEqual([fixtureCardId(1), MEDITATIVE_PLUS_26]);
     expect(decoded.dropped.unknown).toEqual([5001, 5175]);
-    // A version 1 code's numbers are Core's, so 5001 there was never a Stinkyscape card.
     const v1 = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION)}.`;
     expect(expectOk(decodeDeckCode(rawCode("Old", [1, 5001], [], v1), sixSets, null)).dropped.unknown).toEqual([5001]);
   });
@@ -770,16 +749,12 @@ describe("R1410 the Training Grounds set's numbers: 6000 + n (the release, issue
       },
     },
   };
-  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
   const withoutSet: CatalogSnapshot = {
     version: catalog.version,
     cards: Object.fromEntries(Object.entries(sevenSets.cards).filter(([, def]) => def.set !== "Training Grounds")),
   };
 
-  /**
-   * A version 2 code of Core, Meditative+ and Stinkyscape cards, exactly as this client wrote it
-   * before the Training Grounds set had an offset (encoded before the release and pinned here).
-   */
+  /** A version 2 code exactly as this client wrote it before Training Grounds had an offset. */
   const MINTED_BEFORE = "JKO2.F0JlZm9yZSBUcmFpbmluZyBHcm91bmRzBCu6H7coAc7u";
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), MEDITATIVE_PLUS_26, STINKYSCAPE_175, fixtureCardId(1)];
 
@@ -797,7 +772,6 @@ describe("R1410 the Training Grounds set's numbers: 6000 + n (the release, issue
     expect(catalogNumberOf({ set: "Training Grounds", index: "40" })).toBe(6040);
     // A snapshot (#41–#60) is a card of the set like any other.
     expect(catalogNumberOf({ set: "Training Grounds", index: "60" })).toBe(6060);
-    // Its token carries an "N.k" index, so no code can name it, as for every set.
     expect(catalogNumberOf({ set: "Training Grounds", index: "39.1" })).toBeUndefined();
     expect(catalogNumberOf({ set: "Stinkyscape", index: "175" })).toBe(5175);
   });

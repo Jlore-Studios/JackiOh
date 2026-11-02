@@ -118,7 +118,6 @@ function waitForMyTurn(): void {
   cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
 }
 
-/** How many hand cards the client is rendering right now. */
 function renderedHandCards(): Cypress.Chainable<number> {
   cy.settled();
   return cy.get("body", { log: false }).then(
@@ -152,9 +151,8 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // ASK: create through §9.5's endpoint until the room screen has testids. R143 requires the
-    // E2E server to honor this §9.3 seed; R264 makes a Best-of-1 room carry one deck id.
-    // R1989000 pins the host to p1 beside the seed, so the spec keeps the seats it was written for.
+    // ASK: create through §9.5's endpoint until the room screen has testids. R143: the E2E server honors
+    // this §9.3 seed; R264: a Best-of-1 room carries one deck id; R1989000 keeps the host p1, as written.
     cy.then(() => {
       cy.request<{ code: string; expiresAt: number; mode: string }>({
         method: "POST",
@@ -184,7 +182,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Seat 2 atomically claims the room (§9.5).
     cy.then(() => {
       cy.request<{ matchId: string; seriesId: string | null; code: string; seat: string; mode: string }>({
         method: "POST",
@@ -201,7 +198,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Both connect.
     cy.then(() => {
       // `wsPlayer` defaults the omitted seat to p2 (ASK: type its `seat` field).
       cy.wsPlayer({
@@ -223,7 +219,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Both see the board.
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(heroId("opponent"))).should("be.visible");
     for (const side of SIDES) {
@@ -288,7 +283,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Node -> actor -> browser.
     cy.endTurn();
     cy.then(() => {
       // ASK: type `turnAtLeast`; a post-ack view is not pre-action.
@@ -385,8 +379,6 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // Host makes a Best-of-1 room and hands over its link. R1989000 pins the host to p1 beside
-    // the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string; mode: string }>({
         method: "POST",
@@ -424,7 +416,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
 
-    // The host reaches the same match.
     cy.then(() => {
       cy.wsPlayer({
         action: "connect",

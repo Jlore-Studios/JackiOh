@@ -9,7 +9,6 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, 
 import type { FaceModel } from "../model.ts";
 import { startsOnTermTip } from "../TermTip.tsx";
 import { readCardSettings, useCardSettings } from "../settings.ts";
-// The settings panel's "Hover previews" switch also gates the preview (with `hoverPreviews`).
 import { readSettings as readPanelSettings, useSetting as usePanelSetting } from "../../settings/store.ts";
 import type { Shortcut } from "../../shortcuts/shortcuts.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
@@ -21,10 +20,7 @@ import "./inspect.css";
 
 export type InspectOverlayState = { mode: "hover" | "sheet"; anchor: Rect; close: () => void };
 
-/**
- * A card: the preview and the sheet draw its face. `note` is a line they print above it, in words
- * the view gave the caller (R371: "Face down — your opponent can't see this card").
- */
+/** `note` is a line printed above the face, in the view's words (R371: "Face down — your opponent can't see this card"). */
 export type InspectSubject = { key: string; face: FaceModel; note?: string };
 
 /** Anything else (a pile): the caller draws the overlay for each mode. */
@@ -38,14 +34,14 @@ export type InspectOptions = {
    * down, or the sheet while previews are off; it calls onLongPress instead when given.
    */
   longPress?: boolean;
-  /** Default false: only a touch long-presses. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
+  /** Default false. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
   holdAnyPointer?: boolean;
   onLongPress?: () => void;
   /** A mouse right-click calls it and prevents the native menu. The deck builder's, and the hero
       portrait's, which acts only while nothing is targeted (R1449): the board's cards leave
       right-click to the drag cancel. */
   onContextMenu?: () => void;
-  /** Which side of the card the hover preview tries first; "beside" (B27's order) by default. */
+  /** Which side the hover preview tries first; "beside" (B27's order) by default. */
   prefer?: PreviewPrefer;
   /** Default true: overlays show lines of code (E36); matches pass false because it is hidden. */
   showLoc?: boolean;
@@ -152,7 +148,6 @@ export function useInspectTrigger(
       suppressClick.current = true;
       t.suppress = setTimeout(disarmSuppressor, CLICK_SUPPRESS_MS);
     };
-    /** Ends the preview this hold opened (a no-op for any other preview or when none did). */
     const closeHoldPreview = (): void => {
       const opened = holdPreview.current;
       if (opened === null) return;
@@ -193,8 +188,7 @@ export function useInspectTrigger(
         clearPress();
         const holds = event.pointerType === "touch" || (opts.holdAnyPointer === true && event.button === 0);
         if (!holds || opts.longPress === false) return;
-        // R2098000: a press that starts on a glossary term showing its rule is that term's long press
-        // (cards/TermTip.tsx), never the card's sheet, callback or hold preview.
+        // R2098000: a press that starts on a glossary term showing its rule is that term's long press.
         if (startsOnTermTip(event.target)) return;
         const element = event.currentTarget;
         const pressKey = current.key;
@@ -232,7 +226,7 @@ export function useInspectTrigger(
         const dx = event.clientX - start.x;
         const dy = event.clientY - start.y;
         if (Math.hypot(dx, dy) <= LONG_PRESS_SLOP_PX) return;
-        // Past the slop is a drag: cancel the press and its open preview.
+        // Past the slop is a drag.
         closeHoldPreview();
         clearPress();
       },

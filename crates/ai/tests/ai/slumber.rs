@@ -4,9 +4,9 @@
 //! of `face_threat`); the evaluation prices it by the unit it wakes as, less for each turn it waits
 //! (R2380000); and the search signature tells a position holding one apart from one without it.
 //!
-//! Most boards put a unit on the field to sleep by writing its status, as
-//! `slumber::start_slumber_on_field` would. The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy
-//! (core-011) 3/3 and Imprisoned Cosmality (stinkyscape-019), (2) 10/6 Pierce, Dormant for 2 turns.
+//! Most boards put a unit on the field to sleep by writing its status, as `slumber::start_slumber_on_field`
+//! would. The cards: Mr. Vanilla 4/4, Tempo Timmy 3/3 and Imprisoned Cosmality, (2) 10/6 Pierce, Dormant for
+//! 2 turns.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -15,8 +15,6 @@ use super::support::{AI, HUMAN, register_cards};
 
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
 
-/// The AI's Mr. Vanilla ready on the field with a card in hand, and the human's Tempo Timmy; the AI's
-/// turn 9.
 fn board() -> GameState {
     register_cards();
     scenario(json!({
@@ -28,14 +26,12 @@ fn board() -> GameState {
     .clone()
 }
 
-/// `player`'s first unit on the field, put to sleep for two of its controller's turns.
 fn sleep(state: &mut GameState, player: PlayerId) -> String {
     let id = active_units_of(state, player)[0].id.clone();
     find_instance_mut(state, &id).expect("the unit").slumber = Some(Slumber { turns: Some(2) });
     id
 }
 
-/// `state` with `player`'s lane-1 unit zone emptied.
 fn emptied(state: &GameState, player: PlayerId) -> GameState {
     let mut out = state.clone();
     out.players[player].units[0] = None;
@@ -96,10 +92,8 @@ fn r1839000_a_dormant_card_is_no_threat_until_it_wakes() {
     let awake = board();
     let mut dormant = awake.clone();
     sleep(&mut dormant, HUMAN);
-    // The human's Timmy threatens the AI's face awake, and nothing asleep.
     assert!(face_threat(&awake, HUMAN) > 0);
     assert_eq!(face_threat(&dormant, HUMAN), 0);
-    // So the sleeping Timmy is better for the AI than the awake one.
     assert!(eval(&dormant, &AI_EVAL) > eval(&awake, &AI_EVAL));
 }
 
@@ -119,7 +113,6 @@ fn r1839000_two_positions_that_differ_only_in_a_dormant_card_sign_apart() {
 
 const COSMALITY: &str = "stinkyscape-019";
 
-/// The AI's evaluation of `state`, the enemy to swing next.
 fn eval(state: &GameState, w: &EvalWeights) -> f64 {
     evaluate(state, AI, NextSwing::Enemy, w)
 }
@@ -134,8 +127,7 @@ fn asleep(state: &GameState, player: PlayerId, turns: Option<i32>) -> (GameState
     (out, worth)
 }
 
-/// The AI's turn 3, its second (2 crystals), at `tier`'s handicap, Imprisoned Cosmality the one card
-/// in its hand and both boards empty; with `human_hand` the human's hidden hand.
+/// The AI's turn 3, its second (2 crystals), Imprisoned Cosmality alone in its hand, both boards empty.
 fn cosmality_on_curve(tier: Handicap, human_hand: &[&str]) -> GameState {
     register_cards();
     let mut state = scenario(json!({
@@ -150,7 +142,6 @@ fn cosmality_on_curve(tier: Handicap, human_hand: &[&str]) -> GameState {
     state
 }
 
-/// `a` and `b` as equal, to the evaluation's rounding.
 fn close(a: f64, b: f64) {
     assert!((a - b).abs() < 1e-9, "{a} vs {b}");
 }

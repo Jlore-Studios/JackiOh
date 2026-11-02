@@ -1,18 +1,8 @@
 //! #21 Hinder (SPEC §8.2): "Cast on draw: Your opponent has 1 less mana next turn. Discard 1 random card.",
 //! radiant "Cast on draw: Your opponent has 2 less mana next turn." Only the base face discards (R431).
 //! Tunes: mana 1 ↑ (Radiant 2); discards 1 ↓, on the base face only (R1431, R1748003).
-//!
-//! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that. The
-//! engine casts it and repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the free cast is no card
-//! played (R40, R2179002; through v0.5.2 it counted as one, R70). The floor is not this card's either: `nextTurnMana` moves
-//! `mana.nextTurnMod`, which the refresh adds to §2.3's max, floors at 0 and clears; max mana is untouched.
-//!
-//! THE DISCARD (R431, R682, R70). "Discard 1" names no "of your choice", so it is random from the
-//! caster's hand (R682): no declaration travels in the play action (R81) and a cast on a draw asks
-//! nothing as it begins (R70), so no prompt pauses the draw. It comes second, after the mana clause;
-//! with an empty hand there is nothing to discard and the mana clause still lands.
-//!
-//! Through v0.4.4b the discard was printed, not declared; `script_v0_4_4b` keeps that (R767000).
+//! staticFlags.castOnDraw casts on draw up to CAST_ON_DRAW_CHAIN_CAP (R58); no card played (R40, R2179002, R70, R81).
+//! Modifies nextTurnMod (§2.3). Base face discards 1 random card from hand (R431, R682).
 
 use jackioh_engine::prelude::*;
 
@@ -71,15 +61,11 @@ pub fn script_v0_4_4b() -> CardScripts {
     }
 }
 
-// #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: auto-casts on draw and draws again; the opponent's next
-// refresh −1 floored at 0; no card played (R40, R2179002); radiant −2. The base face's caster discards 1
-// at random with no prompt, nothing with an empty hand (R431, R682); the Radiant face discards nothing.
-// R635 keeps it out of the opening deal and the mulligan, so the "real game" below proves the deal.
-//
-// The default board is turn 9 with p1 active, both sides at MAX_MANA (4/4): 4 − 1 = 3 base, 4 − 2 = 2
-// radiant. The floor needs a refresh below 2, so that fixture starts at turn 1 and p2's first refresh
-// is 1: 1 − 2 floors at 0 (§2.3). Hinder lowers the refresh, not max mana.
-// Both sides keep a unit on the board and a card in hand, or the engine would auto-end the turns.
+// #21 Hinder, BUILD M4-T4 row 21: R635 keeps it out of the opening deal and the mulligan, so the "real
+// game" below proves the deal. The default board is turn 9 with p1 active, both sides at MAX_MANA (4/4):
+// 4 − 1 = 3 base, 4 − 2 = 2 radiant. The floor needs a refresh below 2, so that fixture starts at turn 1
+// and p2's first refresh is 1: 1 − 2 floors at 0 (§2.3). Both sides keep a unit on the board and a card
+// in hand, or the engine would auto-end the turns.
 #[cfg(test)]
 mod tests {
     use super::script;

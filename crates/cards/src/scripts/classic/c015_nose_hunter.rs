@@ -15,7 +15,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-015";
 
-/// "Exile the bottom {exile} card(s) of your opponent's deck" (Radiant: "… and a random card from their hand").
 fn hunt(ctx: &EffectContext<'_>, from_hand: bool) -> Vec<Effect> {
     let bottom = exile_bottom_of_library(json_as(json!({ "player": "enemy", "count": param(ctx, "exile") })));
     if from_hand {
@@ -53,7 +52,6 @@ pub fn script() -> CardScripts {
 // C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: Activate Infinity (R392, R384): its
 // cost, a random discard, is paid as it activates, so an empty hand can't activate it; then exile the
 // bottom card of the opponent's deck (empty: nothing); usable the turn it is played, not a play (R384);
-// radiant 6/2 also exiles a random card from their hand; its tuned number (exiled) reads through
 // `param()` (R386).
 #[cfg(test)]
 mod tests {
@@ -73,7 +71,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9.
     const POINTMASTER: &str = "core-020"; // (2) 7/1.
 
-    /// p2's deck, top first: the bottom card is Pointmaster, so "the bottom card" is visible by def.
     const DECK: [&str; 3] = [VANILLA, TIMMY, POINTMASTER];
 
     use crate::merged;
@@ -85,7 +82,6 @@ mod tests {
         }))
     }
 
-    /// The legal `activate` (or legacy `activatePower`) actions naming this card.
     fn activations(s: &Scenario, player: PlayerId, instance_id: &str) -> Vec<Value> {
         legal_actions(s.state(), player)
             .iter()
@@ -96,7 +92,6 @@ mod tests {
             .collect()
     }
 
-    /// The def ids a viewer reads in an exile pile of their view (`you` or `opponent`).
     fn exile_seen(s: &Scenario, viewer: PlayerId, side: &str) -> Vec<String> {
         let view = serde_json::to_value(s.view(viewer)).unwrap();
         view[side]["exile"]
@@ -187,7 +182,6 @@ mod tests {
             s.activate(NOSE, json!({}));
 
             assert_eq!(s.pile(P2, "exile").len(), 1);
-            // The same unit may still switch position this turn: activating spent no exertion.
             let nose = s.card(NOSE).clone();
             assert!(!nose.exertion.attacked);
             assert!(!nose.exertion.switched);

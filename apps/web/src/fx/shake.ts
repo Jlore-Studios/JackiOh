@@ -1,9 +1,8 @@
 /**
  * Trauma-based board shake (docs/polish/1-animations.md, S5; B30), after Squirrel Eiserloh's GDC 2016
- * "Juicing Your Cameras With Math". Hits add trauma in [0, 1], trauma decays linearly, and the shake is
- * trauma² so small hits barely move the board while big ones really land. The offsets read three
- * channels of smooth 1D value noise (x, y and angle), not random jitter, so the motion is a rumble and
- * the same seed always shakes the same way.
+ * "Juicing Your Cameras With Math". Trauma in [0, 1] decays linearly and the shake is trauma², so small
+ * hits barely move the board; the offsets read smooth seeded noise, not random jitter, so the motion is
+ * a rumble and the same seed always shakes the same way.
  */
 import {
   FX_DEFAULT_SEED,
@@ -16,14 +15,10 @@ import { createNoise1D } from "./rng.ts";
 import type { FxShakeOffset } from "./types.ts";
 
 export type Shake = {
-  /** trauma = min(1, trauma + max(0, t)) */
   add(trauma: number): void;
-  /** linear decay at decayPerSecond, floored at 0 */
   step(dtMs: number): void;
-  /** x,y = maxOffsetPx·trauma²·noise, angle = maxAngleDeg·trauma²·noise */
   sample(nowMs: number): FxShakeOffset;
   trauma(): number;
-  /** trauma > 0 */
   active(): boolean;
   reset(): void;
 };

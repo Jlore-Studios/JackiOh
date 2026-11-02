@@ -1,4 +1,4 @@
-// R1484000, #1484: the card creator asks before leaving a card with changes not yet saved.
+// R1484000, #1484: the card creator asks before leaving unsaved changes.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -21,7 +21,7 @@ beforeEach(() => {
 
 const UNSAVED = "This card has changes you haven't saved.";
 
-/** A fake account's store, as the server keeps it: ids minted at create, a version moved by every update. */
+/** A fake account's store, as the server keeps it. */
 function fakeApi(): CreatorApi {
   let minted = 0;
   return {
@@ -55,7 +55,7 @@ async function openRoute(): Promise<ReturnType<typeof render>> {
   return view;
 }
 
-/** The creator where the app puts it, with any other path shown as text: what a move off it leaves behind. */
+/** Any other path shows as text: what a move off the creator leaves behind. */
 function Shell({ api }: { api: CreatorApi }): ReactElement {
   const path = usePathname();
   return path === paths.creator ? <CreatorRoute token="token-1" api={api} /> : <p data-testid="elsewhere">{path}</p>;
@@ -66,7 +66,7 @@ async function openShell(): Promise<void> {
   await screen.findByText("0 of 50 cards");
 }
 
-/** The browser's Back, waited for until its `popstate` has fired. */
+/** The browser's Back, done once its `popstate` has fired. */
 async function browserBack(): Promise<void> {
   await act(async () => {
     const popped = new Promise((resolve) => {
@@ -131,10 +131,10 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
 
     fireEvent.click(screen.getByTestId(creatorTestid.save));
     await screen.findByTestId(creatorTestid.saved);
-    // The note Back opened clears on the report the save's own render carries, a render later.
+    // The note clears a render after the save.
     await waitFor(() => expect(screen.queryByText(UNSAVED)).toBeNull());
-    // That render commits the note's removal before its effect cleanup drops the beforeunload
-    // listener, and a busy scheduler can yield in between, so the listener is waited for too.
+    // Its effect cleanup drops the beforeunload listener after the commit, and a busy scheduler can
+    // yield in between, so the listener is waited for too.
     await waitFor(() => expect(unloadIsCanceled()).toBe(false));
 
     fireEvent.click(screen.getByTestId(navTestid.back));

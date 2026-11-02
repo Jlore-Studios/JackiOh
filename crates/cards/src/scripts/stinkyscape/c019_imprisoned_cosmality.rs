@@ -51,8 +51,6 @@ mod tests {
     const MR_TOKEN: &str = "core-015"; // (1) 1/1.
     const ENEMY_HERO: &str = "hero-p2";
 
-    /// p1 has played the Cosmality (`radiant` its face) into unit zone 1; p2's side is `p2` over a
-    /// hand and a library; `seed` is the match's.
     fn played(radiant: bool, p2: Value, seed: &str) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -63,7 +61,6 @@ mod tests {
         s
     }
 
-    /// Both players' next two turns: the start of p1's second turn after the play awakens it.
     fn to_its_awakening(s: &mut Scenario) {
         s.end_turn().end_turn().end_turn().end_turn();
         assert_eq!(s.state().active, P1);
@@ -73,7 +70,6 @@ mod tests {
         Some(Slumber { turns: Some(turns) })
     }
 
-    /// One of the Cosmality's `damage` events: where it sits in the event list, what it hit, how hard.
     struct Hit {
         index: usize,
         target_id: String,
@@ -94,8 +90,6 @@ mod tests {
             .collect()
     }
 
-    /// R2271000: an awake Cosmality in p1's unit zone 1 (`radiant` both faces) while a second, played
-    /// into zone 2, lies Dormant until its awakening; how many hits the awake one dealt by then.
     fn hits_of_the_awake_one(radiant: bool) -> usize {
         let mut s = crate::scenario(json!({
             "seed": "cosmality-beside",

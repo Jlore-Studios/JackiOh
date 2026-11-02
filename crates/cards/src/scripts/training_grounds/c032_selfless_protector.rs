@@ -2,11 +2,10 @@
 //! Training Grounds set (R1420, R2194000).
 //!   Base:    "Death: Give your Units Divine Shield."
 //!   Radiant: "Cry: Give your Units Divine Shield. / Death: Give your Units Divine Shield."
-//! Engine: C+ #12.5 Anti-Waffle Shell's Cry: Divine Shield granted (§10.4) to each Unit its controller has
-//!   on the field then (`active_units_of`: each pile's top, R13; standing Units, R1081000). The Death runs
-//!   after the state check took this card off the field (R78, R89), so it never reaches itself nor a Unit
-//!   that died in the same check. The Radiant Cry runs with this card on the field, so it shields itself
-//!   too (Hearthstone's "your minions"). A spent shield is up again; a second one changes nothing.
+//! Engine: C+ #12.5 Anti-Waffle Shell's Cry: Divine Shield (§10.4) to each Unit its controller has on the
+//!   field then (`active_units_of`: pile tops, R13; standing Units, R1081000). The Death runs after the
+//!   state check took this card off (R78, R89), so it reaches neither itself nor a Unit dying in that
+//!   check; the Radiant Cry shields itself too (Hearthstone's "your minions"). A spent shield is up again.
 
 use jackioh_engine::prelude::*;
 
@@ -38,9 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #32 Selfless Protector — SPEC §8.11 row 32, BUILD M13 row TG 32: "Death: every other Unit of yours on
-// the field has Divine Shield; enemy Units do not; Units dying in the same check get none; a pile's lower
-// Unit is not reached (R13). radiant Cry: your Units, this one included, gain Divine Shield; Death as base".
+// TG #32 Selfless Protector — SPEC §8.11 row 32, BUILD M13 row TG 32 (R13).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -54,8 +51,6 @@ mod tests {
     const PLAGUE_NUKE: &str = "classic-043"; // (4) Spell: Destroy all Units.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
 
-    /// p1, active with 30 mana, has the Protector (`radiant` its face) in lane 1 and `mine`; p2 has a Mr.
-    /// Vanilla.
     fn board(radiant: bool, mine: Value, hand: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant, "lane": 1 })];
         field.extend(mine.as_array().cloned().unwrap_or_default());

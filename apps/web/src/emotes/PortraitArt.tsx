@@ -1,9 +1,7 @@
-// A portrait's art with its vivid layers (R1332): the `CardArt` oval (R641) under a ground of the
-// portrait's own lit from the upper left, a light that breathes, a few drifting motes and a rim
-// light. The same element draws on the board's hero, in the hero's inspect view (R1330) and in the
-// deck builder's picker, so a portrait looks alike wherever it is. The picture stays the card's own
-// art and everything laid over it is a pure function of the portrait's id (`portraitLook.ts`);
-// `portrait.css` sets the colors, the idle and Reduce Motion's stillness.
+// A portrait's art with its vivid layers (R1332) over the `CardArt` oval (R641). The same element
+// draws on the board's hero, in the hero's inspect view (R1330) and in the deck builder's picker, so a
+// portrait looks alike wherever it is. Everything laid over the art is a pure function of the
+// portrait's id (`portraitLook.ts`); `portrait.css` sets the colors, the idle and Reduce Motion's stillness.
 
 import type { CSSProperties, ReactElement } from "react";
 

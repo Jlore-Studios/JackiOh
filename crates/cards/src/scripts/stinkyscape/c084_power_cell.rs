@@ -33,9 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 84 Power Cell — SPEC §8.10 row 84, BUILD M12 row S 84: "shuffles 4 Metal Scraps into its caster's
-// deck at random positions, a deck at its cap taking none; each drawn later is cast and gains a
-// Resource; scraps reads through `param()`; radiant 8".
+// S 84 Power Cell — SPEC §8.10 row 84, BUILD M12 row S 84.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

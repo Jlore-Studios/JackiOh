@@ -1,13 +1,11 @@
-//! CORS for the REST surface. SPEC §9.2 puts the browser and the API on separate origins, so
-//! without these headers every browser `fetch` is blocked while `cy.request`, curl and `wsPlayer`
-//! are not. The allowed list is `PUBLIC_ORIGINS` (`env.rs`; `actor/ws_server.rs` also reads it).
-//! §9 never writes out the header set: it is derived from what `apps/web/src/net/api.ts` sends.
+//! CORS for the REST surface. SPEC §9.2 puts the browser and the API on separate origins, so without
+//! these headers every browser `fetch` is blocked. The allowed list is `PUBLIC_ORIGINS` (`env.rs`),
+//! the one §9.2's WebSocket `Origin` check (`actor/ws_server.rs`) reads. §9 never writes out the
+//! header set: it is derived from what `apps/web/src/net/api.ts` sends.
 //!
-//! R162 is the contract: echo an allowed origin, never `*`, and never send
-//! `Access-Control-Allow-Credentials` (§9.1's client uses a bearer header). Every response the layer
-//! touches carries `Vary: Origin`. An unlisted origin gets the ordinary response with no CORS headers,
-//! not a 403, so CORS is never load-bearing for a refusal. The list is the one §9.2's WebSocket
-//! `Origin` check reads.
+//! R162: echo an allowed origin, never `*`, and never send `Access-Control-Allow-Credentials` (§9.1's
+//! client uses a bearer header); every response the layer touches carries `Vary: Origin`. An unlisted
+//! origin gets the ordinary response with no CORS headers, not a 403, so CORS never carries a refusal.
 
 use std::future::Future;
 
@@ -19,8 +17,8 @@ use axum::response::Response;
 /// The methods the router's routes use, plus the preflight itself.
 const ALLOWED_METHODS: &str = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 
-/// Exactly what `apps/web/src/net/api.ts` sets on a request: a spend's `Idempotency-Key` among
-/// them (R2124000), without which the browser's preflight would refuse every spend.
+/// Exactly what `apps/web/src/net/api.ts` sets on a request, a spend's `Idempotency-Key` among them
+/// (R2124000), without which the browser's preflight would refuse every spend.
 const ALLOWED_HEADERS: &str = "authorization, content-type, idempotency-key";
 
 /// Not in SPEC, and no R-row: a tuning value with no consequence; ten minutes of preflight caching

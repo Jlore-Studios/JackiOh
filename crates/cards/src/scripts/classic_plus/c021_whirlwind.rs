@@ -31,11 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #21 Whirlwind — SPEC §8.7 row 21, BUILD M9 Classic+ row C+ 21: "Pierce: 1 damage to every Unit on
-// both sides through Armor (an Armor 7 unit takes 1), Divine Shield still popping, all hits before the
-// state check (R59); Spell Damage raises each hit; an Immune to Spells Unit takes none; the damage
-// reads through `param()`; radiant also returns from your graveyard to your hand at the end of the
-// turn (`returnToHandAtEndOfTurn`, R68), burned when the hand is full".
+// C+ #21 Whirlwind — SPEC §8.7 row 21, BUILD M9 Classic+ row C+ 21 (R59).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,7 +66,6 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == kind)
     }
 
-    /// JS `indexOf` / `lastIndexOf` over event types: the position, or −1.
     fn position_of(types: &[GameEventType], wanted: GameEventType, last: bool) -> i64 {
         let found = if last {
             types.iter().rposition(|each| *each == wanted)

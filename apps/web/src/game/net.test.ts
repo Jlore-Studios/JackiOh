@@ -22,7 +22,7 @@ import {
 } from "./net.ts";
 import { setVisibility } from "../test/setup.ts";
 
-/** #1664: what a result's write paid the account: the track moved one level, and one quest completed. */
+/** #1664: what a result's write paid the account. */
 const ECONOMY = {
   jlore: 30,
   xp: 540,
@@ -80,7 +80,6 @@ class FakeSocket implements SocketLike {
     this.onclose?.({ code, reason, wasClean: false });
   }
 
-  /** What the client sent, parsed. */
   frames(): Record<string, unknown>[] {
     return this.sent.map((text) => JSON.parse(text) as Record<string, unknown>);
   }
@@ -90,10 +89,8 @@ type Harness = {
   client: MatchClient;
   sockets: FakeSocket[];
   socket: () => FakeSocket;
-  /** Run every pending backoff callback, in order. */
   runTimers: () => void;
   pending: () => number;
-  /** Every delay a timer was set for, in order. */
   delays: () => number[];
   now: (value: number) => void;
   /** R1441: the page wakes (its tab turns visible, the network comes back). */
@@ -188,8 +185,6 @@ function connected(options: HarnessOptions = {}): Harness {
   return h;
 }
 
-// The handshake
-
 describe("the handshake", () => {
   it("R1379000 the address names the match and never the token, which is offered as a subprotocol", () => {
     // `ws_server.rs` reads the match from `?matchId=` and the token from the offered protocols (SURFACE §11.3).
@@ -224,8 +219,6 @@ describe("the handshake", () => {
     expect(h.client.snapshot().connection).toBe("open");
   });
 });
-
-// The frames
 
 describe("server frames", () => {
   it("a `view` frame becomes the rendered view", () => {
@@ -456,7 +449,6 @@ describe("actions", () => {
 });
 
 // Portraits and emotes (R642, R643)
-
 describe("portraits and emotes", () => {
   it("R642 a `portraits` frame names both seats' heroes, on join and again on reconnect", () => {
     const h = connected();
@@ -554,9 +546,7 @@ describe("portraits and emotes", () => {
 });
 
 // Loadouts (R1834003)
-
 describe("loadouts", () => {
-  /** The registry's first entry of `kind` that is not its default. */
   const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";
   /** A seat's six picks as the `loadouts` frame carries them: every default but those named. */
   const seat = (picks: Partial<CardCosmetics> = {}): CardCosmetics => ({ ...DEFAULT_CARD_COSMETICS, ...picks });
@@ -728,10 +718,6 @@ describe("reconnect", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// a socket that went quiet (R1441)
-// ---------------------------------------------------------------------------------------------
-
 const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
 
 describe("a silent socket", () => {
@@ -741,11 +727,9 @@ describe("a silent socket", () => {
     h.now(SILENCE_MS + 1);
 
     h.wake();
-    // It is asked first: a healthy socket answers with a view, and nothing else changes.
     expect(old.frames()).toEqual([HELLO, HELLO]);
     expect(h.sockets).toHaveLength(1);
 
-    // Nothing came back, so it is let go and a new socket takes its place.
     h.runTimers();
     expect(old.closedWith).not.toBeNull();
     expect(h.sockets).toHaveLength(2);
@@ -754,7 +738,6 @@ describe("a silent socket", () => {
     expect(h.socket().frames()).toEqual([HELLO]);
     expect(h.client.snapshot().connection).toBe("open");
 
-    // Whatever the old socket still says is no longer the match's.
     old.deliver({ type: "view", view: baseView({ turn: 9 }) });
     expect(h.client.snapshot().view).toBeNull();
     h.socket().deliver({ type: "view", view: baseView({ turn: 3 }) });
@@ -768,7 +751,6 @@ describe("a silent socket", () => {
     h.wake();
     live.deliver({ type: "view", view: baseView({ turn: 3 }) });
 
-    // The answer canceled the probe: nothing is left to run, and the socket stays.
     expect(h.pending()).toBe(0);
     h.runTimers();
     expect(h.sockets).toHaveLength(1);
@@ -831,7 +813,6 @@ describe("a silent socket", () => {
       else Object.defineProperty(document, "visibilityState", visibility);
     }
 
-    // A client that was closed no longer listens.
     h.now(4 * SILENCE_MS);
     window.dispatchEvent(new Event("online"));
     expect(live.frames()).toHaveLength(3);
@@ -839,7 +820,7 @@ describe("a silent socket", () => {
   });
 });
 
-/** The token a socket's handshake offered (R1379000). */
+// The token a socket's handshake offered (R1379000).
 function handshakeToken(socket: FakeSocket): string | null {
   return tokenFromProtocols(socket.protocols);
 }

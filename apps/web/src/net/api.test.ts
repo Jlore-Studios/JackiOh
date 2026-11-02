@@ -1,11 +1,7 @@
-// R2124000: `net/api.ts`'s spends go with an `Idempotency-Key`. A press mints one, its retries (after
-// a timeout, a failed transport or a server error) send it again, and any answer from the server, a
-// refusal included, ends the press, so the next press mints another. Reads send none. A 429 ran
-// nothing, so it ends no press, and each spend is out from its press until it settles (R2378000).
-//
-// `fetch` is stubbed with one reply per call, in order: an answer, a failure of the transport, or
-// none at all (the request hangs until `apiRequest` gives up). The keys live in the module for the
-// page's life, so each test presses with a body of its own.
+// R2124000: `net/api.ts`'s spends go with an `Idempotency-Key`: a press mints one, its retries send it
+// again, and any server answer but a 429 (which ran nothing) ends the press; reads send none. Each spend
+// is out from its press until it settles (R2378000). The keys live in the module for the page's life,
+// so each test presses with a body of its own.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -30,14 +26,13 @@ import { jsonResponse } from "../test/stubServer.ts";
 
 const TOKEN = "tok-r2124000";
 
-/** What `crypto.randomUUID()` prints: a version 4 UUID, lower case. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
 type Reply = { status: number; body?: unknown } | "hang" | "fail";
 
 type Sent = { path: string; key: string | undefined };
 
-/** Stubs `fetch` with `replies`, one per call in order, and records each call's path and key. */
+/** One reply per call, in order; records each call's path and key. */
 function stubFetch(replies: Reply[]): Sent[] {
   const sent: Sent[] = [];
   const queue = [...replies];

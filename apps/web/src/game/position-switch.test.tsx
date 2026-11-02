@@ -2,10 +2,8 @@
 // entry (animations.ts) plays over the board as it was BEFORE the switch (Game.tsx plans entries
 // against the view still on screen), so the card's own `data-position` says which way it is turning.
 //
-// The old keyframes always ran upright -> 90deg at full size. Entering DEF they ended at full size and
-// snapped to the DEF scale when the new view swapped in; leaving DEF they started upright, turned the wrong way
-// and snapped upright. The sheet is read as text (vitest stubs CSS imports, as fx/css.test.ts does), and
-// the one fact it must agree with Card.tsx on, the resting DEF transform, is read off a rendered card.
+// The sheet is read as text (vitest stubs CSS imports, as fx/css.test.ts does), and the one fact it
+// must agree with Card.tsx on, the resting DEF transform, is read off a rendered card.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

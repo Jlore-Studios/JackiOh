@@ -4,7 +4,6 @@
 //!   Radiant: "Crater, Brittle 1\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random
 //!            Radiant Stinkyscape Resources}." (3)
 //!
-//! Crater and Brittle 1 are printed keywords, the engine's: a Crater Field Spell Locks its backrow zone
 //! as it enters, any way it enters, and the Lock outlasts it (R1850006, R688); Brittle 1 crumbles it at
 //! its controller's first start of turn two or more turns after it arrived (§6.1, R385, R638). Death, a
 //! backrow card's (§6.2), on any destroy, Brittle's included: `gain_resources` of `resources` random
@@ -34,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 155 Comet Crash — SPEC §8.10 row 155, BUILD M12 row S 155: "played, Locks its backrow zone; at its
-// controller's start of turn two turns later it crumbles and gains 3 random Resources, the zone staying
-// Locked; destroyed sooner it gains them too; resources reads through `param()`; radiant Radiant
-// Resources".
+// S 155 Comet Crash — SPEC §8.10 row 155, BUILD M12 row S 155.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -94,7 +94,6 @@ export function targetFromElement(element: Element): { target: ClickTarget; test
       }
 
       if (ZONE.test(id)) {
-        // Controls in a zone are presses, not drag sources.
         if (throughControl) return null;
         const place = placeOf(at);
         if (place === null) return null;

@@ -58,7 +58,6 @@ fn final_gambit(draw_count: DrawCount, instead: ReplacementInstead, then: &'stat
     }
 }
 
-/// The base face's draws: the declared number.
 fn declared_draws() -> DrawCount {
     Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") })
 }
@@ -83,8 +82,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts v0.4.0f and every version before it ran, the redirect to the enemy hero;
-/// `KEPT_SCRIPTS` folds those versions' replays under them.
+/// R767000: the scripts v0.4.0f and every version before it ran, the redirect to the enemy hero.
 pub fn script_v0_4_0f() -> CardScripts {
     let redirect = ReplacementInstead {
         redirect: Some(InsteadRedirect::EnemyHero),
@@ -96,19 +94,10 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
-// step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
-// caps (R44); fatigue counts, while losing health (R18) and set health (C #29) never open it; the hit
-// is canceled and deals nothing (R1704001); then heal 10 and draw 3; a copy that stays on the field
-// cancels one hit a turn; radiant: heal 20 and draw your whole deck (R58), most of it burning (R317);
-// tuned numbers (heal, draw) read through `param()` (R386). `mod v0_4_0f` keeps the redirect to the
-// enemy hero, the kept script's (R767000).
-//
+// SPEC §8.6 row 52, BUILD M9 Classic row C 52 (R33, R44, R767000); set health (C #29) never opens it.
 // Going Long (Armor 2), C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either
-// hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if
-// both heroes are at 0" needs a second hit inside the same effect, after the trap is spent: Prem
-// Panther's "draw 2" into an empty deck, whose first fatigue the kept trap re-aims at a 1-health
-// opponent and whose second then lands on you.
+// hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if both
+// heroes are at 0" needs a second hit after the trap is spent: Prem Panther's "draw 2" into an empty deck.
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -150,15 +139,10 @@ mod tests {
         s.events().iter().map(js).filter(|event| event["type"] == "trapFired").collect()
     }
 
-    /// `opts[key]`, or `fallback` where it is absent.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// p2 attacks p1's hero with `attacker`. p1 has `health`, a Final Gambit set face-down beside the rest
-    /// of its backrow, a card in hand and a deck to draw from; p2 has whatever `p2` adds.
-    /// `opts`: `attacker`, `health`, `gambit`, `p1Backrow`, `p1`, `p2` (a `Gambit` is a bare id or a
-    /// `{ def, radiant? }` object).
     fn lethal_attack(opts: Value) -> Scenario {
         let attacker = opts["attacker"].as_str().expect("an attacker").to_string();
         let mut backrow = vec![merged(as_entry(&or(&opts, "gambit", json!(GAMBIT))), json!({ "faceUp": false }))];
@@ -213,7 +197,6 @@ mod tests {
                 let gambit = s.card(GAMBIT).id.clone();
 
                 s.expect_events(json!(["attackDeclared", "trapFired", "healed"]));
-                // Canceled: the hit deals nothing to either hero, and nothing is redirected.
                 assert!(s.events().iter().map(js).all(|event| event["type"] != "redirected"));
                 assert!(s.events().iter().map(js).all(|event| event["type"] != "damage"));
                 s.expect_health(PlayerId::P2, 30);
@@ -288,7 +271,6 @@ mod tests {
                 }));
                 s.start_turn();
                 assert_eq!(fired(&s).len(), 1);
-                // The 1st fatigue (1) was canceled; then heal 10 and draw 3 into the empty deck: fatigue 2, 3, 4.
                 assert!(hero_hits(&s, PlayerId::P2).is_empty());
                 assert_eq!(hero_hits(&s, PlayerId::P1), vec![2, 3, 4]);
                 s.expect_health(PlayerId::P2, 30);
@@ -371,17 +353,13 @@ mod tests {
                 s.end_turn();
                 s.state_mut().players.p2.mana.current = 10;
                 // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text
-                // and stays (C+ #74, R831011); a Trap's copy gives it no stats, so it stays a face-up Field
-                // Trap in its zone (R2280000).
+                // and stays (C+ #74, R831011); a Trap's copy has no stats, so it stays a face-up Field
+                // Trap (R2280000).
                 s.play(RAPID, json!({}));
                 s.play(GAMBIT, json!({}));
                 assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
-                // The Gambit p2 played stays set in their backrow; take it off, so only the copy in p1's
-                // Field Trap answers the hits below.
                 s.state_mut().players.p2.backrow[0] = None;
                 s.state_mut().players.p1.fatigue_count = 20;
-                // 4 at 4 health is lethal and canceled; then heal 10 and draw 3 from an empty deck. The
-                // copy stays and has canceled a hit this turn, so fatigue 21, lethal at 14, lands.
                 s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                 // C+ #74 fired as it fused the copy, and the copy, a trap in the backrow, fired once.
                 let copy_fired = fired(&s)
@@ -421,7 +399,6 @@ mod tests {
                 let thawed: GameState =
                     serde_json::from_str(&serde_json::to_string(s.state()).expect("a state serializes")).expect("a state parses");
                 assert_eq!(&thawed, s.state());
-                // The whole follow-up ran: Hinder's draw-again and the two draws after it.
                 assert_eq!(s.state().players.p1.library.len(), 0);
             }
 
@@ -495,7 +472,6 @@ mod tests {
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 0);
                 assert_eq!(s.hand(PlayerId::P1).len(), 10);
                 assert_eq!(s.events().iter().map(js).filter(|event| event["type"] == "burned").count(), 7);
-                // Exactly the deck: no draw past its end, so no fatigue.
                 assert!(hero_hits(&s, PlayerId::P1).is_empty());
                 s.expect_health(PlayerId::P1, 24);
             }
@@ -684,19 +660,14 @@ mod tests {
                     s.play(FORWARD, json!({ "zone": 2 }));
                     s.end_turn();
                     s.state_mut().players.p2.mana.current = 10;
-                    // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text
-                    // and stays (C+ #74, R831011); a Trap's copy gives it no stats, so it stays a face-up
-                    // Field Trap in its zone (R2280000).
+                    // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's
+                    // text and stays (C+ #74, R831011); a Trap's copy has no stats, so it stays a face-up
+                    // Field Trap (R2280000).
                     s.play(RAPID, json!({}));
                     s.play(GAMBIT, json!({}));
                     assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
-                    // The Gambit p2 played stays set in their backrow; take it off, so only the copy in p1's
-                    // Field Trap answers the hits below.
                     s.state_mut().players.p2.backrow[0] = None;
                     s.state_mut().players.p1.fatigue_count = 20;
-                    // 4 at 4 health is lethal: re-aimed (4), then heal 10 and draw 3 from an empty deck. Each
-                    // fatigue, 21, 22 and 23, is lethal at 14 and re-aimed too; p2 falls at the second, so the
-                    // three follow-ups owed by then neither heal nor draw, and the drain ends at the state check.
                     s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                     assert_eq!(s.events().iter().map(js).filter(|event| event["type"] == "redirected").count(), 4);
                     assert_eq!(hero_hits(&s, PlayerId::P2), vec![4, 21, 22, 23]);

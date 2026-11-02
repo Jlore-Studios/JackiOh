@@ -1,8 +1,7 @@
-// The online "More cards from" pick (R1372, R924000, R2031000): the one this device made last in the
-// lobby, the rematch, a friend's challenge or a Duos room, so a pick made in one carries to the next.
-// Practice keeps its own (`routes/practice.tsx`). The picker is `LeanNewest.tsx`'s; this half reads
-// no engine value, so the shell's challenge dialog and toast hold it on a screen that never loads
-// the engine (#778).
+// The online "More cards from" pick (R1372, R924000, R2031000): the one this device made last in the lobby,
+// the rematch, a friend's challenge or a Duos room, so a pick made in one carries to the next. Practice keeps
+// its own (`routes/practice.tsx`). The picker is `LeanNewest.tsx`'s; this half reads no engine value, so the
+// shell's challenge dialog and toast hold it on a screen that never loads the engine (#778).
 //
 // It is kept in try/catch'd `localStorage` (`PLAY_LEAN_SET_KEY`): blocked storage only means it
 // starts with no lean. A device that kept R1372's switch (`PLAY_LEAN_NEWEST_KEY`) reads it as
@@ -11,19 +10,13 @@
 import { LEAN_NEWEST, isLeanPick, type LeanPick } from "@jackioh/shared";
 import { getStored, removeStored, setStored } from "../net/storage.ts";
 
-/** Where this device remembers the online pick. */
 export const PLAY_LEAN_SET_KEY = "jackioh.play.leanSet";
 
-/** R1372's switch, before the picker: `"true"` when it was on. Read only when no pick was written. */
 export const PLAY_LEAN_NEWEST_KEY = "jackioh.play.leanNewest";
 
 /** No lean, as stored and as the picker's `<select>` value. */
 export const NO_LEAN = "";
 
-/**
- * The online pick this device made last: a pick, or `null` for none. None in a private window, with
- * blocked storage or junk; R1372's switch, left on, is "newest".
- */
 export function readPlayLean(): LeanPick | null {
   const stored = getStored(PLAY_LEAN_SET_KEY);
   if (stored !== null) return isLeanPick(stored) ? stored : null;

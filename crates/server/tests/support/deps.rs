@@ -1,30 +1,5 @@
-//! The test doubles every server test shares (SURFACE §11.2): an `App` over the fake store and the
-//! fixture auth provider, a request helper that goes through the real router, and a recording log.
-//! Port of `apps/server/test/fakes/deps.ts`.
-//!
-//! What changed with the port, and why:
-//!
-//! - **Time.** TS's manual and virtual timers (`createManualTimers`, `createVirtualTimers`) are
-//!   gone: every deadline the server reads comes from `jackioh_server::app::now_ms()` and tokio's
-//!   timers, so a test calls `tokio::time::pause()` and `tokio::time::advance(…)` instead
-//!   (`#[tokio::test(start_paused = true)]` does the first). A padded response (`padTo`, §9.4) then
-//!   costs no real time, as `createVirtualTimers` arranged.
-//! - **Auth.** TS's `createFakeAuth` is the fixture provider itself (`auth::E2eAuth`): the three
-//!   fixture tokens verify from the start, `add_user` registers more (token `token-<userId>`, as
-//!   TS's), and the test app's provider deletes users (TS's fake had `deleteUser`; `E2eDeletion`
-//!   chooses otherwise).
-//! - **The catalog.** The real one (`crates/cards/catalog.json`), at the compiled-in version: the
-//!   server runs the real validator (`jackioh_engine::validator`), so TS's synthetic 24-card
-//!   catalog and its permissive and strict validators have no port to plug into. A test that wants
-//!   another catalog hands it to `test_app_with`.
-//! - **Not ported**, because the server has no such port any more (SURFACE §11.3): `createFakeIds`
-//!   (ids are `uuid` + `getrandom`), `fakeRandomDealer` (All Random deals through the engine),
-//!   `createFakeMatchDirectory` (the registry is `actor::registry::Registry`), `testConfig` and
-//!   `testLimits` (the numbers are `jackioh_server::config`'s), `TEST_PATCH_VERSION` (the season is
-//!   read off the compiled-in catalog version).
-//! - **The log.** TS's `createRecordingLogger` is `record_logs()`: a tracing layer installed as the
-//!   thread's default subscriber, which the current-thread runtime of `#[tokio::test]` shares with
-//!   every task it runs.
+//! Test doubles for server tests (SURFACE §11.2, §11.3): `App` over fake store,
+//! fixture auth provider, real router request helper, and paused-clock timers (§9.4).
 
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
@@ -42,9 +17,7 @@ use tracing_subscriber::layer::{Context, SubscriberExt};
 use jackioh_server::app::{self, App};
 use jackioh_server::auth::{Auth, E2eAuth};
 
-// ---------------------------------------------------------------------------
 // The fixtures (`e2e/support/config.ts`, SURFACE §11.3)
-// ---------------------------------------------------------------------------
 
 pub use super::test_app::{TEST_CATALOG_VERSION, TestAppOptions, test_app, test_app_with};
 
@@ -53,9 +26,7 @@ pub use super::test_app::{TEST_CATALOG_VERSION, TestAppOptions, test_app, test_a
 /// and the client-address tests cover it by setting `TRUSTED_PROXY_HOPS`.
 pub const DEFAULT_TEST_IP: &str = "203.0.113.7";
 
-/// TS `createTestDeps()`: the test app over an empty store. R144's fixtures are the end-to-end
-/// server's; a test that seeds its own profiles (`profile-1`, `profile-2`, …, the ids the fake store
-/// also gives the fixtures) and reads whole tables starts from none, as TS's did.
+/// R144: test app over empty store baseline without fixtures.
 pub async fn empty_test_app() -> Arc<App> {
     test_app_with(TestAppOptions {
         skip_fixtures: true,
@@ -64,9 +35,7 @@ pub async fn empty_test_app() -> Arc<App> {
     .await
 }
 
-// ---------------------------------------------------------------------------
-// Auth (TS `createFakeAuth`)
-// ---------------------------------------------------------------------------
+// Auth
 
 /// The test app's auth provider.
 pub fn fake_auth(app: &App) -> &E2eAuth {
@@ -76,14 +45,12 @@ pub fn fake_auth(app: &App) -> &E2eAuth {
     }
 }
 
-/// TS `FakeAuth.addUser`: registers a user and returns the bearer token that verifies as them.
+/// Registers a user and returns verifying bearer token.
 pub fn add_user(app: &App, user_id: &str, email: &str, email_verified: bool) -> String {
     fake_auth(app).add_user(user_id, email, email_verified)
 }
 
-// ---------------------------------------------------------------------------
-// Requests (TS `jsonRequest`, `readJson`)
-// ---------------------------------------------------------------------------
+// Requests
 
 /// Anything that can hand over the app: `Arc<App>` or `&Arc<App>`.
 pub trait AppHandle {
@@ -102,8 +69,7 @@ impl<T: AppHandle> AppHandle for &T {
     }
 }
 
-/// TS `jsonRequest(method, path, body, { token, ip })`. `body` is sent when it is not `null`;
-/// `ip` is the `X-Forwarded-For` entry, `DEFAULT_TEST_IP` when absent.
+/// Sends JSON request with optional body, token, and IP.
 pub fn json_request(
     method: &str,
     path: &str,
@@ -129,8 +95,7 @@ pub fn json_request(
         .unwrap_or_else(|error| panic!("a test request: {error}"))
 }
 
-/// TS `readJson(response)`: the body as JSON; `null` for an empty body, a string for a body that is
-/// not JSON.
+/// Reads response body as JSON.
 pub async fn read_json(response: Response) -> Value {
     let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
         .await
@@ -183,12 +148,9 @@ pub async fn call_with_key(
     send(app, request).await
 }
 
-// ---------------------------------------------------------------------------
-// The log (TS `createRecordingLogger`)
-// ---------------------------------------------------------------------------
+// The log
 
-/// One line the server logged: TS's `{ level, event, data }`. `level` is `"info"`, `"warn"` or
-/// `"alert"` (tracing's ERROR).
+/// One line the server logged.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LogEntry {
     pub level: &'static str,
@@ -232,15 +194,8 @@ pub fn record_logs() -> RecordingLogger {
     }
 }
 
-/// `tracing::subscriber::set_default` for a test's recorder, after a process-wide subscriber that
-/// takes every event and keeps none.
-///
-/// WHY. `tracing` caches each callsite's interest the first time it fires. While only one subscriber
-/// is registered it asks the firing thread's own default, so a callsite first reached by a test that
-/// records nothing (no default: tracing's no-op) is cached as never-enabled, and a recording test on
-/// another thread then misses that line — the suite's tests run on parallel threads and each records
-/// on its own. With the process-wide subscriber registered first, there are always two, the interest
-/// is asked of all of them, and the no-op answer can no longer win.
+/// `tracing::subscriber::set_default` for a test's recorder after a process-wide no-op subscriber.
+/// Prevents callsite interest caching from disabling events across parallel test threads.
 pub fn set_log_default<S>(subscriber: S) -> tracing::subscriber::DefaultGuard
 where
     S: tracing::Subscriber + Send + Sync + 'static,

@@ -1,78 +1,35 @@
-//! What one player is allowed to see, and nothing else (SPEC §10.8). The client renders this view
-//! and never holds rules or hidden information (CLAUDE.md rule 7, §9.1's trust model).
+//! What one player is allowed to see, and nothing else (SPEC §10.8). The client renders this view and never
+//! holds rules or hidden information (CLAUDE.md rule 7, §9.1's trust model).
 //!
-//! The view is built by *copying* what the viewer is entitled to, never by deleting fields from a
-//! state clone: a field added to `GameState` stays invisible until this file names it. Five rules do
-//! all the work here.
-//!   - §9.1 hidden list: library order, the opponent's library, the opponent's hand, face-down traps.
-//!     Both libraries and the opponent's hand travel as counts; graveyards, exile and Field Spells are
-//!     public. R310–R312: the viewer's own library also travels as a list without order of what the
-//!     viewer was shown going in (`ownLibrary.ts`) — definitions, faces and counts, never an instance
-//!     id — so R97's rule below still reads no library card, the owner's included.
-//!   - R33: a face-down trap is readable by its *current controller* only, so a steal, a board swap
-//!     or a rotation moves who may read it even though ownership never changed; a Field Trap that
-//!     has fired (`faceUp`) is public to both.
-//!   - R13, §3.2: the lower cards of a Stack pile are dormant and not on the field. The view shows
-//!     the top card and a count of what is buried under it, never a buried card's identity.
-//!   - R81: only the viewer's own prompt carries its options; the other player's prompt shows that
-//!     it is open and whose it is, nothing more, and so do its `promptOpened` and `promptAnswered`.
-//!   - R97: the event stream is redacted, not truncated. An event that names a card the viewer may
-//!     not read keeps its type and its animation fields and shows `HIDDEN_ID` for that card.
-//!   - R2652000: the one event dropped rather than redacted is a `rolled` batch a face-down trap made,
-//!     to the other player, unless the trap fired in the same action: its flip alone would tell them a
-//!     trap is set there (`withheld_rolls`). It is dropped before the window is taken, so their window
-//!     is as full as it would be had the trap never flipped.
-//!   - R764: a Glitch's reset or boards (R676, R678) takes cards out of the match unseen, so the events
-//!     up to the end of its action read as the sentinel for each card the state no longer holds.
-//!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
-//!     its zone through the `formerId` that set it, and `formerId` itself travels only with the card.
-//!   - R1074000: a Duos pass (B20) takes a hand card out of its duel unseen, so in a duel a card in no
-//!     pile reads to the player whose hand the events last show it in, and when they show it in none
-//!     to everyone if it is a token (R11) and to nobody if not.
-//!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only
-//!     (and the zone it lies in, R821000),
-//!     a `costChanged` on an unreadable card hides its cost and a `buffed` one its amounts, and a
-//!     `transformed` whose new card is unreadable hides the card it replaced, as does one whose old
-//!     card was unreadable where it ceased to exist (`hiddenFrom`), whatever became of its
-//!     replacement since.
-//!   - R169: the player modifiers (§10.1 `mods`) travel on both seats as `{ id, label }`, because
-//!     every one of them is installed by a card played FACE-UP and `modifierChanged` is already
-//!     public in both directions. Face-up, not "by a Cry": #35 and #78 are Spells and can never have
-//!     one, #64 and #79 install theirs without one, and only #77 is a Cry. The caption is built from
-//!     the modifier's own kind and numbers and never from its `sourceId`, so no card identity can
-//!     leave through a badge.
-//!   - R434: once the game is over, the opponent's hand travels in full, as the owner's does; the
-//!     libraries, face-down traps and R97's event redaction stay as they were.
-//!   - R437: a mark (an effect aimed at the card that still waits, #50's pending steal) rides every
-//!     view of the card in both seats, a face-down card's back included (`marks.ts`).
-//!   - R195, R280, R667: three things the engine works out for a card ride on its view.
-//!     `conditionActive` (the yellow glow) on the viewer's own cards only; `counteredOnPlay` (Plague
-//!     Chalice's warning) on the viewer's own hand cards only (`counterWarning.ts` owns that rule);
-//!     `preview` (what a formula comes to now) on every card view the viewer may read — the viewer's
-//!     hand, the top of a unit pile and a backrow card face-up to the viewer — and on no other
-//!     (`preview.ts` owns that rule). #492, R81: a fourth, `embiggenCost` (what a play at the card's
-//!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
-//!     only, beside the normal price `cost` already is. #992, R90: a fifth, `choicesTruncated`, on the
-//!     viewer's own hand cards only, while `legal_actions` lists plays of the card whose choice
-//!     combinations R90's bound cut (`play_choices::hand_play_choices_truncated`). R1844001: a sixth,
-//!     `paretoOptimal` (the Pareto hint), on the viewer's own hand cards only, while the viewer is
-//!     shown the hint and the judge would call the card's play optimal (`pareto::pareto_hint_ids`).
-//!     R2268000: a seventh, `tribute` (how many Tributes a play of the card asks now,
-//!     `play_choices::tribute_cost_of`), on the viewer's own hand cards only, and never at 0.
-//!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
-//!     (`attack_reason_of`).
-//!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
-//!     (`with_play_reason`). R1571000: and on the viewer's own graveyard cards a permission admits.
+//! The view is built by *copying* what the viewer is entitled to, never by deleting fields from a state
+//! clone: a field added to `GameState` stays invisible until this file names it. The rules:
+//!   - §9.1: library order, the opponent's library and hand and face-down traps are hidden; libraries and the
+//!     opponent's hand travel as counts. R310–R312: the viewer's own library also travels as an unordered
+//!     list of what they were shown going in, never an instance id, so R97 still reads no library card.
+//!   - R33: a face-down trap is readable by its *current controller* only; a fired Field Trap (`faceUp`) is
+//!     public.
+//!   - R13, §3.2: a Stack pile shows its top card and a count of the dormant cards buried under it.
+//!   - R81: the other player's prompt (and its `promptOpened`, `promptAnswered`) shows only that it is open
+//!     and whose.
+//!   - R97: events are redacted, not truncated: one naming a card the viewer may not read keeps its type and
+//!     animation fields and shows `HIDDEN_ID` for that card.
+//!   - R2652000: a `rolled` batch a face-down trap made is dropped for the other player unless the trap fired
+//!     in the same action (`withheld_rolls`).
+//!   - R764: a Glitch's reset or boards (R676, R678) takes cards out unseen, so events up to the end of its
+//!     action read as the sentinel for each card the state no longer holds.
+//!   - R227: a card set face-down took a fresh id; events naming its old id follow it through `formerId`.
+//!   - R1074000: a Duos pass (B20) takes a hand card out unseen, so in a duel a card in no pile reads to the
+//!     player whose hand the events last show it in, else to all if a token (R11), else nobody.
+//!   - R177: a prompt option offering a face-down card names it by id only (and its zone, R821000); an
+//!     unreadable card's cost, buff amounts and Replace go with its identity.
+//!   - R169: the player modifiers (§10.1 `mods`) travel on both seats as `{ id, label }`.
+//!   - R434: once the game is over the opponent's hand travels in full; the rest stays hidden.
+//!   - R437: a mark (#50's pending steal) rides every view of the card in both seats, a back included.
+//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000: what the engine works
+//!     out for a card rides the viewer's own cards only, except `preview` and `sick` (every unit).
 //!
-//! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
-//! (§10.4), so no stored total ever reaches the client.
-//!
-//! Port of `packages/engine/src/viewFor.ts` (SURFACE §4.1, §6.1). `VIEW_EVENT_LIMIT` lives in
-//! `crate::config` (SURFACE §6.4); `syncFusedScripts` is gone (SURFACE §6.6). TS's spreads over an
-//! event (`{ ...event, instanceId: HIDDEN_ID }`, `const { formerId, ...rest } = event`) are done on the
-//! event's own JSON, key for key, so what a redacted event carries is exactly what TS's carried; the
-//! match over `GameEventType` has no wildcard, so a new event type does not compile until someone
-//! decides what it reveals (§10.3), as TS's exhaustive switch.
+//! Stats are recomputed on read (`layers.unitView`, §10.4), so no stored total reaches the client. The
+//! boundary is SURFACE §4.1, §6.1, §6.4 and §6.6; `VIEW_EVENT_LIMIT` lives in `crate::config`.
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
@@ -122,17 +79,15 @@ use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
 };
 
-/// R97's sentinel: the identity an event carries in place of a card the viewer may not read. Real
-/// ids are `c<n>` for instances and catalog ids like `core-043` for definitions, so this collides
-/// with neither and the client can test for it — a redacted event still animates, as a card back.
+/// R97's sentinel for a card the viewer may not read. It collides with no instance (`c<n>`) or
+/// catalog id, so the client can test for it; a redacted event still animates, as a card back.
 pub const HIDDEN_ID: &str = "hidden";
 
 /// R97, §9.1: the slot a shuffled-in card landed in would give away library order, to either side.
 pub const HIDDEN_POSITION: i32 = -1;
 
-/// R177: the cost a `costChanged` event reports for a card the viewer may not read. A cost is a
-/// property of the card as much as its definition is — the opponent's hand is a count (§10.8) — and
-/// a sequence of costs over a library would spell out its order (§9.1).
+/// R177: the cost a `costChanged` reports for a card the viewer may not read: a cost is the card's
+/// as much as its definition is, and costs over a library would spell out its order (§9.1).
 pub const HIDDEN_COST: i32 = -1;
 
 /// R385: the count a `counterChanged` "brittle" reports for a card the viewer may not read.
@@ -141,9 +96,7 @@ const HIDDEN_COUNT: i32 = -1;
 /// R177: what a prompt option names when it offers a card the chooser may not read (§10.8, R33).
 pub const HIDDEN_OPTION_LABEL: &str = "Face-down card";
 
-// ---------------------------------------------------------------------------
 // Visibility
-// ---------------------------------------------------------------------------
 
 /// §10.8, R33: a card in the backrow that this viewer sees only as a face-down card.
 fn is_face_down_to(state: &GameState, card: &CardInstance, viewer: PlayerId) -> bool {
@@ -156,22 +109,19 @@ fn is_face_down_to(state: &GameState, card: &CardInstance, viewer: PlayerId) -> 
     ) && !backrow_is_public(state, card, viewer)
 }
 
-/// R177: the card that took each vanished card's place, read off the events that replaced it — a
-/// Replace (`transformed`, §6.3, R35) or a Fuse (`fused`, R77) — so a card that has ceased to exist
-/// can still be judged by a zone: its replacement's. `state.applied` holds every event a view can
-/// show, so every replacement that matters to one is in it.
+/// R177: each vanished card's replacement (`transformed`, §6.3, R35; `fused`, R77), whose zone
+/// judges it. `state.applied` holds every event a view can show, so it holds every replacement
+/// that matters.
 #[derive(Clone, Debug, Default)]
 struct Replacements {
     /// Each vanished card's replacement.
     replaced_by: IndexMap<String, String>,
     /// The players each replaced card was hidden from where it ceased to exist (`transformed.hiddenFrom`).
     hidden_from: IndexMap<String, Vec<PlayerId>>,
-    /// R224: the cards a mulligan returned that wait in setup's owed item for their shuffle-back, in no
-    /// pile (`setup::returned_awaiting_shuffle`). They are on their way to a library, so nobody reads them.
+    /// R224: the cards a mulligan returned, in no pile until their shuffle-back: library cards, unread.
     to_library: Option<IndexSet<String>>,
-    /// R764: set for the events up to the end of the action of a Glitch's reset or boards (R676, R678): a
-    /// card they name that the state no longer holds ceased to exist out of that Glitch, unseen, and
-    /// reads to nobody.
+    /// R764: set for the events up to the end of a Glitch's reset or boards (R676, R678): a card they
+    /// name that the state no longer holds left unseen and reads to nobody.
     voided: bool,
     /// R1074000: `Some` in a duel, where a pass (B20) takes a hand card out of the state unseen.
     duel: Option<DuelGone>,
@@ -183,8 +133,8 @@ struct Replacements {
 /// R1074000: what a duel's events say of the cards in no pile that took no successor.
 #[derive(Clone, Debug, Default)]
 struct DuelGone {
-    /// The ones that read openly as they would in a 1v1 game: a token no pass took (R11), judged by the
-    /// definition the events last name it as, and a card a full library refused before it existed (R316).
+    /// Read openly, as in 1v1: a token no pass took (R11), by its last named definition, and a card
+    /// a full library refused before it existed (R316).
     public: IndexSet<String>,
     /// The ones a pass took out of a hand, tokens among them, each with the player whose hand it left.
     passed: IndexMap<String, PlayerId>,
@@ -223,10 +173,8 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
                     }
                 }
             }
-            // R227: a card set face-down took a fresh id. It is the same card, so the events that named it
-            // by its old id are judged by where it is now, exactly as they were before it moved: its draw
-            // stays hidden while the trap is face-down and reads once the trap is public (R97). No
-            // `hiddenFrom` is kept, since nothing ceased to exist.
+            // R227: a card set face-down took a fresh id but is the same card, so events naming its old id
+            // are judged by where it is now (R97). No `hiddenFrom`: nothing ceased to exist.
             GameEvent::CardPlayed {
                 instance_id,
                 former_id: Some(former),
@@ -257,10 +205,9 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
     }
 }
 
-/// R1020: the cards the events last put into a library and taken out of it by no move since. A
-/// `shuffledIn` puts one there, and a library card's replacement (`transformed`, hidden from every
-/// seat, R177) takes its place; any other move (`stays::moved_by`), a steal or an announcement takes
-/// one out. A card of the opening deck that no event named needs nothing: no event names it either.
+/// R1020: the cards the events last put into a library (a `shuffledIn`, or a library card's
+/// replacement hidden from every seat, R177) that no move, steal or announcement took out since.
+/// An opening-deck card no event named needs nothing: no event names it either.
 fn in_library_of(events: &[&GameEvent]) -> IndexSet<String> {
     let mut in_library: IndexSet<String> = IndexSet::new();
     for event in events {
@@ -292,13 +239,8 @@ fn in_library_of(events: &[&GameEvent]) -> IndexSet<String> {
 
 /// R1074000: a pass (B20) takes a card out of its duel's hand with no event, so in a duel a card in no
 /// pile with no successor is a token that ceased to exist (R11), a card a full library refused (R316),
-/// or a passed one. A passed card's last place the events show is a hand: put there by a draw, an add
-/// to hand, a bounce or a steal (a counter that sends a card to a hand steals it), carried to the card
-/// a Transform or a Fuse in the hand made of it, and not taken out since by a play, a set (R227's old
-/// id), a discard, a burn, a shuffle, an exile, a graveyard or a control change. A unit token bounced
-/// or stolen off the field or out of the resolving zone ceased to exist on its way to the hand (R11),
-/// so it reached none. One that came in by a pass, or whose arrival the log no longer holds, names no
-/// hand. Only a Duos seat passes, so a 1v1 state is no duel and reads every event as before.
+/// or a passed one, whose last place the events show is a hand (a set's old id counts, R227). Only a
+/// Duos seat passes, so a 1v1 state is no duel.
 fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
     if PLAYER_IDS
         .into_iter()
@@ -306,8 +248,7 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
     {
         return None;
     }
-    // Each card in a hand, and whose hand; each card's last definition the events name it as; each unit
-    // token that ceased to exist on its way to a hand, whose `addedToHand` may follow (a counter's steal).
+    // `ceased`: unit tokens gone on the way to a hand; `addedToHand` may follow (a counter's steal).
     let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
     let mut last_def: IndexMap<String, String> = IndexMap::new();
     let mut never_made: IndexSet<String> = IndexSet::new();
@@ -473,28 +414,17 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
     Some(DuelGone { public, passed })
 }
 
-/// R97: whether this viewer may read the identity of the card an event names, judged by where the
-/// card sits *now* and not where it was — so a card drawn last turn and played this turn reads
-/// openly in both events, and a unit bounced into the opponent's hand stops reading the moment it
-/// lands there (§9.1).
-///
-/// A card in the resolving zone is public: playing it was public, and R98 keeps it itself while it
-/// sits there. A card the state no longer holds at all has ceased to exist, and R177 judges it by
-/// the card that replaced it: a face-down trap #83 Transmogulate replaced keeps the secret its
-/// replacement keeps, and a library #83 replaced still never reads, so its earlier `cardPlayed` or
-/// `costChanged` cannot spell out what it was or in what order. With no replacement — a unit token
-/// that left the field (R11), a card exiled out of existence (R86) — it was public when it went. In a
-/// duel one the events last show in a hand, a token's included, was passed out of it (B20) and reads to
-/// that hand's player alone, and of the rest only a token or a card a full library refused (R316) went
-/// publicly (R1074000).
+/// R97: whether this viewer may read the card an event names, judged by where it sits *now*, not where it was
+/// (§9.1). The resolving zone is public (R98). A card that ceased to exist is judged by its replacement
+/// (R177), so what #83 Transmogulate replaced in a face-down trap or a library never reads; with none it went
+/// publicly (a unit token, R11; a card exiled out of existence, R86), save in a duel (`duel_gone`, R1074000).
 fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &Replacements) -> bool {
     let mut id = instance_id.to_string();
     let mut card = find_instance(state, &id);
     let mut hops = 0;
     while card.is_none() && hops < replaced.replaced_by.len() {
-        // R177: a card that ceased to exist where this viewer could not read it — a library card, an
-        // enemy face-down trap — stays unread for good. Its replacement may reach a public pile later,
-        // and judged by that pile alone the card it replaced would read, though it never was public.
+        // R177: a card that ceased to exist where this viewer could not read it stays unread for good,
+        // wherever its replacement goes later.
         if replaced
             .hidden_from
             .get(&id)
@@ -518,7 +448,7 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
             return false;
         }
         // R1074000: in a duel, a card a pass took out of a hand is as hidden as it was there, and one
-        // that names no hand, in by a pass and out by another, reads to nobody.
+        // that names no hand reads to nobody.
         let Some(duel) = &replaced.duel else {
             return true;
         };
@@ -536,11 +466,8 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     }
 }
 
-// ---------------------------------------------------------------------------
 // Cards, units and the backrow
-// ---------------------------------------------------------------------------
 
-/// A card view with nothing set beyond what every view has.
 fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32) -> CardView {
     CardView {
         instance_id,
@@ -581,9 +508,8 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
     }
 }
 
-/// R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. Patch
-/// v0.2.0's instance data rides on every card view (`instanceView.ts`): each is built only for a card
-/// the viewer may read where it is.
+/// R65: the cost as it stands now (an X card's X reads 0 outside a play). The instance data rides
+/// every card view, each built only for a card the viewer may read where it is.
 fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     // B5 E33, R404: a quest line on the field, public as the card is.
     let quest = quest_view_of(state, card);
@@ -595,7 +521,7 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
         effective_cost(state, card, Default::default()),
     );
     view.type_ = data.type_;
-    // MD-B15, R923: a granted tag is part of the card, so a view of it says so.
+    // MD-B15, R923: a granted tag is part of the card.
     view.tags = data.tags;
     view.brittle = data.brittle;
     // R980: the card's element, where the viewer may read the card and a Feng Shui acts.
@@ -605,9 +531,9 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
     view.enchantments = data.enchantments;
     view.marks = with_marks(state, &card.id);
     view.quest = quest;
-    // ME-CN, R1301: public as the card is, so every view built for a card the viewer may read carries it.
+    // ME-CN, R1301: public as the card is.
     view.chinese = card.chinese;
-    // MD-B6, R943: Created is public the same way.
+    // MD-B6, R943: so is Created.
     view.created = card.created;
     // R1956001: and the card that generated it, to its owner alone.
     view.created_by = crate::generators::generator_shown_to(state, card, viewer);
@@ -616,18 +542,16 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
     view
 }
 
-/// R437: the marks a card carries while an effect aimed at it waits (#50's pending steal), on every
-/// view of it and in both players' views — or no key at all, so an unmarked card looks as it did.
+/// R437: a card's marks (#50's pending steal), in both players' views, or no key when it has none.
 fn with_marks(state: &GameState, instance_id: &str) -> Option<Vec<CardMark>> {
     let marks: Vec<CardMark> = marks_on(state, instance_id).into_iter().collect();
     if marks.is_empty() { None } else { Some(marks) }
 }
 
-/// R243, §10.8: a card in the viewer's own hand, in full — what it is made of beyond its printed
-/// face as well. A Unit's stats are its face plus the permanent buffs it gained in hand (§10.4
-/// layers 1, 3 and 4: #89 Corpse Eater's meals), since layer 2 and the auras are the field's; attack
-/// floors at 0 as on the field. A #98 Heroic Power names the power it rolled as it arrived (R43,
-/// R151), which its cost alone does not, and a card with a label shows it (R2247000).
+/// R243, §10.8: a card in the viewer's own hand, in full. A Unit's stats are its face plus its
+/// hand buffs (§10.4 layers 1, 3 and 4: #89 Corpse Eater's meals; layer 2 and auras are the
+/// field's), attack floored at 0. A #98 Heroic Power names the power it rolled (R43, R151), and a
+/// card its label (R2247000).
 fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     let mut view = with_copies(card_view(state, card, viewer), state, card);
     let stats = if card_type_of(state, card) == CardType::Unit {
@@ -657,9 +581,9 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
     view
 }
 
-/// B5 E14, R399, R243: a copier's view carries the Spell text it has now (`CardView.copies`), with that
-/// definition's declared numbers as they read on the card — or nothing, when it copies nothing. Asked
-/// only where the viewer may read the card and R399 shows it: the owner's hand, and the resolving zone.
+/// B5 E14, R399, R243: a copier's view carries the Spell text it has now (`CardView.copies`), with
+/// that definition's numbers as they read on the card. Asked only where R399 shows it: the owner's
+/// hand and the resolving zone.
 fn with_copies(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
     let Some(copy) = copied_text_of(state, card) else {
         return view;
@@ -674,8 +598,7 @@ fn with_copies(mut view: CardView, state: &GameState, card: &CardInstance) -> Ca
     view
 }
 
-/// R195, §10.8: the yellow glow rides on a card view as `conditionActive: true` or not at all — the
-/// key is never `false`, so a card with no condition met looks exactly as it did before R195.
+/// R195, §10.8: the yellow glow, `conditionActive: true` or no key, never `false`.
 fn with_condition(mut view: CardView, active: bool) -> CardView {
     if active {
         view.condition_active = Some(true);
@@ -683,19 +606,16 @@ fn with_condition(mut view: CardView, active: bool) -> CardView {
     view
 }
 
-/// #492, R81: an embiggen card in the viewer's own hand carries what a play of it at its embiggen
-/// price costs now (`embiggenCost`), read by the function step 1 prices that play with
-/// (`play_choices::embiggen_play_cost`), beside the `cost` its normal price comes to. Absent on every
-/// other card; this file asks it only of the viewer's own hand.
+/// #492, R81: what a play of an embiggen card at its embiggen price costs now (`embiggenCost`), by the
+/// function step 1 prices that play with. Asked only of the viewer's own hand.
 fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
     view.embiggen_cost = embiggen_play_cost(state, card);
     view
 }
 
-/// #2268, R2268000: a card in the viewer's own hand whose play asks a Tribute carries how many
-/// (`tribute`), read by the function its play is held to (`play_choices::tribute_cost_of`), so the
-/// client never works one out (CLAUDE.md rule 7). Absent at 0 and on every other card; this file
-/// asks it only of the viewer's own hand.
+/// #2268, R2268000: how many Tributes a play of the card asks (`tribute`), by the function its play
+/// is held to, so the client never works one out (CLAUDE.md rule 7). Absent at 0; asked only of the
+/// viewer's own hand.
 fn with_tribute(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
     let tribute = tribute_cost_of(state, card);
     view.tribute = (tribute > 0).then_some(tribute);
@@ -726,13 +646,10 @@ fn with_choices_truncated(mut view: CardView, truncated: bool) -> CardView {
     view
 }
 
-/// R979000: why the viewer's own hand card cannot be played now, or no key at all — the key is
-/// never empty, so a view with no unplayable card looks exactly as it did before R979000. Only
-/// while the viewer may act (their turn, the main phase, no prompt open) and `play_actions_for`
-/// lists no play of the card; nothing else calls this, so the opponent's hand and post-game hands
-/// carry no key. Which plays are offered stays `legal_actions`' answer. R1571000: the same for a
-/// card in the viewer's own graveyard that a permission admits, read off the graveyard's listing;
-/// the opponent's graveyard carries no key.
+/// R979000: why the viewer's own hand card cannot be played now, or no key (never empty). Only while
+/// the viewer may act (their turn, the main phase, no prompt open) and `play_actions_for` lists no
+/// play of it; nothing else calls this, so other hands carry no key. R1571000: likewise for a card
+/// in the viewer's own graveyard that a permission admits.
 fn with_play_reason(
     mut view: CardView,
     state: &GameState,
@@ -770,11 +687,9 @@ fn with_play_reason(
     view
 }
 
-/// R1838000: why the viewer's own Tradable hand card cannot be Traded now, or no key at all — never
-/// empty, so a view with no Tradable card looks exactly as it did before. Only while the viewer may act
-/// (their turn, the main phase, no prompt open), and only on a card `trade::why_trade_refused` refuses,
-/// which is exactly a card `legal_actions` lists no `trade` of. Nothing else calls this, so the
-/// opponent's hand and post-game hands carry no key.
+/// R1838000: why the viewer's own Tradable hand card cannot be Traded now, or no key (never empty).
+/// Only while the viewer may act, on a card `trade::why_trade_refused` refuses, exactly one
+/// `legal_actions` lists no `trade` of; nothing else calls this, so other hands carry no key.
 fn with_trade_reason(
     mut view: CardView,
     state: &GameState,
@@ -822,9 +737,8 @@ fn trades_view(state: &GameState, viewer: PlayerId) -> Option<crate::wire::Trade
     })
 }
 
-/// R280, §10.8: what a card's formula comes to now rides on its view as `preview`, or not at all —
-/// never `[]`. `preview::preview_of` owns where it may: this file asks only about a card it shows the
-/// viewer (the viewer's own hand, the top of a unit pile, a backrow card face-up to the viewer).
+/// R280, §10.8: what a card's formula comes to now, as `preview` or no key, never `[]`;
+/// `preview::preview_of` owns where.
 fn with_preview(mut view: CardView, values: Option<Vec<PreviewValue>>) -> CardView {
     if let Some(values) = values {
         view.preview = Some(values);
@@ -846,8 +760,7 @@ fn with_activations(
     view
 }
 
-/// The card view the field shows for `card`: the glow, the preview and the abilities on top of
-/// `card_view`, in TS's nesting order (`withActivations(withPreview(withCondition(cardView(…)))))`).
+/// The card view the field shows: the glow, the preview and the abilities on top of `card_view`.
 fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     with_activations(
         with_preview(
@@ -863,8 +776,8 @@ fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> 
     )
 }
 
-/// R940: a unit's keywords as the client reads them. A retired kind (`KeywordKind::RETIRED`) that a shipped
-/// catalog's card still prints is no kind the client's types name, so the view leaves it out.
+/// R940: a retired kind (`KeywordKind::RETIRED`) a shipped catalog's card still prints is no kind the
+/// client's types name, so the view leaves it out.
 fn shown_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
     keywords
         .iter()
@@ -937,23 +850,22 @@ fn unit_view_of(
         } else {
             None
         },
-        // R1174000: a status, public on the field like the unit itself.
+        // R1174000: likewise.
         frozen: top.frozen.map(|_| true),
-        // R1839000: a status, public on the field like the unit itself, its countdown included.
+        // R1839000: likewise, its countdown included.
         slumber: top.slumber,
-        // R1848000: and whether it never thaws, public the same way.
+        // R1848000: likewise, whether it never thaws.
         frozen_forever: crate::freeze::frozen_forever(top).then_some(true),
-        // R1852005: a Starship's memory, public on the field like the unit itself.
+        // R1852005: a Starship's memory, likewise.
         starship: top.starship.clone(),
-        // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
+        // ME-CN, R1301: likewise (the pile's top, R13).
         chinese: card.chinese,
-        // MD-B6, R943: Created is public the same way.
+        // MD-B6, R943: likewise.
         created: card.created,
         created_by: card.created_by,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
-        // R849000: summoning sick with neither Rush nor Charge, from the turn the unit entered and its
-        // viewed keywords — both public on the field.
+        // R849000: summoning sick with neither Rush nor Charge, from public facts on the field.
         sick: if is_asleep(state, top, &layers.keywords) {
             Some(true)
         } else {
@@ -966,8 +878,7 @@ fn unit_view_of(
 }
 
 /// R849000: why the viewer's own unit that may act now cannot declare an attack, gated as
-/// `condition_targets_of`. Which targets it may attack stays `legal_actions`' answer. R1174000: a
-/// Frozen unit has no exertion, so it may not act, and it is told why all the same while its
+/// `condition_targets_of`. R1174000: a Frozen unit has no exertion, yet is told why while its
 /// controller could otherwise act with it.
 fn attack_reason_of(
     state: &GameState,
@@ -982,10 +893,9 @@ fn attack_reason_of(
     why_cannot_declare_in(auras, top).err().map(|error| error.message)
 }
 
-/// MD-D5, R1121: the yellow a dragged attack paints — the enemy Units an `attack_mods` entry would
-/// apply to if this Unit attacked them now, in `attack_targets` order. Only on the viewer's own
-/// attackers that may act now (their main phase, no prompt open, as R195's flag), and `None` when
-/// the list is empty. Tags are public (§10.8), so the field reveals nothing.
+/// MD-D5, R1121: the yellow a dragged attack paints, the enemy Units an `attack_mods` entry would
+/// apply to if this Unit attacked them now. Only on the viewer's own attackers that may act now (as
+/// R195's flag). Tags are public (§10.8), so the field reveals nothing.
 fn condition_targets_of(
     state: &GameState,
     auras: &AuraTable<'_>,
@@ -1012,11 +922,9 @@ fn condition_targets_of(
     if targets.is_empty() { None } else { Some(targets) }
 }
 
-/// §4.1: "each unit has one exertion per turn: one attack or one position switch", so a unit can
-/// still act while either exertion is unspent — a summoning-sick unit may still switch, and a unit
-/// that cannot attack may still switch back. `combat::has_exertion` owns that rule, Deft's
-/// two exertions included (R49); *which* of the two is legal is `combat::can_attack`'s answer and
-/// `legal_actions`', never the view's.
+/// §4.1: one exertion per turn, an attack or a position switch, so a unit can act while either is
+/// unspent (`combat::has_exertion`, Deft's two included, R49). *Which* is legal is
+/// `legal_actions`' answer, never the view's.
 fn can_act(state: &GameState, auras: &AuraTable<'_>, card: &CardInstance) -> bool {
     turn_open_to(state, card)
         && (has_exertion_in(auras, card, ExertionKind::Attack)
@@ -1031,12 +939,9 @@ fn turn_open_to(state: &GameState, card: &CardInstance) -> bool {
         && state.active == card.controller
 }
 
-/// A public backrow card names its owner and its controller, since R33's readability and #87's board
-/// swap both turn on the controller and a stolen card sits in a backrow that is not its own. A
-/// face-down zone is `{ faceDown: true, cost }`: §10.8 grants the non-controller that a zone is
-/// occupied and what the card in it costs (R351, a deliberate reveal), and nothing more, so not even
-/// the controller's name travels with it. The cost is the one the controller's own view shows, so
-/// both players read the same number.
+/// A public backrow card names its owner and controller, since R33's readability and #87's board swap
+/// turn on the controller. A face-down zone is `{ faceDown: true, cost }` and no more (§10.8, R351),
+/// the cost the controller's own view shows, so both players read the same number.
 fn backrow_view(
     state: &GameState,
     auras: &AuraTable<'_>,
@@ -1147,18 +1052,10 @@ fn carried_view(
     )
 }
 
-/// R43: a Heroic Power lives on its instance and it is a Field Spell (§8 #98), so it is public to
-/// both players once it is on the field — the row §2's hero panel marks visible to both. The power,
-/// its X and its use are `heroPower`'s to report, never re-derived here.
-///
-/// It follows control, not ownership: a stolen Heroic Power powers its new controller's hero. So a
-/// player can hold more than one — their own plus one taken with #36 radiant or #49 — and each is
-/// separately once-per-turn, which is why this is a list and every entry carries its `instanceId`
-/// for `activatePower` (§10.2). Board order: p1's backrow lane 1 to 5, then p2's.
-///
-/// R1447: a power on a face-down card is no power. A Trap fused with #98 keeps the rolled power in its
-/// memory, but a face-down card has no ability to use (`activate::is_acting_on_field`), and naming it
-/// would hand the other seat the hidden card's id and definition.
+/// R43: a Heroic Power is a Field Spell (§8 #98), public to both once on the field (§2's hero panel).
+/// It follows control, so a player may hold several (#36 radiant, #49), each once per turn and named by
+/// the `instanceId` `activatePower` takes (§10.2). R1447: a face-down card's power is no power, and
+/// naming it would hand the other seat the hidden card.
 fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
     let mut powers: Vec<HeroPowerView> = Vec::new();
     for side in PLAYER_IDS {
@@ -1182,13 +1079,10 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
     powers
 }
 
-// ---------------------------------------------------------------------------
 // Player modifiers (§10.1 `mods`, §10.3 `modifierChanged`)
-// ---------------------------------------------------------------------------
 
-/// The discount half of `modifier_label`, split out because `costDiscount` is the one kind whose
-/// caption has to say *what* it applies to: R48's current-cost gate (#77), §8 #35's "next Spell",
-/// and #78's flat "your cards" are three different sentences off one kind.
+/// The discount half of `modifier_label`: `costDiscount`'s caption must say *what* it applies to
+/// (R48's current-cost gate, #77; §8 #35's "next Spell"; #78's "your cards").
 fn discount_label(
     amount: i32,
     only_type: Option<CardType>,
@@ -1225,13 +1119,9 @@ fn find_def_in<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
         .or_else(|| registered_catalog().get(def_id))
 }
 
-/// A badge caption for one modifier, built from the modifier alone. The match is exhaustive over
-/// `ModifierKind` on purpose: with no wildcard, a new kind does not compile until someone decides
-/// what the player is told about it.
-///
-/// `sourceId` (#79 Twinspell's instance) is deliberately not read here: it is a card id, and the view
-/// must not hand either seat an identity through a badge. `echo` is the grant as it stands
-/// (`echo::echo_grant_of`), a number read off the permanent's current face (R209, §5.2).
+/// A badge caption built from the modifier alone; with no wildcard, a new `ModifierKind` does not
+/// compile until someone decides what the player is told. `sourceId` (#79 Twinspell's) is never read:
+/// no card identity may leave through a badge. `echo` is the grant as it stands (R209, §5.2).
 fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier, echo: i32) -> String {
     match &modifier.kind {
         ModifierKind::CostDiscount {
@@ -1263,8 +1153,7 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         }
         // B5 E28, R458: the card's own words.
         ModifierKind::StartOfTurnEffect { label, .. } => label.clone(),
-        // B5 E15, E39 (R455): the play pipeline's price rules and Forever&'s rider, worded by their owner:
-        // `costRuleModifierLabel` is `costRuleText(rule, expiry.until === "used")`.
+        // B5 E15, E39 (R455): the price rules and Forever&'s rider, worded by their owner.
         ModifierKind::CostRule { rule } => {
             cost_rule_text(rule, matches!(modifier.expiry, ModifierExpiry::Used)).to_string()
         }
@@ -1325,17 +1214,10 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
     }
 }
 
-/// §10.8 does not list the player modifiers, so R169 decides them: both seats carry the list, since
-/// every Core modifier is installed by a card played face-up and `modifierChanged` is already public
-/// in both directions (see `redact_event`). Only the id and the caption travel.
-///
-/// "Face-up" is the load-bearing word and "Cry" would be wrong: #35 Lunar Eclipse and #78 /fullsend
-/// are Spells, which never enter the field and so can never have a Cry; #64 and #79 install theirs
-/// from other hooks. What all five share is that the play itself was public.
-///
-/// R48: a modifier that covers the controller's *next* turn is installed at once and bites later, so
-/// the caption says so while `modifier_is_live` is still false — otherwise #77's badge would claim a
-/// discount on the very turn the discount does nothing.
+/// §10.8 does not list the player modifiers, so R169 decides: both seats carry the id and caption,
+/// since every one is installed by a card played face-up (not "by a Cry": #35 and #78 are Spells, #64
+/// and #79 use other hooks) and `modifierChanged` is public. R48: one for the *next* turn says so, or
+/// #77's badge would claim a discount on the very turn it does nothing.
 fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
     let mut views: Vec<ModifierView> = state.players[player]
         .mods
@@ -1365,8 +1247,7 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
             ),
         });
     }
-    // R844: a lost refresh is a modifier too, one badge under the id `modifierChanged` names for it,
-    // while a loss covers a future refresh (R169).
+    // R844: a lost refresh likewise, while a loss covers a future refresh.
     if state.players[player].lost_refresh_through.is_some() {
         let total = crate::mana::lost_refreshes_left(&state.players[player]);
         views.push(ModifierView {
@@ -1378,16 +1259,15 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
             },
         });
     }
-    // R846: owed extra turns are a modifier too, one badge under the id `modifierChanged` names for
-    // them, while any is owed (R169).
+    // R846: owed extra turns likewise, while any is owed.
     if let Some(owed) = state.players[player].extra_turns {
         views.push(ModifierView {
             id: crate::turn::EXTRA_TURN_MODIFIER_ID.to_string(),
             label: format!("Extra turns owed: {owed}"),
         });
     }
-    // R1181000: an effect made "in N turns" is a badge on its owner's side while it waits (R169), since
-    // the card that made it is not in play to carry a mark (R437).
+    // R1181000: an effect made "in N turns" is a badge on its owner's side while it waits, since the
+    // card that made it is not in play to carry a mark (R437).
     for entry in state.delayed.iter().filter(|entry| entry.owner == player) {
         if let (Some(due), Some(label)) = (entry.due_own_turn, &entry.label) {
             let left = due - state.players[entry.at.player].turns_started;
@@ -1404,9 +1284,7 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
     views
 }
 
-// ---------------------------------------------------------------------------
 // One side of the board
-// ---------------------------------------------------------------------------
 
 /// R64: the zones this player is holding for a dying Reborn unit, as a mask per row — and B3.1 rule 6's
 /// backrow zones held for an animated "Animated on your turn" card's return (`zones::is_reserved`).
@@ -1423,8 +1301,7 @@ fn reserved_mask(state: &GameState, player: PlayerId) -> RowFlags {
     }
 }
 
-/// R1141: how many cards of the opponent's hand carry a mark, while that hand is a count; `None` when
-/// none does, so a seat with no marked hand card looks as it did.
+/// R1141: how many cards of the opponent's hand carry a mark, while that hand is a count.
 fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option<i32> {
     if player == viewer || state.result.is_some() {
         return None;
@@ -1437,9 +1314,8 @@ fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Op
     (marked > 0).then_some(marked)
 }
 
-/// R1223–R1225: this seat's credit line as the client shows it — `None` with no line acting,
-/// nothing owed and no locked instalment. `available` is set only while a line acts, and `used`
-/// only while a lapsing face acts. Reads public state only: face-up lenders and the public schedule.
+/// R1223–R1225: this seat's credit line, `None` with no line acting, nothing owed and nothing locked.
+/// Reads public state only: face-up lenders and the public schedule.
 fn credit_view(state: &GameState, player: PlayerId) -> Option<CreditView> {
     let terms = crate::credit::credit_terms(state, player);
     let owed: Vec<i32> = state.players[player].owed_instalments.clone().unwrap_or_default();
@@ -1474,8 +1350,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
     } else {
         IndexSet::new()
     };
-    // §10.8: the viewer's own hand in full, the opponent's as a count — until the game is over, when
-    // both hands are revealed (R434): the opponent's cards as they stand, as their owner saw them.
+    // §10.8: the viewer's own hand in full, the opponent's as a count until the game is over (R434).
     let hand = if player == viewer {
         HandView::Cards(
             side.hand
@@ -1532,10 +1407,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         player,
         hero: HeroView {
             health: side.hero.health,
-            // §10.8's "armor": the number §4.4 step 2 will actually subtract, so the hero panel is read
-            // the same way a unit's is — never the stored field alone. `hero_armor_of` adds every backrow
-            // grant (#84 Going Long) to it, summed per R124, and the grant disappears from the view the
-            // moment the granting card leaves the backrow.
+            // §10.8's "armor": the number §4.4 step 2 will subtract, never the stored field alone, with
+            // every backrow grant (#84 Going Long) summed per R124.
             armor: hero_armor_of(state, player),
             power: powers.first().cloned(),
             powers,
@@ -1554,17 +1427,15 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             max: side.mana.max,
         },
         hand,
-        // §9.1: a library's order ships to nobody, and the opponent's library is a count and nothing
-        // else. R310–R312: the viewer's own is a list without order as well, of what they were shown
-        // going in (`own_library.rs`), with no instance id or position in it.
+        // §9.1: a library's order ships to nobody, and the opponent's library is a count. R310–R312:
+        // the viewer's own is also an unordered list of what they were shown going in, no id or place.
         library_count: side.library.len() as i32,
         own_library: if player == viewer {
             Some(own_library_view(state, player))
         } else {
             None
         },
-        // R1571000: the viewer's own graveyard cards a permission admits say why they cannot be
-        // played now; the opponent's graveyard carries no key.
+        // R1571000: only the viewer's own graveyard says why a card cannot be played now.
         graveyard: side
             .graveyard
             .iter()
@@ -1581,8 +1452,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             .iter()
             .map(|card| card_view(state, card, viewer))
             .collect(),
-        // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
-        // card announced to be set face-down waits here too, and the other player sees a card back.
+        // §10.5 step 4, R98: a Spell between its play and its graveyard, public as its play was. R448:
+        // one announced to be set face-down shows the other player a card back.
         resolving: side
             .resolving
             .iter()
@@ -1631,11 +1502,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
     }
 }
 
-// ---------------------------------------------------------------------------
 // The open prompt
-// ---------------------------------------------------------------------------
 
-/// A prompt option with nothing but its key and its label.
 fn bare_option(key: String, label: String) -> PendingOption {
     PendingOption {
         key,
@@ -1655,8 +1523,7 @@ fn bare_option(key: String, label: String) -> PendingOption {
 }
 
 /// §10.8: "a card revealed out of a library is revealed only as an option of the prompt that reveals
-/// it: the chooser sees it in full". These options only ever travel to the chooser (R81), so naming
-/// the definition behind an option is exactly what the chooser is owed.
+/// it: the chooser sees it in full". The options travel to the chooser alone (R81).
 fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> PendingOption {
     // B5 E18: a `pick` option's cost against the budget, and the face an option shows when it is Radiant.
     let mut base = bare_option(option.key.clone(), option.label.clone());
@@ -1669,12 +1536,9 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
     match &option.selection {
         Selection::Instance { instance_id } => {
             let card = find_instance(state, instance_id);
-            // R177: a prompt may offer a card its chooser may not read — a target prompt reaching an
-            // enemy face-down trap (#49, #50, an Echo repeat's fresh pick). The option is the zone's card
-            // and nothing more: the id to answer with, never the definition, and neither the label nor
-            // the key the engine built from its name. A card revealed out of a library is the opposite
-            // case: the prompt IS its reveal, so the chooser sees it in full (above) — and so is B5 E17's
-            // look at the opponent's hand (Classic #11), whose options only their chooser is sent (R81).
+            // R177: a prompt may offer a card its chooser may not read (an enemy face-down trap: #49,
+            // #50, an Echo repeat's pick): the id to answer with, never the definition, label or key
+            // built from its name. B5 E17's look at the opponent's hand (Classic #11) is a reveal.
             if let Some(card) = card
                 && is_face_down_to(state, card, viewer)
             {
@@ -1734,8 +1598,7 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             }
             base
         }
-        // ME-CRAFT (R880): the recipe goes only to the prompt's holder — this view is the chooser's
-        // own (§10.8), and the opponent's sees only that a prompt is open.
+        // ME-CRAFT (R880): the recipe goes only to the prompt's holder, as this view does (§10.8).
         Selection::Craft { recipe } => {
             base.recipe = Some(recipe.clone());
             base
@@ -1759,9 +1622,8 @@ fn pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
 }
 
 /// R2646000: the card asking, its definition and face, when the chooser may read it where it now is
-/// (R1088's test, `may_read`). A prompt no card opened names none, and neither does one whose card the
-/// state no longer holds or that has since changed definition: only a card that is still itself here
-/// and open to the chooser is named, so the view says nothing the board does not.
+/// (R1088's test, `may_read`); none when no card opened the prompt, or the state no longer holds it, or
+/// it has since changed definition, so the view says nothing the board does not.
 fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> Option<(String, bool)> {
     let id = pending.resume.instance_id.as_deref()?;
     let card = find_instance(state, id)?;
@@ -1772,10 +1634,9 @@ fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -
     Some((pending.resume.def_id.clone(), pending.resume.radiant))
 }
 
-/// The chooser's own prompt, copied field by field: `resume` never travels, so nothing a prompt keeps
-/// for its answer — the owner a prompt the other player holds continues as (B5 E18), a multiple-choice
-/// problem's key (R465) — can leave the engine through the view. Only the card asking reaches it, and
-/// only when the chooser may read that card (R2646000).
+/// The chooser's own prompt, field by field: `resume` never travels, so nothing a prompt keeps for its
+/// answer (B5 E18's continuing owner, R465's problem key) leaves the engine through the view, but the
+/// card asking, when the chooser may read it (R2646000).
 fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> PendingView {
     let source = prompt_source(state, viewer, pending);
     PendingView::ForYou(PendingPromptView {
@@ -1799,9 +1660,8 @@ fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> 
     })
 }
 
-/// R265, R266: while both mulligans are open, a seat that still owes one sees its own prompt, and a
-/// seat that has answered sees only that the other seat still owes one — as it would a prompt the
-/// other seat held — never what that seat is choosing from or has chosen.
+/// R265, R266: while both mulligans are open, a seat that still owes one sees its own prompt, and one
+/// that has answered sees only that the other still owes one, as for any prompt the other holds.
 fn mulligan_pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
     if let Some(own) = mulligan_prompt_for(state, viewer) {
         return Some(prompt_view(state, viewer, own));
@@ -1833,10 +1693,8 @@ fn draw_offer_view(state: &GameState) -> Option<DrawOfferView> {
     standing_draw_offer(state).map(|by| DrawOfferView { by })
 }
 
-/// R36: the turns of the viewer's own that a declined offer still blocks — counted from the
-/// viewer's turn under way, or from their next one while the opponent's runs, through the last
-/// before `blocked_until`. The decline's own turn is not counted (its one offer is spent), so the
-/// count starts at DRAW_OFFER_BLOCK_TURNS. The viewer's own only; `None` when nothing blocks them.
+/// R36: the viewer's own turns a declined offer still blocks, through the last before `blocked_until`;
+/// the decline's own turn is not counted (its one offer is spent).
 fn draw_offer_blocked_turns(state: &GameState, viewer: PlayerId) -> Option<i32> {
     let side = &state.players[viewer];
     let blocked_until = side.draw_offer.blocked_until?;
@@ -1845,14 +1703,10 @@ fn draw_offer_blocked_turns(state: &GameState, viewer: PlayerId) -> Option<i32> 
     (left > 0).then_some(left)
 }
 
-// ---------------------------------------------------------------------------
 // Events (§10.10)
-// ---------------------------------------------------------------------------
 
-/// An event's JSON object, `{ ...event }`, as `redact_event` reads and changes it. Until something is
-/// changed it is not written out at all: a field is read off the event itself (`field_of`), and an
-/// event nothing was changed on is the event, cloned. Most events a view carries are shown as they
-/// are, and writing each one out as a `Map` and reading it back was most of a view's cost.
+/// An event's JSON object as `redact_event` reads and changes it, written out only once something
+/// changes (`field_of` reads it until then): writing each event out and back was most of a view's cost.
 struct Shown<'e> {
     event: &'e GameEvent,
     /// The event's JSON, once a change needed it.
@@ -1904,9 +1758,8 @@ fn field_of(event: &GameEvent, key: &str) -> Option<Value> {
     }
 }
 
-/// `field_of`'s serializer: an object's fields are passed over unwritten, but for the one asked for,
-/// which is written with `serde_json::to_value` (the last one, should a key come twice, as a `Map`
-/// keeps it). Anything but an object is an error, and `field_of` then writes the event out.
+/// `field_of`'s serializer: only the field asked for is written (the last, should a key come twice,
+/// as a `Map` keeps it). Anything but an object is an error, and `field_of` then writes the event out.
 mod field_capture {
     use serde::ser::{self, Impossible, Serialize};
     use serde_json::{Error, Value};
@@ -2147,14 +2000,9 @@ fn rebuild(shown: Shown) -> GameEvent {
     }
 }
 
-/// R97. Every event carries ids and several carry a `defId` as well — `drawn` names the card that
-/// went into a hand, `bounced` the one that left the field for it, `costChanged` a card discounted
-/// in hand — so the animation stream is filtered like every other zone. An event that names a card
-/// this viewer may not read keeps its type and every field §10.10's animation table needs, with the
-/// identity replaced by `HIDDEN_ID`: redacted, never dropped, so the cue still plays as a card back.
-///
-/// The match is exhaustive over every event type on purpose (§10.3): with no wildcard, adding an
-/// event type does not compile until someone decides what it reveals.
+/// R97: an event naming a card this viewer may not read keeps its type and every field §10.10's
+/// animation table needs, the identity `HIDDEN_ID`, so the cue still plays as a card back. With no
+/// wildcard (§10.3), a new event type does not compile until someone decides what it reveals.
 fn redact_event(
     state: &GameState,
     viewer: PlayerId,
@@ -2176,8 +2024,7 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R1853003: a card bought at the Marketplace is named as `addedToHand` names a card, its face
-        // with it.
+        // R1853003: a card bought at the Marketplace is named as on `addedToHand`, its face with it.
         GameEventType::MarketBought => {
             if hidden(&instance) {
                 shown.remove("radiant");
@@ -2186,15 +2033,9 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // A card named with its definition: both go, or neither.
-        //
-        // `cardResolved` (§10.5 step 7) is one of these rather than a public event: R97 judges a card
-        // by where it sits *now*, and once resolution is over a Spell has reached the graveyard and a
-        // permanent is on the field, both public — so it ordinarily reads openly, and `may_read` keeps
-        // the sentinel for the card that ended up somewhere this viewer may not read (a Trap set
-        // face-down, a card resolved back into a hand or a library). Its `player` and `permanent` are
-        // not identity fields and never travel redacted; `permanent` is R61's "still in play" answer,
-        // which #85 keys on. The face that resolved (`radiant`) is the card's, so it goes with the id.
+        // A card named with its definition: both go, or neither. `cardResolved` (§10.5 step 7) is
+        // judged where the card is now (R97). `player` and `permanent` (R61's "still in play", which
+        // #85 keys on) are not identity; `radiant` is the card's, so it goes with the id.
         GameEventType::CardResolved => {
             // R119's `arrivedDuring` is the engine's own bookkeeping, and it names face-down traps (#95);
             // so is the exit mark the event happened at (R174, R212).
@@ -2209,9 +2050,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R97, R177: `killerId` names a card as well, and the card that dealt the lethal hit — a unit,
-        // or a Spell whose damage was lethal — may since have gone somewhere this viewer cannot read,
-        // like the #31 KY's Math Equation that returns to its owner's hand at the end of the turn.
+        // R97, R177: `killerId` names a card as well, which may since have gone somewhere this viewer
+        // cannot read (#31 KY's Math Equation returns to its owner's hand at the end of the turn).
         GameEventType::Destroyed => {
             let killer_hidden = nullable_at(&shown, "killerId").is_some_and(|killer| hidden(&killer));
             if hidden(&instance) {
@@ -2224,10 +2064,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R119's `arrivedDuring` and the exit mark on a play's step-4 pair are the engine's bookkeeping,
-        // as on `cardResolved`. R227: `formerId` is the id a card set face-down had, and it goes with the
-        // card's identity — shown to a viewer who may read the card, never to one who may not, or the old
-        // id would name the face-down card after all (R177).
+        // R119's `arrivedDuring` and the exit mark are bookkeeping, as on `cardResolved`. R227:
+        // `formerId` goes with the card's identity, or the old id would name the face-down card (R177).
         GameEventType::CardPlayed | GameEventType::Summoned => {
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
@@ -2235,7 +2073,7 @@ fn redact_event(
             shown.remove("creator");
             if hidden(&instance) {
                 // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
-                // `embiggened`. Any other hidden play keeps both, as it always has (D14).
+                // `embiggened`; any other hidden play keeps both (D14).
                 if find_instance(state, &instance).is_some_and(|card| card.set_as.is_some()) {
                     shown.remove("x");
                     shown.remove("embiggened");
@@ -2243,20 +2081,16 @@ fn redact_event(
                 shown.remove("formerId");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
-            // R1088: `sourceId` names a card as well, and the card whose effect summoned this one may
-            // since have gone somewhere this viewer cannot read — so it is hidden the way `killerId`
-            // is on `destroyed`, never removed.
+            // R1088: `sourceId`, the summoning card, may since be unreadable: hidden as `killerId` is.
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
                 hide(&mut shown, &["sourceId"]);
             }
             rebuild(shown)
         }
 
-        // R316: a card a full library refused is judged like the cards below: one that went to the
-        // graveyard reads as long as it stays there. One never created is in no pile and never was
-        // anywhere hidden, so it reads as the card it copies does (`copyOf`), and openly when it copies
-        // none — #33's copy of a Trap set face-down names the trap no more than the trap does. `copyOf`
-        // is the engine's bookkeeping and never travels.
+        // R316: a card a full library refused is judged like the cards below; one never created was
+        // never anywhere hidden, so it reads as the card it copies (`copyOf`) does, openly when none
+        // (#33's copy of a face-down Trap names it no more than the trap does). `copyOf` never travels.
         GameEventType::LibraryOverflow => {
             let copy_of = shown
                 .remove("copyOf")
@@ -2270,8 +2104,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R317: a burned card lands in its owner's graveyard, or ceases to exist (R11), so both seats read
-        // it — the hand it never entered is not where it is — until something takes it somewhere hidden.
+        // R317: a burned card lands in its owner's graveyard, or ceases to exist (R11), so both seats
+        // read it until something takes it somewhere hidden.
         GameEventType::EnteredGraveyard
         | GameEventType::Exiled
         | GameEventType::Bounced
@@ -2320,15 +2154,10 @@ fn redact_event(
             other => other.clone(),
         },
 
-        // R177: a Make Radiant on a card in a library (#42's roll over every card, top down) is one nobody
-        // could read where it happened (§3), and read openly once the card does, its place in the batch
-        // would say where it lay. The event's `zone` is where it happened, so it stays unread for good.
-        //
-        // And a cue on the other player's card this viewer may not read says only whose it was: a random
-        // pick over several hidden zones (#28's hand, library and field) picks among non-Radiant cards
-        // only (R60), so a cue located in the hand, or at a face-down trap's lane, would tell this viewer
-        // that the hand still held a base-face card, or that the trap was base-face (R33). The zone is
-        // given as that player's hand, the region this viewer is shown the player's unread cards in.
+        // R177: a Make Radiant in a library (#42's roll, top down) stays unread for good (§3): its place
+        // in the batch would say where the card lay. A cue on the other player's unread card is given
+        // their hand as its zone: a random pick (#28) takes non-Radiant cards only (R60), so the real
+        // zone would say a base-face card lay there (R33).
         GameEventType::RadiantSet | GameEventType::Deradianted => {
             let zone = shown.get("zone").unwrap_or(Value::Null);
             let in_library = zone.get("z").and_then(Value::as_str) == Some("library");
@@ -2362,9 +2191,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R177: a Replace puts the new card where the old one was (§6.3), and the old one ceased to
-        // exist there (R35), so no zone of its own is left to judge it by — it is judged by its
-        // replacement's. A card replaced inside a library or a face-down backrow zone never reads.
+        // R177: the old card ceased to exist where the new one is (§6.3, R35), so it is judged by its
+        // replacement's zone; one replaced inside a library or a face-down zone never reads.
         GameEventType::Transformed => {
             let new_hidden = hidden(&text_at(&shown, "newInstanceId"));
             shown.remove("hiddenFrom");
@@ -2392,8 +2220,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R177: a buff's size is the card's too — #89 Corpse Eater gains double on its radiant face —
-        // so a hidden card's buff keeps its type for the cue and says nothing of how much.
+        // R177: a buff's size is the card's too (#89 Corpse Eater gains double on its radiant face), so
+        // a hidden card's buff keeps only its type, for the cue.
         GameEventType::Buffed => {
             if !hidden(&instance) {
                 return event.clone();
@@ -2422,8 +2250,7 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R385: a Brittle count is its card's, read only where the card is (a face-down card's by its
-        // controller alone), so on a card this viewer may not read the number goes with the id.
+        // R385: a Brittle count is its card's, so on an unreadable card it goes with the id.
         GameEventType::CounterChanged => {
             if !hidden(&instance) {
                 return event.clone();
@@ -2435,8 +2262,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R177: the new cost is the card's too, and over a library it would give the order away — so a
-        // change made in a library stays unread for good (`hiddenFrom`), whatever became of the card.
+        // R177: the new cost is the card's too, and over a library would give the order away, so a
+        // change made there stays unread for good (`hiddenFrom`).
         GameEventType::CostChanged => {
             let hidden_from = texts_at(&shown, "hiddenFrom");
             shown.remove("hiddenFrom");
@@ -2472,8 +2299,7 @@ fn redact_event(
             if hidden(&text_at(&shown, "attackerId")) {
                 hide(&mut shown, &["attackerId"]);
             }
-            // R1202: the Windfast a substitute attacks for, hidden when this viewer may not read it;
-            // an event with no `insteadOf` stays without one.
+            // R1202: the Windfast a substitute attacks for, hidden when this viewer may not read it.
             if nullable_at(&shown, "insteadOf").is_some_and(|windfast| hidden(&windfast)) {
                 hide(&mut shown, &["insteadOf"]);
             }
@@ -2492,9 +2318,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R81, §10.6: the other seat learns that a prompt is open and whose, and nothing more. Its
-        // kind would narrow the card that asked, a hidden one among them, and its id counts the
-        // match's prompts. The holder reads both.
+        // R81, §10.6: the other seat learns only that a prompt is open and whose: its kind would
+        // narrow the card that asked, and its id counts the match's prompts.
         GameEventType::PromptOpened | GameEventType::PromptAnswered => {
             if text_at(&shown, "player") == viewer.as_str() {
                 return event.clone();
@@ -2547,9 +2372,8 @@ fn redact_event(
         // R1855000: a board replacement names its player alone.
         | GameEventType::BoardReplaced => event.clone(),
 
-        // R1852000, R97: a fusion names the dead piece with its definition and the Dormant Starship it
-        // fused into, each judged by where it is now: a piece since returned to a hand, or a Starship
-        // since bounced into one, reads to that hand's player alone. The count is the Starship's.
+        // R1852000, R97: a fusion names the dead piece (with its definition) and the Dormant Starship
+        // it fused into, each judged by where it is now. The count is the Starship's.
         GameEventType::StarshipFused => {
             if hidden(&instance) {
                 hide(&mut shown, &["instanceId"]);
@@ -2568,10 +2392,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
-        // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps
-        // its id, and may since have been bounced into a hand, and a holder may since be somewhere this
-        // viewer cannot read. A holder that never found a zone is named by no id, and stays so.
+        // R1850003: only a face-up card is held, so both read it as it happens; then each is judged
+        // by where it is now (R97), like `exiled`. A holder that never found a zone has no id.
         GameEventType::Held => {
             if hidden(&instance) {
                 hide(&mut shown, &["instanceId", "defId"]);
@@ -2582,7 +2404,7 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+        // docs/classic-sets.md B3, B5
 
         // B5 E1: an announce shows what `cardPlayed` would. A card being set face-down is its zone only
         // to the other player (R97, R227): the identity and the targets it declared go, the zone stays.
@@ -2615,9 +2437,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // B5 E1, E2, B3.3: judged by where the card is now (R97) — a countered card in a public pile reads,
-        // one stolen into a hand reads to that hand's owner only, a crumbled card reads once it is in the
-        // graveyard. `byInstanceId` is the countering card, a fired trap by then, judged the same way.
+        // B5 E1, E2, B3.3: judged by where the card is now (R97), and so is `byInstanceId`, the
+        // countering card (a fired trap by then).
         GameEventType::Countered => {
             let by_hidden = nullable_at(&shown, "byInstanceId").is_some_and(|by| hidden(&by));
             if hidden(&instance) {
@@ -2628,10 +2449,8 @@ fn redact_event(
             }
             rebuild(shown)
         }
-        // B5 E2, E16, R466: a stolen card reads to whoever could read it where it was taken from — the
-        // hand's holder, the controller of a face-down zone, everyone for a face-up card or a public pile
-        // (`readableFrom`, written as it was taken) — and to whoever can read it where it is now (R97). A
-        // card out of a library was nobody's to read, so its old owner never learns which card left.
+        // B5 E2, E16, R466: a stolen card reads to whoever could read it where it was taken from
+        // (`readableFrom`) and to whoever can where it is now (R97).
         GameEventType::Stolen => {
             shown.remove("readableFrom");
             let readable = match event {
@@ -2656,9 +2475,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // B3.4, R386, R177: a change is the card's, and over a library or a hidden hand it would say
-        // which card changed and how — so it stays unread for good for whoever could not read the card
-        // where it changed (`hiddenFrom`), and for whoever cannot read it now.
+        // B3.4, R386, R177: a change over a library or a hidden hand would say which card changed and
+        // how, so it stays unread for whoever could not read the card there (`hiddenFrom`) or now.
         GameEventType::Degraded | GameEventType::Upgraded => {
             let hidden_from = texts_at(&shown, "hiddenFrom");
             shown.remove("hiddenFrom");
@@ -2744,8 +2562,7 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // R983: only a face-up play is judged (R982), so the played card is public once it has been
-        // announced; it is judged by where it sits now, like the cards above, and so is its judge.
+        // R983: only a face-up play is judged (R982); the card and its judge go by where each is now.
         GameEventType::FengShui => {
             let source_hidden = nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source));
             if !hidden(&instance) && !source_hidden {
@@ -2786,11 +2603,9 @@ fn redact_event(
     }
 }
 
-/// B5 E2, E16, R466: whether `viewer` could read the card a `stolen` event names where it was taken
-/// from. `ownership::change_owner` writes who could (`readableFrom`) as it takes the card; an event
-/// without the record is judged by its pile alone — a hand is its holder's (§9.1), a library nobody's,
-/// a graveyard, an exile pile or the resolving zone everyone's (a play is public, R98), and a card off
-/// the field nobody's, since whether it stood face-down there is not otherwise on the event.
+/// Whether `viewer` could read the card a `stolen` event names where it was taken from
+/// (`readableFrom`); without that, by its pile: a hand its holder's (§9.1), a public pile everyone's
+/// (R98), a library or the field nobody's (whether it stood face-down there is not on the event).
 fn readable_where_stolen(
     zone: ZoneName,
     from: PlayerId,
@@ -2803,7 +2618,7 @@ fn readable_where_stolen(
     match zone {
         ZoneName::Hand => from == viewer,
         ZoneName::Graveyard | ZoneName::Exile | ZoneName::Resolving => true,
-        // A stolen card never comes out of "gone"; TS's switch had no case for it and answered nothing.
+        // A stolen card never comes out of "gone".
         ZoneName::Library | ZoneName::Field | ZoneName::Gone => false,
     }
 }
@@ -2817,10 +2632,9 @@ fn hidden_tuning_change() -> TuningChange {
 }
 
 /// R2652000: the places, in `state.applied`'s events flattened oldest action first, of the `rolled`
-/// batches `viewer` never reads: each one a card made face-down in its controller's backrow, the viewer
-/// being the other player, unless that trap's own `trapFired` follows in the same action (Hearthstone's
-/// Secret, whose flip is seen only once it fires). It is judged inside the action that rolled, which no
-/// later action changes, so a batch never comes into a window or leaves it after the fact.
+/// batches `viewer` never reads: a face-down card's in its controller's backrow, to the other player,
+/// unless that trap's own `trapFired` follows in the same action (Hearthstone's Secret). Judged inside
+/// the action that rolled, so a batch never comes into a window or leaves it after the fact.
 pub(crate) fn withheld_rolls(state: &GameState, viewer: PlayerId) -> IndexSet<usize> {
     let mut withheld = IndexSet::new();
     let mut base = 0;
@@ -2860,20 +2674,10 @@ pub fn viewed_of_newest(state: &GameState, viewer: PlayerId, fresh: usize) -> us
     (total - from) - withheld
 }
 
-/// §10.8: "the last N events for animation". `state.applied` is the only event history a state
-/// carries (§9.3's nonce dedupe), oldest action first, so flattening it in order and taking the tail
-/// is the stream — and it is bounded by `NONCE_HISTORY` already.
-///
-/// `VIEW_EVENT_LIMIT` is a FLOOR, not a cap: the window never ends inside the newest applied action.
-/// BUILD M5-T4 gives every §10.3 event an animation and `PlayerView.events` is the client's only
-/// channel for them, so a fixed length silently drops the FRONT of any single action that emits more
-/// than it — the client then animates the tail of something whose beginning it was never told about.
-/// One #96 My Pawn cancel plus the §10.7 AI turn it hands over is 38 events in one `reduce`, and the
-/// three the cancel is made of (`attackDeclared`, `trapFired`, `attackCancelled`) were exactly the
-/// ones lost, which made M5-T4's `attackCancelled` row unreachable. Measured: 38 emitted, 32
-/// carried, 6 dropped from the front.
-///
-/// This is SPEC §11 R168, which states the floor and records the measurement above.
+/// §10.8: "the last N events for animation": the tail of `state.applied`, the only event history a state
+/// carries (§9.3's nonce dedupe). `VIEW_EVENT_LIMIT` is a FLOOR, not a cap (SPEC §11 R168): the window never
+/// ends inside the newest action, since `PlayerView.events` is the client's only channel for every §10.3
+/// animation (BUILD M5-T4) and one action can emit more (#96 My Pawn's cancel plus the §10.7 AI turn).
 fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let all: Vec<&GameEvent> = state
         .applied
@@ -2889,9 +2693,8 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let newest = read.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
     let replaced = replacements_of(&all, Some(state));
-    // R764: a Glitch's reset or boards (R676, R678) took cards out of the match without a word, so what
-    // the events up to the end of its action name of one the state no longer holds is not public, as a
-    // token's was (R11). The reset's own setup events end that action and name only the cards it holds.
+    // R764: a Glitch's reset or boards (R676, R678) took cards out unseen, so a card the events up to the
+    // end of its action name that the state no longer holds is not public, as a token's was (R11).
     let mut voided_until = 0;
     let mut end = 0;
     for entry in &state.applied {
@@ -2926,20 +2729,16 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // §10.8
-// ---------------------------------------------------------------------------
 
-/// The one window a player has onto a match (SPEC §10.8). Pure: it reads the state and builds a
-/// fresh object, sharing nothing mutable with it. No clock is running (`clockMs` is `null`); a host
-/// that runs one asks `view_for_with_clock`.
+/// The one window a player has onto a match (SPEC §10.8), sharing nothing mutable with the state.
+/// No clock is running (`clockMs` is `null`); a host that runs one asks `view_for_with_clock`.
 pub fn view_for(state: &GameState, player_id: PlayerId) -> PlayerView {
     view_for_with_clock(state, player_id, None)
 }
 
-/// TS `viewFor(state, playerId, clockMs)`: `clock_ms` is the turn clock the server is running (R79).
-/// The engine never reads a clock, so the caller passes the number in and it is `None` whenever
-/// nobody is counting.
+/// `clock_ms` is the turn clock the server runs (R79): the engine never reads a clock, so the caller
+/// passes it in, `None` when nobody is counting.
 pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Option<i32>) -> PlayerView {
     // #892: one aura table for the whole view.
     let auras = AuraTable::new(state);
@@ -2992,11 +2791,9 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
     view
 }
 
-/// R243: the match-made definitions (`state.transient_defs`: a Fuse's, a crafted card's — R77, R102,
-/// R179) the finished view names anywhere — a card in a zone, a unit, a prompt option, an event —
-/// copied beside it, since no catalog a client holds has them. The view is read after it is built,
-/// so only an id that survived redaction brings its definition: a card this viewer may not read is
-/// the sentinel by then (R97), and its definition stays in the match.
+/// R243: the match-made definitions (`state.transient_defs`: a Fuse's, a crafted card's; R77, R102,
+/// R179) the finished view names anywhere, copied beside it since no client catalog has them. Read
+/// after redaction, so an unreadable card is the sentinel by then (R97) and its definition stays put.
 fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardDef> {
     fn visit(value: &Value, state: &GameState, defs: &mut IndexMap<String, CardDef>) {
         match value {

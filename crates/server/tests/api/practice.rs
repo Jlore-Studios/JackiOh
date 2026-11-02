@@ -1,23 +1,15 @@
 //! Practice earning (SPEC §14.8, #1303): a practice game pays half rates once the server has
 //! checked it, on a seed it issued (`POST /api/practice/seeds`, `POST /api/practice/claims`).
 //!
-//! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a
-//! forged result, an AI move the engine refuses, another seed's log, an unfinished log, a sandbox
-//! tool, a seed claimed before, a lapsed seed and a pruned one pay nothing and say why
-//! (R1303000–R1303003, whose proving tests live here), while a log that folds to its result pays
-//! even when an AI move in it is not the AI's own choice (R2560000). A seed given back frees its place, and only the caller's unclaimed seed can be (R2379000). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
-//! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
-//! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
-//! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000). A pay the store fails is
-//! tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and pays once or not at all (R1688000). A
-//! claim whose pay never landed (every try failed, or a crash took the settle) is paid once by the
-//! retention loop's sweep past `PRACTICE_SETTLE_GRACE_SECONDS`, a refused one is marked so and never
-//! swept, and a shutdown waits for a claim whose caller has gone (R2422000).
+//! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a forged,
+//! reused, unfinished or sandboxed claim, or one on a lapsed or pruned seed, pays nothing and says why
+//! (R1303000–R1303003, whose proving tests live here). A paid game moves the account's quests by
+//! what it did, as a ladder game does (R1304001).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
-//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI (the server no
-//! longer re-runs it, R2560000); the fixture test plays one the browser's worker recorded instead. Every amount
-//! is read through its constant and the hook's own math, so the tests hold whatever #1333 sets.
+//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI; the fixture test
+//! plays one the browser's worker recorded instead. Every amount is read through its constant and
+//! the hook's own math, so the tests hold whatever #1333 sets.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -294,11 +286,7 @@ fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, Claime
 /// A won game: its seed, setup, log and final state.
 type Won = (String, PracticeSetup, Vec<Action>, GameState);
 
-/// The first `practice-win-{n}` Easy game the human, playing as the AI does, wins; played once for
-/// every test that needs it, since each of its AI moves is a full search. The seeds are played a
-/// core's worth at a time, side by side (one after another, the tests waiting on this held every
-/// test thread for over a minute, #2223), and the first in seed order that wins is the one kept,
-/// whatever the number of cores.
+/// First won Easy game played across cores in parallel to avoid test timeouts (#2223).
 fn honest_win() -> &'static Won {
     static WON: OnceLock<Won> = OnceLock::new();
     WON.get_or_init(|| {
@@ -403,9 +391,7 @@ fn first_paid(jlore: impl Into<i64>, xp: i64, capped: bool) -> Value {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Honest games pay practice rates.
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn an_honest_loss_pays_practice_rates() {
@@ -686,9 +672,7 @@ async fn a_paid_claim_answers_the_tracks_it_moved_and_the_quests_it_completed() 
     );
 }
 
-// ---------------------------------------------------------------------------
 // A forged claim pays nothing, and says why.
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn a_deck_the_engine_refuses_pays_nothing() {
@@ -820,9 +804,7 @@ async fn r1303000_a_sandbox_tool_in_a_claim_pays_nothing() {
     assert_unpaid(&app).await;
 }
 
-// ---------------------------------------------------------------------------
 // A seed's lifetime (R1303001).
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1303001_a_seed_pays_once() {
@@ -910,9 +892,7 @@ async fn r1303001_another_accounts_seed_is_unknown() {
     assert_unpaid(&app).await;
 }
 
-// ---------------------------------------------------------------------------
 // The last board (R1303003).
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1303003_a_paid_game_leaves_the_board_the_next_seed_brings() {
@@ -958,9 +938,7 @@ async fn r1303003_a_refused_claim_leaves_no_board() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // The switch, the cap, and the browser's own game.
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn nothing_is_issued_or_paid_while_the_economy_is_off() {
@@ -1107,9 +1085,7 @@ async fn a_claim_whose_caller_stops_waiting_still_pays() {
     assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
 }
 
-// ---------------------------------------------------------------------------
 // The day's Jlore cap and the open seeds (R1483000).
-// ---------------------------------------------------------------------------
 
 /// A `game` Jlore row of `delta` that an earlier game wrote today, as the cap counts it.
 async fn earlier_game_jlore(app: &Arc<App>, delta: i64) -> JloreGrant {
@@ -1276,9 +1252,7 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // A seed given back (R2379000).
-// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r2379000_a_released_seed_frees_its_place_and_its_claim_is_unknown() {
@@ -1351,9 +1325,7 @@ async fn r2379000_another_accounts_claimed_or_unknown_seed_is_a_404_that_changes
     );
 }
 
-// ---------------------------------------------------------------------------
 // A pay the store fails (R1688000).
-// ---------------------------------------------------------------------------
 
 /// From here on, counts the store's `lastBoards.put` calls, the last write of a claim's pay, and
 /// fails the first `failing` of them, which rolls that try back whole (R1688000).
@@ -1501,9 +1473,7 @@ async fn r1688000_a_refused_claim_is_not_tried_again() {
     assert_unpaid(&app).await;
 }
 
-// ---------------------------------------------------------------------------
 // A claim settled once, after a restart or a failed pay (R2422000).
-// ---------------------------------------------------------------------------
 
 /// One sweep of the unsettled claims, as the retention loop runs it.
 async fn sweep(app: &Arc<App>) -> Swept {

@@ -3,15 +3,15 @@
 //! are kept and only the discount changes (§8 Conventions).
 //!
 //! R50: the Discover's options come from the ACTUAL graveyard (`discover_from_graveyard`), so spell
-//! tokens there are eligible; a pool-based `discover_from_catalog` would exclude them.
+//! tokens there are eligible.
 //!
-//! Two steps (§10.6): the cry opens the Discover and parks "exile this"; the answer runs `resume.chosen`
-//! first, then the parked exile. An empty graveyard opens nothing (§6.3: the card still resolves), so
-//! `exile` runs straight through. The resume step never reads `ctx.self`: its instance may be gone.
+//! Two steps (§10.6): the cry opens the Discover and parks "exile this", which runs after the answer's
+//! `resume.chosen`; an empty graveyard opens nothing (§6.3), so `exile` runs straight through. The
+//! resume step never reads `ctx.self`: its instance may be gone.
 //!
-//! Cost (R65): "1 less" is `costMod -1` (travels with the card, R78); "costs 0" is a `costOverride` of 0
-//! (R77), and `costMod` is still added after it. R4: `add_to_hand` moves the pick (§6.3 "Creates OR
-//! MOVES"), so a card picked into a full hand is burned.
+//! Cost (R65): "1 less" is `costMod -1` (travels with the card, R78); "costs 0" is a `costOverride` of
+//! 0 (R77), and `costMod` is still added after it. R4: `add_to_hand` moves the pick, so a card picked
+//! into a full hand is burned.
 
 use jackioh_engine::effects::{add_to_hand, discover_from_graveyard, exile, set_cost_mod, set_cost_override};
 use jackioh_engine::prelude::*;
@@ -58,8 +58,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #72 Reminisce — SPEC §8.3, BUILD M4-T4: "Discover from the GY including spell tokens (R50);
-// chosen card −1 (radiant 0); exiled; empty GY → nothing".
+// #72 Reminisce — SPEC §8.3, BUILD M4-T4 (R50).
 // Each test asserts both halves (where the pick went and its cost, and that Reminisce was exiled);
 // one covers each path of the Cry's list: prompt opened (tail parked), graveyard empty (tail ran).
 // core-013 Jlockeed Shredder-10 (printed cost 3) is the Discover subject in the cost tests.
@@ -70,7 +69,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -78,12 +76,10 @@ mod tests {
 
     use crate::js;
 
-    /// Every `costChanged` event.
     fn costs_changed(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(js).filter(|event| event["type"] == "costChanged").collect()
     }
 
-    /// The open prompt, as JSON (`null` when none).
     fn pending(s: &Scenario) -> Value {
         js(&s.state().pending)
     }
@@ -128,8 +124,8 @@ mod tests {
                 "seed": "core-072-r50",
                 "p1": {
                     "hand": ["core-072"],
-                    // core-051-1 is KY's Empty Notebook, a spell token (§7). A pool-based Discover would
-                    // exclude it; R50 says this one does not, because it discovers "a card in your GY".
+                    // core-051-1 is KY's Empty Notebook, a spell token (§7): a pool-based Discover
+                    // would exclude it.
                     "graveyard": ["core-051-1", "core-005", "core-023"],
                     "library": ["core-035"],
                 },
@@ -182,7 +178,6 @@ mod tests {
 
             s.play("core-072", json!({})).answer(json!(picked.id));
 
-            // GY → hand (§8.3 Engine cell).
             s.expect_in_zone(&picked, "hand");
             // R65: printed 3 plus a costMod of −1 is 2, and the mod travels with the card (R78).
             assert_eq!(s.card(&picked).cost_mod, -1);
@@ -235,9 +230,7 @@ mod tests {
 
             // §6.3: an effect with nothing to offer fizzles and the card still resolves.
             assert!(s.state().pending.is_none());
-            // The resume step never ran, so nothing reached the hand; only core-005 is left there.
             assert_eq!(def_ids(&s.hand(P1)), ["core-005"]);
-            // The parked tail was never parked: it ran straight through in the same pass.
             s.expect_in_zone(&spell, "exile").expect_events(json!(["cardPlayed", "exiled"]));
         }
 

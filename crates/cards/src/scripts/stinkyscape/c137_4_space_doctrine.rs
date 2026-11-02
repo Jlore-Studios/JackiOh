@@ -51,10 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137.4 Space Doctrine — SPEC §8.10 row 137.4, BUILD M12 row S 137.4: "after it, every Unit its caster
-// controls has Flying, later ones included; once, copies of the pieces its launched Starship holds go to
-// the hand, oldest first, until it is full; no Starship, nothing; radiant each copy costs (1), setCost
-// read through `param()` (R824000)".
+// S #137.4 Space Doctrine — SPEC §8.10 row 137.4, BUILD M12 row S 137.4 (R824000).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -91,7 +88,6 @@ mod tests {
         s
     }
 
-    /// `board`, then the Doctrine cast; the hand after it.
     fn cast(seed: &str, radiant: bool, fillers: usize, launch: bool) -> (Scenario, Vec<CardInstance>) {
         let mut s = board(seed, radiant, fillers, launch);
         s.play(ID, json!({}));

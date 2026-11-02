@@ -1,10 +1,6 @@
-// useEmotes: the React half of the emote session (R643, R644). session.ts holds the pure state;
-// this hook adds what a component tree needs that must not live there:
-//   1. Re-rendering: the session's `subscribe` bumps a counter that `visible`/`gate`/`muted` read live.
-//   2. Expiry: each show schedules the timeout that calls `expire`; a newer show's different key
-//      makes an old timer a no-op ("a new emote replaces the current one immediately", issue §5).
-//   3. Sound: `playEmote` (play.ts) runs on a shown emote; a muted or gate-dropped one returns first.
-// A send outside the seat's hand is dropped before the gate, as the server's relay drops it (R1342).
+// useEmotes: the React half of the emote session (R643, R644): re-rendering, expiry and sound
+// (`playEmote`, on a shown emote only). A send outside the seat's hand is dropped before the
+// gate, as the server's relay drops it (R1342).
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
@@ -17,12 +13,8 @@ import { createEmoteSession, type EmoteSession, type EmoteShow } from "./session
 import { emoteShowInfo, playEmote } from "./play.ts";
 
 export type EmotesApi = {
-  /** What `player`'s portrait shows right now, or null. */
   visible: (player: PlayerId) => EmoteShow | null;
-  /**
-   * The local seat's emote: shared-gate it, show + play on admit, then `emit` it (the wire, or the
-   * practice AI's reply hook). Returns whether it was admitted — false is the silent drop.
-   */
+  /** The local seat's emote: shared-gate it, show + play on admit, then `emit` it; false is the silent drop. */
   send: (player: PlayerId, emote: EmoteId) => boolean;
   /** An emote arrived from `player`: shows + plays unless that player is muted. */
   receive: (player: PlayerId, emote: EmoteId) => boolean;
@@ -31,9 +23,7 @@ export type EmotesApi = {
   muted: (player: PlayerId) => boolean;
   /** The live limiter reading for `player` — the menu's grey-out. */
   gate: (player: PlayerId) => EmoteGate;
-  /** `player`'s portrait id — the server's frame when it arrived, the default otherwise. */
   portraitOf: (player: PlayerId) => PortraitId;
-  /** `player`'s emote hand (R1341) — the dealt eight when known, the default hand otherwise. */
   handOf: (player: PlayerId) => readonly EmoteId[];
   /** Raw session, for tests and for drivers that schedule their own shows. */
   session: EmoteSession;
@@ -106,8 +96,7 @@ export function useEmotes(opts: {
 
   const send = useCallback(
     (player: PlayerId, emote: EmoteId): boolean => {
-      // R1342: only the seat's own hand goes out — the menu offers nothing else, and the server
-      // would drop it — and a refused emote spends none of the limit.
+      // R1342: before the gate, so a refused emote spends none of the limit.
       if (!handHolds(handOf(player), emote)) return false;
       const info = emoteShowInfo(portraitOf(player), emote);
       if (!session.send(player, emote, info.text, info.holdMs)) return false;
@@ -138,8 +127,8 @@ export function useEmotes(opts: {
     [session],
   );
 
-  // The device setting (issue §5): on mid-match it silences everyone but the local seat, a bubble
-  // on screen included. Off only stops muting NEW emotes; a menu mute lasts the match.
+  // The device setting (issue §5) silences everyone but the local seat, a standing bubble included.
+  // Off only stops muting NEW emotes; a menu mute lasts the match.
   useEffect(() => {
     if (!globalMute) return;
     for (const player of ["p1", "p2"] as const) {

@@ -1,13 +1,8 @@
 //! #30 Archivist (SPEC §8.2): "Cry: choose one: draw the highest-cost card in your library, or the
 //! lowest", radiant "Cry: draw both". The radiant cell restates the whole Cry, so it replaces the
 //! base clause (§8 Conventions) — the radiant face asks nothing and takes both cards.
-//!
 //! The mode is a DECLARED play-time choice: it travels in the play action's `modes` and never pauses
-//! resolution (R81); `chosenOptions` reads it back. The radiant face declares no modes.
-//!
-//! An empty library draws nothing and the Cry fizzles; the unit still enters (§8 Conventions). With
-//! one card it is both highest and lowest, so the radiant face draws it once (compared by instance).
-//!
+//! resolution (R81). An empty library draws nothing and the Cry fizzles; the unit still enters.
 //! The draw is §6.3's `drawFromLibrary` (#94 Genn's Greed too): the card itself leaves as a draw — a
 //! `drawn` event, R55's counter, the hand cap (R4), the cast-on-draw path (§2.4, R58).
 
@@ -21,9 +16,8 @@ const LOWEST: &str = "lowest";
 
 /// R24: the library card with the extreme current cost, ties going to the card nearest the top.
 /// Costs are R65's out-of-play numbers: X counts 0, embiggen its base price, the instance's `costMod`
-/// persists (R78), and player discounts never price a library card. `effective_cost` is the one
-/// calculation; `queryCost` reads a DEFINITION, blind to #7's `costMod` and #95's library discount.
-/// Reads through `zoneCards` and writes nothing (CLAUDE.md rule 5, BUILD M3-T1).
+/// persists (R78), and player discounts never price a library card. A DEFINITION's cost is blind to
+/// #7's `costMod` and #95's library discount. Writes nothing (CLAUDE.md rule 5, BUILD M3-T1).
 fn extreme(ctx: &EffectContext<'_>, want: &str) -> Option<CardInstance> {
     let mut best: Option<CardInstance> = None;
     let mut best_cost = 0;
@@ -89,8 +83,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #30 Archivist (SPEC §8.2, BUILD M4-T4 row 30): "Mode chosen with the play (R81); highest/lowest
-// by current cost, ties nearest top, X counts 0 (R24); radiant draws both".
+// #30 Archivist (SPEC §8.2, BUILD M4-T4 row 30) (R81, R24).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -121,7 +114,6 @@ mod tests {
 
             s.play("core-030", json!({ "modes": ["highest"] }));
 
-            // R81: the mode traveled in the play action, so resolution never paused.
             assert!(s.state().pending.is_none());
             assert_eq!(def_ids(&s.hand(P1)), strings(&["core-025"])); // #25 at 4 is the dearest
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()).as_deref(), Some("core-030"));
@@ -187,8 +179,6 @@ mod tests {
             assert_eq!(s.state().players.p1.hero.health, 30); // no fatigue: nothing was drawn
         }
 
-        // §6.3 Draw: "take the top card of your library" is the one Draw, and Archivist's names the card,
-        // so the card leaves the library as a draw (`drawFromLibrary`) rather than a copy landing in hand.
         #[test]
         fn r24_draws_the_card_out_of_the_library_so_the_library_no_longer_holds_it_and_it_arrives_as_a_draw_s6_3_draw_s2_4_r55() {
             crate::register_all();
@@ -202,7 +192,6 @@ mod tests {
                 s.state().players.p1.library.iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
                 strings(&["core-005", "core-010"])
             );
-            // The library card itself, not a fresh copy of its definition, and counted as a draw.
             let held: Vec<Option<String>> = s.hand(P1).iter().map(|card| Some(card.id.clone())).collect();
             assert!(held.contains(&dearest));
             assert_eq!(
@@ -228,7 +217,6 @@ mod tests {
 
             assert!(s.state().pending.is_none());
             assert_eq!(sorted(def_ids(&s.hand(P1))), strings(&["core-010", "core-025"])); // 0 and 4
-            // The radiant face is an 8/10 (§8.2).
             let unit_id = s.unit(P1, 1).map(|card| card.id.clone()).unwrap_or_default();
             s.expect_stats(&unit_id, json!({ "attack": 8, "maxHealth": 10 }));
         }

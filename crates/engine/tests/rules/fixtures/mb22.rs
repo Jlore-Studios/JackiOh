@@ -14,7 +14,6 @@ use jackioh_engine::testkit::*;
 use super::damage_combat::note;
 use super::harness::{act, both, new_game, next_action};
 
-/// TS `def(name, type, extra = {})`: a Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("mb22-{name}"),
@@ -37,8 +36,6 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// TS `unit(name, attack, health, keywords = [], radiantKeywords = keywords)`: the Radiant face
-/// doubles the stats. Pass `json!([])` for no keywords and the same list twice for TS's default.
 fn unit(
     name: &str,
     index: i32,
@@ -66,7 +63,6 @@ fn both_of(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// A replacement as TS's literal `{ id, on, instead }`, with no `where`, `when`, `then` or `by`.
 fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDef {
     ReplacementDef {
         id: id.to_string(),
@@ -79,14 +75,11 @@ fn replacement(id: &str, on: ReplacementMoment, instead: Value) -> ReplacementDe
     }
 }
 
-/// Any unit or hero, either side.
 fn any_target() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))]
 }
 
-// ---------------------------------------------------------------------------
 // ME-RANDOMTARGETS (R1200, R1201)
-// ---------------------------------------------------------------------------
 
 /// Meditative #86's shape: while this acts, every declared target, `target` prompt and attack
 /// target is drawn at random. Radiant: Lucky 1.
@@ -114,9 +107,7 @@ pub static asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("asker", 9203,
 /// while a Mayor acts.
 pub static tricky: LazyLock<CardDef> = LazyLock::new(|| def("tricky", 9204, "Spell", json!({})));
 
-// ---------------------------------------------------------------------------
 // ME-ATTACKSUMMON (R1202, R1203)
-// ---------------------------------------------------------------------------
 
 /// Meditative #91's shape: 1/1 Windfury; a Unit from hand makes each attack instead, bounced after.
 pub static windfast: LazyLock<CardDef> = LazyLock::new(|| {
@@ -148,9 +139,7 @@ pub static prime: LazyLock<CardDef> = LazyLock::new(|| {
 /// before its combat.
 pub static snapper: LazyLock<CardDef> = LazyLock::new(|| def("snapper", 9207, "Trap", json!({})));
 
-// ---------------------------------------------------------------------------
 // ME-LETHALGUARD (R1204)
-// ---------------------------------------------------------------------------
 
 /// Meditative #92's shape: 1/5 Armor 3; a lethal hit on a friendly ally goes to this instead.
 pub static guard: LazyLock<CardDef> = LazyLock::new(|| {
@@ -176,7 +165,6 @@ pub static guard2: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// A plain 1/4 ally to guard.
 pub static ally: LazyLock<CardDef> = LazyLock::new(|| plain_unit("ally", 9210, 1, 4));
 /// A plain 1/20 ally no 10-damage hit kills.
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| plain_unit("wall", 9211, 1, 20));
@@ -215,7 +203,6 @@ pub static bastion: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Indestructible" }]),
     )
 });
-/// A plain 3/2 attacker.
 pub static skirmisher: LazyLock<CardDef> = LazyLock::new(|| plain_unit("skirmisher", 9214, 3, 2));
 /// A 2/6 Taunt: while a Mayor acts every drawn attack target is this.
 pub static palisade: LazyLock<CardDef> = LazyLock::new(|| {
@@ -426,9 +413,7 @@ pub static MB22_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     ])
 });
 
-// ---------------------------------------------------------------------------
 // Harness
-// ---------------------------------------------------------------------------
 
 pub fn register() {
     let mut defs: CardDefs = registered_catalog().clone();
@@ -459,9 +444,7 @@ pub fn playing(seed: &str) -> GameState {
     state
 }
 
-/// §9.3: the live game and its replay agree. `start` is the state the log was played from; the log is
-/// folded again from a clone of it, action by action through `reduce`, and the two end states hash
-/// the same (`replay.hashState`).
+/// §9.3: the live game and its replay agree.
 pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
     let mut state = clone_state(start);
     for action in log {
@@ -482,12 +465,10 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    /// The state after every action played so far.
     pub fn state(&self) -> &GameState {
         &self.current
     }
 
-    /// Plays one action with the next nonce and records it; panics with a refusal's text.
     pub fn play(&mut self, body: impl serde::Serialize) -> ReduceResult {
         let action = next_action(body);
         let result = reduce(&self.current, &action);

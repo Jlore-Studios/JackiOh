@@ -1,9 +1,7 @@
 //! The autopilot (`subsystems/autopilot.rs`; Meditative+ #18 Cognitive Offloading, issue #1183,
-//! docs/meditative-plus-set.md MP5): "the AI plays the rest of your turn", engaged on its caster's own
-//! turn only and driven by `reduce` (R1183002), each action `choose`'s pure pick of the state and the
-//! player (R1183003), each through `fixtures::outside_data`, moved here from `outside_data.rs` so the
-//! subsystem has its own module (#2273). Stinkyscape's autopilot aura (R1844000) is `ai_wheel.rs`'s,
-//! and the real card (M+ #18) covers the same cases again.
+//! docs/meditative-plus-set.md MP5): "the AI plays the rest of your turn", engaged on its caster's own turn
+//! only and driven by `reduce` (R1183002), each action `choose`'s pure pick of state and player (R1183003),
+//! each through `fixtures::outside_data` (#2273). Stinkyscape's autopilot aura (R1844000) is `ai_wheel.rs`'s.
 
 use jackioh_engine::config::AUTOPILOT_MAX_ACTIONS;
 use jackioh_engine::effects::autopilot;
@@ -43,7 +41,6 @@ mod r1183002_the_autopilot {
             event,
             GameEvent::AutopilotEngaged { player: P1, turn: t } if *t == turn
         )));
-        // It played the 2/2 from hand, swung the ready 2/2 at the empty board's hero, and ended.
         assert!(
             (1..=5).any(|lane| s.unit(P1, lane).is_some_and(|unit| unit.def_id == "fx-1")),
             "the hand's Unit was played"
@@ -269,8 +266,7 @@ mod r1183003_what_the_autopilot_takes {
     }
 }
 
-/// A board for the autopilot's determinism and legality cases: a Unit and a target prompt in hand, a
-/// ready Unit on each side.
+/// For determinism and legality: a Unit and a target prompt in hand, a ready Unit on each side.
 fn autopilot_board(seed: &str) -> Scenario {
     register_outside_data();
     scenario(json!({

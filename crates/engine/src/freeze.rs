@@ -1,29 +1,15 @@
 //! Frozen (SPEC §6.1, §6.3 Freeze, R1174000): a Hearthstone-style status. A Frozen Unit loses its
 //! next attack or position switch, and thaws at the end of the turn in which it could have made one.
+//! The status is `CardInstance.frozen`, the turn it thaws by, read only here and by
+//! `combat::has_exertion_in`, so `legal_actions`, the refusals, the view's `canAct` and the AI's lethal
+//! solver agree (§4.1); an effect's attack or switch spends no exertion (R20, R53) and is not stopped.
 //!
-//! The status is `CardInstance.frozen`, the turn it thaws by, and nothing else reads a freeze but
-//! through this module and `combat::has_exertion_in`, which answers false for both halves of a
-//! Frozen Unit's exertion, so `legal_actions`, the reducer's refusals, the view's `canAct` and the
-//! AI's lethal solver all agree (§4.1). An effect's attack or switch spends no exertion (R20, R53)
-//! and is not stopped.
-//!
-//! The thaw is stamped as the freeze lands and never worked out later (`thaw_turn`): a Unit frozen
-//! during its controller's Start or Main phase while it still has an exertion to spend (§4.1, R49,
-//! R636) has lost that opportunity and thaws at this turn's cleanup; any other Unit stays Frozen
-//! through its controller's next turn and thaws at that turn's cleanup. The stamp is a turn number
-//! read against its controller's cleanups only (`thaw_at_cleanup`), so an extra turn (R845) of
-//! either player moves nothing: a Unit thaws at the cleanup of its controller's first turn numbered
-//! its stamp or later. A change of control (R171) stamps it again for its new controller
-//! (`restamp`).
-//!
-//! Every freeze and thaw is said with R437's reusable mark (`FROZEN_MARK`): `marked` with `added:
-//! true` as it lands and `added: false` as it thaws or a Vanilla removes it, so the client's brand
-//! flourish, its sound cue and its log need no new event. A Unit leaving the field loses the status
-//! with R78's reset (`zones::reset_instance`), silently, as Berserk does.
-//!
-//! R1848000 (Stinkyscape #2 Absolute Zero) adds the freeze that never thaws: its stamp is
-//! `FROZEN_FOREVER`, a turn no cleanup reaches, which a change of control leaves as it is
-//! (`freeze_unit_forever`, `frozen_forever`).
+//! The thaw is stamped as the freeze lands, never worked out later (`thaw_turn`, §4.1, R49, R636), and
+//! read against its controller's cleanups only (`thaw_at_cleanup`), so an extra turn (R845) moves
+//! nothing; a change of control (R171) stamps it again (`restamp`). Every freeze and thaw is R437's
+//! `marked` (`FROZEN_MARK`), so the client needs no new event; leaving the field clears it silently
+//! with R78's reset (`zones::reset_instance`). R1848000 (Stinkyscape #2 Absolute Zero): the stamp
+//! `FROZEN_FOREVER`, a turn no cleanup reaches, which a change of control leaves as it is.
 
 use crate::combat::{ExertionKind, exertion_unspent};
 use crate::config::{FROZEN_FOREVER, FROZEN_MARK};

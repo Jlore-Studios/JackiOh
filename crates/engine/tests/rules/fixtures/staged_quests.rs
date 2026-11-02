@@ -1,14 +1,6 @@
 //! Test-only cards for Stinkyscape's staged Quests (issue #1854, R1854000–R1854004): each is the shape
-//! of the set card that will use a primitive, written with the engine's own verbs through the prelude.
-//! No Stinkyscape card ships yet (the set comes later, behind its gate), so the engine never imports
-//! `crates/cards` for these.
-//!
-//!   - `heist`, The Greatest Heist's shape: three stages, each one goal and one reward (#7);
-//!   - `application`, Job Application's: a resume sent in by its Activate, a wait to hear back, an
-//!     Interview that draws one of three goals, and an Offer claimed or sent back to stage 1 (#112);
-//!   - `tylannt` and `radiant_tylannt`, Tylannt's two Cries (#6), and `quest_tree`, the quest fixtures'
-//!     In Too Deep-shaped tree with the Quest tag, so the completion reaches both kinds of line;
-//!   - the plain cards the tests drive the goals with.
+//! of the set card that will use a primitive, written with the engine's own verbs through the prelude,
+//! so the engine never imports `crates/cards` for these.
 //!
 //! Ids are prefixed `sq-` and indexed from 18540, so they collide with no other fixture file's.
 
@@ -56,11 +48,9 @@ fn spell(index: u32, name: &str, cost: i32) -> CardDef {
     def(index, name, "Spell", cost, json!([]), None)
 }
 
-// ---- The quest cards ----
+// The quest cards
 
-/// Stinkyscape #7 The Greatest Heist's shape: "Stage 1: Make an Acclaimed Unit Radiant (draw a card).
-/// Stage 2: Have 2 Acclaimed Units you control die (gain 1 mana). Stage 3: Steal an enemy card (steal
-/// your enemy's mana crystals)."
+/// Stinkyscape #7 The Greatest Heist's shape: three stages, each one goal and one reward.
 pub static heist: LazyLock<CardDef> =
     LazyLock::new(|| def(18540, "heist", "Field Spell", 1, json!(["Quest"]), None));
 
@@ -88,8 +78,6 @@ pub static HEIST_STAGES: LazyLock<Vec<QuestStage>> = LazyLock::new(|| {
     ]))
 });
 
-/// The Greatest Heist's script: its stages, and its trigger on its own `questCompleted` giving the
-/// stage's reward and moving the line on.
 fn heist_script() -> Script {
     Script {
         stages: HEIST_STAGES.clone(),
@@ -107,11 +95,8 @@ fn heist_script() -> Script {
     }
 }
 
-/// Stinkyscape #112 Job Application's shape: "Stage 1: Send a card from your hand in as your resume
-/// (hear back in N turns). Stage 2, one of three at random: play a card that costs the same as your
-/// resume; play 3 cards of different costs in a single turn; take or deal 12+ damage in a single
-/// instance (draw a card). Stage 3: Activate to claim it (gain 2 mana) or to send in another
-/// application (back to Stage 1)."
+/// Stinkyscape #112 Job Application's shape: a resume sent in by its Activate, a wait to hear back,
+/// an Interview that draws one of three goals, and an Offer claimed or sent back to stage 1.
 pub static application: LazyLock<CardDef> =
     LazyLock::new(|| def(18541, "application", "Field Spell", 1, json!(["Quest"]), None));
 
@@ -121,13 +106,10 @@ pub const HEAR_BACK_TURNS: i32 = 2;
 pub const RESUME_COST: i32 = 2;
 /// Where the fixture remembers its resume's cost (`remember`), which the Interview's first goal reads.
 pub const RESUME_KEY: &str = "resumeCost";
-/// The three Interview goals' ids, in the stage's order.
 pub const PROVE: &str = "prove";
 pub const BEHAVIORAL: &str = "behavioral";
 pub const HARDBALL: &str = "hardball";
-/// What a claimed Offer gives.
 pub const OFFER_MANA: i32 = 2;
-/// The damage the Hardball question asks for in one instance.
 pub const HARDBALL_DAMAGE: i32 = 12;
 
 pub static APPLICATION_STAGES: LazyLock<Vec<QuestStage>> = LazyLock::new(|| {
@@ -257,7 +239,7 @@ fn instant_script() -> Script {
     }
 }
 
-// ---- One staged quest per new goal ----
+// One staged quest per new goal
 
 /// A goal kind's name, as `QuestGoal`'s `kind` writes it.
 pub type GoalKind = &'static str;
@@ -330,7 +312,7 @@ fn goal_stages(kind: GoalKind) -> Vec<QuestStage> {
     }]
 }
 
-// ---- Tylannt ----
+// Tylannt
 
 /// Stinkyscape #6 Tylannt's shape: "Cry: Complete the current stage on all your Quests."
 pub static tylannt: LazyLock<CardDef> = LazyLock::new(|| {
@@ -348,9 +330,8 @@ pub static tylannt: LazyLock<CardDef> = LazyLock::new(|| {
 /// your Quests."
 pub static radiant_tylannt: LazyLock<CardDef> = LazyLock::new(|| spell(18545, "radiant-tylannt", 0));
 
-// ---- The goals' drivers ----
+// The goals' drivers
 
-/// An Acclaimed 1/1, and a plain 1/1 with no tag.
 pub static acclaimed: LazyLock<CardDef> =
     LazyLock::new(|| def(18546, "acclaimed", "Unit", 1, json!(["Acclaimed"]), Some((1, 1))));
 pub static nobody: LazyLock<CardDef> =
@@ -579,8 +560,6 @@ pub static STAGED_QUEST_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     .collect()
 });
 
-/// The engine's fixture catalog (`setup_catalog`) and the quest fixtures, with these cards and scripts
-/// on top.
 pub fn register_staged_quest_fixtures() {
     super::harness::setup_catalog();
     super::quests::register_quest_fixtures();

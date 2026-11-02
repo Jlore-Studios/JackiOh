@@ -1,17 +1,13 @@
 /**
- * The effects frame loop (docs/polish/1-animations.md, S5; B29). It runs on the injected frame source
- * (requestAnimationFrame in the browser) only while there is work: `onFrame` returning false stops it
- * until the next `wake()`. It never runs while the page is hidden (MDN, Page Visibility API): turning
- * hidden cancels the pending frame, and turning visible calls `onResume` but requests nothing until
- * someone wakes it again. `dt` is clamped to FX_MAX_DT_MS so one long stall cannot fling particles.
+ * The effects frame loop (docs/polish/1-animations.md, S5; B29). It runs only while there is work. It
+ * never runs while the page is hidden (MDN, Page Visibility API): turning hidden cancels the pending
+ * frame, and turning visible calls `onResume` but requests nothing until someone wakes it again.
+ * `dt` is clamped to FX_MAX_DT_MS so one long stall cannot fling particles.
  */
 import { FX_MAX_DT_MS } from "./constants.ts";
 import type { FxFrameSource, FxVisibility } from "./types.ts";
 
-/**
- * dt = clamp(raw, 0, FX_MAX_DT_MS). `first` marks the first frame after a `wake()`, whose `raw` runs
- * from the wake rather than from a previous frame, so it says nothing about the display's rate.
- */
+/** `first` marks the first frame after a `wake()`: its `raw` runs from the wake, so says nothing of the display's rate. */
 export type FxFrame = { dt: number; raw: number; now: number; first: boolean };
 export type FrameLoop = { wake(): void; running(): boolean; dispose(): void };
 
@@ -21,7 +17,6 @@ export function createFrameLoop(options: {
   now: () => number;
   /** Return true while there is still work; false stops requesting frames until the next wake(). */
   onFrame: (frame: FxFrame) => boolean;
-  /** Called when the page turns visible after being hidden. */
   onResume?: () => void;
 }): FrameLoop {
   const { frames, visibility, now, onFrame, onResume } = options;

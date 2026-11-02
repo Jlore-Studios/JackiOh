@@ -1,9 +1,7 @@
-// The weapon kit (issue #1841, Stinkyscape's phase 0): the four engine primitives the set's weapons are
-// written with, each through a fixture script (`fixtures/weapon_kit.rs`) before a card uses it:
-// R1841000's Activate with an extra turn cooldown (`ActivationCost.extraTurnCooldown`), R1841001's
-// damage that deals half to heroes (`halfToHeroes`), R1841002's Equip straight into this Unit from a
-// pick (`equip_picks`) and R1841003's "Float reduces Tribute requirement by 1" (`float_lowers_tribute`).
-// R2268000's view of the proto's Tribute (`CardView.tribute`, issue #2268) reuses the proto.
+// The weapon kit (issue #1841, Stinkyscape's phase 0), each primitive through a fixture script:
+// R1841000's Activate with an extra turn cooldown (`extraTurnCooldown`), R1841001's damage that deals
+// half to heroes (`halfToHeroes`), R1841002's Equip straight into this Unit from a pick (`equip_picks`),
+// R1841003's Float lowering Tribute by 1, and R2268000's view of the proto's Tribute (issue #2268).
 
 use jackioh_engine::effects::EQUIP_PICK_STEP;
 use jackioh_engine::play_choices::{legal_tribute_sets, tribute_cost_of};

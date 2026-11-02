@@ -21,8 +21,6 @@ const INTROSPECTION: &str = "meditative-007"; // (4) Field Spell: End of turn ..
 const ARMORED: &str = "core-025"; // A 7/7 Unit with Armor 7.
 const FILLER: &str = "core-005";
 
-/// `effects` applied for p1 on a sink over the scenario's state, then settled; the rng cursor written
-/// back; their events.
 fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
     let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
     let mut events: Vec<GameEvent> = Vec::new();
@@ -45,7 +43,6 @@ fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
     events
 }
 
-/// One Buff (`upgrade`) or Nerf (`degrade`) of the card `card` names, applied for p1; its events.
 fn tune(s: &mut Scenario, card: &str, direction: TuneDirection) -> Vec<GameEvent> {
     let args = json_as(json!({ "target": { "of": "instance", "instanceId": s.card(card).id } }));
     let effect = match direction {
@@ -59,7 +56,6 @@ fn rows(s: &Scenario, card: &str, direction: TuneDirection) -> Vec<TuneRow> {
     applicable_changes(s.state(), s.card(card), direction)
 }
 
-/// The keys of the declared numbers a step `direction` would move on the card.
 fn steppable_keys(s: &Scenario, card: &str, direction: TuneDirection) -> Vec<String> {
     steppable_params(s.state(), s.card(card), direction)
         .into_iter()
@@ -71,7 +67,6 @@ fn has(s: &Scenario, card: &str, kind: KeywordKind) -> bool {
     has_keyword(&unit_view(s.state(), s.card(card)).keywords, kind)
 }
 
-/// Pierce given to the card `card` names, as a Buff's keyword row leaves it (`tuning`).
 fn give_pierce(s: &mut Scenario, card: &str) {
     s.card_mut(card).tuning = Some(Tuning {
         add_keywords: Some(vec![Keyword::Pierce]),
@@ -79,7 +74,6 @@ fn give_pierce(s: &mut Scenario, card: &str) {
     });
 }
 
-/// How many events of that type the scenario has seen since setup.
 fn count(s: &Scenario, event_type: GameEventType) -> usize {
     s.events()
         .iter()
@@ -98,7 +92,6 @@ fn hits(s: &Scenario) -> Vec<(i32, i32)> {
         .collect()
 }
 
-/// Living Bomb face-up in p1's backrow, on `seed`.
 fn living_bomb(seed: &str) -> Scenario {
     scenario(json!({
         "seed": seed,
@@ -109,7 +102,6 @@ fn living_bomb(seed: &str) -> Scenario {
 
 #[test]
 fn r1748000_a_cry_number_is_out_of_reach_on_the_field() {
-    // In hand its Cry is still to come: its cost and both its numbers are in reach.
     let s = scenario(json!({
         "p1": { "hand": [CRAWLER, FILLER] },
         "p2": { "hand": [FILLER] },
@@ -120,7 +112,6 @@ fn r1748000_a_cry_number_is_out_of_reach_on_the_field() {
     );
     assert!(rows(&s, CRAWLER, TuneDirection::Upgrade).contains(&TuneRow::Cost));
 
-    // On the field its price is paid and its Cry spent: only the number its lasting text reads moves.
     let s = scenario(json!({
         "p1": { "hand": [FILLER], "field": [CRAWLER] },
         "p2": { "hand": [FILLER] },
@@ -162,7 +153,6 @@ fn r1748001_a_buff_gives_a_field_spell_indestructible() {
     )));
     // Indestructible already, it has Immutable left to gain (R2436000).
     assert_eq!(rows(&s, LIVING_BOMB, TuneDirection::Upgrade), [TuneRow::Keyword]);
-    // And it keeps its zone through a destroy, as a printed Indestructible would.
     let id = s.card(LIVING_BOMB).id.clone();
     apply_for_p1(
         &mut s,
@@ -178,7 +168,6 @@ fn r1748001_a_buff_gives_a_field_spell_indestructible() {
 
 #[test]
 fn r2436000_a_buff_may_give_a_field_spell_immutable_and_nothing_tunes_it_after() {
-    // Its keyword row draws Indestructible or Immutable, on a seed that draws Immutable.
     let seed = seed_where("living-bomb-immutable", |seed| {
         let mut s = living_bomb(seed);
         tune(&mut s, LIVING_BOMB, TuneDirection::Upgrade);
@@ -259,13 +248,11 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
         s
     };
 
-    // Unbuffed, p2's Armor 3 takes the whole of its 3 damage.
     let mut s = eclipse_at_p2(false);
     s.expect_health(P2, 30);
     assert!(hits(&s).is_empty());
     assert_eq!(count(&s, GameEventType::DamageAbsorbed), 1);
 
-    // Given Pierce, all 3 land and the Armor takes nothing.
     let mut s = eclipse_at_p2(true);
     s.expect_health(P2, 27);
     assert_eq!(hits(&s), [(3, 0)]);
@@ -274,8 +261,8 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
 
 #[test]
 fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
-    // Introspection's end of turn deals 2 to each enemy. (The Power to Punish, which this test used, deals
-    // Pierce damage of its own since #2179.)
+    // Introspection's end of turn deals 2 to each enemy, with no Pierce of its own (The Power to Punish's has
+    // it, #2179).
     let introspection_at_armored = |pierce: bool| {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "library": [FILLER, FILLER], "backrow": [{ "def": INTROSPECTION, "faceUp": true }] },
@@ -303,7 +290,7 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
             .collect()
     };
 
-    // Unbuffed, the Unit's Armor 7 takes the whole of its 1 damage (2 until #2657).
+    // Unbuffed, the Unit's Armor 7 takes the whole of its 1 damage.
     let s = introspection_at_armored(false);
     assert_eq!(s.stats(ARMORED).health, 7);
     assert!(unit_hits(&s).is_empty());
@@ -363,7 +350,6 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
         ] if *placed_on == id && *upgraded == id
     ));
 
-    // A Nerf takes one off while it carries any, and has no plague row on a card that carries none.
     let mut s = scenario(json!({
         "p1": { "hand": [FILLER], "backrow": [{ "def": PLANTATION, "faceUp": true, "counters": { "plague": 2 } }] },
         "p2": { "hand": [FILLER] },
@@ -384,7 +370,6 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
     }));
     assert!(rows(&s, PLANTATION, TuneDirection::Degrade).is_empty());
 
-    // In a hand it carries none and can carry none: no plague row either way.
     let s = scenario(json!({
         "p1": { "hand": [PLANTATION, FILLER] },
         "p2": { "hand": [FILLER] },

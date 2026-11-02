@@ -29,8 +29,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #147.1 IN33DH3 Prime — SPEC §7 row 147.1, BUILD M12 row S 147.1: "Cry (played or cast): a Wardrum Blob
-// summoned into your backrow, none with no zone; radiant 18/10 and a Radiant Blob".
+// S #147.1 IN33DH3 Prime — SPEC §7 row 147.1, BUILD M12 row S 147.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::cast_new;
@@ -45,7 +44,6 @@ mod tests {
     const RESERVES: &str = "core-075"; // (0) Field Spell.
     const FILLER: &str = "core-005";
 
-    /// p1 plays the Prime, Radiant on `radiant`, with `backrow` in place.
     fn played(radiant: bool, backrow: Value) -> Scenario {
         let mut s = scenario(json!({
             "p1": {
@@ -59,14 +57,12 @@ mod tests {
         s
     }
 
-    /// Each card in p1's backrow, left to right: its def and whether it is Radiant.
     fn backrow(s: &Scenario) -> Vec<(String, bool)> {
         (1..=5)
             .filter_map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
             .collect()
     }
 
-    /// `effects` applied for p1 as a card's list is, then settled.
     fn by_hand(s: &mut Scenario, effects: Vec<Effect>) {
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();

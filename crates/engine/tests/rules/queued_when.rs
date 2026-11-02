@@ -1,6 +1,6 @@
 //! R2271000 (issue #2271): a trigger's printed condition (`TriggerDef.when`, R99) holds when its card is
 //! no trap. The traps' dispatch reads a trap's; every other trigger is queued (§10.3, R68), and its
-//! condition is read as it resolves, so a Unit or a Field Spell that answers "your opponent" no longer
+//! condition is read as it resolves, so a Unit or a Field Spell that answers "your opponent" never
 //! answers its own controller. A fusion that is no trap reads each ingredient's in its place (R102).
 //!
 //! Fixtures are this file's own: `fx-` defs indexed from 22710 (BUILD §0).

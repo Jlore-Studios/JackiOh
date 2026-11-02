@@ -5,11 +5,9 @@
 //! Each permanent's `loc` (§5: its script file's non-blank, non-comment lines, imports excluded; a fused
 //! card's is its ingredients' sum) against this card's own, read off the running definition, so this
 //! file's own length is the card's balance (R388). The permanents are the tops of piles and the backrow
-//! cards, face-down ones included (`subsystems.auditTargets`); an equal `loc` stays. Exile fires no Death
-//! and a token ceases to exist (§6.3, R11). The Radiant face's preview (R280, R583) is, for each choice,
-//! the permanents it would exile now — never one its controller may not read (an enemy face-down card,
-//! R177), which the exile still takes; the base face marks nothing.
-
+//! cards, face-down ones included; an equal `loc` stays. Exile fires no Death and a token ceases to exist
+//! (§6.3, R11). The Radiant preview (R280, R583) is, per choice, what it would exile now, never a card its
+//! controller may not read (an enemy face-down card, R177), which the exile still takes.
 
 use jackioh_engine::effects::{ForEachCardArgs, chosen_options, exile, for_each_card, unreadable_by};
 use jackioh_engine::prelude::*;
@@ -19,7 +17,7 @@ pub const ID: &str = "classicplus-044";
 const ALL: &str = "All permanents";
 const THEIRS: &str = "Only your opponent's";
 
-/// The permanents whose card has fewer lines of code than `defId`'s.
+/// The permanents whose card has fewer lines of code than `def_id`'s.
 fn targets(
     state: &GameState,
     controller: PlayerId,
@@ -52,7 +50,6 @@ fn cards_of(enemy_only: EnemyOnly) -> impl Fn(&mut EffectContext<'_>) -> Vec<Str
     move |run| run_targets(run, enemy_only)
 }
 
-/// The `forEachCard` step: exile that permanent.
 fn exile_instance(instance_id: &str) -> Effect {
     exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
 }
@@ -110,10 +107,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #44 Simplicity Audit — SPEC §8.7 row 44, E36, R11, R13, R177, R280, R583, BUILD M9 row C+ 44.
-// The sweep is `subsystems.auditTargets` (packages/engine/test/audit.test.ts); its preview is pinned
-// in test/preview.test.ts with R280's other cards. Every `loc` here is read off the catalog, so a
-// script edit that moves one fails the guard that names it rather than a silent comparison.
+// C+ #44 Simplicity Audit — SPEC §8.7 row 44, BUILD M9 row C+ 44, R13.
+// Every `loc` here is read off the catalog, so a script edit that moves one fails the guard that names it.
 #[cfg(test)]
 mod tests {
     use crate::events_json;
@@ -135,7 +130,6 @@ mod tests {
     const ALL: &str = "All permanents";
     const THEIRS: &str = "Only your opponent's";
 
-    /// TS `LOC = cardDef(AUDIT).loc ?? 0`.
     fn loc() -> i32 {
         crate::card_def(AUDIT).loc.unwrap_or(0)
     }

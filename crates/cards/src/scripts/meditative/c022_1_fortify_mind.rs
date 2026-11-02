@@ -8,23 +8,19 @@
 //!            +{armor} Armor."
 //!   Radiant: the same without "When you discard this, take all three penalties."
 //! The guess is a declared mode (R81), judged at resolution against the secret the Mind Games that
-//! made this card linked in its memory (R862): only that Mind Games writes the link, so a copy, a
-//! Fortify Mind another card makes, or one played after the secret resolved guesses nothing. A win
-//! removes the reward's delayed effect (R864); a tie or a loss leaves it, both players now reading
-//! the choice. The base face's discard clause answers its own `discarded` event — Temporary's
-//! included — whatever the secret's state; being burned is not a discard. The penalties fall on
-//! whoever plays or discards the card, even the secret's owner (R863).
+//! made this card linked in its memory (R862). A win removes the reward's delayed effect (R864); a
+//! tie or a loss leaves it, both players now reading the choice. Being burned is not a discard.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-022-1";
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed: instance ids.
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -155,13 +151,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #22.1 Fortify Mind — SPEC §8.8 row 22.1, BUILD M10 row M 22.1: "(0) Token Spell
-// (printed Epic): Temporary; played, its declared guess is judged against its linked secret
-// (Attack beats Greed, Greed beats Defend, Defend beats Attack remove the reward's delayed effect;
-// the same does nothing; a losing guess takes that choice's penalty); `predicted` and
-// `secretRevealed` are public; after the secret has resolved it does nothing; discarded by
-// Temporary or by any effect, all three penalties land; stolen back, the penalties are the owner's;
-// radiant no discard clause".
+// Meditative #22.1 Fortify Mind — SPEC §8.8 row 22.1, BUILD M10 row M 22.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -328,7 +318,6 @@ mod tests {
             );
             assert_eq!(s.state().players[P2].hero.health, health);
             assert_eq!(s.hand(P2).len(), hand - 1);
-            // The live secret is untouched by the stale guess.
             assert!(s.state().secrets.is_some());
             assert_eq!(s.state().delayed.len(), 1);
         }
@@ -378,7 +367,6 @@ mod tests {
             // Greed: 2 less mana next turn, and 2 random discards (the link, a draw, then 2 of 4).
             assert_eq!(s.state().players[P2].mana.next_turn_mod, -2);
             assert_eq!(s.hand(P2).len(), 2);
-            // Attack: 8 to the discarder's hero.
             s.expect_health(P2, 30 - 8);
             // Defend: the opponent's hero is healed 8 (a hero has no maximum health, §3) and gains
             // 2 Armor.
@@ -410,7 +398,6 @@ mod tests {
                 },
             }));
             s.end_turn();
-            // Second Wind exiles p2's deck and discards their hand, the Fortify Mind included.
             s.play(WIND, json!({ "zone": 1 }));
             assert!(s.last_events().iter().any(|event| matches!(
                 event,

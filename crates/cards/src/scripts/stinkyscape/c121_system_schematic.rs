@@ -45,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #121 System Schematic — SPEC §8.10 row S 121, BUILD M12 row S 121: "offers four modes and adds
-// the base System chosen, each of the four reachable; a full hand burns it; radiant the chosen one is
-// Radiant".
+// S #121 System Schematic — SPEC §8.10 row S 121, BUILD M12 row S 121.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

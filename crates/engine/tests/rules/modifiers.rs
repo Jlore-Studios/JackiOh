@@ -1,13 +1,9 @@
-//! Player modifiers and delayed effects (BUILD M3-T5, SPEC §2.2, §10.1, R48, R62, R68).
+//! Player modifiers and delayed effects (BUILD M3-T5, SPEC §2.2, §10.1, R48, R62, R68): each
+//! `ModifierExpiry` at its boundary; delayed effects at their R62 point in creation order, K-Pop
+//! Fanatic's steal after its unit has died (§8 #50, R76), a continuation whose instance is gone (R127),
+//! and Efficiency Dividend's mana as `mana.next_turn_mod`, not a delayed effect (§8 #24).
 //!
-//! The modifiers half proves each `ModifierExpiry` (`thisTurn`, `nextTurnOf(player)`, `used`) at its
-//! boundary, with R48's timing (a next-turn modifier does nothing on the turn it was made) apart. The
-//! delayed half proves they resolve at their R62 point in creation order, that K-Pop Fanatic's steal
-//! fires after its unit has died (§8 #50, R76), that a continuation whose instance is gone still
-//! resolves with `ctx.self === null` (R127), and that Efficiency Dividend's mana is a
-//! `mana.nextTurnMod`, not a delayed effect (§8 #24).
-//!
-//! The expiry boundaries call `expireModifiers` directly, so one state carries a whole test; `reduce`
+//! The expiry boundaries call `expire_modifiers` directly, so one state carries a whole test; `reduce`
 //! clones, so tests that need a real turn boundary re-find their cards in the state that comes back.
 //!
 //! Surface contract: docs/v0.3.0/SURFACE.md §7.2 (delayed steps are the script's `delayed` hook).
@@ -132,7 +128,7 @@ fn mod_defs() -> Vec<CardDef> {
 
 thread_local! {
     /// Every `ctx.self` `delayed_bolt`'s continuation has been re-entered with, as an instance id or
-    /// `None`: R127's `ctx.self === null` is only observable from inside the script. One per test thread.
+    /// `None`: R127's missing self is only observable from inside the script. One per test thread.
     static SELF_AT_RESUME: Cell<Vec<Option<String>>> = const { Cell::new(Vec::new()) };
 }
 
@@ -279,7 +275,6 @@ fn at(phase: Phase, player: PlayerId) -> DelayedAt {
     DelayedAt { phase, player }
 }
 
-/// `{ kind: "costDiscount", amount }`.
 fn discount(amount: i32) -> ModifierKind {
     ModifierKind::CostDiscount {
         amount,
@@ -289,7 +284,7 @@ fn discount(amount: i32) -> ModifierKind {
     }
 }
 
-/// #77 Professor Curvature's `{ kind: "costDiscount", amount: 1, minCurrentCost: 4 }`.
+/// #77 Professor Curvature's modifier.
 fn curvature() -> ModifierKind {
     ModifierKind::CostDiscount {
         amount: 1,
@@ -313,7 +308,6 @@ fn mod_ids(state: &GameState) -> Vec<String> {
         .collect()
 }
 
-/// The `modifierChanged` events, as their JSON.
 fn modifier_changes(events: &[GameEvent]) -> Vec<Value> {
     events_of_type(events, GameEventType::ModifierChanged)
         .into_iter()
@@ -883,7 +877,7 @@ mod delayed_effects_10_1_r62_r68 {
         );
         SELF_AT_RESUME.with(|cell| cell.set(Vec::new()));
 
-        // The missing instance must not throw: `endTurns` goes through `act`, which rethrows what `reduce` raised.
+        // The missing instance must not error: `end_turns` panics on any error `reduce` returns.
         state = end_turns(&state, 2);
         assert_eq!(state.turn, 3);
 

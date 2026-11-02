@@ -7,16 +7,14 @@
 //!
 //! Reads `public.code_attempts` through the store (DATABASE_URL) and prints, as Markdown, every IP
 //! hash that distinct accounts made at least `--min-accounts` redemption attempts from in the last
-//! `--window` seconds, with the accounts and the attempts behind it. The ranked ladder pays for
-//! rating, so several invite-gated accounts behind one address is the cheapest way to farm it; this
-//! is where a person looks for that.
+//! `--window` seconds, with the accounts and the attempts behind it. The ranked ladder pays for rating,
+//! so several invite-gated accounts behind one address is the cheapest way to farm it.
 //!
-//! It is advisory and read-only. It bans nothing and disables nothing, because a campus, a
-//! household or a carrier's NAT puts many honest players behind one hash, and it writes nothing.
-//! What it prints is counts and the first `INVITE_CLUSTER_HASH_PREFIX_LEN` characters of each hash:
-//! no full hash, no profile id, no email, no address (the table holds none of the last: §9.4 hashes
-//! the address with the server's pepper before it is stored). The defaults are in `config.rs`
-//! (CLAUDE.md rule 9).
+//! It is advisory and read-only: a campus, a household or a carrier's NAT puts many honest players
+//! behind one hash, so it bans and disables nothing. It prints counts and the first
+//! `INVITE_CLUSTER_HASH_PREFIX_LEN` characters of each hash: no full hash, profile id, email or address
+//! (§9.4 hashes the address with the server's pepper before it is stored). The defaults are in
+//! `config.rs` (CLAUDE.md rule 9).
 
 use anyhow::bail;
 
@@ -29,7 +27,6 @@ use crate::config::{
 use crate::db::store::{Db, StoreError};
 use crate::env::quoted;
 
-/// The usage text, with the defaults and the longest window read off `config.rs`.
 fn usage() -> String {
     format!(
         "Usage: jackioh-server invite-clusters [options]
@@ -59,8 +56,6 @@ pub struct InviteClustersOptions {
     pub min_accounts: i64,
 }
 
-/// One listed IP hash: the first `INVITE_CLUSTER_HASH_PREFIX_LEN` characters of it and its counts.
-/// The report never holds more of a hash than this.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClusterRow {
     pub ip_hash_prefix: String,
@@ -76,7 +71,6 @@ fn named(arg: &str) -> Option<(&str, &str)> {
     (name_ok && !value.is_empty()).then_some((name, value))
 }
 
-/// The whole number in `min..=max` that `--name=value` holds, or a refusal ending with the usage.
 fn bounded(name: &str, raw: &str, min: i64, max: i64) -> anyhow::Result<i64> {
     match raw.parse::<i64>() {
         Ok(value) if (min..=max).contains(&value) => Ok(value),
@@ -88,7 +82,6 @@ fn bounded(name: &str, raw: &str, min: i64, max: i64) -> anyhow::Result<i64> {
     }
 }
 
-/// Parses `--flag=value` arguments, refusing anything it does not know.
 pub fn parse_invite_clusters_args(argv: &[String]) -> anyhow::Result<InviteClustersOptions> {
     let mut options = InviteClustersOptions {
         window_seconds: INVITE_CLUSTER_WINDOW_SECONDS,
@@ -108,7 +101,7 @@ pub fn parse_invite_clusters_args(argv: &[String]) -> anyhow::Result<InviteClust
 }
 
 /// The IP hashes the options list, biggest cluster first (most accounts, then most attempts, then
-/// by hash), each cut to its prefix. One read, in one transaction, committed.
+/// by hash), each cut to its prefix.
 pub async fn invite_clusters_report(
     db: &Db,
     options: &InviteClustersOptions,
@@ -138,7 +131,6 @@ pub async fn invite_clusters_report(
         .collect())
 }
 
-/// The report as the script prints it: a Markdown table, or one line saying nothing was found.
 pub fn render_invite_clusters(rows: &[ClusterRow], options: &InviteClustersOptions) -> String {
     let mut out = String::from("# Invite clusters\n\n");
     if rows.is_empty() {
@@ -167,11 +159,9 @@ pub fn render_invite_clusters(rows: &[ClusterRow], options: &InviteClustersOptio
     out
 }
 
-/// `invite-clusters`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_invite_clusters_args(&args)?;
     let connection_string = database_url()?;
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     let outcome = invite_clusters_report(&db, &options).await;
     db.close().await;

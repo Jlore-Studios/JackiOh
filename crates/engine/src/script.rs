@@ -1,23 +1,10 @@
-//! The card-script contract (SPEC §10.9). A card file returns `Vec<Effect>` from the effects library
-//! and never touches state itself (CLAUDE.md rule 5); the engine applies the effects.
+//! The card-script contract (SPEC §10.9, SURFACE §6.4–§6.6, §7): a card file returns `Vec<Effect>` from
+//! the effects library and never touches state itself (CLAUDE.md rule 5). The types a `Script` field
+//! names live here too, so it compiles on its own; their modules never redefine them.
 //!
-//! Port of `packages/engine/src/script.ts` (part 1's type freeze, SURFACE §6.4–§6.6, §7). TS's
-//! closure objects stay closures (§6.6): a hook is an `Arc<dyn Fn …>` built with `hook(|ctx| …)` (or
-//! the typed constructors below), an effect is `Effect { kind, apply, expand }`. Also here:
-//!
-//! - `EngineSink` (TS `resolve.ts`'s `{ state, events, rng }`, SURFACE §6.5) and `EffectContext`,
-//!   which *is* a sink plus the run's facts: it derefs to its `EngineSink`, so `ctx.state` reads as in
-//!   TS and a TS call `f(ctx)` to a sink-taking function is `f(ctx)` here too.
-//! - The types a `Script` field names that TS declares in another module, because the script must
-//!   compile on its own: `CostAura`, `CostAuraWhose`, `CostAuraArgs` (TS `costRules.ts`),
-//!   `GraveyardPlayPermission` (`graveyardPlay.ts`), `QuestBook` and its parts (`subsystems/quests.ts`),
-//!   and the replacement declarations `ReplacementDef` … `ReplacedEvent` (`replacements.ts`, which
-//!   `script.ts` re-exported). Their TS modules' ports use these and do not redefine them.
-//!
-//! Hooks take `&mut EffectContext`: several TS card hooks draw from `ctx.rng` while they build their
-//! list (Classic #10, #65, C+ #7, #8, #19.2, #19.3, #25, #37, #53, Core #23, #83), which a shared
-//! reference cannot do. Every read-only hook (`ConditionHook`, `AuraHook`, …) takes plain-data
-//! arguments by value, each a `Copy` bundle of references.
+//! Hooks take `&mut EffectContext` because several draw from `ctx.rng` while they build their list
+//! (Classic #10, #65, C+ #7, #8, #19.2, #19.3, #25, #37, #53, Core #23, #83); every read-only hook
+//! takes a `Copy` bundle of references by value.
 
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -33,26 +20,21 @@ use crate::wire::{
     TargetDecl, string_union,
 };
 
-// ---------------------------------------------------------------------------------------------
 // The sink and the context
-// ---------------------------------------------------------------------------------------------
 
-/// TS `resolve.ts`'s `EngineSink = { state, events, rng }` (SURFACE §6.5): what every mutator that
-/// emits events or draws writes to, plus the per-call facts that were module `let`s or transient sink
-/// fields in TS. A nested sink (`reborrow`) carries the flags down and shares the frontier; a TS
-/// mutator that took a sink takes `&mut EngineSink`.
+/// SURFACE §6.5: what every mutator that emits events or draws writes to, plus the per-call facts. A
+/// nested sink (`reborrow`) carries the flags down and shares the frontier.
 pub struct EngineSink<'a> {
     pub state: &'a mut GameState,
     pub events: &'a mut Vec<GameEvent>,
     pub rng: &'a mut Rng,
-    /// `replacements.ts:383`'s re-entrancy counter, formerly a module `let`.
+    /// The replacements' re-entrancy counter.
     pub converting: u32,
-    /// `subsystems/scorer.ts:225`'s flag, formerly a module `let`.
+    /// Set while the scorer or the autopilot dry-runs a line.
     pub dry_running: bool,
-    /// Which of the action's events the frontier has taken (TS `SettleSink.dispatched` and
-    /// `triggers.ts`'s `collected`/`dispatchedElsewhere`), shared by every sink over one event list.
+    /// Which of the action's events the frontier has taken, shared by every sink over one event list.
     pub frontier: crate::triggers::FrontierSlot<'a>,
-    /// R117: the owed items behind the one a drain is running (TS `work.ts`'s `DrainSink.owedBehind`).
+    /// R117: the owed items behind the one a drain is running.
     pub owed_behind: Option<indexmap::IndexSet<String>>,
     /// R1884001: the cards whose `resolveFirst` would-die replacement is resolving up this call, which
     /// a check its own follow-up runs does not ask again (`replacements::would_die_window`).
@@ -74,9 +56,8 @@ impl<'a> EngineSink<'a> {
         }
     }
 
-    /// The same sink, borrowed again for a nested call: the flags travel down with it (every change
-    /// to `converting` is undone before the call that made it returns, so a copy is exact) and the
-    /// frontier is shared, so a loop on a context and the action's own loop see one frontier.
+    /// The same sink for a nested call: the flags are copied down (exact, since every change to
+    /// `converting` is undone before its call returns) and the frontier is shared, so both loops see one.
     pub fn reborrow(&mut self) -> EngineSink<'_> {
         EngineSink {
             state: &mut *self.state,
@@ -91,58 +72,37 @@ impl<'a> EngineSink<'a> {
     }
 }
 
-/// What a running script sees (TS `EffectContext`). It is an `EngineSink` (TS: the context has the
-/// sink's three fields, and is passed wherever a sink is taken) plus the facts of this run.
+/// What a running script sees: an `EngineSink`, passed wherever a sink is taken, plus the facts of this run.
 pub struct EffectContext<'a> {
-    /// `state`, `rng`, `events` and the per-call flags; reached through `Deref` as `ctx.state` etc.
     pub sink: EngineSink<'a>,
-    /// R136: where *this script's* events begin in `events`. The array is the whole action's sink, so
-    /// a card that asks "what did I just do" — #60 Bear Honeypot's "they attack it", and the same
-    /// shape in #24, #31, #33, #38 — must read `events[events_from..]` and never the earlier
-    /// entries, or a second copy of a card, or a trap firing mid-action, feeds its condition. Set once
-    /// where the context is built (`resolve::make_context`), so a step re-entered after a prompt opens
-    /// a new window on the action it resumes in; what the list did before the pause is `summoned`.
+    /// R136: where *this script's* events begin in the whole action's `events`: a card asking "what did I
+    /// just do" (#60 Bear Honeypot, #24, #31, #33, #38) reads only `events[events_from..]`, so another copy
+    /// or a mid-action trap cannot feed it. A step resumed after a prompt opens a new window (`summoned`).
     pub events_from: usize,
-    /// R174: the field's departures when this script's run began (`stays::exit_mark`), so an effect later
-    /// in the list can tell a card an earlier one took off the field from the card that stood there
-    /// when the run began — across a prompt too, since a paused list resumes with the mark it began
-    /// with (`work::PausedStep.exits_from`). Set by `make_context`; absent reads as "now".
+    /// R174: the field's departures when this run began (`stays::exit_mark`), carried across a pause, so a
+    /// later effect tells a card that stood there then from a new stay of it. Absent reads as "now".
     pub exits_from: Option<u32>,
-    /// R174, §10.6: the field's departures when `targets` were chosen, where that is later than the
-    /// run began — the answer to this run's own prompt, picked as the prompt offered the board. A card
-    /// the list took off the field before it asked, and that stood there again when the prompt offered
-    /// it (a Reborn body, R83), is picked on that new stay, and the answered step's effect lands on it.
-    /// Absent reads as `exits_from`: a play's declared targets were chosen as its run began.
+    /// R174, §10.6: the departures when this run's own prompt chose `targets`, so a card that left and
+    /// stood there again when offered (a Reborn body, R83) is picked on that stay. Absent: `exits_from`.
     pub chosen_from: Option<u32>,
-    /// R174, R212: the cards the event a queued trigger answers names, and the field's departures when
-    /// that event happened (`stays::event_stay_of`). The loop hands the trigger its event some time
-    /// later, so a card the event names is judged from then: a trigger that reads the played unit's id
-    /// off its `cardPlayed` does not land on the Reborn body an earlier trigger on the same event made
-    /// (R59). Every other card the run aims at is judged from `exits_from`, when the run began. Carried
-    /// across a pause with the run's other marks. Absent for any run that is not a queued trigger's.
+    /// R174, R212: the cards a queued trigger's event names and the departures when it happened
+    /// (`stays::event_stay_of`), so they are judged from then: a trigger reading the played unit's id
+    /// misses the Reborn body an earlier trigger on it made (R59). Absent unless a queued trigger's run.
     pub event_stay: Option<EventStay>,
-    /// R136: the units this script's run summoned in the actions before a prompt split it. The window
-    /// `events_from` opens is the action's own event list, and a list the answer continues resumes in
-    /// a later action, so what its head summoned is carried here (`work::PausedStep.summoned`,
-    /// `work::RunMarks`). Absent for a run that has not paused.
+    /// R136: the units this run summoned in the actions before a prompt split it, which the resumed list's
+    /// `events_from` window misses (`work::RunMarks`). Absent for a run that has not paused.
     pub summoned: Option<Vec<String>>,
-    /// R98: the card running the script sat in the resolving zone as the run began (§10.5 step 4) — a
-    /// Spell resolving, or a permanent that found no zone. The run is that card's while it stays there,
-    /// so a continuation re-entered once the card has left it — the Spell's own list put it back in its
-    /// owner's hand before it asked — resumes with no self (`prompts::run_resume`). Carried across a
-    /// pause with the run's other marks (`work::RunMarks`, `work::PausedStep`). Absent for any other card.
+    /// R98: the running card sat in the resolving zone as the run began (§10.5 step 4: a Spell, or a
+    /// permanent that found no zone), so a continuation re-entered once it has left resumes with no self
+    /// (`prompts::run_resume`). Carried across a pause (`work::RunMarks`); absent for any other card.
     pub self_resolving: Option<bool>,
     /// Who is resolving this: the controller of `self_`, or the player who cast the card.
     pub controller: PlayerId,
-    /// The instance whose script is running, when it still exists (TS `self`).
-    ///
-    /// TS held the live object, so a write through it reached the state and a read saw every earlier
-    /// effect's change. Here it is the instance as the context was built (a Death hook's is the card as
-    /// it died, R89); `live_self` reads the card as it stands now.
+    /// The running instance as the context was built, when it still exists (a Death hook's is the card as
+    /// it died, R89); `live_self` reads it as it stands now.
     pub self_: Option<CardInstance>,
-    /// R127: the definition whose script is running, set where a continuation is re-entered
-    /// (`prompts::run_resume`), because `self_` is `None` once the card has ceased to exist and a step
-    /// that asks again must still name its script. Absent elsewhere, where `self_` names it.
+    /// R127: the running definition, set where a continuation is re-entered (`prompts::run_resume`): a step
+    /// that asks again must name its script once `self_` is `None`. Absent where `self_` names it.
     pub def_id: Option<String>,
     /// Whether the radiant text is the one running (§5.2).
     pub radiant: bool,
@@ -152,17 +112,13 @@ pub struct EffectContext<'a> {
     pub embiggened: bool,
     /// Captured data from a Resume, for chained steps (§10.6).
     pub data: IndexMap<String, Value>,
-    /// play pipeline B (Classic #22 Mid Runner: "If you had 4 or more mana when you played this"): the
-    /// current mana of the player who played or cast the card as the play began — at §10.5 step 1, before
-    /// step 2 paid, or as a cast began — on the played card's own Cry and every continuation of it
-    /// (`resolve::MANA_BEFORE_PLAY_KEY`, which rides the card's data across a pause). Absent anywhere else.
+    /// Classic #22 Mid Runner's "If you had 4 or more mana when you played this": the mana as the play or
+    /// cast began (§10.5 step 1), on its own Cry and continuations (`resolve::MANA_BEFORE_PLAY_KEY`).
     pub mana_before_play: Option<i32>,
 }
 
 impl<'a> EffectContext<'a> {
-    /// A context over `sink` with every fact of the run at rest (no self, no targets, an empty data
-    /// bag, the window opening where the event list stands). `resolve::make_context` is the engine's
-    /// constructor; this one is for tests and for building one by hand.
+    /// A context with every fact of the run at rest, for tests; the engine's is `resolve::make_context`.
     pub fn new(sink: EngineSink<'a>, controller: PlayerId) -> EffectContext<'a> {
         let events_from = sink.events.len();
         EffectContext {
@@ -186,14 +142,10 @@ impl<'a> EffectContext<'a> {
         }
     }
 
-    /// The running card as it stands now (TS's live `ctx.self`): looked up by id, or the card the
-    /// context was built with when it is no longer anywhere (a Death hook's card that ceased to exist).
-    ///
+    /// The running card as it stands now, or as the context was built when it is no longer anywhere.
     /// R89: a context whose data carries the card's snapshot (`prompts::SELF_KEY`: a Death hook, a dead
-    /// attacker's After Attack, and every continuation of either) runs as that snapshot, never as the
-    /// card R78 has reset on the board under the same id: TS's `ctx.self` was the snapshot object there
-    /// (`stateCheck.runDeathPass`, `combat.runAfterAttack`, `prompts.runResume`), so a Death hook reads
-    /// the memory its card died with (#22 Carnivorous Cube's meal, R41).
+    /// attacker's After Attack, their continuations) runs as that snapshot, never as the card R78 reset on
+    /// the board under the same id, so a Death hook reads the memory it died with (#22's meal, R41).
     pub fn live_self(&self) -> Option<&CardInstance> {
         let snapshot = self.self_.as_ref()?;
         if self.data.contains_key(crate::prompts::SELF_KEY) {
@@ -217,18 +169,14 @@ impl<'a> DerefMut for EffectContext<'a> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Effects and hooks (SURFACE §6.6)
-// ---------------------------------------------------------------------------------------------
 
-/// What `Effect::expand` hands every rebuild so the part is the same one (TS `memo: unknown`, with
-/// `undefined` on the first build): JSON, because it rides a paused step (`work::PausedStep.memo`).
+/// What `Effect::expand` hands every rebuild so the part is the same one (`None` on the first build):
+/// JSON, because it rides a paused step (`work::PausedStep.memo`).
 pub type Memo = Option<Value>;
 
-/// TS `apply: (ctx) => void`.
 pub type EffectApply = Arc<dyn Fn(&mut EffectContext<'_>) + Send + Sync>;
 
-/// TS `expand?: (ctx, memo) => EffectPart`.
 pub type EffectExpand = Arc<dyn Fn(&mut EffectContext<'_>, &Memo) -> EffectPart + Send + Sync>;
 
 /// One state change from the effects library. Effects are built by engine code, so a card file
@@ -237,20 +185,13 @@ pub type EffectExpand = Arc<dyn Fn(&mut EffectContext<'_>, &Memo) -> EffectPart 
 pub struct Effect {
     pub kind: &'static str,
     pub apply: EffectApply,
-    /// A part of a composed list, built when the list reaches it: a fused hook runs each ingredient's
-    /// list in turn (R77, R102), and a later ingredient's list reads the board the earlier ones left
-    /// (#68's threshold after Reno's heal, #22's meal after #100's exile), which a list built all at
-    /// once cannot. `prompts::apply_resumable` runs the part it builds as a nested list, so a prompt
-    /// inside it pauses the part and everything after it, and the pause records where it stood
-    /// (`work::PausedStep.part`) — so the part is built again on resume, and only the part the pause
-    /// stood in. `memo` is what the first build must hand every rebuild so the part is the same one:
-    /// #95's roll, which must not be rolled again (R87). A caller that only calls `apply` gets the
-    /// part built and applied in one go, as `resolve::lazy_part` writes it.
+    /// A part of a composed list, built when the list reaches it, so a later fused ingredient reads the
+    /// board the earlier ones left (R77, R102: #68 after Reno's heal, #22 after #100's exile). A prompt in
+    /// it pauses there (`work::PausedStep.part`); only that part is rebuilt, from `memo` (#95's roll, R87).
     pub expand: Option<EffectExpand>,
 }
 
 impl Effect {
-    /// TS `{ kind, apply(ctx) { … } }`.
     pub fn new(kind: &'static str, apply: impl Fn(&mut EffectContext<'_>) + Send + Sync + 'static) -> Effect {
         Effect {
             kind,
@@ -259,7 +200,7 @@ impl Effect {
         }
     }
 
-    /// TS `{ kind, expand, apply }`: an effect that is a lazily built part.
+    /// An effect that is a lazily built part.
     pub fn with_expand(
         kind: &'static str,
         apply: impl Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
@@ -289,7 +230,6 @@ pub struct EffectPart {
     pub memo: Memo,
 }
 
-/// TS `Hook = (ctx) => Effect[]`.
 pub type Hook = Arc<dyn Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync>;
 
 /// Builds a `Hook` from a closure: `hook(|ctx| vec![…])` (SURFACE §6.6, §7.2).
@@ -298,26 +238,20 @@ pub fn hook(f: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 's
 }
 
 /// `TriggerDef.when`: R99's condition over the context and the event. `&mut`: Classic+ #74's
-/// predicate writes its own card while it declines (part 8.3).
+/// predicate writes its own card while it declines.
 pub type TriggerWhen = Arc<dyn Fn(&mut EffectContext<'_>, &GameEvent) -> bool + Send + Sync>;
 
-/// `TriggerDef.run`: reads the event and the state; returns the effects to queue, or none.
 pub type TriggerRun = Arc<dyn Fn(&mut EffectContext<'_>, &GameEvent) -> Vec<Effect> + Send + Sync>;
 
-/// A trigger a card registers while it is in a given zone (§10.3). TS's `ctx & { event }` is the
-/// context and the event as two arguments.
+/// A trigger a card registers while it is in a given zone (§10.3).
 #[derive(Clone)]
 pub struct TriggerDef {
     pub id: String,
-    /// Which events wake it.
     pub on: Vec<GameEventType>,
-    /// R99: the trigger's condition, kept out of `run` so a trap can decline an event without being
-    /// spent — R61 makes an empty effect list mean "fired and did nothing". Absent, the `on` match
-    /// alone arms it, so a trap with no predicate answers every event it names on either side. The
-    /// traps' dispatch reads a trap's; every other trigger's is read as its queued entry resolves
-    /// (R2271000).
+    /// R99: the trigger's condition, kept out of `run` so a trap can decline an event unspent (R61: an
+    /// empty effect list is "fired and did nothing"); absent, the `on` match arms it. The traps' dispatch
+    /// reads a trap's; every other trigger's is read as its queued entry resolves (R2271000).
     pub when: Option<TriggerWhen>,
-    /// Reads the event and the state; returns the effects to queue, or none.
     pub run: TriggerRun,
     /// R2396000: "Whenever this destroys a Unit": answers a `destroyed` its card is R42's killer of
     /// though the card has left the field since, as the snapshot it killed with
@@ -326,7 +260,6 @@ pub struct TriggerDef {
 }
 
 impl TriggerDef {
-    /// `{ id, on, run }`.
     pub fn new(
         id: impl Into<String>,
         on: &[GameEventType],
@@ -341,7 +274,6 @@ impl TriggerDef {
         }
     }
 
-    /// The same trigger with a `when`.
     pub fn with_when(
         mut self,
         when: impl Fn(&mut EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static,
@@ -366,10 +298,7 @@ impl std::fmt::Debug for TriggerDef {
     }
 }
 
-/// `{ state; self; radiant }`: the argument of every pure-read hook TS gave that object (`aura`,
-/// `setStat`, `costAura`, `graveyardPlay`, `targetingDiscards`, `recordsPlayAs`, `drawLimit`,
-/// `heroGuard`, `conditionalKeywords`, `plagueMultiplier`, `tributeWhen`, `ActivationDecl.has`), and of
-/// the two the Meditative set adds, `discardGuard` (R800) and `echoX` (R802).
+/// The argument of every pure-read hook on the card itself (`aura`, `setStat`, `heroGuard`, …).
 #[derive(Clone, Copy)]
 pub struct HookArgs<'a> {
     pub state: &'a GameState,
@@ -401,10 +330,8 @@ pub struct StatMod {
     pub set_attack: Option<i32>,
 }
 
-/// One entry an aura returns: which units it touches, and what it gives them. `applies` may borrow
-/// the hook's arguments (`move |unit| unit.controller == a.self_.controller`).
+/// One entry an aura returns: the units it touches (`applies` may borrow the hook's arguments) and its mod.
 pub struct AuraEntry<'a> {
-    /// Which units the aura touches.
     pub applies: Box<dyn Fn(&CardInstance) -> bool + 'a>,
     pub mod_: StatMod,
 }
@@ -412,7 +339,6 @@ pub struct AuraEntry<'a> {
 /// An aura contributes stat and keyword layers while its card is in play (§10.4 layer 5).
 pub type AuraHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send + Sync>;
 
-/// Builds an `AuraHook`.
 pub fn aura_hook(f: impl for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send + Sync + 'static) -> AuraHook {
     Arc::new(f)
 }
@@ -428,8 +354,7 @@ pub struct AttackMod {
     pub poisonous: bool,
 }
 
-/// `Script.attack_mods`' argument: `{ state; self; radiant }` with the combat's attacker and
-/// defender. A PURE READ, like `aura`'s: no writes, no rng.
+/// `Script.attack_mods`' argument: `HookArgs` with the combat's attacker and defender. A PURE READ.
 #[derive(Clone, Copy)]
 pub struct AttackModArgs<'a> {
     pub state: &'a GameState,
@@ -439,11 +364,10 @@ pub struct AttackModArgs<'a> {
     pub defender: &'a CardInstance,
 }
 
-/// MD-D4, R1120: a combat-only attack modifier — what this card adds to an attacker's strike while
-/// that attacker attacks a Unit. Read only inside a combat against a Unit (declared or forced).
+/// MD-D4, R1120: what this card adds to an attacker's strike, read only inside a combat against a
+/// Unit (declared or forced).
 pub type AttackModHook = Arc<dyn for<'a> Fn(AttackModArgs<'a>) -> AttackMod + Send + Sync>;
 
-/// Builds an `AttackModHook`.
 pub fn attack_mod_hook(
     f: impl for<'a> Fn(AttackModArgs<'a>) -> AttackMod + Send + Sync + 'static,
 ) -> AttackModHook {
@@ -460,7 +384,6 @@ pub enum FlagOrCount {
 }
 
 impl FlagOrCount {
-    /// How many times the flag is granted: `true` is once, `false` none, a number itself.
     pub fn count(self) -> i32 {
         match self {
             FlagOrCount::Flag(true) => 1,
@@ -483,9 +406,8 @@ pub struct TuneMultiplier {
     pub degrade: Option<i32>,
 }
 
-/// A card's static flags. Data, so a card may write them as the TS object literal
-/// (`json_as(json!({ "castOnDraw": true }))`). `deftDuelist` (legacy, read nowhere) is not ported
-/// (SURFACE §7.2).
+/// A card's static flags. Data, so a card may write them as an object literal
+/// (`json_as(json!({ "castOnDraw": true }))`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -515,8 +437,7 @@ pub struct StaticFlags {
     /// (radiant 2X, dealt as one hit, R281). A number is how many times the card grants it: a card
     /// fused from two Quickstrikers carries both texts (R102), and `true` is once. The multiple of X
     /// each grant deals is not the flag's: it is `QUICKSTRIKER_COMBO_MULTIPLE` in `config.rs`, picked by
-    /// the granting instance's own face, as #84's Armor is (`HERO_ARMOR`), so a base and a Radiant
-    /// Quickstriker side by side deal X and then 2X.
+    /// the granting instance's own face, as #84's Armor is (`HERO_ARMOR`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quickstriker: Option<FlagOrCount>,
     /// #64 Gifted Program: while on the field, the first card costing this much or less its controller
@@ -555,11 +476,10 @@ pub struct StaticFlags {
     /// R429, R766 (issues #557, #572): this Spell's own end-of-turn return (§5.1, R155) gives back the
     /// climb its earlier returns gave it, and no other change to its price. R766 still takes the price
     /// off it in the graveyard it lands in, so §10.5 step 7 notes the climb it carried into its play
-    /// (`resolve::note_return_price`) for its return to read (`query::return_price_of`) — #31 KY's Math
-    /// Equation's climb, (2), (3), (4).
+    /// (`resolve::note_return_price`) for its return to read (`query::return_price_of`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_keeps_price: Option<bool>,
-    // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
+    // Static flags by workstream: field (B3.1, E20, E21, E22)
     /// B5 E21, R446: "A Unit may be played on top of this". While this backrow card acts in its zone, a
     /// Unit its controller plays may name that zone and stand on it: a Unit for every rule that can
     /// neither attack nor be attacked, with this card still acting beneath it (`zones::carrier_zones_for`,
@@ -572,7 +492,7 @@ pub struct StaticFlags {
     /// that Unit's play has resolved.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fuses_carried: Option<bool>,
-    // ---- v0.2.0 static flags, by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15) ----
+    // Static flags by workstream: play pipeline (E1, E2, E5 targeting, E11, E12, E15)
     /// Classic+ #68 Organic Produce: while on the field, every card its controller plays carrying one of
     /// these tags becomes Radiant as it is played (§10.5 step 3) — R213's Gifted Program rule by tag, on
     /// every such play rather than the first cheap one (`play_choices::play_made_radiant`).
@@ -584,7 +504,7 @@ pub struct StaticFlags {
     /// `conditionMet`. The card keeps its own name, cost, type and tags, and its own other flags (Echo).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copies_last_spell: Option<bool>,
-    // ---- v0.2.0 static flags, by workstream: damage and combat (E5, E6, E8, E35) ----
+    // Static flags by workstream: damage and combat (E5, E6, E8, E35)
     /// B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cant_be_attacked: Option<bool>,
@@ -668,7 +588,7 @@ pub struct StaticFlags {
     /// next-turn rider only (Meditative #26).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_natural_mana: Option<bool>,
-    // ---- Meditative ----
+    // Meditative
     /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
     /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its
     /// Radiant face it rewards only its controller's plays and punishes only the opponent's.
@@ -679,7 +599,7 @@ pub struct StaticFlags {
     /// card's declared number `luck` where it declares it, else this.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck: Option<i32>,
-    // ---- Meditative+ (issue #1180) ----
+    // Meditative+ (issue #1180)
     /// R1180000 (Meditative+ #9 Magic Amplifier): "Aura: Both players have Spell Damage +X". While this
     /// card acts on the field, its controller — and with `both`, the opponent too — has Spell Damage +X,
     /// summed with every other source (`damage::spell_damage_of`).
@@ -695,7 +615,7 @@ pub struct StaticFlags {
     /// Spell on its `cardResolved` (`answer`), which the card's hand and deck triggers read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub answers_targeted_spells: Option<bool>,
-    // ---- Meditative+ (issue #1181) ----
+    // Meditative+ (issue #1181)
     /// R1181002 (Meditative+ #22 Mountaintop Garden): while this card acts on the field, every embiggen
     /// card of both players (R1178001) plays its Embiggened version at its normal price, and its dearer
     /// price, the normal price plus this premium, plays it Radiant and Embiggened; a Radiant card has its
@@ -703,13 +623,13 @@ pub struct StaticFlags {
     /// where it declares it, else this; two Gardens apply the least.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_garden: Option<i32>,
-    // ---- Stinkyscape's mechanic (issue #1839) ----
+    // Stinkyscape's mechanic (issue #1839)
     /// R1839000: "Dormant" (SPEC §6.1): this Unit enters the field Dormant — from a hand, a deck, a
     /// graveyard or the resolving zone, any way it arrives — and is reached by nothing but an awakening
     /// until it awakens (`slumber.rs`). What it prints is a `SlumberText`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub slumber: Option<SlumberText>,
-    // ---- Stinkyscape's Starship (issue #1852) ----
+    // Stinkyscape's Starship (issue #1852)
     /// R1852000, R1852003: this is a Starship's hull — the Dormant Starship (`DORMANT_STARSHIP_DEF_ID`),
     /// and every fusion it keeps. Entering the field from off it as a Unit, the card starts a Starship's
     /// memory (`CardInstance.starship`); while it is Dormant its one ability is the engine's launch
@@ -717,7 +637,7 @@ pub struct StaticFlags {
     /// and its awakening launches it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub starship_hull: Option<bool>,
-    // ---- Stinkyscape M15 (issue #1849) ----
+    // Stinkyscape M15 (issue #1849)
     /// R1849000 (Stinkyscape #74 Paragon-X): "Immune to Spell Damage". While this Unit is on the field,
     /// a hit from a Spell deals it nothing and is no damage instance (§4.4 step 0); Spells may still
     /// target it and do everything else to it (`restrictions::spell_damage_cannot_reach`).
@@ -759,7 +679,7 @@ pub struct StaticFlags {
     /// set (`traps::chance_admits`). The card's declared number `chance` where it declares it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reveal_chance: Option<i32>,
-    // ---- Stinkyscape (issue #1844) ----
+    // Stinkyscape (issue #1844)
     /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
     /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands
     /// the turn back (`subsystems::autopilot::aura_reach`); several take the largest.
@@ -773,7 +693,7 @@ pub struct StaticFlags {
     /// is shown the Pareto hint on each of their turns (`subsystems::pareto::pareto_hint_ids`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hints_plays: Option<bool>,
-    // ---- Stinkyscape S16 (issue #1869) ----
+    // Stinkyscape S16 (issue #1869)
     /// R1869000 (Stinkyscape #16 Rod of Ages): "The first Unit you play onto this is Equipped into it".
     /// While this Unit's definition is no fusion, any Unit card its controller plays may be played onto
     /// it as an Equip play (R1086) though it has no Equip (`play_choices::equip_onto_at`).
@@ -831,44 +751,33 @@ string_union! {
     }
 }
 
-/// R195, R280, §10.9: the argument of the two read-only hooks `view_for` asks, the Hearthstone "yellow
-/// glow" predicate (`conditionMet`) and the number a formula comes to now (`preview`). A hook is a
-/// PURE READ — it never writes, never draws from `rng` (the context carries none), never returns
-/// effects — and must agree with what the card's own resolution would do if it resolved now.
+/// R195, R280, §10.9: the argument of the two read-only hooks `view_for` asks, the "yellow glow"
+/// predicate (`conditionMet`) and a formula's number now (`preview`): PURE READS that must agree with
+/// what the card's own resolution would do now.
 #[derive(Clone, Copy)]
 pub struct ConditionContext<'a> {
     pub state: &'a GameState,
     pub self_: &'a CardInstance,
-    /// The card's controller. R195 only ever asks about the viewer's own cards, so there this is the
-    /// viewer; R280 asks about any card the viewer may read, the other seat's public ones included, so
-    /// there it is the card's controller and never the viewer as such.
+    /// The card's controller, never the viewer as such: R195 asks only of the viewer's own cards, R280
+    /// of any card the viewer may read, the other seat's public ones included.
     pub controller: PlayerId,
-    /// Whether the Radiant face is the one running (§5.2).
     pub radiant: bool,
     /// "hand": as if played now. "field": as the card on the field reads it now.
     pub zone: ConditionZone,
-    /// `state.active === controller`, so a card file never reads `state.active` itself.
+    /// `state.active == controller`, so a card file never reads `state.active` itself.
     pub your_turn: bool,
 }
 
 pub type ConditionHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> bool + Send + Sync>;
 
-/// R280, §10.9: the labeled numbers a card's formula comes to now — #31's Fib(cost+1), #70's sum
-/// over missing health and exile. Each `label` is the formula as the running face prints it, an
-/// exact substring of that face's catalog text (the client prints the value in braces right after
-/// the label's first occurrence, §10.10), and each `value` what it would come to if the card resolved
-/// now. The hook is asked with the same context `conditionMet` is (the running face, the card's
-/// controller, the zone, `yourTurn`) and is a PURE READ, built on the same function the card's own
-/// resolution computes the number with, so the two cannot disagree. It reads only what the card's
-/// controller may read (§9.1) — a hero's health, a pile's size, the plays this turn, its own cost and
-/// counters — never a library's contents or order or a hidden hand, because `view_for` shows the
-/// result to every viewer who may read the card, the other seat included (`preview.rs`). An empty
-/// list is no preview at all.
+/// R280, §10.9: the labeled numbers a card's formula comes to now (#31's Fib(cost+1), #70's sum), each
+/// `label` an exact substring of the running face's text (the client prints the value after it, §10.10).
+/// A PURE READ on the function the resolution computes with, so the two agree, of only what its
+/// controller may read (§9.1): `view_for` shows it to every viewer of the card (`preview.rs`).
 pub type PreviewHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<PreviewValue> + Send + Sync>;
 
 /// R2321000, §10.8: one count a card on the field keeps toward what it will do to a Unit on the field,
-/// `value` of `goal` (TG #31 Level Up!'s attacks toward making the Unit Radiant). The Unit is named by
-/// its instance id.
+/// `value` of `goal` (TG #31 Level Up!'s attacks toward making the Unit Radiant).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnitTally {
     pub instance_id: String,
@@ -876,15 +785,12 @@ pub struct UnitTally {
     pub goal: i32,
 }
 
-/// R2321000: the counts a card keeps on the Units of the field (`UnitTally`), which `view_for` surfaces on
-/// each Unit it names as `UnitView.tallies`. Asked with the context `preview` is, of a card acting on
-/// the field that the viewer may read (`preview::tallies_on`), and a PURE READ of the card's own
-/// memory and the board, so a count the card would forget (a Unit that left and came back, R174) is
-/// not shown. An empty list shows nothing.
+/// R2321000: the counts a card keeps on the Units of the field, surfaced on each as `UnitView.tallies`
+/// (`preview::tallies_on`). Asked as `preview` is; a PURE READ of the card's own memory and the board,
+/// so a count the card would forget (a Unit that left and came back, R174) is not shown.
 pub type TallyHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<UnitTally> + Send + Sync>;
 
-/// Builds a `ConditionHook` (`R = bool`), a `PreviewHook` (`R = Vec<PreviewValue>`) or a `TallyHook`
-/// (`R = Vec<UnitTally>`).
+/// Builds a `ConditionHook`, a `PreviewHook` or a `TallyHook`.
 #[allow(clippy::type_complexity)]
 pub fn condition_hook<R: 'static>(
     f: impl for<'a> Fn(ConditionContext<'a>) -> R + Send + Sync + 'static,
@@ -892,17 +798,15 @@ pub fn condition_hook<R: 'static>(
     Arc::new(f)
 }
 
-/// `Script.cost`'s argument: `{ state, instance }`.
+/// `Script.cost`'s argument.
 #[derive(Clone, Copy)]
 pub struct CostArgs<'a> {
     pub state: &'a GameState,
     pub instance: &'a CardInstance,
 }
 
-/// Ceaseless Void's computed cost (R55).
 pub type CostHook = Arc<dyn for<'a> Fn(CostArgs<'a>) -> i32 + Send + Sync>;
 
-/// Builds a `CostHook`.
 pub fn cost_hook(f: impl for<'a> Fn(CostArgs<'a>) -> i32 + Send + Sync + 'static) -> CostHook {
     Arc::new(f)
 }
@@ -918,7 +822,6 @@ pub struct SetStat {
     pub max_health: Option<i32>,
 }
 
-/// §10.4 layer 2: a card that sets its own stats from the board (#92 Felinor Fiender, R39).
 pub type SetStatHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> SetStat + Send + Sync>;
 
 string_union! {
@@ -932,8 +835,8 @@ string_union! {
 
 /// E15: what a card on the field lays on prices while it acts there (`Script.costAura`). A rule with
 /// `ban: true` is "can't play" — it prices nothing and refuses a play of a card it reaches whose price
-/// is `minCost` or more (Classic #68 Radiant), and never a cast (R70). (TS `costRules.ts`:
-/// `CostRule & { whose; ban? }`, the rule's fields flattened beside these.)
+/// is `minCost` or more (Classic #68 Radiant), and never a cast (R70). The rule's fields are flattened
+/// beside these.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -945,14 +848,12 @@ pub struct CostAura {
     pub ban: Option<bool>,
 }
 
-/// The argument of `Script.costAura`, as `Script.aura`'s is: a pure read of the board (TS `costRules.ts`).
+/// The argument of `Script.costAura`, as `Script.aura`'s is: a pure read of the board.
 pub type CostAuraArgs<'a> = HookArgs<'a>;
 
-/// E15, R455: the price rules this card lays on cards while it acts (`cost_rules.rs`).
 pub type CostAuraHook = Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<CostAura> + Send + Sync>;
 
-/// E11, R454: what one card on the field lets its controller play from their own graveyard (TS
-/// `graveyardPlay.ts`).
+/// E11, R454: what one card on the field lets its controller play from their own graveyard.
 ///
 /// - `units`: Units only (Classic #74); absent, every card type (Classic #28, In Too Deep's reward L).
 /// - `minPrice`: the least price a play under it may have, as it would be paid — after every discount
@@ -973,22 +874,17 @@ pub struct GraveyardPlayPermission {
     pub plague: Option<bool>,
 }
 
-/// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
 pub type GraveyardPlayHook =
     Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
 /// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their field
-/// (Radiant Paranoia's "Spells you reveal have Echo +{echo}"), read as the Spell reveals. 0 adds none.
+/// (Radiant Paranoia), read as the Spell reveals (`alt_play::reveal_echo_bonus`). 0 adds none.
 pub type RevealEchoHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
-/// R1864004: the Trades a turn this card gives its controller while it acts on their field (Radiant
-/// The Trade Union's "You may Trade up to {trades} cards each turn").
 pub type TradesPerTurnHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
-/// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
-/// B5 E4, R451: what this card's play records as the card played.
 pub type RecordsPlayAsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Option<PlayRecord> + Send + Sync>;
 
 /// One guard `Script.heroGuard` returns: a per-hit cap and a divisor applied after Armor.
@@ -1006,22 +902,17 @@ pub struct HeroGuard {
     pub guards_self: Option<bool>,
 }
 
-/// B5 E6: what this card does to hits on its controller's hero while it acts on the field.
 pub type HeroGuardHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<HeroGuard> + Send + Sync>;
 
-/// B5 E35: keywords the card has only while a condition holds.
 pub type ConditionalKeywordsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<Keyword> + Send + Sync>;
 
-/// B5 E19, R471: what each Plague Counter placement onto this card is multiplied by.
 pub type PlagueMultiplierHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
-/// R802: a computed Echo X, the repeats the card's Echo makes as it is played.
 pub type EchoXHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
 /// ME-TRIG, R820: how many extra times this card makes its controller's hooks of one kind run.
 pub type TriggerExtraHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
-/// Classic #88 Siphon Squad, R403: "When …, Tribute this".
 pub type TributeWhenHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
 /// `Script.wouldCounter`'s argument.
@@ -1034,40 +925,35 @@ pub struct WouldCounterArgs<'a> {
     pub cost_paid: i32,
 }
 
-/// Classic #87 Plague Chalice, R667: whether the card's own trigger would counter a play.
 pub type WouldCounterHook = Arc<dyn for<'a> Fn(WouldCounterArgs<'a>) -> bool + Send + Sync>;
 
-/// Builds a `WouldCounterHook`.
 pub fn would_counter_hook(
     f: impl for<'a> Fn(WouldCounterArgs<'a>) -> bool + Send + Sync + 'static,
 ) -> WouldCounterHook {
     Arc::new(f)
 }
 
-/// R831008, `Script.mode_allowed`: whether this player may choose this option of the card's own
-/// declared modes now.
 pub type ModeAllowedHook = Arc<dyn Fn(&GameState, PlayerId, &str) -> bool + Send + Sync>;
 
-/// Builds a `ModeAllowedHook`.
 pub fn mode_allowed_hook(
     f: impl Fn(&GameState, PlayerId, &str) -> bool + Send + Sync + 'static,
 ) -> ModeAllowedHook {
     Arc::new(f)
 }
 
-/// R1851000, `Script.play_allowed`: whether this player may play the card now.
 pub type PlayAllowedHook = Arc<dyn Fn(&GameState, PlayerId) -> bool + Send + Sync>;
 
-/// Builds a `PlayAllowedHook`.
 pub fn play_allowed_hook(
     f: impl Fn(&GameState, PlayerId) -> bool + Send + Sync + 'static,
 ) -> PlayAllowedHook {
     Arc::new(f)
 }
 
-/// `ActivationDecl.has`: whether the card has this ability now.
 pub type HasHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
+/// A card face's hooks and declarations. Every hook given no `rng` (a `HookArgs`, a `&GameState`) is a
+/// PURE READ, so one reading a declared number follows its Nerfs and Buffs (B3.4); a list-valued one
+/// lets a fused card carry each ingredient's (R102).
 #[derive(Clone, Default)]
 pub struct Script {
     /// Ceaseless Void's computed cost (R55); everything else uses the printed cost.
@@ -1079,11 +965,10 @@ pub struct Script {
     /// MD-B18, R925: "When this enters your hand" (Meditative #37) — run by `draw::run_arrival_hooks`
     /// on every hand arrival, after R151's start-of-game clause.
     pub enters_hand: Option<Hook>,
-    /// R781004: run on the card a Fuse keeps, once this card's text is fused into it (Meditative #65
-    /// Keymaster Keenus's Equip play), as R43's start-of-game roll is: what this text drew for its own
-    /// card ceased to exist with it, so the kept card draws its own.
+    /// R781004: run on the card a Fuse keeps once this text is fused into it (Meditative #65's Equip), as
+    /// R43's roll is: what this text drew for its own card ceased with it, so the kept card draws its own.
     pub fused_into: Option<Hook>,
-    /// Named continuations a prompt answer re-enters (§10.6, R81). Empty: none.
+    /// Named continuations a prompt answer re-enters (§10.6, R81).
     pub resume: IndexMap<&'static str, Hook>,
     /// A delayed effect this card scheduled, resolved at its R62 point.
     pub delayed: Option<Hook>,
@@ -1091,10 +976,8 @@ pub struct Script {
     pub set_stat: Option<SetStatHook>,
     pub start_of_turn: Option<Hook>,
     pub end_of_turn: Option<Hook>,
-    /// ME-GRANT (MD-D13): the Death abilities this card grants, by key — `meditative-058#bookDeath`
-    /// grants face `bookDeath`. A grant names a hook here, so state stays plain data (a closure never
-    /// enters it, as `fuse.rs` explains). A fused card merges its ingredients' maps (R102): the keys
-    /// already name their definition, so they never collide.
+    /// ME-GRANT (MD-D13): the Death abilities this card grants, by key (`meditative-058#bookDeath` grants
+    /// face `bookDeath`), so state stays plain data; keys name their definition, so a fusion's never collide.
     pub grants: IndexMap<&'static str, Hook>,
     pub aura: Option<AuraHook>,
     pub triggers: Vec<TriggerDef>,
@@ -1104,17 +987,14 @@ pub struct Script {
     /// The play-time choices this card declares (R81).
     pub targets: Vec<TargetDecl>,
     pub modes: Vec<ModeDecl>,
-    /// R831008: which options of the card's own declared modes may be chosen now — a pure read of
-    /// the board, asked by `legalActions`, the play's refusal and a cast's own pick alike
-    /// (Meditative #98 Showdown: only an empty lane). Absent allows every option.
+    /// R831008: which of the card's own declared modes may be chosen now (Meditative #98 Showdown: only an
+    /// empty lane), asked by `legalActions`, the play's refusal and a cast's own pick alike.
     pub mode_allowed: Option<ModeAllowedHook>,
-    /// R1851000: whether the card may be played now, for a card whose play needs something on the
-    /// board to act on though it declares no target its play needs (R703; Meditative #53 Prestige's
-    /// Radiant face: a Radiant enemy card on the field). A pure read of what its player may see
-    /// (§9.1), asked off the face the play resolves (R214, R399) by `legalActions`, the play's refusal
-    /// and the view's `playReason` through one check (`play_choices::play_allowed`), and by a set
-    /// Spell's Reveal (R783006); never by a cast, an Echo repeat or a random cast (R70, R1851001). A
-    /// fusion holds every ingredient's (R1851002). Absent allows the play.
+    /// R1851000: whether the card may be played now, when its play needs something on the board but
+    /// declares no target (R703; Meditative #53 Prestige's Radiant face). It reads what its player may
+    /// see (§9.1), off the face the play resolves (R214, R399), asked by `legalActions`, the refusal,
+    /// `playReason` (`play_choices::play_allowed`) and a set Spell's Reveal (R783006); never by a cast,
+    /// an Echo repeat or a random cast (R70, R1851001). A fusion holds each ingredient's (R1851002).
     pub play_allowed: Option<PlayAllowedHook>,
     /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
     /// play's events, and blanked from an in-flight play the other seat reads.
@@ -1123,194 +1003,143 @@ pub struct Script {
     pub condition_met: Option<ConditionHook>,
     /// R280: the numbers the card's formula comes to now, which `view_for` surfaces as `preview` (§10.8).
     pub preview: Option<PreviewHook>,
-    /// R2321000: the counts the card keeps on Units of the field, which `view_for` surfaces on those
-    /// Units as `tallies` (§10.8).
+    /// R2321000: the counts the card keeps on Units of the field, surfaced on them as `tallies` (§10.8).
     pub tallies: Option<TallyHook>,
-    // ---- Patch v0.2.0 ----
-    /// B3.2, R384: the card's Activate abilities ("Activate:", "Activate N:", "Activate ♾️:"), used by
-    /// the `activate` action while the card acts on the field (`subsystems::activate`).
+    /// B3.2, R384: the card's Activate abilities, used by the `activate` action while it acts on the
+    /// field (`subsystems::activate`).
     pub activations: Vec<ActivationDecl>,
     /// §10.6: the named predicates a declaration's `TargetFilter.check` points at, for a filter no data
     /// field can say (Classic #32's lane rule, #48's lines of code). A pure read, like `conditionMet`.
     pub target_checks: IndexMap<&'static str, TargetCheck>,
-    // play pipeline B (E11, E15). Both are pure reads, like `aura`, asked of a card acting on the field
-    // (the top of its pile, or its backrow card), and both return lists so a fused card carries each
-    // ingredient's (R102). A hook rather than a static flag, so a Degrade or Upgrade of the card's
-    // declared numbers moves what it grants (B3.4), and so a grant can hang on the card's state (Classic
-    // #90 In Too Deep's reward L).
+    // Play pipeline B (E11, E15): hooks, not flags, so a Degrade or Upgrade of the card's declared
+    // numbers moves what it grants and a grant can hang on its state (Classic #90's reward L).
     /// E15, R455: the price rules this card lays on cards while it acts (`cost_rules.rs`).
     pub cost_aura: Option<CostAuraHook>,
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
-    /// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their
-    /// field (`alt_play::reveal_echo_bonus`).
     pub reveal_echo: Option<RevealEchoHook>,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
-    /// also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
-    /// Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards
-    /// are random at pay time (R682), so no action carries them: a play (§10.5 step 2) or an activation
-    /// declaring it pays them as it pays its price, and a prompt answer naming it pays them before it
-    /// goes on (`targeting.rs`, `targeting_point.rs`).
+    /// also discard N cards", 0 or absent none. Random at pay time (R682), so no action carries them: a play
+    /// (§10.5 step 2), activation or prompt answer pays them (`targeting.rs`, `targeting_point.rs`).
     pub targeting_discards: Option<TargetingDiscardsHook>,
-    /// B5 E4, R451: what this card's play records as the card played — the last Spell played (Classic
-    /// #57) and its player's last face-up play. Absent records the card itself; Classic #57 Echo
-    /// returns the Spell it copied, and `None` records nothing (an Echo with nothing to copy).
+    /// B5 E4, R451: what this card's play records as the last Spell played and its player's last face-up
+    /// play: absent, the card itself; Classic #57 Echo returns the Spell it copied, or `None` for nothing.
     pub records_play_as: Option<RecordsPlayAsHook>,
-    // ---- v0.2.0 script hooks, by workstream: activate and turn (E27, E28) ----
-    /// B5 E3, R457: the draw limits this card sets while it acts on the field ("Your opponent can't draw
-    /// more than 1 card each turn": Classic #4, #49). A pure read like an aura, so a card computes its
-    /// number (a declared, tunable one included) from its own instance. The lowest limit on a player holds.
+    // Script hooks by workstream: activate and turn (E27, E28)
+    /// B5 E3, R457: the draw limits this card sets while it acts on the field (Classic #4, #49); the
+    /// lowest limit on a player holds.
     pub draw_limit: Option<DrawLimitHook>,
-    /// R800: the players this card guards from an effect's discard while it acts on the field ("You
-    /// can't be forced to discard cards during your opponent's turn": Meditative #1), relative to its
-    /// controller, as a draw limit's are. A pure read like `draw_limit`; a guarded player's hand loses
-    /// no card to an effect's discard while it is not their turn (`draw::discard_guarded`).
+    /// R800: the players (relative to its controller) whose hand this card, acting on the field, guards
+    /// from an effect's discard while it is not their turn (Meditative #1, `draw::discard_guarded`).
     pub discard_guard: Option<DiscardGuardHook>,
-    // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
-    /// B5 E5, R460: the events this card changes before they happen — a lethal hit on its hero, a heal
-    /// on an enemy, its units' deaths, a card's way to a graveyard, a friendly unit targeted by the
-    /// opponent (`replacements.rs`). Declared as data and decided synchronously, never an effect list.
-    /// The "targeted" entry (`TargetedReplacement`) covers every targeting: attack, play, cast,
-    /// activation and prompt pick.
+    // Script hooks by workstream: damage and combat (E5, E6, E8, E9, E35)
+    /// B5 E5, R460: the events this card changes before they happen (`replacements.rs`), declared as data
+    /// and decided synchronously, never an effect list. The "targeted" entry (`TargetedReplacement`)
+    /// covers every targeting: attack, play, cast, activation and prompt pick.
     pub replacements: Vec<ReplacementDef>,
-    /// B5 E6: what this card does to hits on its controller's hero while it acts on the field — a
-    /// per-hit cap (the lowest of every cap wins, Classic+ #11 Anime Armor) and a divisor applied after
-    /// Armor (several multiply, rounded up once, Classic #75 Argusland). A PURE READ, like `aura`; a
-    /// list, so a fused card carries each ingredient's.
+    /// B5 E6: what this card does to hits on its controller's hero while it acts on the field: a per-hit
+    /// cap (the lowest wins, Classic+ #11 Anime Armor) and a divisor after Armor (several multiply, rounded
+    /// up once, Classic #75 Argusland).
     pub hero_guard: Option<HeroGuardHook>,
-    /// MD-D4, R1120: the combat-only attack modifiers this card lays while it acts on the field. A
-    /// PURE READ, like `aura`; a fused card carries each ingredient's (`subsystems::fuse`).
+    /// MD-D4, R1120: the combat-only attack modifiers this card lays while it acts on the field.
     pub attack_mods: Option<AttackModHook>,
-    /// B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger's First
-    /// Strike "while it has a Plague Counter"), read in the layers with its printed keywords (§10.4), so a
-    /// Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
-    /// back into `unit_view`, or the layers would recurse.
+    /// B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger), read in
+    /// the layers with its printed keywords (§10.4), so a Vanilla takes them. A PURE READ of instance
+    /// data that must never call back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
-    /// "When this attacks" (Classic #13 Boots on the Ground, Classic #45 Nature Titan, Classic+ #73.1
-    /// Classic Golem, Stinkyscape #75 Badger): run for the attacker before any damage of each attack it makes,
-    /// a declared one's once its trap window has closed (before the defender's `allyAttacked`) and a
-    /// forced one's before its combat (R2285000). `ctx.data` holds `{ targetId, forced }`, read with
-    /// `combat::when_attacks_of`. A whole effect list followed by its state check, parkable like any
-    /// (R113); an attack whose attacker or target has left the field after it does not fight (R220).
+    /// "When this attacks" (Classic #13, #45, Classic+ #73.1, Stinkyscape #75): run for the attacker before
+    /// any damage of each attack, a declared one's once its trap window has closed (before the defender's
+    /// `allyAttacked`), a forced one's before its combat (R2285000). Parkable (R113); `ctx.data`:
+    /// `combat::when_attacks_of`. An attacker or target gone after it does not fight (R220).
     pub when_attacks: Option<Hook>,
-    /// "After this attacks" (Classic+ #73.1 Classic Golem, Stinkyscape #38, #91, #92 and #94): run for
-    /// the attacker once the state check that closes each of its combats has run, a declared attack's
-    /// or a forced one's, and only when the attacker is still on the field on the stay it attacked
-    /// from: one that died in the combat, or left the field otherwise, does nothing (R2285001), but
-    /// under `after_attack_even_if_gone`. Not for an attack called off before it fought (R44).
-    /// `ctx.data` holds the combat's facts, read with `combat::after_attack_of`: `{ targetId,
-    /// destroyedIds, survived, forced }`, `survived` true but under `after_attack_even_if_gone`. A
-    /// whole effect list, parkable like any (R113).
+    /// "After this attacks" (Classic+ #73.1, Stinkyscape #38, #91, #92 and #94): run for the attacker
+    /// once the state check closing each of its combats (declared or forced) has run, only while it is
+    /// still on the field on the stay it attacked from (R2285001), unless `after_attack_even_if_gone`;
+    /// never for an attack called off before it fought (R44). `ctx.data`: `combat::after_attack_of`.
     pub after_attack: Option<Hook>,
     /// R2396000: "Whenever this attacks" (Core #32 Prem Panther): `after_attack` runs also for an
     /// attacker that died or left the field in that combat, as the snapshot it fought with
     /// (`prompts::SELF_KEY`), `survived` false.
     pub after_attack_even_if_gone: bool,
-    /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the
-    /// state check that closes each combat it was the target of has run, a declared attack's or a
-    /// forced one's, also when it died there — then on the snapshot it fought with, as a Death hook
-    /// reads its card (R78, R89). Not for a Cleave splash (no attack on it) nor for an attack on
-    /// the hero (MD-C26, R1026). `ctx.data` holds the combat's facts, read with
-    /// `combat::after_attacked_of`: `{ attackerId, forced, attackerSurvived }`. A whole effect
-    /// list, parkable like any (R113).
+    /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the state
+    /// check closing each combat it was the target of (declared or forced) has run, also when it died
+    /// there, then on the snapshot it fought with (R78, R89). Not for a Cleave splash nor an attack on the
+    /// hero (MD-C26, R1026). `ctx.data`: `combat::after_attacked_of`.
     pub after_attacked: Option<Hook>,
-    /// R1849001 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X". Run for this Unit when an effect
-    /// evolves it (`effects::evolve`), and never otherwise. A whole effect list, run resumably like a
-    /// fused card's `fusedInto` (`prompts::run_evolve`).
+    /// R1849001 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X", run for this Unit only when an
+    /// effect evolves it (`effects::evolve`), resumably like `fusedInto` (`prompts::run_evolve`).
     pub evolve: Option<Hook>,
     /// R1849008 (Stinkyscape #14 Arm of the Jempire): "When one of your Units is attacked". Run for each
     /// card acting on the defender's side once a declared attack on one of its Units has come through
-    /// §4.2 step 4's trap window, before its combat, in R68's order — never for an attack on the hero
-    /// or a forced one (R121). `ctx.data` holds `{ attackerId, defenderId }`, read with
-    /// `combat::ally_attacked_of`. A whole effect list, parkable like any (R113).
+    /// §4.2 step 4's trap window, before its combat, in R68's order; never for an attack on the hero or a
+    /// forced one (R121). `ctx.data`: `combat::ally_attacked_of`.
     pub ally_attacked: Option<Hook>,
     /// R2199000 (Training Grounds #31 Level Up!): "After one of your Units attacks". Run for each card
-    /// acting on the attacker's side once the state check that closes each of its combats has run, a
-    /// declared attack's or a forced one's, after the attacker's `afterAttack` and the defender's
-    /// `afterAttacked`, in R68's order — the attacker itself included. Not for an attack called off
-    /// before it fought (R44). `ctx.data` holds `{ attackerId, targetId, forced, survived }`, read with
-    /// `combat::ally_attack_of`. A whole effect list, parkable like any (R113).
+    /// acting on the attacker's side, the attacker included, in R68's order, once the state check closing
+    /// each of its combats (declared or forced) has run, after `afterAttack` and `afterAttacked`; not for
+    /// an attack called off before it fought (R44). `ctx.data`: `combat::ally_attack_of`.
     pub ally_attack: Option<Hook>,
-    // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
-    /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
-    /// its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
-    /// receives the placement — a pure read (a card reads its declared number here, B3.4), floored at 1.
-    /// A fused card's multipliers multiply (`subsystems::fuse`).
+    // Script hooks by workstream: prompts and generation (E13, E19, E26)
+    /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime): what each
+    /// placement is multiplied by as it lands, floored at 1; a fusion's multiply (`subsystems::fuse`).
     pub plague_multiplier: Option<PlagueMultiplierHook>,
-    /// R802: a computed Echo X ("Echo X … X is 2 times your max mana": Meditative #5), read once as the
-    /// card is played, when its Echo repeats are queued (§10.5 step 4), so X stays fixed while it
-    /// resolves. A pure read; the larger of it and `staticFlags.echo` is the card's printed Echo, which
-    /// its "Echo" tuning step and a Twinspell grant then add to (`echo::printed_echo`).
+    /// R802: a computed Echo X (Meditative #5), read once as the card is played, when its Echo repeats are
+    /// queued (§10.5 step 4), so X stays fixed while it resolves. The larger of it and
+    /// `staticFlags.echo` is the printed Echo, which tuning and Twinspell add to (`echo::printed_echo`).
     pub echo_x: Option<EchoXHook>,
-    /// B5 E26, R464: triggers this card answers while it lies in its owner's library ("While this is in
-    /// your deck: …", Classic+ #37 Wardrum). A library card is hidden (§9.1), so its queue entries take
-    /// no number (R177), and within a side they come after the hand's and before the graveyard's, in the
-    /// order the instances were created — never by library position (`triggers::trigger_holders_of`).
+    /// B5 E26, R464: triggers this card answers while in its owner's library (Classic+ #37 Wardrum). It is
+    /// hidden (§9.1), so its queue entries take no number (R177) and, within a side, follow the hand's and
+    /// precede the graveyard's in creation order, never library order (`triggers::trigger_holders_of`).
     pub deck_triggers: Vec<TriggerDef>,
-    /// B5 E26: triggers this card answers while it lies in a graveyard ("While this is in your
-    /// graveyard: when one of your Traps reveals, return this", Classic #47). R153's other graveyard
-    /// answer, the end-of-turn return, stays the `endOfTurn` hook's.
+    /// B5 E26: triggers this card answers while it lies in a graveyard (Classic #47). R153's other
+    /// graveyard answer, the end-of-turn return, stays the `endOfTurn` hook's.
     pub graveyard_triggers: Vec<TriggerDef>,
-    /// B5 E33, R404: the card's quest tree (Classic #90 In Too Deep) — its quests, what completes each and
-    /// the rewards each offers, as data. `subsystems::quests` keeps the count on the instance
-    /// (`memory.quest`), opens the first quest as the card enters the field and reports each completion
-    /// (`questCompleted`), which the card's own trigger answers with its rewards.
+    /// B5 E33, R404: the card's quest tree (Classic #90 In Too Deep), as data: `subsystems::quests` opens
+    /// it as the card enters, counts on `memory.quest` and reports `questCompleted` to the card's trigger.
     pub quests: Option<QuestBook>,
-    /// R1854000: a staged quest's stages, in order (Stinkyscape #7 The Greatest Heist, #112 Job
-    /// Application), for a card that declares no `quests`: its line runs on `staged_book(stages)`, one
-    /// stage open at a time, the first as the card enters; the current stage is public on the card.
+    /// R1854000: a staged quest's stages, in order (Stinkyscape #7, #112 Job Application), for a card with
+    /// no `quests`: it runs on `staged_book(stages)`, one public stage open at a time, the first on entry.
     pub stages: Vec<QuestStage>,
-    // ---- v0.2.0 script hooks, by workstream: Classic #46–#90 (card-specific, cards-classic-b) ----
+    // Script hooks by workstream: Classic #46–#90 (card-specific, cards-classic-b)
     /// Classic #88 Siphon Squad, R403: "When …, Tribute this" — a condition on the card's own text that
     /// every state check reads (§4.5), the one right after the card arrives included; while it holds, the
-    /// card acting on the field (face-down too) is sacrificed (`state_check.rs`). A PURE READ, like `aura`.
+    /// card acting on the field (face-down too) is sacrificed (`state_check.rs`).
     pub tribute_when: Option<TributeWhenHook>,
-    /// Classic #87 Plague Chalice, R667: the static half of a counter the card's own trigger makes —
-    /// whether that trigger, the card standing as it does now, would counter a play `player` makes
-    /// paying `costPaid`. The trigger asks the same predicate, so the two cannot disagree, and
-    /// `counter_warning.rs` reads it to warn the viewer off a hand card (`counteredOnPlay`, §10.8). A
-    /// PURE READ, like `tributeWhen`.
+    /// Classic #87 Plague Chalice, R667: whether the card's own trigger would now counter a play `player`
+    /// makes paying `costPaid`. A PURE READ the trigger asks too, so they agree; `counter_warning.rs`
+    /// reads it to warn the viewer off a hand card (`counteredOnPlay`, §10.8).
     pub would_counter: Option<WouldCounterHook>,
-    /// Classic #62 Living Bomb, R400: "At the start of your opponent's turn" — the `startOfTurn` hook of
-    /// the other side, queued right after the active player's at R62's start-of-turn trigger point, so
-    /// R68's order (the active player's cards, then the opponent's) holds.
+    /// Classic #62 Living Bomb, R400: "At the start of your opponent's turn": the other side's `startOfTurn`,
+    /// queued right after the active player's at R62's trigger point, so R68's order holds.
     pub start_of_opponent_turn: Option<Hook>,
-    // ---- Meditative (R1420) ----
-    /// ME-TRIG, R820, R821 (Meditative #9 Joint Filing): "Your Start of turn and End of turn effects
-    /// trigger N additional times" — N now, asked of the card acting on its controller's field as their
-    /// start-of-turn or end-of-turn hooks are queued (`multipliers::extra_runs`). A PURE READ, like
-    /// `aura`, so a Nerf or Buff of the declared number moves it; several cards do not add, the highest
-    /// holds.
+    // Meditative (R1420)
+    /// ME-TRIG, R820, R821 (Meditative #9 Joint Filing): N extra runs of its controller's start- and
+    /// end-of-turn hooks, asked as they are queued (`multipliers::extra_runs`); the highest N holds.
     pub turn_hook_extra: Option<TriggerExtraHook>,
-    /// ME-TRIG, R822, R823 (Meditative #10 Double Counting): "Your Cry and Death effects trigger N
-    /// additional times" — N now, asked as a permanent's Cry runs for its controller and as the cards a
-    /// state check collects have left the field. A PURE READ; the highest holds.
+    /// ME-TRIG, R822, R823 (Meditative #10 Double Counting): N extra runs of its controller's Cry and Death
+    /// effects, asked as a permanent's Cry runs and as a state check's dead have left; the highest N holds.
     pub cry_death_extra: Option<TriggerExtraHook>,
-    // ---- R1487000 ----
     /// R1487000, R767000: the card's lasting text works while it is set face-down, as R403's first
     /// reading had it. Only a kept script sets it (C #88 Siphon Squad's v0.3.7b), so its replays fold
     /// as they played; every other card's sleeps there (`preview::lasting_text_dormant`).
     pub live_face_down: bool,
-    // ---- Card-on-card verbs (#1850) ----
-    /// R1850002: "Exile all …" as a lasting text, an aura that exiles rather than buffs: while the card
-    /// acts on the field (face-up), every state check exiles each card on the field each entry reaches
-    /// (`card_on_card::exile_by_auras`). A list, so a fused card carries each ingredient's.
+    // Card-on-card verbs (#1850)
+    /// R1850002: "Exile all …" as a lasting text: while the card acts face-up on the field, every state
+    /// check exiles each card on the field each entry reaches (`card_on_card::exile_by_auras`).
     pub exile_auras: Vec<ExileAura>,
     /// R1850005: "When this has N or more keywords, make it Radiant" — the N, read at every state check
     /// against the card's distinct keyword kinds through the layers (`card_on_card::radiant_by_keywords`).
     pub radiant_at_keywords: Option<i32>,
-    // ---- Stinkyscape's trade cards (#1864) ----
+    // Stinkyscape's trade cards (#1864)
     /// R1864004: the Trades a turn this card gives its controller while it acts on their field, read by
-    /// `trade::trades_per_turn_of`. A PURE READ, like `aura`, so a Nerf or Buff of the declared number
-    /// moves it; several cards do not add, the most holds.
+    /// `trade::trades_per_turn_of`; several cards do not add, the most holds.
     pub trades_per_turn: Option<TradesPerTurnHook>,
 }
 
-/// R1850002: one exile aura — the cards on the field it reaches (`scope`, read for the card as an
-/// enemy's harm would read it, so Stealth and Immune keep theirs), when set, the cost they must pass
-/// (`cost`, read as R66's sweeps read it), and the keyword kinds that spare a card that has one through
-/// the layers (`not_keywords`: Scornboi's Starship Piece and Starship, R1852000, R1852003). The card
-/// itself and a face-down card are never reached.
+/// R1850002: one exile aura: the cards on the field it reaches (`scope`, read as an enemy's harm reads
+/// it, so Stealth and Immune keep theirs), the cost they must pass when set (`cost`, as R66's sweeps read
+/// it) and the keyword kinds that spare a card through the layers (`not_keywords`: Scornboi's Starship
+/// Piece and Starship, R1852000, R1852003). The card itself and a face-down card are never reached.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct ExileAura {
     pub scope: crate::effects::BoardScope,
@@ -1319,11 +1148,8 @@ pub struct ExileAura {
 }
 
 impl Script {
-    /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
-    /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
-    /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "whenAttacks", "afterAttack",
-    /// "afterAttacked", "evolve", "allyAttacked", "startOfOpponentTurn".
-    /// `None` for any other name or an absent hook.
+    /// The effect-list hook a string names (a work step, a trigger point, `Resume.hook`), by its field's
+    /// camelCase name; `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
             "cry" => self.cry.as_ref(),
@@ -1346,7 +1172,7 @@ impl Script {
         }
     }
 
-    /// `script.staticFlags ?? {}`.
+    /// The static flags, all unset when the script declares none.
     pub fn flags(&self) -> StaticFlags {
         self.static_flags.clone().unwrap_or_default()
     }
@@ -1413,18 +1239,12 @@ pub struct ActivationCost {
     pub mana_param: Option<&'static str>,
 }
 
-/// B3.2, R384: one Activate ability. `uses` is "Activate" (1), "Activate N" (N) or "Activate ♾️"
-/// ("unlimited", bounded by `ACTIVATE_UNLIMITED_CAP`); Degrade and Upgrade move a number by the tuning
-/// key "Activate" (B3.4). `cost` is what the ability pays as it is activated — mana (Heroic Power's
-/// "spend (X)", which the Heroic Power patch moves here), a random discard (Classic #15), a Tribute of
-/// the controller's units (Classic #21, the card itself allowed), or the card itself (Classic #84).
-/// `targets` and `modes` travel in the action as a play's do (R81). `canActivate` is a pure read for a
-/// condition the text sets (Classic #7: "that Spell" must exist). `run` is the effect.
-///
-/// R384: `cost.tribute` counts units, one each — "Tribute a Unit" is one unit, so a Sheep Token's
-/// "worth 2" does not stretch it (that worth counts only toward a play's Tribute X, §6.3). The card
-/// itself may be one of them when it is a Unit. `tributeSelf` is "Tribute this", which bypasses
-/// Indestructible as every Sacrifice does (§6.3).
+/// B3.2, R384: one Activate ability. "unlimited" `uses` is bounded by `ACTIVATE_UNLIMITED_CAP`, and the
+/// tuning key "Activate" moves a number (B3.4). `cost` may be mana, a random discard (Classic #15), a
+/// Tribute (Classic #21) or the card itself (Classic #84); `targets` and `modes` travel as a play's do
+/// (R81); `canActivate` is a pure read (Classic #7). `cost.tribute` counts units, one each (a Sheep Token's
+/// "worth 2" counts only toward a play's Tribute X, §6.3); `tributeSelf` bypasses Indestructible as every
+/// Sacrifice does.
 #[derive(Clone)]
 pub struct ActivationDecl {
     pub id: String,
@@ -1434,25 +1254,22 @@ pub struct ActivationDecl {
     pub targets: Vec<TargetDecl>,
     pub modes: Vec<ModeDecl>,
     pub can_activate: Option<ConditionHook>,
-    /// Whether the card has this ability now, when that depends on the instance — an ability it lacks is
-    /// neither listed, shown nor accepted. The Heroic Power patch declares one ability per power and
-    /// has only the one it rolled (B3.2 rule 10). Absent: always.
+    /// Whether the card has this ability now, when that depends on the instance: one it lacks is neither
+    /// listed, shown nor accepted (Heroic Power has only the power it rolled, B3.2 rule 10). Absent: always.
     pub has: Option<HasHook>,
     pub run: Hook,
 }
 
-/// R384: the `Resume.hook` an ability's own effect list runs under, `activation:<id>`, so a tail a
-/// prompt parks comes back to the same ability (`work::script_step_for`), as a trigger's comes back by
-/// its id. Distinct from every `Script` key.
+/// R384: the `Resume.hook` an ability's effect list runs under (`activation:<id>`), so a tail a prompt
+/// parks comes back to it (`work::script_step_for`). Distinct from every `Script` key.
 pub const ACTIVATION_HOOK_PREFIX: &str = "activation:";
 
 pub fn activation_hook(id: &str) -> String {
     format!("{ACTIVATION_HOOK_PREFIX}{id}")
 }
 
-/// R384, R102: a face's abilities with ids made unique — a card fused from two Activate cards has both
-/// abilities, and the second of two that share an id is `<id>#2` — so the `activate` action, the view
-/// and a resumed tail all name the same one. Order is the face's own.
+/// R384, R102: a face's abilities in its order, ids made unique (a fusion's second `power` is `power#2`),
+/// so the `activate` action, the view and a resumed tail all name the same one.
 pub fn activation_decls(script: &Script) -> Vec<ActivationDecl> {
     let mut seen: IndexMap<String, i32> = IndexMap::new();
     script
@@ -1495,12 +1312,10 @@ pub struct DrawLimit {
 
 pub type DrawLimitHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<DrawLimit> + Send + Sync>;
 
-/// R800: the players a card guards from an effect's discard, each relative to its controller.
 pub type DiscardGuardHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<DrawLimitPlayer> + Send + Sync>;
 
-/// §10.6: a card-specific target predicate's argument (`TargetFilter.check`). `candidate` is the card a
-/// declaration would offer (`None` for a hero or a zone), `self_` the card declaring it, `player` the
-/// chooser.
+/// `TargetCheck`'s argument. `candidate` is the card a declaration would offer (`None` for a hero or a
+/// zone), `self_` the card declaring it, `player` the chooser.
 #[derive(Clone, Copy)]
 pub struct TargetCheckArgs<'a> {
     pub state: &'a GameState,
@@ -1511,20 +1326,15 @@ pub struct TargetCheckArgs<'a> {
     pub selection: &'a Selection,
 }
 
-/// §10.6: a card-specific target predicate (`TargetFilter.check`). A pure read: no writes, no rng.
+/// §10.6: a card-specific target predicate (`TargetFilter.check`). A pure read.
 pub type TargetCheck = Arc<dyn for<'a> Fn(TargetCheckArgs<'a>) -> bool + Send + Sync>;
 
-/// Builds a `TargetCheck`.
 pub fn target_check(f: impl for<'a> Fn(TargetCheckArgs<'a>) -> bool + Send + Sync + 'static) -> TargetCheck {
     Arc::new(f)
 }
 
-// ---------------------------------------------------------------------------------------------
-// B5 E5, E9 (damage and combat): what `Script.replacements` holds (TS `replacements.ts`, which
-// `script.ts` re-exported beside `Script`) — above all the "targeted" declaration, the one
-// declaration of "a friendly unit is targeted" that an attack, a play, a cast, an activation and a
-// prompt pick all answer through (`replacements::answer_targeting`).
-// ---------------------------------------------------------------------------------------------
+// B5 E5, E9 (damage and combat): what `Script.replacements` holds, above all the "targeted" one every
+// targeting answers through (`replacements::answer_targeting`).
 
 string_union! {
     /// The five points an event can be replaced at.
@@ -1612,7 +1422,6 @@ pub enum ReplacedEvent {
 }
 
 impl ReplacedEvent {
-    /// `event.moment`.
     pub fn moment(&self) -> ReplacementMoment {
         match self {
             ReplacedEvent::LethalHit { .. } => ReplacementMoment::LethalHit,
@@ -1635,7 +1444,7 @@ string_union! {
     }
 }
 
-/// What a replacement's `when` reads: a PURE READ, like `conditionMet` — no writes, no rng.
+/// What a replacement's `when` reads: a PURE READ.
 #[derive(Clone, Copy)]
 pub struct ReplacementContext<'a> {
     pub state: &'a GameState,
@@ -1643,14 +1452,13 @@ pub struct ReplacementContext<'a> {
     /// The card's controller: "your" in its text (§8 Conventions).
     pub controller: PlayerId,
     pub radiant: bool,
-    /// Always the moment the declaration is `on` (TS narrowed the type; here the variant says it).
+    /// Always the moment the declaration is `on`.
     pub event: &'a ReplacedEvent,
 }
 
 /// `ReplacementDef.when`.
 pub type ReplacementWhen = Arc<dyn for<'a> Fn(ReplacementContext<'a>) -> bool + Send + Sync>;
 
-/// Builds a `ReplacementWhen`.
 pub fn replacement_when(
     f: impl for<'a> Fn(ReplacementContext<'a>) -> bool + Send + Sync + 'static,
 ) -> ReplacementWhen {
@@ -1704,7 +1512,7 @@ string_union! {
 }
 
 /// What a replacement does instead. The moment fixes which keys it may set (see `ReplacementDef`);
-/// data, so a card may write it as the TS literal (`json_as(json!({ "to": "exile" }))`).
+/// data, so a card may write it as a literal (`json_as(json!({ "to": "exile" }))`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -1732,24 +1540,17 @@ pub struct ReplacementInstead {
 }
 
 /// One replacement a card makes. The moment fixes what `instead` may say:
-///  - `lethalHit`: `redirect: "enemyHero"` — the hit moves to the enemy hero as a new instance from
-///    the same source, through that hero's Armor and caps (E9). Answers only for its own hero.
-///    `redirect: "self"` — the hit moves to the replacing card itself as a new instance from the
-///    same source, through its own pipeline (ME-LETHALGUARD, R1204). Answers for its controller's
-///    hero and other Units, once each per hit. `cancel: true` — the hit is canceled and deals
-///    nothing (Classic #52 Final Gambit, R1704001). Answers only for its own hero.
-///  - `healed`: `damage: "pierce"` — the heal becomes that much Pierce damage from this card (E8);
-///    `lasting: "thisTurn"` also converts every later heal on its enemies this turn (a player
-///    modifier). Answers only a heal on its controller's enemies.
-///  - `wouldDie`: `flicker: "yours"` — its controller's units among the dying flicker instead (E22):
-///    back in their zones at once, reset, summoning sick, no Death, no Reborn. One firing for them all.
-///    `resolveFirst: true` — its `then` resolves at once, before any card moves, and the check starts
-///    over, judging every unit again on the board the step left (Stinkyscape #138, R1875006, R460).
-///  - `toGraveyard`: `to` — exile, or the bottom of the owner's library.
-///  - `targeted`: `interpose: true` — summon this from its controller's hand (leftmost open unit
-///    zone; with none it does nothing), no Cry, summoning sick, and the attack or pick moves to it.
-///    Answers only its controller's unit targeted by the other player (`TargetedReplacement`); `by:
-///    "spell"` answers only a targeting whose `source` is a Spell (Classic #33 Joro, R651).
+///  - `lethalHit`: `redirect: "enemyHero"` (E9) moves the hit, as a new instance, through the enemy hero's
+///    Armor and caps; it and `cancel` (Classic #52, R1704001) answer only for its own hero, and
+///    `redirect: "self"` (R1204) for its controller's hero and other Units, once each per hit.
+///  - `healed`: `damage: "pierce"` turns the heal into Pierce damage from this card (E8), and
+///    `lasting: "thisTurn"` every later heal on its enemies this turn; answers only a heal on its enemies.
+///  - `wouldDie`: `flicker: "yours"` (E22) sends its controller's dying units back to their zones at once,
+///    reset and summoning sick, no Death, no Reborn; or `resolveFirst` (#138, R1875006, R460).
+///  - `toGraveyard`: `to`, exile or the bottom of the owner's library.
+///  - `targeted`: `interpose: true` summons this from its controller's hand to the leftmost open unit zone
+///    (none: nothing), summoning sick, and the attack or pick moves to it; answers only its controller's
+///    unit targeted by the other player, and `by` narrows it (Classic #33 Joro, R651).
 #[derive(Clone)]
 pub struct ReplacementDef {
     pub id: String,
@@ -1761,17 +1562,14 @@ pub struct ReplacementDef {
     pub instead: ReplacementInstead,
     /// A step of the card's `resume` table resolved after the replaced event, owed on `state.work`.
     pub then: Option<String>,
-    /// R651 (on `targeted` only): when present, the replacement answers only a targeting by this kind of card.
+    /// R651 (on `targeted` only): when present, it answers only a targeting by this kind of card.
     pub by: Option<ReplacementBy>,
 }
 
-/// B5 E5, E9: THE declaration of "a friendly unit is targeted" (Classic #33 Joro): a `ReplacementDef`
-/// whose `on` is `Targeted` (TS narrowed the type; here `on` says it).
+/// B5 E5, E9: THE "a friendly unit is targeted" declaration (Classic #33 Joro): `on` is `Targeted`.
 pub type TargetedReplacement = ReplacementDef;
 
-// ---------------------------------------------------------------------------------------------
-// B5 E33, R404: quests (TS `subsystems/quests.ts`), the data `Script.quests` holds.
-// ---------------------------------------------------------------------------------------------
+// B5 E33, R404: quests, the data `Script.quests` holds.
 
 /// What completes a quest (`subsystems::quests`):
 ///
@@ -1890,11 +1688,9 @@ pub struct QuestBook {
     pub rewards: Vec<QuestRewardDef>,
 }
 
-/// R1854000: one stage of a staged quest (`Script.stages`; Stinkyscape #7 The Greatest Heist, #112 Job
-/// Application): its name, its goals and its reward. A stage of one goal opens that goal; a stage of
-/// several draws one of them from the match rng as it opens (Job Application's Interview). The reward
-/// is the card's own effects, which its trigger on its own `questCompleted` returns
-/// (`subsystems::completed_stage_of` names the stage); `reward.text` is what the view shows of it.
+/// R1854000: one stage of a staged quest (`Script.stages`): a single goal opens as is, one of several is
+/// drawn from the match rng as it opens (Job Application's Interview). The reward is the card's own
+/// effects, from its trigger on its own `questCompleted` (`subsystems::completed_stage_of`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct QuestStage {
@@ -1921,10 +1717,9 @@ pub struct QuestStageReward {
     pub text: String,
 }
 
-/// R1854000: the quest book a staged quest's line runs on: every stage's goals as its quests, each
-/// offering its stage's reward, and no reward naming a next quest, since the card's reward effects
-/// move the line on (`effects::next_stage`, `effects::hear_back`, `effects::open_stage`). `first` is
-/// the first stage's first goal.
+/// R1854000: the quest book a staged quest's line runs on: every stage's goals as quests, each offering
+/// its stage's reward, none naming a next quest, since the card's reward effects move the line on
+/// (`effects::next_stage`, `effects::hear_back`, `effects::open_stage`).
 pub fn staged_book(stages: &[QuestStage]) -> QuestBook {
     QuestBook {
         first: stages
@@ -1954,8 +1749,6 @@ pub fn staged_book(stages: &[QuestStage]) -> QuestBook {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-
 /// A card's two scripts (SURFACE §7.1): the base face's and the radiant face's.
 #[derive(Clone, Default)]
 pub struct CardScripts {
@@ -1963,7 +1756,7 @@ pub struct CardScripts {
     pub radiant: Script,
 }
 
-/// TS `EMPTY_SCRIPT = {}`: a script with no hook, no declaration and no flag.
+/// A script with no hook, no declaration and no flag.
 pub fn empty_script() -> Script {
     Script::default()
 }

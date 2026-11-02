@@ -1,6 +1,4 @@
-// The deck workshop's pure facts (SPEC §9.4, R250–R253): a deck row's status chip, the validator's
-// verdicts on a deck and a trio, which cards the compared decks hold, the editor's two moves on a
-// deck's cards, and the names a new deck or trio starts with.
+// The deck workshop's pure facts (SPEC §9.4, R250–R253).
 //
 // No rule lives here (CLAUDE.md rule 7): `validateDeck`, `validateTrio` and `trioConflicts` (R251: a
 // card is its catalog id) decide. This module hands them the decks under their saved names and never
@@ -33,12 +31,11 @@ export function joinNames(names: readonly string[]): string {
   return t("{rest} and {last}", { rest: names.slice(0, -1).join(t(", ")), last: names.at(-1) ?? "" });
 }
 
-/** "1 card", "3 cards". */
 export function cardsWord(count: number): string {
   return count === 1 ? t("{count} card", { count }) : t("{count} cards", { count });
 }
 
-/** Card names as the reader reads them, listed as a sentence: "Bigot, Fruit Bat and Coin Toss". */
+/** Card names as the reader reads them, listed as a sentence. */
 export function cardNames(ids: readonly string[], catalog: CatalogSnapshot): string {
   return joinNames(
     ids.map((id) => {
@@ -84,9 +81,9 @@ function fitName(name: string, make: (name: string) => string, max: number): str
 }
 
 /**
- * #2096: a duplicate's name, `<name> (copy)`, then `<name> (copy 2)`, `(copy 3)`, …: the first no name
- * in `taken` uses (trimmed, any case, as `nextName` compares). `name` is cut so the whole fits in
- * `nameLength`, or the save's own cut (D1) would take the "(copy)" off again.
+ * #2096: a duplicate's name, `<name> (copy)`, then `<name> (copy 2)`, …: the first no name in `taken`
+ * uses. `name` is cut so the whole fits in `nameLength`, or the save's own cut (D1) would take the
+ * "(copy)" off again.
  */
 export function copyName(name: string, taken: readonly string[], nameLength: number): string {
   const used = new Set(taken.map((other) => other.trim().toLowerCase()));
@@ -131,8 +128,7 @@ export type DeckStatusKind = "ready" | "complete" | "incomplete" | "unowned" | "
 export type DeckStatus = { kind: DeckStatusKind; label: string };
 
 /**
- * The deck row's chip: "Ready" (may queue), "Incomplete" (L2), "N not owned" (L5 only) or "Needs a
- * fix" (anything else). With no collection a legal deck is "Complete", not "Ready". R915005's L7 says
+ * The deck row's chip. With no collection a legal deck is "Complete", not "Ready". R915005's L7 says
  * where a deck plays, not what it lacks (`practiceOnly` badges it), so a deck that breaks only L7 is
  * "Complete", never "Ready". The label is in the reader's language, so call it at render time.
  */
@@ -213,7 +209,6 @@ export type Compare =
 
 export const NO_COMPARE: Compare = { kind: "none" };
 
-/** The trios that hold `deckId` in a slot. */
 export function triosHolding(deckId: string, trios: readonly TrioItem[]): readonly TrioItem[] {
   return trios.filter((trio) => trio.deckIds.includes(deckId));
 }

@@ -1,6 +1,5 @@
 // Handing a made GIF over (#513, R513000): the share sheet where it takes the file, a download
-// elsewhere, and nothing sent anywhere. The share API is stubbed on `navigator` as the room link's
-// tests stub it (`net/roomLink.test.ts`).
+// elsewhere, and nothing sent anywhere.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +14,6 @@ function stub(name: "share" | "canShare", value: unknown): void {
 
 let createObjectURL: ReturnType<typeof vi.fn>;
 let revokeObjectURL: ReturnType<typeof vi.fn>;
-/** The downloads started: the name and the address of each clicked link. */
 let downloads: { name: string; href: string }[];
 
 beforeEach(() => {

@@ -1,9 +1,5 @@
-// The XP reveal (#1664), from crafted answers: a track fills from where a game found it, its level
-// pops as the bar bursts and the server's rewards for it fly out one by one with the sting; levels
-// chain in order, each bar the size the answer gives; a quest the game completed is listed with its
-// pay; reduced motion shows the end state and every reward at once. The audio engine is the recording
-// fake the opening bars' tests use; fake timers move everything. No number here is a shipped one: a
-// test that finds one on screen has found the answer's.
+// The XP reveal (#1664), from crafted answers. No number here is a shipped one: a test that finds one
+// on screen has found the answer's.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -108,7 +104,6 @@ describe("#1664 a track that gains a level", () => {
     expect(level()).not.toHaveClass("xp-reveal__level--pop");
     expect(rewards()).toEqual([]);
 
-    // It bursts: the level pops and the rewards start to fly out.
     advance(segmentMs({ from: 60, to: 100, burst: true }, 100));
     expect(bar()).toHaveAttribute("data-state", "bursting");
     expect(level()).toHaveAttribute("data-level", "2");
@@ -130,7 +125,6 @@ describe("#1664 a track that gains a level", () => {
     expect(level()).toHaveAttribute("data-level", "2");
     expect(rewards()).toEqual(["25 Jlore"]);
 
-    // It rests where the answer says, the rest of the rewards still to fly out, each with its sting.
     advance(segmentMs({ from: 0, to: 30, burst: false }, 200));
     expect(track()).toHaveAttribute("data-state", "done");
     expect(bar()).toHaveAttribute("data-state", "resting");
@@ -161,7 +155,6 @@ describe("#1664 a track that gains a level", () => {
     show([twoLevels()]);
     expect(level()).toHaveAttribute("data-level", "1");
 
-    // The first bar to full: level 2, and its Jlore.
     advance(segmentMs({ from: 60, to: 100, burst: true }, 100));
     expect(level()).toHaveAttribute("data-level", "2");
     advance(REVEAL_STAGGER_MS);

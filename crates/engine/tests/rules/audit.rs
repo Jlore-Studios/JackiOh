@@ -1,8 +1,5 @@
-//! C+ #44 Simplicity Audit and #45 Complexity Audit's sweep (`subsystems/audit.ts`, SPEC §8.7 rows 44
-//! and 45, E36), through test-only definitions carrying their own `loc`. The real cards are proved in
-//! packages/cards (test/classic-plus/044-simplicity-audit.test.ts, 045-complexity-audit.test.ts).
-//!
-//! Port of `packages/engine/test/audit.test.ts`.
+//! C+ #44 Simplicity Audit and #45 Complexity Audit's sweep (SPEC §8.7 rows 44 and 45, E36), through
+//! test-only definitions carrying their own `loc`.
 
 use jackioh_engine::subsystems::audit::{AuditArgs, audit_targets, lines_of_code};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
@@ -11,7 +8,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{new_game, put, slot};
 
-/// TS `{ ...base, ...extra }`: a shallow merge of two object literals.
+/// A shallow merge of two JSON objects.
 fn merged(base: Value, extra: Value) -> Value {
     let mut out = base;
     if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {

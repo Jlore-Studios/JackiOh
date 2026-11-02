@@ -1,25 +1,19 @@
-// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the
-// catalog (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases
-// resolve to crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no
-// server is asked. Presentation only (CLAUDE.md rule 7): no rule reads them.
+// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the catalog
+// (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases resolve to
+// crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no server is asked.
+// Presentation only (CLAUDE.md rule 7): no rule reads them.
 //
-// The first table is keyed by catalog id: each card's and token's name and both faces' texts, each
-// text with exactly the `{key}`s its English face has (an English `{key|singular|plural}` is a plain
-// `{key}` there, a measure word beside it), and for a card that previews a formula (R280) its labels,
-// English template to Chinese template (`previews`). It is written in each card's `zh` in
+// The first table is keyed by catalog id: each card's and token's name and both faces' texts, each text with
+// exactly the `{key}`s its English face has (an English `{key|singular|plural}` is a plain `{key}` there, a
+// measure word beside it), and its preview labels (`previews`). It is written in each card's `zh` in
 // crates/cards/card-text.yaml (#2498), which crates/tools/tests/export_card_text.rs turns into
-// `chinese.json`; its `"//"` entry says so and is dropped here. The second holds the frame's words:
-// the types, tags, rarities and keywords, the labels, "Radiant" and "Created", and the glossary's
-// entries by GLOSSARY's ids (R1303). crates/cards' cross tests hold both to their contract;
-// chinese.test.tsx proves the glossary names exactly GLOSSARY's entries.
+// `chinese.json`; its `"//"` entry says so and is dropped here. The second holds the frame's words.
+// crates/cards' cross tests hold both to their contract; chinese.test.tsx proves the glossary names exactly
+// GLOSSARY's entries.
 //
-// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), so every face of
-// it in a match, whatever the reader's language, and for a reader who reads Chinese (R711000) every
-// card is drawn from these tables, in a match and in the collection alike. A fused card
-// (R468) has no entry of its own, and its Chinese is its ingredients', joined as the engine joins
-// their English (crates/engine/src/subsystems/fuse.rs). A definition with no entry and no
-// ingredients (the hidden sentinel, Craft a Card's) keeps its English, and so does Glitch, whose
-// words stay corrupted in every language (glitch.ts).
+// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), whatever the reader's
+// language, and for a reader who reads Chinese (R711000) every card is drawn from these tables, in a match
+// and in the collection alike.
 
 import chineseJson from "@jackioh/cards/chinese.json";
 import termsJson from "@jackioh/cards/chinese-terms.json";
@@ -71,7 +65,7 @@ export const CHINESE: Readonly<Record<string, ChineseEntry>> = entries;
 
 export const CHINESE_TERMS: ChineseTerms = termsJson;
 
-/** A language's card tables: its cards' words and the frame's, the pair of sidecars beside the catalog (R1303). */
+/** A language's card tables: the pair of sidecars beside the catalog (R1303). */
 export type CardTable = { readonly cards: Readonly<Record<string, ChineseEntry>>; readonly terms: ChineseTerms };
 
 /** The card tables by locale (R711000): a reader whose language has none reads the catalog's English. */
@@ -80,17 +74,15 @@ export const CARD_TABLES: Readonly<Partial<Record<Locale, CardTable>>> = {
 };
 
 /**
- * R711000: whether a card is drawn from the Chinese table: the view flagged it (R1301, whatever the
- * reader's language), or the reader reads Chinese, so every card they see is Chinese. Read where a
- * face or a name is built, never cached across a language switch.
+ * R711000: whether a card is drawn from the Chinese table: the view flagged it, or the reader reads
+ * Chinese. Read where a face or a name is built, never cached across a language switch.
  */
 export function drawnInChinese(flagged: boolean): boolean {
   return flagged || isZhCn();
 }
 
 /**
- * R711000: the frame's words (types, tags, rarities, keywords, labels, the glossary) in the reader's
- * language, or undefined where it has no card table and the catalog's English is what is read. Read
+ * R711000: the frame's words in the reader's language, or undefined where it has no card table. Read
  * where a label is built, never cached across a language switch.
  */
 export function readerTerms(): ChineseTerms | undefined {
@@ -127,11 +119,9 @@ function ingredientEntries(def: CardDef): { entry: ChineseEntry; radiant: boolea
 }
 
 /**
- * R1301: `def` with its name and both faces' texts in Chinese, everything else as it is. A fused
- * definition's are its ingredients' joined as the engine joins the English: the names with " + ",
- * the base text their faces line by line (R469: an ingredient fused on its Radiant face puts that
- * face in the base form too) and the Radiant text their Radiant faces. Any other definition with
- * no entry, and Glitch, comes back as given.
+ * R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its ingredients'
+ * joined as crates/engine/src/subsystems/fuse.rs joins the English (R469: one fused on its Radiant face puts
+ * that face in the base text too). Any other with no entry, and Glitch (glitch.ts), comes back as given.
  */
 export function chineseDef(def: CardDef): CardDef {
   if (isGlitch(def.id)) return def;
@@ -168,10 +158,9 @@ export function chineseKeyword(keyword: Keyword): string {
 }
 
 /**
- * R280, R1301: a preview label in Chinese. The card's templates (its own, or a fused card's
- * ingredients') are filled with the numbers its face is filled with (`fillParams`, the values in
- * play over the printed ones): the one whose English fill is `label` gives its Chinese template,
- * filled the same way. A label no template fills comes back as it is.
+ * R280, R1301: a preview label in Chinese: of the card's templates (its own or its ingredients'), filled as
+ * its face is (`fillParams`), the one whose English fill is `label` gives its Chinese template, filled the
+ * same way. A label no template fills comes back as it is.
  */
 export function chinesePreviewLabel(
   def: CardDef,
@@ -192,9 +181,8 @@ export function chinesePreviewLabel(
 }
 
 /**
- * R711000: a keyword or glossary term as the reader reads it, from the English a tuning change carries
- * ("Rush", "Armor 2", "Echo"): its word in the reader's table with its number stuck to it ("护甲2");
- * as given when the reader's language has no table or the text names no term.
+ * R711000: a keyword or glossary term in a tuning change's English ("Armor 2") as the reader reads it
+ * ("护甲2"); as given when the reader's language has no table or the text names no term.
  */
 export function readerKeyword(text: string): string {
   const terms = readerTerms();

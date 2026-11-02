@@ -4,12 +4,9 @@
 //!            only that number, as #51.1's "Draw 2" does.
 //!
 //! No card generates it: §2.1 deals one to the seat going second once both mulligans are answered
-//! (R244), which is the engine's setup (`dealCoins`), not this file.
-//!
-//! The mana is §2.3's temporary mana: `gainMana` adds to `mana.current` and never touches `max`, so
-//! it may go above the cap (4, or a handicapped seat's `manaCap`, R181) and the next refresh sets
-//! current back to max. It lands on the caster, because `gainMana` defaults `player` to "self" (§6.3).
-//!
+//! (R244), which is the engine's setup (`dealCoins`), not this file. The mana is §2.3's temporary mana,
+//! on `mana.current` and never `max`, so it may go above the cap (or a handicapped seat's `manaCap`,
+//! R181) until the next refresh. It lands on the caster: `gainMana` defaults `player` to "self" (§6.3).
 //! Being a token is data, not script (§7): `token: true` and the `Token` tag keep it out of every
 //! deck (§2.6, §9.4 L3, R184), every random pool and Discover (§5.1); `isUnitToken` is false for a
 //! Spell, so it goes to the graveyard when it resolves (R11).
@@ -18,8 +15,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-t-coin";
 
-/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `runHook`. §7: base gains
-/// 1, radiant 2 — the declared number `mana` (R386), read off the face that is running.
+/// A spell's script is its `cry` hook, the on-resolve hook (§10.9). The 1 or 2 is the declared number
+/// `mana` (R386), read off the face that is running.
 fn coin() -> Script {
     Script {
         cry: Some(hook(|ctx| vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))])),
@@ -34,11 +31,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-coin The Coin (SPEC §7, §2.1, §2.3; R244, R245). BUILD M4-T4's row: "0-cost Spell token dealt to
-// the seat going second after the mulligan; gain 1 mana this turn (radiant 2), may exceed the cap;
-// never in a deck or a random pool". Two halves: what the card does once played (R245, through
-// `scenario()`), and who is dealt it and when (R244: §2.1's setup, which a `scenario()` skips, so
-// real games built with `create_game` and `begin_game` over the real catalog).
+// T-coin The Coin (SPEC §7, §2.1, §2.3; R244, R245). BUILD M4-T4's row. R244's deal is §2.1's setup, which `scenario()` skips, so its
+// tests build real games with `create_game` and `begin_game`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,8 +56,7 @@ mod tests {
     }
 
     /// Two legal DECK_SIZE-card decks with no cast-on-draw card (#21, #27, #90.1) and no Quickdraw card
-    /// (#65, #84, #98), so the opening hands are exactly §2.1's table and nothing asks during setup
-    /// (R224): core-001 to core-026 but #21, and core-036 to core-060.
+    /// (#65, #84, #98), so the opening hands are exactly §2.1's table and nothing asks during setup (R224).
     fn deck_a() -> Vec<String> {
         run(1, DECK_SIZE + 1).into_iter().filter(|id| id != "core-021").collect()
     }
@@ -379,7 +372,6 @@ mod tests {
                 assert_eq!(result.error, None);
                 state = result.state;
             }
-            // Returning the whole hand shuffled four cards back and drew four; The Coin came after that.
             assert_eq!(coins_in(&state.players.p2.hand), 1);
             assert_eq!(coins_in(&state.players.p2.library), 0);
         }
@@ -421,7 +413,6 @@ mod tests {
             for event in dealt {
                 assert_eq!(event["defId"], "hidden");
             }
-            // Its holder reads it like any card in its own hand.
             let hand = mine["you"]["hand"].as_array().cloned().unwrap_or_default();
             let def_ids: Vec<Value> = hand.iter().map(|card| card["defId"].clone()).collect();
             assert!(def_ids.contains(&json!(COIN_DEF_ID)));

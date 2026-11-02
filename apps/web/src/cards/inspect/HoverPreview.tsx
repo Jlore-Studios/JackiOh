@@ -1,22 +1,14 @@
-// The enlarged card a resting mouse or pen pointer opens (B22): the live face at PREVIEW_HEIGHT_PX
-// with its glossary beside it, fixed beside the anchor. It takes no pointer events and is hidden
-// from assistive tech, so it never covers what a click aims at; for the same reason a reference in
-// its text cannot be hovered, so the cards the text names get a column of their own (References.tsx, R279).
+// The enlarged card a resting mouse or pen pointer opens (B22), fixed beside the anchor. It takes no
+// pointer events and is aria-hidden, so it never covers what a click aims at; for the same reason
+// nothing in it can be hovered, so the cards its text names get their own column (References.tsx,
+// R279) and badge states are put in words (StateNotes.tsx: tuned R386, Brittle R385, enchantments
+// E39, a Unit R383; SPEC §10.8, §10.10) above the printed text, glossary, flavour (R660) and lines
+// of code (E36).
 //
-// In that column (SPEC §10.8, §10.10): a face in play whose printed text differs has that text above
-// its glossary, and one whose view gives it states (tuned R386, Brittle R385, enchantments E39, a
-// Unit R383) has them in words at the top (StateNotes.tsx), since badge tooltips cannot be hovered
-// here. It ends with the card's lines of code (E36), above which sit the flavour line and artist
-// credit (R660, Flavour.tsx); a face with nothing beside it stays alone.
-//
-// Issue #1017: a face that prints less than its whole text (a short form or a clamp, CardFace.tsx
-// `faceText`) has the whole text on its left (Extended.tsx), the two held together so the text stays
-// on the face's left whichever side of the anchor the preview opens on. A Summit in a game prints
-// its next Ascent line here too, from the level its view carries (R280).
-//
-// R2126000: a card whose trigger names a key (`keyHint`, "I") has it said under the face, "Focus the
-// card, then press I to inspect" (the key works only from the focused trigger, never a hovered one), on a
-// keyboard device; the face alone stays the group's last child otherwise.
+// #1017: a face that prints less than its whole text has it on its left (Extended.tsx), grouped so it
+// stays there whichever side the preview opens on; a Summit adds its next Ascent line (R280).
+// R2126000: a trigger with a `keyHint` says under the face how to inspect by key (the key works only
+// from the focused trigger, never a hovered one); without one the face stays the group's last child.
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";

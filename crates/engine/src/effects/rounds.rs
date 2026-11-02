@@ -1,14 +1,7 @@
-//! Damage in rounds until a Unit dies (SPEC §8.7 C+ #32.3 Blade Storm, §4.5, R59, R283).
-//!
-//! R59 checks state after a whole effect list; Blade Storm's is one of the two lists that check inside
-//! themselves (R283's is the other): each round is its own list, a sweep and then the state check
-//! (`after_state_check`), so the round's deaths and their Death hooks resolve before the next round is
-//! built. The storm stops after a round in which a Unit died (a Reborn death counts; R55's destroyed
-//! count says so), after `rounds` rounds, or when no Unit in scope is left.
-//!
-//! Each round is a part (`lazy_part`) holding the next, built when the list reaches it. A Death hook
-//! that asks parks the rest on `state.work` (R113); the part's memo is the destroyed count it began
-//! with, so a resumed part rebuilds exactly as it ran and the round after it decides afresh.
+//! Damage in rounds until a Unit dies (SPEC §8.7 C+ #32.3 Blade Storm, §4.5, R59, R283): unlike R59's
+//! check after a whole list, each round is a sweep then a state check, so its deaths (a Reborn one
+//! included, R55) resolve before the next round. Each round is a `lazy_part` whose memo is the destroyed
+//! count it began with, so a part resumed after a Death hook asks (R113) rebuilds as it ran.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -133,8 +126,7 @@ fn cast_round(storm: CastStorm, at: i32, deaths_before: Option<i32>) -> Effect {
     })
 }
 
-/// R652: cast `def` round after round — each round a real Spell cast (R70) with its own state check
-/// (R59) — until a round in which a Unit died, `rounds` rounds, or no Unit is left.
+/// R652: cast `def` round after round, each a real Spell cast (R70) with its own state check (R59).
 pub fn cast_rounds_until_death(args: CastStorm) -> Effect {
     cast_round(args, 0, None)
 }

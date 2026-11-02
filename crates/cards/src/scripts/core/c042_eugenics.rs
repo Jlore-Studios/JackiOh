@@ -3,20 +3,9 @@
 //!             chance to become Radiant." (patch v0.3.10; it exiled 7 random cards before)
 //!   Radiant: "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes
 //!             Radiant." (patch v0.3.10: 100%, and no Lucky, since nothing is left to chance)
-//!   Engine:  `exile_matching` over the library with `maxCost` 2 (R831014): each card's cost read per R65
-//!            as the clause resolves, so an X card out of play counts as 0, an embiggen card at its base
-//!            price, and a card's cost changes count; each exile is its own (R135). Then
-//!            `radiant_chance` rolls each card left, one independent roll per card in zone order (R60),
-//!            an already-Radiant card skipped; a Lucky given to the card rolls each twice and keeps a
-//!            success (R1438). Tunes: chance 30 ↑, a percentage stepping 10 up to 100, on the base face
-//!            only (R1431, R1748003).
-//!
-//! Through v0.4.4b the base face's chance was printed, not declared; `script_v0_4_4b` keeps that
-//! (R767000).
-//!
-//! ORDER MATTERS. The exile runs first and the chance rolls over what is LEFT ("each card left in your
-//! deck"), so an exiled card is never rolled. Two effects in one list is the right shape for that:
-//! §4.5/R59 puts the state check after the whole list, never between two effects of it.
+//!   Engine:  `exile_matching` over the library with `maxCost` 2 (R831014): each card's cost read per R65.
+//! Exile moves straight to exile zone (§2.1, §4.5, §6.3; no death trigger, R61). Each card bumps exile counter (R55; R59, R135, R1431).
+//! Survivors made Radiant via seeded RNG (CLAUDE.md rule 4, R60, R1438); Radiant face marks 100% directly (§5.2, R74).
 
 use jackioh_engine::effects::{exile_matching, radiant_chance};
 use jackioh_engine::prelude::*;
@@ -84,8 +73,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 
 // #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R65, R80, R831014).
 //
-// The must-pass row (BUILD M4-T4 #42): "every deck card that costs (2) or less exiled (R65's cost);
-// 30% per remaining card; radiant every remaining card Radiant."
+// The must-pass row (BUILD M4-T4 #42) (R65).
 
 #[cfg(test)]
 mod tests {

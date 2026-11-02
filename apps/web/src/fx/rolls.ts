@@ -1,19 +1,14 @@
 // R2652001: a card's coin flips and die rolls, one `rolled` batch per verb call or hook.
 //
-// The engine reports a batch as `rolled { player, instanceId, defId, kind, sides, rolls }`, each roll
-// a coin or a die in draw order holding every face it drew (its own, then each extra roll Lucky and
-// Luck made of it) and `kept`, the index of the face it kept. A coin is a two-sided die whose face
-// `ROLL_HEADS` is heads. R2652000 decides who sees a batch (a face-down trap's reaches its controller
-// alone); a batch in the view is the viewer's to read in full, its card named as R97 names it. This
-// module is the client's whole reading of it:
-// - `rollBatchOf` is the one adapter onto the event, so a rename is one line;
-// - `rollWords` states the result in words, for the game log and the showcase's live region;
-// - `rollCues` plans the panel the effects layer draws over the board: every coin spinning and every
-//   die tumbling at once, each landing on its kept face inside the entry (R200), the faces Lucky drew
-//   beside it, and a spark burst as each lands.
+// A batch is `rolled { player, instanceId, defId, kind, sides, rolls }`: each roll holds every face it
+// drew (its own, then each extra roll Lucky and Luck made of it) and `kept`, the index of the face it
+// kept. A coin is a two-sided die whose face `ROLL_HEADS` is heads. R2652000 decides who sees a batch;
+// its card is named as R97 names it. `rollBatchOf` is the one adapter onto the event, `rollWords` the
+// log and live-region words, `rollCues` the panel, each roll landing on its kept face inside the entry
+// (R200) with a spark burst.
 //
-// Nothing here is a rule: the faces and the one kept are the event's, and the tumble a reel shows
-// before it lands is presentation, a fixed walk that says nothing the roll does not (CLAUDE.md rule 7).
+// Nothing here is a rule: the faces and the one kept are the event's, and the tumble before a landing
+// is presentation, a fixed walk that says nothing the roll does not (CLAUDE.md rule 7).
 
 import { ROLL_HEADS, ROLL_TAILS } from "@jackioh/engine/config";
 import type { GameEvent, PlayerId } from "@jackioh/shared";
@@ -117,8 +112,7 @@ export function rollLandAt(i: number, n: number): number {
 
 /**
  * The faces item `i`'s reel shows: FX_ROLL_TUMBLE_FACES faces in a fixed walk, then `face`. A coin
- * alternates heads and tails, so it seems to spin; a die walks its other faces by a stride of
- * FX_ROLL_TUMBLE_STRIDE + i, so a batch of dice does not tumble in step. The walk is the same every time.
+ * alternates heads and tails; a die strides by FX_ROLL_TUMBLE_STRIDE + i so dice do not tumble in step.
  */
 export function rollTumble(kind: RollBatch["kind"], sides: number, face: number, i: number): number[] {
   const out: number[] = [];

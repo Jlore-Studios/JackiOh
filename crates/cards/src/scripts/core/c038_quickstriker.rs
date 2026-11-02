@@ -1,12 +1,10 @@
 //! #38 Quickstriker (SPEC §8.2): Field Spell, "Your cards gain 'Combo X: deal X damage to the enemy
 //! hero', X = cards you played earlier this turn"; radiant "… deal 2X damage …" (R275, R281).
-//!
 //! ROUTE: §10.5 step 5 resolves it with the Combo checks for every play and cast (R70), before the card's
 //! own text, off this card's static flag (`playSteps.quickstrikerCombo`). X is `turnLog.cardsPlayed`
 //! before the card being played (§8.2's Engine cell). A `cardPlayed` trigger would read the count late:
 //! a cast's events wait for the loop of the effect that cast it (§2.4). R119: the play that puts this
 //! Field Spell onto the field does not answer it.
-//!
 //! RADIANT (R281): both faces carry the one flag; the multiple of X is the granting face's
 //! (`QUICKSTRIKER_COMBO_MULTIPLE`, 1 or 2); 2X is ONE hit, so Armor and the Anti-oneshot cap apply once.
 //! PREVIEW (R280) is the next play's X; GLOW (R662) lights its controller's hand, so no `conditionMet` here.
@@ -39,15 +37,12 @@ pub fn script() -> CardScripts {
         preview: Some(preview()),
         ..Script::default()
     };
-    // R281: the same grant and the same X, so the same script; the Radiant face's 2X is the multiple the
-    // engine reads off the instance's face (`QUICKSTRIKER_COMBO_MULTIPLE`), as it reads #84's Armor.
+    // R281: the same script; the engine reads the 2X off the instance's face, as it reads #84's Armor.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// #38 Quickstriker (SPEC §8.2, BUILD M4-T4): "First play deals 0, second 1, third 2 to the enemy
-// hero; nothing when not on the field". The Radiant face (R275) deals 2X as one hit (R281). The R280
-// `preview` is proved in test/preview.test.ts; R662's yellow glow, both faces, is at the end of this file.
+// #38 Quickstriker (SPEC §8.2, BUILD M4-T4). R662's yellow glow, both faces, is at the end of this file.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -67,7 +62,7 @@ mod tests {
 
     const HERO: i32 = 30;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -100,10 +95,7 @@ mod tests {
 
         #[test]
         fn r281_both_faces_carry_the_one_grant_the_multiple_of_x_is_the_granting_faces_read_by_the_engine() {
-            // §10.5 step 5 resolves it for every play and cast, off this flag (R70); the pipeline picks the
-            // multiple, 1 or 2, off the Quickstriker's own face (`QUICKSTRIKER_COMBO_MULTIPLE`).
             let scripts = script();
-            // The same script, so the same flag and the same hook.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.preview.as_ref().expect("the base face has a preview"),
@@ -123,7 +115,6 @@ mod tests {
                 "p2": { "hand": [SPARE], "library": [SPARE] },
             }));
 
-            // "X = cards you played EARLIER this turn", so the first play of the turn is X = 0.
             s.play(RAPID_REPLENISH, json!({})).expect_health("p2", HERO);
             s.play(TEMPO_TIMMY, json!({})).expect_health("p2", HERO - 1);
             s.play(BIG_D_FENDER, json!({})).expect_health("p2", HERO - 1 - 2);
@@ -144,7 +135,7 @@ mod tests {
                 .play(TEMPO_TIMMY, json!({}))
                 .expect_health("p2", HERO - 1);
 
-            // Round the turn back to p1. `startTurn` clears `turnLog` (§2.2), so the count starts over.
+            // `startTurn` clears `turnLog` (§2.2), so the count starts over.
             s.end_turn().end_turn().play(BIG_D_FENDER, json!({}));
 
             s.expect_health("p2", HERO - 1);
@@ -162,7 +153,6 @@ mod tests {
                 .play(TEMPO_TIMMY, json!({}))
                 .play(BIG_D_FENDER, json!({}));
 
-            // "Your cards gain …": the controller of Quickstriker is p1, so p2's plays do nothing.
             s.expect_health("p1", HERO).expect_health("p2", HERO);
         }
 
@@ -190,8 +180,7 @@ mod tests {
             }));
 
             // §10.5 step 4 places the card and counts the play before step 5 resolves the granted Combos,
-            // so Quickstriker is already on the field for its OWN play. R119: it does not answer its own
-            // arrival, so this second play of the turn deals 0 rather than 1.
+            // so Quickstriker is already on the field for its OWN play; R119 makes it deal 0, not 1.
             s.play(RAPID_REPLENISH, json!({}))
                 .play(QUICKSTRIKER, json!({}))
                 .expect_health("p2", HERO);
@@ -251,7 +240,6 @@ mod tests {
             s.play(RAPID_REPLENISH, json!({})).expect_health("p2", HERO);
             s.play(TEMPO_TIMMY, json!({})).expect_health("p2", HERO - 2);
             s.play(BIG_D_FENDER, json!({})).expect_health("p2", HERO - 2 - 4);
-            // One damage event per play, never X hits of 2 or two hits of X.
             assert_eq!(hits_on_p2(&s), vec![2, 4]);
         }
 
@@ -270,7 +258,6 @@ mod tests {
             s.play(RAPID_REPLENISH, json!({}));
             // X = 1: 2X = 2, and Armor 2 takes the whole hit (R63: no damage event at all).
             s.play(TEMPO_TIMMY, json!({})).expect_health("p2", HERO);
-            // X = 2: 2X = 4 as one instance, less Armor 2 once.
             s.play(BIG_D_FENDER, json!({})).expect_health("p2", HERO - 2);
             assert_eq!(hits_on_p2(&s), vec![2]);
         }

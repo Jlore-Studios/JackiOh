@@ -3,21 +3,17 @@
 //! Conventions) on the 6/8 body, and its copy is a Radiant 6/8 too (R275). §8's Engine cell: "Copy
 //! per R57, placed per R64; the copy's Cry does not fire (§6.2)".
 //!
-//! R57: the copy keeps the radiant flag, buffs, granted keywords, Vanilla state and `statsOverride`
-//! and resets damage, exertion and counters; as a new instance it takes the current turn as its
-//! `summonedTurn` (§4.1). R64: with no zone named it takes the leftmost free zone and fizzles
-//! silently when the row has none. R1 / §6.2: copies fire no Cry, so the chain ends after one copy.
-//!
-//! The clone is the engine's `summon_copy` (engine/src/effects/summon.rs). A card file may not
-//! rebuild buffs, keywords and Vanilla state off the instance (CLAUDE.md rule 5), hence a verb.
+//! R57: the copy keeps the radiant flag, buffs, granted keywords, Vanilla state and `statsOverride`,
+//! resets damage, exertion and counters, and takes the current turn as `summonedTurn` (§4.1). R64:
+//! with no free zone it fizzles silently. R1 / §6.2: copies fire no Cry, so the chain ends. A card
+//! may not rebuild an instance's state (CLAUDE.md rule 5), hence the engine's `summon_copy`.
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-012";
 
-/// "A copy of this unit": the Cry's own instance is the source, so `{ of: "self" }` names it without
-/// the card ever touching state. Both faces run this — the radiant cell is "Same".
+/// The Cry's own instance is the source, so `{ of: "self" }` names it without touching state.
 fn cry() -> Hook {
     hook(|_ctx| vec![summon_copy(json_as(json!({ "of": { "of": "self" }, "player": "self" })))])
 }
@@ -34,15 +30,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
-// (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".
-//
-// Radiant (R275): the cell is "Same", so the copy keeps the radiant flag (R57): a Radiant 6/8 (6/9 before
-// patch v0.3.10).
-//
-// HARNESS GAP: layer-4 buffs and damage cannot be seeded, nor reached through play (a Cry fires the
-// instant the unit enters). R78 resets both on leaving the field and the play path resets neither on
-// entering, so seeding the hand instance is the one route to "buffs copied, damage not".
+// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12, R64, R57, R78).
+// Copy lands in leftmost free zone; buffs copied, damage not.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -124,7 +113,6 @@ mod tests {
             fn r57_copies_buffs_and_does_not_copy_damage_exertion_or_counters() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["core-012", "core-005"], "library": ["core-005"] } }));
-                // HARNESS GAP (see the header).
                 let felinors = s.card("core-012").id.clone();
                 seed_history(&mut s, &felinors, 2, 2, 3);
 
@@ -209,7 +197,6 @@ mod tests {
             fn r57_the_radiant_copy_keeps_buffs_and_not_damage_on_the_6_8_face() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
-                // HARNESS GAP (see the header): seeded on the hand instance.
                 let felinors = s.card("core-012").id.clone();
                 seed_history(&mut s, &felinors, 1, 1, 4);
 

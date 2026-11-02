@@ -1,37 +1,19 @@
 //! #92 Felinor Fiender (SPEC §8.4, §3.2, §10.4 layer 2, R13, R39, R362, BUILD M4-T4 row 92).
 //!
 //! Base: "Stack. Also has the stats of all your Felinors, including those under Stack." Radiant:
-//! "Stack. Also has twice the stats of all your Felinors, including those under Stack." (patch v0.1.1: the Radiant
-//! face traded Charge for twice the count). Both faces print Stack alone (§8 Conventions), so §10.4
-//! layer 1 already grants it and this file grants nothing. The printed 5/7 → 10/14 stays: "has the
-//! stats of" is R39's printed-plus-the-sum, and R362 doubles only the sum on the Radiant face.
+//! "Stack. Also has twice the stats of all your Felinors, including those under Stack." Both faces
+//! print Stack alone (§8 Conventions), so §10.4 layer 1 grants it and this file grants nothing. "Has
+//! the stats of" is R39's printed-plus-the-sum, and R362 doubles only the sum on the Radiant face.
 //!
-//! The whole card is §10.4 LAYER 2, the set-stat layer that exists for this card alone, expressed
-//! through `Script.setStat` ("a card that sets its own stats from the board (#92 Felinor Fiender,
-//! R39)"). §10.4 writes layer 2 as "Felinor Fiender adds the sum of your Felinors' LAYER-4 stats",
-//! so each Felinor is measured with `statsWithBuffs` — layers 1 to 4, printed face plus permanent
-//! buffs, BEFORE auras. `unitView` would be layer 5 and is the wrong number here; it would also make
-//! the layers recurse, since `unitView` is what calls this hook.
+//! The whole card is §10.4 LAYER 2 (`Script.setStat`), the set-stat layer that exists for this card
+//! alone. Each Felinor is measured with `statsWithBuffs` (layers 1 to 4, BEFORE auras): `unitView` is
+//! layer 5, the wrong number, and calls this hook, so the layers would recurse. Layer 2 ADDS what the
+//! hook returns, flooring each component at 0 (R116), so it returns the sum alone; R115 skips it on a
+//! Vanilla'd card. R13: "cards under a Stack are not on the field except for Felinor Fiender's count"
+//! (§3.2). R39 (decide, `FIENDER_STATS_MODE = "printed-plus-sum"`): "never below printed".
 //!
-//! R13 is the reason both zone readers appear: "cards under a Stack are not on the field except for
-//! Felinor Fiender's count" — the one dormancy exception in the game (§3.2). `activeUnitsOf` gives
-//! the top card of every pile and `dormantUnitsOf` the cards beneath them.
-//!
-//! R39 (decide, `FIENDER_STATS_MODE = "printed-plus-sum"`): "printed plus the combined Felinor
-//! stats, never below printed", so each sum floors at 0 — a Felinor carrying a negative health buff
-//! can pull the total down toward printed but never past it.
-//!
-//! Fiender itself is tagged Human, not Felinor (§8, catalog), so "all your Felinors" cannot include
-//! it. It is excluded by id anyway, because Fuse unions its ingredients' tags (R77) and a fused
-//! Felinor Fiender would otherwise count its own layer-4 stats into its own layer 2. R131 rules on
-//! exactly that: it never counts itself even once a Fuse has given it the tag, matched by instance
-//! rather than by tag, and a second Fiender contributes only printed and buffed stats (R116), so the
-//! layer cannot recurse.
-//!
-//! Layer 2 is now live: `unitView` in `engine/src/layers.ts` calls `scriptOf(instance).setStat` after
-//! layer 1's printed face and BEFORE the layer-4 buffs and layer-5 auras, and it ADDS what the hook
-//! returns, flooring each component at 0 (R116). So this hook returns the sum alone — adding the
-//! printed face here would count it twice — and R115 skips the hook entirely on a Vanilla'd card.
+//! Fiender is tagged Human, not Felinor, but is excluded by id anyway: Fuse unions tags (R77), and R131
+//! rules a fused Fiender never counts itself; a second Fiender adds only printed and buffed stats (R116).
 
 use jackioh_engine::prelude::*;
 
@@ -40,9 +22,7 @@ pub const ID: &str = "core-092";
 /// §5, §8: the tag that makes a unit one of "your Felinors".
 const FELINOR: Tag = Tag::Felinor;
 
-/// "All your Felinors, including ones under a Stack": every Felinor this card's controller has on
-/// the field, dormant ones included (R13, §3.2). Reading state to find them is not mutation; nothing
-/// here writes (CLAUDE.md rule 5).
+/// "All your Felinors, including ones under a Stack" (R13, §3.2); nothing here writes (CLAUDE.md rule 5).
 fn felinors_of(state: &GameState, self_: &CardInstance) -> Vec<CardInstance> {
     let mut mine: Vec<CardInstance> = active_units_of(state, self_.controller).into_iter().cloned().collect();
     mine.extend(dormant_units_of(state, self_.controller).into_iter().cloned());
@@ -52,9 +32,7 @@ fn felinors_of(state: &GameState, self_: &CardInstance) -> Vec<CardInstance> {
         .collect()
 }
 
-/// §10.4 layer 2, which ADDS this result to layer 1's printed face — so this returns only the sum,
-/// never printed plus the sum (R116). Each Felinor contributes its layer-4 stats (`statsWithBuffs`):
-/// printed plus permanent buffs, before auras, which is also what stops the layers recursing.
+/// §10.4 layer 2: the sum of the Felinors' layer-4 stats alone, which layer 2 adds to the printed face.
 fn set_stat_times(multiple: i32) -> SetStatHook {
     read_hook(move |args| {
         let mut attack = 0;
@@ -65,9 +43,7 @@ fn set_stat_times(multiple: i32) -> SetStatHook {
             max_health += stats.max_health;
         }
 
-        // R116: the hook returns the DELTA layer 2 adds to the printed face, not an absolute total, so
-        // the printed stats must not be added here — layer 2 does that. R39's "never below printed" is
-        // the floor at 0: a Felinor carrying a negative buff can pull the sum toward 0 but not past it.
+        // R39's "never below printed" is the floor at 0.
         SetStat {
             attack: Some(attack.max(0) * multiple),
             max_health: Some(max_health.max(0) * multiple),
@@ -93,29 +69,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362).
-//
-// BUILD M4-T4 row 92: "Plays onto an occupied zone; card beneath is dormant; stats = printed + all
-// your Felinors including dormant ones (R13, R39); radiant printed + twice that sum (R362)".
-//
-// §8: printed 5/7 → 10/14, keywords Stack on both faces, text "Stack. Has the stats of all your
-// Felinors, including those under Stack." and radiant "Stack. Has twice the stats of all your
-// Felinors, including those under Stack." (patch v0.1.1 traded the radiant Charge for the doubled
-// sum) — which is what the two `describe` blocks below check separately (CLAUDE.md rule 6).
-//
-// R39 is the decided reading: "printed plus the combined Felinor stats, NEVER BELOW PRINTED". The
-// floor is per sum, so "no Felinors at all" is the reachable boundary of the never clause and the
-// first test below is it. A NEGATIVE total is unreachable with the Core set as it stands: only an
-// aura (§10.4 layer 5) subtracts stats (#46 Suppressive Aura, #65.1 Spikey Pillow) and layer 2
-// reads layer 4, so no card can hand a Felinor a negative permanent buff. Reported, not asserted.
-//
-// §10.4's wording — "Felinor Fiender adds the sum of your Felinors' LAYER-4 stats" — is the sharp
-// part, and the Spikey Pillow test is what pins it: a Felinor whose aura-reduced attack differs
-// from its buffed attack must contribute the buffed one.
-//
-// SPEC §8 TAGS #92 `Human`, NOT `Felinor` (flagged to the designer as possibly wrong for a card
-// called Felinor Fiender). These tests assert what §8 actually says: a second Fiender contributes
-// nothing, because neither is one of "your Felinors".
+// #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362; BUILD M4-T4 row 92):
+// the two faces are checked in separate blocks below (CLAUDE.md rule 6).
+// R39's floor is per sum, so "no Felinors at all" is its reachable boundary: a NEGATIVE total is
+// unreachable, as only an aura (§10.4 layer 5) subtracts stats (#46 Suppressive Aura, #65.1 Spikey
+// Pillow) and layer 2 reads layer 4. SPEC §8 TAGS #92 `Human`, NOT `Felinor`, so a second Fiender
+// contributes nothing.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,8 +89,7 @@ mod tests {
     const FELINOR_TOKEN: &str = "core-t-felinor";
     /// #65.1 Spikey Pillow: "your units have −2 attack" as an aura, i.e. §10.4 layer 5.
     const SPIKEY_PILLOW: &str = "core-065-1";
-    /// #44 True Strike: 4 damage to a target, for killing a Felinor mid-turn. (#35 Lunar Eclipse would
-    /// read more naturally at 3 damage, but its script throws — see the report.)
+    /// #44 True Strike: 4 damage to a target, for killing a Felinor mid-turn (#35 Lunar Eclipse's script throws).
     const TRUE_STRIKE: &str = "core-044";
 
     fn keyword_kinds(s: &Scenario, card: &str) -> Vec<String> {
@@ -143,9 +101,7 @@ mod tests {
         s.state().players[P1].units.first().cloned().flatten().unwrap_or_default()
     }
 
-    // =========================================================================================
     // base
-    // =========================================================================================
 
     mod n92_felinor_fiender_base {
         use super::*;
@@ -173,7 +129,6 @@ mod tests {
             }));
 
             s.expect_stats(FIENDER, json!({ "attack": 8, "maxHealth": 17, "health": 17 }));
-            // The Felinor itself is untouched: the sum is one-way.
             s.expect_stats(BIG_FELINOR, json!({ "attack": 3, "maxHealth": 10 }));
         }
 
@@ -249,7 +204,6 @@ mod tests {
                 "p2": { "hand": ["core-005"] },
             }));
 
-            // The Felinor is at 3 health of 10; the Fiender still gains 10.
             s.expect_stats(BIG_FELINOR, json!({ "health": 3, "maxHealth": 10 }));
             s.expect_stats(FIENDER, json!({ "attack": 8, "maxHealth": 17, "health": 17 }));
         }
@@ -257,9 +211,8 @@ mod tests {
         #[test]
         fn s10_4_layer_2_reads_each_felinor_s_layer_4_stats_before_auras() {
             crate::register_all();
-            // A Spikey Pillow's aura is layer 5: it takes the Big Felinor's attack from 3 to 1 and the
-            // Fiender's own total by 2. Layer 2 must still add the Felinor's 3, giving 5 + 3 − 2 = 6.
-            // An implementation that summed `unitView` (layer 5) would read 5 + 1 − 2 = 4.
+            // The Pillow's layer-5 aura takes the Big Felinor's attack from 3 to 1 and the Fiender's by 2;
+            // layer 2 must still add the 3 (5 + 3 − 2 = 6), where summing `unitView` would read 4.
             let mut s = scenario(json!({
                 "seed": "core-092-aura-layers",
                 "p1": { "field": [FIENDER, BIG_FELINOR, SPIKEY_PILLOW], "hand": ["core-005"] },
@@ -308,9 +261,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // §3.2 Stack — the dormancy rule this card exists for (R13, R92)
-    // =========================================================================================
 
     mod n92_felinor_fiender_s3_2_stack {
         use super::*;
@@ -383,7 +334,6 @@ mod tests {
 
             let dormant_id = dormant.map(|card| card.id).unwrap_or_default();
             s.expect_refused_with(|s| s.switch_position(dormant_id.as_str()), "not on the field");
-            // The top of the pile switches normally.
             s.switch_position(FIENDER);
             assert_eq!(s.stats(FIENDER).position, Position::Def);
         }
@@ -413,9 +363,7 @@ mod tests {
         }
     }
 
-    // =========================================================================================
     // radiant
-    // =========================================================================================
 
     mod n92_felinor_fiender_radiant {
         use super::*;

@@ -64,11 +64,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #164 The Syndicate — SPEC §8.10 row 164, BUILD M12 row S 164: "while it acts, every card in its
-// controller's hand may be Traded, one Trade a turn; over the seeds a traded card is exiled from the
-// deck about 30% of the time and made Radiant there about 30%, the draw always made; the opponent's
-// Trades roll nothing; both chances read through `param()`; radiant 70% Radiant, so a traded card left
-// in the deck is never left as it was; one the Trade's own draw takes straight back rolls nothing".
+// S #164 The Syndicate — SPEC §8.10 row 164, BUILD M12 row S 164.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,7 +80,6 @@ mod tests {
     const TRADE_UNION: &str = "stinkyscape-165"; // The same aura, and no roll.
     const FENG_SHUI: &str = "meditative-040"; // You have Luck 1.
 
-    /// What became of a traded card.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Outcome {
         Exiled,
@@ -93,8 +88,6 @@ mod tests {
         DrawnBack,
     }
 
-    /// `field_spell` acting in p1's backrow lane 1 (Radiant on `radiant`), `beside` in the lanes after;
-    /// p1 holds two Stockpiles, p2 a Prestige and a Stockpile.
     fn with(seed: &str, field_spell: &str, radiant: bool, beside: &[&str]) -> Scenario {
         let mut field = vec![json!({ "def": field_spell, "lane": 1, "radiant": radiant })];
         field.extend(beside.iter().map(|def| json!({ "def": def })));
@@ -109,7 +102,6 @@ mod tests {
         with(seed, ID, radiant, &[])
     }
 
-    /// The first Stockpile in p1's hand.
     fn stockpile(s: &Scenario) -> String {
         s.hand(P1)
             .into_iter()
@@ -129,7 +121,6 @@ mod tests {
         }
     }
 
-    /// p1 Trades a Stockpile; what became of it.
     fn traded(s: &mut Scenario) -> (String, Outcome) {
         let id = stockpile(s);
         s.trade(&id);
@@ -170,7 +161,6 @@ mod tests {
             assert_eq!(s.hand(P1).len(), hand, "{wanted:?}: the draw stands");
             let p2_events = js(&s.view(P2).events).to_string();
             match wanted {
-                // The exile names the card, as every exile does.
                 Outcome::Exiled => assert!(s
                     .last_events()
                     .iter()
@@ -223,7 +213,6 @@ mod tests {
         assert!(seen.contains(&Outcome::Exiled) && seen.contains(&Outcome::Radiant), "{seen:?}");
     }
 
-    /// p1's rng cursor after Trading a Stockpile on `seed`, with `field_spell` (base face) and `beside`.
     fn cursor_after(seed: &str, field_spell: &str, beside: &[&str]) -> u32 {
         let mut s = with(seed, field_spell, false, beside);
         traded(&mut s);
@@ -251,7 +240,6 @@ mod tests {
 
     #[test]
     fn r1864003_r987_luck_rolls_it_no_more_times() {
-        // The roll has no better side, so Feng Shui's Luck adds no roll to it.
         let kept = seed_where("syndicate-luck", |seed| {
             traded(&mut with(seed, ID, false, &[FENG_SHUI])).1 != Outcome::DrawnBack
         });
@@ -265,7 +253,6 @@ mod tests {
 
     #[test]
     fn r1864003_the_opponents_trades_roll_nothing() {
-        // p2 Trades their Prestige on their own turn: The Syndicate answers only its controller's Trades.
         let their_trade = |field_spell: &str| {
             let mut s = with("syndicate-theirs", field_spell, true, &[]);
             s.end_turn();

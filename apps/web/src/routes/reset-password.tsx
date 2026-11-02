@@ -239,7 +239,7 @@ export default function ResetPasswordRoute(): ReactElement {
     navigate(target);
   }
 
-  // Sentences with an address inside: one entry each, split around it, so English keeps its text nodes.
+  // A sentence with an address inside is one entry, split around it.
   const [forBefore = "", forAfter = ""] = t("For {account}").split("{account}");
   const [replacesBefore = "", replacesAfter = ""] = t("Saving signs this browser out of {address}.").split("{address}");
 

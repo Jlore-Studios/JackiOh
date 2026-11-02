@@ -1,10 +1,7 @@
 /**
- * The effects canvas (docs/polish/1-animations.md, S5). One `<canvas>` overlays the board. Its backing
- * store is the CSS size times the device pixel ratio, clamped to FX_MAX_DPR so a 3× phone does not
- * pay for 9× the pixels, and it is only reallocated when the size or the ratio actually changes.
- *
- * jsdom has no 2D context and logs "Not implemented" when asked for one, so under jsdom the surface
- * is never created and `getContext` is never called: the layer simply draws nothing there.
+ * The effects canvas (docs/polish/1-animations.md, S5). Its backing store is the CSS size times the
+ * device pixel ratio, clamped to FX_MAX_DPR so a 3× phone does not pay for 9× the pixels. jsdom has
+ * no 2D context and logs "Not implemented" when asked for one, so under jsdom `getContext` is never called.
  */
 import { FX_MAX_DPR } from "./constants.ts";
 
@@ -20,22 +17,19 @@ export type FxSurface = {
   resize(): void;
   /** Clears the whole store and sets the transform to scale(dpr). */
   clear(): void;
-  /** Removes the resize listener / ResizeObserver. */
   dispose(): void;
 };
 
-/** True when running under jsdom (its user agent names itself). */
 export function isHeadlessDom(win?: Window): boolean {
   return (win ?? window).navigator.userAgent.includes("jsdom");
 }
 
-/** Clamp to [1, FX_MAX_DPR]; NaN/undefined → 1. */
 export function effectiveDpr(devicePixelRatio: number | undefined): number {
   if (typeof devicePixelRatio !== "number" || Number.isNaN(devicePixelRatio)) return 1;
   return Math.min(FX_MAX_DPR, Math.max(1, devicePixelRatio));
 }
 
-/** null under jsdom (never calls getContext there), or when getContext("2d") is null or throws. */
+/** null under jsdom, or when getContext("2d") is null or throws. */
 export function createSurface(canvas: HTMLCanvasElement, win?: Window): FxSurface | null {
   const host: Window = win ?? canvas.ownerDocument.defaultView ?? window;
   if (isHeadlessDom(host)) return null;

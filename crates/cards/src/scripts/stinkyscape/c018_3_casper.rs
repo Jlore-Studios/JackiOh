@@ -5,19 +5,10 @@
 //!            Activate: Allure a random enemy Unit."
 //!   Radiant: "… / Activate: Allure a random enemy Unit and a random Unit in your opponent's hand."
 //!
-//! Engine: Indestructible is printed in `catalog.json` (§6.1).
-//! - **The Float it saw (R1866003):** a trigger on its controller's `turnEnded` remembers that turn's
-//!   player and Float (§6.2, R1563000: the unspent mana the event carries), so it reads the last turn
-//!   end of its controller's it stood on the field for; leaving the field forgets it (R78).
-//! - **The vote:** start of turn (R62), `vote_out` when that remembered turn end is its controller's and
-//!   held a Float (R1843000). One that saw none of their turns end does not vote.
-//! - **The Allure (R1866004):** Activate (R384, once a turn): one random enemy Unit acting on the field
-//!   (`active_units_of`, never a carried one, R446, or a Dormant one, R1839000), Allured as K-Pop
-//!   Fanatic's is (R963, R1045000): Allure's pink mark (R437), stolen at the start of its controller's
-//!   next turn, destroyed with no room, nothing if it has left the field (R174). With none, nothing.
-//! - **Radiant:** then one random Unit card of the opponent's hand, a hand watch with the same mark
-//!   (R1140, R1141), taken into its controller's hand as theirs at the start of their next turn (R12),
-//!   not taken if it has left that hand. The field's pick is drawn first. Declares no numbers.
+//! Indestructible printed (§6.1). Float trigger on turnEnded remembers player and Float (§6.2, R1563000, R1866003, R78).
+//! Start of turn vote_out on float (R62, R1843000).
+//! Activate allures random enemy Unit (R384, R1866004, R446, R1839000, R963, R1045000, R437, R174).
+//! Radiant also allures random enemy hand unit (R1140, R1141, R12).
 
 use jackioh_engine::effects::remember;
 use jackioh_engine::prelude::*;
@@ -196,14 +187,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #18.3 CASPER — SPEC §8.10 row S 18.3, BUILD M12 row S 18.3: "Start of turn: votes only after a turn
-// of yours that ended with a Float while it stood on the field (R1866003); Activate: a random enemy Unit
-// marked and stolen at the start of your next turn, destroyed with no room (R963); radiant: also a random
-// Unit of their hand taken into yours at the start of your next turn, none if it left their hand"
-// (R1866004).
-//
-// Every case crosses a turn boundary, so both sides keep a card in hand and a library: R82 ends a turn
-// with nothing left in it.
+// S #18.3 CASPER — SPEC §8.10 row S 18.3, BUILD M12 row S 18.3 (R1866003, R1866004, R82, R963).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -217,7 +201,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-016"; // Hit Job: a Spell, inert in a hand.
 
-    /// Hand the turn over until `player` is the active one.
     fn until_active(s: &mut Scenario, player: PlayerId) {
         for _ in 0..2 {
             if s.state().active != player {
@@ -227,7 +210,6 @@ mod tests {
         assert_eq!(s.state().active, player);
     }
 
-    /// How many votes CASPER cast in the last step.
     fn votes(s: &Scenario) -> usize {
         s.last_events()
             .iter()
@@ -235,7 +217,6 @@ mod tests {
             .count()
     }
 
-    /// CASPER (Radiant on `radiant`) in p1's backrow on p1's turn, p2 holding `hand` over `field`.
     fn table(radiant: bool, field: Value, hand: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -253,7 +234,6 @@ mod tests {
         s.activate(casper.as_str(), json!({ "ability": "allure" }));
     }
 
-    /// The marks a card's view carries on the field, as K-Pop Fanatic's tests read them.
     fn marks_in(view: &PlayerView, instance_id: &str) -> Value {
         let view = js(view);
         for side in ["you", "opponent"] {
@@ -270,7 +250,6 @@ mod tests {
         cards.iter().map(|card| card.id.clone()).collect()
     }
 
-    /// The one delayed field Allure's target.
     fn allured(s: &Scenario) -> String {
         let watched: Vec<String> = s.state().delayed.iter().filter_map(|entry| entry.watch.clone()).collect();
         assert_eq!(watched.len(), 1, "one Allure on the field");
@@ -280,7 +259,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// p1's votes at its next start of turn, after a turn of its that left `mana` unspent.
         fn votes_after_a_turn_with(mana: i32) -> usize {
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "backrow": [CASPER], "mana": mana, "library": filler(4) },
@@ -319,7 +297,6 @@ mod tests {
 
         #[test]
         fn r1866003_a_turn_that_spent_everything_is_no_float() {
-            // p2 Floats its whole turn's mana in between, which is not p1's Float.
             assert_eq!(votes_after_a_turn_with(0), 0);
         }
 
@@ -332,7 +309,6 @@ mod tests {
             s.end_turn();
             until_active(&mut s, P1);
             assert_eq!(votes(&s), 1);
-            // This turn spends everything: the next start of turn reads this one, no Float.
             s.state_mut().players.p1.mana.current = 0;
             s.end_turn();
             until_active(&mut s, P1);
@@ -362,7 +338,6 @@ mod tests {
             let pink = json!([{ "mark": "allure", "color": "pink" }]);
             assert_eq!(marks_in(&s.view(P1), &target), pink);
             assert_eq!(marks_in(&s.view(P2), &target), pink);
-            // Once a turn.
             let casper = s.card(CASPER).id.clone();
             s.expect_refused(|s| s.activate(casper.as_str(), json!({ "ability": "allure" })));
 
@@ -409,7 +384,6 @@ mod tests {
                 allure(&mut s);
                 assert_eq!(allured(&s), awake);
             }
-            // With only a Dormant one, nothing.
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "backrow": [CASPER], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "slumber": { "turns": 2 } }], "library": filler(4) },
@@ -430,7 +404,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// The one hand watch's cards.
         fn hand_watched(s: &Scenario) -> Vec<String> {
             let watches: Vec<Vec<String>> =
                 s.state().delayed.iter().filter_map(|entry| entry.hand_watch.clone()).collect();

@@ -10,7 +10,7 @@ export function watchLink(matchId: string, friendId: string): string {
   return `${paths.watch(matchId)}?${new URLSearchParams({ [FRIEND_PARAM]: friendId }).toString()}`;
 }
 
-/** The friend a watch link names, off the address bar's query; empty when it names none. */
+/** The friend a watch link names, off the address bar's query. */
 export function watchFriendOf(search: string): string {
   return new URLSearchParams(search).get(FRIEND_PARAM) ?? "";
 }

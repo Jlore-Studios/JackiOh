@@ -15,7 +15,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-049";
 
-/// "Players can't draw more than 1 card each turn": the base face's printed limit, on both players.
 const PLAYERS_LIMIT: i32 = 1;
 
 fn base_limit(_args: HookArgs<'_>) -> Vec<DrawLimit> {
@@ -25,7 +24,6 @@ fn base_limit(_args: HookArgs<'_>) -> Vec<DrawLimit> {
     }]
 }
 
-/// "Your opponent can't draw more than {limit} …": the declared, tunable number.
 fn radiant_limit(args: HookArgs<'_>) -> Vec<DrawLimit> {
     vec![DrawLimit {
         player: DrawLimitPlayer::Enemy,
@@ -139,13 +137,11 @@ mod tests {
                     "p1": { "hand": [STOCKPILE, STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
                     "p2": { "hand": [MACHINE, FILLER] },
                 }));
-                // p1 draws once on its own turn before any Machine is there.
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&s, P1).len(), 2);
                 s.end_turn();
                 s.play(MACHINE, json!({}));
                 s.end_turn();
-                // p1's start-of-turn draw is its first this turn; the Stockpile's two are past the limit.
                 assert_eq!(drawn(&s, P1).len(), 1);
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&s, P1).len(), 0);
@@ -245,7 +241,6 @@ mod tests {
                 both.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&both, P2).len(), 1);
                 assert_eq!(limited(&both, P2).len(), 1);
-                // Without the base one, the tuned Radiant limit of 2 lets both draws through.
                 let mut alone = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
@@ -259,8 +254,6 @@ mod tests {
             #[test]
             fn b5_e3_with_c_4_palantirs_limit_the_lowest_holds_whichever_card_sets_it() {
                 crate::register_all();
-                // Palantir (p1's) limits p2 to 1; a Radiant Machine tuned to 2 beside it still lets only 1 through.
-                // The Stockpile is at (2), so Palantir lets it resolve rather than steal it.
                 let dear = json!({ "def": STOCKPILE, "costMod": 1 });
                 let mut palantir_lower = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }], "backrow": [PALANTIR] },
@@ -271,7 +264,6 @@ mod tests {
                 palantir_lower.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&palantir_lower, P2).len(), 1);
                 assert_eq!(limited(&palantir_lower, P2).len(), 1);
-                // A Palantir tuned to 2 beside a base Machine: the Machine's 1 holds.
                 let mut machine_lower = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MACHINE], "backrow": [PALANTIR] },
                     "p2": { "hand": [dear, FILLER], "library": [VANILLA, VANILLA, VANILLA] },

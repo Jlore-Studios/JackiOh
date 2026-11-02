@@ -7,8 +7,7 @@
 //! (`when_launched`, R1852003) runs only as part of that Starship. Then, for each Unit its controller
 //! has as the Starship launches, the Starship among them, in lane order: `switch_position_of` to Attack,
 //! a Unit already there staying (R91), an effect's switch spending no exertion (R20); then
-//! `buff_all_units` +N Attack on each, lasting (R1859002). N is read on the face the piece fused on
-//! (`piece_number`, R1859001). Tunes: attackGain 2 ↑.
+//! `buff_all_units` +N Attack on each, lasting (R1859002).
 
 use std::sync::Arc;
 
@@ -49,11 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #106 Warpfield Amplifier — SPEC §8.10 row 106, BUILD M12 row S 106: "on the field it does nothing;
-// when the Starship it fused into launches, every Unit of its controller in Defense Position switches
-// to Attack Position, spending nothing (R20), and each of their Units, the Starship among them, gains
-// +2 Attack for good; the opponent's are untouched; attackGain read on the face it fused on (R1859001);
-// radiant 4/6 and +4".
+// S #106 Warpfield Amplifier — SPEC §8.10 row 106, BUILD M12 row S 106 (R1859001, R20).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -65,8 +60,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
 
-    /// p1's Starship holding the Amplifier, a Mr. Vanilla of p1's in Defense Position and one in Attack
-    /// Position, and a Mr. Vanilla of p2's in Defense Position.
     fn launched(seed: &str, radiant: bool) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,
@@ -94,9 +87,7 @@ mod tests {
         assert!(!s.card(defender.as_str()).exertion.switched, "an effect's switch spends nothing (R20)");
         assert_eq!(attack_of(&s, P1, 2), 4 + 2);
         assert_eq!(attack_of(&s, P1, 3), 4 + 2, "a Unit already in Attack Position gains it too");
-        // The Starship holds the Amplifier's 2 Attack and gains 2 more.
         assert_eq!(s.stats(ship.as_str()).attack, 2 + 2);
-        // The opponent's Units are untouched.
         let theirs = s.unit_at(P2, 1).id;
         assert_eq!(s.stats(theirs.as_str()).position, Position::Def);
         assert_eq!(s.stats(theirs.as_str()).attack, 4);

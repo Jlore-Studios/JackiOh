@@ -74,12 +74,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97.4 Mega Church — SPEC §8.8 row 97.4, BUILD M10 row M 97.4: "Tribute 5, paid by any minimal set
-// of your Units and of permanents on either side costing (1) or less, face-down ones included, each
-// worth 1 (a Sheep 2 or 3), as Sacrifices (MD-F13); a dormant card or a hand card never pays;
-// `legalActions` stays within the AI's budget on a full board; Activate, once a turn: a declared
-// enemy permanent becomes yours by R15, staying put with no free zone; cheap and Tribute read through
-// `param()`; radiant 0/10, Divine Shield, and the stolen permanent is made Radiant".
+// M 97.4 Mega Church — SPEC §8.8 row 97.4, BUILD M10 row M 97.4.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -136,7 +131,6 @@ mod tests {
         #[test]
         fn r1282_pays_mixed_5_card_payment_to_each_owner_s_graveyard_and_church_stays_its_player_s() {
             crate::register_all();
-            // P1 has 3 cheap units on field, P2 has 2 cheap permanents (1 unit, 1 trap).
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [
@@ -160,7 +154,6 @@ mod tests {
                 },
             }));
 
-            // Collect the 5 instance IDs to pay.
             let p1_u1 = s.unit(P1, 1).unwrap().id.clone();
             let p1_u2 = s.unit(P1, 2).unwrap().id.clone();
             let p1_u3 = s.unit(P1, 3).unwrap().id.clone();
@@ -177,11 +170,9 @@ mod tests {
 
             s.play(ID, json!({ "zone": 1, "tributes": tributes }));
 
-            // Church is in P1 lane 1!
             assert_eq!(s.unit(P1, 1).unwrap().def_id, ID);
             assert_eq!(s.unit(P1, 1).unwrap().controller, P1);
 
-            // P1's 3 cards are in P1's graveyard.
             let p1_gy: Vec<String> = s
                 .state()
                 .players
@@ -194,7 +185,6 @@ mod tests {
             assert!(p1_gy.contains(&p1_u2));
             assert!(p1_gy.contains(&p1_u3));
 
-            // P2's 2 cards are in P2's graveyard.
             let p2_gy: Vec<String> = s
                 .state()
                 .players
@@ -237,7 +227,6 @@ mod tests {
             let p1_u3 = s.unit(P1, 3).unwrap().id.clone();
             let p1_u4 = s.unit(P1, 4).unwrap().id.clone();
 
-            // Refuses payment containing dear card.
             s.expect_refused(|s| {
                 s.play(
                     ID,
@@ -269,12 +258,10 @@ mod tests {
                 json!({ "targets": [{ "pick": "instance", "instanceId": enemy_unit }] }),
             );
 
-            // Unit is now controlled by P1!
             let stolen = s.unit(P1, 2).expect("unit stole into lane 2");
             assert_eq!(stolen.id, enemy_unit);
             assert_eq!(stolen.controller, P1);
 
-            // Second activation in the same turn is refused.
             s.expect_refused(|s| {
                 s.activate(
                     ID,
@@ -506,7 +493,6 @@ mod tests {
                 },
             }));
 
-            // Verify Divine Shield on radiant face.
             let church = s.card(ID).clone();
             assert!(
                 s.stats(&church)

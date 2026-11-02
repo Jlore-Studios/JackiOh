@@ -1,19 +1,13 @@
 //! Swap (SPEC §6.3's Swap row, R73): Pocket Chaos (#87) exchanges one thing between the two players
 //! — the two heroes' health, the board contents lane by lane, or the libraries.
 //!
-//! - Health: the two values change places, armor stays with its hero. Not damage, not a heal and not
-//!   "lose health" (R18): no pipeline, no armor step; the only event is `swapped` (§10.3). In a Duos
-//!   duel the values are own HP, and only while neither hero is spent (#936 B18, `duos_life.rs`).
-//! - Board: contents change sides lane by lane, in both rows of §3.1. A swapped card never leaves the
-//!   field, so R78's reset never runs and everything on it comes along (R14). `controller` changes,
-//!   which is an entry (R171): every card that lands, a dormant Stack card included, takes this turn
-//!   as its `summonedTurn` and a fresh exertion. `owner` does not change on a swap (R12); a bounce
-//!   takes the card to its controller's hand as theirs (R747), and it goes to its owner's library,
-//!   graveyard or exile when it later leaves. Locks stay with their zones (R73, §3.2). A face-down trap
-//!   stays face-down and is readable by its new controller only: `view_for` keys that on `controller`,
-//!   so `faceUp` is deliberately untouched here (R33).
-//! - Library: the piles change places whole, in order, and each card's owner becomes the player
-//!   whose library holds it, R12's one exception (R73). Fatigue is player state (§2.4) and stays.
+//! - Health: not damage, a heal or "lose health" (R18): no pipeline, no armor step; the only event is
+//!   `swapped` (§10.3).
+//! - Board: a swapped card never leaves the field, so R78's reset never runs and everything on it
+//!   comes along (R14). The new `controller` is an entry (R171): this turn's `summonedTurn` and a fresh
+//!   exertion, a dormant Stack card's too. `owner` stays (R12). Locks stay with their zones (R73,
+//!   §3.2). A face-down trap stays face-down, readable by its new controller only: `view_for` keys that
+//!   on `controller`, so `faceUp` is untouched (R33).
 
 use serde::{Deserialize, Serialize};
 
@@ -38,18 +32,16 @@ const SWAP_WHATS: &[SwapWhat] = &[SwapWhat::Health, SwapWhat::Board, SwapWhat::L
 /// §3.1: the board is two rows, and a board swap moves both.
 pub const SWAP_ROWS: &[Row] = &[Row::Units, Row::Backrow];
 
-/// One zone's worth of cards and where they are headed. A Stack pile travels whole (§3.2).
+/// One zone's worth of cards and where they are headed.
 struct SwapEntry {
     to: ZoneSlot,
     cards: Vec<CardInstance>,
-    /// R446: the Unit a carrier holds in this backrow zone, if one does — it goes back on its carrier.
-    /// Every other card lands where it lay, a Unit standing in the zone or dormant beneath its top
-    /// included (R1081000).
+    /// R446: the Unit a carrier holds in this backrow zone, if any, which goes back on its carrier;
+    /// every other card lands where it lay (R1081000).
     carried: Option<String>,
 }
 
-/// Everything in a zone, top card first. A unit zone may hold a Stack pile, and the dormant cards
-/// under the top are in the zone too, so they swap with it (§3.2).
+/// Everything in a zone, top card first: a Stack pile's dormant cards swap with it (§3.2).
 fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
     // B5 E21, R446: a backrow zone's pile and a carrier's Unit travel whole too (`zones::zone_contents`).
     zone_contents(state, slot)
@@ -64,19 +56,16 @@ fn mirror_of(slot: &ZoneSlot) -> ZoneSlot {
     }
 }
 
-/// Whether a destination can take a swapped card. R73 says locks stay with their zones but not what
-/// happens to a card whose destination is Locked, or reserved for a dying Reborn unit (R64); R88
-/// settles it, following R14: the card bounces to its controller's hand, #87's override of R688.
+/// R88 (after R14): a card whose destination is Locked, or reserved for a dying Reborn unit (R64),
+/// bounces to its controller's hand instead, #87's override of R688.
 fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
     !is_locked(state, slot) && !is_reserved(state, slot)
 }
 
-/// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
-/// was on top is on top again, which keeps the same card acting for the zone (§3.2).
+/// A pile is rebuilt from the bottom up, so the same card is on top, acting for the zone (§3.2).
 fn place_contents(state: &mut GameState, cards: &[CardInstance], carried: Option<&str>, to: &ZoneSlot) {
     for (placed, card) in cards.iter().rev().enumerate() {
-        // Every swapped zone was emptied and the destination accepts cards, so a refusal here is a
-        // broken invariant, not a game rule.
+        // Every swapped zone was emptied, so a refusal here is a broken invariant, not a game rule.
         let options = PlaceOnFieldOptions {
             stack: Some(placed > 0),
         };
@@ -94,9 +83,8 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], carried: Option
     }
 }
 
-/// The bounce of the decision above: the card goes to its controller's hand (R747, shared with
-/// §6.3 Bounce). The hand cap applies, so a full hand burns it (§2.4, R4), and a unit token ceases
-/// to exist on the way and never reaches a hand (R11).
+/// R88's bounce, to the controller's hand as §6.3 Bounce's (R747): a full hand burns it (§2.4, R4), and
+/// a unit token ceases to exist on the way (R11).
 fn bounce_home(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     bounce_card(ctx, card);
 }
@@ -114,10 +102,9 @@ fn swap_health_now(ctx: &mut EffectContext<'_>) {
     });
 }
 
-/// R73 board: every zone's contents change sides, lane by lane, in both rows. The whole board is
-/// read before anything is placed, so no card lands on a zone whose occupant has not moved yet.
-/// Events (§10.3): `swapped` once, then `controlChanged` per card that landed, the controller's
-/// zones first, units by lane then backrow (R68's order).
+/// R73 board: the whole board is read before anything is placed, so no card lands on a zone whose
+/// occupant has not moved yet. Events (§10.3): `swapped`, then `controlChanged` per card that landed,
+/// the controller's zones first, units by lane then backrow (R68's order).
 fn swap_board_now(ctx: &mut EffectContext<'_>) {
     let sides: [PlayerId; 2] = [ctx.controller, opponent_of(ctx.controller)];
 
@@ -166,8 +153,7 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
         let before: Vec<PlayerId> = entry.cards.iter().map(|card| card.controller).collect();
         place_contents(&mut *ctx.state, &entry.cards, entry.carried.as_deref(), &entry.to);
 
-        // Every destination is on the other side, so every card that landed changed controller (R73),
-        // dormant Stack cards included (§3.2), and has entered its new side (R171).
+        // Every card that landed changed controller (R73), dormant ones too, and entered its new side.
         for (at, card) in entry.cards.iter().enumerate() {
             // The card as it stands in its new zone.
             let landed = crate::zones::live_or(ctx.state, card);
@@ -185,9 +171,8 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
     }
 }
 
-/// R12's one exception: a card in the library that was swapped now belongs to the player holding it,
-/// so it feeds that player's draws and later reaches that player's graveyard or exile. Off the field
-/// control follows ownership (R78), and the zone records the new side.
+/// R12's one exception: a swapped library card belongs to the player holding it, and off the field
+/// control follows ownership (R78).
 fn claim_library(cards: &mut [CardInstance], player: PlayerId) {
     for card in cards {
         card.owner = player;
@@ -198,9 +183,8 @@ fn claim_library(cards: &mut [CardInstance], player: PlayerId) {
     }
 }
 
-/// R73 library: the two piles change places whole, in order, and change owners with them. They are
-/// exchanged directly: `move_to_zone` routes a card to its own owner's pile (R12), which R73
-/// overrides here. Nothing leaves the library, so R11 never fires on a unit-token card in one (#75).
+/// R73 library: the piles are exchanged directly, as `move_to_zone` routes a card to its own owner's
+/// pile (R12). Nothing leaves the library, so R11 never fires on a unit-token card in one (#75).
 fn swap_library_now(ctx: &mut EffectContext<'_>) {
     let mine = ctx.controller;
     let theirs = opponent_of(mine);
@@ -238,9 +222,8 @@ pub struct SwapArgs {
     pub what: Option<SwapWhat>,
 }
 
-/// §6.3 Swap (#87 Pocket Chaos): exchange one thing with the opponent. With no `what` the effect
-/// reads the Choose one answer, so the card script stays declarative data (CLAUDE.md rule 5); an
-/// answer naming none of the three fizzles and the rest of the card still resolves.
+/// §6.3 Swap (#87 Pocket Chaos). With no `what` it reads the Choose one answer, so the card script
+/// stays data (CLAUDE.md rule 5); an answer naming none of the three fizzles, and the rest resolves.
 pub fn swap(args: SwapArgs) -> Effect {
     Effect::new("swap", move |ctx| {
         let Some(what) = args.what.or_else(|| chosen_what(ctx)) else {

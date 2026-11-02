@@ -8,12 +8,12 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-012-5";
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed: instance ids.
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -49,10 +49,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #12.5 Anti-Waffle Shell — SPEC §8.7 row 12.5, BUILD M9 Classic+ row C+ 12.5: "Field Spell: its Cry
-// gives every Unit you control Divine Shield (later Units get none); Aura: your Units have +2/+2 while
-// it is on the field, later ones included, gone when it leaves; the aura reads through `param()`;
-// radiant +4/+4".
+// C+ #12.5 Anti-Waffle Shell — SPEC §8.7 row 12.5, BUILD M9 Classic+ row C+ 12.5.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -82,12 +79,10 @@ mod tests {
         s.stats(card).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield)
     }
 
-    /// TS `s.unit(player, 1)?.id ?? ""`.
     fn lane_1(s: &Scenario, player: PlayerId) -> String {
         s.unit(player, 1).map(|unit| unit.id).unwrap_or_default()
     }
 
-    /// TS `toMatchObject({ attack, maxHealth })` on `s.stats(…)`.
     fn attack_and_max(s: &Scenario, card: &str) -> (i32, i32) {
         let view = s.stats(card);
         (view.attack, view.max_health)

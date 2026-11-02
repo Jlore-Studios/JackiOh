@@ -1,10 +1,8 @@
 //! Test-only cards for Anomalies, the board swap, and the Scanning Probes (issue #1855): a Spell that
 //! exiles its caster's board and lays a preset in its place (`replace_board`, R1855000–R1855002), and
-//! one that scans for an Anomaly (`scan_for_anomaly`, R1855003). Each does it through the engine's own
-//! verbs, as a card script would, so the engine never imports `crates/cards`; Stinkyscape's Anomaly
-//! Found! and its ten boards and the Scanning Probes (S20) are the cards that will use them.
-//!
-//! Ids are prefixed `an-` and indexed from 18580, so they collide with no other fixture file's.
+//! one that scans for an Anomaly (`scan_for_anomaly`, R1855003), through the engine's own verbs so the
+//! engine never imports `crates/cards`. Ids are prefixed `an-` and indexed from 18580, apart from
+//! every other fixture file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -58,20 +56,18 @@ fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords
     }))
 }
 
-/// A 2/3 Unit with no text.
 pub static grunt: LazyLock<CardDef> = LazyLock::new(|| card(18580, "grunt", "Unit", Some((2, 3)), json!([])));
-/// A 1/5 Unit with no text.
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| card(18581, "wall", "Unit", Some((1, 5)), json!([])));
-/// A 1/3 Unit: "Cry: deal 1 damage to a unit or hero".
+/// "Cry: deal 1 damage to a unit or hero".
 pub static aimer: LazyLock<CardDef> = LazyLock::new(|| card(18582, "aimer", "Unit", Some((1, 3)), json!([])));
-/// A 1/3 Unit: "Cry: choose one — deal 2 to the enemy hero, or 3".
+/// "Cry: choose one — deal 2 to the enemy hero, or 3".
 pub static modal: LazyLock<CardDef> = LazyLock::new(|| card(18583, "modal", "Unit", Some((1, 3)), json!([])));
-/// A 1/3 Unit: "Cry: choose left or right; then deal 4 to the enemy hero" (a prompt its text opens).
+/// "Cry: choose left or right; then deal 4 to the enemy hero" (a prompt its text opens).
 pub static asker: LazyLock<CardDef> = LazyLock::new(|| card(18584, "asker", "Unit", Some((1, 3)), json!([])));
-/// A 1/1 Unit: "Cry: exile your other permanents".
+/// "Cry: exile your other permanents".
 pub static banisher: LazyLock<CardDef> =
     LazyLock::new(|| card(18585, "banisher", "Unit", Some((1, 1)), json!([])));
-/// A 2/2 Unit, Immune to Spells: "Cry: deal 5 to the enemy hero".
+/// Immune to Spells: "Cry: deal 5 to the enemy hero".
 pub static ward: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         18586,
@@ -81,17 +77,15 @@ pub static ward: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Immune to Spells" }]),
     )
 });
-/// A Trap with no script.
 pub static trap: LazyLock<CardDef> = LazyLock::new(|| card(18587, "trap", "Trap", None, json!([])));
-/// A Field Spell with no script.
 pub static field: LazyLock<CardDef> = LazyLock::new(|| card(18588, "field", "Field Spell", None, json!([])));
-/// A Spell with no script: a preset entry that is no permanent.
+/// No script: a preset entry that is no permanent.
 pub static spell: LazyLock<CardDef> = LazyLock::new(|| card(18589, "spell", "Spell", None, json!([])));
-/// A Spell with no script: what a scan finds (Anomaly Found!'s place).
+/// No script: what a scan finds (Anomaly Found!'s place).
 pub static found: LazyLock<CardDef> = LazyLock::new(|| card(18590, "found", "Spell", None, json!([])));
-/// A Spell: "Scan for an Anomaly" (a Scanning Probe).
+/// "Scan for an Anomaly" (a Scanning Probe).
 pub static probe: LazyLock<CardDef> = LazyLock::new(|| card(18591, "probe", "Spell", None, json!([])));
-/// A Spell: the same scan, with Lucky 30.
+/// The same scan, with Lucky.
 pub static lucky_probe: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         18592,
@@ -101,42 +95,40 @@ pub static lucky_probe: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Lucky", "n": PROBE_LUCKY }]),
     )
 });
-/// A Spell: destroy every Unit.
+/// Destroy every Unit.
 pub static wipe: LazyLock<CardDef> = LazyLock::new(|| card(18593, "wipe", "Spell", None, json!([])));
-/// A Spell: grunt in lane 1, a Radiant wall in Defense Position in lane 3, the trap in backrow 2 and
+/// The grunt in lane 1, a Radiant wall in Defense Position in lane 3, the trap in backrow 2 and
 /// the field in backrow 4.
 pub static anomaly: LazyLock<CardDef> = LazyLock::new(|| card(18594, "anomaly", "Spell", None, json!([])));
-/// A Spell whose every entry fits nowhere: a row the card does not belong in, a Spell, lanes off the
-/// row.
+/// Every entry fits nowhere: a wrong row, a Spell, lanes off the row.
 pub static misfit: LazyLock<CardDef> = LazyLock::new(|| card(18595, "misfit", "Spell", None, json!([])));
-/// A Spell: the aimer, the modal and the asker in lanes 1 to 3.
+/// The aimer, the modal and the asker in lanes 1 to 3.
 pub static crowd: LazyLock<CardDef> = LazyLock::new(|| card(18596, "crowd", "Spell", None, json!([])));
-/// A Spell: the banisher in lane 1 and the aimer in lane 2.
+/// The banisher in lane 1 and the aimer in lane 2.
 pub static exodus: LazyLock<CardDef> = LazyLock::new(|| card(18597, "exodus", "Spell", None, json!([])));
-/// A Spell: the asteroid in lane 1, its Resources restricted to the Mythic one.
+/// The asteroid in lane 1, its Resources restricted to the Mythic one.
 pub static mine: LazyLock<CardDef> = LazyLock::new(|| card(18598, "mine", "Spell", None, json!([])));
-/// A 1/3 Unit that asks a question as it arrives (R151), and has no Cry.
+/// Asks a question as it arrives (R151), and has no Cry.
 pub static greeter: LazyLock<CardDef> =
     LazyLock::new(|| card(18599, "greeter", "Unit", Some((1, 3)), json!([])));
-/// A Spell: the greeter in lane 1 and the aimer in lane 2.
+/// The greeter in lane 1 and the aimer in lane 2.
 pub static welcome: LazyLock<CardDef> = LazyLock::new(|| card(18600, "welcome", "Spell", None, json!([])));
-/// A 1/3 Unit: "Cry: rotate the board one step right" (§6.3 Rotate).
+/// "Cry: rotate the board one step right" (§6.3 Rotate).
 pub static spinner: LazyLock<CardDef> =
     LazyLock::new(|| card(18601, "spinner", "Unit", Some((1, 3)), json!([])));
-/// A Spell: the spinner in lane 1 and the aimer in lane 2.
+/// The spinner in lane 1 and the aimer in lane 2.
 pub static whirl: LazyLock<CardDef> = LazyLock::new(|| card(18602, "whirl", "Spell", None, json!([])));
-/// A 1/3 Unit: "Cry: your opponent chooses heads or tails; then you choose left or right; then deal
-/// 4 to the enemy hero" (the other player's question first, then one for its caster).
+/// "Cry: your opponent chooses heads or tails; then you choose left or right; then deal 4 to the enemy hero".
 pub static polite: LazyLock<CardDef> =
     LazyLock::new(|| card(18603, "polite", "Unit", Some((1, 3)), json!([])));
-/// A Spell: the polite unit in lane 1 and the aimer in lane 2.
+/// The polite unit in lane 1 and the aimer in lane 2.
 pub static parley: LazyLock<CardDef> = LazyLock::new(|| card(18604, "parley", "Spell", None, json!([])));
-/// A 1/3 Unit: "Cry: at the end of this turn, choose left or right".
+/// "Cry: at the end of this turn, choose left or right".
 pub static planner: LazyLock<CardDef> =
     LazyLock::new(|| card(18605, "planner", "Unit", Some((1, 3)), json!([])));
-/// A Spell: the planner in lane 1.
+/// The planner in lane 1.
 pub static scheme: LazyLock<CardDef> = LazyLock::new(|| card(18606, "scheme", "Spell", None, json!([])));
-/// A 1/1 Unit with Flying: "Cry: deal 6 to the enemy hero".
+/// Flying: "Cry: deal 6 to the enemy hero".
 pub static flier: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         18607,
@@ -146,14 +138,13 @@ pub static flier: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Flying" }]),
     )
 });
-/// A Spell: the flier in backrow 1, the grunt (no Flying) in backrow 2 and a Radiant flier in
-/// Defense Position in backrow 3 (R1879001).
+/// The flier in backrow 1, the grunt (no Flying) in backrow 2 and a Radiant flier in Defense Position
+/// in backrow 3 (R1879001).
 pub static hangar: LazyLock<CardDef> = LazyLock::new(|| card(18608, "hangar", "Spell", None, json!([])));
-/// A Spell: a pile in unit zone 2, the wall at the bottom and the grunt on top, and the grunt alone
-/// in unit zone 4 though it is named as a pile's (R1879002).
+/// A pile in unit zone 2, the wall at the bottom and the grunt on top, and the grunt alone in unit
+/// zone 4 though it is named as a pile's (R1879002).
 pub static fleet: LazyLock<CardDef> = LazyLock::new(|| card(18609, "fleet", "Spell", None, json!([])));
 
-/// A Spell whose Cry replaces its caster's board with `board`.
 fn anomaly_script(board: Value) -> CardScripts {
     let args = json!({ "board": board });
     both(Script {
@@ -162,7 +153,6 @@ fn anomaly_script(board: Value) -> CardScripts {
     })
 }
 
-/// A Spell whose Cry scans for the `found` card.
 fn probe_script() -> CardScripts {
     both(Script {
         cry: Some(hook(|_ctx| {
@@ -172,7 +162,6 @@ fn probe_script() -> CardScripts {
     })
 }
 
-/// A Cry that deals `amount` to the enemy hero.
 fn to_enemy_hero(amount: i32) -> Effect {
     damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))
 }
@@ -445,8 +434,7 @@ pub static AN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The engine's fixture catalog (`harness::setup_catalog`) with the Resources and the asteroid
-/// (`fixtures/resources.rs`) and these cards and scripts on top.
+/// The engine's fixture catalog with the Resources, the asteroid and these cards and scripts on top.
 pub fn register_anomaly_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = resources_catalog(registered_catalog().clone());

@@ -1,5 +1,4 @@
-// #2334: a virtual grid (the Almanac's) mounts only the rows of cards near the view, and the grid's
-// own rows hold the places of the rest. A browser lays the grid out; here the page's layout is the
+// #2334: a virtual grid (the Almanac's). A browser lays the grid out; here the page's layout is the
 // shape and the view this file gives poolWindow.ts's reads, so the rows it mounts follow a view that
 // a test moves. What a real layout says of them is e2e's (33-almanac.cy.ts). The staged grid's
 // mount is PoolGrid.render.test.tsx's.
@@ -29,7 +28,6 @@ vi.mock("./poolWindow.ts", async (importOriginal) => ({
 }));
 
 const CATALOG_HERE: CatalogSnapshot = { version: "test", cards: CATALOG };
-/** Four cards to a row, each row 100 px tall with a gap of 10 under it. */
 const SHAPE: PoolShape = { columns: 4, rowHeight: 100, rowGap: 10, paddingTop: 10 };
 /** 100 cards fill 25 rows of four. */
 const IDS = Object.keys(CATALOG).slice(0, 100);
@@ -41,12 +39,10 @@ function grid(ids: readonly string[]): ReactElement {
   return <PoolGrid ids={ids} catalog={CATALOG_HERE} onInspect={noop} virtual />;
 }
 
-/** The ids of the cards mounted, in the grid's order. */
 function mounted(container: HTMLElement): string[] {
   return [...container.querySelectorAll<HTMLElement>(".db-card")].map((card) => card.dataset.card ?? "");
 }
 
-/** The ids of the rows `first` to `last` of the pool, which hold four cards each. */
 function rows(first: number, last: number): string[] {
   return IDS.slice(first * SHAPE.columns, (last + 1) * SHAPE.columns);
 }
@@ -102,7 +98,6 @@ describe("#2334 a virtual grid mounts the rows near the view", () => {
     for (const id of inView) expect(getByTestId(poolCardId(id))).toBeTruthy();
     expect(container.querySelector(`[data-card="${IDS[0] ?? ""}"]`)).toBeNull();
 
-    // And back to the top, where the first row is mounted again.
     act(() => {
       scrollTo(container, TOP);
     });

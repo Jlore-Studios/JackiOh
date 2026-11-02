@@ -265,8 +265,6 @@ afterEach(async () => {
   releaseRecoverySession();
 });
 
-// B24: validation
-
 describe("B24 validation", () => {
   it("B24 sign-up refuses an invalid email without calling the provider", () => {
     const calls = provider({ "/auth/v1/signup": { status: 200, body: {} } });
@@ -357,8 +355,6 @@ describe("B24 validation", () => {
   });
 });
 
-// B25, B26: refusals, in the client's words
-
 describe("B25 B26 refusals", () => {
   it("B25 an unconfirmed email reads SIGN_IN_FAILED_MESSAGE and no provider text reaches the page", async () => {
     provider({
@@ -416,8 +412,6 @@ describe("B25 B26 refusals", () => {
     expect(bodyText()).not.toContain(PROVIDER_MSG);
   });
 });
-
-// B27 / R192: resend, and its cooldown
 
 describe("R192 B27 resend", () => {
   async function signUpAndWaitForResend(calls: () => Call[]): Promise<HTMLElement> {
@@ -601,8 +595,6 @@ describe("R192 B27 resend", () => {
   });
 });
 
-// B28: forgot password
-
 describe("B28 forgot password", () => {
   async function requestReset(email: string): Promise<void> {
     fireEvent.click(screen.getByTestId(loginTestid.forgot));
@@ -718,8 +710,6 @@ describe("B28 forgot password", () => {
   });
 });
 
-// B29 / R193: confirmation links
-
 describe("R193 B29 confirmation links", () => {
   it("R193 a signup link for the sign-up this browser started signs nothing in: the player signs in with the password they chose", async () => {
     // A pre-hijacked, unconfirmed account keeps its attacker's password; confirmation cannot sign it in.
@@ -826,7 +816,6 @@ describe("R193 B29 confirmation links", () => {
     expect(readSession()).toBeNull();
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
     expect(window.location.pathname).toBe(paths.login);
-    // The forged link fills nothing; its renewed attacker session is revoked.
     expect(screen.getByTestId(loginTestid.email)).toHaveValue("");
     expect(pendingEmail()).toBe(EMAIL);
     expect(callsTo(calls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${attackerRenewed}`]);
@@ -926,8 +915,6 @@ describe("R193 B29 confirmation links", () => {
     expect(pendingReset()).toBeNull();
   });
 });
-
-// B30 / R193: recovery and error links
 
 describe("R193 B30 recovery and error links", () => {
   it("R193 a recovery link for the address this browser asked to reset holds its session for this tab only and goes to /reset-password", async () => {
@@ -1127,7 +1114,6 @@ describe("R193 B30 recovery and error links", () => {
 });
 
 // R323, R324: PKCE links (a one-time code in the query, exchanged with the verifier kept here)
-
 describe("R323 R324 PKCE links", () => {
   /** A GoTrue auth code: a UUID. */
   const CODE = "3f9c6c1e-5a6b-4c2d-9e8f-0a1b2c3d4e5f";
@@ -1158,7 +1144,6 @@ describe("R323 R324 PKCE links", () => {
     expect(callsTo(calls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${token}`]);
     expect(readSession()).toBeNull();
     expect(pendingEmail()).toBeNull();
-    // The code is gone from the address bar, and its verifier from the device.
     expect(window.location.href).not.toContain(CODE);
     expect(window.location.search).toBe("");
     expect(storedVerifiers()).toEqual([]);
@@ -1178,7 +1163,6 @@ describe("R323 R324 PKCE links", () => {
     await flushMicrotasks();
     const [grant] = callsTo(calls, "/auth/v1/token");
     expect(grant?.body).toEqual({ auth_code: CODE, code_verifier: kept?.verifier });
-    // R193: like every link, it is revoked, and nothing is stored.
     expect(callsTo(calls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${token}`]);
     expect(readSession()).toBeNull();
     expect(storedVerifiers()).toEqual([]);
@@ -1278,8 +1262,6 @@ describe("R323 R324 PKCE links", () => {
   });
 });
 
-// B33: the expired-session notice
-
 describe("B33 /login?reason=expired", () => {
   it("B33 shows login-session-expired with the sessionExpired notice", () => {
     at("/login?reason=expired");
@@ -1296,8 +1278,6 @@ describe("B33 /login?reason=expired", () => {
     },
   );
 });
-
-// B35: no destination is read from a URL
 
 describe("B35 fixed destinations", () => {
   it("B35 /login?next=https://evil.example then a sign-in lands on the main menu", async () => {
@@ -1346,8 +1326,6 @@ describe("B35 fixed destinations", () => {
   });
 });
 
-// B24: a shown password is not rewritten by a phone keyboard
-
 describe("B24 show password", () => {
   it("B24 the password field is never auto-capitalised, auto-corrected or spell-checked, shown or hidden", () => {
     render(<LoginRoute />);
@@ -1361,8 +1339,6 @@ describe("B24 show password", () => {
     }
   });
 });
-
-// After the second panel: what the screen says on the way in, and the sessions it replaces
 
 describe("R193 the addresses this browser waits on", () => {
   it("R193 an address remembered longer ago than an emailed link can live arms nothing", () => {
@@ -1497,8 +1473,6 @@ describe("R194 a session another account replaces is revoked", () => {
 });
 
 
-// R193: a link never arms this browser's guard with an address the player did not type
-
 describe("R193 an address from a link is never put in a form", () => {
   const ATTACKER = "attacker@evil.example";
 
@@ -1552,7 +1526,6 @@ describe("R193 an address from a link is never put in a form", () => {
 
     open(first.hash);
     await screen.findByTestId(loginTestid.recoveryClaim);
-    // The claim form is empty too: pressing Continue without typing holds nothing.
     expect(screen.getByTestId(loginTestid.email)).toHaveValue("");
     submitForm();
     expect(screen.getByTestId(loginTestid.emailError)).toBeInTheDocument();
@@ -1586,7 +1559,6 @@ describe("R193 an address from a link is never put in a form", () => {
     open(first.hash);
     await screen.findByTestId(loginTestid.confirmed);
     expect(screen.getByTestId(loginTestid.email)).toHaveValue("");
-    // The victim types only a password and presses Sign in: the form asks for the address.
     setField(loginTestid.password, PASSWORD);
     submitForm();
     await flushMicrotasks();
@@ -1604,8 +1576,6 @@ describe("R193 an address from a link is never put in a form", () => {
     expect(readSession()).toBeNull();
   });
 });
-
-// R193: a link's session this browser does not keep is revoked
 
 describe("R193 a link's session that is not kept is revoked at the provider", () => {
   it.each([
@@ -1759,8 +1729,6 @@ describe("R193 a link's session that is not kept is revoked at the provider", ()
   });
 });
 
-// R192: the provider's interval survives a reload and another device, and is counted on the clock
-
 describe("R192 the mail interval, wherever it started", () => {
   it("R192 a reset asked for moments ago in this browser is not asked for again after a reload", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
@@ -1821,9 +1789,7 @@ describe("R192 the mail interval, wherever it started", () => {
     setField(loginTestid.email, EMAIL);
     expect(screen.getByTestId(loginTestid.submit)).toBeEnabled();
     submitForm();
-    // The request waits for its PKCE challenge (R323), which `crypto.subtle` hashes on the thread
-    // pool and so lands on a later turn of the event loop: the page's answer is waited for, as
-    // `requestReset` does, not assumed after a fixed number of microtasks.
+    // R323's PKCE hash lands on a later turn of the event loop: wait for the answer, not microtasks.
     await waitFor(() => {
       expect(bodyText()).toContain(AUTH_NOTICES.resetSent);
     });
@@ -1851,7 +1817,7 @@ describe("R192 the mail interval, wherever it started", () => {
     const resend = await screen.findByTestId(loginTestid.resend);
     expect(resend).toBeDisabled();
     // The countdown's interval is set up in an effect; flush it before the clock moves, or on a busy
-    // machine the tick below can land before the interval exists (it failed so once, under load).
+    // machine the tick below can land before the interval exists.
     await act(async () => {
       await Promise.resolve();
     });
@@ -1865,8 +1831,6 @@ describe("R192 the mail interval, wherever it started", () => {
     expect(screen.queryByTestId(loginTestid.resendCooldown)).toBeNull();
   });
 });
-
-// What happened is said first, and the field to fix takes focus
 
 describe("the screen says what happened before the form", () => {
   it("after a sign-up, the 'check your email' notice sits above the sign-in form and takes focus", async () => {
@@ -1907,8 +1871,6 @@ describe("the screen says what happened before the form", () => {
     expect(document.activeElement?.id).toBe(id);
   });
 });
-
-// The third panel round
 
 describe("R193 a recovery link the server could not check", () => {
   it("R193 is kept for 'Try again', says so in reset words, and offers no confirmation resend", async () => {
@@ -2086,7 +2048,6 @@ describe("B27 the resend button says who it is for", () => {
     await screen.findByTestId(loginTestid.resend);
     const lead = screen.getByTestId(loginTestid.resendLead);
     expect(lead.textContent).toMatch(/Just signed up\?/);
-    // The lead-in comes before the button it explains.
     expect(lead.compareDocumentPosition(screen.getByTestId(loginTestid.resend)) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 });

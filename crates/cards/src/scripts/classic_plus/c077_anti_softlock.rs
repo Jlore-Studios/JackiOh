@@ -5,10 +5,8 @@
 //!
 //! In the order written, so the drawn card gains the keywords too. The grants are E38's: on the field
 //! at once, in a hand or a deck carried onto the field as the card enters, silent on a card someone may
-//! not read (R440). This card, resolving, is in none of those zones, and a card dormant under a Stack is
-//! not on the field. Stack on a backrow card lets it be played onto an occupied backrow zone (E21); on a
-//! Spell, Pierce is R346's and Stack does nothing. Unlock clears every Locked zone of both players and
-//! leaves a reserved one reserved. The Radiant's choice is a mode declared at play (R81).
+//! not read (R440). Stack on a backrow card lets it be played onto an occupied backrow zone (E21); on a
+//! Spell, Pierce is R346's and Stack does nothing.
 
 use jackioh_engine::effects::{chosen_options, draw, grant_keyword_cards, unlock_all};
 use jackioh_engine::prelude::*;
@@ -53,7 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #77 Anti-Softlock — SPEC §8.7 row 77, E20, E21, E38, R81, R97, R346, R386, R440, BUILD M9 row C+ 77.
+// C+ #77 Anti-Softlock — SPEC §8.7 row 77, BUILD M9 row C+ 77 (R97).
 #[cfg(test)]
 mod tests {
     use crate::merged;

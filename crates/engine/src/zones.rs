@@ -1,23 +1,11 @@
 //! Zones, lanes, adjacency, the two rotation rings, locks and Stack piles (SPEC §3).
 //! These are the only places a card changes zone; effects (M3-T1) call them and emit the events.
 //!
-//! Port of `packages/engine/src/zones.ts`. How TS's live objects map onto Rust ownership:
-//!
-//! - A reader returns references into the state (`card_at` → `Option<&CardInstance>`,
-//!   `active_units_of` → `Vec<&CardInstance>`); `pile_at_mut` is `pile_at`'s mutable twin.
-//! - A mover that takes a card off its zone (`move_to_zone`, `remove_from_any_zone`, `cease_to_exist`)
-//!   takes it as `&mut CardInstance`: the value is first brought up to date with the card under its id
-//!   in the state, then updated exactly as TS updated the live object, so the caller holds the card as
-//!   it landed (`report_graveyard_landing` reads where). A card in no zone is taken as handed.
-//! - A mover that sets a card down (`place_on_field`, `replace_in_zone`'s replacement,
-//!   `fresh_face_down_id`) takes the card as `&mut CardInstance` as handed — a new card, or one already
-//!   taken off its zone — and the state holds a copy of it as it then stands.
-//! - A function that changes a card where it stands (`step_into_unit_zone`, `step_into_backrow`,
-//!   `flicker_in_place`) takes `&CardInstance` and works on the card under that id in the state.
-//! - A zone slot argument takes a `ZoneSlot` or a `&ZoneSlot` (`impl Into<ZoneSlot>`).
-//! - TS's `registerGraveyardRedirect` hook is a direct call to `replacements::graveyard_redirect_for`
-//!   (SURFACE §6.6: the registration hooks go).
-//! - TS's optional `options` objects are `<Function>Options` structs deriving `Default`.
+//! A mover that takes a card off its zone (`move_to_zone`, `remove_from_any_zone`, `cease_to_exist`)
+//! first brings its `&mut CardInstance` up to date with the state's card under that id, so the caller
+//! holds the card as it landed; one that sets a card down (`place_on_field`) stores a copy as handed;
+//! one that changes a card where it stands (`step_into_unit_zone`, `flicker_in_place`) works on the
+//! state's card under that id. A graveyard redirect is asked of `replacements` (SURFACE §6.6).
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -39,7 +27,7 @@ use crate::wire::{
     Zone, ZoneName, ZoneRef, opponent_of,
 };
 
-/// `{ player, row, lane }`: a field zone (TS `ZoneSlot`), the same shape as the wire's `ZoneRef`.
+/// A field zone.
 pub type ZoneSlot = ZoneRef;
 
 /// So a slot argument takes `slot` or `&slot` alike (`impl Into<ZoneSlot>`).
@@ -49,20 +37,17 @@ impl From<&ZoneRef> for ZoneRef {
     }
 }
 
-/// A lane's index in its row, or `None` for a lane below 1.
 fn lane_index(lane: i32) -> Option<usize> {
     usize::try_from(lane - 1).ok()
 }
 
-/// The card under `card`'s id as it stands in the state now, or `card` itself when it is in no zone
-/// (TS held the live object; a caller holds a copy, which may be older than the state).
+/// The card under `card`'s id as the state holds it (a caller's copy may be older), else `card`.
 pub(crate) fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone())
 }
 
-/// Make `row` long enough to hold `index` (JS grows an array assigned past its end).
 fn ensure_len<T>(row: &mut Vec<Option<T>>, index: usize) {
     while row.len() <= index {
         row.push(None);
@@ -77,9 +62,7 @@ pub fn row_size(row: Row) -> i32 {
     }
 }
 
-/// §3.1, Classic #22: the midlane lanes of a board `lanes` wide — the center lane of an odd count,
-/// both center lanes of an even one (R685). Locks never matter to it. The caller reads the count off
-/// the board (a side's unit row length), never off `MID_LANE`, which no longer exists.
+/// §3.1, Classic #22, R685: the midlane, the center lane of `lanes` (both when even), Locked or not.
 pub fn midlane_lanes(lanes: i32) -> Vec<i32> {
     if lanes <= 0 {
         return vec![];
@@ -91,15 +74,12 @@ pub fn midlane_lanes(lanes: i32) -> Vec<i32> {
     }
 }
 
-/// R685: the midlane lanes of a player's own board, read off its unit row length. Card scripts
-/// read the midlane through this (never `state.players[…]` themselves, M3-T1).
+/// R685: the midlane lanes of a player's own board, for card scripts (M3-T1).
 pub fn midlane_lanes_of(state: &GameState, player: PlayerId) -> Vec<i32> {
     midlane_lanes(state.players[player].units.len() as i32)
 }
 
 pub fn slots_of(player: PlayerId, row: Row) -> Vec<ZoneSlot> {
-    // A loop, not `Array.from({ length })`: every unit read asks for slots through the layers, and
-    // Array.from's generic path was a fifth of a long AI gate game's time (#188).
     let size = row_size(row);
     let mut slots: Vec<ZoneSlot> = Vec::with_capacity(size.max(0) as usize);
     for lane in 1..=size {
@@ -192,7 +172,7 @@ pub fn lock_zone(state: &mut GameState, slot: impl Into<ZoneSlot>) {
     set_lock(state, slot.into(), true);
 }
 
-/// B5 E20: clear the flag. Its occupant, if any, is unaffected. R688: summons and moves enter Locked zones, so Unlock only re-opens the zone for plays.
+/// B5 E20: clear the flag; its occupant is unaffected. R688: Unlock only re-opens the zone for plays.
 pub fn unlock_zone(state: &mut GameState, slot: impl Into<ZoneSlot>) {
     set_lock(state, slot.into(), false);
 }
@@ -207,7 +187,6 @@ pub fn pile_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&Pile> {
         .and_then(Option::as_ref)
 }
 
-/// `pile_at`, mutably.
 pub fn pile_at_mut(state: &mut GameState, slot: impl Into<ZoneSlot>) -> Option<&mut Pile> {
     let slot = slot.into();
     if slot.row != Row::Units {
@@ -220,9 +199,7 @@ pub fn pile_at_mut(state: &mut GameState, slot: impl Into<ZoneSlot>) -> Option<&
         .and_then(Option::as_mut)
 }
 
-/// The card that acts in this zone: the top of a Stack pile, or the backrow card (§3.2). In a backrow
-/// zone that is the top of its pile (B5 E21) — and a carrier stays that card beneath the Unit it
-/// carries, which stands in the zone as a Unit and never as its backrow card (R446, `carried_at`).
+/// The card acting in this zone, its pile's top (§3.2, B5 E21): a carrier, not its Unit (R446).
 pub fn card_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardInstance> {
     let slot = slot.into();
     if slot.row == Row::Units {
@@ -238,9 +215,7 @@ pub fn is_empty(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     card_at(state, slot).is_none() && (slot.row == Row::Units || carried_at(state, slot).is_none())
 }
 
-// ---------------------------------------------------------------------------
 // Backrow piles and carried Units (docs/classic-sets.md B5 E21, R446, R447)
-// ---------------------------------------------------------------------------
 
 /// B5 E21: the dormant cards beneath a backrow zone's top card, top first; empty when none.
 pub fn beneath_at(state: &GameState, slot: impl Into<ZoneSlot>) -> &[CardInstance] {
@@ -272,10 +247,8 @@ pub fn carried_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardI
         .and_then(Option::as_ref)
 }
 
-/// B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`staticFlags.carrier`,
-/// or Classic+ #33 Ivory Tower's `fusesCarried`, R653). The flag is the card's text, so a Vanilla
-/// carrier carries nothing more (§6.3, R115: `flags_of` reads nothing off a Vanilla instance), and a
-/// face-down one's sleeps (R1487000).
+/// B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`carrier`, or Classic+
+/// #33 Ivory Tower's `fuses_carried`, R653). Vanilla takes it with the text (§6.3, R115).
 pub fn is_carrier(state: &GameState, card: &CardInstance) -> bool {
     // R1487000: a face-down card's text sleeps until it is revealed or face-up.
     if crate::preview::lasting_text_dormant(state, card) {
@@ -285,12 +258,11 @@ pub fn is_carrier(state: &GameState, card: &CardInstance) -> bool {
     flags.carrier == Some(true) || flags.fuses_carried == Some(true)
 }
 
-/// R653: where a carrier that fuses its Unit (`fusesCarried`) notes the Unit stacked onto it, by id, for
-/// the rest of its stay. Memory, so R78 clears it when the card leaves the field, and a Fuse that keeps
-/// the carrier keeps it (R77: it is the engine's entry, not a text's).
+/// R653: where a `fuses_carried` carrier notes, by id, the Unit stacked onto it this stay. Memory, so
+/// R78 clears it as the card leaves the field, and a Fuse that keeps the carrier keeps it (R77).
 const STACKED_KEY: &str = "__stacked";
 
-/// R653: the id of the Unit stacked onto this `fusesCarried` carrier on this stay, or `None` if none yet.
+/// R653: the id of the Unit stacked onto this carrier on this stay.
 pub fn stacked_onto(card: &CardInstance) -> Option<&str> {
     card.memory.get(STACKED_KEY).and_then(Value::as_str)
 }
@@ -326,10 +298,8 @@ pub fn carried_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstanc
         .collect()
 }
 
-/// R446: the backrow zones of `player`'s side a Unit they play may name — each zone whose acting card
-/// is a carrier holding no Unit yet, and which takes a card at all: not Locked, not held for a card's
-/// return (R64, B3.1 rule 6). `play_choices` offers and checks exactly these (`legal_zones_for`,
-/// `refuse_zone`), so the list and the refusal cannot disagree.
+/// R446: the backrow zones a Unit `player` plays may name. `play_choices` offers and checks exactly
+/// these (`legal_zones_for`, `refuse_zone`), so the list and the refusal cannot disagree.
 pub fn carrier_zones_for(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
     slots_of(player, Row::Backrow)
         .into_iter()
@@ -366,17 +336,14 @@ pub fn why_cannot_carry(state: &GameState, slot: impl Into<ZoneSlot>) -> Result<
     Ok(())
 }
 
-/// `accepts_stack_card`'s options: `move_` is TS's `{ move: true }`, a move rather than a play.
+/// `accepts_stack_card`'s options: `move_` for a move rather than a play.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct AcceptsStackCardOptions {
     pub move_: Option<bool>,
 }
 
-/// §3.2, B5 E21: a zone a Stack card may enter although it is occupied. Occupancy is exactly what
-/// Stack lifts, so what is left is what occupancy never covered — a zone held for a card's return
-/// (R64, B3.1 rule 6) takes no Stack card either — plus, in a backrow zone, a carrier's Unit: a zone
-/// carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R688: only plays
-/// are refused one); a move's does not, via `{ move: true }`.
+/// §3.2, B5 E21: a zone a Stack card may enter although occupied: not one held for a card's return
+/// (R64, B3.1 rule 6) or carrying a Unit (R446), nor a Locked one for a play (R688).
 pub fn accepts_stack_card(
     state: &GameState,
     slot: impl Into<ZoneSlot>,
@@ -400,9 +367,8 @@ pub fn stack_base_at(state: &GameState, player: PlayerId, slot: &ZoneSlot) -> bo
         && accepts_stack_card(state, slot, Default::default())
 }
 
-/// Everything in a zone, top card first, so a move that lifts whole zones (#52's rotation, #87's board
-/// swap) sets each down whole (§3.2): a unit zone's pile, or a backrow zone's carried Unit, its top
-/// card and the dormant cards beneath (B5 E21, R446). Copies, for the mover to set down.
+/// Copies of everything in a zone, top first, for a move lifting whole zones (#52, #87) to set down
+/// whole (§3.2): a pile, or a carried Unit, top card and the cards beneath (B5 E21, R446).
 pub fn zone_contents(state: &GameState, slot: impl Into<ZoneSlot>) -> Vec<CardInstance> {
     let slot = slot.into();
     if slot.row == Row::Units {
@@ -455,9 +421,8 @@ fn set_carried(side: &mut PlayerState, lane: i32, card: Option<CardInstance>) {
     }
 }
 
-/// Whether a card's own face is a Unit's (§5.2, B2.7) — the one kind of card that stands on a carrier
-/// (R446). Its face, not where it stands: an animated card in a unit zone is a Unit there (R383) but
-/// never a Unit face, so it never lands on a carrier.
+/// Whether a card's own face is a Unit's (§5.2, B2.7), the one kind that stands on a carrier (R446).
+/// An animated card is a Unit in a unit zone (R383) but no Unit face, so it never lands on a carrier.
 fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
     // R1040: a Unit set face-down by its Cloaked stands in the backrow as a Field Trap.
     if instance.set_as.is_some() {
@@ -468,14 +433,13 @@ fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
     face.type_.unwrap_or(def.type_) == CardType::Unit
 }
 
-/// A zone a play, or a summon with no named zone, may take: empty and unlocked (§3.2). R688: a named
-/// summon or a move may enter a Locked zone instead (`takes_move`, `place_on_field`); only plays refuse one.
+/// A zone a play, or a summon with no named zone, may take: empty, unlocked and unreserved (§3.2).
 pub fn is_open(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
     is_empty(state, slot) && !is_locked(state, slot) && !is_reserved(state, slot)
 }
 
-/// R688: a zone a move may enter — empty and unreserved. Locked zones take moves; only plays refuse one.
+/// R688: a zone a move may enter: empty and unreserved, Locked or not.
 pub fn takes_move(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
     is_empty(state, slot) && !is_reserved(state, slot)
@@ -570,9 +534,8 @@ pub fn first_free_zone(state: &GameState, player: PlayerId, row: Row) -> Option<
     open_zones(state, player, row).into_iter().next()
 }
 
-/// R64, R688: where a summon, a recruit or a move with no named zone enters — the leftmost open zone,
-/// else the leftmost empty Locked one (a Lock refuses only plays), or `None` when the row is full. Plays
-/// and casts keep `first_free_zone`.
+/// R64, R688: where a summon, a recruit or a move with no named zone enters: the leftmost open zone,
+/// else the leftmost empty Locked one. Plays and casts keep `first_free_zone`.
 pub fn first_entry_zone(state: &GameState, player: PlayerId, row: Row) -> Option<ZoneSlot> {
     first_free_zone(state, player, row).or_else(|| {
         slots_of(player, row)
@@ -596,9 +559,8 @@ pub fn is_unit_token(state: &GameState, instance: &CardInstance) -> bool {
     def.token && card_type_of(state, instance) == CardType::Unit
 }
 
-/// The X/X (and Bread Token Armor X) a token was summoned with. `setStatsAll` temporarily replaces
-/// `stats_override` (R1185002), so it remembers this face until R78 resets the card; Flicker and
-/// Reborn read it before that reset (R175, R444).
+/// The X/X (and Bread Token Armor X) a token was summoned with, kept while `setStatsAll` replaces
+/// `stats_override` (R1185002); Flicker and Reborn read it before R78's reset (R175, R444).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TokenFace {
@@ -610,8 +572,7 @@ pub(crate) struct TokenFace {
 
 const TOKEN_FACE_MEMORY_KEY: &str = "__tokenFace";
 
-/// The token's summoned face, distinct from a later Set Stats override. With no saved face, its
-/// current override is still the face it entered with.
+/// The token's summoned face, not a later Set Stats': the one saved, else its current override.
 pub(crate) fn summoned_token_face(state: &GameState, instance: &CardInstance) -> Option<TokenFace> {
     if !is_unit_token(state, instance) {
         return None;
@@ -654,18 +615,16 @@ pub(crate) fn forget_summoned_token_face(instance: &mut CardInstance) {
     instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY);
 }
 
-/// R781003, R1185002: Set Stats took a token's buffs and the stat half of its `tuning` and left, on a face
-/// that wears its X/X doubled (R349), the difference that makes it wear the set stats. That difference
-/// goes with the set: a token that returns to the face it was summoned with (R175, R444) carries none of
-/// it, or a Radiant Ghoul would come back at the set stats less its doubling. A token never set is as it was.
+/// R781003, R1185002: Set Stats left, on a token face that wears its X/X doubled (R349), the difference
+/// that makes it wear the set stats. That goes with the set, or a Radiant Ghoul back at its summoned
+/// face (R175, R444) would come back at the set stats less its doubling.
 pub(crate) fn forget_set_stats(instance: &mut CardInstance) {
     if instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY).is_some() {
         crate::effects::transform::to_printed_stats(instance);
     }
 }
 
-/// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (TS `{ stack? }`, which a
-/// test builds with `json_as`).
+/// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (`json_as` in tests).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaceOnFieldOptions {
@@ -679,9 +638,8 @@ enum Landing {
     Backrow,
 }
 
-/// Put a card on the field. A Stack card may enter an occupied unit zone and becomes the top of the
-/// pile; the card beneath keeps its damage and stops acting (§3.2). Returns false when the zone
-/// cannot take it, leaving the state (and the card) untouched.
+/// Put a card on the field; a Stack card may top an occupied unit zone, the one beneath keeping its
+/// damage and ceasing to act (§3.2). False, changing nothing, when the zone cannot take it.
 pub fn place_on_field(
     state: &mut GameState,
     instance: &mut CardInstance,
@@ -691,12 +649,9 @@ pub fn place_on_field(
     place_with(state, instance, slot, options, false)
 }
 
-/// R1081000: `place_on_field` for a Unit that stands in a backrow zone itself — a Flying Unit played
-/// into one (the play was vetted by `play_choices`, which read its Flying where it was in hand), or a
-/// Unit already standing in one, or dormant beneath its top, that is moved whole (a steal, a swap, a
-/// rotation, a restore, Reborn's return; a whole zone sets every card down so but the Unit a carrier
-/// holds). Only these set a Unit down in a backrow zone that no carrier holds; every other placement
-/// (a summon, a move out of a carrier's zone) refuses it there, as before.
+/// R1081000: `place_on_field` for a Unit that stands in a backrow zone itself: a Flying Unit played
+/// into one (vetted by `play_choices`), or one standing or dormant there that is moved whole (a
+/// steal, a swap, a rotation, a restore, Reborn's return). Any other placement there needs a carrier.
 pub fn place_standing_on_field(
     state: &mut GameState,
     instance: &mut CardInstance,
@@ -735,13 +690,9 @@ fn place_with(
         Landing::Units
     } else if is_unit_face(state, instance) {
         // R446: a Unit enters a backrow zone only on top of a carrier, which stays beneath it and keeps
-        // acting there. A move that sets a whole zone down (`zone_contents`: a rotation, a board swap)
-        // puts the carrier down first and its Unit back on it, whatever the carrier's text says by then.
-        //
-        // R1081000: a Unit that stands (`place_standing_on_field`) may also stand in the zone itself —
-        // an empty slot lands as `Backrow`; an occupied one only with `stack` and no carried Unit
-        // standing there, as a Stack pile. A carrier still takes it as a carrier first, so a play onto
-        // one lands carried, never standing.
+        // acting; a whole-zone move (`zone_contents`) puts its Unit back on it whatever its text says.
+        // R1081000: a standing Unit may also stand in the zone itself (an occupied one only with `stack`
+        // and no carried Unit there), but a carrier still takes it, so a play onto one lands carried.
         match state.players[slot.player]
             .backrow
             .get(index)
@@ -758,8 +709,7 @@ fn place_with(
                     return false;
                 }
                 if is_carrier(state, top) {
-                    // R653: the first Unit to stand on a carrier that fuses its Unit is the one it
-                    // takes this stay.
+                    // R653: a fusing carrier takes the first Unit to stand on it this stay.
                     let stamp =
                         flags_of(state, top).fuses_carried == Some(true) && stacked_onto(top).is_none();
                     Landing::Carried { stamp }
@@ -840,9 +790,8 @@ fn place_with(
     true
 }
 
-/// R638, R13: places a card beneath the top card of a unit zone pile, or beneath a Unit standing in a
-/// backrow zone (R1081000), the top of that zone's pile. This is no arrival (R638), and the card lies
-/// dormant (R13).
+/// R638, R13: place a card beneath the top of a unit pile, or of a Unit standing in a backrow zone
+/// (R1081000): no arrival, and the card lies dormant.
 pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slot: ZoneSlot) -> bool {
     if slot.row == Row::Backrow {
         if !card_at(state, slot).is_some_and(|top| is_standing_unit(state, top)) {
@@ -877,13 +826,9 @@ pub fn lands_face_down(state: &GameState, instance: &CardInstance, row: Row) -> 
     kind == CardType::Trap || kind == CardType::FieldTrap
 }
 
-/// R227: a card going face-down takes a fresh instance id, so the one handle the action protocol has
-/// for a face-down card — a play's target, a prompt option's answer (R177) — is an id no player has
-/// seen before, and an id seen while the card was public never names it again. The id is the next
-/// number, as a new card's is; whether a card goes face-down is public (§10.8 shows the zone
-/// occupied), so the number it takes says nothing either. Called on a card that is in no pile, just
-/// before it is placed. Returns the id the card had, which the `cardPlayed` or `summoned` that
-/// places it carries as `formerId` for the views to follow (R97).
+/// R227: a card going face-down takes a fresh id, so its one protocol handle (a play's target, a
+/// prompt answer, R177) is an id no player has seen; going face-down is public (§10.8), so the next
+/// number says nothing. Call it just before placing a card in no pile; it returns the old id (R97).
 pub fn fresh_face_down_id(state: &mut GameState, instance: &mut CardInstance) -> String {
     let former = instance.id.clone();
     instance.id = format!("c{}", state.next_id);
@@ -902,11 +847,9 @@ enum OldPlace {
     Beneath,
 }
 
-/// §6.3 Replace on the field: the new card takes the old one's place — the same zone, and the same
-/// place in a Stack pile — under the same controller. That is no summon, so §3.2's Lock ("the zone
-/// accepts no summons … the current occupant is unaffected") and R64's reservation do not refuse it:
-/// the zone was occupied before and is occupied after. Returns false, changing nothing, when the old
-/// card is not on the field. The old card is left pointing at its zone for the caller to retire.
+/// §6.3 Replace on the field: the new card takes the old one's zone and pile place under the same
+/// controller. No summon, so neither a Lock (§3.2) nor R64's reservation refuses it. False when the
+/// old card is off the field; else it is left pointing at its zone for the caller to retire.
 pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &mut CardInstance) -> bool {
     let old = &live_or(state, old);
     let Zone::Field { player, row, lane } = old.zone else {
@@ -1003,11 +946,9 @@ pub struct RemoveFromFieldOptions {
     pub with_pile: Option<bool>,
 }
 
-/// Take a card off the field; the card beneath a Stack resumes acting (§3.2), which is noted against
-/// the card that left (`stays::note_uncovered`, R212): no event reports a resume. The resume is an
-/// entry, summoning sick (R1829000, `stamp_uncovered`). `with_pile` is for a move that lifts whole
-/// piles and sets each down whole elsewhere (#87's board swap, #52's rotation): its cards come off one
-/// at a time, but nothing beneath any of them resumes, so no resume is noted or stamped.
+/// Take a card off the field; the card beneath a Stack resumes acting (§3.2), noted against the card
+/// that left (`stays::note_uncovered`; no event reports it, R212) and summoning sick (R1829000). With
+/// `with_pile` (#87's board swap, #52's rotation) each pile is set down whole, so nothing resumes.
 pub fn remove_from_field(
     state: &mut GameState,
     instance: &CardInstance,
@@ -1097,9 +1038,8 @@ pub fn remove_from_field(
     false
 }
 
-/// R1829000: a card a pile uncovers, as the cards above it leave, is summoning sick as a card that
-/// entered the field on this turn is (§4.1, as a Reborn body is, R83): it takes the turn as its
-/// `summoned_turn` and keeps its exertion. It never left its zone (R175). No event reports it (R212).
+/// R1829000: a card a pile uncovers is summoning sick as one that entered the field this turn (§4.1,
+/// R83's Reborn body), keeping its exertion; it never left its zone (R175). No event says so (R212).
 fn stamp_uncovered(state: &mut GameState, instance_id: &str) {
     let turn = state.turn;
     if let Some(card) = find_instance_mut(state, instance_id) {
@@ -1117,8 +1057,8 @@ fn next_beneath(state: &GameState, card: &CardInstance) -> Option<String> {
     beneath_at(state, at).first().map(|below| below.id.clone())
 }
 
-/// The off-field zones a card can be moved to (TS `OffFieldZone`: "hand" | "library" | "graveyard" |
-/// "exile"). Written by hand rather than with `wire::string_union!`: it is no wire type, and the macro
+/// The off-field zones a card can be moved to ("hand" | "library" | "graveyard" | "exile"). Written
+/// by hand rather than with `wire::string_union!`: it is no wire type, and the macro
 /// would export it to the web's generated types (SURFACE §5.1).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -1131,7 +1071,7 @@ pub enum OffFieldZone {
 }
 
 impl OffFieldZone {
-    /// Every off-field zone, in TS's order (`removeFromAnyZone` searches them so).
+    /// Every off-field zone, in the order `remove_from_any_zone` searches them.
     pub const ALL: &'static [OffFieldZone] = &[
         OffFieldZone::Hand,
         OffFieldZone::Library,
@@ -1139,7 +1079,7 @@ impl OffFieldZone {
         OffFieldZone::Exile,
     ];
 
-    /// The literal, as TS writes it.
+    /// The literal, as serde writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             OffFieldZone::Hand => "hand",
@@ -1149,7 +1089,6 @@ impl OffFieldZone {
         }
     }
 
-    /// The zone's name, as `Zone::z` reads it.
     pub fn zone_name(self) -> ZoneName {
         match self {
             OffFieldZone::Hand => ZoneName::Hand,
@@ -1159,7 +1098,6 @@ impl OffFieldZone {
         }
     }
 
-    /// The zone itself, on `player`'s side.
     pub fn zone_for(self, player: PlayerId) -> Zone {
         match self {
             OffFieldZone::Hand => Zone::Hand { player },
@@ -1181,9 +1119,8 @@ fn pile_for(side: &mut PlayerState, zone: OffFieldZone) -> &mut Vec<CardInstance
     }
 }
 
-/// Take a card out of wherever it is. `instance` is first brought up to date with the card under its id
-/// in the state (TS's live object), and TS's `delete instance.returnToHandAtEndOfTurn` on a card leaving
-/// a graveyard is made on it, so the caller holds the card as it left.
+/// Take a card out of wherever it is, bringing `instance` up to date with it (a card leaving a graveyard
+/// loses its end-of-turn return), so the caller holds the card as it left.
 pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) {
     *instance = live_or(state, instance);
     if remove_from_field(state, instance, RemoveFromFieldOptions::default()) {
@@ -1212,9 +1149,8 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
             }
             return;
         }
-        // §10.5 step 4 parks a card here between its play and its destination. Without this a Spell
-        // moved from `resolving` to the graveyard would be left in both piles, i.e. two live copies
-        // of one instance — so the resolving pile is searched like any other.
+        // §10.5 step 4 parks a card here between its play and its destination; unsearched, a Spell
+        // moved to the graveyard would be left in both piles, two live copies of one instance.
         let resolving = &mut state.players[player].resolving;
         if let Some(at) = resolving.iter().position(|card| card.id == instance.id) {
             resolving.remove(at);
@@ -1224,17 +1160,10 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
     }
 }
 
-/// R78: leaving the field resets an instance, while costMod, costOverride and radiant persist. R215
-/// applies the same reset to a hand or library card that reaches a graveyard or exile, and to a card
-/// leaving the resolving zone once its play is over. The price is not touched here: a card bounced to a
-/// hand or shuffled into a library keeps it, and R766 takes it off only a card that reaches a graveyard
-/// or an exile pile (`reset_price`).
-///
-/// Patch v0.2.0 adds three more that persist in every zone (R385, R386, B5 E39): `tuning` (what
-/// Degrade, Upgrade and KY's Constant changed), `brittle` (the Brittle count) and `enchantments` —
-/// none of them is touched here. The one exception is a Brittle count that has crumbled its card, which
-/// is spent and goes (R441, `brittle_count::drop_spent_brittle`). ME-CN's `chinese` flag persists the
-/// same way: nothing removes it (R1300). So do the tags an effect granted (R923).
+/// R78: leaving the field resets an instance, while costMod, costOverride and radiant persist; R215
+/// resets a hand or library card reaching a graveyard or exile, and a card done resolving. The price
+/// is `reset_price`'s (R766). `tuning`, `brittle`, `enchantments` (R385, R386, B5 E39), the `chinese`
+/// flag (R1300) and granted tags (R923) persist, save a Brittle count that crumbled its card (R441).
 pub fn reset_instance(instance: &mut CardInstance) {
     drop_spent_brittle(instance);
     instance.damage = 0;
@@ -1277,12 +1206,9 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.set_as = None;
 }
 
-/// R766 (#473): a card that reaches a graveyard or an exile pile is its printed card again, its price
-/// included — `costMod` (a discount, a surcharge, a Degrade's or Upgrade's cost step, KY's Constant's
-/// cost) and `costOverride` (a "(0)" given in a hand) both go, so it costs its printed cost (R65), or a
-/// fused card its fused definition's (R77); so does the Embiggened version's own price (R1181003). Its
-/// Radiant face, its `tuning`, its Brittle and times-played counts, its enchantments, its `chinese` flag
-/// (R1300) and its granted tags (R923) are what the card is or what happened to it, not a price, and stay.
+/// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
+/// fused card its fused definition's (R77): `costMod`, `costOverride` and the Embiggened price
+/// (R1181003) go. Radiant, `tuning`, counts, enchantments and tags (R1300, R923) stay.
 pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
@@ -1291,9 +1217,8 @@ pub fn reset_price(instance: &mut CardInstance) {
     instance.fixed_x = None;
 }
 
-/// R174: drop the delayed effects aimed at a card that is leaving the field (`DelayedEffect.watch`).
-/// The card that may later stand in the same zone under the same id — bounced and replayed, or back
-/// through Reborn — is a new arrival (R78, R83), and an effect aimed at the old one fizzles (R76).
+/// R174: drop the delayed effects aimed at a card leaving the field (`DelayedEffect.watch`): what
+/// comes back under its id is new (R78, R83), and an effect aimed at the old one fizzles (R76).
 fn forget_watchers(state: &mut GameState, instance_id: &str) {
     if !state
         .delayed
@@ -1307,11 +1232,10 @@ fn forget_watchers(state: &mut GameState, instance_id: &str) {
         .retain(|effect| effect.watch.as_deref() != Some(instance_id));
 }
 
-/// R1140: a card leaving a hand ends its stay there. Every delayed effect watching it there
-/// (`DelayedEffect.handWatch`, Meditative #76) stops watching it, and one left watching nothing is
-/// dropped, so a card that comes back to a hand is a new stay nobody watches (R174) and its mark goes
-/// at the next sweep (`marks::sweep_marks`). Called by every removal from a hand: `remove_from_any_zone`
-/// and a play taking the card out of the hand (`play_steps::take_from_play_source`).
+/// R1140: a card leaving a hand ends its stay there: every delayed effect watching it there
+/// (`DelayedEffect.handWatch`, Meditative #76) stops, and one left watching nothing is dropped, so a
+/// card back in a hand is a new stay nobody watches (R174) and its mark goes at the next sweep
+/// (`marks::sweep_marks`). Every hand removal calls it, `play_steps::take_from_play_source` included.
 pub fn forget_hand_watch(state: &mut GameState, instance_id: &str) {
     if !state.delayed.iter().any(|effect| {
         effect
@@ -1334,12 +1258,9 @@ pub fn forget_hand_watch(state: &mut GameState, instance_id: &str) {
 /// The zones a queue entry names when the card answered from the field (`triggers::queue_trigger`).
 const FIELD_TRIGGER_ZONES: &[&str] = &["field", "backrow"];
 
-/// R174: drop the triggers and turn hooks this card queued while it stood on the field. They belong
-/// to that stay: a Reborn body or a replayed card under the same id is a reset instance that has
-/// entered the field again (R78, R83), so an entry queued before it left — #91's Plague Counter for the
-/// hit that killed it, #37's start-of-turn hook queued before it died — never acts on what came
-/// back. Without Reborn the entry already fizzled, because a card in a graveyard answers none of
-/// its field triggers (R153); this makes the card that returns answer none of them either.
+/// R174: drop the triggers and turn hooks this card queued on the field: a Reborn or replayed card
+/// under its id is a reset instance (R78, R83), so an entry queued before it left (#91's Plague
+/// Counter, #37's start-of-turn hook) never acts on it, as a card in a graveyard answers none (R153).
 fn forget_queued_triggers(state: &mut GameState, instance_id: &str) {
     let owned = |entry: &QueuedTrigger| {
         entry.instance_id == instance_id
@@ -1356,12 +1277,10 @@ fn forget_queued_triggers(state: &mut GameState, instance_id: &str) {
     state.trigger_queue.retain(|entry| !owned(entry));
 }
 
-/// R86: a card ceases to exist — replaced by a Transform (R35), fused away (R77), or a unit token
-/// leaving the field (R11) — and is in no pile afterwards, which is the `{ z: "gone" }` zone. One
-/// that ceases to exist ON the field has left it, as a destroyed or bounced card has (R174): the
-/// departure is counted, so a trap later in the same dispatch meets a play the first Sheepish turned
-/// into a Sheep as a card no longer in play (`traps::standing_event`), and the delayed effects and
-/// queued triggers aimed at that stay end with it, as `move_to_zone` ends them for a card that lands.
+/// R86: a card ceases to exist (a Transform, R35; fused away, R77; a unit token off the field, R11)
+/// and is in no pile afterwards (`{ z: "gone" }`). One that does so ON the field has left it (R174):
+/// the departure is counted, so a later trap in the same dispatch meets a play Sheepish turned into a
+/// Sheep as out of play (`traps::standing_event`), and its stay's delayed effects and triggers end.
 pub fn cease_to_exist(state: &mut GameState, instance: &mut CardInstance) {
     *instance = live_or(state, instance);
     let was_on_field = instance.zone.z() == ZoneName::Field;
@@ -1374,9 +1293,8 @@ pub fn cease_to_exist(state: &mut GameState, instance: &mut CardInstance) {
     };
 }
 
-/// R174: what a card leaving the field ends — the stay every effect aimed at it was aimed at, the
-/// delayed effects watching it, the triggers it queued there — and, B3.1 rule 6, the home zone an
-/// animated card held for its return: it will not return from a graveyard, a hand or exile.
+/// R174: what a card leaving the field ends: its stay, the delayed effects watching it, the
+/// triggers it queued there and (B3.1 rule 6) an animated card's held home zone.
 fn left_the_field(state: &mut GameState, instance_id: &str) {
     note_field_exit(state, instance_id);
     forget_watchers(state, instance_id);
@@ -1384,20 +1302,17 @@ fn left_the_field(state: &mut GameState, instance_id: &str) {
     release_home(state, instance_id);
 }
 
-/// §2.3: X and the embiggen price are chosen at play time and stored on the played instance, and
-/// R65 has an X-cost card cost 0 and an embiggen card its base price everywhere outside play. So the
-/// choice ends with the play: a Spell that leaves the resolving zone (to its graveyard, to exile, or
-/// straight to a hand) drops it, as R78's reset drops it from a permanent leaving the field. Without
-/// this #24 Efficiency Dividend returned to hand at the X it was last played for.
+/// §2.3: X and the embiggen price are chosen at play time and stored on the played instance; outside
+/// play an X-cost card costs 0 and an embiggen card its base price (R65). So a Spell leaving the
+/// resolving zone drops the choice, as R78's reset does for a permanent leaving the field, or #24
+/// Efficiency Dividend would return to hand at the X it was last played for.
 fn end_play_choices(instance: &mut CardInstance) {
     instance.x = None;
     instance.embiggened = None;
 }
 
-/// What `move_to_zone` did (TS `MoveResult`: "moved" | "vanished" | "replaced"; by hand, as
-/// `OffFieldZone` is). `Replaced` (B5 E5, R460): the card was on its way to a graveyard and a
-/// replacement sent it elsewhere — its exile pile, or the bottom of its library — so it is not in the
-/// graveyard, and `report_graveyard_landing` names where it went.
+/// What `move_to_zone` did. `Replaced` (B5 E5, R460): a replacement sent a card bound for a graveyard
+/// to its exile pile or its library's bottom; `report_graveyard_landing` names where it went.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum MoveResult {
@@ -1407,7 +1322,7 @@ pub enum MoveResult {
 }
 
 impl MoveResult {
-    /// The literal, as TS writes it.
+    /// The literal, as serde writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             MoveResult::Moved => "moved",
@@ -1417,22 +1332,18 @@ impl MoveResult {
     }
 }
 
-// ---- B5 E5: "would go to a graveyard" (damage and combat) ----
+// B5 E5: "would go to a graveyard" (damage and combat)
 
-/// Where a replacement sends a card that would go to a graveyard (B5 E5; Classic #28, #50, #60): TS's
-/// `{ to: "exile" } | { to: "library"; position: "bottom" }`.
+/// Where a replacement sends a card that would go to a graveyard (B5 E5; Classic #28, #50, #60).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GraveyardRedirect {
-    /// `{ to: "exile" }`.
     Exile,
-    /// `{ to: "library", position: "bottom" }`.
     LibraryBottom,
 }
 
 /// One card to the exile pile, the step every exile shares (§6.3 Exile): a card that reaches the pile
-/// feeds the game exile counter (R55), a unit token ceases to exist instead and is not counted (R11),
-/// and the `exiled` event reports the card leaving either way. §6.3's Exile row gives no Death
-/// trigger, so nothing is dispatched here.
+/// feeds the exile counter (R55), a unit token ceases to exist uncounted (R11), and `exiled` reports
+/// the card leaving either way. §6.3's Exile row gives no Death trigger, so none is dispatched.
 pub fn exile_to_pile(sink: &mut EngineSink<'_>, mut card: CardInstance) {
     if move_to_zone(
         sink.state,
@@ -1450,10 +1361,9 @@ pub fn exile_to_pile(sink: &mut EngineSink<'_>, mut card: CardInstance) {
     });
 }
 
-/// B5 E5: the event a move toward a graveyard reports once the card has landed, wherever that was —
-/// `enteredGraveyard` in the graveyard, `exiled` when a replacement exiled it, `shuffledIn` at the
-/// bottom of its library — and nothing for a unit token that ceased to exist (R11). Every engine path
-/// that sends a card to a graveyard reports its landing here rather than assuming the graveyard.
+/// B5 E5: the event a move toward a graveyard reports once the card has landed: `enteredGraveyard`,
+/// `exiled` (a replacement exiled it) or `shuffledIn` (its library's bottom), none for a vanished
+/// token (R11). Every engine path that sends a card to a graveyard reports its landing here.
 pub fn report_graveyard_landing(sink: &mut EngineSink<'_>, instance: &CardInstance, result: MoveResult) {
     if result == MoveResult::Vanished {
         return;
@@ -1490,7 +1400,7 @@ pub fn report_graveyard_landing(sink: &mut EngineSink<'_>, instance: &CardInstan
     }
 }
 
-/// Where `move_to_zone` puts a card in a library (TS `"top" | "bottom" | number`).
+/// Where `move_to_zone` puts a card in a library.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LibraryPosition {
     Top,
@@ -1510,10 +1420,8 @@ pub struct MoveToZoneOptions {
 /// controller's, for a card leaving the field (the side it was on) or the resolving zone (the player who
 /// played or cast it, or the thief who took it off the stack, E2, whose full hand burns it). It lands
 /// there as theirs, its owner becoming that player, as a Bounce makes a card its controller's for the
-/// hand (R747). So a graveyard holds only its holder's cards, and a replacement of the landing (B5 E5,
-/// R460) is read for that player's card and sends it to that player's exile pile or library. `None` for
-/// every other move, which goes to the owner's pile as R12 has it: an exile or a shuffle from the field,
-/// and every move from a hand or a library.
+/// hand (R747), so a replacement of the landing (B5 E5, R460) is read for that player's card. `None` for
+/// every other move, which goes to the owner's pile as R12 has it.
 fn graveyard_keeper(instance: &CardInstance, zone: OffFieldZone) -> Option<PlayerId> {
     match (zone, &instance.zone) {
         (OffFieldZone::Graveyard, Zone::Field { .. } | Zone::Resolving { .. }) => Some(instance.controller),
@@ -1521,17 +1429,12 @@ fn graveyard_keeper(instance: &CardInstance, zone: OffFieldZone) -> Option<Playe
     }
 }
 
-/// Move a card to one of its owner's off-field zones. Unit tokens cease to exist instead (R11),
-/// and a unit-token card leaving hand or library other than by being drawn or played does too. A card
+/// Move a card to one of its owner's off-field zones; a unit token ceases to exist instead (R11). A card
 /// bound for a graveyard from the field or the resolving zone is its keeper's first (R2618000).
 ///
-/// R151's arrival hook is deliberately NOT here, although this is the single point every zone change
-/// goes through: the roll a card makes as it arrives needs the match rng, and this function takes a
-/// `GameState`, which holds only the seed and the cursor `reduce` stores between actions. Building an
-/// rng from those mid-action would repeat draws the action's own rng has already taken and would have
-/// its advanced cursor thrown away by `reduce`'s `next.rng_cursor = sink.rng.cursor()`. The hook lives
-/// one layer up, on the sink-holding funnels every hand and library arrival passes through —
-/// `draw::add_to_hand` and `draw::shuffle_into_library` (`run_arrival_hooks` in `draw.rs`).
+/// R151's arrival hook is deliberately NOT here: its roll needs the match rng, which one rebuilt from
+/// the state's seed and cursor mid-action would repeat. It lives on the sink-holding funnels every hand
+/// and library arrival passes through: `draw::add_to_hand` and `draw::shuffle_into_library`.
 pub fn move_to_zone(
     state: &mut GameState,
     instance: &mut CardInstance,
@@ -1544,8 +1447,7 @@ pub fn move_to_zone(
     let token = is_unit_token(state, instance);
     let keeper = graveyard_keeper(instance, zone);
     remove_from_any_zone(state, instance);
-    // R174: leaving the field ends every delayed effect aimed at this card and every trigger it
-    // queued there, whatever comes back, and ends the stay every effect aimed at it was aimed at.
+    // R174: leaving the field ends the card's stay, whatever comes back.
     if was_on_field {
         left_the_field(state, &instance.id);
     }
@@ -1553,13 +1455,10 @@ pub fn move_to_zone(
         end_play_choices(instance);
     }
 
-    // R11: a unit token ceases to exist when it leaves the field, and a unit-token card ceases to
-    // exist when it would reach a graveyard or exile. One may live in a hand or library (#75) and
-    // "ceases to exist if it leaves that zone other than by being drawn or played, burning
-    // included" — a draw is this call moving it from the library to the hand, and a play never comes
-    // through here (`play_steps` puts the card on the field or in `resolving` itself), so every other
-    // move out of a hand or a library ends it: discarded, exiled, burned, shuffled back.
-    // Staying put is not leaving, so a copy shuffled into the library it was made in lives (R34).
+    // R11: a unit token ceases to exist off the field, and a unit-token card when it would reach a
+    // graveyard or exile, or leave a hand or library (#75) "other than by being drawn or played": a
+    // draw is library to hand and a play never comes here. Staying put is not leaving, so a copy
+    // shuffled into the library it was made in lives (R34).
     let left_hand_or_library = (from == ZoneName::Hand || from == ZoneName::Library)
         && zone.zone_name() != from
         && !(from == ZoneName::Library && zone == OffFieldZone::Hand);
@@ -1577,12 +1476,11 @@ pub fn move_to_zone(
         return MoveResult::Vanished;
     }
 
-    // R215: a card that reaches a graveyard or an exile pile from a hand or a library is reset too, so
-    // what comes back from there is the printed card (#89's hand buffs, #98's rolled power, R151) —
-    // R78's reset, with `radiant` and the rest of what R78 keeps in every zone left alone.
-    // So is a card that lands from the resolving zone (§10.5 step 7): its play is over, and a #95 an
-    // earlier Call to Chaos cast (R87) carries no link of that chain (R28) back into a play of its own.
-    // R2618000: and it lands as its keeper's own card, before R78's reset hands control back to its owner.
+    // R215: a card that reaches a graveyard or an exile pile from a hand or a library gets R78's reset
+    // too, so what comes back is the printed card (#89's hand buffs, #98's rolled power, R151). So does
+    // a card landing from the resolving zone (§10.5 step 7), whose play is over: a #95 Call to Chaos cast
+    // (R87) carries no link of its chain (R28) into a play of its own.
+    // R2618000: it lands as its keeper's own card, before R78's reset hands control back to its owner.
     if let Some(keeper) = keeper {
         instance.owner = keeper;
     }
@@ -1592,18 +1490,16 @@ pub fn move_to_zone(
     if (was_on_field || pile_to_pile || landed) && options.keep_state != Some(true) {
         reset_instance(instance);
     }
-    // R766 (#473): and a card that reaches a graveyard or an exile pile, from wherever it came, costs its
-    // printed cost again: both cost layers go with it (`reset_price`). A price given on the way to a
-    // hand or a library stays (R215's hand prices, R742's gift, R78's bounce). A card a replacement
-    // sends elsewhere instead (below) lands as the graveyard would have had it land, price included.
+    // R766 (#473): and a card that reaches a graveyard or an exile pile from elsewhere costs its printed
+    // cost again (`reset_price`). A price given on the way to a hand or a library stays (R215's hand
+    // prices, R742's gift, R78's bounce); a redirected card (below) lands as the graveyard would have it.
     if to_graveyard_or_exile && from != zone.zone_name() && options.keep_state != Some(true) {
         reset_price(instance);
     }
 
     let owner = instance.owner;
-    // B5 E5, R460: a card that would go to a graveyard may be sent elsewhere instead — asked now that it
-    // has left the zone it was in. It lands the way the graveyard would have had it land (the reset
-    // above), and an exile counts like any other (R55). A unit token never gets here (R11).
+    // B5 E5, R460: a card bound for a graveyard may be sent elsewhere, asked once it has left its zone;
+    // it lands as reset above, and an exile counts (R55). A unit token never gets here (R11).
     let redirect = if zone == OffFieldZone::Graveyard {
         crate::replacements::graveyard_redirect_for(state, instance)
     } else {
@@ -1643,11 +1539,9 @@ pub fn move_to_zone(
     MoveResult::Moved
 }
 
-/// Every unit that acts for this player: each unit zone's top card in lane order (§3.2), then the
-/// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446) —
-/// then the Units standing in its backrow zones, in backrow lane order: a Flying Unit there is a Unit
-/// for every rule too (R1081000). A Dormant card is none of them (R1839000): it fills its zone, which
-/// `units_on_field_of` reads, but no rule that reads a player's Units sees it until it awakens.
+/// Every unit that acts for this player: each unit zone's top in lane order (§3.2), then its carried
+/// Units (R446), then those standing in its backrow (R1081000). A Dormant card is none (R1839000): it
+/// fills its zone (`units_on_field_of`), but no rule that reads Units sees it until it awakens.
 pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut units = units_on_field_of(state, player);
     // R1839000: the one walk that drops a Dormant card; nothing is dropped on a board without one.
@@ -1657,10 +1551,9 @@ pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance
     units
 }
 
-/// R1839000: `active_units_of` with the Dormant cards kept — every Unit that tops a unit zone, is held
-/// by a carrier or stands in a backrow zone, in that order. What a rule reads that sees a Dormant card
-/// where it lies: its countdown (`slumber::awaken_at_turn_start`). A zone's room is read off the zone
-/// itself (`is_open`, `takes_move`), so a Dormant card fills its zone either way.
+/// R1839000: `active_units_of` with the Dormant cards kept, for a rule that sees a Dormant card
+/// where it lies (its countdown, `slumber::awaken_at_turn_start`). A zone's room is read off the
+/// zone itself (`is_open`, `takes_move`), so a Dormant card fills its zone either way.
 pub fn units_on_field_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     // Read straight off the rows, not through `slots_of` and `card_at`: the auras ask for this on every
     // unit read (`layers::aura_sources`), so it builds nothing it does not return (#188).
@@ -1680,19 +1573,16 @@ pub fn units_on_field_of(state: &GameState, player: PlayerId) -> Vec<&CardInstan
     units
 }
 
-/// R1081000: whether the top card of a backrow zone is a Unit standing there — a Flying Unit played
-/// into it. A Unit that enters the field is given a position (`place_on_field`) and a face-down card
-/// holds none, so the position is read first: it keeps this read, which every unit walk makes, off the
-/// definition of the Traps a backrow holds, and off the `ai:hidden` placeholder a redacted state shows
-/// in a face-down card's place, which has none to read. A set Cloaked Unit reads as the Trap it is set
-/// as (`card_type_of`), so it is never one.
+/// R1081000: whether the top card of a backrow zone is a Unit standing there (a Flying Unit played
+/// into it). A Unit on the field has a position (`place_on_field`) and a face-down card none, so the
+/// position goes first: this read, which every unit walk makes, stays off the Traps' definitions and
+/// off a redacted state's `ai:hidden` placeholder. A set Cloaked Unit is its Trap (`card_type_of`).
 pub fn is_standing_unit(state: &GameState, card: &CardInstance) -> bool {
     card.position.is_some() && card_type_of(state, card) == CardType::Unit
 }
 
-/// R1081000: whether `card` is itself a Unit standing in a backrow zone — one of `standing_units_of` for
-/// the side it is on, never a Unit a carrier holds (which `is_standing_unit` alone cannot tell apart).
-/// What a mover reads before it lifts the card, to set it down standing again (`place_standing_on_field`).
+/// R1081000: whether `card` is a Unit standing in a backrow zone itself, never a carried one (which
+/// `is_standing_unit` alone cannot tell apart): a mover reads it to set the card down standing again.
 pub fn stands_in_backrow(state: &GameState, card: &CardInstance) -> bool {
     match card.zone {
         Zone::Field {
@@ -1706,25 +1596,21 @@ pub fn stands_in_backrow(state: &GameState, card: &CardInstance) -> bool {
     }
 }
 
-/// R1081000: whether `card` is a Unit in a zone of its own on the field — in a unit zone, or standing in
-/// a backrow zone. What a "your Units" or "a Unit on the field" read asks where it used to ask for the
-/// unit row alone, so a Flying Unit in the backrow answers as it would there. A Unit a carrier holds is
-/// neither, as before (R446).
+/// R1081000: whether `card` is a Unit in a zone of its own on the field (a unit zone, or standing in a
+/// backrow zone), as a "your Units" or "a Unit on the field" read asks. A carried Unit is not (R446).
 pub fn in_units_row_or_standing(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { row: Row::Units, .. }) || stands_in_backrow(state, card)
 }
 
 /// R1081000: whether `neighbour` is adjacent to `origin` in the sense an effect or a Cleave reads: beside a
-/// Unit standing in the backrow, a neighbour is another Unit standing there, never a Trap or a Field
-/// Spell, which is no Unit (§3.1 Adjacent, §4.4 step 10 hit "units adjacent"). Beside any other card it
-/// is whatever stands in the neighbouring zone, as before. `adjacent` itself only names the zones.
+/// Unit standing in the backrow, only another Unit standing there, never a Trap or a Field Spell (§3.1
+/// Adjacent, §4.4 step 10 hit "units adjacent"). `adjacent` itself only names the zones.
 pub fn is_adjacent_card(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
     !stands_in_backrow(state, origin) || is_standing_unit(state, neighbour)
 }
 
-/// R1081000: the Units standing in `player`'s backrow zones, in backrow lane order — each a Unit for
-/// every rule, so every walk that reads the player's Units reads these after their unit zones' and
-/// their carriers'.
+/// R1081000: the Units standing in `player`'s backrow zones, in lane order; every walk of the
+/// player's Units reads these after their unit zones' and their carriers'.
 pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let side = &state.players[player];
     (1..=BACKROW_ZONES)
@@ -1747,11 +1633,9 @@ pub enum StandingAt {
 }
 
 /// R68, R446, R1081000, R1824000: every card acting on `player`'s side of the field, each once: each unit
-/// zone's top in lane order, then the Units its carriers hold in backrow lane order, then each backrow
-/// zone's top in lane order, a Unit standing there where `standing` puts it. Never a card dormant
-/// beneath a pile (§3.2, R13). It reads no text: each caller drops what its rule says sleeps
-/// (`preview::lasting_text_off`, `preview::is_face_down`). `layers::aura_sources` walks the same
-/// `ItsLane` order straight off the rows (#188).
+/// zone's top in lane order, then the Units its carriers hold, then each backrow zone's top, a Unit
+/// standing there where `standing` puts it; never a dormant card (§3.2, R13). It reads no text: each
+/// caller drops what sleeps. `layers::aura_sources` walks the same `ItsLane` order off the rows (#188).
 pub fn acting_on(state: &GameState, player: PlayerId, standing: StandingAt) -> Vec<&CardInstance> {
     let side = &state.players[player];
     let among_units = standing == StandingAt::AmongUnits;
@@ -1813,16 +1697,13 @@ pub fn is_buried(state: &GameState, instance: &CardInstance) -> bool {
     card_at(state, slot).is_none_or(|top| top.id != instance.id)
 }
 
-/// §3.2, R446: whether a card acts on the field — the top of a unit pile, the top of a backrow zone, or
-/// a Unit a carrier holds. A dormant card under either kind of pile does not, and neither does a
-/// Dormant card where it lies (R1839000), which acts for its awakening alone (`slumber::acts_to_awaken`).
+/// §3.2, R446: whether a card acts on the field: the top of a unit or backrow pile, or a carried Unit,
+/// never one beneath; a Dormant card acts only to awaken (R1839000, `slumber::acts_to_awaken`).
 pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
     instance.zone.z() == ZoneName::Field && instance.slumber.is_none() && !is_buried(state, instance)
 }
 
-/// R64, R1136000: "fill your board" takes every empty, unreserved unit zone, left to right, a Locked
-/// one included (a Lock refuses only plays, R688). The caller makes each card; this returns the
-/// zones to fill, in order.
+/// R64, R1136000: "fill your board" takes every unit zone a move may (`takes_move`), left to right.
 pub fn fill_board_zones(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
     slots_of(player, Row::Units)
         .into_iter()
@@ -1837,17 +1718,11 @@ pub fn slot_of(_state: &GameState, instance: &CardInstance) -> Option<ZoneSlot> 
     }
 }
 
-// ---------------------------------------------------------------------------
 // Moves inside the field: Animated (B3.1, R383), a carrier's Unit (R446), Flicker (B5 E22, R444)
-// ---------------------------------------------------------------------------
 
-/// B3.1 rules 2 and 5, R446: move a card acting in one of its side's backrow zones — an Animated card,
-/// or a Unit a carrier held — into an open unit zone of that side, without leaving the field: no R78
-/// reset, no departure counted (R174), nothing that watches it or that it queued forgotten. A card
-/// dormant beneath it in its backrow pile resumes (§3.2). False, changing nothing, when the card is
-/// not acting in a backrow zone or `to` is not an open unit zone of its side.
-///
-/// `card` names the card; the one that moves is the card under that id as it stands in the state.
+/// B3.1 rules 2 and 5, R446: move a card acting in one of its side's backrow zones (an Animated card,
+/// or a carried Unit) into an open unit zone of that side without leaving the field (no R78 reset, no
+/// departure, R174); a card beneath it resumes (§3.2). False, changing nothing, if it cannot go.
 pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl Into<ZoneSlot>) -> bool {
     let to = to.into();
     let mut moving = live_or(state, card);
@@ -1875,12 +1750,9 @@ pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl 
     place_on_field(state, &mut moving, to, PlaceOnFieldOptions::default())
 }
 
-/// B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side, without leaving the
-/// field. `to` must take it: not held for another card, and empty — or, for a card that
-/// has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R688). The caller releases the card's own home first. False,
-/// changing nothing, when it cannot go.
-///
-/// `card` names the card, as in `step_into_unit_zone`; `stack` is TS's `{ stack?: boolean }`.
+/// B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side without leaving the
+/// field. `to` must be unheld and empty, or, with `stack`, a zone a Stack card may top (B5 E21), Locked
+/// or not (R688). The caller releases the card's own home first. False, changing nothing, if not.
 pub fn step_into_backrow(
     state: &mut GameState,
     card: &CardInstance,
@@ -1921,14 +1793,10 @@ pub fn step_into_backrow(
     place_on_field(state, &mut moving, to, PlaceOnFieldOptions { stack: Some(stack) })
 }
 
-/// B5 E22: the card leaves the field and re-enters the same zone at once — the same place in its pile,
-/// on the same side. Leaving is leaving (R174: every effect aimed at it and every trigger it queued
-/// ends, and an animated card's home is released), and R78 resets it; re-entering is entering, so it is
-/// summoning sick (R83) and in Attack Position. It never passes through another pile, so a unit token
-/// comes back like any other card (R444, as R175 brings one back through Reborn). The caller emits
-/// the events. False, changing nothing, for a card that is not acting on the field.
-///
-/// `card` names the card; the one reset is the card under that id as it stands in the state.
+/// B5 E22: the card leaves the field and re-enters its zone at once, in the same place in its pile.
+/// Leaving is leaving (R174, its home released) and R78 resets it; re-entering is entering: summoning
+/// sick (R83), in Attack Position. Passing through no other pile, a unit token comes back (R444, R175).
+/// The caller emits the events. False for a card not acting on the field.
 pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     let current = live_or(state, card);
     let Zone::Field { player, row, .. } = current.zone else {
@@ -1940,8 +1808,7 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     left_the_field(state, &current.id);
     let turn = state.turn;
     let unit_face = row == Row::Units || is_unit_face(state, &current);
-    // R1040: a card set face-down as a Trap re-enters its backrow zone the Trap it was set as, since
-    // a Unit or a Spell face never stands there on its own.
+    // R1040: a card set as a Trap re-enters as it, since no Unit or Spell face stands there alone.
     let set_as = current.set_as.filter(|_| row == Row::Backrow);
     // R444, R175: an X/X token's summoned face survives the reset; R1185002's later Set Stats does not.
     let token_face = summoned_token_face(state, &current);

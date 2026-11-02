@@ -7,7 +7,7 @@ import "./kbd.css";
 export const KBD_TESTID = "kbd";
 export const SHORTCUT_HINT_TESTID = "shortcut-hint";
 
-/** Where a sentence puts its shortcuts: `t("Focus the card, then press {keys} to inspect")`. */
+/** Where a sentence puts its shortcuts. */
 const KEYS_SLOT = "{keys}";
 
 /** Whether hints show now, kept current by the media query, and whether to write ⌘ for Ctrl. */
@@ -16,7 +16,7 @@ export function useShortcutHints(): ShortcutHints {
   return { shown, apple: applePlatform() };
 }
 
-/** One key, or a chord, in a keycap; nothing where hints are hidden. */
+/** A keycap for `keys`; nothing where hints are hidden. */
 export function Kbd({ keys }: { keys: Shortcut }): ReactElement | null {
   const hints = useShortcutHints();
   if (!hints.shown) return null;
@@ -27,7 +27,7 @@ export function Kbd({ keys }: { keys: Shortcut }): ReactElement | null {
   );
 }
 
-/** A sentence with its shortcuts drawn where `words` has `{keys}`; nothing where hints are hidden. */
+/** `words` with its shortcuts drawn at `{keys}`; nothing where hints are hidden. */
 export function ShortcutHint({
   keys,
   words,

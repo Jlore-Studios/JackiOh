@@ -1,8 +1,5 @@
-// The patch source a screen reads (source.ts), and the hook that loads from it.
-//
-// The real source is the default, so the deck builder's detail view and the Patch notes page need
-// no provider; a test wraps what it renders in `PatchSourceProvider` with `sourceFromData` fixtures
-// (or `EMPTY_PATCH_SOURCE`), which is the only way anything but the real files reaches a screen.
+// The patch source a screen reads (source.ts), and the hook that loads from it. The real source is the
+// default, so screens need no provider; only a test's `PatchSourceProvider` brings another.
 
 import { createContext, useContext, useEffect, useState, type ReactElement, type ReactNode } from "react";
 
@@ -14,12 +11,10 @@ export function PatchSourceProvider({ source, children }: { source: PatchSource;
   return <PatchSourceContext.Provider value={source}>{children}</PatchSourceContext.Provider>;
 }
 
-/** The closest provider's source, else the real one. */
 export function usePatchSource(): PatchSource {
   return useContext(PatchSourceContext);
 }
 
-/** An async read's state: in flight, done, or failed with a way to ask again. */
 export type Loaded<T> =
   | { readonly status: "loading" }
   | { readonly status: "ready"; readonly value: T }
@@ -28,9 +23,8 @@ export type Loaded<T> =
 type Settled<T> = { key: string; attempt: number } & ({ ok: true; value: T } | { ok: false });
 
 /**
- * Runs `load` for `key` (again whenever `key` changes, or after `retry`) and reports where it is.
- * A read that settles after its key has moved on is dropped, so a quick change never shows the
- * answer to an older question.
+ * Runs `load` for `key` (again whenever `key` changes, or after `retry`). A read that settles after its
+ * key has moved on is dropped, never shown.
  */
 export function useLoaded<T>(key: string, load: () => Promise<T>): Loaded<T> {
   const [attempt, setAttempt] = useState(0);

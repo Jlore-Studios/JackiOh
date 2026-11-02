@@ -2,8 +2,6 @@
 //! instance and kept in every zone, which R78's reset leaves alone. Each is read where its rule acts:
 //! `returnAfterResolve` by the play pipeline's step 7 and by the cost calculation (its floor, E15),
 //! `castOnDraw` by the draw (§2.4), `targetEnemies` by a random cast's target picks (E12).
-//!
-//! Port of `packages/engine/src/enchantments.ts`.
 
 use std::borrow::Borrow;
 
@@ -26,7 +24,7 @@ pub enum EnchantmentKind {
 }
 
 impl EnchantmentKind {
-    /// The literal, as TS writes it.
+    /// The literal, as the wire writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             EnchantmentKind::ReturnAfterResolve => "returnAfterResolve",
@@ -37,7 +35,6 @@ impl EnchantmentKind {
     }
 }
 
-/// `entry.kind`.
 pub fn enchantment_kind(entry: &Enchantment) -> EnchantmentKind {
     match entry {
         Enchantment::ReturnAfterResolve { .. } => EnchantmentKind::ReturnAfterResolve,
@@ -66,17 +63,16 @@ pub fn has_enchantment(instance: &CardInstance, kind: EnchantmentKind) -> bool {
         .any(|entry| enchantment_kind(entry) == kind)
 }
 
-/// Two enchantments are one when every field agrees, so a card is never given the same one twice.
-/// (TS compared `JSON.stringify`s; SURFACE §4.4.3 makes that `==` on the derived `PartialEq`.)
+/// Two enchantments are one when every field agrees (SURFACE §4.4.3: the derived `PartialEq`), so a
+/// card is never given the same one twice.
 fn same_enchantment(a: &Enchantment, b: &Enchantment) -> bool {
     a == b
 }
 
-/// B5 E39: put an enchantment on a card. It rides the card through every zone from now on and R78's
-/// reset never takes it (`zones::reset_instance`); one the card already carries is not added twice, while
-/// two of a kind that differ (two floors) are both kept for their reader to combine. Returns whether
-/// the card gained it. Also what the play pipeline stamps with (Classic+ #14 Forever&'s "the next Spell
-/// you play gains …").
+/// B5 E39: put an enchantment on a card. It rides the card through every zone and R78's reset never
+/// takes it (`zones::reset_instance`); one the card already carries is not added twice, while two of a
+/// kind that differ (two floors) are both kept for their reader to combine. Returns whether the card
+/// gained it (Classic+ #14 Forever&'s "the next Spell you play gains …").
 pub fn add_enchantment(instance: &mut CardInstance, enchantment: &Enchantment) -> bool {
     let held: Vec<Enchantment> = instance.enchantments.clone().unwrap_or_default();
     if held.iter().any(|entry| same_enchantment(entry, enchantment)) {

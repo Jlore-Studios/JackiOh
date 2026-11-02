@@ -1,9 +1,7 @@
-// A GIF89a encoder for a shared replay (#513, R513000): RGBA frames in, bytes out, the same bytes
-// for the same frames on every run. It is written by hand instead of pulled in as a dependency: a
-// fixed 6x7x6 color cube for the palette (no per-frame palette search and no dithering, so nothing
-// can differ between runs), each frame LZW-compressed with the GIF variant of the code table, and
-// the Netscape loop extension so the clip repeats. It loads on demand, with the raster (export.ts),
-// so the main bundle does not carry it.
+// A GIF89a encoder for a shared replay (#513, R513000): RGBA frames in, the same bytes for the same
+// frames on every run. Written by hand, not a dependency: a fixed 6x7x6 color cube for the palette (no
+// per-frame palette search and no dithering, so nothing can differ between runs). It loads on demand
+// (export.ts).
 
 const RED_LEVELS = 6;
 const GREEN_LEVELS = 7;
@@ -14,7 +12,7 @@ const PALETTE_SIZE = 256;
 const CHANNEL_MAX = 255;
 const RED_STRIDE = GREEN_LEVELS * BLUE_LEVELS;
 
-/** Entry `i` of the palette is the cube's `i`th color, red the slowest axis; entries past the cube are black. */
+/** Entry `i` is the cube's `i`th color, red the slowest axis. */
 export const GIF_PALETTE: Uint8Array<ArrayBuffer> = (() => {
   const palette = new Uint8Array(PALETTE_SIZE * 3);
   for (let i = 0; i < CUBE_COLORS; i += 1) {
@@ -25,7 +23,7 @@ export const GIF_PALETTE: Uint8Array<ArrayBuffer> = (() => {
   return palette;
 })();
 
-/** Each channel value's nearest level on its axis, worked out once. */
+/** Each channel value's nearest level on its axis. */
 function levels(count: number): Uint8Array {
   return Uint8Array.from({ length: CHANNEL_MAX + 1 }, (_, value) => Math.round((value * (count - 1)) / CHANNEL_MAX));
 }

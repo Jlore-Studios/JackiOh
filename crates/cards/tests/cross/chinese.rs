@@ -22,8 +22,6 @@ const FIELDS: &[&str] = &["name", "base", "radiant", "previews"];
 
 const FACES: [FaceKind; 2] = [FaceKind::Base, FaceKind::Radiant];
 
-/// Hearthstone's zh-CN words for the terms it shares with this game (docs/meditative-set.md, ME-CN):
-/// the English as a face prints it, a whole word, and the Chinese every such face holds.
 const HEARTHSTONE_WORDS: &[(&str, &str)] = &[
     ("Cry", "战吼"),
     ("Death", "亡语"),
@@ -42,8 +40,8 @@ const HEARTHSTONE_WORDS: &[(&str, &str)] = &[
     ("The Coin", "幸运币"),
 ];
 
-/// The set's own words (the same list): the tuning verbs print as Buff and Nerf since patch v0.3.4
-/// (R1320; Upgrade and Degrade before it, R386), and the library is the deck (R366).
+/// The set's own words (the same list): the tuning verbs print as Buff and Nerf (R1320, R386), and the
+/// library is the deck (R366).
 const SET_WORDS: &[(&str, &str)] = &[
     ("Radiant", "光辉"),
     ("Tribute", "献祭"),
@@ -60,8 +58,6 @@ const SET_WORDS: &[(&str, &str)] = &[
     ("Human", "人类"),
 ];
 
-/// Every card's Chinese entry, by catalog id, each kept as raw JSON so an unknown field or a value
-/// that is not a string is seen, not refused by a typed parse.
 fn table() -> IndexMap<String, Map<String, Value>> {
     sidecar(chinese_json(), "crates/cards/chinese.json")
 }
@@ -77,7 +73,6 @@ fn face_field(face: FaceKind) -> &'static str {
     }
 }
 
-/// `card` with both faces' text replaced, so `fill_params` fills a Chinese text as it fills the English.
 fn with_texts(card: &CardDef, base: &str, radiant: &str) -> CardDef {
     let mut def = card.clone();
     def.base.text = base.to_string();
@@ -85,7 +80,6 @@ fn with_texts(card: &CardDef, base: &str, radiant: &str) -> CardDef {
     def
 }
 
-/// A Chinese face as a player reads it: its params filled at the face's printed values.
 fn chinese_face(card: &CardDef, entry: &Map<String, Value>, face: FaceKind) -> String {
     fill_params(
         &with_texts(card, text(entry, "base"), text(entry, "radiant")),
@@ -94,12 +88,10 @@ fn chinese_face(card: &CardDef, entry: &Map<String, Value>, face: FaceKind) -> S
     )
 }
 
-/// A preview template (a key or a value of `previews`) filled at `face`'s printed values.
 fn filled(card: &CardDef, template: &str, face: FaceKind) -> String {
     fill_params(&with_texts(card, template, template), face, None)
 }
 
-/// The `{key}`s a text writes, as a set, and whether it writes any agreeing form.
 fn keys_of(text: &str) -> (IndexSet<String>, bool) {
     let placeholders = param_placeholders(text);
     let agreeing = placeholders.iter().any(|p| p.one.is_some() || p.many.is_some());
@@ -120,8 +112,7 @@ fn names_word(text: &str, phrase: &str) -> bool {
 /// it (the name, or the name before a closing parenthesis, as whole words, a plural "s" with it), so a
 /// term inside a name ("Shadow Word Death", the Stinkyscape set's S #12 token, holds "Death") asks
 /// its face for no Chinese term: such a name is held to its Chinese name instead
-/// (`r1303_each_card_a_text_names_appears_by_its_chinese_name`). Only a name the card's `refs` list
-/// is blanked, so a term the text says outside one is still read.
+/// (`r1303_each_card_a_text_names_appears_by_its_chinese_name`).
 fn without_named_cards(card: &CardDef, text: &str) -> String {
     let mut names: Vec<&str> = card
         .refs
@@ -131,7 +122,6 @@ fn without_named_cards(card: &CardDef, text: &str) -> String {
         .flat_map(|named| [named.name.as_str(), named.name.split(" (").next().unwrap_or("")])
         .filter(|name| !name.is_empty())
         .collect();
-    // The longest first, so a name is blanked whole before a shorter one inside it.
     names.sort_by_key(|name| std::cmp::Reverse(name.len()));
     let edge = |c: Option<char>| c.is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '\'' || c == '-'));
     let mut out = text.to_string();
@@ -235,7 +225,6 @@ mod r1303_the_chinese_tables {
             .filter(|id| !sidecar.contains_key(id.as_str()))
             .collect();
         assert_eq!(without, Vec::<&String>::new());
-        // In the catalog's order, so a card's entry is found where its catalog entry is.
         assert!(sidecar.keys().eq(CATALOG.keys()));
     }
 
@@ -384,7 +373,6 @@ mod r1303_the_chinese_tables {
                         "{id} {face}: writes {chinese:?}, its English {english:?}"
                     ));
                 }
-                // A measure word follows the number ("抽{draw}张牌"): Chinese nouns do not agree.
                 if agreeing {
                     problems.push(format!("{id} {face}: writes an agreeing form"));
                 }
@@ -467,7 +455,6 @@ mod r1303_the_chinese_tables {
     #[test]
     fn r1303_the_terms_name_every_type_tag_rarity_keyword_and_label() {
         let terms = chinese_terms();
-        // serde_json's map is sorted, so both sides are compared as sorted lists.
         let named = |group: &str| -> Vec<String> {
             let mut names: Vec<String> = terms[group]
                 .as_object()
@@ -490,7 +477,6 @@ mod r1303_the_chinese_tables {
             named("rarities"),
             all(Rarity::ALL.iter().map(|r| r.as_str()).collect())
         );
-        // A retired kind (`KeywordKind::RETIRED`) is no keyword of any card and has no word.
         let live: Vec<KeywordKind> = KeywordKind::ALL
             .iter()
             .copied()
@@ -516,7 +502,6 @@ mod r1303_the_chinese_tables {
                 problems.push(word.to_string());
             }
         }
-        // The glossary's entries are the client's GLOSSARY's, which chinese.test.tsx proves.
         for (term, entry) in terms["glossary"].as_object().into_iter().flatten() {
             if !plain(&entry["label"])
                 || !plain(&entry["rule"])
@@ -544,7 +529,6 @@ mod r1303_the_chinese_tables {
     /// held to its Chinese name), and the same term outside a name still does.
     #[test]
     fn r1303_a_term_inside_a_name_the_face_names_asks_for_no_chinese_term_and_outside_one_it_does() {
-        // The Rush Token's name holds two terms, Rush (突袭) and Token (衍生物).
         assert_eq!(CATALOG["core-t-rush"].name, "Rush Token");
         let mut naming = CATALOG["core-001"].clone();
         naming.refs = Some(vec!["core-t-rush".to_string()]);
@@ -561,7 +545,6 @@ mod r1303_the_chinese_tables {
             missing_terms(&naming, "Summon a Rush Token. Give it Rush.", chinese),
             [("Rush", "突袭")]
         );
-        // The plural is the name too; a longer word that holds the name is none, and its terms stay.
         assert!(!without_named_cards(&naming, "Summon two Rush Tokens.").contains("Rush"));
         assert_eq!(
             without_named_cards(&naming, "A Rush Tokenizer has Rush."),

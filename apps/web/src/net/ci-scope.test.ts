@@ -1,12 +1,8 @@
 // scripts/ci-scope.sh: the lines ci.yml's `changes` job uses to skip jobs. It may say `full=false`
-// only when every changed file is one no CI job reads (the night bot's code and its switches, the
-// workflows that run the bot, the training lanes' prompts and loop), and any other line false only
-// when nothing that line's job reads changed (`db` and its three suites, clippy, each Rust test
-// group, the web's checks and unit tests, e2e smoke, infra/'s terraform steps), so each case here is a diff in a throwaway repo
-// and the answer a pull request would get: a path alone that leaves a line off, and the same path
-// beside an engine source, which turns it on. Every doubt must come out with every line true. The
-// scans at the end hold `web` and `e2e` to every repository path the web's and the client's sources
-// name; crates/tools/tests/acceptance.rs holds the Rust groups to `cargo metadata`.
+// only when no CI job reads any changed file, and any other line false only when nothing its job reads
+// changed; every doubt must come out with every line true. The scans at the end hold `web` and `e2e` to
+// every path the web's and the client's sources name; crates/tools/tests/acceptance.rs holds the Rust
+// groups to `cargo metadata`.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -62,23 +58,19 @@ const RUST = [
 const ENGINE = "crates/engine/src/reduce.rs";
 
 let repo = "";
-/** The first commit's sha. */
 let baseSha = "";
 
-/** Git's background upkeep is off (#1016): from git 2.54 a commit can start a detached repack (`git
- * maintenance run --auto`), whose prune-packed removes the empty objects/xx directory a `git add` here
- * has just made for an object, and the add fails with "unable to create temporary file". */
+/** Git's background upkeep is off (#1016): from git 2.54 a commit can start a detached repack whose
+ * prune-packed removes the empty objects/xx directory a `git add` here has just made. */
 const GIT_CONFIG = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0"];
 
 function git(...args: string[]): string {
   return execFileSync("git", [...GIT_CONFIG, ...args], { cwd: repo, encoding: "utf8" }).trim();
 }
 
-/** A commit on top of the first one that writes each file with its content; returns the first commit's sha and the new one's. */
 function changeFiles(contents: Record<string, string>): { base: string; head: string } {
-  // The files go in a directory of their own, staged over the first commit's tree in an index of
-  // their own, so the commit takes one process and no checkout: a case makes dozens of these, and
-  // a process is what costs a case its time.
+  // Staged over the first commit's tree in an index of their own, so the commit takes one process and
+  // no checkout: a case makes dozens of these, and processes are what cost a case its time.
   const files = mkdtempSync(join(tmpdir(), "ci-scope-change-"));
   for (const [file, content] of Object.entries(contents)) {
     mkdirSync(dirname(join(files, file)), { recursive: true });
@@ -102,11 +94,9 @@ function changeFiles(contents: Record<string, string>): { base: string; head: st
   return { base: baseSha, head };
 }
 
-/** A commit on top of the first one that adds `files`, each holding its own path. */
 const change = (...files: string[]): { base: string; head: string } =>
   changeFiles(Object.fromEntries(files.map((file) => [file, `${file}\n`])));
 
-/** The script's output lines, each `name=true|false`, the names in `NAMES`' order. */
 function lines(base: string | undefined, head: string | undefined): Answer {
   const args = [SCRIPT, ...(base === undefined ? [] : [base]), ...(head === undefined ? [] : [head])];
   const run = spawnSync("sh", args, { cwd: repo, encoding: "utf8" });
@@ -119,13 +109,11 @@ function lines(base: string | undefined, head: string | undefined): Answer {
 
 const every = (value: boolean): Answer => Object.fromEntries(NAMES.map((name) => [name, value])) as Answer;
 
-/** What a pull request that adds `files` gets. */
 function answerFor(...files: string[]): Answer {
   const { base, head } = change(...files);
   return lines(base, head);
 }
 
-/** The lines a pull request that adds `files` turns on. */
 const onFor = (...files: string[]): Name[] => {
   const answer = answerFor(...files);
   return NAMES.filter((name) => answer[name]);
@@ -278,7 +266,6 @@ describe("scripts/ci-scope.sh", () => {
     ]) {
       expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: false });
     }
-    // A pull request that skips everything skips the db job too.
     expect(fullAndDb(answerFor("bot/harness/state.py", ".harness/config.json"))).toEqual({ full: false, db: false });
   });
 
@@ -360,8 +347,6 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
-  // Each line beside the Rust groups and the db suites: a path that turns it on alone, and a path
-  // that leaves it off alone and is run beside an engine source.
   const SCOPED: Record<"clippy" | "web" | "e2e", { on: string[]; off: string[] }> = {
     clippy: {
       on: [
@@ -472,9 +457,7 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
-  // promote-production.test.ts, which `web (promote-production)` runs on its own line: an `on` path
-  // alone turns it on (and `web` with it, so the job that runs it runs); an `off` path alone leaves
-  // it off, beside an engine source too, and beside an `on` path turns it on.
+  // `web (promote-production)` runs promote-production.test.ts on its own line; an `on` path turns `web` on too, so that job runs.
   const PROMOTE = {
     on: [
       "scripts/promote-production.sh",
@@ -513,8 +496,7 @@ describe("scripts/ci-scope.sh", () => {
     }
   });
 
-  // infra/'s terraform steps in `rust (checks, fuzz 200)` (#1708): nothing but infra/ reads it, so it
-  // runs that line alone, and nothing outside it but the workflows and this script turns it on.
+  // infra/'s terraform steps in `rust (checks, fuzz 200)` (#1708): nothing but infra/ reads it.
   it("runs infra/'s terraform steps only when infra/ or the workflow that runs them changed", () => {
     for (const file of ["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"]) {
       expect(onFor(file), file).toEqual(["full", "infra"]);
@@ -608,9 +590,7 @@ describe("scripts/ci-scope.sh", () => {
   });
 });
 
-// ------------------------------------------------------------------------------------------------
 // The paths the web's and the client's sources name
-// ------------------------------------------------------------------------------------------------
 
 const TOP = new Set(readdirSync(ROOT));
 /** First segments a named path never counts under: the web and e2e run for everything there already. */
@@ -619,7 +599,6 @@ const SOURCE = /\.(ts|tsx|mjs|js)$/;
 const SKIP_DIRS = new Set(["node_modules", "dist", "pkg", ".vite"]);
 const TOKENS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g;
 
-/** Every source file under `root` (a repository-relative file or directory), repository-relative. */
 function sourcesUnder(root: string): string[] {
   const stat = statSync(join(ROOT, root), { throwIfNoEntry: false });
   if (stat === undefined) return [];
@@ -643,7 +622,6 @@ function readings(file: string, literal: string): string[] {
   return out;
 }
 
-/** The path a reading names, if it is one: under a top-level entry outside apps/ and e2e/, `*` as `x`, a directory as a file in it. */
 function named(reading: string, literal: string): string | undefined {
   const path = posix.normalize(reading.replaceAll("*", "x")).replace(/\/+$/, "");
   const first = path.split("/")[0] ?? "";
@@ -653,7 +631,6 @@ function named(reading: string, literal: string): string | undefined {
   return stat?.isDirectory() ? `${path}/x` : path;
 }
 
-/** Each repository path the sources under `roots` name, with the files that name it. */
 function namedPaths(roots: string[], keep: (file: string) => boolean): Map<string, string[]> {
   const found = new Map<string, string[]>();
   for (const file of roots.flatMap(sourcesUnder).filter(keep)) {
@@ -680,7 +657,7 @@ const WEB = namedPaths(
   ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
   (file) => !DATA_ONLY.includes(file),
 );
-/** What e2e smoke's client build and specs read: e2e/, and the client without its unit tests. */
+/** What e2e smoke's client build and specs read. */
 const E2E = namedPaths(
   ["e2e", "apps/web/vite.config.ts", "apps/web/static-pages.ts", "apps/web/src"],
   (file) => !(file.startsWith("apps/web/src/") && (/\.test\.tsx?$/.test(file) || file.startsWith("apps/web/src/test/"))),

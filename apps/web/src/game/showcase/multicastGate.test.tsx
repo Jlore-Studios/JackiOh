@@ -1,7 +1,5 @@
 // Issue #124: a burst of casts outlasts one burst budget (Jogg's Box casts ten, each with its own
-// CAST_BUDGET_MS), so the showcase's gate must not time out while the runner is still reaching casts:
-// every entry the runner starts restarts the gate's wait, and each cast still replaces in as its own
-// entry starts. With no runner progress at all, the gate still lets go after SHOWCASE_GATE_MAX_MS.
+// CAST_BUDGET_MS), so the showcase's gate must not time out while the runner is still reaching casts.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -25,7 +23,6 @@ const box = (): GameEvent => ({ type: "cardPlayed", player: "p2", instanceId: "b
 const cast = (id: string): GameEvent => ({ type: "cardPlayed", player: "p2", instanceId: id, defId: SPELL, costPaid: 0 });
 const resolved = (id: string): GameEvent => ({ type: "cardResolved", player: "p2", instanceId: id, defId: SPELL, permanent: false, costPaid: 0 });
 
-/** Mounts on a first view, then gives it `view` (with `events` after TURN). */
 function mountThen(events: GameEvent[], options: { queue?: AnimationQueue; view?: PlayerView } = {}) {
   const base = options.view ?? baseView();
   const tree = (view: PlayerView) => withCatalog(<CardShowcase view={view} {...(options.queue === undefined ? {} : { queue: options.queue })} />);
@@ -47,7 +44,6 @@ function advance(ms: number): void {
   });
 }
 
-/** The ordinal badge showing now, or null when nothing is held up. */
 function ordinalNow(): string | null {
   return screen.queryByTestId(T.ordinal)?.getAttribute("data-ordinal") ?? null;
 }
@@ -82,7 +78,6 @@ describe("issue #124 the gate outlasts a burst the runner is still working throu
     const seen: (string | null)[] = [];
     // Four casts, each reached more than SHOWCASE_GATE_MAX_MS after the first was gated: every
     // runner start restarts the gate, so nothing times out into the capped hold queue instead.
-    // The box's own entry is in flight; each tick below ends one entry and starts the next.
     for (const id of ["1", "2", "3", "4"]) {
       tick(); // This cast's entry starts: it replaces in at once.
       expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase", "multicast");
@@ -115,7 +110,6 @@ describe("issue #1493 trap reveals wait for their runner entry", () => {
     const { next } = mountThen([first, second], { queue });
     // Both reveals are gated to their `trapFired` entry: nothing is up before the runner reaches them.
     expect(screen.queryByTestId(T.root)).toBeNull();
-    // Game feeds the runner the same objects the view holds.
     act(() => queue.enqueue(next.events.slice(1), next));
     // The first entry starts as it is enqueued: the first trap replaces in at once.
     expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase", "trap");

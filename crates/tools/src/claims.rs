@@ -1,23 +1,15 @@
 //! `cargo jackioh classify --claims` (#1370, R1370000): a pull request's pending fragments claim
 //! what it does to the cards, no more and no less. The classifier (R1365000) names the families that
-//! play differently between the base and the head; the fragments at the head claim families through
-//! their catalog `cards` and their `plays`, and a rule every game meets through `rule` (R1366000).
+//! play differently; the head's fragments claim them through `cards` and `plays`, and a rule every game
+//! meets through `rule` (R1366000). It fails, naming the family or the fragment, when a family plays
+//! differently and no fragment claims it; when a `plays` claim this change adds names a family stage 2
+//! shows playing as before (an earlier pull request's pending claims stand); when a rule every game
+//! meets (`RULE_MIN_GAMES`, R2455000) goes unclaimed, or a new rule claim has none behind it; and,
+//! R2529000, when a change to the cards' look and a `visual` claim do not match.
 //!
-//! It fails, naming the family or the fragment:
-//! - when a family plays differently and no fragment at the head claims it, through either list;
-//! - when a fragment claims, through `plays`, a family the base build shows playing as before (only
-//!   once stage 2 ran, and only for the claims this change adds: a fragment an earlier pull request
-//!   left pending keeps the claims its own check confirmed);
-//! - when a rule every game meets (divergences no card explains in `classify`'s `RULE_MIN_GAMES` of
-//!   the unforced games, R2455000) has no fragment claiming it, or a fragment newly claims a rule and
-//!   stage 2 found none;
-//! - R2529000: when the cards' look changed and no fragment claims `visual`, or a fragment newly
-//!   claims it and their look did not change.
-//!
-//! The catalog claims are `patches check`'s (R646): this check adds only what the catalog diff
-//! cannot see, a card whose script or whose engine rule changed. CI runs it on every pull request as
-//! a piece of the `rust` check, with stage 2 against main's build of the base whenever stage 1 left
-//! something unchecked (`.github/workflows/ci.yml`, `rust (classify)`).
+//! The catalog claims are `patches check`'s (R646): this adds what the catalog diff cannot see, a
+//! changed script or engine rule. CI runs it on every pull request (`.github/workflows/ci.yml`, `rust
+//! (classify)`), with stage 2 against main's build of the base whenever stage 1 left something unchecked.
 
 use std::collections::BTreeSet;
 use std::path::Path;

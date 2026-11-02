@@ -1,11 +1,8 @@
-// R2202000: the Training Grounds set's own procedural art (issue #2202). Every `traininggrounds-`
-// entry but the snapshots draws here instead of `artSpec`: a training yard (a sky, a palisade, a
-// sand floor) under one subject that its family fixes and its name's word details, so the set's
-// dummies, ogres, knives, totems, Felinors, runes, posters and its Golem each read as what the card
-// is. The snapshots #41–#60 keep their Core card's picture (`SNAPSHOT_ART`). Presentation only
-// (CLAUDE.md rule 7): a pure function of the card's id, name, tags and type, with geometry drawn from
-// streams the Radiant face shares, so the two faces differ only in their paint and the gold rays.
-// No other set reaches this file, so no shipped card's picture moves (R503).
+// R2202000 (#2202): the Training Grounds set's own art, drawn instead of `artSpec`: a training yard
+// under one subject its family fixes and its name details. The snapshots #41–#60 keep their Core
+// card's picture (`SNAPSHOT_ART`). Presentation only (CLAUDE.md rule 7); geometry comes from streams
+// the Radiant face shares, so the faces differ only in paint and gold rays. No other set reaches this
+// file, so no shipped card's picture moves (R503).
 
 import type { CardType, Tag } from "@jackioh/shared";
 

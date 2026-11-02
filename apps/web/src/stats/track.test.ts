@@ -363,7 +363,7 @@ describe("R1743000 the damage, attacks, healing, draws, Radiant changes and turn
     ];
     expect(countHits(EMPTY_LOG, view, fresh, before).overkill).toEqual({ "core-004": 6 });
     expect(countHits(EMPTY_LOG, view, fresh.slice(0, 3), before).overkill).toEqual({ "core-004": 4 });
-    // The same hits with no view before count their damage and their biggest, and no overkill.
+    // With no view before: damage and the biggest hit, but no overkill.
     const blind = countHits(EMPTY_LOG, view, fresh, null);
     expect(blind.overkill).toEqual({});
     expect(blind.biggestHit).toEqual({ "core-004": 50 });
@@ -384,7 +384,6 @@ describe("R1743000 the damage, attacks, healing, draws, Radiant changes and turn
     expect(count([played("p1", "core-040"), healed(3), healed(2)])).toEqual({ "core-040": 5 });
     expect(count([played("p1", "core-040"), healed(3), activated("p1", "core-041"), healed(2)])).toEqual({ "core-040": 3, "core-041": 2 });
     expect(count([activated("p1", "core-041"), healed(1), sprung("p1", "core-020"), healed(4)])).toEqual({ "core-041": 1, "core-020": 4 });
-    // No card before it in the batch, or a zero heal: nothing. A play after it is not its source.
     expect(count([healed(3)])).toEqual({});
     expect(count([healed(9), played("p1", "core-040")])).toEqual({});
     expect(count([played("p1", "core-040"), healed(0)])).toEqual({});
@@ -417,7 +416,6 @@ describe("R1743000 the damage, attacks, healing, draws, Radiant changes and turn
     const started = (turn: number): GameEvent => ({ type: "turnStarted", player: "p1", turn });
     const seven = countEvent(EMPTY_LOG, started(7), "p1");
     expect(seven.turns).toBe(7);
-    // An older or equal turn is the very same log; a later one raises it.
     expect(countEvent(seven, started(5), "p1")).toBe(seven);
     expect(countEvent(seven, started(7), "p1")).toBe(seven);
     expect(countEvent(seven, started(8), "p2").turns).toBe(8);

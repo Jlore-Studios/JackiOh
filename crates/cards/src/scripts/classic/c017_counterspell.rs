@@ -3,27 +3,17 @@
 //!   Radiant: "Activates when your opponent plays a Spell: Counter it. Add a copy of it to your hand.
 //!             The copy costs ({setCost})."
 //!
-//! Counter (§6.3, B5 E1, R448) answers the opponent's `cardAnnounced` of a Spell — the Spell type, so a
-//! Field Spell, a Trap or a Unit leaves it set — in §10.5's announce window, before the card moves: a
-//! play or a cast (a cast is a play and is announced too, R70). The countered Spell never resolves and
-//! goes to its owner's graveyard; it is treated as never played (no spell script, no `cardPlayed` or
-//! `cardResolved`, not counted by the turn's or the game's plays, Combo, Quickstriker or Ceaseless
-//! Void, no Echo repeats), and the mana and Tributes paid for it stay spent. With two Counters set, the
-//! first to resolve cancels the play and the other finds no live announce — the window never offers it
-//! the canceled card, so it stays set (R448). A Trap is consumed when it fires (§5.1).
-//!
-//! The condition lives in `when`, never in an early return from `run` (R99, R61): a Unit play must
-//! leave the trap armed and face-down.
-//!
-//! Radiant: a fresh copy of the countered Spell (its Radiant flag kept, R57) goes to your hand as your
-//! card, costing ({setCost}) (`costOverride`, which persists in every zone, R78); a full hand burns it
-//! (R317), and in your hand the opponent's view names it no more (R97).
+//! Counter (§6.3, B5 E1, R448) answers the opponent's `cardAnnounced` of a Spell in §10.5's window,
+//! before the card moves (cast included, R70); the Spell never resolves and goes to graveyard.
+//! With two Counters set, the first cancels the play and the other stays set (R448, §5.1).
+//! Condition in `when`, never `run` (R99, R61). Radiant: copy of countered Spell to hand (R57, R1300),
+//! costing ({setCost}) (R78, R386); full hand burns it (R317); opponent's view names it no more (R97).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-017";
 
-/// TS `Extract<GameEvent, { type: "cardAnnounced" }>`: the fields of the announce this card reads.
+/// The fields of the announce this card reads.
 struct Announced {
     instance_id: String,
     def_id: String,
@@ -83,20 +73,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #17 Counterspell — SPEC §8.6 row 17, BUILD M9 Classic row C 17: "Face-down (R33); fires on the
-// opponent's announce of a Spell (the Spell type; a Field Spell, Trap or Unit leaves it set), a cast by
-// an effect included (R70), before the card moves (§10.5); the Spell never resolves and goes to its
-// owner's graveyard, treated as never played: no spell script, no `cardPlayed` or `cardResolved`, not
-// counted by the turn's or the game's plays, Combo, Quickstriker or Ceaseless Void, and no Echo
-// repeats; its mana and Tributes stay spent; with two counters set the first to resolve cancels it and
-// the other stays set; your own Spells never fire it; `cardAnnounced` and `countered` name only what
-// `cardPlayed` would; radiant: also a fresh copy of the Spell (its Radiant flag kept) in your hand,
-// yours, that costs (0) (`costOverride`), burned at a full hand (R317) and never named in the opponent's
-// view once there (R97); its tuned number (radiant cost) reads through `param()` (R386)".
-//
-// Every case sets the trap face-down in p1's backrow and makes p2 the active player: a Trap answers the
-// OPPONENT's play. The Spell under test is Stockpile (core-005, "Draw 2. Heal your hero 2."), whose
-// resolution would be visible in p2's hand and health.
+// C #17 Counterspell — SPEC §8.6 row 17, BUILD M9 Classic row C 17: face-down (R33); cancels announced Spell (§10.5, R70);
+// radiant: copy costs (0) (R78, R386), burned at full hand (R317), hidden from opponent (R97).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,14 +94,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019";
 
-    /// TS `armed(radiantFace = false, lane = 2)`.
     fn armed(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": COUNTER, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
 
     use crate::merged;
 
-    /// TS `setup(p1 = {}, p2 = {}, radiantFace = false)`.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -136,7 +112,7 @@ mod tests {
         events.iter().filter(|event| event.event_type() == kind).count()
     }
 
-    /// TS `toMatchObject`: every key of `expected` is equal in `actual`, objects compared key by key.
+    /// Every key of `expected` is equal in `actual`, objects compared key by key.
     fn assert_subset(actual: &Value, expected: &Value) {
         match (actual, expected) {
             (Value::Object(actual_map), Value::Object(expected_map)) => {

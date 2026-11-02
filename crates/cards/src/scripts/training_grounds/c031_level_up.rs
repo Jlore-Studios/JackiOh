@@ -1,15 +1,12 @@
 //! TG #31 Level Up! (SPEC §8.11 row 31). (3) Field Spell, Epic. "After one of your Units has attacked
 //! {attacks|time|times} since this arrived, it becomes Radiant." (Radiant: 2 times.)
-//! The engine's `allyAttack` hook (R2199000): run for this card once the state check that closes each
-//! combat of one of its controller's Units has run, a declared attack's or a forced one's (R53); an
-//! attack called off before it fought never reaches it (R44). Each Unit counts apart, across turns, from
-//! when this arrived (R2199007). The counts live in this card's own `memory` (§10.1), a map of Unit id
-//! to `{ n, mark }`, so they start at nothing as this arrives and go when it leaves (R78), and two Level
-//! Ups count apart. `mark` is the field's departures as the Unit's count began: a Unit that has left the
-//! field since (a bounce, a Reborn return) is a new arrival and starts again (R174). The Unit becomes
-//! Radiant after the combat of its Nth attack, if it still stands (`set_radiant`: the base layer swaps,
-//! damage and buffs stay, no Cry, R22, R74); one already Radiant is counted and nothing happens.
-//! R2321000: the counts that still hold ride on their Units in both views (`tallies`), `n` of "attacks".
+//! The engine's `allyAttack` hook (R2199000): run once the state check closing each combat of one of its
+//! controller's Units has run, declared or forced (R53); an attack called off before it fought never
+//! reaches it (R44). Each Unit counts apart, across turns, from when this arrived (R2199007), in this
+//! card's own `memory` (§10.1) as Unit id to `{ n, mark }`, so the counts go when it leaves (R78). `mark`
+//! is the field's departures as the count began: a Unit that has left since is a new arrival (R174). It
+//! becomes Radiant after its Nth combat if it still stands (`set_radiant`, R22, R74). R2321000: the
+//! counts that still hold ride on their Units in both views (`tallies`).
 
 use jackioh_engine::combat::ally_attack_of;
 use jackioh_engine::prelude::*;
@@ -51,9 +48,8 @@ fn level_up(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     effects
 }
 
-/// R2321000: each count this card keeps that still holds, on the Unit it counts, toward its "attacks"
-/// (§10.8): a Unit of its controller's on the field that has not left it since its count began (R174),
-/// so the screen shows what the next attack will add to.
+/// R2321000: each count that still holds (its Unit on its controller's field, not left since, R174), on
+/// that Unit toward its "attacks" (§10.8), so the screen shows what the next attack adds to.
 fn tallies() -> TallyHook {
     condition_hook(|ctx| {
         let Some(counts) = ctx.self_.memory.get(COUNTS).and_then(Value::as_object) else {
@@ -92,9 +88,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #31 Level Up! — SPEC §8.11 row 31, BUILD M13 row TG 31. p1 holds it face-up in backrow lane 1;
-// p2's Wall (a 0/30 stand-in: Mr. Vanilla with its stats overridden) takes the attacks, so nothing
-// dies unless a test says so.
+// TG #31 Level Up! — SPEC §8.11 row 31, BUILD M13 row TG 31. p2's 0/30 Wall takes the attacks, so
+// nothing dies unless a test says so.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -126,8 +121,7 @@ mod tests {
         scenario(json!({ "seed": "level-up", "p1": p1, "p2": p2 }))
     }
 
-    /// p1's Unit in lane `lane` attacks p2's Unit in lane 1, then the turn passes to p2 and back to p1,
-    /// so it is ready again.
+    /// p1's Unit in lane `lane` attacks p2's Unit in lane 1.
     fn swing(s: &mut Scenario, lane: i32) {
         let attacker = s.unit(P1, lane).unwrap();
         let target = s.unit(P2, 1).unwrap();
@@ -283,7 +277,6 @@ mod tests {
 
         #[test]
         fn r53_a_forced_attack_counts() {
-            // p2's Moths to the Flame forces every p1 Unit to attack it at p2's start of turn.
             let mut s = board(
                 false,
                 json!({ "field": [VANILLA] }),

@@ -5,8 +5,7 @@
 //! Radiant: "Lucky 2\nCry: Draw 1-2. Add 1-4 to your Jade Counter."
 //! Engine (MD-G3, R1439):
 //! - **Two rolls:** the Cry rolls how many cards to draw, 1 or 2, as C+ #53 Book of Tokens rolls its
-//!   count, then how much to add, uniform over 1–2 (1–4 on the Radiant face; 1–3 and 1–6 through
-//!   v0.5.2, which `script_v0_5_2` keeps, R767000, issue #2179). Each is its own
+//!   count, then how much to add, uniform over 1–2 (1–4 on the Radiant face). Each is its own
 //!   `rng.lucky` roll, higher better, with the card's Lucky as it stands (printed, as a Nerf or a
 //!   Buff has moved it, plus any given, R386, R1438: `lucky_on`) and its controller's Luck (R987).
 //! - **The draws** are §2.4's: the hand cap burns the extra card and an empty deck deals fatigue.
@@ -24,8 +23,7 @@ pub const ID: &str = "meditative-102";
 const MIN_DRAWS: i32 = 1;
 const MAX_DRAWS: i32 = 2;
 
-/// The printed "Add 1-2" (base) and "Add 1-4" (Radiant): the least and most one Cry adds (issue
-/// #2179; 1-3 and 1-6 from patch v0.3.10, #831; 1-4 and 1-10 before).
+/// The printed "Add 1-2" (base) and "Add 1-4" (Radiant): the least and most one Cry adds (#2179, #831).
 pub const MIN_JADE: i32 = 1;
 pub const MAX_JADE: i32 = 2;
 pub const MAX_JADE_RADIANT: i32 = 4;
@@ -33,7 +31,6 @@ pub const MAX_JADE_RADIANT: i32 = 4;
 pub const MAX_JADE_V0_5_2: i32 = 3;
 pub const MAX_JADE_RADIANT_V0_5_2: i32 = 6;
 
-/// One uniform roll over `low..=high`.
 fn uniform(rng: &mut Rng, low: i32, high: i32) -> i32 {
     low + rng.int(high - low + 1)
 }
@@ -41,7 +38,6 @@ fn uniform(rng: &mut Rng, low: i32, high: i32) -> i32 {
 fn catboy_maid(max_jade: i32) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // R1438, R987: the Lucky on the card as it stands, and its controller's Luck.
             let lucky = ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
                 + luck_of(&*ctx.state, ctx.controller);
             let draws = ctx.rng.lucky(
@@ -78,12 +74,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// M #102 Catboy Maid SSR+ — SPEC §8.8 row 102, BUILD M10 row M 102: "Lucky 1; Cry (played): draws 1
-// or 2 and adds 1 to 2 to your Jade Counter, every value seen over the seeds (MD-G3); each roll is two
-// draws keeping the higher; given Lucky 1 (R1438), each roll is three draws; a full hand burns the
-// extra card and an empty deck deals fatigue (§2.4); reaching 5 summons a Jade Beauty (MD-C3); radiant
-// 2/2 and Lucky 2: three draws a roll and 1 to 4 added, and reaching 10 makes your Jade Beauty
-// Radiant".
+// M #102 Catboy Maid SSR+ — SPEC §8.8 row 102, BUILD M10 row M 102.
 #[cfg(test)]
 mod tests {
     use super::{ID, MAX_DRAWS, MAX_JADE, MAX_JADE_RADIANT, MAX_JADE_V0_5_2, MIN_DRAWS, MIN_JADE};
@@ -261,7 +252,6 @@ mod tests {
                 .count();
             assert!((1..=2).contains(&fatigues));
             assert!(s.view(P1).you.hero.health < health);
-            // The Jade Counter still rises.
             assert!(s.view(P1).you.jade.is_some_and(|jade| jade >= MIN_JADE));
         }
 
@@ -302,7 +292,6 @@ mod tests {
                     jade_seen.push(jade);
                 }
             }
-            // Past the base face's 2: the Radiant range reaches higher.
             assert!(jade_seen.iter().any(|jade| *jade > MAX_JADE));
         }
 

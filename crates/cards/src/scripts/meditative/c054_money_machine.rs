@@ -4,15 +4,12 @@
 //!          into your deck."
 //! Radiant: "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The
 //!          Coin into your deck."
-//! Engine (patch v0.3.13, #1194):
+//! Engine (#1194):
 //! - **End of turn** (its controller's): one fresh shuffle of The Coin (§7) into the opponent's deck, a
 //!   base Coin on either face, R80's cap turning a full library away. Nothing is rolled, and the
 //!   shuffle is open: the opponent's list names the Coin it was shown going in (R311).
 //! - **Activate** (R384): its controller's alone, once a turn, with no cost: one open shuffle of The
 //!   Coin into its controller's deck, Radiant on the Radiant face. The Machine stays.
-//! - `script_v0_3_7b` keeps what v0.3.7b and every version before it ran for their replays (R767000):
-//!   the hidden roll into its controller's deck over `MONEY_MACHINE_ODDS` with both shuffles unseen
-//!   (MD-D10, R1106), and the Activate either player paid {price} for to Tribute it (MD-D9, R1105).
 
 use jackioh_engine::prelude::*;
 
@@ -68,7 +65,7 @@ fn yours(ctx: &mut EffectContext<'_>) -> String {
 
 /// R767000: the Machine v0.3.7b and every version before it ran: at its controller's end of turn two
 /// unseen shuffles, The Coin into the opponent's deck and the rolled card into its controller's
-/// (R1106), and an Activate either player pays {price} for to Tribute it (R1105).
+/// (MD-D10, R1106), and an Activate either player pays {price} for to Tribute it (MD-D9, R1105).
 fn money_machine_v0_3_7b(radiant: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| {
@@ -117,11 +114,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     }
 }
 
-// M #54 Money Machine — SPEC §8.8 row 54, BUILD M10 row M 54: "At your end of turn only, one The Coin
-// into the opponent's deck, open, and none into yours; R80's cap refuses a full deck; Activate: its
-// controller's alone, once a turn, free: one The Coin into your deck, open, the Machine staying; no tuned
-// numbers; radiant the opponent still gets a base Coin and the Activate's is Radiant". The v0.3.7b
-// script's odds stay pinned (R1106).
+// M #54 Money Machine — SPEC §8.8 row 54, BUILD M10 row M 54.
 #[cfg(test)]
 mod tests {
     use super::{ID, THE_COIN};
@@ -250,7 +243,6 @@ mod tests {
             assert!(!mine[0].radiant);
             // R311: open, so p1's own list names it.
             assert_eq!(s.view(P1).you.own_library.map(|list| list.unknown), Some(0));
-            // Free, and the Machine stays.
             assert_eq!(s.view(P1).you.mana.current, mana);
             s.expect_in_zone(&machine_id, "field");
             // R384: "Activate" is once a turn.

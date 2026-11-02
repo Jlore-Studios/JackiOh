@@ -1,24 +1,15 @@
-//! Custom cards' scripts (#913, #915, SPEC §12.3 to §12.5): the card kit, loading a custom card at
-//! runtime, its budget and what a failure does.
+//! Custom cards' scripts (#913, #915, SPEC §12.3 to §12.5): the card kit, loading, budget and failure.
 //!
 //! - **The kit** is `kit/kit.luau`, host code: it runs once per VM in the sandbox, with `J` in reach,
 //!   and hands back `Card`. A custom card's chunk runs in its own environment, which holds `Card`, the
 //!   sandbox's globals and no `require`: `J` stays underneath (K4).
-//! - **Loading** (`load_custom_card`): the source is linted and compiled as any script's (`compile`),
-//!   then loaded as a card's module by `script::load_card`. The card's name in the VM is its id with
-//!   a digest of its source (`custom-…#<hex>`), so an edited card is a new chunk, never the cached
-//!   one, and both it and the bytecode are leaked to `'static` once per distinct source, as the
-//!   loader's sites need: the cache below keeps a source from being leaked twice.
-//! - **The budget** (K7): a custom card's hook call starts `CUSTOM_HOOK_INTERRUPTS`, not
-//!   `LUAU_HOOK_INTERRUPTS` (`sandbox::Budget::enter`), under the same memory cap.
-//! - **A failure** (R915004): a custom card's hook that errors, runs out, or returns what the host
-//!   refuses resolves `effects::script_failed` instead of panicking (`hooks::failed`), and its aura
-//!   gives nothing. A card whose source does not load gets scripts whose every hook it may have says
-//!   so (`failing_scripts`).
-//!
-//! CLAUDE.md rule 4: the cache is the VM's (`vm::Vm.custom`), so it is thread-local as the VM is, and
-//! it holds compiled scripts only, keyed by the card's id and source: what a lookup answers is a
-//! function of the card it is handed.
+//! - **Loading** (`load_custom_card`): the card's name in the VM is its id with a digest of its source
+//!   (`custom-…#<hex>`), so an edited card is a new chunk, never the cached one. The cache is the VM's
+//!   (CLAUDE.md rule 4), thread-local as the VM is, holding compiled scripts keyed by the card's id and
+//!   source: what a lookup answers is a function of the card it is handed.
+//! - **The budget** (K7): its hook call starts `CUSTOM_HOOK_INTERRUPTS`, under the same memory cap.
+//! - **A failure** (R915004): a hook that errors, runs out, or returns what the host refuses resolves
+//!   `effects::script_failed` instead of panicking (`hooks::failed`), and its aura gives nothing.
 
 use std::sync::Arc;
 
@@ -91,9 +82,8 @@ fn plain(message: &str) -> String {
     text
 }
 
-/// The problems a custom card's source has: the lint's findings, then Luau's compiler, then loading
-/// it as the kit's module (`Card { … }`'s own checks). Empty for a source that loads. The creator
-/// shows these; nothing is cached.
+/// The problems a custom card's source has: the lint's findings, then Luau's compiler's, then loading it
+/// as the kit's module. Empty for a source that loads. The creator shows these; nothing is cached.
 pub fn check_custom_source(card: &CustomCard) -> Vec<ScriptProblem> {
     let name = chunk_name(card);
     match compile(&name, &card.source) {
@@ -189,8 +179,8 @@ impl CustomScriptHost for KitHost {
     }
 }
 
-/// The lint's findings on the kit itself, which the kit's own test checks it has none of but the one
-/// it needs (its key count, `check_spec`), so the kit is held to the rules a card is.
+/// The lint's findings on the kit itself, which the kit's own test checks it has none of but the one it
+/// needs (`check_spec`), so the kit is held to the rules a card is.
 pub fn kit_findings() -> Vec<lint::Finding> {
     lint::lint("kit.luau", KIT_SOURCE)
 }

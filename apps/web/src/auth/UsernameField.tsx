@@ -1,18 +1,7 @@
-// The username field (R1435): the prompt after activation and the account page both use it.
-//
-// THE SERVER JUDGES, THE FIELD ASKS (CLAUDE.md rule 7). Nothing here checks a name: not its length,
-// its characters, its script or the filter (R1432, R1433). `USERNAME_PREVIEW_DEBOUNCE_MS` after the
-// last keystroke the field asks `GET /api/username/preview` what a save would give, aborting the
-// question before it, and shows the answer as it stands: the exact username, tag and all ("Max is
-// taken, so you'd be Max#3"), or the server's own sentence for a refusal. The length and cooldown
-// numbers in the hint are only words for the player, and the input carries no `maxLength`, since
-// the server counts what a player sees (graphemes), not what a browser counts.
-//
-// A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN. Save is live only while the preview on screen
-// is a yes for the name in the box, and sends exactly the username that preview named. If the
-// outcome moved meanwhile (someone took `Max`, so it is `Max#1` now), the server refuses the save
-// with a fresh preview, which replaces the old one with a line saying so, and the player saves again
-// knowing what they get.
+// The username field (R1435). THE SERVER JUDGES (CLAUDE.md rule 7): nothing here checks a name's length,
+// characters, script or the filter (R1432, R1433), and there is no `maxLength`: the server counts graphemes.
+// A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN: Save is live only while the preview on screen is a yes
+// for the name in the box, and sends exactly that username.
 
 import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -38,13 +27,11 @@ const SECONDS_PER_HOUR = 3600;
 
 /** A preview could not be read (the network, a rate limit): said plainly, never as a verdict. */
 export const USERNAME_PREVIEW_FAILED = "Couldn't check that name just now. Try again in a moment.";
-/** A save failed for a reason that carried no preview. */
 export const USERNAME_SAVE_FAILED = "Couldn't save your username just now. Try again in a moment.";
 /** A save the server refused because the outcome changed since the preview (a 409's fresh one). */
 export const USERNAME_CHANGED = "That changed since you looked. Check the name above, then save again.";
 
-/** R1435: when the next change is allowed, in the player's own clock and locale. The preview's
- * cooldown refusal and the account page's cooldown line both say it. */
+/** R1435: when the next change is allowed, in the player's own clock and locale. */
 export function nextChangeSentence(nextChangeAt: number): string {
   return t("You can change your username again on {date}.", { date: formatDateTime(nextChangeAt) });
 }
@@ -54,9 +41,7 @@ type Shown = { name: string; preview: UsernamePreview; changed: boolean };
 
 export type UsernameFieldProps = {
   token: string;
-  /** The save went through: the caller's username as the server now holds it. */
   onSaved: (own: OwnUsername) => void;
-  /** The field's label. */
   label?: string;
   /** Locks the field while something else answers for it (the prompt's Skip). */
   disabled?: boolean;
@@ -102,8 +87,7 @@ export default function UsernameField({ token, onSaved, label, disabled = false 
   const [failure, setFailure] = useState<{ name: string; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // The debounced preview: one question per pause in the typing, the one before it aborted. An
-  // empty box asks nothing.
+  // One question per pause in the typing, the one before it aborted; an empty box asks nothing.
   useEffect(() => {
     if (value.trim().length === 0) return;
     const controller = new AbortController();

@@ -4,7 +4,6 @@
 //!            Embiggened (5): The Miners offered are Radiant."
 //!   Radiant: "… Cry: Choose one of 2 Miners and Equip it into this, twice. …"
 //!
-//! R1872002: the Cry is `equip_picks` (R1841002), a Discover of 2 (`options`) from the five Miners, S #62
 //! Miner v1 to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420):
 //! the pick is a fresh copy fused straight into this (R1086, R77), its Activate with it (R1751000). The
 //! Radiant face asks twice, the second offer once the first pick is in and without it. Embiggened
@@ -53,9 +52,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #79 Orca — SPEC §8.10 row 79, BUILD M12 row S 79: "its Cry offers 2 of the five Miners (a
-// Discover of two, R1841002) and fuses the chosen one into it; Embiggened (5, with mana an effect gave) the
-// two offered are Radiant; radiant 16/16 and two offers in turn, the second leaving out the first pick".
+// Stinkyscape #79 Orca — SPEC §8.10 row 79, BUILD M12 row S 79 (R1841002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -65,7 +62,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// p1 plays the Orca (Radiant on `radiant`) into lane 1, at (5) when `embiggened`, with mana to spare.
     fn played(radiant: bool, embiggened: bool) -> (Scenario, String) {
         let mut s = weapon_board(
             "s079",
@@ -77,7 +73,6 @@ mod tests {
         (s, host)
     }
 
-    /// The Miners the open Discover offers.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.clone().expect("a Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
@@ -92,8 +87,6 @@ mod tests {
             .collect()
     }
 
-    /// Answers each of `picks` offers with the first Miner, checking each offer and the health it adds
-    /// (`radiant_offer`: the picks' Radiant faces); returns the Miners picked.
     fn answers(s: &mut Scenario, host: &str, picks: usize, radiant_offer: bool) -> Vec<String> {
         let mut held: Vec<String> = Vec::new();
         for _ in 0..picks {

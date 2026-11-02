@@ -1,14 +1,7 @@
-//! Cards between the players' piles (docs/classic-sets.md B5 E16, with E2's hand and deck half):
-//! cards handed from one hand to the other (Classic #9 Income Tax), a card taken out of the other
-//! player's deck (Classic+ #12.3 Fluffy Grip) and a draw from the other player's deck (Classic #58
-//! Common Resources). Every one of them is `ownership.ts`'s change of owner: the card becomes the
-//! taker's for good, its later piles are the taker's, and the taker's hand cap burns what does not fit
-//! into the taker's graveyard (§2.4). Swapping whole decks is R73's library swap (`swap.ts`), not this.
-//! Since R1185003 a named card on the field may be taken too (M+ #24 Bob: "Put an enemy Unit into
-//! your hand"), as a Bounce takes it, into the taker's hand (`take_to_hand`).
-//!
-//! Port of `packages/engine/src/effects/give.ts`. TS wrote the riders through the live instance; Rust
-//! writes them through `state::find_instance_mut` by the card's id.
+//! Cards between the players' piles (docs/classic-sets.md B5 E16, with E2's hand and deck half), each
+//! `crate::ownership`'s change of owner: the card is the taker's for good, and the taker's hand cap
+//! burns what does not fit (§2.4). Swapping whole decks is R73's library swap, not this; a named card
+//! on the field may be taken too (R1185003, `take_to_hand`).
 
 use serde::{Deserialize, Serialize};
 
@@ -44,7 +37,6 @@ fn take_with(ctx: &mut EffectContext<'_>, card: &CardInstance, taker: PlayerId, 
         }
         card.radiant = true;
     }
-    // `ownership.takeIntoHand` answers where the card landed: in the hand, burned, or nothing at all.
     if !matches!(take_into_hand(ctx, &card, taker), Some(TakenTo::Hand)) {
         return;
     }
@@ -99,13 +91,10 @@ pub struct GiveFromHandArgs {
     pub riders: TakenRiders,
 }
 
-/// B5 E16: cards out of `from`'s hand into the other player's hand, as theirs — the default `from` is
-/// the enemy, so the taker is this card's controller; `from: "self"` gives your own cards away. `cards` names
-/// which: `"chosen"` the ones the step's prompt picked, `"unchosen"` every other card of that hand
-/// (Classic #9: "they keep one card of their choice and give you the rest" — their own hand pick, then
-/// this), `"all"` the whole hand, `"random"` `count` different cards at random (R60). `ids` names them
-/// by instance id instead (R1140's watched cards), and a card no longer in that hand is not taken.
-/// Hand order, snapshotted first, so the cap burns the last of them.
+/// B5 E16: cards out of `from`'s hand (default the enemy's) into the other player's hand, as theirs:
+/// `"unchosen"` is Classic #9's "give you the rest" after their own pick, `"random"` takes `count`
+/// different cards (R60), and `ids` (R1140) only those still in that hand. In hand order, snapshotted
+/// first, so the cap burns the last of them.
 pub fn give_from_hand(args: GiveFromHandArgs) -> Effect {
     Effect::new("giveFromHand", move |ctx| {
         let from = player_of(ctx, args.from.unwrap_or(PlayerSpec::Enemy));
@@ -165,12 +154,9 @@ pub struct TakeFromLibraryArgs {
     pub riders: TakenRiders,
 }
 
-/// B5 E2, E16: cards out of `from`'s library into the other player's hand, as theirs (Classic+
-/// #12.3 Fluffy Grip: "steal a random Unit from your opponent's deck"). `pick` is `"random"` — `count`
-/// different matching cards (R60) — `"top"` or `"bottom"`, or `"chosen"`, the cards the step's
-/// prompt picked out of it. `filter` narrows the pool as a library reveal does (a unit-token card
-/// never leaves a library for a hand this way, R218). No match takes nothing. The library's owner
-/// learns only that cards left it (R466).
+/// B5 E2, E16: cards out of `from`'s library into the other player's hand, as theirs (Classic+ #12.3
+/// Fluffy Grip); `"random"` takes `count` different matches (R60). `filter` narrows the pool as a
+/// library reveal does (no unit-token card, R218); the owner learns only that cards left it (R466).
 pub fn take_from_library(args: TakeFromLibraryArgs) -> Effect {
     Effect::new("takeFromLibrary", move |ctx| {
         let from = player_of(ctx, args.from.unwrap_or(PlayerSpec::Enemy));
@@ -214,11 +200,9 @@ pub struct DrawFromOpponentArgs {
     pub end: Option<LibraryEnd>,
 }
 
-/// B5 E16: one draw of this card's controller's, taken from the other player's library — its bottom
-/// card by default (Classic #58 Common Resources). It is a draw of the controller's
-/// (`ownership.drawFromLibraryOf`): their hand cap, a cast on draw for them, the draw counters. An
-/// empty library gives nothing and deals no fatigue. One draw per effect, so a card that draws two
-/// returns two, and a cast on draw that asks something pauses the list between them (R113).
+/// B5 E16: a draw of the controller's (their hand cap, cast on draw and counters) from the other
+/// player's library, its bottom card by default (Classic #58 Common Resources); an empty one deals no
+/// fatigue. One draw per effect, so a cast on draw that asks something pauses the list (R113).
 pub fn draw_from_opponent(args: DrawFromOpponentArgs) -> Effect {
     Effect::new("drawFromOpponent", move |ctx| {
         let drawer = ctx.controller;
@@ -238,12 +222,9 @@ pub struct TakeToHandArgs {
     pub riders: TakenRiders,
 }
 
-/// R1185003 (M+ #24 Bob, "Put an enemy Unit into your hand"): the card `target` names goes to this
-/// card's controller's hand as theirs (`ownership::take_into_hand`, the riders as `take_with` gives
-/// them). A card on the field leaves it as a Bounce would take it to its controller's hand (R747), but
-/// to the taker's, owned by the taker from then on: R78's reset, the pile beneath it resuming (R13),
-/// no Death; a unit token ceases to exist (R11); the taker's full hand burns it into the taker's
-/// graveyard (§2.4). A target gone, or already in the taker's hand, takes nothing.
+/// R1185003 (M+ #24 Bob): the card `target` names goes to this card's controller's hand as theirs. A
+/// card on the field leaves it as a Bounce does (R747, R78's reset, the pile beneath resuming, R13, no
+/// Death; a unit token ceases to exist, R11), and a full hand burns it (§2.4).
 pub fn take_to_hand(args: TakeToHandArgs) -> Effect {
     Effect::new("takeToHand", move |ctx| {
         let Some(card) = instance_of(ctx, &args.target) else {

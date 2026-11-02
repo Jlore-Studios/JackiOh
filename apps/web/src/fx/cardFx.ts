@@ -49,7 +49,7 @@ const CARD_TUNING = {
 
 export type CardFxPlan = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
 
-/** R502: cast on draw bursts from the drawer's Deck pile; other events produce no cues. */
+/** R502: cast on draw bursts from the drawer's Deck pile. */
 export function castOnDrawCues(event: GameEvent, p: CardFxPlan): FxCue[] {
   if (event.type !== "cardPlayed" || !p.env.memory.castOnDraw(event)) return [];
   const i = p.env.intensity;
@@ -172,7 +172,6 @@ export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
   "core-021": "manaCrack", // #21 Hinder
   "core-027": "bloodDrain", // #27 Blood Ridden Glowy Jelly Bean
   "classicplus-024": "crushingWalls", // C+ #24 Crushing Walls
-  // R670: marquee Legendary and Mythic Units' own entrances (entrances.ts).
   "core-100": "voidCollapse", // #100 Ceaseless Void (Mythic)
   "classic-080": "bigBoom", // BOOM! Big Max
   "classic-045": "titanBloom", // Nature Titan

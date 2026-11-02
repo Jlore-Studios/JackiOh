@@ -1,40 +1,17 @@
-//! The choices a play carries, built and validated (SPEC §10.5 step 1, §10.6, R81, R90).
+//! The choices a play carries, built and validated (SPEC §10.5 step 1, §10.6, R81, R90): Zone, X,
+//! embiggen, Tribute and the script's targets and modes travel in the `play` action, and this module is
+//! the one place they become options and are checked, so `reduce`'s play path and `legal_actions` read
+//! the same rules. The enumeration is bounded; `listed_play_choices` says when the bound cut it (#992).
 //!
-//! R81: "Zone, X, embiggen, Tribute and the targets and modes a card's script declares travel in the
-//! `play` action, which `legalActions` enumerates". This module is the one place those five kinds of
-//! answer are turned into options and checked against what the card declared and what the board
-//! allows, so `reduce`'s play path and `legal_actions` read the same rules:
+//! R90: declarations read the flat `targets` list in order, each taking its minimum and the last the
+//! remainder; one may not name a card twice, two may name the same card; one the board cannot satisfy
+//! fizzles on resolution unless the play needs it (`required`, R703), and then the play is neither
+//! offered nor accepted, as while its play gate fails (R1851000). §9.1: a `hand` pick offers only the
+//! chooser's own hand; R13: a unit pick only the top of a Stack pile. §6.2: a Stack card's legal zones
+//! are the unit zones merely unlocked and unreserved (R64).
 //!
-//!   * `legal_zones_for`, `legal_x_values`, `legal_embiggen_choices`, `legal_tribute_sets` — the play's
-//!     own cost-and-placement choices;
-//!   * `declared_targets` / `declared_modes` — what the card's script asked for;
-//!   * `legal_selections_for` — every selection one `TargetDecl` filter admits, in a deterministic
-//!     order (the chooser's side first, lane order within a side);
-//!   * `play_choice_combinations` / `play_actions_for` — R90's enumeration, bounded; `listed_play_choices`
-//!     and `hand_play_choices_truncated` say when the bound cut it (#992);
-//!   * `why_choices_refused` — the single refusal, returning `Ok` when every choice is legal.
-//!
-//! R90 is the governing ruling for the validation: several declarations read the flat `targets` list
-//! in order, each taking its own minimum and the last one the remainder; one declaration may not
-//! name the same card twice while two declarations may both name the same card; a declaration the
-//! board cannot satisfy does not refuse the play, it fizzles on resolution — unless the play needs it
-//! (`required`, R703), and then the play is neither offered nor accepted, as it is while a card's
-//! own play gate does not hold (`play_allowed`, R1851000). §9.1 is why a `hand` pick
-//! only ever offers the chooser's own hand, and R13 is why a unit pick only offers the top of a
-//! Stack pile.
-//!
-//! §6.2's Stack row is why the zone question has two answers rather than one: "may be played onto an
-//! occupied zone", so a Stack card's legal zones are the unit zones that are merely unlocked and
-//! unreserved (R64), not the empty ones. `legal_zones_for` and `refuse_zone` read that off the same two
-//! predicates on purpose — the client's greyed-out button and `reduce`'s refusal are the same rule
-//! asked from opposite directions, and a Stack play that only one of them knew about would be a
-//! board the client cannot reach or a refusal it cannot explain.
-//!
-//! Port of `packages/engine/src/playChoices.ts`. A function that reads a card's script takes the state
-//! first (`declared_targets(state, card)`, `tribute_cost_of(state, card)` …), since a script is looked
-//! up through the state (`scripts::script_of(state, def_id)`, SURFACE §6.6); a TS default parameter is
-//! an `Option` (`None` is the default) or, for a list, an empty slice. Refusals are
-//! `Result<(), EngineError>` with TS's text verbatim (SURFACE §4.4.9).
+//! A function that reads a card's script takes the state first (SURFACE §6.6); refusals are
+//! `Result<(), EngineError>`, their text fixed by SURFACE §4.4.9.
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -52,13 +29,11 @@ use crate::wire::{
 };
 use crate::zones::ZoneSlot;
 
-// §7: a Radiant Sheep Token is "2/2, worth 3 Tributes" — the base one is worth 2. The numbers live in
-// `config.rs` (CLAUDE.md rule 9); re-exported so TS's `playChoices.SHEEP_TRIBUTE_VALUE` path resolves.
+// §7's Sheep Token Tribute values live in `config.rs` (CLAUDE.md rule 9); re-exported for callers here.
 pub use crate::config::{RADIANT_SHEEP_TRIBUTE_VALUE, SHEEP_TRIBUTE_VALUE};
 
-/// The `play` member of the action union, without the `playerId` and `nonce` the caller adds (TS
-/// `Extract<ActionBody, { type: "play" }>`): the fields of `ActionBody::Play`, as a struct so a reader
-/// names them (`action.targets`). It serializes as that action body, `"type": "play"` included.
+/// The fields of `ActionBody::Play` as a struct, without the caller's `playerId` and `nonce`. It
+/// serializes as that action body, `"type": "play"` included.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
 #[serde(into = "ActionBody", try_from = "ActionBody")]
 pub struct PlayAction {
@@ -150,12 +125,8 @@ pub struct PlayChoices {
     pub modes: Option<Vec<String>>,
 }
 
-// R90's enumeration bound is `MAX_CHOICE_COMBINATIONS` in `config.rs` (BUILD §2): "Choose 2 or 3"
-// on a full board is 165 combinations, and the client only needs enough of them to offer every
-// picker, so the target and mode enumerations below stop at the cap rather than growing with the
-// board — and a cut drops combinations, never a pick (`cross_product`, `interleaved`), and
-// `listed_play_choices` says when one did (#992). A Tribute's paying sets are the exception: they are
-// the play's price, listed whole (`legal_tribute_sets`).
+// R90's bound is `MAX_CHOICE_COMBINATIONS` (BUILD §2): a cut drops combinations, never a pick
+// (`cross_product`, `interleaved`); Tribute sets are the play's price, listed whole (`legal_tribute_sets`).
 
 /// §7: the Sheep Token, which is "worth 2 Tributes while on the field" (§3.2, §6.3).
 pub const SHEEP_TOKEN_INDEX: &str = "T-sheep";
@@ -172,19 +143,15 @@ const PICK_KIND_ORDER: [FilterOf; 6] = [
     FilterOf::Hero,
 ];
 
-/// The name a card's definition prints.
 fn name_of(state: &GameState, def_id: &str) -> String {
     crate::catalog::def_of(Some(state), def_id).name.clone()
 }
 
-/// `min(n, count)` for a declaration's `min`/`max` read against a count of options (TS numbers).
 fn at_most(n: i32, count: usize) -> usize {
     (n.max(0) as usize).min(count)
 }
 
-// ---------------------------------------------------------------------------
 // What the card asked for
-// ---------------------------------------------------------------------------
 
 /// The `targets` a card's running face declares (§10.9, R81); the empty list when it declares none.
 pub fn declared_targets(state: &GameState, card: &CardInstance) -> Vec<TargetDecl> {
@@ -197,7 +164,7 @@ pub fn declared_modes(state: &GameState, card: &CardInstance) -> Vec<ModeDecl> {
 }
 
 /// R831008: whether this player may choose this option of the card's own declared modes now
-/// (`Script.mode_allowed`; Meditative #98 Showdown's empty lane). A card with no check allows all.
+/// (`Script.mode_allowed`; Meditative #98 Showdown's empty lane).
 pub fn mode_option_allowed(state: &GameState, player: PlayerId, card: &CardInstance, option: &str) -> bool {
     crate::scripts::script_of(state, card)
         .mode_allowed
@@ -206,10 +173,9 @@ pub fn mode_option_allowed(state: &GameState, player: PlayerId, card: &CardInsta
 }
 
 /// R1851000: whether this player may play this card now (`Script.play_allowed`; Meditative #53
-/// Prestige's Radiant face: a Radiant enemy card on the field). `card` is the face the play resolves
-/// (`resolving_face`), so a copier answers with its copied face's gate (R399, R1851002). The one check
-/// `listed_play_choices` offers by and `why_choices_refused` refuses by; a cast never asks it (R70,
-/// R1851001). A card with no gate allows it.
+/// Prestige's Radiant face). `card` is the resolving face, so a copier answers with its copied face's
+/// gate (R399, R1851002); `listed_play_choices` and `why_choices_refused` both read it, a cast never
+/// does (R70, R1851001).
 pub fn play_allowed(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     crate::scripts::script_of(state, card)
         .play_allowed
@@ -217,11 +183,9 @@ pub fn play_allowed(state: &GameState, player: PlayerId, card: &CardInstance) ->
         .is_none_or(|allowed| allowed(state, player))
 }
 
-/// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that
-/// belongs to some modes only (`forModes`, #24's damage and heal target) asks for nothing when none
-/// of them was chosen, so it takes no slot of the flat `targets` list — and one that does belong to
-/// the chosen mode asks for its minimum like any other, which is what stops a damage mode from
-/// naming nobody while a target exists.
+/// The target declarations a play with these modes answers (R90, §8 Conventions): one that belongs to
+/// unchosen modes only (`forModes`, #24) takes no slot of the flat `targets` list, and one of a chosen
+/// mode asks for its minimum, so a damage mode cannot name nobody while a target exists.
 pub fn active_target_decls(decls: &[TargetDecl], modes: &[String]) -> Vec<TargetDecl> {
     decls
         .iter()
@@ -238,9 +202,7 @@ pub fn targets_follow_modes(decls: &[TargetDecl]) -> bool {
     decls.iter().any(|decl| decl.for_modes.is_some())
 }
 
-// ---------------------------------------------------------------------------
 // The face a play resolves with (§10.5 step 3, R213, R214)
-// ---------------------------------------------------------------------------
 
 /// Every permanent that acts for this player: the tops of their unit piles and their backrow (§3.2),
 /// a face-down card left out, whose text sleeps (R1487000).
@@ -248,7 +210,6 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
     for row in ROWS {
         for slot in crate::zones::slots_of(player, row) {
-            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
             if let Some(held) = crate::zones::card_at(state, slot)
                 && !crate::preview::lasting_text_off(state, held)
             {
@@ -259,19 +220,10 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     out
 }
 
-/// §8 #64 Gifted Program, §10.5 step 3: whether a play this player makes now, paying `cost_paid`
-/// (R56's cost actually paid, 0 for a cast, R70), is made Radiant as it is played.
-///
-/// R213: "the first card costing 1 or less YOU play each turn" is counted over the player's plays,
-/// which the turn log keeps (`costsPaid`), and not over the Field Spell's own history. So the count
-/// stays with the player whatever happens to the card: a Gifted Program that fired for its owner and
-/// was then stolen has not used up its thief's first cheap card, one that was bounced and played
-/// again has not given its player a second, and a card costing 1 or less played before a Gifted
-/// Program arrived was already the first — Hearthstone's Pint-Sized Summoner counts the same way.
-/// Each Gifted Program asks with its own face's threshold (2 or less on the radiant one), and the
-/// card's text is its controller's (§8 Conventions), so only the permanents on this player's side
-/// count. A Vanilla one has no text (`flags_of`). It never catches its own play: step 3 runs before
-/// step 4 puts it on the field (R119).
+/// §8 #64 Gifted Program, §10.5 step 3: whether a play this player makes now, paying `cost_paid` (R56's
+/// cost actually paid, 0 for a cast, R70), is made Radiant. R213: "the first card costing 1 or less YOU
+/// play each turn" counts the player's plays (`costsPaid`), not the Field Spell's history; only this
+/// player's side counts (§8 Conventions), and never its own play: step 3 runs before step 4 (R119).
 pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32) -> bool {
     let earlier: &[i32] = state.players[player]
         .turn_log
@@ -291,12 +243,9 @@ pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32)
     })
 }
 
-/// R214: the card whose declarations a play's targets and modes answer — the card as it will
-/// resolve. §10.5 step 3 can make it Radiant as it is played (#64), after step 1 has read the choices
-/// and before step 5 resolves them, and a Radiant face can declare other choices than the face in
-/// hand: #87's "you may skip adding it", #48's "all enemy units, or all units", a crafted card whose
-/// radiant Bigot names no target. So step 1 checks, and `legal_actions` offers, the choices of the
-/// face step 5 will run, which is known at step 1: the cost it pays is.
+/// R214: the card whose declarations a play's targets and modes answer, as it will resolve. §10.5 step 3
+/// can make it Radiant (#64) after step 1 reads the choices, and a Radiant face can declare others (#87,
+/// #48), so step 1 checks, and `legal_actions` offers, the face step 5 will run: its cost is known.
 pub fn resolving_face(
     state: &GameState,
     player: PlayerId,
@@ -312,15 +261,13 @@ pub fn resolving_face(
         }
     };
     // B5 E14, R399: a copier (Classic #57 Echo) declares the choices of the Spell whose text it has, on
-    // the face that Spell was played on — its own face only adds its Echo (`subsystems/copied_text.rs`).
+    // the face that Spell was played on.
     crate::subsystems::copied_text::text_face_of(state, &face)
 }
 
-/// Classic+ #68 Organic Produce, R449: whether a permanent on this player's side makes every card carrying
-/// one of its tags Radiant as the player plays it (`radiantPlaysTagged`) — R213's rule by tag, on every
-/// such play (a cast included, R70) rather than the first cheap one. The card's text is its
-/// controller's (§8 Conventions), a Vanilla one has none (`flags_of`), and it never catches its own
-/// play: step 3 runs before step 4 puts it on the field (R119).
+/// Classic+ #68 Organic Produce, R449: whether a permanent on this player's side makes every card
+/// carrying one of its tags Radiant as the player plays it (`radiantPlaysTagged`), on every such play (a
+/// cast included, R70). It never catches its own play: step 3 runs before step 4 (R119).
 pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     // MD-B15, R923: a granted tag counts for the play's tags too.
     let tags: Vec<Tag> = crate::query::tags_of(state, card);
@@ -338,11 +285,10 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
     })
 }
 
-/// §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
-/// card (R213), a tag rule's (Classic+ #68), Meditative #40 Feng Shui's reward for an auspicious
-/// play (R983), Meditative #53 Prestige's next play (R831005), or Meditative+ #22 Mountaintop
-/// Garden's dearer price (R1181002, read off the card stamped with the play's embiggen choice). Step 1
-/// reads it to know the face the play's choices answer (R214), and step 3 applies it.
+/// §10.5 step 3: whether this play is made Radiant as it is played: #64 Gifted Program (R213), a tag
+/// rule (Classic+ #68), Meditative #40 Feng Shui (R983), #53 Prestige's next play (R831005), Meditative+
+/// #22 Mountaintop Garden's dearer price (R1181002, read off the card stamped with its embiggen choice).
+/// Step 1 reads it to know the face the choices answer (R214), and step 3 applies it.
 pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstance, cost_paid: i32) -> bool {
     gifted_makes_radiant(state, player, cost_paid)
         || tagged_play_radiant(state, player, card)
@@ -365,10 +311,8 @@ fn cost_with(state: &GameState, card: &CardInstance, x: Option<i32>, embiggen: O
     crate::mana::play_cost(state, &stamped_for_play(state, card, x, embiggen))
 }
 
-/// The card stamped with a play's embiggen choice, as §10.5 step 1 stamps it before it reads the price
-/// (`play_steps::validate_play`): a card with a dearer price carries the price chosen, any other card is
-/// as it is. R214, R1181002: the face a play's choices answer is read off it, since Mountaintop Garden's
-/// dearer price makes the play Radiant.
+/// The card stamped with a play's embiggen choice, as §10.5 step 1 stamps it before reading the price;
+/// R214, R1181002: the face a play's choices answer is read off it (Mountaintop Garden's dearer price).
 fn stamped_with_embiggen(state: &GameState, card: &CardInstance, embiggen: Option<bool>) -> CardInstance {
     if has_dearer_price(state, card) {
         CardInstance {
@@ -380,10 +324,9 @@ fn stamped_with_embiggen(state: &GameState, card: &CardInstance, embiggen: Optio
     }
 }
 
-/// R1868000: the card as a play at these prices declares its choices — its embiggen stamped and the X
-/// the play is for, as §10.5 step 1 stamps them before the price is read (`play_steps::validate_play`),
-/// so a declaration's named check reads the play's X (`tuning::x_of`; Stinkyscape #99 No-No Words). A
-/// set X (R1848003) is on the card already, and a card that chooses no X keeps the one it has.
+/// R1868000: the card as a play at these prices declares its choices, its embiggen and X stamped as
+/// §10.5 step 1 stamps them, so a declaration's named check reads the play's X (Stinkyscape #99). A set
+/// X (R1848003) is on the card already, and a card that chooses no X keeps the one it has.
 fn stamped_for_play(
     state: &GameState,
     card: &CardInstance,
@@ -400,20 +343,16 @@ fn stamped_for_play(
     }
 }
 
-/// #492, R81: what a play of this card at its embiggen price costs now, or None for a card with no
-/// embiggen price. It is `cost_with`, the price §10.5 step 1 reads for a play with `embiggen: true`,
-/// and so `mana::play_cost` on the card stamped embiggened, as the pay step charges it: the view's
-/// `embiggenCost` (§10.8) is this number, so the client never prices a play itself (CLAUDE.md rule 7).
-/// R1181002: a Radiant card under Mountaintop Garden has its normal price only, so None.
+/// #492, R81: what a play of this card at its embiggen price costs now (`cost_with`, as the pay step
+/// charges it), or None for a card with none (R1181002: a Radiant card under Mountaintop Garden). The
+/// view's `embiggenCost` (§10.8) is this number, so the client never prices a play (CLAUDE.md rule 7).
 pub fn embiggen_play_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
     legal_embiggen_choices(state, card)
         .contains(&true)
         .then(|| cost_with(state, card, None, Some(true)))
 }
 
-// ---------------------------------------------------------------------------
 // Zone, X and embiggen
-// ---------------------------------------------------------------------------
 
 /// §5.1: a Unit goes in the unit row, every other permanent in the backrow.
 pub fn row_for_card(state: &GameState, card: &CardInstance) -> Row {
@@ -429,10 +368,8 @@ pub fn needs_zone(state: &GameState, card: &CardInstance) -> bool {
     crate::faces::card_type_of(state, card) != CardType::Spell
 }
 
-/// §6.2 Stack: "may be played onto an occupied zone" (§3.2). Read off the card's keywords as they stand
-/// where it is (§10.4, `layers::unit_has`): its face's, the ones granted to it in hand (B5 E38) and the
-/// ones an aura gives the cards in a hand (a "Your cards have Stack" aura). A backrow
-/// card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
+/// §6.2 Stack: "may be played onto an occupied zone" (§3.2), read off the card's keywords where it is
+/// (§10.4, B5 E38). A backrow card with Stack tops an occupied backrow zone too (B5 E21, R447).
 pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
     // ME-ALTPLAY: a face-down play goes into an open backrow zone, never onto a Stack.
     if card.set_as.is_some() {
@@ -444,17 +381,14 @@ pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
     crate::layers::unit_has(state, card, KeywordKind::Stack)
 }
 
-/// §3.2: the zone a Stack card may enter. Occupancy is exactly the refusal Stack lifts, so what is
-/// left is what occupancy never covered: a Locked zone "accepts no summons until the game ends", a
-/// zone reserved for a dying Reborn unit "counts as occupied for every other card that would enter it"
-/// (R64) — and a backrow zone carrying a Unit takes nothing more (R446). `zones::accepts_stack_card`.
+/// §3.2: the zone a Stack card may enter. Occupancy is the refusal Stack lifts, so what is left is a
+/// Locked zone, a zone reserved for a dying Reborn unit (R64) and a backrow zone carrying a Unit (R446).
 fn accepts_stack(state: &GameState, slot: &ZoneSlot) -> bool {
     crate::zones::accepts_stack_card(state, slot, Default::default())
 }
 
-/// R1081000: whether this card may be played into a backrow zone as well as its unit-row zones — a
-/// Unit with Flying, played face-up. Read off the card's keywords as they stand where it is (§10.4),
-/// as `plays_on_stack` is.
+/// R1081000: whether this card may also be played into a backrow zone: a Unit with Flying, played
+/// face-up, read off its keywords where it is (§10.4).
 fn flies(state: &GameState, card: &CardInstance) -> bool {
     if card.set_as.is_some() {
         return false;
@@ -468,12 +402,9 @@ fn flies(state: &GameState, card: &CardInstance) -> bool {
     crate::layers::unit_has(state, card, KeywordKind::Flying)
 }
 
-/// R1081000: whether a Flying play stands in this backrow zone — the same predicate `legal_zones_for`
-/// lists by. Without Stack the zone must be open or freed by the play's own Tribute; with Stack
-/// occupancy is waived as for any Stack card (`accepts_stack` still refuses Locked and reserved zones),
-/// but a carrier's zone is never stood in: a carrier takes a Unit only as its Unit (R446), which
-/// `zones::why_cannot_carry` judges for a Flying Unit as for any, so a carrier that has taken its one
-/// Unit takes no Flying Stack Unit either (R653).
+/// R1081000: whether a Flying play stands in this backrow zone, the predicate `legal_zones_for` lists
+/// by. Without Stack the zone must be open or freed by the play's own Tribute; with Stack occupancy is
+/// waived, but a carrier takes a Unit only as its Unit (R446, `zones::why_cannot_carry`, R653).
 fn flying_takes_backrow(
     state: &GameState,
     card: &CardInstance,
@@ -503,9 +434,8 @@ fn onto_stack_base(state: &GameState, player: PlayerId, card: &CardInstance, slo
         && crate::zones::stack_base_at(state, player, slot)
 }
 
-/// R1086 (ME-EQUIP): whether this card may be played as Equip — a Unit with the Equip
-/// keyword that needs a zone. Read off the card's keywords as they stand where it is (§10.4), as
-/// `plays_on_stack` is.
+/// R1086 (ME-EQUIP): whether this card may be played as Equip: a Unit with the Equip keyword, read off
+/// its keywords where it is (§10.4).
 pub fn plays_equip(state: &GameState, card: &CardInstance) -> bool {
     if !needs_zone(state, card) {
         return false;
@@ -516,11 +446,10 @@ pub fn plays_equip(state: &GameState, card: &CardInstance) -> bool {
     crate::layers::unit_has(state, card, KeywordKind::Equip)
 }
 
-/// R1086: the host an Equip play onto `slot` fuses into — the top card of the zone when it is a
-/// Unit its controller acts with that is not Immutable (R23), not Dormant (R2260000: nothing reaches a
-/// Dormant card, R1839000), and not one this same play tributes.
-/// R1869000: a host that lends Equip hosts in its backrow zone too, a Unit or not.
-/// Both the legal-action listing and the refusal read this one function, so the two cannot disagree.
+/// R1086: the host an Equip play onto `slot` fuses into: the zone's top card when it is a Unit its
+/// controller acts with, not Immutable (R23), not Dormant (R2260000, R1839000) and not one this play
+/// tributes; R1869000: a host that lends Equip hosts in its backrow zone too, a Unit or not. The
+/// legal-action listing and the refusal both read it, so they cannot disagree.
 pub fn equip_host_at(
     state: &GameState,
     player: PlayerId,
@@ -571,8 +500,7 @@ fn lends_equip_at(state: &GameState, slot: &ZoneSlot) -> bool {
     })
 }
 
-/// `equip_onto_at` for a Unit card whose Equip (`plays_equip`) is already read: an Equip card goes onto
-/// any host, any other Unit card onto a host that lends Equip. The lending is read first, so a plain
+/// `equip_onto_at` for a Unit card whose Equip is already read. The lending is read first, so a plain
 /// Unit costs no layer read where nothing lends.
 fn equip_host_for(
     state: &GameState,
@@ -587,9 +515,8 @@ fn equip_host_for(
     equip_host_at(state, player, slot, tributes)
 }
 
-/// R1086, R1869000: the host `card` fuses into when it is played onto `slot` as an Equip play. An Equip
-/// card may go onto any host (`equip_host_at`); any other Unit card onto a host that lends Equip while
-/// that host is no fusion. The listing and the refusal both read this one function.
+/// R1086, R1869000: the host `card` fuses into when played onto `slot` as an Equip play: an Equip card
+/// onto any host, any other Unit card onto one that lends Equip. The listing and the refusal read it.
 pub fn equip_onto_at(
     state: &GameState,
     player: PlayerId,
@@ -625,14 +552,10 @@ pub fn legal_equip_zones_for(
         .collect()
 }
 
-/// §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
-/// the occupied zones of that row for a Stack card (§6.2, B5 E21), plus, for a Unit, the backrow zones
-/// of a carrier that holds none yet (R446, `zones::carrier_zones_for`). `refuse_zone` below reads the
-/// same rules off the same predicates, so the client's greyed-out button and `reduce`'s refusal agree.
-///
-/// R391 (B4.5): with the Tribute a play pays (`tributes`, empty for none), also every zone that Tribute
-/// empties (`freed_by_tribute`), in lane order with the open ones — the zone is judged once the Tribute
-/// is paid, since §10.5 pays at step 2 and places at step 4.
+/// §3.2: "the player picks the zone": every empty, unlocked, unreserved zone of the right row, the
+/// occupied ones for a Stack card (§6.2, B5 E21) and, for a Unit, a carrier's zone (R446). `refuse_zone`
+/// reads the same predicates, so the client's greyed button and `reduce`'s refusal agree. R391 (B4.5):
+/// also every zone the play's Tribute empties, since §10.5 pays at step 2 and places at step 4.
 pub fn legal_zones_for(
     state: &GameState,
     player: PlayerId,
@@ -663,8 +586,7 @@ pub fn legal_zones_for(
                 .filter(|slot| !immutable_fuser(state, slot)),
         );
     }
-    // R1081000: a Flying Unit is also offered the backrow zones it stands in — after its unit-row zones,
-    // in lane order. A carrier's zone it takes only as the carrier's Unit, as listed above.
+    // R1081000: a Flying Unit is also offered the backrow zones it stands in, after its unit-row zones.
     if flies(state, card) {
         for slot in crate::zones::slots_of(player, Row::Backrow) {
             if flying_takes_backrow(state, card, &slot, tributes) && !slots.contains(&slot) {
@@ -681,9 +603,8 @@ pub fn legal_zones_for(
         .collect()
 }
 
-/// R653, R23: a carrier that fuses its Unit in (Classic+ #33 Ivory Tower) takes no Unit while it is
-/// Immutable, since its text could not change to take the Unit in. Read here and in `refuse_zone`, beside
-/// `zones::why_cannot_carry`, because Immutable is a keyword the layers compute (§10.4).
+/// R653, R23: a carrier that fuses its Unit in (Classic+ #33 Ivory Tower) takes no Unit while Immutable.
+/// Read here and in `refuse_zone`, beside `zones::why_cannot_carry`, as the layers compute it (§10.4).
 fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
     match crate::zones::card_at(state, slot) {
         None => false,
@@ -694,13 +615,10 @@ fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
     }
 }
 
-/// R391 (B4.5): whether the Tribute a play pays empties this zone for it — a zone whose pile is exactly
-/// one card, and that card one the Tribute takes (a Stack pile's next card would resume, R13, so
-/// tributing its top frees nothing), without Reborn (its zone would be reserved for the return, R64),
-/// in a zone neither Locked nor reserved for anything else. A zone that is open anyway is not "freed".
-/// The rule is the row's, not the Unit row's alone: a backrow card with a Tribute cost reads it the
-/// same way, though a Tribute pays with units and so empties a backrow zone only when a unit sits in
-/// one. An Activate cost needs no zone and never comes here (B3.2).
+/// R391 (B4.5): whether the Tribute a play pays empties this zone for it: a pile of exactly one card,
+/// that card tributed (a Stack pile's next card would resume, R13) and without Reborn (its zone would be
+/// reserved, R64), in a zone neither Locked nor reserved. The rule is the row's, the backrow's included;
+/// an Activate cost needs no zone and never comes here (B3.2).
 pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String]) -> bool {
     if tributes.is_empty() {
         return false;
@@ -728,13 +646,9 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
     !crate::layers::unit_has(state, held, KeywordKind::Reborn)
 }
 
-/// R64, R391: the zone a play that names none takes — the leftmost open zone of its row, else, on a
-/// full row, the leftmost zone its own Tribute empties. `None` when there is neither.
-///
-/// R1081000: a Flying Unit with no zone in its unit row takes the leftmost open backrow zone, else
-/// the leftmost one its own Tribute empties — the unit row stays its home, so it is read first.
-/// `refuse_zone`'s no-zone arm and §10.5 step 4's assignment read this one function, so the refusal
-/// and the placement cannot disagree.
+/// R64, R391: the zone a play that names none takes: the leftmost open zone of its row, else the
+/// leftmost its own Tribute empties; R1081000: a Flying Unit then tries the backrow the same way. One
+/// function for `refuse_zone`'s no-zone arm and §10.5 step 4's assignment, so the two cannot disagree.
 pub fn default_zone_for(
     state: &GameState,
     player: PlayerId,
@@ -757,9 +671,8 @@ pub fn default_zone_for(
     })
 }
 
-/// §2.3: whether the player chooses X when playing this card — an X-cost card whose X is not fixed
-/// by a `cost` hook. #98 Heroic Power prints X but "its X is fixed by its power" (§2.3, R43, R65):
-/// its cost hook answers the X, so there is nothing to choose and no X travels in its play.
+/// §2.3: whether the player chooses X when playing this card: an X-cost card whose X no `cost` hook
+/// fixes (#98 Heroic Power's "is fixed by its power", R43, R65, so no X travels in its play).
 pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
     // B5 E14, R545: a copier pays its own price and chooses the X of an X-cost text it copies.
     if crate::subsystems::copied_text::copies_text(instance) {
@@ -771,11 +684,10 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
         && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
-/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is —
-/// "X is chosen at play time, 1 ≤ X ≤ the mana the player can spend" (`MIN_CHOSEN_X`): their current
-/// mana plus what a credit line still lends them (`credit::spendable_mana`). `legal_x_values` offers
-/// exactly the values this passes and `refuse_x` refuses exactly the ones it names, so the picker and
-/// the reducer's refusal cannot disagree. `most` defaults to the mana the player can spend.
+/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is:
+/// 1 ≤ X ≤ the mana the player can spend (`MIN_CHOSEN_X`), their current mana plus what a credit line
+/// still lends them (`credit::spendable_mana`). `legal_x_values` offers exactly the values this passes
+/// and `refuse_x` refuses exactly the ones it names, so the picker and the reducer cannot disagree.
 pub fn why_x_refused(
     state: &GameState,
     player: PlayerId,
@@ -785,7 +697,6 @@ pub fn why_x_refused(
     // R1223: an X may be chosen out of borrowed mana too.
     let mana = crate::credit::spendable_mana(state, player);
     let most = most.unwrap_or(mana);
-    // TS also refused an X that is not a whole number ("X must be a whole number"); an `i32` always is.
     if value < 0 {
         return Err(EngineError::new("X cannot be negative"));
     }
@@ -813,7 +724,7 @@ fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
     mana - crate::mana::play_cost(state, card)
 }
 
-/// §2.3, R348: every X `why_x_refused` passes, lowest first. Not an X-cost card, no X values.
+/// §2.3, R348: every X `why_x_refused` passes, lowest first.
 pub fn legal_x_values(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<i32> {
     if !chooses_x(state, card) {
         return Vec::new();
@@ -832,16 +743,14 @@ pub fn has_embiggen_price(state: &GameState, card: &CardInstance) -> bool {
     )
 }
 
-/// R1563004: a card offers a dearer price when it is an embiggen card, or while Mountaintop Garden
-/// offers it its Radiant price (`mana::garden_offers_radiant`); the play names the dearer one with
-/// `embiggen: true` either way.
+/// R1563004: a card offers a dearer price when it is an embiggen card or while Mountaintop Garden
+/// offers it its Radiant price (`mana::garden_offers_radiant`); the play names it with `embiggen: true`.
 pub fn has_dearer_price(state: &GameState, card: &CardInstance) -> bool {
     has_embiggen_price(state, card) || crate::mana::garden_offers_radiant(state, card)
 }
 
-/// R1181002: while Mountaintop Garden reaches a Radiant card, its dearer price (a Radiant play) is no
-/// choice, and it has its normal price only. R1563004: a card of one price that is not Radiant has the
-/// Garden's dearer price beside it.
+/// R1181002: while Mountaintop Garden reaches a Radiant card, it has its normal price only. R1563004: a
+/// card of one price that is not Radiant has the Garden's dearer price beside it.
 pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<bool> {
     if !has_dearer_price(state, card) {
         Vec::new()
@@ -852,14 +761,9 @@ pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<boo
     }
 }
 
-// ---------------------------------------------------------------------------
 // Tribute (§6.3, §3.2)
-// ---------------------------------------------------------------------------
 
-// #55 Lava Golem "may tribute enemy units", which no other Tribute card may (R101). TS kept a local
-// alias `TributeFlags = StaticFlags & { tributeEnemies?: boolean }` for readability; `StaticFlags`
-// declares `tribute_enemies` itself, so the flags are read directly. The flag defaults to false,
-// which is every other card.
+// #55 Lava Golem "may tribute enemy units", which no other Tribute card may (R101).
 
 /// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none, as a
 /// Nerf or a Buff in a hand or a deck left it (R386), less what its owner's Floats took off (R1841003).
@@ -880,20 +784,11 @@ pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {
     crate::scripts::script_of(state, card).flags().tribute_enemies == Some(true)
 }
 
-/// §3.2: "Sheep Tokens are worth 2 Tributes while on the field"; every other unit is worth 1.
-///
-/// §7 gives the Sheep a Radiant face worth 3, so the value is read off the face that is up — the
-/// Sheep's script declares it as `staticFlags.tributeWorth`, and `flags_of` reads the flags of the
-/// face the instance wears, which is exactly what a Radiant form is.
-///
-/// "Worth 2 Tributes" is the Sheep's text (§7), and §6.3's Vanilla removes a unit's text, so a
-/// Vanilla Sheep — radiant #61's copy of one — is worth 1 like any other unit (R115: `flags_of` reads
-/// nothing off a Vanilla instance). And a fused card's text is both texts joined, with nothing about
-/// an ingredient dropped (R102), so a Sheep #85 fused a unit onto is still worth 2 — the fused flags
-/// take the larger worth, as they take the larger Tribute. A face-down backrow card taken by a wide
-/// Tribute is worth 1, its text asleep (R1487000).
+/// §3.2: "Sheep Tokens are worth 2 Tributes while on the field"; every other unit is worth 1. It is
+/// read off the face that is up (§7's Radiant Sheep is worth 3, `staticFlags.tributeWorth`). A Vanilla
+/// Sheep (radiant #61's copy) is worth 1, its text removed (§6.3, R115); a fusion keeps the larger worth
+/// (#85, R102); a face-down backrow card taken by a wide Tribute is worth 1, its text asleep (R1487000).
 pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
-    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
     let flag = if crate::preview::lasting_text_dormant(state, unit) {
         None
     } else {
@@ -972,16 +867,10 @@ fn tribute_total(state: &GameState, units: &[&CardInstance]) -> i32 {
     units.iter().map(|unit| tribute_value_of(state, unit)).sum()
 }
 
-/// Every set of units that pays the Tribute exactly: enough to meet the cost, and minimal, so no unit
-/// in the set could be dropped and still pay it. The Sheep Token's 2 is why a set may overshoot.
-///
-/// R90, R1282: every one of them, with no cut. The Tribute is what the play costs, and a set left off the
-/// list is a price the player can never pay: the client builds a play only out of the plays
-/// `legal_actions` lists (CLAUDE.md rule 7), and the §10.7 policy draws from the same list. Cut at
-/// `MAX_CHOICE_COMBINATIONS` with the player's own units first, a Lava Golem beside four of its own
-/// units and five enemy ones was never offered #55's defining play, three enemy units (R101). The
-/// count is the board's to bound: at most ten units stand, so Core's largest Tribute, #55's 3, has at
-/// most 120 minimal sets; a wide Tribute (R1282) on a full board can have C(20,5) = 15,504 sets.
+/// Every set of units that pays the Tribute exactly: enough, and minimal, so no unit could be dropped
+/// (the Sheep Token's 2 is why a set may overshoot). R90, R1282: every one, with no cut: a set left off
+/// is a price the player can never pay, since the client and the §10.7 policy play only what
+/// `legal_actions` lists (CLAUDE.md rule 7).
 pub fn legal_tribute_sets(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Vec<String>> {
     let need = tribute_cost_of(state, card);
     if need == 0 {
@@ -1025,16 +914,11 @@ fn is_minimal_tribute(state: &GameState, units: &[&CardInstance], need: i32) -> 
         .all(|unit| paid - tribute_value_of(state, unit) < need)
 }
 
-// ---------------------------------------------------------------------------
 // Declared targets: the options one declaration admits
-// ---------------------------------------------------------------------------
 
-/// The sides a declaration reaches, the chooser's own first so the offered order is stable.
-///
-/// A Tribute defaults to the chooser's side — §6.3 reads "sacrifice X of *your* units" — and every
-/// other kind defaults to both, which is what §10.6's bare `target` means. A `hand` declaration is
-/// forced to the chooser whatever it says (§9.1: the opponent's hand is hidden), which the hand case of
-/// `legal_selections_for` enforces rather than this.
+/// The sides a declaration reaches, the chooser's own first so the offered order is stable. A Tribute
+/// defaults to the chooser's side (§6.3 "*your* units"), every other kind to both (§10.6); a `hand`
+/// declaration is forced to the chooser by `legal_selections_for` (§9.1).
 fn sides_for(player: PlayerId, decl: &TargetDecl) -> Vec<PlayerId> {
     let side =
         decl.filter
@@ -1104,10 +988,8 @@ fn card_allowed(
     if filter.and_then(|filter| filter.exclude_self) == Some(true) && held.id == self_.id {
         return false;
     }
-    // MD-B15, R923: a granted tag is part of the card for a declaration too. MD-B16, R924: a
-    // face-down backrow card its chooser cannot read is a legal pick whatever its tags, so the
-    // picks reveal nothing — no shipped declaration filters the backrow by tag, so only the tag
-    // check is skipped for one.
+    // MD-B15, R923: a granted tag is part of the card. MD-B16, R924: a face-down backrow card its
+    // chooser cannot read skips the tag check, so the picks reveal nothing.
     let tags: Vec<Tag> = crate::query::tags_of(state, held);
     let unreadable_backrow = matches!(
         held.zone,
@@ -1122,8 +1004,7 @@ fn card_allowed(
     {
         return false;
     }
-    // §10.6, B5: the v0.2.0 filter fields. The cost is R65's where the card is now (a hand card at its
-    // hand cost; an X card on the field at the X it was played for, which it keeps there).
+    // §10.6, B5: the cost is R65's where the card is now (an X card on the field at its played X).
     if let Some(range) = filter.and_then(|filter| filter.cost_range) {
         let cost = crate::mana::effective_cost(state, held, Default::default());
         if let Some(min) = range.min
@@ -1155,9 +1036,8 @@ fn card_allowed(
     )
 }
 
-/// §10.6: a filter's named predicate (`TargetFilter.check`), the declaring card's own `targetChecks`
-/// entry, asked with the candidate — `None` for a hero or a zone. A name the script does not hold
-/// admits nothing, so a misspelt check never widens a declaration.
+/// §10.6: a filter's named predicate (`TargetFilter.check`), the card's `targetChecks` entry, asked with
+/// the candidate (`None` for a hero or a zone); a misspelt name admits nothing, never widening a pick.
 fn check_allows(
     state: &GameState,
     filter: Option<&TargetFilter>,
@@ -1183,8 +1063,7 @@ fn check_allows(
     })
 }
 
-/// A hero has no card type, no tags, no cost, no damage count and no Plague Counters, so a filter that
-/// names any of them cannot reach one; a named predicate is asked.
+/// A hero has no type, tags, cost, damage or Plague Counters, so a filter naming any cannot reach one.
 fn hero_allowed(
     state: &GameState,
     filter: Option<&TargetFilter>,
@@ -1203,9 +1082,9 @@ fn hero_allowed(
     check_allows(state, filter, self_, player, None, selection)
 }
 
-/// B5 E5, E35, R450: whether a declaration may pick a card acting on the field on top of its filter —
-/// a Spell's declarations never offer a card Immune to Spells, and a `target` declaration never offers
-/// a card whose targeting cost (Classic #89) its chooser cannot pay from the rest of their hand.
+/// B5 E5, E35, R450: whether a declaration may pick a card on the field beyond its filter: a Spell's
+/// never offers one Immune to Spells, a `target` one never one whose targeting cost (Classic #89) the
+/// chooser cannot pay from the rest of their hand.
 fn reachable(
     state: &GameState,
     player: PlayerId,
@@ -1224,8 +1103,7 @@ fn reachable(
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
     }
-    // R781001: a Spell's, a Field Spell's or a Field Trap's `target` declaration never offers an
-    // Immutable card in play.
+    // R781001: a Spell's, Field Spell's or Field Trap's `target` never offers an Immutable card in play.
     if decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), candidate) {
         return false;
     }
@@ -1245,10 +1123,8 @@ fn reachable(
 
 /// Every selection this declaration admits right now, in offer order: the chooser's side first, and
 /// within a side units by lane, then the backrow by lane, then the hand, then zones, then the hero.
-///
-/// R90: a unit pick offers the top of a Stack pile and never a dormant card (R13), a hand pick offers
-/// only the chooser's own hand (§9.1), and the card being played is never offered out of the hand it
-/// is leaving. An empty result is not an error — the play stays legal and the effect fizzles.
+/// R90: a unit pick offers the top of a Stack pile and never a dormant card (R13), and the card being
+/// played is never offered. An empty result is not an error: the play stays legal and the effect fizzles.
 pub fn legal_selections_for(
     state: &GameState,
     player: PlayerId,
@@ -1269,7 +1145,6 @@ pub fn legal_selections_for(
         out.push(selection);
     };
 
-    // B5 E5, E35, R450: a card on the field is offered only where the declaring card may reach it.
     let on_field = |held: &CardInstance| -> bool {
         card_allowed(state, filter, held, card, player) && reachable(state, player, card, decl, held)
     };
@@ -1359,10 +1234,9 @@ pub fn legal_selections_for(
     out
 }
 
-/// B5 E5, R450: which of a play's flat `targets` are targetings — each pick's declaration when it is a
-/// `target` declaration, `None` for a Tribute, hand or zone pick (R90's reading of the list). The
-/// targeting point reads it: a cost is owed, and an interception answers, only for these. `declared`
-/// is the card's own declarations by default (`None`); an activation passes its ability's (B3.2, R384).
+/// B5 E5, R450: each flat `targets` pick's declaration when it is a `target` one, `None` for a Tribute,
+/// hand or zone pick (R90): a cost is owed, and an interception answers, only for these. `declared`
+/// defaults to the card's own (`None`); an activation passes its ability's (B3.2, R384).
 pub fn targeting_decls_of(
     state: &GameState,
     player: PlayerId,
@@ -1402,8 +1276,7 @@ pub fn targeting_decls_of(
 }
 
 /// B5 E5, R450: the discards a play's declared targets cost it (Classic #89), read against the face
-/// the play resolves (R214) — or an activation's, against its ability's declarations. 0 for choices
-/// that target nothing costly.
+/// the play resolves (R214), or an activation's, against its ability's declarations.
 pub fn targeting_discards_required(
     state: &GameState,
     player: PlayerId,
@@ -1429,8 +1302,7 @@ pub fn targeting_discards_required(
 }
 
 /// Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open unit
-/// zone, would be a legal pick of `decl` — a declared pick moves to it only then (Hearthstone's
-/// Spellbender). Read with the card as it would stand there: its cost on the field, undamaged.
+/// zone and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
 pub fn interceptor_fits_decl(
     state: &GameState,
     player: PlayerId,
@@ -1468,14 +1340,11 @@ pub fn interceptor_fits_decl(
             })
 }
 
-// ---------------------------------------------------------------------------
 // R90: reading the flat list, and enumerating it
-// ---------------------------------------------------------------------------
 
-/// R90: how many selections a declaration takes off the flat list. Every declaration but the last
-/// takes a fixed number — its own minimum, or everything the board can offer when that is less, so a
-/// declaration the board cannot satisfy takes none and the next one still reads its own slot. The
-/// last declaration takes the remainder.
+/// R90: how many selections a declaration takes off the flat list: its own minimum, or all the board
+/// offers when that is less, so one the board cannot satisfy takes none and the next still reads its own
+/// slot. The last declaration takes the remainder.
 fn take_for(decl: &TargetDecl, offered: usize) -> usize {
     at_most(decl.min, offered)
 }
@@ -1503,11 +1372,9 @@ pub fn selections_per_declaration(
     split_selections(decls, &offered, selections)
 }
 
-/// R90, R102: where the play's choices were split. A fused card's Cry resolves each ingredient with
-/// its own slice of the flat `targets` list, and the slices are the ones §10.5 step 1 read the play
-/// with — the board as it stood when the play was checked and `legal_actions` offered it — not the
-/// board at step 5, where the played card itself may now be one of the options (a crafted Postdoc +
-/// Sorcerer is a Human, R102). The pipeline carries the lengths in the Cry's `data` under this key.
+/// R90, R102: the key the pipeline stores where the play's choices were split under, in the Cry's
+/// `data`. A fused card's Cry resolves each ingredient with its slice as §10.5 step 1 read it, not the
+/// board at step 5, where the played card may be an option itself.
 pub const DECLARATION_SLICES_KEY: &str = "__declarationSlices";
 
 /// How many selections each active declaration took off the flat list, read now (R90).
@@ -1539,11 +1406,9 @@ pub fn stored_declaration_slices(data: &IndexMap<String, Value>) -> Option<Vec<u
 }
 
 /// R221, R90: a play's picks for each declaration, in the order the declaration offers its options.
-/// `legal_actions` offers each set of picks once, in that order (`subsets_for`), and step 1 accepts
-/// any listing of an offered set, so step 5 must never resolve a listing no offered play means: one
-/// declaration's picks are a set, as an answer's are (`prompts::in_offered_order`). The slices are the
-/// ones step 1 read the play with, and a pick no option names keeps its place after the others.
-/// `target_decls` is the card's own declarations by default (`None`).
+/// Step 1 accepts any listing of a set `legal_actions` offers once (`subsets_for`), so step 5 resolves
+/// one declaration's picks as a set (`prompts::in_offered_order`); a pick no option names keeps its
+/// place after the others. `target_decls` defaults to the card's own (`None`).
 pub fn in_declared_order(
     state: &GameState,
     player: PlayerId,
@@ -1599,11 +1464,9 @@ pub fn in_declared_order(
     out
 }
 
-/// R123: a `tribute` declaration with an `amount` is one Tribute written in two lists — the units the
-/// play pays with (`tributes`, sacrificed at §10.5 step 2) and the picks its script reads as units it
-/// tributed (`targets`) — so every pick is one of the units the play tributes. A pick may name fewer
-/// units than the cost takes (one pick of a Tribute 2, or the one Sheep Token that pays it, §3.2), but
-/// never a unit the play keeps. True when the picks agree, or when the card declares no such Tribute.
+/// R123: a `tribute` declaration with an `amount` is one Tribute written in two lists, the units paid
+/// (`tributes`, sacrificed at §10.5 step 2) and the picks its script reads (`targets`), so every pick is
+/// a unit the play tributes, though it may name fewer (§3.2's Sheep). True too with no such Tribute.
 fn tribute_picks_agree(
     state: &GameState,
     player: PlayerId,
@@ -1718,15 +1581,10 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> (Vec<
     (out, truncated)
 }
 
-/// The cross of several lists, the first varying slowest, bounded by `cap` (R90). When the whole cross
-/// fits under the bound it is all of it, in that order. When it does not, the bound drops
-/// combinations and never a pick: the combinations kept first offer every item of every list — one
-/// per place in the longest list, each list taking its items in turn — and the rest follow in order
-/// up to the bound. Cut in order alone, the first list's later items were in no combination at all:
-/// a crafted Twisted Sorcerer + K-Pop Fanatic crossed over eleven and eight picks never offered the
-/// Sorcerer's 4 damage at the enemy hero (R81, R102), and the client, which builds a play only out of
-/// the plays `legal_actions` lists (CLAUDE.md rule 7), could not make it. Also whether the bound dropped
-/// any (#992).
+/// The cross of several lists, the first varying slowest, bounded by `cap` (R90), and whether the bound
+/// dropped any (#992). Over the bound it drops combinations, never a pick: the first kept offer every
+/// item of every list, one per place in the longest, then the rest in order, so the client, which plays
+/// only what `legal_actions` lists (CLAUDE.md rule 7), can make every pick.
 fn cross_product<T: Clone>(lists: &[Vec<T>], cap: usize) -> (Vec<Vec<T>>, bool) {
     if lists.iter().any(Vec::is_empty) {
         return (Vec::new(), false);
@@ -1785,10 +1643,9 @@ fn cross_product<T: Clone>(lists: &[Vec<T>], cap: usize) -> (Vec<Vec<T>>, bool) 
     (out, total > cap)
 }
 
-/// R90: several groups of answers kept under one bound — the target combinations of each mode choice
-/// a `forModes` card offers — all of them when they fit, and otherwise taken a round at a time, one
-/// from each group in turn, so every mode choice keeps answers of its own. Also whether the bound
-/// dropped any (#992).
+/// R90: several groups of answers under one bound (the target combinations of each mode choice of a
+/// `forModes` card): all when they fit, else a round at a time, one from each group, so every mode
+/// choice keeps answers of its own. Also whether the bound dropped any (#992).
 fn interleaved<T: Clone>(groups: &[Vec<T>], cap: usize) -> (Vec<T>, bool) {
     let total: usize = groups.iter().map(Vec::len).sum();
     if total <= cap {
@@ -1828,9 +1685,8 @@ pub struct ListedChoices {
 }
 
 /// R90: "`legalActions` enumerates every legal combination, bounded by `MAX_CHOICE_COMBINATIONS`".
-/// Declarations are read in order, the first varying slowest, and the target and mode lists that come
-/// back are exactly what a `play` action carries. A card that declares nothing yields one empty
-/// answer, so it is still offered once. `declared` is the card's own declarations by default (`None`).
+/// Declarations are read in order, the first varying slowest; a card that declares nothing yields one
+/// empty answer, so it is still offered once. `declared` defaults to the card's own (`None`).
 pub fn play_choice_combinations(
     state: &GameState,
     player: PlayerId,
@@ -1911,8 +1767,7 @@ pub fn listed_play_choices(
     let (mode_combos, modes_cut) = cross_product(&mode_option_lists, MAX_CHOICE_COMBINATIONS);
 
     if targets_follow_modes(&target_decls) {
-        // The target declarations a play answers depend on its modes (`forModes`), so each mode choice
-        // is enumerated with the targets it asks for — and each keeps answers under the bound (R90).
+        // `forModes`: each mode choice is enumerated with its own targets, each under the bound (R90).
         let mode_choices: Vec<Vec<String>> = if mode_decls.is_empty() {
             vec![Vec::new()]
         } else {
@@ -1966,8 +1821,7 @@ pub fn listed_play_choices(
         mode_combos.into_iter().map(Some).collect()
     };
 
-    // TS crosses the two answer lists themselves; the cross picks by index alone, so it is crossed over
-    // their indices here and the answers read back.
+    // The cross picks by index alone, so it crosses the indices and the answers are read back.
     let index_lists: Vec<Vec<usize>> = vec![
         (0..target_answers.len()).collect(),
         (0..mode_answers.len()).collect(),
@@ -2015,11 +1869,9 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
     out
 }
 
-/// #992, R90, §10.8: whether `legal_actions` lists plays of this card in the player's hand whose choice
-/// combinations R90's bound cut — the view's `choicesTruncated`. Only in the player's own main phase
-/// with no prompt, mulligan or result, where `legal_actions` lists plays at all (§10.2, R211, R265);
-/// at a price the player can pay whose face's combinations were cut and at which a face-up play is
-/// listed.
+/// #992, R90, §10.8: whether `legal_actions` lists plays of this card in hand whose choice combinations
+/// R90's bound cut (the view's `choicesTruncated`): only where it lists plays at all (§10.2, R211, R265),
+/// at a payable price whose face's combinations were cut and at which a face-up play is listed.
 pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     if state.result.is_some()
         || state.pending.is_some()
@@ -2113,9 +1965,8 @@ fn face_down_play_actions(
     out
 }
 
-/// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard — R81's
-/// choices crossed exactly as for a hand card, each with the ways a permission lets it be paid
-/// (`graveyard_play::graveyard_payments_for`). Nothing without a permission that admits it.
+/// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard, crossed as
+/// for a hand card, with the ways a permission lets it be paid (`graveyard_play::graveyard_payments_for`).
 pub fn graveyard_play_actions_for(
     state: &GameState,
     player: PlayerId,
@@ -2133,8 +1984,7 @@ pub fn graveyard_play_actions_for(
     })
 }
 
-/// One price a card's X and embiggen choices come to now (R65): the choices, the probe stamped with
-/// them, its cost.
+/// One price a card's X and embiggen choices come to now (R65).
 struct PlayPrice {
     x: Option<i32>,
     embiggen: Option<bool>,
@@ -2194,18 +2044,11 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
         .collect()
 }
 
-/// R979000, §10.8: why a card in `player`'s hand cannot be played now — the first refusal in a fixed
-/// order, in the engine's own words, as `UnitView.attack_reason` (R849000) is for an attack. Every
-/// branch reads the same function `legal_actions` (through `play_actions_for`) and §10.5 step 1
-/// (through `why_choices_refused`) already call, so the reason and the listing cannot disagree;
-/// nothing here restates a check (`reduce.rs`'s header). `None` when a play is listed, and when no
-/// refusal below fires — an Equip with no host on a board with open zones, or a targeting cost the
-/// hand cannot pay, says nothing rather than the wrong thing.
-///
-/// The order is ban, price, zone, Tribute, choices: the cost first, since a card its player cannot
-/// pay for is refused whatever the board holds, and within it the ban (R455) ahead of the price, as
-/// `validate_play` reads them, since a banned card is refused at every price it could be played at;
-/// then §10.5 step 1's own order, the zone, the Tribute and what the card declares.
+/// R979000, §10.8: why a card in `player`'s hand cannot be played now, the first refusal in a fixed
+/// order, as `UnitView.attack_reason` (R849000) is for an attack. Each branch reads what `legal_actions`
+/// and §10.5 step 1 call, so the reason and the listing cannot disagree (`reduce.rs`'s header); `None`
+/// when a play is listed or no refusal fires. The order is ban (R455), price, zone, Tribute, choices: a
+/// card refused at every price is refused whatever the board holds, then step 1's own order.
 pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
     // R1223: borrowed mana pays; R1180004: a Spell its player's health price reaches is refused by no mana.
     let mana = crate::credit::spendable_mana(state, player);
@@ -2232,8 +2075,7 @@ fn why_unplayable(
     payable: impl Fn(i32) -> bool,
     refuse_price: impl Fn(i32) -> Option<String>,
 ) -> Option<String> {
-    // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped as it stamps
-    // them, and every one forbidden (R455) — the listing left none out for this reason.
+    // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped alike, is banned (R455).
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
         legal_x_values(state, player, card)
             .into_iter()
@@ -2291,9 +2133,8 @@ fn why_unplayable(
         return refuse_price(cheapest.cost);
     };
     let tribute_sets = legal_tribute_sets(state, player, card);
-    // (c) Zone: no set the Tribute could pay leaves a zone — neither an open one, nor one the set
-    // itself empties (R391), nor a host an Equip play would fuse into (R1086, read off this price's
-    // probe, as the listing reads it).
+    // (c) Zone: no set the Tribute could pay leaves a zone: an open one, one the set empties (R391) or a
+    // host an Equip play would fuse into (R1086, read off this price's probe, as the listing reads it).
     if needs_zone(state, card) {
         let sets: Vec<&[String]> = if tribute_sets.is_empty() {
             vec![&[]]
@@ -2317,10 +2158,9 @@ fn why_unplayable(
             .err()
             .map(|error| error.message);
     }
-    // (e) Choices: the resolving face at the cheapest price declares something the board cannot
-    // answer — a needed pick (R703), a mode with no allowed option (R831008) or a play gate that does
-    // not hold (R1851000). The probe is the listing's default (this price, its zone, its first
-    // Tribute set, no picks), so the refusal is the one §10.5 step 1 gives that play.
+    // (e) Choices: the resolving face at the cheapest price declares what the board cannot answer (R703,
+    // R831008, R1851000). The probe is the listing's default (this price, its zone, its first Tribute
+    // set, no picks), so the refusal is the one §10.5 step 1 gives that play.
     let face = resolving_face(
         state,
         player,
@@ -2360,8 +2200,7 @@ fn why_unplayable(
 }
 
 /// R1571000, §10.8: R979000's order and words for a card in the player's own graveyard that a
-/// permission admits. The price step is asked as `graveyard_play_actions_for` asks it. It returns
-/// `None` for a card no permission admits, since there is no play to explain.
+/// permission admits, the price asked as `graveyard_play_actions_for` asks it; `None` for any other.
 pub fn why_graveyard_card_unplayable(
     state: &GameState,
     player: PlayerId,
@@ -2395,10 +2234,9 @@ pub fn face_for_action(
     )
 }
 
-/// R1200 (ME-RANDOMTARGETS): a play's picks with every `target` declaration's slice left out —
-/// what `legal_actions` offers while a Mayor acts, so the client asks for no target. The slices
-/// are `split_selections`' own, so the draw below inverts them exactly. An empty remainder is
-/// `None`, the same as no picks at all.
+/// R1200 (ME-RANDOMTARGETS): a play's picks with every `target` declaration's slice left out, what
+/// `legal_actions` offers while a Mayor acts. The slices are `split_selections`' own, so the draw below
+/// inverts them exactly; an empty remainder is `None`.
 pub fn without_target_picks(
     state: &GameState,
     player: PlayerId,
@@ -2422,11 +2260,9 @@ pub fn without_target_picks(
 }
 
 /// R1200 (ME-RANDOMTARGETS): rebuild a stripped play's full target list, drawing each `target`
-/// declaration's picks at random (`random_targets::draw_picks`) with `subsets_for`'s own bounds —
-/// `take_for` picks off the list for every declaration but the last, which takes the rest — so the
-/// full list splits again exactly as `legal_actions` split it. Any other declaration takes its
-/// slice of the picks the action carried. Picks left over refuse the play: a named target is no
-/// play while a Mayor acts.
+/// declaration's picks at random (`random_targets::draw_picks`) with `subsets_for`'s own bounds, so the
+/// list splits again exactly as `legal_actions` split it; any other declaration takes its slice of the
+/// given picks. Picks left over refuse the play: a named target is no play while a Mayor acts.
 pub fn with_drawn_target_picks(
     state: &GameState,
     rng: &mut Rng,
@@ -2480,14 +2316,10 @@ pub fn with_drawn_target_picks(
     Ok(out)
 }
 
-/// R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
-/// choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
-/// `{}` for a price paid in mana alone. A hand card pays in mana (`play_actions_for`); a card a permission
-/// lets its player play from the graveyard may also pay with Plague Counters (`graveyard_play.rs`).
-///
-/// R455: a price a ban forbids is never offered (`cost_rules::why_play_banned`). R391: each Tribute set is
-/// paired with the zones it leaves open, the open ones and the ones it empties itself, and never with a
-/// zone another set empties.
+/// R81, R90's enumeration with the payment left to the caller: for each price, `payments` answers the
+/// ways a play may pay it (none: not offered; `{}`: mana alone), a hand card in mana, a graveyard one
+/// perhaps with Plague Counters (`graveyard_play.rs`). R455: a banned price is never offered. R391: each
+/// Tribute set is paired with the zones it leaves open, never with a zone another set empties.
 pub fn priced_play_actions(
     state: &GameState,
     player: PlayerId,
@@ -2513,9 +2345,8 @@ pub fn priced_play_actions(
         // R214: the choices of the face step 5 will resolve, which this price decides (#64, R1181002).
         let face = resolving_face(state, player, &stamped_for_play(state, card, x, embiggen), cost);
         let bound = declares_bound_tribute(state, &face);
-        // #1889: the price's choices whose targets' discard cost can be paid, listed once the price
-        // offers a zone: neither reads the Tribute set or the zone, so a wide hand of many Tribute
-        // sets and zones lists them once, not once per pairing.
+        // #1889: the price's payable choices, listed once the price offers a zone: neither reads the
+        // Tribute set or the zone, so they are listed once, not once per pairing.
         let mut payable: Option<Vec<PlayChoices>> = None;
         for tributes in &tribute_sets {
             // R1086: the plain zones first, then the Equip host zones after them (D14: a game that
@@ -2563,9 +2394,8 @@ pub fn priced_play_actions(
                             plague: payment.plague.clone(),
                             face_down: None,
                         };
-                        // R1200: while a Mayor acts the play carries no declared targets — the
-                        // reducer draws them — so collapsed choices list one action, not one per
-                        // target set.
+                        // R1200: while a Mayor acts the reducer draws the targets, so collapsed
+                        // choices list one action, not one per target set.
                         if *random.get_or_insert_with(|| crate::random_targets::targets_random(state)) {
                             pushed.targets = without_target_picks(
                                 state,
@@ -2588,9 +2418,8 @@ pub fn priced_play_actions(
     out
 }
 
-/// B5 E5, R450, R682: `face`'s choice combinations (R90) whose targets' discard cost can be paid. The
-/// discards are random at pay time, so a play lists no paying sets — one action per combination,
-/// offered only when the cost can be paid at all. `card` is the card played, which pays no cost.
+/// B5 E5, R450, R682: `face`'s choice combinations (R90) whose targets' discard cost can be paid; the
+/// discards are random at pay time, so no paying sets are listed. `card`, the card played, pays none.
 fn payable_play_choices(
     state: &GameState,
     player: PlayerId,
@@ -2609,9 +2438,7 @@ fn payable_play_choices(
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // §10.5 step 1: the refusal
-// ---------------------------------------------------------------------------
 
 fn plural(count: i32, one: &str) -> String {
     if count == 1 {
@@ -2625,10 +2452,9 @@ fn refuse(message: String) -> Result<(), EngineError> {
     Err(EngineError::new(message))
 }
 
-/// R1086: the refusal for an Equip play. A play with `equip: false` is a plain play. The
-/// card must play Equip at all or be a Unit card a host may lend it to (R1869000), the zone must name
-/// a unit-row lane in range, and that zone must hold a host it may go onto — read off `equip_onto_at`,
-/// the same function the listing uses.
+/// R1086: the refusal for an Equip play (`equip: false` is a plain play): the card must play Equip or
+/// be a Unit card a host may lend it to (R1869000), and the zone must hold a host it may go onto, read
+/// off `equip_onto_at` as the listing reads it.
 fn refuse_equip(
     state: &GameState,
     player: PlayerId,
@@ -2689,7 +2515,6 @@ fn refuse_zone(
     let row = row_for_card(state, card);
     // R446: a Unit may name a backrow zone whose card carries one (Classic+ #33 Ivory Tower, R653).
     if row == Row::Units && zone.row == Row::Backrow {
-        // TS also refused a lane that is not a whole number; an `i32` always is.
         if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
             return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
         }
@@ -2699,9 +2524,7 @@ fn refuse_zone(
             lane: zone.lane,
         };
         // R1081000: a Flying Unit may stand in a backrow zone it takes, as `legal_zones_for` lists
-        // them. A carrier takes it only as its Unit, on the R446 path below as any Unit (R653: not
-        // once it has taken its one); any other zone it cannot take is simply not open, as in its
-        // unit row.
+        // them; a carrier takes it only as its Unit, on the R446 path below (R653).
         if flies(state, card) {
             if flying_takes_backrow(state, card, &slot, tributes) {
                 return Ok(());
@@ -2724,8 +2547,7 @@ fn refuse_zone(
         return refuse(format!("there is no {row} zone {}", zone.lane));
     }
 
-    // §6.2 Stack: an occupied unit zone is a legal zone for a Stack card, and only occupancy is
-    // waived — `accepts_stack` still refuses a Locked or Reborn-reserved zone (R64).
+    // §6.2 Stack: only occupancy is waived; `accepts_stack` still refuses a Locked or reserved zone (R64).
     let slot = ZoneSlot {
         player,
         row: zone.row,
@@ -2780,7 +2602,7 @@ fn refuse_x(
     if !chooses_x(state, card) {
         return Ok(());
     }
-    // R348: an X the play leaves out is the old default 0, which is no longer one to choose.
+    // R348: an X the play leaves out reads as 0, which is not one to choose.
     why_x_refused(state, player, x.unwrap_or(0), None)
 }
 
@@ -2981,9 +2803,9 @@ fn refuse_modes(
     Ok(())
 }
 
-/// R783004: refusal for a face-down play — a card with no Cloaked (or in a graveyard), a timing other
-/// than Cloaked's (the three of R1044 are offered no more), a named zone outside the open backrow
-/// zones, or any target or mode. X, embiggen and tributes are still checked.
+/// R783004: refusal for a face-down play: a card with no Cloaked (or in a graveyard), a timing other
+/// than Cloaked's (not R1044's three), a named zone outside the open backrow zones, or any target or
+/// mode. X, embiggen and tributes are still checked.
 fn why_face_down_refused(
     state: &GameState,
     player: PlayerId,
@@ -3052,10 +2874,8 @@ fn why_face_down_refused(
 }
 
 /// §10.5 step 1, R90: every choice the play carried, checked against what the card declared and what
-/// the board allows. Returns `Ok` when the play's choices are legal, and the refusal otherwise —
-/// `reduce` returns that message and leaves the state untouched (§9.3).
-///
-/// Mana affordability is not a choice and stays with `reduce`'s pay step (§10.5 step 2).
+/// the board allows; `reduce` returns the refusal and leaves the state untouched (§9.3). Mana
+/// affordability is not a choice and stays with `reduce`'s pay step (§10.5 step 2).
 pub fn why_choices_refused(
     state: &GameState,
     player: PlayerId,
@@ -3086,8 +2906,7 @@ pub fn why_choices_refused(
         &stamped_for_play(state, card, action.x, action.embiggen),
         cost_with(state, card, action.x, action.embiggen),
     );
-    // R1851000: a play gate that does not hold refuses the play whatever it carried, as the listing
-    // offers none of it.
+    // R1851000: a play gate that does not hold refuses the play whatever it carried.
     if !play_allowed(state, player, &face) {
         return refuse(format!(
             "{} cannot be played without something to act on",
@@ -3122,9 +2941,7 @@ pub fn play_uses(card: &CardInstance, targets: &[Selection]) -> Vec<String> {
     out
 }
 
-// ---------------------------------------------------------------------------
-// ---- v0.2.0: activate and turn (B3.2 activation choices, R384) ----
-// ---------------------------------------------------------------------------
+// Activate and turn (B3.2 activation choices, R384)
 
 /// The declarations a set of choices answers when they are not the card's own play-time ones: an
 /// Activate ability's `targets` and `modes` (B3.2 rule 5, R384), which travel in the `activate` action

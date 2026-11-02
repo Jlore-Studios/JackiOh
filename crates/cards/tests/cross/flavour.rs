@@ -4,8 +4,6 @@
 //! else, every card and token has a line, and each entry is plain words under its caps. Whether a line
 //! speaks rules words is the client's test (apps/web/src/cards/flavour.test.ts), beside the list the
 //! voice lines answer to (issue #115).
-//!
-//! Port of `packages/cards/test/flavour.test.ts`.
 
 use indexmap::IndexMap;
 use jackioh_cards::{CATALOG, flavour_json};
@@ -14,22 +12,18 @@ use serde_json::{Map, Value};
 use super::sidecar;
 
 /// A flavour line's longest length, in characters (UTF-16 code units, as JS counts them): one or two
-/// short lines under the rules. The client's `FLAVOUR_MAX_CHARS` (`packages/cards/src/flavour.ts`,
-/// which moves to the web, SURFACE §7.4); the sidecar's contract, held here at the same number.
+/// short lines under the rules: the client's `FLAVOUR_MAX_CHARS` (SURFACE §7.4), the sidecar's
+/// contract, held here at the same number.
 const FLAVOUR_MAX_CHARS: usize = 120;
 
-/// An artist credit's longest length, in characters. The client's `ARTIST_MAX_CHARS`.
 const ARTIST_MAX_CHARS: usize = 60;
 
 const FIELDS: &[&str] = &["flavour", "artist"];
 
-/// Every card's flavour line and artist, by catalog id (TS `FLAVOUR`), each entry kept as raw JSON so
-/// an unknown field or a value that is not a string is seen, not refused by a typed parse.
 fn flavour() -> IndexMap<String, Map<String, Value>> {
     sidecar(flavour_json(), "crates/cards/flavour.json")
 }
 
-/// A string the sidecar may hold: trimmed, non-empty, on one line, and no longer than `cap`.
 fn problem_with(value: &Value, cap: usize) -> Option<String> {
     let Some(value) = value.as_str() else {
         return Some("is not a string".to_string());
@@ -43,7 +37,6 @@ fn problem_with(value: &Value, cap: usize) -> Option<String> {
     if value.contains('\r') || value.contains('\n') {
         return Some("spans lines".to_string());
     }
-    // JS `value.length`: UTF-16 code units.
     let length = value.encode_utf16().count();
     if length > cap {
         return Some(format!("is {length} characters, over {cap}"));

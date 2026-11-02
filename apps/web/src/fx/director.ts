@@ -1,5 +1,5 @@
 // S8 effects director. R200: it only decorates; every visual stays within planned duration, FX_MAX_TAIL_MS and FX_MAX_PARTICLE_LIFE_MS.
-// Cues measure anchors when firing and expire from scheduled due time; frames fire, update, shake, draw, expire/track, adapt, then loop only while active work remains.
+// Cues measure anchors when firing and expire from scheduled due time; frames loop only while active work remains.
 
 import { createCanvasFx } from "./canvasFx.ts";
 import {
@@ -71,7 +71,6 @@ export type FxDirector = {
   pause(): void;
   /** Resumes a hit-stop, shifting visual deadlines by the frozen span. */
   resume(): void;
-  /** Pending, DOM, canvas and shake activity. */
   active(): number;
   particles(): number;
   capacity(): number;
@@ -80,7 +79,6 @@ export type FxDirector = {
 
 type PendingCue = { cue: FxCue; due: number };
 type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string };
-/** Stage effect cleanup and optional movement tracking. */
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
 function defaultViewport(): FxViewportEvents {

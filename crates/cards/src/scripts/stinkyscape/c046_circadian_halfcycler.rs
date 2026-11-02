@@ -40,9 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #46 Circadian Halfcycler — SPEC §8.10 row 46, BUILD M12 row S 46: "each of your turns while it stands:
-// the autopilot takes your first 3 plays or attacks, answers excluded, then hands the turn back (R1844000);
-// End of turn: a Drone Interceptor summoned; radiant: a Radiant one".
+// S #46 Circadian Halfcycler — SPEC §8.10 row 46, BUILD M12 row S 46 (R1844000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -57,7 +55,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1 with the Halfcycler face-up in the backrow, `active` to act.
     fn fielded(radiant: bool, active: &str, hand: Value, field: Value) -> Scenario {
         scenario(json!({
             "active": active,
@@ -77,7 +74,6 @@ mod tests {
             .any(|event| matches!(event, GameEvent::AutopilotEngaged { player: by, .. } if *by == player))
     }
 
-    /// R456's actions among `events`: p1's plays and every attack declared.
     fn actions(events: &[GameEvent]) -> usize {
         events
             .iter()

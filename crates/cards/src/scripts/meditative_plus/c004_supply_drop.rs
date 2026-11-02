@@ -6,17 +6,9 @@
 //!            deal {embiggenedDamage} damage, or add {embiggenedCards}." (3; 4, 1 at (2); 5; 9, 5)
 //!   Radiant: the same, "… or fill your hand with them." (3; 9, 2 at (0); 5; 15, a full hand)
 //!
-//! THE MODES are declared (R81), so the choice travels in the play and never pauses: `combat` and
-//! `supplies`. The Cry arms one delayed effect "in N turns" (R1181000): at the start of the caster's
-//! Nth turn from now, counted in their own turns started (an extra turn counts), before the draw, with
-//! a countdown badge on the caster's side in both views, since the Spell is in the graveyard by then.
-//! The numbers are fixed as the Cry resolves (the Embiggened version's where it was played, R81) and
-//! carried in the entry's data, so the step reads nothing off the card it no longer is.
-//!   - Combat (R1181001): one hit on every enemy Unit and the enemy hero, Pierce and Lifesteal, all
-//!     before one state check (R59), each hit healing the caster's hero.
-//!   - Supplies (R1181001): random non-token Jlockeed cards of the sets that ship, never Supply Drop
-//!     (R387), added Radiant at `suppliesCost`; the Radiant face's Embiggened version adds as many as
-//!     fill the hand, counted as the step resolves (M #77's count).
+//! Modes declared in play (R81): `combat` and `supplies`. Arms delayed effect "in N turns" (R1181000).
+//! Combat: hits each enemy Unit and hero with Pierce and Lifesteal in single state check (R1181001, R59).
+//! Supplies: adds random Radiant Jlockeed cards (R387, M #77); Radiant Embiggened fills hand.
 
 use jackioh_engine::prelude::*;
 
@@ -140,13 +132,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #4 Jlockeed's Supply Drop — SPEC §8.9 row 4, BUILD M11 row M+ 4: "Combat: nothing on the next
-// two of your turns, then at the start of your third, before the draw, 4 Pierce damage to the enemy hero
-// (through Armor) and each enemy Unit, healing your hero 4 per hit, your Spell Damage raising each, one state
-// check; the countdown is a public badge on your side; an extra turn counts (R1181000, R1181001); Supplies:
-// at the same moment a random non-token Jlockeed card, Radiant, costing (2), never Jlockeed's Supply Drop;
-// Embiggened at (4): after 5 turns, 9 damage or 5 cards; every number reads through `param()`; radiant Combat
-// 9 (Embiggened 15), Supplies 2 cards at (0) (Embiggened: as many as fill your hand)".
+// Meditative+ #4 Jlockeed's Supply Drop — SPEC §8.9 row 4, BUILD M11 row M+ 4 (R1181000,
+// R1181001).
 #[cfg(test)]
 mod tests {
     use super::{COMBAT, ID, SUPPLIES};
@@ -155,17 +142,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// A (1) 4/4 with no text: the bodies and the cards to draw.
     const FILLER: &str = "core-008";
-    /// (2) 3/2, Spell Damage +2.
     const SOLARIUS: &str = "classicplus-038";
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER])
     }
 
-    /// p1 holds Supply Drop (Radiant on `radiant`) and one filler, at 20 health, with `p1` merged in;
-    /// p2 has Armor 3 and two 4/4s, with `p2` merged in.
     fn game(seed: &str, radiant: bool, p1: Value, p2: Value) -> Scenario {
         let p1 = crate::merged(
             json!({
@@ -196,7 +179,6 @@ mod tests {
         s.play(ID, action);
     }
 
-    /// The hits in these events, as (target, amount).
     fn hits(events: &[GameEvent]) -> Vec<(String, i32)> {
         events
             .iter()
@@ -207,21 +189,18 @@ mod tests {
             .collect()
     }
 
-    /// Pass `turns` of p1's turns: end p1's turn and p2's, `turns` times.
     fn pass_own_turns(s: &mut Scenario, turns: usize) {
         for _ in 0..turns {
             s.end_turn().end_turn();
         }
     }
 
-    /// The labels of the badges `viewer` sees on p1's seat.
     fn p1_badges(s: &Scenario, viewer: PlayerId) -> Vec<String> {
         let view = s.view(viewer);
         let seat = if viewer == P1 { view.you } else { view.opponent };
         seat.modifiers.into_iter().map(|badge| badge.label).collect()
     }
 
-    /// The cards in p1's hand that Supplies added.
     fn supplies(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1)
             .into_iter()
@@ -233,7 +212,6 @@ mod tests {
         s.state().players[player].hero.health
     }
 
-    /// Supplies' cards: Radiant non-token Jlockeed cards of an open set at `cost`, never Supply Drop.
     fn assert_supplies(cards: &[CardInstance], cost: i32) {
         for card in cards {
             let def = crate::card_def(&card.def_id);
@@ -307,7 +285,6 @@ mod tests {
             let mut s = game("m+004-extra", false, json!({}), json!({}));
             cast(&mut s, COMBAT, false);
             s.state_mut().players[P1].extra_turns = Some(1);
-            // p1's extra turn is the first of the three; then p2's, p1's, p2's, p1's.
             s.end_turn();
             assert!(hits(s.events()).is_empty());
             s.end_turn().end_turn().end_turn();
@@ -476,7 +453,6 @@ mod tests {
                 vec!["Jlockeed's Supply Drop: a hand of Radiant Jlockeed cards in 5 turns".to_string()]
             );
             pass_own_turns(&mut s, 5);
-            // The fill resolves before the draw, so the hand is full and the draw burns.
             assert_eq!(s.hand(P1).len(), 10);
             assert_supplies(&supplies(&s), 0);
         }

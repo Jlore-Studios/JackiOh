@@ -1,21 +1,9 @@
-//! The room-code challenge (SPEC §9.5, R79, BUILD M6-T4), in the queue's three modes (R264).
-//!
-//! §9.5: direct challenge by a 6-character room code from the invite-code alphabet. The queue's
-//! rules apply too, being the same assertions §9.5 makes about entering a match:
-//!
-//!  - the account is active (`AuthLevel::Active`, §9.4), not in a match, a series that is not over
-//!    (R264) or a live co-op match (R1065000);
-//!  - the deck or trio is validated at match time by the shared validator (§9.4, R253), through the
-//!    queue's `freeze_choice`, and frozen into the room at creation (§9.4, §9.5, §9.8);
-//!  - `rooms_claim` is the atomic single-claim: the loser of a join race gets a 409, never a second
-//!    match.
-//!
-//! R264: a room is created in a mode, and a joiner plays that mode or is refused with it named. A
-//! Best-of-1 join starts the match on the two frozen decks; an All Random join deals both decks
-//! (R258); a Conquest join makes the series (R259), whose first game starts once both players have
-//! picked a deck. Handlers: `create` (`POST /api/rooms`), `join` (`POST /api/rooms/:code/join`),
-//! and, R1075000, `mine` (`GET /api/rooms`) and `cancel` (`DELETE /api/rooms/:code`).
-//! Surface contract: docs/v0.3.0/SURFACE.md §4.1.
+//! The room-code challenge (SPEC §9.5, R79) in the queue's modes (R264), under the queue's rules: an
+//! active account (§9.4) in no match, unfinished series or live co-op match (R1065000), its deck
+//! validated (§9.4, R253) and frozen into the room (§9.5, §9.8). `rooms_claim` is the atomic
+//! single-claim: a join race's loser gets a 409, never a second match. A joiner plays the room's mode
+//! or is refused with it named; All Random deals both decks (R258), Conquest makes the series (R259).
+//! R1075000: `mine` and `cancel`. Surface contract: docs/v0.3.0/SURFACE.md §4.1.
 
 use std::cell::RefCell;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -35,22 +23,17 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json a
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
-// `now_ms`: the server's one clock (SURFACE §11.3), read through tokio's clock so a paused test
-// moves every module's "now" together.
+// The server's one clock (SURFACE §11.3), via tokio's, so a paused test moves every "now" together.
 use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 use crate::seats::Seat;
 
-/// SPEC §11 R149: a room code "is minted by retrying a bounded number of times against the codes
-/// still in use and then reporting that no code is available"; the bound is config's, like R79's
-/// clocks. Eight is far more than a 30-bit space (R104) needs against the codes R110 has not released.
+/// SPEC §11 R149: bounded retries against the codes in use; eight is far more than a 30-bit space
+/// (R104) needs against the codes R110 has not released. Config's, like R79's clocks.
 const CODE_ATTEMPTS: usize = 8;
 
-// R143 — the end-to-end mode's optional seed, for the room half
-
-/// One remembered seed, the seat the host asked for with it (R1989000), and the expiry of the
-/// room they belong to.
+/// Held seed, requested seat (R1989000), and room expiry.
 #[derive(Clone, Debug)]
 struct HeldSeed {
     seed: String,
@@ -58,13 +41,8 @@ struct HeldSeed {
     expires_at: i64,
 }
 
-/// SPEC §11 R143: "In end-to-end mode the room and queue endpoints accept an optional seed and use
-/// it verbatim so a networked spec can be seeded, and outside that mode the field is rejected."
-///
-/// A room's match is not created until someone joins, so the host's seed is held between the two
-/// calls, `room code -> seed` as `api/queue.rs` holds `ticket id -> seed`: `Room` carries no seed,
-/// and a test-mode field must not enter what `src/db/**` persists. `seed_override_of` has already
-/// refused the field outside end-to-end mode, so a production process keeps this map empty.
+/// SPEC §11 R143: the e2e seed, held from create to join: a test-mode field must not enter what
+/// `src/db/**` persists. `seed_override_of` refuses it outside e2e, so production keeps this empty.
 static E2E_SEED_BY_ROOM: LazyLock<Mutex<IndexMap<String, HeldSeed>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -81,8 +59,7 @@ pub fn e2e_room_seed_count() -> usize {
     seeds().len()
 }
 
-/// A room never joined has no claim to clear it, so each remembered seed carries its room's expiry
-/// and stale ones are dropped as new rooms are made.
+/// A room never joined has no claim to clear its seed, so stale seeds drop as rooms are made.
 fn remember_seed(code: &str, seed: &str, seat: Option<PlayerId>, expires_at: i64, now: i64) {
     let mut held = seeds();
     held.retain(|_, entry| entry.expires_at > now);
@@ -96,10 +73,8 @@ fn remember_seed(code: &str, seed: &str, seat: Option<PlayerId>, expires_at: i64
     );
 }
 
-/// The seed for this room, consumed, with the host's and the joiner's seat pins beside it. The
-/// host's seed wins over the joiner's: the room came first. A seat-only pin carries no seed (R143),
-/// so the joiner's seed is honored then. R1989000 resolves the pins at the join, the host's first:
-/// a honored pin skips the seed's coin.
+/// Consumes the room's seed and pins; the host's seed wins, but a seat-only pin carries none (R143),
+/// so the joiner's is honored then (R1989000).
 fn take_seed_for_room(
     code: &str,
     joiner_seed: Option<String>,
@@ -113,8 +88,6 @@ fn take_seed_for_room(
     }
 }
 
-// R149 — where a room code comes from
-
 thread_local! {
     /// The test seam for R149's bound; absent, as outside a test, codes are random.
     static SCRIPTED_CODES: RefCell<Option<ScriptedCodes>> = const { RefCell::new(None) };
@@ -126,8 +99,7 @@ struct ScriptedCodes {
     minted: usize,
 }
 
-/// Scripts the room codes `create` mints on the calling thread, in order, the last repeating, until
-/// the guard drops. A `#[tokio::test]` runs the handlers on its own thread, so only its requests see it.
+/// Scripts room codes for the calling thread until the guard drops, so only that test sees them.
 pub fn script_room_codes(codes: &[&str]) -> ScriptedRoomCodes {
     let codes = codes.iter().map(|code| (*code).to_string()).collect();
     SCRIPTED_CODES.with(|scripted| *scripted.borrow_mut() = Some(ScriptedCodes { codes, minted: 0 }));
@@ -160,8 +132,7 @@ fn mint_code() -> String {
     })
 }
 
-/// R264: a join in another mode than the room's is refused with the room's mode named, so the lobby
-/// can ask for the right deck or trio (`details.mode` carries it for the client).
+/// R264: refusal naming the room's mode; the client reads it from `details.mode`.
 fn mode_refusal(mode: QueueMode) -> &'static str {
     match mode {
         QueueMode::Bo1 => "This room plays Best of 1: pick one of your decks.",
@@ -194,8 +165,8 @@ fn wiring_fault(message: String) -> ApiError {
     ApiError::new(ApiErrorCode::Internal, "something went wrong")
 }
 
-/// A room the caller may still join. Missing, malformed and expired codes are one answer, so a
-/// scan of the 30-bit code space cannot tell "wrong" from "too late" (§9.4's invite-code error).
+/// A room the caller may join; missing, malformed and expired are one answer, so a scan cannot tell
+/// "wrong" from "too late" (§9.4).
 async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     let code = normalize_code(typed);
     let miss = || ApiError::new(ApiErrorCode::NotFound, "that room code is not open");
@@ -225,10 +196,7 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     Ok(room)
 }
 
-/// The two seats of a room's match: R1989000 seats the host and the joiner by the seed's coin
-/// (`host_is_p1`), so the same seed always seats the same way. Decks, portraits and slots travel
-/// with the profile; All Random deals stay seat-keyed, each leaning on the set its seat's player
-/// picked, if any.
+/// The two seats of a room's match: R1989000 seats host and joiner by seed coin.
 fn room_seats(
     room: &Room,
     joiner_id: &str,
@@ -242,10 +210,7 @@ fn room_seats(
         (PlayerId::P2, PlayerId::P1)
     };
     if room.mode == QueueMode::Random {
-        // R258: dealt from the match seed and the seat, and frozen into the match row like any deck.
-        // R642: the portraits are dealt the same way, uniformly and seat by seat. R1372, R924000:
-        // each seat's deck leans on the set its own player picked, if any, the host when the room was
-        // made and the joiner now.
+        // R258, R642: decks and portraits dealt by seat; R1372, R924000: each leans on its player's set.
         let joiner_lean = match joiner {
             FrozenChoice::Random { lean } => *lean,
             _ => None,
@@ -307,10 +272,9 @@ fn room_seats(
     ))
 }
 
-/// POST /api/rooms — create a room in a mode and return its code (§9.5, R264).
+/// POST /api/rooms — create a room in a mode and return its code (§9.5, R264); a challenge (B48,
+/// #937, #938, #941) opens its room through `open_room` too.
 pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-    // The work is `open_room`'s, which a challenge (SPEC S7, B48) opens its room through too.
     let room = open_room(app, &req, ROOM_CODE_TTL_SECONDS * 1000).await?;
     Ok(json_response(
         200,
@@ -325,17 +289,12 @@ pub struct OpenedRoom {
     pub mode: QueueMode,
 }
 
-/// `POST /api/rooms`' work on the request's caller and body, the room open for `ttl_ms` unjoined:
-/// `ROOM_CODE_TTL_SECONDS` for a room, `CHALLENGE_TTL_MS` for a challenge's (SPEC S7, B48, B49),
-/// which so lapses with its challenge. Every refusal is the route's own.
+/// Opens a room for `ttl_ms` unjoined; a challenge's lapses with it (B48, B49).
 pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, ApiError> {
-    // ---- end Social ----
     let profile_id = caller_of(req)?.profile.id.clone();
     // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
-    // R143: an optional `seed`, accepted only by an end-to-end server and rejected elsewhere,
-    // read before any work so a production caller gets the 400 without a room being made.
-    // R1989000: an optional `seat` beside it, under the same rule.
+    // R143, R1989000: e2e seed and seat, read first so a refused one makes no room.
     let seed = seed_override_of(app, &req.body)?;
     let seat = seat_override_of(app, &req.body)?;
     assert_free_to_play(app, &profile_id).await?;
@@ -347,9 +306,7 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
     let now = now_ms();
     let expires_at = now + ttl_ms;
 
-    // R890000: one host holds at most `MAX_OPEN_ROOMS_PER_HOST` unclaimed unexpired rooms, so its
-    // rooms cannot amplify a seat race without bound. Advisory: the seats `join` reserves
-    // (R1523000) are what stop a double seat, not this count.
+    // R890000: bounded open rooms per host; advisory, as `join`'s seats (R1523000) stop a double seat.
     {
         let mut tx = app.db.begin(None).await?;
         let open = tx.rooms_count_open_by_host(&profile_id, now).await?;
@@ -404,13 +361,10 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
         if !created {
             continue;
         }
-        // R143, after the create won: a seed for a room that does not exist would never be dropped.
-        // R1989000: the seat pin rides with it, forgotten with it.
+        // R143, R1989000: held only once the create won, else it would never be dropped.
         if let Some(seed) = seed.as_deref() {
             remember_seed(&code, seed, seat, expires_at, now);
         } else if let Some(seat) = seat {
-            // A pin without a seed still needs holding until the join: remember it under a
-            // placeholder entry the join consumes with the room.
             remember_seed(&code, "", Some(seat), expires_at, now);
         }
         tracing::info!(event = "room.created", code = %code, hostProfileId = %profile_id, mode = mode.as_str());
@@ -428,16 +382,12 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
     ))
 }
 
-/// POST /api/rooms/:code/join — claim the room and start its game (§9.5, R264): the match for
-/// Best of 1 and All Random, the series for Conquest.
-///
-/// Takes `&Arc<App>` because `Registry::start` does (as `api::queue::enqueue`); SURFACE §11.2's
-/// `&App` does not fit.
+/// POST /api/rooms/:code/join — claim room and start game (§9.5, R264); `&Arc<App>`, not SURFACE
+/// §11.2's `&App`, since `Registry::start` takes one.
 pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = caller_of(&req)?.profile.id.clone();
     let choice = read_mode_choice(&req.body)?;
-    // R143 again: both endpoints accept the field in end-to-end mode and refuse it outside one.
-    // R1989000: the joiner's `seat` beside it, under the same rule.
+    // R143, R1989000: joiner seed and seat overrides in e2e mode.
     let joiner_seed = seed_override_of(app, &req.body)?;
     let joiner_seat = seat_override_of(app, &req.body)?;
     assert_free_to_play(app, &profile_id).await?;
@@ -450,12 +400,9 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "you created that room; wait for someone to join",
         ));
     }
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-    // SPEC S7, B49: a room a challenge opened is the challenged friend's to join.
+    // B49: a challenge's room is the challenged friend's to join.
     crate::social::challenges::assert_may_join(app, &room.code, &profile_id).await?;
-    // ---- end Social ----
-    // R264: the room's mode, or a refusal naming it — before the joiner's deck is looked at, so the
-    // answer is the useful one.
+    // R264: mode checked before the deck, so the refusal is the useful one.
     if choice_mode(&choice) != room.mode {
         return Err(ApiError::with_details(
             ApiErrorCode::Conflict,
@@ -470,10 +417,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let series_id = new_uuid();
     let now = now_ms();
 
-    // R1523000: the guest's seat and the host's, or neither, before anything is written: a match,
-    // or for Conquest the series. A guest who holds a game meets the refusal `assert_free_to_play`
-    // answers, and a host who holds one (they may have been matched since the room opened) the
-    // host's; a rival door that reserved either first wins, and this one writes nothing.
+    // R1523000: both seats or neither, before anything is written; a rival that reserved first wins.
     let seat = if matches!(frozen, FrozenChoice::Bo3 { .. }) {
         Seat::Series {
             id: series_id.clone(),
@@ -487,19 +431,15 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         .reserve(&[&profile_id, &room.host_profile_id], seat)
         .map_err(|taken| join_refusal(&profile_id, &taken))?;
 
-    // The atomic single-claim: whoever wins this statement is the guest, and there is no second
-    // winner (§9.5, mirroring `tickets_claim_pair`). Fenced first (R1523000): once a newer server's
-    // epoch has overtaken this one, nothing is claimed and the join answers 503.
+    // Atomic single-claim (§9.5, mirroring `tickets_claim_pair`): one winner is the guest. Fenced
+    // (R1523000): past a newer epoch nothing is claimed (503).
     let mut tx = app.db.begin(None).await?;
     tx.seats_fence(app.seats.epoch()).await?;
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-    // SPEC S7, B49: accepting a challenge is joining its room, so the claim accepts it, in the
-    // claim's own transaction.
+    // B49: accept challenge in same transaction.
     if claimed.is_some() {
         tx.challenges_accept_room(&room.code, &profile_id, now).await?;
     }
-    // ---- end Social ----
     tx.commit().await?;
     let Some(claimed) = claimed else {
         return Err(ApiError::new(
@@ -507,9 +447,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "someone already joined that room",
         ));
     };
-    // R143: the server mints the seed, unless an end-to-end room asked for one. R1989000: the
-    // host's seat pin wins over the joiner's, and a honored pin skips the seed's coin, so the same
-    // seed always seats the same way.
+    // R143: minted unless an e2e room asked for one. R1989000: a honored pin skips the seed's coin.
     let (seed_held, host_pin, guest_pin) = take_seed_for_room(&claimed.code, joiner_seed, joiner_seat);
     let seed = seed_held.filter(|held| !held.is_empty()).unwrap_or_else(new_seed);
     let host_is_p1 = match (host_pin, guest_pin) {
@@ -519,9 +457,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     if let FrozenChoice::Bo3 { trio } = &frozen {
-        // R259, R263: the series, with the id the claim reserved as game 1's. Nobody is in a match
-        // yet: the series opens on its pick phase. R1989000: sides index 0 is the coin winner, and
-        // R335's alternation runs from there.
+        // R259, R263: the series opens on its pick phase. R1989000, R335: the coin winner is index 0.
         let Some(host_trio) = claimed.host_trio.clone() else {
             return Err(wiring_fault(format!(
                 "Conquest room {} holds no trio",
@@ -560,8 +496,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             // R604: a room's series is unranked.
             ranked: false,
         };
-        // One transaction, so a half-landed 'picking' row cannot hold both players out of the
-        // queue and the room until the pick deadline (R333).
+        // One transaction, so a half-landed 'picking' row cannot hold both out until R333's deadline.
         let started: Result<SeriesRow, ApiError> = async {
             let mut tx = app.db.begin(None).await?;
             tx.seats_fence(app.seats.epoch()).await?;
@@ -576,8 +511,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 series
             }
             Err(error) => {
-                // The claim has committed, so the room's `open` row would stay claimed and
-                // pointing at no series; `matches_discard_open` releases it and frees the room code.
+                // Discard open match row on series start failure.
                 let cleanup: Result<(), ApiError> = async {
                     let mut tx = app.db.begin(None).await?;
                     tx.matches_discard_open(&match_id).await?;
@@ -624,13 +558,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         (joiner_seat, host_seat)
     };
 
-    // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
-    // "clears both players' in-match state" when the result lands). Both seats are claimed
-    // compare-and-set (R890000) before the start, while the claim's renamed `open` row satisfies
-    // the `current_match_id` foreign key, as the queue path's comment states: the record, and a
-    // second guard behind the seats reserved above (R1523000), so a seat it refuses is drift.
-    // Dropping `tx` on a loss rolls both stores back, and `matches_discard_open` deletes the claim
-    // and frees the room code, so the room stays joinable. A fenced write claims no seat at all.
+    // §9.5, R890000: in-match flags set compare-and-set before the start, a second guard behind
+    // R1523000's seats, so a refusal is drift.
     {
         let mut tx = app.db.begin(None).await?;
         let fenced = tx.seats_fence(app.seats.epoch()).await;
@@ -642,9 +571,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         if host_seated && guest_seated {
             tx.commit().await?;
         } else {
-            // Before the commit, so nothing was written — but the claim above did commit, so
-            // delete it and free the room code: the room stays joinable. Dropped first: the
-            // fake store's lock is held by this transaction, and the cleanup begins its own.
+            // Discard claim and free room code; `tx` drops first, as it holds the fake store's lock.
             drop(tx);
             let mut cleanup = app.db.begin(None).await?;
             cleanup.matches_discard_open(&match_id).await?;
@@ -657,8 +584,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             return Err(host_busy());
         }
     }
-    // R1523000: the record holds both seats now, so the ledger does: a start that fails from here
-    // lets go of them as its cleanup clears the flags.
+    // R1523000: commit seat lease once match row holds both seats.
     lease.commit();
     if let Err(error) = app
         .matches
@@ -677,9 +603,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         )
         .await
     {
-        // The seats committed, so a failed start would lock both players out until the reaper's
-        // open-row sweep (R1450). Undo it now: conditional clears (R890000) that never wipe a
-        // rival flag, then the claim's row.
+        // Revert in-match flags (R890000, R1450) and release seats on start failure; a conditional
+        // clear never wipes a rival flag.
         let cleanup: Result<(), ApiError> = async {
             let mut tx = app.db.begin(None).await?;
             tx.profiles_clear_in_match(&claimed.host_profile_id, &match_id)
@@ -726,12 +651,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// DELETE /api/rooms/:code — the host frees a room nobody has joined (§9.5, R1075000) through
-/// `release_room`, as a challenge's close frees its room: the code is free at once (R110), a join
-/// meets the miss an unknown code is, the end-to-end seed goes with it (R143). Idempotent like
-/// `DELETE /api/queue`: `cancelled: false` when the code holds no unjoined room, and a joined room
-/// is never touched. Another host's room is the join's 404; a room an open challenge holds is 409,
-/// since its challenge's cancel frees it (SPEC S7, B49).
+/// DELETE /api/rooms/:code — the host frees an unjoined room via `release_room` (§9.5, R1075000);
+/// one an open challenge holds is 409, as its challenge's cancel frees it (B49).
 pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = caller_of(&req)?.profile.id.clone();
     let code = normalize_code(&req.params.get("code").cloned().unwrap_or_default());
@@ -761,9 +682,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json_response(200, json!({ "cancelled": canceled })))
 }
 
-/// GET /api/rooms — the caller's own rooms nobody has joined and not expired, newest first, as
-/// `POST /api/rooms` answered them (§9.5, R1075000); a room an open challenge holds is the
-/// challenge's and is not listed.
+/// GET /api/rooms — list caller's active unjoined rooms (§9.5, R1075000).
 pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = caller_of(&req)?.profile.id.clone();
     let now = now_ms();
@@ -783,12 +702,7 @@ pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json_response(200, json!({ "rooms": rooms })))
 }
 
-// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-
-/// SPEC S7, B49: frees a challenge's room once the challenge is declined or canceled, in the
-/// caller's transaction: an unjoined room goes (its code is free again, R110, and a join meets the
-/// miss an unknown code is), with the end-to-end seed its host held for it (R143). A room someone
-/// joined is never touched. False when there was no unjoined room under the code.
+/// B49: frees a declined or canceled challenge's unjoined room and its e2e seed (R110, R143).
 pub async fn release_room(
     tx: &mut crate::db::store::Tx<'_>,
     code: &str,
@@ -799,4 +713,3 @@ pub async fn release_room(
     }
     Ok(released)
 }
-// ---- end Social ----

@@ -58,12 +58,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3: "Cry, on a play from hand, a
-// cast or League of Losers' summon (R1, R411), flips a seeded coin: heads +4/+4 permanently; tails
-// −2/−2 permanently (a damaged Mid Loser can die at the state check) and the opponent's next mana
-// refresh is 1 higher (`nextTurnMod`); a copy or a Rollback's recreation flips nothing; heads and tails
-// amounts read through `param()`; radiant Lucky 1 (two flips, heads kept if either lands) and heads
-// +10/+10".
+// C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3 (R1, R411).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,8 +329,6 @@ mod tests {
                 );
             }
 
-            /// R2652001: the Cry's one coin is reported to both players before the buff it decided,
-            /// heads and tails alike.
             #[test]
             fn r2652001_base_one_coin_is_reported_before_its_buff() {
                 for (flip, face, size) in [(Flip::Heads, ROLL_HEADS, 8), (Flip::Tails, ROLL_TAILS, 2)] {
@@ -428,8 +421,6 @@ mod tests {
             }
         }
 
-        /// R386 the opponent's mana on tails is declared, less being better: a Degrade gives them 2, and an
-        /// Upgrade finds it at its floor of 1
         #[test]
         fn r386_a_degrade_gives_the_opponent_2_mana_on_tails_and_an_upgrade_finds_it_at_its_floor_of_1() {
             let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);

@@ -100,7 +100,6 @@ describe("R668 the practice game to resume, on the device", () => {
     // Picked up again, the player is in it once more.
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });
-    // A lesson is never kept, saved or not.
     writePracticeResume({ ...CONFIG, lesson: "basics" }, { saved: true });
     expect(readPracticeResumeState()).toBeNull();
   });

@@ -1,7 +1,5 @@
-// A screen whose code fails to load (docs/polish/5-sign-in.md, B40). Every route but the landing
-// page is a lazy chunk; on a flaky network, and after every deploy for a tab left open, the import
-// fails. The whole root used to unmount to a blank page. Now the failed screen shows a panel with a
-// reload and a real link home, and moving to another screen clears it.
+// A screen whose code fails to load (docs/polish/5-sign-in.md, B40): every route but the landing page
+// is a lazy chunk, whose import fails on a flaky network and after a deploy for a tab left open.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

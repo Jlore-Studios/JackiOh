@@ -11,8 +11,7 @@
 //!
 //! "Fill your board" is one `summonCopy` per unit zone: each takes the leftmost empty, unlocked,
 //! unreserved zone (R64), else the leftmost empty Locked one (R688), and fizzles once none is left
-//! (§3.2), so a full board makes none. A copy is a summon, which fires no Cry (R1). The aura is #46's
-//! base aura ("your other Felinors").
+//! (§3.2), so a full board makes none.
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
@@ -53,13 +52,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #46.1 Felinor Flagbearer Prime — SPEC §8.7 row 46.1, BUILD M9 Classic+ row C+ 46.1: "Rush; Cry
-// fills every empty, unreserved unit zone of yours with copies of itself (R688: a Locked zone takes
-// one; R57: face, buffs and
-// granted keywords, not damage), none firing a Cry (R1), so nothing loops; each copy's aura gives your
-// other Felinors +1/+1, so each of n Primes has +(n − 1)/+(n − 1) from the rest; a full board makes
-// none; the copies are Tokens and cease to exist when they leave (R11); the aura reads through
-// `param()`; radiant +2/+2 and the copies are Radiant".
+// C+ #46.1 Felinor Flagbearer Prime — SPEC §8.7 row 46.1, BUILD M9 Classic+ row C+ 46.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,8 +79,6 @@ mod tests {
         out
     }
 
-    /// TS `muster({ radiant?, field? })`: the Prime, a Flood and a filler in p1's hand with 10 mana,
-    /// a Felinor on p2's field.
     fn muster(radiant: bool, field: Value) -> Scenario {
         let mut prime = json!({ "def": PRIME });
         if radiant {
@@ -294,7 +285,6 @@ mod tests {
         }
     }
 
-    /// R1081000: a Felinor standing in the backrow is one on the field: the aura reaches it there too.
     #[test]
     fn r1081000_a_felinor_standing_in_the_backrow_keeps_the_aura() {
         crate::register_all();

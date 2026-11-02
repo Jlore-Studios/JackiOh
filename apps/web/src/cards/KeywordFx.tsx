@@ -1,15 +1,9 @@
 // The keyword treatments on a board minion (R438; the map and its caps are keywordVisuals.ts, the
 // look and the loops keywords.css). MinionFace mounts this right after the portrait.
-//
-// Each treatment is a `span.kw-fx[data-keyword-fx="<kind>"]` holding one or two parts, each part an
-// inline, aria-hidden SVG with no <text> or <title> (a face is span, strong, img and aria-hidden SVG,
-// docs/polish/6-cards.md B12). A part that loops carries `kw-anim`; keywords.css runs its keyframes
-// only while the treatment is `data-kw-motion="on"`, and never under reduced motion. The numbers a
-// treatment prints (Brittle's count, Spell Damage's bonus, Lucky's X) come from its `data-n` through
-// CSS, so the unit's text content stays what it was: the chips still name every keyword.
-//
-// Divine Shield's bubble and Armor's plate are MinionFace's own elements (`.shield-icon`,
-// `.stat-armor`), which carry the same attributes; this draws every other treatment.
+// Each part is an aria-hidden SVG with no <text> or <title> (docs/polish/6-cards.md B12). A looping
+// part carries `kw-anim`, run only while `data-kw-motion="on"` and never under reduced motion. The
+// numbers a treatment prints come from its `data-n` through CSS, so the unit's text content stays
+// what it was: the chips still name every keyword.
 
 import type { ReactElement, ReactNode } from "react";
 
@@ -86,7 +80,7 @@ const COG_6 = cog(6);
 
 /** The drawing of every treatment this component owns, by kind. */
 const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () => ReactNode>> = {
-  // Frame: MinionFace's steel shield, moved here from `.cf-portrait::before`; CSS draws it.
+  // Frame: MinionFace's steel shield; CSS draws it.
   Taunt: () => <span className="kw-part kw-taunt-shield" />,
 
   "Immune to Spells": () => (

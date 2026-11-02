@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-063";
 
-/// "At the start of your turn": its controller's `turnStarted`.
 fn your_turn_starts(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::TurnStarted { player, .. } if *player == ctx.controller)
 }
@@ -40,19 +39,13 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 2 counters and draw 2 are its declared numbers, which `param` reads
-    // off the running face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
 }
 
-// C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: face-down (R33), fires at start of
-// your next turn with start-of-turn triggers (R62) and goes to graveyard. Places 1 Plague Counter on each
-// permanent, face-down included (R97; C #27 doubles), then draws 1; radiant: 2 counters each and draw 2;
-// tuned numbers (tokens, draw) read through `param()` (R386).
-//
-// The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
+// C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63 (R33, R62, R97, R386).
+// The C #27 Pestilent Slime case needs C #27's script registered.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -78,7 +71,6 @@ mod tests {
         vec![card; n]
     }
 
-    /// Each card's placements, in the order the first one reached it.
     fn placed_on(s: &Scenario) -> IndexMap<String, Vec<Value>> {
         let mut out: IndexMap<String, Vec<Value>> = IndexMap::new();
         for event in s.events().iter().map(js) {
@@ -99,7 +91,6 @@ mod tests {
             .collect()
     }
 
-    /// p1 sets Crop Dusting on a board with permanents on both sides.
     fn set_up(radiant_face: bool) -> Scenario {
         let mut library = lib(2, Y);
         library.extend(lib(4, X));
@@ -184,7 +175,6 @@ mod tests {
                 );
                 assert_eq!(placed.values().cloned().collect::<Vec<Vec<Value>>>(), vec![vec![json!(1)]; 5]);
                 assert!(s.card(&dusting).counters.plague.is_none());
-                // Its draw (the first of the library, Y) then the turn's draw (Y): the trap fired first.
                 let draws = draws_by(s.last_events(), P1);
                 assert_eq!(draws.len(), 2);
                 let order: Vec<Value> = s
@@ -273,7 +263,6 @@ mod tests {
 
                 s.end_turn();
 
-                // p1: the trap's draw, the Crawler's, and the turn's draw; p2: its Crawler's.
                 assert_eq!(draws_by(s.last_events(), P1).len(), 3);
                 assert_eq!(draws_by(s.events(), P2).len() - p2_before, 1);
             }
@@ -349,7 +338,6 @@ mod tests {
                     assert_eq!(s.card(card).counters.plague, Some(2), "{}", card.def_id);
                 }
                 assert_eq!(placed_on(&s).values().cloned().collect::<Vec<Vec<Value>>>(), vec![vec![json!(2)]; 5]);
-                // Its two draws, then the turn's.
                 assert_eq!(draws_by(s.last_events(), P1).len(), 3);
                 s.expect_in_zone(DUSTING, "graveyard");
             }

@@ -1,15 +1,8 @@
-//! Exiling out of a library: the two halves of §6.3's Exile row that name a library rather than a
-//! target (#34 Collateral Damage, #40 Echoes of the Forgotten, #42 Eugenics, #65 Masochism Mask).
+//! Exiling out of a library: the halves of §6.3's Exile row that name a library card by position (at
+//! random, or the bottom) rather than a `TargetSpec` (#34, #40, #42, #65).
 //!
-//! `move_.rs`'s `exile` takes a `TargetSpec`, which is how a card names a permanent or a card a prompt
-//! picked. A library card is neither: nobody chose it and nothing on the board points at it, so the
-//! two verbs below name it positionally instead — at random, or at the bottom of the pile.
-//!
-//! WHICH END IS THE TOP. `library[0]` is the TOP: `draw.rs`'s `draw_one` takes it, and `zones.rs`'s
-//! `move_to_zone(state, card, Library)` with no position puts a card back on top, while
-//! `position: "bottom"` splices at `pile.len()`. So the BOTTOM card is `library[library.len() - 1]`.
-//! Getting it backwards is silent: #40 eats the wrong end of the deck and no test that only counts
-//! cards would notice.
+//! `library[0]` is the TOP (`draw::draw_one` takes it), so the BOTTOM is the last element; getting it
+//! backwards is silent, as a test that only counts cards would not notice.
 
 use serde::{Deserialize, Serialize};
 
@@ -28,13 +21,8 @@ pub struct ExileRandomFromLibraryArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// §6.3 Exile, `count` random cards out of a library: #34 Collateral Damage, #42 Eugenics.
-///
-/// The cards are DISTINCT (R60, and #42's "Fewer than 8 → exile all"): fewer than `count` in the
-/// library exiles the whole library. `shuffle` copies the list first, so the picks depend only on
-/// (seed, cursor) and the loop may empty the real library underneath it.
-///
-/// An empty library fizzles and the card still resolves (§6.3). No draw happens, so no fatigue.
+/// §6.3 Exile, `count` distinct random cards out of a library (R60): fewer exiles the whole library.
+/// `shuffle` copies the list, so the loop may empty the real library underneath it; no fatigue.
 pub fn exile_random_from_library(args: ExileRandomFromLibraryArgs) -> Effect {
     Effect::new("exileRandomFromLibrary", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -61,13 +49,8 @@ pub struct ExileBottomOfLibraryArgs {
     pub count: Option<i32>,
 }
 
-/// §6.3 Exile, the BOTTOM card of a library: #40 Echoes of the Forgotten, #65 Masochism Mask. The
-/// bottom is the last element (module header).
-///
-/// An empty library does nothing (#40's "no exile, no fatigue"): this verb never reaches `draw.rs`,
-/// and §2.4's fatigue is the price of a DRAW, which this is not.
-///
-/// Each iteration re-reads the pile, so `count` 2 takes the bottom two and stops early on an empty one.
+/// §6.3 Exile, the bottom `count` cards of a library, stopping early on an empty one: no draw, so no
+/// fatigue (§2.4).
 pub fn exile_bottom_of_library(args: ExileBottomOfLibraryArgs) -> Effect {
     Effect::new("exileBottomOfLibrary", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

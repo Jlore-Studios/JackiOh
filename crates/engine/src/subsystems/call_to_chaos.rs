@@ -1,16 +1,11 @@
 //! Call to Chaos (SPEC §8 #95, R28, R87, R423, R436): the ten effects, the roll that picks them, and the
 //! capped recursion the tenth one drives.
 //!
-//! The base text is "one random effect", the Radiant text "three different random effects, resolved in
-//! the order listed" (R423, the shape Classic+ #73 has). The recursion is an entry like any other and
-//! resolves where the list puts it. #95's own file is a one-line hook returning `[callToChaos()]`
-//! (CLAUDE.md rule 5).
-//!
-//! Each effect reads the board when it *resolves*, so each is one lazy wrapper that builds its
-//! sub-effects inside `apply` (R58's "the library size when the effect starts"). The chain length lives
-//! on the cast instance's `memory` (§10.1), so a paused game resumes with the same cap left. What was
-//! rolled is told to both players once, before any of it resolves (`chaosRolled`, R436); a roll a pause
-//! interrupted is rebuilt from the part's memo. Numbers: `crate::config` (CLAUDE.md rule 9, SURFACE §6.4).
+//! Base: one random effect; Radiant: three different ones, in list order (R423, as Classic+ #73).
+//! Each effect reads the board when it *resolves*, building its sub-effects inside `apply` (R58). The
+//! chain length lives on the cast instance's `memory` (§10.1), so a paused game keeps its cap. What was
+//! rolled is told to both players before any of it resolves (`chaosRolled`, R436). Numbers:
+//! `crate::config` (CLAUDE.md rule 9, SURFACE §6.4).
 
 use serde_json::{Value, json};
 
@@ -32,15 +27,13 @@ const CHAOS_GOLEM_INDEX: &str = "95.1";
 /// B2.2: the set whose indices those are, since an index is unique only within its set.
 const TOKEN_SET: SetName = SetName::Core;
 
-/// §5.1: the backrow half of the catalog — "Field Spells or Traps (Field Traps included)" (§8).
+/// §5.1: the backrow half of the catalog (§8).
 fn chaos_backrow_query() -> Value {
     json!({ "type": ["Field Spell", "Trap", "Field Trap"] })
 }
 
-/// R28: how many casts of the chain this instance is. The played #95 has no entry and so is 0; the
-/// card it casts is 1, the card that one casts is 2, and the chain stops once a cast would be the
-/// 21st. It lives in `memory` because §10.1 puts everything a card must remember on the instance,
-/// which keeps the counter serializable and per-chain.
+/// R28: how many casts of the chain this instance is: the played #95 is 0, the card it casts 1, and
+/// so on. On the instance's `memory` (§10.1), so it serializes and is per chain.
 pub const CHAOS_CHAIN_KEY: &str = "chaosChain";
 
 pub fn chaos_chain_of(instance: Option<&CardInstance>) -> i32 {
@@ -54,7 +47,7 @@ pub fn chaos_chain_of(instance: Option<&CardInstance>) -> i32 {
     }
 }
 
-/// R28: the hard stop. At the cap the recursion effect resolves and does nothing at all.
+/// R28: at the cap the recursion resolves into nothing.
 pub fn chaos_chain_cap_reached(depth: i32) -> bool {
     depth >= CALL_TO_CHAOS_CHAIN_CAP
 }
@@ -63,12 +56,12 @@ fn sink_of<'c>(ctx: &'c mut EffectContext<'_>) -> EngineSink<'c> {
     ctx.sink.reborrow()
 }
 
-/// §7: a token summon needs the token's def id, which the catalog holds under its index in Core.
+/// §7: a token's def id, from its Core catalog index.
 fn token_def_id(index: &str) -> Option<String> {
     crate::catalog::def_id_by_index(TOKEN_SET, index)
 }
 
-/// The kind of one entry's lazy part: an effect's kind is a `&'static str`, so the ten are spelled out.
+/// An entry's part kind, spelled out since a kind is a `&'static str`.
 fn chaos_kind(name: ChaosEffectName) -> &'static str {
     match name {
         ChaosEffectName::Units => "callToChaos:units",
@@ -84,11 +77,9 @@ fn chaos_kind(name: ChaosEffectName) -> &'static str {
     }
 }
 
-/// One of the ten effects, built when it resolves rather than when the hook returns it, so every state
-/// read happens after the effects before it have landed. It is a part of the list that holds it
-/// (`resolve.lazyPart`): an effect inside it that asks pauses the rest until the answer (R113), so the
-/// mana of "draw your whole library and gain 4 mana" waits for the draw, as the partner waits for the
-/// recursion (R87).
+/// One of the ten effects, built when it resolves, so it reads the board after the effects before
+/// it. A part of its list (`resolve.lazyPart`): an effect in it that asks pauses the rest (R113), so
+/// the mana waits for the draw, as the partner waits for the recursion (R87).
 fn chaos_effect(
     name: ChaosEffectName,
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
@@ -99,13 +90,11 @@ fn chaos_effect(
     })
 }
 
-/// Point an effect from the library at one card by id. The library names a target through the
-/// selections a play carried (R81), so a pick a script made itself travels the same way instead of
-/// opening a second targeting path — and `setCostMod` stays the only place a cost change is written.
+/// Point a library effect at one card by id, through the selections a play carries (R81), so no
+/// second targeting path opens and `setCostMod` stays the only place a cost change is written.
 fn on_instance(effect: Effect, instance_id: String) -> Effect {
     let kind = effect.kind;
     Effect::new(kind, move |ctx| {
-        // The inner effect sees only this one selection; the context's own targets are restored after.
         let selection = Selection::Instance {
             instance_id: instance_id.clone(),
         };
@@ -117,9 +106,8 @@ fn on_instance(effect: Effect, instance_id: String) -> Effect {
 
 // The ten effects, in the order §8 #95 lists them.
 
-/// 1. "Summon 3 random 3-cost Units": three independent picks (R60), placed per R64. Each pick is its
-///    own `summonRandom`, which draws only when its unit has a zone to go to (R129), so a full row takes
-///    no draw for a summon that cannot land.
+/// 1. "Summon 3 random 3-cost Units": three independent picks (R60), placed per R64, each drawing
+///    only when its unit has a zone to go to (R129).
 pub fn summon_random_three_cost_units() -> Effect {
     chaos_effect(ChaosEffectName::Units, |_ctx| {
         (0..CHAOS_UNIT_COUNT)
@@ -142,9 +130,8 @@ pub fn heal_hero_thirty() -> Effect {
     })
 }
 
-/// 3. "Draw your whole library and gain 4 mana": R58 fixes the count at the library size when the
-///    effect starts, so a cast-on-draw card drawn along the way cannot lengthen the draw, and an empty
-///    library draws nothing at all rather than taking a fatigue hit (§2.4, R3).
+/// 3. "Draw your whole library and gain 4 mana": R58 fixes the count when the effect starts, so a
+///    cast-on-draw card cannot lengthen it, and an empty library takes no fatigue (§2.4, R3).
 pub fn draw_library_and_gain_mana() -> Effect {
     chaos_effect(ChaosEffectName::Draw, |ctx| {
         let count = ctx.sink.state.players[ctx.controller].library.len();
@@ -155,10 +142,9 @@ pub fn draw_library_and_gain_mana() -> Effect {
     })
 }
 
-/// 4. "Add 3 random cards to hand costing 0": three independent picks (R60) from the whole catalog, which
-///    §5.1 keeps free of tokens and of the generating card (only the recursion names its pool), so no
-///    Call to Chaos is added. The 0 is a `costOverride` the card takes on reaching the hand (R65); a full
-///    hand burns what it cannot take (§2.4, R4), without the price.
+/// 4. "Add 3 random cards to hand costing 0": three picks (R60) from the catalog, which §5.1 keeps
+///    free of tokens and the generating card. The 0 is a `costOverride` taken on reaching the hand
+///    (R65); a full hand burns the rest (§2.4, R4).
 pub fn add_random_zero_cost_cards() -> Effect {
     chaos_effect(ChaosEffectName::Add, |_ctx| {
         vec![crate::effects::add_random_from_catalog(json_as(json!({
@@ -168,8 +154,7 @@ pub fn add_random_zero_cost_cards() -> Effect {
     })
 }
 
-/// 5. "Your hand becomes Radiant": every card in hand right now (§5.2). A card that is already
-///    Radiant is untouched, since the flag is never unset (§6.3 Make Radiant).
+/// 5. "Your hand becomes Radiant": every card in hand now (§5.2; §6.3 Make Radiant).
 pub fn make_hand_radiant() -> Effect {
     chaos_effect(ChaosEffectName::Radiant, |ctx| {
         ctx.sink.state.players[ctx.controller]
@@ -180,8 +165,8 @@ pub fn make_hand_radiant() -> Effect {
     })
 }
 
-/// 6. "Summon five Radiant Rush Tokens": the §7 Rush Token's own Radiant face (6/6), five separate
-///    summons, so a board with fewer free zones simply takes fewer (R64) instead of failing as a whole.
+/// 6. "Summon five Radiant Rush Tokens": the §7 Rush Token's Radiant face, five separate summons,
+///    so a fuller board takes fewer (R64).
 pub fn summon_rush_tokens() -> Effect {
     chaos_effect(ChaosEffectName::Tokens, |_ctx| {
         let Some(def_id) = token_def_id(RUSH_TOKEN_INDEX) else {
@@ -193,9 +178,8 @@ pub fn summon_rush_tokens() -> Effect {
     })
 }
 
-/// 7. "Every card in your hand and library costs 2 less": the cards that are there when the effect
-///    resolves, each getting a `costMod` that travels with it to a hand or a library (R78, R766). It changes
-///    those cards, not the player, so a card drawn afterwards still pays full price.
+/// 7. "Every card in your hand and library costs 2 less": the cards there when it resolves, each
+///    a `costMod` that travels with it (R78, R766), so a card drawn later pays full price.
 pub fn discount_hand_and_library() -> Effect {
     chaos_effect(ChaosEffectName::Discount, |ctx| {
         let side = &ctx.sink.state.players[ctx.controller];
@@ -221,10 +205,8 @@ pub fn summon_chaos_golem() -> Effect {
     })
 }
 
-/// 9. "Summon 5 random Field Spells or Traps (Field Traps included, traps face-down) into your
-///    backrow": five independent picks (R60). `summonRandom` sends every one of those types to the
-///    backrow, leaves a Trap or Field Trap face-down while a Field Spell is public (§3.2, R33), and draws
-///    only for a summon that has a zone to go to (R129).
+/// 9. "Summon 5 random Field Spells or Traps into your backrow": five picks (R60), Traps face-down
+///    and Field Spells public (§3.2, R33), each drawing only when it has a zone (R129).
 pub fn summon_random_backrow() -> Effect {
     chaos_effect(ChaosEffectName::Backrow, |_ctx| {
         (0..CHAOS_BACKROW_CARDS)
@@ -233,11 +215,9 @@ pub fn summon_random_backrow() -> Effect {
     })
 }
 
-/// 10. "Cast a random Call to Chaos": a Cast per R70, from the pool of every Call to Chaos in every set
-///     (R380). The card cast is the *base* form even when a Radiant Call cast it (R28). R28 caps the chain
-///     at CALL_TO_CHAOS_CHAIN_CAP casts of either edition: at the cap this effect resolves into nothing,
-///     with no re-roll (R87, R423). The cast card is a real generated card (R60): §10.5 step 7 sends it
-///     to the caster's graveyard (R87).
+/// 10. "Cast a random Call to Chaos": a Cast per R70 from every set's (R380), always the *base* form
+///     (R28). At CALL_TO_CHAOS_CHAIN_CAP casts this resolves into nothing, with no re-roll (R87, R423).
+///     The cast card is a real generated card (R60) that §10.5 step 7 sends to the graveyard.
 pub fn cast_random_call_to_chaos() -> Effect {
     Effect::new("callToChaos:recast", |ctx| {
         let depth = chaos_chain_of(ctx.live_self());
@@ -305,7 +285,7 @@ impl ChaosEffectName {
 pub struct ChaosEffectDef {
     /// Unique within its list: what a roll a pause interrupted is kept by (the part's memo).
     pub name: &'static str,
-    /// The clause as the card prints it: what `chaosRolled` names to both players (R436).
+    /// The printed clause `chaosRolled` names (R436).
     pub label: &'static str,
     pub build: fn() -> Effect,
 }
@@ -322,9 +302,8 @@ impl std::fmt::Debug for ChaosEffectDef {
 /// R28: the effect that drives the chain, "cast a random Call to Chaos" (R423: rolled like any other).
 pub const CHAOS_RECURSION: ChaosEffectName = ChaosEffectName::Recast;
 
-/// The ten effects of §8 #95, in the order the card lists them. Each `label` is the clause as the
-/// card prints it (R432's cost words, R373's "deck"), which is what `chaosRolled` names to both
-/// players (R436).
+/// The ten effects of §8 #95, in card order. Each `label` is the printed clause (R432's cost words,
+/// R373's "deck").
 pub const CHAOS_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "units",
@@ -382,10 +361,9 @@ pub fn chaos_effect_by_name(name: &str) -> Option<&'static ChaosEffectDef> {
     CHAOS_EFFECTS.iter().find(|effect| effect.name == name)
 }
 
-/// R28, R423: the base form rolls one entry of its list; the Radiant form rolls
-/// `CALL_TO_CHAOS_RADIANT_EFFECTS` *different* entries, drawn without replacement, and resolves them in
-/// the order the list writes them (R87's "the recursion where it falls"). `table` is the edition's list
-/// (Core #95's by default; Classic+ #73 brings its own), so one roll serves both.
+/// R28, R423: the base form rolls one entry; the Radiant form rolls
+/// `CALL_TO_CHAOS_RADIANT_EFFECTS` *different* ones, resolved in list order (R87). `table` is the
+/// edition's list, so one roll serves Core #95 and Classic+ #73.
 pub fn roll_chaos_effects(
     rng: &mut Rng,
     radiant: bool,
@@ -411,10 +389,8 @@ pub fn roll_chaos_effects(
         .collect()
 }
 
-/// R436: tell both players what was rolled or picked, before any of it resolves — the clauses by their
-/// printed labels, in the order they resolve, as the effect named `kind` (`callToChaos:announce` here,
-/// `doRandomEntries:announce` for a random pick). The card itself follows R97 (`viewFor.redactEvent`):
-/// a #95 read by nobody is the sentinel, while what it rolled is public, as the resolution is.
+/// R436: tell both players the printed labels of what was rolled or picked, in resolve order, before
+/// any of it resolves. The card follows R97 (`viewFor.redactEvent`); what it rolled is public.
 pub(crate) fn announce_chaos(kind: &'static str, labels: Vec<String>) -> Effect {
     Effect::new(kind, move |ctx| {
         let (instance_id, def_id) = match ctx.live_self() {
@@ -438,18 +414,13 @@ pub struct CallToChaosArgs {
     pub table: Option<&'static [ChaosEffectDef]>,
 }
 
-/// The whole card, as one effect: #95's script is `cry: () => [callToChaos()]` for both forms.
-///
-/// The roll happens when the effect resolves, so the rng cursor moves with the resolution and a replay
-/// that stops on a prompt in between still lines up (§10.7). `radiant` defaults to the instance's own
-/// flag (§5.2); `table` is the edition's list (R423).
+/// The whole card as one effect, #95's Cry for both forms (CLAUDE.md rule 5). It rolls when it resolves, so
+/// the rng cursor moves with the resolution and a replay stopped on a prompt lines up (§10.7).
 pub fn call_to_chaos(args: CallToChaosArgs) -> Effect {
     let table: &'static [ChaosEffectDef] = args.table.unwrap_or(CHAOS_EFFECTS);
     crate::resolve::lazy_part("callToChaos", move |ctx, memo| {
-        // R87, R423: the rolled effects resolve in list order, the recursion's whole chain where it falls,
-        // and a cast in that chain can ask, so the roll is a part of the Cry's list. What was rolled is the
-        // part's memo: resuming rebuilds the same effects and rolls nothing a second time (§10.7). The
-        // announcement heads the part, so a resumed part never repeats it (R436).
+        // R87: a cast in the recursion can ask, so the roll is a part with its names as the memo: a
+        // resume rolls nothing twice. The announcement heads the part, so it never repeats (R436).
         let kept = rolled_names(memo);
         let rolled: Vec<ChaosEffectDef> = match kept {
             None => {

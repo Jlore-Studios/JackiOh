@@ -1,19 +1,10 @@
 // The bar that fills (#1658, part of #1651, SPEC §14.5): a track and a fill, shared by the token
 // bars, the pack opening's two-bar animation and the store's and XP's bars.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). `size` and `value` are the server's, and so is `fills`; the
-// bar only plays them. Without `from` it is drawn at `value` and never moves. With `from` it sweeps
-// to `size`, bursts, reports the fill, restarts at 0 for each further fill, then sweeps to `value`
-// and reports it is done (`bars.ts::segments` lays the sweeps out).
-//
-// THE MOTION is transform and opacity only: the fill is a `scaleX` (`economy.css` holds the
-// keyframes, each taking its duration from `bars.ts`' constants through a custom property), and the
-// timers here move the bar from one sweep to the next. REDUCED MOTION (the panel's setting or the
-// system's), or `still` (its owner's own switch, R1953000), draws the end state at once and reports
-// every fill, then `onDone`, straight away.
-//
-// A native `<progress>` always rests at `value` for screen readers (and the e2e specs), visually
-// hidden: the track beside it is the picture, and it is hidden from them.
+// THE SERVER DECIDES (CLAUDE.md rule 7): `size`, `value` and `fills` are the server's; the bar only
+// plays them (`bars.ts::segments` lays the sweeps out).
+// THE MOTION is transform and opacity only (`economy.css`, its durations `bars.ts`' constants).
+// REDUCED MOTION, or `still` (R1953000), draws the end state at once and reports every fill. A
+// visually hidden native `<progress>` always rests at `value` for screen readers and the e2e specs.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -101,7 +92,6 @@ function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, sti
     setPosition({ step: plan.length - 1, phase: "done" });
   }, [from, reduced, plan]);
 
-  // Motion on: each sweep and each burst waits its time, then the bar moves to the next.
   useEffect(() => {
     if (from === undefined || reduced || position.phase === "done") return undefined;
     const segment = plan[position.step]!;
@@ -124,7 +114,6 @@ function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, sti
     };
   }, [from, reduced, plan, position, size]);
 
-  // The segment on screen; none when the bar is at rest, from the start or at the end.
   const segment = from === undefined || reduced || position.phase === "done" ? undefined : plan[position.step];
   const sweeping = segment !== undefined && position.phase === "sweep";
   const bursting = segment !== undefined && position.phase === "burst";

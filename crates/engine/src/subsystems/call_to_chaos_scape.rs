@@ -1,17 +1,10 @@
 //! Stinkyscape #151 Call to Chaos (Scape Edition) (SPEC §8.10 row 151, R28, R87, R423, R436,
 //! R1882005–R1882009): the builders of its table's entries, which Core #95's subsystem
-//! (`call_to_chaos.rs`) rolls, announces and resolves as it does every other edition's: the base face
-//! rolls one entry, the Radiant three different ones resolved in the list's order (R423), the recursion
-//! counts casts of every edition against `CALL_TO_CHAOS_CHAIN_CAP` (R28), and both players are told what
-//! was rolled (`chaosRolled`, R436).
+//! (`call_to_chaos.rs`) rolls, announces and resolves as it does every other edition's.
 //!
-//! The table itself is the card's (`CHAOS_SCAPE_EFFECTS` in its file), since its first entry lays one of
-//! the ten Anomaly boards, data the cards crate holds (S20's `t_anomaly_found.rs`); the card builds that
-//! entry with `scape_entry` and takes the other nine from here.
-//!
-//! Every entry is built when it resolves (`lazy_part`), as the other editions' are (R87, R113); the one
-//! that draws as it is built (entry 4's two Systems) keeps its draw as the part's memo, so a cast that
-//! asks pauses the second and the resume casts the same one.
+//! The table itself is the card's (`CHAOS_SCAPE_EFFECTS`), since its first entry lays an Anomaly board,
+//! data the cards crate holds (S20's `t_anomaly_found.rs`). Every entry is built when it resolves
+//! (`lazy_part`, R87, R113); entry 4 keeps its draw as the part's memo, so a resume casts the same one.
 
 use serde_json::{Value, json};
 
@@ -53,8 +46,8 @@ fn entry_kind(name: &str) -> &'static str {
     }
 }
 
-/// One entry, built as it resolves (`lazy_part`), kept by name across a pause like Core's (R87). The
-/// card builds its first entry, the board swap, with it (`name` "anomaly").
+/// One entry, built as it resolves and kept by name across a pause (R87); the card builds its board
+/// swap ("anomaly") with it.
 pub fn scape_entry(
     name: &'static str,
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
@@ -65,13 +58,11 @@ pub fn scape_entry(
     })
 }
 
-/// The set's card at `index`, by its id, when the catalog holds it.
 fn def_id_at(index: &str) -> Option<String> {
     def_id_by_index(SET, index)
 }
 
-/// R1878000: the Starship Piece pool, the set's non-token cards that print the keyword (the cards
-/// crate's `starship_pieces()`, the same query).
+/// R1878000: the Starship Piece pool, the same query as the cards crate's `starship_pieces()`.
 fn starship_pieces_query() -> Value {
     json!({ "set": SET, "keywords": [KeywordKind::StarshipPiece] })
 }
@@ -101,8 +92,8 @@ pub fn scape_battleship() -> Effect {
     })
 }
 
-/// 4. R1882006: two different Systems drawn from the match rng (R60), in the order drawn, each cast as a
-///    new card of its caster's (R453), its choices theirs (R70). The draw is the part's memo.
+/// 4. R1882006: different Systems drawn from the match rng (R60), each cast in the order drawn as a new
+///    card of its caster's (R453), its choices theirs (R70).
 pub fn scape_systems() -> Effect {
     crate::resolve::lazy_part(entry_kind("systems"), |ctx, memo| {
         let kept: Option<Vec<String>> = memo.as_ref().and_then(Value::as_array).map(|list| {
@@ -147,8 +138,7 @@ pub fn scape_systems() -> Effect {
     })
 }
 
-/// 5. Four independent picks (R60) of the Starship Pieces (R1878000), each a fresh hand card costing
-///    (0); a full hand burns it (§2.4).
+/// 5. Independent picks (R60) of the Starship Pieces, each a fresh (0) hand card (a full hand: §2.4).
 pub fn scape_pieces() -> Effect {
     scape_entry("pieces", |_ctx| {
         vec![crate::effects::add_random_from_catalog(json_as(json!({
@@ -159,9 +149,8 @@ pub fn scape_pieces() -> Effect {
     })
 }
 
-/// 6. R1882007: a Drone Interceptor summoned into each of its caster's unit zones in lane order, on top
-///    of the pile there when one stands in it (§3.2), a Locked zone taking it as any summon's does
-///    (R688); a zone held for a Reborn return takes none (R64).
+/// 6. R1882007: a Drone Interceptor into each of its caster's unit zones in lane order, on top of a pile
+///    (§3.2), a Locked zone taking it (R688); a zone held for a Reborn return takes none (R64).
 pub fn scape_interceptors() -> Effect {
     scape_entry("interceptors", |_ctx| {
         let Some(def_id) = def_id_at(INTERCEPTOR_INDEX) else {
@@ -179,10 +168,9 @@ pub fn scape_interceptors() -> Effect {
     })
 }
 
-/// 7. R1882008: four independent picks (R60) of the Starship Pieces, each fused into its caster's
-///    Dormant Starship, the first summoning one when they have none (R1852000); then the Starship
-///    awakens, which launches it and costs nothing (R1852003, R1852006): its fused Cries, then its
-///    "When launched" triggers. A Starship buried under a Stack pile cannot awaken and stays Dormant.
+/// 7. R1882008: independent picks (R60) of the Starship Pieces fused into its caster's Dormant Starship,
+///    the first summoning one if none (R1852000); then it awakens, launching for free (R1852003,
+///    R1852006). A Starship buried under a Stack pile cannot awaken and stays Dormant.
 pub fn scape_launch() -> Effect {
     scape_entry("launch", |_ctx| {
         vec![Effect::new("callToChaosScape:fuseAndLaunch", |ctx| {
@@ -216,9 +204,8 @@ pub fn scape_weapons() -> Effect {
     })
 }
 
-/// 9. R1882009, R1853005: a Marketplace lot for the rest of the game, its caster's alone: one Call to
-///    Chaos of the pool the recursion casts from (R380), drawn as the lot is added, at a fixed
-///    `CHAOS_SCAPE_LOT_PRICE` Credits, never Radiant; the Marketplace opens if it is closed.
+/// 9. R1882009, R1853005: its caster's own rest-of-game Marketplace lot, a Call to Chaos of the
+///    recursion's pool (R380) at a fixed price, never Radiant; the Marketplace opens if it is closed.
 pub fn scape_market() -> Effect {
     scape_entry("market", |_ctx| {
         let pool: Vec<String> = query(&json_as(json!({ "tags": [CHAOS_TAG] })))

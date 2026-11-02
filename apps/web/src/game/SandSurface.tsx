@@ -1,9 +1,7 @@
 // A cosmetic, input-transparent fidget layer for the playmat. It reads neither rules nor hidden
 // state: the board owns the cards above it, and this layer only records pointer marks where a
-// press landed on neither a card nor a board control. #2332: a zone's own margin, around the unit
-// or trap it holds, is playmat too. #1954: one press is one tap, in the look and sound of the
-// playmat's family; holding or dragging adds nothing. #2015: a tap takes the playmat of the half
-// it lands on, the opponent's above the center line.
+// press landed on neither a card nor a board control. #1954: one press is one tap, in the look and
+// sound of the playmat's family; holding or dragging adds nothing.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
@@ -104,9 +102,9 @@ export type SandSurfaceProps = {
   field: RefObject<HTMLElement | null>;
   /** The action builder owns this signal: while it has a card lifted or targeted, sand is inert. */
   disabled: boolean;
-  /** The worn playmat (Board's data-table); absent is the default, which taps as sand. */
+  /** The worn playmat (Board's data-table). */
   table?: string;
-  /** R1834004: the opponent's playmat (Board's data-their-table), under the upper half; absent taps as sand. */
+  /** R1834004: the opponent's playmat (Board's data-their-table), under the upper half. */
   theirTable?: string;
 };
 
@@ -127,9 +125,8 @@ function pick(from: readonly [string, ...string[]], at: number): string {
 }
 
 /**
- * #1954: the mark set one press draws, in `family`'s style at (`x`, `y`). The ids run from
- * `firstId`, the `build` piles up across quick presses, and the hue and flight come from the
- * same deterministic `variationFor` as every other mark, so tests can check them.
+ * #1954: the mark set one press draws, in `family`'s style at (`x`, `y`). The hue and flight come
+ * from the same deterministic `variationFor` as every other mark, so tests can check them.
  */
 export function tapMarks(family: TapFamily, x: number, y: number, firstId: number, build: number): SandMark[] {
   let id = firstId - 1;

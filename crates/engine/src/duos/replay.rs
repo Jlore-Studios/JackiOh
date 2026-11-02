@@ -1,7 +1,6 @@
 //! A Duos game's replay (#936 B24): `(options, log)` folds to the state live play reached, and
-//! `duos_hash` makes two folds comparable, with the same canonical JSON and FNV-1a a 1v1 hash uses
-//! (`replay::canonical`, `replay::fnv1a32_utf16`). Unlike a 1v1 fold, a refused action stops the
-//! fold: a Duos log is what a server accepted, so a refusal in it is a fold that went wrong.
+//! `duos_hash` makes two folds comparable as a 1v1 hash does. Unlike a 1v1 fold, a refused action stops
+//! the fold: a Duos log is what a server accepted, so a refusal in it is a fold that went wrong.
 
 use serde::{Deserialize, Serialize};
 
@@ -28,8 +27,8 @@ pub struct DuosReplayResult {
     pub refused_at: Option<usize>,
 }
 
-/// FNV-1a over the canonical JSON of the whole state, both duels' nonce logs included (they are
-/// what the same log folds to, so they hash alike).
+/// FNV-1a over the canonical JSON of the whole state, both duels' nonce logs included (the same log
+/// folds to the same ones).
 pub fn duos_hash(state: &DuosState) -> String {
     let value = match serde_json::to_value(state) {
         Ok(value) => value,

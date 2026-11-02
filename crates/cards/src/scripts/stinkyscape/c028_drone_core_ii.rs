@@ -28,9 +28,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #28 Drone Core II — SPEC §8.10 row 28, BUILD M12 row S 28: "summons a Drone Interceptor into the
-// leftmost open unit zone, which then has one random combat keyword besides Ranged and Flying; a full
-// unit row puts it in the backrow (R2248000); radiant a Radiant Interceptor".
+// S #28 Drone Core II — SPEC §8.10 row 28, BUILD M12 row S 28 (R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::drawn_combat_keywords;

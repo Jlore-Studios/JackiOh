@@ -354,7 +354,6 @@ fn strs(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| item.to_string()).collect()
 }
 
-/// The first item.
 fn first<T>(items: Vec<T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
@@ -364,12 +363,10 @@ fn error_of(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
 
-/// A refusal as `Some(message)`.
 fn refusal(answer: Result<(), EngineError>) -> Option<String> {
     answer.err().map(|error| error.message)
 }
 
-/// `{ type: "play", instanceId, ...choices }` as the `PlayAction` `whyChoicesRefused` takes.
 fn play_action(instance_id: &str, targets: Option<&[Selection]>, modes: Option<&[String]>) -> PlayAction {
     let mut body = json!({ "type": "play", "instanceId": instance_id });
     if let Some(targets) = targets {
@@ -381,12 +378,10 @@ fn play_action(instance_id: &str, targets: Option<&[Selection]>, modes: Option<&
     json_as(body)
 }
 
-/// `{ type: "play", instanceId, ...combo }`.
 fn combo_action(instance_id: &str, combo: &PlayChoices) -> PlayAction {
     play_action(instance_id, combo.targets.as_deref(), combo.modes.as_deref())
 }
 
-/// `{ type: "play", instanceId, playerId: "p1", ...combo }`, an action body for `act_result`.
 fn combo_body(instance_id: &str, combo: &PlayChoices) -> Value {
     let mut body = json!({ "type": "play", "instanceId": instance_id, "playerId": "p1" });
     if let Some(targets) = &combo.targets {
@@ -402,7 +397,6 @@ fn targeting(instance_id: &str, targets: Vec<Selection>) -> Value {
     json!({ "type": "play", "instanceId": instance_id, "playerId": "p1", "targets": targets })
 }
 
-/// `state.players[player].units[lane]?.[0]?.damage`.
 fn top_damage(state: &GameState, player: PlayerId, lane: usize) -> Option<i32> {
     state.players[player]
         .units

@@ -1,30 +1,12 @@
-//! Plague Counters as verbs (SPEC §6.3 Plague Counter; docs/classic-sets.md B5 E19; R471).
+//! Plague Counters as verbs (SPEC §6.3 Plague Counter; docs/classic-sets.md B5 E19; R471). The counter,
+//! the multiplier and the `counterChanged` report are `crate::plague`'s; this file names where a
+//! placement goes and asks the questions.
 //!
-//! The counter, the multiplier and the `counterChanged` report are `crate::plague`'s; this file names
-//! where a placement goes and asks the questions:
-//!   - `place_plague`: "Place N Plague Counters on X" — ONE placement of N on the card named (Classic #39
-//!     Outbreak's target, #59 Plague Doctor's "on this", Classic+ #3's end of turn, #87's "enters with
-//!     X");
-//!   - `place_plague_each`: one placement on each permanent a board scope names (Classic #63 Crop
-//!     Dusting's "on each permanent", face-down ones included);
-//!   - `place_plague_random`: one placement on each of N different random cards of a scope (Classic #42
-//!     Transmutable Toxins, R60);
-//!   - `place_plague_tokens`: "Place N Plague Counters" with no card named — N placements, all on the one
-//!     permanent the placer chooses in a single prompt of their own over every permanent on the field,
-//!     either side, face-down included (R689; Classic #61, #70, #76, #90 reward D);
-//!   - `consume_plague`: take tokens off (Classic #78 Mutate Spell).
-//!
-//! PROMPTS (R113, R122, R689). `place_plague_tokens` opens one `target` prompt naming the single
-//! permanent all of its placements go on. The prompt is opened by the effect, so the list it stands
-//! in parks its rest on `state.work` as any asking effect's does; the answer places every placement
-//! on the pick and drains what the prompt interrupted (`answer_placement`, which `prompts.rs` calls
-//! for this module's hook, SURFACE §6.6 — TS registered it with `registerPromptAnswerer`). The resume
-//! carries only how many tokens each placement puts and how many placements land, so a paused chain
-//! is plain data that survives JSON and replays exactly. The state check waits for the whole effect
-//! (R59), so a unit the placements shrank to 0 health (an aura reading its tokens, #42) dies after the
-//! last placement, not between two.
-//!
-//! Port of `packages/engine/src/effects/plague.ts`.
+//! PROMPTS (R113, R122, R689). `place_plague_tokens` opens one `target` prompt naming the permanent all
+//! its placements go on; `answer_placement` (which `prompts.rs` calls for this hook, SURFACE §6.6)
+//! places them and drains what the prompt interrupted. The resume carries only plain numbers, so a
+//! paused chain survives JSON and replays exactly. The state check waits for the whole effect (R59), so
+//! a unit the placements shrank to 0 health (#42) dies after the last placement, not between two.
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -68,9 +50,8 @@ pub struct PlacePlagueArgs {
     pub amount: i32,
 }
 
-/// "Place N Plague Counters on X": one placement of `amount` on the card `target` names (default the
-/// running card), multiplied by that card's multiplier (R471). Nothing happens for a card that is not
-/// a permanent on the field, or for an amount below 1.
+/// "Place N Plague Counters on X" (Classic #39 Outbreak, #59 Plague Doctor, Classic+ #3, #87): one
+/// placement of `amount` on `target`, times its multiplier (R471); nothing for a card off the field.
 pub fn place_plague(args: PlacePlagueArgs) -> Effect {
     Effect::new("placePlague", move |ctx| {
         let spec = args.target.clone().unwrap_or_else(self_spec);
@@ -93,9 +74,8 @@ pub struct PlacePlagueEachArgs {
     pub amount: i32,
 }
 
-/// One placement of `amount` on each card a board scope names, in R68's order (`cards_in_scope`). Crop
-/// Dusting's "each permanent" is `{ side: "any", rows: ["units", "backrow"] }`, which reaches
-/// face-down cards, as every backrow card is in a scope's backrow row.
+/// One placement on each card of a board scope, in R68's order (Classic #63 Crop Dusting: every
+/// backrow card is in a scope's backrow row, so face-down ones too).
 pub fn place_plague_each(args: PlacePlagueEachArgs) -> Effect {
     Effect::new("placePlagueEach", move |ctx| {
         // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
@@ -119,17 +99,15 @@ pub struct PlacePlagueRandomArgs {
     pub scope: Option<BoardScope>,
 }
 
-/// One placement of `amount` on each of `count` different random cards of a scope (Classic #42's "a
-/// Plague Counter on each of 2 random Units"): R60's random pick of N existing cards picks N different
-/// ones, or all of them if fewer exist. The cards are drawn with `ctx.rng` and placed in R68's order.
-/// An empty scope draws nothing (R129).
+/// One placement on each of `count` different random cards of a scope (Classic #42), all of them if
+/// fewer exist (R60), placed in R68's order. An empty scope draws nothing (R129).
 pub fn place_plague_random(args: PlacePlagueRandomArgs) -> Effect {
     Effect::new("placePlagueRandom", move |ctx| {
         let scope: BoardScope = match &args.scope {
             Some(scope) => scope.clone(),
             None => json_as(json!({ "side": "any", "rows": ["units"] })),
         };
-        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        // MD-B1, R940: a harmful walk.
         let pool: Vec<CardInstance> = cards_in_scope_aimed(ctx, &scope, crate::wire::TargetAim::Harm)
             .into_iter()
             .collect();
@@ -164,8 +142,7 @@ pub struct ConsumePlagueArgs {
     pub amount: Option<i32>,
 }
 
-/// Take up to `amount` Plague Counters (default 1) off the card `target` names: "remove a Plague Counter
-/// from a permanent" (Classic #78). The count floors at 0; a card with none changes nothing.
+/// Take up to `amount` Plague Counters off the card `target` names (Classic #78), flooring at 0.
 pub fn consume_plague(args: ConsumePlagueArgs) -> Effect {
     Effect::new("consumePlague", move |ctx| {
         let spec = args.target.clone().unwrap_or_else(self_spec);
@@ -176,9 +153,7 @@ pub fn consume_plague(args: ConsumePlagueArgs) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // "Place N Plague Counters": N placements, each a prompt (R471, R113, R122).
-// ---------------------------------------------------------------------------
 
 /// The hook every placement prompt names, answered by `answer_placement` below (R122).
 pub const PLAGUE_PLACEMENT_HOOK: &str = "plague:placement";
@@ -190,7 +165,7 @@ struct PlacementData {
     count: i32,
 }
 
-/// TS `typeof x === "number"`: a JSON number, as the integer the data bag was written with.
+/// A JSON number, as the integer the data bag was written with.
 fn number_of(value: Option<&Value>) -> Option<i32> {
     let value = value?;
     if let Some(n) = value.as_i64() {
@@ -210,9 +185,8 @@ fn label_of(state: &GameState, card: &CardInstance) -> String {
     def_of(Some(state), &card.def_id).name.clone()
 }
 
-/// Open the one placement prompt for `resume`'s placer over every permanent on the field (R68's
-/// order, the placer's side first), or return false when there is none — the placements fizzle
-/// then, and draw nothing (R129).
+/// Open the one placement prompt over every permanent on the field (R68's order), or return false
+/// when there is none: the placements fizzle and draw nothing (R129).
 fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) -> bool {
     let cards: Vec<CardInstance> = permanents_on_field(sink.state, player)
         .into_iter()
@@ -225,10 +199,8 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     let tokens = data.map_or(1, |data| data.amount);
     let count = data.map_or(1, |data| data.count).max(1);
     let total = tokens * count;
-    // B5 E12, R452: a random cast's caster is never asked, so under one every placement goes on one
-    // random permanent (R60; an enemy one when the cast targets enemies) and nothing pauses —
-    // this hook answers its own prompts (`prompts.rs` calls `answer_placement` for it), so
-    // `open_prompt` would ask instead.
+    // B5 E12, R452: a random cast's caster is never asked, so every placement goes on one random
+    // permanent (R60). This hook answers its own prompts, so `open_prompt` would ask instead.
     let mode = cast_mode_for_prompt(sink.state, player, resume.instance_id.as_deref());
     // R1200: while a Mayor acts the placement is drawn at random too, and nobody is asked.
     let random = mode.is_some_and(|mode| mode.random) || crate::random_targets::targets_random(sink.state);
@@ -314,11 +286,9 @@ pub struct PlacePlagueTokensArgs {
     pub amount: Option<i32>,
 }
 
-/// "Place N Plague Counters" (B5 E19, R471, R689): `count` placements of `amount` (default 1), all on
-/// the one permanent the running card's controller chooses — either side, face-down cards included —
-/// in a single prompt. The prompt opens as this effect applies; its answer places every placement on
-/// the pick, then what the prompt interrupted resumes. With no permanent on the field the placements
-/// do nothing. The other player sees only that a prompt is open (§10.6, R81).
+/// "Place N Plague Counters" (B5 E19, R689; Classic #61, #70, #76, #90 reward D): `count` placements,
+/// all on the one permanent of either side, face-down included, that the controller picks in a single
+/// prompt. The other player sees only that a prompt is open (§10.6, R81).
 pub fn place_plague_tokens(args: PlacePlagueTokensArgs) -> Effect {
     Effect::new("placePlagueTokens", move |ctx| {
         let count = args.count;
@@ -347,12 +317,8 @@ pub fn place_plague_tokens(args: PlacePlagueTokensArgs) -> Effect {
     })
 }
 
-/// R122, R689: the answer to the one placement prompt — validated as any prompt's, closed, every
-/// placement made on the pick (a card that is no longer a permanent on the field takes nothing),
-/// then what the prompt interrupted resumes (R113).
-///
-/// TS registered this with `registerPromptAnswerer(PLAGUE_PLACEMENT_HOOK, …)`; here `prompts.rs`
-/// calls it by name for that hook (SURFACE §6.6). A refusal is TS's text verbatim.
+/// R122, R689: the answer to the placement prompt: validated, closed, every placement made on the
+/// pick, then what the prompt interrupted resumes (R113).
 pub fn answer_placement(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<(), EngineError> {
     let Some(pending) = sink.state.pending.clone() else {
         return Err(EngineError::new("no prompt is open"));

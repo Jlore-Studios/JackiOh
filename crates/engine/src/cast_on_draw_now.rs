@@ -4,8 +4,6 @@
 //! from a hand is a plain Unit and ends nothing. The draw holds its `drawn` back until that cast has
 //! resolved (`draw_complete::hold_draw`), under the id the card was drawn as, which a Unit keeps through
 //! the cast — so while the hold stands, the card is being cast on draw.
-//!
-//! Port of `packages/engine/src/castOnDrawNow.ts`.
 
 use crate::state::{CardInstance, GameState};
 

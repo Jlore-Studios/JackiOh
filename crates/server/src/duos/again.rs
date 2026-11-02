@@ -1,36 +1,11 @@
-//! Play again after a finished co-op match (SPEC §13.9, R2092000), modeled on the 1v1
-//! rematch (`api::rematch`, R672): either human seat (`a1` or `a2`) offers, and once both have the
-//! server starts one new co-op match for the same two people against the AI team. Nothing in the
-//! client calls it yet: part 2 builds the result panel's button on it, so players see nothing new.
+//! Play again after a finished co-op match (SPEC §13.9, R2092000), modeled on 1v1 rematch (R672).
+//! `POST /api/duos/matches/:matchId/again` records offers; `GET` checks status (CLAUDE.md rule 7).
+//! The new match keeps `a1`/`a2` (§13.9), `difficulty`, AI team rules/handicaps (§13.7) and
+//! catalog version (R767000). Saved decks replay; dealt decks re-deal with lean (R924000, R2031000).
 //!
-//! `POST /api/duos/matches/:matchId/again` records the caller's offer and answers the new match's
-//! id once both seats have offered, else null; `GET` on the same path answers what each seat
-//! offered, whether the teammate is still on the finished match and the created game. A co-op game
-//! is unranked, so there are no stakes: the new match keeps the same `a1` and `a2` (the host stays
-//! a1, §13.9) and the same `difficulty`, and so the same AI team rules and handicaps (§13.7), under
-//! a fresh seed and the server's catalog version (R767000). A seat that played a saved deck replays
-//! the frozen deck from the finished match's `options`; a seat whose deck was dealt is dealt
-//! afresh, leaning on the set its latest offer picked (R924000, R2031000), as an All Random rematch
-//! deals. The AI seats are dealt afresh by the AI's deck-builder, as a room's join deals them.
-//!
-//! Who may offer, and when: only a seat of a finished match. Anyone else, an unknown id and a live
-//! match get the replay route's answers (`duos::replay`); a seat emptied by a deleted account
-//! (R1497000) is refused; a finished match on another catalog version is `409 update_required`
-//! (R1638000), as the co-op room's join refuses one; past `REMATCH_OFFER_TTL_MS` from the match's
-//! `ended_at` — the window a finished co-op match's socket reopens in (§13.9, R1398000) — the offer
-//! lapses silently, as a 1v1 rematch's does. Making the match refuses before anything is made: a
-//! frozen deck with a custom card is `loadout_invalid` (R915005), a seat in another game is
-//! `409 already_in_match` with no details, since the game may be the teammate's, as R1065000
-//! refuses a rematch (through the seat ledger, R1523000), and a pair with a block either way reads
-//! as an unknown code, as a room's does (§13.9).
-//!
-//! The response carries only booleans and ids (CLAUDE.md rule 7).
-//!
-//! The offers live in memory, one map per `App` (`DuosAgainOffers`): rendezvous state for two
-//! sockets, not rows, so a restart drops them and both people re-offer. An entry without a created
-//! game is swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so a late
-//! poller still learns where to go. The reaper's tick sweeps every entry past that window whose
-//! finished match no actor holds (`sweep_duos_again_offers`).
+//! Only seats of finished matches offer. Deleted accounts (R1497000) and other catalog versions
+//! (R1638000) are refused. Offers live in memory and lapse after `REMATCH_OFFER_TTL_MS` (§13.9, R1398000).
+//! Custom cards (R915005) and players already in matches (R1065000, R1523000) refuse creation.
 
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -109,10 +84,8 @@ enum Claim<'a> {
     Wait(Pin<Box<OwnedNotified>>),
 }
 
-/// Holds the right to make the game both seats offered. Dropping it, once the game is published,
-/// on a refusal, or when the request making it is dropped mid-create (a client that hangs up) or
-/// panics, lets the claim go and wakes the waiters, so no offer is stuck behind a create that will
-/// never finish (as `auth.rs`'s `FetchGuard` frees a key-set fetch).
+/// Holds the right to make the game both seats offered. Dropping it on publish, refusal, or cancel
+/// frees the claim and wakes waiters.
 struct Creating<'a> {
     offers: &'a DuosAgainOffers,
     finished: String,
@@ -141,10 +114,7 @@ impl Creating<'_> {
             .is_some_and(|held| Arc::ptr_eq(held, &self.mine))
     }
 
-    /// Publishes the game this claim made, so every later offer and poll reads its id; dropping the
-    /// claim then wakes the waiters to read it. A sweep that won a race at the window's edge while
-    /// the create was in flight took the entry: the game stays discoverable under a fresh answered
-    /// one.
+    /// Publishes the created game id and wakes waiters; remakes entry if swept concurrently.
     fn made(self, id: &str, now: i64) {
         let mut map = self.offers.lock();
         match map.get_mut(&self.finished) {
@@ -173,9 +143,7 @@ impl DuosAgainOffers {
         self.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// Records `seat`'s offer on the finished match and decides what it does next. One new game per
-    /// pair of offers: the check and the claim run under one lock, so two offers landing together
-    /// cannot mint two games.
+    /// Records `seat`'s offer and decides next action; check and claim run under one lock.
     fn claim(&self, finished: &str, seat: DuosSeat, lean: Option<LeanPick>, now: i64) -> Claim<'_> {
         let mut map = self.lock();
         // Sweeps a stale entry, so the offer starts a fresh one.
@@ -222,11 +190,8 @@ fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
     app.duos_again_offers.lock()
 }
 
-/// The reaper's tick (`api::results::run_reaper`, after `Registry::reap_finished`): drops each
-/// entry whose latest offer is older than `REMATCH_OFFER_TTL_MS` and whose finished match no actor
-/// holds any more. An unanswered one is what `live_entry` sweeps on a read nobody makes; one that
-/// made a game goes too, since the new match's actor holds its own game now. An open socket keeps
-/// its actor, and so its offers. Answers how many it dropped.
+/// Drops offer entries older than `REMATCH_OFFER_TTL_MS` with no active actor in registry.
+/// Returns count of dropped entries.
 pub fn sweep_duos_again_offers(app: &Arc<App>, now: i64) -> usize {
     let mut map = offers(app);
     let before = map.len();
@@ -250,9 +215,7 @@ fn not_open() -> ApiError {
 
 // Offers
 
-/// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
-/// game is never swept here: the id is how a late poller finds the game, until the reaper's
-/// `sweep_duos_again_offers`.
+/// Returns the live entry for a match, sweeping unanswered offers past `REMATCH_OFFER_TTL_MS`.
 fn live_entry<'a>(
     offers: &'a mut IndexMap<String, OfferEntry>,
     match_id: &str,
@@ -287,11 +250,8 @@ async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(DuosM
     Ok((match_row, seat))
 }
 
-/// Records the offer and, once both seats have offered, makes the new co-op match outside the lock.
-/// The created id is published only after the create succeeds: an offer landing while another's
-/// create is still in flight waits for it to land or be let go and then reads again, answering the
-/// same id, instead of reading a game that may never exist. A failed or abandoned create lets the
-/// claim go, so a waiting or later offer makes the game itself.
+/// Records the offer and makes the new match once both offer. In-flight creates cause waiters to
+/// wait on notification; failed creates release the claim for another attempt.
 async fn offer_as(
     app: &Arc<App>,
     match_row: &DuosMatch,
@@ -316,18 +276,14 @@ async fn offer_as(
     }
 }
 
-/// Makes the new co-op match both seats offered: the same `a1` and `a2` (the host stays a1) and the
-/// same `difficulty`, a fresh seed, frozen decks replayed and dealt seats dealt afresh. Refuses
-/// before anything is made: a seat that found another game meanwhile keeps that game.
+/// Creates the new co-op match: same seats and difficulty, fresh seed, replaying or re-dealing decks.
 async fn create_again(
     app: &Arc<App>,
     finished: &DuosMatch,
     leans: (Option<LeanPick>, Option<LeanPick>),
     match_id: &str,
 ) -> Result<(), ApiError> {
-    // R915005: a deck with a custom card plays only in practice, so the frozen decks a new game
-    // would replay are asked the validator's L7, as the queue asks it, before anything is claimed.
-    // A dealt seat is dealt afresh from the catalog, which holds no custom card.
+    // R915005: validates that replayed frozen decks contain no custom cards.
     let mut frozen: Vec<&[String]> = Vec::new();
     if !finished.options.dealt.contains(&DuosSeat::A1) {
         frozen.push(&finished.options.decks.a1);
@@ -337,9 +293,7 @@ async fn create_again(
     }
     assert_no_custom_cards(&frozen)?;
 
-    // Refuse before making anything: a seat that found another game meanwhile keeps that game.
-    // R1523000: either person in a 1v1 match, a Conquest series that is not over or a live co-op
-    // match is refused with no details, since it may be the other person's (R1065000).
+    // R1523000, R1065000: refuse without details if either player is already in a match.
     assert_free_to_play(app, &finished.a1)
         .await
         .map_err(|_| already_in_match())?;
@@ -353,9 +307,7 @@ async fn create_again(
         return Err(not_open());
     }
 
-    // A seat whose deck was dealt is dealt afresh, leaning on the set its latest offer picked
-    // (R924000, R2031000); a saved-deck seat replays the finished match's frozen deck. The rebuilt
-    // choice carries no name, portrait or slots: `person_deck` reads only the cards.
+    // Dealt seats re-deal with latest lean (R924000, R2031000); saved decks replay frozen deck.
     let choice_of = |seat: DuosSeat, lean: Option<LeanPick>, cards: &[String]| {
         if finished.options.dealt.contains(&seat) {
             DuosChoice::Random { lean }
@@ -374,8 +326,7 @@ async fn create_again(
     let host_choice = choice_of(DuosSeat::A1, leans.0, &finished.options.decks.a1);
     let guest_choice = choice_of(DuosSeat::A2, leans.1, &finished.options.decks.a2);
 
-    // The start goes through the seat ledger, as every door into a game does (R1523000). It writes
-    // the match row and starts the actor, as a room's join does.
+    // Starts through seat ledger (R1523000), writing match row and starting actor.
     let outcome = start_coop_match(
         app,
         CoopStart {
@@ -402,11 +353,8 @@ async fn create_again(
 
 // Routes
 
-/// `POST /api/duos/matches/:matchId/again` (active): offer to play again (or meet the teammate's
-/// offer). `AuthLevel::Active` is §9.4's gate, as on the rooms; a seat of another pair's match — or
-/// of none — learns nothing beyond "no such co-op match" (§13.9).
-///
-/// It takes `&Arc<App>` because equal offers start the match and `registry::start` needs one.
+/// `POST /api/duos/matches/:matchId/again`: offer to play again (§9.4, §13.9).
+/// Starts match when both seats offer.
 pub async fn offer_again(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     // R924000: absent is no lean, so an offer from a client before the picker is a plain offer.
@@ -435,10 +383,7 @@ pub async fn offer_again(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let now = now_ms();
     if now - ended_at > REMATCH_OFFER_TTL_MS {
-        // R1398000: the window a finished co-op match's socket reopens in has closed, so the offer
-        // is refused the way the 1v1 rematch route refuses an expired offer: it lapses silently,
-        // recording nothing. An entry that made a game keeps its id, so the seat that polls late
-        // still learns where to go.
+        // R1398000: offer lapses silently past reopen window; keep match id if already created.
         let mut map = offers(app);
         let answered = match map.get(&match_row.id) {
             Some(entry) if entry.match_id.is_some() => entry.match_id.clone(),
@@ -461,9 +406,7 @@ pub async fn offer_again(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// `GET /api/duos/matches/:matchId/again` (active): what each seat offered, whether the teammate
-/// is still on the finished match, and the created game. A seat's own pair only: anyone else gets
-/// the same "no such co-op match" as for a missing id (§13.9).
+/// `GET /api/duos/matches/:matchId/again`: offer and teammate presence status (§13.9).
 pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;

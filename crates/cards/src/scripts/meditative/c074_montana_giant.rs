@@ -4,8 +4,6 @@
 //! Engine: a cost hook as C+ #64 Mulch Muncher's (R65, floor 0), counting the hand itself included
 //!   (MD-D33, R1065); at its controller's end of turn with a full hand, its player's hand cap
 //!   (`hand_cap_of`, R1143), the base face makes itself Radiant (§5.2) and the Radiant face buffs +8/+8.
-//!   `script_v0_3_7b` keeps the end of turn that read the default cap for the replays of v0.3.7b and
-//!   before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -100,10 +98,8 @@ mod tests {
     #[test]
     fn r1065_costs_8_less_one_per_card_in_hand_itself_included() {
         crate::register_all();
-        // Alone: 8 - 1 = 7.
         let s = scenario(json!({ "p1": { "hand": [GIANT] }, "p2": { "hand": [FILLER] } }));
         assert_eq!(hand_cost(&s, PlayerId::P1), 7);
-        // With four cards: 8 - 4 = 4.
         let s = scenario(json!({ "p1": { "hand": [GIANT, FILLER, FILLER, FILLER] }, "p2": { "hand": [FILLER] } }));
         assert_eq!(hand_cost(&s, PlayerId::P1), 4);
         // With ten: floored at 0.

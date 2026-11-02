@@ -1,15 +1,9 @@
-// `/dev/hotseat?seed=42&a=<deckId>&b=<deckId>` (BUILD M5-T3).
+// `/dev/hotseat?seed=42&a=<deckId>&b=<deckId>` (BUILD M5-T3): `reduce` in the browser, `viewFor`
+// for whichever seat holds the device, and `window.__jackioh` for Cypress outside production builds.
 //
-// The dev route runs `reduce` in the browser with a seed and two deck lists from the URL, renders
-// `viewFor` for whichever seat holds the device, hands the device over on a button press, and
-// exposes `window.__jackioh` for Cypress outside production builds.
-//
-// It computes no view of its own. A local `viewFor` would mean the client deciding what a player
-// may see, which is exactly the hidden-information leak CLAUDE.md rule 7 and SPEC §10.8 forbid —
-// so when the engine cannot be loaded this route renders the reason and stops. That panel is the
-// honest state of the world: when the WebAssembly module (`crates/wasm`, behind `src/wasm/`) fails
-// to load, or lacks a function the port needs, `viewFor` among them, `loadEnginePort()` rejects with
-// `EngineUnavailableError` and the panel names why. Nothing here stubs a fake engine to hide it.
+// It computes no view of its own (CLAUDE.md rule 7, SPEC §10.8): when the WebAssembly module
+// (`crates/wasm`, behind `src/wasm/`) cannot be loaded, this route renders why and stops, and
+// nothing here stubs a fake engine to hide it.
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -45,9 +39,7 @@ export const E2E_DECKS_KEY = "jackioh.e2e.decks";
 /** R180: each seat's handicap, as `createGame` takes them. Empty when the game is SPEC's own. */
 export type SeatHandicaps = Partial<Record<PlayerId, Handicap>>;
 
-// ---------------------------------------------------------------------------------------------
 // the dev handle (BUILD M5-T3, consumed by e2e/support/commands.ts)
-// ---------------------------------------------------------------------------------------------
 
 /** An action from Cypress, which names the seat it is acting as (`ActionInput`). */
 type DevAction = ActionBody & { playerId?: PlayerId };
@@ -59,15 +51,11 @@ export type HotseatDevHandle = {
   readonly seat: PlayerId;
   readonly log: readonly Action[];
   readonly decks: [string[], string[]];
-  /**
-   * The handicaps the game was created with (R180), `{}` for none: with the seed, the decks and the
-   * log, what `replay.fold` needs to reach this game's hash (`cy.replayCheck` passes them on).
-   */
+  /** The game's handicaps (R180), `{}` for none: `replay.fold` needs them (`cy.replayCheck`). */
   readonly handicaps: SeatHandicaps;
   /**
-   * Dispatch as a seat. A hotseat device can be handed to either player, so a `playerId` that is
-   * not the seat holding it switches the seat first rather than forging an action for someone
-   * else — `reduce` still refuses anything illegal (SPEC §9.3).
+   * Dispatch as a seat: a `playerId` other than the seat's switches the seat first rather than
+   * forging an action for someone else; `reduce` still refuses anything illegal (SPEC §9.3).
    */
   dispatch: (action: DevAction) => DispatchResult;
   view: () => PlayerView;
@@ -80,10 +68,7 @@ declare global {
   interface Window {
     /** BUILD M5-T3. */
     __jackioh?: HotseatDevHandle;
-    /**
-     * ASSUMPTION A1: fixture decks handed to the E2E build of this route, and each seat's handicap
-     * when a fixture carries one (R180; `readInjectedHandicaps`).
-     */
+    /** ASSUMPTION A1: fixture decks for the E2E build, and each seat's handicap (R180). */
     __jackiohE2E?: {
       seed?: string;
       decks?: Record<string, string[]>;
@@ -94,9 +79,7 @@ declare global {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // URL and E2E deck injection
-// ---------------------------------------------------------------------------------------------
 
 export type HotseatParams = { seed: string; a: string; b: string };
 
@@ -115,9 +98,8 @@ export function readParams(search: string): HotseatParams {
 }
 
 /**
- * The E2E injection as it arrived: `window.__jackiohE2E`, or the localStorage copy that survives a
- * reload. Nothing at all in a production build. Unread and unchecked: the two readers below take
- * what they can use out of it.
+ * The E2E injection, unchecked: `window.__jackiohE2E`, or the localStorage copy that survives a
+ * reload. Nothing at all in a production build.
  */
 function readInjection(): unknown {
   if (!DEV_ONLY || typeof window === "undefined") return undefined;
@@ -134,8 +116,7 @@ function readInjection(): unknown {
 }
 
 /**
- * The E2E deck injection, from `window.__jackiohE2E` or the localStorage copy that survives a
- * reload. External, untrusted input: anything that is not a list of strings is dropped, and the
+ * The E2E deck injection. Untrusted: anything that is not a list of strings is dropped, and the
  * ids that remain are still checked against the catalog by `resolveDeck`.
  */
 export function readInjectedDecks(): Record<string, string[]> | undefined {
@@ -155,11 +136,9 @@ export function readInjectedDecks(): Record<string, string[]> | undefined {
 }
 
 /**
- * One seat's injected handicap, if it has the SHAPE of one (R180): an object whose five fields are
- * numbers, and whose `heroHealth` (R290) is a number when present. Only the shape is judged here:
- * whether the numbers are legal (non-negative integers, a deck size a library can hold) is the
- * engine's call (`validateHandicap`, R184), and `createGame`'s refusal reaches the screen as a bad
- * deck's does. The copy carries those fields and nothing else, so no stray key reaches the engine.
+ * One seat's injected handicap, if it has the SHAPE of one (R180; `heroHealth` is R290). Whether
+ * the numbers are legal is the engine's call (`validateHandicap`, R184). The copy carries those
+ * fields and nothing else, so no stray key reaches the engine.
  */
 function handicapShape(raw: unknown): Handicap | undefined {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
@@ -188,11 +167,9 @@ function handicapShape(raw: unknown): Handicap | undefined {
 }
 
 /**
- * The E2E injection's per-seat handicaps (R180): `cy.seedGame` passes fixture A's `handicap` as
- * p1's and fixture B's as p2's, which is the only way a browser reaches R315's fatigue or R80's full
- * library in a few turns. Development builds only, like the deck injection it travels with, and
- * external input like it: a seat whose handicap is not shaped like one is dropped, and `undefined`
- * means no seat has one, so the game is created exactly as it was before handicaps could be injected.
+ * The E2E injection's per-seat handicaps (R180), fixture A's as p1's and B's as p2's: the only way a
+ * browser reaches R315's fatigue or R80's full library in a few turns. A misshapen seat is dropped;
+ * `undefined` means no seat has one, and the game is created without handicaps.
  */
 export function readInjectedHandicaps(): SeatHandicaps | undefined {
   const raw = readInjection();
@@ -209,11 +186,9 @@ export function readInjectedHandicaps(): SeatHandicaps | undefined {
 }
 
 /**
- * The E2E injection's `preview` (R1420): the sets the engine treats as shipped before the game is
- * created, so a spec can play a set the catalog holds before it ships (#552's play-through, which
- * plays every Meditative card). Development builds only, like the rest of the injection, and only
- * strings pass: whether each names a set is the engine's call (`EnginePort.previewSets` refuses one
- * that does not, and the refusal reaches the screen as a bad deck's does).
+ * The E2E injection's `preview` (R1420): sets the engine treats as shipped, so a spec can play a set
+ * before it ships (#552's play-through). Only strings pass: whether each names a set is the engine's
+ * call (`EnginePort.previewSets`).
  */
 export function readInjectedPreview(): SetName[] {
   const raw = readInjection();
@@ -223,18 +198,13 @@ export function readInjectedPreview(): SetName[] {
   return preview.filter((set): set is SetName => typeof set === "string");
 }
 
-// ---------------------------------------------------------------------------------------------
 // startup
-// ---------------------------------------------------------------------------------------------
 
 type Status =
   | { kind: "loading" }
   | { kind: "no-engine"; missing: readonly string[]; message: string }
   | { kind: "no-game"; message: string }
-  /**
-   * `decks` and `handicaps` are kept for the dev handle: spec 01 replays the decks with the log
-   * (ASSUMPTION A2), and a handicapped game (spec 25) needs its handicaps too.
-   */
+  /** `decks` and `handicaps` are kept for the dev handle's replay (ASSUMPTION A2; spec 25). */
   | {
       kind: "ready";
       session: HotseatSession;
@@ -288,9 +258,7 @@ function startSession(port: EnginePort, params: HotseatParams): Status {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // panels
-// ---------------------------------------------------------------------------------------------
 
 function EnginePanel({ missing, message }: { missing: readonly string[]; message: string }) {
   return (
@@ -327,9 +295,7 @@ function GamePanel({ message, params }: { message: string; params: HotseatParams
   );
 }
 
-// ---------------------------------------------------------------------------------------------
 // the loop
-// ---------------------------------------------------------------------------------------------
 
 /**
  * Re-render on every session notification. The session is external mutable state, so the version
@@ -384,10 +350,9 @@ function Hotseat({
     [session],
   );
 
-  // BUILD M5-T3: `{ state, dispatch, seed }` is the contract; the rest is what Cypress needs to
-  // drive two seats and check the replay hash (ASSUMPTION A2 in e2e/support/types.ts). Getters,
-  // not values, so a spec that re-reads `handle.state` sees the current state and not the one
-  // that existed when this effect ran.
+  // BUILD M5-T3: `{ state, dispatch, seed }` is the contract; the rest drives two seats and checks
+  // the replay hash (ASSUMPTION A2 in e2e/support/types.ts). Getters, so a spec that re-reads
+  // `handle.state` sees the current state.
   useEffect(() => {
     if (!DEV_ONLY) return;
     const handle: HotseatDevHandle = {
@@ -430,18 +395,16 @@ function Hotseat({
   const next = otherSeat(session.seat);
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
 
-  // R642–R644: hotseat emotes run locally with the same shared gate — no wire, so `send` only
-  // shows and plays. The dev decks carry no portrait (they are not saved decks), so both seats
-  // read `vanilla`; the device mute applies to whichever seat isn't holding the device. R1341:
-  // each seat holds the hand the game's seed deals it (`startSession`), as a match would.
+  // R642–R644: hotseat emotes run locally with the same shared gate. The dev decks carry no
+  // portrait, so both seats read `vanilla`; the device mute applies to the seat not holding the
+  // device. R1341: each seat's hand is dealt from the seed (`startSession`).
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
   const emotes = useEmotes({
     hands,
     engine: getAudioEngine(),
     globalMute: globalMuteEmotes,
     you: view.viewer,
-    // MD-D29, R1127: hotseat sends the emote through the engine too — as an `Emote` action, and
-    // only while the view hears emotes.
+    // MD-D29, R1127: an `Emote` action through the engine, only while the view hears emotes.
     emit: (emote) => {
       if (view.emotesHeard === true) dispatch({ type: "emote", emote });
     },

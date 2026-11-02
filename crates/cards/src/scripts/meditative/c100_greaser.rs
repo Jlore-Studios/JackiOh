@@ -11,9 +11,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #100 Greaser — SPEC §8.8 row 100, BUILD M10 row M 100: "A 2-cost 7/7 with no tags and no text: it
-// enters with no keywords and its play is the play alone; radiant a 21/21 with no text, three times
-// the base face's stats (R275)".
+// M #100 Greaser — SPEC §8.8 row 100, BUILD M10 row M 100, R275.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -51,7 +49,6 @@ mod tests {
             let mut s = played("greaser-base", false);
             s.expect_stats(ID, json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
             assert!(s.stats(ID).keywords.is_empty());
-            // No text: the play emits the play itself and nothing else.
             let types: Vec<&str> = s
                 .last_events()
                 .iter()

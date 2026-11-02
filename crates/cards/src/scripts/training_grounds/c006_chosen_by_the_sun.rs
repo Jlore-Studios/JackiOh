@@ -1,7 +1,5 @@
 //! SPEC §8.11 Training Grounds 6 Chosen by the Sun: (1) Unit, Common, 3/3 → 9/9, Divine Shield on both
-//! faces, a card of the held Training Grounds set (R1420, R2194000). Keywords only (§6.1): the shield
-//! negates the first damage instance and is lost (§4.4 step 1). The Radiant face adds no keyword, the
-//! designer's word (`docs/radiant-audit.md`). TG #16 Celestial Caller summons it.
+//! faces, a card of the held Training Grounds set (R1420, R2194000). Keywords only (§6.1, §4.4, `docs/radiant-audit.md`). TG #16 summons it.
 
 use jackioh_engine::prelude::*;
 
@@ -14,9 +12,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #6 Chosen by the Sun — SPEC §8.11 row 6, BUILD M13 row TG 6: "base: 3/3 with Divine Shield; the first
-// hit deals nothing and removes the shield; the next hit damages it; summoning-sick (no Rush). radiant
-// 9/9 with Divine Shield, the same".
+// TG #6 Chosen by the Sun — SPEC §8.11 row 6, BUILD M13 row TG 6.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

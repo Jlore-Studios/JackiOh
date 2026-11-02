@@ -71,12 +71,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2: "with a fixture win-rate table, fuses the
-// trailer and the leader (both eligible past the games floor, ties as R1100) into one transient card
-// (summed stats, union of keywords, both scripts, R77) added to your hand at (2); with an empty table
-// Infinite Reserves and Lunar Eclipse stand in, an end named by the table that is the other's fallback
-// leaving that end random (R2521007); a full hand burns it; setCost reads through `param()`; radiant
-// both ingredients Radiant and it costs (0)".
+// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77, R2521007).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,11 +81,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// Tempo Timmy, 3/3 Rush and First Strike (Radiant 6/6 Charge and First Strike): the leader.
     const LEADER: &str = "core-011";
-    /// Right-house defender, 1/1 Taunt, Divine Shield and Reborn (Radiant 2/2): the trailer.
     const TRAILER: &str = "core-003";
-    /// Bigot, between the two.
     const MIDDLE: &str = "core-002";
     const FILLER: &str = "core-005";
 
@@ -113,8 +105,6 @@ mod tests {
         table(vec![(LEADER, 30, 40), (MIDDLE, 20, 40), (TRAILER, 10, 40)])
     }
 
-    /// p1 holds NA Tech (base unless `radiant_face`) and `fillers` fillers; both sides keep cards in
-    /// hand so no turn auto-ends.
     fn casting(seed: &str, radiant_face: bool, fillers: usize) -> Scenario {
         crate::register_all();
         let mut hand = vec![json!({ "def": ID, "radiant": radiant_face })];
@@ -126,7 +116,6 @@ mod tests {
         }))
     }
 
-    /// Cast NA Tech; the card it added to p1's hand.
     fn fused(s: &mut Scenario) -> CardInstance {
         s.play(ID, json!({}));
         let added: Vec<CardInstance> = s
@@ -138,7 +127,6 @@ mod tests {
         added[0].clone()
     }
 
-    /// The fused card's ingredients, in fusion order, with their Radiant flags.
     fn ingredients(s: &Scenario, card: &CardInstance) -> Vec<(String, bool)> {
         def_of(Some(s.state()), &card.def_id)
             .ingredients
@@ -200,7 +188,6 @@ mod tests {
 
         #[test]
         fn r1183000_the_lowest_passes_over_thin_rows_and_breaks_ties_as_r1100() {
-            // A thin row (fewer than 20 games) never trails; 10/40 and 5/20 tie, more games wins.
             register_win_rates(table(vec![
                 (LEADER, 30, 40),
                 ("core-008", 0, 19),
@@ -259,8 +246,6 @@ mod tests {
 
         #[test]
         fn r77_the_fused_card_runs_both_scripts() {
-            // Me and Mr Token (Cry: summon a Rush Token) trails, Jlockeed Shredder-10 (End of turn: 2
-            // to each enemy unit and the enemy hero) leads: played, the one card does both.
             const CRY: &str = "core-015";
             const END_OF_TURN: &str = "core-013";
             register_win_rates(table(vec![(END_OF_TURN, 30, 40), (CRY, 10, 40)]));
@@ -297,7 +282,6 @@ mod tests {
         #[test]
         fn a_full_hand_burns_it() {
             register_win_rates(the_table());
-            // Eleven in hand, ten once NA Tech is cast: the hand is full as the card arrives.
             let mut s = casting("na-tech-burn", false, HAND_CAP as usize);
             s.play(ID, json!({}));
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
@@ -333,7 +317,6 @@ mod tests {
             assert!(card.radiant, "every ingredient Radiant: the card is (R469)");
             assert_eq!(card.cost_override, Some(0));
             let def = def_of(Some(s.state()), &card.def_id).clone();
-            // The Radiant faces summed, Charge from Tempo Timmy's Radiant face.
             let (leader, trailer) = (crate::card_def(LEADER), crate::card_def(TRAILER));
             let summed = |a: Option<i32>, b: Option<i32>| Some(a.unwrap_or(0) + b.unwrap_or(0));
             assert_eq!(
@@ -387,7 +370,6 @@ mod tests {
             assert_eq!(win_rate_leader(ID), Some(leader.clone()));
             assert_eq!(win_rate_trailer(&[ID, leader.as_str()]), Some(trailer.clone()));
             assert_ne!(leader, trailer);
-            // And the card fuses them, the trailer first.
             let mut s = casting("na-tech-compiled", false, 1);
             let card = fused(&mut s);
             assert_eq!(ingredients(&s, &card), vec![(trailer, false), (leader, false)]);

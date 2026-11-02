@@ -1,16 +1,8 @@
-//! The Fuse variants of patch v0.2.0 (docs/classic-sets.md B5 E23; R77, R102, R179) and the three
-//! rulings they needed: R468 (a fused id is bounded: past `FUSED_ID_CAP` it is a digest of its
-//! ingredient list, which the definition keeps), R469 (an ingredient fused "as a Radiant card" puts
-//! its Radiant face into both fused forms) and R470 (a fusion may keep a hand or deck card, which
-//! stays where it is, and "its cost doesn't change" keeps the cost it had).
+//! The Fuse variants (docs/classic-sets.md B5 E23; R77, R102, R179) and the three
+//! rulings they needed: R468, R469 and R470.
 //!
-//! TS read the live objects `fuse` changed; Rust reads a card back from the state by its id, and an
-//! ingredient that ceased to exist (`{ z: "gone" }`, R86) is one the state holds in no pile. A digest
-//! id's ingredients come off its fused definition in the state (SURFACE §6.6: no process-wide digest
-//! table), so the catalog readers take the state; read without one (`None`) a digest id is no fused
-//! id, which is what TS's process answered before it had seen the definition.
-//!
-//! Port of `packages/engine/test/fuse-variants.test.ts`.
+//! A digest id's ingredients come off its fused definition in the state (SURFACE §6.6: no
+//! process-wide digest table), so the catalog readers take the state.
 
 use jackioh_engine::catalog::{
     CatalogQueryArgs, def_of, excluding_def_id, fused_id_parts, fused_id_specs, is_digest_id, self_def_ids,
@@ -37,7 +29,6 @@ use crate::rules::fixtures::harness::{
     Bench, json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
 };
 
-/// TS `run(sink, effect, self = null)`: the effect applied in a context of p1's.
 fn run(state: &mut GameState, sink: &mut Bench, effect: Effect, self_: Option<&CardInstance>) {
     let mut engine = sink.sink(state);
     let mut ctx = make_context(
@@ -51,13 +42,12 @@ fn run(state: &mut GameState, sink: &mut Bench, effect: Effect, self_: Option<&C
     (effect.apply)(&mut ctx);
 }
 
-/// `fuse(sink, args)`, `args` the TS object literal (its instances as the state holds them now).
+/// `fuse(sink, args)`, `args` holding its instances as the state holds them now.
 fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardInstance> {
     let args: FuseArgs = json_as(args);
     fuse(&mut sink.sink(state), args)
 }
 
-/// `fuse(sinkFor(state), args)`.
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
     let mut sink = Bench::new(state);
     fuse_in(state, &mut sink, args)
@@ -67,7 +57,6 @@ fn input(literal: Value) -> ActionInput {
     json_as(literal)
 }
 
-/// The `fused` events of a view's event list (`eventsOfType(view.events, "fused")`).
 fn fused_events(events: &Value) -> Vec<Value> {
     events
         .as_array()
@@ -93,7 +82,6 @@ fn fused_head(id: &str) -> bool {
         .is_some_and(|(count, _)| !count.is_empty() && count.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
-/// `/^[0-9a-f]{16}$/`.
 fn hex16(text: &str) -> bool {
     text.len() == 16
         && text
@@ -120,7 +108,6 @@ fn stats(state: &GameState, card: &CardInstance) -> (i32, i32) {
     (view.attack, view.max_health)
 }
 
-/// A copy of `run` whose state is `state` (TS `{ ...run, state }`).
 fn with_state(run: &Run, state: GameState) -> Run {
     Run {
         start: run.start.clone(),
@@ -128,10 +115,6 @@ fn with_state(run: &Run, state: GameState) -> Run {
         state,
     }
 }
-
-// ---------------------------------------------------------------------------
-// R468: bounded fused ids.
-// ---------------------------------------------------------------------------
 
 mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredient_list {
     use super::*;
@@ -326,10 +309,6 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
     }
 }
 
-// ---------------------------------------------------------------------------
-// R469: an ingredient fused as a Radiant card.
-// ---------------------------------------------------------------------------
-
 mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
     use super::*;
 
@@ -424,10 +403,6 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
         );
     }
 }
-
-// ---------------------------------------------------------------------------
-// R470: fusing into a hand or deck card, keeping its cost.
-// ---------------------------------------------------------------------------
 
 mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_change {
     use super::*;
@@ -726,9 +701,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     }
 }
 
-// ---------------------------------------------------------------------------
-// Three generated cards with no target (Classic+ #43 AI Slop).
-// ---------------------------------------------------------------------------
+// Classic+ #43 AI Slop.
 
 mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
     use super::*;
@@ -812,9 +785,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // An enemy card onto one of yours of its type (Classic #78 Mutate Spell, Radiant).
-// ---------------------------------------------------------------------------
 
 struct MutateBoard {
     run: Run,
@@ -1006,9 +977,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Discover and fuse onto self (Classic+ #30 Felinor Fuser).
-// ---------------------------------------------------------------------------
+// Classic+ #30 Felinor Fuser.
 
 mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
     use super::*;
@@ -1061,15 +1030,11 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
     }
 }
 
-/// R1087 (M #75): a keyword a fusion brings in applies at once — a fused "Animated on your turn"
-/// animates the kept card at its controller's next start of turn, while a fused plain Animated
-/// animates a kept card with stats at the state check (R2280001).
+/// R1087 (M #75): a keyword a fusion brings in applies at once.
 mod r1087_a_fused_animated_keyword_applies_at_once {
     use super::*;
     use jackioh_engine::animated::animate_at_turn_start;
 
-    /// A plain Field Spell keeper (2/3), an "Animated on your turn" Field Spell (4/5) and a plain
-    /// Animated Field Spell (1/1).
     fn animated_defs() -> Vec<CardDef> {
         let def = |id: &str, index: i32, attack: i32, health: i32, keywords: Value| -> CardDef {
             json_as(json!({
@@ -1155,7 +1120,6 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
         assert!(!is_animated(&run.state, &kept));
         assert!(animated_events(&sink.events).is_empty());
 
-        // At its controller's next start of turn it animates, with the summed stats.
         let mut sink = Bench::new(&run.state);
         animate_at_turn_start(&mut sink.sink(&mut run.state), P1);
         let kept = must(find_instance(&run.state, &kept.id).cloned(), "the keeper");
@@ -1181,7 +1145,7 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
         );
 
         // The fusion moves nothing itself: the keeper, which had stats, has a plain Animated now too,
-        // so it animates at the state check (R2280001; before issue #2280 it waited for an entry).
+        // so it animates at the state check (R2280001, #2280).
         assert!(!is_animated(&game.state, &kept));
         assert!(animated_events(&sink.events).is_empty());
         let mut sink = Bench::new(&game.state);

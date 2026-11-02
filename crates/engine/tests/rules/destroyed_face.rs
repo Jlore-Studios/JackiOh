@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/destroyed-face.test.ts`.
-//!
 //! R89: the `destroyed` event says what the unit was as it died, its Radiant face included — the one
 //! fact a unit token that has ceased to exist can no longer tell (C+ #12.8 Frostspatula remembers each
 //! Unit it killed by definition and face, R409). Absent on a base face, so nothing else moves.
@@ -38,7 +36,6 @@ fn killed(radiant: bool) -> Option<GameEvent> {
         .cloned()
 }
 
-/// `describe("R89 a destroyed unit's face")`.
 mod r89_a_destroyed_unit_s_face {
     use super::*;
 

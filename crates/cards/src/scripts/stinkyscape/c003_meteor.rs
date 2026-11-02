@@ -48,12 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3: "15 to a chosen Unit, its excess going to one
-// neighbor drawn at random, then the other (R1848001), each counting it only up to its Health; a
-// neighbor's Divine Shield stops the rest; a neighbor Immune to Spells is passed by; with no
-// neighbor the excess is lost; the target's zone is Locked whether it died or not, and no card can
-// be played into it; damage reads through `param()`; radiant 15 (#2521), and what passes both
-// neighbors hits the target's controller's hero".
+// S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3 (R1848001, #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -80,7 +75,6 @@ mod tests {
             .any(|keyword| keyword.kind() == KeywordKind::DivineShield)
     }
 
-    /// p2's field `units`, p1 holding the Meteor (Radiant when `radiant`) and a filler.
     fn meteor_board(radiant: bool, units: Value) -> Scenario {
         crate::register_all();
         scenario(json!({
@@ -156,7 +150,6 @@ mod tests {
             assert_eq!(hero_health(&s, P2), HERO_HEALTH);
         }
 
-        /// p2's core-008 in hand is offered no play into its units lane `lane`.
         fn no_play_into(s: &Scenario, lane: i32) -> bool {
             let held = s.card(VANILLA).id.clone();
             let plays: Vec<Option<ZoneChoice>> = legal_actions(s.state(), P2)
@@ -184,7 +177,6 @@ mod tests {
         #[test]
         fn the_zone_is_locked_whether_it_died_or_not() {
             crate::register_all();
-            // Killed: its emptied zone is Locked, and its controller can play nothing into it.
             let mut s = scenario(json!({
                 "p1": { "hand": [METEOR, FILLER], "library": filler(4) },
                 "p2": { "hand": [VANILLA, FILLER], "field": [{ "def": VANILLA, "lane": 2 }], "library": filler(4) },
@@ -197,7 +189,6 @@ mod tests {
             assert_eq!(s.state().active, P2);
             assert!(no_play_into(&s, 2));
 
-            // Survived: a Radiant Genn takes the 15 and stands in a Locked zone.
             let mut s = scenario(json!({
                 "p1": { "hand": [METEOR, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": GENN, "radiant": true, "lane": 4 }] },
@@ -227,7 +218,6 @@ mod tests {
             s.play(METEOR, json!({ "targets": pick::instance(&target) }));
 
             s.expect_in_zone(&target, "graveyard");
-            // 11 less the target's 4 is 7 on the 14/14 (15 would have left it at 3).
             assert_eq!(s.stats(&genn).health, 7);
         }
     }

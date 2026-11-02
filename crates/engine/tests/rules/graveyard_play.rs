@@ -1,6 +1,5 @@
-//! Playing cards from the graveyard (docs/classic-sets.md B5 E11; R454): the permissions, what
-//! `legalActions` offers under them, §10.5 taking the card out of the graveyard, R65's prices, the
-//! Plague Counter payment, a pause mid-play surviving JSON, and what the other seat sees.
+//! Playing cards from the graveyard (docs/classic-sets.md B5 E11; R454): the permissions, §10.5
+//! taking the card out of the graveyard, R65's prices and the Plague Counter payment.
 
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::modifiers::add_modifier;
@@ -17,7 +16,6 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health
 }
 
-/// Each play `plays_of` offers, as its JSON.
 fn plays_json(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
     plays_of(state, instance_id, player)
         .iter()
@@ -473,8 +471,7 @@ mod r454_e11_play_from_the_graveyard {
         let zone = serde_json::to_value(&theirs.opponent.backrow[3]).expect("a backrow view serializes");
         assert!(matches_object(&zone, &json!({ "faceDown": true })));
         // The raw event names the card and the id it had; p2's copy is the face-down redaction (R97,
-        // R227) — no identity, no former id — with the pile it came from, which the public graveyard
-        // already showed.
+        // R227) with the pile it came from, which the public graveyard already showed.
         assert_eq!(
             only(&events_json(&result.events, GameEventType::CardPlayed))["formerId"],
             json!(trap.id)

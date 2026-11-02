@@ -1,7 +1,6 @@
-// The tracks panel's bar (#1664): the economy's `FillBar` at rest in place of the bare `<progress>`,
-// still `levelXp − xpToNext` of `levelXp` as the server sends them (the client knows no curve), still
-// a native `<progress>` the e2e specs read, and every test id the panel had. The panel's other words
-// are `collection.test.tsx`'s.
+// The tracks panel's bar (#1664): the economy's `FillBar` at rest, still `levelXp − xpToNext` of
+// `levelXp` as the server sends them (the client knows no curve), still a native `<progress>` the e2e
+// specs read. The panel's other words are `collection.test.tsx`'s.
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -42,7 +41,6 @@ describe("#1664 the tracks panel's XP bar", () => {
       expect(within(row).getByTestId(T.trackRewards(set))).toBeInTheDocument();
       expect(within(row).getByRole("progressbar")).toBeInTheDocument();
     }
-    // A locked track has its lock line, an unlocked one does not.
     expect(screen.getByTestId(T.track(newest))).toHaveAttribute("data-unlocked", "true");
     expect(screen.queryByTestId(T.trackLock(newest))).toBeNull();
     expect(screen.getByTestId(T.trackLock("Core"))).toBeInTheDocument();

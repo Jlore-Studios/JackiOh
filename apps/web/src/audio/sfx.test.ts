@@ -1,8 +1,7 @@
-// B14 (docs/polish/2-sound.md): every procedural recipe, run on the fake context with each of the
-// four parameter sets, keeps the recipe contract: nothing scheduled before `at`, every source it
-// starts stopped by `at + returned`, a returned length within `durationMs`, wiring only into `out`,
-// and nothing outside the permitted Web Audio subset. What a recipe sounds like is B15 and B16, in
-// real Chrome (tester B's component spec).
+// B14 (docs/polish/2-sound.md): every recipe, on the fake context with each of the four parameter sets,
+// keeps the recipe contract: nothing before `at`, every source stopped by `at + returned`, a length within
+// `durationMs`, wiring only into `out`, only the permitted Web Audio subset. How it sounds is B15 and B16,
+// in real Chrome (tester B's component spec).
 
 import { describe, expect, it } from "vitest";
 
@@ -19,14 +18,14 @@ const UNION_ORDER: SfxId[] = [
   "defeat", "uiClick", "uiHover", "whoosh", "radiant", "lock", "poof", "sand", "endTurn", "notify", "drain",
   "cancel", "entrance", "fatigue", "refuse",
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
-  // Patch v0.2.X (R644): the five emoji emotes.
+  // R644: the five emoji emotes.
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
-  // Patch v0.2.X (R669): the play sting.
+  // R669: the play sting.
   "sting",
-  // Patch v0.3.X (MN05): Armor (R1363) and the niche moments (R1364–R1366).
+  // MN05: Armor (R1363) and the niche moments (R1364–R1366).
   "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
   "degrade", "upgrade",
-  // Patch v0.3.X (MN03, R1345): the fourteen new emoji emotes.
+  // MN03, R1345: fourteen more emoji emotes.
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
@@ -67,7 +66,7 @@ const DURATION_MS: Record<SfxId, number> = {
   entrance: 1400,
   fatigue: 650,
   refuse: 400,
-  // Patch v0.2.0 (R506).
+  // R506.
   manaCrack: 900,
   bloodDrain: 600,
   goldBurst: 850,
@@ -82,7 +81,7 @@ const DURATION_MS: Record<SfxId, number> = {
   emoteAngry: 700,
   emoteWahWah: 1800,
   sting: 800,
-  // Patch v0.3.X (MN05).
+  // MN05.
   armorClank: 350,
   armorRing: 850,
   overkill: 550,
@@ -95,7 +94,7 @@ const DURATION_MS: Record<SfxId, number> = {
   fuse: 650,
   degrade: 520,
   upgrade: 500,
-  // Patch v0.3.X (MN03, R1345).
+  // MN03, R1345.
   emoteWave: 500,
   emoteClap: 650,
   emoteThumbsUp: 400,
@@ -186,7 +185,7 @@ function everyRun(): Run[] {
 
 const returnedSeconds = (run: Run): number => (typeof run.returned === "number" ? run.returned : Number.NaN);
 
-/* ----- the contract, one clause per checker; each returns its problems ----- */
+/* the contract, one clause per checker; each returns its problems */
 
 function subsetProblems(run: Run): string[] {
   const problems = run.audio.violations.map((v) => `${run.label}: ${v}`);
@@ -257,10 +256,6 @@ function rampProblems(run: Run): string[] {
     .filter(({ event }) => event.method === "exponentialRampToValueAtTime" && !(event.value > 0))
     .map(({ param }) => `${run.label}: exponential ramp on ${param.node.kind}.${param.name} targets a value <= 0`);
 }
-
-/* --------------------------------------------------------------------------------------------- *
- * B14
- * --------------------------------------------------------------------------------------------- */
 
 describe("B14 the SFX table", () => {
   it("B14 SFX_IDS lists every id, in the order of the SfxId union", () => {
@@ -362,9 +357,8 @@ describe("B14 every recipe keeps the recipe contract on the fake context", () =>
   });
 });
 
-// Integration (docs/polish/reference.md, audio x cards): a card the viewer can name colors its
-// summon thud and its spell shimmer with its family (`timbre`), and a Legendary or Mythic unit enters
-// with its own sting. Every one of those renders keeps the same contract as the plain recipe.
+// Integration (docs/polish/reference.md, audio x cards): a family's summon and spell (`timbre`) and a
+// Legendary's or Mythic's entrance keep the plain recipe's contract.
 describe("B14 the card families and the entrance keep the recipe contract", () => {
   const runs: Run[] = [
     ...SFX_TIMBRES.flatMap((timbre) => [
@@ -442,9 +436,7 @@ describe("B14 the shared noise buffer", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R506: patch v0.2.0's families and card moments keep the recipe contract, and vary as they say
- * --------------------------------------------------------------------------------------------- */
+/* R506: the families and card moments keep the recipe contract, and vary as they say */
 
 describe("R506 the new families and moments keep the recipe contract", () => {
   const variants: Run[] = [

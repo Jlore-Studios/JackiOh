@@ -2,14 +2,7 @@
 //! Spell, Common, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Pierce / Deal {damage} damage to all enemies. Draw {draw|card|cards}." — 1, 1.
 //!   Radiant: "Echo 1, Pierce" and the same text — 2, 1: it resolves a second time.
-//!
-//! Engine: S #13 Asphyxiants Cloud less its next-Spell clause: `damage_all` on every enemy Unit and the
-//! enemy hero, one §4.4 instance each, the list snapshotted and every hit landing before one state
-//! check (R51, R59), then a `draw`. Pierce is printed on both faces and stated by the effect too
-//! (`ignoreArmor`, as C+ #21 Whirlwind), so an Echo repeat with no source left still pierces (R346),
-//! the enemy hero's Armor skipped as a Unit's is; a Divine Shield still takes its hit. A Spell, so its
-//! caster's Spell Damage raises each hit (§4.4 step 0). The Radiant face prints Echo 1
-//! (`StaticFlags.echo`): the whole resolves twice, the damage and the draw again.
+//! S #13 `damage_all` before one state check (R51, R59), then `draw`. Pierce stated by effect (C+ #21, R346); Spell Damage raises hit (§4.4 step 0). Radiant prints Echo 1 (`StaticFlags.echo`).
 
 use jackioh_engine::prelude::*;
 

@@ -4,7 +4,6 @@
 //!   Radiant: "Starship Piece, Equip
 //!            Activate: Summon a Radiant Rush Token that attacks an enemy Unit, Taunt Units first."
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862003: the Activate's target is a declared enemy Unit, never a hero (R81), once a turn (R384).
@@ -13,9 +12,6 @@
 //! (Can't be attacked, a carrier's Unit) binds nobody (B5 E35). Then §7's Rush Token is summoned into
 //! the leftmost open unit zone (R64) and makes a forced attack on that Unit (R53), which strikes back,
 //! as Core #60 Bear Honeypot's tokens attack; one the token may not attack (§4.2 step 2) takes none.
-//! It is not activated (`canActivate`) while its controller has no open unit zone for the token (R64),
-//! as #60's trap waits for one (R430) and a Hearthstone Hero Power that summons waits for room, nor
-//! while the enemy has no Unit, as C #78 Mutate Spell's ability needs a pick.
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;
@@ -98,10 +94,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #140 Rush Token Launcher — SPEC §8.10 row 140, BUILD M12 row S 140: its Activate takes an
-// enemy Unit, a Taunt one while the enemy has one, summons a Rush Token in the leftmost open unit zone
-// and it attacks that Unit at once (R53), the Unit striking back; no open zone, nothing; no hero may be
-// chosen; radiant 0/8 and a Radiant Rush Token.
+// Stinkyscape #140 Rush Token Launcher — SPEC §8.10 row 140, BUILD M12 row S 140 (R53).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,7 +108,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The Rush Token's attack, 3 (Radiant 6), and a Vanilla's, 4.
     const TOKEN_ATTACK: i32 = 3;
     const RADIANT_TOKEN_ATTACK: i32 = 6;
     const VANILLA_ATTACK: i32 = 4;
@@ -132,7 +124,6 @@ mod tests {
         )
     }
 
-    /// The `summoned` events among `events`: the instance and its zone's lane.
     fn summoned(events: &[GameEvent]) -> Vec<(String, i32)> {
         events
             .iter()
@@ -205,7 +196,6 @@ mod tests {
             let mut s = launcher_on(false, json!({ "field": [VANILLA] }));
             assert_eq!(activations(&s), 1);
             s.expect_refused(|s| s.activate(ID, at_hero.clone()));
-            // With no enemy Unit there is nothing to attack, and it is not activated at all.
             let mut s = launcher_on(false, json!({}));
             assert_eq!(activations(&s), 0);
             s.expect_refused(|s| s.activate(ID, at_hero.clone()));

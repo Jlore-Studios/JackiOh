@@ -46,14 +46,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #66 The Rock — SPEC §8.3, BUILD M4-T4: "Play refused without a tribute; Indestructible; radiant
-// Immutable".
-//
-// The §8.3 row is "Tribute 1, Indestructible" → "Plus Immutable", with the Engine cell "Tribute
-// validator; Indestructible per 6.1". So the cases below are: the validator refusing and accepting
-// a Tribute (§6.3, §3.2's Sheep worth 2), Indestructible under damage (§4.4 step 4), under a destroy
-// mark (R46) and at 0 max health (R69), and the radiant face keeping every base clause the cell does
-// not restate (§8 Conventions) while adding Immutable (R23).
+// #66 The Rock — SPEC §8.3, BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -64,9 +57,8 @@ mod tests {
     const RUSH: &str = "core-t-rush"; // Rush Token, 3/3: a second body, so an action can run a state check.
     const AURA: &str = "core-046"; // Suppressive Aura, Field Spell, embiggen price 4 — R69's −10/−10.
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
-    /// `reduce` checks that after EVERY action, so every scenario keeps one free 0-cost Spell in p1's
-    /// hand. It is never played; it only keeps one legal action on the turn.
+    /// R82 auto-ends a turn whose only legal actions are ending it, conceding and offering a draw, so
+    /// every scenario keeps this free Spell in p1's hand; it is never played.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// The refusal names the Tribute, capitalised or not, so the word's common tail is matched.
@@ -192,9 +184,8 @@ mod tests {
             let mut s = board(json!({
                 "p1": { "field": [{ "def": ROCK, "position": "DEF", "lane": 1 }, { "def": RUSH, "lane": 2 }] }
             }));
-            // §6.3 Destroy "only marks the card"; `effects/destroy.rs` sets this flag and §4.5 step 1 collects
-            // it at the next state check. No reachable verb destroys a chosen unit yet, so the mark is set
-            // directly through `s.state_mut()`, a test-only liberty.
+            // No reachable verb destroys a chosen unit yet, so the destroy mark (§6.3: Destroy "only marks
+            // the card") is set directly through `s.state_mut()`, a test-only liberty.
             let rock = s.card(ROCK).id.clone();
             find_instance_mut(s.state_mut(), &rock)
                 .expect("setup: The Rock is on the field")
@@ -235,9 +226,8 @@ mod tests {
                 ["Indestructible", "Immutable"].iter().all(|wanted| kinds.iter().any(|kind| kind == wanted)),
                 "keywords {kinds:?}"
             );
-            // R23's blocking lives in `effects/transform.rs` (`transform` and `vanilla` return early on an
-            // Immutable card) and in `traps.rs` for #41 Sheepish. No reachable verb applies Vanilla or Transform
-            // to a chosen unit yet, so the cross-card cases live in #41, #61, #83 and #85.
+            // R23's blocking lives in `effects/transform.rs` and in `traps.rs` for #41 Sheepish; its
+            // cross-card cases live in #41, #61, #83 and #85.
         }
 
         #[test]
@@ -258,7 +248,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-066, on both faces: the tribute paid and the body entering.
+    /// R2195003: the snapshot plays exactly as core-066, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_066() {
         for radiant in [false, true] {

@@ -1,12 +1,10 @@
-//! Script-less definitions for engine tests: real cards arrive in M4, so M1–M3 tests use these
-//! (BUILD §0). Overrides are JSON literals (`json!({ "cost": 3 })`) spread over the defaults key by key.
-//! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §8.
+//! Script-less definitions for engine tests (BUILD §0), with JSON overrides (`json!({ "cost": 3 })`)
+//! spread over the defaults key by key. Surface contract: docs/v0.3.0/SURFACE.md §4.1, §8.
 
 use jackioh_engine::testkit::*;
 
 use super::harness::spread;
 
-/// Takes `key` out of the literal.
 fn take(overrides: &mut Value, key: &str) -> Option<Value> {
     overrides.as_object_mut().and_then(|object| object.remove(key))
 }
@@ -78,8 +76,7 @@ pub fn token_def(name: &str, tags: impl Into<Vec<Tag>>) -> CardDef {
         "token": true,
         "cost": 1,
         "base": { "attack": 3, "health": 3, "keywords": [{ "kind": "Rush" }], "text": "token" },
-        // §7: every unit token has a DISTINCT radiant face (the real Rush Token is 3/3 -> 6/6), so
-        // a test that reads the radiant face can be told from one that silently reads the base.
+        // §7: a DISTINCT radiant face (as the real Rush Token's), so a test can tell it from the base.
         "radiant": { "attack": 6, "health": 6, "keywords": [{ "kind": "Rush" }], "text": "token" },
     }))
 }

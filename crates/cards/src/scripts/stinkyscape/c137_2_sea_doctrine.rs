@@ -42,10 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #137.2 Sea Doctrine — SPEC §8.10 row 137.2, BUILD M12 row S 137.2: "after it, every Unit its caster
-// controls has Deft (an attack and a switch in one turn, R49), later ones included; once, their hero heals
-// twice their launched Starship's current Health, past its starting health; no Starship, no heal;
-// multiplier reads through `param()`; radiant five times".
+// S #137.2 Sea Doctrine — SPEC §8.10 row 137.2, BUILD M12 row S 137.2 (R49).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -85,7 +82,6 @@ mod tests {
         s
     }
 
-    /// `board`, then the Doctrine cast; the hero's health after it.
     fn healed(seed: &str, radiant: bool, launch: bool) -> (Scenario, i32) {
         let mut s = board(seed, radiant, launch);
         s.play(ID, json!({}));

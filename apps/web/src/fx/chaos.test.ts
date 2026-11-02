@@ -26,9 +26,8 @@ import type { FxChaosCue, FxCue } from "./types.ts";
 
 /** The Core Edition's clauses, as the real engine's `CHAOS_EFFECTS` names them in `chaosRolled`. */
 const CORE_KEYS = subsystems.CHAOS_EFFECTS.map((effect) => effect.label);
-/** The Classic+ Edition's, as `CHAOS_PLUS_EFFECTS` (subsystems/callToChaosPlus.ts) names them. */
+/** The Classic+ and Meditative Editions', as `CHAOS_PLUS_EFFECTS` and `CHAOS_MED_EFFECTS` name them. */
 const PLUS_KEYS = subsystems.CHAOS_PLUS_EFFECTS.map((effect) => effect.label);
-/** The Meditative Edition's, as `CHAOS_MED_EFFECTS` (subsystems/call_to_chaos_meditative.rs) names them. */
 const MED_KEYS = subsystems.CHAOS_MED_EFFECTS.map((effect) => effect.label);
 const [UNITS, HEAL, , , , , DISCOUNT, GOLEM, , RECAST] = CORE_KEYS as [string, string, string, string, string, string, string, string, string, string];
 const DESTROY = "Destroy all enemy permanents";
@@ -59,7 +58,7 @@ describe("R436 the words for each rolled effect", () => {
     for (const table of Object.values(CHAOS_EFFECT_NAMES)) {
       for (const name of Object.values(table)) {
         expect(name.length, name).toBeLessThanOrEqual(48);
-        // R373, R432: "Deck" and "Tribute", "(N) Cost" as the noun ("Cost (N)" and "costing (N)" are the old forms).
+        // R373, R432: "Deck" and "Tribute", "(N) Cost" as the noun, never "Cost (N)" or "costing (N)".
         expect(name, name).not.toMatch(/\blibrar|\bsacrific|costs? \d|\d-cost/i);
         expect(name, name).not.toMatch(/\bCost \(\d/);
         expect(name, name).not.toMatch(/\bcosting \(/i);

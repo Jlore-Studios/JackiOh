@@ -1,18 +1,15 @@
-// `castRoundsUntilDeath` (effects/rounds.ts; SPEC §8.7 C+ #32.3 Blade Storm's base face, R59, R652):
+// `cast_rounds_until_death` (SPEC §8.7 C+ #32.3 Blade Storm's base face, R59, R652):
 // round after round casts the named Spell — each round a real Spell cast (R70) with its own state
 // check — until a round in which a Unit died, `rounds` rounds, or no Unit is left. The real card's
-// test (packages/cards/test/classic-plus/032-3-blade-storm.test.ts) covers the card again.
+// test (`crates/cards/src/scripts/classic_plus/c032_3_blade_storm.rs`) covers the card again.
 //
 // Fixtures are this file's own: defs are `pcr-`, indexed from 5960.
-//
-// Port of `packages/engine/test/rounds.test.ts`.
 
 use jackioh_engine::effects::{cast_rounds_until_death, damage_all};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{act_ok, both, in_hand, new_game, put, slot};
 
-/// TS's module `let nextIndex = 5960`, written out: each def takes the index it had.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let face = json!({ "keywords": [], "text": name });
     let mut def = json!({

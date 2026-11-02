@@ -1,6 +1,4 @@
 //! Shuffle into a library at a uniformly random position, stopping at the library cap (§6.3, R80).
-//!
-//! Port of `packages/engine/src/effects/shuffleInto.ts`.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -16,10 +14,8 @@ use crate::wire::Zone;
 
 use super::targets::{PlayerSpec, player_of};
 
-/// R57 as patch v0.2.0 extends it (B3.4 rule 4, R443): a copy shuffled into a library carries its
-/// source's `tuning` and enchantments beside the radiant flag — never its Brittle count, which a copy
-/// never inherits — and its `chinese` flag (ME-CN, R1300). `source` is the card copied, when it still
-/// exists and is of the copy's definition.
+/// R57 (B3.4 rule 4, R443): a copy carries its source's `tuning`, enchantments and `chinese` flag
+/// (ME-CN, R1300), never its Brittle count.
 fn carry_from(copy: &mut CardInstance, source: Option<&CardInstance>) {
     let Some(source) = source else {
         return;
@@ -70,10 +66,8 @@ pub struct ShuffleIntoArgs {
     pub unseen: Option<bool>,
 }
 
-/// Shuffle fresh copies of a definition into a library (CN-Viral Injection's CN-Virus, Unstable Clone
-/// Machine's copies). `copy_of` is the instance the copies are copies of, when they copy a card rather
-/// than make one the text names: a copy a full library refuses is judged by that card (R316), which
-/// may be a Trap its controller has just set face-down (#33).
+/// Shuffle fresh copies of a definition into a library. A copy a full library refuses is judged by
+/// `copy_of`, the card copied (R316), which may be a Trap just set face-down (#33).
 pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
     Effect::new("shuffleInto", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -119,7 +113,6 @@ pub struct ShuffleCopiesOfSelfArgs {
 /// Shuffle copies of the card that is resolving (CN-Virus's own copies).
 pub fn shuffle_copies_of_self(args: ShuffleCopiesOfSelfArgs) -> Effect {
     Effect::new("shuffleCopiesOfSelf", move |ctx| {
-        // TS read the live `ctx.self`: the card as it stands now.
         let Some(this) = ctx.live_self().cloned() else {
             return;
         };

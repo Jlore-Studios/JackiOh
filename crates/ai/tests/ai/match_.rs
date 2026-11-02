@@ -1,13 +1,7 @@
-//! The match harness and the two baselines (docs/polish/3-ai.md B26, B27).
+//! The match harness and baselines (docs/polish/3-ai.md B26, B27).
 //!
-//! B26: `play_match` is deterministic, stops with `result: null` at `max_actions`, and every record's
-//! log folds with its handicaps back to `record.hash` with no errors (R180's replay, through the
-//! harness the gates use). B27: `random_action` is §10.7's policy under the same rng, and
-//! `greedy_action` takes the candidate whose one-ply `evaluate` is best, or ends the turn when
-//! nothing beats standing still. The greedy oracle here uses the real `evaluate` on states with no
-//! hidden card and no randomness, so a determinization cannot change any number it compares.
-//!
-//! Port of `packages/ai/test/match.test.ts`. TS's per-test timeouts are dropped.
+//! B26: `play_match` is deterministic and log folds to hash (R180). B27: `random_action` (§10.7),
+//! `greedy_action` takes candidate with best one-ply evaluation.
 
 use std::panic::catch_unwind;
 
@@ -54,9 +48,7 @@ fn expect_folds(config: &MatchConfig, record: &MatchRecord) {
     assert_eq!(replayed.state.result, record.result, "{}", config.seed);
 }
 
-// ---------------------------------------------------------------------------------------------
 // B26
-// ---------------------------------------------------------------------------------------------
 
 mod play_match_b26 {
     use super::*;
@@ -231,9 +223,7 @@ mod play_match_b26 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B27
-// ---------------------------------------------------------------------------------------------
 
 /// p1 to act, nothing hidden anywhere and no card with a random effect.
 fn open_board(p1: Value, p2: Value) -> GameState {

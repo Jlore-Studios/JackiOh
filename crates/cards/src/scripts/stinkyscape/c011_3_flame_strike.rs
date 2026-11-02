@@ -25,9 +25,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #11.3 Flame Strike — SPEC §8.10 row S 11.3, BUILD M12 row S 11.3: "5 to each enemy Unit, none to
-// the enemy hero or to its caster's Units; a Divine Shield stops its hit; damage reads through
-// `param()`; radiant 10".
+// S #11.3 Flame Strike — SPEC §8.10 row S 11.3, BUILD M12 row S 11.3.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -78,7 +76,6 @@ mod tests {
 
             s.play(STRIKE, json!({}));
 
-            // The shield took the hit instead: 3/2 untouched; the 4/4 is dead.
             s.expect_stats(&shielded, json!({ "attack": 3, "health": 2 }));
             s.expect_in_zone(&plain, "graveyard");
         }

@@ -40,11 +40,9 @@ mod r923_granted_tags_md_b15 {
         let mut state = game("granted-once");
         let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         assert_eq!(tags_of(&state, &unit), Vec::<Tag>::new());
-        // No event: the grant is silent.
         assert_eq!(run(&mut state, grant_id(&unit.id)), Vec::<GameEvent>::new());
         assert_eq!(live(&state, &unit.id).granted_tags, Some(vec![Tag::Cn]));
         assert_eq!(tags_of(&state, &live(&state, &unit.id)), vec![Tag::Cn]);
-        // A second grant of a tag the card carries changes nothing and reports nothing.
         assert_eq!(run(&mut state, grant_id(&unit.id)), Vec::<GameEvent>::new());
         assert_eq!(live(&state, &unit.id).granted_tags, Some(vec![Tag::Cn]));
     }
@@ -107,7 +105,6 @@ mod r923_granted_tags_md_b15 {
                 "{zone:?}"
             );
         }
-        // A JSON round trip keeps it too.
         let back: GameState = serde_json::from_value(json_of(&state)).expect("a state survives JSON");
         assert_eq!(live(&back, &unit.id).granted_tags, Some(vec![Tag::Cn]));
     }
@@ -202,7 +199,6 @@ mod r923_granted_tags_md_b15 {
         )
         .expect("the fusion happens");
         assert_eq!(fused.id, kept.id);
-        // The kept card's own tag first, then the other ingredient's, in order.
         assert_eq!(
             live(&state, &kept.id).granted_tags,
             Some(vec![Tag::Cn, Tag::Felinor])
@@ -249,7 +245,6 @@ mod r923_granted_tags_md_b15 {
 
         let mine = json_of(view_for(&state, P1));
         assert_eq!(mine["you"]["hand"][0]["tags"], json!(["CN"]));
-        // An ungranted card's view carries no `tags` key.
         assert!(mine["you"]["hand"][1].get("tags").is_none());
         // R351: the controller reads their own face-down trap, tags included.
         assert_eq!(mine["you"]["backrow"][0]["tags"], json!(["CN"]));

@@ -9,7 +9,7 @@
 //! §6.3 Mana), a draw (§2.4) and `gain_market_credits` (R1840005). All in on red: one luck-based roll
 //! from the match rng, a win on 18 of 39 pockets (§6.1 Lucky), giving twice each of Payday's three, a
 //! loss nothing. Radiant: its Lucky 1 (`lucky_on`) rolls again and keeps the win (R1438), and the
-//! controller's Luck does the same on either face (R987). Tunes: mana 2 ↑; draw 1 ↑; credits 20 ↑.
+//! controller's Luck does the same on either face (R987).
 
 use jackioh_engine::effects::{
     DrawArgs, GainManaArgs, GainMarketCreditsArgs, chosen_options, draw, gain_mana, gain_market_credits,
@@ -74,10 +74,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #112.1 Paycheck — SPEC §8.10 row 112.1, BUILD M12 row S 112.1: "Payday gives 2 mana this turn, a
-// draw and 20 Credits (the Marketplace opening); all in on red, over the seeds, wins about 18 in 39
-// (4 mana, 2 draws, 40 Credits) and otherwise gives nothing; mana, draw and credits read through
-// `param()`; radiant Lucky 1, the gamble won when either roll wins".
+// S #112.1 Paycheck — SPEC §8.10 row 112.1, BUILD M12 row S 112.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,10 +86,8 @@ mod tests {
 
     const PAYCHECK: &str = "stinkyscape-112-1";
     const FILLER: &str = "core-005";
-    /// The games the gamble is rolled over.
     const SEEDS: u32 = 200;
 
-    /// P1's main phase with a Paycheck on `radiant`'s face in hand and a deck to draw from.
     fn setup(seed: &str, radiant: bool) -> Scenario {
         crate::register_all();
         scenario(json!({
@@ -102,7 +97,6 @@ mod tests {
         }))
     }
 
-    /// What a play of `mode` gave P1: (mana now less mana before, cards drawn, Credits).
     fn paid(s: &mut Scenario, mode: &str) -> (i32, usize, i32) {
         let mana = s.state().players.p1.mana.current;
         let library = s.pile(P1, "library").len();
@@ -114,7 +108,6 @@ mod tests {
         )
     }
 
-    /// The All in plays won over the seeds on `radiant`'s face, each checked to give all or nothing.
     fn wins(radiant: bool) -> u32 {
         let mut won = 0;
         for seed in 0..SEEDS {
@@ -159,14 +152,12 @@ mod tests {
 
     #[test]
     fn all_in_on_red_wins_about_18_in_39_and_a_loss_gives_nothing() {
-        // 200 × 18/39 is about 92; the window is over three standard deviations either side.
         let won = wins(false);
         assert!((70..=116).contains(&won), "{won} wins in {SEEDS}");
     }
 
     #[test]
     fn radiant_lucky_1_wins_when_either_roll_wins() {
-        // 200 × (1 − (21/39)²) is about 142.
         let won = wins(true);
         assert!((120..=164).contains(&won), "{won} wins in {SEEDS}");
         assert!(won > wins(false), "the second roll only ever helps");

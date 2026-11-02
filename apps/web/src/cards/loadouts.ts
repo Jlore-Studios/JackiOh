@@ -1,16 +1,12 @@
-// R1834002: the loadout each seat of an online match wears, frozen by the server when the match
-// began: its seat's six picks (its deck's deck slots over its account's, and its foil, finish and
-// border, which are their kinds' defaults since R1953001) and, for each of its cards the receiver has
-// been shown, that card's own picks. R1834003: the server sends the seats' picks in
-// a `loadouts` frame on every join and reconnect, before the view, and the picks of each card the
-// view has shown in a `cardLoadouts` frame after it, once per socket; a replay's page carries both
-// (`net/api.ts`). This module reads them, as untrusted input: an id this client does not know draws
-// as its kind's default, and a card's kind the entry lacks wears its kind's default (R1953001).
-//
+// R1834002: the loadout each seat of an online match wears, frozen by the server when the match began:
+// its seat's six picks (its deck's slots over its account's; foil, finish and border are their kinds'
+// defaults, R1953001) and the picks of each of its cards the receiver has been shown. R1834003: the seats'
+// picks come in a `loadouts` frame on every join and reconnect, before the view, the cards' in a
+// `cardLoadouts` frame after it, once per socket; a replay's page carries both (`net/api.ts`). Read as
+// untrusted input: an unknown id, or a kind a card's entry lacks, draws as its kind's default.
 // R1834004: the server checked every pick against the seat's own account (R1834001), so nothing here
-// asks whether the viewer owns it; a `TheirCopy` hands the owner's loadout to the faces of its copy
-// (cards/cosmetics.ts, fullArt.ts), and game/wearer.ts decides which copies wear one. Drawn state
-// only (CLAUDE.md rule 7): no loadout reaches the engine, an action or the view.
+// asks whether the viewer owns it; game/wearer.ts decides which copies wear one. Drawn state only
+// (CLAUDE.md rule 7): no loadout reaches the engine, an action or the view.
 
 import { createElement, type ReactElement, type ReactNode } from "react";
 
@@ -89,9 +85,9 @@ export function parseCardLoadouts(raw: unknown): CardLoadouts | null {
 
 /**
  * R1834003: what one socket, or one replay's pages, have sent so far: the seats' picks, the newest
- * standing, and every card's picks merged in by seat and card id, a card sent again replacing its
- * entry. A `cardLoadouts` that comes before any `loadouts` is kept for it. Each verb answers what
- * `current()` then holds: both seats' loadouts, or null until the seats' picks have come.
+ * standing, and every card's picks merged by seat and card id, a card sent again replacing its entry. A
+ * `cardLoadouts` before any `loadouts` is kept for it. Each verb answers what `current()` then holds,
+ * null until the seats' picks have come.
  */
 export type LoadoutsHolder = {
   seats(picks: Record<PlayerId, CardCosmetics>): SeatLoadouts;

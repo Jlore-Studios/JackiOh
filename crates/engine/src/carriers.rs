@@ -1,16 +1,11 @@
 //! A backrow card that carries a Unit (docs/classic-sets.md B5 E21, Classic+ #33 Ivory Tower; R446).
 //!
-//! The Unit stands in the carrier's backrow zone (`PlayerState.carried`) as a Unit for every rule — every
-//! unit walk finds it through `zones::active_units_of` — that can neither attack nor be attacked
-//! (`combat.rs`), with the carrier still acting beneath it: its aura and its text keep working, and
-//! backrow effects find the carrier, never the Unit (`zones::card_at`). The zone takes nothing more while
-//! it carries one (`zones::accepts_stack_card`). This module owns the one sequence the arrangement needs:
-//! when the zone's acting card stops carrying — the carrier left the field, or lost its text to a
-//! Vanilla — the Unit steps down into a unit zone of its side without leaving the field, or is
-//! destroyed for want of one. §4.5's check runs it first in every pass (`state_check`), so a Unit is
-//! never left standing on nothing past the effect that took its carrier away.
-//!
-//! Port of `packages/engine/src/carriers.ts`.
+//! The Unit stands in the carrier's backrow zone (`PlayerState.carried`) as a Unit for every rule
+//! (`zones::active_units_of`) but can neither attack nor be attacked (`combat.rs`); the carrier still
+//! acts beneath it, and backrow effects find the carrier, never the Unit (`zones::card_at`). The zone
+//! takes nothing more meanwhile (`zones::accepts_stack_card`). When the zone stops carrying (the
+//! carrier left, or a Vanilla took its text), the Unit steps down into a unit zone without leaving the
+//! field, or is destroyed for want of one; §4.5's check runs this first in every pass (`state_check`).
 
 use serde_json::Value;
 
@@ -25,11 +20,9 @@ use crate::zones::{ZoneSlot, first_entry_zone, is_open, slots_of, step_into_unit
 const STRANDED_KEY: &str = "__stranded";
 
 /// R446: every Unit whose backrow zone no longer carries it steps down into its side's unit zone in the
-/// same lane when that is open, else R64's leftmost open one — moving, not leaving the field: no Cry, no
-/// R78 reset, and not summoning sick, since it entered nothing (it was on the field all along). The move
-/// is reported as `animated` with `carried` set, a backrow zone to a unit zone as an animation is. With
-/// no open unit zone it is destroyed (§6.3 Destroy: marked for the check that is running, no killer); an
-/// Indestructible one stays standing where it is and steps down once a unit zone opens.
+/// same lane when open, else R64's leftmost open one: a move, not leaving the field, so no Cry, no R78
+/// reset and no summoning sickness, reported as `animated` with `carried`. With none open it is
+/// destroyed (§6.3 Destroy, no killer); an Indestructible one waits where it is for a zone to open.
 pub fn settle_carried(sink: &mut FieldSink<'_>) {
     for player in PLAYER_IDS {
         if sink.state.players[player].carried.is_none() {
@@ -72,7 +65,7 @@ pub fn settle_carried(sink: &mut FieldSink<'_>) {
                 continue;
             }
             if let Some(moved) = find_instance_mut(sink.state, &unit.id) {
-                // `delete memory[key]`: the other keys keep their order.
+                // The other memory keys keep their order.
                 moved.memory.shift_remove(STRANDED_KEY);
             }
             sink.events.push(GameEvent::Animated {

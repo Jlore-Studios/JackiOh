@@ -1,16 +1,11 @@
-//! Port of `packages/engine/test/counterWarning.test.ts`.
-//!
-//! R667: the counter warning a hand card's view carries (`counterWarning.ts`, `viewFor`), driven with
-//! fixture scripts so the engine is proved without `packages/cards`; Classic #87 Plague Chalice's own
-//! test proves the real card again (CLAUDE.md, "The engine doesn't depend on packages/cards").
-//!
-//! Fixtures are prefixed `cw-` and indexed above 1480 so they cannot collide (BUILD §0).
+//! R667: the counter warning a hand card's view carries (`counter_warning.rs`, `view_for`), driven with
+//! fixture scripts; Classic #87 Plague Chalice's own test proves the real card again. Fixtures are
+//! prefixed `cw-` and indexed above 1480 so they cannot collide (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{act_result, both, in_hand, new_game, put, slot};
 
-/// TS `def(name, type, cost)`, its module `nextIndex` (from 1480) written out per definition.
 fn def(name: &str, type_: &str, cost: i32, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("cw-{name}"),
@@ -32,7 +27,7 @@ fn counter_field() -> CardDef {
     def("counter-field", "Field Spell", 1, 1481)
 }
 
-/// The same counter as a Trap, which answers through `traps.ts` and so warns of nothing.
+/// The same counter as a Trap, which answers through `traps.rs` and so warns of nothing.
 fn counter_trap() -> CardDef {
     def("counter-trap", "Trap", 1, 1482)
 }
@@ -194,7 +189,7 @@ mod r667_the_counter_warning_on_the_viewers_hand {
         in_hand(&mut held, &counter_field().id, PlayerId::P2, 1);
         assert_eq!(warned(&view_for(&held, PlayerId::P1)), Vec::<String>::new());
 
-        // A Trap answers through `traps.ts`, never the trigger dispatch, and face-down it is unreadable (R97).
+        // A Trap answers through `traps.rs`, not the trigger dispatch, and face-down is unreadable (R97).
         let mut trapped = playing("r658-trap");
         put(
             &mut trapped,

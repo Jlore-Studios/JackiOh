@@ -1,8 +1,6 @@
 // The replay player's two sources (#511): a practice game kept on this device, read through the
 // practice worker's `replay` request (#509), and an online match, read through `GET /api/replays/:id`
-// (#510). Each hands the player steps and nothing else, and turns what went wrong into a
-// `ReplayFailure` the player words (CLAUDE.md rule 7: no log, seed or state crosses). R1834003: an
-// online match's pages also carry both seats' frozen loadouts, which the source merges page by page.
+// (#510). Each hands the player steps and nothing else (CLAUDE.md rule 7: no log, seed or state crosses).
 
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplaySummary } from "../practice/protocol.ts";
@@ -16,11 +14,9 @@ import { ReplayFailure, replayFailureOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 
 /**
- * A practice worker's refusal as a failure. The worker answers a refusal as a message
- * (`replayAnswer` in `practice/core.ts`): "… cannot be replayed: <part 1's reason>" for a game that
- * is unavailable and "no finished practice game N is kept on this device" for one it dropped (a
- * game no longer kept reads as expired). Any other message, a game in progress among them, is an
- * `error` that says what the worker said.
+ * A practice worker's refusal as a failure. The worker's messages (`replayAnswer` in `practice/core.ts`):
+ * "… cannot be replayed: <part 1's reason>" for a game that is unavailable and "no finished practice
+ * game N is kept on this device" for one it dropped (expired). Any other message is an `error`.
  */
 export function practiceFailure(message: string): ReplayFailure {
   const refused = /cannot be replayed: (earlier_patch|rules_changed)$/u.exec(message);
@@ -30,9 +26,8 @@ export function practiceFailure(message: string): ReplayFailure {
 }
 
 /**
- * A practice game kept on this device: `listing` is the row `replays` answered (or the finished
- * game's own snapshot's `replay`), `host` the worker that holds the game, or anything that sends it
- * requests (the practice controller's queue).
+ * A practice game kept on this device: `listing` is the row `replays` answered (or the finished game's
+ * snapshot's `replay`), `host` the worker, or anything that sends it requests (the controller's queue).
  */
 export function practiceReplaySource(
   host: Pick<PracticeHost, "request">,
@@ -51,8 +46,7 @@ export function practiceReplaySource(
 
 /**
  * A server's refusal as a failure: 410 `gone` (the log is purged) is expired, 422 `replay_unavailable`
- * carries part 1's reason in `details.reason`, and anything else (the network, the rate limit, a
- * match not over) is an `error` with its own message.
+ * carries part 1's reason in `details.reason`, and anything else is an `error` with its own message.
  */
 export function onlineFailure(cause: unknown): ReplayFailure {
   if (cause instanceof ApiRequestError) {
@@ -89,10 +83,9 @@ function onlinePages(token: string, listing: Pick<OnlineReplayListing, "matchId"
 }
 
 /**
- * R768000: the replay of `matchId`, which the account has just played and whose listing it does not
- * hold: its first page is fetched to learn its length, and kept as step 0's page. A match whose result
- * is still being written (409) is asked again, `REPLAY_OPEN_ATTEMPTS` times in all; otherwise it
- * rejects with the first page's `ReplayFailure`.
+ * R768000: the replay of `matchId`, just played, whose listing the account does not hold: its first page
+ * is fetched to learn its length and kept as step 0's page. A 409 (its result is still being written) is
+ * asked again, `REPLAY_OPEN_ATTEMPTS` times in all; otherwise it rejects with the first page's failure.
  */
 export async function openOnlineMatchReplay(
   token: string,
@@ -104,7 +97,6 @@ export async function openOnlineMatchReplay(
     try {
       first = await getReplaySteps(token, matchId, 0, REPLAY_PAGE_STEPS);
     } catch (cause) {
-      // A 409 is a match whose result is still being written: ask again, a little later.
       const finishing = cause instanceof ApiRequestError && cause.status === 409;
       if (!finishing || attempt >= REPLAY_OPEN_ATTEMPTS) throw onlineFailure(cause);
       await wait(REPLAY_OPEN_RETRY_MS);

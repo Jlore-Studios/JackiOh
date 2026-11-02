@@ -1,22 +1,5 @@
 //! SPEC §11 R263: a Best-of-3 series survives a restart.
-//!
-//! A series is a database row written by compare-and-set; a game's result, the series' record of it
-//! and (when the game ends the series) the rating move commit in one transaction; and a sweeper
-//! starts any game whose picks are in but whose match is not running, once the row has sat unchanged
-//! for `SERIES_START_GRACE_SECONDS`. Each of those is checked here the way it can fail:
-//!
-//!  - a crash between "both picked" and "match started" (the playing row written, no start);
-//!  - a restart: a second app over the same store — a fresh registry, fresh ids — carries on a
-//!    series the first one began;
-//!  - a store failure in the middle of the result's transaction, which must take the series advance
-//!    and the rating move down with the result row;
-//!  - two starts racing for the same game.
-//!
-//! A start is the match row it wrote (read off the shared store); a "process" is an app over the same
-//! store whose predecessor's actors are stopped (the crash); a failing start is the store refusing the
-//! match row's insert. The compare-and-set races use the fake store's race hook
-//! (`FakeData.before_call`), which runs before the update with the tables in hand and writes the rival
-//! row or makes the update lose.
+//! Tests compare-and-set recovery, crash resilience, and atomic result transactions.
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;
@@ -286,9 +269,7 @@ async fn pick_both(process: &Process, slots: [usize; 2]) -> Value {
     answer
 }
 
-/// The game in play ends as the actor would report it, from the seats in the match row — which a
-/// restarted process reads from the store, not from its own memory. `Err` carries the writer's
-/// refusal.
+/// Game in play ends as actor reports from match row seats.
 async fn finish_game(process: &Process, winner: &str) -> Result<(), String> {
     let series = row(&process.app).await;
     let match_id = series["nextMatchId"]
@@ -323,9 +304,7 @@ async fn finish_game(process: &Process, winner: &str) -> Result<(), String> {
     .map_err(|error| format!("{error:?}"))
 }
 
-/// Both picks written the way two requests write them — one compare-and-set each — and nothing
-/// after: the state a process leaves when it dies between committing the second pick and starting
-/// the match.
+/// State left when process dies after committing second pick before start.
 async fn write_picks_only(app: &Arc<App>, series: &Value, slots: [usize; 2], now: i64) -> Value {
     let series: SeriesRow = from(series.clone());
     let one = pick_deck(&series, PlayerId::P1, slots[0] as _, now, None).expect("p1's pick");

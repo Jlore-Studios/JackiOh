@@ -16,7 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-087";
 
-/// The match: a play `player` makes paying `cost_paid`, against this Chalice's count and its face's reach.
 fn counters(self_: &CardInstance, controller: PlayerId, player: PlayerId, cost_paid: i32, opponent_only: bool) -> bool {
     if opponent_only && player == controller {
         return false;
@@ -24,7 +23,6 @@ fn counters(self_: &CardInstance, controller: PlayerId, player: PlayerId, cost_p
     cost_paid == plague_on(self_)
 }
 
-/// The announced play's instance id when the Chalice, as it stands now, counters it (`live_self`).
 fn matches(ctx: &EffectContext<'_>, event: &GameEvent, opponent_only: bool) -> Option<String> {
     let GameEvent::CardAnnounced { player, instance_id, cost_paid, .. } = event else {
         return None;
@@ -140,7 +138,6 @@ mod tests {
         assert!(crate::card_def(CHALICE).params.is_none());
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -161,7 +158,6 @@ mod tests {
             s.expect_refused(|s| s.play(&chalice, json!({})));
         }
 
-        /// it enters with X Plague Counters on it, one placement of X
         #[test]
         fn it_enters_with_x_plague_counters_on_it_one_placement_of_x() {
             let mut s = scenario(json!({ "p1": { "hand": [CHALICE, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
@@ -183,7 +179,6 @@ mod tests {
             s.expect_mana(P1, 1);
         }
 
-        /// it never counters itself: it is not on the field during its own announce
         #[test]
         fn it_never_counters_itself_it_is_not_on_the_field_during_its_own_announce() {
             let mut s = scenario(json!({ "p1": { "hand": [CHALICE, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
@@ -209,11 +204,9 @@ mod tests {
                 |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == vanilla.id)
             ));
             assert_eq!(s.state().players.p1.turn_log.cards_played, played_before);
-            // The mana paid stays spent.
             s.expect_mana(P1, 3);
         }
 
-        /// the opponent's play at the count is countered too, and a play of another cost resolves
         #[test]
         fn the_opponent_s_play_at_the_count_is_countered_too_and_a_play_of_another_cost_resolves() {
             let mut s = standing(1, false, P2);
@@ -227,7 +220,6 @@ mod tests {
             s.expect_in_zone(&their_pointmaster, "field");
         }
 
-        /// a second Chalice played for the same X is countered by the first
         #[test]
         fn a_second_chalice_played_for_the_same_x_is_countered_by_the_first() {
             let mut s = scenario(json!({ "p1": { "hand": [CHALICE, CHALICE, ANCHOR], "mana": 10 }, "p2": { "hand": [ANCHOR] } }));
@@ -275,14 +267,12 @@ mod tests {
             assert_eq!(countered(s.events()), vec![hinder.id.clone()]);
             assert!(s.state().pending.is_none());
             s.expect_in_zone(&hinder, "graveyard");
-            // Countered before it resolved: nothing was discarded and no refresh rider was set.
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Discarded { .. })));
             assert!(!s.events().iter().any(
                 |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == hinder.id)
             ));
         }
 
-        /// at a count of 0 a (0) Cost play is countered too
         #[test]
         fn at_a_count_of_0_a_0_cost_play_is_countered_too() {
             let mut s = standing(0, false, P1);
@@ -293,7 +283,6 @@ mod tests {
             assert_eq!(countered(s.events()), vec![anchor.id.clone()]);
         }
 
-        /// the count moves up: a Plague Bringer's two placements make it 3, and a (3) Cost play is then countered
         #[test]
         fn the_count_moves_up_a_plague_bringer_s_two_placements_make_it_3_and_a_3_cost_play_is_then_countered() {
             let mut s = scenario(json!({
@@ -357,12 +346,10 @@ mod tests {
             assert_eq!(countered(t.events()), vec![trap.id.clone()]);
             let graveyard = def_ids(&t.pile(P2, "graveyard"));
             assert_eq!(graveyard, [PAWN]);
-            // p1 reads it only now that the graveyard shows it.
             let opponent = js(&t.view(P1))["opponent"].clone();
             assert!(serde_json::to_string(&opponent).expect("serializable").contains(PAWN));
         }
 
-        /// leaving the field ends it: exiled, it counters nothing more
         #[test]
         fn leaving_the_field_ends_it_exiled_it_counters_nothing_more() {
             let mut s = scenario(json!({
@@ -380,11 +367,9 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
-        /// counters the opponent's play at the count
         #[test]
         fn counters_the_opponent_s_play_at_the_count() {
             let mut s = standing(1, true, P2);
@@ -395,7 +380,6 @@ mod tests {
             assert_eq!(countered(s.events()), vec![their_vanilla.id.clone()]);
         }
 
-        /// lets your own play at the count resolve
         #[test]
         fn lets_your_own_play_at_the_count_resolve() {
             let mut s = standing(1, true, P1);
@@ -407,7 +391,6 @@ mod tests {
             s.expect_in_zone(&vanilla, "field");
         }
 
-        /// it enters with X tokens too
         #[test]
         fn it_enters_with_x_tokens_too() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": CHALICE, "radiant": true }, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
@@ -420,7 +403,6 @@ mod tests {
     mod r667_the_warning_on_the_viewer_s_hand_patch_v0_2_7 {
         use super::*;
 
-        /// The hand cards `player`'s own view marks `counteredOnPlay`, by definition.
         fn warned(s: &Scenario, player: PlayerId) -> Vec<String> {
             let view = js(&s.view(player));
             match view["you"]["hand"].as_array() {
@@ -437,7 +419,6 @@ mod tests {
         #[test]
         fn r667_base_each_player_s_own_hand_card_whose_cost_equals_the_count_is_marked_and_only_those() {
             let s = standing(2, false, P1);
-            // VANILLA (1), POINTMASTER (2), ANCHOR (0), FILLER (1): only the (2) meets a count of 2, on both seats.
             assert_eq!(warned(&s, P1), [POINTMASTER]);
             assert_eq!(warned(&s, P2), [POINTMASTER]);
             assert_eq!(warned(&standing(0, false, P1), P1), [ANCHOR]);
@@ -492,13 +473,11 @@ mod tests {
         /// R667 an X card is marked only when every X it could be played for is countered
         #[test]
         fn r667_an_x_card_is_marked_only_when_every_x_it_could_be_played_for_is_countered() {
-            // A second Chalice in hand: X runs 1 to the mana, so one countered X leaves the others to play.
             let mut s = scenario(json!({
                 "p1": { "hand": [CHALICE], "backrow": [{ "def": CHALICE, "counters": { "plague": 1 } }], "mana": 3 },
                 "p2": { "hand": [ANCHOR] }
             }));
             assert!(warned(&s, P1).is_empty());
-            // With 1 mana its only X is 1, which the count meets.
             s.state_mut().players.p1.mana.current = 1;
             assert_eq!(warned(&s, P1), [CHALICE]);
         }

@@ -1,6 +1,4 @@
 //! R345: R82's automatic turn end is each player's to turn off (SPEC §2.5, §10.2, §10.8).
-//!
-//! Port of `packages/engine/test/auto-end-turn.test.ts`.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -16,7 +14,7 @@ fn decks() -> (Vec<String>, Vec<String>) {
     (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21))
 }
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
@@ -202,14 +200,13 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
     }
 }
 
-// #188: `autoEndDue` (reduce.ts) needs to know only whether some action holds the turn open, so it
-// walks `eachLegalAction` and stops at the first one. A card past that point is never priced: in a
-// long game that walk ran after every simulated action and was nearly a third of the AI's time.
+// #188: `auto_end_due` stops `each_legal_action` at the first action holding the turn open, so a card
+// past it is never priced: the walk runs after every action the AI simulates.
 fn priced_def() -> CardDef {
     spell_def(0, json!({ "id": "fx-priced", "name": "Fixture Priced Spell" }))
 }
 
-/// TS's module `let priced`: how many times the fixture's cost hook has run.
+/// How many times the fixture's cost hook has run.
 static PRICED: AtomicU32 = AtomicU32::new(0);
 
 fn priced_script() -> Script {

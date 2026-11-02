@@ -52,8 +52,6 @@ mod tests {
     const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
     const TRAITOROUS_BLOOD: &str = "meditative-064"; // Trap: re-aims an attack at the attacker's neighbour.
 
-    /// It is p2's turn: p1 has the Arm (`radiant` its face) in unit zone 1 and `p1_field` beside it,
-    /// p2 has `p2_field` ready to attack.
     fn board(radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];
         field.extend(p1_field.as_array().cloned().unwrap_or_default());
@@ -77,7 +75,6 @@ mod tests {
             let menace = s.unit_at(P1, 2);
             let shredder = s.unit_at(P2, 1);
             s.attack(&shredder, &menace);
-            // +2 before the combat: the 11 it struck back with kills the 6/10, which 9 would not.
             assert_eq!(attack_of(&s, &menace), 11);
             s.expect_in_zone(&shredder, "graveyard");
             s.expect_stats(&menace, json!({ "health": 3 }));

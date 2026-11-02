@@ -1,22 +1,17 @@
-// The menus' kept answers (#2125, R2125000): the last answer of each menu `GET`, in tab memory only.
-// A screen with a kept answer draws it at once, reads again behind it and takes the new answer; a failed read
-// behind a kept answer keeps it and says nothing, so an error or a skeleton shows only on a first visit (R2115000).
-// An entry is keyed by its path (query included) and its account (the token's `sub`, so a renewal keeps it).
-// Sign-out and an account switch empty the cache; a mutating answer that carries a new value updates its entry.
-// Never kept: a match's, a series', a duos room's, a watch's or a replay's reads, and anything that isn't a `GET`.
-// R2630000: the gate keeps its `/api/auth/me` answer here too, for the next screen to open on.
-// CLAUDE.md rule 7: only this account's own answers from the server are kept; nothing here predicts, enforces
-// or reveals game state.
+// The menus' kept answers (#2125, R2125000): the last answer of each menu `GET`, in tab memory only,
+// drawn at once while the screen reads again behind it; a failed read behind a kept answer keeps it, so
+// an error or a skeleton shows only on a first visit (R2115000). An entry is keyed by its path and its
+// account (the token's `sub`, so a renewal keeps it). Never kept: a match's, a series', a duos room's,
+// a watch's or a replay's reads. R2630000: the gate keeps its `/api/auth/me` answer here too.
+// CLAUDE.md rule 7: only this account's own answers are kept; nothing here predicts or reveals game state.
 
 import { tokenClaim } from "../auth/claims.ts";
 
 /** The most answers kept; the one kept longest ago goes first (each statistics filter keeps its own). */
 export const READ_CACHE_MAX_ENTRIES = 64;
 
-/** The account of a public read. */
 const PUBLIC = "";
 
-/** The account whose answers are kept, or null. */
 let owner: string | null = null;
 const entries = new Map<string, unknown>();
 

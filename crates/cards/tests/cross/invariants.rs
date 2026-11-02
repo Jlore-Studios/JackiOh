@@ -1,23 +1,5 @@
-//! I2's Windfury shadow (R636): the oracle reads Windfury from the event stream, so a grant that
-//! lands mid-action counts before the declarations that follow it in the same action's events.
-//! Found by fuzz seed 359: R44's AI turn summoned a Conjure Rush Token, granted it Windfury among
-//! six keywords, and fought with it twice, all inside one outer action — no between-action state
-//! ever held the token, so the old oracle read attack number 2 as an extra attack. Fuzz seed 7758 of
-//! the handicapped wave (#874) found the other way a unit gains a keyword, a Buff's keyword row
-//! (`upgraded`, R386): My Pawn's random rest of the turn (R44) Buffed the attacker it had stopped into
-//! Windfury, and it attacked again inside the same action.
-//!
-//! I6 (hidden information, issue #348) is proved by feeding the oracle a view or an event that names a
-//! card the seat may not read (a hidden definition beside any id, a former id, R227, or the seat's
-//! own library card it was never shown, R312), and by the exceptions §10.8 and its rulings make: a face-down trap's
-//! bare id as a target (R177) and a `stolen` event naming a card its viewer could read where it was
-//! taken (R466).
-//!
-//! I8 (#1192, #1574) is proved by handing the oracle `legal_actions` with one attack, switch or
-//! activation taken out, which `reduce` still accepts; the whole list gives nothing. `malformed_answers`
-//! and `malformed_actions` are proved by `reduce` refusing each variant.
-//!
-//! Port of `packages/cards/test/invariants.test.ts` (SURFACE §4.1, §8).
+//! Invariants I2 (R44, R386, R636, #874), I6 hidden information (SPEC §10.8, issue #348, R177, R227,
+//! R312, R466), and I8 (issues #1192, #1574). Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::testkit::*;
 
@@ -31,12 +13,10 @@ const APPROPRIATIONS: &str = "classicplus-040";
 
 use super::{craft_fused, fixture, in_hand, scenario};
 
-/// An event from TS's object literal.
 fn event(literal: Value) -> GameEvent {
     json_as(literal)
 }
 
-/// `g.backrow(player, lane)`: the card in that backrow zone, which the setup must have put there.
 fn backrow_at(g: &Scenario, player: PlayerId, lane: usize, what: &str) -> CardInstance {
     match g.state().players[player]
         .backrow
@@ -63,7 +43,6 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
         }));
         let unit = g.unit_at(PlayerId::P1, 1);
         let prey = g.unit_at(PlayerId::P2, 1);
-        // The end state holds Windfury, as if the grant below resolved mid-action.
         find_instance_mut(g.state_mut(), &unit.id)
             .expect("the unit")
             .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Windfury" }))];
@@ -133,10 +112,10 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
         monitor.after(&events, g.state())
     }
 
-    /// Fuzz seed 7758 of the handicapped wave (#874): My Pawn canceled an attack (R44), the random rest
-    /// of the turn cast CN Peptides on the attacker, whose Buffs gave it Windfury, and it attacked again,
-    /// all inside the one outer action. A unit that gains Windfury after one attack may attack once more
-    /// (R636), and a Buff's keyword row is a gain like a grant.
+    /// #874: My Pawn canceled an attack (R44), the random rest of the turn cast CN Peptides on the
+    /// attacker, whose Buffs gave it Windfury, and it attacked again, all inside the one outer action. A
+    /// unit that gains Windfury after one attack may attack once more (R636), and a Buff's keyword row is
+    /// a gain like a grant.
     #[test]
     fn r636_r386_two_declarations_after_a_mid_action_buff_into_windfury_are_one_legal_windfury_turn() {
         let change = json!({ "kind": "keyword", "keyword": { "kind": "Windfury" }, "added": true });
@@ -168,16 +147,12 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
 }
 
 /// I2 and a unit that enters inside one action already holding Windfury: the autopilot (R1183002)
-/// plays a whole turn in one action, so a Windfury unit it plays and attacks with twice is on the field
-/// in no state between actions. Fuzz seeds 5325 (Windfast), 6431 (a Felinor Flagbearer Prime Buffed
-/// into Windfury in the hand) and 9388 (Windfurious Prime), and 6732 and 7295 of the handicapped wave
 /// (Rampaging Rhino), #1216.
 mod i2_a_windfury_unit_that_enters_inside_one_action {
     use super::*;
 
     const RHINO: &str = "meditative-002";
 
-    /// The events of `unit` entering p1's unit zone 1 and declaring twice at p2's hero.
     fn entered_and_declared_twice(unit: &CardInstance) -> Vec<GameEvent> {
         let declared = json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": "hero-p2", "forced": false });
         vec![
@@ -208,8 +183,6 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
     #[test]
     fn r636_r1183002_a_windfury_card_from_the_hand_that_enters_and_declares_twice_in_one_action_is_one_legal_windfury_turn()
      {
-        // 6431's shape: the card carries Windfury in the hand, and is a token that has ceased to exist
-        // by the end of the action, so only the state before the action shows its keywords.
         let (mut g, card) = hand_card(Some("Windfury"));
         let mut monitor = create_invariant_monitor(g.state());
         assert_eq!(
@@ -223,8 +196,6 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
 
     #[test]
     fn r636_a_windfury_unit_made_inside_the_action_is_read_where_the_action_left_it() {
-        // No state before the action holds it (a copy a Cry made, or a card no `before` saw): the
-        // action leaves it on the field with its printed Windfury.
         let mut g = scenario(json!({ "p1": { "field": [{ "def": RHINO, "lane": 1 }] } }));
         let rhino = g.unit_at(PlayerId::P1, 1);
         let turn = g.state().turn;
@@ -253,7 +224,6 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
 mod i6_hidden_information_in_what_each_seat_is_sent {
     use super::*;
 
-    /// p1 sees a unit and p2 holds a hand card, a library card and a face-down trap.
     struct Board {
         g: Scenario,
         unit: CardInstance,
@@ -505,7 +475,6 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         let Board { mut g, trap, .. } = board();
         offer_trap(&mut g, &trap.id);
         assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
-        // The id outside the option, or the definition anywhere, is a leak the prompt does not excuse.
         let found = violations(&g, PlayerId::P1, &[drawn("p2", &trap.id, &trap.def_id)]);
         assert!(
             found.iter().any(|message| message.contains(&quoted(&trap.id))),
@@ -581,7 +550,6 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         g.state_mut().players.p2.hand[0].def_id = def.clone();
         offer_craft(&mut g, &recipe);
         assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
-        // The hidden card anywhere else is still a leak the prompt does not excuse.
         let found = violations(&g, PlayerId::P1, &[drawn("p2", &secret.id, &secret.def_id)]);
         assert!(
             found.iter().any(|message| message.contains(&quoted(&secret.id))),
@@ -668,7 +636,6 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         panic!("no seed draws {outcome}");
     }
 
-    /// The instance ids the log's raw events pair with a definition, which no pile holds once a Glitch has taken them.
     fn ids_naming(g: &Scenario, def_id: &str) -> Vec<String> {
         g.state()
             .applied
@@ -687,7 +654,6 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             .collect()
     }
 
-    /// What an engine that left the log's events unredacted would send p1.
     fn unredacted(g: &Scenario) -> PlayerView {
         let mut view = view_for(g.state(), PlayerId::P1);
         view.events = g
@@ -860,9 +826,7 @@ mod r1062_fiery_waraxe_reanimated {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 
-    /// Fuzz seed 2443: the autopilot's turn animates The Cane at its controller's start of turn, then
-    /// plays Knowledge Breaker, whose Nerf takes its "Animated on your turn" in the same action. The
-    /// animation entered nothing (R1062), so I4 reads the keyword as the animation had it, off the
+    /// The animation entered nothing (R1062), so I4 reads the keyword as the animation had it, off the
     /// change the later event names, and not off the state the action left.
     #[test]
     fn r1062_i4_reads_animated_on_your_turn_as_the_animation_had_it_though_a_nerf_later_in_the_action_takes_it()
@@ -894,7 +858,6 @@ mod r1062_fiery_waraxe_reanimated {
             monitor.after(&events, g.state())
         };
         assert_eq!(nerfed(true), no_violations());
-        // With no event naming the change, the keyword is read where the action left it: I4 still fires.
         assert!(
             nerfed(false)
                 .iter()
@@ -903,10 +866,9 @@ mod r1062_fiery_waraxe_reanimated {
         );
     }
 
-    /// Fuzz seed 5644 (#1216): a face-down Field Trap fused with Fiery Waraxe, set on an earlier turn,
-    /// fires on its controller's turn and animates as its firing's last step, face-up for the first
-    /// time: an entry (R383), as the engine's `summonedTurn` says, not the start-of-turn animation
-    /// R1062 makes none.
+    /// #1216: a face-down Field Trap fused with Fiery Waraxe, set on an earlier turn, fires on its
+    /// controller's turn and animates as its firing's last step, face-up for the first time: an entry
+    /// (R383), as the engine's `summonedTurn` says, not the start-of-turn animation R1062 makes none.
     #[test]
     fn r1062_r383_a_card_that_fires_as_a_trap_on_its_controllers_turn_enters_as_it_animates() {
         let mut g = scenario(json!({ "p1": { "backrow": [{ "def": "meditative-066", "lane": 1 }] } }));
@@ -922,7 +884,6 @@ mod r1062_fiery_waraxe_reanimated {
         }));
         assert_eq!(monitor.after(&[set], g.state()), no_violations());
 
-        // p1's turn after next: the trap fires and the card animates into unit zone 1.
         let now = set_on + 2;
         g.state_mut().turn = now;
         find_instance_mut(g.state_mut(), &card.id)
@@ -944,13 +905,11 @@ mod r1062_fiery_waraxe_reanimated {
 }
 
 /// R1126: Pareto Optimality's attack animates The Cane on the other player's turn, which is an entry
-/// (R383); only its controller's start-of-turn animation enters nothing (R1062). Fuzz seed 9 of the
-/// M4 gate's short wave found the monitor reading the Pareto animation as the start-of-turn one.
+/// (R383); only its controller's start-of-turn animation enters nothing (R1062).
 mod r1126_the_canes_pareto_animation {
     use super::*;
 
     const PARETO: &str = "meditative-071";
-    /// A 1/1 for (1) under p2's 4/4 for (1): the worse-scored play that sends the Cane.
     const BAD: &str = "core-t-felinor";
 
     #[test]
@@ -971,10 +930,8 @@ mod r1126_the_canes_pareto_animation {
             .get("cane")
             .and_then(|found| found.as_str().map(str::to_string))
             .expect("Pareto remembers its Cane");
-        // It goes home at p1's cleanup.
         g.end_turn();
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
-        // p2's worse play sends it: it animates on p2's turn, an entry, attacks and goes home.
         g.play(BAD, json!({}));
         assert!(
             g.last_events().iter().any(|event| matches!(
@@ -990,10 +947,6 @@ mod r1126_the_canes_pareto_animation {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 }
-
-// ---------------------------------------------------------------------------------------------
-// I6 and a token that was fused, then rolled back to itself (fuzz seed 119)
-// ---------------------------------------------------------------------------------------------
 
 /// R97, R419, R11: Core #85's trap fuses a played Unit onto p2's Rush Token, which keeps the token's
 /// id under a fused (non-token) definition; C+ #35 Rollback then puts the token back as it was, a
@@ -1026,14 +979,12 @@ mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         g.end_turn();
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
-        // p1's Vanilla trips the trap, which fuses it onto the token: the token's id, a fused definition.
         g.play(VANILLA, json!({ "zone": 2 }));
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         assert!(
             g.card(&token).def_id.starts_with("t-"),
             "the token wears the fused definition"
         );
-        // On p2's turn 12, Rollback 1 puts the board back to turn 11's start: the token is a token again.
         g.end_turn();
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         g.play(ROLLBACK, json!({ "modes": ["1"] }));
@@ -1050,7 +1001,6 @@ mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
     }
 }
 
-/// I8 (#1192): an attack or a switch `reduce` accepts that the list leaves out.
 mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
@@ -1304,8 +1254,7 @@ mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
 
 /// R127, R436: a Cry run out of a graveyard runs with no card (`self` null), so the `chaosRolled` a
 /// Call to Chaos in it sends names its definition beside an empty `instanceId`. The empty id is no
-/// card, so I6 reads nothing hidden in it. Fuzz seed 7232 of the handicapped wave (#1645): a Radiant
-/// Rewind ran the Cry of a Meditative Call to Chaos fused into a Unit in p1's graveyard; every edition
+/// card, so I6 reads nothing hidden in it (fuzz seed 7232 of the handicapped wave, #1645). Every edition
 /// announces its roll the same way (`announce_chaos`), so Core #95 fused into Mr Vanilla stands in.
 mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
     use super::*;
@@ -1349,8 +1298,7 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
 /// R1122, R2285002: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
 /// combat is fought there, so a Classic Golem's "when this attacks" transforms the Unit it was re-aimed
 /// at, and a Golem that kills the Unit that took its place killed its defender (R42) and may attack
-/// again: I4 reads it as readied through the redirect and the transform both. Fuzz seed 9123 of the
-/// handicapped wave (#1645) was the redirect; R424's self-transform was its first shape.
+/// again: I4 reads it as readied through the redirect and the transform both (#1645, R424).
 mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     use super::*;
 
@@ -1373,7 +1321,6 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
         }))
     }
 
-    /// The Unit the re-aimed attack's target became, when the Golem destroyed it and survived.
     fn killed_and_survived(g: &Scenario, golem: &str, ally: &str) -> Option<String> {
         let made = g.last_events().iter().find_map(|event| match event {
             GameEvent::Transformed {
@@ -1433,8 +1380,6 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
     const MAYOR: &str = "meditative-086"; // M #86 Mayor Medinamogger: all targets are chosen at random
 
     /// Fuzz seed 2870's board (#1728): p1's Fusion Lab with nothing in p1's hand while p2's Mayor acts.
-    /// The list spells its activation with no targets (`play_choices::without_target_picks`), and I8's
-    /// forged copy carries an empty list, which the reducer reads alike.
     fn board() -> (Scenario, CardInstance) {
         let g = scenario(json!({
             "p1": { "hand": [], "backrow": [FUSION_LAB], "library": [VANILLA, VANILLA] },
@@ -1485,17 +1430,15 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
 }
 
 /// R1829000 (issue #1829): a card a Stack pile uncovers has entered the field on that turn, though no
-/// event says so (R212). The monitor reads the uncovering off the piles of the states it is shown, a
-/// card dormant in the last one that acts now, and takes `summonedTurn`'s word only where an uncovering
-/// inside the one action was possible: a fusion's kept card keeps its turn (R77, R1086), and a card in
-/// the zone a play was announced into may have been covered and uncovered inside that action.
+/// event says so (R212). The monitor reads the uncovering off the piles of the states it is shown and
+/// takes `summonedTurn`'s word only where an uncovering inside the one action was possible: a fusion's
+/// kept card keeps its turn (R77, R1086), and a card in the zone a play was announced into may have been
+/// covered and uncovered inside that action.
 mod r1829000_a_card_uncovered_beneath_a_stack {
     use super::*;
 
     const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
 
-    /// p1's Vanilla, played on the turn returned, beneath the Felinor Fiender played onto it, on p1's
-    /// next turn, the monitor fed every action. Hit Job is still in p1's hand.
     fn covered_on_an_earlier_turn() -> (Scenario, InvariantMonitor, CardInstance, CardInstance, i32) {
         let mut g = scenario(json!({
             "p1": { "hand": [VANILLA, FIENDER, HIT_JOB], "library": [VANILLA, VANILLA] },
@@ -1573,10 +1516,6 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         assert_eq!(monitor.after(&[fused], g.state()), no_violations());
     }
 
-    /// A Stack card played onto a unit and destroyed inside the same action (a trap answering its
-    /// summon, the autopilot's turn) uncovers the unit with nothing on the piles between actions to
-    /// show it: a play announced into the unit's zone is what makes it possible, and one announced into
-    /// another zone does not.
     #[test]
     fn r1829000_i4_takes_the_turn_of_a_unit_a_play_may_have_covered_and_uncovered_inside_one_action() {
         let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
@@ -1601,8 +1540,8 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
     }
 
     /// R14: a play announced into the zone beside the unit's, and the rings then turned (Core #52
-    /// Silly Silas played onto a unit, the pile carried one step, Silas killed, all inside one
-    /// action: fuzz seed 128 of the Stinkyscape release), may have covered and uncovered it too.
+    /// Silly Silas played onto a unit, the pile carried one step, Silas killed), may have covered and
+    /// uncovered it too.
     #[test]
     fn r14_r1829000_i4_follows_a_covering_play_s_zone_around_the_ring() {
         use jackioh_engine::wire::RotationDirection;
@@ -1611,7 +1550,6 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         find_instance_mut(g.state_mut(), &fiender.id)
             .expect("the Fiender")
             .summoned_turn = Some(now);
-        // A zone of p1's that one step around p1's unit ring brings onto the Fiender's, lane 1.
         let (from, direction) = [RotationDirection::Left, RotationDirection::Right]
             .into_iter()
             .flat_map(|direction| (2..=5).map(move |lane| (lane, direction)))
@@ -1648,11 +1586,11 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
     }
 }
 
-/// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
+/// R1869002 (#1869), B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
 /// (`mayAttackAgain`, no transform), so I2 counts a kill credit beside its one attack, and I1 and I4 read
 /// the sickness the kill lifted as readied. Only an attacker whose text answers its attacks
 /// (`afterAttack`) earns one, and the state the action leaves takes it back when the attacker's attack
-/// is still spent. Fuzz seeds 15, 79, 85, 99 and 123 of the S16 build (#1869).
+/// is still spent.
 mod r1869002_i2_a_kill_credit {
     use super::*;
 
@@ -1759,8 +1697,7 @@ mod r1869002_i2_a_kill_credit {
 
     /// R636: a Fuse brings its ingredients' text, and with it a Windfury an aura of theirs gives, which no
     /// `keywordGranted` reports; the fused unit has it from the fuse on, inside the one action that fused
-    /// it and attacked twice (a handicapped seat's AI turn: M #65 Keymaster Keenus equipped onto S #113,
-    /// handicapped fuzz seed 7566 of the Stinkyscape release).
+    /// it and attacked twice (a handicapped seat's AI turn: M #65 Keymaster Keenus equipped onto S #113).
     #[test]
     fn r636_a_windfury_a_fuse_brings_allows_two_attacks_in_the_action_that_fused_it() {
         let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
@@ -1785,14 +1722,12 @@ mod r1869002_i2_a_kill_credit {
 
     /// R636: a fusion whose text draws its keywords as it fuses (M #65 Keymaster Keenus' Aura) and that
     /// leaves the field later in the same action took them away with its memory; two attacks it
-    /// declared after the fuse are one legal Windfury turn (Duos fuzz seed 679 of the Stinkyscape
-    /// release: equipped onto C+ #26, two kills, then exiled).
+    /// declared after the fuse are one legal Windfury turn (equipped onto C+ #26, two kills, then exiled).
     #[test]
     fn r636_a_keyword_drawing_fusion_gone_by_the_action_s_end_may_have_attacked_twice() {
         const KEYMASTER_KEENUS: &str = "meditative-065";
         let mut g = scenario(json!({ "p1": { "field": [{ "def": VANILLA, "lane": 1 }] } }));
         let mut monitor = create_invariant_monitor(g.state());
-        // Off the field by the action's end, as the exiled one was: here, in p1's hand.
         let fused = craft_fused(&mut g, PlayerId::P1, &[KEYMASTER_KEENUS, VANILLA]);
         let declared = || {
             event(
@@ -1810,8 +1745,7 @@ mod r1869002_i2_a_kill_credit {
 
     /// R636: a token whose text draws its keywords as it arrives (the Stinkyscape Drone Corvette) and
     /// that ceased to exist later in the same action took them with it; two attacks it declared are one
-    /// legal Windfury turn (fuzz seed 8567 of the release: summoned, two kills, killed, all inside one
-    /// autopilot action).
+    /// legal Windfury turn (summoned, two kills, killed, all inside one autopilot action).
     #[test]
     fn r636_a_keyword_drawing_token_gone_by_the_action_s_end_may_have_attacked_twice() {
         const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
@@ -1834,7 +1768,7 @@ mod r1869002_i2_a_kill_credit {
 
     /// R12, R636: a steal keeps a card on the field with the keywords it drew, so a Drone Corvette
     /// summoned, attacking twice, stolen and attacking twice more for its new controller, then
-    /// bounced, all inside one AI turn, attacked legally (handicapped fuzz seed 1358 of the release).
+    /// bounced, all inside one AI turn, attacked legally.
     #[test]
     fn r636_r12_a_keyword_drawing_token_stolen_inside_the_action_keeps_what_it_drew() {
         const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
@@ -1896,7 +1830,7 @@ mod r1869002_i2_a_kill_credit {
     fn r1869002_a_kill_an_ambush_s_prompt_delayed_still_credits_the_attack_it_paused() {
         // The attack is declared, an ambush's Discover (S #22 Gatinsir's Phalanxes) pauses its combat,
         // and the kill lands in the answer's action: the attack the action left open is still the one
-        // resolving, so the kill frees Tmack Trav (fuzz seed 4195 of the release's super run).
+        // resolving, so the kill frees Tmack Trav.
         let g = scenario(json!({
             "p1": { "field": [{ "def": TMACK_TRAV, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
@@ -1926,7 +1860,7 @@ mod r1869002_i2_a_kill_credit {
 
     /// A kill whose victim's Death steals the attacker (Core #86) gives it a new stint before its
     /// `afterAttack` frees it, and the prompt the action leaves open holds the credit unsettled: the
-    /// lifted sickness is the credit's, not an entry mismatch (handicapped fuzz seed 4737 of the release).
+    /// lifted sickness is the credit's, not an entry mismatch.
     #[test]
     fn r1869002_r12_a_kill_credit_unsettled_across_a_steal_reads_as_readied() {
         let mut g = scenario(json!({
@@ -1970,8 +1904,6 @@ mod r1869002_i2_a_kill_credit {
 
     #[test]
     fn r1869002_a_kill_that_left_its_attack_spent_readied_nothing_and_its_credit_is_taken_back() {
-        // The Wasp's text answers its attacks (it copies itself), but readies nothing: its kill leaves
-        // its attack spent, so a second declaration is still an extra attack.
         let mut g = scenario(json!({
             "p1": { "field": [{ "def": WASP, "lane": 1 }], "hand": [VANILLA] },
             "p2": { "field": [{ "def": MR_TOKEN, "lane": 1 }], "hand": [VANILLA] },
@@ -1993,7 +1925,7 @@ mod r1869002_i2_a_kill_credit {
 
 /// R678: a Glitch's boards outcome deals both fields again and places their cards with no `summoned`,
 /// so the `glitched` event is the entry of every card the field holds after it (a Glitch played from
-/// the graveyard mid-game: handicapped fuzz seed 7613 of the Stinkyscape release).
+/// the graveyard mid-game).
 mod r678_a_glitch_s_boards_are_entered {
     use super::*;
 

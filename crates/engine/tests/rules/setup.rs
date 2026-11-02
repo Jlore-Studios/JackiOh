@@ -1,4 +1,4 @@
-// Port of `packages/engine/test/setup.test.ts`: setup (M1-T5) and The Coin (R244).
+// Setup (M1-T5) and The Coin (R244).
 
 use jackioh_engine::testkit::*;
 
@@ -103,7 +103,7 @@ mod setup_m1_t5 {
             );
             assert_eq!(state.players.p1.hand.len() as i32, OPENING_DRAW[0], "{seed}");
             // It waits at the bottom of the library, behind every drawable card, to be shuffled in once
-            // the mulligans are done (the all-cast-on-draw fallback lives in setup-aside.test.ts).
+            // the mulligans are done (the all-cast-on-draw fallback is in `setup_aside.rs`).
             let library: Vec<String> = state
                 .players
                 .p1

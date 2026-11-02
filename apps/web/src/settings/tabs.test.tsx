@@ -1,7 +1,5 @@
-// Issue #128: the settings dialog's sections are tabs. The tablist follows the ARIA tabs pattern
-// (roles, aria-selected, aria-controls, a roving tabindex, arrow keys, Home and End); the tab the
-// player used last opens next time, on this device; "Reset this tab" puts back only that tab's
-// controls; and a section with nothing in it has no tab.
+// Issue #128: the settings dialog's sections are tabs, in the ARIA tabs pattern; the tab the player
+// used last opens next time, and "Reset this tab" puts back only that tab's controls.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -115,8 +113,7 @@ describe("#128 the tablist", () => {
   });
 
   it("a section with no switch and no slot has no tab", () => {
-    // Every section draws now: gameplay, visuals and audio each have built-in switches, so no
-    // section lacks content. There is no account section since #303.
+    // Gameplay, visuals and audio each have built-in switches, so every section draws (no account tab, #303).
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
     expect(screen.getAllByRole("tab").map((node) => node.textContent)).toEqual(["Gameplay", "Visuals", "Audio"]);
@@ -207,8 +204,7 @@ describe("#128 Reset this tab", () => {
 
 describe("#128 the dialog around the tabs", () => {
   it("opens with the first switch of the open tab focused", () => {
-    // Every tab has a switch now (no account section since #303), so focus always lands on one.
-    // The panel keeps its fallback to the tab itself, now unreachable, for a tab with none.
+    // Every tab has a switch, so focus always lands on one; the fallback to the tab itself is unreachable.
     render(<SettingsPanel onClose={noop} slots={slotsWith()} />);
     expect(document.activeElement).toBe(screen.getByTestId("setting-dragToPlay"));
   });

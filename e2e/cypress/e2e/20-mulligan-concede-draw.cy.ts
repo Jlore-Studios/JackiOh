@@ -127,7 +127,6 @@ function seatTwoSends(body: ActionInput): Cypress.Chainable<WsPlayerResult> {
   return cy.wsPlayer({ action: "send", name: SEAT_TWO, body });
 }
 
-/** Latest clock frame (R79, R268). */
 function seatTwoClock(): Cypress.Chainable<ClockFrame> {
   return cy.wsPlayer({ action: "messages", name: SEAT_TWO }).then((result) => {
     const frames = (result.messages ?? []).filter((message) => message.type === "clock") as unknown as ClockFrame[];
@@ -145,7 +144,6 @@ function seatTwoKeepsWholeHand(): void {
 
 // The browser
 
-/** Opening hand ids from the mulligan picker (R9). */
 function browserMulliganIds(): Cypress.Chainable<string[]> {
   return cy
     .get(`${promptOf("mulligan")} ${ANY_OPTION}`, { timeout: timeouts.view })

@@ -1,6 +1,5 @@
 //! Cards buried under a Stack pile, and what Reborn brings back (SPEC §3.2, §4.5, §7, R13, R175).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //!  - §3.2, R13: a card dormant under a Stack is not on the field, so §4.5's check never collects it
 //!    there. The top shields it: an aura or a layer-2 Felinor that stops reaching it cannot kill it,
 //!    and it is judged when it resumes on top, with the board's auras reaching it again.
@@ -16,7 +15,6 @@ use jackioh_engine::testkit::*;
 
 const VANILLA: &str = "core-008";
 const HIT_JOB: &str = "core-016";
-/// Felinor Fiender (2) and Hit Job (3), in one turn.
 const MANA_FOR_FIENDER_AND_HIT_JOB: i32 = 5;
 const BIG_FELINOR: &str = "core-043";
 const RUSH_TOKEN_FARM: &str = "core-058";
@@ -31,7 +29,6 @@ fn unit_id(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
     g.unit(player, lane).map(|card| card.id.clone())
 }
 
-/// Every instance a `destroyed` event has named since setup.
 fn destroyed_ids(g: &Scenario) -> Vec<String> {
     g.events()
         .iter()
@@ -42,7 +39,6 @@ fn destroyed_ids(g: &Scenario) -> Vec<String> {
         .collect()
 }
 
-/// The `damage` events among `events` whose source is `source`.
 fn hits_from(events: &[GameEvent], source: &str) -> Vec<GameEvent> {
     events
         .iter()
@@ -55,7 +51,6 @@ fn events_json(events: &[GameEvent]) -> String {
     serde_json::to_string(events).expect("events serialize")
 }
 
-/// A Core-set Common definition named after its id, with the same face on both sides.
 fn fixture_def(id: &str, type_: CardType, face: Value) -> CardDef {
     json_as(json!({
         "id": id,
@@ -72,7 +67,6 @@ fn fixture_def(id: &str, type_: CardType, face: Value) -> CardDef {
     }))
 }
 
-/// A fixture unit placed on p1's side in `lane`, not summoning sick.
 fn place_on_p1_side(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
     let mut card = new_instance(
         g.state_mut(),
@@ -114,18 +108,14 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
         let token = g.unit_at(PlayerId::P1, 1);
-        // 3/3 printed, +3/+3 from the radiant Farm's aura, 4 damage taken: alive at 2.
         g.expect_stats(&token.id, json!({ "attack": 6, "maxHealth": 6, "health": 2 }));
 
-        // Felinor Fiender (Stack) goes on top of it: the token is dormant and the aura stops reaching
-        // it, but nothing hit it and the check does not look under the pile.
         g.play(FIENDER, json!({ "zone": 1 }));
         let fiender = g.unit_at(PlayerId::P1, 1);
         assert_eq!(fiender.def_id, FIENDER);
         assert!(!destroyed_ids(&g).contains(&token.id));
         g.expect_in_zone(&token.id, "field");
 
-        // The top leaves; the token resumes on top of the zone, and the Farm's aura reaches it again.
         g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(token.id.clone()));
         g.expect_stats(&token.id, json!({ "attack": 6, "maxHealth": 6, "health": 2 }));
@@ -145,7 +135,6 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
         }));
         let buried = g.unit_at(PlayerId::P1, 1);
         let felinor = g.unit_at(PlayerId::P1, 2);
-        // 5/7 printed plus Big Felinor's 3/10, with 10 damage: alive at 7.
         g.expect_stats(&buried.id, json!({ "attack": 8, "maxHealth": 17, "health": 7 }));
 
         g.play(FIENDER, json!({ "zone": 1 }));
@@ -160,8 +149,6 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
     #[test]
     fn r13_r47_r175_a_dormant_felinor_fiender_with_reborn_that_a_felinor_s_death_leaves_at_0_never_comes_back_on_top_of_the_card_acting_in_its_zone_3_2()
      {
-        // Lane 1 is a pile: Fiender A on top of Fiender B. B took 10 damage while Big Felinor fed its
-        // stats (8/17), and has Reborn. Hit Job on Big Felinor drops B to 5/7 under 10 damage.
         let mut g = scenario(json!({
             "p1": {
                 "hand": [HIT_JOB, VANILLA],
@@ -209,7 +196,6 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
         let bread = g.unit_at(PlayerId::P1, 1);
-        // The card as it stands, written in the state.
         let live = g.card(&bread.id).id.clone();
         find_instance_mut(g.state_mut(), &live)
             .expect("the Bread Token")
@@ -219,10 +205,8 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
 
         g.play(HIT_JOB, json!({ "targets": pick::instance(&bread) }));
 
-        // "Returns ... at 1 health without Reborn", a unit token included: 3/3 with 2 damage.
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(bread.id.clone()));
         g.expect_stats(&bread.id, json!({ "attack": 3, "maxHealth": 3, "health": 1 }));
-        // It died once, to Hit Job, not a second time to its own printed 0/0.
         assert_eq!(
             g.events()
                 .iter()
@@ -233,10 +217,8 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
     }
 }
 
-/// A test-only unit on p1's side: a transient def in the match state and its script in the registry.
-/// Its one trigger deals 1 damage to the enemy hero whenever an event of type `on` is dispatched, so
-/// a firing is a `damage` event whose source is this card. No Core unit watches another card's event
-/// from the field (#32 and #91 watch their own), which is why these cases need one.
+/// No Core unit watches another card's event from the field (#32 and #91 watch their own), which is why these
+/// cases need one.
 fn place_watcher(g: &mut Scenario, id: &str, lane: i32, on: GameEventType) -> CardInstance {
     let script = Script {
         triggers: vec![TriggerDef::new(format!("{id}:on-{on}"), &[on], |_ctx, _event| {
@@ -270,7 +252,6 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
             "p1": { "hand": [FIENDER, HIT_JOB], "mana": MANA_FOR_FIENDER_AND_HIT_JOB },
             "p2": { "field": ["core-011"], "health": 20 },
         }));
-        // "Whenever a unit dies, deal 1 damage to the enemy hero", in p1's lane 1.
         let watcher = place_watcher(&mut g, "fixture:r10-death-watcher", 1, GameEventType::Destroyed);
         let fiender = g.card(FIENDER).clone();
 
@@ -300,7 +281,6 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
             "p1": { "hand": [FIENDER, HIT_JOB], "mana": MANA_FOR_FIENDER_AND_HIT_JOB },
             "p2": { "field": ["core-011"], "health": 20 },
         }));
-        // "Whenever a card finishes resolving, deal 1 damage to the enemy hero", in p1's lane 1.
         let watcher = place_watcher(
             &mut g,
             "fixture:r10-resolve-watcher",
@@ -309,7 +289,6 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
         );
         let fiender = g.card(FIENDER).clone();
         g.play(&fiender.id, json!({ "zone": 1 }));
-        // Step 4 buried the watcher before the Fiender's own play reached step 7, so it answered nothing.
         assert_eq!(g.state().players.p2.hero.health, 20);
 
         // Hit Job kills the Fiender inside its own resolution, so the watcher resumes before step 7's
@@ -323,8 +302,6 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
     }
 }
 
-/// A test-only unit on p1's side that deals 1 damage to the enemy hero whenever another source deals
-/// damage, so a firing is a `damage` event whose source is this card (and it never answers its own).
 fn place_hit_watcher(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
     let script = Script {
         triggers: vec![TriggerDef::new(
@@ -332,7 +309,6 @@ fn place_hit_watcher(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
             &[GameEventType::Damage],
             |ctx, event| {
                 let self_id = ctx.self_.as_ref().map(|card| card.id.clone());
-                // Only a source that is this card is its own.
                 let another = match event {
                     GameEvent::Damage { source_id, .. } => match (source_id, &self_id) {
                         (Some(source), Some(own)) => source != own,
@@ -363,7 +339,6 @@ fn place_hit_watcher(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
     place_on_p1_side(g, id, lane)
 }
 
-/// A test-only 0-cost Spell in p1's hand whose Cry is `cry`.
 fn spell_in_hand(g: &mut Scenario, id: &str, cry: Option<Hook>) -> CardInstance {
     let face = json!({ "keywords": [], "text": id });
     let def = fixture_def(id, CardType::Spell, face);
@@ -389,9 +364,6 @@ fn spell_in_hand(g: &mut Scenario, id: &str, cry: Option<Hook>) -> CardInstance 
 mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3_2_r153 {
     use super::*;
 
-    // The note a pile top's removal leaves (`stays.noteUncovered`) is kept against that removal only,
-    // not until the card next leaves the field, or a later move of the card that left (exiled out of
-    // its graveyard, discarded, shuffled back) would read as the removal again.
     #[test]
     fn r212_a_card_that_resumed_under_a_stack_answers_a_later_hit_even_when_the_same_list_then_exiles_the_card_that_uncovered_it_from_the_graveyard()
      {
@@ -403,13 +375,9 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
         let fiender = g.card(FIENDER).clone();
         g.play(&fiender.id, json!({ "zone": 1 }));
         g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
-        // The Fiender died on top of the watcher, which resumed then and answered nothing of it.
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         assert_eq!(g.state().players.p2.hero.health, 20);
 
-        // A later action: a Spell hits p2's hero, then exiles p1's graveyard, the Fiender with it. The
-        // watcher has stood on top since the last action, so it saw the hit; the exile is a move out of a
-        // graveyard, not the death that uncovered it.
         let spell = spell_in_hand(
             &mut g,
             "fixture:r11-hit-then-exile",
@@ -440,9 +408,6 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
         let fiender = g.card(FIENDER).clone();
         g.play(&fiender.id, json!({ "zone": 1 }));
 
-        // The hit lands while the watcher lies under the Fiender; the sacrifice uncovers it, and the
-        // exile then takes the Fiender on out of the graveyard before the loop reaches the hit. The
-        // watcher resumed after the hit, so it did not see it — the later exile changes nothing.
         let fiender_id = fiender.id.clone();
         let spell = spell_in_hand(
             &mut g,

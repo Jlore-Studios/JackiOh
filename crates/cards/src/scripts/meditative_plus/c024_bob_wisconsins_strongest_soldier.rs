@@ -5,24 +5,9 @@
 //!            hand with copies of it."
 //!   Radiant: "Cry: Do all of these, in order: …" the same four.
 //!
-//! THE MODES are declared (R81), so the choice travels in the play and never pauses: `freeze`,
-//! `take`, `discover`, `copies`. The take's target is declared with them, for that mode alone
-//! (`forModes`), and needed (R703): with no enemy Unit the take is not offered, as Hearthstone greys
-//! out a Choose One option with no target. The Radiant face declares no mode and does all four in
-//! order, each its own step, its take's target declared with the play and not needed: with no enemy
-//! Unit that step does nothing (R1185004).
-//!   1. Freeze (§6.3, R1174000): every enemy Unit (`freeze_all`).
-//!   2. The declared enemy Unit goes to your hand as yours (`take_to_hand`, R1185003: R78's reset, a
-//!      token ceasing to exist, your full hand burning it), then The Coin to the opponent, `coins` of
-//!      them. The Coins are the price of a declared take: given whenever a Unit was declared, even
-//!      one gone by the time it resolves, and never when none was.
-//!   3. Discover (§6.3) among three different Units of the sets that ship (R380), never Bob (R387),
-//!      the pick added Radiant (M #88's shape).
-//!   4. One draw, then copies of the card it put in the hand until the hand is full (`draw_priced`'s
-//!      `fillWithCopies`, R596, R1242): a card cast on draw, burned or not drawn is copied by nothing.
-//!
-//! Every list is the same length whatever the board holds, so the Radiant list a Discover pauses
-//! resumes where it stopped (R113).
+//! Modes declared in play (R81, R703, R1185004). Radiant does all four in order (R113).
+//! 1. freeze_all (§6.3, R1174000). 2. take_to_hand gives Coins to opponent (R1185003, R78).
+//! 3. Discover unit (R380, R387, #88). 4. Draw and fillWithCopies (R596, R1242).
 
 use jackioh_engine::prelude::*;
 
@@ -129,11 +114,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #24 Bob, Wisconsin's Strongest Soldier — SPEC §8.9 row 24, BUILD M11 row M+ 24: "mode 1
-// freezes every enemy Unit (#1174's rule); mode 2 a declared enemy Unit goes to your hand as yours, a
-// token ceasing to exist, and the opponent gets 3 Coins; mode 3 Discovers among 3 Units, the pick
-// Radiant; mode 4 draws 1 and fills your hand with copies, a cast-on-draw card none; coins reads
-// through `param()`; radiant 10/10 and the four in order, mode 2's target declared with the play".
+// Meditative+ #24 Bob, Wisconsin's Strongest Soldier — SPEC §8.9 row 24, BUILD M11 row M+ 24
+// (#1174).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,12 +124,10 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    /// Core #8 Mr. Vanilla, a 4/4 Unit.
     const VANILLA: &str = "core-008";
     /// M #30.1 Love Bomb, cast on draw.
     const LOVE_BOMB: &str = "meditative-030-1";
 
-    /// p1 holds Bob (its face as given) and a filler; p1's deck and both fields as given.
     fn bob(seed: &str, radiant: bool, p1_library: Value, p2_field: Value) -> Scenario {
         crate::register_all();
         scenario(json!({
@@ -161,7 +141,6 @@ mod tests {
         s.hand(player).iter().filter(|card| card.def_id == COIN).count()
     }
 
-    /// The open Discover's options, by catalog id (§10.6: a pick is a `mode` selection carrying one).
     fn options(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.clone().expect("the Discover is open");
         pending
@@ -302,14 +281,12 @@ mod tests {
             let target = s.unit(P2, 1).expect("the enemy Unit to take");
             let kept = s.unit(P2, 2).expect("the enemy Unit left");
             s.play(ID, json!({ "zone": 1, "targets": pick::instance(&target) }));
-            // 1, 2: frozen and taken, the Coins given, then 3: the Discover asks.
             assert!(s.card(&kept).frozen.is_some());
             assert_eq!(s.card(&target).zone, Zone::Hand { player: P1 });
             assert_eq!(coins_of(&s, P2), 3);
             let pick = first_option(&s);
             let before = s.hand(P1).len();
             s.answer(json!(pick.clone()));
-            // 3's pick, Radiant, then 4: one draw and copies of it to a full hand.
             let hand = s.hand(P1);
             assert!(hand.iter().any(|card| card.def_id == pick && card.radiant));
             assert_eq!(hand.len() as i32, hand_cap_of(s.state(), P1));
@@ -323,7 +300,7 @@ mod tests {
 
         #[test]
         fn r1185004_with_no_enemy_unit_the_take_does_nothing_and_no_coins_are_given() {
-            // The full hand at the end needs the Discover's pick to stay in it. Re-pinned for v0.3.15
+            // Re-pinned for v0.3.15
             // (Meditative+ ships, #1187): its Units join the Discover's pool, so "bob-radiant-empty"
             // now offers C #66 EU Striker first, which summons itself from the hand once Bob resolves
             // (R401, R548); the seed is the first whose Radiant pick is still in the hand.

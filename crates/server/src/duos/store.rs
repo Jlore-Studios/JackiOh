@@ -1,15 +1,8 @@
-//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039 and 0051): co-op
-//! rooms, co-op matches and their append-only log, over Postgres (`pg` below) or the in-memory fake
-//! (`fake` below, whose tables are `FakeTables::duos`).
+//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039 and 0051):
+//! rooms, matches, and logs over Postgres or fake `FakeTables::duos`.
 //!
-//! Same shape as `db::store`: every store method is one method on `Tx`, named `duos_<table>_<verb>`,
-//! whose body dispatches to this file's `pg::<name>` or `fake::<name>`. The impl lives here, beside
-//! its two halves, so the co-op store is one file (an inherent impl may sit anywhere in the crate).
-//! The fake is strict where Postgres is strict: a room code is taken once, a claim is single-shot, a
-//! match id is written once, and the log answers a nonce already logged at its seq with that row and
-//! refuses any other clash as `StoreError::SeqClash` (R776000's rule, as `matches_append_actions`).
-//!
-//! Integers are `i64` epoch milliseconds and seqs, as everywhere in the store.
+//! Store methods on `Tx` dispatch to `pg` or `fake`. Nonces logged at their own seq return that
+//! row; other clashes error as `StoreError::SeqClash` (R776000). Timestamps are `i64` epoch ms.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -20,27 +13,17 @@ use jackioh_engine::{Handicap, LeanPick};
 
 use crate::db::store::{FrozenDeck, StoreResult, Tx};
 
-// ---------------------------------------------------------------------------
-// The rows
-// ---------------------------------------------------------------------------
-
-/// What a person brings to a co-op seat (S6's `deckId` or `random: true`), frozen when the room is
-/// made or joined: one of their saved decks, checked legal then (R253's `freeze_choice`) under the
-/// catalog version it names, or a deal from the match seed when the match starts (R258), leaning on
-/// the set their "More cards from" pick names, if any (R1372, R924000). The `host_choice` /
-/// `guest_choice` column.
+/// Frozen deck or random choice (S6, R253, R258, R1372, R924000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DuosChoice {
     Deck {
         deck: FrozenDeck,
-        /// §9.4: the catalog the deck was checked against. A join under another catalog is refused
-        /// (`update_required`), as a 1v1 room's is: the running catalog may not deal it.
+        /// §9.4: catalog checked against (`update_required` on mismatch).
         #[serde(default)]
         catalog_version: String,
     },
-    /// R924000: `lean` is the pick, written as `leanSet` only when there is one, as the 1v1 ticket's
-    /// frozen choice writes it.
+    /// R924000: `lean` is the pick (`leanSet`).
     Random {
         #[serde(rename = "leanSet", default, skip_serializing_if = "Option::is_none")]
         lean: Option<LeanPick>,
@@ -51,25 +34,23 @@ pub enum DuosChoice {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosRoom {
-    /// `ROOM_CODE_LENGTH` characters of the room-code alphabet, normalized.
+    /// Room code (`ROOM_CODE_LENGTH`, normalized).
     pub code: String,
-    /// The profile that made it: seat a1.
+    /// Host profile (seat a1).
     pub host: String,
-    /// The profile whose join claimed it: seat a2. `None` while it waits.
+    /// Guest profile (seat a2; `None` while waiting).
     pub guest: Option<String>,
-    /// The AI team's tier (§9.9): its rules (`duos_ai_team`) and its seats' handicaps.
+    /// AI team tier (§9.9: rules and handicaps).
     pub difficulty: Difficulty,
     pub host_choice: DuosChoice,
     pub guest_choice: Option<DuosChoice>,
-    /// The match the join started.
     pub match_id: Option<String>,
     pub created_at: i64,
-    /// `created_at + DUOS_ROOM_TTL_MS`; unjoined past it, the room is gone (B34).
+    /// Expiry timestamp (`DUOS_ROOM_TTL_MS`, B34).
     pub expires_at: i64,
 }
 
-/// What B33's atomic room claim came to. `Blocked` is distinct from `Unavailable` so §13.9's
-/// unknown-code answer is decided by the same store statement that observed the block.
+/// B33: atomic room claim outcome; distinguishes blocks from unavailable (§13.9).
 #[derive(Clone, Debug, PartialEq)]
 pub enum DuosRoomClaimOutcome {
     Claimed(Box<DuosRoom>),
@@ -77,7 +58,7 @@ pub enum DuosRoomClaimOutcome {
     Unavailable,
 }
 
-/// Every seat's deck, in library order as the engine is handed it (`DuosDecks`'s fields).
+/// Every seat's deck in library order (`DuosDecks`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatDecks {
@@ -87,7 +68,6 @@ pub struct SeatDecks {
     pub b2: Vec<String>,
 }
 
-/// Both teams' rules (`PerTeam<DuosTeamRules>`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TeamRules {
@@ -95,7 +75,7 @@ pub struct TeamRules {
     pub b: DuosTeamRules,
 }
 
-/// Each seat's §9.9 handicap (`DuosHandicaps`); `None` is `HUMAN_HANDICAP`.
+/// §9.9 handicap per seat (`None` is `HUMAN_HANDICAP`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatHandicaps {
@@ -105,9 +85,7 @@ pub struct SeatHandicaps {
     pub b2: Option<Handicap>,
 }
 
-/// What a co-op match was created with besides its seed: the `options` column. Frozen at the start,
-/// like a 1v1 match's decks, so every rebuild and every replay folds the same game whatever the
-/// tiers' constants become later.
+/// Match options frozen at creation for deterministic rebuilds and replays.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosMatchOptions {
@@ -116,8 +94,7 @@ pub struct DuosMatchOptions {
     pub dealt: Vec<DuosSeat>,
     pub teams: TeamRules,
     pub handicaps: SeatHandicaps,
-    /// R767000: the catalog version the match was dealt and is played on, so its rebuilds and its
-    /// replay fold under that version's catalog whatever this build's is.
+    /// R767000: catalog version the match was dealt and played on.
     #[serde(default)]
     pub catalog_version: String,
 }
@@ -128,16 +105,16 @@ pub struct DuosMatchOptions {
 pub struct DuosMatch {
     pub id: String,
     pub seed: String,
-    /// The room's host; empty once the match has ended and their account was deleted (R1497000).
+    /// Host seat (cleared on deleted account after match ends, R1497000).
     pub a1: String,
-    /// The room's guest; empty once the match has ended and their account was deleted (R1497000).
+    /// Guest seat (cleared on deleted account).
     pub a2: String,
     pub difficulty: Difficulty,
     pub options: DuosMatchOptions,
     pub created_at: i64,
-    /// Written once, with `result`, when the game ends; `None` while it is live.
+    /// End timestamp when finished (`None` while live).
     pub ended_at: Option<i64>,
-    /// The engine's `DuosResult` as JSON.
+    /// Engine result as JSON.
     pub result: Option<Value>,
 }
 
@@ -148,12 +125,11 @@ pub struct DuosActionRow {
     pub match_id: String,
     pub seq: i64,
     pub nonce: String,
-    /// The applied `DuosAction`, `{ seat, nonce, body }` (`action_json`).
+    /// Applied `DuosAction` JSON (`{ seat, nonce, body }`).
     pub action: Value,
     pub at: i64,
 }
 
-/// The fake's three tables (`FakeTables::duos`).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DuosTables {
     pub rooms: Vec<DuosRoom>,
@@ -161,7 +137,7 @@ pub struct DuosTables {
     pub actions: Vec<DuosActionRow>,
 }
 
-/// A `DuosAction` as the log holds it: `{ "seat", "nonce", "body" }`, the engine type's own JSON.
+/// Logged action JSON (`{ seat, nonce, body }`).
 #[derive(Serialize)]
 struct LoggedRef<'a> {
     seat: DuosSeat,
@@ -176,12 +152,11 @@ struct Logged {
     body: DuosActionBody,
 }
 
-/// The log's JSON for one action.
 pub fn action_json(seat: DuosSeat, nonce: &str, body: &DuosActionBody) -> Result<Value, serde_json::Error> {
     serde_json::to_value(LoggedRef { seat, nonce, body })
 }
 
-/// The action a log row holds, as the engine folds it.
+/// Parses a logged action.
 pub fn action_of(value: &Value) -> Result<DuosAction, serde_json::Error> {
     let logged = Logged::deserialize(value)?;
     Ok(DuosAction {
@@ -191,16 +166,12 @@ pub fn action_of(value: &Value) -> Result<DuosAction, serde_json::Error> {
     })
 }
 
-/// The seat a log row's action was taken for, without reading its body.
+/// Reads seat from action JSON without parsing body.
 pub fn seat_of_logged(value: &Value) -> Option<DuosSeat> {
     value.get("seat")?.as_str()?.parse::<DuosSeat>().ok()
 }
 
-// ---------------------------------------------------------------------------
-// The store methods
-// ---------------------------------------------------------------------------
-
-/// `duos_dispatch!(self, name(args))`: the same call against whichever store this transaction is on.
+/// Dispatches to `pg` or `fake`.
 macro_rules! duos_dispatch {
     ($self:ident, $name:ident ( $($arg:expr),* $(,)? )) => {
         match $self {
@@ -221,10 +192,8 @@ impl Tx<'_> {
         duos_dispatch!(self, rooms_get(code))
     }
 
-    /// B33's atomic single-claim: sets the guest, the guest's choice and the match id only while the
-    /// room is unjoined and unexpired at `at`, and neither its host nor `guest` blocks the other
-    /// (§13.9). Its outcome distinguishes a block observed by the claim from every other refusal,
-    /// without a second read whose snapshot could differ.
+    /// B33's atomic single-claim: claims unjoined, unexpired room if unblocked (§13.9).
+    /// Distinguishes blocks from other refusals in the same statement.
     pub async fn duos_rooms_claim(
         &mut self,
         code: &str,
@@ -241,15 +210,12 @@ impl Tx<'_> {
         duos_dispatch!(self, rooms_delete(code, host))
     }
 
-    /// B34: deletes every unjoined room that expired at or before `unjoined_before`, and every joined
-    /// one that expired at or before `joined_before` (kept longer, so a host's poll still reads the
-    /// match its guest started). Answers how many went.
+    /// B34: deletes unjoined rooms expired at `unjoined_before` and joined at `joined_before`.
     pub async fn duos_rooms_reap(&mut self, unjoined_before: i64, joined_before: i64) -> StoreResult<u64> {
         duos_dispatch!(self, rooms_reap(unjoined_before, joined_before))
     }
 
-    /// R890000, R1047002: how many of `host`'s rooms nobody has joined and whose expiry is after `at`,
-    /// the advisory half of `MAX_OPEN_ROOMS_PER_HOST` as the 1v1 rooms' `rooms_count_open_by_host` is.
+    /// R890000, R1047002: counts unjoined unexpired rooms for host (`MAX_OPEN_ROOMS_PER_HOST`).
     pub async fn duos_rooms_count_open_by_host(&mut self, host: &str, at: i64) -> StoreResult<i64> {
         duos_dispatch!(self, rooms_count_open_by_host(host, at))
     }
@@ -267,13 +233,12 @@ impl Tx<'_> {
         duos_dispatch!(self, matches_live_for(profile_id))
     }
 
-    /// Every live co-op match, oldest first: what the sweeper resumes after a restart.
+    /// Live co-op matches in creation order for restart sweeper.
     pub async fn duos_matches_live(&mut self) -> StoreResult<Vec<String>> {
         duos_dispatch!(self, matches_live())
     }
 
-    /// B40: writes the result and `ended_at` once. False when the match already has them (or there is
-    /// no such match): the first write stands.
+    /// B40: writes result and `ended_at` once (first write stands).
     pub async fn duos_matches_finish(
         &mut self,
         match_id: &str,
@@ -283,27 +248,22 @@ impl Tx<'_> {
         duos_dispatch!(self, matches_finish(match_id, result, at))
     }
 
-    /// B40: appends one row. A nonce already logged at its own seq answers that row; any other clash
-    /// of seq or nonce is `StoreError::SeqClash` (R776000).
+    /// B40: appends one row (idempotent on duplicate nonce at same seq; `SeqClash` on clash, R776000).
     pub async fn duos_actions_append(&mut self, row: &DuosActionRow) -> StoreResult<()> {
         duos_dispatch!(self, actions_append(row))
     }
 
-    /// The match's log in seq order.
     pub async fn duos_actions(&mut self, match_id: &str) -> StoreResult<Vec<DuosActionRow>> {
         duos_dispatch!(self, actions(match_id))
     }
 
-    /// The retention purge (`api/retention.rs`): deletes the log of every co-op match that ended
-    /// before `ended_before`, as a 1v1 match's log goes (`MATCH_ACTION_RETENTION_DAYS`). The match
-    /// row, its result with it, stays. Answers how many rows went.
+    /// Retention purge (`api/retention.rs`): deletes match action logs before `ended_before`.
     pub async fn duos_actions_purge(&mut self, ended_before: i64) -> StoreResult<u64> {
         duos_dispatch!(self, actions_purge(ended_before))
     }
 }
 
-/// Migration 0051's `duos_matches_seats_filled_unless_over_check`, in the fake
-/// (`db::fake::profiles_remove`): a profile seated in a live co-op match is not deleted (R1497000).
+/// Migration 0051: profile seated in live co-op match cannot be deleted (R1497000).
 pub fn refuse_live_seat(tables: &DuosTables, profile_id: &str) -> StoreResult<()> {
     match tables
         .matches
@@ -319,9 +279,7 @@ pub fn refuse_live_seat(tables: &DuosTables, profile_id: &str) -> StoreResult<()
     }
 }
 
-/// Migration 0039's `on delete cascade` for rooms and 0051's `on delete set null` for seats, in the
-/// fake (`db::fake::remove_profile_rows`): a deleted profile's rooms (host or guest) go, and its seat
-/// on each co-op match empties. The match and its log stay for the teammate (R1497000).
+/// Cascade delete for rooms (0039) and set null for seats (0051); match stays for teammate (R1497000).
 pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
     tables
         .rooms
@@ -334,10 +292,6 @@ pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Postgres (migrations 0039 and 0051)
-// ---------------------------------------------------------------------------
 
 mod pg {
     use serde_json::Value;
@@ -362,7 +316,6 @@ mod pg {
         text.parse::<Difficulty>().map_err(StoreError::Other)
     }
 
-    /// A macro rather than a `const`, so every query stays a `&'static str` (`concat!`).
     macro_rules! room_columns {
         () => {
             "code, host, guest, difficulty, host_choice, guest_choice, match_id, created_at, expires_at"
@@ -442,8 +395,7 @@ mod pg {
         row.as_ref().map(room_of).transpose()
     }
 
-    /// B33's single-claim as one statement: the loser of a race updates no row, while a block either
-    /// way is reported from the statement's own snapshot (§13.9).
+    /// B33: atomic claim reporting blocks from statement snapshot (§13.9).
     pub async fn rooms_claim(
         t: &mut PgTx<'_>,
         code: &str,
@@ -577,8 +529,7 @@ mod pg {
 
     pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<DuosMatch>, StoreError> {
         run_as(t, None).await?;
-        // A path segment the caller typed: an id that is no uuid names no match, rather than failing
-        // the cast.
+        // Non-UUID IDs match nothing rather than failing the cast.
         if !is_uuid(match_id) {
             return Ok(None);
         }
@@ -660,8 +611,7 @@ mod pg {
         if done.rows_affected() == 1 {
             return Ok(());
         }
-        // The seq or the nonce is taken. The same nonce at its own seq is this very action, written
-        // before an answer was lost: the log already says so. Anything else is a clash.
+        // Same nonce at same seq is idempotent retry; anything else clashes.
         let held = sqlx::query(
             "select seq, nonce from public.duos_match_actions
               where match_id = $1::uuid and (seq = $2::bigint or nonce = $3::text)",
@@ -724,10 +674,6 @@ mod pg {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The in-memory fake (`FakeTables::duos`)
-// ---------------------------------------------------------------------------
-
 mod fake {
     use serde_json::Value;
 
@@ -735,8 +681,7 @@ mod fake {
     use crate::db::fake::FakeTx;
     use crate::db::store::StoreError;
 
-    /// The unit fake's two seams (`db::fake`'s `call`): its fault-injection hook, then its race hook,
-    /// each told the method's name.
+    /// Fault-injection and race hooks for fake calls (`db::fake`).
     fn call<'t>(f: &'t mut FakeTx<'_>, method: &str) -> Result<&'t mut DuosTables, StoreError> {
         let data = f.data();
         if let Some(hook) = data.on_call.clone() {
@@ -783,7 +728,7 @@ mod fake {
         }) else {
             return Ok(DuosRoomClaimOutcome::Unavailable);
         };
-        // §13.9: report the block from the claim's own read, as Postgres's one statement does.
+        // §13.9: report blocks from snapshot read.
         if blocks.iter().any(|block| {
             (block.blocker == room.host && block.blocked == guest)
                 || (block.blocker == guest && block.blocked == room.host)
@@ -888,7 +833,6 @@ mod fake {
 
     pub fn actions_append(f: &mut FakeTx<'_>, row: &DuosActionRow) -> Result<(), StoreError> {
         let tables = call(f, "duos.actions.append")?;
-        // The foreign key Postgres holds.
         if !tables.matches.iter().any(|held| held.id == row.match_id) {
             return Err(StoreError::from(format!(
                 "duos_match_actions: no duos match {}",
@@ -1049,7 +993,7 @@ mod tests {
             .await
             .expect("a claim");
         assert_eq!(by_third, DuosRoomClaimOutcome::Unavailable);
-        // B34: a joined room is not the host's to free.
+        // B34: joined rooms cannot be deleted by host.
         assert_eq!(t.duos_rooms_delete("ABCDEF", "host").await.ok(), Some(false));
     }
 

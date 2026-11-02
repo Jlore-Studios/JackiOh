@@ -1,11 +1,9 @@
 //! The AI's shared types (docs/polish/3-ai.md §Surface, SPEC §9.9). Every name here is exact: the
-//! harness, the web worker and the tests write against these before the code behind them exists.
+//! harness, the web worker and the tests write against these.
 //!
-//! `NodeCounter` is a trait whose methods take `&self`: one counter is shared by the lethal solver,
-//! the beam, the replies and `decide` itself, a sub-counter holding its parent, so the counters keep
-//! their tallies in `Cell`s (`simulate.rs`) and every function that spends nodes takes
-//! `&dyn NodeCounter`. A counter that tallies failed simulations answers `Some` to
-//! `sim_error_tally` and `sim_panic_tally`, any other `None`.
+//! `NodeCounter`'s methods take `&self` because one counter is shared by the lethal solver, the beam,
+//! the replies and `decide`, a sub-counter holding its parent: counters keep their tallies in `Cell`s
+//! (`simulate.rs`).
 
 use jackioh_engine::{ActionBody, Rng};
 use serde::{Deserialize, Serialize};
@@ -56,7 +54,6 @@ pub struct AiOptions<'a> {
 }
 
 impl<'a> AiOptions<'a> {
-    /// The AI's stream at AI_BUDGET, with no clock.
     pub fn new(rng: Rng) -> AiOptions<'a> {
         AiOptions {
             rng,
@@ -65,7 +62,6 @@ impl<'a> AiOptions<'a> {
         }
     }
 
-    /// The AI's stream at `budget`, with no clock.
     pub fn with_budget(rng: Rng, budget: SearchBudget) -> AiOptions<'a> {
         AiOptions {
             rng,
@@ -176,15 +172,13 @@ pub trait NodeCounter {
     /// Polls shouldStop, then takes one node; false when the budget or the clock is spent.
     fn take(&self) -> bool;
     fn stopped_by(&self) -> StoppedBy;
-    /// The failed simulations this counter tallies (`SearchStats.simErrors`), or `None` for a
-    /// counter that tallies none.
+    /// The failed simulations this counter tallies (`SearchStats.simErrors`), if it tallies them.
     fn sim_error_tally(&self) -> Option<usize> {
         None
     }
     /// Sets that tally; a counter that tallies none ignores it.
     fn set_sim_error_tally(&self, _value: usize) {}
-    /// Of those failed simulations, the ones that panicked (`SearchStats.simPanics`, #1429), or
-    /// `None` for a counter that tallies none.
+    /// Of those, the ones that panicked (`SearchStats.simPanics`, #1429), if it tallies them.
     fn sim_panic_tally(&self) -> Option<usize> {
         None
     }
@@ -192,7 +186,6 @@ pub trait NodeCounter {
     fn first_sim_panic(&self) -> Option<String> {
         None
     }
-    /// Counts one panic, keeping its message when it is the first; a counter that tallies none
-    /// ignores it.
+    /// Counts one panic, keeping its message when it is the first.
     fn record_sim_panic(&self, _message: &str) {}
 }

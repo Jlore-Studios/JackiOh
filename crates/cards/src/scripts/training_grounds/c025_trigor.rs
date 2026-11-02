@@ -2,21 +2,9 @@
 //! Training Grounds set (R1420, R2194000).
 //!   Base and Radiant: "Tribute 3 / Death: Summon a Trigor with this one's base stats +{grow}/+{grow}." —
 //!   grow 3, Radiant 6
-//! Engine:
-//! - **Tribute 3** is the play's price (§6.3, R101), paid at §10.5 step 2, as C #61 Plague Bringer
-//!   Goliath's; a zone its Tribute empties counts (R391).
-//! - **The Death** is M #94 Shrinking Felinor's mirror: `ctx.self_` is the card as it died, its
-//!   `statsOverride` still on it (R78), and `base_stats_of` reads its §10.4 layer-1 stats off that (R1181).
-//!   It summons a fresh base Trigor, not a copy (R57), whose base stats are those +{grow}/+{grow}, into
-//!   the leftmost open unit zone (R64): a summon, so no Cry and no Tribute (§6.3). A full row summons none.
-//!   Both faces summon a base body (R1828003's pattern), so the Radiant one's chain goes on at +3/+3.
-//! - **The end** (REVIEW A3.6, R2197004): a Trigor that a Trigor's Death summoned this turn summons
-//!   nothing when it dies this turn, so each lineage adds at most one body a turn. Growth alone (R2197002)
-//!   was no terminator: a Poisonous hit, a destroy or two Trigors forced into each other (S #24 Warp
-//!   Disruptor II) kill a body whatever its size. The Death marks the Trigor it summons in that
-//!   Trigor's memory (`CHAIN_MARK`, R2206000), and the hook reads the card as it died (R78): a stat
-//!   override is no mark, since TG #34 Dino-size's Set stats and a Seance copy wear one too (R2198000,
-//!   R2198001), and a played Trigor they touch still summons. Leaving the field clears the mark (R78).
+//! Engine (§6.3, R101, §10.5 step 2, C #61, R391): Tribute 3 play cost.
+//! Death (M #94, §10.4 layer 1, R1181, R78) summons fresh Trigor (R57, R1828003) in leftmost zone (R64, §6.3).
+//! REVIEW A3.6, R2197004, R2197002: chain mark (R2206000, S #24) prevents same-turn loop; TG #34, R2198000, R2198001.
 
 use jackioh_engine::prelude::*;
 
@@ -72,9 +60,7 @@ fn trigor() -> Script {
             let Some(this) = ctx.self_.clone() else {
                 return vec![];
             };
-            // R2197004, R2206000: a Trigor a Trigor's Death summoned this turn (its mark holds this
-            // turn) summons nothing when it dies this turn, so each lineage adds at most one body a
-            // turn whatever kills them.
+            // R2197004: a chain body summoned this turn summons nothing when it dies this turn.
             let turn = ctx.state.turn;
             if chained(ctx.state, &this) {
                 return vec![];
@@ -101,14 +87,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #25 Trigor — SPEC §8.11 row 25, BUILD M13 row TG 25: "can't be played without 3 Units to Tribute;
-// destroyed at 3/3: a base Trigor 6/6 arrives in the leftmost open zone; that one destroyed on a later turn:
-// a 9/9; buffs on the dying one are not carried (base stats only); the new one fires no Cry and pays no
-// Tribute; a full row: none summoned; a Trigor its Death summoned this turn summons nothing when it dies this
-// turn (R2197004): under an aura that takes 7 Health the 6/6 dies and none follows, and seeds 1543 and 9463's
-// endless chains (a Poisonous forced attacker; two Trigors forced into each other) end; exiled or bounced: no
-// Death, no summon; the growth reads through `param()`. radiant 6/6; its Death summons a base 12/12, whose
-// Death on a later turn summons 15/15".
+// TG #25 Trigor — SPEC §8.11 row 25, BUILD M13 row TG 25 (R2197004).
+// Tribute 3; Death summons base Trigor with +grow/+grow; chain mark prevents same-turn looping.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -127,7 +107,7 @@ mod tests {
     /// S #24 Warp Disruptor II: "After your opponent summons a Unit, each of your Units attacks it."
     const DISRUPTOR_II: &str = "stinkyscape-024";
 
-    /// p1, active with 30 mana, has `field` and `hand`; p2 has a library for Collateral Damage.
+    /// p2 has a library for Collateral Damage.
     fn game(field: Value, hand: Value) -> Scenario {
         crate::scenario(json!({
             "seed": "trigor",
@@ -254,8 +234,7 @@ mod tests {
 
         #[test]
         fn r2197004_under_an_aura_taking_7_health_the_6_6_dies_and_none_follows() {
-            // p2's Suppressive Auras, three Radiant (−2/−2 on p1's Units) and one base (−1/−1 on all),
-            // take 7 from each of p1's Units; the first Trigor is buffed to live through them.
+            // Three Radiant Suppressive Auras (−2/−2) and a base one (−1/−1) take 7; the first is buffed.
             let mut s = crate::scenario(json!({
                 "seed": "trigor-aura",
                 "active": "p2",
@@ -280,8 +259,7 @@ mod tests {
             }
             assert_eq!(s.stats(first.as_str()).max_health, 13 - 7);
             s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": first }] }));
-            // R2197004: the 3/3 dies and summons a 6/6, which the aura kills in the same check; it arrived
-            // this turn from a Trigor's Death, so it summons nothing.
+            // The 6/6 the 3/3's Death summons dies to the aura in the same check and summons nothing.
             let summoned = s
                 .last_events()
                 .iter()
@@ -318,7 +296,7 @@ mod tests {
         }
     }
 
-    /// R2197004: the chains the handicap fuzz found endless on R2197002's growth alone, each now ending.
+    /// R2197004: the chains the handicap fuzz found endless on R2197002's growth alone.
     mod r2197004_the_chain_ends {
         use super::*;
 
@@ -329,8 +307,7 @@ mod tests {
                 .count()
         }
 
-        /// Fuzz seed 1543 (`--handicap`): a Poisonous Unit forced into each new Trigor kills it whatever
-        /// its size.
+        /// Fuzz seed 1543 (`--handicap`): a Poisonous Unit forced into each new Trigor.
         #[test]
         fn r2197004_a_poisonous_unit_forced_into_each_new_trigor_ends_the_chain_after_one_body() {
             let mut s = crate::scenario(json!({
@@ -347,14 +324,12 @@ mod tests {
             s.card_mut(moths.as_str()).granted_keywords = vec![Keyword::Poisonous];
             let first = trigor_id(&s);
             hit(&mut s, &first);
-            // The 6/6 its Death summoned is forced into, poisoned and summons nothing (R2197004).
             assert_eq!(trigors_summoned(&s), 1);
             assert!(trigors(&s).is_empty());
             assert!(s.state().result.is_none());
         }
 
-        /// Fuzz seed 9463 (`--handicap`): Trigors and Warp Disruptor IIs on both sides; each new Trigor is
-        /// forced into the other side's, both die and both return.
+        /// Fuzz seed 9463 (`--handicap`): with a Warp Disruptor II each side, new Trigors meet and both die.
         #[test]
         fn r2197004_two_trigors_forced_into_each_other_end_after_one_body_each() {
             let mut s = crate::scenario(json!({
@@ -388,9 +363,7 @@ mod tests {
             assert_eq!(trigors(&s), vec![(1, 9, 9, false)], "set up on an earlier turn, it is no chain body");
         }
 
-        /// REVIEW B-1: a stat override is no chain mark. A Trigor played this turn and set to 10/10 by
-        /// TG #34 Dino-size still summons its successor, a 13/13, when it dies this turn; that one, the
-        /// chain's, carries the mark and summons nothing when it dies this turn too.
+        /// REVIEW B-1: a stat override is no chain mark; the successor is the chain's and carries one.
         #[test]
         fn r2206000_r2197004_a_played_trigor_set_to_10_10_this_turn_still_summons_a_13_13() {
             let mut s = game(json!([VANILLA, VANILLA, VANILLA]), json!([ID, DINO, HIT_JOB, HIT_JOB, FILLER]));

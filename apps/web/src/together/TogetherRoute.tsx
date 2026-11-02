@@ -1,20 +1,12 @@
-// `/together` — Play together (#936, SPEC S8, B54–B59): friends with their status, requests both
-// ways, the players this account blocked, the challenges it sent, the replays friends shared with it,
-// chat with any friend, and Duos co-op (`duos/CoopPanel.tsx`, which gets the friends list).
-//
+// `/together` — Play together (#936, SPEC S8, B54–B59), Duos co-op included (`duos/CoopPanel.tsx`,
+// which gets the friends list).
 // Behind the gate like `/play` (B54). Every list is the server's answer (`net/social.ts`), read again
-// without a reload: the friends list (statuses, requests, blocks) every `FRIENDS_POLL_MS`, the pace a
-// status changes at, and the challenges and unread counts every `SOCIAL_POLL_MS` (`socialPoll.ts`, the
-// one read of them every screen shares); and each list again at once after each of this page's own
-// changes. Nothing here is a rule (CLAUDE.md rule 7): which friend can be challenged or watched is what the server says of them
-// (`status`, `watchable`), and every refusal is shown in the server's words.
-//
-// A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
-// server says the game is `watchable`; Chat always; Remove, at once, and Block, asking once.
-//
-// R2119000: Remove asks nothing. The friend leaves the list at once behind "Friend removed · Undo",
-// and the unfriend waits for the undo window (`undo/hold.ts`); Undo puts the friend back and sends
-// nothing, and an unfriend that fails puts the friend back and shows the server's words.
+// without a reload: the friends list every `FRIENDS_POLL_MS`, the pace a status changes at, and each
+// list at once after each of this page's own changes. Nothing here is a rule (CLAUDE.md rule 7): which
+// friend can be challenged or watched (B56) is what the server says of them (`status`, `watchable`),
+// and every refusal is shown in the server's words.
+// R2119000: Remove asks nothing: the friend leaves the list at once and the unfriend waits behind
+// "Friend removed · Undo" (`undo/hold.ts`), so Undo sends nothing.
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -64,7 +56,6 @@ import "./together.css";
 
 const NO_FRIENDS: readonly Friend[] = [];
 
-/** An ISO time as a date and time in the reader's language, or the text itself when it is not one. */
 function when(iso: string): string {
   const at = Date.parse(iso);
   return Number.isFinite(at) ? formatDateTime(at, { dateStyle: "medium", timeStyle: "short" }) : iso;
@@ -88,7 +79,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
       return after;
     });
   };
-  // The challenges and unread counts are the tab's one read of them (`socialPoll.ts`), shared with the shell's toast.
+  // The challenges and unread counts are the tab's one read of them (`socialPoll.ts`).
   const social = useSocialPoll();
   const [shared, reloadShared] = usePolled(getSharedReplays, null);
   const lookup = useCatalogLookup();
@@ -127,7 +118,6 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
     if (list !== null && typeof list.scrollIntoView === "function") list.scrollIntoView();
   }, [shared.kind]);
 
-  /** One of this page's own changes, then the lists it touched read again. */
   const act = (work: () => Promise<unknown>, after: () => void = reloadFriends): void => {
     if (busy) return;
     setBusy(true);
@@ -146,9 +136,8 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
   };
 
   /**
-   * Closes the challenge dialog and gives the focus back to the Challenge button that opened it, as a
-   * dialog should leave it (WAI-ARIA APG; `Game.tsx`'s `refocusConcede`). The button is kept when it is
-   * pressed, not read off the focus, which a click on a button does not move in every browser.
+   * The focus goes back to the Challenge button that opened the dialog (WAI-ARIA APG; `Game.tsx`'s
+   * `refocusConcede`), kept when pressed, not read off the focus, which a click does not move everywhere.
    */
   const closeChallenge = (): void => {
     setChallenging(null);

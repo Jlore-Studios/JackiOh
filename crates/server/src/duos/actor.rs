@@ -1,52 +1,15 @@
-//! One actor per Duos co-op match (fullsend SPEC S6, B35–B40), as `actor/match_actor.rs` is one per
-//! 1v1 match: it holds the `DuosState` in memory, one socket per person (seats a1 and a2), the clocks
-//! and the AI's seats, and it appends every applied action to `duos_match_actions`.
-//!
-//!  - The rules are the engine's Duos wrapper (`duos::engine`): `duos_reduce` refuses an illegal
-//!    action and the actor relays its reason verbatim (B35); nothing here restates a rule.
-//!  - The only per-seat payload is `duos_view_for(state, seat)` with `duos_legal_actions` for the same
-//!    seat (B23), so a socket never sees an opponent's hidden card or another seat's array.
-//!  - Every action goes through one path, a person's and the AI's alike (`apply`): reduce, append one
-//!    row at the next gapless seq, then push. A rebuilt actor folds `(seed, options, log)`
-//!    (`duos_fold`, B40) and answers a nonce it has logged with its original ack.
-//!  - The AI plays b1 and b2 always, a person's seat whose disconnect outlived the grace until they
-//!    are back (B37), a seat whose round clock ran out (B38) and a prompt whose clock ran out: each
-//!    seat waits `DUOS_AI_STEP_DELAY_MS`, then `jackioh_ai::duos_decide` decides on the blocking pool,
-//!    off the runtime as a ladder bot's search is (R1452), and its move comes back through `apply`
-//!    with a server nonce (`srv-ai-<seq>`, R270's prefix). The AI never concedes and never offers or
-//!    takes a draw (R188).
-//!  - Clocks live here, never in the engine: the mulligan clock over the four open mulligans, a round
-//!    clock for a round with a person in it, a prompt clock for a prompt a person holds outside one, and
-//!    each person's disconnect grace (the 1v1's `DISCONNECT_GRACE_SECONDS`). None of them is an action
-//!    the engine sees: an expiry hands the seat to the AI, whose moves are ordinary logged actions, so
-//!    `(seed, log)` still folds the match exactly. The mulligan clock's expiry keeps each owing
-//!    person's whole hand (§13.2, R268): the AI's own mulligan never answers for a person (it may for a
-//!    seat past its grace, which the AI plays outright).
-//!  - The hard ceiling (§9.5, R1047000) is the one clock the engine does see: `MATCH_CEILING_MS` after
-//!    the row's `created_at`, never stored, the actor sends the engine's own `ceilingReached` as one
-//!    server action, and its `ceiling` draw ends the game and writes the result like any other end.
-//!    A rebuilt actor that arms past the deadline sends it at once, before anyone plays on.
-//!  - A move the AI decided is played only while the AI still plays the seat the way it decided it:
-//!    one decided for a seat past its grace is dropped once its person is back, whatever clock has
-//!    run out for them meanwhile, and the seat decides again (B37, B38).
-//!  - Every engine call runs under the catalog the match was dealt from (R767000, `Pinned`), so a
-//!    rebuilt actor plays on as the match began.
-//!  - A `hello` repeated while one for the same socket is still queued is absorbed by it (§9.1, as
-//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame. One that finds
-//!    none queued is dropped, unanswered, when the socket's last answered hello was less than
-//!    `WATCH_HELLO_INTERVAL_MS` ago (R2686000); a reattach's first hello is always answered.
-//!  - Each person's seat keeps the 1v1 seat's guards (`actor::guard::SeatGuard`; R137, R835000,
-//!    R835002): the action flood window, the malformed-frame budget, the count of refusals that
-//!    raises `match.rejections.unusual` and the hello interval. Only a person's own refusals count;
-//!    the AI's never do.
-//!  - A live `reduce` that panics changes nothing and is answered `internal` and filed; a server
-//!    action that panics ends the match as the ceiling's draw (R1253000).
-//!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
-//!    viewed (B39).
-//!
-//! Every task runs on one serialized queue (one tokio task draining an inbox, each task run as its
-//! own spawned task so one that panics is logged and the queue goes on), and the lock is never held
-//! across an `.await` or while a socket is closed (a close calls back into the actor).
+//! One actor per Duos co-op match (fullsend SPEC S6, B35–B40): it holds `DuosState`, one socket per
+//! person (a1, a2), the clocks and the AI's seats, and appends every action to `duos_match_actions`.
+//! `duos_reduce`'s refusals are relayed verbatim (B35); a socket gets only its seat's view (B23).
+//! Every action takes `apply` (B40), under the dealt catalog (R767000). The AI plays b1, b2 and a
+//! person's seat past its grace (B37) or clock (B38), off the runtime (R1452), with R270's nonces,
+//! never conceding or drawing (R188). Clocks live here, never in the engine, so an expiry hands the
+//! seat to the AI and `(seed, log)` still folds; a lapsed mulligan keeps the hand (§13.2, R268). The
+//! ceiling (§9.5, R1047000) is the engine's own action. Seats keep the 1v1's guards (§9.1, R835001,
+//! R137, R835000, R835002); a hello sooner than `WATCH_HELLO_INTERVAL_MS` after the socket's last
+//! answered one is dropped (R2686000). A panicking server action ends in the ceiling's draw
+//! (R1253000); pings reach the teammate only, never logged (B39). One serialized queue; the lock is
+//! never held across an `.await` or while a socket is closed (a close calls back into the actor).
 
 use std::collections::VecDeque;
 use std::panic::AssertUnwindSafe;
@@ -90,8 +53,7 @@ use crate::duos::{ceiling_at, ceiling_draw, finish_match};
 use crate::economy::rewards::GameEconomy;
 use crate::seats::Seat;
 
-/// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
-/// indexed in this order.
+/// Human player seats, host and guest (S6): the per-person arrays' order.
 pub const HUMAN_SEATS: [DuosSeat; 2] = [DuosSeat::A1, DuosSeat::A2];
 
 /// A seat's index in `DUOS_SEATS` order (a1, a2, b1, b2).
@@ -112,10 +74,6 @@ fn human(seat: DuosSeat) -> Option<usize> {
         DuosSeat::B1 | DuosSeat::B2 => None,
     }
 }
-
-// ---------------------------------------------------------------------------
-// Reading the state (public bookkeeping only; nothing here is shown to a socket)
-// ---------------------------------------------------------------------------
 
 /// The id of the prompt `seat` holds in its duel, if any.
 fn held_prompt(state: &DuosState, seat: DuosSeat) -> Option<String> {
@@ -164,8 +122,7 @@ fn is_answer(body: &DuosActionBody) -> bool {
     )
 }
 
-/// R188: what the AI never plays for any seat: a concession (the team's or the duel's), a draw offer,
-/// an accepted draw or an emote.
+/// R188: forbidden AI moves: concessions, draws, and emotes.
 fn ai_forbidden(body: &DuosActionBody) -> bool {
     match body {
         DuosActionBody::Concede => true,
@@ -174,8 +131,7 @@ fn ai_forbidden(body: &DuosActionBody) -> bool {
     }
 }
 
-/// What the AI plays when `duos_decide` gave nothing it may play: ending the turn, else an answer,
-/// else the first legal action it may take.
+/// Fallback move when `duos_decide` yields no playable action.
 fn fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
     let allowed = || legal.iter().filter(|body| !ai_forbidden(body));
     allowed()
@@ -184,10 +140,6 @@ fn fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
         .or_else(|| allowed().next())
         .cloned()
 }
-
-// ---------------------------------------------------------------------------
-// The AI's seats
-// ---------------------------------------------------------------------------
 
 /// Why a person's seat (a1, a2) is in the AI's hands for a while.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -239,8 +191,7 @@ fn keep_whole_hand(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
         .map(|(_, body)| body.clone())
 }
 
-/// What the AI plays for `seat` in `mode` without a decision of its own: the whole hand kept, the
-/// turn ended, or `fallback`'s pick.
+/// Fallback action for `seat` in `mode` without AI search.
 fn without_search(
     mode: &Mode,
     state: &DuosState,
@@ -267,9 +218,8 @@ struct AiJob {
 }
 
 impl AiJob {
-    /// B26–B29: `duos_decide` on the seat's own stream (`{seed}:duos-ai:{seat}`, the server's, never
-    /// the match rng), within `BOT_DECISION_DEADLINE_MS` of search. Answers the move, or none, and
-    /// where the stream stands.
+    /// B26–B29: `duos_decide` on `{seed}:duos-ai:{seat}` (never the match rng) within
+    /// `BOT_DECISION_DEADLINE_MS`.
     fn decide(&self) -> (Option<DuosActionBody>, u32) {
         jackioh_cards::register_all();
         let Some(mode) = &self.mode else {
@@ -308,10 +258,6 @@ impl AiJob {
         (body, options.rng.cursor())
     }
 }
-
-// ---------------------------------------------------------------------------
-// The actor
-// ---------------------------------------------------------------------------
 
 /// What a new or rebuilt actor starts from.
 pub struct DuosActorInput {
@@ -372,8 +318,7 @@ enum Task {
         reply: oneshot::Sender<DuosServerMessage>,
     },
     Expire(Expiry),
-    /// The move the AI decided for `seat`, in `mode`, on the state as it stood when the log's next
-    /// seq was `version`.
+    /// AI decision for `seat` in `mode` at state `version`.
     AiMove {
         seat: DuosSeat,
         version: i64,
@@ -417,54 +362,39 @@ fn armed_by(countdown: Option<&Countdown>, timer: u64) -> bool {
 struct Core {
     state: DuosState,
     next_seq: i64,
-    /// §9.3: nonce -> the seat that sent it and the seq it was logged at, rebuilt from the log.
+    /// §9.3: nonce -> (seat, seq) rebuilt from log.
     acks: IndexMap<String, (DuosSeat, i64)>,
-    /// R1253000: the nonces of actions whose `reduce` panicked: never logged, so a rebuild starts empty;
-    /// a resend gets `panicked_answer` again with no second reduce. Not `acks`, which holds only what
-    /// the log holds.
+    /// R1253000: nonces whose `reduce` panicked; not `acks`, which holds only what the log holds.
     panicked: IndexSet<String>,
-    /// By `HUMAN_SEATS`.
     sockets: [Option<Socket>; 2],
-    /// B37: the AI plays this person's seat until they are back.
+    /// B37: whether AI plays human seat during disconnect.
     ai_playing: [bool; 2],
     grace: [Option<Countdown>; 2],
     mulligan: Option<Countdown>,
     mulligan_expired: bool,
-    /// The round the clock runs for, and its countdown.
     round_clock: Option<(i32, Countdown)>,
-    /// The round whose clock already ran out, so it is not armed again.
     round_expired: Option<i32>,
-    /// By `HUMAN_SEATS`: the prompt the clock runs for, and its countdown.
     prompt_clocks: [Option<(String, Countdown)>; 2],
-    /// By `HUMAN_SEATS`: the prompt whose clock already ran out.
     prompt_expired: [Option<String>; 2],
-    /// R1047000: the hard ceiling's countdown (from the row), or its retry's.
+    /// R1047000: hard ceiling countdown.
     ceiling: Option<Countdown>,
-    /// By `DUOS_SEATS` (only a person's is ever set).
     forced: [Option<Forced>; 4],
-    /// By `DUOS_SEATS`: a decision is under way for it.
     ai_busy: [bool; 4],
-    /// By `DUOS_SEATS`: where each seat's AI stream stands. A rebuilt actor starts them again.
+    /// Each seat's AI stream cursor; a rebuilt actor starts them again.
     ai_cursor: [u32; 4],
-    /// By `HUMAN_SEATS`: the 1v1 seat's guards (`actor::guard`): §9.8's per-seat action window
-    /// (R137), R835000's refusals, R835002's malformed frames and R2686000's hello interval.
+    /// By `HUMAN_SEATS`: action flood (R137, §9.8), refusals (R835000), malformed frames (R835002), hello
+    /// interval (R2686000).
     guards: [SeatGuard; 2],
     /// By `HUMAN_SEATS`: B39's ping window.
     pings: [VecDeque<i64>; 2],
-    /// By `HUMAN_SEATS` (R835001's rule): the socket generation whose Hello is queued and unrun, so
-    /// a repeat from that socket is absorbed; a Hello from a newer socket always enqueues.
+    /// By `HUMAN_SEATS`: pending Hello socket generation to absorb duplicates (R835001).
     hello_pending: [Option<u64>; 2],
-    /// By `HUMAN_SEATS`: bumped on every attach, the first included.
     socket_generation: [u64; 2],
-    /// The result is written (or the row already had one when the actor was built).
     finished: bool,
     finished_at: Option<i64>,
-    /// By `HUMAN_SEATS`: R1483000, each seat's own flag for whether the daily Jlore cap held back
-    /// its pay for this match.
+    /// By `HUMAN_SEATS`: whether daily Jlore cap held back pay (R1483000).
     jlore_capped: [bool; 2],
-    /// By `HUMAN_SEATS`: #1657, what the result's write paid each seat's person, as the write
-    /// answered it. `None` before the write, and on an actor whose write found the result already
-    /// there or that was rebuilt on a finished match: nothing paid then, so nothing is told.
+    /// By `HUMAN_SEATS`: payout per player answered by result write (#1657); `None`, nothing told.
     economy: [Option<GameEconomy>; 2],
     stopped: bool,
 }
@@ -590,8 +520,8 @@ impl DuosActor {
         match task {
             Task::Arm => self.on_arm().await,
             Task::Hello { seat, generation } => {
-                // §9.5: a fresh full view, never a log replay. R835001: the flag is cleared only for
-                // the generation that set it, so a newer socket's queued Hello stays marked.
+                // §9.5 full view; clear Hello flag only for matching generation, so a newer socket's
+                // queued Hello stays marked (R835001).
                 let mut core = self.lock();
                 if let Some(index) = human(seat)
                     && core.hello_pending[index] == Some(generation)
@@ -631,9 +561,7 @@ impl DuosActor {
         }
     }
 
-    // -----------------------------------------------------------------
-    // Sending. A socket only ever carries its own seat's view (B23).
-    // -----------------------------------------------------------------
+    // Sockets only carry their own seat's view (B23).
 
     fn socket_for<'c>(&self, core: &'c Core, seat: DuosSeat) -> Option<&'c Socket> {
         let index = human(seat)?;
@@ -646,8 +574,7 @@ impl DuosActor {
         }
     }
 
-    /// The deadline `seat` is playing against: the mulligans' in round 0, its round's while the round
-    /// clock runs, else the prompt clock it holds.
+    /// Deadline `seat` plays against: mulligan, round, or prompt clock.
     fn deadline_for(&self, core: &Core, seat: DuosSeat) -> Option<i64> {
         if core.finished || core.state.result.is_some() {
             return None;
@@ -666,8 +593,7 @@ impl DuosActor {
             .map(|(_, countdown)| countdown.deadline)
     }
 
-    /// B35: the seat's view and its own legal actions, off one state. The engine never reads a clock
-    /// (R79), so the own duel's `clockMs` is filled in here with the deadline the seat plays against.
+    /// B35: view and legal actions; fills in `clock_ms` deadline outside engine (R79).
     fn push_view(&self, core: &Core, seat: DuosSeat) {
         let Some(socket) = self.socket_for(core, seat) else {
             return;
@@ -719,10 +645,6 @@ impl DuosActor {
         self.push_teammate(core, seat);
     }
 
-    // -----------------------------------------------------------------
-    // Clocks
-    // -----------------------------------------------------------------
-
     /// A countdown of `ms` whose expiry comes back on the queue as `expiry(timer id)`.
     fn countdown(&self, ms: i64, expiry: impl FnOnce(u64) -> Expiry + Send + 'static) -> Countdown {
         let actor = Arc::downgrade(&self.shared);
@@ -747,8 +669,7 @@ impl DuosActor {
             Some(self.countdown(DISCONNECT_GRACE_MS, move |timer| Expiry::Grace { seat, timer }));
     }
 
-    /// Brings the mulligan, round and prompt clocks up to date with the state. Each is armed once for
-    /// what it runs over (the mulligans, a round, a prompt) and never armed again over the same one.
+    /// Syncs mulligan, round and prompt clocks with state (armed once per instance).
     fn sync_clocks(&self, core: &mut Core) {
         let over = core.finished || core.stopped || core.state.result.is_some();
 
@@ -761,7 +682,7 @@ impl DuosActor {
             core.mulligan = None;
         }
 
-        // B38: a round with a person among its round seats runs the round clock.
+        // B38: round with human seat runs round clock.
         let round = core.state.round;
         let with_people =
             !over && round >= 1 && core.state.round_seats.iter().any(|seat| human(*seat).is_some());
@@ -776,8 +697,7 @@ impl DuosActor {
             core.round_clock = None;
         }
 
-        // A prompt a person holds outside a round of their own (the AI team's round, or after they
-        // ended). Inside one, the round clock covers it, and its expiry answers it (B38).
+        // Prompt held outside own round (inside one, round clock covers it, B38).
         for seat in HUMAN_SEATS {
             let Some(index) = human(seat) else { continue };
             let held = if over {
@@ -865,8 +785,7 @@ impl DuosActor {
                     }
                     core.grace[index] = None;
                     if self.socket_for(&core, seat).is_none() {
-                        // B37: the AI plays the seat until its person is back; the team never loses
-                        // to a disconnect.
+                        // B37: AI plays the seat until its person is back: no loss by disconnect.
                         core.ai_playing[index] = true;
                         tracing::info!(event = "duos.seat.ai_playing", matchId = %self.match_id_str(), seat = %seat);
                         self.push_teammate(&core, seat.teammate());
@@ -881,15 +800,10 @@ impl DuosActor {
         self.drive_ai();
     }
 
-    // -----------------------------------------------------------------
-    // Arming, sockets coming and going
-    // -----------------------------------------------------------------
-
     async fn on_arm(&self) {
         let (over, past_ceiling) = {
             let mut core = self.lock();
-            // As R744 has it for a 1v1 match: a person no socket has reached yet is away from now,
-            // so a seat nobody opens is the AI's once the grace runs out.
+            // R744: seat with no socket starts grace, so one nobody opens goes to the AI.
             for seat in HUMAN_SEATS {
                 if self.socket_for(&core, seat).is_none() {
                     self.start_grace(&mut core, seat);
@@ -931,9 +845,8 @@ impl DuosActor {
         self.reach_ceiling().await;
     }
 
-    /// R1047000: one `ceilingReached` in duel 0, stamped a1 (R146: the ceiling is no seat's), ends the
-    /// whole game as the duel's draw does (`ceiling`), and `after_change` writes the result. A write
-    /// that could not be logged is tried again `MATCH_SERVER_ACTION_RETRY_MS` later (R776000).
+    /// R1047000: `ceilingReached` in duel 0, stamped a1 (R146: no seat's), ends the game as a
+    /// draw; retried on a log error (R776000).
     async fn reach_ceiling(&self) {
         let seq = {
             let core = self.lock();
@@ -1000,7 +913,7 @@ impl DuosActor {
         {
             let mut core = self.lock();
             let Some(index) = human(seat) else { return };
-            // A socket already replaced by an open one, or let go by `halt`, is not a disconnect.
+            // Open replacement or halted socket is not a disconnect.
             if core.sockets[index].as_ref().is_none_or(Socket::is_open) {
                 return;
             }
@@ -1012,10 +925,6 @@ impl DuosActor {
         }
         self.enqueue(Task::Disconnect { seat });
     }
-
-    // -----------------------------------------------------------------
-    // Frames from a socket
-    // -----------------------------------------------------------------
 
     fn on_frame(&self, seat: DuosSeat, text: &str) {
         let Some(index) = human(seat) else { return };
@@ -1031,7 +940,7 @@ impl DuosActor {
                     &error_message(SocketErrorCode::Malformed, &malformed.reason, None),
                 );
                 if over {
-                    // R835002. The guard goes first: the close calls back into the actor.
+                    // R835002: close past the budget; the lock goes first, as the close calls back.
                     let socket = core.sockets[index].clone();
                     drop(core);
                     if let Some(socket) = socket {
@@ -1041,9 +950,8 @@ impl DuosActor {
             }
             Ok(DuosClientMessage::Hello { .. }) => {
                 // R835001: a hello while this socket's last one is still queued is absorbed by it.
-                // R2686000: one that finds none queued is dropped, unanswered and with the socket
-                // left open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered
-                // on this socket; a newer generation (a reattach) always enqueues.
+                // R2686000: one within WATCH_HELLO_INTERVAL_MS of the last answered is dropped, the
+                // socket left open; a newer generation (a reattach) always enqueues.
                 let generation = core.socket_generation[index];
                 if core.hello_pending[index] != Some(generation)
                     && core.guards[index].hello_answer_allowed(generation, now_ms())
@@ -1058,7 +966,7 @@ impl DuosActor {
                 if !core.guards[index].action_allowed(now) {
                     // §9.8: the overflow is refused; the socket stays open.
                     tracing::warn!(event = "duos.action.flooded", matchId = %self.match_id_str(), seat = %seat);
-                    // R835000: a flood refusal counts toward the seat's unusual-rejection alert.
+                    // R835000: flood refusal counts toward unusual-rejection alert.
                     self.note_rejection(&mut core, index, now);
                     self.send(
                         &core,
@@ -1076,8 +984,7 @@ impl DuosActor {
         }
     }
 
-    /// R835000: counts one refused action of the person at `index`, and raises
-    /// `match.rejections.unusual` the first time their window crosses the threshold.
+    /// R835000: records rejection, alerting on threshold crossing.
     fn note_rejection(&self, core: &mut Core, index: usize, now: i64) {
         if let Some(rejected) = core.guards[index].note_rejection(now) {
             let profile_id = [&self.shared.row.a1, &self.shared.row.a2][index];
@@ -1085,9 +992,8 @@ impl DuosActor {
         }
     }
 
-    /// B39: a ping goes to the teammate's socket only, at most `PING_RATE_LIMIT` per
-    /// `PING_RATE_WINDOW_MS`. A hand target naming another side than the sender's own team's, or a
-    /// position past that hand, is dropped, as is the overflow: silently, as an emote is (R643).
+    /// B39: relays rate-limited pings to teammate; a hand target off the team's own hand is dropped
+    /// silently (R643).
     fn relay_ping(&self, core: &mut Core, seat: DuosSeat, ping: PingKind, target: PingTarget) {
         let Some(index) = human(seat) else { return };
         if core.stopped {
@@ -1127,12 +1033,7 @@ impl DuosActor {
         );
     }
 
-    // -----------------------------------------------------------------
-    // Applying an action
-    // -----------------------------------------------------------------
-
-    /// The one path every action takes, a person's and the AI's alike (B35, B40): reduce, append
-    /// exactly one row at the next gapless seq, then push. Answers the ack or the error.
+    /// Applied action path for player and AI (B35, B40): reduce, append one gapless row, then push.
     async fn apply(&self, seat: DuosSeat, nonce: String, body: DuosActionBody) -> DuosServerMessage {
         let reduced = {
             let core = self.lock();
@@ -1164,8 +1065,7 @@ impl DuosActor {
                 nonce: nonce.clone(),
                 body,
             };
-            // R1253000: `reduce` takes `&state` and returns a new one, so a panic leaves nothing
-            // half-applied, as the rebuild's fold relies on.
+            // R1253000: pure `reduce` leaves nothing half-applied on panic, as the fold relies on.
             let reduced = std::panic::catch_unwind(AssertUnwindSafe(|| {
                 engine::reduce(self.shared.pinned, &core.state, &action)
             }));
@@ -1184,8 +1084,7 @@ impl DuosActor {
         if let Some(reason) = &result.error {
             let reason = reason.to_string();
             tracing::warn!(event = "duos.action.rejected", matchId = %self.match_id_str(), seat = %seat, reason = %reason);
-            // R835000: a person's own refusal counts; the AI's moves and the ceiling carry server
-            // nonces (R270) and never do.
+            // R835000: count person refusals; AI/ceiling carry server nonces (R270) and never do.
             if let Some(index) = human(seat)
                 && !nonce.starts_with(SERVER_NONCE_PREFIX)
             {
@@ -1195,7 +1094,7 @@ impl DuosActor {
             return error_message(SocketErrorCode::IllegalAction, &reason, Some(&nonce));
         }
 
-        // §9.3: the row goes in before the new state is kept, so the log is never behind the state.
+        // §9.3: row before state, so the log is never behind the state.
         let logged: Result<Value, StoreError> =
             action_json(action.seat, &action.nonce, &action.body).map_err(StoreError::from);
         let appended = match logged {
@@ -1233,12 +1132,8 @@ impl DuosActor {
         ack_message(&nonce, seq)
     }
 
-    /// R1253000: a live `reduce` panicked. Nothing was logged or kept, so the state, the log and
-    /// `next_seq` stand. The nonce keeps its answer, since `reduce` is pure and the same action on the
-    /// same state panics again, and the finding is filed for the night bot (`bug_reports.rs`): the seq
-    /// the action would have taken, its seat and its type, never the panic's message, which only the
-    /// private log line holds. A server action (the AI's move, shared by every AI seat at a seq, or the
-    /// ceiling's) would be made again and panic again, so it ends the match as the ceiling's draw.
+    /// R1253000: handles panicked `reduce`. Caches nonce failure and files finding with `bug_reports`.
+    /// A server action would be made and panic again, so it ends the match as ceiling draw.
     async fn on_reduce_panicked(&self, action: &DuosAction, seq: i64, message: &str) -> DuosServerMessage {
         let kind = match &action.body {
             DuosActionBody::Duel { body } => body.action_type().to_string(),
@@ -1267,9 +1162,7 @@ impl DuosActor {
         panicked_answer(&action.nonce)
     }
 
-    /// R1253000, R1047001: the match ends at once as the ceiling's draw (`ceiling_draw`), written as B40
-    /// writes any ending. The actor lets go as the sweep's `end_abandoned` does for a match it cannot
-    /// fold back; the clocks `halt` clears, and the AI's retries find the match finished or stopped.
+    /// R1253000, R1047001: ends match as ceiling draw (B40) and lets go as `end_abandoned` does.
     async fn end_as_ceiling_draw(&self) {
         let result = ceiling_draw();
         let at = now_ms();
@@ -1298,8 +1191,7 @@ impl DuosActor {
         }
     }
 
-    /// B35: after every applied action, both people get fresh views and clocks; then the result is
-    /// written, or the AI moves on.
+    /// B35: pushes fresh views and clocks after every action, then writes the result or moves the AI.
     async fn after_change(&self) {
         let over = {
             let mut core = self.lock();
@@ -1317,8 +1209,7 @@ impl DuosActor {
         }
     }
 
-    /// B40: the end writes `result` and `ended_at` once. A write that never lands lets the actor go,
-    /// so the next socket rebuilds it from the log and the rebuilt actor writes it as it arms.
+    /// B40: writes `result` and `ended_at` once; a lost write lets go, for a rebuild to write it.
     async fn on_terminal(&self) {
         let (result, at) = {
             let mut core = self.lock();
@@ -1344,19 +1235,13 @@ impl DuosActor {
             return;
         };
         self.release_seats();
-        // #1657: each seat's pay, which `load_jlore_caps` sends.
         self.lock().economy = economy;
         self.load_jlore_caps(true).await;
         tracing::info!(event = "duos.over", matchId = %self.match_id_str(), outcome = %result.outcome, reason = %result.reason);
     }
 
-    /// R1483000: whether the daily Jlore cap held back either seat's pay for this match, read off
-    /// the ledger now that the result is in it. Every view of a seat it held back carries it;
-    /// `announce` sends those seats a fresh one now, for a result just written (an actor arming on
-    /// a finished match sends its sockets theirs as each attaches), and with them each seat the
-    /// write paid (`Core::economy`, #1657), so one view tells a seat both. A read that fails costs
-    /// the line, never the result or the pay: it is logged, and the next rebuilt actor reads it
-    /// again.
+    /// R1483000: checks if daily Jlore cap held back either seat's pay. Pushes updated view
+    /// with `jlore_capped` and payment (#1657) to affected seats; a failed read is only logged.
     async fn load_jlore_caps(&self, announce: bool) {
         let caps = match super::duos_game_jlore_caps(&self.shared.app, self.match_id_str()).await {
             Ok(caps) => caps,
@@ -1378,10 +1263,8 @@ impl DuosActor {
         }
     }
 
-    /// `MATCH_RECORD_RESULT_ATTEMPTS` tries, the waits doubling from `MATCH_RECORD_RESULT_BACKOFF_MS`.
-    /// A write that finds the result already there has landed too. The write that lands pays both
-    /// people (`finish_match`, [[R1502000]]). Answers what it paid each, by `HUMAN_SEATS`, once the
-    /// result landed (nothing for one already there, #1657), and `None` when it never did.
+    /// Retries `finish_match` ([[R1502000]]) with backoff; a result already there has landed too.
+    /// Returns payout per `HUMAN_SEATS` (#1657).
     async fn record_result(&self, result: &DuosResult, at: i64) -> Option<[Option<GameEconomy>; 2]> {
         let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
         for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
@@ -1407,8 +1290,7 @@ impl DuosActor {
         None
     }
 
-    /// The registry forgets this actor and both sockets close as `halt` closes them; the next socket
-    /// folds the match again from its log (as R1437 and R776000 have the 1v1 actor let go).
+    /// Forgets actor and closes sockets, for the next socket to fold the log (R1437, R776000).
     fn let_go(&self, event: &'static str) {
         if self.lock().stopped {
             return;
@@ -1418,9 +1300,7 @@ impl DuosActor {
         tracing::warn!(event = event, matchId = %self.match_id_str());
     }
 
-    // -----------------------------------------------------------------
     // The AI's seats (B36–B38)
-    // -----------------------------------------------------------------
 
     fn ai_mode(&self, core: &Core, seat: DuosSeat) -> Option<Mode> {
         let Some(index) = human(seat) else {
@@ -1441,9 +1321,7 @@ impl DuosActor {
         }
     }
 
-    /// B36: starts a decision for every AI-played seat that owes the game something and is not already
-    /// deciding. Each waits `DUOS_AI_STEP_DELAY_MS`, reads the state as it stands then, decides on the
-    /// blocking pool and queues its move.
+    /// B36: starts background decision for every AI seat needing a move (`DUOS_AI_STEP_DELAY_MS`).
     fn drive_ai(&self) {
         let mut core = self.lock();
         if core.finished || core.stopped || core.state.result.is_some() {
@@ -1514,14 +1392,9 @@ impl DuosActor {
         Some((job, core.next_seq))
     }
 
-    /// Plays the AI's move for `seat` while the AI still holds the seat the way it decided the move
-    /// (`decided`), as a server action. A move decided in another mode than the seat's now is dropped
-    /// and the seat decides again: a person back from past their grace is never played for, even when
-    /// a clock has handed the AI their prompts or their turn's end meanwhile (B37, B38). A move
-    /// decided on a state the log has since moved past (the other duel, a pass, a person's answer)
-    /// still goes when the engine takes it; refused, the seat decides again on the state as it is, as
-    /// a ladder bot does (R1452). A fresh move the engine refuses is traded for the fallback once; a
-    /// move that could not be written is decided again `BOT_WRITE_RETRY_MS` later.
+    /// Plays AI move for `seat` if still in matching mode, else decides again: a person back is never
+    /// played for (B37, B38). A refused move decides again (R1452), a fresh one falls back once; a
+    /// failed write is decided again after `BOT_WRITE_RETRY_MS`.
     async fn on_ai_move(
         &self,
         seat: DuosSeat,
@@ -1585,8 +1458,7 @@ impl DuosActor {
         match code {
             SocketErrorCode::MatchOver => {}
             SocketErrorCode::Internal => {
-                // A match whose row is gone (deleted from the store under the actor) takes no more
-                // rows: the actor lets go rather than retry for ever.
+                // Deleted match row takes no more rows; lets go rather than retrying forever.
                 let row = one_tx!(self.shared.app.db, |t| t
                     .duos_matches_get(&self.shared.row.id)
                     .await?);
@@ -1611,10 +1483,6 @@ impl DuosActor {
         });
     }
 
-    // -----------------------------------------------------------------
-    // The actor's surface
-    // -----------------------------------------------------------------
-
     pub fn match_id(&self) -> &str {
         &self.shared.row.id
     }
@@ -1635,8 +1503,7 @@ impl DuosActor {
         }
     }
 
-    /// Hands a connection to the person in `seat` (a1 or a2), replacing (and closing) the one they
-    /// held. The seat's view, legal actions, clock and teammate follow on the queue (B35).
+    /// Attaches connection to person in `seat` (a1/a2), closing the old; view and clock follow (B35).
     pub fn attach(&self, seat: DuosSeat, socket: Socket) {
         let Some(index) = human(seat) else {
             socket.close(Some(CLOSE_NORMAL), Some("that seat is the AI's"));
@@ -1647,13 +1514,13 @@ impl DuosActor {
             if core.stopped {
                 None
             } else {
-                // R835001: a new socket generation, so its hello is never absorbed by an older one's.
+                // R835001: new socket generation so hello is never absorbed by older one.
                 core.socket_generation[index] += 1;
                 Some(core.sockets[index].replace(socket.clone()))
             }
         };
         let Some(previous) = previous else {
-            // The actor is going away: the client reconnects, and the next socket rebuilds it.
+            // Actor stopping; client reconnects.
             socket.close(Some(CLOSE_GOING_AWAY), Some("the actor is going away"));
             return;
         };
@@ -1680,7 +1547,7 @@ impl DuosActor {
         self.enqueue(Task::Attach { seat });
     }
 
-    /// Lets go of that person's socket, which starts their grace.
+    /// Detaches socket, starting disconnect grace.
     pub fn detach(&self, seat: DuosSeat) {
         let Some(index) = human(seat) else { return };
         let socket = self.lock().sockets[index].clone();
@@ -1691,7 +1558,7 @@ impl DuosActor {
         self.on_socket_gone(seat);
     }
 
-    /// Applies one action for `seat` through the path a socket's takes, and answers its ack or error.
+    /// Submits action for `seat`, returning ack or error.
     pub async fn submit(&self, seat: DuosSeat, nonce: String, body: DuosActionBody) -> DuosServerMessage {
         let (reply, answer) = oneshot::channel();
         let failed = error_message(
@@ -1755,10 +1622,8 @@ impl DuosActor {
             .any(|seat| self.socket_for(&core, seat).is_some())
     }
 
-    /// R2092000: which human seats hold an open socket right now, by `HUMAN_SEATS`. The Play again
-    /// status reads this, so a seat learns whether its teammate is still on the finished match. A
-    /// seat is present while it holds a socket that is still open (CLAUDE.md rule 7: booleans and
-    /// ids only).
+    /// R2092000: which human seats hold open sockets, for Play again's status (`HUMAN_SEATS`,
+    /// CLAUDE.md rule 7).
     pub fn presence(&self) -> [bool; 2] {
         let core = self.lock();
         HUMAN_SEATS.map(|seat| self.socket_for(&core, seat).is_some())

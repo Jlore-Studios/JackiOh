@@ -1,10 +1,4 @@
-//! R748000 (SPEC §9.12, R1454, R610, R732001): the ladder bots' seed ratings, measured. An even
-//! score is no offset and a sweep stays finite; the Bradley-Terry fit recovers the offsets it is
-//! given; a seed is the anchor plus its offset; an AI promotion moves the anchor by its `vsParent`;
-//! the reference's live rating is read off its games against people; a calibration game is a function
-//! of its seed; and `bot-calibrate`'s flags and its report are what the docs say.
-//!
-//! `jackioh_server::bots::calibrate` and `cli::bot_calibrate`, on the real cards.
+//! Measuring bot ratings (`src/bots/calibrate.rs`, SPEC §9.12, R748000, R1454, R610, R732001).
 
 use std::path::PathBuf;
 

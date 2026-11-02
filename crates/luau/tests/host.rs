@@ -34,7 +34,6 @@ fn bytecode(file: &str, source: &str) -> &'static [u8] {
     }
 }
 
-/// `fixtures/<name>.luau`, compiled.
 macro_rules! fixture {
     ($name:literal) => {
         bytecode(
@@ -99,7 +98,7 @@ fn error_text<T>(result: Result<T, LuauError>) -> String {
     }
 }
 
-// ---- the sandbox (L5) ----------------------------------------------------------------------------
+// The sandbox (L5)
 
 #[test]
 fn every_removed_global_is_nil() {
@@ -369,7 +368,7 @@ fn a_memory_error_is_known_under_a_readers_callback_error() {
     assert!(!ran_out_of_memory(&mlua::Error::runtime("not enough memory")));
 }
 
-// ---- integers at the boundary (L6) ---------------------------------------------------------------
+// Integers at the boundary (L6)
 
 #[test]
 fn a_bad_number_in_an_effect_fails_naming_the_card_face_hook_and_value() {
@@ -514,7 +513,7 @@ fn a_return_that_is_not_a_list_of_effects_is_named_by_its_kind() {
     );
 }
 
-// ---- one VM per thread (L8) ----------------------------------------------------------------------
+// One VM per thread (L8)
 
 #[test]
 fn a_module_level_counter_reads_the_same_on_every_call() {
@@ -703,7 +702,7 @@ fn the_same_effects_come_out_on_two_threads() {
     assert_eq!(there, [here.clone(), here]);
 }
 
-// ---- the loader ----------------------------------------------------------------------------------
+// The loader
 
 #[test]
 fn load_card_reads_the_declared_hooks() {
@@ -748,8 +747,7 @@ fn load_card_reads_the_declared_hooks() {
 #[test]
 fn an_activations_uses_crosses_as_an_i32_or_the_card_does_not_load() {
     // A count is a number leaving Luau like any other (L6, #871): one that is not an `i32` is
-    // refused at load, naming the card and face, where a cast once made 1.5 one use and 2^32 + 1
-    // one too.
+    // refused at load, naming the card and face.
     let module = |face: Face, uses: &str| {
         let declared = format!(
             "{{ activations = {{ {{ id = \"a\", label = \"A\", uses = {uses}, run = function(ctx) return nil end }} }} }}"
@@ -804,7 +802,7 @@ return {
     assert!(scripts.radiant.aura.is_some());
 }
 
-// ---- compiling and the lint (L6, L7) -------------------------------------------------------------
+// Compiling and the lint (L6, L7)
 
 #[test]
 fn the_lint_refuses_each_rules_example() {

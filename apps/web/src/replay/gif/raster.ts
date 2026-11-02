@@ -1,9 +1,7 @@
-// The raster of a shared GIF (#513, R513000): a frame plan drawn, frame by frame, onto a 2D canvas
-// and handed to the encoder. It runs in `raster.worker.ts` on an `OffscreenCanvas`; where a worker
-// cannot draw, `export.ts` runs it on the main thread, one frame per macrotask. It knows no React,
-// no catalog and no `t()`: the faces and art it draws arrive in `GifAssets`, made from the same
-// data the board's faces use (`cards/art`), so the same plan and assets give the same pixels' bytes.
-// It loads on demand with the encoder, never in the main bundle.
+// The raster of a shared GIF (#513, R513000): a frame plan drawn onto a 2D canvas and handed to the
+// encoder, in `raster.worker.ts` or, where a worker cannot draw, on the main thread (`export.ts`). It
+// knows no React, no catalog and no `t()`: its faces and art arrive in `GifAssets`, made from the data
+// the board's faces use (`cards/art`), so the same plan and assets give the same bytes.
 
 import type { CardType, PortraitId, Rarity } from "@jackioh/shared";
 
@@ -37,7 +35,7 @@ export type Ctx2D = CanvasState &
   CanvasPathDrawingStyles &
   CanvasImageData;
 
-/** What a card face needs to be drawn: its name, type, rarity and procedural art (null for a Glitch). */
+/** A card face to draw; its art is null for a Glitch. */
 export type GifFace = { name: string; type: CardType; rarity: Rarity | null; art: ArtSpec | null };
 
 export type GifAssets = {
@@ -46,7 +44,6 @@ export type GifAssets = {
   portraits: Partial<Record<PortraitId, { art: ArtSpec; rim: string }>>;
 };
 
-/** What the worker is asked: the plan, its assets and the byte cap. */
 export type RasterRequest = { plan: GifPlan; assets: GifAssets; maxBytes: number };
 
 /** What the worker answers, in order: a `frame` per frame drawn, then one of the other four. */
@@ -97,7 +94,7 @@ const RIM_MIN = 2;
 const DEGREES = Math.PI / 180;
 const FULL_CIRCLE = Math.PI * 2;
 
-/** A 2D context over a canvas of the given size: an `OffscreenCanvas` where there is one, else a canvas element. */
+/** An `OffscreenCanvas`'s 2D context where there is one, else a canvas element's. */
 export function canvasContext(width: number, height: number): Ctx2D | null {
   if (typeof OffscreenCanvas === "function") {
     return new OffscreenCanvas(width, height).getContext("2d", { willReadFrequently: true });
@@ -159,8 +156,7 @@ function mote(ctx: Ctx2D, m: ArtSpec["motes"][number], shape: ArtSpec["moteShape
 
 /**
  * A card's procedural art in the window `(x, y, w, h)`, in the order `artSvg` (cards/art/svg.ts)
- * lays its picture out: the sky, the glow, a Radiant card's rays, the ridges, the motif's glyphs,
- * the emblem and its accent, the motes and the vignette, the box scaled to cover the window.
+ * lays its picture out, the box scaled to cover the window.
  */
 export function drawArt(ctx: Ctx2D, spec: ArtSpec, x: number, y: number, w: number, h: number): void {
   ctx.save();
@@ -300,7 +296,6 @@ function drawPortrait(ctx: Ctx2D, item: Extract<GifItem, { kind: "portrait" }>, 
   ctx.stroke();
 }
 
-/** One frame's items, in order, onto `ctx`. */
 export function drawFrame(ctx: Ctx2D, frame: GifFrame, assets: GifAssets): void {
   ctx.textBaseline = "middle";
   for (const item of frame.items) {
@@ -350,7 +345,7 @@ export type RasterOptions = {
   between?: () => Promise<void>;
 };
 
-/** The plan drawn and encoded: the GIF's bytes, or null when they pass `maxBytes`. */
+/** The GIF's bytes, or null when they pass `maxBytes`. */
 export async function rasterize(ctx: Ctx2D, plan: GifPlan, assets: GifAssets, options: RasterOptions): Promise<Uint8Array<ArrayBuffer> | null> {
   const encoder = createGifEncoder(plan.width, plan.height);
   for (const [index, frame] of plan.frames.entries()) {

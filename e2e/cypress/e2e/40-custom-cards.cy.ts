@@ -1,9 +1,5 @@
-// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12).
-// A fixture account builds "Cry: deal 2 damage to an enemy unit" with the no-code builder, reads it
-// in the code view and saves it (R915010, R915008); finds it again after a reload; puts it in a deck,
-// which the workshop marks practice only (R915005); starts practice with that deck, which runs in
-// the Luau module (R915009); plays the card and sees the damage; and folds the browser's log, its
-// custom card with it, with `jackioh replay` to the same hash (R915006), as specs 01 and 13 do.
+// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12). The browser's
+// log, its custom card with it, folds with `jackioh replay` to the same hash (R915006).
 
 import { allCardIds } from "../../support/cards.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
@@ -46,7 +42,6 @@ function me(): E2EAccount {
 
 const SEED = seedFor("40-custom-cards");
 
-/** The card the builder makes. */
 const NAME = "Spark Lancer";
 const DAMAGE = 2;
 
@@ -118,12 +113,10 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
 
 type Play = { card: string; target: string; health: number; lane: number };
 
-/** SPEC §6: whether the Cry's damage reaches the unit whole: no Armor and no shielding keyword. */
 function takesWholeHit(unit: NonNullable<UnitLike>): boolean {
   return unit.armor === 0 && !unit.keywords.some((keyword) => SHIELDING_KEYWORDS.includes(keyword.kind));
 }
 
-/** The card in hand, an enemy unit the Cry's damage reaches whole, an empty lane of the human's and the mana to pay. */
 function playable(view: ViewLike, customId: string, cost: number): Play | null {
   const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
   const card = hand.find((held) => held.defId === customId);
@@ -133,7 +126,6 @@ function playable(view: ViewLike, customId: string, cost: number): Play | null {
   return { card: card.instanceId, target: enemy.instanceId, health: enemy.health, lane: lane + 1 };
 }
 
-/** Pass turns until the custom card can be played at an enemy unit, then say how. */
 function untilPlayable(customId: string, cost: number, turns = TURN_BUDGET): Cypress.Chainable<Play> {
   reachHumanTurn();
   return practiceHandle().then((handle) => {
@@ -161,9 +153,9 @@ const RESUME_KEY = "jackioh.practice.game";
 
 /**
  * Start practice on the saved deck, on the first of `SEED`'s deals that puts the custom card in the human's
- * opening hand, and say its seed. The deck is DECK_SIZE cards and the passive human is beaten on turn 9, so
- * a card left to the draws (about one deal in three) arrives too late: a deal is found, not assumed, so
- * a change to the deck, the shuffle or the AI moves it without breaking the spec (#1803).
+ * opening hand, and say its seed. The passive human is beaten on turn 9, so a card left to the draws
+ * arrives too late; a deal is found, not assumed, so a change to the deck, the shuffle or the AI moves
+ * it without breaking the spec (#1803).
  */
 function startWithCardInHand(customId: string, attempt = 0): Cypress.Chainable<string> {
   expect(attempt, `the custom card is in the opening hand of one of ${String(SEED_BUDGET)} deals`).to.be.lessThan(SEED_BUDGET);
@@ -258,8 +250,8 @@ describe("40 custom cards — made in the creator, kept on the account, played i
 
       untilPlayable(customId, 1).then((play) => {
         cy.playCard(play.card, { zone: { side: "you", row: "units", lane: play.lane as 1 | 2 | 3 | 4 | 5 } });
-        // R81: the Cry's declared target. With one enemy unit the board takes it as the only one;
-        // with more, it asks, and the spec names the unit it measured.
+        // R81: the Cry's declared target. With one enemy unit the board takes it; with more, it asks for
+        // the unit the spec measured.
         cy.get("body").then(($body) => {
           if ($body.find(promptOf("target")).length > 0) cy.answerPrompt("target", { cards: [play.target] });
         });

@@ -133,12 +133,10 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// R71: the log is read here, when the delayed effect runs, so later plays are in it — through the
-/// engine's read-only `playedIdsThisTurn` (engine/src/query.ts), which gives the ids in play order.
-/// R86: an id whose instance no longer exists is skipped rather than fizzled on.
-/// R133: the log holds one entry per play, so a card played, bounced and replayed is two entries and
-/// one card. "Every other card you played this turn" is the set of cards, not the list of plays, so
-/// each id yields one copy; deduping by id leaves R86's skip untouched.
+/// R71: the log is read here, when the delayed effect runs, so later plays are in it (the ids in play order,
+/// from the engine's read-only `playedIdsThisTurn`). R86: an id whose instance no longer exists is skipped
+/// rather than fizzled on. R133: the log holds one entry per play, so a card played, bounced and replayed is
+/// two entries and one card: each id yields one copy, and deduping by id leaves R86's skip untouched.
 fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
     let discount = discount_of(ctx, terms);
     let mut out: Vec<Effect> = Vec::new();
@@ -198,22 +196,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39: "Exiled on play; end of turn
-// adds copies of every other card played this turn, including later ones (R71); radiant copies
-// cost 1 less". R275 raised the radiant face: its copies are Radiant as well as 1 cheaper, whatever
-// the played card was, where the base face's copies keep the played card's own flag (R57).
-//
-// The rulings these tests are named after:
-//   R71  the log is read at END of turn, so cards played AFTER this one are copied too;
-//   R62  end-of-turn triggers → the trap window → delayed effects → cleanup, so the copies arrive
-//        after a `turnEnded` trap has fired and before the next turn starts. `turnEnded` itself is
-//        emitted BEFORE the window (`turn.ts`), so it is no use as a "just before cleanup" marker:
-//        `turnStarted` is the first event after cleanup and that is what these tests key on;
-//   R86  an id in `turnLog.playedIds` whose instance has ceased to exist is skipped, not fizzled on;
-//   R57  a copy is a fresh instance carrying the radiant flag and nothing else;
-//   R275 the radiant face's copies are Radiant and 1 cheaper;
-//   R65  radiant's "cost 1 less" is a `costMod`, so the copy's price is what `effectiveCost`
-//        reports to the client in `viewFor` and what the player actually pays.
+// #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39, R71, R62.
+// Exiled on play; end-of-turn adds copies of cards played this turn; radiant copies cost 1 less.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -237,7 +221,6 @@ mod tests {
         json!({ "hand": [STOCKPILE, TIMMY], "library": [MENACE, POSTDOC] })
     }
 
-    /// TS `{ ...side, ...SPARE }`.
     fn with_spare(mut side: Value) -> Value {
         if let Value::Object(spare) = spare() {
             for (key, value) in spare {
@@ -247,7 +230,7 @@ mod tests {
         side
     }
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `scenario` with the shipped cards registered first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -586,7 +569,6 @@ mod tests {
                 assert_eq!(copy.cost_mod, -1);
                 assert_eq!(view_cost(&s, "p1", &copy.id), 0);
             }
-            // The originals on the field are untouched: only the copies are Radiant.
             assert_eq!(s.unit("p1", 1).map(|card| card.radiant), Some(false));
         }
 
@@ -694,7 +676,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-039, on both faces: the exile, and the copies at the end of the turn.
+    /// R2195003: the snapshot plays exactly as core-039, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_039() {
         for radiant in [false, true] {

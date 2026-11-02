@@ -2,7 +2,6 @@
 //! §6.2 Echo, §10.5 steps 4 to 7, R30, R59, R178). Found by the polish-4 edge-case hunt
 //! (docs/polish/4-edge-cases.md, lens L7).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //!  - §4.5: the state check runs after a Spell's first resolution, before its Echo repeat asks
 //!    anything, so a unit it killed is not offered again and a hero it killed ends the game.
 //!  - R178: "exile this" is where §10.5 step 7 sends a Spell, so a self-exiling Spell still takes
@@ -43,7 +42,6 @@ fn option_ids(g: &Scenario) -> Vec<String> {
         .collect()
 }
 
-/// How many of `player`'s modifiers are an `echoNextSpell`.
 fn echo_mods(g: &Scenario, player: PlayerId) -> usize {
     g.state().players[player]
         .mods
@@ -52,7 +50,6 @@ fn echo_mods(g: &Scenario, player: PlayerId) -> usize {
         .count()
 }
 
-/// Answers the open prompt with its first option until none is open, or one has no options.
 fn answer_first_selections(g: &mut Scenario) {
     while let Some(pending) = g.state().pending.as_ref() {
         let Some(first) = pending.options.first() else {
@@ -69,8 +66,6 @@ mod section_4_5_the_state_check_between_an_echos_resolutions {
     #[test]
     fn r59_4_5_an_echo_repeats_prompt_is_asked_after_the_first_resolutions_deaths_so_a_destroyed_unit_is_not_offered_again()
      {
-        // Twinspell gives Hit Job Echo +1. The first resolution destroys the enemy Mrow; by the time the
-        // repeat asks its fresh target prompt Mrow has died, and its Death has run.
         let mut g = scenario(json!({
             "p1": { "hand": [TWINSPELL, HIT_JOB, RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": MROW, "lane": 1 }, { "def": POINTMASTER, "lane": 4 }], "library": LIBRARY },
@@ -118,8 +113,6 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
 
     #[test]
     fn r178_r30_a_self_exiling_spell_takes_twinspells_echo_resolves_twice_and_lands_in_exile_6_2() {
-        // True Strike: "Deal 4 damage to a target, ignoring Armor; exile this". With Twinspell it
-        // resolves twice — the repeat asks for its target again — and only then goes to exile.
         let mut g = scenario(json!({
             "p1": { "hand": [TWINSPELL, TRUE_STRIKE, RENO], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
@@ -146,8 +139,6 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
     #[test]
     fn r178_r30_twinspell_is_consumed_by_the_next_spell_played_even_when_that_spell_swaps_it_away_and_exiles_itself()
      {
-        // Pocket Chaos swaps the boards — Twinspell with them — and exiles itself. The Echo was already
-        // gained as it was played, so Twinspell went to the graveyard first and the repeat still comes.
         let mut g = scenario(json!({
             "p1": { "hand": [TWINSPELL, CHAOS, RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },
@@ -233,7 +224,6 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
      {
         let mut s = scenario(json!({
             // A unit that can still switch keeps §2.5's auto-end from passing the turn once the hand is empty.
-            // The Radiant /fullsend: the face that grants "Combo: Draw 1".
             "p1": { "hand": [TWINSPELL, { "def": FULLSEND, "radiant": true }], "field": [MR_VANILLA], "mana": 8, "library": R119_LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [MIDRANGE_MENACE], "library": R119_LIBRARY },
         }));
@@ -292,8 +282,6 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
             s.answer(json!(key));
         }
 
-        // The setup did what it says: the Echo was taken (Twinspell reached the graveyard, two
-        // resolutions), and a Quickstriker arrived in p1's backrow during this play.
         let graveyard: Vec<String> = s
             .pile(P1, "graveyard")
             .iter()
@@ -308,7 +296,6 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
         assert_eq!(rolls, 2);
         assert!(!quickstrikers_of(&s, P1).is_empty());
         // R119: a permanent #95 summons while the play resolves "starts counting from the next play";
-        // the Echo repeat is not a next play, so the Quickstriker grants it no Combo damage.
         let hits = s
             .events()
             .iter()

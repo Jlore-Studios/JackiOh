@@ -2,7 +2,6 @@
 //! it does in a 1v1 game but for what §13 changes: the round, the shared life and passing. The
 //! wrapper's own rules are proven with fixture scripts in the engine's `tests/rules/duos.rs`; these
 //! are the catalog's cards inside it.
-//!
 //! Two setups: `duos_scenario`, the real wrapper, where the round, the pools or a pass matter; and a
 //! 1v1 `scenario()` with a side's `duos` life set, which is what `duos_create` puts on a duel's side
 //! (`duos_seat`), for a rule that lives inside one duel.
@@ -24,11 +23,6 @@ const FILLER: &str = "core-005"; // (1) Spell Stockpile: draw 1, heal your hero 
 const COIN: &str = "core-t-coin";
 const TEMPO: &str = "classicplus-026"; // Tommy Tempo: cast on draw, ends its caster's turn (R456).
 
-// ---------------------------------------------------------------------------------------------
-// The wrapper
-// ---------------------------------------------------------------------------------------------
-
-/// `DECK_SIZE` distinct Core cards with no cast on draw, no Trap and no Quickdraw.
 fn deck() -> Vec<String> {
     [
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 22, 23, 24, 25, 26, 28,
@@ -53,7 +47,6 @@ fn begun(seed: &str) -> DuosState {
     begun_with(seed, None)
 }
 
-/// Every seat holds `hand` over a library of Vanillas, so no draw does anything.
 fn quiet(seed: &str, hand: &[&str]) -> DuosState {
     let mut state = begun(seed);
     for seat in DUOS_SEATS {
@@ -79,7 +72,6 @@ fn act(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosReduceRes
     )
 }
 
-/// The action, which must be accepted.
 fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
     let what = serde_json::to_string(&body).unwrap_or_default();
     let result = act(state, seat, body);
@@ -109,7 +101,6 @@ fn side_mut(state: &mut DuosState, seat: DuosSeat) -> &mut PlayerState {
     &mut state.duels[seat.duel()].players[seat.player()]
 }
 
-/// A new card at the right end of the seat's hand; its id.
 fn give(state: &mut DuosState, seat: DuosSeat, def_id: &str) -> String {
     let player = seat.player();
     let game = &mut state.duels[seat.duel()];
@@ -119,7 +110,6 @@ fn give(state: &mut DuosState, seat: DuosSeat, def_id: &str) -> String {
     id
 }
 
-/// Replaces the seat's hand and library.
 fn rig(state: &mut DuosState, seat: DuosSeat, hand: &[&str], library: &[&str]) {
     let player = seat.player();
     side_mut(state, seat).hand.clear();
@@ -134,7 +124,6 @@ fn rig(state: &mut DuosState, seat: DuosSeat, hand: &[&str], library: &[&str]) {
     }
 }
 
-/// Puts `def_id` on top of the seat's library: its next draw.
 fn draws_next(state: &mut DuosState, seat: DuosSeat, def_id: &str) {
     let player = seat.player();
     let game = &mut state.duels[seat.duel()];
@@ -150,7 +139,6 @@ fn held(state: &DuosState, seat: DuosSeat, def_id: &str) -> Option<String> {
         .map(|card| card.id.clone())
 }
 
-/// The play of `id` the wrapper offers (its first).
 fn legal_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
     duos_legal_actions(state, seat)
         .into_iter()
@@ -166,7 +154,6 @@ fn play_def(state: &DuosState, seat: DuosSeat, def_id: &str) -> DuosState {
     ok(state, seat, body)
 }
 
-/// A play of `id` with these declared modes.
 fn play_with_modes(id: &str, modes: &[&str]) -> DuosActionBody {
     let mut body = json!({ "type": "play", "instanceId": id });
     if !modes.is_empty() {
@@ -175,7 +162,6 @@ fn play_with_modes(id: &str, modes: &[&str]) -> DuosActionBody {
     DuosActionBody::Duel { body: json_as(body) }
 }
 
-/// Every round seat that has not ended ends its turn; the round must close.
 fn close_round(state: DuosState) -> DuosState {
     let round = state.round;
     let mut state = state;
@@ -189,7 +175,6 @@ fn close_round(state: DuosState) -> DuosState {
     state
 }
 
-/// The id the last pass gave its card in the teammate's duel.
 fn last_passed(events: &[DuosEvent]) -> String {
     events
         .iter()
@@ -214,11 +199,6 @@ fn keep_all(state: &DuosState, seat: DuosSeat) -> DuosState {
     )
 }
 
-// ---------------------------------------------------------------------------------------------
-// One duel with Duos life
-// ---------------------------------------------------------------------------------------------
-
-/// Makes `player`'s side a Duos seat: own HP `own`, its team's pool `pool` of cap `cap`, spent or not.
 /// A spent seat's health reads the pool (§13.4).
 fn duos_side(s: &mut Scenario, player: PlayerId, own: i32, pool: i32, cap: i32, spent: bool) {
     let side = &mut s.state_mut().players[player];
@@ -230,9 +210,7 @@ fn duos_side(s: &mut Scenario, player: PlayerId, own: i32, pool: i32, cap: i32, 
     });
 }
 
-// =============================================================================================
 // Meditative #19 Expedition123 and #19.1 Temporal Rift (R844, R846)
-// =============================================================================================
 
 mod expedition123 {
     use super::*;
@@ -240,10 +218,9 @@ mod expedition123 {
     const EXPEDITION: &str = "meditative-019";
     const RIFT: &str = "meditative-019-1";
 
-    /// A1 casts Expedition123, then its Rift off two Coins, in round 1. The lost refreshes land on
-    /// A1's extra turn and on its next own turn, in duel 0 alone; the third is normal, as in the 1v1
-    /// game below. The extra turn keeps duel 0's round on A1 (§13.3), so the rounds run [A1, B2],
-    /// [B1, A2] from then on, and no seat acts out of its round.
+    /// The lost refreshes land on A1's extra turn and on its next own turn, in duel 0 alone; the third is
+    /// normal, as in the 1v1 game below. The extra turn keeps duel 0's round on A1 (§13.3), so the rounds run
+    /// [A1, B2], [B1, A2] from then on, and no seat acts out of its round.
     #[test]
     fn r844_r846_expedition123_and_its_rift_lose_the_casters_own_turns_in_its_own_duel() {
         let mut s = begun("cross-duos-expedition");
@@ -297,7 +274,6 @@ mod expedition123 {
             "the extra turn and A1's next turn are lost, the third is not"
         );
 
-        // The same plays in a 1v1 game: the same mana on the same turns.
         jackioh_cards::register_all();
         let library = [VANILLA; 6];
         let mut one = scenario(json!({
@@ -325,9 +301,7 @@ mod expedition123 {
     }
 }
 
-// =============================================================================================
 // R1168000: a passed card carries no link into the duel it left
-// =============================================================================================
 
 mod pass_links {
     use super::*;
@@ -408,12 +382,10 @@ mod pass_links {
 
     /// A1's Journey Complete remembers a card of A1's own sent on a journey in duel 0 (R1246). Duel 1
     /// numbers its cards from the same start, so that id is one of A2's own cards, exiled there:
-    /// passed, the card remembers nothing, and A2's play returns nothing.
     #[test]
     fn r1168000_a_passed_journey_complete_returns_nothing_of_the_other_duel() {
         let mut state = begun_with("cross-duos-journey", free_passes());
         top_up(&mut state);
-        // An id both duels' libraries hold: each deals its own opening hands from its own shuffle.
         let journeyed = side(&state, A1)
             .library
             .iter()
@@ -538,9 +510,7 @@ mod pass_links {
     }
 }
 
-// =============================================================================================
 // R1168001: each duel's turn moves once a round
-// =============================================================================================
 
 mod round_turns {
     use super::*;
@@ -590,14 +560,11 @@ mod round_turns {
     }
 }
 
-// =============================================================================================
 // R1168002: Glitch in a co-op game
-// =============================================================================================
 
 mod glitch {
     use super::*;
 
-    /// Team A's pool at `pool` in both duels, A1 spent on it.
     fn spend_a1(state: &mut DuosState, pool: i32) {
         state.teams[Team::A].pool = pool;
         for seat in [A1, A2] {
@@ -620,8 +587,6 @@ mod glitch {
         })
     }
 
-    /// The first seed at which A1's Glitch, played with A1 spent on a pool of 15, draws `want`: the
-    /// state before and the step.
     fn glitched(want: GlitchOutcome) -> (DuosState, DuosReduceResult) {
         for n in 0..300 {
             let mut state = begun(&format!("cross-duos-glitch-{n}"));
@@ -655,9 +620,6 @@ mod glitch {
         assert_eq!(reset.state.teams[Team::A].pool, 15);
     }
 
-    /// A reset in round 1 whose mulligans are answered before the round closes starts duel 0 on turn
-    /// 1 again, the round's own turn number. The round still closes, and duel 0's new first turn is
-    /// round 2's there.
     #[test]
     fn r1168002_a_reset_whose_new_turn_reaches_the_rounds_number_never_freezes_the_round() {
         let mut state = quiet("cross-duos-reset-r1", &[VANILLA, VANILLA]);
@@ -673,8 +635,6 @@ mod glitch {
         assert_eq!(state.ended, [false, false]);
     }
 
-    /// The same in round 2, with the new first turn cut short by a Tommy Tempo: duel 0 reaches turn
-    /// 2, round 2's own number, and the round still closes.
     #[test]
     fn r1168002_a_reset_then_a_turn_ended_as_it_began_never_freezes_the_round() {
         let mut state = close_round(quiet("cross-duos-reset-r2", &[VANILLA, VANILLA]));
@@ -727,9 +687,7 @@ mod glitch {
     }
 }
 
-// =============================================================================================
 // R1168003: a judge of lethal counts own HP and the pool
-// =============================================================================================
 
 mod lethal {
     use super::*;
@@ -759,7 +717,7 @@ mod lethal {
     }
 
     /// §10.7's scorer (Zephyrs, Zephrys Zealotism) against 27 life: a 1v1 hero at 27 health, or a Duos
-    /// hero at own HP 7 with a pool of 20. Nothing is lethal against either.
+    /// hero at own HP 7 with a pool of 20.
     #[test]
     fn r1168003_the_scorer_judges_lethal_against_own_hp_and_the_pool() {
         let one = scorer_board(json!([]), false);
@@ -769,8 +727,6 @@ mod lethal {
         assert_eq!(lethal_ids(duos.state()), Vec::<String>::new());
     }
 
-    /// Pareto Optimality's judge (MD-D28) agrees: the play it calls optimal in the 1v1 game is
-    /// optimal against the same life in Duos.
     #[test]
     fn r1168003_paretos_judge_calls_the_same_play_optimal() {
         let hand = json!([CHARGER, "core-019", "core-008", "core-020"]);
@@ -825,10 +781,6 @@ mod lethal {
     const GOLIATH: &str = "classic-061"; // Trample
     const PAWN: &str = "core-096";
 
-    /// p2's 30/30 Trample Goliath attacks p1's First Strike Lifesteal Golem (its Divine Shield gone),
-    /// which heals p1 for 10 before the 20 excess lands. Spent on a pool of 15 (cap 20), p1 heals 5,
-    /// not 10, so the swing empties the pool and My Pawn cancels it; in a 1v1 game at 15 health the
-    /// hero ends at 5 and My Pawn rightly stays set.
     #[test]
     fn r1168003_my_pawn_counts_a_spent_heros_capped_heal_before_the_hit() {
         let swing = |duos: bool| -> Scenario {

@@ -33,9 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #147 IN33DH3 — SPEC §8.10 row 147, BUILD M12 row S 147: "Cry (played) on your turn: your view marks
-// the hand cards the judge rates best, ties sharing it, never on the opponent's view, gone at the cleanup
-// (R1844001); Death: an IN33DH3 Prime shuffled into your deck; radiant 2/4 and a Radiant Prime".
+// S #147 IN33DH3 — SPEC §8.10 row 147, BUILD M12 row S 147 (R1844001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::summon;
@@ -52,7 +50,6 @@ mod tests {
     const MENACE: &str = "core-019"; // 9/9 Taunt.
     const FILLER: &str = "core-005";
 
-    /// The instance ids of p1's hand cards their own view marks optimal.
     fn marked(s: &Scenario) -> Vec<String> {
         let HandView::Cards(hand) = s.view(P1).you.hand else {
             panic!("p1's own hand is full cards");
@@ -73,7 +70,6 @@ mod tests {
         s
     }
 
-    /// `effects` applied for p1 as a card's list is, then settled.
     fn by_hand(s: &mut Scenario, effects: Vec<Effect>) {
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
@@ -95,7 +91,6 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
     }
 
-    /// IN33DH3, Radiant on `radiant`, attacks a 9/9 and dies.
     fn dies(radiant: bool) -> Scenario {
         let mut s = scenario(json!({
             "p1": {
@@ -110,7 +105,6 @@ mod tests {
         s
     }
 
-    /// Whether each IN33DH3 Prime in p1's library is Radiant.
     fn primes(s: &Scenario) -> Vec<bool> {
         s.pile(P1, "library")
             .iter()

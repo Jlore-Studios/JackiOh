@@ -1,7 +1,5 @@
-// What one emote looks and sounds like once it is shown (issue §3, §4): the voice line's bubble
-// text and how long it stays, the emoji's sticker and synth sound, and the call that plays either
-// on the right channel. Pure mapping — the session (session.ts) decides whether and when an emote
-// shows at all.
+// What one emote looks and sounds like once it is shown (issue §3, §4). Pure mapping — the session
+// (session.ts) decides whether and when an emote shows at all.
 
 import type { EmojiEmoteId, EmoteId, PortraitId, VoiceEmoteId } from "@jackioh/shared";
 import { isVoiceEmote } from "@jackioh/shared";
@@ -41,10 +39,9 @@ export const EMOJI_SFX: Record<EmojiEmoteId, SfxId> = {
 };
 
 /**
- * How long a voice line's bubble holds (issue §3): its audible length, clamped to 2–4s. Rendered
- * files' real spans aren't in the client, so the estimate is the line's words at its persona's
- * rate — say personas give wpm directly, sapi ones a percent of SAPI_BASELINE_WPM — plus
- * Felinors' echoed tail. When the voice table can't resolve a line the bubble holds the minimum.
+ * How long a voice line's bubble holds (issue §3): its audible length, clamped. Rendered files' real
+ * spans aren't in the client, so the estimate is the line's words at its persona's rate plus
+ * Felinors' echoed tail.
  */
 export function voiceBubbleMs(portrait: PortraitId, emote: VoiceEmoteId): number {
   const line = emoteLineFor(CARD_AUDIO, portrait, emote);
@@ -77,9 +74,9 @@ export function emoteShowInfo(
 }
 
 /**
- * Plays an already-shown emote (issue §3, §4): a voice line on the voice channel at react
- * priority — it cuts in on a card line the way R204's death line does — or an emoji's synth on
- * the effects channel. Callers gate muting before this; a muted emote never reaches it.
+ * Plays an already-shown emote: a voice line on the voice channel at react priority, cutting in on
+ * a card line the way R204's death line does, or an emoji's synth on the effects channel. Callers
+ * gate muting before this.
  */
 export function playEmote(engine: SoundSink, portrait: PortraitId, emote: EmoteId): void {
   if (isVoiceEmote(emote)) {

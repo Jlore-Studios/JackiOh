@@ -1,20 +1,15 @@
 //! `cargo jackioh sweep` (R186, R390; SURFACE §12): the run that decides the AI's shadow ban, in two
-//! passes. Port of `packages/ai/scripts/sweep.ts` (`pnpm ai:sweep`).
-//!
-//! Pass 1: for every non-token card of every set and every tier in AI_SWEEP.tiers, `sweepCard` forces
-//! the card into AI decks on that tier's handicap against the greedy baseline (AI_SWEEP.seedsPerCard
-//! games each, at AI_GATE_BUDGET). `atRiskIds` reads the at-risk cards off pass 1 (plus today's
-//! SHADOW_BAN and SHADOW_WATCH). Pass 2: `sweepAtRisk` forces each at-risk card into
-//! AI_SWEEP.seedsPerCardAtRisk more games per tier, with every at-risk card dealt more often as
-//! filler. `sweepVerdict` joins a card's tiers and passes. This prints the flagged rows of both
-//! passes, the at-risk cards, the suspects, the unswept cards, then the SHADOW_BAN and SHADOW_WATCH
-//! entries, the ids it cleared (R1675000) and the header line for `crates/ai/src/shadow_ban.rs`.
-//! Those tables are never copied in by hand or edited to taste: `--write` rewrites the header block
-//! and both tables of that file from the reports of record (this output, committed under
-//! `training/history/`, oldest first), and `--check` (and the
-//! `shadow_ban_rs_is_what_its_reports_of_record_dictate` test) fails with a line diff when the file is
-//! anything else. Both read the one section of a report that `--report` prints for the file, through
-//! one parser (`parse_block`).
+//! passes. Pass 1: for every non-token card of every set and every tier in AI_SWEEP.tiers, `sweepCard`
+//! forces the card into AI decks on that tier's handicap against the greedy baseline
+//! (AI_SWEEP.seedsPerCard games each, at AI_GATE_BUDGET); `atRiskIds` reads the at-risk cards off it
+//! (plus today's SHADOW_BAN and SHADOW_WATCH). Pass 2: `sweepAtRisk` forces each at-risk card into
+//! AI_SWEEP.seedsPerCardAtRisk more games per tier, every at-risk card dealt more often as filler.
+//! `sweepVerdict` joins a card's tiers and passes. The report ends with the SHADOW_BAN and SHADOW_WATCH
+//! entries, the ids it cleared (R1675000) and the header line for `crates/ai/src/shadow_ban.rs`, whose
+//! tables are never copied in by hand: `--write` rewrites its header block and both tables from the
+//! reports of record (this output, committed under `training/history/`, oldest first), and `--check`
+//! (and the `shadow_ban_rs_is_what_its_reports_of_record_dictate` test) fails with a line diff when the
+//! file is anything else. Both read a report's section for the file through one parser (`parse_block`).
 //!
 //! ```text
 //! cargo jackioh sweep                              both passes over every card, then the report
@@ -30,11 +25,10 @@
 //! cargo jackioh sweep --due [REV]                  the ids a sweep is due over since REV (R1678000)
 //! ```
 //!
-//! Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
-//! A slice writes each line as it lands, so one cut short keeps what it finished: rerun the rest.
-//! Tooling, so it may read the clock (`Instant`, for decision timing), read files and write to the
-//! console; `crates/ai` stays pure and receives the clock as `now`, and R977000's re-timer, which times
-//! again a decision the clock found slow against the perf gate's yardstick, as `retime` (`still_slow`).
+//! Pass 2 needs every slice's pass 1 first (the at-risk list is the whole sweep's); a slice writes each
+//! line as it lands, so one cut short keeps what it finished: rerun the rest.
+//! Tooling, so it may read the clock (`Instant`) and files; `crates/ai` stays pure and receives the
+//! clock as `now`, and R977000's re-timer, which times a slow decision again, as `retime` (`still_slow`).
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -208,7 +202,7 @@ fn name_of(def_id: &str) -> String {
         .map_or_else(|| def_id.to_string(), |def| def.name.clone())
 }
 
-/// A sweep flag's name, as TS wrote it (`neverPlayed` …).
+/// A sweep flag's name (`neverPlayed` …).
 fn flag_names(flags: &[SweepFlag]) -> String {
     flags.iter().map(literal).collect::<Vec<_>>().join(", ")
 }
@@ -252,8 +246,7 @@ fn timed<T>(label: &str, run: impl FnOnce() -> T, describe: impl FnOnce(&T) -> S
     result
 }
 
-/// The clock `sweepCard` and `sweepAtRisk` time decisions with: milliseconds since `origin`
-/// (TS: `performance.now`).
+/// The clock `sweepCard` and `sweepAtRisk` time decisions with: milliseconds since `origin`.
 fn milliseconds_since(origin: Instant) -> impl Fn() -> f64 {
     move || origin.elapsed().as_secs_f64() * MS_PER_SECOND
 }
@@ -402,7 +395,7 @@ fn pass2(
     results
 }
 
-/// `[...new Set(xs)].sort()`.
+/// The ids sorted, each once.
 fn sorted_unique(ids: impl IntoIterator<Item = String>) -> Vec<String> {
     let mut unique: Vec<String> = ids.into_iter().collect::<IndexSet<_>>().into_iter().collect();
     unique.sort();

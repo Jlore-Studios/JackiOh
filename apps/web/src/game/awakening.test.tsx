@@ -30,13 +30,11 @@ function readSheet(fromWeb: string): string {
 
 const css = readSheet("src/game/animations.css");
 
-/** The `animation-name` the rule for `selector` sets. */
 function animationNameFor(selector: string): string | undefined {
   const escaped = selector.replace(/[[\]".=()]/g, "\\$&");
   return new RegExp(`${escaped}\\s*\\{[^}]*?animation-name:\\s*([\\w-]+);`).exec(css)?.[1];
 }
 
-/** The opacity one keyframe stop of `@keyframes <name>` sets. */
 function opacityAt(name: string, at: "0%" | "100%"): string {
   const block = new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(css)?.[1];
   if (block === undefined) throw new Error(`@keyframes ${name} not found`);

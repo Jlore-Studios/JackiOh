@@ -1,7 +1,5 @@
-// The account's custom cards as a screen reads them (SPEC §12.9, R915008): the creator's list, the
-// deck builder's "Custom" filter and the practice setup's decks all ask `GET /api/custom-cards`
-// through this one hook, and draw each card from the definition its frame builds (`customDef`, the
-// normal module's validator: no Luau is loaded to draw a card, R915009).
+// The account's custom cards (`GET /api/custom-cards`) as a screen reads them (SPEC §12.9, R915008),
+// each drawn from its frame's definition (`customDef`: no Luau is loaded to draw, R915009).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -13,17 +11,13 @@ import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts"
 import { customDef } from "../wire/validator.ts";
 
 export type CustomCardsState =
-  /** No active account: there are no custom cards to read. */
   | { kind: "none" }
   | { kind: "loading" }
   | { kind: "ready"; cards: CustomCard[]; limit: number }
-  /** The read failed; `retryAfterMs` is the wait a rate limit stated (R192), which Try again counts down (#1691). */
+  /** `retryAfterMs` is the wait a rate limit stated (R192), which Try again counts down (#1691). */
   | { kind: "failed"; retryAfterMs?: number };
 
-/**
- * An active account's custom cards, read once per token and again on `reload`; `token` null reads
- * nothing. `load` is the route's, so a test hands its own.
- */
+/** Read once per token and again on `reload`; `load` is the route's, so a test hands its own. */
 export function useCustomCards(
   token: string | null,
   load: (token: string) => Promise<CustomCardsResponse> = getCustomCards,
@@ -64,7 +58,7 @@ export function useCustomCards(
     setLoaded((current) => (current !== null && current.state.kind === "failed" ? null : current));
     setGeneration((value) => value + 1);
   }, []);
-  /** After a save or a delete: the list as the server now holds it, without a second read. */
+  /** After a save or a delete: the server's list, without a second read. */
   const replace = useCallback(
     (cards: CustomCard[]) => {
       if (token === null) return;
@@ -82,7 +76,7 @@ export function useCustomCards(
   return { state, reload, replace };
 }
 
-/** Each card's definition by its id (`customDef`); a card whose frame the engine refuses is left out. */
+/** Each card's definition by its id; a card whose frame the engine refuses is left out. */
 export function customDefsOf(cards: readonly CustomCard[]): CardDefs {
   const defs: Record<string, CardDef> = {};
   for (const card of cards) {

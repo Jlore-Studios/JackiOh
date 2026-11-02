@@ -6,8 +6,7 @@
 //!
 //! R18: losing health is not damage — `loseHealth` takes it straight off the hero, past Armor, under no
 //! per-hit cap and through no replacement window, and a hero at 0 loses at the state check after the
-//! list (§4.5). The entry declares no params (the Rotten Grape's numbers are printed), so the two
-//! amounts are named here.
+//! list (§4.5).
 
 use jackioh_engine::effects::lose_health;
 use jackioh_engine::prelude::*;
@@ -33,9 +32,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1: "Lose 5 health
-// (R18): no Armor, no cap, no Blood Moon, no on-damage effect, and at 0 you lose at the state check;
-// radiant loses 1".
+// C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::convert_healing;

@@ -9,11 +9,9 @@
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //! Engine:
 //! - Cry: `degrade` over every other CN or KY card on fields and in hands, `times`; a card in
-//!   Chinese is CN (R1176000). Through v0.5.2 it reached the decks too, which `script_v0_5_2`
-//!   keeps for those replays (R767000, issue #2179).
+//!   Chinese is CN (R1176000).
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
-//! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040);
-//!   until patch v0.3.7 it was ME-ALTPLAY's face-down play permission.
+//! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040).
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;
@@ -22,7 +20,7 @@ pub const ID: &str = "meditative-045";
 
 const PRIME: &str = "meditative-045-1";
 
-/// The zones the Cry Nerfs in: the fields and the hands since #2179.
+/// The zones the Cry Nerfs in: the fields and the hands (#2179).
 const NERFED_ZONES: &[&str] = &["field", "hand"];
 /// Through v0.5.2: the decks too.
 const NERFED_ZONES_V0_5_2: &[&str] = &["field", "hand", "library"];
@@ -208,7 +206,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// Every H1B Printer of a side outside its deck.
         fn cnky_outside_decks(s: &Scenario, player: PlayerId) -> Vec<String> {
             let library: Vec<String> = s.state().players[player].library.iter().map(|card| card.id.clone()).collect();
             cnky_ids(s, player).into_iter().filter(|id| !library.contains(id)).collect()
@@ -240,11 +237,10 @@ mod tests {
             assert_eq!(decks.len(), 2);
             s.play(&breaker.id, json!({ "zone": 2 }));
             let degraded = degraded_ids(&s);
-            // Every other CN or KY card exactly once, on fields and in hands alike.
             for id in before_p1.iter().chain(before_p2.iter()) {
                 assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 1, "{id}");
             }
-            // Issue #2179: a deck is no longer in its scope, so no card in one is Nerfed or cued.
+            // #2179: a deck is out of its scope, so no card in one is Nerfed or cued.
             for id in &decks {
                 assert!(!s.events().iter().any(|event| {
                     matches!(event, GameEvent::Degraded { instance_id, .. } if instance_id == id)
@@ -272,7 +268,6 @@ mod tests {
             }));
         }
 
-        /// R767000: the script kept for the replays of v0.5.2 and before, whose Cry reached the decks.
         #[test]
         fn r767000_a_game_on_v0_5_2_nerfs_the_decks_too() {
             crate::under_kept(BREAKER, crate::scripts::meditative::c045_knowledge_breaker::script_v0_5_2(), || {
@@ -366,8 +361,6 @@ mod tests {
 
         #[test]
         fn r1176000_cry_nerfs_a_translated_card_on_a_field_and_in_a_hand_never_one_in_a_deck() {
-            // A Vanilla in Chinese is CN (R1176000), wherever it is: the Cry Nerfs the translated
-            // ones on p1's field and in p2's hand, and changes no English Vanilla and none in a deck.
             let mut s = scenario(json!({
                 "seed": "breaker-translated",
                 "p1": {
@@ -415,7 +408,6 @@ mod tests {
             assert!(s.unit(P2, 1).is_some(), "the Cry is dormant");
             let set = s.backrow(P1, 2).expect("set in the backrow");
             assert_eq!(set.def_id, BIGOT);
-            // The opponent reads a face-down backrow card and a Trap play, never the Unit.
             let theirs = serde_json::to_string(&s.view(P2)).expect("the view serializes");
             assert!(!theirs.contains(BIGOT), "p2 never reads the set Unit");
         }
@@ -454,7 +446,6 @@ mod tests {
             let set = s.backrow(P1, 2).expect("set").id;
             s.end_turn().end_turn();
             reveal(&mut s, &set);
-            // The Cry's pick is asked as a prompt at the reveal.
             let open = s.state().pending.clone().expect("the Cry asks for its target");
             assert_eq!(open.player_id, P1);
             s.answer(json!([format!("instance:{enemy}")]));
@@ -485,7 +476,6 @@ mod tests {
             assert!(!reveal_offered(&s, &set));
             s.expect_refused(|s| s.activate(set.as_str(), json!({ "ability": CLOAKED_REVEAL })));
             assert_eq!(s.backrow(P1, 2).expect("still set").id, set);
-            // A zone opens, and it may reveal into it.
             let blocker = s.unit(P1, 5).expect("lane 5").id;
             s.play(
                 HIT_JOB,
@@ -516,10 +506,8 @@ mod tests {
                 json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }),
             );
             s.expect_in_zone(&breaker, "graveyard");
-            // The Aura ended: the Unit left in hand is no longer Cloaked, and has no face-down play.
             assert!(!cloaked(&s, &other.id));
             assert!(face_down_plays(&s, P1, &other.id).is_empty());
-            // The one already set stays set, and reveals.
             s.end_turn().end_turn();
             reveal(&mut s, &set);
             assert_eq!(s.unit(P1, 2).expect("it still reveals").def_id, VANILLA);
@@ -572,7 +560,6 @@ mod tests {
 
         #[test]
         fn r1042_radiant_nerfs_twice_with_divine_shield_on_fields_and_in_hands() {
-            // The Radiant face carries Divine Shield.
             let def = crate::card_def(BREAKER);
             assert!(def.radiant.keywords.contains(&Keyword::DivineShield));
             let mut s = spread_board("breaker-cry-radiant", true);
@@ -592,8 +579,8 @@ mod tests {
                 .filter(|id| !decks.contains(id))
                 .collect();
             assert_eq!(reached.len(), 4);
-            // Each Printer at (2), as before patch v0.3.10 made it (3): a Nerf that lifts the cost has
-            // two steps left under the cap of (4), so both Nerfs change something.
+            // Each Printer down from (3) to (2): a Nerf that lifts the cost has two steps left under
+            // the cap of (4), so both Nerfs change something.
             for id in &reached {
                 s.card_mut(id.as_str()).cost_mod = -1;
             }

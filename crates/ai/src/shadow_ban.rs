@@ -3,89 +3,16 @@
 //! else: a banned card stays legal for every player, a human may play it against the AI, and the AI
 //! still has to answer it. It is not §9.4 L6's ban, which is server state (R164).
 //!
-//! How an entry gets here: `cargo jackioh sweep` (crates/tools/src/sweep.rs; `pnpm ai:sweep` before
-//! v0.3.0) forces each non-token card of every set into AI decks at every tier in AI_SWEEP.tiers (Easy
-//! and Hard) against the greedy baseline, in two passes (R390): the second sweeps the cards at risk
-//! again with more games and deals them more often as filler, and a `neverPlayed` or `selfHarm` ban
-//! needs its numbers. It prints one row per flagged card and tier, together with the entries for both
-//! tables below, which `cargo jackioh sweep --write` writes in from the reports of record the header
-//! block names (`--check` fails on anything else). A flag at either tier bans the card at every tier,
-//! and the reason names the tier after the flags ("neverPlayed: hard: …"). No card is listed without a
-//! flag, and neither table is tuned by hand.
-//!
-//! Sweep of record: 2026-09-27 (UTC), `pnpm ai:sweep` over 100 non-token Core cards at easy and hard,
-//! 8 seeds per card and tier (`sweep:<tier>:<id>:<n>`), budget AI_GATE_BUDGET {"nodes":600,
-//! "lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,
-//! "maxDepth":8,"finalists":3}, re-run on the whole of patch v0.1.1 (issue #27) once its engine,
-//! card and client halves were merged: the two sweeps its halves ran apart each saw only part of the
-//! patch. It ran as five parallel slices and flagged no card `timeout`, so nothing needed a second
-//! run; every entry is `neverPlayed`. Against the table before it (the card half's sweep): Eugenics,
-//! KY's Private Tutor, Lava Golem, KY's Trial, Fed Fauci and Combo-Index are new, and /fullsend is
-//! now flagged at easy and Craft a Card at both tiers; Flood, Glowy Jelly Bean, GIGA Glowy Jelly Bean,
-//! Unstable Clone Machine, Lunar Eclipse, Professor Curvature, Twinspell and My Pawn were played this
-//! time and come off, and so do Zao Gao and CN-Viral Injection, which the engine half's sweep had
-//! added. Hinder, Blood Ridden Glowy Jelly Bean and Ceaseless Void were never affordable at either
-//! tier, so they are unswept and not listed (R186: no evidence either way). No card was flagged
-//! `error` or `selfHarm`.
-//!
-//! Sweep of record for the Rust AI (generation 0, #306 part 40): 2026-10-07 (UTC), `cargo jackioh
-//! sweep` on `7e91089`, pass 1 over 268 card(s) at easy and hard, 8 seeds each
-//! (`sweep:<tier>:<id>:<n>`), pass 2 over 91 at-risk card(s), 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in four parallel
-//! slices per pass. It filled `SHADOW_WATCH` below (67 cards). `SHADOW_BAN` above stays generation 0's,
-//! TypeScript's eleven (#306): that sweep would ban 25 cards, three of the eleven among them and 22 of
-//! the 25 for `timeout` (decisions that resolve R29's dry-run scorers, and one turn that never ends),
-//! and clear the other eight. It replaces a first run of the same day (`fa03797`), whose 63 timeouts
-//! were fused scripts composed on every lookup. training/history/sweep-2026-10-07.md lists them, with
-//! what the timeouts measured, as the unban lane's starting notes.
-//!
-//! Sweep of record for generation 9 (#732): 2026-10-12 (UTC), `cargo jackioh sweep` on `716cc6b`
-//! (`main` at `bf0f8e8` with R1390's gate lifted), pass 1 over the 102 Meditative card(s) at easy and
-//! hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 22 at-risk card(s), 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
-//! pinned to their own cores, every card that timed out swept again with the machine to itself. It
-//! swept the Meditative set alone: R732000 keeps every card of an earlier set out of `SHADOW_BAN`, so
-//! `SHADOW_WATCH` keeps the 2026-10-07 sweep's rows for those sets and gains this sweep's Meditative
-//! ones. It filled `SHADOW_BAN` (31 of the 102, every one for `timeout`) and lifted the gate.
-//! training/history/sweep-2026-10-12.md has the report and what the timeouts measured.
-//!
-//! Sweep of record for the Meditative+ set (#1186, part of #1173): 2026-10-18 (UTC), `cargo jackioh
-//! sweep` on `e1f7728` (`main` at `13e527a` with Meditative+ batches 01 and 03 merged), every set
-//! previewed (R1420), pass 1 over the 26 Meditative+ card(s) at easy and hard, 8 seeds each
-//! (`sweep:<tier>:<id>:<n>`), pass 2 over 11 at-risk card(s), 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes. It
-//! swept the Meditative+ set alone (R1186000): a card takes the row of the latest report that lists
-//! it, so the Meditative bans stand and `SHADOW_WATCH` gains this sweep's 11 Meditative+ rows. It banned
-//! none of the 26 (no game had an error or a timeout, and every pass-1 `neverPlayed` cleared in pass
-//! 2), so the AI deals itself the whole set, generation 12 unchanged. training/history/sweep-2026-10-18.md
-//! has the report.
-//!
-//! Sweep of record for generation 13 (#1675): 2026-10-22 (UTC), `cargo jackioh sweep` on `71b594b`
-//! (`main`, the learned evaluation of #1477), pass 1 over the 17 Meditative card(s) `SHADOW_BAN` held
-//! at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over the same 17 at risk, 24 seeds
-//! each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
-//! with no build or test beside them. It swept the 17 banned Meditative cards alone, so every other
-//! card keeps the row the earlier reports gave it. It banned 1 of the 17 (`meditative-069`, one
-//! decision still over 2 s timed again, R977000), watches 5 and cleared 11 (R1675000), so `SHADOW_BAN`
-//! holds one row and `SHADOW_WATCH` gains the 5. training/history/sweep-2026-10-22.md has the report
-//! and the slow state.
-//!
-//! Sweep of record for #1889: 2026-10-25 (UTC), `cargo jackioh sweep` on `main` at `86430e3` with
-//! #1889's change to the engine's play listing (`priced_play_actions` checks each price's targeting
-//! discards once, not once per Tribute set and zone), pass 1 over `meditative-069` alone at easy and
-//! hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over it at risk, 24 seeds each
-//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in one lane with no
-//! build or test beside it. It banned none: 069 is watched, at risk by its own numbers at half strength
-//! (R600), so `SHADOW_BAN` is empty and `SHADOW_WATCH` gains its row. training/history/sweep-2026-10-25.md
-//! has the report and where the slow decision's time went.
-//!
-//! From #1678 on (R1678000), a sweep of record follows every push to `main` that moves the AI's
-//! generation or ships a set, run by `.github/workflows/sweep.yml` over the cards `cargo jackioh sweep
-//! --due` names. Those sweeps write no paragraph here: each report under training/history/ says what
-//! ran and why, and the header block below names it.
-//!
-//! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
-//! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
+//! How an entry gets here: `cargo jackioh sweep` (crates/tools/src/sweep.rs) forces each non-token
+//! card of every set into AI decks at every tier in AI_SWEEP.tiers against the greedy baseline, in two
+//! passes (R390), and `cargo jackioh sweep --write` writes both tables in from the reports of record
+//! the header block names (`--check` fails on anything else). A flag at either tier bans the card at
+//! every tier, the reason naming the tier ("neverPlayed: hard: …"); no card is listed without a flag,
+//! and neither table is tuned by hand. From #1678 on (R1678000), `.github/workflows/sweep.yml` runs a
+//! sweep of record after every push to `main` that moves the AI's generation or ships a set. Each
+//! report under training/history/ says what its sweep ran and found, the earlier ones' included (#27,
+//! #306's generation 0, #1186's for #1173 with every set previewed by R1420, #1675's on #1477's
+//! learned evaluation). The table is `(defId, reason)` pairs sorted by id (SURFACE §9).
 
 // BEGIN `cargo jackioh sweep --write`: the reports of record (R186), oldest first. Never edit by hand.
 // Report of record: training/history/sweep-2026-10-07.md
@@ -115,208 +42,13 @@
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
 /// Sorted by id.
 ///
-/// Generation 1 (the unban lane) removed four entries, all generation-0 `neverPlayed` bans the Rust
-/// sweep of record cleared or explained:
-/// - `core-051` (KY's Private Tutor) and `core-082` (KY's Trial): cheap units the 2026-10-07 sweep
-///   cleared at both tiers and both passes; the never-played flag measured a deal the sweep's
-///   forced-filler bias never made worth casting, not a card the AI misplays.
-/// - `core-091` (Fed Fauci): its stored-mana engine lives in Plague Counters, which `evaluate` now
-///   prices (`AI_EVAL.plague_counter`); it was invisible to the eval that kept passing it over.
-/// - `core-093` (Combo-Index): its grade cascade is now priced too (`AI_EVAL.grade_counter` per
-///   banked step, plus the step an armed rise is about to bank on the controller's own turn), so the
-///   beam sees the snowball it would otherwise give away.
-///
-/// Generation 2 removed `core-057` (Conjure KY): the Rust sweep of record cleared it at both tiers
-/// and both passes — its generation-0 `neverPlayed` row measured 4 affordable turns, far under the
-/// flag's bar — and pass 2 watched the AI cast it 145 times at easy for +2.2 mean eval delta. Two
-/// mana for three cards is exactly the card advantage the mirror's tempo race runs on.
-///
-/// Generation 3 removed `core-094` (Genn's Greed): the sweep of record cleared it — its
-/// `neverPlayed` row measured a card whose draw-and-exile read as pure loss to the eval that
-/// priced it, not a misplay. The eval already counts what the cast moves: the drawn two-costs land
-/// in hand (`hand_card`), the exiled odd-costs leave library and hand (`library_card`,
-/// `hand_card`), so a determinized world shows the whole trade and the beam casts it only when the
-/// dealt deck's two-cost density makes it pay.
-///
-/// Generation 4 removed `core-099` (Craft a Card): the sweep of record cleared it at both tiers,
-/// and its `neverPlayed` flag names a structural blind spot rather than a misplay — the two
-/// Discover answers sit between the cast and the fused card, so the beam's open-prompt states read
-/// as a spent spell with no payoff and prune the line before the 0-cost fused unit lands (a sweep
-/// on this build still shows 0 plays in 16 affordable turns). It is not in `UNBANNED_PREFER`: dealt
-/// at stock weight it shows up in a few decks, the mulligan returns it like any other 4-cost, and
-/// the never-played slot costs a fraction of a draw — the ban it came off measured a deal the
-/// beam's shape makes dead, not a card the AI mishandles.
-///
-/// Generation 5 removed `core-055` (Lava Golem): the only entry the Rust sweep of record would have
-/// kept for `timeout`, and the report itself says what that flag measured — a decision over two
-/// seconds in a game that also held an R29 scorer (Zephrys Zealotism's perfect hand and Zephyrs'
-/// Discover rank dry-run whole pools of cards, "from a card dealt or one a determinization sampled
-/// into the opponent's hand, so neither card need be in the game"). The card it was charged to is
-/// the one the sweep watched the AI play best: 222 casts at easy for +4545.7 mean eval delta and
-/// 168 at hard for +23833.0, every tribute set enumerated by `legal_actions` (R101's own list keeps
-/// the enemy units) and every one priced by the same eval that reads the Golem's `controller`
-/// whether it lands at home or across the table (R360). Dealt ×3 by `UNBANNED_PREFER` on the same
-/// evidence as the generation-2 unban: a card the AI demonstrably plays well belongs in its decks.
-///
-/// Generation 6 removed `core-078` (/fullsend): its `neverPlayed` row is the same beam-horizon
-/// blind spot as generation-4's core-099 — the cast alone buys nothing (4 paid, 3 refreshed, a
-/// discount that pays back only across the rest of the line, and a delayed hand-exile the eval
-/// reads only once it fires), so no prefix of the line ever outbids the tempo plays beside it.
-/// What makes the row a blind spot rather than a misplay is that a cast that did survive selection
-/// would be honest: the exile is real engine state, every simulated EndTurn runs it, and an open
-/// line is scored with its turn ended — a /fullsend that fails to cash its hand costs itself by
-/// the same eval that would have to pick it. Dealt at stock weight and not in `UNBANNED_PREFER`,
-/// the never-played slot costs a fraction of a draw where it lands at all.
-///
-/// Generation 7 removed `core-042` (Eugenics): the Rust sweep of record cleared it at both
-/// tiers and both passes — pass 2 watched the AI cast it 34 times at easy for -2.3 mean
-/// evaluate change and 30 at hard for -0.4, so the generation-0 `neverPlayed` row measured a
-/// deal an older AI's beam never made worth casting, not a card this one mishandles. The casts
-/// it does choose are honest on the terms the eval sees: the exiled seven leave the library
-/// `library_card` counts, and the line is picked only where the cast outbids the tempo play
-/// beside it; the Radiant flags themselves are the part no weight prices, the same blind spot
-/// generation 4 and 6 named, so most deals still end with it unplayed. Not in
-/// `UNBANNED_PREFER`, dealt at stock weight (`DEALT_Q` has no row for it, so it keeps
-/// `DEALT_Q_PRIOR`): preferring it would deal a mostly-dead slot three times as often.
-///
-/// Generation 8 removed `core-076` (Field of Dreams), the last entry. The two rows against it
-/// are both artifacts rather than a misplay: its easy `selfHarm` mean of -22,729.5 over 44
-/// pass-2 plays sums to within a hundred of a single -`AI_EVAL.win` swing charged to the card
-/// — the artifact #628 was written for (`record_sweep_play` now keeps a game-ending play out
-/// of the mean and counts it as a losing or winning play) — and a fresh sweep on this build
-/// watches the beam decline it on every affordable turn at both tiers (0 plays over 16 easy
-/// and 11 hard). Paying three to swap a hand for Reminisce copies reads as the loss it is in
-/// the tempo mirror while the eval prices each copy like any other one-cost, so the beam's
-/// refusal is the right call where it lands. Dealt at stock weight and not in
-/// `UNBANNED_PREFER` on the generation-4 precedent: a card the beam correctly never casts is a
-/// dead slot costing a fraction of a draw, and preferring it would deal that slot three times
-/// as often.
-///
-/// Generation 9 (#732) added 31 entries, the sweep of record over the Meditative set, when it
-/// lifted R1390's gate: every one a Meditative card (R732000), every one for `timeout`, a decision
-/// over `AI_SWEEP.decision_ms` (2 s) at the browser's budget in a game the card was forced into. The
-/// slow games looked at closely were long ones whose hands had filled with cheap random spells and
-/// tokens, or in which a simulated step played out a whole turn (My Pawn), so a ban says the card leads
-/// the AI into a slow game, not necessarily that the card is hard to think about
-/// (training/history/sweep-2026-10-12.md). They are the unban lane's work: a faster search in those
-/// states lifts them, never a lower bar.
-///
-/// Generation 10 removed seven entries — 021, 033, 047, 051, 063, 073, 092 — the cards no
-/// rerun of the sweep ever flagged again. What changed is the search's bookkeeping of wall
-/// clock, not its bar (`decide.rs` `fat_width`, `simulate.rs` `surcharge_nodes`): the searched
-/// part of a decision's budget now shrinks as the state grows wide, and a simulated step that plays
-/// a catalog-ranking scorer or attacks into a trap that answers with a whole AI turn is charged the
-/// nodes that work really costs, so a fat state can no longer burn a decision's two seconds on a
-/// few sims. Under pools dealt with these cards legal, sweeps on this build flagged other cards —
-/// some kept below, some that a later pool cleared again — and these seven never: their rows
-/// measured the fat games a fuller deck sometimes deals, not the cards themselves. `submitted`
-/// (decide.rs) also ends the misplay that kept the rows honest-looking: a play refused on the true
-/// state by a tax the determinization could not see is now replaced by the action the match would
-/// have stood in for it, before the refusal is ever recorded. Four cards stay that a rerun cleared
-/// or near-cleared: `meditative-030` re-flagged `timeout` at both tiers in the pass-1 rerun on this
-/// build's pool, under the machine to itself (7 decision(s) at easy, 1 at hard); `meditative-025`
-/// re-flagged `timeout` at easy the same way, twice; and `meditative-012` and `meditative-017`
-/// swept clean but leaving them out deals the practice fixtures' Easy AI dead hands — R265's
-/// `r265-ai-first-p2-h` mulligan lands past turn 1 and the R677 `glitch-swap` game ends inside the
-/// human's five passes — so they wait for a sweep that clears them under a pool the fixtures
-/// survive.
-///
-/// Generation 11 removed three entries — 041, 067, 080 — on the same sweep
-/// evidence as generation 10 plus reruns of its own: none of them flags at
-/// either tier under a pass-1 rerun of the sweep on this build. The change is
-/// the twice-set-back generation 11's own (commit fe9997827, promoted 75/100
-/// and set back when patch v0.3.7 moved the engine under it — the Magnetic
-/// rename and the Cloaked rework of `determinize`'s hidden-backrow pools —
-/// and the change no longer applied; re-landed as 7afc085ea→0e6a7e0ad
-/// releasing 016, 041 and 068, promoted 73/100 and set back when CI's tools
-/// suite played its `b30_b31` smoke: under that table the Hard-vs-Easy deal
-/// won only 2 of the 4 `gate:v3:hard-vs-easy` games). What changed is
-/// bookkeeping of wall clock, not the bar: determinization's read-only
-/// preamble (its trap and card pools, the opponent's shown def ids, each
-/// side's cloakable slot pools) is computed once per decision instead of once
-/// per world (determinize.rs `det_ground`); a line's membership checks
-/// compare the action itself instead of its canonical-JSON key and skip move
-/// ordering they do not read (candidates.rs `candidate_set`, `ActionBody`
-/// being plain data whose `==` answers what `action_key` equality did); the
-/// reply walk enumerates `legal_actions` once per step instead of twice; and
-/// decide's line shortlists key on the body itself. None of it changes which
-/// action any state plays — the same decisions arrive under the 2 s mark in
-/// the fat states the Meditative games deal.
-///
-/// The release is the swept-clean triple every seeded fixture survives. Every
-/// ban-table change re-deals every seeded game, and the other tables each
-/// broke one: {016, 041, 068} loses `gate:v3:hard-vs-easy` games 2 and 3 (2
-/// of 4, the set-back above); {016, 067, 068}, {041, 067, 068} and
-/// {016, 067, 080} deal the spec-13 practice human dead before its fourth
-/// main; {016, 041, 067} and {016, 068, 080} re-deal R265's
-/// `r265-ai-first-p2-h` into a p1 hand with no turn-1 play; {016, 041} deals
-/// B34's `b34-walk` into an AI holding no hidden card; and the five-card
-/// release {016, 041, 067, 068, 080} ties R290's `tutorial-tier-3` margin
-/// (greedy takes seeds 1–8 against it 3 to Easy's 4, where a lead of 1 is
-/// needed). Under {041, 067, 080} the tools test's four-game gate smokes pass
-/// 4/3, 3/1 and 4/3, the tutorial-tier run holds 10 of 13 with a margin of 5
-/// over Easy where 6 and 1 are needed, all four r265 mulligan seeds hold
-/// turn 1, B34's walk never empties the AI's hidden cards, the glitch-swap
-/// seat owes its action inside the human's passes, and spec 13's human
-/// reaches its fourth main. `meditative-016` and `meditative-068` sweep clean
-/// on this build too — the pair {016, 068} alone survives every fixture as
-/// the 22-ban fallback — but no surviving triple holds 016, so it waits, as
-/// `meditative-012` and `meditative-017` did, for a pool whose deals survive.
-/// The rest of the generation-9 table keeps its record: `meditative-017`,
-/// `meditative-025`, `meditative-030` and `meditative-031` still flag
-/// `timeout` in the reruns, and `meditative-029`, `meditative-058`,
-/// `meditative-069`, `meditative-091` and `meditative-099` flag `neverPlayed`
-/// at hard — the beam never casts them in the dealt games, an evaluation
-/// blind spot a faster clock does not move.
-///
-/// Generation 12 removed four entries — 006, 016, 045 and 068 — `timeout` rows
-/// of generation 9's that the bookkeeping generations 10 and 11 landed clears
-/// at last. A fresh pass-1 sweep of all 21 under the gen-11 pool let ten go
-/// (gen12s/p1-{a,b}.jsonl), but every release re-deals both the sweep's filler
-/// and the fixed fixtures' hands: under the 11-ban pool `meditative-030`
-/// timed out at both tiers, `-075` logged an `error` at easy, `-078` timed
-/// out at hard and `-096` went `neverPlayed` at both; the r677 glitch-swap
-/// fixture dies the moment a release leaves the AI seat no turn-1 play (any
-/// of `012`/`045` freed restores it); and B34's walk, spec 13's do-nothing
-/// human and the hard-vs-easy smoke each vetoed other subsets. This 17-ban
-/// table is the deal that survives them all: the four released ids sweep
-/// clean at both tiers in their own pool (gen12s/pool17c-*.jsonl), all four
-/// r265 mulligan seeds hold turn 1, B34's walk never empties the AI's hidden
-/// cards, the swap lands on the human's open first turn, spec 13's human
-/// reaches the fourth main, R290's tier-3 run holds 8 of 13 with a margin of
-/// 2 over Easy, and the tools' four-game gate smokes pass 4/3, 3/1 and 3/3.
-/// The seventeen kept entries flag under their own pools, `timeout` or
-/// `neverPlayed` as generation 11 recorded.
-/// Dealt at stock weight and not in `UNBANNED_PREFER`, on the generations
-/// 4–7 precedent: none of the four shows the kind of sweep numbers a tripled
-/// deal is justified by.
-///
-/// #1186's sweep of the Meditative+ set (R1186000) banned none of its 26
-/// cards, so the seventeen stand as generation 12 left them, and the set's
-/// 11 at-risk cards are watched.
-///
-/// #1675's sweep of the seventeen on generation 13 banned one of them,
-/// 069, at hard: one decision of a pass-2 game still over 2 s timed again
-/// (R977000), its state wide with a fused card of nine ingredients. Eleven
-/// came off as cleared, the report's `Cleared ids:`, which by R1675000 keep
-/// no row in either table: 012, 017, 029, 030, 031, 049, 058, 085, 087, 091
-/// and 096. Five came off as watched, a watch row lifting a ban (R1186000):
-/// 011, 025, 075, 078 and 099, each at risk by its own numbers at half
-/// strength (R600) and meeting no flag in full. The sixteen are dealt at
-/// stock weight and not in `UNBANNED_PREFER`, on the generations 4–7
-/// precedent.
-///
-/// #1889's sweep of 069 banned none. It came off as watched, a watch row
-/// lifting a ban (R1186000): at risk by its own numbers at half strength
-/// (R600) and meeting no flag in full. It is dealt at stock weight and not
-/// in `UNBANNED_PREFER`, on the generations 4–7 precedent, and the table is
-/// empty.
-///
-/// The sweeps of record after the Stinkyscape and Training Grounds sets shipped banned S #149
-/// Wildar (#2358) and TG #25 Trigor (#2397), both `neverPlayed`. #2521 lifts both through the unban
-/// lane (`SHADOW_UNBANNED`, R2521010), so the table is empty again (#2452): a banned card the beam
-/// never casts is a dead slot costing a fraction of a draw, on the generations 4–8 precedent. Both
-/// are dealt at stock weight and not in `UNBANNED_PREFER`.
+/// Empty since #2521 lifted its last two rows, S #149 Wildar (#2358) and TG #25 Trigor (#2397), both
+/// `neverPlayed`, through the unban lane (`SHADOW_UNBANNED`, R2521010, #2452): a banned card the beam
+/// never casts is a dead slot costing a fraction of a draw. Each generation's lifts and their evidence
+/// (1–8: beam blind spots and R29 scorers' slow games, #628's game-ending-play artifact, R101, R360;
+/// 9: #732's `timeout` bans as R1390's gate lifted; 10–12: wall-clock bookkeeping, each table held to
+/// the seeded fixtures, R265, R677, B34; then #1186, #1675's R977000 and R1675000, and #1889) are in
+/// the reports under training/history/ and in git log.
 pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
@@ -332,7 +64,7 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
 
 /// R732000, R1186000, R2521010: the ids the unban lane has removed from the reports of record's
 /// `SHADOW_BAN` entries, sorted by id (generation 10: 021, 033, 047, 051, 063, 073, 092; 11: 041, 067,
-/// 080; 12: 006, 016, 045, 068; the notes above `SHADOW_BAN`; #2521: `stinkyscape-149` Wildar and
+/// 080; 12: 006, 016, 045, 068, as training/history/ tells; #2521: `stinkyscape-149` Wildar and
 /// `traininggrounds-025` Trigor, the two `neverPlayed` rows #2358 and #2397 wrote, so the AI deals
 /// itself every card of every set, #2452). `cargo jackioh sweep --write` leaves their rows out of
 /// `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding its id
@@ -357,12 +89,8 @@ pub const SHADOW_UNBANNED: &[&str] = &[
     "traininggrounds-025",
 ];
 
-/// Issue #1113: the frozen fixture pool. A copy of `SHADOW_BAN_IDS` as it stood when the seeded
-/// fixtures were dealt from it, so a shadow-ban change re-deals none of them: R290's tier games,
-/// the `cargo test` gate smokes behind `fixture_game_config`, and the named practice seeds deal
-/// with `banned: Some(FIXTURE_BANNED_IDS)`. It is never updated with the table; a fixture that
-/// needs a new deal changes its seed instead. Live paths (`game_config`, `gate --full`,
-/// promotion, sweep, practice without its test-only pool) keep dealing the live table.
+/// Issue #1113: frozen fixture pool (R290's tier games, gate smokes), isolating seeded fixtures
+/// from shadow-ban table changes.
 pub const FIXTURE_BANNED_IDS: &[&str] = &[
     "meditative-011",
     "meditative-012",
@@ -1145,33 +873,11 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
 ];
 
-// ---------------------------------------------------------------------------
-// The unban lane's dealt-pool model (training/README.md): what each seat's deck
-// can hold, learned from the lane's own game records. Generation 1's.
-// ---------------------------------------------------------------------------
+// The unban lane's dealt-pool model (training/README.md).
 
 /// The lane's unbans dealt into the AI's own decks prefer this hard, on top of
 /// `DEALT_Q`'s shaped weight: the whole point of the lane is that the AI meets
-/// these cards, so it meets them often. `core-091` is not preferred on purpose:
-/// the records show the AI losing the games it casts Fauci in, so it deals at
-/// its measured weight like any other card. `core-057` joins them in
-/// generation 2 on the sweep's numbers (played 145 times at easy, +2.2 mean
-/// eval delta) — card advantage is what the tempo mirror rewards. `core-094`
-/// joins them in generation 3: the sweep cleared it, and the AI meets the card
-/// the table now teaches. `core-099` is not preferred either: the beam prunes
-/// its Discover chain before the fused payoff lands (the generation-4 note
-/// above the ban table), so preferring it would only deal a dead card more.
-/// `core-055` joins them in generation 5 on the strongest numbers the sweep of
-/// record took (222 casts at easy for +4545.7, 168 at hard for +23833.0): the
-/// AI already plays the Golem well, so it should meet it often. `core-078` is
-/// not preferred on the generation-4 precedent: its refresh, discount and
-/// hand-exile pay only across a whole dumped hand (the generation-6 note above
-/// the ban table), so preferring it would deal the dead slot three times as
-/// often. `core-042` is not preferred on the same precedent (the generation-7
-/// note): the sweep watched the casts it makes land near neutral, so the extra
-/// deals would buy nothing. `core-076` is not preferred on the generation-4
-/// precedent (the generation-8 note): the beam declines it on every affordable
-/// turn, so preferring it would deal the dead slot three times as often.
+/// these cards, so it meets them often.
 pub const UNBANNED_PREFER: &[&str] = &[
     "core-051", "core-055", "core-057", "core-082", "core-093", "core-094",
 ];
@@ -1191,11 +897,7 @@ pub const DEAL_SHAPE_CAP: f64 = 12.0;
 /// when its shaped weight reaches this (mulligan.rs).
 pub const DEAL_MULLIGAN_KEEP: f64 = 2.0;
 
-/// Per defId, the share of games the candidate won with it dealt into its deck,
-/// shrunk toward `DEALT_Q_PRIOR` (`(w + 60 x prior) / (n + 60)` over the lane's
-/// `self-vs-bin` records). The ids banned when the table was last fit are
-/// absent: a deck dealt under a ban list never holds one. They are all unbanned
-/// now; an absent id prices as `DEALT_Q_PRIOR`. Sorted by id.
+/// Per defId, win share with card in deck shrunk toward `DEALT_Q_PRIOR`. Absent ids price as `DEALT_Q_PRIOR`.
 pub const DEALT_Q: &[(&str, f64)] = &[
     ("classic-001", 0.5742),
     ("classic-002", 0.5418),

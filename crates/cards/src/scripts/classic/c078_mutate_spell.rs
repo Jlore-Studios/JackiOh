@@ -17,8 +17,6 @@ pub const ID: &str = "classic-078";
 
 const CHOSEN: TargetSpec = TargetSpec::Chosen { index: None };
 
-/// What the chosen permanent's side and row make of the removed Plague Counter, read as the activation
-/// runs: an enemy permanent is exiled; your backrow card draws; your Unit attacks a random enemy.
 fn outcome(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(card) = instance_of(&*ctx, &CHOSEN) else {
         return vec![];
@@ -128,7 +126,6 @@ mod tests {
             .collect()
     }
 
-    /// The targets legalActions offers for Mutate Spell's activation, each once.
     fn offered(s: &Scenario) -> Vec<String> {
         let mutate = s.card(MUTATE).id.clone();
         let ids: Vec<String> = legal_actions(s.state(), P1)
@@ -176,7 +173,6 @@ mod tests {
         }
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -266,7 +262,6 @@ mod tests {
 
             assert_eq!(attacks_by(s.last_events(), &vanilla), ["hero-p2"]);
             s.expect_health(P2, 26);
-            // No exertion spent: it may still attack this turn.
             s.attack(&vanilla, "hero");
             s.expect_health(P2, 22);
         }
@@ -292,7 +287,6 @@ mod tests {
             assert_eq!(seen, BTreeSet::from(["hero", "unit"]));
         }
 
-        /// a removal is no placement: a Plague Crawler targeted draws nothing
         #[test]
         fn a_removal_is_no_placement_a_plague_crawler_targeted_draws_nothing() {
             let mut s = scenario(json!({
@@ -456,7 +450,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
@@ -525,7 +518,6 @@ mod tests {
             s.expect_refused_with(|s| s.activate(MUTATE, json!({ "targets": pick::instance(&vanilla) })), "100 times");
         }
 
-        /// your backrow card draws 4
         #[test]
         fn your_backrow_card_draws_4() {
             let mut s = scenario(json!({
@@ -594,7 +586,6 @@ mod tests {
             step_param(s.card_mut(MUTATE), "draw", -1);
             step_param(s.card_mut(MUTATE), "attacks", -1);
 
-            // Activate ♾️: both in one turn.
             let mutate = s.card(MUTATE).clone();
             s.activate(MUTATE, json!({ "targets": pick::instance(&mutate) }));
             assert_eq!(draws_by(s.last_events(), P1), 3);

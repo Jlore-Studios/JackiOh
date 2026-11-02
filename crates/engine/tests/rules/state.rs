@@ -1,4 +1,4 @@
-// Port of `packages/engine/test/state.test.ts`: `createGame` (M1-T1).
+// `create_game` (M1-T1).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -27,8 +27,8 @@ fn game() -> GameState {
     })
 }
 
-/// `createGame` with these decks against the fixture catalog, which must refuse: TS threw, Rust
-/// panics with the same message (`state.rs`'s `create_game`). Returns that message.
+/// `create_game` with these decks against the fixture catalog, which must refuse: it panics, and this
+/// returns the message.
 fn refusal(decks: (Vec<String>, Vec<String>)) -> String {
     let options = CreateGameOptions {
         seed: "s".into(),
@@ -47,7 +47,7 @@ fn refusal(decks: (Vec<String>, Vec<String>)) -> String {
         .unwrap_or_default()
 }
 
-/// TS `toThrow(/first.*second/)`: `first` occurs, and `second` occurs after it.
+/// `first` occurs in `text`, and `second` occurs after it.
 fn matches_in_order(text: &str, first: &str, second: &str) -> bool {
     text.find(first)
         .is_some_and(|at| text[at + first.len()..].contains(second))

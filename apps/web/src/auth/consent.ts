@@ -1,20 +1,9 @@
 // The age screen and the terms box on this device (R757000, R757001; issue #757).
 //
-// UX, not a rule (CLAUDE.md rule 7). The server decides whether an account owes the age check or
-// agreement to the terms (`ageCheckOwed`, `termsOwed` on `/api/auth/me`), counts the age itself and
-// keeps only that the check passed (`POST /api/account/consent`, `crates/server/src/api/consent.rs`).
-// What the device keeps, each in `localStorage` inside try/catch like every other store:
-//
-// - THE REFUSAL. An answer under the minimum age refuses sign-up on this device, and the device
-//   remembers it, so going back and choosing another year does not work (`signUpRefusedHere`). It
-//   names no age, and it is not undone.
-// - THE HELD ANSWER. Sign-up asks for the month and year before the account exists, and the account
-//   cannot be told until it is signed in, after its email is confirmed. So the answer and the terms
-//   version waits here for the address it was given with, as long as this device remembers that
-//   address (`AUTH_PENDING_ADDRESS_TTL_SECONDS`), and the consent screen posts it at the first
-//   sign-in and forgets it once the server has answered (`heldSignUpConsent`, `forgetSignUpConsent`).
-//   One past its time is dropped as the app starts (`dropStaleSignUpConsent`). Another device asks
-//   again.
+// UX, not a rule (CLAUDE.md rule 7): the server decides what an account owes and counts the age itself
+// (`crates/server/src/api/consent.rs`). THE REFUSAL: an answer under the minimum refuses sign-up here for
+// good, so choosing another year does not work. THE HELD ANSWER: sign-up asks before the account exists,
+// so the answer waits as long as this device remembers its address; another device asks again.
 
 import {
   AUTH_PENDING_ADDRESS_TTL_SECONDS,
@@ -36,7 +25,6 @@ const MONTHS_PER_YEAR = 12;
 /** A calendar month: `month` is 1–12. */
 export type YearMonth = { year: number; month: number };
 
-/** The sign-up form's answer, held for the account's first sign-in. */
 export type SignUpConsent = {
   email: string;
   birthYear: number;
@@ -46,8 +34,8 @@ export type SignUpConsent = {
 
 /**
  * R757000: whole years from a birth month to `today`, counting the birth month itself as not yet
- * reached: with no day, the birthday may still be to come. The server's `age_in_years`
- * (`crates/server/src/api/consent.rs`) is the same sum, and it is the one that decides.
+ * reached: with no day, the birthday may still be to come. The server's `age_in_years` is the same
+ * sum, and it is the one that decides.
  */
 export function ageInYears(birthYear: number, birthMonth: number, today: YearMonth): number {
   return today.year - birthYear - (today.month <= birthMonth ? 1 : 0);
@@ -64,14 +52,12 @@ export function oldEnough(birthYear: number, birthMonth: number, today: YearMont
   return ageInYears(birthYear, birthMonth, today) >= MIN_ACCOUNT_AGE_YEARS;
 }
 
-/** The years the age screen offers, newest first, down to `BIRTH_YEAR_EARLIEST`. */
 export function birthYears(todayYear: number): number[] {
   const years: number[] = [];
   for (let year = todayYear; year >= BIRTH_YEAR_EARLIEST; year -= 1) years.push(year);
   return years;
 }
 
-/** The months of the year, 1–12. */
 export function birthMonths(): number[] {
   return Array.from({ length: MONTHS_PER_YEAR }, (_, index) => index + 1);
 }
@@ -99,7 +85,6 @@ export function forgetSignUpConsent(): void {
   removeStored(SIGNUP_CONSENT_KEY);
 }
 
-/** The held answer as stored, if it is whole and within its time. */
 function freshHeld(): SignUpConsent | null {
   const raw = getStored(SIGNUP_CONSENT_KEY);
   if (raw === null) return null;
@@ -129,11 +114,7 @@ export function dropStaleSignUpConsent(): void {
   if (getStored(SIGNUP_CONSENT_KEY) !== null && freshHeld() === null) removeStored(SIGNUP_CONSENT_KEY);
 }
 
-/**
- * R757000, R757001: the held answer for `email`, or null when none is held, it is for another
- * address, or its time is up. An answer past its time is dropped; one within it is only read, so
- * a render may call this.
- */
+/** R757000, R757001: the held answer for `email`. Only a stale one is dropped, so a render may call this. */
 export function heldSignUpConsent(email: string | null): SignUpConsent | null {
   dropStaleSignUpConsent();
   const held = freshHeld();

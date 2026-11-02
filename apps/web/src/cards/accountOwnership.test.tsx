@@ -1,10 +1,7 @@
-// R1833000: the account's playmats, backdrops and card backs are earned, so while ownership decides
-// (`AccountCosmeticsOwned`, which ownedFullArt.ts mounts from `GET /api/cosmetics` on a gated screen)
-// the pickers offer only the defaults, the starters and what the account owns, and a stored pick it
-// does not own draws as its kind's default. With nothing deciding (practice, hotseat, R1310004's
-// builds), every cosmetic counts as owned, as before. R1953001: the account-wide foil, finish and
-// border have no picker left and no face wears them; a card's own earned one is worn where the
-// ledger lists it on that card.
+// R1833000: the account's playmats, backdrops and card backs are earned: while ownership decides
+// (`AccountCosmeticsOwned`, which ownedFullArt.ts mounts from `GET /api/cosmetics`) the pickers offer
+// only the defaults, the starters and what it owns; with nothing deciding (practice, hotseat,
+// R1310004's builds), all. R1953001: no face wears the account-wide foil, finish or border.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -55,7 +52,6 @@ const ASTRAL = "table-astral";
 const SNOW = "field-snow";
 const CLOCKWORK = "card-back-clockwork";
 
-/** The kind's entries every account owns: its default and its starters. */
 function everyAccounts(kind: DeckSlotKind | "foil" | "finish" | "border"): string[] {
   return cosmeticsOf(kind)
     .filter((cosmetic) => cosmetic.default || cosmetic.starter)
@@ -101,7 +97,7 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     // An id the registry does not know is never owned while ownership decides.
     expect(ownsAccountCosmetic(new Set(["table-unknown"]), "table-unknown")).toBe(false);
 
-    // The account list is the account's own: a per-card cosmetic or an unknown id there is no account cosmetic.
+    // A per-card cosmetic or an unknown id in the account list is no account cosmetic.
     const owned: OwnedCosmeticsResponse = { cards: [{ cardId: "core-004", cosmeticId: "foil-galaxy" }], account: [ASTRAL, "foil-galaxy", "table-unknown"] };
     expect(ownedAccountCosmetics(owned)).toEqual(new Set([ASTRAL]));
   });
@@ -167,7 +163,7 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
       field: DEFAULT_CARD_COSMETICS.field,
       cardBack: CLOCKWORK,
     });
-    // With nothing deciding, every pick is worn.
+    // Nothing deciding.
     expect(wornDeckCosmetics(true, decked, account)).toEqual({ table: ASTRAL, field: SNOW, cardBack: CLOCKWORK });
 
     // R1953001: an account-wide foil is worn on no card; a card's own earned foil only where the ledger lists it there.
@@ -201,7 +197,7 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     expect(screen.getByTestId<HTMLSelectElement>("deck-cosmetic-table").value).toBe(DEFAULT_CARD_COSMETICS.table);
     cleanup();
 
-    // The board: the viewer's side wears the default playmat for an unowned pick, and the owned one once owned.
+    // The board: the default playmat for an unowned pick.
     const board = (owned: AccountOwnership): void => {
       cleanup();
       render(under(owned, <Board view={fullBoardView()} wearCosmetics deckCosmetics={deckCosmeticsOf({ tableCosmetic: ASTRAL })} />));
@@ -247,7 +243,6 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     expect(probe.owns(ASTRAL)).toBe(false);
     expect(fetchOwned).toHaveBeenCalledTimes(1);
 
-    // Not gated: every one is owned, and nothing is read.
     const unread = vi.fn(read);
     rerender(
       <ViewerAccountCosmetics token="e2e-token-p2" gated={false} read={unread}>

@@ -1,24 +1,15 @@
-//! ME-CRAFT: the card crafter of Meditative #17 True Craft a Card (`docs/meditative-set.md`
-//! M6 #17, R880–R883). The block table over the engine's real pieces (type and stats; R21's
-//! keywords plus Armor and Echo; the `cry`, `death`, `start_of_turn`, `end_of_turn`, Spell-resolution
-//! and Trap-trigger hooks; and the effect verbs), each priced in points and in lines of code; the
-//! validator; the compiler from a recipe to a transient definition (R882) and its scripts; the
-//! seeded presets (R881); and the preview the editor shows (R880).
+//! ME-CRAFT: the card crafter of Meditative #17 True Craft a Card (`docs/meditative-set.md` M6 #17,
+//! R880–R883): the block table (R21's keywords plus Armor and Echo, the hooks, the verbs) priced in
+//! points and lines; the validator; the compiler to a transient definition and scripts (R882); the
+//! seeded presets (R881); the editor's preview (R880).
 //!
-//! Meditative+ (#1182) adds the potion frame (`CraftFrame`, R1182000, R1182001): since #1563 a Spell
-//! tagged Potion, of the Meditative+ set, with no stats, whose one hat is When cast (R1563008; a Unit
-//! whose one hat was "Activate: Tribute this." until then), at a fixed cost and budget, with presets
-//! of its own; and Scratch Pad's from-scratch mode (R1182002), which changes nothing here but the
-//! prompt's flag.
+//! Meditative+ (#1182): the potion frame (`CraftFrame`, R1182000, R1182001), a Potion-tagged Spell
+//! whose one hat is When cast (R1563008); Scratch Pad's from-scratch mode (R1182002). The offer
+//! (#1563, R1563007): every other `craft` prompt draws its blocks from the match rng, and its presets
+//! and answer use no other; "give your hero Armor" is retired (R1563009).
 //!
-//! #1563 adds the offer (R1563007): every `craft` prompt but Scratch Pad's draws `CRAFT_OFFER_KEYWORDS`
-//! keywords, `CRAFT_OFFER_HATS` hats and `CRAFT_OFFER_VERBS` verbs from the match rng, Kazakus style,
-//! its presets are built from them, and its answer may use no other block; and it retires "give your
-//! hero Armor" (`CRAFT_RETIRED_VERBS`, R1563009).
-//!
-//! Pure (CLAUDE.md rule 4): the compiler is a total function of the recipe, the presets read only
-//! the match rng, and no `HashMap` orders anything — the id hashes JSON whose field order is
-//! fixed, so every process mints the same id for one recipe.
+//! Pure (CLAUDE.md rule 4): the compiler is a total function of the recipe, the presets read only the
+//! match rng, and the id hashes JSON of fixed field order.
 
 use std::sync::Arc;
 
@@ -59,21 +50,16 @@ use crate::wire::{
 };
 use crate::zones::active_units_of;
 
-// ---------------------------------------------------------------------------
 // The id (R882)
-// ---------------------------------------------------------------------------
 
-/// A crafted definition's id: `craft:` plus the digest of the recipe's canonical JSON (R179,
-/// R468's form), so the id names the recipe and the def keeps the recipe itself (`CardDef.craft`),
-/// from which the scripts rebuild in any process, as a Fuse's do.
+/// `craft:` plus the digest of the recipe's canonical JSON (R179, R468's form); the def keeps the
+/// recipe (`CardDef.craft`), from which the scripts rebuild in any process, as a Fuse's do.
 pub fn craft_id(recipe: &CraftRecipe) -> String {
     let json = serde_json::to_string(recipe).unwrap_or_default();
     format!("{CRAFT_ID_PREFIX}{FUSED_DIGEST_MARK}{}", fused_digest(&json))
 }
 
-// ---------------------------------------------------------------------------
 // The potion frame (R1182000, R1182001)
-// ---------------------------------------------------------------------------
 
 /// A frame's fixed cost: (1) for a Potion, (3) for a HUGE Potion.
 pub fn frame_cost(frame: CraftFrame) -> i32 {
@@ -83,10 +69,8 @@ pub fn frame_cost(frame: CraftFrame) -> i32 {
     }
 }
 
-/// The points a recipe may spend: Meditative #17's budget at the chosen cost (R880); a Potion's,
-/// `CRAFT_POTION_POINTS` (R1563008: lower than the crafter's budget at its cost, since a Spell has no
-/// stats to spend them on); a HUGE Potion's, `CRAFT_HUGE_POTION_BUDGET_MULTIPLE` times a Potion's
-/// (R1182001).
+/// The points a recipe may spend: Meditative #17's budget at the cost (R880); a Potion's, below the
+/// crafter's at its cost since a Spell has no stats (R1563008); a HUGE Potion's, a multiple (R1182001).
 pub fn points_budget(frame: Option<CraftFrame>, cost: i32) -> i32 {
     match frame {
         None => craft_points_budget(cost.clamp(0, CRAFT_MAX_COST)),
@@ -95,7 +79,6 @@ pub fn points_budget(frame: Option<CraftFrame>, cost: i32) -> i32 {
     }
 }
 
-/// The frame's words for a refusal sentence.
 fn frame_label(frame: CraftFrame) -> &'static str {
     match frame {
         CraftFrame::Potion => "Potion",
@@ -108,9 +91,7 @@ fn frame_label(frame: CraftFrame) -> &'static str {
 const POTION_ABILITY: &str = "tribute";
 const POTION_ABILITY_LABEL: &str = "Tribute this";
 
-// ---------------------------------------------------------------------------
 // Prices (R883)
-// ---------------------------------------------------------------------------
 
 fn verb_price(verb: CraftVerb) -> &'static CraftVerbPrice {
     CRAFT_VERB_PRICES
@@ -130,8 +111,7 @@ fn hat_price(hat: CraftHatKind) -> &'static crate::wire::CraftHatPrice {
         .expect("every CraftHatKind has a price row")
 }
 
-/// One verb's points: `points + per_n × N`, halved (rounded up) when the row says so. A
-/// `grantKeyword` costs what its keyword costs.
+/// One verb's points; a `grantKeyword` costs what its keyword costs.
 fn effect_points(effect: &CraftEffect) -> i32 {
     if effect.verb == CraftVerb::GrantKeyword {
         return effect
@@ -145,8 +125,7 @@ fn effect_points(effect: &CraftEffect) -> i32 {
     if row.halve { (price + 1) / 2 } else { price }
 }
 
-/// A recipe's points: a Unit's `attack + health − 1`, the keyword prices, `echo × 4`, and each
-/// effect's price times its hat's multiplier.
+/// A recipe's points: stats, keywords, Echo, and each effect's price times its hat's multiplier.
 pub fn recipe_points(recipe: &CraftRecipe) -> i32 {
     let mut points = 0;
     if recipe.type_ == CardType::Unit {
@@ -165,8 +144,7 @@ pub fn recipe_points(recipe: &CraftRecipe) -> i32 {
     points
 }
 
-/// A recipe's lines of code: the frame plus the hat lines plus the verb lines (a targeted verb's
-/// row counts its `TargetDecl` line).
+/// A recipe's lines of code (a targeted verb's row counts its `TargetDecl` line).
 pub fn recipe_loc(recipe: &CraftRecipe) -> i32 {
     let mut loc = CRAFT_LOC_SKELETON;
     for hat in &recipe.hats {
@@ -178,9 +156,7 @@ pub fn recipe_loc(recipe: &CraftRecipe) -> i32 {
     loc
 }
 
-// ---------------------------------------------------------------------------
 // The validator (R880)
-// ---------------------------------------------------------------------------
 
 fn is_reveal_hat(hat: CraftHatKind) -> bool {
     matches!(
@@ -189,10 +165,9 @@ fn is_reveal_hat(hat: CraftHatKind) -> bool {
     )
 }
 
-/// One sentence for each problem `validate_recipe` finds; empty is valid. `cost` is the cost the
-/// `number` prompt chose — the recipe's own cost must match it, and both sit in 0 to
-/// `CRAFT_MAX_COST`. A framed recipe (R1182000, R1182001, R1563008) is a Spell at its frame's cost whose
-/// one hat is When cast, within its frame's points. A retired verb (R1563009) is no block.
+/// One sentence for each problem; empty is valid. `cost` is the `number` prompt's choice, which the
+/// recipe's must match. A framed recipe (R1182000, R1182001, R1563008) is a Spell at its frame's cost
+/// whose one hat is When cast; a retired verb (R1563009) is no block.
 pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String>> {
     let mut reasons: Vec<String> = Vec::new();
     if !(0..=CRAFT_MAX_COST).contains(&cost) {
@@ -291,7 +266,7 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String
         } else {
             seen_hats.push(hat.hat);
         }
-        // R1563008: the Activate was the potion frame's own hat until #1563; no type takes it now.
+        // R1563008: no type takes the retired Activate hat.
         if !hat_price(hat.hat).types.contains(&recipe.type_) {
             reasons.push(format!(
                 "a {} takes no {}",
@@ -387,10 +362,9 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String
     if reasons.is_empty() { Ok(()) } else { Err(reasons) }
 }
 
-/// A `craft` prompt's answer (R880): `validate_recipe` at the prompt's cost, and the frame the
-/// prompt's mode names (R1182000, R1182002) — a potion prompt takes only a recipe in its frame, and
-/// Meditative #17's and Scratch Pad's take only an unframed one. R1563007: with an offer, every
-/// keyword (a granted one included), hat and verb the recipe uses is one the prompt offered.
+/// A `craft` prompt's answer (R880): `validate_recipe` at the prompt's cost, in the frame its mode
+/// names (R1182000, R1182002; none for Meditative #17's and Scratch Pad's), and with an offer, using
+/// only keywords (granted ones included), hats and verbs it offered (R1563007).
 pub fn validate_answer(
     recipe: &CraftRecipe,
     cost: i32,
@@ -475,7 +449,6 @@ fn summon_token(verb: CraftVerb) -> Option<&'static str> {
     }
 }
 
-/// The hat's words for a refusal sentence.
 fn hat_label(hat: CraftHatKind) -> &'static str {
     match hat {
         CraftHatKind::Cry => "Cry",
@@ -490,9 +463,7 @@ fn hat_label(hat: CraftHatKind) -> &'static str {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The definition compiler (R882)
-// ---------------------------------------------------------------------------
 
 /// The effects that declare numbers, in hat-then-effect order, with their `bK` keys: the one
 /// walk the definition and the scripts number params through, so `param` never misses a key.
@@ -508,7 +479,6 @@ fn numbered(recipe: &CraftRecipe) -> Vec<(usize, usize, String)> {
     out
 }
 
-/// The param key of one effect, if it declares a number.
 fn key_of(numbered: &[(usize, usize, String)], hi: usize, ei: usize) -> Option<String> {
     numbered
         .iter()
@@ -572,8 +542,7 @@ fn face_keywords(recipe: &CraftRecipe, radiant: bool) -> Vec<Keyword> {
         })
     {
         let has = |kind: KeywordKind| recipe.keywords.iter().any(|block| block.kind == kind);
-        // The cheapest by points; `min_by_key` keeps the first of equals, so palette order breaks
-        // a tie.
+        // `min_by_key` keeps the first of equals, so palette order breaks a tie.
         let gained = CRAFT_KEYWORD_PRICES
             .iter()
             .filter(|row| row.kind != KeywordKind::Armor && !has(row.kind))
@@ -631,7 +600,6 @@ fn effect_sentence(effect: &CraftEffect, key: Option<&str>) -> String {
     }
 }
 
-/// One hat's line: the label (none for When cast) and its effects' sentences.
 fn hat_sentence(recipe: &CraftRecipe, hi: usize, numbered: &[(usize, usize, String)]) -> String {
     let hat = &recipe.hats[hi];
     let effects: Vec<String> = hat
@@ -654,8 +622,6 @@ fn hat_sentence(recipe: &CraftRecipe, hi: usize, numbered: &[(usize, usize, Stri
     format!("{label}{}", effects.join(" "))
 }
 
-/// A face's text: the keyword line first, then one line per hat — the house style of Core #5,
-/// #6 and #41.
 fn face_text(recipe: &CraftRecipe, radiant: bool) -> String {
     let mut lines: Vec<String> = Vec::new();
     let mut keywords: Vec<String> = recipe
@@ -729,8 +695,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
             grants: None,
         }
     };
-    // R1182000: a Potion is of the Meditative+ set and tagged Potion, as M+ #11 to #13 are; every
-    // other crafted card is Meditative #17's, untagged (R882).
+    // R1182000: a Potion is Meditative+ and tagged, as M+ #11 to #13 are; the rest untagged (R882).
     let (set, tags) = match recipe.frame {
         Some(_) => (SetName::MeditativePlus, vec![Tag::Potion]),
         None => (SetName::Meditative, Vec::new()),
@@ -762,11 +727,8 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The script compiler (R882)
-// ---------------------------------------------------------------------------
 
-/// One effect ready to compile: the block, its param key and its play-time target declaration.
 #[derive(Clone)]
 struct CompiledEffect {
     effect: CraftEffect,
@@ -774,9 +736,8 @@ struct CompiledEffect {
     target: Option<usize>,
 }
 
-/// The `TargetDecl` filter a targeted block declares: damage and heal aim at any unit or hero,
-/// the rest at another unit (R883). A Potion's Activate never aims at the Potion, which it pays with
-/// (R1182000).
+/// A targeted block's filter: damage and heal aim at any unit or hero, the rest at another unit
+/// (R883); a Potion's Activate never at the Potion it pays with (R1182000).
 fn target_filter(verb: CraftVerb, activation: bool) -> serde_json::Value {
     match verb {
         CraftVerb::DamageTarget | CraftVerb::HealTarget if activation => {
@@ -789,8 +750,7 @@ fn target_filter(verb: CraftVerb, activation: bool) -> serde_json::Value {
     }
 }
 
-/// One compiled effect, with the running face's numbers read now (`param`), as every card script
-/// reads its declared numbers when its hook runs.
+/// One compiled effect, reading the running face's numbers now (`param`), as every card script does.
 fn effect_of(ctx: &mut EffectContext<'_>, compiled: &CompiledEffect) -> Vec<Effect> {
     let effect = &compiled.effect;
     let n = compiled.key.as_deref().map(|key| param(&*ctx, key)).unwrap_or(1);
@@ -893,8 +853,7 @@ fn effect_of(ctx: &mut EffectContext<'_>, compiled: &CompiledEffect) -> Vec<Effe
 /// The resume step a crafted Discover answers: it adds the pick, as Core #7's does.
 const DISCOVER_STEP: &str = "discover";
 
-/// The trigger a reveal hat becomes, in Core #41's shape: it fires on the opponent's play of the
-/// named type, or on their attack (R883).
+/// A reveal hat's trigger, in Core #41's shape: the opponent's play of the type, or attack (R883).
 fn reveal_trigger(hat: CraftHatKind, compiled: Vec<CompiledEffect>) -> TriggerDef {
     let (id, on) = match hat {
         CraftHatKind::OpponentPlaysUnit => ("crafted-reveal-unit", vec![GameEventType::CardPlayed]),
@@ -923,10 +882,9 @@ fn reveal_trigger(hat: CraftHatKind, compiled: Vec<CompiledEffect>) -> TriggerDe
     })
 }
 
-/// One face's scripts. Both faces share the compiled hooks — the numbers read `param`, which
-/// answers the running face — except Echo, a face number on the static flags (R883). A Potion's
-/// Activate is an ability whose cost is the card itself, once per turn, whose targets travel in the
-/// `activate` action rather than the play (R1182000, R384).
+/// One face's scripts. Both faces share the hooks (their numbers read `param`, which answers the
+/// running face) but Echo, a face number (R883). A Potion's Activate costs the card itself, once per
+/// turn, its targets travelling in the `activate` action (R1182000, R384).
 fn compile_face(recipe: &CraftRecipe, numbered: &[(usize, usize, String)], radiant: bool) -> Script {
     let mut targets: Vec<TargetDecl> = Vec::new();
     let mut activation_targets: Vec<TargetDecl> = Vec::new();
@@ -1040,9 +998,7 @@ pub fn compile_crafted_scripts(recipe: &CraftRecipe) -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The presets (R881)
-// ---------------------------------------------------------------------------
 
 /// A 2-point Unit keyword for the Unit preset, drawn from the palette.
 const UNIT_PRESET_KEYWORDS: &[KeywordKind] = &[
@@ -1085,7 +1041,6 @@ fn fits_alone(verb: CraftVerb, hat: CraftHatKind, budget: i32) -> bool {
     aims_ok && affordable && verb != CraftVerb::GrantKeyword && !CRAFT_RETIRED_VERBS.contains(&verb)
 }
 
-/// A recipe's name, drawn from the two word lists.
 fn preset_name(rng: &mut Rng) -> (String, String) {
     let adjective = rng.pick(CRAFT_ADJECTIVES).copied().unwrap_or("Pure").to_string();
     let noun = rng.pick(CRAFT_NOUNS).copied().unwrap_or("Closure").to_string();
@@ -1114,8 +1069,8 @@ fn preset_recipe(
     }
 }
 
-/// The Unit preset: a 2-point keyword of the offer when the budget holds one, and all the rest in
-/// stats. A Unit needs no hat, so the offer always leaves one.
+/// The Unit preset: an offered 2-point keyword the budget allows, the rest in stats. A Unit needs no
+/// hat, so the offer always leaves one.
 fn preset_unit(rng: &mut Rng, cost: i32, budget: i32, offer: &CraftOffer) -> CraftRecipe {
     let offered: Vec<KeywordKind> = UNIT_PRESET_KEYWORDS
         .iter()
@@ -1147,8 +1102,8 @@ fn preset_unit(rng: &mut Rng, cost: i32, budget: i32, offer: &CraftOffer) -> Cra
     recipe
 }
 
-/// A one-hat, one-effect preset under the first of `hats` the offer holds, around a verb of the
-/// offer that fits alone there, at the largest N that fits; none when the offer holds no such pair.
+/// A one-hat, one-effect preset: an offered hat of `hats` and an offered verb that fits alone there,
+/// at the largest N that fits.
 fn preset_effect(
     rng: &mut Rng,
     cost: i32,
@@ -1194,10 +1149,9 @@ fn preset_effect(
     ))
 }
 
-/// The seeded presets, in Unit, Spell, Field Spell and Trap order: complete recipes within the
-/// budget, drawn from the match rng (R881) and built from the prompt's offer (R1563007), so a type
-/// whose hats or verbs the offer lacks has none; the Unit always has one. Every word, hat and verb is
-/// an rng draw, so one seed names one set.
+/// The seeded presets, in Unit, Spell, Field Spell and Trap order: complete recipes within the budget,
+/// every word, hat and verb a match-rng draw (R881) from the prompt's offer (R1563007), so a type the
+/// offer cannot build has none.
 pub fn craft_presets(rng: &mut Rng, cost: i32, offer: &CraftOffer) -> Vec<CraftRecipe> {
     let cost = cost.clamp(0, CRAFT_MAX_COST);
     let budget = craft_points_budget(cost);
@@ -1238,9 +1192,8 @@ pub fn craft_presets(rng: &mut Rng, cost: i32, offer: &CraftOffer) -> Vec<CraftR
     out
 }
 
-/// R1182000, R1182001, R1563008: a potion prompt's presets, up to `CRAFT_PRESETS` complete Potions in
-/// the frame, drawn from the match rng: each its own verb of the offer (no two alike) that fits the
-/// frame's points, at the largest N that fits them. One seed names one set, as R881's do.
+/// R1182000, R1182001, R1563008: a potion prompt's presets, up to `CRAFT_PRESETS` Potions, each its own
+/// offered verb that fits the frame's points, at the largest N that fits; drawn as R881's are.
 pub fn craft_potion_presets(rng: &mut Rng, frame: CraftFrame, offer: &CraftOffer) -> Vec<CraftRecipe> {
     let cost = frame_cost(frame);
     let budget = points_budget(Some(frame), cost);
@@ -1292,8 +1245,7 @@ fn free_hats() -> Vec<CraftHatKind> {
         .collect()
 }
 
-/// `count` different picks from `pool` by the match rng, in the pool's order; all of it when it holds
-/// no more.
+/// `count` different picks from `pool` by the match rng, in the pool's order.
 fn draw_some<T: Copy + PartialEq>(rng: &mut Rng, pool: &[T], count: usize) -> Vec<T> {
     if pool.len() <= count {
         return pool.to_vec();
@@ -1302,11 +1254,9 @@ fn draw_some<T: Copy + PartialEq>(rng: &mut Rng, pool: &[T], count: usize) -> Ve
     pool.iter().copied().filter(|item| drawn.contains(item)).collect()
 }
 
-/// R1563007: a `craft` prompt's offer, drawn from the match rng as it opens, or `None` for Scratch
-/// Pad's, which codes from the whole palette. Every offer draws from the whole keyword table (a
-/// keyword serves the card or a Give a unit a keyword block); Meditative #17's from the hats a type
-/// takes and the verbs that fit its budget alone, a potion prompt's hat is its one When cast and its
-/// verbs those that fit its points. No retired verb is offered.
+/// R1563007: a `craft` prompt's offer, drawn from the match rng as it opens; `None` for Scratch Pad's.
+/// Keywords come from the whole table (one serves the card or a Give a unit a keyword block), hats
+/// from those a type takes, verbs from those that fit its budget alone.
 pub fn roll_offer(rng: &mut Rng, mode: Option<CraftMode>, cost: i32) -> Option<CraftOffer> {
     if mode == Some(CraftMode::Scratch) {
         return None;
@@ -1340,9 +1290,8 @@ pub fn roll_offer(rng: &mut Rng, mode: Option<CraftMode>, cost: i32) -> Option<C
     })
 }
 
-/// A `craft` prompt's presets for its mode and offer: Meditative #17's (R881) for the free crafter,
-/// the frame's Potions for a potion prompt (R1182000), each from the offer (R1563007); from scratch
-/// (R1182002), with no offer, from the whole palette.
+/// A `craft` prompt's presets: Meditative #17's (R881) or the frame's Potions (R1182000), from the
+/// offer (R1563007), or with none (R1182002) from the whole palette.
 pub fn presets_for(
     rng: &mut Rng,
     mode: Option<CraftMode>,
@@ -1370,13 +1319,10 @@ pub fn whole_palette() -> CraftOffer {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The preview (R880)
-// ---------------------------------------------------------------------------
 
-/// The engine's own verdict on a recipe at the chosen cost: validity, one sentence per problem,
-/// the points and lines used against their budgets, and the card it would make. The editor shows
-/// this, so the client decides nothing (CLAUDE.md rule 7).
+/// The engine's own verdict on a recipe at the chosen cost, with its budgets and the card it would
+/// make: the editor shows this, so the client decides nothing (CLAUDE.md rule 7).
 pub fn craft_preview(recipe: &CraftRecipe, cost: i32) -> CraftPreview {
     CraftPreview {
         valid: validate_recipe(recipe, cost).is_ok(),
@@ -1389,8 +1335,7 @@ pub fn craft_preview(recipe: &CraftRecipe, cost: i32) -> CraftPreview {
     }
 }
 
-/// R1563007: `craft_preview` as the open prompt judges the answer, its mode's frame and its offer
-/// read by `validate_answer`, so the editor's verdict is the reducer's.
+/// R1563007: `craft_preview` judged by `validate_answer`, so the editor's verdict is the reducer's.
 pub fn craft_preview_for(
     recipe: &CraftRecipe,
     cost: i32,

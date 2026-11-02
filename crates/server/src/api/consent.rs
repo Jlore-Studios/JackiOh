@@ -1,19 +1,16 @@
 //! The age screen and the terms a player agrees to (SPEC §9.4, R757000, R757001; issue #757).
 //!
-//! `POST /api/account/consent` (`AuthLevel::User`): `{ termsVersion, birthYear?, birthMonth? }`. The
-//! client asks; the server decides (CLAUDE.md rule 7):
+//! `POST /api/account/consent` (`AuthLevel::User`): `{ termsVersion, birthYear?, birthMonth? }`.
+//! The client asks; the server decides (CLAUDE.md rule 7):
+//! - **Age (R757000):** a pending account owes an age check, counted from the birth month and year
+//!   in UTC; only that it passed, when and against which minimum is kept, never the birth date. An
+//!   answer under `MIN_ACCOUNT_AGE_YEARS` deletes the account as `DELETE /api/account` does (403
+//!   `under_age`).
+//! - **Terms (R757001):** every account owes agreement to `TERMS_VERSION`, once per version; a client
+//!   that sends another version read other terms and is told to reload (409 `update_required`).
 //!
-//! - **Age (R757000).** A pending account that has not passed the age check owes one. The server
-//!   counts the age from the birth month and year in UTC and keeps only that the check passed, when
-//!   and against which minimum, never the birth date. An answer under `MIN_ACCOUNT_AGE_YEARS`
-//!   deletes the account the way `DELETE /api/account` does and answers 403 `under_age`.
-//! - **Terms (R757001).** Every account owes agreement to `TERMS_VERSION`, once per version. A
-//!   client that sends another version read other terms, and is told to reload (409
-//!   `update_required`).
-//!
-//! `GET /api/auth/me` carries what is owed (`ageCheckOwed`, `termsOwed`), and `POST
-//! /api/codes/redeem` refuses an account owing either (`consent_owed`) before it logs an attempt.
-//! The request body is never logged: it holds a birth month and year.
+//! `GET /api/auth/me` carries what is owed; `POST /api/codes/redeem` refuses an account owing either
+//! before it logs an attempt. The request body is never logged: it holds a birth month and year.
 
 use std::sync::Arc;
 

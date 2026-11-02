@@ -62,9 +62,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-propagation-layer — SPEC §8.10 row T-propagation-layer, BUILD M12 row S T-propagation-layer:
-// "beneath the Shield Layer it offers no Activate; on top, it summons up to two Drone Interceptors and one
-// Drone Corvette a turn, each Activate counted apart; radiant 24/24 and Radiant drones".
+// S T-propagation-layer — SPEC §8.10 row T-propagation-layer, BUILD M12 row S T-propagation-layer.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -80,8 +78,6 @@ mod tests {
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
     const FILLER: &str = "core-005";
 
-    /// The Meltdown and Propagation Layers in p1's lane 1, the Propagation (Radiant on `radiant`) on top,
-    /// and `above` piled onto them.
     fn pile(radiant: bool, above: &[&str]) -> Scenario {
         let mut field = vec![
             json!({ "def": MELTDOWN, "radiant": radiant, "lane": 1 }),
@@ -98,7 +94,6 @@ mod tests {
         s.activate(PROPAGATION, json!({ "ability": ability }))
     }
 
-    /// p1's unit row past the pile, lane 2 to 5: each zone's definition and face.
     fn drones(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (2..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
@@ -127,7 +122,6 @@ mod tests {
             drones(&s),
             vec![drone(INTERCEPTOR), drone(CORVETTE), drone(INTERCEPTOR), None]
         );
-        // The next turn counts afresh.
         s.end_turn();
         s.end_turn();
         activate(&mut s, "interceptor");

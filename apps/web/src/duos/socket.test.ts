@@ -59,7 +59,6 @@ class FakeSocket implements SocketLike {
     this.onclose?.({ code, reason, wasClean: false });
   }
 
-  /** What the client sent, parsed. */
   frames(): Record<string, unknown>[] {
     return this.sent.map((text) => JSON.parse(text) as Record<string, unknown>);
   }
@@ -97,7 +96,6 @@ const SILENCE_MS = WS_PING_INTERVAL_SECONDS * MS_PER_SECOND;
 
 const view = (round: number): unknown => ({ type: "view", view: { round }, legal: [] });
 
-/** The round the client holds, or null before a view. */
 function roundOf(h: Harness): number | null {
   const held = h.client.snapshot().view as { round?: number } | null;
   return held === null ? null : (held.round ?? null);
@@ -185,8 +183,6 @@ function connected(options: HarnessOptions = {}): Harness {
   return h;
 }
 
-// a quiet socket on a woken page (R1441)
-
 describe("a quiet co-op socket on a woken page", () => {
   it("R1441 a co-op socket quiet past the ping interval is sent hello on wake, and replaced when nothing answers", () => {
     const h = connected();
@@ -194,12 +190,10 @@ describe("a quiet co-op socket on a woken page", () => {
     h.advance(SILENCE_MS + 1);
 
     h.wake();
-    // It is asked first: a healthy socket answers with a view, and nothing else changes.
     expect(old.frames()).toEqual([HELLO, HELLO]);
     expect(h.sockets).toHaveLength(1);
     expect(h.delays()).toEqual([WAKE_PROBE_MS]);
 
-    // Nothing came back, so it is let go and a new socket takes its place.
     h.runTimers();
     expect(old.closedWith).toEqual({ code: 1000, reason: "replaced" });
     expect(h.sockets).toHaveLength(2);
@@ -222,14 +216,12 @@ describe("a quiet co-op socket on a woken page", () => {
     h.wake();
     current.deliver(view(3));
 
-    // The answer canceled the probe: nothing is left to run, and the socket stays.
     expect(h.pending()).toBe(0);
     h.runTimers();
     expect(h.sockets).toHaveLength(1);
     expect(current.closedWith).toBeNull();
     expect(h.client.snapshot().connection).toBe("open");
 
-    // It was just heard from, so waking again asks nothing.
     h.wake();
     expect(current.frames()).toEqual([HELLO, HELLO]);
   });
@@ -282,7 +274,6 @@ describe("a quiet co-op socket on a woken page", () => {
       else Object.defineProperty(document, "visibilityState", visibility);
     }
 
-    // A client that was closed no longer listens.
     h.advance(2 * SILENCE_MS);
     window.dispatchEvent(new Event("online"));
     expect(current.frames()).toHaveLength(3);
@@ -305,8 +296,6 @@ describe("a quiet co-op socket on a woken page", () => {
     expect(h.sockets).toHaveLength(1);
   });
 });
-
-// the reconnect
 
 describe("the co-op socket's reconnect", () => {
   it.each([4401, 4403, 4404])("does not retry a refusal: %i is a settled answer", (code) => {
@@ -498,7 +487,6 @@ describe("a co-op socket refused for its sign-in", () => {
 });
 
 // R1483000: the daily cap's flag on view frames
-
 describe("R1483000 a finished view carries jloreCapped, absent while false", () => {
   it("R1483000 a finished view carries jloreCapped, absent while false", () => {
     const h = connected();

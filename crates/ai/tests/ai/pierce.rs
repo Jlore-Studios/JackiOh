@@ -3,9 +3,8 @@
 //! the move order's winning trades (the hit and the strike back) and in the opponent's reply (its
 //! blows and its face hit). Defense Position's Armor 1 (§4.1) is the Armor most boards here pierce.
 //!
-//! Each board grants Pierce to a vanilla body on the field, as `ranged_flying.rs` grants Ranged. The
-//! cards: Mr. Vanilla (core-008) 4/4, Zoomerbin Oomen (core-067) 1/2, Plague Doctor (classic-059) 2/3
-//! and Plague Crawler (classic-053) 2/2.
+//! Each board grants Pierce to a vanilla body on the field, as `ranged_flying.rs` grants Ranged. The cards:
+//! Mr. Vanilla 4/4, Zoomerbin Oomen 1/2, Plague Doctor 2/3 and Plague Crawler 2/2.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -19,7 +18,6 @@ fn board(setup: Value) -> GameState {
     scenario(setup).state().clone()
 }
 
-/// Grants `keyword` to `player`'s unit of `def_id` on the field.
 fn grant(state: &mut GameState, player: PlayerId, def_id: &str, keyword: Keyword) {
     let id = active_units_of(state, player)
         .into_iter()
@@ -137,8 +135,7 @@ mod r346_move_order {
 mod r346_reply {
     use super::*;
 
-    /// The AI's turn 9, with `p1` as its side and the enemy's Plague Crawler 2/2 given `keywords`,
-    /// ended through the reducer: the enemy's turn 10.
+    /// The AI's turn 9 against the enemy's Plague Crawler 2/2, ended through the reducer.
     fn handed_over(p1: Value, keywords: &[Keyword]) -> GameState {
         let mut state = board(json!({
             "seed": "ai-pierce-reply",
@@ -164,9 +161,9 @@ mod r346_reply {
         .expect("a reply")
     }
 
-    /// The AI's Plague Crawler in Defense Position (Armor 1, Taunt) against the enemy's, which
-    /// strikes first: its hit kills only when it pierces, and short of a kill the strike back
-    /// destroys it, so the model attacks only when it reads the Pierce.
+    /// The AI's Plague Crawler in Defense Position (Armor 1, Taunt) against the enemy's, which strikes
+    /// first: it kills only when it pierces, else the strike back destroys it, so the model attacks only
+    /// when it reads the Pierce.
     fn crawlers(keywords: &[Keyword]) -> GameState {
         handed_over(
             json!({ "field": [{ "def": "classic-053", "position": "DEF" }], "library": LIBRARY }),

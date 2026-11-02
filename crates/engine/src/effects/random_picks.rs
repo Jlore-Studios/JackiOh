@@ -1,9 +1,5 @@
-//! Two random picks of existing cards that Classic #90 In Too Deep's rewards name and no verb had
-//! (SPEC §8.6 row 90; R60): "a random Unit of yours gets +3/+3" (reward E) and "return 2 random cards
-//! from your graveyard to your hand" (reward C). A hook may not roll dice — `ctx.rng` advances
-//! `rngCursor`, which is state — so the pick happens here, as the effect applies.
-//!
-//! Port of `packages/engine/src/effects/randomPicks.ts`.
+//! Random picks of existing cards (Classic #90 In Too Deep's rewards, SPEC §8.6 row 90; R60). A hook
+//! may not roll dice, as `ctx.rng` advances `rngCursor`, which is state, so the pick happens here.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -31,8 +27,8 @@ pub struct BuffRandomUnitArgs {
     pub health: Option<i32>,
 }
 
-/// "A random Unit of yours gets +X/+Y": one Unit acting on that side (the tops of the piles, R13),
-/// drawn with the match rng, gets a layer-4 buff (§10.4) through `buff`. No Unit draws nothing (R129).
+/// "A random Unit of yours gets +X/+Y": one Unit acting on that side (R13) gets a layer-4 buff
+/// (§10.4); no Unit draws nothing (R129).
 pub fn buff_random_unit(args: BuffRandomUnitArgs) -> Effect {
     Effect::new("buffRandomUnit", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -43,8 +39,7 @@ pub fn buff_random_unit(args: BuffRandomUnitArgs) -> Effect {
         let Some(unit) = ctx.rng.pick(&units).cloned() else {
             return;
         };
-        // `buff`'s argument as the TS literal `{ target: { of: "instance", instanceId }, ...amount }`,
-        // with only the halves this call was given.
+        // `buff`'s argument, with only the halves this call was given.
         let mut literal = Map::new();
         literal.insert(
             "target".into(),
@@ -71,9 +66,7 @@ pub struct GrantKeywordsRandomUnitArgs {
     pub keywords: Vec<Keyword>,
 }
 
-/// R1085 (M #65 Radiant): one random Unit acting on that side (the tops of the piles, R13), drawn
-/// with the match rng, is granted every named keyword (§10.4) through `grant_keyword`. No Unit
-/// draws nothing (R129).
+/// R1085 (M #65 Radiant): one random Unit acting on that side (R13) is granted every named keyword.
 pub fn grant_keywords_random_unit(args: GrantKeywordsRandomUnitArgs) -> Effect {
     Effect::new("grantKeywordsRandomUnit", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -101,10 +94,8 @@ pub struct ReturnRandomFromGraveyardArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// "Return N random cards from your graveyard to your hand": R60's random pick of N existing cards —
-/// N different cards, or all of them if fewer lie there — drawn together before any moves, so a card a
-/// full hand burns back into the graveyard (§2.4, R4) is not picked again. Each goes to its owner's
-/// hand through §2.4's pipeline in the order drawn. An empty graveyard draws nothing (R129).
+/// "Return N random cards from your graveyard to your hand": R60's N different cards, drawn together
+/// before any moves, so a card a full hand burns back (§2.4, R4) is not picked again.
 pub fn return_random_from_graveyard(args: ReturnRandomFromGraveyardArgs) -> Effect {
     Effect::new("returnRandomFromGraveyard", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

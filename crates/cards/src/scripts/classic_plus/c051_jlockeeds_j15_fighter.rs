@@ -3,13 +3,10 @@
 //!   Radiant: "Ranged, Flying, Rush, Divine Shield" and the same.
 //!   Through v0.5.9f: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
 //!   be attacked." (`script_v0_5_9f`, kept, R767000)
-//!   Engine:  "Can't be attacked (§6.1, §4.2 step 2): no attack may name it, a forced one included (a
-//!            forced attack on it does not happen, and "a random enemy" never draws it); it is still
-//!            targeted by effects and hit by "all" effects. A Taunt it gains binds nobody, since it
-//!            cannot be attacked. Tunes: none."
+//!   Engine:  "Can't be attacked" (§6.1, §4.2 step 2): no attack may name it, a forced one included; it is
+//!            still targeted by effects and hit by "all" effects. A Taunt it gains binds nobody. Tunes: none.
 //!
-//! "Can't be attacked" is a static flag the engine reads everywhere (`restrictions.cannotBeAttacked`); the
-//! keywords are the catalog's. Nothing else to do.
+//! A static flag the engine reads everywhere (`restrictions.cannotBeAttacked`); the keywords are the catalog's.
 
 use jackioh_engine::prelude::*;
 
@@ -34,10 +31,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "Ranged, Flying, Rush;
-// can't be attacked: never the target of a declared or forced attack (a
-// random-enemy forced attack never draws it), while effects still target it and "all" effects hit it;
-// a Taunt given to it binds no attacker; radiant 14/4 with Divine Shield too". Since #2657 it may be in
+// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51. Since #2657 it may be in
 // Defense Position.
 #[cfg(test)]
 mod tests {
@@ -60,7 +54,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
+    /// The unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }

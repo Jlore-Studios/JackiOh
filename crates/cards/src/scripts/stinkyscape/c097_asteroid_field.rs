@@ -8,8 +8,8 @@
 //! its owner then drawing again (R58); setup never deals it (R635). Its cast is one `damage_all` hit on
 //! every Unit of both sides and then each hero, one state check after them all (R59), its caster's Spell
 //! Damage raising each (§4.4 step 0); then `gain_resources` of `resources` random Resources into the
-//! hand, a full hand burning them (R2250000). Radiant: the enemy Units and the enemy hero only, and Radiant Resources. The numbers
-//! are the declared `damage` and `resources` (R386).
+//! hand, a full hand burning them (R2250000). Radiant: the enemy Units and the enemy hero only, and
+//! Radiant Resources. The numbers are the declared `damage` and `resources` (R386).
 
 use jackioh_engine::effects::{damage_all, gain_resources};
 use jackioh_engine::prelude::*;
@@ -45,10 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 97 Asteroid Field — SPEC §8.10 row 97, BUILD M12 row S 97: "drawn, it is cast: 2 damage to each
-// hero and every Unit, its caster's included, then 2 random Resources into the hand, then a draw; never
-// dealt at setup (R635); damage and resources read through `param()`; radiant only the enemy hero and
-// Units are hit, and the Resources are Radiant".
+// S 97 Asteroid Field — SPEC §8.10 row 97, BUILD M12 row S 97 (R635).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -61,7 +58,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const BODY: &str = "core-019"; // 9/9
 
-    /// An Asteroid Field on top of p1's library, a 9/9 on each side.
     fn field_on_top(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {

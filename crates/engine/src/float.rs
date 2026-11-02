@@ -1,9 +1,8 @@
 //! Float (SPEC §6.2, R1563000): a player Floats when their turn ends with mana unspent, and the Float
 //! is that much mana, the `turnEnded` event's `unspentMana` (§2.2's end step). "Reveals when any player
-//! Floats" is a trap trigger on `turnEnded` (#18 Bread and Butter); "Float reduces cost" is this
-//! module's trigger, which a card registers as a hand trigger and as a deck trigger (R464), each under
-//! its own id (#29 GIGA Glowy Jelly Bean, M #49.1 YileGPT Prime). "Float reduces Tribute requirement
-//! by 1" is its trigger too, registered the same way (R1841003).
+//! Floats" is a trap trigger (#18 Bread and Butter); "Float reduces cost" and "Float reduces Tribute
+//! requirement by 1" (R1841003) are this module's, registered as a hand and a deck trigger (R464),
+//! each under its own id (#29 GIGA Glowy Jelly Bean, M #49.1 YileGPT Prime).
 
 use serde_json::{Value, json};
 
@@ -57,8 +56,7 @@ pub fn tribute_lowered(card: &CardInstance) -> i32 {
 
 /// "Float reduces Tribute requirement by 1" (R1841003): whenever the card's owner Floats, its Tribute X
 /// is `FLOAT_TRIBUTE_REDUCTION` lower, whatever the Float's size, kept in hand and deck on the card's
-/// `memory` until a graveyard, an exile or the field's reset takes it (R78, R215). The opponent's Float
-/// lowers nothing.
+/// `memory` until a graveyard, an exile or the field's reset takes it (R78, R215).
 pub fn float_lowers_tribute(id: &str) -> TriggerDef {
     TriggerDef::new(id, &[GameEventType::TurnEnded], lower_tribute)
         .with_when(|ctx, event| float_of(event).is_some_and(|(player, _)| player == ctx.controller))

@@ -6,9 +6,7 @@
 //!   Radiant: the same, with "Add a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
 //! The mode is declared with the play (R81) and kept secret (R860, R865): filed as a secret record
 //! on the caster by `keep_secret`, never carried on an event. The reward is the caster's `next`
-//! start-of-turn delayed effect (R861): after the refresh, before the triggers and the draw. A play
-//! with no mode keeps no secret — that only happens in a redacted copy (R865) — and still hands the
-//! opponent its Fortify Mind.
+//! start-of-turn delayed effect (R861): after the refresh, before the triggers and the draw.
 
 use jackioh_engine::prelude::*;
 
@@ -20,12 +18,12 @@ const FORTIFY_MIND: &str = "meditative-022-1";
 /// The `resume` step the reward re-enters.
 const REWARD: &str = "reward";
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed: instance ids.
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -134,13 +132,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #22 Mind Games — SPEC §8.8 row 22, BUILD M10 row M 22: "(2) Epic Spell: the secret
-// mode reaches no opponent view, event or log line until it is revealed; at the start of your next
-// turn, after the refresh and before the start-of-turn triggers and the draw, the reward resolves
-// (Greed 2 temporary mana and draw 2; Attack 8 to the enemy hero and each enemy Unit; Defend heal
-// 8 on your hero and each of your Units, your hero +2 Armor and each Unit Armor 2); a Fortify Mind
-// linked to the secret goes to the opponent's hand, burned at a full hand; a winning guess removes
-// the reward; its numbers read through `param()`; radiant the Fortify Mind costs (2)".
+// Meditative #22 Mind Games — SPEC §8.8 row 22, BUILD M10 row M 22.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -199,7 +191,6 @@ mod tests {
             assert!(!sent.contains("choice"));
             assert!(!sent.contains("modes"));
             assert!(!sent.contains("greed"));
-            // The owner's view carries the choice.
             let own = s.view("p1");
             let mine = own.you.secrets.clone().expect("the owner reads their secret");
             assert_eq!(mine[0].choice, Some(SecretChoice::Greed));

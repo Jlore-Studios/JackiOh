@@ -7,9 +7,6 @@
 //! keeps the cheap ones to AI_MULLIGAN_CURVE's curve (#993).
 //! B21 and R188: the AI answers an unanswered draw offer at once with a
 //! decline, and never concedes, offers a draw or accepts one.
-//!
-//! Port of `packages/ai/test/decide.test.ts`. TS's per-test timeouts have no `cargo test` twin and
-//! are dropped.
 
 use jackioh_ai::{
     AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_MULLIGAN_CURVE, AiMulliganCurve, AiOptions, Decision,
@@ -78,9 +75,7 @@ fn ids_where(events: &[GameEvent], player: PlayerId, shuffled: bool) -> Vec<Stri
         .collect()
 }
 
-// ---------------------------------------------------------------------------------------------
 // B16
-// ---------------------------------------------------------------------------------------------
 
 mod forced_moves_and_nothing_to_do_b16 {
     use super::*;
@@ -112,7 +107,6 @@ mod forced_moves_and_nothing_to_do_b16 {
         );
         assert_eq!(decision.as_ref().map(|d| d.stats.nodes), Some(0));
         assert_eq!(options.rng.cursor(), 0);
-        // The engine takes it.
         act(&state, AI, &decision.expect("a decision").action);
     }
 
@@ -271,9 +265,7 @@ mod forced_moves_and_nothing_to_do_b16 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B20
-// ---------------------------------------------------------------------------------------------
 
 mod the_mulligan_b20 {
     use super::*;
@@ -374,7 +366,7 @@ mod the_mulligan_b20 {
             }
             // Both answers are in, so both resolved in the second one (R265). R9: the replacements were
             // drawn before the returned cards went back, so none of setup's draws brought one back.
-            // (TS's `slice(0, -1)` when no turn started is kept: it drops the last event.)
+            // With no turn started, the last event is left out.
             let end = events
                 .iter()
                 .position(|event| matches!(event, GameEvent::TurnStarted { .. }))
@@ -480,7 +472,6 @@ mod the_mulligan_at_its_bounds_b20 {
             ActionBody::Mulligan { keep } => sorted(keep.clone()),
             _ => vec![],
         };
-        // Exactly one card is kept: a copy of the proven four-drop.
         assert_eq!(kept.len(), 1);
         let kept_card = state.players[PlayerId::P1]
             .hand
@@ -491,9 +482,7 @@ mod the_mulligan_at_its_bounds_b20 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // #993: the curve
-// ---------------------------------------------------------------------------------------------
 
 /// p2's mulligan on Hard's handicap, whose extra opening card (R182) makes it five cards, with its
 /// hand's defs replaced.
@@ -676,9 +665,7 @@ mod the_mulligans_curve {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B21, R188
-// ---------------------------------------------------------------------------------------------
 
 mod draw_offers_b21 {
     use super::*;

@@ -21,8 +21,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs only in what the engine reads off the catalog (its doubled
-    // stats and Reborn).
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -38,24 +36,15 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const GHOST: &str = "classic-089";
-    /// (1) Spell: Deal 4 damage (a declared target).
     const WILDFIRE: &str = "classic-055";
     const ECHO: &str = "classic-057";
-    /// Whenever you discard cards, draw that many.
     const RECYCLER: &str = "classic-064";
-    /// (4) Spell: Destroy all permanents.
     const NETHER: &str = "core-088";
-    /// (1) Unit 4/4
     const VANILLA: &str = "core-008";
-    /// (3) Unit 9/9
     const MENACE: &str = "core-019";
-    /// (1) Spell
     const FILLER: &str = "core-005";
-    /// (0) Spell, a card to discard
     const SPARE: &str = "core-010";
-    /// Activate: remove a Plague Counter from a permanent; an enemy one is exiled.
     const MUTATE: &str = "classic-078";
-    /// Cry: with 4 or more mana as it was played, bounce 2 random enemy permanents.
     const MID_RUNNER: &str = "classic-022";
 
     fn at(card: &CardInstance) -> Selection {
@@ -98,7 +87,6 @@ mod tests {
         }
     }
 
-    /// The action as it goes on the wire names no discards.
     fn carries_no_discards(action: &ActionBody) -> bool {
         serde_json::to_value(action).unwrap().get("discards").is_none()
     }
@@ -145,7 +133,6 @@ mod tests {
             );
             let scripts = script();
             assert!(scripts.base.targeting_discards.is_some());
-            // The Radiant face is the same script, so the same hook.
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.targeting_discards.as_ref().unwrap(),
                 scripts.radiant.targeting_discards.as_ref().unwrap()
@@ -218,7 +205,6 @@ mod tests {
                     "p2": { "field": [GHOST, VANILLA] },
                 }));
                 let ghost = s.card(GHOST).clone();
-                // Wildfire plus one spare: only one card outside the played card, fewer than the two owed.
                 s.expect_refused(|s| s.play(WILDFIRE, json!({ "targets": [at(&ghost)] })));
             }
 
@@ -246,7 +232,6 @@ mod tests {
                     .into_iter()
                     .filter(|play| matches!(first_target(play), Some(Selection::Instance { .. })))
                     .collect();
-                // Offered now that two others are held — and carrying no discards, paid at random.
                 let own_targets: Vec<Option<Selection>> = own.iter().map(first_target).collect();
                 assert!(own_targets.contains(&Some(at(rich.card(GHOST)))));
                 assert!(own.iter().all(carries_no_discards));
@@ -443,7 +428,6 @@ mod tests {
                     "p2": { "field": [GHOST] },
                 }));
                 step_param(rich.card_mut(GHOST), "discard", 1);
-                // Three others now owed: offered with four others held — still carrying no discards.
                 let ghost = rich.card(GHOST).clone();
                 let at_ghost: Vec<ActionBody> = wildfire_plays(&rich, P1)
                     .into_iter()

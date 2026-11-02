@@ -3,14 +3,13 @@
 //!            and never tuned there, R824000)
 //!   Radiant: "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
 //!
-//! Each round is one effect list followed by its own state check (one of the two lists R59 lets check
-//! inside themselves, beside R283's) so killed Units die and Death hooks resolve before the next round. The storm stops after a round in which any Unit died
-//! (Reborn counts), after its round cap, or when no Unit is left. Cap is declared `rounds` (R386),
-//! read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces, tuned on the Radiant face
-//! only (R824000). Base face casts Whirlwind (C+ #21)
-//! as a real Spell cast (R70, §4.4), so Divine Shield, Armor (Pierce goes through it, R652) and Spell
-//! Damage apply round by round.
-//! Radiant face hits enemy Units only; a death on either side still stops it (refs Whirlwind, R279).
+//! Each round is one effect list with its own state check (one of the two lists R59 lets check inside
+//! themselves, beside R283's), so killed Units die and Death hooks resolve before the next round. It
+//! stops after a round in which any Unit died (Reborn counts), after its round cap, or with no Unit
+//! left. The cap is the declared `rounds` (R386), `BLADE_STORM_ROUNDS` on both faces, tuned on the
+//! Radiant face only (R824000). The base face casts Whirlwind (C+ #21) as a real Spell cast (R70, §4.4),
+//! so Divine Shield, Armor (Pierce goes through it, R652) and Spell Damage apply round by round. The
+//! Radiant face hits enemy Units only; a death on either side still stops it (as Whirlwind, R279).
 
 use jackioh_engine::effects::{cast_rounds_until_death, damage_rounds_until_death};
 use jackioh_engine::prelude::*;
@@ -45,8 +44,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #32.3 Blade Storm (SPEC §8.7, R59, R70, R283, R652): base face casts Whirlwind round after
-// round (C+ #21, Pierce, so Armor does not stop it) until a Unit dies, no Unit is left, or round cap is reached. Radiant hits enemy Units only.
+// C+ #32.3 Blade Storm — SPEC §8.7 row 32.3.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -152,7 +150,6 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.id, STORM);
             let scripts = script();
-            // The two faces are two scripts.
             assert!(!std::sync::Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),
                 scripts.radiant.cry.as_ref().unwrap()
@@ -231,7 +228,6 @@ mod tests {
             fn r652_pierce_goes_through_armor_the_7_7_with_armor_7_takes_1_a_round_and_dies_in_round_7() {
                 crate::register_all();
                 let mut s = storm(json!({ "field": [SEVEN] }), json!({ "field": [counter()] }), false, None);
-                // Seven hits of 1 past Armor 7, one per round; the storm stops in round 7.
                 assert_eq!(whirlwinds(&s), 7);
                 assert_eq!(deaths(&s), [SEVEN]);
                 assert_eq!(hits(&s, s.unit(P2, 1)), [1, 1, 1, 1, 1, 1, 1]);
@@ -353,7 +349,6 @@ mod tests {
                 assert!(!crate::can_degrade_number(&s, STORM, "damage"));
                 assert_eq!(crate::upgrade_number(&mut s, STORM, "damage"), 2);
                 s.play(STORM, json!({}));
-                // 2 a round into a 9/9: it dies in the fifth.
                 assert_eq!(hits(&s, s.unit(P2, 1).or_else(|| Some(s.card(MENACE).clone()))), [2, 2, 2, 2, 2]);
             }
     }

@@ -222,7 +222,7 @@ const RICH = tally(
   { bestStreak: 6, longestGame: 23, longestGamePlayed: { "core-002": 3 } },
 );
 
-/** RICH, and three tokens that top every counter a stat reads (one never destroyed, one always, one never played), and a token in the longest game. */
+/** RICH, plus three tokens topping every counter a stat reads (one never destroyed, one always, one never played) and one in the longest game. */
 const WITH_TOKENS: PlayerStats = {
   ...RICH,
   cards: {
@@ -283,7 +283,6 @@ const WITH_TOKENS: PlayerStats = {
 
 const seen = (stats: ShowcaseStat[]): [string, string, string][] => stats.map((stat) => [stat.key, stat.cardId, stat.line()]);
 
-/** One stat of a tally, drawn with a fresh seeded source. */
 function statOf(stats: PlayerStats, key: ShowcaseKey, seed = 1): ShowcaseStat | undefined {
   return showcaseStats(stats, null, seeded(seed)).find((stat) => stat.key === key);
 }
@@ -298,17 +297,14 @@ describe("R1743000 a token is never a stat's card", () => {
     const tokenPick: PocketPick = { id: TOKENS[0], playerRate: 0.9, baseRate: 0.1 };
     const stats = showcaseStats(WITH_TOKENS, tokenPick, seeded(4));
     const without = showcaseStats(RICH, null, seeded(4));
-    // The same 64 stats, each on the same card with the same words as with no token in the tally.
     expect(seen(stats)).toEqual(seen(without));
     expect(stats.map((stat) => stat.key)).toEqual(SHOWCASE_KEYS.filter((key) => key !== "pocketPick"));
     for (const stat of stats) expect(CATALOG[stat.cardId]?.token).toBe(false);
-    // The ones the issue names: Old Faithful, Fallen Hero, Survivor, The Record and the rest.
     for (const key of ["faithful", "fallen", "survivor", "record", "toppled", "lastLaugh", "workhorse"] as const) {
       expect(statOf(WITH_TOKENS, key)?.cardId).toBe("core-001");
     }
     expect(pocketStat(WITH_TOKENS, tokenPick)).toEqual([]);
     expect(showcaseStats(WITH_TOKENS, tokenPick, seeded(4)).some((stat) => stat.key === "pocketPick")).toBe(false);
-    // A pick on a card that is not a token is kept, wherever it is asked for.
     expect(pocketStat(WITH_TOKENS, PICK).map((stat) => [stat.key, stat.cardId])).toEqual([["pocketPick", "core-005"]]);
     expect(pocketStat(EMPTY_STATS, PICK)).toEqual([]);
     expect(pocketStat(WITH_TOKENS, null)).toEqual([]);
@@ -469,7 +465,6 @@ describe("R1743000 the new stats", () => {
     // A better share beats a bigger sample, and a count past the plays is capped at them.
     expect(statOf(tally({ ...base, "core-007": { played: SHOWCASE_MIN_PLAYS, destroyed: SHOWCASE_MIN_PLAYS } }), "glassCannon")?.cardId).toBe("core-007");
     expect(statOf(tally({ "core-001": { played: 5, destroyed: 9 } }), "glassCannon")?.line()).toBe("destroyed 5 of the 5 times you played it");
-    // Below the floor, never destroyed, or no plays: left out.
     expect(statOf(tally({ "core-002": base["core-002"] }), "glassCannon")).toBeUndefined();
     expect(statOf(tally({ "core-001": { played: 10 }, "core-002": { destroyed: 4 } }), "glassCannon")).toBeUndefined();
   });
@@ -620,7 +615,6 @@ describe("R1743000 the new stats", () => {
     const all = counting();
     showcaseStats(tally({ "core-001": { played: 1, seen: 3 } }), null, all.random);
     expect(all.calls()).toBe(3);
-    // The same source draws the same picks: the stats are a function of the tally and the seed.
     expect(seen(showcaseStats(RICH, null, seeded(5)))).toEqual(seen(showcaseStats(RICH, null, seeded(5))));
   });
 
@@ -929,7 +923,6 @@ describe("R1743000 the bag", () => {
         expect(bag.shown).not.toBe(last);
         last = bag.shown;
       }
-      // A bag spent on exactly one stat refills without it.
       const spent: ShowcaseBag = { shown: "toppled", left: [] };
       expect(nextInBag(spent, ["toppled", "coveted"], seeded(seed)).shown).toBe("coveted");
     }

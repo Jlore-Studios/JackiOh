@@ -82,7 +82,6 @@ describe("R504 an empty hand keeps its place", () => {
     expect(base?.body).toContain("width: var(--slot-w)");
     // Positioned, so R439's heartbeat under the hand stays under it too.
     expect(base?.body).toContain("position: relative");
-    // Your hand's outline is your hand card's height.
     const yours = rules.find((rule) => rule.selectors.includes(".hand-you .hand-empty"));
     expect(yours?.body).toBe("height: var(--hand-card-h);");
     const yourCards = rules.filter((rule) => rule.selectors.includes(".hand-you .card-hand") && /(^|; )height:/.test(rule.body));
@@ -184,7 +183,6 @@ describe("R1143 and R1141 the hand pile shows its size and its marks", () => {
     for (const side of ["you", "opponent"] as const) {
       expect(screen.getByTestId(`hand-cap-${side}`)).toHaveTextContent("/12");
     }
-    // With no set size neither seat shows one.
     cleanup();
     renderBoard(baseView());
     expect(screen.queryByTestId("hand-cap-you")).toBeNull();
@@ -203,7 +201,6 @@ describe("R1143 and R1141 the hand pile shows its size and its marks", () => {
     // Never which: backs carry no instance id and no mark.
     expect(hand.querySelector("[data-def-id]")).toBeNull();
     expect(hand.querySelectorAll(".card-back")).toHaveLength(2);
-    // The viewer's own seat shows no count.
     expect(screen.getByTestId("hand-you")).not.toHaveAttribute("data-marked");
     expect(screen.queryByTestId("hand-marked-you")).toBeNull();
   });

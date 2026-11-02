@@ -1,23 +1,5 @@
-//! The room-code challenge (`actor/rooms.rs`, SPEC §9.5, R79, BUILD M6-T4).
-//!
-//! Four rulings own this file:
-//!
-//!  - **R143**, the optional seed. A room's match is not created until someone joins, so the seed
-//!    the host posts to `POST /api/rooms` has to survive until the join, and outside end-to-end mode
-//!    the field is refused at both doors. BUILD M8 requires every spec to set a seed.
-//!  - **R149**, the bounded mint: a code is retried a fixed number of times against the codes still
-//!    in use, and then the caller is told none is available rather than the server retrying for ever.
-//!  - **R264**, the room's mode: a room is made in the host's mode with their deck or trio frozen
-//!    into it, a join in another mode is refused with the room's mode named, a Best-of-3 join makes
-//!    the series and an All Random join deals both decks.
-//!  - **R1075000**, the host's cancel and the lobby's list: `DELETE /api/rooms/:code` frees a room
-//!    nobody has joined (never a joined one, never another host's, never a challenge's) and
-//!    `GET /api/rooms` lists the caller's own open rooms back to them.
-//!
-//! The rooms run the real `freeze_choice` (`api/decks.rs`), validator and registry over decks saved
-//! into the store; "the match the join started" is the match row it wrote. R149's two tests script
-//! the code mint to collide through `actor::rooms::script_room_codes`.
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
+//! Room challenge tests (SPEC §9.5, R79, BUILD M6-T4, M8, SURFACE §11.2, §11.3).
+//! Rulings: R143 (seed), R149 (bounded mint), R264 (modes), R1075000 (cancel/list).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -50,9 +32,7 @@ const AT: i64 = 1_700_000_000_000;
 /// test's seed is never another's count.
 static ROOMS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// The matches the registry started, oldest first — every match row past its `open` reservation
-/// (a room's claim reserves the row; the join's start completes it). Seat order is the row's: index 0
-/// of `players` and `decks` is p1.
+/// Matches registry started, oldest first; index 0 of `players` and `decks` is p1.
 async fn started(app: &App) -> Vec<Value> {
     table(app, |data| json!(data.tables.matches))
         .await
@@ -444,10 +424,7 @@ mod r149_the_bounded_room_code_mint {
 
 // §9.4 / §9.5 / §9.8 — the host's deck is frozen into the room
 
-/// The room half of §9.8's "Deck swapped after matchmaking → decks are frozen into the ticket".
-/// `actor/rooms.rs` freezes the host's deck at `POST /api/rooms`, but the match is not created until
-/// somebody joins, up to `ROOM_CODE_TTL_SECONDS` later. These tests use the real `PUT /api/decks/:id`
-/// on the same router.
+/// Host deck freezing into room at creation (§9.4, §9.5, §9.8).
 mod the_hosts_deck_is_frozen_into_the_room {
     use super::*;
 
@@ -511,8 +488,7 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let h = freeze_harness().await;
         let (a, b, c) = h.decks.clone();
 
-        // PREMISE: the deck the host freezes and the one they swap to share no card, so "the match used
-        // the frozen deck" and "the match used the saved deck" cannot both be true.
+        // Host frozen and saved decks share no cards.
         assert!(!a.is_empty());
         assert!(a.iter().all(|card| !c.contains(card)));
 
@@ -552,8 +528,7 @@ mod the_hosts_deck_is_frozen_into_the_room {
 
     #[tokio::test]
     async fn the_control_the_same_swap_made_before_the_create_is_the_deck_the_room_freezes() {
-        // Without this, the test above would pass against a room that ignored saved decks entirely.
-        // Exactly one thing moves between the two: whether the save happens before or after the create.
+        // Verifies room does not ignore saved decks entirely.
         let _turn = ROOMS.lock().await;
         let h = freeze_harness().await;
         let (a, b, c) = h.decks.clone();
@@ -1063,12 +1038,7 @@ mod r264_rooms_carry_a_mode {
 
 // R642 — the portraits on a room's match (§9.5)
 
-/// R642, the room half: a Best-of-1 room freezes the host deck's portrait at `POST /api/rooms`,
-/// with the deck, and an All Random room deals each seat's portrait off the match seed — the same
-/// `pick_portrait_from_seed` the queue uses (R258's dealing, one layer down).
-///
-/// The match row these tests read is the real write: the registry's `start` writes it, seat order
-/// and `portrait_or_default` included.
+/// R642: portrait assignment and freezing for rooms (SPEC §9.5, R258).
 mod r642_the_portraits_on_a_rooms_match {
     use super::*;
 
@@ -1092,9 +1062,7 @@ mod r642_the_portraits_on_a_rooms_match {
         let host_is_p1 = seat_coin_p1_first("room-portraits");
         let (first, second) = if host_is_p1 { (HOST, GUEST) } else { (GUEST, HOST) };
         assert_eq!(row["players"], json!([first, second]));
-        // Each seat's pick is `pick_portrait_from_seed` on its own seat-keyed suffix — both
-        // `:portrait:p1` and `:portrait:p2` — and the row the actor will read keeps them in that
-        // seat order.
+        // Each seat's pick uses seat-keyed suffix in seat order.
         let expected = json!([
             pick_portrait_from_seed("room-portraits:portrait:p1"),
             pick_portrait_from_seed("room-portraits:portrait:p2"),
@@ -1176,9 +1144,7 @@ mod r642_the_portraits_on_a_rooms_match {
 
 // R1834002 — the loadouts on a room's match
 
-/// R1834002, the room half: a Best-of-1 room freezes the host deck's slots at `POST /api/rooms`
-/// with the deck, as R642 freezes its portrait, and the joiner's with the join; the match row keeps
-/// both seats' loadouts, each slot the deck's pick, else the account's, else the default.
+/// R1834002: Best-of-1 room freezes loadout slots on host and join (R642); match row stores both.
 mod r1834002_the_loadouts_on_a_rooms_match {
     use super::*;
 
@@ -1316,9 +1282,7 @@ mod r890000_a_match_seat_is_claimed_atomically {
         assert_eq!(status, 200, "{created}");
         let code = created["code"].as_str().expect("a code").to_string();
 
-        // The queue seats the host between the host-free check and the seat claim. Hooked on
-        // the claim, which commits: a rival write inside the seat transaction would roll back
-        // with the loss, while a real rival's commit stands.
+        // Queue seats host before room claim; rival write committed.
         fake(&h.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
             if method == "rooms.claim"
                 && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == HOST)
@@ -1629,9 +1593,7 @@ mod a_deck_with_a_custom_card_r915005 {
 
 // R1989000 — the match seed's coin seats the host and the joiner
 
-/// R1989000, the room half: a fixed seed set seats both orders, the same seed seats the same way
-/// twice, an end-to-end `seat` pin skips the coin with the host winning a conflict, and the join
-/// answer names the joiner's actual seat.
+/// R1989000: room seed coin seats both orders deterministically; seat pin skips coin.
 mod r1989000_the_seed_coin_seats_the_room {
     use super::*;
 
@@ -1693,9 +1655,7 @@ mod r1989000_the_seed_coin_seats_the_room {
     #[tokio::test]
     async fn r1989000_a_host_pin_skips_the_coin_with_the_host_winning_a_conflict() {
         let _turn = ROOMS.lock().await;
-        // A pin against the coin proves the pin skipped it: the host takes the pinned seat either
-        // way the coin would have seated them, and the joiner takes the free one. A fresh harness
-        // per seed, as above.
+        // Pin against coin proves pin skipped it; host takes pinned seat.
         for seed in SEEDS {
             let h = harness(true).await;
             let host_pin = if seat_coin_p1_first(seed) { "p2" } else { "p1" };

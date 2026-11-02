@@ -28,9 +28,6 @@ pub fn script() -> CardScripts {
 // T-glitch Glitch (SPEC §7, issue #170; R673–R679). BUILD M9's row: "hidden Spell token, cost 0, blank;
 // only R673's roll makes one, after a … in the System play, at n/10000 per generated card; always
 // playable on its owner's turn; resolves as one of four outcomes drawn by the match rng".
-//
-// The engine's own test (packages/engine/test/glitch.test.ts) proves the odds' arithmetic and each
-// outcome on a fixture; this file proves them again on the real catalog, through `scenario()`.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -40,12 +37,10 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// #8 Mr. Vanilla, Radiant.
     fn other_board() -> Value {
         json!([{ "defId": "core-008", "radiant": true }])
     }
 
-    /// A game at p1's turn with Glitch in hand and no mana to pay for anything else.
     fn with_glitch(seed: &str) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -62,7 +57,6 @@ mod tests {
         })
     }
 
-    /// The first seed whose Glitch draws `outcome`, played.
     fn played(outcome: GlitchOutcome) -> Scenario {
         for n in 0..200 {
             let mut g = with_glitch(&format!("t-glitch-{outcome}-{n}"));
@@ -87,7 +81,6 @@ mod tests {
             );
             let scripts = script();
             assert!(scripts.base.cry.is_some());
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same script, so the same hook.
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),
                 scripts.radiant.cry.as_ref().unwrap()

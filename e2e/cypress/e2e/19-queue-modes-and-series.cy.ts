@@ -2,7 +2,6 @@
 // #21 Hinder is the selected deck's observable opening-hand card.
 // Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
 // Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
-// BUILD M5-T1 fixes testids; M6/M7 supply the server, actor, queue and results.
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
@@ -57,8 +56,6 @@ import {
   type QueueMode,
 } from "../../support/testids.ts";
 
-// Constants
-
 const MS_PER_SECOND = 1000;
 
 /** Allow the §9.5/R108 window to reach MAX_FAIR_GAP (R640001), a sweep, poll, and render. */
@@ -67,7 +64,6 @@ const PAIRING_TIMEOUT_MS =
     MS_PER_SECOND +
   timeouts.view;
 
-/** Allow a poll and render. */
 const SERIES_POLL_TIMEOUT_MS = SERIES_POLL_SECONDS * MS_PER_SECOND + timeouts.view;
 
 /** R245 Tokens are the only hand cards not from a deck. */
@@ -158,9 +154,8 @@ function dequeue(account: E2EAccount): void {
 
 /**
  * R897000: seat two is a queued client, so it polls like one. The queue cancels a ticket nobody has
- * heard from for `QUEUE_TICKET_STALE_MS`, and the browser's earlier rated endings leave the two
- * accounts apart, so the newer ticket may wait up to `RATING_WINDOW_FULL_AFTER_SECONDS` for its
- * window to reach the gap.
+ * heard from for `QUEUE_TICKET_STALE_MS`, and the browser's earlier rated endings keep the accounts
+ * apart, so the newer ticket may wait up to `RATING_WINDOW_FULL_AFTER_SECONDS` for the gap.
  */
 function pollWhileQueued(account: E2EAccount): void {
   cy.stayQueued(account, SERIES_POLL_SECONDS * MS_PER_SECOND);
@@ -218,14 +213,12 @@ function browserHand(): Cypress.Chainable<string[]> {
     .then(($cards) => $cards.map((_index, element) => element.getAttribute("data-def-id") ?? "").get());
 }
 
-/** §10.8 sends the viewer's own hand as cards. */
 function socketHand(view: Record<string, unknown> | null | undefined): string[] {
   const you = (view?.you ?? {}) as { hand?: unknown };
   expect(Array.isArray(you.hand), "the viewer's own hand arrives as cards, not a count (§10.8)").to.eq(true);
   return (Array.isArray(you.hand) ? (you.hand as { defId?: string }[]) : []).map((card) => card.defId ?? "");
 }
 
-/** Require enough non-Token cards to prove the selected deck. */
 function expectDealtFrom(hand: readonly string[], deck: readonly string[], others: readonly (readonly string[])[], label: string): void {
   const drawn = hand.filter((id) => !TOKEN_IDS.has(id));
   expect(drawn.length, `${label}: an opening hand (§2.1)`).to.be.at.least(constants.OPENING_DRAW[0]);
@@ -241,7 +234,6 @@ function expectDealtFrom(hand: readonly string[], deck: readonly string[], other
 
 function openLobby(account: E2EAccount, mode: QueueMode): void {
   cy.visitAs(account, routes.play());
-  // The lobby's mode chips, or what the page shows instead when they never come.
   cy.get("body", { timeout: timeouts.view }).should(($body) => {
     const shown = $body.find(ts(playModeId(mode))).length > 0;
     expect(shown, `the lobby's ${mode} chip; the page shows: ${$body.text().replace(/\s+/gu, " ").slice(0, 400)}`).to.eq(true);
@@ -272,8 +264,6 @@ function installed(value: InstalledLoadout | null): InstalledLoadout {
   expect(value, "cy.installLoadout has answered").to.not.eq(null);
   return value as InstalledLoadout;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 describe("19 queue modes and series — Best of 1, All Random, Conquest and rooms", () => {
   beforeEach(() => {
@@ -470,7 +460,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       cy.get(ts(SERIES_SCORE)).should("have.attr", "data-you", String(wins)).and("have.attr", "data-opponent", "0");
     };
 
-    // Queue Conquest
     openLobby(seatOne, "bo3");
     cy.then(() => {
       cy.get(ts(PLAY_TRIO_SELECT), { timeout: timeouts.view }).select(installed(mine).trioId);
@@ -531,7 +520,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // Game 1
     playAndWin(1, GAME_ONE_PICKS);
 
     // R330: a won deck is locked; a losing deck returns.
@@ -558,7 +546,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     playAndWin(2, GAME_TWO_PICKS);
 
-    // R332: auto-pick the browser's final deck.
     continueToPick(2);
     cy.get(ts(SERIES_PICKER)).should("have.attr", "data-state", "waiting").and("have.attr", "data-auto", "true");
     cy.get(ts(seriesDeckId(GAME_THREE_PICKS.browser))).should("have.attr", "data-picked", "true");
@@ -568,7 +555,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     playAndWin(3, GAME_THREE_PICKS);
 
-    // Series result
     cy.get(ts(SERIES_BANNER_RESULT), { timeout: SERIES_POLL_TIMEOUT_MS }).should("have.attr", "data-outcome", "win");
     for (const slot of [0, 1, 2]) {
       cy.get(ts(seriesBannerYourDeckId(slot))).should("have.attr", "data-won", "true");
@@ -607,7 +593,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // Both players can queue again.
     for (const account of [seatOne, seatTwo]) {
       cy.then(() => {
         me(account).should((body) => {
@@ -645,7 +630,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(code, "R79: a room code").to.have.length(constants.ROOM_CODE_LENGTH);
       });
 
-    // R264: a Best-of-1 joiner is refused with the room mode.
     cy.then(() => {
       cy.request<ErrorBody>({
         method: "POST",

@@ -1,7 +1,6 @@
 // R1297000: the open deck's own playmat, backdrop and card back, behind a top-bar button. Three
 // inline selects in the sidebar push the verdict and the pool's first row off the first screen
-// (BUILD M5-T1), so the picks live in a popover like the settings gear's (SettingsButton.tsx):
-// a button in the header row, an absolutely-positioned panel, outside-press and Escape close.
+// (BUILD M5-T1), so the picks live in a popover like the settings gear's (SettingsButton.tsx).
 // R1833000: each select offers the starters and the account cosmetics the account owns while
 // ownership decides (`useOwnsAccountCosmetic`), and a stored pick it does not own shows as the
 // kind's default, which is what the board draws.
@@ -14,7 +13,6 @@ import { BackLayer } from "../../net/backLayers.ts";
 import { DECK_COSMETICS_BUTTON } from "./testids.ts";
 import type { DeckItem } from "./sync.ts";
 
-/** R1297000: the deck's three slots, the deck field each is saved in and its label. */
 const DECK_COSMETIC_FIELDS: readonly { kind: DeckSlotKind; key: "tableCosmetic" | "fieldCosmetic" | "cardBackCosmetic"; label: string }[] = [
   { kind: "table", key: "tableCosmetic", label: "Playmat" },
   { kind: "field", key: "fieldCosmetic", label: "Backdrop" },

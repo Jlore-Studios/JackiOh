@@ -1,35 +1,15 @@
 // What a Radiant face prints that its base face does not (SPEC §10.10, R277).
 //
-// The catalog carries each Radiant face's whole text (`radiant.text`, §8's Radiant cell read by its
-// Conventions and written out), so a face prints it as it stands and marks the words and numbers
-// in it that the base face's text does not have: #44 True Strike's "Deal 9 damage to a target,
-// ignoring Armor; exile this" marks the 9 and nothing else. A word the Radiant face drops is simply
-// absent, since the face prints the Radiant text alone.
+// The catalog carries each Radiant face's whole text (`radiant.text`, §8's Radiant cell written out);
+// the face prints it and marks the words and numbers the base text lacks (#44 True Strike marks its 9
+// alone). The mark is a word-level LCS diff of the two public catalog texts, so it is the same wherever
+// the face is drawn, and presentation only (CLAUDE.md rule 7). Case is ignored (#17's "Bounce" becoming
+// "bounce" marks nothing). The separators `, ; : . ( )` are tokens of their own, and a marked range
+// never starts or ends on one, so the underline reads as one phrase.
 //
-// The mark is a word-level diff of the two public catalog texts — a longest common subsequence over
-// their tokens — so it is the same wherever the face is drawn, and it is presentation only: nothing
-// reads it but the renderer (CLAUDE.md rule 7). Tokens are compared without regard to case, so
-// #17's "Bounce all units" becoming "bounce all units" inside a longer sentence marks nothing.
-//
-// A token is a run of anything but spaces and the separators `, ; : . ( )`, which are tokens of
-// their own: "Fib(cost+3)" is `Fib`, `(`, `cost+3`, `)`, so only the `cost+3` is marked, and
-// "−10/−10)" leaves its bracket unmarked. A marked range runs from the first marked word to the
-// last of a stretch, over the spaces and separators between them, but never starts or ends on a
-// separator, so the underline reads as one phrase ("and the units adjacent to it on its side").
-//
-// A face printed in Chinese (ME-CN, R1302, MD-B13) is compared character by character: Chinese puts
-// no space between words, so each CJK character is a token of its own, and Chinese punctuation
-// `，；：。（）、` is a separator like its English counterpart. "抽两张牌。" against "抽三张牌。" marks
-// the 三 alone. English text tokenizes exactly as it always has.
-//
-// A fused definition's texts are its ingredients' texts one per line (R102); when both faces have
-// the same number of lines, each Radiant line is diffed against the base line of the same
-// ingredient, as each ingredient's own face is.
-//
-// The same diff marks what a patch changed in a card's text (R388, patches/diff.ts): `wordDiff`
-// returns both sides of one alignment, the words the newer text adds (the stretches R277 marks,
-// `radiantMarks` being `wordDiff(base, radiant).added`) and the words the older text loses, which
-// the patch history strikes through.
+// A Chinese face (ME-CN, R1302, MD-B13) is compared character by character: Chinese puts no space
+// between words, and its punctuation `，；：。（）、` is a separator. The same diff (`wordDiff`) marks
+// what a patch changed (R388, patches/diff.ts), striking through the words the older text loses.
 
 /** A stretch of a printed text, by UTF-16 offsets: `start` inclusive, `end` exclusive. */
 export type TextRange = { readonly start: number; readonly end: number };
@@ -48,10 +28,7 @@ const SEPARATORS = ",;:.()，；：。（）、";
  * the Unified Ideographs, and the full-width forms.
  */
 const CJK = "\\u3000-\\u303F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uFF00-\\uFFEF";
-/**
- * A separator alone, a CJK character alone, or a run of anything that is neither a space, a
- * separator nor a CJK character.
- */
+/** A separator alone, a CJK character alone, or a run of anything that is none of those nor a space. */
 const TOKEN = new RegExp(`[${SEPARATORS}]|[${CJK}]|[^\\s${SEPARATORS}${CJK}]+`, "g");
 /** R102: a fused definition's text is its ingredients' texts, one per line. */
 const LINE_BREAK = "\n";
@@ -136,10 +113,9 @@ function lineDiff(before: string, after: string, beforeOffset: number, afterOffs
 }
 
 /**
- * A word-level diff of two texts, by R277's rules: `added` are the stretches of `after` that
- * `before` does not have, `removed` the stretches of `before` that `after` does not have, each in
- * order and never overlapping. When both texts have the same number of lines, and more than one,
- * each line is diffed against the line of the same place (a fused text's ingredients, R102).
+ * A word-level diff of two texts (WordDiff), by R277's rules, each side's stretches in order and never
+ * overlapping. When both texts have the same number of lines, and more than one, each line is diffed
+ * against the line of the same place (a fused text's ingredients, R102).
  */
 export function wordDiff(before: string, after: string): WordDiff {
   const beforeLines = before.split(LINE_BREAK);
@@ -162,10 +138,7 @@ export function wordDiff(before: string, after: string): WordDiff {
   return lineDiff(before, after, 0, 0);
 }
 
-/**
- * R277: the stretches of `radiant` that `base` does not have, in order and never overlapping. A
- * Radiant text equal to its base marks nothing; an empty base marks every word of the Radiant text.
- */
+/** R277: the stretches of `radiant` that `base` does not have. */
 export function radiantMarks(base: string, radiant: string): TextRange[] {
   return wordDiff(base, radiant).added;
 }

@@ -39,8 +39,6 @@ pub fn script() -> CardScripts {
 // C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
 // fatigue; the hand is discarded at the end of this turn (R62), a discard (C #64 sees it); radiant:
-// at the end of your next turn instead, nothing at this turn's end; no tuned numbers. The draw-limit
-// case uses C #4 Palantir's aura, whose own test file proves the limit in full.
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -56,12 +54,10 @@ mod tests {
     const POINTMASTER: &str = "core-020";
     const FELINORS: &str = "core-012";
 
-    /// Five distinct cards, top first, so each draw is visible by def.
     const DECK: [&str; 5] = [VANILLA, TIMMY, MENACE, POINTMASTER, FELINORS];
 
     use crate::js;
 
-    /// `p1`, `p2` override each side's setup (`json!({})` for none).
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": HURRAH, "radiant": radiant_face }, "core-010"], "library": DECK }), p1),
@@ -77,12 +73,10 @@ mod tests {
         want.iter().all(|item| have.contains(item))
     }
 
-    /// The first position, or -1.
     fn index_of(types: &[String], type_: &str) -> i64 {
         types.iter().position(|t| t == type_).map_or(-1, |at| at as i64)
     }
 
-    /// The last position, or -1.
     fn last_index_of(types: &[String], type_: &str) -> i64 {
         types.iter().rposition(|t| t == type_).map_or(-1, |at| at as i64)
     }
@@ -150,7 +144,6 @@ mod tests {
             #[test]
             fn s2_4_a_draw_limit_stops_the_rest_those_draws_do_not_happen_at_all() {
                 crate::register_all();
-                // At (2), so Palantir (which steals a (1) Cost Spell) lets it resolve and limits its draws.
                 let mut s = setup(
                     json!({ "hand": [{ "def": HURRAH, "costMod": 2 }, "core-010"] }),
                     json!({ "backrow": [{ "def": PALANTIR, "faceUp": true }] }),
@@ -245,7 +238,6 @@ mod tests {
 
                 s.end_turn();
 
-                // p2 has drawn for their turn and still holds everything.
                 assert!(s.hand(PlayerId::P2).len() >= 2);
             }
 
@@ -303,7 +295,6 @@ mod tests {
                 s.end_turn();
                 s.end_turn();
                 assert_eq!(s.state().active, PlayerId::P1);
-                // p1's start-of-turn draw found an empty deck: fatigue, no card.
                 let held: Vec<String> = s.hand(PlayerId::P1).iter().map(|card| card.id.clone()).collect();
                 assert!(!held.is_empty());
 

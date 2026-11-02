@@ -1,12 +1,6 @@
-//! The helpers every server test file carried its own copy of (#1491, #2385): the fake store behind the
-//! test app (`fake`, `fake_ref`, `fake_lock`), its tables (`table`, `fake_read`) and its injected faults
-//! (`fail_on`, `stop_failing`) and its call log (`record_calls`), one store call in a transaction of
-//! its own (`q!`, `store!`, `try_store!`), a value as JSON and back (`to_json`, `from`), a
-//! client-minted id (`uuid`), an HMAC-SHA256 as hex (`hmac_sha256_hex`), three steps of tokio's
-//! paused clock (`advance`, `advance_and_yield`, `sleep_settled`), a signed-in active account
-//! (`Account`, `account`) and two of them made friends (`befriend`), the cards a view names
-//! (`named_cards`) and TS's `toMatchObject` (`assert_match`; #2160). A copy that behaved differently keeps a name of its own;
-//! `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`) refuses a new copy.
+//! The helpers every server test file carried its own copy of (#1491, #2385). A copy that behaved
+//! differently keeps a name of its own; `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`)
+//! refuses a new copy.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -229,8 +223,8 @@ pub fn named_cards(view: &Value) -> Vec<(String, String)> {
     named
 }
 
-/// TS's `toMatchObject`: every key `expected` names holds the same value in `actual` (objects
-/// partially, arrays element for element), and nothing else is compared.
+/// Every key `expected` names holds the same value in `actual` (objects partially, arrays element
+/// for element), and nothing else is compared (#2160).
 pub fn assert_match(actual: &Value, expected: &Value) {
     fn matches(actual: &Value, expected: &Value) -> bool {
         match (actual, expected) {
@@ -257,9 +251,7 @@ macro_rules! q {
 }
 pub(crate) use q;
 
-/// One store call in its own transaction: `store!(app, t => expr)` answers `expr` as it stands;
-/// `store!(app, |t| call)` awaits `call` and insists on `Ok`; `store!(db, method(args…))` is `q!` on a
-/// bare `Db` (the e2e tests' fixture store has no `App`).
+/// Runs store call in own transaction, evaluating expr or awaiting call.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app

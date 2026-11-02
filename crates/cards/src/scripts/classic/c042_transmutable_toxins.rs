@@ -70,18 +70,12 @@ pub fn script() -> CardScripts {
 
     let base = toxins.clone();
 
-    // The same script: the Radiant face differs only in its declared stats per token (2), which `param`
-    // reads off the running face.
     let radiant = toxins;
 
     CardScripts { base, radiant }
 }
 
-// C #42 Transmutable Toxins — SPEC §8.6 row 42, BUILD M9 Classic row C 42: your Units +1/+1 per Plague
-// Counter, enemy Units −1/−1, recomputed on every change; an enemy can die of it, an Indestructible one
-// too once its max health reaches 0 (R69); Activate, once per turn (R384): one token on each of two
-// different random Units on the field, either side (R60); C #27 doubles its share; not a play; radiant
-// ±2; its tuned numbers (tokens, stats per token) read through `param()` (R386).
+// C #42 Transmutable Toxins — SPEC §8.6 row 42, BUILD M9 Classic row C 42 (R69, R384, R60, R386).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -104,7 +98,6 @@ mod tests {
         s.unit(player, lane).and_then(|unit| unit.counters.plague).unwrap_or(0)
     }
 
-    /// `mine` and `theirs`: the field lists, as JSON arrays.
     fn with_toxins(radiant_face: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -132,7 +125,6 @@ mod tests {
             );
             let scripts = script();
             assert_eq!(scripts.base.activations.iter().map(|ability| js(&ability.uses)).collect::<Vec<Value>>(), vec![json!(1)]);
-            // The Radiant face is the same script: the same aura and the same one ability.
             assert_eq!(scripts.radiant.aura.is_some(), scripts.base.aura.is_some());
             assert_eq!(
                 scripts.radiant.activations.iter().map(|ability| (ability.id.clone(), ability.label.clone(), js(&ability.uses))).collect::<Vec<_>>(),
@@ -161,8 +153,6 @@ mod tests {
             #[test]
             fn recomputed_on_every_change_a_token_placed_later_applies_at_once() {
                 crate::register_all();
-                // A Fed Fauci (1/6) hit for 3 gets a token: the enemy's is −1/−1 at once (max health 5, 2 left),
-                // yours +1/+1 (max health 7, 4 left).
                 let mut s = scenario(json!({
                     "p1": { "hand": [ECLIPSE, ECLIPSE, STOCKPILE], "backrow": [TOXINS], "field": [FAUCI] },
                     "p2": { "hand": [STOCKPILE], "field": [FAUCI] },

@@ -33,7 +33,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-033";
 
 pub fn script() -> CardScripts {
-    // `ReplacementDef` holds a `when` closure, so it is built in Rust, not through `json_as`.
     let base = Script {
         replacements: vec![ReplacementDef {
             id: "joro".into(),
@@ -47,21 +46,10 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // Same script: the Radiant face differs only in the catalog's Indestructible.
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #33 Joro — SPEC §8.6 row 33, BUILD M9 Classic row C 33: "From your hand only (R394): when your
-// opponent targets one of your Units with a Spell (R651), by a declared target of a Spell played or
-// cast (§10.5 step 1) or by a Spell's prompt answer, Joro is summoned into your leftmost open zone
-// (no Cry, summoning sick) and the pick moves to it (`redirected`); an attack (§4.2 step 2), a Unit's
-// Cry pick, an activation or a Trap's pick summons nothing; a random pick or an "all" effect targets
-// nothing; a Spell naming several of your Units moves the first only; one Joro answers one
-// targeting; your own picks never set it off; no open unit zone → nothing happens and Joro stays in
-// hand; it never answers from the deck or the field; the opponent's view and `legalActions` carry no
-// sign of Joro in your hand until it is summoned (R97); radiant 2/2: Indestructible, so it survives
-// the redirected hit, with no Taunt (R347); no tuned numbers".
-//
+// C #33 Joro — SPEC §8.6 row 33, BUILD M9 Classic row C 33 (R394, R651, §10.5, §4.2, R97, R347).
 // "A friendly unit is targeted" is one replacement point, run for an attack (§4.2 step 2), a play's
 // declared targets (§10.5 step 1) and every target prompt; each carries the targeting card's type,
 // and `by: "spell"` answers only a Spell's. The Cry case uses C #76 Plague Bringer, the activation
@@ -94,13 +82,10 @@ mod tests {
         s.events().iter().map(js).filter(|event| event["type"] == "redirected").collect()
     }
 
-    /// `opts[key]`, or `fallback` when it is null.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// p2 (active) holds removal; p1 has a Vanilla in lane 1 and Joro in hand.
-    /// `opts`: `radiantFace`, `myField`, `myHand`, `myLibrary`.
     fn under_attack(opts: Value) -> Scenario {
         let radiant_face = opts["radiantFace"] == true;
         scenario(json!({
@@ -159,7 +144,6 @@ mod tests {
                 let timmy = s.card(TIMMY).id.clone();
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": timmy }] }));
                 assert_eq!(redirects(&s).len(), 1);
-                // Joro stood in lane 3 when Hit Job destroyed it.
                 let summoned = s
                     .events()
                     .iter()
@@ -392,7 +376,6 @@ mod tests {
                 s.play(VANILLA, json!({}));
                 assert!(redirects(&s).is_empty());
                 s.expect_in_zone(JORO, "hand");
-                // Tesla fired at the summoned Vanilla for 4.
                 s.expect_in_zone(&vanilla, "graveyard");
             }
 
@@ -425,7 +408,6 @@ mod tests {
                 s.expect_in_zone(&joro, "field");
                 s.expect_stats(&joro, json!({ "attack": 2, "health": 2, "maxHealth": 2 }));
                 assert!(s.stats(&joro).keywords.iter().any(|keyword| js(keyword)["kind"] == "Indestructible"));
-                // Summoned this turn: summoning sick.
                 assert_eq!(s.card(&joro).summoned_turn, Some(s.state().turn));
             }
 

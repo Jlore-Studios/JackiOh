@@ -1,10 +1,5 @@
 //! Test-only cards for the Meditative+ spell-power systems (issue #1180, docs/meditative-plus-set.md
-//! MP5, R1180000–R1180005): Spell Damage from an aura for one or both players and from a "this turn"
-//! player modifier, an aura giving its controller's Spells Lifesteal, the healing multiplier, health
-//! as the next Spell's price, and the hand-and-deck card that answers a Spell that targeted an enemy.
-//! Each reproduces a Meditative+ card's shape through the script hooks, the static flags and the
-//! effects library, so the engine is proved without `crates/cards`; the real cards are tested again in
-//! their own files. Ids are `sp-*`, indices from 11800 so they collide with nothing (BUILD §0).
+//! MP5, R1180000–R1180005), each a Meditative+ card's shape. Ids `sp-*` from 11800 (BUILD §0).
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
@@ -46,7 +41,7 @@ fn flags(value: Value) -> Option<StaticFlags> {
     Some(json_as(value))
 }
 
-/// A Field Spell: "Aura: Both players have Spell Damage +2" (Meditative+ #9's shape).
+/// A Field Spell: "Aura: Both players have Spell Damage +2" (Meditative+ #9).
 pub const AMP: &str = "sp-amp";
 /// A Field Spell: "Aura: You have Spell Damage +3" — an aura for its controller alone.
 pub const AMP_OWN: &str = "sp-amp-own";
@@ -56,7 +51,6 @@ pub const AMP_DECLARED: &str = "sp-amp-declared";
 pub const BOLT: &str = "sp-bolt";
 /// A (2) Spell, untargeted: 1 damage to the enemy hero, twice.
 pub const ZAP: &str = "sp-zap";
-/// A (0) Spell that does nothing.
 pub const NOTHING: &str = "sp-nothing";
 /// An X Spell: X damage to the enemy hero.
 pub const XBOLT: &str = "sp-xbolt";
@@ -69,9 +63,9 @@ pub const FIELD_ZAP: &str = "sp-field-zap";
 pub const TRAP: &str = "sp-trap";
 /// A 1/1 Unit with Spell Damage +1.
 pub const WIZARD: &str = "sp-wizard";
-/// A 1/1 Unit with "Activate: you have Spell Damage +5 this turn", twice a turn (Meditative+ #11's shape).
+/// A 1/1 Unit with "Activate: you have Spell Damage +5 this turn", twice a turn (Meditative+ #11).
 pub const POTION: &str = "sp-potion";
-/// A 1/2 Unit: "Aura: Your Spells have Lifesteal" (Meditative+ #7's shape).
+/// A 1/2 Unit: "Aura: Your Spells have Lifesteal" (Meditative+ #7).
 pub const MAGE: &str = "sp-mage";
 /// A 1/2 Unit: "Healing your hero and Units is twice as effective" (Meditative+ #7's Radiant shape).
 pub const DOUBLER: &str = "sp-doubler";
@@ -81,23 +75,20 @@ pub const MEND: &str = "sp-mend";
 /// Radiant shape).
 pub const MOON: &str = "sp-moon";
 /// A (0) Spell: "Your next Spell costs health equal to 3 times its cost instead of mana"
-/// (Meditative+ #6's shape).
+/// (Meditative+ #6).
 pub const BLOOM: &str = "sp-bloom";
 /// The same, and the Spell it prices has Echo 1 (the Radiant face's).
 pub const BLOOM_ECHO: &str = "sp-bloom-echo";
 /// A (1) Spell: 2 damage to a declared enemy Unit or hero; in its owner's hand or deck it answers
-/// their Spells that targeted an enemy, cast at that enemy (Meditative+ #17's shape).
+/// their Spells that targeted an enemy, cast at that enemy (Meditative+ #17).
 pub const PILER: &str = "sp-piler";
 /// A (1) Spell whose own script asks for an enemy Unit or hero in a `target` prompt, then deals 1.
 pub const ASKER: &str = "sp-asker";
 /// A (1) Spell: Echo 1, and 1 damage to a declared enemy Unit or hero.
 pub const ECHO_BOLT: &str = "sp-echo-bolt";
-/// A vanilla 1/9 body.
 pub const BODY: &str = "sp-body";
-/// A vanilla 1/1.
 pub const PAWN: &str = "sp-pawn";
 
-/// Every fixture definition.
 pub fn catalog() -> CardDefs {
     [
         def(11800, "amp", "Field Spell", json!({})),
@@ -187,7 +178,6 @@ fn health_price(echo: Option<i32>) -> Script {
     }
 }
 
-/// Every fixture script.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     let entries: Vec<(&str, Script)> = vec![
         (

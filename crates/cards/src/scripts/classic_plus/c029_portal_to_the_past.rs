@@ -2,7 +2,7 @@
 //!   Base:    Discover a card from the board your last game ended with; it arrives costing (0).
 //!   Radiant: {cards} different random cards of that board straight to your hand, each costing (0).
 //! The board is the caster's last board, a setup input frozen into the match (B5 E30,
-//! `subsystems/lastBoards`); an empty one (hotseat, a first game) gives nothing (R129).
+//! `subsystems/last_boards`); an empty one (hotseat, a first game) gives nothing (R129).
 
 use jackioh_engine::effects::{add_from_last_board, add_random_from_last_board, discover_from_last_board};
 use jackioh_engine::prelude::*;
@@ -51,10 +51,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #29 Portal to the Past — SPEC §8.7 row 29, R417, R564; BUILD M9 Classic+ row C+ 29. The last
-// board is a setup input frozen into the match (B5 E30); `scenario({ lastBoards })` hands it to
-// `createGame` as the server does. The engine's own proofs (the reader, the freeze, the fold) are in
-// packages/engine/test/lastBoards.test.ts.
+// C+ #29 Portal to the Past — SPEC §8.7 row 29, BUILD M9 Classic+ row C+ 29. `scenario({ lastBoards })` hands
+// the last board to `createGame` as the server does.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -67,7 +65,6 @@ mod tests {
     const MENACE: &str = "core-019";
     const TOKEN: &str = "core-t-rush"; // a unit token (R11)
     const FUSED: &str = "t-1:core-012+core-025"; // R179
-    /// TS `type Entry = { defId: string; radiant: boolean }`.
     type Entry = (&'static str, bool);
     const BOARD: [Entry; 5] = [
         ("core-012", false),
@@ -349,7 +346,7 @@ mod tests {
                 assert!(result.state.work.is_empty());
             }
 
-            /// TS's `act`: one action of the fold test's log, its nonce numbered by the log so far.
+            /// One action of the fold test's log, its nonce numbered by the log so far.
             fn act(log: &mut Vec<Action>, state: &GameState, body: Value) -> GameState {
                 let mut with_nonce = body.clone();
                 with_nonce["nonce"] = json!(format!("portal-fold-{}", log.len()));
@@ -402,7 +399,6 @@ mod tests {
                     let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                     state = act(&mut log, &state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
                 }
-                // To p1's first turn with (3) mana, ending every turn on the way.
                 while !(state.active == P1 && state.players.p1.mana.current >= 3) {
                     assert!(state.pending.is_none());
                     let active = state.active;

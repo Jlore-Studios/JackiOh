@@ -312,7 +312,6 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         let owed: Vec<String> = state.work.iter().map(|item| item.resume.step.clone()).collect();
         assert_eq!(owed, strings(&["after"]));
         settle(&mut b.sink(&mut state), Default::default());
-        // Heal 10, then three more fatigue draws of 2, 3 and 4.
         assert_eq!(hero(&state, P2), 1 + 10 - 2 - 3 - 4);
         assert_eq!(state.players.p2.fatigue_count, 4);
         assert!(state.work.is_empty());
@@ -343,7 +342,7 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         state.players.p2.hero.health = 9;
         let mut b = Bench::new(&state);
         let dealt = deal(&mut b, &mut state, None, hero_target(P2), 12);
-        // 12 − 1 Armor = 11, halved and rounded up = 6, capped at Anti-oneshot's 4 (5 until #2657).
+        // 12 − 1 Armor = 11, halved and rounded up = 6, capped at Anti-oneshot's 4 (#2657).
         assert_eq!(dealt, 4);
         assert_eq!(hero(&state, P1), 26);
         assert_eq!(hero(&state, P2), 9);
@@ -389,7 +388,6 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         assert_eq!(hero(&paused, P1), 28);
         assert_eq!(notes(&paused), strings(&["asker:before"]));
         assert_eq!(paused.pending.as_ref().map(|p| p.player_id), Some(P2));
-        // The rest of the follow-up is owed as plain data.
         let work_again: Vec<WorkItem> =
             serde_json::from_value(serde_json::to_value(&paused.work).unwrap()).unwrap();
         assert_eq!(work_again, paused.work);
@@ -1236,8 +1234,6 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         );
     }
 }
-
-// R97, R177: what each seat reads of the events these moments emit
 
 mod r97_r177_the_replacement_events_in_both_views {
     use super::*;

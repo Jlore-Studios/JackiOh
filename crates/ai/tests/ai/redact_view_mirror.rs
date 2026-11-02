@@ -1,9 +1,5 @@
-//! R185, R177, R97, R227 and R448 (#1593): `redact` hides what the seat's view hides. An
-//! enemy face-down card the seat's own prompt offers stays a placeholder and its option reads as
-//! the view shows it; the events the queues keep lose what `redact_event` strips of a hidden card;
-//! what the seat may read is unchanged.
-//!
-//! Port of nothing: these mirror `view_for`'s contract, which had no AI-side test.
+//! R185, R177, R97, R227 and R448 (#1593): `redact` hides what the seat's view hides. Prompt options
+//! stay placeholders and match view; queue events stripped by `redact_event`.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

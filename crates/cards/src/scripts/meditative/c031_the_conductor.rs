@@ -7,15 +7,12 @@
 //!           deck."
 //! Engine:
 //! - **Deft** is the §6.1 keyword (catalog data).
-//! - **The Cry** reads, as it begins, the ids of the Created cards in its controller's library,
-//!   top down (`query::created_in_library`, MD-B6), and returns one named `draw_from_library`
-//!   per id. Each is a real §2.4 draw (MD-B7, R944): a `drawn` event and R55's counter, R4's hand
-//!   cap burning the overflow, a cast-on-draw card cast with its top-of-deck replacement draw
-//!   (R58), R457's draw limit. An id gone from the library by its turn fizzles, and a card that
-//!   enters during the draws is not drawn (`for_each_card` reads the list once).
-//! - **The Radiant face** first shuffles in a random Prime card (`shuffle_random_from_catalog`
-//!   over `{ tags: [Prime] }` — every Prime card is a token, so Prime joins the pool's token tags,
-//!   R1421). That card is Created, so the same Cry draws it.
+//! - **The Cry** reads, as it begins, the ids of the Created cards in its controller's library
+//!   (`query::created_in_library`, MD-B6). Each is a real §2.4 draw: R55's counter, R4's hand cap,
+//!   a cast-on-draw card cast with its replacement draw (R58), R457's draw limit. An id gone from
+//!   the library by its turn fizzles, and a card that enters during the draws is not drawn.
+//! - **The Radiant face** first shuffles in a random Prime card (every Prime card is a token, so
+//!   Prime joins the pool's token tags, R1421). That card is Created, so the same Cry draws it.
 
 use jackioh_engine::effects::{ForEachCardArgs, for_each_card, shuffle_random_from_catalog};
 use jackioh_engine::prelude::*;
@@ -101,12 +98,10 @@ mod tests {
             json!([{ "def": VANILLA, "created": true }, FILLER, { "def": VANILLA, "created": true }]),
         );
         s.play(CONDUCTOR, json!({}));
-        // Both Created cards drawn, top down; the dealt card stays.
         let hand = def_ids(&s.hand(P1));
         assert_eq!(hand[hand.len() - 2..], [VANILLA.to_string(), VANILLA.to_string()]);
         assert_eq!(s.pile(P1, "library").len(), 1, "the dealt card stays");
         assert_eq!(s.pile(P1, "library")[0].def_id, FILLER);
-        // The drawn cards keep their mark.
         for card in s.hand(P1).into_iter().skip(1) {
             if card.def_id == VANILLA {
                 assert_eq!(card.created, Some(true), "drawn cards stay Created");
@@ -344,15 +339,12 @@ mod tests {
             |state: &GameState| find_instance(state, &marked).expect("the card").created == Some(true);
         // The library, through a JSON round trip.
         assert!(is_marked(&round_trip(s.state())));
-        // The hand, drawn by the Conductor.
         s.play(CONDUCTOR, json!({}));
         assert!(matches!(s.card(&marked).zone, Zone::Hand { .. }));
         assert!(is_marked(&round_trip(s.state())));
-        // The field.
         s.play(&marked, json!({}));
         assert!(matches!(s.card(&marked).zone, Zone::Field { .. }));
         assert!(is_marked(&round_trip(s.state())));
-        // The graveyard.
         s.play(
             HIT_JOB,
             json!({ "targets": [{ "pick": "instance", "instanceId": marked }] }),

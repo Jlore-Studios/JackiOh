@@ -1,6 +1,5 @@
 // R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
-// way FxLayer plans them: each entry remembered, then planned against the view the runner planned it
-// against.
+// way FxLayer plans them.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { GameEvent, PlayerView } from "@jackioh/shared";

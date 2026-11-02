@@ -63,12 +63,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #19 League of Losers — SPEC §8.7 row 19, BUILD M9 Classic+ row C+ 19: "Summons Top, Jungle, Mid,
-// Support and Bot Loser (C+ #19.1–#19.5) into your unit zones 1 to 5 in that order, each aimed at its
-// own zone: an occupied, Locked or reserved zone is skipped and that Loser is not summoned elsewhere;
-// Mid Loser's Cry fires when this summons it (R411); a full board summons nothing; a Loser summoned by
-// any other effect (a copy, a Rollback's recreation, Frostspatula's copies) fires no Cry (R1); radiant
-// all five Radiant".
+// C+ #19 League of Losers — SPEC §8.7 row 19, BUILD M9 Classic+ row C+ 19 (R1).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,7 +105,6 @@ mod tests {
         (1..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id)).collect()
     }
 
-    /// The row TS spelled out as ids (`null` for an empty zone).
     fn ids(row: &[Option<&str>]) -> Vec<Option<String>> {
         row.iter().map(|id| id.map(str::to_string)).collect()
     }
@@ -128,7 +122,6 @@ mod tests {
 
     use crate::unit_or_blank;
 
-    /// JS `indexOf`: the first position of `item`, or −1.
     fn index_of(items: &[String], item: &str) -> i64 {
         items
             .iter()
@@ -136,7 +129,6 @@ mod tests {
             .map_or(-1, |at| i64::try_from(at).unwrap_or(i64::MAX))
     }
 
-    /// TS `s.hand("p1").find((card) => card.defId === HIT_JOB) ?? HIT_JOB`.
     fn a_hit_job(s: &Scenario) -> String {
         s.hand(P1)
             .into_iter()

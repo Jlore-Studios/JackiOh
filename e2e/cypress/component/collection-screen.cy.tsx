@@ -1,11 +1,8 @@
 // #1307: the collection screen fits a phone. jsdom cannot measure layout, so this mounts the route
-// in a browser, serves the reads it makes from the fixtures, and checks that nothing on the
-// page is wider than the viewport at 360 px and 390 px, with every panel shown and then with a
-// set's card grid open.
-//
-// R1579000: the hub and each section fit one screen at those two sizes and on a desktop's: the
-// page never scrolls, either way, and the card list's body is what scrolls. A door is never
-// clicked here: `navigate` would move the iframe's own path, so each test sets `?section=` itself.
+// in a browser, serves its reads from the fixtures, and checks nothing is wider than 360 px and 390 px.
+// R1579000: the hub and each section fit one screen at those two sizes and on a desktop's, only the
+// card list's body scrolling. A door is never clicked here: `navigate` would move the iframe's own
+// path, so each test sets `?section=` itself.
 
 import { newestShippedSet } from "@jackioh/shared";
 
@@ -55,7 +52,6 @@ function serveFixtures(): void {
   });
 }
 
-/** Nothing on the page is wider than the viewport. */
 function expectNoHorizontalOverflow(viewport: Viewport): void {
   cy.window({ log: false }).should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;
@@ -78,7 +74,6 @@ function openAt(section: CollectionSection | null): void {
   });
 }
 
-/** R1579000: the page never scrolls: the document is no taller than the window. */
 function expectNoPageScroll(viewport: Viewport): void {
   cy.window({ log: false }).should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;

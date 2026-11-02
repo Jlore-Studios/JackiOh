@@ -35,9 +35,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #45 Drone Commander — SPEC §8.10 row 45, BUILD M12 row S 45: "played, adds 6 Drone Core cards (the set
-// previewed), each (1) less, a full hand burning the rest; cards and discount read through `param()`;
-// radiant 16/24 and Radiant ones".
+// S #45 Drone Commander — SPEC §8.10 row 45, BUILD M12 row S 45.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -49,7 +47,6 @@ mod tests {
     const COMMANDER: &str = "stinkyscape-045";
     const FILLER: &str = "core-005";
 
-    /// The Drone Cores in p1's hand, as (face, cost layer).
     fn cores(s: &Scenario) -> Vec<(bool, i32)> {
         s.hand(P1)
             .into_iter()

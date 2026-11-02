@@ -1,13 +1,5 @@
-//! Buying and opening card packs (`src/economy/packs.rs`, SPEC §14.1, §14.3; #1301): the routes,
-//! what each write leaves in the store, and the transaction that takes an opening whole or not at
-//! all. The roll itself is `src/economy/roll.rs`'s unit tests; here it runs over the real catalog.
-//!
-//! Every request goes through the whole app over an empty fake store (`deps::empty_test_app`), as
-//! the active account `p1`. An opening the test must steer (a registry with cosmetics a pack may
-//! drop, R1301002) calls `open_pack` with that registry; the route opens over the shipped one,
-//! whose every entry but the six full arts (R1313000) and the five portraits but vanilla
-//! (R1827000) is a starter. A spend sent while the account's other spends run waits its turn
-//! (R2378000): the test takes the turns with spends of its own, held until it lets them go.
+//! Buying and opening card packs (`src/economy/packs.rs`, SPEC §14.1, §14.3, #1301).
+//! Rulings: R1301002 (cosmetics drop), R1313000 (full art), R1827000 (portraits), R2378000 (spend serialization).
 
 use std::sync::Arc;
 
@@ -56,10 +48,6 @@ const ROUTES: [(&str, &str); 3] = [
     ("POST", "/api/packs/buy"),
     ("POST", "/api/packs/open"),
 ];
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// An empty app with the active `p1` and its bearer token.
 async fn setup() -> (Arc<App>, String) {
@@ -265,9 +253,7 @@ async fn last_log(app: &App) -> OpeningLog {
     serde_json::from_str(row.reference.as_deref().expect("the opening's log")).expect("an opening log")
 }
 
-// ---------------------------------------------------------------------------------------------
 // Buying (§14.1, §14.3)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn buying_debits_exactly_the_pack_price() {
@@ -384,9 +370,7 @@ async fn buying_with_a_short_wallet_is_refused_and_changes_nothing() {
     assert_eq!(before["state"]["jlore"], json!(price() - 1));
 }
 
-// ---------------------------------------------------------------------------------------------
 // Opening (§14.3, §14.4)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn an_opening_grants_exactly_its_slots_one_rare_or_better() {
@@ -780,8 +764,7 @@ async fn r1953000_spent_duplicates_of_each_rarity_add_21_to_each_bar() {
     grant_entire_catalog(&app, PROFILE, None)
         .await
         .expect("R111's grant");
-    // The roll is pure, so a seed whose five slots rolled one of each rarity is found before the
-    // opening, over the holdings it will read and an empty registry, which drops no cosmetic.
+    // Roll is deterministic; finds seed rolling one of each rarity.
     let pool = pack_pool(defs(&app), PackKind::Set(SetName::Core));
     let before = holdings(&app).await;
     let every = [
@@ -1474,9 +1457,7 @@ async fn get_lists_the_unopened_packs_held() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2124000: a buy or an opening sent again under its Idempotency-Key runs once
-// ---------------------------------------------------------------------------------------------
 
 /// `profile_id`'s wallet and the packs it holds, each kind with its count.
 async fn wallet_and_packs(app: &App, profile_id: &str) -> (i64, Value) {
@@ -1684,9 +1665,7 @@ async fn r2124000_the_same_key_twice_opens_one_pack_and_answers_the_same_slots()
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2378000: an account runs one spend at a time, the rest waiting their turn
-// ---------------------------------------------------------------------------------------------
 
 /// How many times `until_claims` lets the spawned requests run before it gives up.
 const YIELDS: usize = 1_000;

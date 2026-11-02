@@ -1,9 +1,6 @@
-//! The `damage` effect itself (BUILD M3-T1 "every effect has its own test file"; SPEC §6.3, §4.4,
-//! R85). `damage.test.ts` covers the ten pipeline steps of `dealDamage`; this file covers the
-//! factory a card script writes: what it declares, what it hands the pipeline, what it emits, and
-//! what it does when its declared target is not there.
-//!
-//! Port of `packages/engine/test/effects-damage.test.ts`.
+//! The `damage` effect itself (BUILD M3-T1; SPEC §6.3, §4.4, R85): what the factory a card script
+//! writes declares, hands the pipeline and emits, and what it does when its target is not there.
+//! `damage.rs` covers the ten pipeline steps of `deal_damage`.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::testkit::*;
@@ -45,8 +42,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// A context as a resolving card would see it, so the effect runs the way a script runs it. TS
-/// spread `extra` (here only ever `targets`) over the context `makeContext` built.
 /// `make_context` reborrows its sink, and the context outlives this function, so the sink is leaked
 /// for the test's length (as `fixtures::harness::sink_for` leaks its rng and events).
 fn ctx_for<'a>(
@@ -88,7 +83,6 @@ fn on_instance(instance: &CardInstance) -> Option<Vec<Selection>> {
     }])
 }
 
-/// One field of every `damage` event, in order (TS `eventsOfType(events, "damage").map((e) => e.<key>)`).
 fn damage_field(events: &[GameEvent], key: &str) -> Vec<Value> {
     events_of_type(events, GameEventType::Damage)
         .iter()

@@ -21,9 +21,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #8.1 Rosemary Triscuit — SPEC §7 token, BUILD M12 row S 8.1: "at (0) its caster's spent mana
-// comes back by 2, never above max mana; at full mana nothing happens (R364); refresh reads through
-// `param()`; radiant 4".
+// S #8.1 Rosemary Triscuit — SPEC §7 token, BUILD M12 row S 8.1 (R364).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -63,7 +61,6 @@ mod tests {
 
             s.play(TRISCUIT, json!({}));
 
-            // The mana is unchanged: the 0-cost play pays nothing and the Refresh caps at max.
             s.expect_mana(P1, 4);
             s.expect_in_zone(TRISCUIT, "graveyard");
         }

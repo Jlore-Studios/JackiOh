@@ -67,7 +67,6 @@ fn activate(player: PlayerId, instance_id: &str) -> ActionInput {
     input(json!({ "type": "activate", "instanceId": instance_id, "playerId": player }))
 }
 
-/// The live card (TS held the object itself; Rust looks it up by id).
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }

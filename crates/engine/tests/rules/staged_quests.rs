@@ -1,8 +1,8 @@
 // Issue #1854: Stinkyscape's staged Quests, an engine primitive proved on the fixture scripts of
-// `fixtures/staged_quests.rs` (no Stinkyscape card ships yet). R1854000 the quest card of stages, its
-// current stage public; R1854001 "Complete the current stage on all your Quests", which reaches In Too
-// Deep's tree as well; R1854002 the six goals the set's stages need; R1854003 stealing the enemy's mana
-// crystals; R1854004 "hear back in N turns".
+// `fixtures/staged_quests.rs`. R1854000 the quest card of stages, its current stage public; R1854001
+// "Complete the current stage on all your Quests", which reaches In Too Deep's tree as well; R1854002
+// the six goals the set's stages need; R1854003 stealing the enemy's mana crystals; R1854004 "hear
+// back in N turns".
 
 use jackioh_engine::subsystems::quests::{QuestMemory, quest_memory_of};
 use jackioh_engine::testkit::PlayerId::{P1, P2};

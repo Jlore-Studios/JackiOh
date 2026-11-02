@@ -1,16 +1,7 @@
-//! Shared builders for the loadout tests (SPEC §9.4 L1–L6, BUILD M6-T3).
-//!
-//! The catalog is synthetic, but the five cards the §9.4 messages name keep their real ids and
-//! names, so the message assertions read like the spec. Every size comes from DECK_SIZE and
-//! LOADOUT_DECKS: nothing here spells 20 or 3.
-//!
-//! Each injection below breaks exactly one rule. That is the point of the file: a careless
-//! mutation trips several rules at once (a second copy of a card is also a copy you may not own),
-//! so the collection grants 2 of the two ids the L3-copies and L4 injections duplicate, and grants
-//! the token, the banned card and the uncataloged id so those injections do not also trip L5.
-//!
-//! Port of `packages/validator/test/fixtures/loadouts.ts` (SURFACE §4.1). The rule tests
-//! (`validator.rs`, `validator_drafts.rs`) reach it as `crate::rules::fixtures::validator_loadouts`.
+//! Shared builders for the loadout tests (SPEC §9.4 L1–L6, BUILD M6-T3, SURFACE §4.1). The catalog is
+//! synthetic, but the cards the §9.4 messages name keep their real ids and names, so the assertions read
+//! like the spec; every size comes from DECK_SIZE and LOADOUT_DECKS. Each injection breaks exactly one
+//! rule: a careless mutation trips several at once (a second copy is also a copy you may not own).
 
 use std::sync::LazyLock;
 
@@ -39,9 +30,7 @@ pub const CEASELESS_VOID: &str = "core-100";
 /// Owned, and absent from the snapshot, so L6 refuses it by id alone.
 pub const NOT_IN_CATALOG: &str = "core-999";
 
-/// `DECK_SIZE` as a length.
 const DECK_LEN: usize = DECK_SIZE as usize;
-/// `LOADOUT_DECKS` as a count of decks.
 #[allow(clippy::unnecessary_cast)]
 const LOADOUT_LEN: usize = LOADOUT_DECKS as usize;
 
@@ -49,7 +38,6 @@ const LOADOUT_LEN: usize = LOADOUT_DECKS as usize;
 const SPARE_COUNT: usize = DECK_LEN;
 const POOL_SIZE: usize = LOADOUT_LEN * DECK_LEN + SPARE_COUNT;
 
-/// TS's `NAMED` record: the three pool cards the messages name, by id.
 const NAMED: &[(&str, &str)] = &[
     (HIT_JOB, "Hit Job"),
     (ARCHIVIST, "Archivist"),
@@ -64,7 +52,6 @@ fn pool_id(n: usize) -> CardId {
     format!("core-{n:03}")
 }
 
-/// TS's `vanillaDef` object literal, as JSON.
 fn vanilla_json(id: &str, index: &str, name: &str) -> Value {
     json!({
         "id": id,
@@ -93,8 +80,8 @@ fn token_def() -> CardDef {
     serde_json::from_value(value).expect("fixture error: the token def is a CardDef")
 }
 
-/// Every deckable id in the catalog: the decks draw from these, the rest are spares. `POOL_SIZE` of
-/// them, numbered from 1 past `CEASELESS_VOID`'s, which the pool reaches at four decks of 25.
+/// Every deckable id, the decks' and the spares': `POOL_SIZE` of them from 1, skipping `CEASELESS_VOID`'s,
+/// which the pool reaches at four decks of 25.
 pub static POOL_IDS: LazyLock<Vec<CardId>> = LazyLock::new(|| {
     (1..=POOL_SIZE + 1)
         .map(pool_id)
@@ -140,9 +127,8 @@ pub fn collection() -> Collection {
     owned
 }
 
-// Deck 2 takes the third block of the pool (core-041…), which is the block holding Glowy Jelly
-// Bean (core-051), and Deck 3 takes the second: that puts Hit Job in Deck 1, the Jelly Bean in
-// Deck 2 and the Archivist in Deck 3, exactly as the §9.4 messages read.
+// Deck 2 takes the pool's third block (core-041…, holding the Jelly Bean) and Deck 3 the second, so
+// Hit Job, the Jelly Bean and the Archivist sit in Decks 1, 2 and 3, as the §9.4 messages read.
 const BLOCK_ORDER: &[usize] = &[0, 2, 1];
 
 /// The legal loadout's decks: LOADOUT_DECKS disjoint blocks of DECK_SIZE distinct owned ids.
@@ -157,7 +143,6 @@ pub fn legal_decks() -> Vec<Vec<CardId>> {
         .collect()
 }
 
-/// A loadout that breaks none of L1–L6.
 pub fn legal_loadout() -> LoadoutInput {
     LoadoutInput {
         decks: legal_decks()
@@ -169,8 +154,7 @@ pub fn legal_loadout() -> LoadoutInput {
     }
 }
 
-// --- injections ------------------------------------------------------------
-// Each one takes any legal loadout — the fixture's or a generated one — and breaks one rule.
+// Injections: each takes any legal loadout (the fixture's or a generated one) and breaks one rule.
 
 fn with_decks(input: &LoadoutInput, decks: Vec<LoadoutDeck>) -> LoadoutInput {
     LoadoutInput {
@@ -201,7 +185,6 @@ fn map_deck(input: &LoadoutInput, index: usize, f: impl Fn(&[CardId]) -> Vec<Car
     )
 }
 
-/// Swaps `replacement` in for the first card that is not already `replacement`.
 fn substitute(cards: &[CardId], replacement: &str) -> Vec<CardId> {
     let at = cards.iter().position(|id| id != replacement);
     cards
@@ -228,13 +211,12 @@ fn deck_holding(input: &LoadoutInput, card_id: &str) -> usize {
     }
 }
 
-/// Owned, cataloged, deckable ids no deck of this loadout uses.
 fn unused_ids(input: &LoadoutInput) -> Vec<CardId> {
     let used: IndexSet<&CardId> = input.decks.iter().flat_map(|deck| deck.cards.iter()).collect();
     POOL_IDS.iter().filter(|id| !used.contains(id)).cloned().collect()
 }
 
-/// L1: one deck short. Dropping a deck cannot break another rule — its cards simply go unused.
+/// L1: one deck short; its cards simply go unused, so no other rule breaks.
 pub fn drop_deck(input: &LoadoutInput) -> LoadoutInput {
     let keep = input.decks.len().saturating_sub(1);
     with_decks(input, input.decks[..keep].to_vec())
@@ -259,8 +241,7 @@ pub fn drop_card(input: &LoadoutInput) -> LoadoutInput {
     map_deck(input, 0, |cards| cards.iter().skip(1).cloned().collect())
 }
 
-/// L2: one card too many. Appending an id already in the loadout would break L3, L4 and L5 too,
-/// so this appends a spare the profile owns and no deck uses.
+/// L2: one card too many, a spare owned and unused: an id already in would break L3, L4 and L5 too.
 pub fn add_spare_card(input: &LoadoutInput) -> LoadoutInput {
     let Some(spare) = unused_ids(input).into_iter().next() else {
         panic!("fixture error: the loadout uses every pool card");
@@ -279,17 +260,15 @@ pub fn duplicate_in_deck(input: &LoadoutInput) -> LoadoutInput {
     })
 }
 
-/// L3: a Token card in the last deck. It is cataloged and owned, so only the token rule fires.
+/// L3: a Token card in the last deck; cataloged and owned, so only the token rule fires.
 pub fn insert_token(input: &LoadoutInput) -> LoadoutInput {
     match input.decks.len().checked_sub(1) {
         Some(last) => map_deck(input, last, |cards| substitute(cards, SHEEP_TOKEN)),
-        // TS's `decks.length - 1` is -1 here, which no deck's index matches.
         None => with_decks(input, input.decks.clone()),
     }
 }
 
-/// L4: Hit Job in a second deck while it stays in its first. That is 2 copies across the loadout,
-/// which is why the profile owns 2 of it.
+/// L4: Hit Job in a second deck while it stays in its first: 2 copies, so the profile owns 2.
 pub fn cross_deck(input: &LoadoutInput) -> LoadoutInput {
     let home = deck_holding(input, HIT_JOB);
     let other = (home + 1) % input.decks.len();

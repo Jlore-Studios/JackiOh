@@ -129,8 +129,6 @@ function fill(value: string): void {
   fireEvent.change(input(), { target: { value } });
 }
 
-// B20: when submit is allowed, and what it sends
-
 describe("B20 submit", () => {
   it("B20 is disabled for an empty and a partial code, and enabled once complete", async () => {
     await mount();
@@ -226,7 +224,6 @@ describe("B20 submit", () => {
 });
 
 // B21: tries left
-
 describe("B21 tries left", () => {
   it.each([[5], [3], [1], [0]] as const)(
     "B21 shows %i tries left from /api/codes/status in invite-attempts",
@@ -302,7 +299,6 @@ describe("B21 tries left", () => {
 });
 
 // B22 / R192: a rate limit is a rate limit
-
 describe("B22 a rate-limited redemption", () => {
   it("B22 shows the server's sentence verbatim, the wait, and disables submit", async () => {
     vi.mocked(redeemCode).mockRejectedValue(rateLimited(WINDOW_MS));
@@ -384,8 +380,6 @@ describe("B22 a rate-limited redemption", () => {
   });
 });
 
-// B23: always a way out
-
 describe("B23 the way out", () => {
   const states: readonly (readonly [string, () => void])[] = [
     ["a pending account with redemption open", () => {}],
@@ -465,7 +459,7 @@ describe("B23 the way out", () => {
   });
 });
 
-// B23: after mounting, replace location because jsdom cannot follow signOut's page load; assign records its destination and storage.
+// jsdom cannot follow signOut's page load, so location is replaced after mounting.
 
 describe("B23 signing out lands on the landing page", () => {
   it("B23 invite-sign-out loads / once both session keys are gone", async () => {
@@ -502,8 +496,6 @@ describe("B23 signing out lands on the landing page", () => {
     expect(assign).toHaveBeenCalledWith(paths.landing);
   });
 });
-
-// The adversarial panel's findings
 
 /** Settle promises without timers. */
 async function flushMicrotasks(): Promise<void> {
@@ -544,7 +536,6 @@ describe("R192 a stated wait lifts by itself", () => {
   });
 
   it("R192 paused redemption says how long, and lifts when the breaker's wait is over", async () => {
-    // Advance deadline timers with the clock.
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     try {
       const wait = 5 * 60_000;
@@ -654,7 +645,7 @@ describe("an active account on the code screen", () => {
     fill(GOOD);
     fireEvent.click(submit());
 
-    // R145: show the server's account-state sentence, then read the account again.
+    // R145: the server's sentence, then the account read again.
     expect((await screen.findByTestId(inviteTestid.error)).textContent).toBe("This account is already active.");
     await screen.findByTestId(inviteTestid.goToDecks);
     expect(screen.queryByTestId(inviteTestid.submit)).toBeNull();
@@ -670,7 +661,7 @@ describe("an active account on the code screen", () => {
     fill(GOOD);
     fireEvent.click(submit());
 
-    // The server's sentence, and a fresh read of the account, whose gate then shows the consent screen.
+    // The server's sentence, then a fresh read, whose gate shows the consent screen.
     expect((await screen.findByTestId(inviteTestid.error)).textContent).toBe("Finish setting up your account first.");
     await waitFor(() => {
       expect(vi.mocked(getMe).mock.calls.length).toBeGreaterThan(readsBefore);
@@ -752,8 +743,6 @@ describe("R194 a redemption the API refuses as unauthorised", () => {
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
   });
 });
-
-// R145: a refused code is not sent again unchanged, and the answer is about the code on screen
 
 describe("R145 a code the server refused", () => {
   it("R145 is not sent again unchanged: Redeem stays off and says why until the code is changed", async () => {
@@ -837,7 +826,7 @@ describe("R145 a code the server refused", () => {
   });
 });
 
-// §9.4 step 1: an unconfirmed email has a way forward on the code screen
+// §9.4 step 1: an unconfirmed email has a way forward
 
 describe("an account whose email is not confirmed yet", () => {
   const UNVERIFIED_SENTENCE = "Verify your email address before redeeming an invite code.";
@@ -922,8 +911,6 @@ describe("an account whose email is not confirmed yet", () => {
   });
 });
 
-// One account's state: the screen starts again for another account
-
 describe("the code screen's state belongs to one account", () => {
   function me(id: string, email: string) {
     return {
@@ -962,8 +949,6 @@ describe("the code screen's state belongs to one account", () => {
     expect(screen.getByTestId(inviteTestid.input)).toHaveValue("");
   });
 });
-
-// Stated waits are deadlines, a 503 pauses, and "Check again" answers.
 
 const MINUTE = 60_000;
 

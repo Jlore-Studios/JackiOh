@@ -38,13 +38,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #34 Ancient Acquisition — SPEC §8.6 row 34, BUILD M9 Classic row C 34: "Return 2 random cards
-// from your graveyard to hand, with no prompt (R684; fewer if fewer; an empty graveyard: nothing);
-// the resolving Spell is never one of its own returns; a full hand burns the overflow (R317); the
-// returned cards follow R97 in the opponent's view once in your hand; cast by C #47 the returns are
-// still its caster's; radiant: up to 4 from your graveyard or your exile; its tuned number (cards)
-// reads through `param()` (R386)".
-//
+// C #34 Ancient Acquisition — SPEC §8.6 row 34, BUILD M9 Classic row C 34 (R684, R317, R97, R386).
 // The C #47 case casts this card from C #47 Recurring Felinor's Cry (B5 E12).
 #[cfg(test)]
 mod tests {
@@ -55,7 +49,6 @@ mod tests {
     const ACQUIRE: &str = "classic-034";
     const RECURRING: &str = "classic-047"; // C #47 Recurring Felinor, (2) Unit: "Cry: Cast Ancient Acquisition."
     const FILLER: &str = "core-005"; // (1) Spell, a spare card (§2.5).
-    // Graveyard and exile cards, one definition each so a def id names one card.
     const MENACE: &str = "core-019"; // (3) Unit
     const SEVEN: &str = "core-025"; // (4) Unit
     const FELINORS: &str = "core-012"; // (2) Unit
@@ -66,12 +59,10 @@ mod tests {
 
     use crate::js;
 
-    /// `opts[key]`, or `fallback` when it is null.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// `piles`: `graveyard`, `exile`, `hand` (`{}` for none).
     fn acquire(radiant_face: bool, piles: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ACQUIRE, "radiant": radiant_face })];
         hand.extend(or(&piles, "hand", json!([FILLER])).as_array().cloned().unwrap_or_default());
@@ -113,7 +104,6 @@ mod tests {
                 let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 assert_eq!(grave.len(), 4);
                 assert!(grave.iter().any(|def_id| def_id == ACQUIRE));
-                // The two in hand came from the graveyard's five.
                 let in_hand: Vec<String> = s
                     .hand(PlayerId::P1)
                     .iter()
@@ -239,7 +229,6 @@ mod tests {
                 }));
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
-                // The one own-graveyard card is the only thing that could come: it did.
                 s.expect_in_zone(MENACE, "hand");
                 assert_eq!(s.pile(PlayerId::P2, "graveyard").len(), 2);
                 let exile = def_ids(&s.pile(PlayerId::P1, "exile"));
@@ -307,7 +296,6 @@ mod tests {
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(PlayerId::P1).len(), 5);
-                // Six pooled cards, four taken: two stay, plus the spent Spell in the graveyard.
                 assert_eq!(s.pile(PlayerId::P1, "graveyard").len() + s.pile(PlayerId::P1, "exile").len(), 3);
             }
 
@@ -317,7 +305,6 @@ mod tests {
                 let mut s = acquire(true, json!({ "graveyard": [MENACE, SEVEN], "exile": [VANILLA, MANA_WELL] }));
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
-                // All four pooled cards come: both piles empty but for the spent Spell.
                 assert_eq!(s.hand(PlayerId::P1).len(), 5);
                 let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 assert_eq!(grave, vec![ACQUIRE]);
@@ -343,7 +330,6 @@ mod tests {
                 }));
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
-                // Both own cards come (2 of the 4 asked take all there is).
                 s.expect_in_zone(MENACE, "hand");
                 s.expect_in_zone(VANILLA, "hand");
                 assert_eq!(s.pile(PlayerId::P2, "graveyard").len(), 1);

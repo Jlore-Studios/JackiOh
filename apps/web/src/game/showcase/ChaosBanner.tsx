@@ -2,10 +2,8 @@
 //
 // The effects layer's reveal (fx/chaos.ts) is decoration and, like every effect, is not drawn under
 // reduced motion or with the effects off (R200). The roll is information both players are owed, so in
-// those modes CardShowcase draws this instead: a plain panel over the board with "Call to Chaos" and
-// one line per effect, in the order they resolve, for as long as the reveal would have stood. It never
-// moves, takes no pointer event, and is hidden from assistive tech, which hears the showcase's
-// `chaos-live` region say the same words.
+// those modes CardShowcase draws this instead. It never moves, takes no pointer event, and is hidden
+// from assistive tech, which hears the showcase's `chaos-live` region say the same words.
 
 import type { CSSProperties, ReactElement } from "react";
 import { createPortal } from "react-dom";

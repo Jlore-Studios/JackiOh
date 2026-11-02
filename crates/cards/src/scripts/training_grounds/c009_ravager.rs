@@ -35,11 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #9 Ravager — SPEC §8.11 row 9, BUILD M13 row TG 9: "base: 7/7 with Rush, may attack a Unit the turn
-// it is played, not the hero; attacking and killing a Unit it survives: 12/12 (the damage taken stays); a
-// Unit that attacks it and dies: +5/+5; if it dies in the same combat it gains nothing (R1245); a hit that
-// does not kill: no gain; a hit on a Divine Shield: no gain; two kills: +10/+10; the buff reads
-// `param("buff")`. radiant 14/17 with Rush; each kill +10/+10".
+// TG #9 Ravager — SPEC §8.11 row 9, BUILD M13 row TG 9 (R1245).
 #[cfg(test)]
 mod tests {
     use super::ID;

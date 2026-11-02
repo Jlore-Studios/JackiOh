@@ -2,11 +2,9 @@
 // (CLAUDE.md rule 7): a card the viewer may read whose id is GLITCH_DEF_ID wears these words instead
 // of the catalog's, and a face-down card stays a back, since its id is the hidden sentinel.
 //
-// The corruption is drawn deterministically from a fixed source string and a fixed seed, so every
-// client prints the same jumble and nothing calls Math.random during a render: each character of the
-// source is kept, swapped for a glyph out of GLITCH_GLYPHS or followed by a combining mark, by a
-// small linear congruential stream (its constants are Numerical Recipes'). A string's seed is the
-// source's own characters folded into GLITCH_SEED, so the name and the text jumble differently.
+// The corruption is deterministic (a fixed seed and a small LCG, Numerical Recipes' constants), so
+// every client prints the same jumble and nothing calls Math.random during a render. A string's seed
+// folds its own characters into GLITCH_SEED, so the name and the text jumble differently.
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
@@ -42,7 +40,6 @@ const LCG_INCREMENT = 1013904223;
 /** A character code is folded into the seed by this odd factor (the FNV prime). */
 const FOLD_PRIME = 16777619;
 
-/** Whether a card id is Glitch's. */
 export function isGlitch(defId: string | null | undefined): boolean {
   return defId === GLITCH_DEF_ID;
 }

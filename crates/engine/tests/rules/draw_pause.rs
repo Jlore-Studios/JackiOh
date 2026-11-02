@@ -1,16 +1,9 @@
 //! A prompt opened by a cast-on-draw card, inside §2.4's two draw loops (SPEC §2.4, §9.3, §10.6;
 //! R3, R4, R58, R70, R113, R117, R122).
 //!
-//! §2.4's "Cast on draw" fires a whole play from inside a draw, and a play can ask: #7 Jewelosco
-//! Scarab's Discover, or anything Call to Chaos reaches. Neither draw loop may draw on past the prompt.
-//!   * §9.3, R113, R117: a cast that asks stops the chain; the rest is owed to `state.work` and the
-//!     answer draws exactly those cards, once each (likewise the whole draws a "draw N" has not made).
-//!   * §9.3, §10.1: the paused game survives a JSON round trip and resumes identically.
-//!   * R58: the owed chain carries its counter, so resuming cannot evade the cap.
-//!   * R4, R3: hand-cap burn and fatigue still apply past a pause; the paused draw counts once.
-//!   * R70, R122: the paused cast lands on the answer (§10.5 steps 6, 7), before the draw owed behind it.
-//!
-//! Controls: with nothing asking, the chain and "draw N" run in one call and `state.work` stays empty.
+//! §2.4's "Cast on draw" fires a whole play from inside a draw, and a play can ask (#7 Jewelosco
+//! Scarab's Discover), so neither draw loop may draw on past the prompt: the rest is owed to
+//! `state.work` (§9.3, R113), with the chain's counter, so resuming cannot evade the cap (R58).
 //! Fixtures: defs prefixed `dr-`, indexed from 2700, so they cannot collide with another file (BUILD §0).
 
 use jackioh_engine::draw::{
@@ -68,7 +61,6 @@ fn defs() -> Vec<CardDef> {
     vec![log_card(), ask_on_draw(), quiet_on_draw(), plain()]
 }
 
-// The note log: what ran, in the order it ran.
 const NOTE_LANE: usize = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
@@ -219,7 +211,6 @@ fn only<T: Clone>(items: &[T]) -> T {
     items.first().cloned().expect("expected exactly one item")
 }
 
-/// Answer the one open prompt, whoever it belongs to.
 fn answer(state: &GameState) -> ReduceResult {
     let pending = state.pending.as_ref().expect("expected a prompt to be open");
     let result = act_result(
@@ -237,9 +228,8 @@ fn answer(state: &GameState) -> ReduceResult {
     result
 }
 
-/// The `drawn` events of one player. `state.counters.drawn` is both players' (R55), and an `answer`
-/// that leaves p1 with no legal action auto-ends the turn, so p2's own start-of-turn draw lands in
-/// the same action — which says nothing about the draw under test.
+/// The `drawn` events of one player: `state.counters.drawn` is both players' (R55), and an `answer`
+/// that auto-ends p1's turn brings p2's start-of-turn draw into the same action.
 fn drawn_by(events: &[GameEvent], player: PlayerId) -> Vec<String> {
     events_of_type(events, GameEventType::Drawn)
         .iter()
@@ -299,14 +289,12 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         draw_one(&mut bench.sink(&mut state), PlayerId::P1, None);
         let events = bench.events;
 
-        // The chain cast the first card, drew the asker, cast it — and stopped at its question.
         assert_eq!(notes(&state), vec!["quiet".to_string(), "ask".to_string()]);
         assert_eq!(
             state.pending.as_ref().map(|pending| pending.player_id),
             Some(PlayerId::P1)
         );
 
-        // Exactly two cards have left the library, the two already cast; the cards behind are undrawn.
         assert_eq!(state.counters.drawn, 2);
         assert_eq!(
             drawn_by(&events, PlayerId::P1),
@@ -315,8 +303,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(library_of(&state), vec![quiet_on_draw().id, plain().id]);
         assert_eq!(hand_of(&state), Vec::<String>::new());
 
-        // R113 and R117: the remainder is owed — one more draw, continuing the chain at the count it
-        // had. §9.3: plain data, so no closure and no captured library is held across the prompt.
+        // R113, R117: one more draw is owed at the chain's count, as plain data (§9.3).
         let parked = only(&owed_work(&state, Some(DRAW_CHAIN_WORK)));
         // R217: the chain is the draw's own, so the item that finishes it closes it (`owns`).
         let owed = owed_draw_chain_of(&parked.resume).expect("an owed draw chain");
@@ -344,19 +331,15 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
             .expect("an owed draw chain");
         assert_eq!(owed.player, PlayerId::P1);
         assert_eq!(owed.chain, 2);
-        // R217: the draw that began this chain finishes it, so the item closes it.
         assert!(owed.owns);
 
         let done = answer(&round);
-        // R113: the rest of the Cry, then the cast's tail, and only then the draw that was owed.
         assert_eq!(
             notes(&done.state),
             ["quiet", "ask", "answered", "ask:tail", "quiet"]
                 .map(str::to_string)
                 .to_vec()
         );
-        // The two cards still in the library were drawn, once each: the third was cast on draw, the
-        // fourth ended the chain in hand. Nothing was drawn twice and nothing was skipped.
         assert_eq!(done.state.counters.drawn, 4);
         assert_eq!(
             drawn_by(&done.events, PlayerId::P1),
@@ -366,8 +349,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(hand_of(&done.state), vec![plain().id]);
         assert_eq!(done.state.pending, None);
         assert_eq!(done.state.work, Vec::<WorkItem>::new());
-        // R2179002: a cast on draw is no play, so none of the three cast cards counted as one, across
-        // the pause (through v0.5.2 each counted exactly once, R70).
+        // R2179002: a cast on draw is no play, so none of the three casts counted, across the pause.
         assert_eq!(done.state.counters.played, 0);
         assert_eq!(done.state.players.p1.turn_log.cards_played, 0);
     }
@@ -444,11 +426,9 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         );
 
         let done = answer(&round_trip(&state));
-        // The owed draw happened once: counted once, burned once, and the hand is still at the cap.
         assert_eq!(done.state.counters.drawn, 2);
         assert_eq!(burned_count(&done.events), 1);
         assert_eq!(done.state.players.p1.hand.len(), HAND_CAP as usize);
-        // The asker resolved to the graveyard (§10.5 step 7) and the burned card joined it.
         assert_eq!(
             done.state
                 .players
@@ -481,7 +461,6 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
             .map(|event| serde_json::to_value(event).expect("an event serializes")["amount"].clone())
             .collect();
         assert_eq!(amounts, vec![json!(1)]);
-        // No card was drawn by the owed draw — there was none to draw — so nothing reached p1's hand.
         assert_eq!(drawn_by(&done.events, PlayerId::P1), Vec::<String>::new());
         assert_eq!(hand_of(&done.state), Vec::<String>::new());
         assert_eq!(done.state.work, Vec::<WorkItem>::new());
@@ -500,7 +479,6 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         draw_one(&mut bench.sink(&mut state), PlayerId::P1, None);
         let events = bench.events;
 
-        // Both casts and the card that ended the chain, inside the one call.
         assert_eq!(notes(&state), vec!["quiet".to_string(), "quiet".to_string()]);
         assert_eq!(state.counters.drawn, 3);
         assert_eq!(hand_of(&state), vec![plain().id]);
@@ -534,8 +512,8 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_draw_n_loop {
         assert_eq!(library_of(&state), vec![plain().id, plain().id]);
         assert_eq!(hand_of(&state), Vec::<String>::new());
 
-        // R113: the interrupted chain is owed ahead of the whole draws that are still to come, and the
-        // cast's own tail ahead of both. §9.3: all plain data.
+        // R113: the cast's own tail, then the interrupted chain, then the whole draws still to come.
+        // §9.3: all plain data.
         assert_eq!(
             hooks_of(&state),
             vec![
@@ -555,7 +533,6 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_draw_n_loop {
         assert_eq!(reparsed, parked);
 
         let done = answer(&round_trip(&state));
-        // The chain's own owed draw first, then the two whole draws: three draws in all, once each.
         assert_eq!(done.state.counters.drawn, 3);
         assert_eq!(drawn_by(&done.events, PlayerId::P1), vec![plain().id, plain().id]);
         assert_eq!(hand_of(&done.state), vec![plain().id, plain().id]);
@@ -576,7 +553,6 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_draw_n_loop {
         let mut bench = Bench::new(&state);
         let outcomes = draw(&mut bench.sink(&mut state), PlayerId::P1, 3);
 
-        // Draw 1 cast the top card and chained into the next; draws 2 and 3 took a card each.
         assert_eq!(
             outcomes,
             vec![DrawOutcome::Cast, DrawOutcome::Drawn, DrawOutcome::Drawn]

@@ -25,7 +25,7 @@ function count(value: unknown): number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
-/** One card's counters, each of CARD_COUNTERS; one missing (stored before R1582000's counters) or not a whole positive number reads as 0. */
+/** One card's counters; one missing (stored before R1582000) or not a whole positive number reads as 0. */
 function parseCounters(raw: unknown): CardCounters | null {
   if (!isRecord(raw)) return null;
   const counters = Object.fromEntries(CARD_COUNTERS.map((counter) => [counter, count(raw[counter])])) as Record<
@@ -46,7 +46,6 @@ function parseCounts(raw: unknown): Record<string, number> {
   return counts;
 }
 
-/** Tolerant parsing: malformed input becomes empty statistics. */
 export function parsePlayerStats(raw: unknown): PlayerStats {
   try {
     let value: unknown = raw;
@@ -104,7 +103,6 @@ export function readPlayerStats(): PlayerStats {
   return snapshot;
 }
 
-/** R639: fold a finished game into stored totals. */
 export function recordGame(log: GameLog, outcome: GameOutcome): PlayerStats {
   const next = addGame(loadStored(), log, outcome);
   snapshot = next;

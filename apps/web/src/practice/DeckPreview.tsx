@@ -1,8 +1,6 @@
-// What the chosen deck is, before Start: its name, what it does, its mana curve and its cards.
-//
-// The card data is the catalog the practice worker sends (`{ type: "catalog" }`, §5.1: the catalog
-// is public), so this page still imports no card data of its own. Until it arrives, or when it
-// cannot be read, the preview says so and Start still works: the deck is the same either way.
+// What the chosen deck is, before Start. The card
+// data is the catalog the worker sends (§5.1: the catalog is public), so this page imports none of its own;
+// until it arrives, or when it cannot be read, the preview says so and Start still works.
 
 import { useMemo, type ReactElement } from "react";
 
@@ -108,11 +106,7 @@ export function DeckPreview({ title, identity, cards, defs, defsFailed, onRetry 
   );
 }
 
-/**
- * One card of the list. Resting the pointer on it shows the whole card and a touch long-press opens
- * the inspect sheet, as the deck builder's list does (task 6's inspect, docs/polish/6-cards.md), so
- * a deck can be read before it is played.
- */
+/** One card of the list: hover and long-press inspect it as the deck builder's list does (docs/polish/6-cards.md). */
 function PreviewRow({ card }: { card: PreviewCard }): ReactElement {
   const def = card.def;
   const locale = useLocale();

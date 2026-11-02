@@ -43,15 +43,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
-// (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".
-//
-// Radiant (R275): the cell is "Same", so the copy keeps the radiant flag (R57): a Radiant 6/8 (6/9 before
-// patch v0.3.10).
-//
-// HARNESS GAP: layer-4 buffs and damage cannot be seeded, nor reached through play (a Cry fires the
-// instant the unit enters). R78 resets both on leaving the field and the play path resets neither on
-// entering, so seeding the hand instance is the one route to "buffs copied, damage not".
+// #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12, R64, R57, R275, R78).
+// Copy lands in leftmost free zone; buffs copied, damage not.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

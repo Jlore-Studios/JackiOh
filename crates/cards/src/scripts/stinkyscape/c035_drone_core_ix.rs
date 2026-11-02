@@ -51,8 +51,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// S #35 Drone Core IX — SPEC §8.10 row 35, BUILD M12 row S 35: "Float lowers its cost as S 34's; summons
-// 3 Drone Corvettes, into the backrow once the unit row is full (R2248000); corvettes reads through `param()`; radiant 3 Radiant ones".
+// S #35 Drone Core IX — SPEC §8.10 row 35, BUILD M12 row S 35 (R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -70,7 +69,6 @@ mod tests {
         effective_cost(s.state(), s.card(id), CostOptions::default())
     }
 
-    /// p1 holds one Drone Core IX and has one in the deck, with `mana` left to Float.
     fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
         let s = scenario(json!({
             "p1": {
@@ -92,14 +90,12 @@ mod tests {
         }))
     }
 
-    /// p1's unit row, lane 1 to 5: each zone's definition and face, or `None` when it is empty.
     fn row(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
             .collect()
     }
 
-    /// p1's backrow, lane 1 to 5, read as `row` reads the unit row.
     fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5)
             .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))

@@ -97,7 +97,6 @@ mod tests {
         json!([VANILLA, VANILLA, VANILLA])
     }
 
-    /// The side's keys, then SPARE's over them.
     fn with_spare(side: Value) -> Value {
         let mut merged = side;
         if let (Some(into), Value::Object(extra)) = (merged.as_object_mut(), spare()) {
@@ -108,7 +107,6 @@ mod tests {
         merged
     }
 
-    /// SPARE's keys, then the side's over them.
     fn spare_with(side: Value) -> Value {
         let mut merged = spare();
         if let (Some(into), Value::Object(extra)) = (merged.as_object_mut(), side) {
@@ -133,7 +131,6 @@ mod tests {
             .collect()
     }
 
-    /// A fixture card: a transient def in the match state and its script in the registry.
     fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script) -> String {
         let face = json!({ "keywords": [], "text": id });
         let def: CardDef = json_as(json!({
@@ -162,7 +159,6 @@ mod tests {
         id.to_string()
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -199,7 +195,6 @@ mod tests {
                 .filter(|event| event["type"] == json!("locked"))
                 .collect();
             assert!(locks.contains(&json!({ "type": "locked", "player": "p1", "row": "backrow", "lane": 3 })));
-            // No event p2 is shown names the Trap.
             let trap = must(s.backrow(P1, 3), "p1's Trap");
             let text = serde_json::to_string(&seen).expect("serializable");
             assert!(!text.contains(SHEEPISH));
@@ -251,15 +246,12 @@ mod tests {
                 },
                 "p2": spare()
             }));
-            // Me and Mr Token is played (lane 1, Locked); the Rush Token it summons (lane 2) is not.
             s.play(TOKEN_MAKER, json!({ "zone": 1 }));
             assert_eq!(lock_events(&s), ["p1 units 1"]);
             assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some("core-t-rush".to_string()));
-            // Call to Arms recruits Timmy into lane 3: no play, no Lock.
             s.play(CALL_TO_ARMS, json!({}));
             assert_eq!(s.unit(P1, 3).map(|card| card.def_id), Some(TIMMY.to_string()));
             assert!(lock_events(&s).is_empty());
-            // The Defender dies and comes back through Reborn: no play, no Lock.
             let defender = must(s.unit(P1, 5), "the Defender");
             s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
             assert_eq!(s.unit(P1, 5).map(|card| card.id), Some(defender.id.clone()));
@@ -366,7 +358,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 

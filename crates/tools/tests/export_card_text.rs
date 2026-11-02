@@ -26,7 +26,6 @@ const VOICE_TEXT: &str = concat!(
     "/../../apps/web/src/audio/voice-text.json"
 );
 
-/// Each written file's `"//"` entry.
 const HEADER: &str = "Generated from crates/cards/card-text.yaml by crates/tools/tests/export_card_text.rs. Do not edit: change the YAML, then run cargo test -p jackioh-tools --test export_card_text.";
 
 /// The YAML key of the portraits' section; every other top-level key is a catalog id.
@@ -137,7 +136,6 @@ fn parse(text: &str) -> Result<(Cards, Emotes), String> {
     Ok((cards, emotes))
 }
 
-/// The committed YAML, parsed.
 fn shipped() -> (Cards, Emotes) {
     let text = std::fs::read_to_string(YAML).unwrap_or_else(|error| panic!("{YAML}: {error}"));
     parse(&text).unwrap_or_else(|error| panic!("{error}"))
@@ -149,7 +147,6 @@ fn pretty(value: &impl Serialize) -> String {
     format!("{text}\n")
 }
 
-/// Each written file's path and its text.
 fn render() -> [(&'static str, String); 3] {
     let (cards, emotes) = shipped();
     let flavour = Sidecar {

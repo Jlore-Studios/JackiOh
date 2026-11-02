@@ -1,29 +1,21 @@
 //! Public card and player statistics page API (SPEC §9.11, R654).
 //!
 //! R1367000 (amends R654): `GET /api/stats/cards` reads each card over its own window, through the
-//! engine's `windowed_card_stats`, the function `cargo jackioh stats report --window` and `winrates`
-//! call too; the drill-down's per-patch rates stay per patch.
+//! engine's `windowed_card_stats`; the drill-down's per-patch rates stay per patch.
 //!
 //! R978000: the card figures are read off a patch's totals once and kept for
-//! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=`, `?pilot=` and `?mode=`
-//! (`KeptReports`), and both card routes read the kept reports. R1044000: the totals are the records
-//! folded as they were written (`db::store::Tx::stats_totals_load`), and read the same figures the
-//! records did.
+//! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=`, `?pilot=` and `?mode=` (`KeptReports`).
+//! R1044000: the totals are the records folded as written (`db::store::Tx::stats_totals_load`). R2491000
+//! (amends R978000): the drill-down's patch history is one kept history per `?pilot=` and `?mode=`
+//! (`KeptHistory`), shared by every card's page.
 //!
-//! R2491000 (amends R978000): the drill-down's patch history is one kept history per `?pilot=` and
-//! `?mode=` (`KeptHistory`), read off every patch's totals in one load and shared by every card's
-//! page; its turn and co-played figures still read the current patch's kept report.
+//! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every live
+//! game, kept for `PLAY_RATES_REFRESH_SECONDS`. R1771000: `PUT /api/stats/player` keeps R1142000's summary
+//! inputs alone, for catalog cards, and drops every other key, id and value (`account_copy`).
 //!
-//! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every
-//! live game, read off every patch's totals and kept for `PLAY_RATES_REFRESH_SECONDS`.
-//!
-//! R1771000: `PUT /api/stats/player` keeps R1142000's summary inputs alone, for catalog cards, and
-//! drops every other key, id and value (`account_copy`).
-//!
-//! R1994000: `GET /api/stats/games` is the patch's game figures (the first seat's wins, the endings,
-//! the turns, R1256000's counts) over the window every card shares, read through the engine's
-//! `windowed_game_figures` off the totals' whole games (`StatsTotals.game_totals`, which outlive
-//! R1044001's purge), kept with the cards' windowed report and cached as long.
+//! R1994000: `GET /api/stats/games` is the patch's game figures (R1256000's counts) over the window every
+//! card shares, read through the engine's `windowed_game_figures` off `StatsTotals.game_totals` (which
+//! outlive R1044001's purge), kept with the cards' windowed report and cached as long.
 
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -196,7 +188,6 @@ impl PublicStatsSource {
         }
     }
 
-    /// R1367000: the source a window's figures were counted from.
     fn of(source: WindowSource) -> PublicStatsSource {
         match source {
             WindowSource::Live => PublicStatsSource::Live,
@@ -664,10 +655,7 @@ impl KeptReports {
     }
 }
 
-/// R1367000: one patch's windowed figures for one `?source=` and `?pilot=`, and each version's live
-/// games, which the window of a card no counted deck held is read from, over the history as
-/// R1973001 reads it (a patch no game was played on read as a micro). R1973002: every patch the
-/// page can show, newest first. R1994000: the game figures over the window every card shares.
+/// R1367000: windowed figures for a patch (R1973001, R1973002, R1994000).
 struct KeptWindow {
     report: WindowedReport,
     games: WindowedGames,
@@ -694,9 +682,7 @@ impl KeptWindow {
 
 type KeptWindowCell = Arc<OnceCell<Arc<KeptWindow>>>;
 
-/// R1367000: `at`'s windowed report for `source` and `pilot`, kept as `kept_report` keeps a patch's:
-/// read off every patch's totals once per `CARD_STATS_CACHE_TTL_SECONDS`, and never kept for a patch
-/// the server does not know.
+/// R1367000: cached windowed report computation (`CARD_STATS_CACHE_TTL_SECONDS`).
 async fn kept_window(
     app: &App,
     history: &[PatchStep],
@@ -757,11 +743,8 @@ async fn kept_window(
     Ok(Arc::clone(kept))
 }
 
-/// R978000: `patch`'s figures for `source_param`, `live_pilot` and `mode`, read off the patch's
-/// totals (R654's gate and `?source=` choose which source's count). With `with_drills`, each card's
-/// drill-down too, over the seats `public_report` counts (`seat_counted`). R654: a tutorial game is
-/// never counted; no game mode is `tutorial` and the server records no tutorial game, so the totals
-/// hold none.
+/// R978000, R654: computes patch report for requested filters and optional drill-downs.
+/// Tutorial games are excluded (R654).
 fn patch_report(
     totals: &StatsTotals,
     patch: &str,
@@ -772,7 +755,6 @@ fn patch_report(
 ) -> PatchReport {
     let live_games = totals.live_games(patch);
 
-    // R654 publication gate.
     let cleared = live_games >= PUBLIC_STATS_MIN_LIVE_GAMES;
 
     let source = if cleared || source_param == SourceParam::Live {
@@ -812,11 +794,8 @@ fn patch_report(
     }
 }
 
-/// R978000: `patch`'s report for `source`, `pilot` and `mode`, as kept: computed from the
-/// patch's totals when none was made in the last `CARD_STATS_CACHE_TTL_SECONDS`, once however many
-/// requests miss it together. A patch the server does not know (neither in `versions` nor the
-/// current one) is computed on every request and never kept, so made-up `?patch=` values push no
-/// kept report out.
+/// R978000: cached report lookup or computation (`CARD_STATS_CACHE_TTL_SECONDS`).
+/// Unknown patches are computed on-demand without caching.
 async fn kept_report(
     app: &App,
     versions: &[String],
@@ -902,16 +881,8 @@ async fn kept_history(
     Ok(Arc::clone(kept))
 }
 
-/// GET /api/stats/cards: public card win rates. R654's gate, amended by R1367000: each card's figures
-/// are read over its own window (`windowed_card_stats`), live games only once the window has logged
-/// 1000 live games, else its previous window's live games when that one has, else AI games pad the
-/// window. `gate` and `source` are the window every card shares (its X's). Below 20 games
-/// `hasEnoughGames` is false.
-/// R1451, amended by R807000: a ladder bot's game counts toward the gate like any live game, and
-/// the figures count every counted seat, human and bot alike (`?pilot=human` reads the people's
-/// sides only, `?pilot=ai` the bots'). R377: `?mode=` scopes the figures to one match type
-/// (`bo1`, `bo3`, `random`), or every mode when missing, `all`, or unrecognized. A bot game adds
-/// two decks like any game, so the per-game deck tell R1452 recorded is gone.
+/// GET /api/stats/cards: public card win rates (R654, R1367000).
+/// Supports pilot filtering (R1451, R807000, R1452) and match modes (R377).
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
@@ -946,7 +917,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .filter(|value| !value.is_empty());
     let cost_param = req.query.get("cost").cloned();
     let card_param = query_trimmed(&req, "card");
-    // The card, set, rarity and cost asked for, which both tables read.
     let shown = |id: &str, def: &CardDef| {
         if card_param.as_ref().is_some_and(|card| id != card) {
             return false;
@@ -1137,13 +1107,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
-/// GET /api/stats/games (R1994000): the game figures at `?patch=` (the current patch when missing),
-/// over the window every card shares under R654's gate as `GET /api/stats/cards` reads it: live
-/// games once the window has `PUBLIC_STATS_MIN_LIVE_GAMES`, else the previous window's, else AI
-/// games pad it (provisional). `?source=` and `?mode=` as for the cards. A game is read whole,
-/// whoever piloted its seats; `pairs` splits it by both pilots, so the games against a ladder bot
-/// (R1451) read apart from people's. `totalGames` counts every record of the window, those folded
-/// before the whole games were kept among them.
+/// GET /api/stats/games (R1994000): game figures across windowed reports (R654, `PUBLIC_STATS_MIN_LIVE_GAMES`).
+/// Pairs breakdown separates ladder bot games (R1451).
 pub async fn get_games(app: &Arc<App>, req: Req) -> ApiResult {
     let patch = query_trimmed(&req, "patch").unwrap_or_else(|| app.catalog.version.clone());
     let source_param = SourceParam::parse(req.query.get("source").map(String::as_str));
@@ -1319,8 +1284,7 @@ fn play_rates_of(totals: &StatsTotals, defs: &CardDefs) -> PlayRatesResponse {
     PlayRatesResponse { decks, cards }
 }
 
-/// GET /api/stats/play-rates (R1583000): read off every patch's live totals once per
-/// `PLAY_RATES_REFRESH_SECONDS` however many ask (a failed load is kept for no one), cacheable as long.
+/// GET /api/stats/play-rates (R1583000, `PLAY_RATES_REFRESH_SECONDS`).
 pub async fn get_play_rates(app: &Arc<App>, _req: Req) -> ApiResult {
     let cell = app.card_stats.play_rates_cell(now_ms());
     let rates = cell
@@ -1361,7 +1325,7 @@ const ACCOUNT_STATS_TOTALS: [&str; 4] = ["games", "wins", "losses", "draws"];
 /// R1771000: the counters each card of the account copy keeps (R1142000), in `syncPayload`'s order.
 const ACCOUNT_STATS_CARD_COUNTERS: [&str; 4] = ["played", "playedAgainst", "destroyed", "defeated"];
 
-/// TS `Number.isSafeInteger(value) && value >= 0` on a JSON value, as the count it is.
+/// Checks whether a JSON value is a non-negative safe integer count.
 fn whole_count(value: &Value) -> Option<u64> {
     const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
     let number = value.as_f64()?;
@@ -1371,10 +1335,7 @@ fn whole_count(value: &Value) -> Option<u64> {
     Some(number as u64)
 }
 
-/// R1771000: the account copy of a PUT's `stats`, in R1142000's shape: each game total that is a
-/// whole number of 0 or more and, under `cards`, each catalog card's counters that are whole
-/// numbers above 0, a card left with none dropped. Every other key, id and value is dropped, so
-/// the public summary (R654) only ever names a card the catalog holds.
+/// R1771000, R1142000: keeps valid catalog card counters for account copy (R654).
 fn account_copy(stats: &Map<String, Value>, defs: &CardDefs) -> IndexMap<String, Value> {
     let mut copy = IndexMap::new();
     for key in ACCOUNT_STATS_TOTALS {
@@ -1403,12 +1364,12 @@ fn account_copy(stats: &Map<String, Value>, defs: &CardDefs) -> IndexMap<String,
     copy
 }
 
-/// The body's length as `JSON.stringify(body).length`: UTF-16 code units.
+/// Returns the serialized length in UTF-16 code units.
 fn stringified_length(body: &Value) -> usize {
     body.to_string().encode_utf16().count()
 }
 
-/// PUT /api/stats/player: the caller updates their statistics and privacy setting, the statistics kept in R1142000's shape (R1771000).
+/// PUT /api/stats/player (R1771000, R1142000).
 pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX {

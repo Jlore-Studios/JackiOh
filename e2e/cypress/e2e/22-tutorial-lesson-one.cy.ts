@@ -1,6 +1,5 @@
 // Spec 22: lesson 1 follows the coach through the UI to a replay-verified win (SPEC §9.10; R187,
 // R290, R294). Reduced motion keeps coach state fresh without changing game rules or fast AI pacing.
-// BUILD M8: the lesson owns its seed; waits are retried assertions and selectors are test ids.
 // The flow stays generic so lesson content may change if following the coach still wins.
 
 import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION, timeouts } from "../../support/config.ts";

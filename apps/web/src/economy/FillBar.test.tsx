@@ -1,7 +1,4 @@
-// The bar that fills (#1658): drawn at its value without a start, the sweeps, the burst and the fill
-// reported when it bursts, the rest at the server's value, reduced motion under either switch, and
-// the stylesheet that holds the motion to transform and opacity behind one gate. Fake timers move
-// the bar; nothing here waits in real time.
+// The bar that fills (#1658). Fake timers move the bar; nothing here waits in real time.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
@@ -128,7 +125,6 @@ describe("#1658 a bar that fills", () => {
     expect(fillTransform()).toBe("scaleX(1)");
     expect(onDone).not.toHaveBeenCalled();
 
-    // The burst holds, then the bar restarts at 0 and sweeps to the value.
     advance(BURST_MS);
     expect(bar()).toHaveAttribute("data-state", "filling");
     expect(bar().querySelector(".fill-bar__burst")).toBeNull();
@@ -308,7 +304,7 @@ describe("#1658 reduced motion", () => {
   });
 });
 
-/* ------------------------------------------------------------------------ the stylesheet --- */
+/* the stylesheet */
 
 type Block = { prelude: string; body: string };
 

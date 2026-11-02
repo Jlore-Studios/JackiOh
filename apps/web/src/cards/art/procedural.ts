@@ -85,9 +85,9 @@ const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   classic: 0x79bdaf98,
   classicplus: 0x5921ab01,
   meditative: 0x16056737,
-  // R1857000: the Stinkyscape set's own, under which none of its cards repeats another set's picture.
+  // R1857000: so no Stinkyscape card repeats another set's picture.
   stinkyscape: 0x275c6732,
-  // R2194000: the held Training Grounds set's own, under which none of its cards repeats a shipped card's picture.
+  // R2194000: so no held Training Grounds card repeats a shipped card's picture.
   traininggrounds: 0x3c6ef373,
 };
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
@@ -138,7 +138,6 @@ function between(rng: Rng, low: number, high: number): number {
   return low + (high - low) * rng();
 }
 
-/** An integer in [low, high], inclusive. */
 function whole(rng: Rng, low: number, high: number): number {
   return low + Math.floor(rng() * (high - low + 1));
 }
@@ -1194,7 +1193,6 @@ function glitch(rng: Rng): string {
 
 type Twist = { under: Layer[]; over: Layer[] };
 
-/** R503 family twists use a stream of their own. */
 function twistLayers(rng: Rng, theme: ArtThemeId): Twist {
   switch (theme) {
     case "book":
@@ -1223,7 +1221,6 @@ const TWIST_COLORS: Readonly<Partial<Record<ArtThemeId, string>>> = {
   ai: "#39f3ff",
 };
 
-/** Plain cards and Tokens use their motif as their emblem. */
 const PLAIN_THEMES: ReadonlySet<ArtThemeId> = new Set<ArtThemeId>(["unit", "spell", "field-spell", "trap", "field-trap", "token"]);
 
 type Placed = { x: number; y: number; size: number };
@@ -1462,7 +1459,6 @@ export function artSpec(
   const angle = between(rng, SKY_ANGLE_MIN, SKY_ANGLE_MAX);
   const behind = backdropLayers(rng, backdrop);
   const composed = COMPOSERS[composition](rng, theme, layout, drawn?.headgear);
-  // Isolated streams leave existing geometry untouched.
   const twist = twistLayers(seededRandom((seed ^ TWIST_SALT) >>> 0), theme);
   const motifStream = seededRandom((seed ^ MOTIF_SALT) >>> 0);
   const pattern: Layer[] =

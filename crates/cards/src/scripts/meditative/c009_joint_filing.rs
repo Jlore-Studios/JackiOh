@@ -7,8 +7,7 @@
 //! The engine's turn-hook multiplier (`Script.turn_hook_extra`): while this acts on its controller's
 //! field, each of their start-of-turn and end-of-turn hooks is queued 1 + extra times as the turn's
 //! trigger step queues them (`triggers::queue_hooks_in_trigger_order`), each copy its own entry re-read
-//! as it pops (R153, R821). Several multipliers do not add: the highest holds (R820). Both faces run one
-//! script; `param` reads the face's `extra`.
+//! as it pops (R153, R821). Several multipliers do not add: the highest holds (R820).
 
 use jackioh_engine::prelude::*;
 
@@ -25,18 +24,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #9 Joint Filing — SPEC §8.8 row 9, BUILD M10 row M 9: "While it acts, each of your
-// start-of-turn and end-of-turn hooks runs twice, each copy its own queue entry right behind the
-// original, with a state check between (R59, R821) and fresh random numbers; a card gone before its
-// copy pops fizzles (R153); M 8 in your graveyard returns once …; delayed effects, the opponent's turn
-// hooks and the end-of-turn trap window are not multiplied (R62); two Joint Filings give one extra, not
-// two (R820); M 12's triggered End of turn effects are multiplied too; leaving the field ends it;
-// extra reads through `param()`; radiant three runs in all".
-//
-// Core #13 Jlockeed Shredder-10's end of turn (2 to each enemy) and Core #58
-// Rush Token Farm's start of turn (a Rush Token) are the hooks it multiplies; Core #23 Reoccurring
-// Dream stands in for M 8, a Spell that returns from the graveyard at the end of the turn it was played
-// (M 8 and M 21 are built by their own parts). M 12's case is in Fear Mongerer's file.
+// Meditative #9 Joint Filing — SPEC §8.8 row 9, BUILD M10 row M 9, R59, R62.
+// Core #13 and #58 are the hooks it multiplies, Core #23 stands in for M 8; M 12's case is in Fear Mongerer's file.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -58,8 +47,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // a (1) 4/4 with no text
     const FILLER: &str = "core-005"; // Stockpile, a (1) Spell
 
-    /// A side with something to do and a deck to draw, so no turn auto-ends (§2.5) or fatigues; `extra`
-    /// adds its own entries.
+    /// A side with something to do and a deck to draw, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {
         crate::merged(json!({ "hand": [FILLER], "library": [FILLER, FILLER, FILLER] }), extra)
     }

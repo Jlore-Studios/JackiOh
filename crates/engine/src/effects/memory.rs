@@ -1,18 +1,13 @@
 //! What a card remembers, on its own instance (§10.1): Carnivorous Cube's meal, Heroic Power's power.
 //!
-//! R174, R78: what is remembered is remembered by the card on the stay the run began with. A card an
-//! earlier effect of the same list took off the field has been reset (R78) — memory included — and
-//! what it remembered went with that stay, so a later part of the list writes nothing onto it: a
-//! fused Cube part does not write its meal onto a card its Silas part has bounced to a hand.
+//! R174, R78: what is remembered is remembered by the card on the stay the run began with: a card an
+//! earlier effect of the same list took off the field has been reset, memory included, so a later
+//! part writes nothing onto it (a fused Cube part, onto a card its Silas part bounced). A card no
+//! longer anywhere (a Death hook's snapshot) has nothing to write onto either.
 //!
-//! R102: on a fused card each ingredient remembers under its own key (`work::part_memory_key`), so two
-//! Carnivorous Cubes crafted into one card remember two meals, and each Death copies its own; a card
-//! reads back through `query::recalled`, which applies the same key. A card a Fuse keeps moves what its
-//! texts remembered to the path they run at in the new fusion (`work::reroot_remembered`, R77).
-//!
-//! Port of `packages/engine/src/effects/memory.ts`. TS wrote through the live `ctx.self`; here the
-//! card is found again by id in the state, and a card that is no longer anywhere (a Death hook's
-//! snapshot) has nothing to write onto, as TS's write onto a detached object reached no state.
+//! R102: on a fused card each ingredient remembers under its own key (`work::part_memory_key`), which
+//! `query::recalled` applies too; a card a Fuse keeps moves what its texts remembered to their path in
+//! the new fusion (`work::reroot_remembered`, R77).
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

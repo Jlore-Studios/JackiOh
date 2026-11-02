@@ -1,6 +1,5 @@
 //! §10.5 steps 6 and 7: an Echo repeat, the state check after a card's last resolution, and the traps
 //! that answer it (SPEC §4.5, §10.5, R17, R59, R61, R174).
-//!
 //!  - §10.5 step 6 is "repeat step 5", and step 5 is the granted Combo parts (#38, #78) and then the
 //!    card's own script, so a repeat runs all three.
 //!  - §4.5, R59: the check runs after a card's whole Cry or spell, before step 7's `cardResolved`, so
@@ -36,8 +35,6 @@ const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// The harness with the real catalog and every card script registered: the engine's testkit cannot
-/// name the cards crate, so the cards test does.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -47,13 +44,11 @@ fn count(events: &[GameEvent], type_: GameEventType) -> usize {
     events.iter().filter(|event| event.event_type() == type_).count()
 }
 
-/// §10.5 step 6: an Echo repeat is step 5 again, granted Combo parts included
 mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
     use super::*;
 
     #[test]
     fn r30_s10_5_quickstrikers_granted_combo_hits_once_per_resolution_of_an_echoed_spell_s8_c38() {
-        // Twinspell is the one card played earlier, so X = 1 on each of Stockpile's two resolutions.
         let mut g = setup(json!({
             "p1": { "hand": [TWINSPELL, STOCKPILE, RENO], "backrow": [{ "def": QUICKSTRIKER, "lane": 2 }], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "library": LIBRARY },
@@ -63,7 +58,6 @@ mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
 
         g.play(STOCKPILE, json!({}));
 
-        // Stockpile's own text ran twice (draw 2, twice), and Quickstriker's Combo with it.
         assert_eq!(g.hand("p1").len(), before - 1 + 4);
         let hits = g
             .last_events()
@@ -76,8 +70,6 @@ mod s10_5_step_6_an_echo_repeat_is_step_5_again_granted_combo_parts_included {
 
     #[test]
     fn r30_s10_5_fullsends_granted_combo_draw_1_draws_once_per_resolution_of_an_echoed_spell_s8_c78() {
-        // A Radiant /fullsend (its face grants the Combo draw) and Twinspell were played earlier: each
-        // of Stockpile's two resolutions draws 1 for the granted Combo and then 2 for Stockpile.
         let mut g = setup(json!({
             "p1": { "hand": [{ "def": FULLSEND, "radiant": true }, TWINSPELL, STOCKPILE, RENO], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "library": LIBRARY },
@@ -122,9 +114,6 @@ mod s4_5_the_check_after_a_cards_whole_cry_or_spell_before_step_7s_traps {
             },
         }));
 
-        // Big Felinor's Cry destroys every non-Felinor unit, and the check after the whole Cry collects
-        // both Mr. Vanillas; only then does `cardResolved` reach the trap, whose "fill your board" finds
-        // all five of p2's unit zones empty.
         g.play(BIG_FELINOR, json!({ "zone": 1 }));
 
         let tokens = g
@@ -153,7 +142,6 @@ mod s4_5_the_check_after_a_cards_whole_cry_or_spell_before_step_7s_traps {
 
         g.play(BIG_FELINOR, json!({ "zone": 1 }));
 
-        // Timmy died with the Cry, so p2 controls no Unit when the trap is asked, and it stays armed.
         g.expect_in_zone(&timmy, "graveyard");
         assert_eq!(count(g.events(), GameEventType::TrapFired), 0);
         assert_eq!(g.unit("p1", 1).map(|c| c.def_id), Some(BIG_FELINOR.to_string()));
@@ -172,7 +160,6 @@ mod s4_5_the_check_after_a_cards_whole_cry_or_spell_before_step_7s_traps {
         }));
         let victim = g.unit_at("p2", 3);
 
-        // 3 damage kills the lane-3 Mr. Vanilla as the spell ends, so its zone is empty by step 7:
         // "summon 2 Rush Tokens" takes that one zone and the second summon fails in silence (§3.2).
         g.play(LUNAR_ECLIPSE, json!({ "targets": pick::instance(&victim) }));
 
@@ -232,9 +219,6 @@ mod r174_a_trap_after_bear_honeypots_run_meets_the_played_unit_the_run_killed_as
             },
         }));
 
-        // Right-house defender (1/1, Taunt, Divine Shield, Reborn): the first trap's first token takes
-        // its shield and the second kills it, and Reborn brings it straight back. The second trap still
-        // fires — the play cost 1 — but "they attack it" named that play's stay, which has ended.
         g.play(RIGHT_HOUSE, json!({ "zone": 1 }));
 
         assert_eq!(count(g.events(), GameEventType::TrapFired), 2);
@@ -244,7 +228,6 @@ mod r174_a_trap_after_bear_honeypots_run_meets_the_played_unit_the_run_killed_as
     }
 }
 
-/// §4.5, R118: a played unit that does not survive its own arrival still resolves its Cry
 mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves_its_cry {
     use super::*;
 
@@ -257,9 +240,9 @@ mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves
         let prey = g.unit_at("p2", 1);
         let bigot = g.card(BIGOT).clone();
 
-        // Bigot is 6/1 printed, 4/-1 under the aura. No trap answered it and nothing took it off the
-        // field at step 4, so step 5 resolves its Cry (R118: the Cry is lost only where a trap has taken
-        // the card off the field), and the check after the play collects it (§4.5).
+        // No trap answered it and nothing took it off the field at step 4, so step 5 resolves its Cry (R118:
+        // the Cry is lost only where a trap has taken the card off the field), and the check after the play
+        // collects it (§4.5).
         g.play(BIGOT, json!({ "targets": pick::instance(&prey) }));
         g.expect_in_zone(&prey, "graveyard");
         g.expect_in_zone(&bigot, "graveyard");
@@ -272,10 +255,6 @@ const POINTMASTER: &str = "core-020";
 const COLLATERAL_DAMAGE: &str = "core-034";
 const PLASTIC_SURGERY: &str = "core-063";
 
-/// A fixture card: a transient def in the match state and its script in the registry.
-///
-/// `face` is `{ attack?, health?, keywords? }` (`{}` for none); a Unit's printed stats default to 2/2
-/// and its keywords to none.
 fn fixture_card(state: &mut GameState, id: &str, type_: &str, script: Script, face: Value) {
     let keywords = face.get("keywords").cloned().unwrap_or_else(|| json!([]));
     let printed = if type_ == "Unit" {
@@ -363,7 +342,6 @@ fn wipe_on_play() -> Script {
     }
 }
 
-/// R174, R118, R61: the play follows the stay step 4 put the card on, not a Reborn body
 mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_body {
     use super::*;
 
@@ -374,8 +352,6 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
             "p1": { "hand": [STOCKPILE], "mana": 4 },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": GARY, "lane": 1 }], "backrow": [{ "def": UNLICENSED, "lane": 2 }] },
         }));
-        // A Unit with Reborn whose Cry deals 3 to the enemy hero, and a trap that destroys a Unit the
-        // opponent plays. No Core trap removes a played unit and lets it come back, so both are fixtures.
         fixture_card(
             g.state_mut(),
             "edge-r7-reborn-cry",
@@ -429,10 +405,10 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
     #[test]
     fn r174_r53_r83_bear_honeypots_tokens_do_not_attack_the_reborn_body_of_a_played_unit_that_died_in_its_own_resolution_s10_5_step_7()
      {
-        // p1 plays a 0-cost Reborn unit whose Cry kills itself. Step 6's check collects it and Reborn
-        // brings a new arrival back at 1 health (§4.5 step 4, R83) before step 7. p2's Bear Honeypot
-        // answers the play: "if it was a Unit, they attack it" — but the unit that was played has left
-        // the field, so the tokens attack nothing and the Reborn body is left standing.
+        // Step 6's check collects it and Reborn brings a new arrival back at 1 health (§4.5 step 4, R83)
+        // before step 7. p2's Bear Honeypot answers the play: "if it was a Unit, they attack it" — but the
+        // unit that was played has left the field, so the tokens attack nothing and the Reborn body is left
+        // standing.
         let mut s = setup(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-honeypot-martyr",
@@ -457,7 +433,6 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
 
         s.play(&martyr, json!({ "zone": 3 }));
 
-        // The play died and came back: the Reborn body stands in lane 3.
         assert!(s.events().iter().any(
             |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == martyr.id)
         ));
@@ -477,7 +452,6 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
     }
 }
 
-/// R174: a target a trap answering the play took off the field is gone for the play's step 5
 mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_plays_step_5 {
     use super::*;
 
@@ -485,7 +459,6 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
     fn r174_r78_c63_plastic_surgery_does_not_buff_or_grant_a_keyword_to_its_target_in_the_graveyard_after_a_step_4_trap_destroyed_it_s8_conventions()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-surgery-on-the-dead",
             "p1": { "hand": [PLASTIC_SURGERY], "mana": 4 },
             "p2": { "field": [POINTMASTER] },
@@ -532,7 +505,6 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
     fn r174_r55_c34_collateral_damage_does_not_exile_its_target_out_of_the_graveyard_after_a_step_4_trap_destroyed_it_s8_conventions()
      {
         let mut s = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-collateral-on-the-dead",
             "p1": { "hand": [COLLATERAL_DAMAGE], "mana": 4 },
             "p2": { "field": [POINTMASTER], "library": [TIMMY, TIMMY] },
@@ -550,7 +522,6 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
         s.play(COLLATERAL_DAMAGE, json!({ "targets": pick::instance(&target) }));
 
         // The trap's wipe put the Pointmaster in its owner's graveyard (§4.5, R17), and there it stays:
-        // the permanent the spell named is gone, so only the library half of its text resolves.
         assert!(s.last_events().iter().any(
             |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == target.id)
         ));

@@ -18,7 +18,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-101";
 
-/// "Add a random Luck-based card to your hand. Give it Lucky {lucky}."
 fn pull(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![add_random_from_catalog(AddRandomFromCatalogArgs {
         query: Some(crate::query::luck_based()),
@@ -51,11 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #101 Gachaholic — SPEC §8.8 row 101, BUILD M10 row M 101: "Its Cry adds one random non-token
-// card that prints Lucky or flips a coin, of the sets that ship, on its base face at its printed cost
-// and hidden from the opponent (R1444), and gives it Lucky 1 (R1438); a full hand burns it; its Lucky
-// reads through `param()` (R386); previewed, the pool reaches Meditative cards (R1420); radiant no Cry,
-// an Activate once a turn, the turn it is played included (R384)".
+// M #101 Gachaholic — SPEC §8.8 row 101, BUILD M10 row M 101, R386.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -70,13 +65,11 @@ mod tests {
     const PEPTIDES: &str = "meditative-036";
 
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
-    /// R1444), the Meditative set's among them since it ships: #36 CN Peptides, #86 Mayor Medinamogger
-    /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004, and Core #42
-    /// Eugenics with patch v0.3.10, R831014). Re-pinned for the Stinkyscape release (#1884): its #77
-    /// Yuma, #112 Job Application, #145 Fortify Flesh, #153 Stimmycheck and #166 and #167, the Scanning
-    /// Probes, join it; and for the Training Grounds release (#2204): its #49 Reoccurring Dream, the
-    /// snapshot of Core #23; and for #2521: Stinkyscape #53, #57 and #61, the Flaks, whose Radiant faces
-    /// print Lucky 1.
+    /// R1444). Meditative's are #36 CN Peptides, #86 Mayor Medinamogger and #102 Catboy Maid SSR+ (not #65
+    /// Keymaster Keenus, R781004, nor Core #42 Eugenics, R831014); Stinkyscape's (#1884) #77 Yuma, #112 Job
+    /// Application, #145 Fortify Flesh, #153 Stimmycheck, #166 and #167 (the Scanning Probes) and #53, #57
+    /// and #61 (the Flaks, whose Radiant faces print Lucky 1, #2521); Training Grounds' #49 Reoccurring
+    /// Dream (#2204), the snapshot of Core #23.
     const SHIPPED_POOL: [&str; 20] = [
         "core-004",
         "core-023",

@@ -1,8 +1,6 @@
-// Cloudflare serves the production client as static assets only: no Worker script, no
-// runtime variables, no bindings, no secrets. wrangler.jsonc must stay an assets-only
-// worker, and public/404.html must exist because not_found_handling asks Cloudflare to
-// answer unrouted paths with it. cloudflare-config.test.ts holds the three serving files
-// equal to vercel.json; this file holds the serving contract vercel.json cannot express.
+// Cloudflare serves the production client as static assets only: no Worker script, variables, bindings
+// or secrets. public/404.html must exist because not_found_handling answers unrouted paths with it.
+// This holds what vercel.json cannot express; cloudflare-config.test.ts holds the rest equal to it.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

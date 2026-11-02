@@ -95,8 +95,7 @@ export default function CosmeticPacks({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cardFor, setCardFor] = useState<Record<string, string>>({});
-  // The shard points the panel read before the last opening: where the bar plays from; none when the
-  // bar was just read, or emptied by a chase, and it rests.
+  // The points read before the last opening, where the bar plays from; none when it rests.
   const [shardFrom, setShardFrom] = useState<number | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(true);
@@ -150,8 +149,7 @@ export default function CosmeticPacks({
         setShardFrom(next.shardBefore);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
         onChanged?.();
-        // The collection and the owned cosmetics moved too: read them back, so the chase
-        // choice prices what the account holds now.
+        // The collection and owned cosmetics moved too: read them back so the chase choice prices them now.
         Promise.all([getCollection(token), getOwnedCosmetics(token)]).then(
           ([nextCollection, nextOwned]) => {
             setCollection(nextCollection);
@@ -247,8 +245,7 @@ export default function CosmeticPacks({
           {opened === null ? null : (
             <div className="pack-slots" data-testid={shopTestid.reveal}>
               {opened.slots.map((slot, index) => {
-                // R1827000, R1833000: a cosmetic shows its look: a portrait's art, an account cosmetic's
-                // board or back, a per-card one on its card.
+                // R1827000, R1833000: a cosmetic shows its look, a per-card one on its card.
                 const look =
                   slot.grant.kind === "cosmetic" && hasLook(slot.grant.cosmeticId, slot.grant.cardId)
                     ? { id: slot.grant.cosmeticId, cardId: slot.grant.cardId }
@@ -320,7 +317,7 @@ export default function CosmeticPacks({
   );
 }
 
-/** The moment a full bar reveals: the chase choice, as a reward flies out of the bar (`kind` and `rarity` set its sting and look). */
+/** The chase choice's moment, a reward flying out of the bar (`kind` and `rarity` set its sting and look). */
 function chaseReveal(): RevealItem[] {
   return [
     { key: "chase", kind: "cosmeticToken", label: t("The bar is full — pick a chase:"), rarity: "Legendary" },
@@ -328,9 +325,8 @@ function chaseReveal(): RevealItem[] {
 }
 
 /**
- * The Chase Shard bar, and the Legendary-or-Mythic choice only when full. An opening that took the
- * bar from short of full to full plays the sweep, then the bar bursts and the choice is revealed as a
- * moment of its own; a bar read full, or one a further opening only held full, shows its choice at once.
+ * The Chase Shard bar, and its choice only when full. An opening that filled it plays the sweep, then the
+ * bar bursts and reveals the choice; a bar read full, or held full by a further opening, shows it at once.
  */
 function ShardBar({
   info,

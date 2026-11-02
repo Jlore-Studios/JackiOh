@@ -1,8 +1,7 @@
 // R291 lessons are deterministic R187 practice games with the R290 handicap; the practice core exposes
-// only the human's view (rule 7). R2205003, R2434001: five lessons, one subject each; the human's
-// decks Training Grounds cards; no Legendary or Mythic card in either deck before the last and the
-// pool hold on both seats there; the last lesson's human deck holding the set's Legendary and Mythic
-// cards. R2533001: the AI's decks Training Grounds cards too, never Legendary or Mythic.
+// only the human's view (rule 7). R2205003, R2434001, R2533001: five lessons, one subject each, of
+// Training Grounds cards, with Legendary and Mythic cards only in the last lesson's human deck and
+// the pool hold on before it.
 
 import { describe, expect, it } from "vitest";
 
@@ -34,10 +33,8 @@ const FINALE_SHOWPIECES: readonly string[] = ["traininggrounds-037", "traininggr
 const EVERYTHING = 5;
 
 /**
- * R2434001 (§9.10): the lesson that teaches each ability a card can show on its face, so a deck holds
- * "nothing a later lesson teaches": its type, a keyword, or an ability its text names. Lesson 1 is
- * units with a few Cries and Rush; lesson 2 the other keywords; lesson 3 spells; lesson 4 the backrow;
- * every other keyword and ability is lesson 5's.
+ * R2434001 (§9.10): the lesson that teaches each ability a card can show on its face (its type, a keyword,
+ * or an ability its text names), so a deck holds "nothing a later lesson teaches".
  */
 const TYPE_LESSON: Readonly<Record<string, number>> = { Unit: 1, Spell: 3, Trap: 4, "Field Trap": 4, "Field Spell": 4 };
 // Trample comes only on TG #14 Explosive Trap's damage, so it is the backrow's, with its Trap.
@@ -53,7 +50,6 @@ const TEXT_LESSON: readonly (readonly [string, number])[] = [
 /** R2201000: all the idle human ever sends, the mulligan and a prompt's answer aside. */
 const IDLE_MOVES: readonly string[] = ["mulligan", "answer", "endTurn"];
 
-/** Every ability of a card's face with the lesson that teaches it. */
 function abilitiesOf(card: CardDef): { ability: string; lesson: number }[] {
   const found: { ability: string; lesson: number }[] = [{ ability: card.type, lesson: TYPE_LESSON[card.type] ?? Infinity }];
   for (const keyword of card.base.keywords) found.push({ ability: keyword.kind, lesson: KEYWORD_LESSON[keyword.kind] ?? EVERYTHING });
@@ -121,8 +117,7 @@ describe("R291 the tutorial's lessons", () => {
         expect(def(id).token, `${lesson.id}: ${id} is no Token`).toBe(false);
         expect(def(id).set, `${lesson.id}: ${id} is a Training Grounds card`).toBe(HUMAN_SET);
       }
-      // R2434001: a card comes twice only when it is a vanilla unit, one with no text or only Rush,
-      // and never more often than TUTORIAL_HUMAN's deckCopies (R2433001).
+      // R2434001: only a vanilla unit comes twice, never more often than TUTORIAL_HUMAN's deckCopies (R2433001).
       const seen = new Map<string, number>();
       for (const id of lesson.humanDeck) {
         if (seen.has(id)) expect(vanilla(def(id)), `${lesson.id}: ${id} ${def(id).name} comes twice`).toBe(true);

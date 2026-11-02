@@ -1,15 +1,13 @@
 //! #37 Gravedigger (SPEC §8.2): 4/5 → 8/10, "Start of turn: add a random card from your GY to your
 //! hand", radiant "Discover one from your GY; it costs 1 less". The radiant cell restates the whole
 //! clause: the random add becomes a Discover plus the discount (§8 Conventions).
-//!
 //! Base is one verb: `addRandomFromGraveyard` draws from `ctx.rng` (CLAUDE.md rule 4) and does nothing
 //! on an empty graveyard (§8.2 Engine: "Empty GY → nothing"). Start-of-turn hooks run before the draw.
-//!
 //! Radiant opens a RESOLUTION prompt at the start of a later turn, so R81's "travels in the play action"
 //! does not apply: it offers the actual graveyard (R50), and an empty one opens no prompt. The answer
-//! re-enters through the `resume.picked` step table, not the `startOfTurn` hook that opened it, with the
-//! pick in `ctx.targets`; `bounce` moves it to its owner's hand (R747, §6.3), then `setCostMod -1` is
-//! R65's "costs 1 less", kept in every zone (R78); a pick a full hand burns gets none (§2.4, R4).
+//! re-enters through the `resume.picked` step, the pick in `ctx.targets`; `bounce` moves it to its
+//! owner's hand (R747, §6.3), then `setCostMod -1` is R65's "costs 1 less", kept in every zone (R78);
+//! a pick a full hand burns gets none (§2.4, R4).
 
 use jackioh_engine::effects::{add_random_from_graveyard, bounce, discover_from_graveyard, set_cost_mod};
 use jackioh_engine::prelude::*;
@@ -19,8 +17,7 @@ pub const ID: &str = "core-037";
 /// The step name the Discover's continuation carries (`script.resume[step]`).
 const PICKED: &str = "picked";
 
-// R65: "costs 1 less" is a −1 `costMod` on the chosen instance, permanent and zone-proof (R78); the 1
-// is the declared number `discount` (R386).
+// The 1 of "costs 1 less" is the declared number `discount` (R386).
 
 pub fn script() -> CardScripts {
     CardScripts {
@@ -56,8 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #37 Gravedigger (SPEC §8.2, BUILD M4-T4): "Random GY card to hand at start of turn before the
-// draw; empty GY nothing; radiant Discover at −1."
+// #37 Gravedigger (SPEC §8.2, BUILD M4-T4).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -75,7 +71,7 @@ mod tests {
     /// The card that seed picks out of the three-card graveyard; pinned per CLAUDE.md rule 4.
     const SEEDED_PICK: &str = MANA_WELL;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -133,8 +129,7 @@ mod tests {
                 def_ids(&s.hand("p1")).into_iter().filter(|id| id != DRAWN).collect()
             };
 
-            // The seed above picks Mana Well out of the three; the point of the assertion is that the
-            // outcome is pinned, not which card it is.
+            // The seed picks Mana Well; the point is that the outcome is pinned, not which card it is.
             assert_eq!(moved(&first), strings(&[SEEDED_PICK]));
             assert_eq!(moved(&second), strings(&[SEEDED_PICK]));
             // It MOVED: one card left the graveyard rather than being copied out of it (R78, §6.3).
@@ -157,7 +152,6 @@ mod tests {
 
             s.start_turn();
 
-            // Only the turn's draw reached the hand.
             assert_eq!(def_ids(&s.hand("p1")), strings(&[DRAWN]));
             assert!(s.pile("p1", "graveyard").is_empty());
         }
@@ -176,7 +170,6 @@ mod tests {
 
             s.start_turn();
 
-            // A genuine resolution prompt, not a play-time choice (R81): it opened a PendingChoice.
             let pending = s
                 .state()
                 .pending
@@ -184,7 +177,6 @@ mod tests {
                 .expect("the radiant face should have opened a Discover");
             assert_eq!(pending.kind, PromptKind::Discover);
             assert_eq!(pending.player_id, PlayerId::P1);
-            // R50: the options are the real graveyard instances, not a catalog pool.
             let offered: Vec<Selection> = pending.options.iter().map(|option| option.selection.clone()).collect();
             assert_eq!(offered.len(), 3);
             for selection in &offered {
@@ -195,18 +187,14 @@ mod tests {
 
             let picked = s.card(MANA_WELL).clone();
             s.expect_in_zone(&picked, "hand");
-            // R65: "costs 1 less" is a −1 costMod, and R78 keeps it in every zone.
             assert_eq!(picked.cost_mod, -1);
             assert_eq!(effective_cost(s.state(), s.card(&picked.id), Default::default()), 2);
-            // The other two are still in the graveyard: Discover moves the pick alone.
             let left = def_ids(&s.pile("p1", "graveyard"));
             assert_eq!(sorted(left), sorted(strings(&[HIT_JOB, STOCKPILE])));
         }
 
-        /// KNOWN FAILING, deliberately: the assertion states R62's order ("start-of-turn triggers → draw"),
-        /// not the engine's, which draws INSIDE the open prompt (log: promptOpened, drawn, addedToHand,
-        /// promptAnswered). The fix is in the engine's start of turn, not here: park the owed draw in
-        /// `state.work` as the end of turn does and let the answer finish it (R113, R117, R122).
+        /// R62's order ("start-of-turn triggers → draw") across the prompt: the owed draw waits in
+        /// `state.work` for the answer (R113, R117, R122).
         #[test]
         fn r62_radiant_resumes_across_the_prompt_the_draw_comes_after_the_start_of_turn_trigger() {
             let mut s = scn(json!({
@@ -223,11 +211,9 @@ mod tests {
 
             assert!(s.state().pending.is_none());
             assert!(s.state().work.is_empty());
-            // The draw that follows the start-of-turn hook happened, and the picked card is there too.
             assert_eq!(sorted(def_ids(&s.hand("p1"))), sorted(strings(&[DRAWN, MANA_WELL])));
             assert_eq!(s.state().phase, Phase::Main);
-            // R62's order, as a subsequence: the Discover opens, is answered and puts its pick in hand,
-            // and only then does the turn draw. Red until the engine owes the draw to `state.work`.
+            // A subsequence: the Discover opens, is answered and puts its pick in hand, then the turn draws.
             s.expect_events(json!(["promptOpened", "promptAnswered", "addedToHand", "drawn", "addedToHand"]));
         }
 

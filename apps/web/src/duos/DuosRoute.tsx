@@ -1,24 +1,14 @@
 // `/duos/<matchId>` (#936 S8, B61–B64): the networked co-op board over `/ws/duos`.
 //
-// As `/match/<id>` is (routes/match.tsx), the whole route is intent in and views out: open the socket
-// (`socket.ts`), render the `DuosView` and `legal` the server pushed through `DuosBoard` — Game.tsx
-// for the own duel — and send what the board reports straight back. CLAUDE.md rule 7: nothing on
-// screen comes from anywhere but the view, and no move is offered that `legal` does not list.
+// As `/match/<id>` is (routes/match.tsx), the route is intent in and views out: it renders the
+// `DuosView` and `legal` the server pushed (`socket.ts`) through `DuosBoard` and sends what the board
+// reports straight back. CLAUDE.md rule 7: nothing on screen comes from anywhere but the view.
 //
-// The catalog is the one the client ships (together/catalog.ts), as on the match screen, so cards wear
-// their names from the first render; the provider is always rendered, so the board never remounts.
-//
-// A finished game's result panel offers "Watch the replay" (#965, §13.9): the route then swaps the
-// board for `DuosReplay.tsx`, which reads the server's replay once, and "back" returns to the result.
-//
-// PLAY AGAIN (R2092000): `usePlayAgain` reads the two seats' offers every SERIES_POLL_SECONDS while
-// the result is up, as Rematch.tsx reads the rematch's, and holds the state above the panel, so the
-// #1755 fold keeps it. On a new path, `<Gated key={path}>` remounts the route and `useDuosMatch`
-// opens the new match's socket.
-//
-// The route takes the bearer the gate resolved, as `/match/<id>` does, and hands each renewal to the
-// socket (R194, R1115000); the gate in main.tsx has already let a signed-in, active account through,
-// and keys the route by the provider session, so a new session opens a new socket.
+// The catalog is the one the client ships (together/catalog.ts), so cards wear their names from the
+// first render; the provider is always rendered, so the board never remounts. "Watch the replay"
+// (#965, §13.9) swaps the board for `DuosReplay.tsx`. The route hands each renewal of the gate's
+// bearer to the socket (R194, R1115000); the gate keys the route by the provider session, so a new
+// session opens a new socket.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -102,8 +92,7 @@ function goToMatch(matchId: string): void {
 /**
  * R2092000: this seat's Play again offer and the two seats' status, read every SERIES_POLL_SECONDS
  * while the result is up, as Rematch.tsx reads the rematch's. The state lives above the panel, so
- * the #1755 fold keeps it; on a new path, `<Gated key={path}>` remounts the route and `useDuosMatch`
- * opens the new match's socket.
+ * the #1755 fold keeps it; a new path remounts the route (`<Gated key={path}>`).
  */
 function usePlayAgain(matchId: string, reading: boolean): DuosPlayAgain {
   const [status, setStatus] = useState<DuosAgainStatus | null>(null);
@@ -177,13 +166,10 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
   const lookup = useCatalogLookup();
   // #965: the result panel's replay is open. Held above the early returns, which a hook may not follow.
   const [watching, setWatching] = useState(false);
-  // R2092000: the result panel's Play again, held above the early returns with it, so the #1755
-  // fold keeps the offer's state.
   const playAgain = usePlayAgain(matchId, match.view !== null && match.view.result !== null && !watching);
 
-  // BUILD M5-T3's `window.__jackioh` outside production: the own duel's view-derived state, which is
-  // what the shared Cypress commands read (`cy.keepMulligans` waits on it), and a dispatch of a duel
-  // move as the board would send it.
+  // BUILD M5-T3's `window.__jackioh` outside production: the own duel's view-derived state, which the
+  // shared Cypress commands read (`cy.keepMulligans` waits on it), and a duel move's dispatch.
   const latest = useRef(match);
   latest.current = match;
   useEffect(

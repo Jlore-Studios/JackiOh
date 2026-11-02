@@ -3,16 +3,12 @@
 //!
 //! Base:    "Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
 //! Radiant: "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
-//! Engine: a trigger on `damage` aimed at this card, as Core #91 Fed Fauci's, returning
-//! `discard_random { count: discards, player: self }`. Every damage instance is one discard, and each hit
-//! of a sweep is its own (R59). A hit Armor or a cap took whole, or a Divine Shield took, emits no
-//! `damage` event (R63), so it costs nothing. The discard is random (R682) and comes from the hand of
-//! whoever controls the Rhino as the hit lands (R212); an empty hand discards nothing and draws no random
-//! number (R129); on the opponent's turn the discard is a forced one, which M #1 Disruptive Disruptor's
-//! guard stops (R800). A hit that kills it discards nothing: the state check removes it before its trigger
-//! pops, and a trigger of a card that has left the field ends there (R153, R174, R780). Its keywords are
-//! catalog data, so the Radiant face's script is the base's. Patch v0.3.10 (#831) gave both faces Rush
-//! and Windfury and the Radiant face First Strike in place of its Trample, at 10/18 (11/20 before).
+//! A trigger on `damage` aimed at this card, as Core #91 Fed Fauci's: every damage instance is one
+//! discard (R59). A hit Armor or a cap took whole, or a Divine Shield took, emits no `damage` event
+//! (R63), so it costs nothing. The discard comes from the hand of whoever controls the Rhino as the hit
+//! lands (R212); an empty hand draws no random number (R129). A hit that kills it discards nothing:
+//! the state check removes it before its trigger pops, and a trigger of a card that has left the field
+//! ends there (R153, R174, R780). Its keywords are catalog data (#831), so both faces share one script.
 
 use jackioh_engine::prelude::*;
 
@@ -55,12 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #2 Rampaging Rhino — SPEC §8.8 row 2, BUILD M10 row M 2: "A trigger on `damage` aimed at it, one random
-// discard per damage instance from the hand of whoever controls it as the hit lands (R212, R682); a sweep
-// hits each Rhino once (R59); a hit Armor takes whole discards nothing (R63); an empty hand discards nothing
-// and draws no random number (R129); a hit that kills it discards nothing (R174, R780); Rush and
-// Windfury on both faces, First Strike on the Radiant one; discards reads through param() (R386)".
-//
+// M #2 Rampaging Rhino — SPEC §8.8 row 2, BUILD M10 row M 2.
 // Fixtures: #61 Prejudiced Postdoc (2/4, its Cry never fires when it is placed, R1) hits for 2 and dies to the
 // Rhino's 5; #4 Gary the Gambler is a 1/1 striker and #8 Mr. Vanilla a 4/4; #13 Shredder-10 deals 2 to each
 // enemy Unit at its end of turn; #10 Rapid Replenish is a (0) Spell, which fills a hand and keeps the acting
@@ -238,7 +229,6 @@ mod tests {
             assert_eq!(discarded(&s, P1), 0);
             s.play(ECLIPSE, at(&rhino));
             s.expect_stats(&rhino, json!({ "attack": 5, "health": 6, "maxHealth": 9 }));
-            // The hit landed on P1's Rhino, so P1 discards, and P2's hand is as it was.
             assert_eq!(discarded(&s, P1), 1);
             assert_eq!(s.hand(P1).len(), 2);
             assert_eq!(discarded(&s, P2), 0);

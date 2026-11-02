@@ -1,21 +1,14 @@
-//! Temporary (R637): a card that is discarded from its owner's hand at the end of their turn. The
-//! keyword is a card keyword and not temporary mana (§2.3, `mana.rs`), which is a different thing that
-//! only shares the word, so nothing here or in the card data is called "temporary" without "card".
+//! Temporary (R637): a card discarded from its owner's hand at the end of their turn. It is a card
+//! keyword, not temporary mana (§2.3, `mana.rs`), so nothing here is called "temporary" without "card".
 //!
-//! A card is Temporary when its running face prints it or an effect granted it (`card_keywords`, the
-//! set a card in a hand is made of), so a Vanilla card has lost the printed one and keeps a given one,
-//! as §10.4 keeps every granted keyword. Cleanup (`turn.rs`) counts them down after every end-of-turn
-//! step, so an end-of-turn effect, a trap and a delayed effect may still play or use them first; the
-//! discard is a real one (§6.3), so "whenever you discard" sees each card, and `endOfTurnCleanupSettle`
-//! answers its events like cleanup's others.
+//! A card is Temporary when its running face prints it or an effect granted it (`card_keywords`), so a
+//! Vanilla card keeps only a granted one (§10.4). Cleanup (`turn.rs`) counts them down after every
+//! end-of-turn step, so an end-of-turn effect, a trap or a delayed effect may still use them first; the
+//! discard is a real one (§6.3): "whenever you discard" sees each (`end_of_turn_cleanup_settle`).
 //!
-//! R2179001: Temporary X. The number is the count of its owner's ends of turn the card outlasts in
-//! their hand: each cleanup takes 1 off, and the card is discarded once it reaches 0. A plain Temporary
-//! is Temporary 1, discarded at the first, as before the number. What is left after a count-down rides
-//! the instance (`CardInstance.temporary`) and stands in for the keyword's number from then on, so the
-//! view shows the count as it stands (`layers::card_keywords`).
-//!
-//! Port of `packages/engine/src/temporary.ts`.
+//! R2179001: Temporary X counts the owner's ends of turn the card outlasts in hand: each cleanup takes
+//! 1 off and the card is discarded at 0; a plain Temporary is Temporary 1. The count left rides the
+//! instance (`CardInstance.temporary`) and stands in for the keyword's number, so the view shows it.
 
 use crate::layers::card_keywords;
 use crate::script::EngineSink;
@@ -68,8 +61,7 @@ pub fn with_temporary_count(keywords: &[Keyword], instance: &CardInstance) -> Ve
 }
 
 /// R637, R2179001: every Temporary card in `player`'s hand counts down by 1, in hand order, and each
-/// that reaches 0 goes to their graveyard. Deterministic and drawing nothing from the rng, like a
-/// whole-hand discard (`move_::discard_hand`): no choice arises.
+/// that reaches 0 goes to their graveyard. No choice arises, so it draws nothing from the rng.
 pub fn discard_temporary_cards(sink: &mut EngineSink<'_>, player: PlayerId) {
     // A snapshot: a discard splices the hand.
     let hand: Vec<CardInstance> = sink.state.players[player].hand.clone();

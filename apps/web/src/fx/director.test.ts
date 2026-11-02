@@ -1,6 +1,5 @@
 // Polish 1 (docs/polish/1-animations.md, S8): effects director tests, B32–B35.
 // Public seams only; 5 ms frames make every multiple-of-five delay land exactly on its due frame.
-// Timing starts at T0.
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -288,8 +287,6 @@ function measuredTestids(calls: readonly { anchor: FxAnchor }[]): string[] {
   return calls.flatMap((call) => (call.anchor.kind === "testid" ? [call.anchor.testid] : []));
 }
 
-// B32: cues fire at the measured box and expire by D + T.
-
 describe("B32 — the director fires each cue on time and leaves nothing behind", () => {
   it("freezes FX visual time during hit-stop and resumes from the remaining lifetime", () => {
     const h = harness();
@@ -472,7 +469,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
 });
 
 // B33: clear() and a hidden page.
-
 describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock ages", () => {
   it("B32 a banner replaces one still fading, so two never read over each other", () => {
     const h = harness();
@@ -760,8 +756,6 @@ describe("B34 — particle capacity", () => {
   });
 });
 
-// B35: shake reaches the board only through the sink.
-
 describe("B35 — the shake goes through the sink", () => {
   it("B35 a shake cue drives the sink with offsets bounded by trauma², then clears it once when the trauma is spent", () => {
     const h = harness();
@@ -823,7 +817,6 @@ describe("B35 — the shake goes through the sink", () => {
 });
 
 // B41: flash presets bloom at their origin.
-
 describe("B41 — bursts of a flash preset bloom at their origin", () => {
   it("B41 a spark burst leaves a bloom running after its particles are counted, and it is gone within the preset's flash time", () => {
     const flashMs = PARTICLE_PRESETS.spark.flash?.ms ?? 0;
@@ -859,8 +852,7 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     const plain = play();
     const tinted = play(palette);
 
-    // The particles are drawn (jsdom gives them no sprites, so as arcs) only in the palette's colors,
-    // and the bloom's gradient takes its first color as the core and its last as the glow.
+    // jsdom gives particles no sprites, so they draw as arcs, in the palette's colors only.
     const particleFills = tinted.h.surface.fills.filter((fill): fill is string => typeof fill === "string");
     expect(particleFills.length).toBeGreaterThan(0);
     for (const fill of particleFills) expect(palette).toContain(fill);

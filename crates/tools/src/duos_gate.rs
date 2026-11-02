@@ -1,22 +1,12 @@
 //! `cargo jackioh gate --duos [--games N]`: the Duos gate (#936 B32, S5). `jackioh_ai::duos` plays and
 //! measures the games; this file runs them, prints the report and fails under the floor.
 //!
-//! The gate plays two matchups (#1760), one per `DuosOpponent`, each over the same game count. Game n
-//! against opponent `o` is `duos_gate_game(n, DUOS_GATE_SERIES, o)`: the Easy AI team (`duos_decide` at
-//! AI_GATE_BUDGET) against a team on §10.7's random policy over `duos_legal_actions` (seed
-//! `${DUOS_GATE_SERIES}:${n}`) or against a team whose seats each play the 1v1 greedy baseline in their
-//! own duel (seed `${DUOS_GATE_SERIES}:greedy:${n}`), the AI on team A in odd games and on team B in
-//! even ones, every seat dealt by the AI's deck rule. A game is a pure function of its opponent and
-//! number, so the games run in parallel (rayon) and each report is the one
-//! `duos_gate(games, DUOS_GATE_SERIES, o)` gives. Without `--games` it plays DUOS_GATE_GAMES_SMOKE per
-//! matchup. A matchup passes when the AI team wins at least the opponent's floor
-//! (`DuosOpponent::win_floor`: DUOS_GATE_WIN_FLOOR against random, DUOS_GATE_GREEDY_WIN_FLOOR against
-//! greedy) of the games and no game had an action refused, on either team, nor an AI action off a
-//! fallback path, nor a panic an AI seat's search caught (#1429, `DuosGateReport::passes`); a draw
-//! counts for nothing. Output goes to stdout; the gate fails when either matchup does, returning an
-//! `Err` with one message per failed matchup, each naming the games not won, the games with a refusal,
-//! the games with a fallback (seed and count only) and the games with a search panic (seed, count, and
-//! the first one's seat and message) (exit 1).
+//! Two matchups (#1760), one per `DuosOpponent`: the Easy AI team against §10.7's random policy and
+//! against a team on the 1v1 greedy baseline, `DUOS_GATE_GAMES_SMOKE` games each without `--games`. A
+//! game is a pure function of its opponent and number, so the games run in parallel. A matchup passes
+//! when the AI team wins at least `DuosOpponent::win_floor` of the games (a draw counts for nothing)
+//! with no refused action, AI fallback or caught search panic (#1429); else the gate exits 1, one
+//! message per failed matchup.
 
 use anyhow::{Result, anyhow};
 use rayon::prelude::*;

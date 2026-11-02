@@ -1,144 +1,42 @@
-//! The card test harness (BUILD M4-T3; SURFACE §8). Port of `packages/cards/test/_harness.ts`, with
-//! `packages/cards/test/_harness.test.ts` as this file's `mod tests` (part 5).
+//! The card test harness (BUILD M4-T3; SURFACE §8); its `mod tests` tests the harness itself.
 //!
-//! In TS, importing the harness registered the real catalog and every script (`registerAll()`). The
-//! engine crate cannot name `jackioh_cards` (it depends on the engine), so a card test calls
-//! `jackioh_cards::register_all()` first, or a test with fixture cards installs them with this
-//! file's `register_catalog`/`register_scripts`: the thread-local override that
-//! `catalog::registered_catalog()` and `scripts::script_of()` consult first under the `testkit`
-//! feature (SURFACE §8). Each `#[test]` runs on its own thread, so an override is that test's alone.
+//! The engine cannot name `jackioh_cards`, so a card test calls `jackioh_cards::register_all()` first, or
+//! installs fixture cards with `register_catalog`/`register_scripts`, a thread-local override that
+//! `catalog::registered_catalog()` and `scripts::script_of()` consult first (SURFACE §8). A scenario is built
+//! from the engine's own functions (`create_game`, `place_on_field`, …), never a state literal, so it has
+//! every field the engine adds later.
 //!
-//! A scenario is built out of the engine's OWN functions — `create_game`, `new_instance`,
-//! `place_on_field`, `move_to_zone`, `create_in_hand`, `refresh_mana`, `state_check` — never out of a
-//! hand-written state literal, so a state built here always has every field the engine adds later.
+//! DEFAULTS (`seed`, `turn`, `active` change them): seed "jackioh-harness", active "p1", turn 9, so the
+//! active side has started 5 turns and the other 4 (§2.5: `turnsStarted` follows `active`/`turn`), both at
+//! MAX_MANA; `SideSetup.mana` sets `current` only (§2.3). The scenario starts in `main` with the mulligan,
+//! `begin_game` and the opening `start_turn` skipped: setup draws nothing and fires no trigger, `field` units
+//! are not summoning sick, both exertions unspent.
 //!
-//! ---------------------------------------------------------------------------------------------
-//! DEFAULTS  (pass `seed`, `turn`, `active` to change them)
-//! ---------------------------------------------------------------------------------------------
-//!   seed    "jackioh-harness"
-//!   active  "p1"
-//!   turn    9  — a mid-game board: the active side has started ceil(9/2) = 5 turns and the other
-//!               floor(9/2) = 4, so both sides sit at MAX_MANA (4/4) with no asymmetry to reason
-//!               about. Turn counts player-turns (§2.5): turn 1 is p1's first, 2 is p2's first.
-//!               `turnsStarted` always follows `active`/`turn` by that rule, NOT by the parity of
-//!               `turn`, so `{ "active": "p2", "turn": 9 }` gives p2 five started turns and p1 four.
-//!   mana    each side's `mana.max` is whatever `refresh_mana` computes from `turnsStarted`, and
-//!           `mana.current` equals it. `SideSetup.mana` sets `current` only — §2.3 lets current
-//!           exceed max, so the harness never raises max.
-//!   health  HERO_HEALTH (30); armor 0.
+//! SIDE SETUP (each key's rule is on its `FieldEntry` or `CostSetup` field): `def` and `defId` are aliases,
+//! exactly one is required, and a bare string is `{ def }`. `radiant: true` works in any zone, a library's
+//! top included (#21, #23). An entry's row comes from its def's type (`row` overrides it) and a Spell is
+//! refused in either (§3.2). Lanes are handed out per row, `field` first: a named `lane` is kept, the rest
+//! take the leftmost free zone; a `stack: true` entry buries the card in its lane, so a pile's list reads
+//! bottom-first (R13).
 //!
-//! The scenario starts in `phase: "main"` with the mulligan, `begin_game` and the opening `start_turn`
-//! all skipped: setup draws nothing and fires no trigger. Units placed by `field` are NOT summoning
-//! sick (`summonedTurn` is left unset) and have both exertions unspent.
+//! STRING REFERENCES, first match wins: an instance id that exists right now, a catalog id, a SPEC §5 index
+//! (`"43"`, `"51.1"`, `"T-rush"`), a card name (exact, then case-insensitive). The last three take the first
+//! instance of that def, the active player's first: hand, unit zones (lane by lane, a pile's top first),
+//! backrow, graveyard, exile, library, resolving. `play` searches hands only, `attack`/`switch_position` the
+//! field only. No match panics listing what was there; for one of several copies pass the `CardInstance`.
 //!
-//! ---------------------------------------------------------------------------------------------
-//! SIDE SETUP  (what `p1`/`p2` accept)
-//! ---------------------------------------------------------------------------------------------
-//!   hand, library, graveyard, exile   (string | { def?, defId?, radiant?, costMod?, costOverride? })[]
-//!   field, backrow                    (string | { def?, defId?, radiant?, row?, lane?, stack?,
-//!                                                 position?, damage?, counters?, faceUp?,
-//!                                                 statsOverride?, costMod?, costOverride?,
-//!                                                 slumber? })[]
-//!   health, mana, armor               number
-//! `def` and `defId` are aliases: exactly one is required, and both with different values throws
-//! naming both. A bare string is `{ def: <string> }`. `radiant: true` sets the instance's Radiant
-//! flag in whatever zone the entry names, a library or a hand included (#21, #23 need a Radiant
-//! card sitting on top of a library). `statsOverride` is §10.4 layer 1 / R41's X/X token. `slumber`
-//! lays a field card down Dormant with that countdown (R1839000); the setup is no arrival, so a
-//! card's printed Dormant starts only when it is played or summoned in the test.
-//! `counters` seeds §10.1's instance counters — #91's `plague`, #93's `grade`. `costMod` and
-//! `costOverride` seed §2.3's cost layers, which R78 keeps in every zone, so a ruling about the cost
-//! at resolution rather than the printed cost (R65, R66) can be set up in a hand or a library.
-//! `faceUp` is written exactly as given, so `faceUp: false` reads back `Some(false)` rather than
-//! `None` (R33: a Trap is face-down until it fires).
+//! INSTANCES ARE SNAPSHOTS: a `CardInstance` captured before a step is stale after it. Every method
+//! re-resolves one by `id`, but read state back with `s.card(inst)`, `s.unit(p, lane)` or
+//! `s.expect_stats(…)`.
 //!
-//! `stack: true` builds a §3.2 Stack pile, in a unit zone or a backrow zone (B5 E21): the entry
-//! buries the card already in its lane instead of taking a lane of its own, so the `lane` may be
-//! repeated, and with no `lane` it lands on the entry before it in its row. Later entries go on top,
-//! the way a play would put them, so the pile reads top-first and the list reads bottom-first:
-//!   "field": ["core-043", { "def": "core-092", "stack": true }]
-//! is a Felinor Fiender on top of a Big Felinor in lane 1, the Big Felinor dormant (R13).
+//! `end_turn()` is the `endTurn` action: the opponent really takes a turn, so two come back to your next
+//! turn, and a turn with nothing meaningful left auto-ends (`turnAutoEnded`, §2.5), so give each side a card
+//! in hand or a unit when a test crosses turns. `start_turn()` does not pass the turn.
 //!
-//! `field` and `backrow` describe ONE board and take the same entries: an entry's row comes from
-//! its def's type — a Unit to the unit zones, a Field Spell / Trap / Field Trap to the backrow —
-//! and `row: "units" | "backrow"` overrides that, so `field: [{ defId: MANA_WELL, row: "backrow" }]`
-//! and `backrow: [{ defId: MANA_WELL }]` are the same setup — and a card filed under the wrong list
-//! is routed by its type rather than refused. Only an explicit `row` that contradicts the type is an
-//! error, and a Spell is refused in either list: §3.2 never puts one on the field.
-//! Lanes are handed out per row over the whole board, `field` entries
-//! first: an entry naming a `lane` keeps it, and the rest take the leftmost zone still free, in
-//! list order. Instances are created in list order either way, so the ids follow the literal.
-//!
-//! ---------------------------------------------------------------------------------------------
-//! STRING REFERENCES  (`play("43", …)`, `attack("Big Felinor", "hero")`, `expect_in_zone("c7", "gone")`)
-//! ---------------------------------------------------------------------------------------------
-//! A `string` is resolved in this order, first match wins:
-//!   1. an instance id that exists right now (`"c7"`);
-//!   2. a catalog id (`"core-043"`);
-//!   3. a SPEC §5 index (`"43"`, `"51.1"`, `"T-rush"`);
-//!   4. a card name, exact (`"Big Felinor"`), then case-insensitive.
-//!      Steps 2-4 give a defId, and the instance is then the first one found scanning
-//!      the ACTIVE player first, then the opponent, and within a side:
-//!      hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
-//!      backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
-//!      resolving.
-//!      A method that needs the card somewhere particular narrows the search to that place first:
-//!      `play` looks in hands only, `attack`/`switch_position` on the field only. Nothing matching panics
-//!      naming the string and listing what was there instead. Holding several copies of one def?
-//!      Use the `CardInstance` the setup or `s.card(...)` handed back; the string form is first-match.
-//!
-//! ---------------------------------------------------------------------------------------------
-//! INSTANCES ARE SNAPSHOTS
-//! ---------------------------------------------------------------------------------------------
-//! `reduce` returns a new state, so a `CardInstance` you captured before a step is a stale copy after
-//! it. Every harness method re-resolves a `CardInstance` argument by its `id` against the live
-//! state, so passing a stale instance is fine — but never read `.damage`/`.buffs` off one you are
-//! holding; read it back with `s.card(inst)`, `s.unit(p, lane)` or `s.expect_stats(inst, …)`.
-//! `unit`, `backrow`, `hand` and `pile` hand back copies for that reason (and so that a copy can be
-//! passed straight into the next step: `s.attack("core-025", s.unit("p2", 1).unwrap())`).
-//!
-//! ---------------------------------------------------------------------------------------------
-//! start_turn() vs end_turn()  — the two easiest things to get wrong
-//! ---------------------------------------------------------------------------------------------
-//! `start_turn()` runs the engine's `start_turn(sink, state.active)` for the player who is active NOW.
-//!   It does not pass the turn: `state.turn` and that player's `turnsStarted` go up by one, mana
-//!   refreshes, delayed and start-of-turn effects fire, exertion resets, the player draws one card,
-//!   and the phase lands back in `main`. This is what an "at the start of your turn" card test wants.
-//! `end_turn()` is the `endTurn` ACTION: end-of-turn triggers and delayed effects fire, the turn log
-//!   closes, "this turn" modifiers expire — and then `turn.rs` starts the OPPONENT's turn (their
-//!   draw, their triggers). So one `end_turn()` hands the turn over; two come back around to your own
-//!   next turn. It is not `start_turn()` twice: the opponent really takes a turn in between.
-//!   WARNING (engine `reduce`, §2.5): after any action, a turn with nothing meaningful left on it
-//!   auto-ends by itself and emits `turnAutoEnded`. A side with an empty hand and no unit that could
-//!   switch position has nothing meaningful, so `end_turn()` can cascade several turns forward. Give
-//!   each side a card in hand or a unit on the board when a test crosses a turn boundary.
-//!
-//! ---------------------------------------------------------------------------------------------
-//! ZONES, EVENTS, ASSERTIONS
-//! ---------------------------------------------------------------------------------------------
-//! `expect_in_zone(card, "field")` means a unit zone or the backrow, a card dormant under a Stack pile
-//!   included. `"gone"` means in no pile at all: SPEC §3.2 / R11's unit token that ceased to exist
-//!   (`move_to_zone` answers "vanished" and leaves it nowhere). To assert `"gone"` pass the
-//!   `CardInstance` or its instance id — a def reference has nothing left to find.
-//! `expect_stats` reads the engine's `unit_view` (`layers.rs`), so every §10.4 layer is already in the
-//!   number: never `def.base`, never raw `buffs`. `stats(card)` returns that whole `UnitView`
-//!   (attack, maxHealth, health, keywords, armor, position) for a test that needs to read a keyword
-//!   or an Armor total — a `CardInstance` has none of those, they are computed on every read.
-//! `events()` is the cumulative log of every event produced since setup finished, oldest first; the
-//!   events of the setup itself (including a death from a unit placed at lethal damage) are not in
-//!   it. `last_events()` is just the most recent step. `expect_events(...)` searches `events` for those
-//!   types as a SUBSEQUENCE: in that relative order, not necessarily adjacent.
-//! Every refusal — an illegal play, an illegal attack, an answer that matches no option — panics
-//!   with the engine's own message, which is the mechanism the M4-T4 table's "Play refused
-//!   without a tribute" / "locked zone rejects play" / "Uncastable at 4 mana" rows use:
-//!   `s.expect_refused_with(|s| s.play(x, json!({})), "tribute")` (TS `toThrow(/tribute/)`).
-//!   `expect_refused` and `expect_refused_with` pass on those refusals alone (#1247): any other panic
-//!   in the step (a reference that matches nothing, `answer` with no prompt open, a step's argument
-//!   check, an engine crash) fails the test as itself. A test of those panics uses `expect_throw_with`.
-//!
-//! TS's fallbacks for `reduce`'s long-gone placeholder refusals ("combat arrives with M2", "prompts
-//! arrive with M3") are not ported: `attack` and `answer` are plain actions, as every other step is.
-//! `view()` calls `view_for(state, player)` (§10.8) directly.
+//! `expect_in_zone(card, "field")` counts a unit zone or the backrow, under a pile included; `"gone"` is in
+//! no pile (§3.2 / R11's token that ceased to exist). `expect_refused` and `expect_refused_with` pass on
+//! refusals alone (#1247), any other panic fails the test as itself, and a test of those panics uses
+//! `expect_throw_with`. `view()` is `view_for` (§10.8).
 
 use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -169,14 +67,11 @@ pub const DEFAULT_SEED: &str = "jackioh-harness";
 /// A mid-game board: both sides at MAX_MANA. See the file header.
 pub const DEFAULT_TURN: i32 = 9;
 
-// ---------------------------------------------------------------------------------------------
 // Test-only registries (SURFACE §8)
-// ---------------------------------------------------------------------------------------------
 
-// The one exception to SURFACE §3's "no mutable statics": a per-thread override of the two
-// registries, for tests only (this module is compiled under the `testkit` feature alone). Each holds
-// a leaked `&'static`, so `registered_catalog()` can hand it out as it hands out the `OnceLock`'s; a
-// test registers a handful of times, so the leak is bounded by the test run.
+// The one exception to SURFACE §3's "no mutable statics": per-thread registry overrides, compiled
+// under `testkit` alone. Each holds a leaked `&'static`, so `registered_catalog()` hands it out as it
+// does the `OnceLock`'s; a test registers a handful of times, so the leak is bounded.
 thread_local! {
     static CATALOG_OVERRIDE: Cell<Option<&'static CardDefs>> = const { Cell::new(None) };
     static CATALOG_VERSION_OVERRIDE: Cell<Option<&'static str>> = const { Cell::new(None) };
@@ -190,13 +85,13 @@ thread_local! {
         const { Cell::new(None) };
 }
 
-/// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
-/// with until the thread ends or `clear_overrides()` runs. Its version is TS's default, `"test"`.
+/// The catalog `catalog::registered_catalog()` answers with on this thread, at version `"test"`,
+/// until the thread ends or `clear_overrides()` runs.
 pub fn register_catalog(defs: CardDefs) {
     register_catalog_as(defs, "test");
 }
 
-/// TS `registerCatalog(defs, catalogVersion)` for this thread.
+/// `register_catalog` at `catalog_version`.
 pub fn register_catalog_as(defs: CardDefs, catalog_version: &str) {
     let defs: &'static CardDefs = Box::leak(Box::new(defs));
     let version: &'static str = Box::leak(catalog_version.to_string().into_boxed_str());
@@ -204,43 +99,37 @@ pub fn register_catalog_as(defs: CardDefs, catalog_version: &str) {
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(Some(version)));
 }
 
-/// TS `registerScripts(scripts)` for this thread: the scripts `scripts::script_of()` reads until the
-/// thread ends or `clear_overrides()` runs. Like TS, it replaces the whole registry, never merges.
+/// The scripts `scripts::script_of()` reads on this thread until it ends or `clear_overrides()`
+/// runs; it replaces the whole registry, never merges.
 pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
     let scripts: &'static IndexMap<String, CardScripts> = Box::leak(Box::new(scripts));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(Some(scripts)));
 }
 
-/// The catalog this thread registered, if any: what `catalog::registered_catalog()` answers first.
 pub fn catalog_override() -> Option<&'static CardDefs> {
     CATALOG_OVERRIDE.with(Cell::get)
 }
 
-/// The catalog version this thread registered with its catalog, if any (`catalog::catalog_version()`).
 pub fn catalog_version_override() -> Option<&'static str> {
     CATALOG_VERSION_OVERRIDE.with(Cell::get)
 }
 
-/// The scripts this thread registered, if any: what `scripts::script_of()` reads first.
 pub fn scripts_override() -> Option<&'static IndexMap<String, CardScripts>> {
     SCRIPTS_OVERRIDE.with(Cell::get)
 }
 
-/// ME-STATS: the win-rate table this thread registered, if any: what
-/// `catalog::registered_win_rates()` answers first. A leaked `&'static`, like the catalog's.
+/// ME-STATS: the win-rate table `catalog::registered_win_rates()` answers first on this thread.
 pub fn register_win_rates(table: crate::win_rates::WinRateTable) {
     let table: &'static crate::win_rates::WinRateTable = Box::leak(Box::new(table));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(Some(table)));
 }
 
-/// The win-rate table this thread registered, if any.
 pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
     WIN_RATES_OVERRIDE.with(Cell::get)
 }
 
-/// R1183004: the code blocks this thread registered, by catalog id, in place of the compiled ones
-/// (`catalog::code_block_of`), until the thread ends or `clear_overrides()` runs. Leaked, like the
-/// catalog, and sorted by id as the compiled table is.
+/// R1183004: code blocks by catalog id for this thread, in place of the compiled ones
+/// (`catalog::code_block_of`), sorted by id as the compiled table is.
 pub fn register_code_blocks(blocks: Vec<(&str, &str)>) {
     let mut owned: Vec<(&'static str, &'static str)> = blocks
         .into_iter()
@@ -255,28 +144,23 @@ pub fn register_code_blocks(blocks: Vec<(&str, &str)>) {
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(Some(blocks)));
 }
 
-/// The code blocks this thread registered, if any.
 pub fn code_blocks_override() -> Option<crate::catalog::CodeBlocks> {
     CODE_BLOCKS_OVERRIDE.with(Cell::get)
 }
 
 /// R767000: the shipped catalogs `catalog::shipped_catalog()` finds by version on this thread, in
-/// place of the build's, until the thread ends or `clear_overrides()` runs. Leaked, like the catalog.
+/// place of the build's.
 pub fn register_shipped(catalogs: Vec<crate::catalog::ShippedCatalog>) {
     let catalogs: &'static [crate::catalog::ShippedCatalog] = Box::leak(catalogs.into_boxed_slice());
     SHIPPED_OVERRIDE.with(|cell| cell.set(Some(catalogs)));
 }
 
-/// The shipped catalogs this thread registered, if any.
 pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
     SHIPPED_OVERRIDE.with(Cell::get)
 }
 
-/// R1846000: card metrics for this thread, in place of the compiled ones (`catalog::card_metrics`),
-/// until the thread ends or `clear_overrides()` runs: each fixture card's code lines, by catalog id,
-/// and the BUSTED and complicated lists `crates/cards/build.rs` would compile from them (more than
-/// `BUSTED_CODE_LINES`, more than `COMPLICATED_CODE_LINES`). Leaked, like the catalog, and sorted
-/// by id as the compiled tables are.
+/// R1846000: each fixture card's code lines, and the BUSTED and complicated lists `crates/cards/build.rs`
+/// would compile from them, in place of the compiled ones (`catalog::card_metrics`), sorted by id.
 pub fn register_code_lines(lines: Vec<(&str, usize)>) {
     let mut owned: Vec<(&'static str, usize)> = lines
         .into_iter()
@@ -299,25 +183,22 @@ pub fn register_code_lines(lines: Vec<(&str, usize)>) {
     CARD_METRICS_OVERRIDE.with(|cell| cell.set(Some(metrics)));
 }
 
-/// The card metrics this thread registered, if any.
 pub fn card_metrics_override() -> Option<crate::catalog::CardMetrics> {
     CARD_METRICS_OVERRIDE.with(Cell::get)
 }
 
 /// R1853001: the Marketplace's table of lots for this thread, in place of `MARKETPLACE_TABLE`
-/// (`marketplace::marketplace_table`), until the thread ends or `clear_overrides()` runs.
+/// (`marketplace::marketplace_table`).
 pub fn register_marketplace_table(table: &'static [crate::config::MarketLot]) {
     MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(Some(table)));
 }
 
-/// The Marketplace table this thread registered, if any.
 pub fn marketplace_table_override() -> Option<&'static [crate::config::MarketLot]> {
     MARKETPLACE_TABLE_OVERRIDE.with(Cell::get)
 }
 
-/// #1035: one thread's registry overrides (`thread_overrides`), for another thread to take
-/// (`install`), so work a test hands to a blocking pool reads the test's own cards. Each is the
-/// leaked `&'static` the override already holds: nothing is copied.
+/// #1035: one thread's registry overrides (`thread_overrides`), for another thread to `install`, so
+/// work a test hands to a blocking pool reads the test's own cards. Nothing is copied.
 #[derive(Clone, Copy)]
 pub struct ThreadOverrides {
     catalog: Option<&'static CardDefs>,
@@ -359,8 +240,7 @@ pub fn thread_overrides() -> ThreadOverrides {
     }
 }
 
-/// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
-/// `registerAll()` after a fixture registration.
+/// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread.
 pub fn clear_overrides() {
     CATALOG_OVERRIDE.with(|cell| cell.set(None));
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
@@ -372,12 +252,10 @@ pub fn clear_overrides() {
     MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(None));
 }
 
-// ---------------------------------------------------------------------------------------------
 // Public types
-// ---------------------------------------------------------------------------------------------
 
-/// TS `CardRef = string | CardInstance`. A `CardInstance` is held by its id (and def id, for the
-/// message when it is gone), so a copy handed back by a read can go straight into the next step.
+/// A string or a `CardInstance`, held by its id (and def id, for the message when it is gone), so a
+/// copy handed back by a read can go straight into the next step.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CardRef {
     Text(String),
@@ -421,7 +299,7 @@ impl From<&CardInstance> for CardRef {
 }
 
 /// A seat as a harness read or assertion names it: `PlayerId::P1`, `"p1"`, or `()`/`None` for the
-/// active player (TS's omitted `player?` argument).
+/// active player.
 pub trait SeatRef {
     fn seat_or(self, active: PlayerId) -> PlayerId;
 }
@@ -454,8 +332,7 @@ impl SeatRef for () {
     }
 }
 
-/// Every setup entry names its card with `def` OR `defId` — the two are aliases, exactly one is
-/// required, and giving both with different values throws. A bare string is the same as `{ def }`.
+/// A setup entry's card: `def` or `defId` (see the file header).
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DefRef {
@@ -465,9 +342,8 @@ pub struct DefRef {
     pub def_id: Option<String>,
 }
 
-/// R78: "`costMod`, `costOverride` and `radiant` persist in every zone", so a setup may seed the two
-/// cost layers wherever the card sits — which is what a ruling about the cost *at resolution* rather
-/// than the printed cost (R65, R66) needs in order to be testable at all.
+/// R78: "`costMod`, `costOverride` and `radiant` persist in every zone", so a setup seeds the cost
+/// layers wherever the card sits, as a ruling about the cost at resolution (R65, R66) needs.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CostSetup {
@@ -479,7 +355,7 @@ pub struct CostSetup {
     pub cost_override: Option<i32>,
 }
 
-/// TS `DefRef & CostSetup & { radiant? }`: a hand, library, graveyard or exile entry's object form.
+/// A hand, library, graveyard or exile entry's object form.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PileEntry {
@@ -495,7 +371,6 @@ pub struct PileEntry {
     pub created: Option<bool>,
 }
 
-/// TS `PileSetup = string | (DefRef & CostSetup & { radiant? })`.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum PileSetup {
@@ -503,8 +378,7 @@ pub enum PileSetup {
     Entry(PileEntry),
 }
 
-/// One card on the field. `field` and `backrow` take the same shape: the row comes from the def's
-/// type (Units to the unit zones, Field Spells and Traps to the backrow) unless `row` names it.
+/// One card on the field, in `field` or `backrow`.
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldEntry {
@@ -520,10 +394,8 @@ pub struct FieldEntry {
     /// 1-based lane; omitted takes the leftmost zone still free in that row.
     #[serde(default)]
     pub lane: Option<i32>,
-    /// §3.2 Stack: this entry buries the card already in its lane instead of taking a lane of its
-    /// own, so the lane may be repeated. Later entries go on top, as a play would put them: the pile
-    /// reads top-first, which is the reverse of the list. A unit zone or a backrow zone (B5 E21), and
-    /// the buried card must come earlier in the list (or be pinned there with the same `lane`).
+    /// §3.2 Stack, in either row (B5 E21): buries the card already in its lane, which must come
+    /// earlier in the list (or share its `lane`); the pile reads top-first, the reverse of the list.
     #[serde(default)]
     pub stack: Option<bool>,
     #[serde(default)]
@@ -542,14 +414,12 @@ pub struct FieldEntry {
     /// MD-B6, R943: opt a setup card into Created (as on `PileEntry`).
     #[serde(default)]
     pub created: Option<bool>,
-    /// R1839000: the card lies on the field Dormant, with this countdown (`{ "turns": 2 }`, or `{}` for
-    /// none). A setup card is already on the field rather than arriving, so its text starts nothing; a
-    /// card played or summoned in the test enters Dormant by its text.
+    /// R1839000: the card lies Dormant with this countdown (`{ "turns": 2 }`, or `{}` for none). A
+    /// setup card does not arrive, so its own text starts nothing.
     #[serde(default)]
     pub slumber: Option<crate::state::Slumber>,
 }
 
-/// TS `FieldSetup = string | FieldEntry`.
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum FieldSetup {
@@ -557,7 +427,6 @@ pub enum FieldSetup {
     Entry(FieldEntry),
 }
 
-/// TS `BackrowSetup = string | FieldEntry`.
 pub type BackrowSetup = FieldSetup;
 
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
@@ -611,11 +480,9 @@ pub struct PlayOptions {
     pub face_down: Option<RevealAt>,
 }
 
-/// B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81): `ability`
-/// names one when a card has several, `modes` and `targets` are its declared choices, and `tributes`
-/// pays a Tribute its cost names (card references on the field, as `play`'s). With none of `ability`,
-/// `modes` or `tributes` the harness sends `activatePower`, the alias every old log carries, which
-/// the engine routes exactly as `activate` (R43, R384).
+/// B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81). With none of
+/// `ability`, `modes` or `tributes` the harness sends `activatePower`, the alias every old log
+/// carries, which the engine routes exactly as `activate` (R43).
 #[derive(Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivateOptions {
@@ -638,7 +505,7 @@ pub struct ScenarioOptions {
     pub p1: Option<SideSetup>,
     #[serde(default)]
     pub p2: Option<SideSetup>,
-    /// A number, so a fraction or a negative is refused by name as TS refused it.
+    /// A number, so a fraction or a negative is refused by name.
     #[serde(default)]
     pub turn: Option<f64>,
     #[serde(default)]
@@ -655,9 +522,7 @@ pub struct ScenarioOptions {
     pub custom: Option<Vec<crate::wire::CustomCard>>,
 }
 
-// ---------------------------------------------------------------------------------------------
 // Card references
-// ---------------------------------------------------------------------------------------------
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Where {
@@ -666,7 +531,6 @@ enum Where {
     Field,
 }
 
-/// TS `INSTANCE_ID = /^c\d+$/`.
 fn is_instance_id(text: &str) -> bool {
     text.len() > 1 && text.starts_with('c') && text[1..].bytes().all(|byte| byte.is_ascii_digit())
 }
@@ -706,8 +570,7 @@ fn visible_defs(state: &GameState) -> Vec<&CardDef> {
         .collect()
 }
 
-/// Steps 2-4 of the header's resolution order: catalog id, then §5 index, then name (exact, then
-/// case-insensitive). Returns every defId that matched at the first matching step.
+/// Steps 2-4 of the header's resolution order: every defId that matched at the first step to match.
 fn def_ids_for(state: &GameState, text: &str) -> Vec<String> {
     let defs = visible_defs(state);
     let lower = text.to_lowercase();
@@ -769,15 +632,11 @@ fn where_label(scope: Where) -> &'static str {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Setup
-// ---------------------------------------------------------------------------------------------
 
 /// `create_game` validates decks (§2.6: DECK_SIZE cards, no duplicates, no tokens), so the filler
-/// deck is the first DECK_SIZE non-token catalog ids in §5 index order — TS took them straight from
-/// `query({})`, whose filter (no token, R674's Glitch in no pool) and order this repeats. Both
-/// libraries are emptied again right afterwards and `nextId` is reset, so the ids a scenario hands
-/// out start at `c1` and follow the setup's own order.
+/// deck is `query`'s first DECK_SIZE ids in §5 index order (no token, R674's Glitch in no pool). Both
+/// libraries are emptied right afterwards and `nextId` reset, so a scenario's ids start at `c1`.
 fn filler_deck() -> Result<Vec<String>, String> {
     let defs: Vec<&CardDef> = crate::catalog::query(&crate::catalog::CatalogQueryArgs::default());
     let size = DECK_SIZE.max(0) as usize;
@@ -791,7 +650,7 @@ fn filler_deck() -> Result<Vec<String>, String> {
     Ok(defs.into_iter().take(size).map(|def| def.id.clone()).collect())
 }
 
-/// TS `defOf(state, defId)` (`catalog::find_def`: transient defs first), as the harness's error.
+/// `catalog::find_def` (transient defs first), with the harness's error.
 fn def_of(state: &GameState, def_id: &str) -> Result<CardDef, String> {
     crate::catalog::find_def(Some(state), def_id)
         .cloned()
@@ -860,8 +719,7 @@ struct Placement {
     lane: Option<i32>,
 }
 
-/// §3.2: a Unit goes in the unit zones and a Field Spell, Trap or Field Trap in the backrow, so the
-/// def's type picks the row and `row` on the entry overrides it. `field` and `backrow` therefore
+/// §3.2: the def's type picks the row and the entry's `row` overrides it, so `field` and `backrow`
 /// accept the same entries: naming the list is a convenience, not a second rule.
 fn normalize_placement(
     state: &GameState,
@@ -921,15 +779,9 @@ fn normalize_placement(
     })
 }
 
-/// §3.2 lane assignment for a setup row: entries that name a `lane` keep it, and the rest take the
-/// leftmost lane still free, in list order. Instances are still created in list order, so the ids
-/// follow the setup literal even when a later entry pinned an earlier lane.
-///
-/// §3.2 Stack: an entry with `stack: true` does not take a lane of its own — it buries the card
-/// already in one, so it may repeat a `lane` an earlier entry pinned, and with no `lane` of its own
-/// it lands on the entry before it in the list.
-///
-/// Each entry is its `(lane, stack)`.
+/// §3.2 lane assignment for a setup row, each entry its `(lane, stack)`: a named `lane` is kept and
+/// the rest take the leftmost free lane in list order. A `stack: true` entry buries the card already
+/// in a lane, so it may repeat a pinned `lane`, and with none it lands on the entry before it.
 fn assign_lanes(entries: &[(Option<i32>, bool)], size: i32, label: &str) -> Result<Vec<i32>, String> {
     let mut taken: Vec<i32> = Vec::new();
     for (at, &(lane, stack)) in entries.iter().enumerate() {
@@ -1028,8 +880,7 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     apply_cost_setup(&mut card, Some(&entry.entry.cost));
     let id = card.id.clone();
 
-    // §3.2 Stack: `stack: true` buries whatever is in the lane already — `place_on_field` puts the
-    // arriving card on top, so the pile reads top-first and the list reads bottom-first.
+    // §3.2 Stack: `place_on_field` puts the arriving card on top of whatever the lane holds.
     let slot = ZoneSlot { player, row, lane };
     let options = PlaceOnFieldOptions {
         stack: if entry.entry.stack == Some(true) {
@@ -1056,7 +907,6 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
         ));
     }
 
-    // TS went on writing the object it had placed; here it is found again by its id.
     if let Some(card) = find_instance_mut(&mut *sink.state, &id) {
         if row == Row::Units {
             card.position = Some(entry.entry.position.unwrap_or(Position::Atk));
@@ -1064,8 +914,7 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
                 card.damage = damage;
             }
         }
-        // R33: a Trap is face-down, so `faceUp: false` is a state a test asserts — write it as given
-        // rather than leaving the flag unset, which would read `None`.
+        // R33: written as given, so a test can assert `faceUp: false` rather than `None`.
         if row == Row::Backrow
             && let Some(face_up) = entry.entry.face_up
         {
@@ -1115,7 +964,6 @@ fn place_pile(
         if radiant {
             card.radiant = true;
         }
-        // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
         card.created = created;
         apply_cost_setup(&mut card, cost);
         let id = card.id.clone();
@@ -1129,9 +977,8 @@ fn place_pile(
                 ..MoveToZoneOptions::default()
             },
         );
-        // R311: a scenario's library stands for its owner's deck, which they know card by card. A deck
-        // is dealt on its base face, so a card set Radiant here became Radiant where nobody saw it
-        // (#28, #42): what its owner was shown is the base face.
+        // R311: a scenario's library is its owner's deck, known card by card and dealt on its base face,
+        // so a card set Radiant here became Radiant unseen (#28, #42): its owner was shown the base face.
         if zone == OffFieldZone::Library
             && result == MoveResult::Moved
             && let Some(card) = find_instance_mut(&mut *sink.state, &id)
@@ -1163,8 +1010,7 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
         &format!("{seat}.hand"),
     )?;
 
-    // `field` and `backrow` are one board: each entry's row comes from its def's type (or its own
-    // `row`), and lanes are then handed out per row over the whole board, `field` entries first.
+    // `field` and `backrow` are one board: lanes are handed out per row over both, `field` first.
     let mut placements: Vec<Placement> = Vec::new();
     for (at, entry) in setup.field.iter().flatten().enumerate() {
         placements.push(normalize_placement(
@@ -1303,11 +1149,9 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
     Ok(state)
 }
 
-// ---------------------------------------------------------------------------------------------
-// Refusals (TS `expect(() => …).toThrow(/text/)`)
-// ---------------------------------------------------------------------------------------------
+// Refusals
 
-/// A panic's message, as `toThrow` read an Error's.
+/// A panic's message.
 fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(text) = payload.downcast_ref::<String>() {
         return text.clone();
@@ -1326,16 +1170,15 @@ fn refusal_of(run: impl FnOnce()) -> Option<String> {
     }
 }
 
-/// TS `expect(() => …).toThrow()`: any panic passes, so it is for a call that is not a refused step —
-/// `scenario(…)` itself, a harness check that fails loudly (`Scenario::expect_refused` takes a refusal
-/// only).
+/// Any panic passes, so it is for a call that is not a refused step: `scenario(…)` itself, a harness
+/// check that fails loudly (`Scenario::expect_refused` takes a refusal only).
 pub fn expect_throw(run: impl FnOnce()) {
     if refusal_of(run).is_none() {
         panic!("expect_throw: the call ran through; it should have been refused");
     }
 }
 
-/// TS `expect(() => …).toThrow(/text/)`: the refusal's message contains `text`.
+/// `expect_throw` whose panic message contains `text`.
 pub fn expect_throw_with(run: impl FnOnce(), text: &str) {
     match refusal_of(run) {
         None => {
@@ -1376,12 +1219,10 @@ fn json_text<T: serde::Serialize + ?Sized>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_default()
 }
 
-// ---------------------------------------------------------------------------------------------
 // The scenario
-// ---------------------------------------------------------------------------------------------
 
-/// TS `Scenario` (the `Harness` class): the live state, the event log, and the steps, reads and
-/// assertions. Every step and assertion answers `&mut Scenario`, so they chain as TS's did.
+/// The live state, the event log, and the steps, reads and assertions. Every step and assertion
+/// answers `&mut Scenario`, so they chain.
 pub struct Scenario {
     current: GameState,
     log: Vec<GameEvent>,
@@ -1393,7 +1234,6 @@ pub struct Scenario {
 }
 
 impl Scenario {
-    /// TS `new Harness(opts)`.
     pub fn new(opts: &ScenarioOptions) -> Scenario {
         Scenario {
             current: or_fail(build_state(opts)),
@@ -1409,7 +1249,7 @@ impl Scenario {
         &self.current
     }
 
-    /// The live state, for a test that edits the board between steps (TS wrote `s.state.…` directly).
+    /// The live state, for a test that edits the board between steps.
     pub fn state_mut(&mut self) -> &mut GameState {
         &mut self.current
     }
@@ -1424,7 +1264,7 @@ impl Scenario {
         &self.last
     }
 
-    // --- refs -----------------------------------------------------------------------------------
+    // Refs
 
     /// A reference as the live instance's id, searched where `scope` says.
     fn resolve(&self, reference: &CardRef, scope: Where, what: &str) -> Result<String, String> {
@@ -1478,7 +1318,7 @@ impl Scenario {
         ))
     }
 
-    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone".
+    /// "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone".
     fn locate(&self, id: &str) -> &'static str {
         for player in PLAYER_IDS {
             let side = &self.current.players[player];
@@ -1549,8 +1389,7 @@ impl Scenario {
         self.live(&id)
     }
 
-    /// The live instance, for a test that edits a card between steps (TS wrote through `s.card(…)`'s
-    /// live object). Resolved as `card()` resolves it.
+    /// The live instance, for a test that edits a card between steps, resolved as `card()` does.
     pub fn card_mut(&mut self, card: impl Into<CardRef>) -> &mut CardInstance {
         let id = or_fail(self.resolve(&card.into(), Where::Any, "card"));
         match find_instance_mut(&mut self.current, &id) {
@@ -1565,11 +1404,10 @@ impl Scenario {
         unit_view(&self.current, self.live(&id))
     }
 
-    // --- engine plumbing ------------------------------------------------------------------------
+    // Engine plumbing
 
-    /// An action through `reduce`, which derives its rng from (seed, cursor) itself. Every action gets
-    /// its own deterministic nonce, or `reduce`'s dedupe would replay the last result instead of
-    /// applying this one.
+    /// An action through `reduce`, with its own deterministic nonce, or `reduce`'s dedupe would replay
+    /// the last result instead of applying this one.
     fn try_action(&mut self, body: ActionBody, player: PlayerId) -> Option<String> {
         self.step += 1;
         let action = Action::new(body, player, format!("h{}", self.step));
@@ -1589,9 +1427,8 @@ impl Scenario {
         }
     }
 
-    /// A refusal: `reduce`'s error, or an answer the open prompt does not offer. It panics with
-    /// `message` as it stands, after marking the scenario so that `expect_refused` can tell it from
-    /// any other panic.
+    /// A refusal (`reduce`'s error, or an answer the open prompt does not offer): panics with `message`,
+    /// marked so that `expect_refused` can tell it from any other panic.
     fn refuse(&mut self, message: String) -> ! {
         self.refused = true;
         panic!("{message}");
@@ -1611,7 +1448,7 @@ impl Scenario {
         self.log.extend(events);
     }
 
-    // --- steps ----------------------------------------------------------------------------------
+    // Steps
 
     /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "equip"?, "targets"?, "modes"?,
     /// "tributes"?, "faceDown"? })`.
@@ -1820,7 +1657,7 @@ impl Scenario {
             );
             return self;
         }
-        // R752: `activatePower`, the alias that names a Heroic Power's rolled power, or a card's only ability.
+        // R752: `activatePower`, the alias naming a Heroic Power's rolled power, or a card's only ability.
         self.action(
             ActionBody::ActivatePower {
                 instance_id: source.id.clone(),
@@ -1832,7 +1669,7 @@ impl Scenario {
         self
     }
 
-    // --- reads ----------------------------------------------------------------------------------
+    // Reads
 
     pub fn view(&self, player: impl SeatRef) -> PlayerView {
         let viewer = player.seat_or(self.current.active);
@@ -1881,7 +1718,7 @@ impl Scenario {
             .clone()
     }
 
-    /// `zone`: "hand", "library", "graveyard", "exile" (TS `PileName`).
+    /// `zone`: "hand", "library", "graveyard", "exile".
     pub fn pile(&self, player: impl SeatRef, zone: &str) -> Vec<CardInstance> {
         let side = &self.current.players[player.seat_or(self.current.active)];
         match zone {
@@ -1905,9 +1742,9 @@ impl Scenario {
         }
     }
 
-    // --- assertions -----------------------------------------------------------------------------
+    // Assertions
 
-    /// `zone`: "hand", "library", "graveyard", "exile", "field", "gone" (TS `ZoneName`).
+    /// `zone`: "hand", "library", "graveyard", "exile", "field", "gone".
     pub fn expect_in_zone(&mut self, card: impl Into<CardRef>, zone: &str) -> &mut Scenario {
         let id = or_fail(self.ref_id(&card.into(), zone));
         let actual = self.locate(&id);
@@ -2011,8 +1848,8 @@ impl Scenario {
         self
     }
 
-    /// TS `expect(() => s.step(…)).toThrow()`: the step is refused (it panics), and the scenario goes
-    /// on from the state the refusal left — a refused action leaves it untouched.
+    /// The step is refused (it panics), and the scenario goes on from the state the refusal left: a
+    /// refused action leaves it untouched.
     pub fn expect_refused(
         &mut self,
         step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario,
@@ -2023,7 +1860,7 @@ impl Scenario {
         self
     }
 
-    /// TS `expect(() => s.step(…)).toThrow(/text/)`: refused, with `text` in the message.
+    /// Refused, with `text` in the message.
     pub fn expect_refused_with(
         &mut self,
         step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario,
@@ -2041,9 +1878,8 @@ impl Scenario {
         self
     }
 
-    /// The refusal `step` met, or `None` when it ran through. Only `refuse` marks a refusal; any other
-    /// panic in the step (a reference that matches nothing, `answer` with no prompt open, an engine
-    /// crash) is the test's own failure, so it fails as itself with a note that it was no refusal.
+    /// The refusal `step` met, or `None` when it ran through. Any panic `refuse` did not mark (a
+    /// reference that matches nothing, an engine crash) is the test's own failure and fails as itself.
     fn refusal_in(
         &mut self,
         helper: &str,
@@ -2072,10 +1908,9 @@ enum Unreadable {
     Malformed(String),
 }
 
-/// §10.6: a prompt's answer is a `Selection[]`. A string (or a list of strings) is matched against
-/// `state.pending.options` by `key`, then `label`, then a mode option, then the option's
-/// `instanceId`, then that instance's `defId`, then the label case-insensitively, and finally by
-/// resolving the string the way every other harness reference is resolved.
+/// §10.6: a prompt's answer is a `Selection[]`. A string (or a list of them) is matched against
+/// `state.pending.options` by `key`, `label`, mode option, `instanceId`, that instance's `defId`, the
+/// label case-insensitively, and last as any other harness reference is resolved.
 fn to_selections(
     state: &GameState,
     selection: &Value,
@@ -2155,8 +1990,7 @@ fn match_option(state: &GameState, text: &str, pending: &PendingChoice) -> Resul
 }
 
 /// Build a scenario from its options literal (`json!({ "p1": {…}, "p2": {…}, "seed"?, "turn"?,
-/// "active"?, "lastBoards"?, "glitchBoards"? })`, or `json!({})`). See the file header for every
-/// default and every documented decision.
+/// "active"?, "lastBoards"?, "glitchBoards"? })`, or `json!({})`); the file header has the defaults.
 pub fn scenario(opts: Value) -> Scenario {
     let opts: ScenarioOptions = options_of(opts, "scenario");
     Scenario::new(&opts)
@@ -2164,25 +1998,16 @@ pub fn scenario(opts: Value) -> Scenario {
 
 #[cfg(test)]
 mod tests {
-    //! The harness proves itself (BUILD M4-T3). Every case leans on cards whose scripts do not
-    //! matter to it and asserts ENGINE behavior, never card text:
+    //! The harness proves itself (BUILD M4-T3), asserting engine behavior, never card text, on cards
+    //! whose scripts do not matter: core-025 "4-mana 7/7" and core-056 "Jilliax" (keywords only),
+    //! core-043 "Big Felinor" (the radiant stat difference), core-010 "Rapid Replenish" (a play that
+    //! ends in the graveyard), core-041 and core-073 (backrow placement).
     //!
-    //!   core-025 "4-mana 7/7"  Unit, cost 4, 7/7 Armor 7 / radiant 7/7 Indestructible — keywords only
-    //!   core-056 "Jilliax"     Unit, cost 2, 3/2 Rush Taunt Lifesteal Divine Shield — keywords only
-    //!   core-043 "Big Felinor" Unit, cost 3, 3/10 / radiant 6/20 — the radiant stat difference
-    //!   core-010 "Rapid Replenish" Spell, cost 0 — a play that ends in the graveyard
-    //!   core-041 "Sheepish"    Trap, and core-073 "Anti-oneshot Armor" Field Spell — backrow placement
-    //!
-    //! These tests run inside the engine crate, which cannot link `jackioh_cards` (it would be a
-    //! second copy of the engine), so they install the real catalog through the thread-local
-    //! override and run with no card scripts: no case here plays a card whose script would act
-    //! (core-025 and core-056 have none; core-010's draw needs three earlier plays; the rest are only
-    //! placed or drawn). `activate()` has no case here: Heroic Power (#98) is its only user and that
-    //! card's own test covers it. A prompt CHAIN needs a card script that opens one, which is a card
-    //! file's test.
-    //!
-    //! TURN HAZARD: `reduce` auto-ends a turn with nothing meaningful left on it (§2.5), so scenarios
-    //! that cross a turn boundary give both sides something to do. See the harness header.
+    //! The engine crate cannot link `jackioh_cards`, so these install the real catalog through the
+    //! thread-local override and run with no card scripts: no case plays a card whose script would
+    //! act (core-010's draw needs three earlier plays). `activate()` has no case: Heroic Power (#98) is
+    //! its only user and its own test covers it. A turn with nothing meaningful left auto-ends (§2.5),
+    //! so a test that crosses turns gives both sides something to do.
 
     use super::*;
     use crate::config::{HAND_CAP, MAX_MANA};
@@ -2190,7 +2015,7 @@ mod tests {
     use crate::wire::{KeywordKind, ZoneName};
     use serde_json::json;
 
-    /// The real catalog, as `registerAll()` registered it for the TS harness.
+    /// The real catalog.
     fn install_catalog() {
         if catalog_override().is_none() {
             let defs: CardDefs = serde_json::from_str(include_str!("../../../cards/catalog.json"))
@@ -2209,11 +2034,9 @@ mod tests {
         json!({ "def": "core-056", "lane": 5 })
     }
 
-    /// The same job as `anchor()` for a test that owns the board: #10 Rapid Replenish is a 0-cost Spell
-    /// and §8 row 10 says "always playable", so holding one is a legal action for R82's purposes and the
-    /// turn cannot auto-end. A combat test wants this rather than `anchor()`, because `anchor()` is a
-    /// second `core-056` and these tests name their attacker by def id (`s.attack("core-056", …)`),
-    /// which is a first-match lookup.
+    /// `anchor()`'s job for a test that owns the board: #10 Rapid Replenish costs 0 and §8 row 10 says
+    /// "always playable", so holding one is a legal action for R82 and the turn cannot auto-end. Unlike
+    /// `anchor()` it adds no second `core-056` to an attacker named by def id (a first-match lookup).
     const HAND_ANCHOR: &str = "core-010";
 
     /// A whole §3.2 Stack pile, top-first, which `unit()` cannot give: it answers with the card on top.
@@ -2356,7 +2179,6 @@ mod tests {
             let s = scenario(json!({ "p1": { "field": [{ "def": "core-043", "damage": 10 }, anchor()] } }));
             assert!(s.unit("p1", 1).is_none());
             assert_eq!(def_ids(&s.pile("p1", "graveyard")), ["core-043"]);
-            // The setup's own events are not in the log.
             assert!(s.events().is_empty());
         }
 
@@ -2515,8 +2337,7 @@ mod tests {
             assert_eq!(def_ids(&pile), ["core-056", "core-025", "core-043"]);
             assert_eq!(def_id_at(s.unit("p1", 1)), some("core-056"));
 
-            // Instances are created in list order whatever the pile order is, so reading the pile
-            // bottom-first gives the ids in the order they were handed out.
+            // Ids follow the list whatever the pile order, so the pile read bottom-first gives them in order.
             let bottom_first: Vec<u32> = pile
                 .iter()
                 .rev()
@@ -2660,8 +2481,7 @@ mod tests {
 
         #[test]
         fn accepts_a_fixture_declared_as_const() {
-            // TS: a fixture `as const` is assignable as it stands. Here: a literal built ahead of the
-            // scenario goes in unchanged.
+            // A literal built ahead of the scenario goes in unchanged.
             let fixture = json!({ "hand": ["core-025"], "field": [{ "defId": "core-056", "lane": 5 }] });
             let s = scenario(json!({ "p1": fixture }));
             assert_eq!(s.hand("p1").len(), 1);
@@ -2809,9 +2629,8 @@ mod tests {
 
         #[test]
         fn hits_the_enemy_hero_through_hero_player() {
-            // R82: with an empty hand and its one unit exerted, p1 would have nothing but `endTurn` left
-            // and the turn would auto-end under the assertion — taking the opponent's turn with it and
-            // charging §2.4 fatigue to both empty libraries. The hand anchor keeps the turn open.
+            // R82: with an empty hand and its one unit exerted, the turn would auto-end under the assertion,
+            // taking the opponent's turn and §2.4 fatigue with it. The hand anchor keeps the turn open.
             let mut s = scenario(
                 json!({ "p1": { "field": ["core-056"], "hand": [HAND_ANCHOR] }, "p2": { "health": 20 } }),
             );
@@ -2824,8 +2643,7 @@ mod tests {
 
         #[test]
         fn resolves_a_unit_exchange_and_spends_the_exertion_s4_1_s4_3() {
-            // R82 again: the second attack must be refused for having ALREADY ACTED, which it can only be
-            // while it is still p1's turn (see the hero test above).
+            // R82 again: the second attack is refused for having ALREADY ACTED only while it is p1's turn.
             let mut s = scenario(
                 json!({ "p1": { "field": ["core-025"], "hand": [HAND_ANCHOR] }, "p2": { "field": ["core-056"] } }),
             );
@@ -2915,9 +2733,8 @@ mod tests {
             );
         }
 
-        // A real prompt chain (`s.play(x, …).answer(json!("a")).answer(json!("b"))`) needs a card
-        // script that opens a prompt, which is a card file's test. `answer` reads `state.pending` fresh
-        // on every call, so a chain works as soon as a prompt is open.
+        // A real prompt chain needs a card script that opens a prompt, which is a card file's test;
+        // `answer` reads `state.pending` fresh on every call, so a chain works once a prompt is open.
     }
 
     mod assertion_helpers_fail_loudly {
@@ -2937,8 +2754,8 @@ mod tests {
 
         #[test]
         fn expect_in_zone_gone_for_a_card_that_ceased_to_exist_r11() {
-            // A unit token in a hand is legal (#75, R11); playing it and letting it leave the field is what
-            // makes it vanish, which needs card scripts. Here: a live card is not "gone".
+            // A unit token in a hand is legal (#75, R11); making it vanish needs card scripts, so this
+            // checks that a live card is not "gone".
             let mut s = scenario(json!({ "p1": { "field": ["core-025", anchor()] } }));
             let unit = s.unit("p1", 1).expect("a unit in lane 1");
             expect_throw_with(
@@ -3179,10 +2996,8 @@ mod tests {
 
         #[test]
         fn the_rng_cursor_is_threaded_and_nothing_reachable_consumes_rng_yet() {
-            // Nothing in these steps draws from the rng: setup does not shuffle, `draw` and `combat` never
-            // call it, and no card script runs here to. So the cursor is still 0 and the threading
-            // (`state.rng_cursor = rng.cursor()` after a direct call, `reduce`'s own write after an
-            // action) is a no-op — which is exactly why a cross-seed DIFFERENCE cannot be shown here.
+            // Nothing in these steps draws from the rng (setup does not shuffle, `draw` and `combat` never
+            // call it, no card script runs), so the cursor stays 0: a cross-seed difference cannot show.
             let a = steps("seed-alpha");
             let b = steps("seed-beta");
             assert_eq!(a.state().rng_cursor, 0);

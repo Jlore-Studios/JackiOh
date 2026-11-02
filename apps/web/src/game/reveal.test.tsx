@@ -90,11 +90,9 @@ describe("R434 the game-over screen lists 'Their hand'", () => {
       expect(face).toHaveAttribute("data-def-name", nameOf(defId));
       expect(face).toHaveAccessibleName(`${nameOf(defId)}: show it large`);
     });
-    // A Radiant card is shown on its Radiant face, as the view lists it.
     expect(within(section).getByTestId(revealTestid.theirHandCard("t1")).querySelector('[data-radiant-face="true"]')).not.toBeNull();
     expect(within(section).getByTestId(revealTestid.theirHandCard("t0")).querySelector('[data-radiant-face="true"]')).toBeNull();
 
-    // A click opens the card large in the inspect sheet.
     fireEvent.click(within(section).getByTestId(revealTestid.theirHandCard("t2")));
     const sheet = screen.getByTestId(INSPECT_SHEET);
     expect(within(sheet).getByTestId(INSPECT_FACE)).toHaveTextContent(nameOf("core-055"));
@@ -145,7 +143,6 @@ describe("R434 the game-over screen lists 'Their hand'", () => {
     expect(overlay).toHaveAttribute("data-form", "chip");
     expect(within(overlay).getByTestId("result-reopen")).toBeInTheDocument();
     expect(within(overlay).getByTestId(revealTestid.theirHandOpen)).toBeInTheDocument();
-    // The empty hand's chip has nothing to open.
     cleanup();
     renderGame(finished([]), "chip");
     expect(screen.queryByTestId(revealTestid.theirHandOpen)).toBeNull();

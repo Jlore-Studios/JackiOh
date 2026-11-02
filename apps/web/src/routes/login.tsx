@@ -6,8 +6,6 @@
 // Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
 // Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
 // Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
-// Sign-up asks the month and year of birth and for the unticked terms box before the provider is called, refuses
-// an answer under the minimum on this device for good, and holds a passing one for the first sign-in (R757000, R757001).
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -87,16 +85,14 @@ export { loginTestid };
 export const signUpPrivacyTestid = "login-sign-up-privacy";
 
 /**
- * `claimReset`: a recovery link asked for elsewhere, waiting for the player to type their address.
  * `emailCode`: the email sign-in link and code (R664). `mfa`: a session waiting for the code from
  * the account's authenticator app (R665).
  */
 type Mode = "signIn" | "signUp" | "forgot" | "claimReset" | "emailCode" | "mfa";
 
 /**
- * R665: a session held for its second step, the factor whose code it needs, and what happens once it
- * has it: `signIn` keeps it as this browser's session; `recovery` hands the raised session back to
- * the recovery link being checked (the link's own state still owns it, so leaving revokes it).
+ * R665: a session held for its second step. `signIn` keeps it as this browser's session; `recovery`
+ * hands it back to the recovery link being checked (whose state still owns it, so leaving revokes it).
  */
 type SecondStep = { session: Session; factorId: string; then: "signIn" | "recovery" };
 
@@ -129,9 +125,8 @@ type LinkRenewal =
   | "kept";
 
 /**
- * Renews the link's session once (see A LINK IS RENEWED AS SOON AS IT IS READ). Concurrent calls
- * share one provider request (`refreshSession`), so StrictMode's second run gets the same renewal.
- * A session released meanwhile (the player moved on and it was revoked) is not brought back.
+ * Renews the link's session once (R194): StrictMode's second run gets the same renewal, and a
+ * session revoked meanwhile is not brought back.
  */
 async function renewLinkOnce(state: LinkState): Promise<LinkRenewal> {
   if (state.renewed) return "renewed";
@@ -148,10 +143,7 @@ async function renewLinkOnce(state: LinkState): Promise<LinkRenewal> {
   }
 }
 
-/**
- * R323: the link's code for its session, once. The session never passed through a URL, so there is
- * no copy in history to spend: it counts as renewed already.
- */
+/** R323: the link's code for its session, once; never in a URL, it counts as renewed already. */
 async function exchangeLinkOnce(state: LinkState, code: string): Promise<CodeExchange> {
   state.exchange ??= exchangeAuthCode(code);
   const exchange = await state.exchange;
@@ -168,7 +160,6 @@ async function exchangedFactor(state: LinkState): Promise<string | null> {
   return exchange?.kind === "session" ? exchange.secondFactor : null;
 }
 
-/** The link's session is not kept: revoke it (see A LINK'S SESSION THAT IS NOT KEPT). */
 function revokeLink(state: LinkState): void {
   const session = state.session;
   state.session = null;
@@ -242,7 +233,7 @@ function readEntry(): Entry {
     mode: forgot ? "forgot" : "signIn",
     sessionExpired: loginReasonOf(search) === "expired",
     // Empty, always: `mode=forgot` is a public link, and the address this browser last asked to
-    // reset may be another person's (see NOTHING IS PREFILLED FROM STORAGE).
+    // reset may be another person's.
     email: "",
     linkError: false,
     oauthFailed: false,
@@ -254,7 +245,7 @@ function readEntry(): Entry {
     case "none":
       break;
     case "session":
-      // Decided once the server has said whose token it is (see A LINK'S ADDRESS IS CHECKED).
+      // Decided once the server has said whose token it is.
       entry.mode = "signIn";
       entry.link = { kind: "session", session: link.session, linkType: link.linkType };
       break;
@@ -270,8 +261,7 @@ function readEntry(): Entry {
     case "error":
       entry.mode = "signIn";
       if (newestFlow() === "oauth") {
-        // R666: the newest thing this browser asked for was an OAuth sign-in, and the provider sent
-        // it back with an error (canceled, or refused): not an emailed link's failure.
+        // R666: this browser's newest flow was an OAuth sign-in: not an emailed link's failure.
         forgetVerifier("oauth");
         entry.oauthFailed = true;
         break;
@@ -283,10 +273,7 @@ function readEntry(): Entry {
   return entry;
 }
 
-/**
- * The provider's per-address interval that a send this browser remembers (`pendingEmail`,
- * `pendingReset`) started, while it is still running: a reload does not forget it (R192).
- */
+/** The provider's per-address interval a remembered send started, while running (R192). */
 function runningInterval(entry: PendingAddress | null): { address: string; deadline: number } | null {
   if (entry === null) return null;
   const deadline = deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, entry.at);
@@ -312,9 +299,8 @@ function useRunningLong(active: boolean): boolean {
 }
 
 /**
- * The account this browser is signed in as when the screen opens, or null. Its address is the
- * stored token's own claim, shown back only to whoever holds the token; `""` when it names none
- * (the end-to-end fixture sessions).
+ * The account this browser is signed in as, or null: the stored token's own claim, shown only to
+ * whoever holds the token; `""` when it names none (the end-to-end fixture sessions).
  */
 function signedInAddress(): string | null {
   const session = readSession();
@@ -344,7 +330,6 @@ export default function LoginRoute(): ReactElement {
   const acted = useRef(false);
   /** Bumped by "Try again" on a recovery link that could not be checked. */
   const [checkRound, setCheckRound] = useState(0);
-  /** The emailed link's session while this screen answers for it (see `LinkState`). */
   const linkState = useRef<LinkState>({
     session: entry.link === null || entry.link.kind === "code" ? null : entry.link.session,
     renewed: false,
@@ -368,18 +353,14 @@ export default function LoginRoute(): ReactElement {
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
   const codeCooldown = useAddressCooldown();
   const codeWait = codeCooldown.secondsFor(email);
-  /** R665: the session waiting for its authenticator code (see `SecondStep`). */
   const secondStep = useRef<SecondStep | null>(null);
-  /** R666: the OAuth providers this build offers. */
   const [providers] = useState(oauthProviders);
   const [oauthFailed, setOauthFailed] = useState(entry.oauthFailed);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   /** Set when a notice should take focus once it renders (a sign-up that moved the form on). */
   const focusNotice = useRef(false);
-  /** R757000: the sign-up form's month and year of birth, nothing chosen at first. */
   const [birth, setBirth] = useState<BirthAnswer>(NO_BIRTH_ANSWER);
   const [birthError, setBirthError] = useState<string | null>(null);
-  /** R757001: the terms box, unticked at first. */
   const [agreed, setAgreed] = useState(false);
   const [agreeError, setAgreeError] = useState<string | null>(null);
   /** R757000: this device refused a sign-up under the minimum age, now or before. */
@@ -391,9 +372,8 @@ export default function LoginRoute(): ReactElement {
     noticeRef.current?.focus();
   }, [notice]);
 
-  // A link this screen still answers for when it really unmounts (being checked, kept for "Try
-  // again", or waiting for its address) is revoked (see A LINK'S SESSION THAT IS NOT KEPT). After
-  // the unmount, so StrictMode's rehearsal (which remounts at once) does not.
+  // A link this screen still answers for when it really unmounts is revoked: after the unmount, so
+  // StrictMode's rehearsal (which remounts at once) does not.
   useEffect(() => {
     mounted.current = true;
     const state = linkState.current;
@@ -402,16 +382,13 @@ export default function LoginRoute(): ReactElement {
       window.setTimeout(() => {
         if (mounted.current) return;
         revokeLink(state);
-        // R665: a sign-in left at its second step is not kept, so it is revoked too.
         releaseSecondStep();
       }, 0);
     };
   }, []);
 
   // Act on an emailed link once mounted: renew it (spending the copy in history), then act only on
-  // what the server says the renewed token is (R193). StrictMode's rehearsal runs this twice; the
-  // first run's answer is dropped, and both share one renewal. The cached reading is released when
-  // the screen really unmounts.
+  // what the server says the renewed token is (R193). StrictMode's first run's answer is dropped.
   useEffect(() => {
     const pending = entry.link;
     const state = linkState.current;
@@ -425,8 +402,7 @@ export default function LoginRoute(): ReactElement {
         try {
           exchange = await exchangeLinkOnce(state, pending.code);
         } catch {
-          // The provider could not answer. The code is still good, but this screen says what it says
-          // of any link it could not check.
+          // The provider could not answer: said as of any link that could not be checked.
           if (canceled || acted.current) return;
           setLinkOutcome("unchecked");
           setResendOffered(true);
@@ -480,8 +456,7 @@ export default function LoginRoute(): ReactElement {
       if (session === null) return;
       if (link.kind === "recovery" && renewal !== "spent" && assuranceLevel(session.accessToken) !== "aal2") {
         // R665: the server refuses an `aal1` token for an account with an authenticator app, so its
-        // code comes first. A code's exchange said already; an implicit link's account is asked.
-        // An answer that could not be had asks for nothing: the server still has the last word.
+        // code comes first. An answer that could not be had asks for nothing: the server decides.
         let factor: string | null = null;
         if (pending.kind === "code") factor = await exchangedFactor(state);
         else if (authConfig() !== null) factor = await secondFactorFor(session).catch(() => null);
@@ -499,13 +474,11 @@ export default function LoginRoute(): ReactElement {
       const check: LinkCheck = renewal === "spent" ? { kind: "refused" } : await checkLink(session.accessToken);
       if (canceled) return;
       if (acted.current) {
-        // The player moved on before the answer came.
         revokeLink(state);
         return;
       }
       if (check.kind === "refused") {
-        // A spent, expired or forged link. A renewal the server still refused is revoked; a link
-        // whose own tokens were refused has nothing live to revoke.
+        // A spent, expired or forged link: only a renewal holds anything live to revoke.
         if (renewal === "renewed") revokeLink(state);
         else state.session = null;
         setLinkOutcome("none");
@@ -515,8 +488,7 @@ export default function LoginRoute(): ReactElement {
       }
       if (check.kind === "unchecked") {
         if (link.kind === "recovery") {
-          // Our server could not be reached, but the provider accepted this one-time link: keep
-          // it on this screen so it can be checked again, rather than spend it on a network blip.
+          // Kept so it can be checked again, rather than spend a one-time link on a network blip.
           setLinkOutcome("recoveryUnchecked");
           return;
         }
@@ -527,8 +499,7 @@ export default function LoginRoute(): ReactElement {
       }
       const verified = check.email;
       if (link.kind === "session") {
-        // R193: no link signs this browser in, the sign-up it started included (see A
-        // CONFIRMATION link, above): the player signs in with their password.
+        // R193: no link signs this browser in, not even its own sign-up's.
         revokeLink(state);
         if (link.linkType === "invite") {
           setMode("forgot");
@@ -547,7 +518,6 @@ export default function LoginRoute(): ReactElement {
         return;
       }
       if (verified === null) {
-        // An account with no address has nothing to compare: nothing is held.
         revokeLink(state);
         setLinkOutcome("recoveryRefused");
         return;
@@ -561,8 +531,7 @@ export default function LoginRoute(): ReactElement {
         navigate(paths.resetPassword, { replace: true });
         return;
       }
-      // Asked for elsewhere (another device or browser, or before this browser signed in): held
-      // only once the player types the address it was sent to (see A RECOVERY link, above).
+      // Asked for elsewhere: held only once the player types the address it was sent to.
       claimAddress.current = verified;
       setMode("claimReset");
       setLinkOutcome("recoveryClaim");
@@ -582,13 +551,11 @@ export default function LoginRoute(): ReactElement {
     if (step !== null && step.then === "signIn") void revokeSignedOutSession(step.session);
   }
 
-  /** Keep a session as this browser's own and go on, as a password sign-in does. */
   function keepSession(session: Session): void {
     // Replaces (and revokes) any other session this browser held (R194).
     adoptSession(session);
-    // To the main menu, whichever screen sent the player here (issue #479). The one gate in
-    // `main.tsx` handles a pending account on any gated screen, so this file needs no notion of
-    // account status. A fixed `paths` value, never a URL from the query (B35).
+    // To the main menu (issue #479); `main.tsx`'s gate handles a pending account. A fixed `paths`
+    // value, never a URL from the query (B35).
     navigate(paths.landing, { replace: true });
   }
 
@@ -678,7 +645,6 @@ export default function LoginRoute(): ReactElement {
       });
   }
 
-  /** R664: the typed sign-in code. */
   function submitEmailCode(address: string): void {
     const problem = requiredProblem(code, "code");
     setCodeError(problem);
@@ -761,7 +727,7 @@ export default function LoginRoute(): ReactElement {
     setNotice(null);
     resendConfirmation(address)
       .then(() => {
-        // One sentence whatever the provider answered (R192); `resendConfirmation` resolves on all.
+        // One sentence whatever the provider answered (R192).
         setNotice(AUTH_NOTICES.resendSent);
         resendCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
       })
@@ -773,14 +739,10 @@ export default function LoginRoute(): ReactElement {
       });
   }
 
-  /**
-   * `claimReset`: a recovery link asked for elsewhere is held only for the address it was sent to.
-   * A typo can be corrected (the link's holder can read its address anyway); leaving revokes it.
-   */
+  /** A typo can be corrected (the link's holder can read its address anyway); leaving revokes it. */
   function claimReset(): void {
     const expected = claimAddress.current;
     if (expected === null || linkState.current.session === null) {
-      // Nothing left to claim: back to the plain sign-in form, letting go of whatever is left.
       switchMode("signIn");
       return;
     }
@@ -850,7 +812,6 @@ export default function LoginRoute(): ReactElement {
     ];
     const firstProblem = problems.find(([problem]) => problem !== null);
     if (firstProblem !== undefined) {
-      // The first field to fix, for a keyboard or a screen reader.
       document.getElementById(firstProblem[1])?.focus();
       return;
     }
@@ -879,18 +840,15 @@ export default function LoginRoute(): ReactElement {
       if (born !== null) holdSignUpConsent({ email: address, ...born, termsVersion: TERMS_VERSION });
       signUp(address, password)
         .then(() => {
-          // §9.4 step 1 requires a verified email before a code can be redeemed, so the next step
-          // is the inbox, not the game. Said identically whether or not the address was already
-          // registered -- see `signUp`'s note on why the provider makes that true for free.
+          // §9.4 step 1: the next step is the inbox, said identically whether or not the address
+          // was already registered (`signUp`'s note). The notice takes focus, read next.
           setMode("signIn");
           setPassword("");
-          // The form now reads "Sign in", which is the step after the inbox: the notice says so,
-          // above it, and takes focus so it is what is read next.
           focusNotice.current = true;
           setNotice(AUTH_NOTICES.signUpSent);
           setResendOffered(true);
-          // The sign-up just mailed this address, which starts the provider's per-address
-          // interval: a resend now would be refused, and reported as sent (R192).
+          // The sign-up started the provider's per-address interval: a resend now would be
+          // refused, and reported as sent (R192).
           resendCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
         })
         .catch((cause: unknown) => {
@@ -920,20 +878,16 @@ export default function LoginRoute(): ReactElement {
     const byUsername = !address.includes("@");
     (byUsername ? signInWithUsername(address, password) : signIn(address, password))
       .then((result) => {
-        // Kept at once, or (R665) once its authenticator code has been typed.
         signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
         setError(authMessageOf(cause));
         // The resend link and the confirm-first hint below are for an address.
         if (byUsername) return;
-        // An unconfirmed address reads as `credentials` (R160), so the way forward for it is
-        // offered after any such refusal rather than only after a telling one. Not after a network
-        // failure or a rate limit, which say nothing about the address and which a mailer would not
-        // help (and, while rate-limited, would only add another request).
+        // An unconfirmed address reads as `credentials` (R160), so resend is offered after any
+        // such refusal; not after a network failure or a rate limit, which say nothing about it.
         if (cause instanceof AuthError && cause.failure === "credentials") setResendOffered(true);
-        // The address this browser has just signed up with: most likely its confirmation link has
-        // not been opened yet. Keyed on this browser's own state, never on the provider's answer.
+        // Keyed on this browser's own sign-up, never on the provider's answer.
         if (cause instanceof AuthError && cause.failure === "credentials" && justSignedUp !== null) {
           setConfirmFirst(sameAddress(address, justSignedUp));
         }
@@ -963,9 +917,8 @@ export default function LoginRoute(): ReactElement {
   if (signingUp) {
     submitLabel = busy ? t("Creating…") : t("Create account");
   } else if (forgot) {
-    // "Send", not "Send again": the interval may have been started before a reload.
-    // The wait is said once, in the line under the button (as the confirmation resend says it),
-    // so the button keeps its name while it is locked (integration QA: the countdown was twice).
+    // "Send", not "Send again": the interval may have been started before a reload. The wait is
+    // said once, under the button, so the button keeps its name while locked.
     submitLabel = busy ? t("Sending…") : t("Send reset link");
   } else if (claiming) {
     submitLabel = t("Continue");
@@ -978,8 +931,7 @@ export default function LoginRoute(): ReactElement {
     submitLabel = busy ? t("Signing in…") : t("Sign in");
   }
 
-  // Sentences with a link or an address inside: one entry each, split around what is inserted, so
-  // English keeps the text nodes it always had.
+  // One i18n entry per sentence, split around the inserted link or address.
   const [signedInBefore = "", signedInAfter = ""] = t("This browser is signed in as {address}.").split("{address}");
 
   const forgotButton = (
@@ -1230,9 +1182,8 @@ export default function LoginRoute(): ReactElement {
                   <input
                     id="login-email"
                     data-testid={loginTestid.email}
-                    // R1443: sign-in takes a username too, which an email field would refuse. As text
-                    // it keeps an email field's keyboard (its @) and, like one, is never capitalised,
-                    // corrected or spell-checked by a phone keyboard.
+                    // R1443: sign-in takes a username too, which an email field would refuse; as
+                    // text it keeps an email field's keyboard and is never autocorrected.
                     type={signingIn ? "text" : "email"}
                     inputMode="email"
                     autoComplete="username"
@@ -1294,8 +1245,6 @@ export default function LoginRoute(): ReactElement {
                     <input
                       id="login-password"
                       data-testid={loginTestid.password}
-                      // The whole point of the toggle: a password you cannot read is a password you
-                      // cannot check before submitting, which matters most while CREATING one.
                       type={showPassword ? "text" : "password"}
                       autoComplete={signingUp ? "new-password" : "current-password"}
                       // Shown as text, a phone keyboard would otherwise capitalise, correct and
@@ -1390,7 +1339,6 @@ export default function LoginRoute(): ReactElement {
                 </p>
               ) : null}
               {forgot && resetWait > 0 ? (
-                // Only the wait: whether a mail went out is the neutral notice's to say (R192).
                 <p className="auth-hint" data-testid={loginTestid.resetCooldown} data-seconds={resetWait}>
                   {t("You can ask for another in {seconds} s.", { seconds: resetWait })}
                 </p>

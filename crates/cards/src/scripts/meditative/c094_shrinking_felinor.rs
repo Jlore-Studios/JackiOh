@@ -8,15 +8,10 @@
 //!   printed stats (R1181). Buffs, tuning, auras and damage are not base stats. Reading the graveyard
 //!   copy instead would restart every chain at 9/9, since R78 clears the override there.
 //! - **What it summons:** a fresh base Shrinking Felinor, not a copy (R57), so no buff, granted keyword or
-//!   tuning carries, into the leftmost open unit zone (R64). Its `statsOverride` is the attack less
-//!   `shrinkAttack` (at least 0) and the health less `shrinkHealth`, the dying face's numbers. Since
-//!   issue #1828 the Radiant face summons a base body too (R1828003), so its chain goes on on the base face.
-//! - **The end:** a body whose health would be 0 or less is not summoned, so the chain ends: 9/9, 6/6,
-//!   3/3 on the base face, and 18/18, then base bodies of 15/15 down to 3/3, from the Radiant one. Each
-//!   shrink is a declared number (R386) that never tunes below 1, so the chain always ends.
-//!
-//! Through v0.4.9 the Radiant face summoned a Radiant body; `script_v0_4_9` keeps that for those
-//! versions' replays (R767000).
+//!   tuning carries, into the leftmost open unit zone (R64), shrunk by the dying face's numbers. The
+//!   Radiant face summons a base body too (R1828003, #1828), so its chain goes on on the base face.
+//! - **The end:** a body whose health would be 0 or less is not summoned; each shrink is a declared
+//!   number (R386) that never tunes below 1, so the chain always ends.
 
 use jackioh_engine::prelude::*;
 
@@ -91,11 +86,7 @@ pub fn script_v0_4_9() -> CardScripts {
     }
 }
 
-// M #94 Shrinking Felinor — SPEC §8.8 row 94, BUILD M10 row M 94: "Its Death summons a fresh base Shrinking
-// Felinor with base stats 3/3 smaller (attack floored at 0), no buffs or keywords carried (MD-E20, R1181):
-// 9/9, 6/6, 3/3, then none, since the health would be 0 or less; a full board summons none; the shrink reads
-// through `param()`; radiant 18/18, also 3/3 smaller, and the body it summons is base (R1828003), six bodies:
-// 18/18, then base 15/15, 12/12, 9/9, 6/6, 3/3".
+// M #94 Shrinking Felinor — SPEC §8.8 row 94, BUILD M10 row M 94 (MD-E20).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -208,7 +199,6 @@ mod tests {
                 let mut s = game(json!([{ "def": ID, "radiant": true }]), 6);
                 let start = s.unit(P1, 1).unwrap_or_else(|| panic!("the card"));
                 s.expect_stats(&start, json!({ "attack": 18, "maxHealth": 18 }));
-                // The Radiant face shrinks 3/3 into a base body, and each base body shrinks 3/3 more.
                 assert_eq!(
                     run_chain(&mut s),
                     vec![
@@ -244,8 +234,7 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.4.9 and before, whose Radiant face summoned a
-        /// Radiant body.
+        /// R767000: the script kept for the replays of v0.4.9 and before.
         mod v0_4_9 {
             use super::*;
 

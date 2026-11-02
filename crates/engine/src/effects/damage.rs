@@ -1,12 +1,10 @@
-//! Deal damage: one instance through the §4.4 pipeline, for one target or for a whole scope.
-//!
-//! Port of `packages/engine/src/effects/damage.ts`. The source of every hit is the card running the
-//! script as its context was built (`ctx.self_`, TS `ctx.self`).
+//! Deal damage: one instance through the §4.4 pipeline, for one target or for a whole scope. The
+//! source of every hit is the running card as its context was built (`ctx.self_`).
 
 use serde::{Deserialize, Serialize};
 
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
-// R1848001: where a stated Trample's excess goes, as a card names it.
+// R1848001: where a stated Trample's excess goes.
 pub use crate::damage::TrampleOnto;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, resolve_target, sides_of};
 use crate::rng::Rng;
@@ -52,8 +50,7 @@ pub struct DamageEffectArgs {
     pub flags: DamageFlagArgs,
 }
 
-/// One spelling of the flag block, so `damage` and `damageAll` cannot drift apart: a sweep must put
-/// exactly the same instance through §4.4 as a single-target hit does.
+/// One spelling of the flags, so a sweep puts the same instance through §4.4 as a single hit does.
 fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
     DamageFlags {
         ignore_armor: Some(args.ignore_armor == Some(true)),
@@ -126,25 +123,12 @@ pub struct DamageAllArgs {
     pub scope: BoardScope,
 }
 
-/// §6.3 Damage over a scope: one §4.4 damage instance per target, in `cardsInScope` order, then the
-/// hero of each scoped side in the same side order when `heroes` is set (#13 Jlockeed Shredder-10,
-/// "End of turn: deal 2 damage to each enemy unit and the enemy hero", 5 on the radiant face).
+/// §6.3 Damage over a scope: one §4.4 instance per target in `cardsInScope` order, then each scoped
+/// side's hero if `heroes` (#13). The targets are read before the first hit, since §4.5 runs no state
+/// check between one effect's hits (R59); a target that absorbs its hit fizzles silently.
 ///
-/// The target list is snapshotted before the first hit. SPEC says one instance per target, and §4.5
-/// never runs a state check between the hits of one effect (R59), so nothing that happens mid-sweep
-/// may change who is hit: a unit dragged to 0 health by the second hit still takes nothing extra,
-/// and a unit that was not on the field when the sweep began is not hit at all. Re-reading the row
-/// per hit would make the sweep depend on the order deaths were noticed, which is exactly the
-/// dependency R59 exists to remove.
-///
-/// Each hit is an ordinary `dealDamage`, so Divine Shield, Armor, the hero cap, Indestructible,
-/// Poisonous, Lifesteal and Trample all behave per target; a target that absorbs its hit fizzles
-/// silently and the sweep continues.
-///
-/// R2521001: with `odds`, each target's amount is its own roll, made just before its hit, in the
-/// order the targets are hit (the units, then the heroes), as Hearthstone's Lightning Storm rolls
-/// each minion apart. Without `odds` nothing is drawn, so a sweep that names none plays and replays
-/// exactly as it always did.
+/// R2521001: with `odds`, each target's amount is its own roll, made just before its hit, in hit order
+/// (the units, then the heroes), as Hearthstone's Lightning Storm does; without `odds` nothing is drawn.
 pub fn damage_all(args: DamageAllArgs) -> Effect {
     Effect::new("damageAll", move |ctx| {
         let flags = damage_flags(&args.flags);

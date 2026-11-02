@@ -10,10 +10,7 @@
 //! each guesses: the player, the AI, the random policy and a timeout (R79). Right: one hit of
 //! `damage` on the enemy hero (§4.4, its caster's Spell Damage raising it), then `gain_echo`: the card
 //! is owed one more resolution (§6.2 Echo), which asks a new problem, the repeats a play gives itself
-//! capped at `SELF_ECHO_GAIN_CAP`. Wrong: nothing more, the Spell still played. The Radiant face's cheat
-//! sheet is `CHEAT_SHEET_MARK` on the right option's label, which only its chooser's prompt shows (the
-//! other seat's view says only that a prompt is open); the key itself stays stripped from every view
-//! and from the AI's redaction (R465, R185), and the AI, reading no label, still guesses (R1870002).
+//! capped at `SELF_ECHO_GAIN_CAP`.
 
 use jackioh_engine::effects::{ChooseAnswerArgs, answered_correctly, choose_answer, damage, gain_echo};
 use jackioh_engine::prelude::*;
@@ -78,12 +75,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #4.2 KY's Last Exam — SPEC §8.10 row S 4.2, BUILD M12 row S 4.2: "opens an `answer` prompt of 4
-// options for its caster, the key in neither view; a right answer deals 30 to the enemy hero (Spell
-// Damage raising it) and the card resolves again with a new problem; a wrong one ends it; the AI, the
-// random policy and a timeout answer it; the repeats stop at the cap; damage reads through `param()`;
-// radiant the right option is marked for its chooser and for no other seat" (R1870002). The AI's
-// answer is `crates/ai/tests/ai/answer_key.rs`'s, the AI being out of this crate's reach.
+// S #4.2 KY's Last Exam — SPEC §8.10 row S 4.2, BUILD M12 row S 4.2 (R1870002).
 #[cfg(test)]
 mod tests {
     use super::{CHEAT_SHEET_MARK, ID};
@@ -102,10 +94,8 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const SOLARIUS: &str = "classicplus-038"; // a Unit with Spell Damage +2.
     const SOLARIUS_SPELL_DAMAGE: i32 = 2;
-    /// The catalog's damage, 30.
     const DAMAGE: i32 = 30;
 
-    /// p1 casts KY's Last Exam, the enemy hero at `health`.
     fn exam(seed: &str, radiant: bool, health: i32) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
@@ -121,7 +111,6 @@ mod tests {
         answer_key_of(&pending.resume.data).expect("its key")
     }
 
-    /// Answers the open problem rightly or wrongly.
     fn answer(s: &mut Scenario, right: bool) {
         let correct = key(s);
         let letter = if right {
@@ -302,7 +291,6 @@ mod tests {
                     let marked = option.label.ends_with(CHEAT_SHEET_MARK);
                     assert_eq!(marked, option.key == format!("mode:{key}"), "{:?}", labels(&s));
                 }
-                // The chooser's view shows the mark; the other seat's shows no prompt at all.
                 let mine = js(&s.view(P1))["pending"]["options"]
                     .as_array()
                     .cloned()
@@ -317,7 +305,6 @@ mod tests {
                 assert!(!theirs.contains(CHEAT_SHEET_MARK.trim()), "p2 never sees it");
                 assert!(!theirs.contains(ANSWER_KEY));
             }
-            // The base face marks nothing.
             let s = exam("kys-last-exam-sheet-base", false, HERO_HEALTH);
             assert!(labels(&s).iter().all(|label| !label.ends_with(CHEAT_SHEET_MARK)));
         }

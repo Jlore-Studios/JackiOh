@@ -35,15 +35,12 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 18 is its declared `heal`, which `param` reads off the running face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
 }
 
-// C #3 Book of Heal — SPEC §8.6 row 3, BUILD M9 Classic row C 3: "Heal a target 9, either side: a
-// Unit up to its max health, a hero with no cap (R19); a full-health Unit gains nothing; radiant 18;
-// its tuned number (heal, step 2) reads through `param()` (R386)".
+// C #3 Book of Heal — SPEC §8.6 row 3, BUILD M9 Classic row C 3 (R19, R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,7 +80,6 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "aim": "help", "filter": { "side": "any", "of": ["unit", "hero"] } }])
             );
-            // The radiant face is the very same script.
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

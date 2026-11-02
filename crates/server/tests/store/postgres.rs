@@ -1,14 +1,5 @@
-//! What only a real Postgres can prove about the Postgres store (`Db::Pg`, `src/db/pg.rs`);
-//! `tests/store/contract.rs` covers the rest against both stores. Here: which role the store runs as,
-//! that `SET LOCAL` really is local, that the `app.*` functions do the work, and the schema
-//! invariants the store leans on (§9.4, §9.5).
-//!
-//! Run with `tests/db/run.sh`, which sets `DATABASE_URL`; without it every case returns at once, so
-//! `cargo test` stays hermetic. The cases share one database and truncate it, so `run.sh` runs them
-//! one at a time per database (`--test-threads=1`, in each of its shard databases).
-//!
-//! A store call made outside `store.tx` is its own transaction: `once!` begins one (`Db::begin`),
-//! makes the call and commits. Rows go in and come out as JSON, so these cases read the wire shapes.
+//! Postgres store tests (`Db::Pg`, `src/db/pg.rs`, §9.4, §9.5).
+//! Verifies role permissions, SET LOCAL scoping, app functions, and schema invariants.
 
 use std::collections::BTreeSet;
 use std::future::Future;
@@ -129,10 +120,7 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
         .collect()
 }
 
-/// The probe that answers "what was the session, inside the store's own transaction?". A trigger on
-/// `public.code_attempts` — a table `codes.logAttempt` writes directly — records `current_user` and
-/// `auth.uid()` as the store's statement sees them. Nothing here is faked or asserted from the
-/// outside: the row is written by Postgres, during the store's call, in the store's transaction.
+/// Trigger probe on `public.code_attempts` recording `current_user` and `auth.uid()` in store transaction.
 const PROBE_SETUP: &str = "
 create schema if not exists probe;
 create table if not exists probe.session_log (
@@ -348,9 +336,7 @@ mod the_acting_role {
             attempt(Some(user_id.as_str()), "ip-1", "ok", "redeemed", at),
         )
         .await;
-        // Pool size is 1, so this is the same physical connection. `SET LOCAL` is undone at commit,
-        // so the second transaction must start from nothing and set its own (null) subject — if the
-        // GUC leaked, `uid` below would still be the first profile.
+        // Pool size 1: SET LOCAL undone at commit so next transaction starts fresh.
         log_attempt(&ctx.db, attempt(None, "ip-2", "rejected", "missing", at)).await;
 
         let rows = ctx.probe_rows().await;
@@ -640,8 +626,7 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
         decks.iter().map(js).collect()
     }
 
-    /// The cap is checked under a lock on the profile, so two concurrent creates cannot both pass it.
-    /// The in-memory store cannot show this; here the creates run at once, on separate connections.
+    /// Concurrent creates checked under lock on profile.
     #[tokio::test]
     async fn r250_lets_exactly_as_many_concurrent_creates_through_as_the_cap_has_room_for() {
         let Some(ctx) = setup().await else { return };
@@ -1149,10 +1134,7 @@ mod concurrency {
         .expect("quests.replace")
     }
 
-    /// R2210000: two replaces of one account at once (the panel's Replace pressed on two held
-    /// quests in two tabs) land one: the replace locks the account's economy before it counts the
-    /// day's removed quests, so the second waits for the first and reads its `removed` row, and is
-    /// spent.
+    /// R2210000: two simultaneous replaces of one account land at most one.
     #[tokio::test]
     async fn r2210000_two_simultaneous_replaces_land_at_most_one() {
         let Some(ctx) = setup().await else { return };
@@ -1227,9 +1209,7 @@ mod concurrency {
         ctx.finish().await;
     }
 
-    /// R1304000: two top-ups of one account at once (its quests read in two tabs, or read as a game
-    /// it played is recorded) bring the quest that fell due once. The store's read locks the
-    /// account's schedule, so the second waits for the first and reads what it wrote.
+    /// R1304000: two simultaneous top-ups bring a quest that fell due once.
     #[tokio::test]
     async fn r1304000_two_simultaneous_top_ups_bring_a_quest_that_fell_due_once() {
         let Some(ctx) = setup().await else { return };
@@ -1409,9 +1389,7 @@ async fn app_live_matches_backs_matches_live_and_an_open_room_is_not_one() {
     ctx.finish().await;
 }
 
-// ---------------------------------------------------------------------------
 // R1435: the usernames `seed-accounts` gives its accounts
-// ---------------------------------------------------------------------------
 
 mod r1435_seed_accounts {
     use super::*;

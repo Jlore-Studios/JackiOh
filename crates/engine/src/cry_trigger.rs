@@ -1,36 +1,9 @@
 //! Trigger a Cry (docs/classic-sets.md B5 E13, R467): run a Unit's Cry again, on the field or out of a
-//! graveyard, for the player whose card triggered it (Classic #54 Rewind).
-//!
-//! The rules, in the order the sequence meets them:
-//!   - Which card. A Unit whose running face has a Cry: the top of a unit pile (a dormant card under a
-//!     Stack is not on the field, R13) or a Unit card in a graveyard; or a face-up Field Spell with a
-//!     Cry on the field (R1873003). Anything else triggers nothing.
-//!   - Who. The triggering card's controller runs it and makes its choices (R70), whoever controls or
-//!     owns the Unit — Rewind's Radiant reaches the other player's Units too.
-//!   - Its choices. A Cry's declared targets and modes (R81) travel in the play that played the Unit,
-//!     and a triggered Cry has no play, so they are asked as prompts, declaration by declaration, as a
-//!     cast's are (R70) — modes first when a target declaration hangs on them (R90's `forModes`). A
-//!     declaration the board cannot satisfy is skipped (§8's conventions), and a Tribute declaration is
-//!     a play's price, which a triggered Cry never pays: its slots are left empty (`{ pick: "none" }`)
-//!     so the declarations after it still read their own (R90, R123). A random cast's caster is never
-//!     asked (R452): while one of the controller's is being driven, each declaration is drawn from the
-//!     match rng instead, a target pick aimed by its declaration when the cast targets enemies (R656), as
-//!     `play_steps` draws a cast's own.
-//!   - "This". On the field the Unit is the Cry's `self`. Out of a graveyard the Cry runs with no card
-//!     at all (`self` null, its definition named as R127 names a ceased card's), so an effect aimed at
-//!     "this" finds nothing, a pool still excludes the definition (§5.1), and the Cry reads X as 0.
-//!   - Not a play. Nothing is played, cast or announced: no `cardPlayed`, no counters (R55, E4), no
-//!     Echo, no Combo. The Cry's own effects are ordinary effects.
-//!   - Pauses. Each question is a prompt this module opened for itself, so its answer comes back here
-//!     (`prompts.rs` matches `TRIGGER_CRY_HOOK` to `answer_cry_prompt`, R122; TS registered it with
-//!     `registerPromptAnswerer`, SURFACE §6.6), and the Cry that runs once they are answered is the
-//!     card's own resumable hook (`prompts::run_hook_resumable`): a prompt inside it parks its own tail
-//!     on `state.work` ahead of whatever the triggering list still owes (R113). The run record in the
-//!     prompt's resume is plain JSON, so a paused trigger survives a round trip and replays exactly.
-//!   - Leaving. A Unit that has left the field since the trigger began (R174), or left the graveyard,
-//!     by the time its choices are made triggers nothing.
-//!
-//! Port of `packages/engine/src/cryTrigger.ts`.
+//! graveyard, for the player whose card triggered it (Classic #54 Rewind), who makes its choices (R70).
+//! A dormant card under a Stack is not on the field (R13). A triggered Cry is no play: its declared
+//! choices (R81) are asked as prompts, one the board cannot satisfy skipped (§8); no `cardPlayed`, no
+//! counters (R55, E4), no Echo, no Combo. Out of a graveyard "this" finds nothing, a pool still
+//! excludes the definition (§5.1), and X reads 0.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -64,7 +37,7 @@ pub const TRIGGER_CRY_HOOK: &str = "@triggerCry";
 /// Where the run record sits inside the prompt's `resume.data`.
 const RUN_KEY: &str = "cry";
 
-/// Where the Unit is when its Cry is triggered. (TS `"field" | "graveyard"`.)
+/// Where the Unit is when its Cry is triggered.
 /// ME-ALTPLAY, R1044: a set Spell resolving in the backrow runs from `Backrow`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -74,7 +47,7 @@ pub enum CryPlace {
     Backrow,
 }
 
-/// Which kind of question the open prompt is (TS `"mode" | "target" | null`).
+/// Which kind of question the open prompt is.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 enum CryAwaiting {
@@ -82,7 +55,7 @@ enum CryAwaiting {
     Target,
 }
 
-/// A triggered Cry part-way through its questions. All JSON (§9.3); the field order is TS's literal's.
+/// A triggered Cry part-way through its questions. All JSON (§9.3); its field order is the format's.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct CryRun {
@@ -97,7 +70,7 @@ struct CryRun {
     decl_at: usize,
     mode_at: usize,
     /// Which kind of question the open prompt is, so its answer is filed where it belongs. `null`, not
-    /// absent, while none is open, as TS writes it.
+    /// absent, while none is open.
     awaiting: Option<CryAwaiting>,
     /// ME-ALTPLAY, R1045: Echo repeats a set Spell still owes, with fresh prompts each time.
     #[serde(default, skip_serializing_if = "is_zero")]
@@ -112,7 +85,6 @@ fn is_zero(n: &u32) -> bool {
     *n == 0
 }
 
-/// The name a card's definition prints.
 fn name_of(state: &GameState, def_id: &str) -> String {
     crate::catalog::def_of(Some(state), def_id).name.clone()
 }
@@ -120,8 +92,7 @@ fn name_of(state: &GameState, def_id: &str) -> String {
 /// Where a card's Cry could be triggered from, or `None`: a Unit (its running face's type, B2.7) with a
 /// Cry on its running face, on top of its unit pile, standing in a backrow zone (R1081000) or in a
 /// graveyard, or a face-up Field Spell with one in its backrow zone (R1873003). A Vanilla card has no
-/// text (§6.3), so no Cry. A pure read: the reader a card's target check uses (Classic #54's "a Unit
-/// that has a Cry").
+/// text (§6.3), so no Cry.
 pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> {
     // ME-ALTPLAY, R1044: a set Spell whose text is resolving runs from the backrow first.
     if matches!(
@@ -136,9 +107,8 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
         return Some(CryPlace::Backrow);
     }
     let card_type = crate::faces::card_type_of(state, card);
-    // R1873003: a face-up Field Spell on the field runs its Cry as itself, as a Unit there does (Radiant
-    // S #6 Tylannt's summon names S #7 The Greatest Heist, R411). A face-down one reads as the Trap it
-    // was set as (`card_type_of`), and out of a graveyard only a Unit's Cry is triggered.
+    // R1873003: a face-up Field Spell on the field runs its Cry as itself (R411). A face-down one reads
+    // as the Trap it was set as (`card_type_of`), and out of a graveyard only a Unit's Cry is triggered.
     if card_type == CardType::FieldSpell && matches!(card.zone, Zone::Field { .. }) {
         crate::scripts::script_of(state, card).cry.as_ref()?;
         return Some(CryPlace::Field);
@@ -162,17 +132,15 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
     }
 }
 
-/// B5 E13: trigger `card`'s Cry for `controller`. Asks the Cry's declared choices first, as prompts
-/// (the sequence then continues in the answer), and runs the Cry once they are all made. Nothing
-/// happens for a card whose Cry cannot be triggered (`cry_place_of`).
+/// B5 E13: trigger `card`'s Cry for `controller`: its declared choices as prompts, then the Cry.
+/// Nothing happens for a card whose Cry cannot be triggered (`cry_place_of`).
 pub fn trigger_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId) {
     trigger(sink, card, controller, None);
 }
 
 /// R1855001: trigger `card`'s Cry for `controller` with every choice of the controller's drawn at
-/// random, as R452's random cast draws its caster's: its declared targets and modes, and every prompt
-/// its text opens for the controller, after a pause as before one (`random_cast::RANDOM_CHOICES_KEY`).
-/// The other player's prompts are asked as usual.
+/// random, as R452's random cast draws its caster's, after a pause as before one
+/// (`random_cast::RANDOM_CHOICES_KEY`). The other player's prompts are asked as usual.
 pub fn trigger_random_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId) {
     trigger(sink, card, controller, Some(true));
 }
@@ -481,11 +449,10 @@ fn run_cry(sink: &mut EngineSink, run: &CryRun, card: &CardInstance) {
 /// the name.
 pub const EXTRA_CRY_HOOK: &str = "@extraCry";
 
-/// R823 (Meditative #10 Double Counting): a triggered Cry runs `left` more times, one after another,
-/// each a whole effect list the state check closes first (R59), reusing the answers its prompts got
-/// (R467) and aimed at the stays they were given on (R174). They end once the Unit is no longer where
-/// the trigger found it (`standing`). A pause owes the rest as one work item, at the moment it pauses
-/// (R117), behind the tail of the run that paused (R113).
+/// R823 (Meditative #10 Double Counting): a triggered Cry runs `left` more times, each a whole effect
+/// list the state check closes first (R59), reusing its prompts' answers (R467) and aimed at their
+/// stays (R174), until the Unit is no longer where the trigger found it. A pause owes the rest as one
+/// work item as it pauses (R117), behind the tail of the run that paused (R113).
 fn run_extra_cries(sink: &mut EngineSink, run: &CryRun, mut left: u32, exits_from: u32) {
     while left > 0 {
         if sink.state.result.is_some() {
@@ -694,13 +661,9 @@ fn run_of(data: &IndexMap<String, Value>) -> Option<CryRun> {
     })
 }
 
-/// R122: the answer to one of this sequence's questions. Validated like any answer, filed into the
-/// run — a mode prompt's pick into its modes, a target prompt's picks, in offered order (R221), into
-/// its targets — and the sequence goes on: the next question, or the Cry. Then the rest of what the
-/// question interrupted drains in R113's order, as `prompts::answer_prompt` does for a card's own step.
-///
-/// `prompts.rs` calls this for a prompt whose `resume.hook` is `TRIGGER_CRY_HOOK` (TS registered it
-/// with `registerPromptAnswerer`; SURFACE §6.6 matches the key instead).
+/// R122: the answer to a prompt whose `resume.hook` is `TRIGGER_CRY_HOOK` (`prompts.rs`, SURFACE §6.6),
+/// validated like any answer and filed into the run (picks in offered order, R221); then the next
+/// question or the Cry, and the rest drains in R113's order, as `prompts::answer_prompt` does.
 pub fn answer_cry_prompt(sink: &mut EngineSink, answer: &AnswerInput) -> Result<(), EngineError> {
     let Some(pending) = sink.state.pending.clone() else {
         return Err(EngineError::new("no prompt is open"));

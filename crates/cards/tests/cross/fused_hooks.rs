@@ -2,7 +2,6 @@
 //! ordered against what is already owed (SPEC §10.5, §10.6, R77, R90, R102, R113, R122).
 //! A fused Cry can pause with more of its list still to run, and one answered step can itself pause
 //! with a tail. Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //!  - R113, R122: a paused Cry resumes ingredient by ingredient; a pause inside an answered step is
 //!    owed ahead of everything older. R90, R102: each ingredient resolves the slice of the choices
 //!    that §10.5 step 1 read, not one measured at step 5, where the crafted card itself stands.
@@ -27,8 +26,6 @@ const TWISTED_SORCERER: &str = "core-068";
 
 use super::{craft_fused, scenario};
 
-/// A sink over the scenario's state with an event list of its own and an rng at the state's cursor,
-/// which nothing writes back.
 fn fuse_in(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -60,7 +57,6 @@ fn craft(s: &mut Scenario, def_ids: &[&str]) -> CardInstance {
     )
 }
 
-/// A fused definition's id: `t-<n>:` and then its ingredients.
 fn is_fused_id(id: &str, parts: &str) -> bool {
     match id.strip_prefix("t-").and_then(|rest| rest.split_once(':')) {
         Some((number, tail)) => {
@@ -76,10 +72,6 @@ mod r113_a_fused_cry_that_pauses_resumes_the_rest_of_every_ingredients_list {
     #[test]
     fn r113_r77_r102_a_crafted_cube_scarab_sorcerer_still_deals_the_sorcerers_damage_after_the_scarabs_discover()
      {
-        // The fused Cry is [Cube: remember, sacrifice] + [Scarab: Discover] + [Sorcerer: 4 damage]. The
-        // Discover pauses it at its third effect and the fourth is owed. Rebuilt on the answer, the
-        // Cube's half is empty — its meal has left the field — so the resume must go by ingredient.
-        // A second permanent stays on the field, so the Cube's declaration still takes its one pick.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [CARNIVOROUS_CUBE, JEWELOSCO_SCARAB, TWISTED_SORCERER, RENO],
@@ -96,7 +88,6 @@ mod r113_a_fused_cry_that_pauses_resumes_the_rest_of_every_ingredients_list {
             { "pick": "hero", "player": "p2" },
         ]);
         s.play(&crafted.id, json!({ "zone": 3, "targets": targets }));
-        // The Cube's half has eaten the meal, and the Scarab's Discover is asking.
         assert_eq!(s.card(&meal.id).zone.z(), ZoneName::Graveyard);
         let pending = must(s.state().pending.clone(), "the Scarab's Discover");
         let key = must(pending.options.first(), "a Discover option").key.clone();
@@ -211,7 +202,6 @@ fn kinds(g: &Scenario, card: &CardInstance) -> Vec<KeywordKind> {
     g.stats(&card.id).keywords.iter().map(Keyword::kind).collect()
 }
 
-/// The keyword kinds a definition's base face prints.
 fn printed_kinds(g: &Scenario, def_id: &str) -> Vec<KeywordKind> {
     def_of(Some(g.state()), def_id)
         .base
@@ -350,7 +340,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         assert!(printed_kinds(&g, &fused.def_id).contains(&KeywordKind::DivineShield));
         // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
         // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
-        // printed shield does after a granted one was spent (`radiant.gainPrintedShield`).
+        // printed shield does after a granted one was spent.
         assert!(kinds(&g, &kpop).contains(&KeywordKind::DivineShield));
     }
 
@@ -377,7 +367,6 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         let fused = g.card(&kpop.id).clone();
         assert_ne!(fused.def_id, KPOP);
         assert!(printed_kinds(&g, &fused.def_id).contains(&KeywordKind::Reborn));
-        // The defender's printed Reborn is the fused card's text, which the Kpop never printed.
         assert!(kinds(&g, &kpop).contains(&KeywordKind::Reborn));
     }
 }
@@ -419,7 +408,6 @@ fn fuse_seven_seven_onto(target: Value) -> (Scenario, CardInstance) {
     }));
     let kept = g.unit_at(P1, 1);
     g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
-    // The fusion happened: the target instance stands, carrying the summed stats (R77).
     assert!(
         g.events()
             .iter()
@@ -481,7 +469,6 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
             Some(P1)
         );
         s.answer(json!(["lose 3"]));
-        // One Mask's pick: 3 health, not 3 for each ingredient that shares the step name.
         s.expect_health(P1, 27);
         assert_eq!(
             s.state().pending.as_ref().map(|pending| pending.player_id),
@@ -495,7 +482,6 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     fn r102_r41_r77_a_crafted_carnivorous_cube_carnivorous_cube_remembers_both_meals_so_its_death_copies_each_8_22()
      {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-cube-cube",
             "p1": {
                 "mana": 10,
@@ -543,13 +529,11 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         );
         s.expect_in_zone(&pointmaster.id, "graveyard");
         s.expect_in_zone(&menace.id, "graveyard");
-        // The Mana Well beside them is no meal (R428): it stays where it is.
         assert_eq!(
             s.backrow(P1, 1).map(|card| card.def_id.clone()),
             Some(MANA_WELL.to_string())
         );
 
-        // Hit Job destroys the crafted card: each Cube's Death summons 2 copies of ITS remembered card.
         s.play(
             HIT_JOB,
             json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }),
@@ -579,7 +563,6 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         // p2 plays a Twinspell; p1's Unlicensed Experimentation fuses it onto p1's own Twinspell (R61,
         // R77). The fused Field Spell prints "the next Spell you play gains Echo +1" twice.
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-card-twin-twin",
             "active": "p2",
             "p1": { "backrow": [TWINSPELL, EXPERIMENTATION], "field": [MIDRANGE_MENACE], "hand": [STOCKPILE, RAPID], "library": library },
@@ -594,8 +577,6 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         );
         s.end_turn();
 
-        // Two Twinspells standing apart make the next Spell resolve three times; the one card that
-        // carries both texts does the same. Stockpile draws 2 per resolution.
         let from = s.events().len();
         s.play(STOCKPILE, json!({}));
         let draws = s.events()[from..]
@@ -648,8 +629,7 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
 
         // R43: each power is an Activate of the card's text (R752), and "one created later rolls when it
         // is created"; R151 has a Heroic Power roll as it arrives anywhere a card can be looked at, so no
-        // copy of the text is left "carrying no power … for ever". The fused card has a power, and p2
-        // may use it on their own turn.
+        // copy of the text is left "carrying no power … for ever".
         assert!(subsystems::power_of(&fused).is_some());
         g.end_turn();
         assert_eq!(g.state().active, P2);
@@ -664,8 +644,6 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
         );
     }
 }
-
-// A fused card's layers are each ingredient's
 
 const SUPPRESSIVE_AURA: &str = "core-046"; // Field Spell, 2 embiggen 4
 const GOING_LONG: &str = "core-084"; // Field Spell, 2 embiggen 4, Quickdraw — hero Armor 2 (paid 4: 5)
@@ -734,10 +712,9 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
 
     #[test]
     fn r102_r65_a_suppressive_aura_paid_4_fused_onto_a_mana_well_keeps_its_2_2_6_3_embiggen() {
-        // p2 plays Suppressive Aura at its embiggen price, 4: "all Units −2/−2". p1's Unlicensed
-        // Experimentation fuses it onto p1's Mana Well. The fused cost already reads that ingredient at
-        // the price it was played for (R77: the sum of the printed costs per R65), and its text is the
-        // same ingredient's, which §6.3 Embiggen has read the stored choice, so the aura stays −2/−2.
+        // The fused cost already reads that ingredient at the price it was played for (R77: the sum of the
+        // printed costs per R65), and its text is the same ingredient's, which §6.3 Embiggen has read the
+        // stored choice, so the aura stays −2/−2.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -758,7 +735,6 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         );
         assert!(is_fused_id(&backrow_at(&g, P1, 1).def_id, "core-046+core-006"));
 
-        // Big Felinor is 3/10: under −2/−2 it is 1/8, under the base price's −1/−1 it would be 2/9.
         g.expect_stats(&felinor.id, json!({ "attack": 1, "maxHealth": 8 }));
     }
 
@@ -767,8 +743,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
      {
         // p1's radiant Spikey Pillow prints "Aura: your non-Spikey-Pillow units have −2 attack"; p2's
         // Tempo Timmy is fused onto it by p1's Unlicensed Experimentation (R61, R77), and the fused card
-        // keeps that aura in full. The real Spikey Pillow p1's Masochism Mask summons is a Spikey
-        // Pillow, so the aura spares it; Jlockeed's Weapons gives it +3 attack and its own base aura −2.
+        // keeps that aura in full.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -797,7 +772,6 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         let pillow = g.unit_at(P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
 
-        // 0 printed + 3 (Weapons) − 2 (its own base aura), and nothing from the fused radiant aura.
         g.expect_stats(&pillow.id, json!({ "attack": 1 }));
     }
 }
@@ -805,7 +779,6 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
 mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_its_ingredients_read_and_what_its_own_texts_remembered {
     use super::*;
 
-    /// p2 plays Going Long, at its embiggen price or not; p1's Unlicensed Experimentation fuses it onto p1's own, played for 2.
     fn fused_going_longs(embiggen: bool) -> (Scenario, CardInstance, IndexMap<String, Value>) {
         let mut g = scenario(json!({
             "active": "p2",
@@ -841,8 +814,6 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         let (_g, kept, before) = fused_going_longs(true);
         let mut rest = kept.memory.clone();
         let prices = rest.shift_remove(INGREDIENTS_KEY);
-        // Everything the card remembered before is still there, and the one entry the Fuse added is the
-        // price each ingredient was played for: the kept Going Long's 2, and p2's 4.
         assert_eq!(rest, before);
         assert!(prices.is_some());
         let mut paid: Vec<bool> = ingredients_of(&kept)
@@ -940,8 +911,6 @@ mod r1850000_a_fused_copier_s_targeting_cost_is_its_copy_s {
     }
 }
 
-// A Trap's text fused into a Unit
-
 const WORMHOLE: &str = "stinkyscape-139"; // Trap, 2 — counters an opponent's Spell aimed at their own side
 const BOOK_OF_STATS: &str = "classicplus-057"; // Spell, 1 — "Give a Unit +5/+5."
 
@@ -951,7 +920,6 @@ mod r2226000_a_traps_text_fused_into_a_unit_never_fires_from_its_unit_zone {
     #[test]
     fn r2226000_a_wormhole_fused_onto_a_unit_never_counters_a_spell_its_condition_admits() {
         let mut g = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test.
             "seed": "fused-trap-text",
             "active": "p2",
             "p1": {

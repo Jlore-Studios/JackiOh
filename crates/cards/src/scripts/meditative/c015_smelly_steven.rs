@@ -3,10 +3,8 @@
 //! Base:    "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
 //! Radiant: the same, surcharge 2.
 //! Engine: a price rule on the opponent (`add_cost_rule`, R455) for Spells only, lasting
-//! "theirNextTurn": T-AI-7 Alignment Tax's shape narrowed to the Spell type. It is inert for the rest of
-//! this turn, holds through their next turn and is gone at its cleanup (R458: "next turn" skips the
-//! current one). It is a price for a play, so a Field Spell, a Trap and a Unit keep theirs, and a cast
-//! pays nothing (R70).
+//! "theirNextTurn" (R458: "next turn" skips the current one): T-AI-7 Alignment Tax's shape narrowed to
+//! the Spell type. It is a price for a play, so a cast pays nothing (R70).
 
 use jackioh_engine::prelude::*;
 
@@ -32,15 +30,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #15 Smelly Steven — SPEC §8.8 row 15, BUILD M10 row M 15: "A price rule on the opponent for Spells only,
-// lasting their next turn (R455): inert for the rest of your turn, live through theirs and gone at its
-// cleanup (R458); a Field Spell, a Trap and a Unit keep their price; your own Spells keep theirs; a cast pays
-// nothing (R70); a Spell the surcharge lifts past their mana drops out of `legalActions`; surcharge reads
-// through param() (R386); the Radiant face adds 2".
-//
-// Fixtures, as T-AI-7 Alignment Tax's: p2's hand holds one card of each price and type, #8 Mr. Vanilla (a
-// (1) Unit), #5 Stockpile (a (1) Spell), #17 Flood (a (4) Spell), #6 Mana Well (a (3) Field Spell) and #17
-// Counterspell (classic, a (2) Trap); #21 Hinder is the Spell cast on draw.
+// M #15 Smelly Steven — SPEC §8.8 row 15, BUILD M10 row M 15.
+// Fixtures as T-AI-7 Alignment Tax's: p2 holds one card of each price and type (#17 Flood); #21 Hinder casts on draw.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -119,7 +110,6 @@ mod tests {
             assert_eq!(price_of(&s, P2, STOCKPILE), 2);
             assert_eq!(price_of(&s, P2, FLOOD), 5);
             s.play(STOCKPILE, json!({}));
-            // 4 mana, the taxed Stockpile paid 2.
             s.expect_mana(P2, 2);
         }
 

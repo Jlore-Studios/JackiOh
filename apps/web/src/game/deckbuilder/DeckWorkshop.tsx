@@ -1,13 +1,9 @@
 // `/decks` deck workshop (SPEC §9.4, R250–R256): up to ten saved decks and five trios, one open at
 // a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
-// the local store and supplied API (R256). The open deck's kept versions are its History, in the
-// editor's head (R2100000).
-// #2096: Duplicate, on each deck's row and in its editor, makes a new deck with its cards, portrait and picks under copyName's name, and opens it.
-// R2119000: Delete deck and Delete trio ask nothing. The item leaves the list at once (the store's `hide`)
-// behind "Deck deleted · Undo" or "Trio deleted · Undo", and its DELETE waits for the undo window
-// (`undo/hold.ts`). Undo puts it back, open, its trio slots filled again; anything that needs it gone
-// first (a new deck, a duplicate, an import) sends the held DELETE at once.
+// the local store and supplied API (R256). R2119000: Delete deck and Delete trio ask nothing. The item
+// leaves the list at once (the store's `hide`) and its DELETE waits for the undo window
+// (`undo/hold.ts`); anything that needs it gone first sends the held DELETE at once.
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -91,7 +87,6 @@ function halvesTakeTurns(): boolean {
   }
 }
 
-/** What the main column shows. */
 export type WorkshopOpen =
   | { kind: "deck"; id: string }
   | { kind: "trio"; id: string }
@@ -300,7 +295,6 @@ type DeckRowProps = {
   unsynced: boolean;
   atCap: boolean;
   reasonId: string | undefined;
-  /** R2097000: the newest patch's changes while it is the catalog shown, else null. */
   patch: NewestChanges | null;
   onOpen: () => void;
   onDuplicate: () => void;
@@ -423,10 +417,9 @@ function neighbourOf<T extends { id: string }>(items: readonly T[], id: string):
 
 /**
  * #1991: where the open deck's "Practice with this deck" goes, or null for none. `saved:<n>` names the
- * deck by its place in the server's list, oldest first, which the store's list is only while nothing
- * waits on the server: no deck unsynced (R256), no deletion pending, both of which keep the status
- * off `saved`, and no deck's deletion held (R2119000), a deck the server still lists. Practice offers
- * only a complete deck (§9.9).
+ * deck by its place in the server's list, which the store's list is only while nothing waits on the
+ * server: no deck unsynced (R256) or deletion pending (each keeps the status off `saved`), and no
+ * deletion held (R2119000). Practice offers only a complete deck (§9.9).
  */
 function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | null {
   if (deck.cards.length !== DECK_SIZE || snapshot.status.state !== "saved" || snapshot.held?.kind === "deck") return null;
@@ -455,7 +448,6 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   // R2119000: before the store's start and stop, so leaving the screen sends a held DELETE first.
   const { held, hold, undo: undoDeletion, sendNow } = useUndoHold(props.clock);
 
-  // Start and stop persistence with the screen.
   useEffect(() => {
     store.start();
     return () => {
@@ -527,8 +519,8 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
     if (id !== null) openItem({ kind: "deck", id });
   };
 
-  // R2118000: the command menu's New deck (`/decks?new=deck`) makes and opens one deck. The query is read off the
-  // address itself and dropped first, so a second run of this effect (StrictMode) makes none.
+  // R2118000: the command menu's New deck (`/decks?new=deck`). The query is read off the address
+  // itself and dropped first, so a second run of this effect (StrictMode) makes none.
   const asksNewDeck = wantsNewDeck(useSearch());
   useEffect(() => {
     if (!asksNewDeck || !wantsNewDeck(window.location.search)) return;
@@ -553,7 +545,6 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const backToList = (): void => {
     setView("list");
     setMoveFocus("list");
-    // #2099: closing the editor ends its history.
     setHistory((current) => emptyHistory(current.deckId));
   };
 

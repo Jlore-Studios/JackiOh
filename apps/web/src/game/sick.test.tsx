@@ -1,7 +1,6 @@
 // R849000: a summoning-sick unit wears a zzz (`UnitView.sick`), and your own unit that may act but
-// cannot attack says why (`UnitView.attackReason`): in its tooltip, in the inspect notes and, when you
-// click it and `legal` offers no attack, in a notice on the board. The client reads both fields off the
-// view and works neither out; whether an attack is offered stays `legal`'s answer (CLAUDE.md rule 7).
+// cannot attack says why (`UnitView.attackReason`). The client reads both fields off the view and
+// works neither out; whether an attack is offered stays `legal`'s answer (CLAUDE.md rule 7).
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PlayerView, UnitView } from "@jackioh/shared";
@@ -26,7 +25,6 @@ afterEach(() => {
 const lookup = lookupFromDefs(CATALOG);
 const ASLEEP = "that unit is summoning sick";
 
-/** u1 is asleep and says so; u2 may attack; u3 is in Defense Position (no reason given); e1 is asleep too. */
 function sickView(): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -45,7 +43,7 @@ function sickView(): PlayerView {
   });
 }
 
-/** u2 attacks e1 or the hero; every unit of yours may switch, a sick one included (§4.1). */
+/** Every unit of yours may switch, a sick one included (§4.1). */
 const LEGAL: readonly ActionBody[] = [
   { type: "attack", attackerId: "u2", targetId: "e1" },
   { type: "attack", attackerId: "u2", targetId: "hero-p2" },
@@ -88,7 +86,7 @@ describe("R849000 a summoning-sick unit wears a zzz, and your own unit says why 
     expect(attacker.interaction.stage).toBe("attacking");
     expect(attacker.notice).toBeUndefined();
 
-    // A unit with no reason and no attack stays silent, as it always did.
+    // A unit with no reason and no attack stays silent.
     expect(click("u3", 3)).toEqual({ interaction: IDLE });
 
     // `legal` decides: the same unit with an attack on offer is picked up, with no notice.

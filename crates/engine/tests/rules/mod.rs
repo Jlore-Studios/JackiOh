@@ -1,6 +1,5 @@
-//! The ported engine tests (SURFACE §1): one module per `packages/engine/test/<x>.test.ts`, plus
-//! the test-only scripts and catalogs in `fixtures`. Each file starts with
-//! `use jackioh_engine::testkit::*;`. Written once by part 1; the files are parts 24–27's.
+//! The engine's rule tests (SURFACE §1), plus the test-only scripts and catalogs in `fixtures`. Each
+//! file starts with `use jackioh_engine::testkit::*;`.
 //!
 //! The modules from `a` to `o`, in the `rules` binary; those from `p` on are `mod_2.rs`'s, in
 //! `rules_2` (`tests/rules_2.rs`). One binary took CI's `rust (test engine rules)` past seven

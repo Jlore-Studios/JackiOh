@@ -1,15 +1,13 @@
 //! #40 Echoes of the Forgotten (SPEC §8.2): 2-cost Field Spell, "Start of your turn: deal damage to
 //! the enemy hero equal to the cards in your exile; then exile the bottom card of your library",
 //! radiant "… equal to twice the cards in your exile; …" (R275): only that multiple changes.
-//!
 //! R280: its `preview` is the damage it would deal if its controller's turn started now (`damage_now`,
 //! the hook's own); the exile count is public (§3). R72: "cards in exile" is YOUR OWN pile, never the
 //! game-wide `counters.exiled` (R55) or the opponent's.
-//!
 //! ORDER is load-bearing: the damage is counted BEFORE the new card enters exile, so this turn's exile
-//! pays out next turn. The hook reads `ctx.state` (CLAUDE.md rule 5 bans writing it) and freezes the
-//! number into the `damage` effect. The bottom card goes through `exileBottomOfLibrary` (shared with #65):
-//! `exile` takes a `TargetSpec`, which cannot name a library card, and the clause is not a choice (R81).
+//! pays out next turn; the hook freezes the number into the `damage` effect (CLAUDE.md rule 5). The
+//! bottom card goes through `exileBottomOfLibrary` (shared with #65): `exile` takes a `TargetSpec`,
+//! which cannot name a library card, and the clause is not a choice (R81).
 
 use jackioh_engine::effects::{damage, exile_bottom_of_library};
 use jackioh_engine::prelude::*;
@@ -83,11 +81,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40: "Start of turn: damage = exile
-// count, then bottom card exiled; empty library → no exile, no fatigue"; Radiant: twice the count (R275).
-// R280's `preview` is proved in test/preview.test.ts. R72: your own exile pile only. R62: the bottom
-// card is exiled before the draw. R63: a hit of 0 is no damage instance, so an empty pile emits none
-// (twice 0 is 0). §2.4/R3: fatigue is the draw's, so an empty library shows exactly one instance.
+// #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40. Radiant: twice the count (R275). R62:
+// the bottom card is exiled before the draw. R63: a hit of 0 is no damage instance, so an empty pile emits
+// none. §2.4/R3: fatigue is the draw's, so an empty library shows exactly one instance.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -106,7 +102,7 @@ mod tests {
     /// Three cards in p1's exile, so the base face deals 3 and the radiant face 6.
     const EXILE_THREE: [&str; 3] = [STOCKPILE, TIMMY, MENACE];
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -165,7 +161,6 @@ mod tests {
 
             s.start_turn();
 
-            // The card this turn exiles brings the pile to 1, and yet the hit was 0: the order is the rule.
             assert!(damage_to(&s, "hero-p2").is_empty());
             s.expect_health("p2", 30);
             assert_eq!(def_ids(&s.pile("p1", "exile")), strings(&[POSTDOC]));
@@ -213,8 +208,7 @@ mod tests {
             s.expect_health("p2", 28);
             assert!(exiled_events(&s).is_empty());
             assert_eq!(s.pile("p1", "exile").len(), 2);
-            // §2.4/R3: the turn's own draw fatigues for FATIGUE_DAMAGE(1) = 1 and nothing else does, so a
-            // second fatigue instance from this card's exile clause would show as 30 − 1 − 2 = 27.
+            // The turn's own draw fatigues for FATIGUE_DAMAGE(1) = 1 and nothing else does.
             s.expect_health("p1", 29);
             assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
         }

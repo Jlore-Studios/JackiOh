@@ -1,20 +1,15 @@
 //! Meditative #40 Feng Shui: ME-ELEMENT and ME-LUCK (R980–R987).
 //!
-//! ME-ELEMENT: every card has an element, the Hetu (河图) element of its index's last digit (R980:
-//! 1 and 6 水, 2 and 7 火, 3 and 8 木, 4 and 9 金, 5 and 0 土; no digit is 土; a fused card takes
-//! its first ingredient's). Each player's last face-up play is recorded (R982, at §10.5 step 4 by
-//! `play_counts::record_play`, in every game since the Meditative set shipped). At step 3 each Feng
-//! Shui on the field judges the play from its player's last record (R981): positive when the last element
-//! generates the new one (木→火→土→金→水→木), negative when it overcomes it (木→土→水→火→金→木),
-//! neutral otherwise and on a first play. A positive play is made Radiant there (R983, read through
-//! `rewards` by step 1's `play_made_radiant`, as R214 fixes Gifted Program's); a negative one is
-//! given Brittle 2 there and takes its hit once the play has resolved (R983, R985: 10, 20 from a
-//! Radiant judge). The base face judges both players; a Radiant judge rewards only its controller
-//! and punishes only the opponent (R984). Elements are no tags (R986).
+//! ME-ELEMENT: every card has the Hetu (河图) element of its index's last digit (R980). Each player's
+//! last face-up play is recorded (R982, at §10.5 step 4 by `play_counts::record_play`). At step 3
+//! each Feng Shui on the field judges the play from its player's last record (R981): positive when
+//! the last element generates the new one, negative when it overcomes it. A positive play is made
+//! Radiant there (R983); a negative one is given Brittle 2 there and takes its hit once the play has
+//! resolved (R985). A Radiant judge rewards only its controller and punishes only the opponent
+//! (R984). Elements are no tags (R986).
 //!
-//! ME-LUCK: a player's Luck, read through `query::luck_of` (R987).
-//!
-//! All of it is plain data on the state, so `(seed, decks, …, log)` folds to the same game (§9.3).
+//! ME-LUCK: a player's Luck, read through `query::luck_of` (R987). All of it is plain data on the
+//! state, so `(seed, decks, …, log)` folds to the same game (§9.3).
 
 use serde::{Deserialize, Serialize};
 
@@ -24,9 +19,8 @@ use crate::config::{
 use crate::state::{CardInstance, GameState};
 use crate::wire::{CardElement, FengShuiOutcome, PLAYER_IDS, PlayerId, PreviewValue};
 
-/// R983: one Feng Shui's judgement of a play, fixed at §10.5 step 1 (as R214 fixes Gifted
-/// Program's) and carried on the play's run to steps 3 and 7. `source_id` is the judging Feng
-/// Shui; `damage` is the step-7 hit for a `Negative` verdict, else 0.
+/// R983: one Feng Shui's judgement of a play, fixed at §10.5 step 1 and carried on the play's run to
+/// steps 3 and 7. `source_id` is the judge; `damage` is the step-7 hit for a `Negative` verdict.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FengShuiVerdict {
@@ -35,8 +29,7 @@ pub struct FengShuiVerdict {
     pub damage: i32,
 }
 
-/// R980: the element of a catalog index — its last ASCII digit's Hetu element, or 土 for an index
-/// with no digit (T-rush, T-coin and the other named tokens).
+/// R980: the element of a catalog index: its last ASCII digit's Hetu element, or 土 with no digit.
 pub fn element_of_index(index: &str) -> CardElement {
     let digit = index
         .bytes()
@@ -49,8 +42,7 @@ pub fn element_of_index(index: &str) -> CardElement {
     }
 }
 
-/// R980: the element of a definition — its first ingredient's for a fused card (R77's order),
-/// else its index's.
+/// R980: the element of a definition: its first ingredient's for a fused card (R77's order).
 pub fn element_of(state: &GameState, def_id: &str) -> CardElement {
     match crate::catalog::fused_id_parts(Some(state), def_id).and_then(|parts| parts.into_iter().next()) {
         Some(first) => element_of(state, &first),
@@ -58,8 +50,7 @@ pub fn element_of(state: &GameState, def_id: &str) -> CardElement {
     }
 }
 
-/// R981: how `played` answers `last`, the element of the player's last face-up play — `Positive`
-/// when the last element generates the new one, `Negative` when it overcomes it, `None` for the
+/// R981: how `played` answers `last`, the element of the player's last face-up play: `None` for the
 /// same element, the reverse relations, and a first play.
 pub fn reaction(last: Option<CardElement>, played: CardElement) -> Option<FengShuiOutcome> {
     let last = last?;
@@ -72,7 +63,6 @@ pub fn reaction(last: Option<CardElement>, played: CardElement) -> Option<FengSh
     }
 }
 
-/// Whether `played` cyclically follows `last` in `cycle`.
 fn follows_in(cycle: &[CardElement; 5], last: CardElement, played: CardElement) -> bool {
     cycle
         .iter()
@@ -88,9 +78,8 @@ pub fn last_element(state: &GameState, player: PlayerId) -> Option<CardElement> 
         .and_then(|log| log.last_element)
 }
 
-/// R982–R984: the Feng Shuis judging a play now — the cards acting on either side of the field
-/// (§3.2) whose running face carries the flag. A face-down Feng Shui's text is in nobody's use
-/// until it fires (R33), so it judges nothing.
+/// R982–R984: the Feng Shuis judging a play now, acting on either side of the field (§3.2); a
+/// face-down one's text is in nobody's use until it fires (R33), so it judges nothing.
 fn judges(state: &GameState) -> Vec<CardInstance> {
     let mut out = Vec::new();
     for player in PLAYER_IDS {
@@ -103,15 +92,13 @@ fn judges(state: &GameState) -> Vec<CardInstance> {
     out
 }
 
-/// R982: whether a play is judged — only a face-up one, never a Trap or a face-down play.
+/// R982: whether a play is judged: only a face-up one.
 pub fn judged(state: &GameState, card: &CardInstance) -> bool {
     !crate::play_counts::played_face_down(crate::faces::card_type_of(state, card))
 }
 
-/// R981–R984: every acting Feng Shui's verdict on `player`'s play of `card` — empty for a play no
-/// Feng Shui judges (face-down, neutral, or none standing). A Radiant judge keeps a `Positive`
-/// verdict only for its controller's plays and a `Negative` one only for the opponent's; `damage`
-/// is the judge's face hit (R985) for a `Negative` verdict, else 0.
+/// R981–R984: every acting Feng Shui's verdict on `player`'s play of `card`, empty for a play none
+/// judges; `damage` is the judge's face hit (R985) for a `Negative` verdict, else 0.
 pub fn verdicts(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<FengShuiVerdict> {
     if !judged(state, card) {
         return Vec::new();
@@ -144,18 +131,16 @@ pub fn verdicts(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec
         .collect()
 }
 
-/// R983: whether any Feng Shui makes this play Radiant — what step 1 reads to know the face the
-/// play's choices answer (R214), so step 3 applies the answer rather than asking the board again.
+/// R983: whether any Feng Shui makes this play Radiant: step 1 reads it to know the face the play's
+/// choices answer, as R214 fixes Gifted Program's, so step 3 applies it without asking the board again.
 pub fn rewards(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     verdicts(state, player, card)
         .iter()
         .any(|verdict| verdict.outcome == FengShuiOutcome::Positive)
 }
 
-/// R982: record the element of `player`'s face-up play of `card`, beside R451's records — in every
-/// game since the Meditative set shipped (v0.3.5; before it, only while the set was previewed,
-/// D14). Ignores R451's AI-card skip: the hidden rule never reveals a hidden card either way, and
-/// the record is its memory.
+/// R982: record the element of `player`'s face-up play of `card`, beside R451's records but without
+/// their AI-card skip: the hidden rule never reveals a hidden card either way, and this is its memory.
 pub fn record_element(state: &mut GameState, player: PlayerId, card: &CardInstance) {
     if !judged(state, card) {
         return;
@@ -166,8 +151,7 @@ pub fn record_element(state: &mut GameState, player: PlayerId, card: &CardInstan
     }
 }
 
-/// R980: the element a card's view carries — `Some` while a Feng Shui acts, `None` otherwise, so
-/// a shipped game shows none (D14).
+/// R980: the element a card's view carries, `Some` only while a Feng Shui acts (D14).
 pub fn shown_element(state: &GameState, card: &CardInstance) -> Option<CardElement> {
     if judges(state).is_empty() {
         return None;

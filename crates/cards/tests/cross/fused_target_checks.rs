@@ -1,15 +1,10 @@
 //! R102, §10.6: a fused card carries every ingredient's declared targets, and a declaration's filter
 //! may name a predicate (`TargetFilter.check`) in its card's `targetChecks`. Those are pure reads asked
 //! with the candidate, not hooks that return lists, so the fused card must answer them with a boolean.
-//!
 //! Found by the fuzz gate: a fused card of two ingredients that each define `targetChecks` (here Classic
-//! #48 Hired Shrimp and a fusion holding C+ #41 KY's Constant) made `legalActions` throw "Cannot read
-//! properties of undefined (reading '__partDepth')" for as long as it sat in a hand, and `reduce` with
-//! it, because every action ends by asking whether the turn is over (R82). The combiner wrapped each
-//! predicate as a fused Cry; one ingredient defining the object was never wrapped, so no test saw it.
-//!
-//! Port of `packages/cards/test/fused-target-checks.test.ts` (SURFACE §4.1, §8). TS's
-//! `expect(() => legalActions(…)).not.toThrow()` is the call itself: a panic fails the test.
+//! #48 Hired Shrimp and a fusion holding C+ #41 KY's Constant) broke `legalActions` for as long as it
+//! sat in a hand, and `reduce` with it, because every action ends by asking whether the turn is over
+//! (R82). A bare `legal_actions` call is a test of its own: a panic fails it. Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::PlayerId::P1;
 use jackioh_engine::subsystems::fuse::FuseArgs;
@@ -23,8 +18,6 @@ const ANCHOR: &str = "core-010"; // a free Spell that keeps the turn open; never
 
 use super::scenario;
 
-/// TS `craft(s, ingredients)`: `subsystems.fuse` over a sink on the scenario's state, with an event
-/// list of its own and an rng at the state's cursor that nothing writes back.
 fn craft(s: &mut Scenario, ingredients: [CardInstance; 2]) -> CardInstance {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -43,7 +36,6 @@ fn craft(s: &mut Scenario, ingredients: [CardInstance; 2]) -> CardInstance {
     }
 }
 
-/// The `play` actions `legalActions` offers p1 for this card.
 fn plays_of(s: &Scenario, card: &CardInstance) -> Vec<ActionBody> {
     legal_actions(s.state(), P1)
         .into_iter()
@@ -66,9 +58,7 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
         let constant = s.card(KYS_CONSTANT).clone();
         let fused = craft(&mut s, [rewind, constant]);
 
-        // not.toThrow(): listing the legal actions must not panic.
         let _listed = legal_actions(s.state(), P1);
-        // Rewind's pick (an ally with a Cry) and KY's Constant's (a hand card), in ingredient order.
         assert!(plays_of(&s, &fused).iter().any(
             |play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if targets.len() == 2)
         ));
@@ -78,7 +68,6 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
     fn r102_ingredients_that_name_the_same_predicate_must_each_admit_the_candidate_a_crafted_kys_constant_kys_constant()
      {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "fused-target-checks",
             "p1": { "hand": [KYS_CONSTANT, KYS_CONSTANT, HIT_JOB, ANCHOR], "mana": 10 },
         }));
@@ -93,7 +82,6 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
         };
         let fused = craft(&mut s, [first, second]);
 
-        // not.toThrow(): listing the legal actions must not panic.
         let _listed = legal_actions(s.state(), P1);
         assert!(!plays_of(&s, &fused).is_empty());
     }

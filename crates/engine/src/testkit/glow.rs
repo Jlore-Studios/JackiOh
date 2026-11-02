@@ -1,9 +1,7 @@
 //! R195, R662: reading the yellow glow (`conditionActive`) off a viewer's own `view_for`, for the
 //! card tests that prove it in their own file (README §5). The key is present and `true`, or absent:
-//! a key present with any other value fails here.
-//!
-//! Port of `packages/cards/test/_glow.ts` (part 5). The view is read as its JSON, as TS read the
-//! object: "is the key there" is a question about the wire, not about a Rust `Option`.
+//! a key present with any other value fails here. The view is read as its JSON, since "is the key
+//! there" is a question about the wire, not about a Rust `Option`.
 
 use serde::Serialize;
 use serde_json::Value;
@@ -11,7 +9,7 @@ use serde_json::Value;
 use crate::testkit::scenario::Scenario;
 use crate::wire::PlayerId;
 
-/// `card` as its JSON, `None` for no card at all (TS `null` or `undefined`).
+/// `card` as its JSON, `None` for no card at all.
 fn as_json<T: Serialize>(card: Option<&T>) -> Option<Value> {
     let value = serde_json::to_value(card?).expect("a view serializes");
     if value.is_null() { None } else { Some(value) }

@@ -1,7 +1,4 @@
 //! Stat and keyword layers (SPEC §10.4). Always computed on read, never stored.
-//!
-//! Port of `packages/engine/src/layers.ts`: the same order of aura sources (each side's acting units
-//! in lane order, its carried Units, then its backrow by lane) and of stat mods as TS.
 
 use serde::{Deserialize, Serialize};
 
@@ -48,9 +45,7 @@ pub struct BuffedStats {
 
 /// R349: what a summon's X/X (`statsOverride`) comes to on the face the instance wears. A card that
 /// prints no Radiant form of its own (`radiantFallback`, the Ghoul Token) is, made Radiant, its base
-/// face with its attack and health doubled, and its X/X is that base face — so a Radiant Ghoul
-/// summoned 3/3 is a 6/6. A card that prints a Radiant form keeps its X on both faces, as the Bread
-/// Token's "X/X, Armor X" and an X/X Rush Token do (§7).
+/// face with its attack and health doubled; one that prints a Radiant form keeps its X on both (§7).
 pub fn worn_stats_override(def: &CardDef, instance: &CardInstance) -> Option<AttackHealth> {
     let stats = instance.stats_override?;
     if !instance.radiant || def.radiant_fallback != Some(true) {
@@ -63,9 +58,8 @@ pub fn worn_stats_override(def: &CardDef, instance: &CardInstance) -> Option<Att
 }
 
 /// B2.7: a face that prints its stats as multiples of X (Classic+ #69 Buff Billy's "[3X/3X]") is those
-/// multiples of the X the card was played for, tuned (`tuning::x_of`), and 0/0 when it has none — a
-/// Recruit, a copy, a card outside a play — as the Ghoul Token's X/X is with no X (§7). A summon's
-/// `statsOverride` still wins, as it wins over any printed stats.
+/// multiples of the X the card was played for, tuned (`tuning::x_of`), and 0/0 when it has none. A
+/// summon's `statsOverride` still wins, as it wins over any printed stats.
 fn x_stats_of(face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> {
     let multiples = face.x_stats?;
     let x = x_of(instance);
@@ -75,11 +69,9 @@ fn x_stats_of(face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> 
     })
 }
 
-/// The card's printed face, radiant when the instance is (§5.2), as the card's lasting changes leave
-/// it: B2.7's X stats, and B3.4's `tuning` — the stats changes on top of the printed stats and the
-/// keyword changes on the printed keywords (`tuning::tuned_keywords`). Tuning is part of the card, kept
-/// in every zone (R78 leaves it alone), so this is the face a card in a hand or a deck will enter with
-/// (B3.4 rule 6) as well as layer 1 on the field.
+/// The card's printed face, radiant when the instance is (§5.2), with B2.7's X stats and B3.4's
+/// `tuning` on top. Tuning is part of the card, kept in every zone (R78 leaves it alone), so this is the
+/// face a card in a hand or a deck will enter with (B3.4 rule 6) as well as layer 1 on the field.
 pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
@@ -104,10 +96,9 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
     }
 }
 
-/// R2280000: whether the card has stats, an attack and health line its definition gives it: its own
-/// printed one or a fused definition's (R77, R102), a summon's `statsOverride` or X stats. Buffs, auras
-/// and `tuning` change a line the card has and never make one. A Field Spell, Trap or Field Trap
-/// animates only with stats (`animated::animated_with_stats`).
+/// R2280000: whether the card has a stat line its definition gives it: its own printed one or a fused
+/// definition's (R77, R102), a summon's `statsOverride` or X stats. Buffs, auras and `tuning` never
+/// make one, and a Field Spell, Trap or Field Trap animates only with one (`animated::animated_with_stats`).
 pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
@@ -117,12 +108,10 @@ pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
         || face.health.is_some()
 }
 
-/// The keywords the running face prints, before tuning (§5.2): what a Degrade takes a printed keyword
-/// off and what a numbered keyword's tuning steps from (B3.4). §7: the Bread Token's radiant "Armor X"
-/// is the same X as its X/X, so the printed `n` is a placeholder the summon fills in, exactly as
-/// `statsOverride` fills in the printed 0/0.
-///
-/// R1850000: a copier prints the keywords of the text it copied, on its own stats (`face_of`).
+/// The keywords the running face prints, before tuning (§5.2): what a Degrade takes off and what a
+/// numbered keyword's tuning steps from (B3.4). §7: the Bread Token's radiant "Armor X" is its X/X's X,
+/// so the printed `n` is a placeholder the summon fills in. R1850000: a copier prints the keywords of
+/// the text it copied, on its own stats (`face_of`).
 pub fn printed_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(instance);
     let face = crate::faces::running_face_of(state, def_id, radiant);
@@ -141,8 +130,7 @@ pub fn printed_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Ke
 
 /// B3.3 rule 5, R385: a Brittle count in force is the card's Brittle, whatever it prints: the list's
 /// Brittle entries give way to one `Brittle n` of the count, a given count on a card that printed none
-/// included. With no count in force (a printed Brittle that has not started, off the field) the
-/// printed keyword stands.
+/// included. With no count in force the printed keyword stands.
 fn with_brittle_count(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyword> {
     let Some(count) = active_brittle_count(instance) else {
         return keywords.to_vec();
@@ -156,10 +144,9 @@ fn with_brittle_count(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
     out
 }
 
-/// §10.4 layers 1 to 4 of the keywords, before auras and position: the printed keywords as tuning
-/// leaves them (none on a Vanilla card, §6.3) with the granted ones, as a set (§6.1), and the Brittle
-/// count in force. What a card in a hand or a deck is made of (B5 E38, R243) — the granted keywords it
-/// gained there ride onto the field with it — and what a Degrade may take off it (B3.4).
+/// §10.4 layers 1 to 4 of the keywords: the printed keywords as tuning leaves them (none on a Vanilla
+/// card, §6.3) with the granted ones, as a set (§6.1), and the Brittle count in force: what a card in a
+/// hand or a deck is made of (B5 E38, R243).
 pub fn card_keywords(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let mut all: Vec<Keyword> = if instance.vanilla || crate::alt_play::is_dormant(instance) {
         Vec::new()
@@ -192,10 +179,9 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 }
 
 /// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
-/// a Unit of theirs on the field, in a unit zone or standing in the backrow (R1081000) — never a
-/// Vanilla one, unlike an aura's grant (the War Doctrines' rows of §8.10), nor one Dormant or buried
-/// under a Stack pile, which no effect reaches (R13, R1839000). R1870004: only while the modifier is
-/// live, so Stinkyscape #4.4 Last Word's lends Charge on its holder's next turn alone.
+/// a Unit of theirs in a unit zone or standing in the backrow (R1081000), never a Vanilla one (unlike
+/// an aura's grant, §8.10), nor one Dormant or buried under a Stack pile (R13, R1839000). R1870004:
+/// only while the modifier is live.
 fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     if instance.vanilla
         || is_dormant(state, instance)
@@ -219,9 +205,8 @@ fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5): a face-down card's
 /// sleeps (R1487000).
 pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
-    // Every unit read walks this list, so it is built with plain loops (#188), straight off the rows
-    // as `zones::active_units_of` reads them: each unit zone's top card in lane order, then the Units
-    // the side's carriers hold (R446), then the backrow by lane.
+    // Every unit read walks this list, so it is plain loops (#188), in `zones::active_units_of`'s order:
+    // each unit zone's top card in lane order, the side's carried Units (R446), then the backrow by lane.
     let mut sources: Vec<&CardInstance> = Vec::new();
     for player in PLAYER_IDS {
         let side = &state.players[player];
@@ -245,7 +230,6 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
                 .ok()
                 .and_then(|at| side.backrow.get(at))
                 .and_then(|card| card.as_ref());
-            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
             if let Some(card) = card
                 && !crate::preview::lasting_text_dormant(state, card)
                 && card.slumber.is_none()
@@ -261,9 +245,8 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
 fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
     let mut entries: Vec<AuraEntry<'_>> = Vec::new();
     for source in aura_sources(state) {
-        // §6.1/§6.3: Vanilla "clears printed keywords and scripts", and an aura is part of a card's
-        // Script (§10.9), so a Vanilla'd permanent projects nothing. It still *receives* aura grants:
-        // an aura is the board's text, not the unit's.
+        // §6.1/§6.3: Vanilla clears scripts, and an aura is part of a card's Script (§10.9), so a
+        // Vanilla'd permanent projects nothing. It still *receives* aura grants.
         if source.vanilla {
             continue;
         }
@@ -301,12 +284,9 @@ fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
 }
 
 /// R1180002 (Meditative+ #7 Life Mage): "Aura: Your Spells have <keyword>." — while the source acts,
-/// each Spell its controller is resolving has the keyword: a card in that player's resolving zone whose
-/// type is Spell, so not a Field Spell or a Trap, nor a Spell set face-down, which is a Trap until it
-/// resolves (R783005). It is a layer (§10.4) on the resolving card, read wherever the Spell's keywords
-/// are read: damage step 8 heals for a Spell's Lifesteal there (R85). A keyword is had once (§6.1), so
-/// two such auras give it once. The test reads instance data only (`faces::card_type_of` reads no
-/// layer), as an aura's must.
+/// each Spell its controller is resolving has it: a Spell in that player's resolving zone, so not a
+/// Field Spell, a Trap nor a Spell set face-down (R783005). Read wherever the Spell's keywords are, as
+/// damage step 8's Lifesteal (R85); the test reads no layer (`faces::card_type_of`), as an aura's must.
 pub fn spells_have_aura(keyword: Keyword) -> AuraHook {
     crate::script::aura_hook(move |args| {
         let controller = args.self_.controller;
@@ -325,9 +305,8 @@ pub fn spells_have_aura(keyword: Keyword) -> AuraHook {
 }
 
 /// #892: layer 5's aura entries for a whole sweep. `new` asks each source's hook once and every unit
-/// read through it filters the same entries, so a sweep over the board pays one hook call per source
-/// instead of one per source per unit; `per_read` asks on every read, as `unit_view` does, for a
-/// reader that may read nothing. It borrows the state, so the state cannot change while it lives: a
+/// read through it filters the same entries; `per_read` asks on every read, as `unit_view` does, for
+/// a reader that may read nothing. It borrows the state, so the state cannot change while it lives: a
 /// derived value, not a cache (CLAUDE.md rule 4).
 pub struct AuraTable<'a> {
     state: &'a GameState,
@@ -350,7 +329,6 @@ impl<'a> AuraTable<'a> {
         self.state
     }
 
-    /// `layers::unit_view` through this table.
     pub fn unit_view(&self, instance: &CardInstance) -> UnitView {
         layered_view(
             instance,
@@ -358,17 +336,14 @@ impl<'a> AuraTable<'a> {
         )
     }
 
-    /// `layers::unit_has` through this table.
     pub fn unit_has(&self, instance: &CardInstance, kind: KeywordKind) -> bool {
         has_keyword(&self.unit_view(instance).keywords, kind)
     }
 }
 
-/// §6.1: a unit's keywords are "computed as a set per unit", and §10.4 makes them the union of the
-/// printed, granted, aura and position keywords — so a keyword two sources give is had once (Tempo
-/// Timmy's printed Rush under Jlockeed's Weapons, a Taunt unit's own Taunt in Defense Position), and
-/// the view hands the client one entry for it (§10.8). The numbered keywords are the exception: Armor
-/// sums across its sources (§10.4) and Lucky X stacks, so every entry of theirs is kept for the sum.
+/// §6.1: a unit's keywords are "computed as a set per unit", so a keyword two sources give is had once
+/// and the view hands the client one entry for it (§10.8). Armor sums across its sources (§10.4) and
+/// Lucky X stacks, so every entry of theirs is kept.
 fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
     let mut seen: Vec<KeywordKind> = Vec::new();
     keywords
@@ -392,9 +367,8 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
         .collect()
 }
 
-/// B5 E35: a keyword that holds only while a condition does (Classic #69 Plague Charger's First Strike
-/// "while it has a Plague Counter"): the card's `conditionalKeywords` hook, read with its printed ones,
-/// so a Vanilla takes it (`scripts::script_of` runs no script for one). The hook reads instance data only.
+/// B5 E35: a keyword that holds only while a condition does (`conditionalKeywords`), read with the
+/// printed ones, so a Vanilla takes it. The hook reads instance data only.
 pub(crate) fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
     let script = crate::scripts::script_of(state, instance);
     match script.conditional_keywords.as_ref() {
@@ -411,14 +385,12 @@ pub fn unit_view(state: &GameState, instance: &CardInstance) -> UnitView {
     layered_view(instance, compute_layers(state, instance, None))
 }
 
-/// R89, R1884004: a dead card's view as it stood when it died — its snapshot (a Death hook's `self_`),
-/// the board's auras still on it as they were on its last stay. A Death that brings the card back reads
-/// it to tell whether it died for want of health, which the same board would kill again.
+/// R89, R1884004: a dead card's snapshot (a Death hook's `self_`) with the board's auras as they were on
+/// its last stay: a Death that brings it back reads whether it died for want of health.
 pub fn unit_view_as_it_died(state: &GameState, instance: &CardInstance) -> UnitView {
     layered_view(instance, compute_layers_on(state, instance, None, true))
 }
 
-/// `unit_view`'s answer from the layers computed.
 fn layered_view(instance: &CardInstance, layered: Layered) -> UnitView {
     // Attack floors at 0; max health may fall to 0, which the state check turns into a death (§10.4).
     let clamped_attack = layered.attack.max(0);
@@ -433,14 +405,12 @@ fn layered_view(instance: &CardInstance, layered: Layered) -> UnitView {
     }
 }
 
-/// §10.4's attack before layer 5's floor at 0 — what KY's Constant needs to set a unit's attack to a
-/// number exactly (`effects/tune::set_number`), since a card whose layers come to −2 shows 0 and a delta
-/// taken off the shown number would land short.
+/// §10.4's attack before layer 5's floor at 0, for KY's Constant to set a unit's attack exactly
+/// (`effects/tune::set_number`): a delta taken off a −2 shown as 0 would land short.
 pub fn unclamped_attack(state: &GameState, instance: &CardInstance) -> i32 {
     compute_layers(state, instance, None).attack
 }
 
-/// `compute_layers`' answer.
 struct Layered {
     attack: i32,
     max_health: i32,
@@ -462,7 +432,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[Au
 }
 
 /// `compute_layers`, with `as_it_died` for a card's snapshot as it died (R89): it no longer tops its
-/// pile, so the dormancy test, which is for a card on the field, does not hold layer 5 off it.
+/// pile, so the dormancy test does not hold layer 5 off it.
 fn compute_layers_on(
     state: &GameState,
     instance: &CardInstance,
@@ -476,14 +446,9 @@ fn compute_layers_on(
     let mut attack = printed.attack;
     let mut max_health = printed.health;
 
-    // Layer 2: a card that sets its own stats from the board (#92 Felinor Fiender, R39). §10.4 words
-    // it as "Felinor Fiender *adds* the sum of your Felinors' layer-4 stats", so the hook returns the
-    // sum rather than a finished total, and R39's "never below printed" floors each sum at 0 — a
-    // Felinor carrying a negative health buff can pull the total back toward printed, never past it.
-    // R132 and R150: this is the ONE floor R39 asks for, on each stat's combined total separately.
-    // The contributors reach the hook unfloored (`stats_with_buffs`), so a negative buff really does
-    // pull its sum down, and flooring attack here never touches the health sum (R116's per-component
-    // clamp).
+    // Layer 2: a card that sets its own stats from the board (#92 Felinor Fiender, R39) adds the sum
+    // of your Felinors' layer-4 stats, each sum floored at 0 by R39's "never below printed": the ONE
+    // floor (R132, R150), per stat (R116), as the contributors reach the hook unfloored.
     // Vanilla has cleared the card's scripts, so a Vanilla'd body keeps its printed stats (§6.1).
     if !instance.vanilla {
         let script = crate::scripts::script_of(state, instance);
@@ -502,11 +467,9 @@ fn compute_layers_on(
     attack += instance.buffs.attack;
     max_health += instance.buffs.health;
 
-    // Layer 5: auras. A card dormant under a Stack pile is "not on the field for effects" (§3.2, R13)
-    // and an aura is one, so none reaches it: it keeps its damage and its own layers 1 to 4, and the
-    // board's auras apply again the moment it resumes on top. Without this an aura that shrinks max
-    // health (#46) killed buried cards the top of the pile shielded.
-    // R1839000: no aura reaches a Dormant card either, an effect like any other.
+    // Layer 5: auras. A card dormant under a Stack pile is "not on the field for effects" (§3.2, R13),
+    // so no aura reaches it until it resumes on top (one shrinking max health, #46, would kill it).
+    // R1839000: no aura reaches a Dormant card either.
     let auras: Vec<StatMod> =
         if (!as_it_died && is_dormant(state, instance)) || crate::slumber::is_slumbering(instance) {
             Vec::new()
@@ -528,12 +491,10 @@ fn compute_layers_on(
         }
     }
 
-    // B3.3 rule 5: a Brittle count in force is the unit's Brittle (`with_brittle_count`).
     let mut listed: Vec<Keyword> = Vec::new();
     if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
         listed.extend(printed.keywords.iter().cloned());
     }
-    // B5 E35: the keywords its text gives it only while a condition holds, beside the printed ones.
     listed.extend(conditional_keywords_of(state, instance));
     listed.extend(instance.granted_keywords.iter().cloned());
     for modifier in &auras {
@@ -549,10 +510,8 @@ fn compute_layers_on(
     }
 
     // R46: an Indestructible unit that would have been destroyed loses Taunt for the turn. R347: an
-    // Indestructible unit never has Taunt at all — printed, granted, from an aura or from Defense
-    // Position — so Indestructible, from whichever source, takes Taunt out of the set.
-    // A spent Divine Shield and a used Reborn are gone until granted again (§6.1, §4.5 step 4); a
-    // used Flashback for good (R783013).
+    // Indestructible unit never has Taunt, from any source. A spent Divine Shield and a used Reborn
+    // are gone until granted again (§6.1, §4.5 step 4).
     let taunt_suppressed = instance.taunt_suppressed_turn == Some(state.turn)
         || keywords
             .iter()
@@ -582,20 +541,9 @@ fn compute_layers_on(
 }
 
 /// §10.4 layers 1 to 4: printed stats plus permanent buffs, before auras — the reading a set-stat
-/// layer that sums other units needs (#92 Felinor Fiender, R116).
-///
-/// R150: NO PER-UNIT FLOOR. §10.4 floors attack at layer 5 and at nothing earlier, so this reading
-/// reports what layers 1 to 4 actually come to, negative included. A `max(0, …)` here would be
-/// invisible to a single card and wrong for every caller that sums: a Felinor carrying a −5 buff
-/// would contribute 0 instead of −2 and could never "pull the attack sum toward 0", which is exactly
-/// what R132 requires of #92's total. The floor belongs where the value is finally used — on the
-/// combined total in `unit_view`'s layer 2 above (R116, R132), and on the displayed attack at the end
-/// of `unit_view` (§10.4 layer 5) — so it is applied once, by the reader that knows which number the
-/// rule floors, rather than baked into a reading that has more than one reader.
-///
-/// The only other readers are the tests, `query.rs`'s re-export and `view_for`'s hand cards (R243),
-/// which floor the attack they show; R89's death snapshot reads `unit_view` (`state_check.rs`), which
-/// floors its own attack, so nothing is left unclamped by this.
+/// layer that sums other units needs (#92 Felinor Fiender, R116). R150: no per-unit floor, or a
+/// Felinor with a −5 buff would add 0, not −2, and never pull the sum toward 0 as R132 requires. The
+/// floor is each reader's: layer 2's total, `unit_view`'s attack, `view_for`'s hand cards (R243).
 pub fn stats_with_buffs(state: &GameState, instance: &CardInstance) -> BuffedStats {
     let printed = face_of(state, instance);
     BuffedStats {

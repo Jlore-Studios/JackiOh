@@ -56,7 +56,6 @@ function isCustomCards(value: unknown): boolean {
   );
 }
 
-/** R765: persisted practice setup and its Save-and-leave state. */
 export type PracticeResume = {
   config: PracticeStartConfig;
   /** Save and leave; otherwise the player remained in the game (R668). */

@@ -4,21 +4,16 @@
 //! Radiant: the same, plus " This turn, after you put a card into that lane, cast Book of Buff on
 //!           it."
 //! Engine:
-//! - **The lane** is a play-time choice of five modes (`lane-1` … `lane-5`, R81), random under a
-//!   random cast. Only an empty lane is offered, all four of its zones empty (`mode_allowed`,
-//!   `lane_is_empty`, R831008): with none the card is not offered and its play is refused, and a
-//!   cast picks among the empty lanes, resolving into nothing when there is none.
-//! - **The Cry** Locks every zone of the four other lanes, both sides and both rows, that is not
-//!   already Locked (Lock, §6.3; R688: plays refused, summons still landing), then arms a delayed
-//!   effect at the start of the caster's next turn (R62's delayed stage) that unlocks exactly those
-//!   zones still Locked — a zone Locked before this resolved stays Locked (MD-B21, R945).
-//! - **The Radiant face** also sets a turn watcher (MD-B22, R946): after a card of the caster's
-//!   enters one of their zones in the chosen lane — by a play once it resolves, or by a summon of
-//!   theirs — the caster casts a new C+ #71 Book of Buff (its base face, Buff 4 times) aimed at it,
-//!   a play (R70) that goes to the caster's graveyard (R87). A move (an animate, a steal, a
-//!   rotation) is not putting a card there: only a resolution and a summon answer.
-//! - **Tradable** (both faces, R1838000): catalog data the engine reads in the hand (`trade.rs`), so
-//!   nothing here runs for it.
+//! - **The lane** is one of five modes (`lane-1` … `lane-5`, R81), random under a random cast, offered
+//!   only while all four of its zones are empty (`mode_allowed`, `lane_is_empty`, R831008): with none
+//!   the play is refused and a cast resolves into nothing.
+//! - **The Cry** Locks every not-yet-Locked zone of the four other lanes, both sides and rows (Lock,
+//!   §6.3; R688: plays refused, summons still landing), and arms a delay to the caster's next turn
+//!   start (R62) unlocking exactly those, so a zone Locked before stays Locked (MD-B21, R945).
+//! - **The Radiant face** watches the lane this turn (MD-B22, R946): after a card of the caster's
+//!   enters it by a resolved play or their summon (not a move: animate, steal, rotation), the caster
+//!   casts a new base C+ #71 Book of Buff at it, a play (R70) that goes to their graveyard (R87).
+//! - **Tradable** (both faces, R1838000) is catalog data `trade.rs` reads; nothing here runs for it.
 
 use jackioh_engine::effects::{
     LockArgs, UnlockArgs, WatchLaneArgs, ZoneSpec, cast_new, chosen_options, delay, lock, unlock,
@@ -31,7 +26,6 @@ pub const ID: &str = "meditative-098";
 /// C+ #71 Book of Buff, cast on each card the watch answers.
 const BOOK: &str = "classicplus-071";
 
-/// The lane modes' prefix: `lane-1` … `lane-5`.
 const LANE_PREFIX: &str = "lane-";
 
 /// The step that unlocks the lanes at the start of the caster's next turn.
@@ -259,10 +253,8 @@ mod tests {
             "p2": { "hand": [FILLER], "library": self::library() },
         }));
         s.play(SHOWDOWN, json!({ "modes": ["lane-2"] }));
-        // A unit into a Locked unit zone is refused, on either side's row naming …
         s.expect_refused(|s| s.play(VANILLA, json!({ "zone": 1 })));
         s.expect_refused(|s| s.play(VANILLA, json!({ "zone": 3 })));
-        // … but a summon still lands (first entry: the open lane 2).
         s.play(RECRUIT, json!({}));
         let landed = s.unit(P1, 2).expect("the recruit lands in the open lane");
         assert_eq!(landed.def_id, VANILLA);
@@ -275,7 +267,6 @@ mod tests {
         lock_zone(s.state_mut(), ZoneSlot { player: P1, row: Row::Units, lane: 3 });
         s.play(SHOWDOWN, json!({ "modes": ["lane-2"] }));
         assert!(locked(&s, P1, Row::Units, 3), "pre-Locked before");
-        // At the start of the caster's next turn every Showdown Locked zone opens …
         s.end_turn();
         s.end_turn();
         for player in [P1, P2] {
@@ -304,7 +295,6 @@ mod tests {
         let mark = s.events().len();
         s.play(VANILLA, json!({ "zone": 2 }));
         let played = s.unit(P1, 2).expect("played");
-        // The base Book Upgrades 4 times: four `upgraded` events on the played card.
         let changes: Vec<TuningChange> = s.events()[mark..]
             .iter()
             .filter_map(|event| match event {
@@ -346,11 +336,10 @@ mod tests {
             "p2": { "hand": [FILLER], "library": self::library() },
         }));
         s.play(SHOWDOWN, json!({ "modes": ["lane-2"] }));
-        // A play into the lane answers …
         s.play(VANILLA, json!({ "zone": 2 }));
         let books = |s: &Scenario| s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == BOOK).count();
         assert_eq!(books(&s), 1, "one Book for the played card");
-        // … a summon into the taken lane lands Locked, in lane 1, and answers nothing …
+        // With lane 2 taken, a summon lands Locked in lane 1 and answers nothing.
         s.play(RECRUIT, json!({}));
         let recruit = s.unit(P1, 1).expect("the recruit lands Locked in lane 1");
         assert_eq!(recruit.def_id, VANILLA);
@@ -372,7 +361,6 @@ mod tests {
         }));
         s.play(SHOWDOWN, json!({ "modes": ["lane-2"] }));
         s.play(VANILLA, json!({ "zone": 2 }));
-        // Showdown plus the Book: two Spells played this turn, and the Book rests in the graveyard.
         assert_eq!(played_this_turn_of_type(s.state(), P1, &[CardType::Spell]), 2);
         assert_eq!(s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == BOOK).count(), 1);
         // Next turn the lanes are open and the watch is gone: a play into the lane (Stacked onto
@@ -502,8 +490,7 @@ mod tests {
         }
     }
 
-    /// R1838000: Showdown is Tradable on both faces — Traded from the hand into the deck for a draw,
-    /// at no mana, one Trade a turn over all the player's Tradable cards.
+    /// R1838000: Tradable on both faces, one Trade a turn over all the player's Tradable cards.
     mod r1838000_tradable {
         use super::*;
 

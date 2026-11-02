@@ -1,9 +1,6 @@
 // Earning in practice, as the page sees it (SPEC §14.8, R1303000): which games ask the server for a
-// seed, and what the result dialog says about a claim.
-//
-// Page-safe: it never imports `core.ts`, and it decides no rule (CLAUDE.md rule 7). Whether a game
-// pays is the server's to say once it has folded the log to its result (R2560000); this only names
-// the setups the server is asked about and words its answer.
+// seed, and what the result dialog says about a claim. Page-safe: it never imports `core.ts`, and it
+// decides no rule (CLAUDE.md rule 7); whether a game pays is the server's to say (R2560000).
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 
@@ -15,8 +12,7 @@ import { randomDeckLean, type PracticeStartConfig } from "./protocol.ts";
 
 /**
  * R1303000: the seed request for a free game on the setup's own deck, or null for a game that never
- * earns: a lesson, a sandbox game, one with custom cards, the creator's Try it, and a game whose AI
- * deck is dealt from the e2e fixture pool (`aiBanned`), which the server never deals.
+ * earns, such as one whose AI deck is dealt from the e2e fixture pool (`aiBanned`), which the server never deals.
  */
 export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest | null {
   if (config.lesson !== undefined || config.sandbox === true || config.aiBanned !== undefined) return null;
@@ -38,9 +34,8 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
 }
 
 /**
- * What the result dialog says about a game on a server seed: checking, paid, refused (and why), or no
- * answer. #1664: a paid game's `tracks` and `quests` are the answer's, played by the dialog's XP
- * reveal; a paid one without either shows no bar.
+ * What the result dialog says about a game on a server seed. #1664: a paid game's `tracks` and `quests`
+ * are played by the dialog's XP reveal; a paid one without either shows no bar.
  */
 export type PracticeEarning =
   | { kind: "pending" }
@@ -49,10 +44,7 @@ export type PracticeEarning =
   | { kind: "unreachable" }
   | { kind: "unearned"; /** R2379000: the server's reason for issuing no seed, or the page's unreachable sentence; null when neither. */ reason: string | null };
 
-/**
- * Why the server paid nothing, in words: `economy::practice`'s `ClaimRefusal` by its wire name,
- * and a name this build does not know as it came.
- */
+/** `economy::practice`'s `ClaimRefusal` by its wire name, in words; a name this build does not know as it came. */
 function refusalText(reason: string): string {
   switch (reason) {
     case "economy_off":

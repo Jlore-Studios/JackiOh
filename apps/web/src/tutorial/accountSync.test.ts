@@ -1,8 +1,6 @@
 // The tutorial's progress kept on the account as well as the device (tutorial/accountSync.ts): R321.
-//
-// The account is a fake `TutorialAccountApi` that merges as the server does (a union of lessons and
-// the strictly newer choice, R320), so these tests read what the device and the account hold after
-// each step. The device is the real progress store over jsdom's localStorage.
+// The account is a fake `TutorialAccountApi` that merges as the server does (R320); the device is the
+// real progress store over jsdom's localStorage.
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,12 +32,10 @@ function lesson(number: number): TutorialLesson {
 
 const [ONE, TWO, THREE] = [lesson(1).id, lesson(2).id, lesson(3).id];
 
-/** The account, merging as `PUT /api/tutorial` does (R320). */
 type FakeAccount = TutorialAccountApi & {
   stored: TutorialAccountProgress;
   loads: string[];
   saves: { token: string; body: TutorialAccountProgress }[];
-  /** Makes every request fail at the network until set back to false. */
   offline: boolean;
 };
 
@@ -115,7 +111,6 @@ describe("R321 the device's copy and the account's are merged, and neither steps
     await start(account).settled();
 
     expect(account.loads).toEqual(["tok-1"]);
-    // The device now holds both, and sent both up: the merged value, not only what it had.
     expect(readTutorialProgress().completed).toEqual([ONE, TWO]);
     expect(account.saves.map((save) => save.body.completed)).toEqual([[ONE, TWO]]);
     expect(account.stored.completed).toEqual([ONE, TWO].sort());
@@ -169,7 +164,6 @@ describe("R321 the device's copy and the account's are merged, and neither steps
 
     expect(isTutorialHidden(readTutorialProgress())).toBe(false);
     expect(readTutorialProgress().hiddenChoice).toEqual({ hidden: false, at: 20_000 });
-    // The device's newer Show went up, so the next device to load sees it too.
     expect(account.stored.hiddenChoice).toEqual({ hidden: false, at: 20_000 });
   });
 
@@ -224,7 +218,6 @@ describe("R321 the network never blocks the tutorial", () => {
     expect(account.stored.completed).toEqual([TWO]);
     sync.stop();
 
-    // The next visit, online: both copies end with all three.
     account.offline = false;
     await start(account).settled();
     expect(readTutorialProgress().completed).toEqual([ONE, TWO, THREE]);

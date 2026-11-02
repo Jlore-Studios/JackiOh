@@ -1,10 +1,6 @@
 // Polish 6, slice D: the deck builder's filter and sort semantics, pure (docs/polish/6-cards.md,
-// B31–B36; the DOM half is browse.test.tsx).
-//
-// `filters.ts` is the only place these semantics live. The catalog below is built inline on
-// purpose: it has every cost shape the Surface names (0, 1, 6, 100, "X" and two embiggen cards),
-// all five types, several tags and rarities, a card with no text, a card nobody owns, a token, and
-// two cards that tie on cost and name so the index tie-break is visible.
+// B31–B36; the DOM half is browse.test.tsx). The inline catalog has every cost shape the Surface
+// names and all five types.
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -48,9 +44,7 @@ import {
 } from "./filters.ts";
 import { filterCostId, filterRarityId, filterSetId, filterTagId, filterTypeId, slugOf } from "./testids.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The inline catalog
-// ---------------------------------------------------------------------------------------------
 
 type DefInput = {
   id: string;
@@ -82,8 +76,8 @@ function def(input: DefInput): CardDef {
 }
 
 const DEFS: CardDef[] = [
-  // Cost 0, no text on either face. Its radiant stats are the biggest in the set, so a sort that
-  // read the radiant face instead of the base one would move it.
+  // Its radiant stats are the biggest in the set, so a sort that read the radiant face instead of
+  // the base one would move it.
   def({ id: "x-01", index: "1", name: "Acorn Scout", type: "Unit", tags: ["Human"], rarity: "Common", cost: 0,
     base: { attack: 1, health: 1 }, radiant: { attack: 20, health: 20 } }),
   def({ id: "x-02", index: "2", name: "Bramble Cat", type: "Unit", tags: ["Felinor"], rarity: "Rare", cost: 1,
@@ -109,7 +103,7 @@ const DEFS: CardDef[] = [
     base: { attack: 0, health: 8, keywords: [{ kind: "Armor", n: 2 }], text: "Armor 2" },
     radiant: { attack: 0, health: 16, keywords: [{ kind: "Armor", n: 4 }], text: "Armor 4" } }),
   // The twins tie on cost and (case-insensitively) on name, so the numeric index decides: 12
-  // before 100, which a string comparison of "100" and "12" would get backwards. Each carries a
+  // before 100, which a string comparison would get backwards. Each carries a
   // keyword its text never mentions: Divine Shield on the radiant face, Poisonous on the base one.
   def({ id: "x-10", index: "100", name: "Mirror Twin", type: "Unit", rarity: "Common", cost: 4,
     base: { attack: 4, health: 4, text: "Reflects light" },
@@ -182,10 +176,6 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
     desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
   },
 };
-
-// ---------------------------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------------------------
 
 describe("the filter vocabulary (B31, B34)", () => {
   it("B31 COST_BUCKETS runs 0 to 5, then 6+, then X, and CURVE_TOP is 6", () => {
@@ -264,10 +254,6 @@ describe("the filter vocabulary (B31, B34)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// costBucket and costOrder
-// ---------------------------------------------------------------------------------------------
-
 describe("costBucket and costOrder (B31)", () => {
   const BUCKETS: [CardCost, CostBucket][] = [
     [0, "0"],
@@ -322,10 +308,6 @@ describe("tileCost (#2644)", () => {
     expect(tileCost(undefined)).toBe("");
   });
 });
-
-// ---------------------------------------------------------------------------------------------
-// matchesFilter
-// ---------------------------------------------------------------------------------------------
 
 function matching(f: PoolFilter): string[] {
   return ALL_IDS.filter((id) => matchesFilter(card(id), f));
@@ -396,10 +378,6 @@ describe("matchesFilter (B31)", () => {
     expect(matching(filter({ search: "bramble", costs: new Set<CostBucket>(["0"]) }))).toEqual([]);
   });
 });
-
-// ---------------------------------------------------------------------------------------------
-// searchMatches
-// ---------------------------------------------------------------------------------------------
 
 function found(query: string): string[] {
   return ALL_IDS.filter((id) => searchMatches(card(id), query));
@@ -476,10 +454,6 @@ describe("searchMatches (B32)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// sortPool
-// ---------------------------------------------------------------------------------------------
-
 describe("sortPool (B34)", () => {
   for (const key of ["cost", "name", "rarity", "attack", "health", "type"] as const) {
     for (const dir of ["asc", "desc"] as const) {
@@ -492,7 +466,6 @@ describe("sortPool (B34)", () => {
   }
 
   it("B34 ties break by cost, then name, then numeric index, ascending even when the key is descending", () => {
-    // Cost 3: Grove Ward before Hollow Squire both ways. Cost 4: index 12 before index 100.
     const desc = sortPool(ALL_IDS, CATALOG, { key: "cost", dir: "desc" });
     expect(desc.indexOf("x-07")).toBeLessThan(desc.indexOf("x-08"));
     expect(desc.indexOf("x-11")).toBeLessThan(desc.indexOf("x-10"));
@@ -545,10 +518,6 @@ describe("sortPool (B34)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// visiblePool
-// ---------------------------------------------------------------------------------------------
-
 describe("visiblePool (B31, B33, B34)", () => {
   it("B33 by default it shows the owned non-token cards, cost ascending", () => {
     expect(visiblePool(CATALOG, COLLECTION, DEFAULT_FILTER, DEFAULT_SORT)).toEqual(owned(SORTED.cost.asc));
@@ -588,10 +557,6 @@ describe("visiblePool (B31, B33, B34)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// manaCurve
-// ---------------------------------------------------------------------------------------------
-
 describe("manaCurve (B36)", () => {
   it("B36 counts a deck's cards per bucket, embiggen under the base price", () => {
     const deck = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
@@ -612,10 +577,6 @@ describe("manaCurve (B36)", () => {
     expect(Object.keys(manaCurve(["x-01"], CATALOG)).sort()).toEqual([...COST_BUCKETS].sort());
   });
 });
-
-// ---------------------------------------------------------------------------------------------
-// deckListOrder
-// ---------------------------------------------------------------------------------------------
 
 describe("deckListOrder (B35)", () => {
   it("B35 orders tiles by cost, then name, with unknown ids last", () => {
@@ -646,10 +607,7 @@ describe("deckListOrder (B35)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R711000: the reader's language
-// ---------------------------------------------------------------------------------------------
-
 describe("R711000 the reader's language", () => {
   afterEach(resetLocaleForTests);
   const REAL: CatalogSnapshot = { version: "r711000-test", cards: CORE_CATALOG };
@@ -715,16 +673,12 @@ describe("R711000 the reader's language", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R278: the Jlockeed tag
-// ---------------------------------------------------------------------------------------------
-
 describe("the set chips (R380: one format, every set)", () => {
   const REAL: CatalogSnapshot = { version: "v0.2.0-test", cards: CORE_CATALOG };
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    // Re-pinned for the Training Grounds release (#2204): the set ships, so its chip follows Stinkyscape's.
     expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
@@ -773,14 +727,12 @@ describe("the Jlockeed tag (R278)", () => {
     expect(FILTER_TAGS).toContain("Jlockeed");
     expect(filterTagId("Jlockeed")).toBe("db-filter-tag-jlockeed");
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
-    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside Core's two;
-    // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockeed's Evil Blueprints
-    // (#97.9 Jlockeed's Headquarters is a token, which the pool never offers).
+    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside
+    // Core's two; and once the Meditative set ships (R1420), its #87 and #97 (#97.9 is a token).
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
-    // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the pool gains Meditative+ #4 Supply Drop, the
-    // set's one Jlockeed card.
+    // Meditative+ (#1187): its #4 Supply Drop, the set's one Jlockeed card.
     const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
-    // And for the Stinkyscape release (#1884): its #124 to #130, Jlockeed's space program.
+    // Stinkyscape (#1884): its #124 to #130.
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
@@ -802,10 +754,7 @@ describe("the Jlockeed tag (R278)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R630: the Card Almanac's shelf and tag chips
-// ---------------------------------------------------------------------------------------------
-
 describe("the almanac's pool (R630)", () => {
   const REAL: CatalogSnapshot = { version: "almanac-test", cards: CORE_CATALOG };
   /** R1420: the catalog's cards of the sets that ship, the shelf the almanac shows. */
@@ -900,10 +849,7 @@ describe("the almanac's pool (R630)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1380, R1381: the chips follow what ships
-// ---------------------------------------------------------------------------------------------
-
 describe("the chips follow what ships (R1380, R1381)", () => {
   const fixture = (id: string, set: SetName, tags: Tag[]): CardDef => ({ ...def({ id, index: "1", name: id, type: "Unit", rarity: "Common", cost: 1, tags }), set });
 
@@ -925,7 +871,7 @@ describe("the chips follow what ships (R1380, R1381)", () => {
   });
 
   it("R1857000 the Stinkyscape set has a chip and lends its tags, its four own included, once it ships", () => {
-    // The third held set (issue #1836), sixth in the catalog order, shipped by its release (#1884).
+    // The third held set (issue #1836), sixth in the catalog order.
     expect(setShips("Stinkyscape")).toBe(true);
     expect(FILTER_SETS.includes("Stinkyscape")).toBe(true);
     expect(filterSetId("Stinkyscape")).toBe("db-filter-set-stinkyscape");
@@ -933,8 +879,8 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     const drone = fixture("s-27", "Stinkyscape", ["Drone Core", "Human"]);
     expect([...shippedTags(["Human", ...four], [drone])]).toEqual(["Human", "Drone Core"]);
     expect([...shippedTags(["Human", ...four], [fixture("c-1", "Core", four)])]).toEqual(four);
-    // The bundled catalog's shipped cards carry them, so their chips show: the deck builder's three
-    // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
+    // The bundled catalog's shipped cards carry them: the deck builder's three (War Doctrine is on
+    // tokens alone, which the deck builder never offers) and the Almanac's four.
     for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
     for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
   });

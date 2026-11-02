@@ -1,27 +1,14 @@
 //! Meditative #42 CN Flea Market's night market (ME-MARKET, docs/meditative-set.md M6 #42, SPEC §8.8
-//! row 42, R1000–R1002).
+//! row 42, R1000–R1002): the stall, the yuan prices, the `market` prompt and its deals, each step a
+//! plain-data continuation, so a market paused at its prompt survives JSON and replays (§9.3).
 //!
-//! The machinery that is not card data: the stall, the yuan prices, the `market` prompt and its deals.
-//! Each step is a plain-data continuation, so a market paused at its prompt survives JSON and replays
-//! (§9.3):
-//!
-//!   cry    the stall, rolled once from the match rng as the Spell resolves (R1000): the card's shelves
-//!          in order — for #42, three different random CN cards (never the card itself, R387), two
-//!          Auspicious Rocks and one random AI generated card — then the market opens with the card's
-//!          `yuan`. Nothing else in a market draws from the rng, so every simulation of it (R185) and
-//!          every replay sees the same lots.
-//!   deal   each answer is one deal (R1000): a lot bought arrives in the caster's hand at its printed
-//!          cost, hidden per zone (R97), and the market reopens (R113) with its price taken off. Every
-//!          lot is sold on either face (patch v0.3.10, R831002): its base face at its price, or its
-//!          Radiant face at its Radiant price (`YUAN_RADIANT_MULTIPLIER` times as much). On the Radiant
-//!          face a barter exiles a hand card, in public, and adds its price to the yuan (R1001); Leave
-//!          closes it, and the yuan left is lost. With nothing to buy or barter the market closes on its
-//!          own.
-//!
-//! Only lots the yuan covers are offered, none while the hand is full, so neither `legal_actions`'
-//! plain answer walk nor a random answer (R452) ever names an answer the reducer refuses. The stall,
-//! the yuan and whether barter is open ride in the prompt's resume data, which no view sends (§10.8):
-//! only the chooser's own options name the lots. A timeout leaves (R1002, `leave_answer`).
+//! The stall is rolled once from the match rng as the Spell resolves (R1000), and nothing else in a
+//! market draws from it, so every simulation (R185) and replay sees the same lots. Each answer is one
+//! deal (R113): a lot bought on either face (R831002) arrives in the hand, hidden per zone (R97); on the
+//! Radiant face a barter exiles a hand card, in public, for its price (R1001); Leave loses the yuan left.
+//! Only lots the yuan covers are offered, none while the hand is full, so neither `legal_actions` nor a
+//! random answer (R452) names one the reducer refuses. The stall and yuan ride in the resume data,
+//! which no view sends (§10.8). A timeout leaves (R1002).
 
 use std::sync::Arc;
 
@@ -71,10 +58,9 @@ pub struct NightMarketScript {
     pub resume: IndexMap<&'static str, Hook>,
 }
 
-/// R1000: a card's price in yuan. `YUAN_PER_COST` per mana of its printed cost out of play (R65:
-/// `query_cost`, so X counts 0 and an embiggen card its base price), plus `YUAN_PER_RARITY` per step
-/// of its rarity's rank; a token is ranked by its printed rarity, Common when it prints none. A
-/// Radiant card costs `YUAN_RADIANT_MULTIPLIER` times as much (R1001's barters read the same rule).
+/// R1000: a card's price in yuan, by its printed cost out of play (R65's `query_cost`: X counts 0) and
+/// its rarity's rank (a token's printed rarity, else Common), times `YUAN_RADIANT_MULTIPLIER` for a
+/// Radiant card (R1001's barters read the same rule).
 pub fn yuan_price(def: &CardDef, radiant: bool) -> i32 {
     let rarity = if def.rarity == Rarity::Token {
         def.printed_rarity
@@ -100,11 +86,9 @@ fn hand_has_room(state: &GameState, player: PlayerId) -> bool {
     crate::query::room_in(state, player, crate::zones::OffFieldZone::Hand) > 0
 }
 
-/// R1000, R1001, R831002: the market's options for `player`, in this order: for each lot (distinct
-/// ids in the order they were rolled, none while the hand is full) its base face, then its Radiant
-/// face, each while the yuan covers its price; then on a barter market one per hand card (its price
-/// written negative, as it adds to the yuan), then Leave. With no lot and no barter there is nothing
-/// to do, and no option at all.
+/// R1000, R1001, R831002: the market's options for `player`: each lot's base then Radiant face
+/// (distinct ids in rolled order), then on a barter market one per hand card (its price negative, as it
+/// adds to the yuan), then Leave. With nothing to do, no option at all.
 fn market_options(
     state: &GameState,
     player: PlayerId,

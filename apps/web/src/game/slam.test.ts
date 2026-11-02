@@ -1,4 +1,4 @@
-// #185 Unit Slam: the queue gives each landing its slam (R700, R701), read off the newest view.
+// #185 Unit Slam: the queue gives each landing its slam (R700, R701).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -82,7 +82,6 @@ describe("R701 a landing is its own animation entry, staggered and capped per ac
     expect(sum("shakePx")).toBeLessThanOrEqual(SLAM_BURST.shakePx);
     expect(sum("anticipationMs")).toBeLessThanOrEqual(SLAM_BURST.anticipationMs);
     expect(slams[0]?.hitStopMs, "the first still lands at full weight").toBe(UNIT_SLAM.massive.hitStopMs);
-    // The next action has its own totals again.
     expect(plan([summoned("e", 5)], baseView(), () => "massive")[0]?.slam?.hitStopMs).toBe(UNIT_SLAM.massive.hitStopMs);
   });
 

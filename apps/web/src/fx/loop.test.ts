@@ -1,6 +1,4 @@
-// docs/polish/1-animations.md, behavior B29: the frame loop (S5). It asks for frames only while
-// there is work, clamps dt, requests nothing while the page is hidden and calls onResume when it
-// comes back. Frames and visibility are fakes driven by hand; `now` is a plain variable.
+// docs/polish/1-animations.md, behavior B29: the frame loop (S5), its frames, visibility and `now` driven by hand.
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -174,7 +172,6 @@ describe("B29 frame timing", () => {
     h.frameAt(1_020);
     h.frameAt(1_036);
     expect(h.seen.map((frame) => frame.first)).toEqual([true, false, false]);
-    // The loop stopped; the next wake starts a fresh run.
     h.setNow(5_000);
     h.loop.wake();
     h.frameAt(5_010);

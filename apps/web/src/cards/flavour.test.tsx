@@ -1,8 +1,6 @@
 // R660: a card's flavour line and artist credit on the client. The sidecar's shape and keys are
 // crates/cards/tests/cross/flavour.rs's; here its words are held to the voice lines' rule (issue
-// #115: flavour never restates rules words, and none of these lines may), and the inspect views are
-// held to where the words show: the hover preview's column, the touch sheet and the detail view, and
-// never the face itself, a card with no catalog def, or a card no entry names.
+// #115: flavour never restates rules words), and the inspect views to where the words show.
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

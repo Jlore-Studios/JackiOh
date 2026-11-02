@@ -1,20 +1,11 @@
 // The card bar and the ping markers (#936 B62, B64), drawn over whichever board the Duos board shows.
+// The bar's pass and Trade (`TradeControl.tsx`, R1838000) controls are live exactly when `legal` lists
+// that card's `pass` (B19) or `trade` (rule 7), else greyed. The bar stays DUOS_HOVER_GRACE_MS after the
+// pointer leaves its card, so the pointer can reach it.
 //
-// THE BAR. Pointing at a hero, a zone or a hand card (a mouse over it, a tap on it, the keyboard's
-// focus on it) puts a small bar on it: the ping wheel (`duos-ping-wheel`, the five pings) and, on a
-// card of the seat's own hand, the pass control (`duos-pass`) with its cost and the passes left, and
-// on a Tradable one the Trade control (`TradeControl.tsx`, R1838000), which a 1v1 board shows in a bar
-// of its own. Each is live exactly when `legal` lists that card's `pass` (B19) or `trade` (rule 7);
-// otherwise it is greyed and sends nothing. The bar stays DUOS_HOVER_GRACE_MS after the pointer leaves its card, so the pointer
-// can reach it, and goes on Escape, on a press elsewhere, after a pick, and while a card is dragged.
-//
-// THE MARKERS. A ping marks its place (`duos-ping-marker`) on this board when it names this board's
-// duel; the caller keeps each one PING_SHOW_MS.
-//
-// Game.tsx stays the one board: nothing here is inside it. The bar and the markers are laid over the
-// board in its container, at the box of the element the board draws for the spot (`spots.ts`),
-// re-measured every frame while any is up, since cards move as the board animates (`game/cardBar.ts`,
-// which the Trade control's bar shares).
+// Game.tsx stays the one board: nothing here is inside it. The bar and the markers are laid over it, at
+// the box of the element it draws for the spot (`spots.ts`), re-measured every frame while any is up,
+// since cards move as the board animates (`game/cardBar.ts`, which the Trade control's bar shares).
 
 import { useMemo, type ReactElement } from "react";
 
@@ -46,10 +37,8 @@ export type PingMarker = { key: string; spot: BoardSpot; ping: PingKind; from: D
 
 export type CardActionsProps = {
   /**
-   * The element the board is drawn in, once it is mounted; the bar and the markers are positioned
-   * inside it. An element, not a ref: a parent's ref is attached after its children's layout effects
-   * run, so a ref read there on the first render would be empty and a ping already up would wait a
-   * frame for its marker.
+   * The element the board is drawn in, once mounted. An element, not a ref: a parent's ref is attached
+   * after its children's layout effects run, so a ping already up would wait a frame for its marker.
    */
   container: HTMLDivElement | null;
   /** The view the board is showing, and the duel it is of. */

@@ -1,7 +1,5 @@
-// #1954: the glove cursor. Every former `pointer`, `grab` and `grabbing` names one of the
-// three custom properties, defined once in index.css under a fine pointer; touch and pen fall
-// back to their own keyword. #2103: while a mouse button is held the pointing glove is the
-// pressed one, a fourth glove defined beside them: one still frame with the same hotspot.
+// #1954: the glove cursor: every `pointer`, `grab` and `grabbing` is one of three custom properties
+// defined once in index.css under a fine pointer; touch and pen keep their own keyword.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -19,7 +17,6 @@ const GLOVES = [
   { property: "--cursor-glove-press", file: "glove-press.svg", x: 4, y: 3, keyword: "pointer" },
 ] as const;
 
-// #2103: while a mouse button is held, the pointing glove is the pressed one.
 const PRESS = ":root:active {\n    --cursor-glove-point: var(--cursor-glove-press);\n  }";
 
 function cssFiles(dir: string): string[] {
@@ -30,7 +27,6 @@ function cssFiles(dir: string): string[] {
   });
 }
 
-// Every `@keyframes` block of a stylesheet, from its name to its closing brace.
 function keyframes(css: string): string[] {
   const blocks: string[] = [];
   for (let at = css.indexOf("@keyframes"); at !== -1; at = css.indexOf("@keyframes", at + 1)) {

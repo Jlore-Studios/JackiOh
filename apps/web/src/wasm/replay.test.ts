@@ -1,5 +1,4 @@
-// R768, issue #508: what a replay shows, through the WebAssembly module. A game the random policy
-// plays is opened with `replayOpen` and read with `replayPage`; every step of both seats is
+// R768, issue #508: what a replay shows, through the WebAssembly module. Every step of both seats is
 // `viewFor` of the state the client held after that many actions.
 
 import { describe, expect, it } from "vitest";
@@ -22,7 +21,7 @@ import type { Action, PlayerId } from "@jackioh/shared";
 import { beginGame, createGame, reduce, type FoldInput, catalogVersion } from "./index.ts";
 import { resolveDecks } from "../game/decks.ts";
 
-/** The first `replay-wasm-N` whose game lasts past two checkpoints, since "replay-wasm"'s ends sooner now Player 1 opens on three cards (R2368000). */
+/** The first `replay-wasm-N` whose game lasts past two checkpoints now Player 1 opens on three cards (R2368000). */
 const SEED = "replay-wasm-1";
 /** Three checkpoints' worth of actions and a few over: the game's end need not be reached. */
 const GAME_ACTIONS = 3 * REPLAY_CHECKPOINT_EVERY + 5;

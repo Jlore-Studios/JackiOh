@@ -1,10 +1,8 @@
-// Which rows of a long pool to mount (#2334). The Almanac's pool holds about 700 cards, and mounting
-// them all cost more than the 481 it held before #2145 whatever staged the mount, so a virtual grid
-// (`PoolGrid`'s `virtual`) mounts only the rows near what the player sees, and leaves the rest of
-// its height to the grid's own rows, so the scrollbar and every card's place are those of the whole
-// pool. This file is the arithmetic and the reads of the page that feed it; `usePoolWindow.ts` is
-// what reads them as the pool scrolls. Nothing here is a rule (CLAUDE.md rule 7): it is where cards
-// are drawn, never which.
+// Which rows of a long pool to mount (#2334). The Almanac's pool holds about 700 cards since #2145,
+// too many to mount whatever staged the mount, so a virtual grid (`PoolGrid`'s `virtual`) mounts only
+// the rows near what the player sees, and leaves the rest of its height to the grid's own rows, so the
+// scrollbar and every card's place are those of the whole pool. `usePoolWindow.ts` reads these as the
+// pool scrolls. Nothing here is a rule (CLAUDE.md rule 7): it is where cards are drawn, never which.
 
 /**
  * How far the window reaches past the part of the pool in view, in heights of that part, on each
@@ -20,7 +18,6 @@ const CARD = ".db-card";
 
 /** What the grid's layout says about its rows, in pixels. */
 export type PoolShape = {
-  /** Cards to a row. */
   columns: number;
   rowHeight: number;
   rowGap: number;
@@ -63,7 +60,6 @@ export function fitWindow(mounted: PoolWindow, count: number): PoolWindow {
   return { ...mounted, firstRow: Math.min(mounted.firstRow, lastRow), lastRow: Math.min(mounted.lastRow, lastRow) };
 }
 
-/** The same rows. */
 export function sameWindow(before: PoolWindow, after: PoolWindow): boolean {
   return (
     before.columns === after.columns &&
@@ -84,8 +80,7 @@ export function poolRowTracks(count: number, mounted: PoolWindow): string {
 
 /**
  * The grid and what holds it that clip it: whatever of the pool they hide is not in view, so the
- * view is what they all leave (the grid itself on a desktop, the page's one region on a phone),
- * and the page's own edges (`readBand`).
+ * view is what they all leave, and the page's own edges (`readBand`).
  */
 export function clippingBoxes(grid: HTMLElement): HTMLElement[] {
   const boxes: HTMLElement[] = [];

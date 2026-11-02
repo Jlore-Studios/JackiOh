@@ -1,12 +1,8 @@
-// Sharing a replay as a GIF (#513, R513000): the raster draws a frame plan's known view and the
-// encoder's GIF decodes back, in a browser, to the colors the plan names. jsdom draws nothing, so
-// the unit tests (apps/web/src/replay/gif/) hold the plan and the bytes, and this holds the pixels.
-//
-// The golden is the plan itself: each filled rectangle's color is sampled where nothing drawn after
-// it lies over it and compared with the palette entry the encoder quantises that fill to, within
-// COLOR_SLACK per channel (the specs compare colors exactly; 1 is rounding in the browser's GIF
-// decoder). No stored image is compared, since text depends on the machine's fonts. Each card's art
-// window must also show several colors, so a blank or missing picture fails.
+// Sharing a replay as a GIF (#513, R513000): in a browser, the encoder's GIF of a frame plan decodes back
+// to the colors the plan names. jsdom draws nothing: the unit tests (apps/web/src/replay/gif/) hold the
+// plan and the bytes. The golden is the plan: each fill is sampled where nothing drawn after it lies
+// over it. No stored image is compared, since text depends on the machine's fonts. Each card's art
+// window must show several colors, so a blank fails.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/replay-gif.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -26,13 +22,12 @@ const EDGE_SLACK_PX = 1;
 const MIN_SAMPLES = 5;
 /** Per channel; the palette's own colors decode exactly, so this is only rounding. */
 const COLOR_SLACK = 1;
-/** A card's art window shows at least this many palette colors on the grid below. */
+/** A card's art window shows at least this many palette colors. */
 const MIN_ART_COLORS = 3;
 /** The art window is sampled on a grid this many points across. */
 const ART_GRID = 5;
-/** Where in a rectangle a sample may be taken, as fractions of its width and height: its middle first, then outwards. */
+/** Sample points in a rectangle, as fractions of its size: the middle first, then outwards. */
 const CANDIDATE_FRACTIONS = [0.5, 0.25, 0.75, 0.125, 0.875, 0.375, 0.625] as const;
-/** A big rectangle (the background, a seat's band) is sampled at up to this many of its candidates. */
 const SAMPLES_PER_RECT = 3;
 /** A glyph is at most this wide in ems, and the box around text is padded by this much. */
 const TEXT_EM_WIDTH = 0.7;
@@ -46,7 +41,7 @@ type Box = { x: number; y: number; w: number; h: number };
 type Sample = { x: number; y: number; expected: readonly [number, number, number]; label: string };
 type Decoded = { width: number; height: number; data: Uint8ClampedArray };
 
-/** The region an item covers, text over-estimated by the widest glyph and padded. */
+/** An item's region, text over-estimated by the widest glyph, padded. */
 function boxOf(item: GifItem): Box {
   if (item.kind !== "text") return item;
   const w = item.size * TEXT_EM_WIDTH * item.text.length;
@@ -69,7 +64,7 @@ function quantised(hex: string): [number, number, number] {
   return [GIF_PALETTE[at] ?? -1, GIF_PALETTE[at + 1] ?? -1, GIF_PALETTE[at + 2] ?? -1];
 }
 
-/** For each filled rectangle, the first few of its candidate points (CANDIDATE_FRACTIONS) that nothing is drawn over. */
+/** Each fill's first few candidate points that nothing is drawn over. */
 function samplesOf(frame: GifFrame): Sample[] {
   const samples: Sample[] = [];
   frame.items.forEach((item, index) => {
@@ -135,7 +130,6 @@ describe("a replay clip drawn as a GIF (R513000)", () => {
             });
             expect(off, "samples off the plan's colors").to.deep.equal([]);
 
-            // Every card's art window shows a picture, not one flat color.
             for (const item of frame.items) {
               if (item.kind !== "card" || assets.faces[faceKey(item.defId, item.radiant)]?.art === null) continue;
               const edge = Math.max(2, Math.round(item.h * 0.06));

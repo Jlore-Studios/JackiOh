@@ -3,14 +3,11 @@
 //! Base: "Destroy all permanents". Radiant: "Choose: all enemy permanents, or all".
 //! Engine cell: "Indestructibles survive; backrow included."
 //!
-//! §8's Conventions: the radiant face is the same board-wide destroy with a side chosen at play time.
-//! The mode is a DECLARED play choice, not a prompt: R81 names #88 and §10.6 says a card's declared
-//! modes "travel in the `play` action". `destroyAll` MARKS and never moves, walked in R68's order, so
-//! §4.5 step 1 collects the whole board at once and R59's one state check does the rest. Only cards
-//! ON the field match, so one dormant under a Stack pile is safe (R13). The scope does NOT
-//! pre-exclude Indestructibles, or R46 would be lost: §4.5 drops their mark, switches them to Attack
-//! Position and suppresses Taunt only if the mark was applied, and one with max health 0 or less dies
-//! anyway (R69).
+//! The radiant side is a DECLARED play choice, not a prompt (§8's Conventions; R81 names #88, §10.6).
+//! `destroyAll` MARKS and never moves, in R68's order, so §4.5 step 1 collects the whole board and R59's
+//! one state check does the rest; a card dormant under a Stack is safe (R13). The scope does NOT
+//! pre-exclude Indestructibles, or R46 would be lost: §4.5 switches them to Attack Position and
+//! suppresses Taunt only if the mark was applied, and one with max health 0 or less dies anyway (R69).
 
 use jackioh_engine::prelude::*;
 
@@ -27,9 +24,8 @@ fn modes() -> Vec<ModeDecl> {
     }]
 }
 
-/// Which side the destroy reaches. The base face has no choice to read and always hits both sides;
-/// the radiant face hits what the play named, and a play carrying no mode fizzles rather than
-/// guessing — the spell still counts as played (§6.3, §8 Conventions).
+/// Which side the destroy reaches. A radiant play carrying no mode fizzles rather than guessing; the
+/// spell still counts as played (§6.3, §8 Conventions).
 fn side_for(mode_name: Option<&str>, modal: bool) -> Option<&'static str> {
     if !modal {
         return Some("any");
@@ -65,8 +61,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #88 Twisting Nether (SPEC §8.5, BUILD M4-T4 row 88): "Every permanent on both rows destroyed,
-// Indestructibles survive; radiant enemy-only mode".
+// #88 Twisting Nether (SPEC §8.5, BUILD M4-T4 row 88).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,8 +72,8 @@ mod tests {
 
     const NETHER: &str = "core-088";
 
-    // Inert fixtures: each unit below has a Cry and nothing else, and the harness's `field` setup never
-    // fires a Cry. Mana Well and Sheepish have no Indestructible, so both rows are destructible.
+    // Inert fixtures: each unit's only text is a Cry, which `field` never fires. Mana Well and Sheepish
+    // have no Indestructible.
     const GARY: &str = "core-004"; // 1/1
     const RENO: &str = "core-053"; // 4/6
     const ROCK: &str = "core-066"; // 10/10, printed Indestructible
@@ -204,7 +199,6 @@ mod tests {
                 .iter()
                 .any(|keyword| keyword.kind() == KeywordKind::Taunt));
 
-            // Everything destructible still died.
             s.expect_in_zone(&gary, "graveyard");
         }
 

@@ -1,20 +1,15 @@
-//! Degrade and Upgrade's lasting changes to a card (docs/classic-sets.md B3.4, R386): the readers every
-//! other module uses. A card's `tuning` rides it through every zone (R78 leaves it alone); what writes
-//! it is `effects::tune`.
+//! Degrade and Upgrade's lasting changes to a card (docs/classic-sets.md B3.4, R386). A card's `tuning`
+//! rides it through every zone (R78 leaves it alone); what writes it is `effects::tune`.
 //!
-//! Echo, Activate, Tribute (flags a script declares, not `Keyword`s) and an X-cost card's X are read
-//! through `tuned_count` wherever the engine reads them, so a Degrade or Upgrade of that number is felt
-//! where the number is used; the numbered `Keyword`s (Armor, Lucky, Brittle, Spell Damage) are tuned in
-//! the layers (§10.4) by `tuned_keywords`, read by `layers::face_of`.
+//! Echo, Activate, Tribute and an X-cost card's X are read through `tuned_count` wherever the engine
+//! reads them; the numbered `Keyword`s are tuned in the layers (§10.4) by `tuned_keywords`.
 //!
 //! `attack`/`health` are summed deltas beside the layer-4 buffs, moving max health on the field and the
-//! face a card will enter with anywhere else (B3.4 rule 6); `addKeywords`/`removeKeywords` an Upgrade's
-//! additions and a Degrade's removed printed kinds; `x` a step count per numbered keyword or X (`X_KEY`),
-//! each step `TUNE_X_STEP`; `numbers` a step count per declared number, each step that number's own
-//! (`params::param_step`), so a card made Radiant keeps its steps on its Radiant numbers; `set` a number
-//! KY's Constant sets outright, the steps after it counting from it (`tuned_count`). A declared number's
-//! key is a `params` key (camelCase), a keyword's its kind (capitalised), so the two never share a key.
-//! The cost change is the card's `costMod` (R65), never a field here.
+//! face a card will enter with anywhere else (B3.4 rule 6); `x` and `numbers` count steps per numbered
+//! keyword or X and per declared number (each step `TUNE_X_STEP`, or that number's own, so a card made
+//! Radiant keeps its steps on its Radiant numbers); `set` a number KY's Constant sets outright. A
+//! declared number's key is a `params` key (camelCase), a keyword's its kind (capitalised), so the two
+//! never share a key. The cost change is the card's `costMod` (R65), never a field here.
 
 use indexmap::IndexMap;
 
@@ -22,15 +17,14 @@ use crate::config::TUNE_MIN_AMOUNT;
 use crate::state::CardInstance;
 use crate::wire::{Keyword, KeywordKind, Tuning};
 
-/// B3.4: the least a tuned number may come to — "an amount never drops below 1" (`TUNE_MIN_AMOUNT`).
+/// B3.4: the least a tuned number may come to ("an amount never drops below 1").
 pub const TUNED_FLOOR: i32 = TUNE_MIN_AMOUNT;
 
 /// B3.4 rule 3: the tuning key of an X-cost card's X (`x_of`).
 pub const X_KEY: &str = "X";
 
 /// B3.4 rule 3: the numbered keywords that are `Keyword`s, which the layers tune (`tuned_keywords`).
-/// Armor and Lucky print as keywords on any card; Brittle is also a count once started (`brittle.rs`);
-/// Spell Damage is E6's.
+/// Brittle is also a count once started (`brittle.rs`); Spell Damage is E6's.
 pub const LAYERED_NUMBERED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Armor,
     KeywordKind::Lucky,
@@ -38,10 +32,9 @@ pub const LAYERED_NUMBERED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::SpellDamage,
 ];
 
-/// B3.4, R386: the value a card's numbered keyword or X has now — its printed value (or the value KY's
-/// Constant set outright, `tuning.set`) moved by the card's tuning steps for `key`. A number the card
-/// does not print (0) is never tuned into existence. Never below `TUNED_FLOOR` (`tuned_count_with_min`
-/// takes another floor).
+/// B3.4, R386: the value a card's numbered keyword or X has now: its printed value (or the value KY's
+/// Constant set, `tuning.set`) moved by its tuning steps for `key`, never below `TUNED_FLOOR`. A number
+/// the card does not print (0) is never tuned into existence.
 pub fn tuned_count(instance: &CardInstance, key: &str, printed: i32) -> i32 {
     tuned_count_with_min(instance, key, printed, TUNED_FLOOR)
 }
@@ -67,9 +60,8 @@ pub fn tuned_count_with_min(instance: &CardInstance, key: &str, printed: i32, mi
     min.max(set.unwrap_or(printed) + step)
 }
 
-/// B2.7, B3.4: the X an X-cost card counts on the field and as it resolves — the X it was played for
-/// moved by its X steps, never below 1 (R348's floor) — and 0 for a card that has no chosen X (a
-/// Recruit, a copy, a card outside a play), as R65 reads an X card's cost off the field.
+/// B2.7, B3.4: the X an X-cost card counts on the field and as it resolves, moved by its X steps,
+/// never below 1 (R348), and 0 with no chosen X (a Recruit, a copy), as R65 reads its cost off the field.
 /// R1848003: a card whose X is set (`fixed_x`) counts that X wherever no play chose one.
 pub fn x_of(instance: &CardInstance) -> i32 {
     match instance.x.or(instance.fixed_x) {
@@ -78,10 +70,8 @@ pub fn x_of(instance: &CardInstance) -> i32 {
     }
 }
 
-/// §10.4 layer 1 with B3.4 on top: a face's printed keywords as the card's tuning leaves them. The
-/// printed kinds a Degrade removed go, a numbered keyword a Degrade, an Upgrade or KY's Constant moved
-/// prints its tuned value (several printed entries of one kind — a fused Armor 7 and Armor 3 — are
-/// tuned as their sum and print as one), and the keywords an Upgrade added are appended.
+/// §10.4 layer 1 with B3.4 on top: a face's printed keywords as its tuning leaves them; the entries of
+/// one numbered kind (a fused Armor 7 and Armor 3) are tuned as their sum and print as one.
 pub fn tuned_keywords(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyword> {
     let Some(tuning) = instance.tuning.as_ref() else {
         return keywords.to_vec();
@@ -225,9 +215,8 @@ pub fn copy_tuning(tuning: Option<&Tuning>) -> Option<Tuning> {
     tuning.cloned()
 }
 
-/// R102, B3.4 rule 4: a Fuse sums its ingredients' tuning — the stats and every step count add up,
-/// the keyword changes unite, and a number KY's Constant set is kept from the first ingredient that
-/// set it. `None` when no ingredient carries any.
+/// R102, B3.4 rule 4: a Fuse sums its ingredients' tuning; a number KY's Constant set is kept from the
+/// first ingredient that set it.
 pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
     let mut out = Tuning::default();
     for tuning in tunings.iter().flatten() {

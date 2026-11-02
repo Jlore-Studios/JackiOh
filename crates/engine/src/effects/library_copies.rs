@@ -4,12 +4,10 @@
 //! (R57's copy, R386) — never a Brittle count or a cost rider — the source staying where it is. A copy
 //! that reaches the hand is given Brittle `brittle` (B3.3); one the hand cap burns is not (§2.4, R586).
 //!
-//! R586: the copies go to the hand in the order drawn, never the deck's, so their order says nothing of where
-//! the sources lay (§9.1). A deck of no more than `count` cards gives a copy of each with no draw
-//! (R129), ordered by definition id for the same reason. The other player reads only that cards
-//! reached the hand (`addedToHand` under the sentinel, R97); the deck they came from is untouched.
-//!
-//! Port of `packages/engine/src/effects/libraryCopies.ts`.
+//! R586: the copies go to the hand in the order drawn, never the deck's, so their order says nothing of
+//! where the sources lay (§9.1); a deck of no more than `count` cards gives one of each with no draw
+//! (R129), ordered by definition id. The other player reads only that cards reached the hand
+//! (`addedToHand` under the sentinel, R97).
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -40,7 +38,7 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
         let count = args.count.max(0);
         let library = ctx.sink.state.players[whose].library.clone();
         let picked: Vec<CardInstance> = if library.len() <= count as usize {
-            // R586, R129: every card, with no draw, ordered by definition id (a stable sort, as TS's).
+            // R586, R129: every card, with no draw, ordered by definition id (a stable sort).
             let mut sorted = library;
             sorted.sort_by(|a, b| a.def_id.cmp(&b.def_id));
             sorted
@@ -68,7 +66,6 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
             if let Some(stats) = source.stats_override {
                 copy.stats_override = Some(stats);
             }
-            // `copyTuning`: a deep copy of the source's tuning, absent when it has none.
             if let Some(tuning) = source.tuning.clone() {
                 copy.tuning = Some(tuning);
             }

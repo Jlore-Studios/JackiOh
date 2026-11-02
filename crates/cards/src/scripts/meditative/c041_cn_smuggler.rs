@@ -43,10 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative #41 CN Smuggler — SPEC §8.8 row 41, BUILD M10 row M 41: "At your start of turn only,
-// adds a base Auspicious Rock, then a random non-token CN card of any set (never itself, R387),
-// hidden from the opponent, the hand cap burning in that order; radiant 8/10 and both cards
-// Radiant".
+// Meditative #41 CN Smuggler — SPEC §8.8 row 41, BUILD M10 row M 41.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,7 +80,6 @@ mod tests {
         assert_eq!(hand[1], ROCK, "the Rock first");
         assert!(is_cn_non_token(&hand[2]), "{} is a non-token CN card, not itself", hand[2]);
         assert!(s.hand(P1).iter().all(|card| !card.radiant));
-        // Hidden from the opponent.
         let theirs = serde_json::to_string(&s.view(P2)).unwrap();
         assert!(!theirs.contains(ROCK));
         assert!(!theirs.contains(&hand[2]));

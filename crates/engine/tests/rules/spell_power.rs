@@ -1,16 +1,11 @@
 //! The Meditative+ spell-power systems (issue #1180, docs/meditative-plus-set.md MP5), proved on
 //! fixture cards (`fixtures::spell_power`) before the real cards use them:
 //!
-//! - R1180000: a player's Spell Damage is one sum — their Units' keyword, every Spell Damage aura acting
-//!   on either side that reaches them (one player or both), and their "this turn" modifiers — read as
-//!   each hit of a Spell lands; a Field Spell's or a Trap's hit is never raised.
-//! - R1180001: "Spell Damage +N this turn" is the activator's, stacks, stays when its card leaves and
-//!   ends at the turn's cleanup.
-//! - R1180002: "Your Spells have Lifesteal" reaches its controller's resolving Spells only, once per hit,
-//!   once however many give it, and ends when its card leaves.
-//! - R1180003: the healing multiplier doubles every heal of its controller's hero and Units, Lifesteal's
-//!   included, two quadruple, the opponent's heals untouched, and a heal a replacement turned into
-//!   damage, or a "heal up to N", is not doubled.
+//! - R1180000: a player's Spell Damage is one sum (their Units' keyword, every aura that reaches them,
+//!   their "this turn" modifiers), read as each hit of a Spell lands, never a Field Spell's or a Trap's.
+//! - R1180001: "Spell Damage +N this turn", the activator's until the turn's cleanup.
+//! - R1180002: "Your Spells have Lifesteal", for its controller's resolving Spells only.
+//! - R1180003: the healing multiplier, for every heal of its controller's hero and Units.
 //! - R1180004: health as the next Spell's price.
 //! - R1180005: the targets a Spell declared or chose kept, and the one card in its player's hand or deck
 //!   that answers it.
@@ -142,7 +137,7 @@ fn badges(s: &Scenario, player: PlayerId) -> Vec<String> {
         .collect()
 }
 
-// ---- R1180000: Spell Damage beyond Units ----
+// R1180000: Spell Damage beyond Units
 
 mod r1180000_spell_damage_is_one_sum {
     use super::*;
@@ -261,7 +256,7 @@ mod r1180000_spell_damage_is_one_sum {
     }
 }
 
-// ---- R1180001: "Spell Damage +N this turn" ----
+// R1180001: "Spell Damage +N this turn"
 
 mod r1180001_spell_damage_this_turn {
     use super::*;
@@ -313,7 +308,7 @@ mod r1180001_spell_damage_this_turn {
     }
 }
 
-// ---- R1180002: "Your Spells have Lifesteal" ----
+// R1180002: "Your Spells have Lifesteal"
 
 mod r1180002_spells_have_lifesteal {
     use super::*;
@@ -388,7 +383,7 @@ mod r1180002_spells_have_lifesteal {
     }
 }
 
-// ---- R1180003: the healing multiplier ----
+// R1180003: the healing multiplier
 
 mod r1180003_healing_twice_as_effective {
     use super::*;
@@ -469,7 +464,7 @@ mod r1180003_healing_twice_as_effective {
     }
 }
 
-// ---- R1180004: health as the price ----
+// R1180004: health as the price
 
 mod r1180004_health_as_the_price {
     use super::*;
@@ -645,7 +640,7 @@ mod r1180004_health_as_the_price {
     }
 }
 
-// ---- R1180005: after a Spell targeting an enemy resolves ----
+// R1180005: after a Spell targeting an enemy resolves
 
 mod r1180005_after_a_spell_targeting_an_enemy {
     use super::*;
@@ -729,7 +724,6 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         let in_hand = hand_card(&s, P1, PILER);
         s.play(BOLT, json!({ "targets": hero(P2) }));
         let named = answers(&s);
-        // The hand's answers the Bolt; its own cast calls the deck's top one, whose cast calls the last.
         assert_eq!(named[0].1.by, in_hand.id);
         assert_eq!(named.len(), 3);
         assert_eq!(hits_on(&s, "hero-p2"), vec![1, 2, 2, 2]);
@@ -749,7 +743,6 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         let named = answers(&s);
         assert_eq!(named.len(), 2);
         assert_eq!(named[0].1.by, first.id);
-        // The second answers the first's cast, not the Bolt.
         assert_eq!(named[1].0, first.id);
         assert_eq!(named[1].1.by, second.id);
         assert_eq!(hits_on(&s, "hero-p2"), vec![1, 2, 2]);
@@ -869,10 +862,8 @@ mod r1180006_the_answer_chain_is_bounded {
         s.play(BOLT, json!({ "targets": pick::instance(&body) }));
         let cap = usize::try_from(SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
         assert_eq!(named(s.events()), cap);
-        // The Bolt's hit, then one hit for each answer the chain named.
         assert_eq!(hits_on(&s, &body.id).len(), 1 + cap);
         assert_eq!(library_pilers(&s), 25 - cap);
-        // The chain has ended: nothing is left under way.
         assert_eq!(s.state().players[P1].answer_chain, None);
     }
 

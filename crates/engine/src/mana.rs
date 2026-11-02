@@ -1,6 +1,4 @@
 //! Mana refresh, temporary mana and the cost calculation (SPEC §2.3, §6.3 Cost, R65, R396, R455).
-//!
-//! Port of `packages/engine/src/mana.ts`.
 
 use crate::catalog::def_of;
 use crate::config::GLITCH_DEF_ID;
@@ -14,31 +12,25 @@ use crate::triggers::{TriggerZone, holders_answering};
 use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Zone};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
-/// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
-/// "min(number of turns you have started, 4), plus persistent modifiers". `nextTurnMod` is not one of
-/// those: it is a one-shot rider on a single refresh, which the refresh spends and clears, so it never
-/// reaches max mana. Hinder and every other modifier apply on top of the capped value exactly as for
-/// a human. R1854003: the crystals a steal moved count with the turns, inside the cap
-/// (`mana_crystal_count`).
+/// modifiers, floored at 0; with no handicap, §2.3's "min(number of turns you have started, 4), plus
+/// persistent modifiers". `nextTurnMod` is a one-shot rider the refresh spends, never max mana; other
+/// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
     let handicap = handicap_of(side);
     let base = mana_crystal_count(side).min(handicap.mana_cap);
     (base + side.mana.perm_mod).max(0)
 }
 
-/// R1854003: a player's mana crystals before the cap — the turns they have started and their seat's
-/// mana bonus (R181), moved by the crystals effects stole from them or gave them (`mana_crystals`).
-/// It is Hearthstone's count of crystals: one more each turn, never past the cap.
+/// R1854003: a player's mana crystals before the cap (Hearthstone's count): the turns they have started
+/// and their seat's mana bonus (R181), moved by the crystals effects stole from them or gave them.
 pub fn mana_crystal_count(side: &PlayerState) -> i32 {
     side.turns_started + handicap_of(side).mana_bonus + side.mana_crystals.unwrap_or(0)
 }
 
-/// R1854003: `thief` steals `victim`'s mana crystals. The victim's crystals go, so their maximum mana
-/// falls to their persistent modifiers alone (0 on every shipped card) and their current mana by as
-/// much, never below 0; the crystals come back one a turn, as any player's do (§2.3). The thief gains
-/// as many as the victim lost, full, up to their cap, so a thief at the cap gains none. Both sides'
-/// `mana.max` is set at once. Returns the maximum mana the victim lost and the crystals the thief
-/// gained; the caller reports each side whose mana changed (`mana_event`).
+/// R1854003: `thief` steals `victim`'s mana crystals: the victim's max mana falls to their persistent
+/// modifiers alone and their current mana by as much, never below 0, the crystals coming back one a
+/// turn (§2.3); the thief gains as many, full, up to their cap. Returns the max mana the victim lost and
+/// the crystals the thief gained; the caller reports each side whose mana changed (`mana_event`).
 pub fn move_mana_crystals(state: &mut GameState, thief: PlayerId, victim: PlayerId) -> (i32, i32) {
     let side = &mut state.players[victim];
     let count = mana_crystal_count(side);
@@ -67,18 +59,17 @@ pub fn move_mana_crystals(state: &mut GameState, thief: PlayerId, victim: Player
 /// names as it appears, changes and is spent, and which the view lists while the rider is not 0.
 pub const NEXT_REFRESH_MODIFIER_ID: &str = "nextTurnMana";
 
-/// Start of turn: refresh to max, moved by the one-shot rider (§6.3 Mana: "'next turn' mana is stored
-/// as a modifier for the next refresh"), which is then cleared. The rider changes what the refresh
-/// gives, not max mana: #24 Efficiency Dividend's next-turn mana is temporary mana on §2.3's list and
-/// "adds to current mana and can exceed 4", exactly as #6 Mana Well's gain does, and #21 Hinder
-/// "subtracts from the opponent's next refresh". Current mana never goes below 0 (§2.3).
+/// Start of turn: refresh to max, moved by the one-shot rider (§6.3 Mana), which is then cleared. The
+/// rider changes what the refresh gives, not max mana: #24 Efficiency Dividend's next-turn mana is
+/// temporary mana that "can exceed 4", as #6 Mana Well's gain does, and #21 Hinder "subtracts from the
+/// opponent's next refresh". Current mana never goes below 0 (§2.3).
 pub fn refresh_mana(side: &mut PlayerState) {
     refresh_mana_with(side, true);
 }
 
 /// `refresh_mana` with the natural generation named: under MD-B2's aura (`natural: false`) the
 /// refresh sets max mana as usual but current mana to the next-turn rider only. A lost refresh
-/// still gives 0 first (MB04's `refresh_is_lost` reads here once it lands).
+/// still gives 0 first (`refresh_is_lost`).
 pub fn refresh_mana_with(side: &mut PlayerState, natural: bool) {
     let max = max_mana_for(side);
     side.mana.max = max;
@@ -94,8 +85,7 @@ pub fn refresh_mana_with(side: &mut PlayerState, natural: bool) {
 /// while a loss covers a future refresh (R169).
 pub const LOST_REFRESH_MODIFIER_ID: &str = "lostRefresh";
 
-/// R844: whether this player's refresh is lost — their `lost_refresh_through` covers the turn they
-/// have started (`turns_started`).
+/// R844: whether this player's refresh is lost: `lost_refresh_through` covers their `turns_started`.
 pub fn refresh_is_lost(side: &PlayerState) -> bool {
     side.lost_refresh_through
         .is_some_and(|through| side.turns_started <= through)
@@ -114,8 +104,7 @@ pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
     }
 }
 
-/// R844: how many lost refreshes this player still has past this one — `through − turns_started`,
-/// never below 0.
+/// R844: how many lost refreshes this player has left past this one, never below 0.
 pub fn lost_refreshes_left(side: &PlayerState) -> i32 {
     side.lost_refresh_through
         .map(|through| (through - side.turns_started).max(0))
@@ -132,9 +121,8 @@ pub fn spend_lost_refresh(side: &mut PlayerState) -> bool {
     false
 }
 
-/// MD-B2, R941: whether any player generates mana naturally now — false while a card holding
-/// `no_natural_mana` acts on the field (face-up, top of its pile or a Unit a carrier holds, R446,
-/// R1824000), on either side and in either row.
+/// MD-B2, R941: whether any player generates mana naturally now: false while a face-up card holding
+/// `no_natural_mana` acts on either side's field, a Unit a carrier holds included (R446, R1824000).
 pub fn natural_mana_on(state: &GameState) -> bool {
     for player in PLAYER_IDS {
         for card in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
@@ -148,14 +136,13 @@ pub fn natural_mana_on(state: &GameState) -> bool {
     true
 }
 
-/// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max — Hearthstone's "Refresh
-/// Mana Crystals" (#78 /fullsend). Unlike temporary mana (`gain_mana`) it cannot take current above
-/// max, and a player already at or above max gains nothing.
+/// §6.3 Refresh, R364: give back up to `amount` spent mana, never past max (Hearthstone's "Refresh
+/// Mana Crystals", #78 /fullsend), unlike temporary mana (`gain_mana`).
 pub fn refresh_some_mana(side: &mut PlayerState, amount: i32) {
     if amount <= 0 || side.mana.current >= side.mana.max {
         return;
     }
-    // Saturating: "refresh all your mana" (Classic+ #27) passes `i32::MAX`, TS's `Infinity`.
+    // Saturating: "refresh all your mana" (Classic+ #27) passes `i32::MAX`.
     side.mana.current = side.mana.max.min(side.mana.current.saturating_add(amount));
 }
 
@@ -187,7 +174,7 @@ pub fn mana_spent_heard(state: &GameState) -> bool {
 
 /// MD-D26: report mana `player` spent, for a play's price or an activation's — but only while
 /// something answers it, so a game with no listener keeps its events, and its `next_seq` hashes,
-/// exactly as before (D14). Nothing is emitted for an amount below 1.
+/// unchanged (D14). Nothing is emitted for an amount below 1.
 pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32, for_: ManaSpentFor) {
     if amount <= 0 || !mana_spent_heard(sink.state) {
         return;
@@ -221,10 +208,9 @@ pub fn is_x_cost(state: &GameState, instance: &CardInstance) -> bool {
     def_of(Some(state), &instance.def_id).cost == CardCost::X
 }
 
-/// R48: a modifier that covers a player's *next* turn does nothing on the turn it was created on,
-/// and nothing on the opponent's turn in between either — #77's text is "during **your** next turn",
-/// so it is live only once that player is the active one on a later turn. `expireModifiers` ends it
-/// at the cleanup of that player's next turn, which is why this is a separate question from expiry.
+/// R48: a modifier for a player's *next* turn (#77: "during **your** next turn") is live only once that
+/// player is active on a later turn, not on the turn it was made nor the opponent's between. Expiry
+/// ends it at that turn's cleanup, a separate question.
 pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
     // R757: Armor Up's Armor holds from the moment it is gained until its expiry's cleanup removes it.
     // MD-C21: Tranquility's immunity holds the same way.
@@ -256,26 +242,16 @@ struct Price {
     used_rules: Vec<String>,
 }
 
-/// R65: start from costOverride or the printed cost, add the instance's costMod, add the player's
-/// discounts, then Professor Curvature if the result is 4 or more (R363), and floor at 0. An X-cost
-/// card costs exactly X and ignores modifiers, unless an override makes it free.
+/// R65: start from costOverride or the printed cost, add the instance's costMod and the player's discounts,
+/// then Professor Curvature if the result is 4 or more (R363), and floor at 0; an X-cost card costs exactly
+/// X unless an override makes it free. Discounts and Curvature price a play (§6.3's Cost, #35, #78, R48), so
+/// they reach only a card in its controller's hand (§10.5 step 1) or a graveyard a permission lets them play
+/// from (E11, R454); any other is read at its own cost (#30, R24; #94, R66). `options.asPlay` prices any
+/// card as a play of it now.
 ///
-/// The player's discounts and Curvature are prices for a play — §6.3's Cost is "what a card costs to
-/// play now", #35's is "the next Spell you play", #78's "this turn your cards cost 1 less", and R48
-/// reads Curvature "at play time" — so they reach a card in its controller's hand, where a play takes
-/// it from (§10.5 step 1), and no other. A card in a library or a graveyard is read at its own cost,
-/// its `costOverride` or printed cost with its `costMod`: #30 Archivist's "highest" (R24), #94's
-/// 2-cost draw and odd-cost exile (R66), a Recruit's filter — as Hearthstone's hand discounts never
-/// reach the deck or the graveyard (R65) — except a graveyard a permission lets its player play from
-/// (E11, R454), where a play takes the card from. `options.asPlay` prices any card as a play of it now.
-/// (TS's `options` defaulted to `{}`; a caller with none passes `CostOptions::default()`.)
-///
-/// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts, the flat price rules (the
-/// `costRule` modifiers and the field's cost auras), then the threshold rules, which read the one
-/// number the flat ones left, as R363 reads Curvature there; then "costs (N)" sets; then the floor the
-/// card carries (Forever&'s "can't cost less than (N)"), which holds in every zone, as the card's own
-/// `costOverride` does; then 0. An X-cost card still ignores every modifier (R65), and only its floor
-/// reaches it.
+/// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts the flat price rules, then the
+/// threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)" sets, then
+/// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0.
 pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }
@@ -300,10 +276,9 @@ pub fn cost_rules_spent_by(state: &GameState, instance: &CardInstance) -> Vec<St
         .collect()
 }
 
-/// R1181002 (Meditative+ #22 Mountaintop Garden): the premium the Gardens acting on either side ask
-/// for an embiggen card's dearer price, the least of them, or `None` while no Garden acts. Each text
-/// that carries `embiggenGarden`, on a card acting on its controller's field (`acting_texts_of`),
-/// reaches both players' cards; its premium moves with the card's declared number `premium` (R386).
+/// R1181002 (Meditative+ #22 Mountaintop Garden): the least premium the Gardens acting on either side
+/// (`acting_texts_of`, each reaching both players' cards) ask for an embiggen card's dearer price, or
+/// `None` while no Garden acts; each moves with its card's declared number `premium` (R386).
 pub fn garden_premium(state: &GameState) -> Option<i32> {
     let mut least: Option<i32> = None;
     for side in PLAYER_IDS {
@@ -336,10 +311,9 @@ fn garden_premium_for(state: &GameState, card: &CardInstance) -> Option<i32> {
     garden_premium(state)
 }
 
-/// R1563004: whether a Garden offers this card of one price its Radiant price — a card that is not
-/// Radiant, has no embiggen price and no X (R65: an X card costs exactly X), played as a Garden reaches
-/// a play. Its dearer choice is the play's `embiggen: true`, stamped on the card as `embiggened` until
-/// §10.5 step 3 (`play_steps::garden_step`).
+/// R1563004: whether a Garden offers this card of one price its Radiant price: not Radiant, no embiggen
+/// price and no X (R65), played as a Garden reaches a play. Its dearer choice is the play's `embiggen:
+/// true`, stamped on the card as `embiggened` until §10.5 step 3 (`play_steps::garden_step`).
 pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
     !card.radiant
         && !crate::play_choices::has_embiggen_price(state, card)
@@ -347,9 +321,8 @@ pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
         && garden_premium_for(state, card).is_some()
 }
 
-/// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant — its
-/// normal price plus the premium, in place of an embiggen card's printed Embiggened price — or `None`
-/// where no Garden reaches it, or for any other play.
+/// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant: its
+/// normal price plus the premium, in place of an embiggen card's Embiggened price; else `None`.
 pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
     if card.embiggened != Some(true) || card.radiant {
         return None;
@@ -363,9 +336,8 @@ pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32
     }
 }
 
-/// R65, R1181003: the override a price starts from — for the Embiggened version, its own price
-/// (`embiggenCostOverride`, Meditative+ #23) before `costOverride`; for every other play,
-/// `costOverride`.
+/// R65, R1181003: the override a price starts from: for the Embiggened version its own price
+/// (`embiggenCostOverride`, Meditative+ #23) before `costOverride`; for every other play `costOverride`.
 pub fn override_of(card: &CardInstance) -> Option<i32> {
     if card.embiggened == Some(true) {
         card.embiggen_cost_override.or(card.cost_override)
@@ -442,11 +414,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         cost -= amount;
     }
 
-    // R65, R363: "apply Professor Curvature if the result is then 4 or more" — the result of the steps
-    // above, which every live Curvature reads. Two of them (#39's copy, #33's) each test that one
-    // number, so both apply to a card the discounts leave at 4 or more, and the order they were played
-    // in changes nothing: a Curvature never reads the cost another Curvature has already lowered (R48).
-    // R455: the flat price rules come first, and the threshold rules read the same number Curvature does.
+    // R65, R363: "apply Professor Curvature if the result is then 4 or more": every live Curvature
+    // (#39's copy, #33's) tests that one number, never one another lowered, so play order changes
+    // nothing (R48). R455: the flat price rules come first; the threshold rules read Curvature's number.
     let curvature = |before_curvature: i32| -> i32 {
         let mut off = 0;
         for modifier in &side.mods {
@@ -478,10 +448,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
 }
 
 /// R1180004 (Meditative+ #6 Bloodbloom): the health price a play of this card would use now, as
-/// `(multiple, echo)` — the newest live `HealthPrice` of the player holding it, when the card is a Spell
-/// in that player's hand played face-up: not a Field Spell or a Trap, and not a Spell being set
-/// face-down, which is played as a Trap (R783005). A card anywhere else — a graveyard's play, a cast,
-/// which pays nothing (R70) — never uses it. Every price, legal play and payment reads this one rule.
+/// `(multiple, echo)`: the newest live `HealthPrice` of the player holding it, for a Spell played
+/// face-up from that hand, not one set face-down (R783005); a graveyard's play or a cast (R70) never
+/// uses it. Every price, legal play and payment reads this one rule.
 pub fn health_price_rule(state: &GameState, instance: &CardInstance) -> Option<(i32, Option<i32>)> {
     let Zone::Hand { player } = instance.zone else {
         return None;
@@ -519,12 +488,10 @@ pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
     mana_due_now(state, instance, cost) <= crate::credit::spendable_mana(state, instance.controller)
 }
 
-/// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —
-/// the one reader card scripts compare costs with. An X-cost card on the field costs the X it was
-/// played for (the instance's `x`); anywhere else, and on the field when it arrived without a chosen X
-/// (a Recruit, a summon), it costs 0 (R65). An embiggen card outside a play costs its base price (R65),
-/// on the field too. Any other card is R65's cost as it stands: a hand card at its hand cost, a card in
-/// a library, a graveyard or on the field at its own (R66). A floor the card carries holds (R455).
+/// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule or a card script compares
+/// or counts costs. An X-cost card costs the X it was played for on the field, else 0 (R65; a Recruit,
+/// a summon); an embiggen card outside a play its base price (R65); any other card R65's cost as it
+/// stands, its own outside a hand (R66). A floor the card carries holds (R455).
 pub fn cost_now(state: &GameState, card: &CardInstance) -> i32 {
     let floor = cost_floor_of(card);
     if is_x_cost(state, card) {

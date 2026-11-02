@@ -1,13 +1,4 @@
-//! R762: the AI samples an unseen face-down trap at the cost the board shows.
-//!
-//! Since R351 every face-down Trap shows its cost to both players, and `redact` keeps that number
-//! on the placeholder — but `determinize` filled each placeholder from every Trap and Field Trap,
-//! so a sampled world could put a cost-1 trap where the board shows 3. The lethal solver accepts a
-//! line that wins on all 3 determinizations, so it swung at the face into a shown cost-3 trap most
-//! of the time, where a human reading the same cost would not.
-//!
-//! Port of `packages/ai/test/determinize-shown-cost.test.ts`. TS's `{ timeout: 60_000 }` has no
-//! `cargo test` twin and is dropped.
+//! R762, R351: samples unseen face-down trap at shown cost rather than any cost.
 
 use indexmap::IndexSet;
 use jackioh_ai::{AiOptions, DecisionReason, DeterminizeOptions, decide, determinize, redact};
@@ -40,13 +31,12 @@ fn one_of_each_cost() -> GameState {
     .clone()
 }
 
-/// Vanilla 4 + Timmy 3 is exactly 7, so the two swings are lethal. Doom Shroom exiles both attackers
-/// on the first swing. Groom Shroom lets the first swing hit (R405) and walls the second behind
-/// Taunts. So no world at (3) has a lethal. Do not cut this to one attacker: a Groom world would
-/// then still be lethal. C #9 Income Tax, a Trap at (3) since patch v0.3.10 (#831) that stops no swing,
-/// and C #88 Siphon Squad, a Field Trap at (3) since patch v0.3.12 (#1149) that sleeps while it is set
-/// and unrevealed (R1149000), lie in p2's graveyard: seen, neither is any world's face-down card (a
-/// deck holds no card twice).
+/// Vanilla 4 + Timmy 3 is exactly 7, so the two swings are lethal. Doom Shroom exiles both attackers on the
+/// first swing. Groom Shroom lets the first swing hit (R405) and walls the second behind Taunts. So no world
+/// at (3) has a lethal. Do not cut this to one attacker: a Groom world would then still be lethal. C #9
+/// Income Tax (a Trap at (3), #831, stopping no swing) and C #88 Siphon Squad (a Field Trap at (3), #1149,
+/// asleep while set and unrevealed, R1149000) lie in p2's graveyard: seen, neither is any world's face-down
+/// card (a deck holds no card twice).
 fn shroomed(trap: bool) -> GameState {
     register_cards();
     let backrow = if trap {
@@ -153,7 +143,7 @@ mod determinize_at_the_shown_cost_r762 {
                 AI,
                 &mut AiOptions::new(create_rng(&format!("shown-cost-doom:{seed}"), 0)),
             );
-            // TS's `decision?.action ?? { type: "endTurn" }` never falls back: a null decision fails here.
+            // A null decision fails here: nothing falls back to ending the turn.
             let decision = decision.unwrap_or_else(|| panic!("seed {seed}: no decision"));
             assert_ne!(
                 decision.reason,

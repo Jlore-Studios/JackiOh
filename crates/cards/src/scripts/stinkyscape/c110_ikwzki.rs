@@ -31,13 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #110 iKwzki — SPEC §8.10 row 110, BUILD M12 row S 110: "Cry (played): the chosen permanent (either
-// side) shows the gold Duo mark and is made Radiant at the start of your next turn, not if it left;
-// radiant 12/12, every permanent of yours marked, a Radiant one passed by". The mark's view and a face-down
-// card's report are the engine's, proven by its tests (R1850001).
-//
-// Every case keeps cards in both hands and libraries, so no turn ends by itself (R82); two `end_turn()`s
-// come back to p1's start of turn, where the Make Radiant lands (R62).
+// S #110 iKwzki — SPEC §8.10 row 110, BUILD M12 row S 110 (R1850001, R62, R82).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::DUO_MARK;

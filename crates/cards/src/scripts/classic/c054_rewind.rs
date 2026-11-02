@@ -65,18 +65,15 @@ mod tests {
 
     use crate::js;
 
-    /// Written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serializes");
         serde_json::from_str(&text).expect("the state parses back")
     }
 
-    /// Applicable changes, each row as its JSON name.
     fn changes(s: &Scenario, card: &str, direction: TuneDirection) -> Vec<Value> {
         applicable_changes(s.state(), s.card(card), direction).iter().map(js).collect()
     }
 
-    /// The instance ids `legalActions` offers as Rewind's target.
     fn offered(s: &Scenario, player: PlayerId) -> Vec<String> {
         let rewind = s
             .hand(player)
@@ -119,7 +116,6 @@ mod tests {
                 let gary = s.card(GARY).clone();
                 s.play(REWIND, json!({ "targets": pick::id(&gary.id) }));
                 let stats = s.stats(&gary);
-                // Five coins, one point each, split between attack and health.
                 assert_eq!(stats.attack + stats.max_health, 1 + 1 + 5);
                 s.expect_events(json!(["cardPlayed", "buffed"]));
             }

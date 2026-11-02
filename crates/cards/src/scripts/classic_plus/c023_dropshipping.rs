@@ -1,6 +1,5 @@
 //! C+ #23 Dropshipping (SPEC §8.7 row 23): add {cards} random cards from every card and token but this
 //! (R382, R387), each given Temporary {temporary} (R2179001, issue #2179); Radiant: each costs (1).
-//! Through v0.5.2 each was given Brittle {brittle} (R385), which `script_v0_5_2` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -82,13 +81,7 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// C+ #23 Dropshipping — SPEC §8.7 row 23, BUILD M9 Classic+ row C+ 23: "Adds 3 random cards drawn from
-// every card and token of every set but Dropshipping (R382, R387; repeats allowed, R60), so a Grape, a
-// Loser, an AI generated card or a unit-token card (R11) can arrive, each at its printed cost and
-// given Temporary 2 (R2179001): at the end of your turn it counts down to 1 in your hand, and at the end
-// of your next it is discarded unless played; the owner sees the counts, the opponent sees three cards
-// added under the sentinel (R97); a full hand burns the rest; card count and Temporary read through
-// `param()`; radiant they cost (1) (`costOverride` 1)".
+// C+ #23 Dropshipping — SPEC §8.7 row 23, BUILD M9 Classic+ row C+ 23 (R60, R97).
 
 #[cfg(test)]
 mod tests {
@@ -155,12 +148,11 @@ mod tests {
             .collect()
     }
 
-    /// Two `endTurn`s: the opponent's turn, then p1's next start of turn.
     fn next_own_turn(s: &mut Scenario) -> &mut Scenario {
         s.end_turn().end_turn()
     }
 
-    /// TS `/-\d{3}-\d/.test(id)`: a token's three-digit index followed by its own number.
+    /// `-\d{3}-\d`: a token's three-digit index followed by its own number.
     fn has_token_index(id: &str) -> bool {
         id.as_bytes().windows(6).any(|w| {
             w[0] == b'-' && w[1..4].iter().all(u8::is_ascii_digit) && w[4] == b'-' && w[5].is_ascii_digit()
@@ -400,8 +392,7 @@ mod tests {
                             assert!(!card.granted_keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Temporary));
                         }
                         // A burned unit token ceases to exist (R11): it is in no pile, so nothing holds a
-                        // count. Re-pinned for v0.3.5: the Meditative set joins the pool, and this seed
-                        // now burns a unit token (C+ #19.5), which no pile holds to look up.
+                        // count; this seed burns one (C+ #19.5).
                         None => {
                             let def = def_of(Some(s.state()), def_id);
                             assert!(def.token && def.type_ == CardType::Unit, "{def_id}");

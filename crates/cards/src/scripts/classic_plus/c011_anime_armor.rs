@@ -1,9 +1,8 @@
 //! C+ #11 Anime Armor (SPEC §8.7 row 11). (2) Unit, Rare, 3/3 → 6/6 (Radiant: Reborn).
-//! Aura: while it acts on the field its controller's hero, and since issue #2179 this Unit itself, takes
-//! at most {cap} from each damage instance (§4.4 step 3, E6's per-hit cap: the lowest cap wins beside
-//! Anti-oneshot Armor's; on this Unit the cap is its guard's `guardsSelf`, R2179005). Lose health (R18)
-//! and Set health are not damage and are not capped. Through v0.5.2 it guarded the hero alone, which
-//! `script_v0_5_2` keeps for those replays (R767000).
+//! Aura: while it acts on the field its controller's hero and this Unit itself each take at most {cap}
+//! from each damage instance (§4.4 step 3, E6's per-hit cap: the lowest cap wins beside Anti-oneshot
+//! Armor's; on this Unit the cap is its guard's `guardsSelf`, R2179005). Lose health (R18) and Set
+//! health are not damage and are not capped.
 
 use jackioh_engine::prelude::*;
 
@@ -38,15 +37,7 @@ pub fn script_v0_5_2() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #11 Anime Armor — SPEC §8.7 row 11, BUILD M9 Classic+ row C+ 11: "While it is on the field its
-// controller's hero takes at most 1 from each damage instance (§4.4 step 3): combat, Spells, Pierce hits
-// and fatigue alike, each Trample excess and each split hit its own capped instance; the lowest cap wins
-// beside Anti-oneshot Armor's 5 or 3; lose health (R18) and Set health are not damage and are not
-// capped; the opponent's hero is unaffected; the cap lifts when it leaves; the cap reads through
-// `param()` and never drops below 1; radiant 6/6 with Reborn, the cap returning with it". Since #2179
-// each hit on Anime Armor itself is capped the same way (R2179005).
-//
-// Anime Armor stands in p1's unit lane 1 unless a test says otherwise.
+// C+ #11 Anime Armor — SPEC §8.7 row 11, BUILD M9 Classic+ row C+ 11.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

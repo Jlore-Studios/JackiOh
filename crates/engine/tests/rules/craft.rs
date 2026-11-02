@@ -18,12 +18,10 @@ use crate::rules::fixtures::prompt_harness::{
 };
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
 
-/// An `Action` from its JSON, as the socket sends it.
 fn action(literal: Value) -> Action {
     json_as(literal)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -53,8 +51,8 @@ fn crafting(seed: &str, cost_pick: &str) -> GameState {
     cast_now(&mut state, "pm-crafter", P1, false);
     let answered = answer_keys(&mut state, &[cost_pick]);
     assert_eq!(answered.error, None, "the cost answer");
-    // These tests hold R880–R883's rules, which R1563007's offer only narrows: widen it to every block
-    // (craft_modes.rs proves the offer itself).
+    // R1563007's offer only narrows R880–R883, which these tests hold: widen it to every block
+    // (craft_modes.rs proves the offer).
     if let Some(pending) = state.pending.as_mut() {
         pending.craft_offer = Some(whole_palette());
     }
@@ -88,7 +86,6 @@ fn answer_recipe(state: &mut GameState, recipe: Value) -> AnswerResult {
     AnswerResult { events, error }
 }
 
-/// The recipe types of the craft prompt's options, in order.
 fn option_types(state: &GameState) -> Vec<String> {
     must(state.pending.clone(), "a craft prompt")
         .options
@@ -213,7 +210,6 @@ fn r880_the_preview_and_the_reducer_agree() {
 #[test]
 fn r880_the_opponent_sees_only_an_open_prompt_then_a_hidden_card() {
     let mut state = crafting("craft-hidden", "mode:1");
-    // While p1 crafts, p2 sees only that a prompt is open: no preset, recipe or budget.
     let open = view_for(&state, P2);
     assert!(matches!(open.pending, Some(PendingView::Elsewhere(_))));
     let open_json = serde_json::to_string(&open).expect("the view serializes");
@@ -368,7 +364,6 @@ fn r882_a_crafted_card_survives_a_json_round_trip_and_replays_exactly() {
     let craft_id = pending.id.clone();
     state = act_logged(&state, json!({ "type": "answer", "playerId": "p1", "choiceId": craft_id, "selection": [{ "pick": "craft", "recipe": recipe }] }), &mut log).state;
 
-    // The card is played after the round trip, and the fold rebuilds the live state exactly.
     let tripped = round_trip(&state);
     let crafted = must(
         tripped.players[P1]
@@ -438,7 +433,6 @@ fn r882_a_nerf_moves_a_crafted_param() {
     );
 }
 
-/// The crafted definition's id, read off the hand.
 fn craft_def_id(state: &GameState) -> String {
     must(
         state.players[P1]
@@ -456,7 +450,6 @@ fn r882_a_full_hand_burns_the_crafted_card() {
     let mut state = board("craft-burn");
     register_craft_fixtures();
     cast_now(&mut state, "pm-crafter", P1, false);
-    // A full hand of ten: the crafted card has nowhere to go.
     while state.players[P1].hand.len() < 10 {
         let mut filler = new_instance(&mut state, "pm-crafter", P1, Zone::Hand { player: P1 });
         filler.id = format!("filler-{}", state.players[P1].hand.len());
@@ -478,7 +471,7 @@ fn r882_a_full_hand_burns_the_crafted_card() {
 
 #[test]
 fn r883_stockpiles_recipe_costs_seven_points_and_seven_lines() {
-    // Stockpile's recipe: a cost-1 Spell drawing 2 and healing its hero 2.
+    // Stockpile's recipe.
     let recipe: CraftRecipe = json_as(json!({
         "cost": 1, "type": "Spell", "adjective": "Seeded", "noun": "Reducer",
         "attack": 0, "health": 1, "keywords": [], "echo": 0,
@@ -497,7 +490,6 @@ fn r883_stockpiles_recipe_costs_seven_points_and_seven_lines() {
 
 #[test]
 fn r883_a_targeted_block_needs_a_cry_or_when_cast_hat() {
-    // Aimed from a Death: refused. The same block under a Cry: crafted.
     let aimed = json!({
         "cost": 2, "type": "Unit", "adjective": "Pure", "noun": "Closure",
         "attack": 4, "health": 5, "keywords": [], "echo": 0,

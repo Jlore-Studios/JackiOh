@@ -1,13 +1,9 @@
 //! §4.5's check at a point of an effect list, then the rest on a stay that begins after it —
-//! `afterStateCheck` (effects/afterCheck.ts), the verb Classic #43 Plague Nuke needs ("Destroy all
-//! Units. Gain 1 mana for each Plague Counter … Then summon … each of those Units … from its owner's
-//! graveyard"). SPEC §4.5; R59, R78, R113, R174. The real card's test (packages/cards/test/classic/
-//! 043-plague-nuke.test.ts) covers the card's cases again through the card.
+//! `after_state_check`, the verb Classic #43 Plague Nuke needs ("Destroy all Units. … Then summon …
+//! each of those Units … from its owner's graveyard"). SPEC §4.5; R59, R78, R113, R174.
 //!
 //! Fixtures are this file's own: defs are prefixed `ac-` and indexed from 5300, so they cannot collide
 //! with another test file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-after-check.test.ts`.
 
 use jackioh_engine::effects::{
     ForEachCardArgs, after_state_check, destroy_all, for_each_card, gain_mana, summon,
@@ -28,7 +24,6 @@ const SWEEP_AND_TAKE: &str = "ac-sweep-take";
 /// The control: the same summon in the same list with no check between, aimed at the ids read first.
 const SWEEP_NO_CHECK: &str = "ac-sweep-no-check";
 
-/// TS `nextIndex = 5300`, bumped once per `def` call in declaration order.
 fn def(name: &str, type_: &str, index: u32) -> CardDef {
     let face = if type_ == "Unit" {
         json!({ "attack": 1, "health": 1, "keywords": [], "text": name })
@@ -272,12 +267,11 @@ fn play_spell(state: &mut GameState, def_id: &str) -> ReduceResult {
     result
 }
 
-/// TS `Array.prototype.lastIndexOf`: -1 when absent.
+/// -1 when absent.
 fn last_index_of(kinds: &[GameEventType], kind: GameEventType) -> i64 {
     kinds.iter().rposition(|k| *k == kind).map_or(-1, |i| i as i64)
 }
 
-/// `state.players[player].units[lane - 1]?.[0]?.id`.
 fn top_id(state: &GameState, player: PlayerId, lane: usize) -> Option<String> {
     state.players[player].units[lane - 1]
         .as_ref()

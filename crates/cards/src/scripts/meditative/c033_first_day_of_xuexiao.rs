@@ -3,10 +3,9 @@
 //! Base:    "Add {cards|random CN card|random CN cards} to your hand. Each costs ({discount}) less."
 //! Radiant: "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand. Each costs
 //!           ({discount}) less."
-//! Engine: `add_random_from_catalog({ query: { tags: [CN] }, count: cards, costMod: -discount,
-//! radiant })` with the NEW `chinese` rider (ME-CN), set before the card moves as the Radiant rider
-//! is, so a card the hand cap burns is Chinese in its graveyard too. The pool never holds this card
-//! (R387), and R673 applies. As the designer asked, the printed text never says Chinese.
+//! Engine: the `chinese` rider (ME-CN) is set before the card moves, as the Radiant rider is, so a
+//! card the hand cap burns is Chinese in its graveyard too. The pool never holds this card (R387),
+//! and R673 applies. As the designer asked, the printed text never says Chinese.
 
 use jackioh_engine::prelude::*;
 
@@ -33,17 +32,13 @@ fn first_day(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // Both faces add the same count at the same discount; the Radiant face's cards are Radiant.
     let base = first_day(false);
     let radiant = first_day(true);
     CardScripts { base, radiant }
 }
 
-// M #33 First Day of 学校 — SPEC §8.8 row 33, BUILD M10 row M 33: "Adds two random non-token CN
-// cards of any set (R380), never itself (R387), each costing (1) less (an X card untouched, R65)
-// and each carrying the `chinese` flag, which the owner's client shows in Chinese and the opponent
-// never sees on a hidden card (MD-B12); a burned card reaches the graveyard Chinese; cards and
-// discount read through `param()`; radiant the two cards are Radiant".
+// M #33 First Day of 学校 — SPEC §8.8 row 33, BUILD M10 row M 33: two random non-token CN cards of any
+// set (R380), an X card's cost untouched (R65).
 #[cfg(test)]
 mod tests {
     use super::*;

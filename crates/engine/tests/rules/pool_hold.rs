@@ -1,7 +1,6 @@
 //! A lesson's random pools (SPEC §5.1, §9.10; R2201001): the handicap's `poolHold`. While either
-//! seat sets it, every random pool the game draws from leaves out Legendary and Mythic cards: add,
-//! summon, Discover and cast random, every `catalog::query` pool, the weighted tables and the
-//! Marketplace. An unheld game still offers them.
+//! seat sets it, every random pool the game draws from, the weighted tables and the Marketplace
+//! included, leaves out Legendary and Mythic cards. An unheld game still offers them.
 //!
 //! The hold is read through a thread-local that `reduce`, `reduce_unpiloted` and `begin_game` set
 //! for their one call and put back after it (`catalog::with_pool_hold`), so held and unheld games
@@ -48,7 +47,6 @@ fn spell(id: &str, index: i32, rarity: &str, cost: i32) -> CardDef {
     }))
 }
 
-/// The four verbs, each the Cry of a cost-0 Spell.
 fn verbs() -> Vec<(&'static str, Script)> {
     vec![
         (
@@ -121,7 +119,6 @@ fn register() {
     register_scripts(scripts);
 }
 
-/// The lesson's handicap with the hold, and without it.
 fn human(hold: bool) -> Handicap {
     Handicap {
         pool_hold: if hold { Some(true) } else { None },
@@ -164,7 +161,6 @@ fn playing(seed: &str, hold: bool) -> GameState {
     state
 }
 
-/// `verb`'s Spell put in p1's hand and played through `reduce`: the state after it.
 fn played(seed: &str, hold: bool, verb: &str) -> GameState {
     let mut state = playing(seed, hold);
     let card = state::new_instance(
@@ -185,8 +181,7 @@ fn played(seed: &str, hold: bool, verb: &str) -> GameState {
     next
 }
 
-/// Which of the held rarities' pool cards the state names anywhere: a hand, a row, a graveyard, a
-/// prompt's options.
+/// Which of the held rarities' pool cards the state names anywhere.
 fn held_seen(state: &GameState) -> Vec<&'static str> {
     let text = serde_json::to_string(state).expect("serializes");
     [
@@ -414,8 +409,7 @@ mod r2386001_a_held_game_ranks_no_legendary_or_mythic_card {
         register();
         let held = playing("r2386001-ends", true);
         let unheld = playing("r2386001-ends", false);
-        // The Legendary leads the table and the Mythic trails it; the Epic, Common and Rare rows are
-        // what a held game ranks.
+        // The Legendary leads the table and the Mythic trails it.
         register_win_rates(table(vec![
             row("ph-unit-legendary", 40, 40),
             row("ph-unit-epic", 30, 40),
@@ -430,7 +424,6 @@ mod r2386001_a_held_game_ranks_no_legendary_or_mythic_card {
             ends(&held),
             (Some("ph-unit-epic".to_string()), Some("ph-unit-rare".to_string()))
         );
-        // The same table in an unheld game, stepped after the held one: nothing is left out.
         assert_eq!(
             ends(&unheld),
             (

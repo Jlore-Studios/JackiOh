@@ -44,7 +44,6 @@ describe("R388 the patch source", () => {
     await source.snapshot("b");
     expect(calls).toEqual(["patches", "b"]);
     expect(await source.snapshot("missing")).toBeNull();
-    // patches.json, index.json and shipped.json are never snapshots.
     expect(await source.snapshot("index")).toBeNull();
     expect(await source.snapshot("patches")).toBeNull();
     expect(await source.snapshot("shipped")).toBeNull();
@@ -81,13 +80,13 @@ describe("R388 the patch source", () => {
       readFileSync(resolve(REPO, "crates/cards/patches/patches.json"), "utf8"),
     ) as { version: string }[];
     expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
-    // Promotions only ever append (R646): the six versions the brief checked stay the prefix.
+    // Promotions only append (R646): the brief's six versions stay the prefix.
     expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
     expect(shipped.map((patch) => patch.version)).toEqual(
       expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.0b", "v0.2.1", "v0.2.2"]),
     );
     const index = await realPatchSource.index();
-    // A promotion that touches the card appends to its line (R646), so the shipped part is the prefix.
+    // A promotion touching the card appends to its line, so the shipped part is the prefix.
     expect(index["core-065"]?.slice(0, 5)).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.2"]);
     for (const patch of patches) {
       const snapshot = await realPatchSource.snapshot(patch.version);

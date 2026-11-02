@@ -1,10 +1,7 @@
-// The practice core's fallback for an AI step (docs/polish/3-ai.md §Surface, core contract): "If
-// decide returns null or throws, or reduce refuses, the fallback is `endTurn` when legal, else the
-// first `legalActions(state, aiSeat)` entry that reduce accepts", and never an action R188 forbids.
-//
-// The real `decide` never does any of this, so `@jackioh/ai` is mocked with a `decide` that is the
-// real one until a test tells it to misbehave. Everything else is the real core: the engine, the
-// card scripts, the AI's decks and the debug door into the true state.
+// The practice core's fallback for an AI step (docs/polish/3-ai.md §Surface, core contract): when decide
+// returns null or throws, or reduce refuses, `endTurn` when legal, else the first legal action reduce
+// accepts, and never an action R188 forbids. The real `decide` never does any of this, so it is mocked
+// with one that is the real one until a test tells it to misbehave; everything else is the real core.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -84,10 +81,7 @@ function lastLogged(d: Driver): { body: ActionBody; playerId: PlayerId; nonce: s
   return { body: body as ActionBody, playerId, nonce };
 }
 
-/**
- * Plays on (the AI for real, the human keeping its mulligan, taking its prompts' first answers and
- * ending its turns) until the AI stands in its own main phase with no prompt open.
- */
+/** Plays on until the AI stands in its own main phase with no prompt open. */
 function untilAiMain(d: Driver, from: PracticeSnapshot): PracticeSnapshot {
   let last = from;
   for (let n = 0; n < 100; n += 1) {

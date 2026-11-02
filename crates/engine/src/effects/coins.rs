@@ -1,42 +1,22 @@
 //! Coin flips that buff a unit or grant it a keyword (SPEC §8.1 #4 Gary the Gambler, §10.4
 //! layer 4, §10.7, R32, R130, R1440).
 //!
-//! "Cry: flip 5 coins; +1 attack per heads, +1 max health per tails. Then flip a coin: heads
-//! gains Divine Shield, tails gains Rush", radiant "7 coins; +2 per heads, +2 per tails" plus the
-//! same rider verbatim. #4's Engine cell read "5 or 7 seeded rolls; permanent buff layer; then
-//! one seeded coin granting Divine Shield on heads, Rush on tails; Lucky has no defined 'best'
-//! here so does not apply". The first three clauses are decisions this file keeps; R1440 has
-//! since given every coin flip a best, heads, which replaces the fourth:
+//! Every flip is `flip_coin`, the draws of `ctx.rng.lucky_coin(lucky)`, the only randomness §10.7
+//! allows (CLAUDE.md rule 4, SURFACE §3): a card file may not roll for itself. Totals and the rider go
+//! through `super::buff`, the one implementation of §10.4's layer 4. §6.1's Lucky X keeps the best of X
+//! more rolls, and R1440 (over R32/R130) makes heads a coin's best: at the flipping card's Lucky X
+//! (`query::lucky_on`, R1438) a coin flips X more and lands heads if any does; with none, one draw.
 //!
-//!   * SEEDED ROLLS. Every flip is `flip_coin`, the draws of `ctx.rng.lucky_coin(lucky)`, the only
-//!     source of randomness §10.7 allows. OS randomness is out of reach of this crate (CLAUDE.md rule
-//!     4, SURFACE §3), and a card file may not roll for itself, which is the whole reason these verbs
-//!     exist.
-//!   * PERMANENT BUFF LAYER. The totals are applied through `buff` from `super::buff`, and the rider
-//!     keyword through `grant_keyword` from the same module, so there is ONE implementation of
-//!     §10.4's layer 4: nothing here writes `card.buffs` or `card.granted_keywords`, and the unit's
-//!     totals stay something `unit_view` computes on every read rather than something stored.
-//!   * LUCKY KEEPS HEADS. §6.1's Lucky X is "repeat a luck-based roll X extra times, keep the best",
-//!     and R1440 makes a coin flip luck-based with heads its better side, though Gary pays on both
-//!     faces (revising R32/R130). Each coin is its own roll: with the flipping card's Lucky X
-//!     (`query::lucky_on`, printed plus given, R1438) it flips X more coins and lands heads if any
-//!     does. With no Lucky every flip is the one draw it always was, so no shipped game changes.
-//!   * ONE ROLL FOR THE RIDER. `flip_coin_keyword` is one coin, rolled the same way: one seeded draw
-//!     with no Lucky, 1 + X with Lucky X.
-//!   * REPORTED (R2652001). Each verb call reports its coins as one `rolled` batch, every face each
-//!     coin drew and the one it kept, just before the buff or the keyword they decided. A card that
-//!     flips or rolls in its own hook draws through `flip_coin` or `roll_die`, which take exactly the
-//!     draws `lucky_coin` and `lucky` take, and returns `report_rolls` with what they drew. The report
-//!     is answered by nothing and takes no number in R68's order, so no state hash moves for it.
+//! R2652001: each verb call reports its coins as one `rolled` batch (every face each coin drew and the
+//! one it kept) just before the buff or keyword they decided. A card that flips or rolls in its own hook
+//! draws through `flip_coin` or `roll_die`, which take exactly `lucky_coin`'s and `lucky`'s draws, and
+//! returns `report_rolls`. The report answers nothing and takes no number in R68's order, so no state
+//! hash moves for it.
 //!
-//! THE FIZZLE IS TOTAL, AND THAT IS A DETERMINISM RULE, NOT TIDINESS. §10.7 stores `rngCursor` in
-//! state, so the cursor is part of the match: every later draw in the game depends on how many were
-//! taken before it. If a flip happened only when a target was there, the whole rest of the match's
-//! randomness would depend on the board at this moment — two replays of the same action list could
-//! diverge, and §9.3 requires they never do. So the target is resolved FIRST and a missing one takes
-//! no draws at all, leaving the cursor exactly where it was.
-//!
-//! Port of `packages/engine/src/effects/coins.ts`.
+//! THE FIZZLE IS TOTAL, a determinism rule: §10.7 stores `rngCursor` in state, so a flip taken only
+//! when a target was there would make the rest of the match's draws depend on the board, and §9.3
+//! requires two replays of one action list never diverge. The target is resolved FIRST; a missing one
+//! takes no draws.
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -152,7 +132,7 @@ fn flipper_lucky(ctx: &EffectContext<'_>) -> i32 {
         + crate::query::luck_of(&*ctx.sink.state, ctx.controller)
 }
 
-/// TS `key: "attack" | "health"`: which stat `total_for` sums.
+/// Which stat `total_for` sums.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Stat {
     Attack,
@@ -181,13 +161,8 @@ pub struct FlipCoinsArgs {
     pub per_tails: Option<BuffAmount>,
 }
 
-/// §8.1 #4: flip `coins` coins and buff the target by `perHeads` per heads and `perTails` per tails.
-/// Each coin is a `lucky_coin` at the flipping card's Lucky (R1440).
-///
-/// The two totals are applied as ONE layer-4 buff, so heads + tails always accounts for every flip
-/// and there is a single `buffed` event carrying the whole result — which is what §10.10 animates
-/// and what a test can read back. A buff that works out to +0/+0 (all five coins landing on a side
-/// the card pays nothing for) is silently nothing, like every other no-op buff.
+/// §8.1 #4: flip `coins` coins and buff the target by `perHeads` per heads and `perTails` per tails, as
+/// ONE layer-4 buff, so a single `buffed` event carries the whole result (§10.10); +0/+0 is nothing.
 pub fn flip_coins(args: FlipCoinsArgs) -> Effect {
     Effect::new("flipCoins", move |ctx| {
         // Resolved before a single draw: see the determinism note above.
@@ -206,8 +181,6 @@ pub fn flip_coins(args: FlipCoinsArgs) -> Effect {
         let nothing = BuffAmount::default();
         let per_heads = args.per_heads.as_ref().unwrap_or(&nothing);
         let per_tails = args.per_tails.as_ref().unwrap_or(&nothing);
-        // TS `buff({ target: { of: "instance", instanceId }, attack, health })`, written as that literal
-        // so it reads the buff's own argument shape.
         let effect = buff(json_as(json!({
             "target": { "of": "instance", "instanceId": unit.id },
             "attack": total_for(heads, tails, per_heads, per_tails, Stat::Attack),
@@ -227,13 +200,8 @@ pub struct FlipCoinKeywordArgs {
     pub tails_keyword: Keyword,
 }
 
-/// §8.1 #4: flip one coin and grant the target a keyword — `headsKeyword` on heads,
-/// `tailsKeyword` on tails (§10.4 granted keywords, §10.7, R32/R130).
-///
-/// Gary the Gambler's rider after its stat flips: heads gains Divine Shield, tails gains Rush.
-/// One `ctx.rng.lucky_coin` at the flipping card's Lucky (R1440: one seeded draw with none, 1 + X
-/// with Lucky X, heads kept), resolved against the target FIRST so a missing target takes zero
-/// draws, like `flip_coins`.
+/// §8.1 #4: flip one coin and grant the target `headsKeyword` on heads, `tailsKeyword` on tails (Gary's
+/// rider, Divine Shield or Rush): one `lucky_coin` at the flipping card's Lucky (R1440), like `flip_coins`.
 pub fn flip_coin_keyword(args: FlipCoinKeywordArgs) -> Effect {
     Effect::new("flipCoinKeyword", move |ctx| {
         // Resolved before the single draw: see the determinism note above.

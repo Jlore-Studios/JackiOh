@@ -32,7 +32,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs only in its declared surcharge (2) and its doubled stats.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -93,7 +92,6 @@ mod tests {
         })
     }
 
-    /// is a (2) 5/5 Stack Unit (10/10 Radiant), its surcharge a declared number
     #[test]
     fn is_a_2_5_5_stack_unit_10_10_radiant_its_surcharge_a_declared_number() {
         assert_eq!(js(&def().cost), json!(2));
@@ -110,11 +108,9 @@ mod tests {
         ));
     }
 
-    /// base
     mod base {
         use super::*;
 
-        /// every Spell in either player's hand costs (1) more, and a play pays it
         #[test]
         fn every_spell_in_either_player_s_hand_costs_1_more_and_a_play_pays_it() {
             let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, FILLER], "field": [MONKEY] }, "p2": { "hand": [ECLIPSE] } }));
@@ -125,7 +121,6 @@ mod tests {
             assert_eq!(played_cost(s.last_events(), None), Some(2));
         }
 
-        /// the Spell type only: a Field Spell, a Trap and a Unit cost what they print
         #[test]
         fn the_spell_type_only_a_field_spell_a_trap_and_a_unit_cost_what_they_print() {
             let s = scenario(json!({ "p1": { "hand": [ARMOR, HONEYPOT, VANILLA], "field": [MONKEY] } }));
@@ -211,7 +206,6 @@ mod tests {
             assert_eq!(hand_cost(&s, P1, STOCKPILE), Some(2));
         }
 
-        /// gone when it leaves: destroyed, a Spell costs what it prints again
         #[test]
         fn gone_when_it_leaves_destroyed_a_spell_costs_what_it_prints_again() {
             let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, STOCKPILE], "field": [MONKEY], "mana": 9 } }));
@@ -229,7 +223,6 @@ mod tests {
             assert_eq!(hand_cost(&s, P1, STOCKPILE), Some(3));
         }
 
-        /// a Spell you cannot afford with the surcharge is not offered, and its play is refused
         #[test]
         fn a_spell_you_cannot_afford_with_the_surcharge_is_not_offered_and_its_play_is_refused() {
             let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, FILLER], "field": [MONKEY], "mana": 1 } }));
@@ -245,7 +238,6 @@ mod tests {
         /// R177 a hidden hand card's `costChanged` shows −1 and the sentinel to the other player
         #[test]
         fn r177_a_hidden_hand_card_s_costchanged_shows_1_and_the_sentinel_to_the_other_player() {
-            // Radiant Risky Die keeps a drawn (1) Spell: (1) − 1 + the Monkey's (1) = (1), not more than (1).
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": RISKY_DIE, "radiant": true }, FILLER],
@@ -286,11 +278,9 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 
-        /// is a 10/10 with Stack
         #[test]
         fn is_a_10_10_with_stack() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": MONKEY, "radiant": true }, FILLER] } }));
@@ -299,7 +289,6 @@ mod tests {
             assert_eq!(json!(kinds), json!(["Stack"]));
         }
 
-        /// every Spell in either player's hand costs (2) more
         #[test]
         fn every_spell_in_either_player_s_hand_costs_2_more() {
             let s = scenario(json!({

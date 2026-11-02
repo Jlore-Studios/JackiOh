@@ -1,19 +1,4 @@
 //! Public card and player statistics page tests (SPEC §9.11, R654).
-//!
-//! Port of `apps/server/test/api/stats.test.ts` (part 18). Three things differ from TS, each
-//! because the Rust app is the whole server rather than a router over test deps:
-//!
-//! - The catalog is the real one (`jackioh_cards`), where TS swapped in six hand-written defs. The
-//!   records play the real `core-001`..`core-004`, and the filter test reads its expectations off
-//!   the catalog itself rather than off the six.
-//! - The current patch is the build's own (`jackioh_cards::catalog_version()`, what TS's
-//!   `loadCurrentPatch` read in production), where TS pinned `v0.2.0` through `deps.games`.
-//! - The accounts are the E2E fixtures (`e2e-p1` active, `e2e-pending` pending), and the listed
-//!   players are profiles made through the store, so their ids are the store's.
-//!
-//! TS also wrote five `mode: "tutorial"` records to prove the gate leaves them out. `GameMode` has
-//! no such literal in Rust, so no such record can be built or stored; the counts they were excluded
-//! from are asserted unchanged.
 
 use std::sync::Arc;
 
@@ -35,7 +20,7 @@ const USER_TOKEN: &str = "e2e-token-p1";
 /// The pending account's bearer token (`e2e-pending`).
 const PENDING_TOKEN: &str = "e2e-token-pending";
 
-/// The patch the server counts as current (TS `PATCH`).
+/// The patch the server counts as current.
 fn current_patch() -> String {
     jackioh_cards::catalog_version().to_string()
 }
@@ -49,7 +34,7 @@ where
     usize::try_from(value).expect("a count fits a usize")
 }
 
-/// TS `makeGameRecord`'s options: every one optional.
+/// Options for constructing game records.
 #[derive(Default)]
 struct RecordOptions {
     source: Option<&'static str>,
@@ -159,7 +144,7 @@ async fn insert_records(app: &App, records: Vec<Value>) {
     tx.commit().await.expect("commit");
 }
 
-/// A new active profile that picked `username` at time 0, as TS's `seedProfile`; answers its id.
+/// New active profile picking username at time 0; answers id.
 async fn seed_profile(app: &App, user_id: &str, username: &str) -> String {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let profile = tx
@@ -206,7 +191,7 @@ async fn put_player_stats(app: &App, profile_id: &str, stats: Value, is_private:
     tx.commit().await.expect("commit");
 }
 
-/// One request through the whole app (TS `router(jsonRequest(method, path, body, { token }))`).
+/// One request through the whole app.
 async fn request(
     app: &Arc<App>,
     method: &str,
@@ -310,7 +295,6 @@ mod r654_public_card_and_player_stats {
                 },
             ));
         }
-        // TS's 5 tutorial games (excluded from gate and figures) cannot be stored: see the header.
         insert_records(&app, records).await;
 
         let (status, headers, data) = get_public(&app, "/api/stats/cards").await;
@@ -546,11 +530,7 @@ mod r654_public_card_and_player_stats {
     #[tokio::test]
     async fn r377_get_api_stats_cards_publishes_drawn_not_played_counts_and_server_calculated_played_delta() {
         let app = test_app().await;
-        // 50 games where p1 holds core-001 and core-002:
-        // core-001 is played in 30 games (21 wins, 9 losses -> 70% played win rate).
-        // core-001 is drawn but not played in 20 games (10 wins, 10 losses -> 50% baseline).
-        // Played delta for core-001 = 0.70 - 0.50 = +0.20 (+20 points).
-        // core-002 is never played in any of the 50 games (played cohort is empty -> delta is null).
+        // 50 games: core-001 played in 30 (70% win), drawn in 20 (50% baseline), delta +0.20; core-002 never played.
         let mut records = Vec::new();
         // 21 played games won by p1
         for i in 1..=21 {
@@ -678,13 +658,7 @@ mod r654_public_card_and_player_stats {
     #[tokio::test]
     async fn r654_get_api_stats_cards_withholds_the_played_delta_below_the_floor_on_either_side() {
         let app = test_app().await;
-        // 40 games where p1 holds core-001, core-002 and core-005:
-        //  - 20 won, core-001 and core-002 played;
-        //  - 19 lost, only core-005 played;
-        //  - 1 lost, only core-002 played.
-        // core-001: 20 played, 20 drawn but not played: both at the floor, so its delta shows (+100).
-        // core-002: 21 played, 19 not: its baseline is one game short, so no delta.
-        // core-005: 19 played, 21 not: its played side is one game short, so no delta.
+        // 40 games testing floor on either side: core-001 meets floor, core-002 and core-005 each short one game.
         let deck = vec!["core-001", "core-002", "core-005"];
         let mut records = Vec::new();
         let groups: [(&str, usize, Vec<&str>, &str); 3] = [
@@ -1487,18 +1461,13 @@ mod r1044000_condensed_card_stats {
     }
 }
 
-// R1367000: `GET /api/stats/cards` reads each card over its own window, the build's real patch
-// history deciding the windows: the newest micro that plays a card opens that card's window, while
-// every other card keeps its X's. The tests ask at a micro's own version (`?patch=`), not at the
-// newest one: a ship can leave the newest X with no micro in it (#1832's v0.4.9), while a micro
-// already in the history stays there, so the shape they need never goes away.
+// R1367000: `GET /api/stats/cards` reads each card over its patch-history window.
+// Query `?patch=` tests micro version stability across releases (#1832).
 mod r1367000_card_stats_by_window {
     use super::*;
     use jackioh_engine::wire::stats::{PatchTier, WindowRequest, card_window};
 
-    /// The newest micro in the history that plays a card whose previous window opens at the micro's
-    /// X: the X's first version, the micro's version and the card, which the micro's window holds
-    /// alone at that version.
+    /// Newest micro version and card whose previous window opens at X.
     fn x_and_micro() -> (String, String, &'static str) {
         let history = jackioh_cards::patch_history();
         for micro in (1..history.len()).rev() {
@@ -1552,9 +1521,7 @@ mod r1367000_card_stats_by_window {
         )
     }
 
-    /// `x_games` live games on the X's first version, `micro_games` on the micro's, and ten
-    /// development games on the micro's too, each holding the card and core-001; the cards' figures
-    /// as the route reads them at the micro's version.
+    /// Live and development game figures across X and micro versions.
     async fn cards(x_games: i64, micro_games: i64) -> (Value, &'static str, String, String) {
         let (x, micro, card) = x_and_micro();
         let app = test_app().await;
@@ -2099,9 +2066,7 @@ mod r2089000_created_card_stats {
     #[tokio::test]
     async fn r2089000_get_api_stats_cards_lists_created_cards_apart_from_the_deck_table() {
         let app = test_app().await;
-        // p1 plays its dealt core-001 in both games. In the first, which it wins, it also uses a Rush
-        // Token and a Created core-001, Radiant at its first use; in the second, which it loses, it
-        // makes a Rush Token it never uses.
+        // p1 plays dealt core-001 in both games with Rush tokens and Created card.
         let records = vec![
             make_game_record(
                 "live-1",

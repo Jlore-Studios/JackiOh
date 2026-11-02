@@ -1,17 +1,10 @@
-// `/collection`'s quests (SPEC §14.9, #1304; moved from `/account` by #1307): each quest the account
-// holds, its progress toward its target and what it pays, and how long until the next one arrives.
-// The landing's bookmark (R2035000) shares `useQuests` and `QuestsView`, so both screens show the
-// same rows from the same read.
-//
+// `/collection`'s quests (SPEC §14.9, #1304, #1307): each held quest, its progress and pay, and the
+// time until the next; the landing's bookmark (R2035000) shares `useQuests` and `QuestsView`.
 // The server decides all of it (CLAUDE.md rule 7): `GET /api/quests` tops the account up first
-// (R1304000) and answers the held quests and when the next falls due, `null` while the account holds
-// `QUEST_MAX_HELD` or the economy is off (R1304002). This only counts that moment down on the clock
-// (`auth/cooldown.ts`), so a background tab's frozen timers never put it wrong. A quest's title is the
-// pool's English, looked up as the server's sentences are.
-//
-// R2210000: each held quest offers Replace, behind a confirm, while the answer's `replacesLeft` is above
-// 0 and the caller can send one. The server counts the day's replaces and draws the new quest; this
-// only asks and then shows the quests it answers, or reads them again when it refused.
+// (R1304000) and answers when the next falls due, `null` at `QUEST_MAX_HELD` or with the economy off
+// (R1304002). This only counts down on the clock (`auth/cooldown.ts`), so a background tab's frozen
+// timers never put it wrong. A title is the pool's English, looked up as the server's sentences are.
+// R2210000: the server counts the day's replaces and draws the new quest; this only asks.
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 
@@ -184,9 +177,8 @@ export function QuestsList({
 }
 
 /**
- * The caller's quests, read on mount and again on Try again. The landing's bookmark (R2035000)
- * shares this, so `/collection` and the landing show the same rows from the same read. R2125000: it
- * starts on the quests the last visit kept, and a read that fails behind them keeps them and says nothing.
+ * The caller's quests, read on mount and on Try again. R2125000: it starts on the quests the last
+ * visit kept, and a read that fails behind them keeps them and says nothing.
  */
 export function useQuests(token: string): {
   quests: QuestsResponse | null;
@@ -240,9 +232,8 @@ export function useQuests(token: string): {
 }
 
 /**
- * The quests read, the failure, or the wait for them: a failed read says why in the panel's
- * place, so the screen around it still shows. The panel is loading until the quests arrive, so
- * loading never looks like having no quests.
+ * The quests, the failure (in the panel's place, so the screen around it still shows) or the wait,
+ * so loading never looks like having no quests.
  */
 export function QuestsView({
   quests,

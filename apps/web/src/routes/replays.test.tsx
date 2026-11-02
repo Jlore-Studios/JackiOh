@@ -1,10 +1,6 @@
-// R768000, issue #768: `/replays`, the recent games. It lists the practice games a worker kept and,
-// signed in, the account's online games a page at a time; opens one in the player and comes back to
-// the list; names a game it cannot show and keeps its Watch button off; and is a route a production
-// build keeps, with the GIF code still loaded on demand. R970000: an account that owes the consent
-// screen meets it before the online half, which waits on its answer. R1141000: a row that can be
-// watched downloads as one JSON file of its steps' views and its own facts, no account named, and
-// that file opens again in the player, in the page, or is refused where it stands (#1160).
+// R768000 (#768): `/replays`, the recent games: the device's practice games and, signed in, the
+// account's online games a page at a time. R970000: an owed consent screen comes before the online half.
+// R1141000: a watchable row downloads as one JSON file, which opens again in the player or is refused (#1160).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -280,7 +276,6 @@ describe("R970000 /replays and the consent screen", () => {
     });
     renderRoute(await storeWithGame());
 
-    // The practice half is open; the online half, its "Shared with me" and its shares wait.
     expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
     const owed = await screen.findByTestId(replaysTestid.consent);
     expect(owed).toHaveTextContent("Agree to the Terms and the Privacy Policy to see your online games.");
@@ -366,7 +361,6 @@ describe("R1141000 Download JSON", () => {
   it("R1141000 a practice row saves every step of its game, in order, and nothing of its setup", async () => {
     renderRoute(await storeWithGame());
     const row = await screen.findByTestId(replaysTestid.practice(1));
-    // Its button sits just left of Watch.
     expect(within(row).getByRole("button", { name: "Watch" }).previousElementSibling).toBe(
       screen.getByTestId(replaysTestid.download("practice-1")),
     );

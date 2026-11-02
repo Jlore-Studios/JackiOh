@@ -1,8 +1,7 @@
 // Looking through a graveyard or an exile pile (Board.tsx `Pile`, cards/inspect/CardList.tsx). Both
 // are public on both seats (§10.8: full `CardView` lists), so both seats' piles can be browsed. The
 // viewer's own library can be browsed too, from the list without order its view carries (R310,
-// R313); the opponent's library is a count and nothing else. A resting mouse shows the count and
-// the first faces; a click, a tap, a long-press or Enter opens every card in a dialog.
+// R313); the opponent's library is a count and nothing else.
 
 import { CATALOG } from "@jackioh/cards";
 import type { LibraryView, PlayerView } from "@jackioh/shared";
@@ -237,7 +236,6 @@ describe("R313 your own library, without its order", () => {
     expect(preview).toHaveTextContent("Order hidden");
     expect(within(preview).getByTestId(INSPECT_LIST_COUNT)).toHaveAttribute("data-count", String(TOTAL));
     expect(within(preview).getByTestId(INSPECT_LIST_COUNT)).toHaveTextContent(`${String(TOTAL)} cards`);
-    // The view's order, and the backs last.
     expect(names(preview)).toEqual([nameOf("core-010"), nameOf("core-090-1"), nameOf("core-002"), ""]);
     const tiles = within(preview).getAllByTestId(INSPECT_LIST_CARD);
     expect(tiles.map((tile) => tile.getAttribute("data-count"))).toEqual(["1", "2", "1", "3"]);

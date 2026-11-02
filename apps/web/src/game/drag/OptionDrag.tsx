@@ -1,10 +1,9 @@
 // R658: a prompt's options are dragged as well as clicked (docs/polish/7-mobile-ux.md S9).
 //
-// A press on an open picker's option (`prompt-option-<key>`) that travels DRAG_THRESHOLD_PX lifts it:
-// a ghost with its name follows the pointer. Released outside the picker's panel the option is
-// clicked, so the drop does exactly what a click does; released over the panel, or canceled
-// (Escape, the context menu, a lost pointer), it does nothing. Nothing here reads a rule or an
-// option's meaning (CLAUDE.md rule 7): what the click does is Prompt.tsx's.
+// A press on an open picker's option that travels DRAG_THRESHOLD_PX lifts it. Released outside the
+// picker's panel the option is clicked, so the drop does exactly what a click does; released over
+// the panel, or canceled, it does nothing. Nothing here reads a rule or an option's meaning
+// (CLAUDE.md rule 7): what the click does is Prompt.tsx's.
 //
 // The board's own drags are DragLayer.tsx's; the picker sits outside `[data-testid="board"]`.
 
@@ -44,7 +43,6 @@ function overPanel(option: HTMLElement, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-/** What the ghost reads: the option's accessible name, else its text. */
 function nameOf(option: HTMLElement): string {
   const label = option.getAttribute("aria-label");
   if (label !== null && label !== "") return label;

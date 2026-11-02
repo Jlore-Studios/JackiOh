@@ -1,6 +1,4 @@
 //! Switch position as an effect: 5pek Controller and friends spend no exertion (R20).
-//!
-//! Port of `packages/engine/src/effects/position.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -79,7 +77,7 @@ pub fn switch_all_positions(args: SwitchAllPositionsArgs) -> Effect {
             SwitchAllPositionsSide::Enemy => vec![player_of(ctx, PlayerSpec::Enemy)],
         };
         for player in players {
-            // The list as it stands before the first switch, as TS walked the array it was handed.
+            // The list as it stands before the first switch.
             let units: Vec<CardInstance> = active_units_of(ctx.state, player).into_iter().cloned().collect();
             for unit in units {
                 let _ = switch_position(

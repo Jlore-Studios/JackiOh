@@ -3,16 +3,7 @@
 //!   Base:    "Death: Make your other Units Radiant."
 //!   Radiant: "Reborn
 //!             Death: Make your other Units Radiant."
-//!
-//! Since issue #2179 the Radiant face's upgrade is Reborn (catalog data), so she dies twice and her
-//! Death radiates the board each time; through v0.5.2 it widened the scope to your hand instead,
-//! one `setRadiant` per card named by id, as #29 does, which `script_v0_5_2` keeps (R767000). A hand
-//! is its owner's alone (§9.1), so R177 had `setRadiant` report a `radiantSet` for a named hidden card
-//! whether or not the flag changed, and the cue told nothing.
-//! R22: `setRadiant` sets the `radiant` flag and nothing else, so §10.4's printed-stat layer swaps on
-//! the next read while buffs and damage stay, and no Cry re-fires. R78: Death runs off a snapshot of
-//! her after she left the field, so it never names `self`; "all your units" is `activeUnitsOf` (top of
-//! each pile only, R13, §3.2; R23 keeps Immutable units legal).
+//! Death trigger makes other friendly units Radiant (R74, §5.2; R78; R22, R177, R275, R276; R23, §9.1, §10.4). Radiant face adds Reborn (§6.1, §8).
 
 use indexmap::IndexSet;
 use jackioh_engine::effects::set_radiant;
@@ -92,15 +83,12 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn on the base
-// face, so she dies once; radiant she has Reborn and dies twice, each Death radiating the board, and
-// never the hand (issue #2179; through v0.5.2 her Radiant Death radiated the hand, hidden from the
-// opponent, R177)". Her Cry is cut (§8's row); R64 and R83 are the engine's, not this file's.
+// BUILD M4-T4's must-pass row (#2179, R177). Her Cry is cut (§8's row); R64 and R83 are the engine's.
 //
 // Fixtures: #11 Tempo Timmy (3/3 → 6/6, empty script) shows a stat change only as the radiant face
-// swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. A Saintess
-// set up with damage equal to her health dies in the setup's own state check and fires her Death;
-// the harness records no events for setup, so those cases assert state, not the log.
+// swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. One set up
+// with damage equal to her health dies in the setup's own state check and fires her Death; the harness
+// records no events for setup, so those cases assert state, not the log.
 #[cfg(test)]
 mod tests {
     use super::*;

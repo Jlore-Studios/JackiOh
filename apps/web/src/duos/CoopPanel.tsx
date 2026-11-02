@@ -1,14 +1,10 @@
 // The co-op panel on Play together (#936 S8, B60): make a Duos room against the AI team, share its
-// code (in a chat message to a friend, or by hand), join a friend's by its code, and go to the board
-// once both are in.
+// code, join a friend's by its code, and go to the board once both are in.
 //
-// CLAUDE.md rule 7: the panel proposes and the server rules. The AI's difficulty, the deck or a random
-// deal (and, for a random one, "More cards from", R924000, R2031000: the device's online pick,
-// `readPlayLean`, as the lobby's) are what the player chose; the
-// server checks them, makes the room, and answers a join with the match or a refusal shown in a
-// player's words. The host waits on the room: it is read every COOP_ROOM_POLL_MS until it names its
-// match, and then both players are on the board (the guest goes straight from its join). A room the
-// tab opened is remembered for the tab (COOP_ROOM_KEY, try/catch), so a reload picks the wait up.
+// CLAUDE.md rule 7: the panel proposes and the server rules. The AI's difficulty and the deck or a
+// random deal ("More cards from", R924000, R2031000, the device's online pick) are what the player
+// chose; the server checks them and answers. The host's room is read every COOP_ROOM_POLL_MS until it
+// names its match, and is remembered for the tab (COOP_ROOM_KEY), so a reload picks the wait up.
 //
 // R915005: a deck naming a custom card is listed off, "(practice only)", and never picked.
 
@@ -212,7 +208,6 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     };
   }, [room]);
 
-  // R2094000: settle the join deck on the last co-op pick, else the first saved deck, once decks arrive.
   useEffect(() => {
     if (touchedDeck.current || decks.length === 0) return;
     const settled = defaultCoopDeck(decks, readCoopDeck())?.id ?? RANDOM;
@@ -223,7 +218,6 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   useEffect(() => {
     forgetCoopLink();
   }, []);
-  // R2094000: a chat Join on this same screen arrives as a new query without remounting.
   useEffect(() => {
     const code = readCoopLink();
     if (code === null) return;

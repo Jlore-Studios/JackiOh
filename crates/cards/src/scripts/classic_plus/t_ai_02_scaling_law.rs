@@ -50,11 +50,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-2 Scaling Law — SPEC §8.7 row T-AI-2, BUILD M9 row T-AI-2: a 2/2 with +1/+1 for each AI generated
-// card its controller has played this game — a layer-2 set-stat over the per-game count of AI-tagged
-// plays (casts included, R70, but not a cast on draw, R2179002; the opponent's don't count; the count outlives the cards) — counting
-// itself once played, so 3/3 as the game's first; an AI Slop fusion counts once; radiant 4/4 with
-// +2/+2 for each.
+// T-AI-2 Scaling Law — SPEC §8.7 row T-AI-2, BUILD M9 row T-AI-2.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{CastNewArgs, CastNewDef, cast_new};
@@ -68,8 +64,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// TS's `sinkOf(s)`: a direct engine call on the scenario's live state, its rng rebuilt from
-    /// (seed, cursor) and the cursor written back afterwards (`s.state.rngCursor = sink.rng.cursor`).
+    /// A direct engine call on the scenario's live state, its rng rebuilt from (seed, cursor) and the
+    /// cursor written back afterwards.
     fn direct<R>(s: &mut Scenario, run: impl FnOnce(&mut EngineSink<'_>) -> R) -> R {
         let mut events: Vec<GameEvent> = Vec::new();
         let state = s.state_mut();

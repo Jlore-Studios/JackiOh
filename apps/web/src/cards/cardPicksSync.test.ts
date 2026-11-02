@@ -1,8 +1,6 @@
 // R1834000: each card's picks live on the account, and the device's store is their cache
-// (`cards/cardPicksSync.ts`). The account is a fake `CardPicksAccountApi` that keeps picks as the
-// server does: the upload writes only the cards it holds no row for, a change patches one card (null
-// clears a field), and every answer is all the account's picks. The device is the real store over
-// jsdom's localStorage.
+// (`cards/cardPicksSync.ts`). The fake account keeps picks as the server does: the upload writes only
+// the cards it holds no row for, a change patches one card, and every answer is all of them.
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,7 +35,6 @@ function item(kind: CosmeticKind, index: number): CosmeticId {
 const [FOIL, OTHER_FOIL] = [item("foil", 0), item("foil", 1)];
 const [BORDER, OTHER_BORDER] = [item("border", 0), item("border", 1)];
 
-/** The account, keeping each card's picks as `crates/server` does. */
 type FakeAccount = CardPicksAccountApi & {
   stored: Map<string, CardPicksEntry>;
   calls: string[];
@@ -128,7 +125,6 @@ describe("R1834000 each card's picks live on the account", () => {
       ],
     ]);
     expect(uploaded()).toEqual(["u1"]);
-    // The device now holds the account's copy.
     expect(readAllCardPicks()).toEqual({ "core-004": { border: OTHER_BORDER }, "core-008": { fullArt: false } });
     first.stop();
 

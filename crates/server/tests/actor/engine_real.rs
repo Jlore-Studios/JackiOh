@@ -1,13 +1,4 @@
-//! The real engine through `actor::engine`: that it is reachable, registered and driveable.
-//!
-//! Every other test in this suite installs a scripted port, which is why nothing noticed when the
-//! catalog was never registered: `create_game` looks its cards up in the registered catalog
-//! (`validateDeck` fails "not in the catalog (§9.4 L6)" when it is empty). This file builds the port
-//! for real, with the real §8 catalog, and plays a card.
-//!
-//! The rules those calls run belong to the engine and cards crates, and the fuzz suite plays whole
-//! games of them (BUILD §4). The probe for two legal decks is private here and catches
-//! `create_game`'s panic. Surface contract: docs/v0.3.0/SURFACE.md §11.3.
+//! The real engine through `actor::engine` (BUILD §4, §9.4, §8, SURFACE §11.3).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -59,12 +50,7 @@ fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     "a panic without a message".to_string()
 }
 
-/// Two legal, disjoint decks for the **real** engine port, for the files that drive `actor::engine`
-/// (`engine_real.rs`, and the real-engine blocks of `match_actor.rs` and `recovery.rs`).
-///
-/// The deck size is whatever the engine accepts (BUILD §2 keeps `DECK_SIZE` in its config): the
-/// slices grow until `createGame` stops objecting. With the catalog unregistered *every* size is
-/// refused, which surfaces here as "the real engine refused every deck size".
+/// Two legal, disjoint decks for real engine port; slices grow until `createGame` accepts (BUILD §2).
 fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<String>, Vec<String>)) {
     let mut refusals: Vec<String> = Vec::new();
     let mut size = 1;

@@ -1,10 +1,7 @@
-// Which music the page plays (SPEC §10.11 "Music", R631): the main menu theme on every screen
-// without a board, and the board's own music while a board is mounted.
-//
-// `appAudio.ts` turns the menu on for as long as the page-wide audio is held. Each mounted Game
-// enters the scene (`useGameAudio`); the newest board's director then decides, and when the last
-// board leaves, the menu theme comes back. A card's intro (R1350) is the newest board's alone too:
-// an older board asks for none, and a board that leaves cuts the one it started (R1351).
+// Which music the page plays (SPEC §10.11 "Music", R631): the menu theme on every screen without a
+// board (`appAudio.ts` holds it), and the newest mounted board's music (`useGameAudio`) otherwise. A
+// card's intro (R1350) is the newest board's alone too: an older board asks for none, and a board that
+// leaves cuts the one it started (R1351).
 
 import { getMusicPlayer, type MusicRequest } from "./music.ts";
 import type { MusicSink } from "./musicDirector.ts";

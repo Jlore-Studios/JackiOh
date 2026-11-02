@@ -1,9 +1,6 @@
-// The rules box's reading floor (fit.ts), against a modeled layout. jsdom has no layout, so
-// `useFitText` is a no-op there (CardFace.test.tsx B15); a rules box gets a small model instead: a
-// known box height, a font of base size × tier scale × `--cf-fit` (no tier scale in the long
-// layout, as cards.css has it) and text that needs `need × font²` px of height. The component specs
-// (card-faces B15, deckbuilder-layout) prove the same on real layout. The last describe is the
-// scheduler: fits queued together are read together, round by round.
+// The rules box's reading floor (fit.ts), against a modeled layout (`Model`): jsdom has no layout,
+// so `useFitText` is a no-op there (CardFace.test.tsx B15). The component specs (card-faces B15,
+// deckbuilder-layout) prove the same on real layout.
 
 import { cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
@@ -50,7 +47,6 @@ function boxOf(element: HTMLElement, model: Model): number {
 /** Counts the layouts a run pays for: a write dirties layout, and the next read of it pays once. */
 const meter = { dirty: false, paid: 0 };
 
-/** Wires the model into the one element the probe renders. */
 function modelLayout(model: Model): void {
   meter.dirty = false;
   meter.paid = 0;
@@ -94,7 +90,6 @@ function modelLayout(model: Model): void {
     }
     const font = fontOf(this, model);
     const needed = model.need * font * font + 2 * PADDING;
-    // A clamped box shows its clamped lines only.
     const lines = this.style.getPropertyValue("--cf-clamp-lines");
     return lines === "" ? needed : Math.min(needed, Number(lines) * font * LINE_HEIGHT + 2 * PADDING);
   });
@@ -145,7 +140,6 @@ describe("the rules box's reading floor", () => {
   });
 
   it("takes the long layout when the ordinary box cannot hold the text at the floor", () => {
-    // Needs 1.2 × 9² ≈ 97 px: over the 80 px box, inside the 120 px one.
     const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 });
     expect(face.getAttribute(LONG_ATTRIBUTE)).toBe("true");
     expect(face.hasAttribute(LONGEST_ATTRIBUTE)).toBe(false);
@@ -154,7 +148,6 @@ describe("the rules box's reading floor", () => {
   });
 
   it("takes the longest layout when the long box still cannot hold the text at the floor (#617)", () => {
-    // Needs 1.7 × 9² ≈ 146 px: over the 120 px long box, inside the 160 px longest one.
     const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, longestBox: 160, need: 1.7 });
     expect(face.getAttribute(LONG_ATTRIBUTE)).toBe("true");
     expect(face.getAttribute(LONGEST_ATTRIBUTE)).toBe("true");
@@ -194,7 +187,6 @@ describe("the rules box's reading floor", () => {
   });
 });
 
-/** A flat set of probe elements that share the model, each with a box of its own. */
 function renderProbes(count: number, content: string): HTMLElement[] {
   const { container } = render(
     <>
@@ -248,7 +240,6 @@ describe("the batched scheduler", () => {
   });
 
   it("reads layout once per round for every card at once, not once per card", () => {
-    // The layouts a run pays for must not grow with the number of cards.
     const layouts = (count: number): number => {
       modelLayout(model);
       renderProbes(count, "rules");
@@ -328,7 +319,6 @@ describe("the batched scheduler", () => {
       flushFits();
     }).toThrow("detached mid-pass");
     expect(goodDone).toHaveBeenCalledTimes(1);
-    // The queue is empty again: a later flush has nothing left to throw.
     expect(() => {
       flushFits();
     }).not.toThrow();
@@ -369,10 +359,7 @@ describe("a web font landing (fonts.css)", () => {
 describe("a face the browser skips waits for it (#263)", () => {
   const model: Model = { basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 };
 
-  /**
-   * A skippable item holding one text box. `state.skipped` is what `content-visibility: auto` would
-   * say; `checkVisibility({ contentVisibilityAuto: true })` answers false for it.
-   */
+  /** A skippable item holding one text box; `state.skipped` is what `content-visibility: auto` would say. */
   function skippable(state: { skipped: boolean }, holder = true): { item: HTMLElement; text: HTMLElement } {
     const item = document.createElement("div");
     if (holder) item.setAttribute(SKIPPABLE_ATTRIBUTE, "");

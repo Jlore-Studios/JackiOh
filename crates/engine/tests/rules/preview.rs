@@ -1,17 +1,11 @@
 //! R280 (SPEC §10.8, §10.9): the number a formula comes to now, as `viewFor` carries it on a card
 //! view (`preview`), and a Fuse's list (R102).
 //!
-//! Every card here is a test-only definition whose script carries a recording `preview` hook, so each
-//! test controls what the hook answers and reads back every question the engine asked it.
-//!
-//! Where the view carries it (§10.8), both seats:
-//!   - the viewer's own hand, in any phase and on either turn;
-//!   - a unit on top of its pile, either seat's;
-//!   - a backrow card face-up to the viewer: a Field Spell and a fired Field Trap for both, a
-//!     face-down Trap or Field Trap for its controller alone (R33).
-//!
-//! Never: the opponent's hand, a library card, a card buried under a Stack, a graveyard, exile or
-//! resolving card — and the hook is not even asked about those. Absent, never `[]`, when the hook
+//! Where the view carries it (§10.8), both seats: the viewer's own hand, in any phase and on either
+//! turn; a unit on top of its pile, either seat's; a backrow card face-up to the viewer (a Field
+//! Spell and a fired Field Trap for both, a face-down Trap or Field Trap for its controller alone,
+//! R33). Never: the opponent's hand, a library card, a card buried under a Stack, a graveyard, exile
+//! or resolving card — and the hook is not even asked about those. Absent, never `[]`, when the hook
 //! answers nothing or the card has none.
 //!
 //! The registries are the testkit's per-thread override (Surface contract: docs/v0.3.0/SURFACE.md §8)
@@ -30,7 +24,7 @@ use crate::rules::fixtures::harness::{
 
 // Fixtures
 
-/// Which `vi.fn` answered.
+/// Which hook answered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum HookId {
     Base,
@@ -428,7 +422,6 @@ fn side(view: &PlayerView, viewer: PlayerId) -> &SideView {
 
 // The viewer's hand
 
-/// R280 preview in the viewer's own hand
 mod r280_preview_in_the_viewer_s_own_hand {
     use super::*;
 
@@ -545,7 +538,6 @@ mod r280_preview_in_the_viewer_s_own_hand {
 
 // The field: the top of a unit pile, the backrow
 
-/// R280 preview on the field
 mod r280_preview_on_the_field {
     use super::*;
 
@@ -732,7 +724,6 @@ mod r280_preview_on_the_field {
 
 // Nowhere else
 
-/// R280 preview is nowhere else
 mod r280_preview_is_nowhere_else {
     use super::*;
 
@@ -799,7 +790,6 @@ mod r280_preview_is_nowhere_else {
         assert_eq!(preview_of(&state, &at(&my_hand), P1, ConditionZone::Field), None);
         assert!(asked().is_empty());
 
-        // And the positive controls, asked once each.
         assert_eq!(
             preview_of(&state, &at(&their_trap), P2, ConditionZone::Field),
             Some(vec![value(&format!("n({})", their_trap.id), 12)])
@@ -859,7 +849,6 @@ mod r280_preview_is_nowhere_else {
 
 // A read, and nothing more
 
-/// R280 the hook is a pure read
 mod r280_the_hook_is_a_pure_read {
     use super::*;
 
@@ -909,7 +898,6 @@ mod r280_the_hook_is_a_pure_read {
 
 // R102: a fused card's list, and its refs
 
-/// R280 a fusion's preview is its ingredients' lists in ingredient order (R102)
 mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
     use super::*;
 

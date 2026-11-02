@@ -4,12 +4,10 @@
 //! "Can't attack. Start of turn: Deal {damage} damage to your hero and each adjacent Unit that isn't
 //! a Yile's Virus. Always in Attack Position. Activate: Destroy this. Death: Discard
 //! {discards|random card|random cards}."
-//! Engine: Can't attack is a keyword; "can't be in Defense Position" is #65.1 Spikey Pillow's
-//! `neverDefense` flag, so the token never has Defense's Taunt. Activate (R384) destroys itself
-//! once a turn in its controller's main phase. Death discards at random from its controller's hand
-//! (R682), firing though the token vanishes (R11, §6.2). At its controller's start of turn, one hit
-//! each on the Units beside it on its side and row (§3.1) — those of Yile's Virus's definition
-//! skipped — then one on its controller's hero. "Your" is the Virus's controller, its victim, since
+//! Engine: "can't be in Defense Position" is #65.1 Spikey Pillow's `neverDefense` flag, so the
+//! token never has Defense's Taunt. Activate (R384) works once a turn in its controller's main
+//! phase. Death discards at random (R682), firing though the token vanishes (R11, §6.2). Adjacent
+//! is beside it on its side and row (§3.1). "Your" is the Virus's controller, its victim, since
 //! M #49 and M #49.1 make it for the opponent (R12); forced attacks still make it attack (R53).
 
 use jackioh_engine::effects::{damage, destroy, discard_random, for_each_card};
@@ -32,9 +30,8 @@ fn destroy_self() -> ActivationDecl {
 }
 
 pub fn script() -> CardScripts {
-    // Both faces share the one script: the declared `discards` and `damage` (1 and 2, Radiant 2
-    // and 4) are what differ. The amount is read as the hook resolves and moved into each hit, so
-    // a Nerf or Buff on the numbers moves every hit of the turn (R386).
+    // Both faces share the one script: only the declared `discards` and `damage` differ. The amount
+    // is read as the hook resolves and moved into each hit, so a Nerf or Buff moves every hit (R386).
     let virus = Script {
         static_flags: Some(StaticFlags {
             never_defense: Some(true),
@@ -171,7 +168,6 @@ mod tests {
 
                 s.start_turn();
 
-                // Can't attack, yet the Girlfriend's forced attack makes it attack (R53).
                 assert!(s.events().iter().any(|event| matches!(
                     event,
                     GameEvent::AttackDeclared { attacker_id, target_id, forced: true, .. }
@@ -186,7 +182,6 @@ mod tests {
 
                 s.end_turn();
 
-                // p2's turn: p1 can't activate it.
                 s.expect_refused(|s| s.activate(&virus, json!({})));
                 s.expect_in_zone(&virus, "field");
             }
@@ -227,10 +222,8 @@ mod tests {
 
                 s.end_turn();
 
-                // p2's start of turn: p2's hero is hit, p1's is not.
                 s.expect_health(P2, 28);
                 s.expect_health(P1, 30);
-                // p2 activates it; its Death discards from p2's hand.
                 let before = s.hand(P2).len();
                 s.activate(&virus, json!({}));
                 assert_eq!(s.hand(P2).len(), before - 1);
@@ -246,10 +239,8 @@ mod tests {
 
                 s.start_turn();
 
-                // 3 damage now: the 3/4 neighbour sits at 1, the hero at 27.
                 s.expect_stats(&left, json!({ "health": 1 }));
                 s.expect_health(P1, 27);
-                // And its Death discards 2.
                 let before = s.hand(P1).len();
                 s.activate(&virus, json!({}));
                 assert_eq!(s.hand(P1).len(), before - 2);
@@ -283,7 +274,6 @@ mod tests {
 
                 s.start_turn();
 
-                // One hit of 2 on each adjacent non-Virus Unit, then one on its hero.
                 s.expect_stats(&left, json!({ "health": 2, "maxHealth": 4 }));
                 s.expect_stats(&right, json!({ "health": 2, "maxHealth": 4 }));
                 s.expect_health(P1, 28);
@@ -341,7 +331,6 @@ mod tests {
 
                 s.start_turn();
 
-                // 4 damage: a 3/4 neighbour falls to 0 and dies; the hero takes 4.
                 assert!(s.unit(P1, 1).is_none());
                 assert!(s.unit(P1, 3).is_none());
                 s.expect_health(P1, 26);

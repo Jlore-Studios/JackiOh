@@ -1,13 +1,8 @@
 //! `cargo jackioh stats [--games N] [--from N] [--patch v] [--series name] [--force id] [--out file]`
-//! (SPEC §9.11, R378; SURFACE §12): an internal AI development run of the build in this checkout. Port of
-//! `packages/ai/scripts/stats.ts` (`pnpm ai:stats`).
-//!
-//! Plays AI-against-AI All Random games (`devGameRecord`, `crates/ai/src/dev_run.rs`), writes each
-//! finished one as a game record, one JSON line per game, and prints the run's card win rates. The
-//! records are tagged `source: "dev"` and filed under the patch the run tests, so once they are
-//! loaded with `jackioh-server stats-import <file>`, `stats-cards --source=dev --patch=<version>`
-//! reads them, to compare with what `stats-cards --patch=<version>` reads of that patch's live games,
-//! and no live figure ever counts them unless asked.
+//! (SPEC §9.11, R378; SURFACE §12): an internal AI development run of the build in this checkout. It
+//! plays AI-against-AI All Random games (`crates/ai/src/dev_run.rs`), writes each as a game record, one
+//! JSON line, and prints the run's card win rates. The records are tagged `source: "dev"` under the
+//! patch the run tests, so no live figure ever counts them unless asked (`stats-cards --source=dev`).
 //!
 //! ```text
 //! cargo jackioh stats                               AI_DEV_RUN.games games of the "dev" series,
@@ -24,36 +19,14 @@
 //!                                                   compared on the seat that holds the card (R1284000)
 //! ```
 //!
-//! A game takes seconds at the browser's budget, so a full run takes a while; progress goes to
-//! stderr. `--out` is resolved against the directory the command was started in, and the file is
-//! written a line per game as the run goes, so a run that is stopped keeps the games it finished.
-//!
-//! The games play on rayon's pool in chunks of one game per thread (RAYON_NUM_THREADS sets the
-//! width). Each chunk's records are written in game order and flushed before the next chunk starts,
-//! so --out is byte-identical to a serial run's file and a stopped run keeps every whole chunk.
-//!
-//! `cargo jackioh stats report <file>…` reads record files instead (what `--out` writes, what
-//! `jackioh-server stats-export` writes of the live games, what the training lanes keep) and prints
-//! R377's card win rates over them with no database, with `stats-cards`' flags: the figures a
-//! notebook computes over the same files (`analysis/`) are checked against these.
-//!
-//! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
-//! per patch, mode and source: how often the first seat won of the decided games (with its 95% Wilson
-//! interval; unknown when every game was drawn, R2567000), how the games ended, how long they lasted,
-//! and what R1256000's counts say of fatigue, Traps, position switches and Radiant upgrades. A record
-//! written before those counts is unknown for them, not zero. The training lanes keep these figures
-//! beside the card figures (`training/README.md`).
-//!
-//! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
-//! `stats report`, never for `stats-import` (R1284000).
-//!
-//! `cargo jackioh stats fit-dealt <file>…` refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena record
-//! files and prints them to paste (`dealt_fit.rs`).
-//!
-//! `cargo jackioh stats from-selfplay <log>… --out <file>` files `selfplay` logs, the learn lane's
-//! exports, as development records instead (`selfplay_records.rs`, R1676000).
-//!
-//! Tooling, so it may read files, the clock and the console; `crates/ai` stays pure.
+//! `stats report <file>…` prints R377's card win rates over record files with no database, with
+//! `stats-cards`' flags (the `analysis/` notebooks' figures are checked against these). `--games` prints
+//! the game figures per patch, mode and source instead: the first seat's wins of the decided games with a
+//! 95% Wilson interval (unknown when every game was drawn, R2567000), endings, lengths and R1256000's
+//! counts, unknown (not zero) in a record older than them. A forced run files under `dev-force-<id>`, for
+//! `compare` and `report`, never `stats-import` (R1284000). `fit-dealt` refits `DEALT_Q` and
+//! `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`); `from-selfplay` files `selfplay` logs as
+//! development records (`selfplay_records.rs`, R1676000).
 
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -79,16 +52,13 @@ use crate::arena::{paired_interval, wilson_interval};
 use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
 use crate::{dealt_fit, golden, selfplay_records};
 
-/// Seconds print with this many decimals.
 const SECONDS_DECIMALS: usize = 1;
 
-/// Percentages print with this many decimals.
 const PERCENT_DECIMALS: usize = 1;
 
 /// A mean or a per-set figure prints with this many decimals.
 const MEAN_DECIMALS: usize = 2;
 
-/// A share as a percentage.
 const PERCENT: f64 = 100.0;
 
 /// `crates/cards/patches/patches.json`, the card patch history (R388), where this checkout keeps it.
@@ -106,7 +76,7 @@ fn newest_patch(list: &Value) -> Result<String> {
     }
 }
 
-/// A positive integer option, refused with TS's words otherwise (`--games` and `--from`).
+/// A positive integer option (`--games` and `--from`).
 fn count(name: &str, raw: &str) -> Result<i32, String> {
     match raw.parse::<i32>() {
         Ok(value) if value >= 1 => Ok(value),
@@ -314,8 +284,8 @@ struct ReportJson<'a> {
     created: &'a [CreatedStats],
 }
 
-/// R2427000: one card's row of `stats report --window --json`: the windowed row with the
-/// never-drawn tally and the drawn delta beside it, read off the row's figures.
+/// R2427000: one card's row of `stats report --window --json`: the windowed row with the never-drawn
+/// tally and the drawn delta beside it.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct WindowedRow<'a> {
@@ -347,7 +317,6 @@ struct WindowJson<'a> {
     created: &'a [WindowedCreated],
 }
 
-/// The report as `stats-cards` prints it: the table, with the catalog's names, or JSON.
 pub fn render(
     report: &CardStatsReport,
     args: &ReportArgs,
@@ -372,7 +341,6 @@ pub fn render(
     }
 }
 
-/// The game report as `stats report --games` prints it: lines of text, or JSON.
 pub fn render_games(report: &GameReport, json: bool) -> String {
     if json {
         return serde_json::to_string_pretty(report).unwrap_or_default();
@@ -555,7 +523,6 @@ pub fn render_window(
     lines.join("\n")
 }
 
-/// `cargo jackioh stats report`.
 fn run_report(args: &ReportArgs) -> Result<()> {
     if let Some(at) = &args.window {
         jackioh_cards::register_all();
@@ -699,7 +666,6 @@ fn shadow_row(card: &str) -> Option<(&'static str, &'static str)> {
         .or_else(|| listed(SHADOW_WATCH).map(|reason| ("SHADOW_WATCH", reason)))
 }
 
-/// R1284000: what `stats compare` prints, as data.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Comparison {
     pub card: String,
@@ -727,7 +693,6 @@ fn created_of(records: &[GameRecord], card: &str) -> Option<CreatedStats> {
         .find(|stats| stats.card == card)
 }
 
-/// R1284000: the two sides' records compared on the seat that holds `card`.
 pub fn compare(before: &[GameRecord], after: &[GameRecord], card: &str) -> Comparison {
     Comparison {
         card: card.to_string(),
@@ -740,19 +705,16 @@ pub fn compare(before: &[GameRecord], after: &[GameRecord], card: &str) -> Compa
     }
 }
 
-/// R1284000: the comparison the arguments ask for, over the records of the files they name.
 pub fn comparison(args: &CompareArgs) -> Result<Comparison> {
     let before = read_records(&args.before)?;
     let after = read_records(&args.after)?;
     Ok(compare(&before, &after, &args.card))
 }
 
-/// A share as a percentage, as `31.4%`.
 fn percent(share: f64) -> String {
     format!("{:.*}%", PERCENT_DECIMALS, share * PERCENT)
 }
 
-/// A difference of shares in percentage points, signed, as `+3.0`.
 fn points(share: f64) -> String {
     format!("{:+.*}", PERCENT_DECIMALS, share * PERCENT)
 }
@@ -817,7 +779,6 @@ pub fn render_compare(comparison: &Comparison, name: Option<&str>) -> String {
     lines.join("\n")
 }
 
-/// `cargo jackioh stats compare`.
 fn run_compare(args: &CompareArgs) -> Result<()> {
     jackioh_cards::register_all();
     let compared = comparison(args)?;
@@ -908,7 +869,6 @@ fn play_chunks(
     Ok(())
 }
 
-/// `cargo jackioh stats`.
 pub fn run(args: Args) -> Result<()> {
     match &args.command {
         Some(Command::Report(report)) => return run_report(report),
@@ -1124,11 +1084,9 @@ mod tests {
             (Some("v0.2.3"), Some("core-001"), true)
         );
 
-        // --games asks for the game figures and does not go with one card's row.
         assert!(report_args(&["a.jsonl", "--games"]).unwrap().games);
         assert!(report_args(&["a.jsonl", "--games", "--card=core-001"]).is_err());
 
-        // A report names files, and a run's options are not a report's.
         assert!(report_args(&[]).is_err());
         assert!(report_args(&["a.jsonl", "--games=3"]).is_err());
         let refused = report_args(&["a.jsonl", "--source=practice"])
@@ -1216,7 +1174,6 @@ mod tests {
         ]
     }
 
-    /// The game report of `game_lines` under `stats report --games` and these flags.
     fn games_of(flags: &[&str]) -> GameReport {
         let args = report_args(&[&["a.jsonl", "--games"], flags].concat()).unwrap();
         game_report(
@@ -1408,7 +1365,6 @@ mod tests {
         for (files, report) in [(vec![dev, live], games), (vec![counts], counts_report)] {
             let committed = std::fs::read_to_string(report).unwrap();
             let figures = game_report(&read_records(&files).unwrap(), &all);
-            // As the command prints it, byte for byte.
             assert_eq!(render_games(&figures, true), committed.trim_end(), "{report}");
         }
     }
@@ -1458,8 +1414,7 @@ mod tests {
         assert!(parse(&["fit-dealt", "a.jsonl", "--games=3"]).is_err());
     }
 
-    /// A game record as a line of JSON: the shape `--out` writes. A live game is two people's, a
-    /// development run's two AIs'.
+    /// A game record as a line of JSON: the shape `--out` writes.
     fn record_line(id: &str, source: &str, mode: &str, winner: &str, deck_p2: &[&str]) -> String {
         let pilot = if source == "live" { "human" } else { "ai" };
         record_line_piloted(id, source, mode, winner, deck_p2, [pilot, pilot])
@@ -1548,7 +1503,6 @@ mod tests {
             ..DEFAULT_CARD_STATS_FILTER.clone()
         };
         assert_eq!(everything, card_stats(&records, &all));
-        // The order the files are named in only reorders the records, never the figures.
         let reversed: Vec<PathBuf> = paths.iter().rev().cloned().collect();
         assert_eq!(report_of(&reversed, &["--source=all"]).1, everything);
 
@@ -1565,7 +1519,6 @@ mod tests {
         assert_eq!(narrowed, card_stats(&records, &filter));
         assert_eq!((narrowed.games, narrowed.decks), (2, 4));
 
-        // --card keeps one row; a card no counted deck held leaves the table and says so.
         let (one_args, one) = report_of(&paths, &["--source=all", "--card=core-003"]);
         assert_eq!(
             one.cards
@@ -1633,7 +1586,6 @@ mod tests {
             row.as_object_mut().expect("a row").remove("drawnDelta");
         }
         assert_eq!(bare, serde_json::to_value(&report).unwrap());
-        // The table is the report's, with the names the caller gives.
         let table = render(&report, &ReportArgs { json: false, ..args }, |card| {
             (card == "core-001").then(|| "Alpha".to_string())
         });
@@ -1675,7 +1627,6 @@ mod tests {
         );
         let delta = first["drawnDelta"].as_f64().expect("core-001 has drawnDelta");
         assert!((delta - 1.0 / 3.0).abs() < 1e-12);
-        // Without the two new keys, the JSON is the windowed report's.
         let mut bare = parsed.clone();
         for row in bare["cards"].as_array_mut().expect("rows") {
             let row = row.as_object_mut().expect("a row");
@@ -1707,7 +1658,6 @@ mod tests {
         assert_eq!(by_default.filter.pilot, PilotFilter::Unified);
         assert_eq!(held(&by_default, "core-001"), Some(1));
         assert_eq!(held(&by_default, "core-003"), Some(1));
-        // Split: each side reads alone.
         let (_, people) = report_of(&paths, &["--pilot=human"]);
         assert_eq!((people.games, people.decks), (1, 1));
         assert_eq!(held(&people, "core-001"), Some(1));
@@ -1727,7 +1677,7 @@ mod tests {
 
     #[test]
     fn r1367000_report_window_reads_each_card_over_its_own_window() {
-        // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone (patches.json's changes).
+        // v0.2.3b, a micro after v0.2.3, plays Classic #55 alone (patches.json's changes).
         let on = |id: &str, patch: &str| {
             record_line(id, "live", "bo1", "p1", &["classic-055"])
                 .replace("\"v0.2.3\"", &format!("\"{patch}\""))
@@ -1747,7 +1697,6 @@ mod tests {
         assert_eq!(micro.window.versions, ["v0.2.3b"]);
         assert_eq!(micro.window.source, jackioh_engine::WindowSource::Provisional);
         assert!(render_window(&report, &args, |_| None).contains("classic-055: from v0.2.3b"));
-        // --window takes the place of the filter flags.
         assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--patch=v0.2.3"]).is_err());
         assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--games"]).is_err());
         std::fs::remove_dir_all(dir).unwrap();
@@ -1788,7 +1737,6 @@ mod tests {
         std::fs::remove_dir_all(dir).unwrap();
     }
 
-    /// The options a run of `argv` plays, as `run` reads them under the patch "v0.2.5".
     fn options_of(argv: &[&str]) -> Result<DevRunOptions> {
         jackioh_cards::register_all();
         run_options(&parse(argv).unwrap(), "v0.2.3".to_string())
@@ -1800,7 +1748,6 @@ mod tests {
         assert_eq!((plain.series.as_str(), plain.force), ("dev", None));
         assert_eq!(plain.patch, "v0.2.3");
 
-        // A forced run files under a series of its own; an explicit series with --force is refused.
         let forced = options_of(&["--force=core-090"]).unwrap();
         assert_eq!(
             (forced.series.as_str(), forced.force.as_deref()),
@@ -1933,9 +1880,8 @@ mod tests {
         forced_line(patch, n, holder, if holder_wins { holder } else { other })
     }
 
-    /// Before (v0.2.5): the holder wins games 1 to 5 and loses 6 to 10; game 11 has no holder. After
-    /// (v0.2.6): it wins 1 to 7, loses 8 and 9 and draws 10; wins 12, which only this side played; and
-    /// game 13 has two holders.
+    /// Before: the holder wins games 1 to 5 and loses 6 to 10; game 11 has no holder. After: it wins 1 to 7,
+    /// loses 8 and 9 and draws 10; wins 12, which only this side played; and game 13 has two holders.
     fn forced_runs() -> (Vec<GameRecord>, Vec<GameRecord>) {
         let mut before: Vec<String> = (1..=10).map(|n| forced_game("v0.2.3", n, n <= 5)).collect();
         before.push(forced_line("v0.2.3", 11, "none", "p1"));
@@ -1973,7 +1919,6 @@ mod tests {
              \x20 paired  +20.0 points over the 10 games on both sides, 95% interval -6.1 to +46.1\n\
              \x20 left out: 1 game(s) before and 1 after, where no seat or both seats hold test-card"
         );
-        // A card the catalog does not name is printed by its id alone.
         assert!(render_compare(&compared, None).starts_with("test-card: the win rate"));
     }
 
@@ -2007,7 +1952,6 @@ mod tests {
             (paired.games, paired.mean, paired.low, paired.high),
             (1, -1.0, -1.0, 1.0)
         );
-        // No game is on both sides at all.
         let apart = compare(&before[..1], &after[1..2], "test-card");
         assert_eq!(apart.paired, None);
         assert!(render_compare(&apart, None).contains("\n  paired  no game is on both sides"));
@@ -2016,7 +1960,6 @@ mod tests {
     #[test]
     fn r2089000_compare_adds_the_card_s_created_figures_on_each_side() {
         let (before, after) = forced_runs();
-        // No seat made a Created test-card, so the comparison prints what it did before.
         let plain = compare(&before, &after, "test-card");
         assert_eq!((&plain.created_before, &plain.created_after), (&None, &None));
         assert!(!render_compare(&plain, None).contains("created"));
@@ -2157,7 +2100,6 @@ mod tests {
         );
         assert!(!text.contains("left out"), "{text}");
 
-        // A file that is not records is an error naming it, as `report`'s is.
         let missing = dir.join("missing.jsonl");
         let refused = comparison(&CompareArgs {
             before: vec![missing.clone()],
@@ -2193,8 +2135,7 @@ mod tests {
         all
     }
 
-    /// The same games played one at a time, as `run` played them before chunks, each as the line
-    /// `--out` would hold.
+    /// The same games played one at a time, each as the line `--out` would hold.
     fn serial_lines(from: i32, games: i32, options: &DevRunOptions) -> Vec<String> {
         (from..from + games)
             .filter_map(|n| dev_game_record(n, options))
@@ -2280,7 +2221,6 @@ mod tests {
             })
         });
         assert!(stopped.is_err(), "the bailed sink ends the run");
-        // The kept bytes parse as records: no torn line.
         parse_game_record_lines(&kept).unwrap();
         let kept_lines: Vec<&str> = kept.lines().collect();
         let first_chunk = serial_lines(1, 4, &options);

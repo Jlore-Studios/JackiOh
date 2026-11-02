@@ -3,14 +3,11 @@
 //!   Base:    "Make a permanent Radiant."
 //!   Radiant: "Cleave / Make a permanent Radiant."
 //!
-//! Engine: Core #34's target (any permanent on either side's field, R81) and the field's Make Radiant
-//! (`set_radiant`, R74): the flag only, so a Unit's base-stat layer swaps at once with its damage and
-//! buffs kept, no Cry fires again (R22), a Field Spell runs its Radiant text from then on, and a
-//! face-down card's change is reported to its opponent as a change alone (R97, R177). Any permanent may
-//! be picked, a Radiant one included (it stays as it is), so no pick check leaks a face-down card's
-//! face. The Radiant face's Cleave is R2198003's board reading: the permanents beside the pick in its
-//! row on its side (`adjacent_to`, §3.1), read as the clause begins, each made Radiant too, a neighbour
-//! Immune to Spells passed by.
+//! Engine: Core #34's target (any permanent on either side's field, R81) and Make Radiant (`set_radiant`,
+//! R74): the flag only, so damage and buffs are kept, no Cry fires again (R22), and a face-down card's
+//! change reaches its opponent as a change alone (R97, R177). A Radiant pick is allowed, so no pick check
+//! leaks a face-down card's face. Radiant's Cleave (R2198003): the permanents beside the pick in its row
+//! and side (`adjacent_to`, §3.1), read as the clause begins; a neighbour Immune to Spells is passed by.
 
 use jackioh_engine::prelude::*;
 

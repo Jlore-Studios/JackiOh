@@ -1,22 +1,8 @@
 //! #56 Jilliax (SPEC §8.3): (2), Embiggened (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield /
 //! Embiggened (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Embiggened (3):
 //! Equip." (R1175000).
-//!
-//! Patch v0.3.10 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
-//! the script's `conditionalKeywords` returns Equip on a card stamped embiggened, so `legalActions`
-//! offers the Equip play only at that price and the refusal reads the same stamp (R831013).
-//!
-//! Its four printed keywords need no script. §10.4's keyword layer reads the printed keywords off the
-//! running face of the def (`face_of` in engine/src/layers.rs), and each keyword is a rule the engine
-//! owns (§6.1): Rush (`why_cannot_declare`, §4.1, §4.2 step 1), Taunt (`taunt_wall`, §4.2 step 3),
-//! Lifesteal (§4.4 step 8), Divine Shield (damage pipeline step 1), Reborn. Re-stating any would be a
-//! second implementation (CLAUDE.md rule 5, BUILD M4-T4).
-//!
-//! §8 Conventions: a keyword cell with no "Plus" "gives the radiant form's complete keyword list", so it
-//! REPLACES the base list; `tests/cross/catalog.rs` (M4-T1) pins `catalog.json`'s data.
-//! R46/R69 (Indestructible, pipeline step 4 and §4.5 step 1), which neither face prints now: a marked
-//! Indestructible unit goes to Attack Position and loses Taunt for the turn instead of dying, and is
-//! still collected at 0 max health; Sacrifice and Exile go around it (§6.3).
+//! Embiggen price (3) gives Equip (ME-EQUIP, R1086, #831; conditionalKeywords; R831013; §8).
+//! Printed keywords (§6.1, §10.4, §4.1; CLAUDE.md rule 5). Damage pipeline (§4.4, §4.5, §6.3, R46, R69). Play-time Equip target chosen when embiggened (R81, R90).
 
 use jackioh_engine::prelude::*;
 
@@ -40,18 +26,16 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant all four plus Reborn").
+// #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56).
 // A keywords-only card, so every test asserts either the computed keyword set (§10.4's keyword
 // layer, read through `view_for`) or the rule each keyword names in §6.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// A turn anchor (§2.5, R82): #10 Rapid Replenish is a 0-cost Spell, so holding one keeps at least
-    /// one legal action other than ending the turn, conceding and offering a draw on a side whose units
-    /// have all spent their exertion. It is never played; it only stops `reduce` from auto-ending the
-    /// turn underneath an assertion. It is a Spell rather than a unit so it never joins the board a test
-    /// is counting, and so a def-id reference to the attacker stays unambiguous.
+    /// A turn anchor (§2.5, R82): #10 Rapid Replenish, a 0-cost Spell never played, keeps a legal action
+    /// besides ending the turn, so `reduce` never auto-ends it under an assertion. A Spell joins no board a
+    /// test counts, and a def-id reference to the attacker stays unambiguous.
     const ANCHOR: &str = "core-010";
 
     /// The keyword kinds §10.4 computes for the unit in `lane`, sorted so the set is order-free.
@@ -84,7 +68,6 @@ mod tests {
             g.expect_health(PlayerId::P2, 30);
 
             // The same sick unit may attack a unit: 3 into a Mr. Vanilla at 3 health, which kills it.
-            //
             // R78 resets an instance's damage as it leaves the field, so the kill cannot be read as
             // `health: 0` on the card. R89: the `destroyed` event carries what the card was, its attack and
             // max health as the layers computed them at the moment it died.
@@ -144,9 +127,7 @@ mod tests {
             crate::register_all();
             let mut g = scenario(json!({
                 // R82/§2.5 TURN ANCHOR: the attack spends Jilliax's only exertion and kills the only enemy unit,
-                // so without a card in hand `reduce` would auto-end the turn under the assertion (the tell is
-                // `turnAutoEnded` then `damage amount: 1, sourceId: null`). #10 Rapid Replenish is a 0-cost
-                // Spell, always affordable, and adds no second body: the attacker is named by def id.
+                // so without a card in hand `reduce` would auto-end the turn under the assertion.
                 "p1": { "field": [{ "def": "core-056", "lane": 1 }], "hand": [ANCHOR], "health": 20 },
                 "p2": { "field": [{ "def": "core-008", "lane": 1 }] },
             }));
@@ -217,7 +198,7 @@ mod tests {
         fn s4_2_step_3_taunt_is_still_on_the_radiant_face() {
             crate::register_all();
             // R347 (an Indestructible unit has no Taunt) leaves this face's printed Taunt standing: it is
-            // no longer Indestructible.
+            // not Indestructible.
             let mut g = scenario(json!({
                 "p1": { "field": [{ "def": "core-025", "lane": 1 }] },
                 "p2": {

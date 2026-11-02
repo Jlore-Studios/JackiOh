@@ -1,10 +1,6 @@
-// B36 (docs/polish/5-sign-in.md): no source file under apps/web/src renders raw HTML. Every string
-// the client shows (a server sentence, a provider error, an emailed link's parameters) goes through
-// React's text escaping, so a crafted `error_description` or code can never become markup.
-//
-// Test files are left out: never bundled, and the effects layer's tests set fixture DOM through
-// innerHTML to measure anchors. Sources are read with `import.meta.glob(..., "?raw")` (the web
-// tsconfig has no Node types); the two patterns are built from pieces so this file does not match itself.
+// B36 (docs/polish/5-sign-in.md): no source file under apps/web/src renders raw HTML, so a crafted
+// `error_description` or code can never become markup. Sources are read as `?raw` (the web tsconfig has
+// no Node types); the patterns are built from pieces so this file does not match itself.
 
 import { describe, expect, it } from "vitest";
 

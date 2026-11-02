@@ -1,21 +1,14 @@
-//! Face-down plays as Traps: Cloaked (#783, R783004–R783010, and R1040–R1046 since patch v0.3.7).
+//! Face-down plays as Traps: Cloaked (#783, R783004–R783010, R1040–R1046).
 //!
 //! A Unit, Spell or Field Spell that has Cloaked in its controller's hand (printed, given, or lent by
-//! an aura that reaches the cards in a hand, §10.4 layer 5, as Knowledge Breaker (#45) and its Prime
-//! (#45.1) lend it to Units and Paranoia (#99) to Spells, `cloak_hand_aura`) may be set face-down at
-//! its own price (R783005). A set card is a Field Trap (a Unit or a Field Spell) or a Trap (a Spell)
-//! until it reveals, hidden like any set Trap (R33, R1046), its text dormant. It has no timing: it
-//! reveals only when its controller activates its Reveal (`CLOAKED_REVEAL`, `subsystems::activate`),
-//! which is offered only while the card can come out whole (`reveal_can_complete`). A set Unit flips,
-//! animates and runs its Cry with prompts, keeping its set turn as `summonedTurn` so it may attack
-//! (R1041); a set Spell resolves its Spell text with prompts and its Echo repeats, Radiant Paranoia's
-//! Echo +N among them while one acts on its controller's field (`reveal_echo_bonus`, R1045). The form
-//! ends when the card leaves the field (R78).
+//! an aura there, §10.4 layer 5: Knowledge Breaker (#45) and its Prime to Units, Paranoia (#99) to
+//! Spells, `cloak_hand_aura`) may be set face-down at its own price (R783005). A set card is a Field
+//! Trap or a Trap until it reveals, hidden like any set Trap (R33, R1046), its text dormant. It reveals
+//! only when its controller activates its Reveal (`CLOAKED_REVEAL`), offered only while the card can
+//! come out whole (`reveal_can_complete`). The form ends when the card leaves the field (R78).
 //!
-//! Until patch v0.3.7 the same play was ME-ALTPLAY's permission (`face_down_play`): Knowledge
-//! Breaker's Aura set Units that revealed at the start of the next turn, Paranoia's set Spells that
-//! revealed at a time chosen as they were played. No card grants it now, and the three timings
-//! (`RevealAt::ALL`) are never offered; the wire keeps them so old records still read.
+//! No card grants ME-ALTPLAY's timed reveals: the three timings (`RevealAt::ALL`) are never offered,
+//! and the wire keeps them so old records still read.
 
 use crate::script::{AuraEntry, AuraHook, Effect, EngineSink, HookArgs, StatMod, TriggerDef};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
@@ -103,9 +96,8 @@ pub fn lent_cloaked_def_ids(state: &GameState, player: PlayerId) -> Vec<String> 
         .collect()
 }
 
-/// R783004: the way this card may be set face-down now, as a kind and its timing (`RevealAt::Cloaked`):
-/// a Unit, a Spell or a Field Spell with Cloaked in a hand has one, a Trap, a Field Trap or a card in a
-/// graveyard never does.
+/// R783004: the way this card may be set face-down now (`RevealAt::Cloaked`): a Unit, a Spell or a
+/// Field Spell with Cloaked in a hand has one.
 pub(crate) fn face_down_options(
     state: &GameState,
     card: &CardInstance,
@@ -124,8 +116,8 @@ pub(crate) fn face_down_options(
 }
 
 /// R1040, R1044, R783007: "Aura: Your <type>s have Cloaked." — Cloaked for each card of this printed
-/// type in its controller's hand while the source acts on their field (Knowledge Breaker and its
-/// Prime for Units, Paranoia for Spells). A card already set keeps its form when the aura ends.
+/// type in its controller's hand while the source acts on their field. A card already set keeps its
+/// form when the aura ends.
 pub fn cloak_hand_aura(type_: CardType) -> AuraHook {
     crate::script::aura_hook(move |args| {
         let controller = args.self_.controller;
@@ -143,10 +135,9 @@ pub fn cloak_hand_aura(type_: CardType) -> AuraHook {
     })
 }
 
-/// R1045: the Echo every card acting on this player's field adds to a Spell they reveal now — the
-/// largest any of them gives (`Script::reveal_echo`, Radiant Paranoia's "Spells you reveal have Echo
-/// +{echo}"), 0 with none; a Unit a carrier holds is one of them (R446, R1824000). Read as the Spell
-/// reveals, so a Paranoia that left before then adds none.
+/// R1045: the Echo every card acting on this player's field adds to a Spell they reveal now, the
+/// largest any of them gives (`Script::reveal_echo`, Radiant Paranoia), 0 with none; a carried Unit is
+/// one of them (R446, R1824000). Read as the Spell reveals.
 pub fn reveal_echo_bonus(state: &GameState, player: PlayerId) -> i32 {
     let mut out = 0;
     for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
@@ -222,11 +213,10 @@ pub(crate) fn reveal_triggers(card: &CardInstance) -> Vec<TriggerDef> {
     vec![TriggerDef::new("@reveal", &[], |_, _| vec![reveal_effect()])]
 }
 
-/// R783006: whether a card set by its Cloaked can come out whole now, which its Reveal waits for — a
-/// Unit needs the unit zone it would animate into (its own lane's, else R64's leftmost open one), a
-/// Spell what playing it needs (a legal pick for each declaration its play could not go without,
-/// R703, and its play gate, R1851001, read as its reveal reads them, `cry_trigger::reveal_set_spell`),
-/// and a Field Spell, which stands in its zone already, nothing.
+/// R783006: whether a card set by its Cloaked can come out whole now, which its Reveal waits for: a
+/// Unit needs the unit zone it would animate into (R64), a Spell a legal pick for each declaration its
+/// play could not go without (R703) and its play gate (R1851001), as `cry_trigger::reveal_set_spell`
+/// reads them, and a Field Spell, which stands in its zone already, nothing.
 pub fn reveal_can_complete(state: &GameState, card: &CardInstance) -> bool {
     let Some(at) = crate::zones::slot_of(state, card) else {
         return false;
@@ -301,8 +291,8 @@ fn reveal_effect() -> Effect {
             };
             crate::cry_trigger::trigger_cry_of(ctx, &live, controller);
         } else {
-            // R1045: the Echo stamped as it was set (none since patch v0.3.7), and Radiant Paranoia's
-            // while one acts on its controller's field now.
+            // R1045: the Echo stamped as it was set, and Radiant Paranoia's while one acts on its
+            // controller's field now.
             let echo = set.echo.unwrap_or(0) + reveal_echo_bonus(ctx.state, controller);
             if let Some(stored) = find_instance_mut(ctx.state, &snapshot.id)
                 && let Some(set) = stored.set_as.as_mut()

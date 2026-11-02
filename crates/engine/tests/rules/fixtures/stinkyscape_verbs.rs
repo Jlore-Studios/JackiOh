@@ -1,14 +1,10 @@
-//! Test-only cards for Stinkyscape's combat and replacement verbs (issue #1849, the set's phase 0):
-//! Immune to Spell Damage (R1849000), Evolve (R1849001), destroy becomes exile (R1849002), reflected
-//! damage (R1849003), the own-turn redirect (R1849004), the Gauntlet's lanes (R1849005), "Units cannot
-//! be in Defense Position" (R1849006), a random forced attacker (R1849007), "when one of your Units is
-//! attacked" (R1849008) and a trap's chance to reveal (R1849009); and, for S15 (issue #1875), a Trap that
-//! answers a Unit's death in combat before anything moves (R1875006). Each does it through the engine's own
-//! verbs and static flags, as a card script would, so the engine never imports `crates/cards`; the
-//! Stinkyscape cards that use them come later, behind the set's gate.
-//!
-//! Ids are prefixed `sv-` and indexed from 18490, and the two reprieves R1884001 adds at 18455 and
-//! 18456, so they collide with no other fixture file's.
+//! Test-only cards for Stinkyscape's verbs (#1849): Immune to Spell Damage (R1849000), Evolve (R1849001),
+//! destroy becomes exile (R1849002), reflected damage (R1849003), the own-turn redirect (R1849004), the
+//! Gauntlet (R1849005), "Units cannot be in Defense Position" (R1849006), a random forced attacker
+//! (R1849007), "when one of your Units is attacked" (R1849008), a trap's reveal chance (R1849009) and
+//! (#1875) a Trap answering a combat death before anything moves (R1875006), each through the engine's
+//! verbs and flags, so the engine never imports `crates/cards`. Ids are `sv-` from 18490, plus R1884001's
+//! two reprieves at 18455 and 18456, so they collide with no other fixture file's.
 
 use jackioh_engine::combat::ally_attacked_of;
 use jackioh_engine::effects;
@@ -16,87 +12,55 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// What the bolt deals the chosen Unit.
 pub const BOLT_DAMAGE: i32 = 3;
-/// What the ember deals each enemy Unit.
 pub const EMBER_DAMAGE: i32 = 2;
-/// What the zap deals the enemy hero.
 pub const ZAP_DAMAGE: i32 = 3;
-/// What the two self-burns deal their caster's own hero.
 pub const BURN_DAMAGE: i32 = 15;
 pub const SINGE_DAMAGE: i32 = 10;
 /// The Masochism fixtures' cap a turn, and the Radiant one's multiplier.
 pub const REDIRECT_CAP: i32 = 20;
 pub const REDIRECT_MULTIPLIER: i32 = 2;
-/// The Jempire's "+2 attack".
 pub const JEMPIRE_ATTACK: i32 = 2;
-/// The askers' buff once answered.
 pub const ASKER_ATTACK: i32 = 3;
-/// Aerelret's "30% chance to Reveal", and what it deals the attacker once revealed.
 pub const AERELRET_CHANCE: i32 = 30;
 pub const AERELRET_DAMAGE: i32 = 1;
-/// The lucky Aerelret's Lucky.
 pub const AERELRET_LUCKY: i32 = 2;
 /// What the reprieve's follow-up gives the Unit it answers for (Stinkyscape #138's shape, R1875006).
 pub const REPRIEVE_HEALTH: i32 = 10;
 
 /// A 2/4 Unit with Divine Shield, immune to Spell Damage (Paragon-X's shape).
 pub const IMMUNE: &str = "sv-immune";
-/// A Spell: "Deal 3 damage to a Unit."
 pub const BOLT: &str = "sv-bolt";
-/// A Field Spell: "Cry: Deal 2 damage to each enemy Unit."
 pub const EMBER: &str = "sv-ember";
-/// A Spell: "Give a Unit +1 attack."
 pub const RALLY: &str = "sv-rally";
-/// A Spell: "Deal 3 damage to the enemy hero."
 pub const ZAP: &str = "sv-zap";
-/// A 3/3 Unit: "After this attacks, summon a copy of this, then evolve. Evolve: gain Flying."
 pub const WASP: &str = "sv-wasp";
-/// A Spell: "Evolve a Unit."
 pub const EVOLVER: &str = "sv-evolver";
-/// A 6/3 Unit: "Aura: Anytime something would be Destroyed, it is Exiled instead."
 pub const DISINTEGREX: &str = "sv-disintegrex";
-/// A 6/3 Unit: "Aura: Anytime an enemy permanent would be Destroyed, it is Exiled instead."
 pub const DISINTEGREX_R: &str = "sv-disintegrex-r";
-/// A 2/2 Unit with Reborn: "Death: Draw a card."
 pub const PHOENIX: &str = "sv-phoenix";
-/// A Field Spell with no text.
 pub const FIELD: &str = "sv-field";
-/// A Spell: "Destroy a Unit or a backrow card."
 pub const SMASH: &str = "sv-smash";
-/// A Spell: "Destroy every Unit."
 pub const WIPE: &str = "sv-wipe";
-/// A Spell: "Sacrifice one of your Units."
 pub const OFFERING: &str = "sv-offering";
-/// A 0/6 Unit: "Any damage this takes is dealt to the enemy hero."
 pub const PLATING: &str = "sv-plating";
-/// A 0/6 Unit: "Any damage this takes is dealt to the enemy hero and the attacker."
 pub const PLATING_R: &str = "sv-plating-r";
-/// A 2/6 Unit with the Radiant plating's text, which can attack.
+/// The Radiant plating's flags on a 2/6 Unit, which can attack.
 pub const SPIKED: &str = "sv-spiked";
-/// A Field Trap: "Reveals when you take damage on your turn: Redirect all damage you take on your
-/// turn to your opponent (up to 20)."
+/// A Field Trap: "Reveals when you take damage on your turn: redirect it to your opponent (up to 20)."
 pub const MASOCHISM: &str = "sv-masochism";
 /// A Field Trap: the same, "and double it (up to 40)".
 pub const MASOCHISM_R: &str = "sv-masochism-r";
-/// A Spell: "Deal 15 damage to your hero."
 pub const BURN: &str = "sv-burn";
-/// A Spell: "Deal 10 damage to your hero."
 pub const SINGE: &str = "sv-singe";
 /// A Field Spell: "The middle 3 unit lanes are trapped in a Gauntlet."
 pub const GAUNTLET: &str = "sv-gauntlet";
-/// A Spell: "Your Units attack an enemy Unit."
 pub const GOAD: &str = "sv-goad";
-/// A Spell: "Switch a Unit's position."
 pub const SHOVE: &str = "sv-shove";
-/// A Field Spell: "Aura: Units cannot be in Defense Position. When the enemy summons a Unit, a random
-/// Unit from your side attacks it."
+/// A Field Spell: no Unit in Defense Position, and a random Unit of yours attacks each enemy summon.
 pub const WARP: &str = "sv-warp";
-/// A Field Spell: the same, "all Units from your side attack it".
 pub const WARP_II: &str = "sv-warp-ii";
-/// A 2/2 Unit: "Aura: Units cannot be in Defense Position."
 pub const WARDEN: &str = "sv-warden";
-/// A 4/5 Unit: "When one of your Taunt Units is attacked, give it +2 attack."
 pub const JEMPIRE: &str = "sv-jempire";
 /// A 1/5 Unit: "When one of your Units is attacked, choose left or right, then give it +3 attack."
 pub const ASKER: &str = "sv-asker";
@@ -104,17 +68,12 @@ pub const ASKER: &str = "sv-asker";
 pub const ASKER_LAST: &str = "sv-asker-last";
 /// A Trap: "30% chance to Reveal when an opponent attacks: deal 1 damage to the attacker."
 pub const AERELRET: &str = "sv-aerelret";
-/// A Trap with Lucky 2 and Aerelret's text.
 pub const LUCKY_AERELRET: &str = "sv-lucky-aerelret";
 /// A Trap with Aerelret's trigger and no chance: it reveals every time.
 pub const SURE_TRAP: &str = "sv-sure-trap";
-/// A plain 3/3.
 pub const GRUNT: &str = "sv-grunt";
-/// A 2/4 with Taunt.
 pub const TAUNTER: &str = "sv-taunter";
-/// A 2/3 with Flying.
 pub const FLYER: &str = "sv-flyer";
-/// A plain 1/1, to draw.
 pub const PLAIN: &str = "sv-plain";
 /// A Trap: "Reveals when one of your Units would die in combat: give it +10 Health" (Stinkyscape #138
 /// Pocket Peptides' shape, R1875006).
@@ -159,7 +118,6 @@ fn flags(value: Value) -> Option<StaticFlags> {
     Some(json_as(value))
 }
 
-/// One declared pick of a Unit or a backrow card as `filter` says.
 fn pick(filter: Value) -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, filter)]
 }
@@ -202,8 +160,7 @@ fn own_turn_damage(id: &'static str) -> TriggerDef {
     })
 }
 
-/// The Warp Disruptors' trigger: the enemy summons a Unit, and this side's Units attack it — one at
-/// random, or all of them.
+/// The Warp Disruptors' trigger: an enemy summon, which one random Unit of this side, or all, attack.
 fn enemy_summons(id: &'static str, random: bool) -> TriggerDef {
     TriggerDef::new(id, &[GameEventType::Summoned], move |_ctx, event| {
         let GameEvent::Summoned { instance_id, .. } = event else {
@@ -335,7 +292,6 @@ fn endless_reprieve(asking: bool) -> Script {
     }
 }
 
-/// A Spell that casts a new bolt aimed at the enemy hero, `aimOnly` or not.
 fn aimed_bolt(only: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {

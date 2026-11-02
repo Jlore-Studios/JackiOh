@@ -1,9 +1,6 @@
-//! The AI generated cards' verbs (SPEC §8.7 rows T-AI-4 and T-AI-6, the cards-plus-d workstream): a draw
-//! that repeats while the card it brought is cheap (T-AI-4 Chain of Thought), and a sweep of Field Spells
-//! that hits the heroes once per Field Spell it dooms (T-AI-6 Datacenter Fire).
-//!
-//! Each is card-specific — no Core card and no generic B5 system asks for either — so they live here,
-//! beside the effects library they are written in.
+//! The AI generated cards' verbs (SPEC §8.7 rows T-AI-4 and T-AI-6): a draw that repeats while the card
+//! it brought is cheap (T-AI-4 Chain of Thought), and a sweep of Field Spells that hits the heroes once
+//! per Field Spell it dooms (T-AI-6 Datacenter Fire).
 
 use serde::{Deserialize, Serialize};
 
@@ -35,10 +32,9 @@ pub struct DrawWhileCheapArgs {
     pub player: Option<PlayerId>,
 }
 
-/// T-AI-4: "Draw 1. If it costs (`maxCost`) or less, repeat this, up to `repeats` more times." Each round is one
-/// §2.4 draw; "it" is the card THAT draw put in the hand (R596), priced as it arrives (R65: X-cost reads 0).
-/// A card cast on draw (R58, R596), a burned card, a fatigue or limited draw and the game's end (R216) end
-/// the chain; a cast that asks (R158) parks its own remainder (R113), so the chain owes nothing.
+/// T-AI-4: each round one §2.4 draw, "it" the card THAT draw put in hand (R596), priced as it arrives
+/// (R65). A cast on draw (R58), a burn, a fatigue or limited draw and the game's end (R216) end the
+/// chain; a cast that asks (R158) parks its own remainder (R113).
 pub fn draw_while_cheap(args: DrawWhileCheapArgs) -> Effect {
     Effect::new("drawWhileCheap", move |ctx| {
         let player = args.player.unwrap_or(ctx.controller);
@@ -76,8 +72,7 @@ pub enum FieldSpellSide {
     Enemy,
 }
 
-/// The reader a doomed count needs: the card running it (a Spell's effects pass a Spell-immune card by).
-/// A running effect and a card's `preview` both hand one over.
+/// The card a doomed count runs for (a Spell's effects pass a Spell-immune card by).
 #[derive(Clone, Copy)]
 pub struct SweepReader<'a> {
     pub state: &'a GameState,
@@ -111,9 +106,8 @@ impl<'a> SweepReader<'a> {
     }
 }
 
-/// E35 (`restrictions.effectIsFromSpell`, read off a sweep reader): whether the list running is a
-/// Spell's. Its card says so while it is there; a continuation re-entered once the card has gone still
-/// names the script it runs (`defId`), on the face it recorded.
+/// E35 (`restrictions.effectIsFromSpell`, off a sweep reader): whether the running list is a Spell's;
+/// once its card has gone, by the script it names (`defId`) on the face it recorded.
 fn reader_is_spell(reader: &SweepReader<'_>) -> bool {
     if let Some(own) = reader.self_ {
         return is_spell_source(reader.state, Some(own));
@@ -126,17 +120,15 @@ fn reader_is_spell(reader: &SweepReader<'_>) -> bool {
     face.type_.unwrap_or(def.type_) == CardType::Spell
 }
 
-/// E35 (`restrictions.unaffectedBy`, read off a sweep reader): a Spell's effects pass an immune card on
-/// the field by.
+/// E35 (`restrictions.unaffectedBy`, off a sweep reader).
 fn reader_unaffected_by(reader: &SweepReader<'_>, card: &CardInstance) -> bool {
     card.zone.z() == ZoneName::Field && reader_is_spell(reader) && immune_to_spells(reader.state, card)
 }
 
-/// T-AI-6: the Field Spells "destroy all (enemy) Field Spells" would destroy now: those of the sides in a
-/// backrow zone (the acting card of each: an Ivory Tower beneath its Unit counts, R418; a card dormant
-/// under a backrow pile does not, §3.2), except Indestructible (R46) or unaffected by the running Spell
-/// (B5 E35). Traps and Field Traps are no Field Spells, and an animated one standing in a unit zone is a
-/// Unit there (R383), so not one (R588). A pure read, so `preview` (R280) and resolution agree.
+/// T-AI-6: the Field Spells "destroy all (enemy) Field Spells" would destroy now: each backrow zone's
+/// acting card (an Ivory Tower beneath its Unit counts, R418; a dormant one does not, §3.2), except
+/// Indestructible (R46) or unaffected (B5 E35). An animated one in a unit zone is a Unit (R383, R588).
+/// A pure read, so `preview` (R280) and resolution agree.
 pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec<CardInstance> {
     let sides: Vec<PlayerId> = if side == FieldSpellSide::Enemy {
         vec![opponent_of(reader.controller)]
@@ -172,12 +164,9 @@ pub struct DestroyFieldSpellsAndHitArgs {
     pub damage_per: i32,
 }
 
-/// T-AI-6 Datacenter Fire: "Destroy all Field Spells. Deal `damagePer` damage to each hero for each one
-/// destroyed" (Radiant: the enemy's, and the enemy hero). Every Field Spell of those sides is marked destroyed
-/// (§6.3; §4.5's check collects them together, R59, and fires their Death); the ones the mark will take
-/// (`fieldSpellsDoomed`, read as the sweep lands, as C+ #12.6's "each one destroyed" is, R408) set one §4.4
-/// instance per hero of `damagePer` times that count, from the running Spell (Spell Damage and a per-hit cap
-/// apply once), in R68's order. None doomed, no damage.
+/// T-AI-6 Datacenter Fire: every Field Spell of the sides is marked destroyed (§6.3; §4.5's check
+/// collects them, R59); the count doomed as the sweep lands (as C+ #12.6's is, R408) sets one §4.4
+/// instance per hero of `damagePer` times it (so Spell Damage applies once), in R68's order.
 pub fn destroy_field_spells_and_hit(args: DestroyFieldSpellsAndHitArgs) -> Effect {
     Effect::new("destroyFieldSpellsAndHit", move |ctx| {
         let doomed = field_spells_doomed(SweepReader::of_context(ctx), args.side).len() as i32;

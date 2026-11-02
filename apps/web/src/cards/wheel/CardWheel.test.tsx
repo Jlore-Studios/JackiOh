@@ -43,14 +43,13 @@ describe("CardWheel", () => {
     expect(screen.getByTestId(wheelTestid.position)).toHaveTextContent("2 of 3");
     expect(onIndex).toHaveBeenCalledWith(1);
 
-    // Tapping the card peeking right goes deeper; ArrowLeft comes back up.
+    // Tapping the card peeking right goes deeper.
     const cards = screen.getAllByTestId(wheelTestid.card);
     fireEvent.click(cards.find((element) => element.getAttribute("data-offset") === "1") ?? cards[0]!);
     expect(screen.getByTestId(wheelTestid.position)).toHaveTextContent("3 of 3");
     fireEvent.keyDown(screen.getByTestId(wheelTestid.wheel), { key: "ArrowLeft" });
     expect(screen.getByTestId(wheelTestid.position)).toHaveTextContent("2 of 3");
 
-    // Scrolling down goes deeper, Home returns to the top, End to the bottom.
     fireEvent.wheel(screen.getByTestId(wheelTestid.wheel), { deltaY: 100 });
     expect(screen.getByTestId(wheelTestid.position)).toHaveTextContent("3 of 3");
     fireEvent.keyDown(screen.getByTestId(wheelTestid.wheel), { key: "Home" });

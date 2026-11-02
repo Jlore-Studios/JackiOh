@@ -1,34 +1,11 @@
-// The event feed (SPEC §10.10, BUILD M5-T1): `view.events` as readable lines.
+// The event feed (SPEC §10.10, BUILD M5-T1): `view.events` as readable lines. A plain list,
+// deliberately: the animation runner owns motion (M5-T4) and nothing here animates.
 //
-// A plain list, deliberately: the animation runner owns motion (M5-T4) and nothing here
-// animates. Every line is built from the event payload plus public board data, and card
-// identities that are only in the view by accident are not printed — `drawn`, `addedToHand` and
-// `shuffledIn` carry a `defId` for the animation layer, so this log says "drew a card" rather
-// than naming it, and a redaction slip upstream cannot turn into a leak on screen.
-//
-// A line never prints an id. A card is named from the board as it stands, else from what the
-// window's own public events said it was (`summoned`, `cardPlayed`, a move to the graveyard …),
-// else as "a unit" or "a card". A `trapFired` sentinel (R763, R2734000) reads as "a face-down trap",
-// never as "hidden".
-// A play names the targets its announce declared (`announcedAims`), and a hit off combat the card that
-// dealt it, each only where the view names it: a face-down set, a target or source the view hid, and an
-// announce that has left the window leave the line as it read without them (R97, R227).
-// `cardResolved` gets no line: it is bookkeeping, and "… finished resolving" read like a debug
-// trace between the lines that matter.
-//
-// A line about a card can be looked at: hovering it with a mouse opens that card's face beside the
-// log, and a click, a tap, a long-press or Enter opens it in a sheet (the cards module's inspect,
-// one overlay at a time). The card is the one the line names, found exactly as the name was, so a
-// line never opens a card it does not print: a sentinel, a hero, a draw or a line that says "a
-// unit" opens nothing. What opens is the card in play (faces.ts, SPEC §10.10): as it stands where
-// the view still lists it, else its definition as the game shows it; and a match-made card (a
-// Fuse's, R243) is named and drawn from the definition the view carries for it. A card the view
-// says is Chinese (ME-CN, R1301) is named by its Chinese name, and a translation itself gets no line:
-// the card's words changed language, and the board already shows it.
-//
-// The window is not the whole game: the lines whose events have left it come from
-// `useLogHistory.ts` (R745), kept as they read when they arrived, with a definition's face and no
-// instance id. A divider stands before each turn's first line.
+// Every line is built from the event payload plus public board data, and card identities that are
+// only in the view by accident are not printed: `drawn`, `addedToHand` and `shuffledIn` carry a
+// `defId` for the animation layer, so this log says "drew a card", and a redaction slip upstream
+// cannot turn into a leak on screen. A line never prints an id, and a `trapFired` sentinel (R763,
+// R2734000) reads as "a face-down trap". `cardResolved` gets no line: it is bookkeeping.
 
 import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
 
@@ -52,7 +29,6 @@ import { CHAOS_TEXT } from "./showcase/constants.ts";
 import { useLogHistory, type KeptLine, type LoggedLine } from "./useLogHistory.ts";
 
 
-/** What a player is asked for, by prompt kind, in the log's words. */
 const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   discover: "a card to Discover",
   target: "a target",
@@ -73,7 +49,6 @@ const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   market: "a deal at the night market",
 };
 
-/** A number's key in words: a declared number's camelCase split ("drawLimit" is "draw limit"). */
 function keyWords(key: string): string {
   return key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }
@@ -94,9 +69,8 @@ type Naming = {
   /** A card's printed name, or its def id when no catalog is loaded (see catalog.ts). */
   def: (defId: string) => string;
   /**
-   * A card an event names by both its instance and its definition: as `def` names it, but in Chinese
-   * while the view shows that instance in Chinese (R1301), so the lines about one card name it as the
-   * board does, whichever field the event carries (#552).
+   * As `def` names it, but in Chinese while the view shows that instance in Chinese (R1301), so the
+   * lines about one card name it as the board does, whichever field the event carries (#552).
    */
   card: (instanceId: string, defId: string) => string;
   /** A card by name where it is public, else "a unit" (or `unknown`). Heroes read as a seat's. */
@@ -104,7 +78,6 @@ type Naming = {
   /** A card as `instance` names it, a hero as a seat's; null where nothing public names it (R97: never the sentinel). */
   known: (instanceId: string) => string | null;
   seat: (player: PlayerId) => string;
-  /** "your" or "the opponent's". */
   whose: (player: PlayerId) => string;
 };
 
@@ -133,10 +106,9 @@ function zoneLabel(row: string, lane: number): string {
 }
 
 /**
- * Instance → definition, from the window's events about public zones (a card played, summoned,
- * destroyed or sent to a pile), so a unit that has since left the board is still named. The
- * hand's own events (`drawn`, `addedToHand`, `shuffledIn`) are not read, as above, and neither is
- * the sentinel.
+ * Instance → definition, from the window's events about public zones, so a unit that has since left
+ * the board is still named. The hand's own events (`drawn`, `addedToHand`, `shuffledIn`) are not read,
+ * and neither is the sentinel.
  */
 function publicNames(events: readonly GameEvent[]): Map<string, string> {
   const names = new Map<string, string>();
@@ -173,15 +145,13 @@ function publicNames(events: readonly GameEvent[]): Map<string, string> {
   return names;
 }
 
-/** Each `cardPlayed` in a window → the targets its announce declared (B5 E1): see `announcedAims`. */
 type Aims = ReadonlyMap<GameEvent, readonly string[]>;
 
 /**
- * Each play in the window → what its `cardAnnounced` declared: the latest announce of the same instance
- * before it, keyed by the `cardPlayed` event itself so a card played twice in one window pairs each play
- * with its own. A face-down set (the other seat reads its targets as the sentinel, and its play takes a
- * fresh id, R97, R227) and a hidden announce pair with nothing, nor does a play whose announce has left
- * the window: each reads as it always did.
+ * Keyed by the `cardPlayed` event itself so a card played twice in one window pairs each play with its
+ * own. A face-down set (the other seat reads its targets as the sentinel, and its play takes a fresh
+ * id, R97, R227) and a hidden announce pair with nothing, nor does a play whose announce has left the
+ * window.
  */
 function announcedAims(events: readonly GameEvent[]): Aims {
   const declared = new Map<string, readonly string[]>();
@@ -218,7 +188,6 @@ function defIdOfInstance(view: PlayerView, instanceId: string): string | undefin
   return undefined;
 }
 
-/** R404: an open quest's words, off the quest line its card's view carries, or null once it is not open. */
 function questText(view: PlayerView, instanceId: string, quest: string): string | null {
   return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
 }
@@ -233,7 +202,6 @@ const OVERFLOW_LINE: Readonly<Record<LibraryOverflowOutcome, string>> = {
   ceased: "{whose} deck is full: {card} ceased to exist",
 };
 
-/** A counter's line, by the counter. */
 const COUNTER_LINE: Readonly<Record<Extract<GameEvent, { type: "counterChanged" }>["counter"], string>> = {
   plague: "{target} plague counters: {value}",
   grade: "{target} grade counters: {value}",
@@ -309,7 +277,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       // R864: revealed, the choice is public history.
       return capitalised(t("{whose} secret was {choice}", { whose: name.whose(event.player), choice: t(SECRET_WORDS[event.choice]) }));
     case "predicted":
-      // R864: the guess and what it did to the reward.
       return t("{seat} guessed {guess}: {outcome}", {
         seat: name.seat(event.player),
         guess: t(SECRET_WORDS[event.guess]),
@@ -342,7 +309,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       return capitalised(t("{whose} hand is full: {card} burned", { whose: name.whose(event.owner), card: named(event.defId) }));
     case "fatigue":
       // R315: public, and it names no card. The hit is the `damage` line after it.
-      // R373: the rules' library reads as the Deck.
       return capitalised(t("{whose} deck is empty: fatigue {count}", { whose: name.whose(event.player), count: event.count }));
     case "libraryOverflow":
       // R316: the card a full library turned away, named only where the viewer reads it.
@@ -459,7 +425,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       const why = t(resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason, event.winner));
       return event.winner === "draw" ? t("Draw. {why}", { why }) : t("{seat} won. {why}", { seat: seatLabel(view, event.winner), why });
     }
-    // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+    // Patch v0.2.0 (docs/classic-sets.md B3, B5)
     case "cardAnnounced":
       // The play's own line is its `cardPlayed`, which names what this declared (`announcedAims`); a countered one has its `countered` line.
       return null;
@@ -495,7 +461,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
     case "numberChanged": {
       const card = namedCard(event.instanceId, event.defId);
       if (event.key === HIDDEN_CARD) return capitalised(t("{card} changed", { card }));
-      // A cost is a price (R432); any other key is a word, a declared number's camelCase split ("draw limit").
+      // A cost is a price (R432); any other key is a word.
       return capitalised(
         event.key === "cost"
           ? t("{card} now costs ({value})", { card, value: event.value })
@@ -586,7 +552,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       // R1852003: the Starship launched under the name it took.
       return capitalised(t("{whose} Starship launched as {name}", { whose: name.whose(event.player), name: event.name }));
     case "voteCast":
-      // R1843000: a card voted against a player; the tally counts toward `needed`.
       return capitalised(
         t("{card} voted to remove {who} ({votes} of {needed})", {
           card: name.card(event.instanceId, event.defId),
@@ -620,7 +585,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });
     case "fengShui":
-      // R983: whose play was judged, and how.
       return capitalised(t("{whose} play was {outcome}", { whose: name.whose(event.player), outcome: t(FENG_SHUI_LINE[event.outcome]) }));
     case "marked":
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
@@ -634,7 +598,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
   }
 }
 
-/** The words a view's lines use for cards and seats, naming a card from the board, else from `remembered`. */
 function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
   const def = (defId: string): string => {
     if (defId === HIDDEN_CARD) return t("a hidden card");
@@ -650,7 +613,7 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
     if (defId === undefined) return null;
     const info = lookup?.(defId, false);
     const english = info?.name ?? defId;
-    // R1301, R711000: a card the view shows in Chinese is named in Chinese.
+    // ME-CN, R1301, R711000: a card the view shows in Chinese is named in Chinese.
     return drawnInChinese(cardInView(view, instanceId)?.chinese === true) ? chineseName(defId, english, info?.def) : english;
   };
   return {
@@ -693,21 +656,17 @@ const STOLEN_LINE: Readonly<Record<Extract<GameEvent, { type: "stolen" }>["zone"
   field: "{seat} stole {card} from {whose} side of the field",
 };
 
-/** What a redirect moved. */
 const REDIRECTED: Readonly<Record<Extract<GameEvent, { type: "redirected" }>["what"], string>> = {
   damage: "a hit",
   attack: "an attack",
   target: "a target",
 };
 
-/** The card a line is about: the one it names, by definition, and the face it wears where the view shows it. */
 type LineCard = { defId: string; radiant: boolean; instanceId?: string };
 
 /**
- * The card a line is about, or null when it names none: the one `describe` names (for a Transform,
- * the card it became; for an attack, the attacker). It reads the same sources `Naming` does — the
- * event's own `defId`, else the instance on the board or in the window's public events — so it can
- * never open a card the line does not print (R97: the sentinel is none).
+ * The card `describe` names, or null: it reads the same sources `Naming` does, so it can never open a
+ * card the line does not print (R97: the sentinel is none).
  */
 function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<string, string>): LineCard | null {
   const face = (instanceId: string | undefined): boolean =>
@@ -738,7 +697,6 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
       return card === null ? null : { ...card, radiant: true };
     }
     case "deradianted": {
-      // MD-D6: the mirror of `radiantSet`'s card.
       const card = event.instanceId === HIDDEN_CARD ? null : byDef(event.defId, event.instanceId);
       return card === null ? null : { ...card, radiant: false };
     }
@@ -836,9 +794,8 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
   // R745: the lines that have left the window, and the key each window event keeps as it slides.
   const history = useLogHistory(view, keptLineFor(view, lookup));
 
-  // The newest line is the one worth reading, so a log taller than its box keeps its end in view
-  // (polish task 7: on a desktop the log is a fixed box beside your seat and hand). A log that was
-  // hidden (the phone's popover) has no height to scroll, so it scrolls again as it opens.
+  // The newest line is the one worth reading, so a log taller than its box keeps its end in view. A
+  // log that was hidden (the phone's popover) has no height to scroll, so it scrolls again as it opens.
   const listRef = useRef<HTMLOListElement>(null);
   useLayoutEffect(() => {
     const list = listRef.current;

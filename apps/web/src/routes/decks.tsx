@@ -1,11 +1,6 @@
-// `/decks`: §9.4 workshop gate and I/O (R250–R256, R341, R2100000's history and restore).
-// Redirecting pending accounts is UX; active-only endpoints enforce the gate.
-// Reads run once per profile, and again on Try again; writes use the current token only while it remains that profile (R194, R256).
-// The collection is optional: without L5 quantities, ownership is unknown.
-// R915005: the account's custom cards join the catalog the workshop reads (set `Custom`, drawn from
-// their frames by `customDef`) and are owned once each; the validator's L7 marks a deck naming one.
-// The catalog is the one the client ships (game/currentCatalog.ts, §9.4); only the decks and the collection are read.
-// R1827000: and, while ownership decides, the account's cosmetics, for the portraits its picker offers.
+// `/decks`: §9.4 workshop gate and I/O (R250–R256, R341, R2100000's history and restore). Redirecting
+// pending accounts is UX; active-only endpoints enforce the gate. Writes use the current token only while
+// it remains that profile (R194, R256). Without the collection's L5 quantities, ownership is unknown.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -51,7 +46,6 @@ type Loaded = {
   catalog: CatalogSnapshot;
   collection: Collection | null;
   decks: DecksResponse;
-  /** R1827000: the portraits the picker offers. */
   portraits: PortraitOwnership;
 };
 
@@ -68,9 +62,8 @@ function withCustom(data: Loaded, customDefs: CardDefs): { catalog: CatalogSnaps
 }
 
 /**
- * R2125000: what the last visit read, or null on a first visit (no decks kept). The workshop opens on it
- * at once; the answer that lands behind it replaces it. A collection or cosmetics list not kept reads as
- * a failed read of it does: ownership unknown, only the starters' portraits.
+ * R2125000: what the last visit read, or null on a first visit. A collection or cosmetics list not kept
+ * reads as a failed read of it does: ownership unknown, only the starters' portraits.
  */
 function keptLoaded(token: string, portraitsGated: boolean): Loaded | null {
   const decks = cachedRead<DecksResponse>(token, keptPaths.decks);
@@ -85,7 +78,6 @@ function keptLoaded(token: string, portraitsGated: boolean): Loaded | null {
   };
 }
 
-/** Whether the server's decks and trios are what the workshop already holds. */
 function sameDecks(a: DecksResponse, b: DecksResponse): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -96,7 +88,7 @@ type Screen =
   /** `generation` counts the workshop's reopenings (R2125000): its store is made once, from the decks it opens on. */
   | { kind: "ready"; profileId: string; data: Loaded; generation: number };
 
-/** `settings` is off on the Loading… screens: the workshop replaces them with its own gear, so a dialog opened from theirs would close when the decks arrive (#1524). */
+/** `settings` is off on the Loading… screens: a dialog opened from their gear would close when the decks arrive (#1524). */
 function Shell({ children, settings = true }: { children: ReactNode; settings?: boolean }) {
   return (
     <div className="app-shell">
@@ -108,9 +100,8 @@ function Shell({ children, settings = true }: { children: ReactNode; settings?: 
 }
 
 /**
- * `portraitsGated`: whether ownership decides which portraits the picker offers (R1827000). It
- * decides here as it does for full art (`FULL_ART_GATED`, R1310004): once the economy is live in a
- * production build. Elsewhere every portrait is offered and nothing is read.
+ * `portraitsGated`: whether ownership decides the picker's portraits (R1827000), as for full art
+ * (`FULL_ART_GATED`, R1310004); otherwise every portrait is offered and nothing is read.
  */
 export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portraitsGated?: boolean } = {}) {
   const account = useAccount();
@@ -166,7 +157,6 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
     if (!hasToken || profileId === null || blocked) return;
     const readToken = sessionRef.current.token ?? "";
     let canceled = false;
-    // R2125000: a revisit opens on the decks the last visit kept and reads again behind them.
     const kept = keptLoaded(readToken, portraitsGated);
     setScreen(kept === null ? { kind: "loading" } : { kind: "ready", profileId, data: kept, generation: 0 });
 
@@ -176,8 +166,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
         (response) => response,
         () => null,
       ),
-      // R1827000: a failed read offers only the starters (and each deck's own pick), as full art
-      // shows only the defaults and starters until its read answers.
+      // R1827000: a failed read offers only the starters (and each deck's own pick).
       portraitsGated
         ? getOwnedCosmetics(readToken).then(
             (owned) => ownedPortraits(owned.account),
@@ -196,7 +185,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
             decks,
             portraits,
           },
-          // The workshop reopens on the server's decks only when they are not the ones it holds.
+          // The workshop reopens only on decks that differ from the ones it holds.
           generation:
             previous.kind === "ready"
               ? sameDecks(previous.data.decks, decks)

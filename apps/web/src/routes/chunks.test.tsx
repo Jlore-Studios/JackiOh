@@ -1,9 +1,6 @@
-// R2116000, issue #2116 (part of #2036): a screen's code starts loading when the player shows
-// intent toward a control that leads there, once per route per page load, with the engine for a
-// game's screen; Save-Data turns it all off and a production build has no dev-only chunk.
-//
-// `wasm/index.ts` is mocked the way `routes/engine-gate.test.tsx` does, so the setup file's real
-// module stays underneath.
+// R2116000 (#2116, #2036): a screen's code starts loading on intent toward a control leading there,
+// once per route per page load, with the engine for a game's screen. `wasm/index.ts` is mocked as
+// `routes/engine-gate.test.tsx` does, so the setup file's real module stays underneath.
 
 import { Suspense, type ReactElement, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

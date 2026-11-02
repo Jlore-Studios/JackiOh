@@ -1,6 +1,4 @@
-// The code view's syntax highlighting (#920): a card-kit script cut into tokens the view colors.
-// It reads Luau's lexical shape only (comments, strings, numbers, keywords, names) and the kit's own
-// marks (`c:verb`, `n.key`, `Card`), never what a script means: the Luau module's check judges it.
+// The code view's syntax highlighting (#920): Luau's lexical shape and the kit's marks, never meaning.
 
 export type TokenKind = "comment" | "string" | "number" | "keyword" | "kit" | "param" | "name" | "punct" | "space";
 
@@ -31,7 +29,7 @@ const KEYWORDS = new Set([
   "while",
 ]);
 
-/** The patterns, tried in order at each position; the first to match there wins. */
+/** Tried in order at each position; the first to match there wins. */
 const RULES: readonly (readonly [TokenKind, RegExp])[] = [
   ["comment", /--\[(=*)\[[\s\S]*?(?:\]\1\]|$)/y],
   ["comment", /--[^\n]*/y],

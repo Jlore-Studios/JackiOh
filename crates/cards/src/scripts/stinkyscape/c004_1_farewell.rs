@@ -8,8 +8,7 @@
 //! a Dormant card stays, since no effect reaches it (R1839000). Then `exile_matching` over each
 //! graveyard, its caster's first; the Radiant face then each hand and library the same way, so each
 //! player's next draw is a fatigue draw (R1870001). An exile fires no Death (§6.2), and a unit token
-//! ceases to exist (R11). Farewell is in the resolving zone throughout, so it lands in its owner's
-//! graveyard after it (§3.2).
+//! ceases to exist (R11).
 
 use jackioh_engine::effects::{exile_all_piles, exile_matching};
 use jackioh_engine::prelude::*;
@@ -41,10 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #4.1 Farewell — SPEC §8.10 row S 4.1, BUILD M12 row S 4.1: "exiles every Unit, backrow card and
-// face-down Trap on both sides, a pile whole, firing no Death, then every card in both graveyards; a
-// Dormant card stays; Farewell is in its owner's graveyard after it; radiant both hands and both decks
-// too, each player's next draw a fatigue draw" (R1870001).
+// S #4.1 Farewell — SPEC §8.10 row S 4.1, BUILD M12 row S 4.1 (R1870001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -65,7 +61,6 @@ mod tests {
         json!({ "def": FAREWELL, "radiant": radiant })
     }
 
-    /// p1 casts Farewell into two full boards, graveyards, hands and decks.
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "farewell",
@@ -158,7 +153,6 @@ mod tests {
             for id in &buried {
                 s.expect_in_zone(id.as_str(), "exile");
             }
-            // The base face leaves both hands and both decks alone.
             assert_eq!(s.hand(P1).len(), 1);
             assert_eq!(s.hand(P2).len(), 1);
             assert_eq!(s.pile(P1, "library").len(), 2);

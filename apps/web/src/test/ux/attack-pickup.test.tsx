@@ -1,5 +1,5 @@
-// R655: picking up your own attacker plays its `attack` hook. This pointer-level `<Game/>` suite
-// verifies `playPickup` wiring only; audio never changes rules or sends an action (CLAUDE.md rule 7).
+// R655: picking up your own attacker plays its `attack` hook. This suite checks the `playPickup`
+// wiring only; audio never changes rules or sends an action (CLAUDE.md rule 7).
 
 import type { ActionBody, ActivationView, PlayerView, Selection } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -13,8 +13,6 @@ import Game from "../../game/Game.tsx";
 import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, emptySide, unit } from "../fixtures.ts";
-
-// Fixture.
 
 /** Attack-hook fixture ("rumble"). */
 const ROCK = "core-066";
@@ -73,13 +71,9 @@ function renderGame() {
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
 
-// Audio engine.
-
 let engine: FakeAudioEngine;
 
 const pickups = (): string[] => engine.playPickup.mock.calls.map((call) => call[0]);
-
-// Pointer.
 
 const POINTER = 1;
 const START = { x: 200, y: 400 };
@@ -126,8 +120,6 @@ afterEach(() => {
   __resetSettingsForTests();
   resetAudioSettingsForTests();
 });
-
-// Drag.
 
 describe("R655 a drag that lifts your attacker plays its pick-up, once per lift", () => {
   it("R655 a press on your attacker plays nothing until it travels the threshold, then plays once with the Unit's defId and sends nothing", () => {
@@ -235,8 +227,6 @@ describe("R655 a drag that lifts your attacker plays its pick-up, once per lift"
   });
 });
 
-// What never plays.
-
 describe("R655 only a Unit `legal` lets attack is picked up", () => {
   it("R655 your Unit with no legal attack plays nothing, dragged or clicked, though its card has an attack hook", () => {
     const { onAction } = renderGame();
@@ -317,8 +307,6 @@ describe("R655 only a Unit `legal` lets attack is picked up", () => {
     expect(pickups()).toEqual([ROCK]);
   });
 });
-
-// Click-click.
 
 describe("R655 click-click: choosing your attacker is a pick-up", () => {
   it("R655 clicking your attacker plays once, and clicking its target attacks, plays nothing more and sends exactly the attack", () => {

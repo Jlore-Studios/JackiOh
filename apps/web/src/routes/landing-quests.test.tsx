@@ -94,7 +94,7 @@ describe("R2035000 the landing's quests bookmark", () => {
     expect(panel).toHaveAttribute("hidden");
     expect(screen.queryByTestId(questsTestid.quest)).toBeNull();
 
-    // The three doors are unchanged: still Play, Collection and Shop, and nothing else.
+    // The three doors are unchanged.
     const doors = [...ctas.querySelectorAll("a.landing-cta")];
     expect(doors.map((door) => door.getAttribute("data-testid"))).toEqual([
       landingTestid.play,
@@ -169,7 +169,6 @@ describe("R2035000 the landing's quests bookmark", () => {
       expect(screen.queryByTestId(questsTestid.quest)).toBeNull();
     };
 
-    // A second click.
     openPanel();
     fireEvent.click(bookmark);
     rollsUp();
@@ -181,7 +180,6 @@ describe("R2035000 the landing's quests bookmark", () => {
     rollsUp();
     expect(document.activeElement).toBe(bookmark);
 
-    // A press outside.
     openPanel();
     fireEvent.pointerDown(document.body);
     rollsUp();
@@ -320,7 +318,6 @@ describe("R2035000 the landing's quests bookmark", () => {
     const server = serve([refusal(503, "unavailable", "the server refused"), book()]);
     render(<LandingRoute />);
 
-    // A stubbed round trip can outrun the 1 s default under load, as on the landing's own tests.
     fireEvent.click(await screen.findByTestId(landingTestid.questsBookmark, undefined, SLOW));
     expect(await screen.findByTestId(questsTestid.error, undefined, SLOW)).toHaveTextContent("the server refused");
     expect(screen.queryByTestId(landingTestid.questsCount)).toBeNull();

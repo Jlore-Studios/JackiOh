@@ -120,20 +120,20 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Can't attack" },
   { kind: "Armor", n: 2 },
   { kind: "Lucky", n: 3 },
-  // Patch v0.2.0's kinds (R383, R385, E6, E35), so the unit still carries every keyword there is.
+  // R383, R385, E6, E35's kinds, so the unit still carries every keyword there is.
   { kind: "Animated" },
   { kind: "Animated on your turn" },
   { kind: "Brittle", n: 2 },
   { kind: "Spell Damage", n: 1 },
   { kind: "Immune to Spells" },
-  // Patch v0.2.X's keyword rules (R636, R637).
+  // R636, R637.
   { kind: "Windfury" },
   { kind: "Temporary" },
-  // Patch v0.2.4's keyword (R49).
+  // R49.
   { kind: "Deft" },
-  // R1220's keyword.
+  // R1220.
   { kind: "Untributable" },
-  // Meditative batch 16's keyword (R1086).
+  // R1086.
   { kind: "Equip" },
   // #783's keywords (R783000, R783002, R783004, R783010, R783012).
   { kind: "Ranged" },
@@ -141,7 +141,7 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Cloaked" },
   { kind: "Crater" },
   { kind: "Flashback" },
-  // Issue #1838's keyword (R1838000).
+  // #1838's keyword (R1838000).
   { kind: "Tradable" },
   // Stinkyscape's Starship keywords (R1852000, R1852003).
   { kind: "Starship Piece" },
@@ -190,10 +190,9 @@ export const heroPower: HeroPowerView = {
 };
 
 /**
- * The M5-T1 acceptance fixture: a full board — 10 units, 10 backrow cards, a Stack pile with
- * cards buried under it, every keyword on show, radiant cards, plague and grade counters, locks,
- * a reserved zone (R64), a card mid-resolution, a hero power, and an opponent hand that is a
- * count only (SPEC §10.8).
+ * The M5-T1 acceptance fixture: a full board — 10 units, 10 backrow cards, a Stack pile, every keyword,
+ * radiant cards, plague and grade counters, locks, a reserved zone (R64), a card mid-resolution, a hero
+ * power, and an opponent hand that is a count only (SPEC §10.8).
  */
 export function fullBoardView(over: Partial<PlayerView> = {}): PlayerView {
   resetIds();
@@ -261,11 +260,8 @@ export function fullBoardView(over: Partial<PlayerView> = {}): PlayerView {
       graveyard: [card({ defId: "core-009" })],
       exile: [],
       units: enemyUnits.map((u) => u),
-      // The opponent's traps are face-down; their Field Spells are public (SPEC §10.8). Lane 5 used
-      // to be `null`, which left the fixture with 9 backrow cards against the 10 BUILD M5-T1 asks
-      // for — and no empty field zone is lost by filling it: `baseView`/`emptySide` are all-null
-      // boards, and `routes/match.test.tsx` renders one of them through `Game` into this same
-      // `Board`.
+      // The opponent's traps are face-down; their Field Spells are public (SPEC §10.8). All five lanes
+      // are filled for the 10 backrow cards BUILD M5-T1 asks for; `baseView`/`emptySide` are all-null.
       backrow: [
         faceDownBackrow,
         faceDownBackrow,
@@ -298,9 +294,7 @@ export function withEvents(view: PlayerView, events: GameEvent[]): PlayerView {
   return { ...view, events };
 }
 
-// ---------------------------------------------------------------------------------------------
 // A co-op replay's steps (R1242000): the seat's `DuosView`s, drawn from the server's answer alone
-// ---------------------------------------------------------------------------------------------
 
 /** One team's life as a co-op replay shows it: its pool and both seats' own HP. */
 export function duosTeamView(team: Team): DuosTeamView {
@@ -333,9 +327,7 @@ export function duosView(round: number, result: DuosView["result"] = null): Duos
   };
 }
 
-// ---------------------------------------------------------------------------------------------
 // A match-made definition, as `PlayerView.defs` carries one (R243)
-// ---------------------------------------------------------------------------------------------
 
 const RARITY_ORDER: readonly CardDef["rarity"][] = ["Token", "Common", "Rare", "Epic", "Legendary", "Mythic"];
 
@@ -359,12 +351,9 @@ function fusedFaceOf(faces: readonly CardFace[]): CardFace {
 }
 
 /**
- * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179): the ingredients'
- * names joined by " + ", their tags united (the Token tag only when every ingredient is a token, as
- * `token` is: R1177000), the rarest rarity, their costs summed and capped at 4,
- * and each face their stats summed, keywords united and texts joined a line per ingredient. The id
- * is `t-<n>:` and the ingredients' ids, and it is its own index. Fixture only: the engine's builder
- * is the one the game runs, and hidden-information.test.ts pins what the view carries of it.
+ * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179; the Token tag only when every
+ * ingredient is a token, R1177000). The game runs the engine's builder; hidden-information.test.ts pins
+ * what the view carries of it.
  */
 export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
   const first = ingredients[0];

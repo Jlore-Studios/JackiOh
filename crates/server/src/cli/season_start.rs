@@ -25,13 +25,11 @@ use crate::api::ranked::{OpenedSeason, SeasonDeps, open_season_in_tx};
 use crate::db::pg::assert_postgres_url;
 use crate::db::store::Db;
 
-/// The one flag.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct SeasonStartOptions {
     pub dry_run: bool,
 }
 
-/// The one flag. Anything else is a usage error, named in the refusal.
 pub fn parse_season_start_args(argv: &[String]) -> anyhow::Result<SeasonStartOptions> {
     let mut dry_run = false;
     for arg in argv {
@@ -47,9 +45,7 @@ pub fn parse_season_start_args(argv: &[String]) -> anyhow::Result<SeasonStartOpt
     Ok(SeasonStartOptions { dry_run })
 }
 
-/// R609's season open, through the same `open_season_in_tx` the boot path's `open_season` calls. On
-/// a dry run the report is read out of the transaction and then the transaction is thrown away, so
-/// the answer describes exactly what a real run would have done and nothing it did survives.
+/// R609's season open, through the same `open_season_in_tx` the boot path's `open_season` calls.
 ///
 /// A dry run drops the transaction without `commit`, which rolls Postgres back and restores a
 /// fake's snapshot (`db::fake::FakeTx`).

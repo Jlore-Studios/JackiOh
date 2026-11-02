@@ -12,7 +12,6 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-092";
 
 pub fn script() -> CardScripts {
-    // Both faces catch the same way; the Radiant face's Armor is catalog data beside it.
     let base = Script {
         replacements: vec![ReplacementDef {
             id: "92-lethal-guard".to_string(),
@@ -32,12 +31,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #92 Unan — SPEC §8.8 row 92, BUILD M10 row M 92: "§4.4 step 4a opens for Units as well as heroes,
-// so a fatal hit on a friendly ally goes to Unan through Unan's own Armor, each Unan catching a
-// given hit once (Covers R1204); the Radiant face is 6/26 with Armor 6".
-//
-// The guard is proved in `crates/engine/tests/rules/mb22.rs` (R1204); these tests prove the card's
-// own faces carry it.
+// M #92 Unan — SPEC §8.8 row 92, BUILD M10 row M 92. The guard is proved in
+// `crates/engine/tests/rules/mb22.rs` (R1204); these tests prove the card's own faces carry it.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,9 +78,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [STRIKER] },
                 }));
                 s.end_turn();
-                // 9 damage on the 3-health ally is lethal …
                 s.attack(STRIKER, ALLY);
-                // … so Unan takes it instead, through its Armor 3: 9 − 3.
                 assert_eq!(s.stats(ALLY).health, 3, "the ally is untouched");
                 assert_eq!(s.stats(UNAN).health, 13 - 6);
                 assert!(
@@ -104,7 +97,6 @@ mod tests {
                     "p2": { "hand": [BURN, FILLER] },
                 }));
                 s.end_turn();
-                // 2 damage on the 3-health ally is survivable: no window opens.
                 let ally = s.card(ALLY).id.clone();
                 s.play(
                     BURN,
@@ -121,7 +113,6 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [UNAN, STRIKER] },
                     "p2": { "hand": [FILLER], "field": [ALLY] },
                 }));
-                // 9 damage on the enemy 3-health ally is lethal, but it is no friendly ally.
                 s.attack(STRIKER, ALLY);
                 s.expect_in_zone(ALLY, "graveyard");
                 assert_eq!(s.stats(UNAN).health, 13);
@@ -132,7 +123,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN] },
-                    // The Radiant face, which leaves the turn going (patch v0.3.10).
+                    // The Radiant face, which leaves the turn going.
                     "p2": { "hand": [{ "def": VITAL_KILL, "radiant": true }, FILLER], "field": [HEAVY] },
                 }));
                 s.end_turn();
@@ -140,7 +131,6 @@ mod tests {
                     VITAL_KILL,
                     json!({ "targets": [{ "pick": "hero", "player": "p1" }] }),
                 );
-                // 14 damage on the 13-health hero is lethal, so Unan takes it through Armor 3.
                 s.attack(HEAVY, "hero");
                 s.expect_health(P1, 13);
                 assert_eq!(s.stats(UNAN).health, 13 - 11);
@@ -167,7 +157,6 @@ mod tests {
                 }));
                 s.end_turn();
                 s.attack(STRIKER, GHOST);
-                // The Shield takes the 9: nothing lethal, nothing caught.
                 assert_eq!(s.card(GHOST).damage, 0);
                 assert!(
                     !s.stats(GHOST)
@@ -188,7 +177,6 @@ mod tests {
                 }));
                 s.end_turn();
                 s.attack(STRIKER, BASTION);
-                // The Indestructible Unit cannot die of it: not caught, and it stands.
                 s.expect_in_zone(BASTION, "field");
                 assert_eq!(s.stats(UNAN).health, 13);
                 assert_eq!(redirects(&s), 0);
@@ -220,8 +208,7 @@ mod tests {
                 let second = s.unit(P1, 2).unwrap().id;
                 s.end_turn();
                 // The ally's lethal 9 would reach the first Unan as 6, lethal to its 3 left, so the
-                // second catches the hit: a new instance of the 9 through its own Armor 3, 6. Each
-                // Unan catches the hit once.
+                // second catches the hit: a new instance of the 9 through its own Armor 3, 6.
                 s.attack(STRIKER, ALLY);
                 assert_eq!(redirects(&s), 2, "two redirects, then the cap: each Unan once");
                 assert_eq!(s.card(ALLY).damage, 0);
@@ -232,8 +219,7 @@ mod tests {
 
             #[test]
             fn r1204_lose_health_is_not_caught() {
-                // Rotten Grape: "Lose 5 health." At 5 health it is lethal, and no
-                // damage for Unan to catch.
+                // At 5 health Rotten Grape's loss is lethal, and no damage for Unan to catch.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "health": 5, "hand": [GRAPE, FILLER], "field": [UNAN] },
@@ -263,8 +249,7 @@ mod tests {
 
             #[test]
             fn r1204_each_hit_of_a_sweep_is_judged_alone() {
-                // Whirlwind deals 1 to every Unit: lethal to the 1/1 Scarab alone, survivable
-                // for the 4/4. Only the Scarab's hit is caught.
+                // Whirlwind deals 1 to every Unit: lethal to the 1/1 Scarab alone, survivable for the 4/4.
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, SCARAB, VANILLA] },

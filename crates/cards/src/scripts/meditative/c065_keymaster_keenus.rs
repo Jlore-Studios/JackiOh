@@ -55,11 +55,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #65 Keymaster Keenus — SPEC §8.8 row 65, BUILD M10 row M 65: "Prints Equip and an Aura that has
-// 5 random combat keywords (Radiant 10, a declared number): drawn from the combat keyword pool as it
-// arrives on the field, none repeated and none it has (never Equip, nor a keyword outside the pool),
-// replayed by the seed, kept until it leaves the field and taken by a Vanilla; played as Equip onto your
-// Unit it fuses in, and the host draws its own (R1086, R781004); radiant 2/2 and 10".
+// M #65 Keymaster Keenus — SPEC §8.8 row 65, BUILD M10 row M 65.
 #[cfg(test)]
 mod tests {
     use super::*;

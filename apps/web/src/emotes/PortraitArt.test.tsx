@@ -1,8 +1,6 @@
 // R1332's vivid portraits (issue #544): each of the six has a look of its own, drawn as layers
-// over the card's oval — a lit ground, a breathing light, drifting motes and a rim — the same on
-// the board, in the hero's inspect view and in the deck builder's picker, deterministic, and
-// stilled by Reduce Motion. The colors and the motes are `portraitLook.ts`'s; the CSS is
-// `portrait.css`, read here as text the way `emotes.test.tsx` reads emotes.css.
+// over the card's oval the same wherever it draws, deterministic, and stilled by Reduce Motion.
+// The CSS is `portrait.css`, read here as text.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";

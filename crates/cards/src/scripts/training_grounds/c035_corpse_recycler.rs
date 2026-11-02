@@ -1,9 +1,8 @@
 //! TG #35 Corpse Recycler (SPEC §8.11 row 35). (3) Field Spell, Epic. "After a non-Token Unit dies,
 //! summon a Rush Token for its controller." (Radiant: a Radiant Rush Token.)
-//! A trigger on `destroyed`, as C+ #19.5 Bot Loser's: a Field Spell's trigger, so both players' Units
-//! answer it (R2199006). The event names who controlled the Unit as it died (R172), and the token goes
-//! to that player, in R64's leftmost open zone (the event carries no lane, R89); a full row summons
-//! nothing (§3.2). A Token's death gives nothing, so the Rush Token it makes never feeds it (§7).
+//! A trigger on `destroyed`, as C+ #19.5 Bot Loser's: a Field Spell's, so both players' Units answer it
+//! (R2199006). The token goes to the Unit's controller as it died (R172), in R64's leftmost open zone (the
+//! event carries no lane, R89), none on a full row (§3.2); a Token's death gives nothing (§7).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::summon;
@@ -46,8 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #35 Corpse Recycler — SPEC §8.11 row 35, BUILD M13 row TG 35. p1 holds it face-up in backrow
-// lane 1 and is active.
+// TG #35 Corpse Recycler — SPEC §8.11 row 35, BUILD M13 row TG 35.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -121,8 +119,7 @@ mod tests {
 
         #[test]
         fn r64_a_full_row_summons_nothing() {
-            // The Bigot tops a Stack pile in lane 1 (§3.2): as it dies the Vanilla beneath resumes there,
-            // so the row is still full when the token would come.
+            // The Bigot tops a Stack pile (§3.2): the Vanilla beneath resumes, so the row stays full.
             let mut s = board(
                 false,
                 json!({ "field": [VANILLA, { "def": BIGOT, "stack": true }, VANILLA, VANILLA, VANILLA, VANILLA] }),
@@ -151,8 +148,7 @@ mod tests {
             assert_eq!(tokens(&s, P1), 1);
             assert_eq!(tokens(&s, P2), 2);
 
-            // R68: the death triggers run in side then lane order, the active player's first: p1's
-            // lane-4 Vanilla, then p2's lane 1 and lane 2. Each token follows its own death's trigger.
+            // R68: death triggers run in side then lane order, the active player's first.
             let p1_vanilla = |e: &GameEvent| matches!(e, GameEvent::Destroyed { controller: P1, def_id, .. } if def_id == VANILLA);
             let deaths: Vec<(PlayerId, String)> = s
                 .events()

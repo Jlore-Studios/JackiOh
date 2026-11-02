@@ -2,19 +2,17 @@
 //
 // BUILD M5-T1 fixes the board's testids and `e2e/support/testids.ts` mirrors them; this file is the
 // builder's half of that contract. One deck is open at a time, so its elements carry no number.
-//
-// `data-legal="false"` is not a new word: `e2e/support/testids.ts` exports it as `ILLEGAL` for the
-// board's M5-T2 highlighting, and a pool card the open deck will not take is the same statement.
+// `data-legal="false"` is `e2e/support/testids.ts`'s `ILLEGAL` (the board's M5-T2 highlighting): a
+// pool card the open deck will not take is the same statement.
 
 import type { CardType, Rarity, Tag } from "@jackioh/shared";
 import type { LoadoutRule } from "@jackioh/validator";
 
 import type { CostBucket } from "./filters.ts";
 
-// The workshop: the screen, the save status, the rail of decks and trios
+// The workshop
 
-/** The workshop's root: the whole screen, whether a deck, a trio, the import or nothing is open.
- *  `data-view="list|editor"` says which half a phone shows. */
+/** The workshop's root; `data-view="list|editor"` says which half a phone shows. */
 export const WORKSHOP = "workshop";
 
 /** The save status line, always on screen: `data-state="saved|saving|offline|error"` (R256). */
@@ -49,7 +47,6 @@ export const DECK_PRACTICE_ONLY = "deck-practice-only";
  */
 export const DECK_PATCH_BADGE = "deck-patch-badge";
 
-/** R2097000's list of the cards the newest patch changed of a deck. */
 export const DECK_PATCH_CARDS = "deck-patch-cards";
 
 /** R2097000: one card the newest patch changed of a deck, `data-card` its id. */
@@ -122,10 +119,7 @@ export function deckDuplicateId(deckId: string): string {
   return `deck-duplicate-${deckId}`;
 }
 
-/**
- * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
- * `/practice?deck=saved:<n>` (`practiceDeckPath`), the deck picked and no game started.
- */
+/** #1991: "Practice with this deck", on a complete deck while the workshop is saved. */
 export const DECK_TO_PRACTICE = "deck-to-practice";
 
 /**
@@ -285,11 +279,9 @@ export const TRIO_IMPORT_ERROR = "trio-import-error";
 
 // Browse: filters, sort, the pool grid and its inspect control (docs/polish/6-cards.md, Surface D).
 // `e2e/support/testids.ts` block A14 mirrors these name for name.
-//
 // No new name starts with `card-` or `hand-card-`: `cy.fieldCardByName` and `cy.handCardByName`
 // select on those prefixes, and a new id carrying one would hijack them.
 
-/** Lower-case, every run of characters outside `[a-z0-9]` becomes one "-", trimmed of "-". */
 export function slugOf(value: string): string {
   return value
     .toLowerCase()
@@ -337,7 +329,6 @@ export const DB_EMPTY = "db-empty";
 /** The win-rate sort's notice over the pool, `data-state="loading|failed"` (useCardWinRates.ts). */
 export const DB_WINRATE_NOTICE = "db-winrate-notice";
 
-/** The notice's retry, shown after a failed fetch. */
 export const DB_WINRATE_RETRY = "db-winrate-retry";
 
 /** The card pool, and one entry per card in it: `card-pool-<id>` carries `data-legal`,

@@ -1,7 +1,6 @@
-//! Fixture cards for a kill credited to another unit (R42, R412) and for `isCastOnDraw` (R58),
-//! shaped like Classic+ #19.2 Jungle Loser, #19.5 Bot Loser and #26 Tommy Tempo. The engine never
-//! imports `crates/cards` (CLAUDE.md). Ids `kc-…`, indexed from 5800 so they collide with no other
-//! fixture file.
+//! Fixture cards for a kill credited to another unit (R42, R412) and for `is_cast_on_draw` (R58),
+//! shaped like Classic+ #19.2 Jungle Loser, #19.5 Bot Loser and #26 Tommy Tempo, without `crates/cards`.
+//! Ids `kc-…`, indexed from 5800 so they collide with no other fixture file.
 
 #![allow(non_upper_case_globals)]
 
@@ -155,7 +154,7 @@ pub static KC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     ])
 });
 
-/// Adds these cards to whatever catalog and scripts are registered (after the base fixture's setup).
+/// Adds these cards to the registered catalog and scripts (after the base fixture's setup).
 pub fn register_kill_credit() {
     let mut defs: CardDefs = registered_catalog().clone();
     for card in [&*bot, &*jungle, &*tempo] {

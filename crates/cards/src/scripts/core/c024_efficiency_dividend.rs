@@ -4,13 +4,9 @@
 //! this to hand". Radiant: "Deal 2X damage, heal a target 6X, or gain X+1 mana next turn" (4X and 8X
 //! through v0.5.2, declared numbers, so no script is kept, issue #2179), the modes,
 //! target and return to hand kept (§8 Conventions). Patch v0.3.14 (#1220) dropped the +1s that v0.3.10
-//! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65).
-//!
-//! R81: X, the mode and the target all travel in the `play` action and never pause resolution, so the
-//! hook reads `ctx.x`, `ctx.modes` (through `chosenOptions`) and `{ of: "chosen" }`. "Gain X mana next
-//! turn" is a positive `mana.nextTurnMod` (§2.3), the one-shot modifier Hinder makes negative.
-//! §5.1 and R68: the spell returns from the graveyard at the end of its turn. No verb sets
-//! `returnToHandAtEndOfTurn` yet, so the hook gates on the flag OR this turn's play log (see #23).
+//! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65; #23).
+//! X, mode, and target travel in play action (R81; chosenOptions, R65; #2179, #1220, #831).
+//! End of turn return to hand (§6.2, R68; graveyard_triggers, §2.2, §5.1).
 
 use jackioh_engine::prelude::*;
 
@@ -93,12 +89,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24: "X chosen with the play, bounded by
-// mana (R81); three modes; next-turn mana +X; returns to hand". Radiant (R275) deals 2X, heals 6X and
-// gains X+1, still for X paid; each radiant mode is checked at an odd and an even X, and X = 0 is
-// refused (R348).
-// Nothing prompts (R81), so `state.pending` stays null. Both sides keep a unit and a card in hand so
-// no turn auto-ends. The default board is turn 9: 4 mana now and a MAX_MANA 4 refresh, so a positive
+// #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24 (R81, R275). X = 0 is refused (R348).
+// Nothing prompts (R81), so `state.pending` stays null. Both sides keep a unit and a card in hand so no turn
+// auto-ends. The default board is turn 9: 4 mana now and a MAX_MANA 4 refresh, so a positive
 // `mana.nextTurnMod` shows as current mana above 4 while max mana stays 4 (§2.3: temporary mana).
 #[cfg(test)]
 mod tests {

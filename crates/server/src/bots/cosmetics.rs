@@ -4,27 +4,9 @@
 //!
 //! A bot's **wardrobe** is what it may wear past the starters, in the ledger's shape
 //! ([`OwnedCosmetics`]) but kept on its `bots` row (`bots.cosmetics`, migration 0061), never in the
-//! ledger, `collection_grants` or `GET /api/cosmetics`. It holds a non-starter only when the people
-//! own it widely and long enough ([`eligible`]: `BOT_COSMETIC_MIN_OWNERS` people, on that card for a
-//! per-card one, the first of them granted it `BOT_COSMETIC_MIN_AGE_DAYS` ago), so no bot ever wears
-//! what no person could; each eligible one it holds at the share of people of its account age that
-//! own it ([`fit_for`], `BOT_COSMETIC_FITS`, else `BOT_COSMETIC_PRIOR`), by a roll of its own that
-//! the seed of the bot's first draw fixes, so a bot that ages owns each at its age's share and is
-//! not rolled for it again at every refresh.
-//!
-//! From the wardrobe and the same fit it draws what a person's settings, decks and cards hold: its
-//! account's six picks and Full-art switch, each deck's three slots (its Best-of-1 decks' and its
-//! Conquest trio's) and its cards' own picks, a deck at a time at the fit's per-card share. Each slot
-//! is drawn among what the wardrobe owns so that the bots wear each cosmetic at the fit's share of
-//! seats, a share that counts the seats that do not own it too ([`draw_slot`]). Its seat then
-//! freezes through the same `loadout::freeze_loadout` a person's does, the wardrobe as what it owns
-//! (R1834002).
-//!
-//! The pool draws a bot's cosmetics once it holds decks, again for its decks (and its cards' picks)
-//! whenever they are dealt again, which leaves their slots unset, and every
-//! `BOT_COSMETIC_REDRAW_DAYS` it ages as an account does: it may gain wardrobe items and each slot
-//! changes at `BOT_COSMETIC_SLOT_CHANGE_SHARE` ([`redraw`]). Every draw reads `{seed}:cosmetics:…`, so
-//! one seed draws one wardrobe and one loadout.
+//! ledger. It holds a non-starter only when people own it widely and long enough ([`eligible`]),
+//! each eligible one held at the share of people of its account age that own it ([`fit_for`]).
+//! Its seat freezes through `loadout::freeze_loadout` as what it owns (R1834002).
 
 use std::collections::BTreeSet;
 
@@ -44,11 +26,8 @@ use crate::economy::store::{CardCosmetic, CardPicks, CosmeticOwners, FullArtPick
 use crate::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots, setting_key};
 
 /// R1834005: what a bot may wear and what it wears (`bots.cosmetics`, migration 0061): its
-/// wardrobe, the cosmetics it holds past the starters, in the ledger's shape but never in the ledger;
-/// its account picks, as a person's settings hold theirs; its cards' own picks; when it last drew
-/// them (epoch ms); and the seed its wardrobe's rolls read, the one its first draw read, kept so a
-/// holding is rolled once for the bot and never again at a later refresh ([`draw_wardrobe`]). Its
-/// decks' slots ride on the decks (`BotDeck::slots`, `FrozenDeck::slots`).
+/// wardrobe, account picks, cards' picks, last draw timestamp, and wardrobe seed ([`draw_wardrobe`]).
+/// Decks' slots ride on the decks.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BotCosmetics {
@@ -112,7 +91,6 @@ pub fn eligible(registry: &[Cosmetic], owners: &[CosmeticOwners], now: i64) -> V
     out
 }
 
-/// The holdings `owned` lists.
 fn holdings(owned: &OwnedCosmetics) -> BTreeSet<Holding> {
     owned
         .cards
@@ -122,7 +100,6 @@ fn holdings(owned: &OwnedCosmetics) -> BTreeSet<Holding> {
         .collect()
 }
 
-/// The ledger's shape of `held`.
 fn owned_of(held: &BTreeSet<Holding>) -> OwnedCosmetics {
     let mut owned = OwnedCosmetics::default();
     for (cosmetic_id, card) in held {
@@ -152,11 +129,8 @@ fn holding_roll(seed: &str, (cosmetic_id, card): &Holding) -> f64 {
     Rng::new(&format!("{seed}:cosmetics:wardrobe:{cosmetic_id}:{card}"), 0).next()
 }
 
-/// R1834005: a bot's wardrobe, from `seed` (the one its first draw read, `BotCosmetics::seed`):
-/// what it `held` that is still eligible, and each other eligible holding whose roll falls under
-/// the fit's share of people that own it. A holding's roll is fixed by the seed, so a bot drawn
-/// again owns each at the share of its age now and only gains as that share grows, rather than at
-/// a fresh chance at every refresh, which would carry its ownership past the people's.
+/// R1834005: a bot's wardrobe, from `seed` (`BotCosmetics::seed`): what it `held` that is still
+/// eligible, and each other eligible holding whose roll falls under the fit's ownership share.
 pub fn draw_wardrobe(
     seed: &str,
     fit: &CosmeticFit,
@@ -249,16 +223,9 @@ fn owned_of_kind<'r>(
         .collect()
 }
 
-/// One of `candidates` (what a bot owns, of `kinds`, on `card` for a per-card kind), drawn so that,
-/// across the bots, each cosmetic of `kinds` is taken at its share of `shares`.
-///
-/// A fitted share counts every seat, those that do not own the cosmetic among them, so weighing a
-/// non-starter by it among what one bot owns would count its ownership twice. So its non-starters
-/// are offered first, in the registry's order: each one the bot owns it takes at its share over the
-/// share of seats still undrawn before it and over its share of owners (`ownership_share`, the
-/// share its wardrobe holds it at), which takes it at its share of all bots; a bot that takes none
-/// draws among the starters and the default by their shares, which are then theirs too. `None`
-/// when nothing it owns weighs anything.
+/// One of `candidates` (what a bot owns, of `kinds`, on `card`), drawn so that each cosmetic is
+/// taken at its share of `shares`. Non-starters are offered first at their share over undrawn seats
+/// and ownership share (`ownership_share`), then starters and defaults by their shares.
 fn draw_by_shares<'r>(
     rng: &mut Rng,
     registry: &'r [Cosmetic],
@@ -367,14 +334,10 @@ fn fits_card_picks(fit: &CosmeticFit) -> bool {
     !fit.card_picks.is_empty() || !fit.earned_wear.is_empty()
 }
 
-/// One pick of `card`'s own: when `fit` holds people's picks on cards (`fits_card_picks`), a
-/// default's or a starter's foil, finish or border, kind and cosmetic drawn together at their
-/// shares of people's picks on cards (`card_picks`; an earned one is drawn by `wear_earned`, at its
-/// wear on its own card); else, under the prior, one kind at even odds and a cosmetic of it by the
-/// prior's split among what `wardrobe` owns on the card. Never the account's own pick of that kind
-/// (`account`): under a fit of people's loadouts that is the kind's default (no card wears the
-/// account's, R1953001), which a frozen card's entry never holds, since it lists only what differs
-/// from its seat (R1834002).
+/// One pick of `card`'s own: under `fit`, a default or starter foil, finish or border drawn at its
+/// share of people's picks (`card_picks`), or under the prior, the prior's split. Never the
+/// account's own pick (no card wears the account's, R1953001), listing only what differs from its
+/// seat (R1834002).
 fn draw_card_pick<'r>(
     rng: &mut Rng,
     registry: &'r [Cosmetic],
@@ -411,11 +374,8 @@ fn draw_card_pick<'r>(
 }
 
 /// Under a fit holding people's picks on cards, `card`'s earned foils, finishes and borders: each
-/// that `wardrobe` owns on the card, in the registry's order, is worn at its `earned_wear` (none
-/// when the fit lists none: no person who owns it there and played the card wore it), a kind
-/// taking the first that rolls. The wardrobe holds each at its share of people that own it there,
-/// so the bots that play the card wear it at the share of people that do, however many cards
-/// their deck holds. Whether the card took a pick.
+/// owned on the card is worn at its `earned_wear`, a kind taking the first that rolls. Answers
+/// whether the card took a pick.
 fn wear_earned(
     rng: &mut Rng,
     registry: &[Cosmetic],
@@ -452,14 +412,9 @@ fn full_art_wear(fit: &CosmeticFit, full_art: &str) -> f64 {
         .map_or(BOT_COSMETIC_PRIOR_FULL_ART_WEAR, |(_, share)| *share)
 }
 
-/// R1834005: a bot's cards' own picks from `seed`, over its `decks` (each a list of card ids, in
-/// the order it holds them): for each deck, under a fit of people's picks on cards, each card no
-/// earlier deck held first wears what it earned at its wear (`wear_earned`); then, at the fit's
-/// per-card share, its `cards_per_deck_mean` cards (rounded, at least one), less those that just
-/// wore an earned one, are each given a pick other than the account's (`draw_card_pick`), a card
-/// picked already keeping that pick; then each card whose full art the wardrobe owns prints it at
-/// the fit's wear (the account's switch is on, so a card that does not is switched off). Sorted by
-/// card, each entry holding something.
+/// R1834005: a bot's cards' own picks from `seed` over its `decks`: each card first wears what it
+/// earned (`wear_earned`), then at `per_card_share` up to `cards_per_deck_mean` cards receive picks
+/// other than the account's (`draw_card_pick`), and full arts are worn at `full_art_wear`.
 pub fn draw_card_picks(
     seed: &str,
     registry: &[Cosmetic],
@@ -524,7 +479,6 @@ pub fn draw_card_picks(
     cards
 }
 
-/// The index of `card`'s entry in `cards`, made empty when it has none.
 fn entry(cards: &mut Vec<CardPicks>, card: &str) -> usize {
     match cards.iter().position(|picks| picks.card_id == card) {
         Some(at) => at,
@@ -608,16 +562,9 @@ fn aged_slot(
     }
 }
 
-/// R1834005: what a bot draws at a refresh at `now`, from `seed` (the pool's, and the bot's id), the
-/// age bucket's row of `fits` and the holdings `eligible` lists, or `None` when nothing is due:
-///
-///  - a bot that holds decks and has drawn nothing draws everything: its wardrobe, its account
-///    picks, every deck's slots and its cards' picks;
-///  - a bot one of whose decks has no slots (dealt again since it drew) draws that deck's slots and
-///    its cards' picks again, over the decks it holds now;
-///  - a bot that drew `BOT_COSMETIC_REDRAW_DAYS` ago or more ages: its wardrobe may gain items
-///    (and loses what is no longer eligible), each slot changes at
-///    `BOT_COSMETIC_SLOT_CHANGE_SHARE`, and a card's pick it no longer owns is dropped.
+/// R1834005: what a bot draws at a refresh at `now`, or `None` when nothing is due: draws everything
+/// if undrawn; redraws slots and card picks if a deck has no slots; or ages after
+/// `BOT_COSMETIC_REDRAW_DAYS` (updates wardrobe, changes slots at `BOT_COSMETIC_SLOT_CHANGE_SHARE`).
 pub fn redraw(
     seed: &str,
     bot: &BotRow,
@@ -737,7 +684,6 @@ pub fn redraw(
                     picks
                 })
                 .collect();
-            // A full art gained as it aged prints at the fit's wear, as a drawn one does.
             let every: BTreeSet<&str> = played
                 .iter()
                 .flat_map(|deck| deck.iter().map(String::as_str))

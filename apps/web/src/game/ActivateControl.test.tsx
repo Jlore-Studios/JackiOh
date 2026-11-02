@@ -45,8 +45,7 @@ const SECOND_POWER: HeroPowerView = { instanceId: "power-2", defId: "core-098", 
 
 /**
  * `act1` Brother Ping (one ability, its damage moved to 3), `act2` a Turtinator listing two
- * abilities, `fs1` a Field Spell whose ability is spent (greyed), `fs2` one with modes; `u1`, `u2`
- * plain units; hand `h1`..`h4`; graveyard `gy1`, `gy2`; two Heroic Powers.
+ * abilities, `fs1` a Field Spell whose ability is spent (greyed), `fs2` one with modes.
  */
 function activateView(over: { fs1?: ActivationView[] } = {}): PlayerView {
   return baseView({
@@ -143,7 +142,6 @@ describe("R510 the Activate control on the card", () => {
     expect(control.getAttribute("title")).not.toMatch(/[{}]/);
     expect(el(testid.activateUses("act1"))).toHaveTextContent("1");
     expect(el(testid.activateUses("act1"))).toHaveAttribute("data-uses", "1");
-    // The control sits on the card, inside its root.
     expect(el(testid.card("act1")).contains(control)).toBe(true);
   });
 
@@ -322,7 +320,6 @@ describe("R384 an activation is built through the board as a play is", () => {
     const { onAction } = renderGame([DRAW_ACT2]);
 
     fireEvent.click(el(testid.activate("act2")));
-    // Does not dispatch immediately; opens discover modal!
     expect(onAction).not.toHaveBeenCalled();
     const modal = el("prompt-modal");
     expect(modal).toHaveAttribute("data-prompt-kind", "discover");
@@ -382,9 +379,7 @@ describe("R384 Heroic Power works through the same build", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Drag to target
-// ---------------------------------------------------------------------------------------------
 
 describe("R510 an activation is dragged from its control onto its target", () => {
   let under: Element[] = [];
@@ -450,9 +445,7 @@ describe("R510 an activation is dragged from its control onto its target", () =>
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The play's payments in the pickers
-// ---------------------------------------------------------------------------------------------
 
 describe("B5 E5 R682 a target that costs discards (Classic #89): no picker — the cost is random at pay time", () => {
   const legal: ActionBody[] = [

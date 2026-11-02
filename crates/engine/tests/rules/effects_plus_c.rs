@@ -1,6 +1,5 @@
 //! Two verbs of the Classic+ #1–#39 workstream: `damageRoundsUntilDeath` (SPEC §8.7 C+ #32.3 Blade
 //! Storm, §4.5, R59, R113, R283) and `chooseFromHand`'s `where` (C+ #31 Fusion Lab's end of turn, R23).
-//! The real cards' tests cover the cards again.
 //!
 //! Fixtures are this file's own: defs are `pcv-`, indexed from 5900.
 
@@ -137,7 +136,6 @@ fn nothing_more() -> Hook {
     hook(|_ctx| vec![])
 }
 
-/// `chooseFromHand`'s `where`: a card without Immutable.
 fn not_immutable(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     !unit_has(&*ctx.state, card, KeywordKind::Immutable)
 }
@@ -196,7 +194,6 @@ fn local_scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// p1's main phase, hands empty, this file's cards registered.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player_id in [PlayerId::P1, PlayerId::P2] {
@@ -231,8 +228,7 @@ struct StormOptions {
     radiant: bool,
 }
 
-/// p1 casts a storm onto the board `setup` builds (a spare hand card keeps the turn going), and gets
-/// back what `setup` returned beside the play's result.
+/// p1 casts a storm onto the board `setup` builds (a spare hand card keeps the turn going).
 fn stormed<T>(
     seed: &str,
     setup: impl FnOnce(&mut GameState) -> T,

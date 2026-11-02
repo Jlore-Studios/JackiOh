@@ -1,12 +1,8 @@
 //! SPEC §8.11 Training Grounds 5 Midlane Menace: (2) Unit, Human, Common, 3/3 → 6/6, a card of the held
 //! Training Grounds set (R1420, R2194000).
-//!
 //! Base:    "Cry: If this is in midlane, it gains +5/+5 and Rush."
 //! Radiant: "Cry: If this is in midlane, it gains +10/+10 and Rush."
-//! Engine: C #22 Mid Runner's midlane test (R685: computed from the lane count, never hardcoded; a Unit
-//! standing in the midlane's backrow zone is in midlane, R1081000), read as the Cry resolves, then a
-//! permanent `buff` and a granted Rush on itself. A granted Rush works at once: it may attack a Unit the
-//! turn it lands, never the hero (§6.1). The Cry fires only on a play (R1).
+//! Midlane test (C #22, R685; backrow counts, R1081000). Permanent buff and granted Rush on itself (§6.1; on play only, R1).
 
 use jackioh_engine::prelude::*;
 
@@ -39,12 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #5 Midlane Menace — SPEC §8.11 row 5, BUILD M13 row TG 5: "base played into lane 3: 8/8 with Rush (one
-// `buffed`, one `keywordGranted`); it may attack an enemy Unit that turn; it may not attack the enemy hero
-// that turn; played into lanes 1, 2, 4 or 5: 3/3, no Rush, summoning-sick; the buff is permanent (kept
-// after the turn), and the Rush stays as a granted keyword; a copy or summon of it in lane 3 gains nothing
-// (no Cry, R1); the buff reads `param("buff")`. radiant in lane 3: 16/16 with Rush; elsewhere 6/6,
-// nothing".
+// TG #5 Midlane Menace — SPEC §8.11 row 5, BUILD M13 row TG 5 (R1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

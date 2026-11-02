@@ -19,9 +19,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-014";
 
-/// The `destroyed` events of the state-check pass the answered one belongs to: the unbroken run of
-/// `destroyed` reports it stands in (a card a replacement took elsewhere reports its landing there
-/// instead, and still belongs to the run). The answered event itself when the list holds no run.
 fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> Vec<GameEvent> {
     let events: &[GameEvent] = &ctx.events[..];
     let found = events.iter().rposition(
@@ -134,11 +131,8 @@ pub fn script_v0_4_12b() -> CardScripts {
     scripts(false)
 }
 
-// C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: face-down (R33); one firing per pass
-// (§4.5); cards left in a graveyard return to their owner's hand (§3.2) at cost 0 (R78), overflow burned
-// (R317); tokens (R11) and a Reborn Unit already back are skipped, and an Indestructible Unit is
-// collected only when its max health falls to 0 (R69). Radiant: flickers them, a fresh copy (R57) goes to your hand, hidden
-// (R97); number via `param()` (R386).
+// C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14 (R33, §4.5, §3.2, R78, R317, R11, R69,
+// R57, R97, R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -165,8 +159,6 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
     const SUPPRESSIVE_AURA: &str = "core-046"; // (2) Field Spell: "Aura: All Units have −1/−1."
 
-    /// p1 sets the trap; p2, active, plays Big Felinor and destroys every non-Felinor Unit in one pass.
-    /// `opts` keys: `myHand` and `theirs`.
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -298,7 +290,6 @@ mod tests {
 
         #[test]
         fn r69_an_indestructible_unit_whose_max_health_falls_to_0_is_collected_fires_it_and_comes_back() {
-            // A State of the Game standing as a 1/1 meets Suppressive Aura's −1/−1: max health 0.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {

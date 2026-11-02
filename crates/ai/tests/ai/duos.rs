@@ -3,11 +3,9 @@
 //! that turn, owes nothing off its turn, and reads only its own team's knowledge. B32's gate plays
 //! whole games, so it runs in `ai_slow.rs` (`duos_gate.rs`).
 //!
-//! States come from the testkit's `duos_scenario` (round 1 open, A1 and A2 to act) or from
-//! `duos_create` + `duos_begin` (the four mulligans open). Where a test needs exact costs it then sets
-//! a seat's hand and mana by hand, minting the cards with the engine's own `new_instance`, as
-//! `decide.rs`'s `mulligan_with` sets a hand's defs. Every deck is `CHEAP`, so no round seat is left
-//! with nothing to do (B9) before a test sets its hand. A `DuosActionBody` is compared by its JSON.
+//! States come from the testkit's `duos_scenario` or from `duos_create` + `duos_begin`; a test that
+//! needs exact costs sets a seat's hand and mana by hand, minting with the engine's `new_instance`.
+//! Every deck is `CHEAP`, so no round seat is left with nothing to do (B9) before a test sets its hand.
 
 use std::cell::Cell;
 
@@ -73,10 +71,6 @@ const MID: &str = "core-019";
 const STACK_UNIT: &str = "classicplus-004";
 /// Keymaster Keenus, a 4-cost 1/1 Unit with Equip (R1086): it may be played fused onto a Unit.
 const EQUIP_UNIT: &str = "meditative-065";
-
-// ---------------------------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------------------------
 
 fn cheap() -> Vec<String> {
     CHEAP.iter().map(|id| id.to_string()).collect()
@@ -399,9 +393,7 @@ fn play_turn(mut state: DuosState, seat: DuosSeat, seed: &str) -> (DuosState, Ve
     (state, taken, false)
 }
 
-// ---------------------------------------------------------------------------------------------
 // B26: the mulligan and prompts go to the 1v1 decide; a seat that owes nothing gets None
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn b26_each_seat_answers_its_own_open_mulligan_with_the_1v1_decide() {
@@ -412,7 +404,6 @@ fn b26_each_seat_answers_its_own_open_mulligan_with_the_1v1_decide() {
         assert_eq!(expected.action_type(), ActionType::Mulligan, "{seat}");
         let got = duos_decide(&state, seat, &mut opts(&seed));
         assert_eq!(json_of(&got), json_of(&Some(duel(expected))), "{seat}");
-        // The wrapper takes it.
         apply(&state, seat, got.expect("an answer"));
     }
 }
@@ -425,7 +416,6 @@ fn b26_a_seat_owes_nothing_once_its_mulligan_is_in_nor_while_the_other_duels_are
     assert!(!owes(&state, A1), "A1 has answered its mulligan");
     assert!(owes(&state, B1), "B1's mulligan is still open");
 
-    // Duel 0's mulligans are both in and duel 1's are not, so nobody may play yet (B2).
     let state = ai_answers(&state, B1, seed);
     assert_eq!(state.round, 0);
     assert!(!owes(&state, A1), "A1 waits for duel 1's mulligans");
@@ -433,7 +423,6 @@ fn b26_a_seat_owes_nothing_once_its_mulligan_is_in_nor_while_the_other_duels_are
     assert!(owes(&state, A2), "A2's mulligan is open");
     assert!(owes(&state, B2), "B2's mulligan is open");
 
-    // Once all four are in, round 1 is team A's.
     let state = ai_answers(&state, A2, seed);
     let state = ai_answers(&state, B2, seed);
     assert_eq!(state.round, 1, "all four mulligans resolved");
@@ -450,7 +439,6 @@ fn b26_the_seat_answers_the_prompt_it_holds_with_the_1v1_decide() {
     let expected = decided_alone(&state, A1, seed);
     let got = duos_decide(&state, A1, &mut opts(seed));
     assert_eq!(json_of(&got), json_of(&Some(duel(expected))));
-    // The wrapper takes it.
     apply(&state, A1, got.expect("an answer"));
 }
 
@@ -479,7 +467,6 @@ fn b26_a_seat_that_has_ended_owes_nothing_while_its_teammate_plays_on() {
     let state = apply(&state, A1, end_turn());
     assert!(state.ended[0], "A1 has ended");
     assert_eq!(state.round, 1, "A2 has not, so round 1 goes on");
-    // Duel 0's endTurn waits for A2's (B5), so the 1v1 decide alone would still play it.
     assert!(decide(&state.duels[0], PlayerId::P1, &mut opts(seed)).is_some());
 
     assert!(!owes(&state, A1), "A1 has ended");
@@ -497,9 +484,7 @@ fn b26_a_finished_game_owes_nothing() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B27: its own turn is the 1v1 decide's, and its passes come before the turn's end
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn b27_while_decide_still_plays_the_seat_plays_that_move_and_passes_nothing_yet() {
@@ -508,7 +493,6 @@ fn b27_while_decide_still_plays_the_seat_plays_that_move_and_passes_nothing_yet(
     set_hand(&mut state, A1, &[ONE_DROP, OTHER_ONE_DROP, BIG]);
     set_mana(&mut state, A1, cost(ONE_DROP));
     set_mana(&mut state, A2, cost(BIG));
-    // BIG is a card A1 would pass (B28), but A1 still has plays.
     let expected = decided_alone(&state, A1, seed);
     assert_ne!(expected, ActionBody::EndTurn, "the 1v1 AI plays a one-drop");
 
@@ -524,7 +508,6 @@ fn b27_when_decide_would_end_the_turn_the_seat_makes_its_pass_first_then_ends() 
     let big = set_hand(&mut state, A1, &[BIG]).remove(0);
     set_mana(&mut state, A1, DUOS_PASS_COST);
     set_mana(&mut state, A2, cost(BIG));
-    // A2 keeps a play of its own, so round 1 stays open after A1 ends.
     give(&mut state, A2, ONE_DROP);
     let would = decided_alone(&state, A1, seed);
     assert_eq!(would, ActionBody::EndTurn, "A1 can play nothing");
@@ -555,7 +538,6 @@ fn b27_a_whole_ai_turn_plays_then_passes_then_ends() {
     assert!(state.ended[0], "A1 has ended its turn");
     assert!(!state.ended[1], "A2 has not");
     assert_eq!(state.round, 1);
-    // Once the first pass is made, only passes and the turn's end follow.
     let end = json_of(&end_turn());
     if let Some(first) = taken.iter().position(|body| body["kind"] == "pass") {
         let tail = &taken[first..];
@@ -566,9 +548,7 @@ fn b27_a_whole_ai_turn_plays_then_passes_then_ends() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B28: the cards duos_passes names
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn b28_a_card_the_seat_cannot_afford_and_its_teammate_can_is_passed() {
@@ -648,12 +628,10 @@ fn price_void(state: &mut DuosState, duel: usize, price: i32) {
 fn r1168000_b28_a_card_is_priced_in_the_teammates_duel_where_it_would_be_played() {
     register_cards();
     let price = cost(MID);
-    // Cheap in A1's duel, dear in A2's: A2 cannot afford it, so it is not passed.
     let (mut dear_there, _) = passing("duos-ai-priced-there", None, &[VOID], DUOS_PASS_COST, price);
     price_void(&mut dear_there, 0, price);
     price_void(&mut dear_there, 1, price + 1);
     assert!(duos_passes(&dear_there, A1).is_empty());
-    // Dear in A1's duel, cheap in A2's: A2 can, so it is.
     let (mut cheap_there, ids) = passing("duos-ai-priced-there", None, &[VOID], DUOS_PASS_COST, price);
     price_void(&mut cheap_there, 0, price + 1);
     price_void(&mut cheap_there, 1, price);
@@ -739,7 +717,6 @@ fn b28_a_seat_without_the_mana_for_a_paid_pass_passes_nothing() {
 #[test]
 fn b28_off_its_own_turn_a_seat_passes_nothing() {
     let mut state = round_one("duos-ai-off-turn", None);
-    // Round 1 is team A's: neither B1 nor B2 is a round seat.
     set_hand(&mut state, B1, &[BIG]);
     set_mana(&mut state, B1, DUOS_PASS_COST);
     set_mana(&mut state, B2, cost(BIG));
@@ -759,10 +736,7 @@ fn b28_passes_stop_at_the_teams_pass_cap() {
     for def_id in &hand[1..] {
         assert_eq!(cost(def_id), cost(BIG), "{def_id}");
     }
-    // A1 can afford its one-drop (so it always has a play left) and every pass, but none of the
-    // four 4-costs, all of which A2 can afford.
     let seed = "duos-ai-pass-cap";
-    // R1723000: A2 can pay for two of them, so the second pass is worth making too.
     let (state, ids) = passing(
         seed,
         team_a(rules),
@@ -808,10 +782,8 @@ fn b28_with_free_passes_a_card_the_teammate_can_afford_next_turn_is_passed() {
     assert!(cost(BIG) <= MAX_MANA);
     let mut state = round_one("duos-ai-free-next-turn", team_a(free));
     let ids = set_hand(&mut state, A1, &[BIG]);
-    // A1: turn 1's crystal, spent; BIG is out of its reach this turn and next.
     set_mana(&mut state, A1, 0);
     assert!(side(&mut state, A1).mana.max + 1 < cost(BIG));
-    // A2: no mana now, and a full refresh next turn.
     set_mana(&mut state, A2, 0);
     full_refresh_next_turn(&mut state, A2);
     assert_eq!(duos_passes(&state, A1), ids);
@@ -827,9 +799,7 @@ fn b28_with_paid_passes_a_card_the_teammate_can_afford_only_next_turn_is_kept() 
     assert!(duos_passes(&state, A1).is_empty());
 }
 
-// ---------------------------------------------------------------------------------------------
 // B29: only the team's knowledge
-// ---------------------------------------------------------------------------------------------
 
 /// The same decision and passes for team A from `base` and `variant`, which differ only in a card
 /// team A cannot see.
@@ -869,9 +839,7 @@ fn b29_a_hidden_card_in_the_teammates_opponents_hand_does_not_change_the_decisio
     assert_team_a_decides_alike(&base, &variant, seed);
 }
 
-// ---------------------------------------------------------------------------------------------
 // B30: the AI tiers
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn b30_the_easy_ai_team_plays_the_human_teams_rules() {
@@ -916,7 +884,6 @@ fn b30_a_free_passing_ai_seat_keeps_a_card_its_teammate_cannot_afford_now_or_nex
     let mut state = round_two(seed, duos_ai_team(Difficulty::Medium));
     set_hand(&mut state, B1, &[BIG]);
     set_mana(&mut state, B1, 0);
-    // B2 is on its first turn: no mana now (The Coin would not make four), two crystals next turn.
     set_mana(&mut state, B2, 0);
     assert!(side(&mut state, B2).mana.max + 1 < cost(BIG));
     assert!(duos_passes(&state, B1).is_empty());
@@ -976,9 +943,7 @@ fn b30_hard_ai_seats_keep_their_handicap_and_their_pool_and_answer_their_mulliga
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B31: deterministic
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn b31_the_same_state_and_options_give_the_same_action_twice() {
@@ -1005,9 +970,7 @@ fn b31_the_same_state_and_options_give_the_same_action_twice() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // #1385: where an action came from, for the gate (§13.7)
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn duos_decision_marks_a_starved_search_as_a_fallback_and_its_own_moves_as_none() {
@@ -1050,9 +1013,7 @@ fn duos_decision_counts_the_panics_its_1v1_search_caught() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R964000: a seat's life is its own HP and its team's pool
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r964000_every_seat_starts_at_its_own_hp_and_its_teams_pool() {
@@ -1086,9 +1047,7 @@ fn r964000_every_seat_starts_at_its_own_hp_and_its_teams_pool() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1127000: the Duos AI passes the card that gives its teammate the best next play
-// ---------------------------------------------------------------------------------------------
 
 /// Round 1 with A1 holding BIG (4-cost) and the Stab (3-cost) at pass mana, so it can afford
 /// neither, A2 at BIG mana with an empty hand, and B2 at an effective life of 3: the Stab deals 4
@@ -1126,8 +1085,6 @@ fn r1127000_passes_the_cheaper_card_that_wins_the_teammate_the_game_first() {
         !can_play(&state.duels[0], PlayerId::P1, &stab),
         "A1 cannot play the Stab"
     );
-    // One pass is paid for, and it is the cheaper, better card: this fails on the old cost-first
-    // order, which names BIG.
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()]);
     let got = duos_decide(&state, A1, &mut opts(seed));
     assert_eq!(json_of(&got), json_of(&Some(pass(&stab))));
@@ -1172,7 +1129,6 @@ fn r1127000_pass_limits_still_cap_a_scored_list() {
         can_play(&state.duels[0], PlayerId::P1, &ids[0]),
         "A1 keeps its one-drop"
     );
-    // Scoring picks the order, the cap still truncates: two of the four 4-costs.
     let passes = duos_passes(&state, A1);
     assert_eq!(passes.len(), SMALL_PASS_CAP as usize, "{passes:?}");
     assert!(passes.iter().all(|id| ids[1..].contains(id)), "{passes:?}");
@@ -1186,8 +1142,6 @@ fn r1127000_free_pass_next_turn_cards_keep_cost_order() {
     };
     let mut state = round_one("duos-ai-best-pass-later", team_a(free));
     let ids = set_hand(&mut state, A1, &[MID, BIG]);
-    // No mana now on either seat, and a full refresh next turn for A2: both cards are affordable
-    // next turn only.
     set_mana(&mut state, A1, 0);
     set_mana(&mut state, A2, 0);
     full_refresh_next_turn(&mut state, A2);
@@ -1199,16 +1153,13 @@ fn r1127000_the_passed_card_is_scored_under_the_teammates_next_id_not_the_one_it
     let seed = "duos-ai-best-pass-ids";
     let (mut state, first, second) = winning_pass_state(seed);
     // Both duels number their cards from the same start, so a card minted now in A2's duel takes the
-    // id the first card of A1's hand holds. The Stab takes that id, and in A2's duel it names a
-    // one-drop of A2's own.
+    // id the first card of A1's hand holds.
     let (big, stab) = (second, first);
     let hand = &mut state.duels[0].players[PlayerId::P1].hand;
     hand[0].id = big.clone();
     hand[1].id = stab.clone();
     let one_drop = give(&mut state, A2, ONE_DROP);
     assert_eq!(one_drop, stab, "the Stab's id names A2's one-drop");
-    // Scored under that id, the Stab's plays would play the one-drop and leave the Stab in hand, and
-    // BIG, whose id names nothing of A2's, would outscore it.
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
 }
 
@@ -1233,14 +1184,10 @@ fn r1127000_a_passed_fused_card_is_scored_with_its_match_made_definitions_along(
         !can_play(&state.duels[0], PlayerId::P1, &fusion),
         "A1 cannot play the fusion"
     );
-    // Scored without its definition, the fusion would break the scoring and every candidate would
-    // fall back to cost order, BIG first.
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1723000: the Duos AI passes a card only when the trade is worth it
-// ---------------------------------------------------------------------------------------------
 
 /// Round 1 with A1 holding only BIG at pass mana, so it can play nothing, and A2 at BIG's mana
 /// holding `a2_hand` alone.
@@ -1296,9 +1243,7 @@ fn r1723000_a_card_the_teammate_can_play_after_its_own_best_play_is_passed() {
     assert_eq!(duos_passes(&state, A1), vec![big]);
 }
 
-// ---------------------------------------------------------------------------------------------
 // #1760: the Duos gate's greedy team plays each seat's duel with the 1v1 greedy baseline
-// ---------------------------------------------------------------------------------------------
 
 /// What the 1v1 `greedy_action` alone answers for `seat` in its own duel.
 fn greedy_alone(state: &DuosState, seat: DuosSeat, seed: &str) -> ActionBody {
@@ -1336,7 +1281,6 @@ fn b32_a_greedy_seat_ends_its_turn_where_the_ai_would_pass() {
     set_hand(&mut state, A1, &[BIG]);
     set_mana(&mut state, A1, DUOS_PASS_COST);
     set_mana(&mut state, A2, cost(BIG));
-    // A2 keeps a play of its own, so round 1 stays open after A1 ends.
     give(&mut state, A2, ONE_DROP);
     assert!(!duos_passes(&state, A1).is_empty(), "the AI would pass BIG");
 

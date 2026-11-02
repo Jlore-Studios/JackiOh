@@ -74,8 +74,6 @@ async function mount(): Promise<void> {
   });
 }
 
-// §9.4 format from config
-
 describe("the code format is §9.4's, read from crates/server/src/config.rs", () => {
   it("R104 normalizes to upper case, and refuses an excluded character rather than dropping it", async () => {
     // R104 normalizes lowercase `l` to `L`; R191 refuses ambiguous look-alikes rather than mapping them.
@@ -133,8 +131,6 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
   });
 });
 
-// Pending account, redemption open
-
 describe("a pending account", () => {
   it("is shown the code screen", async () => {
     await mount();
@@ -189,8 +185,6 @@ describe("a pending account", () => {
     expect(redeemCode).not.toHaveBeenCalled();
   });
 });
-
-// Verbatim refusal messages (§9.4, R145)
 
 describe("a refusal is rendered exactly as the server wrote it", () => {
   async function submitAndFail(error: ApiRequestError): Promise<HTMLElement> {
@@ -249,8 +243,6 @@ describe("when redemption is paused", () => {
   });
 });
 
-// Active account
-
 describe("an active account", () => {
   it("is told it needs no code, and the route stays reachable", async () => {
     vi.mocked(getMe).mockResolvedValue(meBody("active", false));
@@ -261,8 +253,6 @@ describe("an active account", () => {
     expect(window.location.pathname).toBe("/invite");
   });
 });
-
-// No session
 
 describe("with no session", () => {
   it("goes to the sign-in screen", async () => {
@@ -276,7 +266,6 @@ describe("with no session", () => {
 });
 
 // #1691: the account read behind the screen
-
 describe("#1691 an account that could not be read", () => {
   it("#1691 an account read that failed offers Try again, which reads it again", async () => {
     vi.mocked(getMe).mockRejectedValueOnce(new Error("the server could not be reached"));

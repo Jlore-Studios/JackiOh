@@ -1,10 +1,7 @@
 //! Test-only cards for the Meditative+ batch "outside data and the autopilot" (issue #1183,
 //! docs/meditative-plus-set.md MP5): the two-pick fuse (R1183001), the autopilot (R1183002,
-//! R1183003) and the code-block Discover (R1183005). Each fixture is trimmed to the one property its
-//! name promises, the same script on both faces; the real cards (M+ #2, #18, #25) and their tests
-//! live in `crates/cards`.
-//!
-//! Ids are prefixed `od-` and indexed from 11830, so they cannot collide with another fixture file's.
+//! R1183003) and the code-block Discover (R1183005), each trimmed to the one property its name
+//! promises (the real cards are M+ #2, #18 and #25). Ids `od-…` from 11830.
 
 #![allow(non_upper_case_globals)]
 
@@ -22,7 +19,6 @@ use super::harness::{both, setup_catalog};
 pub const FIRST_UNIT: &str = "fx-1";
 pub const SECOND_UNIT: &str = "fx-2";
 
-/// A Core Common Spell `od-<name>` costing `cost`, with `extra` over the definition.
 fn spell(name: &str, index: i32, cost: i32, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("od-{name}"),
@@ -52,15 +48,14 @@ pub static offload: LazyLock<CardDef> = LazyLock::new(|| spell("offload", 11830,
 pub static offload_on_draw: LazyLock<CardDef> =
     LazyLock::new(|| spell("offload-on-draw", 11831, 1, json!({})));
 
-/// A (0) Spell that adds another of itself to its caster's hand: a turn that never runs out of
-/// plays, for `AUTOPILOT_MAX_ACTIONS` (R1183003).
+/// Adds another of itself to its caster's hand: a turn that never runs out of plays, for
+/// `AUTOPILOT_MAX_ACTIONS` (R1183003).
 pub static refill: LazyLock<CardDef> = LazyLock::new(|| spell("refill", 11832, 0, json!({})));
 
-/// A Spell that asks its caster for a target, any Unit or hero, and deals it 3 (R1183003's answers).
+/// Asks its caster for a target, any Unit or hero, and deals it 3 (R1183003's answers).
 pub static zap: LazyLock<CardDef> = LazyLock::new(|| spell("zap", 11833, 1, json!({})));
 
-/// A Spell whose question goes to the opponent (`choose_mode`'s `by: enemy`), so the autopilot's
-/// turn waits on their answer (R1183002).
+/// Asks the opponent (`choose_mode`'s `by: enemy`): the autopilot's turn waits on them (R1183002).
 pub static ask_enemy: LazyLock<CardDef> = LazyLock::new(|| spell("ask-enemy", 11834, 1, json!({})));
 
 /// A two-pick fuse of the two vanilla units, distinct, at (2) (R1183001).
@@ -75,7 +70,6 @@ pub static code_seer: LazyLock<CardDef> = LazyLock::new(|| spell("code-seer", 11
 /// The resume step the target and the code fixtures re-enter.
 const PICKED: &str = "picked";
 
-/// The scripts of the fixtures, by def id.
 pub static OUTSIDE_DATA_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock::new(|| {
     vec![
         (
@@ -185,7 +179,6 @@ pub static OUTSIDE_DATA_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock
     ]
 });
 
-/// The shared fixture catalog with these cards, and their scripts, registered on this thread.
 pub fn register_outside_data() {
     setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();

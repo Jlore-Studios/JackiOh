@@ -1,17 +1,8 @@
 //! #94 Genn's Greed (SPEC §8.4, R4, R26, R55, R65, R66, R135, BUILD M4-T4 row 94).
 //! Base: "Draw every 2-cost card from your library; exile every odd-cost card in your library, hand
-//! and GY (X-cost cards exempt); gain 2 mana". Radiant: "Gain 6" — only the number moves (§8
-//! Conventions), so the draw and the exile are kept verbatim.
-//! R26 (`GENN_GREED_EXILES = "odd"`) settles the garbled source line as "exile all odd-cost cards".
-//! R66: both clauses read each card's cost per R65 AT RESOLUTION, `effectiveCost` (`costOverride`,
-//! else the printed cost, plus the instance's `costMod`, which persists in every zone, R78); X-cost
-//! cards are exempt.
-//! Player discounts price a play from the hand, so they reach no library or graveyard card (R65),
-//! and `queryCost` reads a DEFINITION, so it cannot see a `costMod`.
-//! THE ORDER IS §8's AND R135's: the draw runs first, so 2-cost cards are in hand before the exile
-//! looks at hands, and 2 is even. Each exile is its own, so R55's counter moves once per card. Each
-//! clause reads its set once (the draw's R113, the exile's R135); reading is no mutation
-//! (CLAUDE.md rule 5); see §6.3 Draw, Exile.
+//! and GY (X-cost cards exempt); gain 2 mana". Radiant: "Gain 6" (§8 Conventions).
+//! R26: exile all odd-cost cards. Costs read per R65 at resolution (R66, effectiveCost; CLAUDE.md rule 5, R78).
+//! Draw draws up to hand cap, burning extras (R4, §2.4, §6.3). Exile straight to exile zone, bumping counter (R55; R135).
 
 use jackioh_engine::prelude::*;
 

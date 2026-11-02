@@ -3,11 +3,6 @@
 //! I/O: the pack roll calls [`apply_pity`] with the slots it rolled from its own seeded, logged
 //! draws, and the tracks call the level curve with the account's total XP. The numbers live in
 //! [`crate::config`]; this module only computes with them (CLAUDE.md rule 9).
-//!
-//! - [`PityCounters`] is one rarity counter set per account, shared by every card pack it opens
-//!   (R1298000): each counts card packs, not slots, since its rarity last dropped.
-//! - [`apply_pity`] is pity, pure from the counters and the slots' rolled rarities to the slots
-//!   after any force and the next counters.
 
 use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
@@ -38,12 +33,9 @@ pub struct PityCounters {
     pub mythic: usize,
 }
 
-/// Pity (SPEC §14.4, R1339001): from the pack's pity counters and its slots' rolled rarities to
-/// the slots after pity and the next counters. Pity changes no roll: a pack in which a counter
-/// would reach its threshold, without its rarity, forces one slot to that rarity, Mythic first,
-/// then Legendary, then Epic, each into `forced_slot`'s slot. Then each counter resets when the
-/// pack holds its rarity and adds one when it does not, so a Mythic leaves the Epic and Legendary
-/// counters running, and a Legendary the Epic one.
+/// Pity (SPEC §14.4, R1339001) changes no roll: a pack in which a counter would reach its threshold, without
+/// its rarity, forces one slot to that rarity, Mythic first, then Legendary, then Epic, each into
+/// `forced_slot`'s slot. Then each counter resets when the pack holds its rarity, else adds one.
 pub fn apply_pity(
     counters: PityCounters,
     mut slots: Vec<PrintedRarity>,
@@ -71,13 +63,11 @@ pub fn apply_pity(
     (slots, pity)
 }
 
-/// The slot a force of `rarity` takes (R1339001), in slot order from the floored slot
-/// (`PACK_FLOORED_SLOT`) on, never one an earlier force took: the first below `rarity` whose loss
-/// takes no tracked rarity from the pack (a Common or a Rare, or a rarity another slot also
-/// holds), so the force raises it; else the first whose rarity another slot also holds. Either
-/// way the pack keeps every tracked rarity it rolled. `PACK_SLOTS >= TRACKED_RARITIES` means one
-/// of the two always exists: past the earlier forces, the slots left outnumber the tracked
-/// rarities neither forced nor this one, so a slot is Common or Rare or two share a rarity.
+/// The slot a force of `rarity` takes (R1339001), in slot order from the floored slot (`PACK_FLOORED_SLOT`)
+/// on, never one an earlier force took: the first below `rarity` whose loss takes no tracked rarity from the
+/// pack (a Common or a Rare, or a rarity another slot also holds), so the force raises it; else the first
+/// whose rarity another slot also holds. Either way the pack keeps every tracked rarity it rolled, and
+/// `PACK_SLOTS >= TRACKED_RARITIES` means one of the two always exists.
 fn forced_slot(slots: &[PrintedRarity], forced: &[bool], rarity: PrintedRarity) -> Option<usize> {
     let order: Vec<usize> = std::iter::once(PACK_FLOORED_SLOT)
         .chain((0..slots.len()).filter(|at| *at != PACK_FLOORED_SLOT))
@@ -92,10 +82,9 @@ fn forced_slot(slots: &[PrintedRarity], forced: &[bool], rarity: PrintedRarity) 
         .or_else(|| order.iter().copied().find(|at| shared(*at)))
 }
 
-/// The level curve's exact total in `i128`: `total_xp_for_level` below saturates to
-/// `i64::MAX` past level 429,496,730, and the correction loops in `level_for_xp` compare
-/// against this, never the saturated total, so they cannot walk that plateau one level at
-/// a time (at `i64::MAX` that walk would run from the ~429M guess to `u32::MAX`).
+/// The level curve's exact total in `i128`: `total_xp_for_level` below saturates to `i64::MAX` past
+/// level 429,496,730, and the correction loops in `level_for_xp` compare against this, never the
+/// saturated total, so they cannot walk that plateau one level at a time.
 fn exact_total_xp_for_level(level: u32) -> i128 {
     let step = i128::from(SET_TRACK_XP_PER_LEVEL);
     step * i128::from(level.saturating_sub(1)) * i128::from(level) / 2
@@ -176,8 +165,6 @@ mod tests {
 
     #[test]
     fn level_for_xp_huge_xp_ends() {
-        // `total_xp_for_level` saturates to `i64::MAX` past level 429,496,730; comparing the
-        // correction loops against it walked that plateau to `u32::MAX` at `i64::MAX`.
         assert_eq!(total_xp_for_level(429_496_730), 9_223_372_032_559_808_500);
         assert_eq!(total_xp_for_level(429_496_731), i64::MAX);
         assert_eq!(level_for_xp(i64::MAX), 429_496_730);
@@ -352,12 +339,10 @@ mod tests {
         assert_eq!(next.epic, 0);
     }
 
-    /// The seeded simulation (SPEC §14.4, R1339001): 200,000 card packs, each `slot_tiers` from
-    /// `Rng::new("jackioh-economy-1339", 0)` with `apply_pity` on top. It reports each tracked
-    /// rarity's share of packs holding it with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^
-    /// PACK_SLOTS` (30.4%, 9.6% and 4.9%), and tunes nothing to them: the rate with pity is at
-    /// least the rate before it, within `RATE_TOLERANCE`, and no counter ever reaches its threshold
-    /// (pity fires on the threshold pack, so the largest counter seen stays one below it).
+    /// The seeded simulation (SPEC §14.4, R1339001) reports each tracked rarity's share of packs holding it
+    /// with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^PACK_SLOTS`, and tunes nothing to them: the
+    /// rate with pity is at least the rate before it, within `RATE_TOLERANCE`, and no counter ever reaches
+    /// its threshold (pity fires on the threshold pack).
     #[test]
     fn r1339001_the_simulation_reports_pity_on_top_and_caps_every_counter() {
         const PACKS: usize = 200_000;
@@ -391,12 +376,10 @@ mod tests {
         }
     }
 
-    /// The bar sizes as §14.5 states them (R1953000, R1999000): on any collection, every slot
-    /// adding its points whatever it grants, and before pity, which only ever lifts a slot's
-    /// rarity, a pack's mean points are its slots' rarity odds (`card_odds`, the fallback
-    /// included) weighted by each rarity's points: `PACK_SLOTS - 1` slots at 1.61 and the floored
-    /// one at 2.21, so 8.65. Each bar then fills once every its target packs on average: its size
-    /// over that mean, rounded.
+    /// The bar sizes as §14.5 states them (R1953000, R1999000): on any collection, every slot adds its points
+    /// whatever it grants, and before pity (which only lifts a slot's rarity) a pack's mean points are its
+    /// slots' rarity odds (`card_odds`, the fallback included) weighted by each rarity's points. Each bar
+    /// then fills once every its target packs on average: its size over that mean, rounded.
     #[test]
     fn r1953000_the_bars_fill_at_their_target_packs_on_average() {
         let mean = |odds: TierOdds| {

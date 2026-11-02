@@ -1,8 +1,6 @@
-// Polish 6, slice B: `faceModel`, tested pure against the real catalog (docs/polish/6-cards.md,
-// Surface B `model.ts` and "Tone rules", behaviors B7–B9).
-//
-// "Printed" is the face being shown: `def.radiant` when radiant, else `def.base`, and an embiggen
-// card's base price counts as its printed cost. A missing printed value always gives "base".
+// `faceModel`, pure against the real catalog (docs/polish/6-cards.md, Surface B `model.ts`, B7–B9).
+// "Printed" is the face shown (`def.radiant` when radiant, else `def.base`); an embiggen card's base
+// price counts as its printed cost. A missing printed value always gives "base".
 
 import { describe, expect, it } from "vitest";
 
@@ -37,7 +35,7 @@ function printed(card: CardDef, radiant: boolean): CardFace {
   return radiant ? card.radiant : card.base;
 }
 
-/* ------------------------------------------------------------------------------------------ B7 */
+/* B7 */
 
 describe("B7: faceModel copies the def and picks the face", () => {
   it("B7 a base unit face: name, type, tags, rarity, printed stats, keywords, and no radiant clause", () => {
@@ -85,7 +83,6 @@ describe("B7: faceModel copies the def and picks the face", () => {
     const f = face("core-020", true);
     expect(f.text.full).toBe("First Strike, Divine Shield");
     expect(markedText(f.text.full, f.text.marks)).toEqual(["Divine Shield"]);
-    // Stats still come from the radiant face.
     expect(f.stats?.attack).toBe(14);
     expect(f.stats?.maxHealth).toBe(2);
   });
@@ -155,11 +152,9 @@ describe("B7: faceModel copies the def and picks the face", () => {
   });
 
   it("R923 in play a face lists the view's tags; outside play the definition's", () => {
-    // Outside play the definition's tags stand (core-020 is Human).
     expect(face("core-020", false).tags).toEqual(["Human"]);
-    // In play with the view's tags, the view's stand (MD-B15: a granted tag is part of the card).
+    // MD-B15: a granted tag is part of the card.
     expect(face("core-020", false, { inPlay: {}, tags: ["Human", "CN"] }).tags).toEqual(["Human", "CN"]);
-    // In play with no view tags, the definition's stand.
     expect(face("core-020", false, { inPlay: {} }).tags).toEqual(["Human"]);
   });
 
@@ -207,12 +202,10 @@ describe("B7: faceModel copies the def and picks the face", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------ Radiant text */
+/* Radiant text */
 
-// R277: the catalog carries each Radiant face's whole text (§8's cell read by its Conventions and
-// written out), and a radiant face prints it as it stands, marking the stretches the base face's
-// text does not have (radiantDiff.ts). These pin the reading on real cards; radiantDiff.test.ts
-// proves the diff itself.
+// R277: the catalog carries each Radiant face's whole text (§8's cell written out), and the face marks
+// what the base text lacks. These pin it on real cards; radiantDiff.test.ts proves the diff.
 
 function marksOf(id: string): string[] {
   const f = face(id, true);
@@ -250,18 +243,12 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   });
 
   it("R277 every catalog radiant face prints its catalog text and marks at least one stretch the base text lacks", () => {
-    // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback ("If
-    // opposing Units are used, summon for your opponent."), so its text adds nothing to mark; its
-    // doubled stats are what R277 marks on it.
-    // Classic #60 and Classic+ #5 drop words too, and patch v0.2.1's Classic+ #34 drops "Choose
-    // one." Balance patch 1 gives Classic #28's base face the same minimum price as its Radiant
-    // face, so its Radiant face is its base text less the exile replacement. Meditative #89 Jlarna's
-    // Radiant face is its base text less the end-of-turn Tribute (R1225); #22.1 Fortify Mind's is its
-    // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
-    // as is Classic #29 Book of Vital Kill's since patch v0.3.10, and Meditative+ #11 Living Mana
-    // Potion's less its Tribute, with #12 Living Armor Potion's and #13 Living Health Potion's
-    // The Stinkyscape set's #9 Ticketed drops its Brittle 3 (radiantDiff.test.ts names all thirteen;
-    // #149 Wildar's Radiant face adds "It costs (0)." since #2657, a mark, no deletion).
+    // #55 Lava Golem's Radiant face is its base text less the drawback, so its text adds nothing to
+    // mark; its doubled stats are what R277 marks on it. Classic #60, Classic+ #5, Classic+ #34 and
+    // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862)
+    // and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
+    // Living Potions and the Stinkyscape set's #9 Ticketed (radiantDiff.test.ts names all thirteen;
+    // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
       "classic-028",
@@ -279,14 +266,12 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     ]);
     for (const card of DEFS) {
       const f = face(card.id, true);
-      // The Radiant face prints its catalog text with its `{key}` numbers filled in (B3.4 rule 5).
       expect(f.text.full, card.id).toBe(fillParams(card, "radiant"));
       if (fillParams(card, "radiant") === fillParams(card, "base") || pureDeletions.has(card.id)) {
         expect(f.text.marks, card.id).toEqual([]);
         continue;
       }
       expect(f.text.marks.length, `${card.id} marks nothing`).toBeGreaterThan(0);
-      // Every radiant keyword is printed somewhere on the face.
       const printed = termsIn(f.text.full);
       for (const keyword of card.radiant.keywords) {
         expect(printed, `${card.id} never prints its radiant keyword ${keyword.kind}`).toContain(keyword.kind);
@@ -295,7 +280,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B8 */
+/* B8 */
 
 describe("B8: faceModel cost", () => {
   it("B8 a live cost below the printed price is down, above is up, equal is base", () => {
@@ -318,7 +303,6 @@ describe("B8: faceModel cost", () => {
         alt: null,
       });
     }
-    // Radiant faces and other X cards alike.
     expect(face("core-074", true, { liveCost: 3 }).cost.tone).toBe("base");
     expect(face("classic-087", false, { liveCost: 2 }).cost.text).toBe("X");
   });
@@ -328,7 +312,7 @@ describe("B8: faceModel cost", () => {
   });
 
   it("R1848003 an X card whose X is set prints the set X on its gem", () => {
-    // Stinkyscape #102 Book of Nono-Words' copies: the view's `fixedX` is the price, and the gem says it.
+    // Stinkyscape #102 Book of Nono-Words' copies: the view's `fixedX` is the price.
     for (const fixedX of [1, 2, 3, 4]) {
       expect(face("core-024", false, { liveCost: fixedX, fixedX }).cost, `X set at ${fixedX}`).toEqual({
         text: String(fixedX),
@@ -337,7 +321,6 @@ describe("B8: faceModel cost", () => {
         alt: null,
       });
     }
-    // With none set, the gem says X as ever.
     expect(face("core-024", false, { liveCost: 2 }).cost.text).toBe("X");
   });
 
@@ -349,7 +332,7 @@ describe("B8: faceModel cost", () => {
 
   it("R1181003 the second badge shows the view's embiggenCost", () => {
     // Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)", and Mountaintop Garden's
-    // dearer price: the view prices the Embiggened version, and the badge beside the gem says so.
+    // dearer price: the view prices the Embiggened version.
     expect(face("core-084", false, { liveCost: 2, liveEmbiggenCost: 0 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "0" });
     expect(face("core-046", false, { liveCost: 2, liveEmbiggenCost: 4 }).cost.alt).toBe("4");
     expect(face("core-046", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
@@ -404,7 +387,7 @@ describe("B8: faceModel cost", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------ B9 */
+/* B9 */
 
 describe("B9: faceModel stat tones", () => {
   // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 12/20 on its radiant one.
@@ -441,10 +424,8 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    // 12/20 is the radiant face exactly, and would be buffed against the base 6/10.
     expect(face(ID, true, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
     expect(face(ID, false, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    // 6/10 is the base face exactly, and is reduced against the radiant 12/20.
     expect(face(ID, true, { live: live(6, 10, 10) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 
@@ -478,7 +459,7 @@ describe("B9: faceModel stat tones", () => {
   });
 });
 
-/* --------------------------------------------------------------------- faces in play (§10.10) */
+/* faces in play (§10.10) */
 
 describe("a face in play is the card as the view says it stands; the collection's is the card as printed", () => {
   it("a face with no `inPlay` is the collection's: printed text, no marks, nothing held beside it", () => {
@@ -494,7 +475,6 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.text.full).toBe(def("core-089").base.text);
     expect(f.keywords).toEqual(def("core-089").base.keywords);
     expect(f.printed).toBeNull();
-    // The collection's Corpse Eater is the printed 2/2.
     expect(face("core-089", false).stats).toMatchObject({ attack: 2, health: 2 });
   });
 
@@ -550,7 +530,6 @@ describe("a face in play is the card as the view says it stands; the collection'
       const f = face("core-095", radiant, { liveCost: 4, inPlay: {} });
       expect(f.text, `radiant ${String(radiant)}`).toEqual({ full: CONCEALED_TEXT, marks: [] });
       expect(f.printed).toBeNull();
-      // Everything else about it is the card's: its name, tags, rarity and cost.
       expect(f).toMatchObject({ name: "Call to Chaos (Core Edition)", tags: ["Call to Chaos"], rarity: "Legendary" });
     }
   });

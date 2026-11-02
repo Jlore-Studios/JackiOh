@@ -1,7 +1,6 @@
 // Coach placement (R2434003): the floating bubble docks to a corner of the viewport, never the middle
-// of the board, and never over its anchor or the HUD when a corner is clear of them, protecting
-// `keepClear` over `avoid`. The ring, not the bubble, points at the target. Phones use Coach.tsx's
-// page panel: their boards leave no safe floating position.
+// of the board, and never over its anchor or the HUD when a corner is clear of them. The ring, not the
+// bubble, points at the target. Phones use Coach.tsx's page panel: their boards leave no safe floating position.
 
 export type Rect = { left: number; top: number; width: number; height: number };
 export type Size = { width: number; height: number };
@@ -54,11 +53,7 @@ export function padRect(rect: Rect, pad: number): Rect {
 
 type Spot = { side: BubbleSide; left: number; top: number; maxHeight: number | null };
 
-/**
- * R2434003: the four corners a bubble docks to, the bottom ones first, beside the heroes' rows: the
- * right edge (over the log) before the left. Every one is at an edge of the viewport, under the HUD,
- * so no bubble is ever in the middle of the board.
- */
+/** The four corners, under the HUD: the bottom ones first, beside the heroes' rows, the right (over the log) before the left. */
 function spots(input: PlaceInput): Spot[] {
   const { viewport, bubble, margin, minHeight } = input;
   const topEdge = input.insetTop + margin;
@@ -76,12 +71,7 @@ function spots(input: PlaceInput): Spot[] {
   ];
 }
 
-/**
- * R2434003: where the floating bubble docks. It is always at an edge (`spots`), never in the middle of
- * the board and never over its anchor when a corner is clear of it: the anchor first, then `keepClear`,
- * then `avoid` decide among the corners, and a tie keeps the earlier corner. The pointing at a target
- * is the ring (Coach.tsx), not the bubble's place.
- */
+/** The anchor first, then `keepClear`, then `avoid` decide among the corners; a tie keeps the earlier corner. */
 export function placeBubble(input: PlaceInput): BubblePlacement {
   const { bubble } = input;
   const covers = (spot: Spot, rects: readonly Rect[]): number => {

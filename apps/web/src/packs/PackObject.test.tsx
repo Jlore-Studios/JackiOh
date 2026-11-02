@@ -1,7 +1,5 @@
-// The pack object (#1663): its name and emblem for a set, `global` and `cosmetic`, its state from idle
-// through a tear to open, the pointer's sheen and tilt, reduced motion holding it all still, and the
-// two stylesheets it and the scene draw from animating only transform and opacity. The sheets are read
-// as text, as `fx/css.test.ts` reads its own, because Vitest stubs CSS imports.
+// The pack object (#1663). The two stylesheets it and the scene draw from animate only transform and
+// opacity; they are read as text, as `fx/css.test.ts` reads its own, because Vitest stubs CSS imports.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -125,7 +123,7 @@ describe("#1663 the pack object", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------- the stylesheets --- */
+/* the stylesheets */
 
 function readSheet(name: string): string {
   for (const candidate of [`src/packs/${name}`, `apps/web/src/packs/${name}`]) {

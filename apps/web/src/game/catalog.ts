@@ -66,7 +66,6 @@ export function unknownCard(defId: string): CardInfo {
   return { name: defId, type: "Unit", text: "", tags: [] };
 }
 
-/** Match-made definitions and rolled powers (R243). */
 export type MatchCards = {
   defs: CardDefs;
   powers: ReadonlyMap<string, RolledPower>;

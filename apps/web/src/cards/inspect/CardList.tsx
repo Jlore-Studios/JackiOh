@@ -1,9 +1,7 @@
-// Lists display public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller
-// order, using inspect's sole slot (B23). Entries are faces/counts or unopened backs (R312).
-// B5 E11: the board supplies `play` only for `legalActions`; this client reports it and closes the
-// sheet (CLAUDE.md rule 7). R1571000: where "Play" would be, a face the view says cannot be played
-// now (`FaceModel.playReason`) says why instead, in the grid and opened large; nothing is clickable.
-// R2121000: a swipe down closes the sheet too, as Close does (useSheetSwipe.tsx).
+// Public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller order, in
+// inspect's sole slot (B23); entries are faces/counts or unopened backs (R312). B5 E11: the board
+// supplies `play` only for `legalActions`; this client only reports it (CLAUDE.md rule 7). R1571000:
+// where "Play" would be, an unplayable face says why, unclickable. R2121000: a swipe down closes it.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -43,13 +41,13 @@ import {
 import "./inspect.css";
 import "./list-play.css";
 
-/** One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows; `count` is 1 when absent. */
+/** One face in the list, or a card back (`face: null`, R312); `key` is stable for what it shows. */
 export type CardListEntry = {
   key: string;
   face: FaceModel | null;
   count?: number;
   play?: CardListPlay;
-  /** R1297000: the card back a faceless entry wears (the viewer's own pick, board.tsx); absent: the default. */
+  /** R1297000: the card back a faceless entry wears (the viewer's own pick, board.tsx). */
   back?: string;
 };
 
@@ -58,10 +56,9 @@ export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void }
 
 const PLAY_WORD = "Play";
 
-/** R1571000: the glyph of a pile card's reason for not playing, the StateNotes glyph's sibling. */
+/** R1571000: the StateNotes glyph's sibling. */
 const PLAY_REASON_GLYPH = "⊘";
 
-/** R1571000: where "Play" would be, why the card cannot be played now (`CardView.playReason`). */
 function PlayReason({ reason }: { reason: string }): ReactElement {
   return (
     <span className="inspect-list-play-reason" data-state="playReason">
@@ -75,7 +72,7 @@ export type CardListProps = {
   /** What the list is, in words: "Your graveyard". */
   title: string;
   entries: readonly CardListEntry[];
-  /** What the order of the entries is, in words; a pile's is "Newest first". */
+  /** What the order of the entries is, in words. */
   order?: string;
 };
 
@@ -120,7 +117,6 @@ function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   );
 }
 
-/** B5 E11: "Play" under a face the viewer may play from the pile. */
 function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: CardListPlay; onClose: () => void }): ReactElement {
   return (
     <button
@@ -227,7 +223,6 @@ export function CardListPreview({
   );
 }
 
-/** B5 E11: a grid face opens large, with "Play" when permitted. */
 function FaceTile({
   entry,
   face,
@@ -288,7 +283,6 @@ export function CardListSheet({
   const opened: FaceModel | undefined = openedEntry?.face ?? undefined;
   // B5 E11: the face opened large keeps its "Play" while it is listed.
   const openedPlay = opened === undefined ? undefined : openedEntry?.play;
-  // R1571000: where "Play" would be, the face opened large says why it cannot be played now.
   const openedReason = openedPlay === undefined ? opened?.playReason : undefined;
   const total = totalOf(entries);
   /** The face last opened, so Back refocuses it rather than dropping focus on <body>. */

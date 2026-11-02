@@ -1,17 +1,9 @@
 //! #60 Bear Honeypot (SPEC §8.3): Trap, cost 1, Epic. "When your opponent plays a (1) Cost or less
 //! card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it." /
 //! radiant "When your opponent plays a card, if you have an empty unit zone: Fill your board with Rush
-//! Tokens. If it's a Unit, they attack it." The Radiant face drops the cost threshold and fills the
-//! board; the rest is kept (§8 Conventions, R277).
-//!
-//! R430: "an empty unit zone" is R64's `open_zones`; with none the trap stays armed, unconsumed. §5.1,
-//! §10.3 and traps.rs own `trapFired`, the state check and consuming it (R17, R61). The condition is a
-//! `when`, not an early `run` return (a `run` returning `[]` fired for nothing): a play over the
-//! threshold, by R56's cost actually paid (read off the event, R89), leaves it armed; a cast pays 0
-//! (R70), so it always qualifies, but a card cast on draw is no play and never sets it off (R2179002). R53 is the forced attack (§4.2 steps 1-3 skipped,
-//! `force_attacks_on`). It answers `cardResolved` (§10.5 step 7, R17), not `cardPlayed`: the unit is
-//! on the field with its Cry resolved, the moment #41 Sheepish shares since R427, the two answering
-//! in lane order (R68). R662: the glow, both faces.
+//! Tokens. If it's a Unit, they attack it." (§8 Conventions, R277).
+//! Trap window (§4.2 step 4) after play resolves (§10.5; R68, R89); empty zone check (R64, §3.2).
+//! Tokens attack played Unit if still on field (R174, R350).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{fill_board, forced_attacks, summon};
@@ -128,14 +120,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #60 Bear Honeypot (SPEC §8.3, BUILD M4-T4 row 60). Every test puts the trap face-down in p1's
-// backrow and makes p2 the active player: a Trap fires on the OPPONENT's turn and resolves to
-// completion before their action continues (§10.3); this one opens no prompt. Rulings proved here:
-// R17 (fires after the played card has resolved, the moment #41 Sheepish shares since R427), R56 (the
-// cost actually paid), R70 (a cast pays 0), R53 (forced attacks in full), R64 ("fill your board" is
-// every empty unit zone, left to right, R1136000), R11 (a dead unit token ceases to exist), R430 (no
-// empty unit zone: the trap waits), §5.1 (a Trap is consumed when it fires), R662 (the yellow glow,
-// at the end of this file).
+// #60 Bear Honeypot (SPEC §8.3, §10.3, §5.1; BUILD M4-T4 row 60; R11, R17, R53, R56, R64, R70, R427, R430, R662, R1136000, #41).
+// Fires after opponent's card resolves; summons tokens and forces attack if target was a unit.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -160,8 +146,6 @@ mod tests {
             .collect()
     }
 
-    /// How many events of this type the whole game has emitted (`"trapFired" | "attackDeclared" |
-    /// "summoned"`).
     fn count_of(g: &Scenario, kind: &str) -> usize {
         g.events()
             .iter()
@@ -241,8 +225,7 @@ mod tests {
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
                 // #21 Hinder is cast on draw: drawing it casts it (§2.4, R58), for 0, and the cast is no
-                // play (R2179002; through v0.5.2 it was, R70, and set the trap off). Its Radiant face
-                // discards nothing (R431), so the cast asks no question.
+                // play (R2179002). Its Radiant face discards nothing (R431), so the cast asks no question.
                 "p2": { "hand": ["core-005"], "library": [{ "def": "core-021", "radiant": true }, "core-011"] },
             }));
 
@@ -705,7 +688,7 @@ mod tests {
             if radiant { "radiant" } else { "base" }
         }
 
-        /// R662 `${face}`: with an open zone it glows for its controller only, and the opponent's cheap
+        /// R662: with an open zone it glows for its controller only, and the opponent's cheap
         /// play sets it off.
         fn glows_with_an_open_zone(radiant: bool) {
             crate::register_all();
@@ -722,7 +705,7 @@ mod tests {
             assert!(s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
         }
 
-        /// R662 `${face}`: with every unit zone taken it does not glow, and the play leaves it armed (R430).
+        /// R662: with every unit zone taken it does not glow, and the play leaves it armed (R430).
         fn dark_with_every_zone_taken(radiant: bool) {
             crate::register_all();
             let mut s = scenario(json!({

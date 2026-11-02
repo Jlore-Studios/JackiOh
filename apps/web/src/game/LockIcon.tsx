@@ -1,9 +1,7 @@
 // The mark on a Locked zone (SPEC §6.3 Lock; BUILD M5-T1's `data-locked`): a padlock, so a zone that
-// takes no summon reads as locked at a glance rather than as a small empty square.
-//
-// Presentation only (CLAUDE.md rule 7). Zone.tsx decides whether to draw it from the view's `locks`
-// flag; this file knows nothing about why a zone is locked. A reserved zone (R64) keeps its own
-// round mark in board.css, since it is held rather than locked.
+// takes no summon reads as locked at a glance. Presentation only (CLAUDE.md rule 7): Zone.tsx decides
+// whether to draw it from the view's `locks` flag. A reserved zone (R64) keeps its own round mark in
+// board.css, since it is held rather than locked.
 
 import type { ReactElement } from "react";
 

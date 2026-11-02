@@ -1,7 +1,5 @@
 //! Heal (§6.3): a unit loses damage, never past its max health; a hero simply gains health, with no
 //! cap (§3). R19 lets a heal name any unit or hero. The `healed` event comes from damage.rs.
-//!
-//! Port of `packages/engine/src/effects/heal.ts`.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,6 +1,6 @@
 // #258: two board cues on the card root (Card.tsx), mounted through the real Board as Card.test.tsx
 // does: the "can't act yet" cue on a Unit with no action left (spent.ts, spent.css), and keyboard
-// inspect (I, the context-menu key, Shift+F10) on every hand and field card.
+// inspect on every hand and field card.
 
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +28,6 @@ function root(u: UnitView): HTMLElement {
   return screen.getByTestId(testid.card(u.instanceId));
 }
 
-/** The fixture with the viewer's lane-1 unit spent too, and every enemy unit unable to act. */
 function spentView(over: Partial<PlayerView> = {}): PlayerView {
   const view = fullBoardView(over);
   const mine = view.you.units.map((u, i) => (u !== null && i === 0 ? { ...u, canAct: false } : u));
@@ -112,7 +111,6 @@ describe("#258 keyboard inspect on the board", () => {
         closeInspect();
       });
     }
-    // F10 without Shift, and other letters, open nothing.
     fireEvent.keyDown(el, { key: "F10" });
     fireEvent.keyDown(el, { key: "x" });
     expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();

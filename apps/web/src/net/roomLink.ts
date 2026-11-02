@@ -1,7 +1,7 @@
 // Play room links (SPEC §9.5, R767) and co-op room links (R2094000).
 // They only fill the lobby form; the server validates the mode (R264, CLAUDE.md rule 7).
-// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632); codes use `canonicalCode`
-// and `ROOM_CODE_FORMAT` (R191). Sign-in keeps only code and mode (B35); unavailable storage means no link.
+// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632).
+// Sign-in keeps only code and mode (B35); unavailable storage means no link.
 
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
@@ -89,7 +89,6 @@ export function coopLinkPath(code: string): string {
   return `${paths.together}?${query.toString()}`;
 }
 
-/** R2094000: the co-op link as a shareable URL on this origin. */
 export function coopLinkUrl(code: string): string {
   return `${window.location.origin}${coopLinkPath(code)}`;
 }
@@ -102,7 +101,7 @@ export function coopLinkOf(search: string): string | null {
   return canonicalCode(raw, ROOM_CODE_FORMAT);
 }
 
-/** R2094000: before routing, adopt only a `/together` link and remove its coop parameter without touching others. */
+/** R2094000: `adoptRoomLink`'s twin for a `/together` link. */
 export function adoptCoopLink(): boolean {
   if (typeof window === "undefined") return false;
   if (currentPath() !== paths.together) return false;
@@ -121,7 +120,7 @@ export function adoptCoopLink(): boolean {
   return true;
 }
 
-/** R2094000: read URL then untrusted tab storage without consuming either, so StrictMode gets the same result. */
+/** R2094000: `readRoomLink`'s twin. */
 export function readCoopLink(): string | null {
   adoptCoopLink();
   try {
@@ -141,9 +140,8 @@ export function forgetCoopLink(): void {
 }
 
 /**
- * R2094000: the first room link of this site a message holds, built as a path, never markup.
- * Accepts this origin's `/play?room=…` (as `roomLinkOf` reads it) and `/together?coop=…`;
- * a link to any other origin, or a malformed one, draws no button.
+ * R2094000: the first room link of this site (`/play?room=…` or `/together?coop=…`) a message holds,
+ * built as a path, never markup.
  */
 export function findRoomLinkInText(text: string, origin: string): { path: string } | null {
   const candidates = text.match(/https?:\/\/[^\s"'<>]+|\/(?:play\?room=|together\?coop=)[^\s"'<>]*/g);

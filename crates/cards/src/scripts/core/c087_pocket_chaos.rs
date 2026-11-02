@@ -5,20 +5,13 @@
 //! Chaos …" (§8's cell "You may skip adding it"; the gift is priced, R742). The radiant cell restates
 //! only the gift clause, so the Choose one and the exile are kept (§8 Conventions).
 //!
-//! BOTH choices are declared play choices, not prompts (R81 names #87; §10.6: a card's own play
-//! choices travel in the `play` action). `Script.modes` lists a `ModeDecl` per choice and a play must
-//! answer each, so the radiant face declares a second mode for the gift. A skip prompt would pause a
-//! resolution the base face never pauses; §10.6 reserves `PendingChoice` for choices made DURING it.
+//! BOTH choices are declared play choices, not prompts (R81 names #87; §10.6 reserves `PendingChoice`
+//! for choices made DURING resolution). The two option sets are disjoint, so this file never indexes
+//! `chosenOptions(ctx)`. A play with no swap mode fizzles that clause; the rest still resolves (§6.3).
+//! Each swap is R73's, owned by the engine's swap effect (R12, R18, R33, R88; §3.1).
 //!
-//! `chosenOptions(ctx)` returns the play's `modes` in declaration order. The two option sets are
-//! disjoint, so this file never indexes that list: `swap()` picks out its own and the gift clause
-//! looks for SKIP by name. A play with no swap mode fizzles that clause; the rest still resolves (§6.3).
-//!
-//! What each swap does is R73's, owned by the engine's swap effect (R12, R18, R33, R88; §3.1).
-//!
-//! The gift is a fresh, non-Radiant card (`addToHand` makes a new instance; a full hand burns it, §2.4,
-//! R4): R57's "carries the radiant flag" is about copies of an existing card. Its base cost is priced,
-//! not copied: a `costOverride` of the cast copy's base cost less GIFT_DISCOUNT (R742), kept in every
+//! The gift is a fresh, non-Radiant card (a full hand burns it, §2.4, R4): R57's "carries the radiant
+//! flag" is about copies of an existing card. Its base cost is a `costOverride` (R742), kept in every
 //! zone (R78), so a gift cast in turn prices the next one down until (0) ends the chain.
 
 use jackioh_engine::prelude::*;
@@ -48,9 +41,8 @@ fn gift_mode() -> ModeDecl {
     }
 }
 
-/// R742: the gift with its base cost. The copy's base cost (R65's start: its `costOverride`, else
-/// its printed cost) is GIFT_DISCOUNT less than the cast copy's, so the gifts chain down
-/// (4) → (3) → (2) → (1); a copy whose base cost would be (0) is never added.
+/// R742: the gift at GIFT_DISCOUNT less than the cast copy's base cost (R65's start: its
+/// `costOverride`, else its printed cost); a copy whose base cost would be (0) is never added.
 fn gift(ctx: &EffectContext<'_>) -> Vec<Effect> {
     let Some(this) = ctx.self_.as_ref() else {
         return vec![];
@@ -91,10 +83,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #87 Pocket Chaos (SPEC §8.5, BUILD M4-T4 row 87): "Health swap, lane-preserving board swap
-// including face-down traps with locks staying put, library swap that transfers ownership of the
-// swapped cards (R73); opponent gains a Pocket Chaos; exiled; radiant may skip the gift". Patch
-// v0.1.1 removed the draw R275 had added to the radiant face.
+// #87 Pocket Chaos (SPEC §8.5, BUILD M4-T4 row 87; R73). Patch v0.1.1 removed the draw R275 had added to
+// the radiant face.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,9 +96,8 @@ mod tests {
 
     const CHAOS: &str = "core-087";
 
-    // Inert fixtures: every unit below has a Cry and nothing else, and the harness's `field` setup
-    // never fires a Cry. Sheepish is a Trap that watches for a Unit the opponent plays, so a Spell
-    // never sets it off — which makes it a stable face-down card to swap.
+    // Inert fixtures: each unit's only text is a Cry, which `field` never fires; Sheepish watches for a
+    // Unit the opponent plays, so a Spell never sets it off.
     const GARY: &str = "core-004"; // 1/1
     const RENO: &str = "core-053"; // 4/6
     const POSTDOC: &str = "core-061"; // 2/4
@@ -421,12 +410,9 @@ mod tests {
 
             let gifts = gifts_in(&s, P2);
             assert_eq!(gifts.len(), 1);
-            // R57's "a copy carries the radiant flag" is about copies of an existing card; the gift is a
-            // fresh card, and neither #87's text nor its radiant cell makes it Radiant.
             assert_eq!(gifts.first().map(|card| card.radiant), Some(false));
             // R742: the Radiant cast copy's base cost is still (4), so its gift costs (3) too.
             assert_eq!(gifts.first().and_then(|card| card.cost_override), Some(3));
-            // R73: the libraries swapped, whole and in order, each card now its new holder's (R12).
             assert_eq!(def_ids(&s.pile(P1, "library")), vec![RENO.to_string(), POSTDOC.to_string()]);
             assert!(s.pile(P1, "library").iter().all(|card| card.owner == P1));
             assert_eq!(def_ids(&s.pile(P2, "library")), vec![GARY.to_string()]);

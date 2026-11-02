@@ -123,7 +123,6 @@ fn unleashed(radiant: bool, v0_5_9f: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             if radiant {
-                // The Radiant face does all five, in order, with no roll (MD-C23).
                 entries(&*ctx, true)
                     .into_iter()
                     .flat_map(|entry| entry.effects)
@@ -229,21 +228,18 @@ mod tests {
             .count()
     }
 
-    /// Units of this def on this side's field, by lane.
     fn field_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
         (1..=5)
             .filter_map(|lane| s.unit(player, lane).map(|unit| unit.def_id))
             .collect()
     }
 
-    /// Backrow cards on this side, by lane.
     fn backrow_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
         (1..=5)
             .filter_map(|lane| s.backrow(player, lane).map(|card| card.def_id))
             .collect()
     }
 
-    /// How many `degraded` reports the game emitted.
     fn degraded(s: &Scenario) -> usize {
         s.events()
             .iter()
@@ -275,7 +271,6 @@ mod tests {
         panic!("no seed rolled {key}");
     }
 
-    /// How many `degraded` reports named this instance.
     fn degraded_of(s: &Scenario, id: &str) -> usize {
         s.events()
             .iter()
@@ -386,7 +381,6 @@ mod tests {
                     let order: Vec<usize> = rolled(&s).iter().map(|label| entry_index(label)).collect();
                     assert_eq!(order.len(), 2, "{n}");
                     assert!(order[0] < order[1], "list order: {order:?}");
-                    // Both seats' views carry the roll's names.
                     for seat in [P1, P2] {
                         let seen = s.view(seat).events.iter().any(|event| {
                             matches!(event, GameEvent::ChaosRolled { effects, .. } if effects.len() == 2)
@@ -463,7 +457,6 @@ mod tests {
             #[test]
             fn r1023_the_opponents_board_filled_with_base_viruses() {
                 let s = rolling("Fill", None);
-                // p2's board was empty: all five zones hold a base Yile's Virus, for p2.
                 for lane in 1..=5 {
                     let unit = s.unit(P2, lane).expect("a virus");
                     assert_eq!(unit.def_id, VIRUS);
@@ -522,7 +515,6 @@ mod tests {
                 let id = s.hand(P1)[0].id.clone();
                 step_param(s.card_mut(id.as_str()), "picks", 1);
                 s.play(UNLEASHED, json!({ "zone": 1 }));
-                // Three entries now, all different.
                 let mut order: Vec<usize> = rolled(&s).iter().map(|label| entry_index(label)).collect();
                 assert_eq!(order.len(), 3);
                 order.dedup();
@@ -536,11 +528,9 @@ mod tests {
                     let mut s = holding(&format!("unleashed-pick-{n}"), false);
                     s.play(UNLEASHED, json!({ "zone": 1 }));
                     let labels = rolled(&s);
-                    // Two different entries (R60), named to both players.
                     assert_eq!(labels.len(), 2, "{n}");
                     assert_ne!(labels[0], labels[1], "{n}");
                     pairs.push(labels.clone());
-                    // …and both resolved: the named summons stand, the named adds arrived.
                     if labels.iter().any(|label| label.contains("Datacenter")) {
                         assert_eq!(
                             backrow_defs(&s, P1)
@@ -603,9 +593,7 @@ mod tests {
                 let mut s = holding("unleashed-radiant", true);
                 s.play(UNLEASHED, json!({ "zone": 1 }));
 
-                // No roll on the Radiant face: all five entries resolved in order (MD-C23).
                 assert!(rolled(&s).is_empty());
-                // Two Datacenters, three Radiant Glitches at (0), an AI Girlfriend …
                 assert_eq!(
                     backrow_defs(&s, P1)
                         .iter()
@@ -621,7 +609,6 @@ mod tests {
                     }
                 }
                 assert!(field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
-                // … two Radiant Viruses for the opponent in place of the fill (MD-C24) …
                 let foe = field_defs(&s, P2);
                 assert_eq!(foe.iter().filter(|def| *def == VIRUS).count(), 2);
                 for lane in 1..=5 {
@@ -631,7 +618,7 @@ mod tests {
                         assert!(unit.radiant);
                     }
                 }
-                // … and every enemy card Nerfed twice: the hand card alone drew two Degrades.
+                // Every enemy card Nerfed twice: the hand card alone drew two Degrades.
                 assert!(degraded(&s) >= 2, "every enemy card Nerfed twice");
             }
         }

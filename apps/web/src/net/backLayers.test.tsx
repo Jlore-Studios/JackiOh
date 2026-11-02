@@ -1,7 +1,6 @@
-// R2127000: the browser's Back closes the topmost open sheet or dialog before it leaves the screen
-// (`backLayers.ts`), through `navigate.ts`'s one `popstate` listener; where the browser has
-// `CloseWatcher` the top layer holds one instead. jsdom traverses the history in queued tasks, so
-// every Back here waits on real timers (`test/history.ts`).
+// R2127000: Back closes the topmost open sheet or dialog before it leaves the screen (`backLayers.ts`); where
+// the browser has `CloseWatcher` the top layer holds one instead. jsdom traverses the history in queued
+// tasks, so every Back here waits on real timers (`test/history.ts`).
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState, type ReactElement } from "react";
@@ -21,13 +20,11 @@ import { at, must } from "../test/stubServer.ts";
 import { useBackLayer } from "./backLayers.ts";
 import { guardLeaving, navigate, usePathname } from "./navigate.ts";
 
-/** One layer, closed through its own `onClose` while `closable`. */
 function Overlay({ name, onClose, closable = true }: { name: string; onClose: () => void; closable?: boolean }): ReactElement {
   useBackLayer(onClose, closable);
   return <div data-testid={`overlay-${name}`} />;
 }
 
-/** A screen that reads the path, opens one more layer on Open and closes the newest on Close. */
 function Screen(): ReactElement {
   const path = usePathname();
   const [open, setOpen] = useState<readonly string[]>([]);
@@ -67,7 +64,6 @@ function press(name: "Open" | "Close"): void {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
-/** The layers on screen, oldest first. */
 function shown(): string[] {
   return screen.queryAllByTestId(/^overlay-/).map((element) => element.dataset.testid ?? "");
 }

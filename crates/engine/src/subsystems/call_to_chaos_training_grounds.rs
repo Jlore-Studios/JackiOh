@@ -1,17 +1,7 @@
 //! Training Grounds #39 Call to Chaos (Training-Grounds Edition) (SPEC §8.11 row 39, R28, R87, R423, R436,
 //! R2200000–R2200004): its table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls,
-//! announces and resolves — `call_to_chaos({ radiant, table: CHAOS_TG_EFFECTS })` — so one rule serves
-//! every edition: the base face rolls one entry, the Radiant three different ones resolved in the list's
-//! order (R423), the recursion counts casts of every edition against `CALL_TO_CHAOS_CHAIN_CAP` (R28) and
-//! both players are told what was rolled (`chaosRolled`, R436).
-//!
-//! Every entry is built when it resolves, not when the Cry returns (a part of the list, `lazy_part`), as
-//! the other editions' are (R87, R113).
-//!
-//! Entry 9 is a rest-of-game effect of the engine's own (R458, R2200002): a start-of-turn effect under
-//! `CHAOS_TG_ALTERNATE_HOOK`, whose step `work::script_step_for` answers with `alternate_step` whatever
-//! card made it. It carries its caster's `turns_started` as it was made and adds only on the caster's
-//! turns a multiple of `CHAOS_TG_EVERY` after that one; a player holds at most `CHAOS_TG_ALTERNATE_CAP`.
+//! announces and resolves, so one rule serves every edition. Every entry is built when it resolves
+//! (`lazy_part`), as the other editions' are (R87, R113).
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
@@ -34,13 +24,13 @@ use crate::zones::OffFieldZone;
 /// R2200000: the pool "Training Grounds cards" and "Training Grounds permanents" name, the set's
 /// non-token cards, held or shipped (R2194001).
 const TG_SET: &str = "Training Grounds";
-/// §7: the cards this edition makes by index: Core's Rush Token, Training Grounds #40 Goetzmann Game
-/// Design and #39.1 Training-Grounds Golem.
+/// §7: the cards this edition makes, by index.
 const RUSH_TOKEN_INDEX: &str = "T-rush";
 const DESIGN_INDEX: &str = "40";
 const GOLEM_INDEX: &str = "39.1";
 
-/// R2200002: the hook of entry 9's rest-of-game effect, which the engine resolves itself.
+/// R2200002, R458: the hook of entry 9's rest-of-game effect, the engine's own: `work::script_step_for`
+/// answers it with `alternate_step` whatever card made it.
 pub const CHAOS_TG_ALTERNATE_HOOK: &str = "@chaosTgAlternate";
 /// Entry 9's step name, under `CHAOS_TG_ALTERNATE_HOOK`.
 const CHAOS_TG_ALTERNATE_STEP: &str = "chaosTgAlternate";
@@ -106,8 +96,7 @@ fn add_free(name: &'static str, count: i32, radiant: bool) -> Effect {
 }
 
 /// R2200002, R2200004: one random Call to Chaos of the sets that ship (R380, R1420), this edition among
-/// them once its set ships (R387: the pool the text names holds it), added to the controller's hand at
-/// (0); a full hand burns it (§2.4).
+/// them once its set ships (R387), added at (0); a full hand burns it (§2.4).
 fn add_random_call() -> Effect {
     Effect::new("callToChaosTrainingGrounds:addCall", |ctx| {
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
@@ -139,9 +128,8 @@ pub fn alternate_effects_held(state: &GameState, player: PlayerId) -> i32 {
         .count() as i32
 }
 
-/// R2200002: the step entry 9's effect re-enters at the start of each of its player's turns. It adds
-/// only when the turns the player has begun since the effect was made are a positive multiple of
-/// `CHAOS_TG_EVERY` (extra turns counted, R846): none the next turn, one the turn after, and so on.
+/// R2200002: entry 9's step at the start of each of its player's turns: it adds only when the turns
+/// begun since the effect was made are a positive multiple of `CHAOS_TG_EVERY` (extra turns, R846).
 pub fn alternate_step() -> Hook {
     hook(|ctx| {
         let now = ctx.state.players[ctx.controller].turns_started;
@@ -159,9 +147,8 @@ pub fn alternate_step() -> Hook {
     })
 }
 
-/// 1. R2200001: three base Rush Tokens (§7), then Taunt and Divine Shield granted to every Unit card of
-///    the caster's on the field, in hand and in the deck, the tokens included (C+ #40's scope); a
-///    hidden card changes silently (R440).
+/// 1. R2200001: three base Rush Tokens (§7), then Taunt and Divine Shield for the caster's Unit cards
+///    on the field, in hand and in the deck (C+ #40's scope); a hidden card changes silently (R440).
 fn build_fortify() -> Effect {
     entry("fortify", |_ctx| {
         let scope = json!({
@@ -181,7 +168,7 @@ fn build_fortify() -> Effect {
 }
 
 /// 2. R2200001: Goetzmann Game Designs (#40) until the hand is full (S #88 Siva 2's fill), then §6.3
-///    Refresh 4 (R364): spent mana back, never past max, nothing at max.
+///    Refresh 4 (R364).
 fn build_designs() -> Effect {
     entry("designs", |ctx| {
         let room = room_in(ctx.state, ctx.controller, OffFieldZone::Hand);
@@ -236,9 +223,8 @@ fn build_radiant() -> Effect {
     add_free("radiant", CHAOS_TG_RADIANT_CARDS, true)
 }
 
-/// 7. R2200003: five base Rush Tokens, then three `unitsHaveKeyword` modifiers on the caster (R1859007):
-///    every Unit they control has Rush, Trample and Pierce, those that arrive later too, kept when the
-///    card is gone.
+/// 7. R2200003: five base Rush Tokens, then three `unitsHaveKeyword` modifiers on the caster (R1859007),
+///    so Units that arrive later have them too, kept when the card is gone.
 fn build_army() -> Effect {
     entry("army", |_ctx| {
         let mut effects = summon_many(SetName::Core, RUSH_TOKEN_INDEX, CHAOS_TG_ARMY_TOKENS);
@@ -258,10 +244,9 @@ fn build_golem() -> Effect {
     })
 }
 
-/// 9. R2200002: a random Call to Chaos at (0) now, then the caster's rest-of-game effect that adds one at
-///    the start of every second turn of theirs, stacking up to `CHAOS_TG_ALTERNATE_CAP`. A roll of it for
-///    a player at the cap resolves into nothing, the "now" included, with no re-roll (R87's shape, as
-///    R1241).
+/// 9. R2200002: a random Call to Chaos at (0) now, then the rest-of-game effect, stacking up to
+///    `CHAOS_TG_ALTERNATE_CAP`; a roll of it at the cap resolves into nothing, the "now" included, with
+///    no re-roll (R87's shape, as R1241).
 fn build_alternate() -> Effect {
     entry("alternate", |ctx| {
         if alternate_effects_held(ctx.state, ctx.controller) >= CHAOS_TG_ALTERNATE_CAP {

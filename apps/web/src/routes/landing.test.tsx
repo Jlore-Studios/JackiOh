@@ -176,8 +176,6 @@ describe("R661 the statistics are not a call to action", () => {
   });
 });
 
-// B37: corner slot
-
 describe("B37 the corner slot", () => {
   it("B37 anonymous: shows landing-sign-in, which leads to /login, and no landing-account", async () => {
     render(<LandingRoute />);
@@ -373,7 +371,6 @@ describe("B38 the hero", () => {
     expect(landing()).toHaveAttribute("data-motion", "reduced");
   });
 
-  // A settings change applies to the page already showing.
   it("B38 data-motion is reduced under the settings panel's Reduce motion, live", () => {
     render(<LandingRoute />);
     expect(landing()).toHaveAttribute("data-motion", "full");
@@ -655,7 +652,7 @@ describe("R639 your table", () => {
       await vi.dynamicImportSettled();
     });
     const table = screen.getByTestId(landingTestid.stats);
-    // The six stats this tally has, with the words each says; none of them has a button of its own.
+    // The six stats this tally has, with the words each says.
     const lines: Record<string, string> = {
       "Old Faithful": "played 9×",
       Unbreakable: "played 9×, never destroyed",
@@ -717,7 +714,6 @@ describe("R639 your table", () => {
 });
 
 // R765: rejoin a live online game from the main menu
-
 describe("R765 the main menu's live-game banner", () => {
   function serveInGame(
     currentMatchId: string | null,

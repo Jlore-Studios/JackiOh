@@ -1,8 +1,6 @@
-//! Port of `packages/engine/test/fixtures/lastBoards.ts`.
-//!
 //! Fixture cards for B5 E30's last boards (SPEC §8.7 C+ #29, R417, R564): C+ #29's two faces in the
 //! smallest script that has them, and a Trap and a Field Trap to put face-down. The engine never
-//! imports packages/cards (CLAUDE.md), so the real card's test covers the same cases again.
+//! imports `crates/cards` (CLAUDE.md).
 
 use std::sync::LazyLock;
 
@@ -65,12 +63,12 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id (the brief's `catalog()`).
+/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     defs().into_iter().map(|card| (card.id.clone(), card)).collect()
 }
 
-/// This file's scripts, by id (the brief's `scripts()`).
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     scripts_table()
 }
@@ -93,15 +91,14 @@ pub static LB_DECKS: LazyLock<(Vec<String>, Vec<String>)> = LazyLock::new(|| {
     (first, vanilla_deck(DECK_SIZE, 21))
 });
 
-/// What `portal_game` answers: TS's `{ seed, state, log }`.
 pub struct PortalGame {
     pub seed: String,
     pub state: GameState,
     pub log: Vec<Action>,
 }
 
-/// A real game from `(seed, decks, lastBoards)`: the first seed from `seedBase` whose opening deal puts
-/// the Portal in p1's hand, past both mulligans (everything kept), in p1's first main phase.
+/// A real game: the first seed from `seed_base` whose opening deal puts the Portal in p1's hand,
+/// past both mulligans (everything kept), in p1's first main phase.
 pub fn portal_game(seed_base: &str, last_boards: Option<LastBoardInput>) -> PortalGame {
     register_last_boards();
     for at in 0..200 {

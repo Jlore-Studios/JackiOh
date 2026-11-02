@@ -1,10 +1,6 @@
-// #936 S8 B58: `ChatPanel`, the conversation with one friend. It shows the page the server answers
-// (newest last), polls every CHAT_POLL_MS while it is open and never once it is closed, sends what is
-// typed as `POST /api/chat/:friendId {body}`, and shows a refusal (B53: empty, too long, not friends,
-// rate-limited) in the server's words without adding a message. The Friends button's panel (#1831,
-// which replaced the board rail's chat toggle) lists friends, each opening this panel.
-// #1898: a failed read says why with Try again; a read that answers, or Try again, clears it.
-// R2120000: a send shows at once; its answer replaces it, a refusal marks it failed with Retry and Discard.
+// #936 S8 B58: `ChatPanel`, the conversation with one friend. A refusal (B53: empty, too long, not
+// friends, rate-limited) shows in the server's words without adding a message. The Friends button's
+// panel (#1831) lists friends, each opening this panel. #1898: a failed read says why with Try again.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

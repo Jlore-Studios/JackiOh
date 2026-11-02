@@ -5,17 +5,8 @@
 //!            make this Radiant."
 //!   Radiant: "Animated, Flying, Indestructible / The first Unit you play onto this is Equipped into it.
 //!            / End of turn: Gain {keywords|random combat keyword|random combat keywords}."
-//! Engine: Animated and Flying are catalog keywords (§6.1), but with no stats it is no Unit (R2280000): it
-//! enters the field and stays in its backrow zone. `StaticFlags.lends_equip` (R1869000): while it acts on
-//! its controller's field, in its backrow zone or a unit zone, and is no fusion, any Unit card its
-//! controller plays may be played onto it as an Equip play (R1086), beside the plain zones: the Unit
-//! resolves on top, its Cry included, then fuses into it, this card the kept host (R77, R102); once it
-//! holds a fusion it lends no more. The fusion gives it the Unit's stats beside its Animated, so it
-//! animates at that state check into its own lane's unit zone or R64's leftmost (R2280001), or stays
-//! with none open. End of turn, in the backrow or as a Unit: `grant_random_keywords` from R21's pool
-//! (R781005), {keywords} of them. Base: `radiant_at_keywords` 10 (R1850005): at a state check where its
-//! keyword kinds through the layers reach 10, each kind once, Animated and Flying included, it is made
-//! Radiant. Radiant: Indestructible and two keywords a turn.
+//! Animated and Flying catalog keywords (§6.1, R2280000). lends_equip lets first unit equip into it (R1869000, R1086, R77, R102, R64, R2280001).
+//! End of turn grants random combat keywords (R21, R781005). Base becomes Radiant at 10 keywords (R1850005, R1748003).
 
 use jackioh_engine::prelude::*;
 
@@ -61,7 +52,6 @@ mod tests {
     const MR_TOKEN: &str = "core-015"; // (1) 1/1, "Cry: Summon a Rush Token."
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// p1 has played the Rod (`radiant` its face) into backrow zone 2, `hand` still in hand.
     fn played(radiant: bool, hand: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
         cards.extend(hand.as_array().cloned().unwrap_or_default());
@@ -74,7 +64,6 @@ mod tests {
         s
     }
 
-    /// The zones p1 may play `card` onto as an Equip play, by lane.
     fn equip_lanes(s: &Scenario, card: &CardInstance) -> Vec<i32> {
         legal_actions(s.state(), P1)
             .iter()
@@ -122,8 +111,6 @@ mod tests {
             assert_eq!(equip_lanes(&s, &token), vec![2]);
             s.play(&token, json!({ "zone": 2, "row": "backrow", "equip": true }));
             assert!(find_instance(s.state(), &token.id).is_none());
-            // It resolved on top first, its Cry included, then fused: the Rod has its 1/1 and Animated,
-            // so it animated at that state check.
             assert!(s.events().iter().any(|event| matches!(
                 event,
                 GameEvent::Summoned { def_id, .. } if def_id == RUSH_TOKEN
@@ -171,7 +158,6 @@ mod tests {
             assert_eq!(equip_lanes(&s, &token), vec![2]);
             s.play(MR_TOKEN, json!({ "zone": 2, "row": "backrow", "equip": true }));
             assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
-            // No unit zone is open, so it stays in its backrow zone, a Field Spell holding the fusion.
             let fused = s.backrow(P1, 2).expect("the fused Rod stays");
             assert_eq!(fused.id, rod.id);
             assert_ne!(fused.def_id, ID);
@@ -194,7 +180,6 @@ mod tests {
             let mut s = played(false, json!([VANILLA]));
             s.state_mut().players.p1.mana.current = 4;
             s.play(VANILLA, json!({ "zone": 2, "row": "backrow", "equip": true }));
-            // Fused with the Vanilla's 4/4, it animated: a Unit now.
             let rod = s.unit_at(P1, 2);
             assert!(s.card(&rod.id).granted_keywords.is_empty());
             s.end_turn();
@@ -227,7 +212,6 @@ mod tests {
                 event,
                 GameEvent::RadiantSet { instance_id, .. } if *instance_id == rod.id
             )));
-            // Its Radiant face has no stats either: it stays in its backrow zone.
             assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(rod.id.clone()));
         }
 

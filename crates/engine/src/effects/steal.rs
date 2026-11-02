@@ -6,8 +6,6 @@
 //! What a steal does change besides `controller` is R171's: the card has entered its new
 //! controller's side on this turn, so it takes the turn as its `summonedTurn` (summoning sick, §4.1)
 //! and a fresh exertion. A steal that does nothing (R15, R76) changes neither.
-//!
-//! Port of `packages/engine/src/effects/steal.ts`.
 
 use serde::{Deserialize, Serialize};
 
@@ -61,17 +59,15 @@ fn destination_for(ctx: &EffectContext<'_>, thief: PlayerId, from: &ZoneSlot) ->
     first_entry_zone(ctx.state, thief, from.row)
 }
 
-/// One card to `ctx.controller`'s side. Nothing happens when the card is not on the field (control
-/// means nothing off it, R12), when that player already controls it (R76), or when the row has no
-/// free zone: then it stays with its owner (R15).
+/// One card to `ctx.controller`'s side, by `move_control`'s rules.
 fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     let receiver = ctx.controller;
     move_control(ctx, card, receiver, ControlHow::Steal)
 }
 
-/// One card to `receiver`'s side, as `take_control` moves it: R15's zone, R171's entry, the
-/// `controlChanged` event (`how`, R1366: a steal or a give), and nothing at all when the card is off
-/// the field, dormant (R13), already `receiver`'s (R76), or finds no free zone (R15).
+/// One card to `receiver`'s side: R15's zone, R171's entry and `controlChanged` (`how`, R1366: a steal
+/// or a give); nothing when the card is off the field, dormant (R13), already `receiver`'s (R76), or
+/// finds no free zone (R15).
 fn move_control(
     ctx: &mut EffectContext<'_>,
     card: &CardInstance,
@@ -81,8 +77,7 @@ fn move_control(
     let Some(from) = slot_of(ctx.state, card) else {
         return false;
     };
-    // R13: only the top of a Stack pile is on the field. A card dormant under one — #50's chosen
-    // permanent after a Stack card was played onto it — is not there to be taken.
+    // R13: only the top of a Stack pile is on the field; a card dormant under one (#50's) is not taken.
     if !is_active_on_field(ctx.state, card) {
         return false;
     }
@@ -96,7 +91,7 @@ fn move_control(
     };
 
     let mut moving = card.clone();
-    // R1081000: a Unit standing in a backrow zone is stolen standing, into the open backrow zone `to`.
+    // R1081000: a Unit standing in a backrow zone is stolen standing.
     let stands = crate::zones::stands_in_backrow(ctx.state, card);
     remove_from_field(ctx.state, &moving, Default::default());
     let landed = if stands {
@@ -105,8 +100,7 @@ fn move_control(
         place_on_field(ctx.state, &mut moving, to, Default::default())
     };
     if !landed {
-        // `to` was open a line ago and the card came off the other side of the field, so this cannot
-        // happen; putting the card back keeps the board legal rather than losing it to a refusal.
+        // Cannot happen (`to` was open); putting the card back keeps the board legal, not losing it.
         let options = PlaceOnFieldOptions { stack: Some(true) };
         if stands {
             place_standing_on_field(ctx.state, &mut moving, from, options);
@@ -120,8 +114,7 @@ fn move_control(
     let placed = find_instance(ctx.state, &moving.id).cloned().unwrap_or(moving);
     enter_new_side(ctx, &placed, previous);
 
-    // R33: a stolen face-down trap stays face-down, and the new controller is the one who may read
-    // it — the controller decides that, so `faceUp` is deliberately untouched here.
+    // R33: a stolen face-down trap stays face-down, readable by its new controller: `faceUp` is untouched.
     ctx.events.push(GameEvent::ControlChanged {
         instance_id: placed.id.clone(),
         controller: to.player,
@@ -147,11 +140,9 @@ pub fn steal(args: StealTarget) -> Effect {
         if take_control(ctx, &card) {
             return;
         }
-        // R963, MD-C4: with no open zone on the taker's side, `otherwise: destroy` destroys it
-        // instead — but only a card still standing on the field under the other player (`instance_of`
-        // already narrowed it to the stay the run began on, R174): a card the taker already controls
-        // is neither stolen nor destroyed (R76). Anything else the steal refused — off the field,
-        // dormant — fizzles in `destroy`'s own resolution, so only the taker's own card is guarded.
+        // R963, MD-C4: with no open zone on the taker's side, `otherwise: destroy` destroys it instead,
+        // unless the taker already controls it (R76, the stay narrowed per R174); anything else the
+        // steal refused fizzles in `destroy`'s own resolution.
         if args.otherwise != Some(StealOtherwise::Destroy) {
             return;
         }
@@ -165,11 +156,8 @@ pub fn steal(args: StealTarget) -> Effect {
     })
 }
 
-/// R1423: give a card on the field to the other player, the mirror of `steal`: the player who
-/// controls it now loses it to their opponent, placed per R15 and entering that side per R171
-/// (Meditative #6 Me no Likey gives one of your Units to the enemy, #30 Fickle E-Kitten gives
-/// itself away). The same no-ops as a steal: a card off the field or dormant under a Stack (R13),
-/// or one the receiving side has no free zone for, stays where it is (R15).
+/// R1423: give a card on the field to its controller's opponent, the mirror of `steal`, with the same
+/// placing and no-ops (R13, R15, R171; Meditative #6, #30).
 pub fn give_control(args: StealTarget) -> Effect {
     Effect::new("giveControl", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
@@ -190,17 +178,13 @@ pub struct StealAllArgs {
     pub row: Option<Row>,
 }
 
-/// Steal every enemy card of a row: lane order (§3.2), each placed per R15, and the ones that find no
-/// free zone stay with their owner. Only the top of a Stack pile is on the field, so only it is taken
-/// (R13). It was #86 "Miss" Mrow's Death until patch v0.1.1 gave her the unit that destroyed her
-/// instead (R361, `steal` of `query::killer_of`); no Core card calls it now, and the verb stays for a
-/// card that may.
+/// Steal every enemy card of a row in lane order (§3.2), each per R15; only a Stack pile's top is taken
+/// (R13). No Core card calls it (#86 steals `query::killer_of`, R361); it stays for a card that may.
 pub fn steal_all(args: StealAllArgs) -> Effect {
     Effect::new("stealAll", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
         let enemy = opponent_of(ctx.controller);
-        // R1081000: a Unit standing in a backrow zone is one of the units row's, after its zones, and
-        // no backrow card (§6.1 Animated).
+        // R1081000: a Unit standing in a backrow zone is the units row's, after its zones (§6.1 Animated).
         let mut cards: Vec<CardInstance> = slots_of(enemy, row)
             .into_iter()
             .filter_map(|slot| card_at(ctx.state, slot))
@@ -239,7 +223,7 @@ pub fn capture(args: CaptureArgs) -> Effect {
         let Some(target_card) = instance_on_its_stay(ctx, &args.instance_id) else {
             return;
         };
-        // R1081000: a Unit standing in the backrow is captured as one in a unit zone is.
+        // R1081000: likewise a target standing in the backrow.
         if !in_units_row_or_standing(ctx.state, &target_card) || !is_active_on_field(ctx.state, &target_card)
         {
             return;
@@ -266,7 +250,7 @@ pub fn capture(args: CaptureArgs) -> Effect {
             former_id: None,
             how: Some(ControlHow::Steal),
         });
-        // R1854002: a capture is a steal, so it moves its taker's "steal an enemy card" quests.
+        // R1854002: a capture is a steal, for the quests.
         crate::subsystems::quests::note_steal(ctx, holder_slot.player);
     })
 }

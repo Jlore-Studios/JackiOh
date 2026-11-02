@@ -42,17 +42,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #43 Big Felinor (SPEC §8.2, §4.5, §6.3 Destroy; R11, R46, R59, R69).
-// Must-pass row (BUILD M4-T4 #43): "Non-Felinors on both sides destroyed, Felinors and itself
-// survive; radiant enemy side only."
-// One play producing two `destroyed` events, one per side, is R59's single state check.
-// The board keeps one def per slot so a string reference is never ambiguous:
-//   p1  lane 2  #20 Pointmaster   7/2 Human            non-Felinor, dies (base) / lives (radiant)
-//   p1  lane 4  Felinor Token     1/1 Felinor, Token   survives both faces
-//   p2  lane 1  #12 Duplicating Felinors 3/4 Felinor   survives both faces
-//   p2  lane 2  #25 4-mana 7/7    7/7 Armor 7          non-Felinor, dies on both faces
-// Nothing on that board has a Cry that could fire (units placed by the builder are not played), and
-// Armor is irrelevant to a destroy, which is not damage (§6.3).
+// #43 Big Felinor (SPEC §8.2, §4.5, §6.3 Destroy; R11, R46, R59, R69; BUILD M4-T4 #43).
+// Non-Felinors (#20, #25) destroyed in single state check (R59); Felinors (#12, Felinor Token) survive.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

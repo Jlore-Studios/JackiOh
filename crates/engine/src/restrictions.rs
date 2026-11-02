@@ -1,39 +1,20 @@
-//! What a card may not be done to (docs/classic-sets.md B5 E35): the one place a targeting rule, a
-//! damage step or an attack validator asks whether a card is out of an effect's reach, so the answer a
-//! client greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
+//! What a card may not be done to (docs/classic-sets.md B5 E35): the one place a targeting rule, a damage
+//! step or an attack validator asks whether a card is out of an effect's reach, so the answer a client
+//! greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
 //!
-//! Three families live here.
+//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `effects/targets.rs`'s, which
+//!    asks `effect_is_from_spell` for every card a target or a scope names.
+//!  * Immutable's targeting half (R781001, R450): every declaration and `target` prompt asks
+//!    `immutable_bars`, as does a Field Trap naming its one card (Classic #5 Tesla, Classic+ #74); random
+//!    picks, scopes and attacks still reach it. Its text half (R23) is read at each verb.
+//!  * The attack restrictions (Classic+ #51, #19.1, a carried Unit's R446, Flying's #783, the Gauntlet's
+//!    R1849005): `combat.rs` asks `attack_restriction` for a declared attack (§4.2 step 2), the Taunt wall
+//!    (step 3: a Taunt binds only who may attack it) and every forced attack, which skips steps 1 to 3
+//!    (R53) but not these.
 //!
-//!  * Immune to Spells: "a Spell can't target it and doesn't affect it". The targeting half is the
-//!    play pipeline's (`spell_cannot_reach` in `play_choices`); the "doesn't affect it" half is
-//!    `effects/targets.rs`, which asks `effect_is_from_spell` for every card a single target or a scope
-//!    names, so every verb written in that vocabulary passes an immune unit by.
-//!  * Immutable's targeting half (R781001): "while in play, Spells, Field Spells and Field Traps can't
-//!    target it". Targeting is R450's choosing, so `immutable_bars` is asked by every declaration
-//!    (`play_choices`) and every `target` prompt (`targeting_point`); a Field Trap whose trigger names
-//!    the one card it acts on asks it too (Classic #5 Tesla, Classic+ #74). Random picks, scopes,
-//!    attacks, Units and Traps that are not Field Traps still reach the card. Its text half (no
-//!    Transform, Vanilla, Fuse-onto, Nerf or Buff, R23) is read where each of those verbs is.
-//!  * The attack restrictions: can't be attacked (Classic+ #51), attacked only from its own lane
-//!    (Classic+ #19.1), can't attack or be attacked (a carried Unit, R446), and Flying, attacked only
-//!    by Flying or Ranged units outside Defense Position (#783, R783002). `combat.rs` asks
-//!    `attack_restriction` for a declared attack (§4.2 step 2), for the Taunt wall (step 3: a Taunt
-//!    binds only the attackers that may attack it) and for every forced attack, which skips steps 1 to
-//!    3 (R53) but not these. The Gauntlet (R1849005) is one more of them, an aura's rather than a
-//!    unit's: while one acts, the Units of its lanes attack only one another.
-//!
-//! Beside them, two Stinkyscape rules (#1849): Immune to Spell Damage (R1849000, asked by `damage.rs`),
-//! and the aura "Units cannot be in Defense Position", which reaches every Unit (R1849006, asked by
-//! `combat::why_cannot_switch_in` and the state check).
-//!
-//! A restriction a card prints is a static flag (`Script.staticFlags`), so a Vanilla takes it with the
-//! rest of the text (`scripts::script_of`).
-//!
-//! Port of `packages/engine/src/restrictions.ts`. Not ported (SURFACE §6.6): TS's positional bars
-//! (`registerAttackBar`, `AttackBar`, `AttackBarAnswer` and the `bars` registry the attack checks also
-//! consulted). Nothing ever registered one — a carried Unit's "can't attack or be attacked" is read off
-//! where it stands by `combat.rs` (`zones::is_carried`) — so the registry was always empty and every
-//! check here is its flag alone.
+//! Beside them, Stinkyscape's (#1849) Immune to Spell Damage (R1849000) and "Units cannot be in Defense
+//! Position" (R1849006). A printed restriction is a static flag, so a Vanilla takes it with the text. A
+//! carried Unit's bar is read where it stands (`zones::is_carried`), not registered (SURFACE §6.6).
 
 use crate::config::GAUNTLET_LANES;
 use crate::damage::DamageTarget;
@@ -57,8 +38,7 @@ pub fn is_spell_source(state: &GameState, source: Option<&CardInstance>) -> bool
     }
 }
 
-/// E35: "a Spell can't target it and doesn't affect it". True when `source` is a Spell and `card` is
-/// immune to Spells, so the effect passes the card by as if it were not there.
+/// E35: "a Spell can't target it and doesn't affect it", for an immune `card` and a Spell `source`.
 pub fn spell_cannot_reach(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
     is_spell_source(state, source) && immune_to_spells(state, card)
 }
@@ -67,7 +47,7 @@ pub fn spell_cannot_reach(state: &GameState, source: Option<&CardInstance>, card
 /// continuation re-entered once the card has gone (R98's resolving Spell returned to a hand, R127's
 /// card that ceased to exist) still names the script it runs (`ctx.def_id`), on the face it recorded.
 pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
-    // TS read the live `ctx.self`: the card as it stands now, which is what its type is judged by.
+    // The card as it stands now is what its type is judged by.
     if let Some(card) = ctx.live_self() {
         return is_spell_source(ctx.sink.state, Some(card));
     }
@@ -77,12 +57,9 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
     }
 }
 
-/// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names —
-/// a Spell's effects pass an immune unit on the field by. A card in a hand or a deck is no unit, and
-/// its printed keyword protects nothing there. R1839000: every effect, whatever its source, passes a
-/// Dormant card by — a chosen one, one named by id, "this" and every scope and neighbour walk — so
-/// each verb written in that vocabulary (destroy, exile, damage, bounce, transform, steal, Allure,
-/// Freeze, Buff, …) leaves it be; only `effects::awaken` names it.
+/// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names:
+/// a Spell's effects pass an immune unit on the field by. R1839000: every effect, whatever its
+/// source, passes a Dormant card by; only `effects::awaken` names it.
 pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     if crate::slumber::is_slumbering(card) {
         return true;
@@ -92,10 +69,9 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
         && immune_to_spells(ctx.sink.state, card)
 }
 
-/// R781001: the type Immutable's targeting rule reads off a source. Anything standing in a unit zone
-/// is a Unit (an Animated card there included); any other card is its running face's printed type, so a
-/// Spell set face-down and revealed (ME-ALTPLAY, R1044) is still a Spell, and a Field Trap firing from
-/// the backrow is a Field Trap even when it animates afterwards.
+/// R781001: the type Immutable's targeting rule reads off a source: a Unit in a unit zone (an Animated
+/// card included), else its running face's printed type, so a revealed face-down Spell (ME-ALTPLAY,
+/// R1044) is a Spell and a Field Trap firing from the backrow a Field Trap, even if it animates later.
 pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     if let Zone::Field { row: Row::Units, .. } = source.zone {
         return CardType::Unit;
@@ -103,19 +79,17 @@ pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     card_type_of_face(state, &source.def_id, source.radiant)
 }
 
-/// R781001: whether the card is Immutable while in play: on the field, face-up (a face-down card's
-/// text is dormant, and reading it would tell its owner's opponent what it is), with the keyword now
-/// (printed, granted or from an aura).
+/// R781001: whether the card is Immutable in play: on the field, face-up (a face-down card's text is
+/// dormant, and reading it would tell the opponent what it is), with the keyword now.
 pub fn immutable_in_play(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { .. })
         && !crate::preview::is_face_down(state, card)
         && unit_has(state, card, KeywordKind::Immutable)
 }
 
-/// R781001: "While in play, Spells, Field Spells and Field Traps can't target it." True when `source`
-/// is a Spell, a Field Spell or a Field Trap (`targeting_type_of`) and `card` is Immutable in play, so
-/// the source may not choose it, its controller's own cards included. A Unit, a Trap that is not a Field
-/// Trap, and no source at all may.
+/// R781001: "While in play, Spells, Field Spells and Field Traps can't target it": true when `source`
+/// is one of those (`targeting_type_of`) and `card` is Immutable in play, its controller's own cards
+/// included. A Unit, a Trap that is not a Field Trap, and no source at all may target it.
 pub fn immutable_bars(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
     let Some(source) = source else {
         return false;
@@ -133,10 +107,9 @@ pub fn immune_to_tribal_hate(state: &GameState, card: &CardInstance) -> bool {
         && crate::scripts::flags_of(state, card).immune_to_tribal_hate == Some(true)
 }
 
-/// MD-B1, R940: whether a harmful effect whose card filter names a tribal tag (in `tags` or
-/// `not_tags`) can neither pick `card` nor reach it. True when either list holds a tag in
-/// `TRIBAL_TAGS` and the card holds the immunity. A scope with no tribal tag still reaches it,
-/// and so does a helpful effect (the caller passes the aim).
+/// MD-B1, R940: whether a harmful effect naming a tribal tag (`TRIBAL_TAGS`) in its card
+/// filter's `tags` or `not_tags` can neither pick nor reach `card`, when it holds the immunity.
+/// Scopes without a tribal tag and helpful effects (the caller passes the aim) still reach it.
 pub fn tribal_hate_cannot_reach(
     state: &GameState,
     card: &CardInstance,
@@ -152,9 +125,8 @@ pub fn tribal_hate_cannot_reach(
     names_tribal(tags) || names_tribal(not_tags)
 }
 
-/// Whether any card acting on either side of the field (§3.2; a face-down card's text asleep, R1487000,
-/// and a Dormant one's off, R1839000) carries a static flag `has` finds — an aura that reaches both
-/// players. It stops at the first.
+/// Whether any card acting on either side (§3.2; a face-down card's text asleep, R1487000, a Dormant
+/// one's off, R1839000) carries a static flag `has` finds: an aura that reaches both players.
 fn any_acting_flag(state: &GameState, has: impl Fn(&StaticFlags) -> bool) -> bool {
     PLAYER_IDS.into_iter().any(|side| {
         crate::zones::acting_on(state, side, crate::zones::StandingAt::AmongUnits)
@@ -193,9 +165,7 @@ pub fn defense_barred(state: &GameState) -> bool {
     any_acting_flag(state, |flags| flags.units_never_defense == Some(true))
 }
 
-// ---------------------------------------------------------------------------
 // The attack restrictions
-// ---------------------------------------------------------------------------
 
 /// R1839000: why a Dormant card may neither attack, be attacked, switch its position nor be picked —
 /// the one reason `legal_actions`, the reducer and the view all give.
@@ -212,15 +182,13 @@ pub fn cannot_be_attacked(state: &GameState, unit: &CardInstance) -> bool {
     flags.cant_be_attacked == Some(true) || flags.cant_attack_or_be_attacked == Some(true)
 }
 
-/// E35: only a unit standing in this unit's lane may attack it. (TS took the unit alone; its flags are
-/// read through the state here, which composes a fused card's script.)
+/// E35: only a unit standing in this unit's lane may attack it.
 pub fn attackable_only_from_lane(state: &GameState, unit: &CardInstance) -> bool {
     crate::scripts::flags_of(state, unit).attacked_only_from_lane == Some(true)
 }
 
-/// E35: why the unit restrictions bar `attacker` from attacking `target` — a declared attack or a
-/// forced one alike (R53 waives position, sickness and Taunt, never these) — or `Ok` when nothing
-/// does (SURFACE §4.4.9). A hero carries no restriction of its own.
+/// E35: why the unit restrictions bar `attacker` from `target`, declared or forced (R53), or `Ok`
+/// when nothing does (SURFACE §4.4.9). A hero carries no restriction of its own.
 pub fn attack_restriction(
     state: &GameState,
     attacker: &CardInstance,
@@ -289,9 +257,7 @@ fn flies_out_of_reach(auras: &AuraTable<'_>, attacker: &CardInstance, defender: 
     !auras.unit_has(attacker, KeywordKind::Flying) && !auras.unit_has(attacker, KeywordKind::Ranged)
 }
 
-// ---------------------------------------------------------------------------
 // Berserk
-// ---------------------------------------------------------------------------
 
 /// B5 E35: whether the unit has gone Berserk — a status, kept until it leaves the field (R78).
 pub fn is_berserk(card: &CardInstance) -> bool {

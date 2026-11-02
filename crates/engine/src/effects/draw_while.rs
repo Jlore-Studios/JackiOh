@@ -1,13 +1,11 @@
 //! "Draw until …" (Classic #46 Divine Favor, SPEC §8.6 row 46): one draw at a time while a condition the
 //! card reads holds, asked again before each draw, ending at the first draw that adds no card to the
 //! hand — a fatigue hit, a burn at the hand cap, a card cast on draw (R58), a draw a draw limit stops
-//! (§2.4) — so it never loops. A card-specific verb of the cards-classic-b workstream.
+//! (§2.4) — so it never loops.
 //!
-//! Each draw is §2.4's own (`draw.draw`). A cast on draw ends it whatever its chain then draws, and a
-//! cast that asks a question leaves the rest of its chain owed to the answer (R113) and ends it too.
-//! The hand holds at most the player's hand cap (`hand_cap_of`, R1143), which bounds the loop.
-//!
-//! Port of `packages/engine/src/effects/drawWhile.ts`.
+//! A cast on draw ends it whatever its chain then draws, and a cast that asks a question leaves the
+//! rest of its chain owed to the answer (R113) and ends it too. The hand cap (`hand_cap_of`, R1143)
+//! bounds the loop.
 
 use std::sync::Arc;
 
@@ -25,11 +23,10 @@ pub struct DrawWhileArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// Draw one card at a time while `more(ctx)` holds, stopping at a draw that adds no card to the hand.
 pub fn draw_while(args: DrawWhileArgs) -> Effect {
     Effect::new("drawWhile", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        // TS compared the prompt objects; a prompt's id names it alone.
+        // A prompt's id names it alone.
         let asked = ctx.sink.state.pending.as_ref().map(|pending| pending.id.clone());
         let cap = crate::query::hand_cap_of(ctx.sink.state, player);
         for _draws in 0..=cap {

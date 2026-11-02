@@ -1,13 +1,12 @@
 // The two glows as DOM attributes (docs/polish/7-mobile-ux.md S5, S6), and Plague Chalice's warning
 // beside them (R667).
 //
-// Green is `data-glow="ready"`: the element's testid is in `Highlight.glow`, which `highlightFor`
-// derived from `legalActions` alone. Yellow is `data-condition-active="true"`: the engine put
-// `conditionActive: true` on the card's view (R195, CLAUDE.md rule 7). Neither is decided here;
-// these helpers only turn a set membership or a view flag into an attribute value, and return
-// `undefined` so React omits the attribute rather than writing "false". `highlights.css` paints
-// them. A third mark, `data-counted="true"`, rings the cards a hand card's preview names (#991, R583),
-// read off the view like the yellow.
+// Green is `data-glow="ready"`: the element's testid is in `Highlight.glow`, which `highlightFor` derived
+// from `legalActions` alone. Yellow is `data-condition-active="true"`: the engine put
+// `conditionActive: true` on the card's view (R195, CLAUDE.md rule 7). Neither is decided here; these
+// helpers return `undefined` so React omits the attribute rather than writing "false". `highlights.css`
+// paints them. A third mark, `data-counted="true"`, rings the cards a hand card's preview names
+// (#991, R583), read off the view like the yellow.
 
 import type { CardView, PlayerView } from "@jackioh/shared";
 
@@ -15,21 +14,18 @@ import { testid, type Highlight } from "./contract.ts";
 
 export type GlowAttr = "ready";
 
-/** `data-glow`: "ready" when `testId` is in `highlight.glow`; undefined (attribute omitted) otherwise. */
 export function glowAttr(highlight: Highlight | undefined, testId: string | undefined): GlowAttr | undefined {
   if (highlight === undefined || testId === undefined) return undefined;
   return highlight.glow?.has(testId) === true ? "ready" : undefined;
 }
 
-/** `data-condition-active`: "true" when the view says so; undefined otherwise. */
 export function conditionAttr(card: Pick<CardView, "conditionActive"> | null | undefined): "true" | undefined {
   return card?.conditionActive === true ? "true" : undefined;
 }
 
 /**
- * MD-D5, R1121: `data-condition-active` from the drag layer — "true" when `testId` is in
- * `highlight.condition`, which `highlightFor` filled from the dragged or selected attacker's
- * `conditionTargets`; undefined otherwise.
+ * MD-D5, R1121: `data-condition-active` from the drag layer: `highlight.condition`, which
+ * `highlightFor` filled from the dragged or selected attacker's `conditionTargets`.
  */
 export function conditionTargetAttr(
   highlight: Highlight | undefined,
@@ -40,10 +36,9 @@ export function conditionTargetAttr(
 }
 
 /**
- * #991, R583: the testids (`card-<id>`) of the cards a hand card's preview counts, every value's
- * `ids` (C+ #44, #45's Radiant "highlight targets"), for the viewer's hand card under the pointer
- * (`hovered`), else the one `highlight.selected` holds. The engine lists only cards the viewer may
- * read (R1447) and a back has no testid, so nothing hidden is marked. Nothing is decided here.
+ * #991, R583: the testids of the cards a hand card's preview counts (C+ #44, #45's Radiant "highlight
+ * targets"). The engine lists only cards the viewer may read (R1447) and a back has no testid, so
+ * nothing hidden is marked.
  */
 export function countedTestids(view: PlayerView, highlight: Highlight, hovered: string | null): ReadonlySet<string> {
   const counted = new Set<string>();
@@ -58,7 +53,6 @@ export function countedTestids(view: PlayerView, highlight: Highlight, hovered: 
   return counted;
 }
 
-/** #991: `data-counted`: "true" when `testId` is in `highlight.counted`; undefined otherwise. */
 export function countedAttr(highlight: Highlight | undefined, testId: string | undefined): "true" | undefined {
   if (highlight === undefined || testId === undefined) return undefined;
   return highlight.counted?.has(testId) === true ? "true" : undefined;
@@ -70,17 +64,14 @@ export function countedAttr(highlight: Highlight | undefined, testId: string | u
  */
 export const COUNTERED_NOTE = "Plague Chalice would counter this if you played it now";
 
-/**
- * `data-countered-on-play`: "true" when the engine put `counteredOnPlay: true` on the hand card's
- * view (R667); undefined otherwise. Like the yellow glow it is drawn, never decided, here.
- */
+/** `data-countered-on-play`: "true" when the engine put `counteredOnPlay: true` on the hand card's view. */
 export function counteredAttr(card: Pick<CardView, "counteredOnPlay"> | null | undefined): "true" | undefined {
   return card?.counteredOnPlay === true ? "true" : undefined;
 }
 
 /**
  * `data-pareto-optimal`: "true" when the engine put `paretoOptimal: true` on the hand card's view, the
- * Pareto hint (R1844001); undefined otherwise. Which card the judge calls optimal is the engine's alone.
+ * Pareto hint (R1844001). Which card the judge calls optimal is the engine's alone.
  */
 export function paretoAttr(card: Pick<CardView, "paretoOptimal"> | null | undefined): "true" | undefined {
   return card?.paretoOptimal === true ? "true" : undefined;
@@ -97,8 +88,7 @@ const MOVE_PREFIXES: readonly string[] = [
 
 /**
  * True when `glow` holds a playable card (in the hand, or "Play" in the graveyard pile), an attacker,
- * an Activate control or a Heroic Power: any testid starting `hand-card-`, `card-`, `pile-play-`,
- * `activate-` or `power-`, or `power`.
+ * an Activate control or a Heroic Power.
  */
 export function hasMovesLeft(highlight: Highlight | undefined): boolean {
   const glow = highlight?.glow;

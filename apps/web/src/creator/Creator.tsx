@@ -1,17 +1,7 @@
-// The card creator (#920, SPEC §12.9): the account's custom cards in a list, and an editor for one
-// of them: the frame form, the no-code builder or the code view (K3), the problems the checks found,
-// a live preview and the save, delete and "Try it" buttons.
-//
-// The checks guide and the server decides (CLAUDE.md rule 7). The frame's issues are the engine
-// validator's (`validateCustomCard`, the normal module, at once); the script's are the Luau module's
-// (`checkCustomCard`, loaded the first time the editor asks, R915009), and a script with a problem is
-// not saved, since the server never compiles one (§12.9). A save the server refuses shows its issues
-// or its sentence as it sent them.
-//
-// R2119000: Delete asks nothing. The card leaves the list at once behind "Card deleted · Undo", and
-// its DELETE waits for the undo window (`undo/hold.ts`). Undo puts it back where it was; a DELETE that
-// fails puts it back too and shows why. A new card's first save sends a held DELETE first, so the
-// card it frees a place for is gone before the server counts.
+// The card creator (#920, SPEC §12.9): the account's custom cards and an editor for one (K3).
+// The checks guide and the server decides (CLAUDE.md rule 7): a script with a problem from
+// `checkCustomCard` (loaded on first use, R915009) is not saved, since the server never compiles one.
+// R2119000: Delete asks nothing; its DELETE waits for the undo window (`undo/hold.ts`).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -123,7 +113,6 @@ function withCardAt(cards: readonly CustomCard[], card: CustomCard, at: number):
 /** The script's problems, checked a moment after the last edit; stale answers are dropped. The second value asks again after a check that failed, with no edit. */
 function useScriptCheck(card: CustomCard, check: CreatorApi["check"]): [ScriptCheck, () => void] {
   const [result, setResult] = useState<ScriptCheck>({ kind: "checking" });
-  /** Bumped by the failed check's Try again, which asks again for the same script. */
   const [attempt, setAttempt] = useState(0);
   const asked = useRef(0);
   const source = card.source;
@@ -361,7 +350,6 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved, un
   const [pendingOpen, setPendingOpen] = useState<CustomCard | "new" | null>(null);
   const saved = draft.id === null ? null : (cards.find((card) => card.id === draft.id) ?? null);
   const dirty = isDirty(draft, saved);
-  /** Changes a leave would lose: a dirty draft, unless it is a new card nobody has touched. */
   const unsaved = dirty && !isUntouchedNew(draft);
   const reopenAfterReload = useRef<string | null>(null);
   // R2119000: a held DELETE answers after renders have moved on; it reads the list and token as they are then.

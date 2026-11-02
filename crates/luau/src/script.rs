@@ -23,16 +23,11 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
     vm::with_module(card, bytecode, |_lua, module| {
         let mut base_script = None;
         let mut radiant_script = None;
-        // One adapter for one function under two hooks, across both faces too (#464 gaps 10
-        // and 14): when two hook keys hold the same Luau function value — two hooks of one
-        // face, or one hook of both faces, whose params differ — both share one `Arc`, so
-        // `Arc::ptr_eq` holds the way it does for a Rust script that clones one hook
-        // (`classicplus-070`; `classic-082` and `classicplus-047` across faces). The shared
-        // function reads `param` off the running face, so one adapter serves both. The cache
-        // lives here, not in `build_script`, so both faces draw from it.
+        // One adapter for one function under two hooks, across both faces too (#464 gaps 10 and 14):
+        // two hook keys holding the same Luau function value share one `Arc`, so `Arc::ptr_eq` holds as it
+        // does for a Rust script that clones one hook. The cache lives here, not in `build_script`, so
+        // both faces draw from it.
         let mut hook_cache: HookCache = Vec::new();
-        // Each face's table, so a face's hooks can ask whether the other face holds the same
-        // function under the same key (`build_script`): none for `radiant = "base"`.
         let face_table = |face: Face| match module.raw_get::<Value>(face.key()) {
             Ok(Value::Table(table)) => Some(table),
             _ => None,
@@ -106,10 +101,9 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
 /// (`build_script`).
 pub type HookCache = Vec<(*const std::ffi::c_void, Option<Face>, Hook)>;
 
-/// Builds one `Script` for a face from its table. `hook_cache` is `load_card`'s, shared by both
-/// faces, so one function value held by two hook keys gets one adapter (#464 gaps 10 and 14);
-/// `other` is the other face's table, none when the Radiant face is `"base"` or either face is
-/// missing.
+/// Builds one `Script` for a face from its table. `hook_cache` is `load_card`'s, shared by both faces, so
+/// one function value held by two hook keys gets one adapter (#464 gaps 10 and 14); `other` is the other
+/// face's table, none when the Radiant face is `"base"` or either face is missing.
 pub fn build_script(
     card: &'static str,
     face: Face,
@@ -397,16 +391,10 @@ pub fn build_script(
         }
     }
 
-    // Direct hooks. One adapter for one function under two hooks (#464 gaps 10 and 14):
-    // when two hook keys hold the same Luau function value, both share one `Arc`, so
-    // `Arc::ptr_eq` holds the way it does for a Rust script that clones one hook. The cache
-    // is `load_card`'s, shared by both faces. An adapter looks its function up under the key it
-    // was built for, on the face it runs, so it is shared only where that face holds the function
-    // under that key (#871). A hook whose function the other face holds under the same key gets
-    // an adapter that runs the face the context names, shared with every such hook of either face;
-    // any other gets one that runs its own face's function, as a Rust face runs its own closure
-    // whatever the context says (a Radiant ingredient fused into a base host, #765), shared with
-    // its face's other hooks holding that function.
+    // Direct hooks: an adapter is shared only where the face it runs holds its function under the key it
+    // was built for (#871). A hook whose function the other face holds under the same key runs the face
+    // the context names; any other runs its own face's function, as a Rust face runs its own closure
+    // whatever the context says (a Radiant ingredient fused into a base host, #765).
     let mut direct_hook = |key: &'static str| -> Option<Hook> {
         let func = hooks::get_fn(table, key).ok()?;
         let ptr = func.to_pointer();

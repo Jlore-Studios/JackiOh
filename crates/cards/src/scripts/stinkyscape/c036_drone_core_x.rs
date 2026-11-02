@@ -53,10 +53,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// S #36 Drone Core X — SPEC §8.10 row 36, BUILD M12 row S 36: "Float lowers its cost as S 34's; summons
-// the Meltdown, Propagation and Shield Layers into one unit zone in that order, only the Shield Layer
-// acting, the Propagation Layer resuming when it dies and the Meltdown Layer last (R1842000); with no free
-// unit zone nothing; radiant all three Radiant".
+// S #36 Drone Core X — SPEC §8.10 row 36, BUILD M12 row S 36 (R1842000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -77,7 +74,6 @@ mod tests {
         effective_cost(s.state(), s.card(id), CostOptions::default())
     }
 
-    /// p1 holds one Drone Core X and has one in the deck, with `mana` left to Float.
     fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
         let s = scenario(json!({
             "p1": {
@@ -102,7 +98,6 @@ mod tests {
         }))
     }
 
-    /// The definitions and faces of p1's unit zone `lane`, top first.
     fn pile(s: &Scenario, lane: i32) -> Vec<(String, bool)> {
         pile_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane })
             .cloned()

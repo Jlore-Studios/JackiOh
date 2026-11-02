@@ -1,7 +1,6 @@
 // R2321000: a count a card on the field keeps on a Unit (`UnitView.tallies`, Training Grounds #31
 // Level Up!'s attacks toward its Radiant) is drawn on the Unit as "▲ 2/3", named by the keeping card,
-// on both seats, and the inspect notes spell it out for a touch player. Rendered the way the board
-// renders it, from fixture views carrying `tallies`.
+// on both seats, and the inspect notes spell it out for a touch player.
 
 import { CATALOG } from "@jackioh/cards";
 import type { PlayerView, TallyView, UnitView } from "@jackioh/shared";

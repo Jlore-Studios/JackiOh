@@ -1,8 +1,4 @@
-//! RENDER_GIT_COMMIT -> `Env.deployed_commit` (src/env.rs): the commit `GET /api/catalog` reports
-//! so deploy-watch.yml can compare it with the push. It is optional, never a problem, and only a
-//! git SHA survives, because the value ends up in a response header.
-//!
-//! Port of `apps/server/test/env-deployed-commit.test.ts` (part 18).
+//! Deployed commit header from RENDER_GIT_COMMIT (`src/env.rs`, §11.3).
 
 use indexmap::IndexMap;
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};

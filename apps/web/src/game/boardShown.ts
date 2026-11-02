@@ -33,7 +33,6 @@ export function useMarkBoardShown(): void {
   }, []);
 }
 
-/** R2118000: whether any board is mounted now. */
 export function useBoardShown(): boolean {
   return useSyncExternalStore(subscribe, shown, shown);
 }

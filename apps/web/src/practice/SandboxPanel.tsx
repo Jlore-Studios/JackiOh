@@ -1,11 +1,7 @@
-// The practice sandbox's dev tools (issue #923, SPEC §9.9, R923000–R923003): search for any card (a
-// shipped one, or one of the game's own custom cards, R962000) and spawn it for either side into any
-// zone, set a hero's health and Armor and a player's mana, draw, destroy or remove a card, and hold the
-// AI's turn while the board is arranged.
-//
-// It sends intent and nothing else (CLAUDE.md rule 7): every tool is a `sandbox` action the practice
-// worker hands the engine, which refuses what its rules refuse, and the board shows the refusal as it
-// shows any other. The bounds come from the engine's config (rule 9); the lanes from the view.
+// The practice sandbox's dev tools (issue #923, SPEC §9.9, R923000–R923003), the game's own custom cards
+// among the spawnable ones (R962000). It sends intent and nothing else (CLAUDE.md rule 7): every tool is a
+// `sandbox` action the engine judges, and the board shows a refusal as it shows any other. The bounds
+// come from the engine's config (rule 9); the lanes from the view.
 
 import { useId, useMemo, useState, type ReactElement } from "react";
 
@@ -69,7 +65,6 @@ function nameOf(defs: CardDefs | null, customs: CardDefs | undefined, view: Play
   return defs?.[defId]?.name ?? customs?.[defId]?.name ?? view.defs?.[defId]?.name ?? defId;
 }
 
-/** A whole number from an input, or null when it is empty or not one. */
 function whole(text: string): number | null {
   return /^\d+$/u.test(text.trim()) ? Number(text.trim()) : null;
 }

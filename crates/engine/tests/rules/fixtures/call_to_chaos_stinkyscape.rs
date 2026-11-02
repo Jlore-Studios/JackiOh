@@ -1,7 +1,6 @@
 //! The Stinkyscape set's two Call to Chaos tables (`subsystems/call_to_chaos_stinky.rs` and
-//! `call_to_chaos_scape.rs`, R1882001–R1882009) name the set's cards by index (B2.2): these fixture
-//! cards stand at those indices, in the Stinkyscape set, with no text, so each entry is proved on what
-//! it summons or adds and not on what the real cards then do (the cards' own tests, S #150 and #151).
+//! `call_to_chaos_scape.rs`, R1882001–R1882009) name cards by index (B2.2): these stand at those indices
+//! with no text, so an entry is proved on what it summons or adds; S #150's and #151's tests do the rest.
 
 use jackioh_engine::testkit::*;
 

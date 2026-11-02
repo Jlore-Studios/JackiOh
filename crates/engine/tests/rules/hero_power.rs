@@ -3,15 +3,12 @@
 //! R752: "Heroic Power costs (0) and playing it uses nothing. Each of its thirteen powers is an
 //! 'Activate: Spend (X)' ability (R384): once per turn, its X paid in mana as it is activated, and the
 //! card has only the one it rolled." This file is the engine's half: the table, the abilities, the
-//! roll, and the powers whose behavior needs nothing from the real catalog. `packages/cards`'
-//! `098-heroic-power.test.ts` covers the real card again, with the powers that draw from the
-//! catalog's pools (Witness Value, Stitching, KY Brainstorm, Pluck, Terminus Tricks, Cat Cafe).
+//! roll, and the powers whose behavior needs nothing from the real catalog. The real card's tests
+//! (`c098_heroic_power.rs`) cover the powers that draw from the catalog's pools (Witness Value,
+//! Stitching, KY Brainstorm, Pluck, Terminus Tricks, Cat Cafe).
 //!
-//! `hp-heroic` below is this file's stand-in for #98, wired as the real card is: `startOfGame` rolls
-//! with `rollPower`, `activations` are `powerAbilities`, and `resume` points `POWER_RESUME` at
-//! `heroPower`. Its catalog entry declares the `shot` number Steady Shot reads (R754).
-//!
-//! Port of `packages/engine/test/heroPower.test.ts`.
+//! `hp-heroic` below is this file's stand-in for #98, wired as the real card is. Its catalog entry
+//! declares the `shot` number Steady Shot reads (R754).
 
 use serde::Serialize;
 
@@ -34,11 +31,8 @@ use crate::rules::fixtures::harness::{
 };
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
-// ---------------------------------------------------------------------------
 // Fixtures: this file's stand-in for #98 and the three tokens it summons by index.
-// ---------------------------------------------------------------------------
 
-/// TS `def(name, type, extra)`; `index` is the value TS's running `nextIndex` (from 1600) gives it.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -141,7 +135,6 @@ fn heroic_script(radiant: bool) -> Script {
     }
 }
 
-/// TS `registerCatalog({ ...registeredCatalog(), ...DEFS })` and `registerScripts({ ...registeredScripts(), ...SCRIPTS })`.
 fn register_fixtures() {
     let mut catalog = registered_catalog().clone();
     for entry in defs() {
@@ -174,8 +167,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// Write one key of a card's memory in the state (TS wrote through the live object) and hand back
-/// the card as it now stands.
+/// Write one key of a card's memory in the state and hand back the card as it now stands.
 fn set_memory(state: &mut GameState, id: &str, key: &str, value: Value) -> CardInstance {
     let card = find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"));
     card.memory.insert(key.to_string(), value);
@@ -218,7 +210,6 @@ fn name_of<T: Serialize>(name: T) -> String {
     json_of(name).as_str().unwrap_or_default().to_string()
 }
 
-/// `expect(HERO_POWER_NAMES).toContain(value)`.
 fn is_power_name(value: Option<&Value>) -> bool {
     let names = json_of(HERO_POWER_NAMES);
     value.is_some_and(|value| names.as_array().is_some_and(|names| names.contains(value)))
@@ -234,9 +225,7 @@ fn lists_activation_of(state: &GameState, card: &CardInstance) -> bool {
         .any(|body| matches!(body, ActionBody::Activate { instance_id, .. } if *instance_id == card.id))
 }
 
-// ---------------------------------------------------------------------------
 // The table and the abilities (R103, R752).
-// ---------------------------------------------------------------------------
 
 mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
     use super::*;
@@ -455,9 +444,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The powers that need nothing from the catalog (R753–R758).
-// ---------------------------------------------------------------------------
 
 mod heroic_power_the_powers_r753_r758 {
     use super::*;
@@ -603,7 +590,7 @@ mod heroic_power_the_powers_r753_r758 {
             Default::default(),
         );
         keep_turn(&mut state);
-        // R81: the target is declared with the activation; legalActions lists one per target.
+        // R81: the target is declared with the activation; `legal_actions` lists one per target.
         let listed = legal_actions(&state, P1)
             .into_iter()
             .filter(
@@ -760,15 +747,12 @@ mod heroic_power_the_powers_r753_r758 {
             assert_eq!(result.error, None);
             result.state.rng_cursor - cursor
         };
-        // The base face picks once; its controller's Luck 1 picks twice and keeps the better.
         assert_eq!(picks(false), 1);
         assert_eq!(picks(true), 2);
     }
 }
 
-// ---------------------------------------------------------------------------
 // The roll (R43, R78, R151).
-// ---------------------------------------------------------------------------
 
 mod heroic_power_rolling_the_power_r43_r78 {
     use super::*;

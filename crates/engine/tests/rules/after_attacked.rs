@@ -1,8 +1,7 @@
-//! "After this is attacked" (`Script.afterAttacked`): the defender's hook, run once the state check
-//! that closes each combat it was the target of has run — a declared attack's (§4.2 step 5) and a
-//! forced one's (R53) — also when it died there, then on the snapshot it fought with (R78, R89);
-//! never for a Cleave splash (no attack on it) nor for an attack on the hero. The attacker's hook
-//! runs first. Meditative #49.3 AI Girlfriend (MD-C26, R1026) is its user.
+//! "After this is attacked" (`Script.afterAttacked`): the defender's hook, run once the state check closing
+//! each combat it was the target of has run (§4.2 step 5; a forced one's, R53), also when it died there,
+//! then on the snapshot it fought with (R78, R89); never for a Cleave splash nor an attack on the hero. The
+//! attacker's hook runs first. Meditative #49.3 AI Girlfriend (MD-C26, R1026) is its user.
 
 use jackioh_engine::combat::AFTER_ATTACKED_WORK;
 use jackioh_engine::effects::forced_attacks_on;
@@ -15,12 +14,11 @@ use crate::rules::fixtures::damage_combat::{
 };
 use crate::rules::fixtures::harness::{put, sink_for, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -71,8 +69,7 @@ mod script_after_attacked {
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": target.id, "playerId": "p1"
         })));
-        // The defender died in the combat; the hook ran on the snapshot it fought with, whose zone
-        // is still the field — while the attacker that killed it survived.
+        // The defender died; the hook ran on the snapshot it fought with (zone: field), its killer alive.
         assert_eq!(
             notes(game.state()),
             vec![format!("attacked:{}:false:true:field", striker.id)]
@@ -131,8 +128,7 @@ mod script_after_attacked {
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": middle.id, "playerId": "p1"
         })));
-        // The attacker's hook ran for its combat; the splashed defender's never did: a Cleave
-        // splash is damage, not an attack on it.
+        // The splashed defender's hook never ran: a Cleave splash is damage, not an attack on it.
         assert!(
             notes(game.state())
                 .iter()

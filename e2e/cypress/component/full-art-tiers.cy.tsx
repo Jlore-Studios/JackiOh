@@ -1,15 +1,13 @@
-// R2655000, R2655003: the full-art tiers in a real browser. apps/web's vitest suite proves which
-// classes and attributes a tier's face wears (cards/fullArtTiers.test.tsx) and what the stylesheet
-// declares (cards/cosmetics.test.tsx); what only a layout and style engine can say is measured here:
-// one full-art face of each card type (a Unit, a Spell, a Field Spell, a Field Trap, and two tokens
-// that wear their parent's full art, R2655002) at each tier, at the hand and inspect sizes, keeps its
-// cost gem, rarity gem, set mark, crest, name banner and stats apart, and a Mythic's
-// signature is on the art, clear of all of them; and under Reduce motion no tier moves and the
-// signature stands whole.
+// R2655000, R2655003: the full-art tiers in a real browser. apps/web's vitest suite proves the classes
+// and attributes a tier's face wears (cards/fullArtTiers.test.tsx) and what the stylesheet declares
+// (cards/cosmetics.test.tsx); what only a layout and style engine can say is measured here: one
+// full-art face of each card type (`CARDS`) at each tier, at the hand and inspect sizes, keeps its
+// parts apart, and a Mythic's signature is on the art, clear of all of them; under Reduce motion no
+// tier moves and the signature stands whole.
 //
 // Each face is the viewer's own copy (`OwnCopy`) shown at a tier by `FullArtShown`, as the
-// Collection's preview shows one, so the three tiers of one card stand side by side with no pick
-// written. No `FullArtOwned` is mounted, so every full art counts as owned, as in practice.
+// Collection's preview shows one, so a card's three tiers stand side by side with no pick written.
+// No `FullArtOwned` is mounted, so every full art counts as owned, as in practice.
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, FACE_ASPECT, faceModel } from "../../../apps/web/src/cards/index.ts";
@@ -229,7 +227,6 @@ describe("R2655003 the full-art tiers on real faces", () => {
             const signature = cf.querySelector(".cf-signature")?.getBoundingClientRect();
             const text = cf.querySelector(".cf-signature text")?.getBoundingClientRect();
             expect(text?.width ?? 0, `${where}: the name is drawn`).to.be.greaterThan(0);
-            // The whole name shows inside the open wipe.
             expect(text?.left ?? 0, `${where}: the name starts inside`).to.be.at.least((signature?.left ?? 0) - 0.5);
             expect(text?.right ?? 0, `${where}: the name ends inside`).to.be.at.most((signature?.right ?? 0) + 0.5);
           }

@@ -99,7 +99,6 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
 
-  // Hide offers until the server confirms an open opponent socket.
   if (connection !== "open" || status === null || !status.opponentHere) return null;
 
   const random = status.mode === "random";

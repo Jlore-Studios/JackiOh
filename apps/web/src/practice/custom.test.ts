@@ -14,7 +14,6 @@ import { createPracticeCore } from "./core.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 
-/** A 0-cost Spell: "Deal {dmg} damage to the enemy hero." */
 const BURNER: CustomCard = {
   id: "custom-burner",
   version: 1,
@@ -156,7 +155,6 @@ describe("R962000 a sandbox game spawns the custom cards it carries", () => {
     let last = snapshotOf(await send({ type: "start", config: { ...CONFIG, seed, sandbox: true } }));
     expect(luauModuleInUse()).toBe(true);
 
-    // The mulligans, keeping everything; then the human's main phase, the AI acting when it owes.
     for (let step = 0; step < 60; step += 1) {
       const { view } = last;
       if (last.aiToAct) {
@@ -198,8 +196,7 @@ describe("R962000 a sandbox game spawns the custom cards it carries", () => {
     expect(after.view.events.some((event) => event.type === "scriptFailed")).toBe(false);
 
     // Either seat: one spawned into the AI's hand is a card it holds, which it may read (R915007).
-    // With the human's hero at 3, its damage, the card is the AI's win, so any evaluation plays it: a
-    // free 3 to the face alone is a choice one AI makes and the next may not (AI gen 13 held it).
+    // With the human's hero at 3, its damage, the card is the AI's win, so any evaluation plays it.
     const ai = opponentOf(HUMAN);
     const given = snapshotOf(await send({ type: "act", action: { type: "sandbox", op: { kind: "spawn", player: ai, defId: BURNER.id, to: { zone: "hand" } } } }));
     expect(given.error).toBeNull();
@@ -219,7 +216,6 @@ describe("R962000 a sandbox game spawns the custom cards it carries", () => {
     ).toBe(true);
     expect(events.some((event) => event.type === "scriptFailed")).toBe(false);
 
-    // The log, the spawns in it, folds back to the same game with the custom card and the flag.
     const debug = await send({ type: "debug" });
     if (debug.type !== "debug") throw new Error("a dev core answers debug");
     const { decks, handicaps, log, dealt, hash, customCards, sandbox } = debug.debug;

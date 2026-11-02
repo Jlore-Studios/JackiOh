@@ -1,24 +1,13 @@
-//! A backrow card's turn hooks in the AI's evaluation (R2477000): at a decision's root the AI fires
-//! once each start-of-turn and end-of-turn hook of its own backrow, and of its own hand's Field Spells
-//! (set first), and prices the firing as its controller's evaluation after it less before it, each
-//! crystal of mana gained at `AI_EVAL.next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of the price
-//! for each own readable backrow card, so a Field Spell that pays every turn is worth more than its
-//! cost. A hook that prompts is not priced, the enemy's backrow is priced as before, the frozen
-//! baseline reads no price, and a call not passed a decision's prices reads none.
-//!
+//! A backrow card's turn hooks in the AI's evaluation (R2477000): the decision's root fires each
+//! start-of-turn and end-of-turn hook of the seat's backrow and hand Field Spells once
+//! (`turn_hook_prices`), and `material` adds `AI_EVAL.turn_hook` of the price. A hook that prompts is not
+//! priced, the frozen baseline reads no price, and a call not passed a decision's prices reads none.
 //! R2565000 prices the same hooks for a Unit on either field and for a Field Spell the seat can read in
-//! the enemy's backrow too: Gatling Pea (meditative-013), (2) 2/6 Armor 2, "End of turn: Deal 1 damage to
-//! the enemy hero. Then this damage permanently goes up by 1"; Gravedigger (core-037), (2) 4/5, "Start of
-//! turn: Return a random card from your graveyard to hand"; and Meltdown Layer
-//! (stinkyscape-t-meltdown-layer), a (5) 12/12 token, "End of turn: This takes 6 damage", which harms its
-//! holder. A face-down card of the enemy's is never probed (R185).
+//! the enemy's backrow too; a face-down card of the enemy's is never probed (R185).
 //!
-//! The cards: Mana Well (core-006), (3) "Start of turn: gain 1 mana", Radiant 2; Rush Token Farm
-//! (core-058), (2) "Start of turn: summon a Rush Token"; Unbiased Immigration (core-059), (2) "Start of
-//! turn: add a random card to your hand"; Masochism Mask (core-065), (1) "Start of turn: choose one: …",
-//! a prompt; Ace in the Hole (classic-065), (2) a Trap, "End of turn: Flip a coin. …"; the Field Spells
-//! with no turn hook The Power to Thrive (classic-081, 2), Level Up! (traininggrounds-031, 3) and Mutate
-//! Spell (classic-078, 1); and Mr. Vanilla (core-008), a (1) 4/4 with no text.
+//! The cards: Mana Well (Radiant 2), Rush Token Farm, Unbiased Immigration, Masochism Mask (a prompt),
+//! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),
+//! three Field Spells with no turn hook, and Mr. Vanilla.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -97,8 +86,8 @@ fn close(a: f64, b: f64) {
     assert!((a - b).abs() < 1e-9, "{a} vs {b}");
 }
 
-/// The AI's turn 5 (three crystals) with a Mana Well and three crystals to play it with, nothing else
-/// in hand and nothing on either board, the human holding a Mr. Vanilla; the AI at `tier`.
+/// The AI's turn 5 with a Mana Well and the three crystals to play it, nothing else in hand or on
+/// either board; the AI at `tier`.
 fn mana_well_on_curve(tier: Handicap) -> GameState {
     register_cards();
     let mut state = scenario(json!({
@@ -281,8 +270,7 @@ fn r2477000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     );
 }
 
-/// The AI's turn with `p1` and `p2` as their sides' setups (hand, field, backrow, graveyard, mana), a
-/// stocked library under each.
+/// The AI's turn with `p1` and `p2` as their sides' setups, a stocked library under each.
 fn sides(seed: &str, p1: Value, p2: Value) -> GameState {
     register_cards();
     let side = |setup: Value| {
@@ -296,7 +284,6 @@ fn sides(seed: &str, p1: Value, p2: Value) -> GameState {
         .clone()
 }
 
-/// `player`'s unit of `def_id` on the field.
 fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
     active_units_of(state, player)
         .into_iter()

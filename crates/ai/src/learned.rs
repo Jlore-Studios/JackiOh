@@ -1,32 +1,15 @@
 //! The learned evaluation in the search (#466, #1010; `docs/learned-eval.md` D4, D6, D7, D9): a small
 //! network over `features`, fitted by `training/ml`, that corrects the hand eval where the search
-//! finally scores a line.
-//!
-//! - **Where.** `AI_EVAL_KIND` (`config.rs`) chooses. With `EvalKind::Hand`, the default, nothing
-//!   changes. With `EvalKind::Learned`, `finalist_score` scores the finalists after the opponent's
-//!   reply (`reply_score`, the lines `score_line` re-scores on every determinization): D6's option B.
-//!   `LEARNED_REACH` takes it further (R1012002): at `Lines`, every complete line where the beam
-//!   closes it (`line_score`, in `static_score`), so the network also picks the finalists; at `Beam`,
-//!   every open line the beam ranks too (`open_score`). Short of `Beam`, the beam's pruning keeps the
-//!   hand eval, so the network picks among the lines the hand eval found.
-//! - **What.** The network learned the seat's chance to win as `a·hand/U + b + net(x)` (D4's skip
-//!   connection, `training/ml/jackioh_ml/models.py`). Mapped back onto the hand eval's points, that is
-//!   `hand + (b + net(x))·U/a` (`Network::points`). So `unspent_mana`, the lethal constants and a
-//!   ladder bot's `temperature` (R1452), all in evaluation points, keep their meaning.
-//! - **How much.** A finalist takes `LEARNED_CORRECTION_SHARE` of the correction, `hand + share·
-//!   (points − hand)` (R1012001): fitted to outcomes, the whole correction judges positions a game
-//!   apart better than lines a move apart.
-//! - **Which games.** 1v1 only. A Duos duel keeps the hand eval (D9, R964000): the network never saw
-//!   a team's pool. Nor does the tutorial's opponent (R1012003): its lessons are scripts written for
-//!   it. A finished game keeps its won or lost score.
-//! - **Arithmetic.** `f64`, every loop in one fixed order, ReLU written as comparisons (never
-//!   `f64::max`, so a signed zero cannot differ), and no libm function. That is the determinism the
-//!   hand eval's own `f64` rests on (D7). Part 6 (#1011) swaps it for integers before it ships.
-//! - **Weights.** `src/learned/weights.json`, compiled in by `build.rs` as `LEARNED` (rule 4: data
-//!   reaches the crate at compile time). It records `FEATURES_VERSION`, the catalog it was fitted on,
-//!   the id-to-row table (`keys`) and the scale. A feature key the table lacks is no input at all, so a
-//!   new or custom card (#915) is valued by its dense stats alone (D5). The checked-in network may be
-//!   the null one, whose correction is zero everywhere, until a fit replaces it.
+//! finally scores a line. `AI_EVAL_KIND` (`config.rs`) chooses; with `EvalKind::Learned`,
+//! `finalist_score` scores the finalists after the opponent's reply (D6's option B), and `LEARNED_REACH`
+//! (R1012002) takes it further. A finalist takes `LEARNED_CORRECTION_SHARE` of the correction
+//! (R1012001), mapped back onto the hand eval's points (D4's skip connection, `Network::points`), so
+//! `unspent_mana`, the lethal constants and a ladder bot's `temperature` (R1452) keep their meaning.
+//! 1v1 only: a Duos duel keeps the hand eval (D9, R964000), since the network never saw a team's pool,
+//! and so does the tutorial's opponent (R1012003), whose lessons are scripts written for it. The float
+//! network is `f64`, every loop in one fixed order, ReLU written as comparisons and no libm function:
+//! the determinism the hand eval's own `f64` rests on (D7). A feature key the weights' table lacks is
+//! no input, so a new or custom card (#915) is valued by its dense stats alone (D5).
 
 use jackioh_engine::{AI_TUTORIAL, GameState, Handicap, PlayerId};
 

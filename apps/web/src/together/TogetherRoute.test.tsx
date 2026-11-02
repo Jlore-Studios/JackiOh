@@ -1,11 +1,6 @@
 // #936 S8: `/together`, the Play together page (B54–B56, B59). The page renders what the social
-// routes answer and sends intent (CLAUDE.md rule 7): the friends list with each friend's status and
-// the controls B56 offers by it, the requests both ways, the blocked list, the add form showing the
-// server's refusal in its words, "Shared with me", and the co-op panel.
-//
-// The server is a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where
-// `net/session.ts` reads it, as the gate tests do. R2119000: Remove is undone, not asked, its undo
-// window run on a manual clock.
+// routes answer and sends intent (CLAUDE.md rule 7). The server is a stubbed `fetch`
+// (`test/stubServer.ts`); the signed-in session is put where `net/session.ts` reads it.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,9 +45,7 @@ const TESTID = {
   friendsRetry: "together-friends-retry",
 } as const;
 
-// ---------------------------------------------------------------------------------------------
 // the world the stubbed server answers with
-// ---------------------------------------------------------------------------------------------
 
 const ME: PlayerRef = { profileId: "profile-1", username: "Me#1" };
 const SINCE = "2026-10-01T00:00:00.000Z";
@@ -163,9 +156,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-// ---------------------------------------------------------------------------------------------
 // reading the page
-// ---------------------------------------------------------------------------------------------
 
 async function renderPage(
   state: World = world(),
@@ -280,9 +271,7 @@ function press(key: string, options: { shiftKey?: boolean } = {}): void {
 
 const IN_MATCH = /in[\s_-]?(a\s)?(match|game)|playing/i;
 
-// ---------------------------------------------------------------------------------------------
 // B54: the gate, as /play's
-// ---------------------------------------------------------------------------------------------
 
 describe("B54 /together is gated as /play is", () => {
   it("B54 anonymous: /together sends the browser to /login", async () => {
@@ -328,9 +317,7 @@ describe("B54 /together is gated as /play is", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B55: friends, requests, blocked, the add form
-// ---------------------------------------------------------------------------------------------
 
 describe("B55 the friends list", () => {
   it("B55 lists one row per friend, each with the friend's name#tag", async () => {
@@ -593,9 +580,7 @@ describe("B55 requests both ways and the blocked list", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B56: what each friend row offers
-// ---------------------------------------------------------------------------------------------
 
 describe("B56 each friend row's controls", () => {
   it("B56 an online, idle friend is offered Challenge", async () => {
@@ -687,9 +672,7 @@ describe("B56 each friend row's controls", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R2119000: Remove is undone, not asked
-// ---------------------------------------------------------------------------------------------
 
 describe("R2119000 removing a friend is undone, not asked", () => {
   const ANN_PATH = "/api/friends/f-ann";
@@ -749,7 +732,6 @@ describe("R2119000 removing a friend is undone, not asked", () => {
       expect(server.to("DELETE", ANN_PATH)).toHaveLength(1);
     }, SLOW);
     expect(server.to("DELETE", ANN_PATH)[0]?.keepalive).toBe(false);
-    // The list is read again, and no longer names her.
     await waitFor(() => {
       expect(server.to("GET", "/api/friends").length).toBeGreaterThan(reads);
     }, SLOW);
@@ -780,9 +762,7 @@ describe("R2119000 removing a friend is undone, not asked", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B59: Shared with me
-// ---------------------------------------------------------------------------------------------
 
 describe("B59 Shared with me", () => {
   // Ann shares a replay but is no friend row here, so her name on the page is the shared entry's.
@@ -848,9 +828,7 @@ describe("B59 Shared with me", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the co-op panel lives on the page
-// ---------------------------------------------------------------------------------------------
 
 describe("B60 the page holds the co-op panel", () => {
   it("B60 /together shows the co-op panel's create control", async () => {
@@ -859,9 +837,7 @@ describe("B60 the page holds the co-op panel", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the challenge dialog is a modal for the keyboard (#1569), as the card drill-down is (#1527)
-// ---------------------------------------------------------------------------------------------
 
 describe("the challenge dialog's focus (#1569)", () => {
   /** Press Ann's Challenge button. `fireEvent.click` leaves the focus where it was, as Safari does. */

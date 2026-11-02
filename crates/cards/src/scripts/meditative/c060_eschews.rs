@@ -92,13 +92,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #60 Eschews — SPEC §8.8 row 60, BUILD M10 row M 60: "At your end of turn only, casts one random
-// non-token Human, Book or CN card or AI generated card (`anyTags`, R1421), never itself, each
-// definition once in the pool, as your play (R70): random choices, X at your current mana (at
-// least 1), a Unit summoned with its Cry, a backrow card fizzling with no zone; each death of one
-// of your Units, tokens and both deaths of a Reborn Unit included, counts from its entry; at 5 it
-// is Tributed at the next state check (R1082), a Sacrifice that Indestructible does not stop;
-// casts and deaths read through `param()`; radiant the cast card is Radiant, and the count is 50".
+// M #60 Eschews — SPEC §8.8 row 60, BUILD M10 row M 60 (R70).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,7 +176,6 @@ mod tests {
                 s.play(ESCHEWS, json!({}));
                 s.end_turn();
 
-                // One random cast went out as p1's play.
                 let plays = s
                     .events()
                     .iter()
@@ -197,12 +190,10 @@ mod tests {
             fn r1082_five_deaths_tribute_it_at_the_next_state_check() {
                 let mut s = boarded("eschews-deaths", false);
                 s.play(ESCHEWS, json!({}));
-                // Four Timmies die: Eschews stays.
                 for lane in 2..=5 {
                     kill_timmy(&mut s, lane);
                 }
                 assert!(eschews_on_field(&s));
-                // The fifth death Tributes it at the next state check.
                 kill_timmy(&mut s, 1);
                 s.expect_in_zone(ESCHEWS, "graveyard");
             }
@@ -249,7 +240,6 @@ mod tests {
                 s.play(ESCHEWS, json!({}));
                 s.end_turn();
 
-                // The cast went out on its Radiant face.
                 let radiant_cast = s.events().iter().any(|event| match event {
                     GameEvent::CardResolved {
                         player,

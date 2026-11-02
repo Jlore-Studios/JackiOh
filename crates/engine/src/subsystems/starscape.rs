@@ -1,22 +1,12 @@
 //! Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002). No card reaches it
 //! until the Stinkyscape set ships (R1420); its fixture card proves it (`tests/rules/starscape.rs`).
 //!
-//! The machinery that is not card data: the map, the travel and the abilities a card declares to
-//! travel it.
-//!
-//!   map     each player has one (R1847000), on `PlayerState.starscape`, absent until their first
-//!           travel (D14): every card's travel moves the same map, and it stays when the card leaves.
-//!           It is charted at that first travel from the match rng, once: `STARSCAPE_EDGE_TRAVELS`
-//!           nodes, each before the last drawn uniformly from `STARSCAPE_REWARDS`, the last the edge
-//!           of the universe. The nodes are stored, never drawn again, so a simulation or a replay of
-//!           a later travel sees the same map. Public on both seats (`starscape_view`).
-//!   travel  one node and its reward (R1847001), reported by the public `starscapeTravelled`: the
-//!           node's heal, draw, mana or damage, or at the edge the card the ability names, which a full
-//!           hand burns (§2.4). Nothing travels past the edge: the ability stays listed and can't be
-//!           activated now.
-//!   price   Activate ♾️ (`STARSCAPE_TRAVEL_MANA`); on the Radiant face the player's first travel each
-//!           turn is free (R1847002), as two abilities `has` switches between (R752), so the card has
-//!           exactly one of them at a time and `legal_actions`, the refusal and the view read one.
+//! Each player has one public map (R1847000) on `PlayerState.starscape`, absent until their first
+//! travel (D14), shared by every card's travel and kept when the card leaves. It is charted once from
+//! the match rng and stored, so a simulation or a replay of a later travel sees the same map. A travel
+//! (R1847001) takes one node's reward, at the edge the card the ability names (a full hand burns it,
+//! §2.4); nothing travels past the edge. On the Radiant face the first travel each turn is free
+//! (R1847002), as two abilities `has` switches between (R752), so the card has one at a time.
 
 use crate::config::{STARSCAPE_EDGE_TRAVELS, STARSCAPE_REWARDS, STARSCAPE_TRAVEL_MANA};
 use crate::effects::travel_starscape;
@@ -33,8 +23,7 @@ pub const STARSCAPE_TRAVEL_ABILITY: &str = "travel";
 /// R1847002: the Radiant face's free first travel each turn.
 pub const STARSCAPE_FREE_TRAVEL_ABILITY: &str = "free-travel";
 
-/// R1847000: a new map, its nodes before the edge drawn uniformly from `STARSCAPE_REWARDS`, the edge
-/// last.
+/// R1847000: a new map, its nodes drawn uniformly from `STARSCAPE_REWARDS`, the edge last.
 pub(crate) fn chart(rng: &mut Rng) -> Vec<StarscapeReward> {
     let mut nodes: Vec<StarscapeReward> = (1..STARSCAPE_EDGE_TRAVELS)
         .filter_map(|_| rng.pick(STARSCAPE_REWARDS).map(|&(reward, _)| reward))
@@ -43,8 +32,7 @@ pub(crate) fn chart(rng: &mut Rng) -> Vec<StarscapeReward> {
     nodes
 }
 
-/// R1847000: how much a node's reward gives (config `STARSCAPE_REWARDS`); the edge gives a card, and
-/// no number.
+/// R1847000: how much a node's reward gives; the edge gives a card, and no number.
 pub fn starscape_amount(reward: StarscapeReward) -> Option<i32> {
     STARSCAPE_REWARDS
         .iter()
@@ -93,9 +81,7 @@ fn travel_ability(
 }
 
 /// R1847002: the abilities a card declares to travel its controller's map, the edge giving
-/// `edge_def_id`. The base face has one, a travel for `STARSCAPE_TRAVEL_MANA`. The Radiant face has
-/// two that `has` switches between (R752): a free travel while the player has not traveled this
-/// turn, and the paid one once they have.
+/// `edge_def_id`: the paid travel, and on the Radiant face a free one before this turn's first travel.
 pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<ActivationDecl> {
     let paid = Some(ActivationCost {
         mana: Some(STARSCAPE_TRAVEL_MANA),

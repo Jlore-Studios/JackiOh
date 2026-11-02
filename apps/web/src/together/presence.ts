@@ -1,10 +1,8 @@
 // The presence heartbeat (#936, B47): while the client holds a session, `POST /api/presence` now and
 // every `PRESENCE_HEARTBEAT_MS`, so friends see the player online for `PRESENCE_TTL_MS` after each.
-// Mounted once in the shell (`main.tsx`), so every screen keeps it, a match and practice included.
-//
-// What "online" means is the server's (CLAUDE.md rule 7); this only says the client is open. A session
-// the server refuses outright (signed out, or an account that is not active) is not asked again until
-// the tab holds another one; any other failure is the next beat's to retry.
+// Mounted once in the shell (`main.tsx`), so every screen keeps it. What "online" means is the
+// server's (CLAUDE.md rule 7). A session the server refuses outright is not asked again until the tab
+// holds another one; any other failure is the next beat's to retry.
 
 import { useEffect } from "react";
 

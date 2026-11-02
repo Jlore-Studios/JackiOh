@@ -1,22 +1,12 @@
-// A finished co-op game, a step at a time (#965, SPEC §13.9, B41): the result panel's "Watch the
-// replay". `GET /api/duos/matches/:matchId/replay` answers every step at once, the seat's own view
-// after each, so it is read once (`openDuosReplay`) and the steps are held here. A read that failed
-// for a reason that can pass (`reason: "error"`) offers Try again (#1691); an expired or refused
-// replay offers none.
+// A finished co-op game, a step at a time (#965, SPEC §13.9, B41), read once (`openDuosReplay`). A
+// failed read that can pass (`reason: "error"`) offers Try again (#1691); an expired or refused one
+// offers none. CLAUDE.md rule 7: only the server's views are drawn, on `DuosBoard`'s `replay` mode.
+// The controls are the 1v1 replay's (`replay/ReplayToolbar.tsx`), a round standing for a turn (§13.3).
 //
-// The controls are the 1v1 replay's toolbar (`replay/ReplayToolbar.tsx`), a round standing for a turn
-// (§13.3: a `DuosView` carries no turn). CLAUDE.md rule 7: only the server's views are drawn, on
-// `DuosBoard`'s `replay` mode, and nothing is computed from them.
-//
-// A step forward hands the board the next view with the same key, so its animations and sounds run
-// as live play's do (R201's speed included). Any other move, a step back or a jump, gives the board
-// a fresh key: it mounts on that view with nothing animating, and its portal shows the own duel again.
-// The controls sit outside the board, so a remount never takes the scrubber from under the pointer,
-// and the scrubber held moves the board only when it is let go (#2025).
-//
-// DOWNLOAD JSON (R1242000). A replay whose steps are loaded offers Download JSON in its controls:
-// the seat's views as one file, made in the page. A replay that is loading, refused or expired
-// offers none.
+// A step forward keeps the board's key, so its animations and sounds run as live play's do (R201's
+// speed included); any other move gives a fresh key, mounting with nothing animating. The controls sit
+// outside the board, so a remount never takes the scrubber from under the pointer, and the scrubber
+// held moves the board only when it is let go (#2025). Download JSON (R1242000) waits for the steps.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 
@@ -53,10 +43,9 @@ type Shown = { at: number; board: number };
 
 /**
  * The replay of `matchId`, read once. The actor sends a match's last view before it writes its end
- * (`on_terminal`, `crates/server/src/duos/actor.rs`), so a result panel can open the replay while the
- * server still answers 409: it is asked again, `REPLAY_OPEN_ATTEMPTS` times in all, as
- * `openOnlineMatchReplay` asks (R768000). Any refusal rejects with a `ReplayFailure`, as a 1v1
- * replay's does.
+ * (`on_terminal`, `crates/server/src/duos/actor.rs`), so the server may still answer 409: it is asked
+ * again, `REPLAY_OPEN_ATTEMPTS` times in all, as `openOnlineMatchReplay` asks (R768000). Any refusal
+ * rejects with a `ReplayFailure`, as a 1v1 replay's does.
  */
 export async function openDuosReplay(
   matchId: string,
@@ -68,7 +57,6 @@ export async function openDuosReplay(
       if (first === undefined) throw new ReplayFailure("error", "the co-op replay holds no step");
       return [first, ...rest];
     } catch (cause) {
-      // A 409 is a match whose result is still being written: ask again, a little later.
       const finishing = cause instanceof ApiRequestError && cause.status === 409;
       if (!finishing || attempt >= REPLAY_OPEN_ATTEMPTS) throw onlineFailure(cause);
       await wait(REPLAY_OPEN_RETRY_MS);
@@ -132,7 +120,6 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
     show(target);
   }
 
-  /** A round move: the first step of the next round, or of this round or the one before. */
   function goRound(direction: 1 | -1): void {
     goTo(direction === 1 ? nextRound(steps, shown.at) : previousRound(steps, shown.at));
   }

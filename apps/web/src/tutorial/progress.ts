@@ -1,11 +1,8 @@
-// Device-local tutorial progress (SPEC §9.9, §9.10; R294, R320, R321, R322).
-// `accountSync.ts` merges known completions and the newest Hide/Show choice through
-// `adoptTutorialProgress`; unavailable or malformed storage means no saved progress.
-// R2205002: the Field Guide's found entries ride in the same record on the device only; the account
-// never sees them, and a lesson won anywhere counts its entries found.
+// Device-local tutorial progress (SPEC §9.9, §9.10; R294, R320, R321, R322); `accountSync.ts` merges the
+// account's copy in through `adoptTutorialProgress`. R2205002: the Field Guide's found entries ride in the
+// same record, never the account's, and a lesson won anywhere counts its entries found.
 // R2434000: an id of the lessons before #2434 reads as the lesson in its place on the path, so nothing
-// won is un-won. R2434002: a lesson whose last game was conceded is kept as lost, on the device only,
-// until it is won.
+// won is un-won. R2434002: a conceded lesson is kept as lost, on the device only, until it is won.
 
 import { useSyncExternalStore } from "react";
 
@@ -25,13 +22,12 @@ export type TutorialProgress = {
   readonly hiddenChoice: TutorialHiddenChoice | null;
   /** R2205002: the Field Guide entries found on this device, in the guide's order. */
   readonly found: readonly string[];
-  /** R2434002: the lessons whose last game was conceded and that are not won, in path order; this device's alone. */
+  /** R2434002: the conceded lessons not won, in path order. */
   readonly lost: readonly string[];
 };
 
 export type LessonStatus = "locked" | "unlocked" | "completed";
 
-/** R2434002: whether this device keeps `lesson` as lost: its last game conceded, and not won since. */
 export function lessonLost(progress: TutorialProgress, lesson: TutorialLesson): boolean {
   return progress.lost.includes(lesson.id);
 }
@@ -61,7 +57,6 @@ function strings(ids: Iterable<unknown>): Set<string> {
   return wanted;
 }
 
-/** R2434000: the lesson ids `ids` name, an earlier id read as the lesson in its place. */
 function lessonIds(ids: Iterable<unknown>): Set<string> {
   const wanted = new Set<string>();
   for (const id of strings(ids)) wanted.add(currentLessonId(id));
@@ -169,7 +164,6 @@ export function markLessonComplete(id: string): TutorialProgress {
   return commit(normalize([...current.completed, id], current.hiddenChoice, current.found, current.lost));
 }
 
-/** R2434002: a conceded lesson is lost: kept so on this device until the lesson is won. */
 export function markLessonLost(id: string): TutorialProgress {
   const current = readTutorialProgress();
   return commit(normalize(current.completed, current.hiddenChoice, current.found, [...current.lost, id]));

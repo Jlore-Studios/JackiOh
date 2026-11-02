@@ -30,8 +30,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs in its declared damage (8), read through `param`, and in
-    // the face of the Book it becomes, which the swap reads off the card.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -63,7 +61,6 @@ mod tests {
 
     use crate::js;
 
-    /// Written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serializes");
         serde_json::from_str(&text).expect("the state parses back")
@@ -79,7 +76,6 @@ mod tests {
         json!({ "pick": "instance", "instanceId": s.card(card).id })
     }
 
-    /// The target lists `legalActions` offers for p1's Wildfire, each as its JSON.
     fn wildfire_plays(s: &Scenario, player: PlayerId) -> Vec<Value> {
         let id = s.card(WILDFIRE).id.clone();
         legal_actions(s.state(), player)
@@ -99,7 +95,6 @@ mod tests {
             .collect()
     }
 
-    /// p1 holds this card (Radiant or not) and a filler, and p2 a filler, so no turn ends on its own.
     fn holding(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({ "seed": seed, "p1": { "hand": [{ "def": WILDFIRE, "radiant": radiant }, FILLER] }, "p2": { "hand": [FILLER] } }))
     }
@@ -109,7 +104,6 @@ mod tests {
         s.hand(P1).into_iter().next().expect("p1's hand is empty")
     }
 
-    /// The Book p1's Wildfire is after p1's end of turn, from a game on `seed`.
     fn swapped_on(seed: &str, radiant: bool) -> CardInstance {
         let mut s = holding(seed, radiant);
         s.end_turn();
@@ -341,7 +335,6 @@ mod tests {
                 assert!(seen.iter().all(|id| books.contains(id)));
                 assert!(seen.contains(BOOK_OF_FLAME));
                 assert!(seen.len() > 5);
-                // The same game picks the same Book.
                 assert_eq!(swapped_on("pool-7", false).def_id, swapped_on("pool-7", false).def_id);
             }
 

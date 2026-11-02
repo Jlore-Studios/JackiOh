@@ -31,9 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #41 Drone Sympathizer — SPEC §8.10 row 41, BUILD M12 row S 41: "adds 2 Drone Core cards (each of S 27
-// to S 36 seen over the seeds), a full hand burning the second; the pool names no set, so they arrive now
-// the set ships (R1420); cards reads through `param()`; radiant both Radiant".
+// S #41 Drone Sympathizer — SPEC §8.10 row 41, BUILD M12 row S 41 (R1420).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -45,7 +43,6 @@ mod tests {
     const SYMPATHIZER: &str = "stinkyscape-041";
     const FILLER: &str = "core-005";
 
-    /// The ten Drone Core tiers, S #27 to S #36.
     fn tiers() -> Vec<String> {
         (27..=36).map(|n| format!("stinkyscape-{n:03}")).collect()
     }
@@ -62,7 +59,6 @@ mod tests {
         s
     }
 
-    /// The Drone Cores in p1's hand, as (definition, face, cost layer).
     fn cores(s: &Scenario) -> Vec<(String, bool, i32)> {
         s.hand(P1)
             .into_iter()

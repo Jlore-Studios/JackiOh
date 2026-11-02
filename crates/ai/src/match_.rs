@@ -6,9 +6,7 @@
 //! config is a game, and folding a record's log with `MatchConfig::fold_args` (its seed, decks,
 //! handicaps and setup inputs) reproduces its hash.
 //!
-//! Port of `packages/ai/src/match.ts` (`match` is a Rust keyword, hence `match_`). TS's `try`/`catch`
-//! around a controller call and around `reduce` is `catch_unwind`: a refusal comes back as `error`, and
-//! what TS threw on an impossible state is a panic (SURFACE §4.4.9).
+//! Matches and turn runners. Errors surface via `catch_unwind` on illegal states (SURFACE §4.4.9).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -26,7 +24,7 @@ use crate::observe::ai_to_act;
 use crate::skill::{plays_best, skill_miss_action};
 use crate::types::{AiOptions, Decision, DecisionReason, SearchBudget};
 
-/// `AI_MATCH`'s shape (module-private in TS).
+/// `AI_MATCH`'s shape.
 struct AiMatch {
     max_actions: usize,
 }
@@ -54,7 +52,6 @@ pub enum SeatController {
 }
 
 impl SeatController {
-    /// `controller.kind`.
     pub fn kind(&self) -> &'static str {
         match self {
             SeatController::Ai { .. } => "ai",
@@ -117,9 +114,7 @@ impl MatchConfig {
 /// Called with the true state before and after every accepted action.
 pub type AfterActionHook<'a> = Box<dyn FnMut(&GameState, &GameState, PlayerId, &ActionBody) + 'a>;
 
-/// Wraps each controller call for timing (the sweep): TS's `<T>(seat, run: () => T) => T`. The hook is
-/// handed the true state, the seat, the controller's rng as it stood before the call (so the sweep can
-/// decide the state again, R977000) and the call, and must call it once; the call keeps its own result.
+/// Wraps controller calls for timing (e.g. sweep re-decision, R977000). Must invoke callback once.
 pub type TimeDecisionHook<'a> = Box<dyn FnMut(&GameState, PlayerId, &Rng, &mut dyn FnMut()) + 'a>;
 
 /// Handed (the true state, the seat, the controller's answer); answers the action the controller plays.
@@ -132,9 +127,7 @@ pub struct MatchHooks<'a> {
     pub after_action: Option<AfterActionHook<'a>>,
     /// Wraps each controller call for timing (the sweep); default none.
     pub time_decision: Option<TimeDecisionHook<'a>>,
-    /// A test seam standing in for `match-refusal.test.ts`'s `vi.mock` of the baselines: called with
-    /// each controller call's answer inside the call (a panic in it is the controller's throw), before
-    /// a `None` is replaced by `random_action`; what it answers is the controller's answer.
+    /// Overrides controller choice before fallback; panics count as controller throws.
     pub override_choice: Option<OverrideChoiceHook<'a>>,
 }
 
@@ -266,8 +259,7 @@ pub(crate) fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionB
     out
 }
 
-/// The defId of the hand card a `play` names, read before the play moves it. (TS read the hand through
-/// `zoneCards(state, seat, "hand")`, a copy of the same pile.)
+/// The defId of the hand card a `play` names, read before the play moves it.
 fn played_def_id(state: &GameState, seat: PlayerId, action: &ActionBody) -> Option<String> {
     let ActionBody::Play { instance_id, .. } = action else {
         return None;
@@ -286,10 +278,8 @@ struct Accepted {
     next: GameState,
 }
 
-/// Deterministic: create_game (with the config's setup inputs)+begin_game, then while no result:
-/// actor = seat_to_act(state) (R265); controller rng = Rng::new(`${seed}:ctl:${seat}`, 0); nonce
-/// `m${log.length}`. A refused action is recorded in `rejected` and replaced by endTurn (or the first
-/// legal answer); a panic is recorded and ends the match.
+/// Plays deterministic match: creates and begins game, querying `seat_to_act` (R265).
+/// Records rejected actions and controller thrown errors.
 pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
     let max_actions = config.max_actions.unwrap_or(AI_MATCH.max_actions);
     let created = create_game(&CreateGameOptions {

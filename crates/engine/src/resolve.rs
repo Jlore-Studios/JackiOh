@@ -1,10 +1,5 @@
-//! Running a card's script: build a context, apply the effects it returns, then finish the card.
-//! The full play pipeline of §10.5 arrives with M3; this is the part M1's draw and turn loop need.
-//!
-//! Port of `packages/engine/src/resolve.ts` (part 3, SURFACE §4, §6.5). TS's `EngineSink = { state,
-//! events, rng }` is part 1's `script::EngineSink` (SURFACE §6.5), re-exported here under its TS path.
-//! TS's cast-driver registry (`registerCastDriver`, set by `playSteps.ts` at module scope to break an
-//! import cycle) goes (SURFACE §6.6): `cast_card` calls the play pipeline's driver directly.
+//! Running a card's script (SURFACE §4): build a context, apply the effects it returns, then finish
+//! the card. `cast_card` enters §10.5's play pipeline (`play_steps.rs`) directly (SURFACE §6.6).
 
 use std::sync::Arc;
 
@@ -15,11 +10,10 @@ use crate::script::{Effect, EffectContext, EffectExpand, EffectPart, Hook, Memo,
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{CardType, PlayerId, Selection, ZoneName};
 
-/// TS `export type EngineSink = { state; events; rng }` (`resolve.ts:13`), which part 1 declared in
-/// `script.rs` beside the context that derefs to it (SURFACE §6.5).
+/// Declared in `script.rs` beside the context that derefs to it (SURFACE §6.5).
 pub use crate::script::EngineSink;
 
-/// TS `HookOptions`: what a run's context is built with, beyond the card itself.
+/// What a run's context is built with, beyond the card itself.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HookOptions {
     pub controller: Option<PlayerId>,
@@ -28,13 +22,12 @@ pub struct HookOptions {
     pub data: Option<IndexMap<String, Value>>,
 }
 
-/// Where a played card's Cry keeps its player's mana as the play began (`EffectContext.manaBeforePlay`):
-/// in the card's own data, which every continuation of the Cry carries (`prompts.resumeSelf`,
-/// `work.parkWork`), so the number survives a pause and a JSON round trip as the rest of the data does.
+/// Where a played card's Cry keeps its player's mana as the play began: the card's own data, which
+/// every continuation of the Cry carries, so it survives a pause and a JSON round trip.
 pub const MANA_BEFORE_PLAY_KEY: &str = "__manaBeforePlay";
 
-/// TS `makeContext(sink, self, options)`. The context borrows the sink for as long as it lives (it is
-/// the sink, plus this run's facts); `self_` is copied in as the card stands now.
+/// The context borrows the sink for as long as it lives (it is the sink, plus this run's facts);
+/// `self_` is copied in as the card stands now.
 pub fn make_context<'b>(
     sink: &'b mut EngineSink<'_>,
     self_: Option<&CardInstance>,
@@ -46,10 +39,8 @@ pub fn make_context<'b>(
         .and_then(|data| data.get(MANA_BEFORE_PLAY_KEY))
         .and_then(Value::as_i64)
         .map(|mana| mana as i32);
-    // R136: this script's own event window opens where the sink's list stands right now. Every
-    // context is built here, so this is the one place the mark has to be taken; a resumed
-    // continuation calls back through here and opens a fresh window on the action it resumes in,
-    // and what its first pass summoned in an earlier action comes with it (`EffectContext.summoned`).
+    // R136: this script's own event window opens where the sink's list stands now. Every context,
+    // a resumed continuation's too, is built here, so this is the one place the mark is taken.
     let events_from = sink.events.len();
     // R174: the stay every card on the field has as this script begins.
     let exits_from = Some(crate::stays::exit_mark(sink.state));
@@ -89,9 +80,8 @@ pub fn make_context<'b>(
     }
 }
 
-/// Apply an effect list in order. R216: once a state check inside the list has ended the game — a
-/// cast on draw that killed its own hero, halfway through #5 Stockpile's "draw 2; heal your hero 2" —
-/// the rest of the list does not resolve: the game is over (§2.5), and nothing happens after it.
+/// Apply an effect list in order. R216: once a state check inside the list has ended the game (a cast
+/// on draw that killed its own hero), the rest of the list does not resolve (§2.5).
 pub fn apply_effects(effects: &[Effect], ctx: &mut EffectContext<'_>) {
     for effect in effects {
         if ctx.state.result.is_some() {
@@ -120,7 +110,7 @@ pub fn lazy_part(
     }
 }
 
-/// TS `HookName`: the effect-list hooks `run_hook` may run by name.
+/// The effect-list hooks `run_hook` may run by name.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum HookName {
     Cry,
@@ -134,7 +124,7 @@ pub enum HookName {
 }
 
 impl HookName {
-    /// The literal, as TS names the `Script` key.
+    /// The `Script` key it names.
     pub fn as_str(self) -> &'static str {
         match self {
             HookName::Cry => "cry",
@@ -149,18 +139,16 @@ impl HookName {
     }
 }
 
-/// `script[name]`. `Script.activate` is not ported (SURFACE §7.2), so "activate" names nothing.
+/// `Script.activate` is no hook here (SURFACE §7.2), so "activate" names nothing.
 fn hook_of(script: &Script, name: HookName) -> Option<Hook> {
     script.hook_named(name.as_str()).cloned()
 }
 
 /// Run one of a card's hooks. `cry` is also a spell's on-resolve hook (§10.9).
 ///
-/// This is the *non-resumable* runner: the whole effect list is applied here and now, so it is only
-/// ever right on a path where no effect can open a prompt — a caller that has already established
-/// there is nothing to ask. Any path whose effects may ask something uses `prompts.runHookResumable`
-/// (a trigger, a play's or a cast's Cry, an activate), and a start-of-game clause, which may return a
-/// Choose like any other list (§10.9), runs through `prompts.runStartOfGame` (R151, R113).
+/// The *non-resumable* runner: the whole list is applied now, so it is right only where no effect can open
+/// a prompt. A path whose effects may ask uses `prompts.runHookResumable`, a start-of-game clause (R151,
+/// R113), which may Choose (§10.9), `prompts.runStartOfGame`.
 pub fn run_hook(sink: &mut EngineSink<'_>, instance: &CardInstance, name: HookName, options: HookOptions) {
     let Some(hook) = hook_of(&crate::scripts::script_of(sink.state, instance), name) else {
         return;
@@ -180,14 +168,10 @@ pub enum CastAfterward {
 
 /// How a cast is made, beyond R70's defaults (B5 E12; R452, R453):
 ///
-/// - `random`: every choice its caster would make is made at random (`randomCast.ts`, R452).
-/// - `targetEnemies`: each target pick is aimed by its declaration (R656: harm at enemies, help at
-///   friends, when one is legal); a card carrying the `targetEnemies` enchantment (E39) is cast so
-///   whoever casts it.
-/// - `afterward: "exile"`: a Spell goes to exile rather than its graveyard once it has resolved
-///   (Classic #56 Spell Tyrant's "then exile them", R453) — §10.5 step 7's landing (`echo.exileOnLanding`).
-///
-/// TS `HookOptions & { random?; targetEnemies?; afterward? }`: `HookOptions`' fields, then these.
+/// - `random`: every choice its caster would make is made at random (R452).
+/// - `targetEnemies`: each target pick is aimed by its declaration (R656), as for a card carrying the
+///   `targetEnemies` enchantment (E39).
+/// - `afterward: "exile"`: a Spell lands in exile, not its graveyard (Classic #56, R453), at §10.5 step 7.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CastOptions {
@@ -204,49 +188,23 @@ pub struct CastOptions {
     pub aim_at: Option<String>,
 }
 
-/// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with
-/// cost paid 0", fires the card's script, and "a cast Spell does use Twinspell's Echo". So a cast IS
-/// §10.5's pipeline, entered after the two steps a cast skips — step 1 has nothing to validate, since
-/// the effect chose the card, and step 2 pays nothing — and run through the same named steps as a
-/// play from hand: step 3's Gifted Program hook (#64), step 4's placement, counters and `cardPlayed`
-/// with the Echo gained as it is played (R178), step 5's Quickstriker (#38) and /fullsend Combo draw
-/// (#78) before the card's own script, step 6's repeats and step 7's landing and `cardResolved`.
+/// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with cost
+/// paid 0", fires the card's script, and "a cast Spell does use Twinspell's Echo". So a cast IS §10.5's
+/// pipeline past steps 1 and 2: step 3's Gifted Program hook (#64), step 4's placement and `cardPlayed`
+/// with its Echo (R178), step 5's Quickstriker (#38) and Combo draw (#78), then steps 6 and 7 (R117).
 ///
-/// Its own path used to stop short of that: it skipped steps 3 and 5's granted parts outright, and
-/// owed steps 6 and 7 to `state.work` even when nothing had paused (against R117), so a cast-on-draw
-/// Spell's Echo repeat resolved after the draw had already repeated (§2.4). The one difference from a
-/// play is where the resolution loop runs: a cast happens inside some other effect — §2.4's draw,
-/// #95's recursion — so it settles nothing itself. Its step 4 is still a window, as a play's is (R70,
-/// R17): every event so far reaches the traps there (`triggers.dispatchPending`), while the other
-/// triggers they wake wait for that effect's loop; and §2.4's chain runs the state check after each
-/// cast-on-draw cast (§4.5, R59).
-///
-/// Used by Cast on draw (§2.4), by Call to Chaos, and by the cast verbs of B5 E12 (`effects/cast.ts`):
-/// a card from a graveyard or any pile, a new card of a named definition, a random catalog card.
-///
-/// The play pipeline (`play_steps.rs`, which owns §10.5) is called directly: TS reached it through a
-/// driver `playSteps.ts` registered at module scope (`registerCastDriver`), which Rust needs not.
+/// A cast happens inside another effect (§2.4's draw, #95), so it settles nothing itself, but its step 4
+/// is a window (R70, R17): traps answer there, and the state check runs after each cast-on-draw cast
+/// (§4.5, R59).
 pub fn cast_card(sink: &mut EngineSink<'_>, instance: &CardInstance, options: CastOptions) {
     crate::play_steps::cast_through_pipeline(sink, instance, options);
 }
 
 /// §5.1 and R155: "Spells with 'End of turn: add this back to your hand' are flagged
 /// `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn".
-/// This is that flag, written at the one moment §10.5 describes — step 7, as the Spell lands in the
-/// graveyard — so the card carries its own answer and nothing has to infer it later.
-///
-/// The three conditions are step 7's own sentence, in order. It must be a Spell: a Unit with an
-/// `endOfTurn` hook (#13 Jlockeed Shredder-10) that was played and died on the turn it was played is
-/// in the graveyard too, and it must not return from there (R153). Its resolving face must declare
-/// an end-of-turn return, which for a Spell is exactly an `endOfTurn` hook — #23 Reoccurring Dream,
-/// #24 Efficiency Dividend and #31 KY's Math Equation are the only three in Core, and the only
-/// `endOfTurn` a Spell can have, since R153 gives a graveyard no other hook. And it must have
-/// reached the **graveyard**: a Spell that says "exile this on play" (#39 Recycling Initiative) is
-/// not in the graveyard when step 7 is done, so it is never flagged and never comes back.
-///
-/// `turn.cleanup` clears it at the end of that turn, which is what makes the flag mean "this turn"
-/// rather than "for ever" — a flagged card that returns to hand and is later discarded into the
-/// graveyard must stay there (R153).
+/// Written at §10.5 step 7, as the Spell lands, on three conditions in order: a Spell (a Unit with an
+/// `endOfTurn` hook, #13, must not return, R153); an `endOfTurn` hook on its resolving face (#23, #24,
+/// #31); and in the **graveyard** (#39 exiles itself on play). `turn.cleanup` clears it that turn (R153).
 pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &str) {
     let Some(card) = find_instance(state, instance_id) else {
         return;
@@ -265,26 +223,17 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
     }
 }
 
-/// R429, R766 (issues #557, #572): the price a Spell whose return keeps it
-/// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation) has had from its own returns — its climb,
-/// (2), (3), (4) — and nothing else. Its return writes it on the card in the hand it returns to, beside
-/// the same amount in its `costMod` (`setCostMod`'s `returnPrice`), and the card carries it through a
-/// hand, a library and its next play; any other change to its price (a discount, a surcharge, a cost
-/// step) is in its `costMod` alone. R766 takes the price off it in the graveyard as it takes it off
-/// every card, so the card lying there costs its printed cost; §10.5 step 7 reads the note before the
-/// landing and writes it again on the card it lands (`note_return_price`), which is what its own
-/// end-of-turn return reads (`query::return_price_of`). Engine bookkeeping in the card's `memory`, as
-/// R178's `@exileOnLanding` is: in the graveyard it lives exactly as long as R155's flag beside it,
-/// gone with it as the card leaves (`zones::remove_from_any_zone`) or the turn's cleanup ends the
-/// return (`turn::clear_return_flags`), and a card that reaches a graveyard or exile any other way
-/// loses it with the rest of its memory (R78).
+/// R429, R766 (issues #557, #572): the climb a Spell whose return keeps its price
+/// (`StaticFlags.returnKeepsPrice`, #31) has had from its own returns, beside the same amount in its
+/// `costMod`. R766 takes it off in the graveyard, so step 7 writes it again (`note_return_price`) for the
+/// end-of-turn return to read. Engine bookkeeping in `memory`, as R178's `@exileOnLanding` is: it lives as
+/// long as R155's flag beside it, and a card reaching a graveyard or exile any other way loses it (R78).
 pub const RETURN_PRICE_KEY: &str = "@returnPrice";
 
 /// R429, R766: note `price`, the climb the card carried into its play, on a card step 7 has just
-/// flagged for its end-of-turn return (R155) and whose script asks. A card that was not flagged — a
-/// countered play never reaches step 7, a discarded card was never played, a Spell that exiled itself
-/// is not in the graveyard — gets no note, so R766's reset is all there is for it. Nothing is written
-/// for a price of 0, so a game whose #31 never climbs hashes as it did before the note existed.
+/// flagged for its end-of-turn return (R155) and whose script asks; any other card gets no note, so
+/// R766's reset is all there is for it. Nothing is written for a price of 0, so a game whose #31 never
+/// climbs hashes as it would without the note.
 pub fn note_return_price(state: &mut GameState, instance_id: &str, price: i32) {
     if price == 0 {
         return;

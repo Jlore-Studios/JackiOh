@@ -1,7 +1,6 @@
 // Spec 14: landing and sign-in (B16-B18, B22, B23, B29-B31, B37 and B40).
 // No server or provider: API calls are intercepted, sessions seed in `onBeforeLoad`, and links use
-// `/login` hashes or queries. The CORS stub handles client/API preflights.
-// Paste uses a realm-local `ClipboardEvent`; unit tests cover the unhandled path.
+// `/login` hashes or queries. Paste uses a realm-local `ClipboardEvent`; unit tests cover the unhandled path.
 
 import {
   AUTH_PASSWORD_MIN_LENGTH,
@@ -173,7 +172,6 @@ function stubApi(initial: Partial<Api> = {}): Api {
   return api;
 }
 
-/** No request may reach the auth provider. */
 function forbidProvider(): void {
   cy.intercept({ pathname: /\/auth\/v1\// }, () => {
     throw new Error("spec 14 must never reach the auth provider");
@@ -259,8 +257,6 @@ function openInviteScreen(api: Partial<Api> = {}): Api {
   return live;
 }
 
-// B37: landing page
-
 describe("B37 the landing page", () => {
   it("B37 anonymous: the three doors link to /play, /collection and /shop, and the corner offers sign-in", () => {
     stubApi();
@@ -303,8 +299,6 @@ describe("B37 the landing page", () => {
     cy.get(byTestid(loginTestid.form)).should("not.exist");
   });
 });
-
-// B16-B18: typing and pasting a code
 
 describe("B16-B18 the code field", () => {
   it("B16 typing eight lower-case letters shows two upper-case groups, the separator added, caret at the end", () => {
@@ -412,8 +406,6 @@ describe("B22 a rate-limited redemption", () => {
   });
 });
 
-// B23: code-screen exit
-
 /** `navTestid.back` is in JSX, outside this bundle. */
 const NAV_BACK = "nav-back";
 
@@ -441,8 +433,7 @@ describe("B23 the invite screen's way out", () => {
   });
 });
 
-// Failed sign-in keeps the sign-in screen
-// Without a provider, submissions fail before a request; the screen must retain the form.
+// Without a provider, a sign-in fails before any request; the screen must keep the form.
 
 const PASSWORD = "e2e-spec14-password";
 
@@ -703,8 +694,6 @@ describe("B30 a recovery link and an expired link", () => {
   });
 });
 
-// B31: /reset-password
-
 describe("B31 the reset screen", () => {
   function openWithRecoveryLink(): void {
     stubApi();
@@ -780,8 +769,6 @@ describe("B31 the reset screen", () => {
     cy.get(byTestid(loginTestid.form)).should("be.visible");
   });
 });
-
-// B40: no dead ends in the shell
 
 describe("B40 the shell's exits", () => {
   it("B40 the gate's error panel offers retry, home and sign-out; retry opens the gate once /api/auth/me answers", () => {

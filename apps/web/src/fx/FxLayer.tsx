@@ -1,9 +1,7 @@
 // The fixed effects overlay (docs/polish/1-animations.md, S9) decorates the runner's in-flight entry
-// but never paces it (R200). `--anim-squeeze` preserves the runner's actual duration (R201).
-// Its layout-effect subscription exists before `Game` enqueues the first entry; it reads only the
-// redacted stream (R202), and reduced motion or intensity "off" leaves an empty root.
-// A drain clears the killing blow before it draws, so cut entries replay lethal ahead of game-over.
-// R502: `latest` supplies #21 Hinder's `env.next` and marks the next refresh's empty crystals.
+// but never paces it (R200). `--anim-squeeze` preserves the runner's actual duration (R201). Its
+// layout-effect subscription exists before `Game` enqueues the first entry; it reads only the redacted
+// stream (R202). R502: `latest` supplies #21 Hinder's `env.next` and marks the next refresh's empty crystals.
 
 import {
   useContext,
@@ -107,7 +105,7 @@ export function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFa
   if (defId === "hidden" || lookup === null) return undefined;
   const info = lookup(defId, false);
   if (info === undefined) return undefined;
-  // The card's family lends its look to the effects (looks.ts); the catalog is public.
+  // The card's family lends its look to the effects (looks.ts).
   return { rarity: info.rarity, attack: info.attack, health: info.health, type: info.type, tags: info.tags };
 }
 
@@ -332,7 +330,6 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       target.play([...lethal.cues, ...delayCues(planResult(view, env), lethal.leadMs)]);
     }
     if (previousViewer !== undefined && previousViewer !== view.viewer) target.play(planHandover(view, env));
-    // `planEnv` reads refs only, so the effect depends on the view alone.
   }, [view]);
 
   return (

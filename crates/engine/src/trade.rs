@@ -3,26 +3,14 @@
 //! random position and draw a card, at `TRADE_COST` (no mana), up to their Trades a turn
 //! (`TRADES_PER_TURN`, or the figure an effect set for them), counted over all their Tradable cards.
 //!
-//! One function says whether a Trade is legal, `why_trade_refused`: `legal_actions` lists a `trade`
-//! for each hand card it passes, the reducer refuses what it refuses in its words, and the view gives
-//! the viewer's own Tradable hand card its refusal as `tradeReason` and their Trades as `trades`
-//! (`view_for.rs`), so a greyed-out control and a refusal cannot disagree (§9.3).
-//!
-//! A card is Tradable when its running face prints the keyword, an effect granted it, or an aura that
-//! reaches its controller's hand lends it, read through the layers as Cloaked is (`alt_play::is_cloaked`).
-//!
-//! Stinkyscape's trade cards (#1864) read three things more. An aura lends Tradable to its controller's
-//! hand (`tradable_hand_aura`, R1864002: The Syndicate, The Trade Union). A card acting on its
-//! controller's field may give them more Trades a turn (`Script::trades_per_turn`, R1864004: Radiant
-//! The Trade Union), the most of all holding and never a sum. And a trigger on `traded` is handed the
-//! card the Trade put into the deck (`traded_card_of`, R1864003: The Syndicate's roll), though the
-//! public event names none.
+//! One function says whether a Trade is legal, `why_trade_refused`, which `legal_actions`, the reducer
+//! and the view's `tradeReason` all ask, so a greyed-out control and a refusal cannot disagree (§9.3).
+//! Stinkyscape's trade cards (#1864) add a hand aura, more Trades a turn and the traded card's id.
 //!
 //! The Trade is hidden information like a draw (R1838001): `traded` names only the player, the card
-//! goes in through the one shuffle-in the engine has (`draw::shuffle_into_library`: `shuffledIn`, its
-//! slot hidden from both and the card from the other player, R97, shown to its owner, R311) and the card
-//! comes out through §2.4's draw (`draw::draw`: `drawn`, hidden from the other player). It is no play,
-//! no cast and no discard (R1838002).
+//! goes in through `draw::shuffle_into_library` (its slot hidden from both and the card from the other
+//! player, R97, shown to its owner, R311) and comes out through §2.4's draw. It is no play, no cast and
+//! no discard (R1838002).
 
 use serde_json::Value;
 
@@ -31,24 +19,21 @@ use crate::script::{AuraEntry, AuraHook, EffectContext, EngineSink, HookArgs, St
 use crate::state::{CardInstance, DrawCount, EngineError, GameState};
 use crate::wire::{GameEvent, Keyword, KeywordKind, Phase, PlayerId, Zone};
 
-/// R1838000, R1864002: whether this card may be Traded from a hand, read through the layers (§10.4):
-/// its running face prints Tradable, an effect gave it the keyword, or an aura that reaches the cards in
-/// its controller's hand lends it.
+/// R1838000, R1864002: whether this card may be Traded from a hand, read through the layers (§10.4) as
+/// Cloaked is (`alt_play::is_cloaked`): printed, granted, or lent by an aura reaching its hand.
 pub fn is_tradable(state: &GameState, card: &CardInstance) -> bool {
     crate::layers::unit_has(state, card, KeywordKind::Tradable)
 }
 
-/// R1838000, R1864004: the Trades `player` may make each turn — `TRADES_PER_TURN`, or their own figure
-/// once an effect has set one, or the most a card acting on their field gives when that is more: the
-/// larger holds, never a sum. Every rule that reads the limit reads it here.
+/// R1838000, R1864004: the Trades `player` may make each turn: their own figure or the most a card on
+/// their field gives, the larger, never a sum. Every rule that reads the limit reads it here.
 pub fn trades_per_turn_of(state: &GameState, player: PlayerId) -> i32 {
     let own = state.players[player].trades_per_turn.unwrap_or(TRADES_PER_TURN);
     trades_given(state, player).map_or(own, |given| own.max(given))
 }
 
-/// R1864004: the most Trades a turn any card acting on `player`'s field gives them
-/// (`Script::trades_per_turn`), or `None` when none gives a figure; a Unit a carrier holds is one of
-/// them (R446), and a face-down card's text sleeps (R1487000).
+/// R1864004: the most Trades a turn any card acting on `player`'s field gives (`Script::trades_per_turn`);
+/// a Unit a carrier holds is one (R446), and a face-down card's text sleeps (R1487000).
 fn trades_given(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut most: Option<i32> = None;
     for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
@@ -73,9 +58,7 @@ fn trades_given(state: &GameState, player: PlayerId) -> Option<i32> {
     most
 }
 
-/// R1864002: "Aura: Cards in your hand have Tradable." — Tradable for every card in its controller's
-/// hand while the source acts on their field (The Syndicate, The Trade Union), as `alt_play`'s
-/// `cloak_hand_aura` lends Cloaked.
+/// R1864002: "Aura: Cards in your hand have Tradable." (The Syndicate, The Trade Union).
 pub fn tradable_hand_aura() -> AuraHook {
     crate::script::aura_hook(|args| {
         let controller = args.self_.controller;
@@ -95,12 +78,10 @@ pub fn tradable_hand_aura() -> AuraHook {
 pub const TRADED_ID_KEY: &str = "tradedId";
 
 /// R1864003: the card the Trade being answered put into a deck, read as a trigger on its `traded` is
-/// queued. `traded` names no card (R1838001), but the loop takes an action's events into
-/// `state.dispatch` before it offers any of them, in the order they happened, and takes each off as it
-/// offers it (`triggers::dispatch_new_events`); `apply_trade` reports the card's `shuffledIn` right
-/// after `traded`. So while `traded` is offered, the next event still owed (passing a cast-on-draw
-/// `drawn` held back, R58) is that shuffle-in. `None` when it is not one: a deck at R80's cap turned
-/// the card away.
+/// queued. `traded` names no card (R1838001), but the loop offers an action's events in order from
+/// `state.dispatch` (`triggers::dispatch_new_events`) and `apply_trade` reports the `shuffledIn` right
+/// after `traded`, so the next event owed (passing a cast-on-draw `drawn` held back, R58) is that
+/// shuffle-in. `None` when it is not one: a deck at R80's cap turned the card away.
 pub fn traded_card_after(state: &GameState) -> Option<String> {
     let next = state
         .dispatch
@@ -112,8 +93,7 @@ pub fn traded_card_after(state: &GameState) -> Option<String> {
     }
 }
 
-/// R1864003: in a trigger on `traded`, the card that Trade put into a deck (`TRADED_ID_KEY`), or
-/// `None` in any other hook.
+/// R1864003: in a trigger on `traded`, the card that Trade put into a deck; `None` in any other hook.
 pub fn traded_card_of(ctx: &EffectContext<'_>) -> Option<String> {
     ctx.data
         .get(TRADED_ID_KEY)
@@ -121,8 +101,7 @@ pub fn traded_card_of(ctx: &EffectContext<'_>) -> Option<String> {
         .map(str::to_string)
 }
 
-/// R1838000: the Trades `player` has made this turn. `PlayerState.trades` is kept per turn, so a count
-/// from an earlier turn reads as 0, as a draw count does (`draw::draws_this_turn`).
+/// R1838000: the Trades `player` has made this turn (a count kept for an earlier turn reads as 0).
 pub fn trades_this_turn(state: &GameState, player: PlayerId) -> i32 {
     match state.players[player].trades {
         Some(trades) if trades.turn == state.turn => trades.count,
@@ -135,9 +114,8 @@ pub fn trades_left(state: &GameState, player: PlayerId) -> i32 {
     (trades_per_turn_of(state, player) - trades_this_turn(state, player)).max(0)
 }
 
-/// R1838000, R1853003: why `player` may not take a main-phase deal now — a Trade, or a buy or a sale
-/// at the Marketplace (`marketplace.rs`) — or `Ok`: a live game in their own main phase with no
-/// prompt open.
+/// R1838000, R1853003: why `player` may not take a main-phase deal now (a Trade, or a buy or a sale at
+/// the Marketplace), or `Ok`.
 pub fn why_not_in_main_phase(state: &GameState, player: PlayerId) -> Result<(), EngineError> {
     if state.result.is_some() {
         return Err(EngineError::new("the game is over"));
@@ -151,10 +129,8 @@ pub fn why_not_in_main_phase(state: &GameState, player: PlayerId) -> Result<(), 
     Ok(())
 }
 
-/// R1838000: why `player` may not Trade the card `instance_id` names now, or `Ok`. The one rule:
-/// `legal_actions`, the reducer and the view all ask it. In order: a live game in `player`'s own main
-/// phase with no prompt open, the card in their hand and Tradable, a Trade left this turn, the mana for
-/// `TRADE_COST`, and room in their deck for the card (R80's cap, which would otherwise turn it away).
+/// R1838000: why `player` may not Trade the card `instance_id` names now, or `Ok`. Its last check is
+/// room in their deck for the card (R80's cap, which would otherwise turn it away).
 pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str) -> Result<(), EngineError> {
     why_not_in_main_phase(state, player)?;
     let side = &state.players[player];

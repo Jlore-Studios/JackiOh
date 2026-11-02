@@ -1,6 +1,6 @@
 //! Cost rules (docs/classic-sets.md B5 E15, E39; R65, R363, R396, R455): the auras and player
-//! modifiers that price a play, the ladder `mana.effectiveCost` climbs, the ban on (N)+ Cost plays, the
-//! return-after-resolve enchantment's return and floor, and R396's cost reader.
+//! modifiers that price a play, the `mana.effectiveCost` ladder, the (N)+ Cost ban, the
+//! return-after-resolve enchantment and its floor, and R396's cost reader.
 
 use jackioh_engine::effects::{CastNewArgs, CastNewDef, add_cost_rule, cast, cast_new, discard};
 use jackioh_engine::mana::{cost_now, effective_cost, play_cost};
@@ -34,7 +34,6 @@ fn add_modifier_to(state: &mut GameState, player: PlayerId, expiry: ModifierExpi
     add_modifier(&mut bench.sink(state), player, expiry, kind);
 }
 
-/// The effects in one context, the loop settled, the cursor written back; the sink's events come back.
 fn run(state: &mut GameState, effects: Vec<Effect>, controller: PlayerId) -> Vec<GameEvent> {
     let mut bench = Bench::new(state);
     {
@@ -214,8 +213,8 @@ mod r455_e15_price_rules_from_auras {
             cost_discount(3, None),
         );
         assert_eq!(cost(&state, &three), 2); // 3 + 2 − 3 = 2, under the threshold
-        // And Curvature and #68 each read the one number the flat rules left (R363): a (3) card meets
-        // #68's (3)+ and not Curvature's (4)+, even though #68 then takes it to 4.
+        // Curvature and #68 each read the number the flat rules left (R363): a (3) card meets #68's
+        // (3)+ and not Curvature's (4)+, though #68 then takes it to 4.
         let mut fresh = pb_playing("r455-threshold-curvature");
         put(
             &mut fresh,
@@ -257,7 +256,6 @@ mod r455_e15_price_rules_from_auras {
             ))
             .contains("can't play (3)+ Cost cards")
         );
-        // An X card: X below 3 only.
         let x = hand_card(&mut state, &x_spell().id, PlayerId::P1);
         let xs: Vec<Value> = plays_json(&state, &x.id)
             .iter()
@@ -342,7 +340,6 @@ mod r455_e15_price_rules_on_a_player {
                 .iter()
                 .any(|modifier| modifier.id == rule.id)
         );
-        // The Field Spell it prices spends it.
         let mana = after.players.p1.mana.current;
         after = act(
             &after,
@@ -464,7 +461,6 @@ mod r455_e39_return_after_resolving_and_its_floor {
             &after,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
-        // Resolved (1 damage), back in hand, carrying the enchantment; the rider is spent.
         assert_eq!(after.players.p2.hero.health, before - 1);
         let back = only(&held(&after.players.p1.hand, &spell.id));
         assert_eq!(
@@ -489,7 +485,6 @@ mod r455_e39_return_after_resolving_and_its_floor {
             cost_discount(5, None),
         );
         assert_eq!(cost(&after, &back), 2);
-        // And it comes back again, and in any pile it keeps the floor.
         after = act(
             &after,
             json!({ "type": "play", "instanceId": back.id, "playerId": "p1" }),
@@ -635,7 +630,6 @@ mod r396_an_x_card_on_the_field_costs_its_x {
             Default::default(),
         );
         assert_eq!(cost_now(&after, &spell), 2);
-        // The graveyard and the library read their own cost.
         let grave = in_graveyard(&mut after, &x_unit().id, PlayerId::P1);
         assert_eq!(cost_now(&after, &grave), 0);
     }

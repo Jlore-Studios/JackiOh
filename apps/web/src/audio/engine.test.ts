@@ -1,8 +1,6 @@
 // The audio engine against a fake Web Audio context (docs/polish/2-sound.md, B1 and B3 to B11).
-//
-// Every clock the engine may read moves together through `elapse`/`tick`: the injected `now`, each
-// fake context's `currentTime` (which fires `onended` as sources finish), and vitest's fake timers.
-// So a test holds whichever of the three an implementation happens to use.
+// `elapse`/`tick` move every clock the engine may read together (the injected `now`, each fake context's
+// `currentTime` and vitest's fake timers), so a test holds whichever one an implementation uses.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,9 +58,7 @@ import {
 import type { AudioEngine, PlayedCue, SfxId, VoiceKey, CardAudioTable, VoiceManifest } from "./types.ts";
 import { must } from "../test/stubServer.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Fixtures
- * --------------------------------------------------------------------------------------------- */
+/* Fixtures */
 
 /** Distinct levels, so the sfx and voice buses can be told apart by their gain. */
 const LEVELS = { master: 0.5, sfx: 0.3, voice: 0.7 } as const;
@@ -111,9 +107,7 @@ const MANY_MANIFEST: VoiceManifest = {
 
 const url = (key: string): string => `/audio/voice/${key}.m4a`;
 
-/* --------------------------------------------------------------------------------------------- *
- * The rig
- * --------------------------------------------------------------------------------------------- */
+/* The rig */
 
 type Rig = {
   engine: AudioEngine;
@@ -245,9 +239,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B1 and B3: before a gesture, and with no Web Audio at all
- * --------------------------------------------------------------------------------------------- */
+/* B1 and B3: before a gesture, and with no Web Audio at all */
 
 describe("fetchAudioBytes", () => {
   afterEach(() => {
@@ -347,10 +339,7 @@ describe("B3 with no Web Audio every call is a refused no-op", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B4: the graph and its gains
- * --------------------------------------------------------------------------------------------- */
-
+// B4: the graph and its gains
 describe("B4 the bus graph", () => {
   it("B4 unlock wires sfx and voice buses into master, master into a compressor, and that into the destination", () => {
     const r = rig();
@@ -418,10 +407,7 @@ describe("B4 the bus graph", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B5: the acceptance gate and the log
- * --------------------------------------------------------------------------------------------- */
-
+// B5: the acceptance gate and the log
 describe("B5 the acceptance gate", () => {
   it("B5 an accepted sfx returns true, is logged, and plays through the sfx bus from currentTime + delayMs/1000", () => {
     const r = rig();
@@ -532,10 +518,7 @@ describe("B5 the acceptance gate", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B6: SFX retrigger and polyphony
- * --------------------------------------------------------------------------------------------- */
-
+// B6: SFX retrigger and polyphony
 describe("B6 SFX limits", () => {
   it("B6 the same id again within SFX_RETRIGGER_MS is refused and not logged, while another id is accepted", () => {
     const r = rig();
@@ -619,9 +602,7 @@ describe("B6 SFX limits", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B7 to B10: voice lines
- * --------------------------------------------------------------------------------------------- */
+/* B7 to B10: voice lines */
 
 describe("B7 one voice at a time, and a short queue behind it", () => {
   it("B7 an equal-priority request while a line is pending waits, logged pending, and starts once the channel frees", async () => {
@@ -871,10 +852,6 @@ describe("B10 late lines are dropped", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B11: preloading
- * --------------------------------------------------------------------------------------------- */
-
 describe("B11 preloadVoices", () => {
   it("B11 fetches nothing before unlock", async () => {
     const r = rig({ engine: { manifest: PRELOAD_MANIFEST } });
@@ -938,10 +915,7 @@ describe("B11 preloadVoices", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B46: nothing is scheduled on a context that is not running
- * --------------------------------------------------------------------------------------------- */
-
+// B46: nothing is scheduled on a context that is not running
 describe("B46 a context that is not running schedules nothing", () => {
   for (const state of ["suspended", "interrupted"] as const) {
     it(`B46 while ${state}, cues are accepted and logged, flagged, but no node is built, nothing is fetched and no line holds the channel`, async () => {
@@ -984,9 +958,7 @@ describe("B46 a context that is not running schedules nothing", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B47 and B48: priorities and the queue
- * --------------------------------------------------------------------------------------------- */
+/* B47 and B48: priorities and the queue */
 
 describe("B47 a more important line cuts in", () => {
   it("B47 a react line during a playing file line fades that line out and stops it within VOICE_FADE_S, then plays", async () => {
@@ -1120,10 +1092,7 @@ describe("B48 the queue", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B49: a rendered line plays and holds the channel for its audible span
- * --------------------------------------------------------------------------------------------- */
-
+// B49: a rendered line plays and holds the channel for its audible span
 describe("B49 a rendered line's silent head and tail are skipped", () => {
   /** 2 s of silence with a tone from 0.30 s to 1.20 s. */
   const speechBetween = (samples: Float32Array, rate: number): void => {
@@ -1171,10 +1140,7 @@ describe("B49 a rendered line's silent head and tail are skipped", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B50: mute and voice lines off stop the line that is speaking
- * --------------------------------------------------------------------------------------------- */
-
+// B50: mute and voice lines off stop the line that is speaking
 describe("B50 muting stops voice at once", () => {
   it("B50 muting cancels a spoken fallback line and drops every waiting line", async () => {
     const r = rig();
@@ -1209,10 +1175,6 @@ describe("B50 muting stops voice at once", () => {
     expect(bus.voice.param("gain").targets().at(-1)?.value).toBeCloseTo(LEVELS.voice, 6);
   });
 });
-
-/* --------------------------------------------------------------------------------------------- *
- * B51: the voice caches and the background prefetch
- * --------------------------------------------------------------------------------------------- */
 
 describe("B51 caches and prefetch", () => {
   it("B51 at most VOICE_DECODED_MAX lines stay decoded; an evicted one decodes again from its bytes, with no second fetch", async () => {
@@ -1270,10 +1232,7 @@ describe("B51 caches and prefetch", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B58: no background voice work while the board animates
- * --------------------------------------------------------------------------------------------- */
-
+// B58: no background voice work while the board animates
 describe("B58 background voice work waits while the engine is busy", () => {
   /** Resolves every hanging request, over and over, until nothing new is asked for. */
   async function drainFetches(r: Rig): Promise<void> {
@@ -1373,10 +1332,7 @@ describe("B58 background voice work waits while the engine is busy", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Integration: `speaking`, the signal behind the page's `data-speaking` (SPEC §9.9: practice holds
- * the AI's next step while a line plays).
- * --------------------------------------------------------------------------------------------- */
+/* Integration: `speaking`, behind `data-speaking` (SPEC §9.9: practice holds the AI's next step while a line plays) */
 
 describe("speaking: a line holds the voice channel from its request until it ends", () => {
   it("is false before any line, true from the request of a file line (loading included), false once it has played", async () => {
@@ -1464,15 +1420,9 @@ describe("speaking: a line holds the voice channel from its request until it end
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R655: card effects and the pick-up
- * --------------------------------------------------------------------------------------------- */
-
+// R655: card effects and the pick-up
 describe("R655 a card's effect and a Unit picked up to attack", () => {
-  /**
-   * #66 The Rock: effects alone on its play and attack hooks, an effect and a line on its death.
-   * #4: an attack hook with an effect and a line (with a file). #8 has no attack hook.
-   */
+  /** #66 The Rock: effects alone on play and attack, an effect and a line on death; #4: both on attack; #8: no attack. */
   const FX_LINES: CardAudioTable = {
     voices: LINES.voices,
     effects: {
@@ -1731,9 +1681,7 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R669 (#259): lane panning, the effects' duck under voice, and the shared reverb
- * --------------------------------------------------------------------------------------------- */
+/* R669 (#259): lane panning, the effects' duck under voice, and the shared reverb */
 
 describe("R669 the mix's panning, ducking and reverb", () => {
   it("R669 an sfx cue with a pan plays through a stereo panner into the sfx bus; a centered one does not", () => {
@@ -1797,9 +1745,7 @@ describe("R669 the mix's panning, ducking and reverb", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Backgrounding: the page goes hidden mid-game and comes back (issue #2034)
- * --------------------------------------------------------------------------------------------- */
+/* Backgrounding: the page goes hidden mid-game and comes back (issue #2034) */
 
 describe("background: the page hides mid-game and comes back", () => {
   it("background: unlock() after the OS closed the context builds a new context, mix and settings subscription", async () => {
@@ -1817,10 +1763,8 @@ describe("background: the page hides mid-game and comes back", () => {
 
     const audio = r.factory.last();
     expect(audio).not.toBe(closed);
-    // The new mix hears a later settings write …
     writeAudioSettings({ ...LEVELS, muted: false, voiceOn: true, master: 0.9 });
     expect(buses(audio).master.param("gain").targets().at(-1)?.value).toBeCloseTo(0.9, 9);
-    // … and cues play again through it.
     expect(r.engine.playSfx("draw")).toBe(true);
     await settle();
     expect(r.engine.log().at(-1)).toMatchObject({ kind: "sfx", id: "draw" });
@@ -1878,7 +1822,6 @@ describe("background: the page hides mid-game and comes back", () => {
     const bus = buses(audio);
     expect(r.engine.state()).toBe("running");
 
-    // The OS suspends the context while the page is hidden.
     audio.state = "suspended";
     r.life.visible = false;
     r.life.fire();

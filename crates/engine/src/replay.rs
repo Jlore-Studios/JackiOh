@@ -1,8 +1,7 @@
 //! Replay: (seed, decks, action log) rebuilds a match exactly, and a state hash makes two folds
-//! comparable (SPEC §9.2, §9.3). A practice game adds its handicaps to that tuple (§9.9, R180, R187),
-//! a game with a dealt deck the seats that were dealt one (R433), and a match its seats' last boards
-//! (R417) and its Glitch boards (R678): they are setup, not actions, so the fold hands them to
-//! `create_recorded_game` exactly as the live game handed them to `create_game` (R1705003).
+//! comparable (SPEC §9.2, §9.3). Handicaps (§9.9, R180, R187), dealt seats (R433), last boards (R417)
+//! and Glitch boards (R678) are setup, not actions, so the fold hands them to `create_recorded_game`
+//! exactly as the live game handed them to `create_game` (R1705003).
 //!
 //! The hash's text is fixed (`docs/v0.3.0/SURFACE.md` §5.2; §4.4.1 sort stability, §4.4.7 absent
 //! options; §6.1 `fold`'s signature): practice saves on players' devices store the hash, the hotseat
@@ -21,9 +20,8 @@ use crate::wire::{
     ReplayRefusal, ReplayStep,
 };
 
-/// Canonical JSON: keys sorted, so two equal states always produce the same text. A string, number,
-/// bool or null as `JSON.stringify` writes it; an array as `[a,b]`; an object as `{"key":value}` with
-/// its keys sorted ascending by UTF-16 code units. An absent `Option` is no key at all.
+/// Canonical JSON, so two equal states always produce the same text: each value as `JSON.stringify`
+/// writes it, an object's keys sorted ascending by UTF-16 code units. An absent `Option` is no key.
 pub fn canonical(value: &Value) -> String {
     let mut out = String::new();
     write_canonical(value, &mut out);
@@ -71,8 +69,8 @@ fn json_string(text: &str) -> String {
 }
 
 /// `JSON.stringify(n)` for a JSON number: an integer as its digits; a float with no fraction as an
-/// integer (JS has one number type, so `2.0` prints `2`); any other float as serde_json writes it,
-/// which is the shortest round-trip form, as JS's is. The engine's state holds integers only.
+/// integer; any other float as serde_json writes it, which is the shortest round-trip form, as JS's is.
+/// The engine's state holds integers only.
 fn js_number(number: &serde_json::Number) -> String {
     if number.is_i64() || number.is_u64() {
         return number.to_string();
@@ -122,13 +120,10 @@ pub fn fnv1a32_utf16_u32(text: &str) -> u32 {
     hash
 }
 
-/// FNV-1a over the canonical state, minus the nonce log, which is bookkeeping, the opening a Glitch
-/// reset deals again (R676), which is a copy of the fold's own input, so no hash moved when it came,
-/// and the Created cards' generators (R1956001), which dress a card and play no part in a game, so a
-/// game recorded before they were kept hashes as it did.
-/// The text is written straight from `Serialize` (`direct::canonical_text`), byte for byte what
-/// `canonical(&to_value(state))` writes; a shape that writer leaves alone takes the `Value` path
-/// below, so the hash never depends on which path ran.
+/// FNV-1a over the canonical state, minus the nonce log (bookkeeping) and two fields whose arrival moved
+/// no recorded game's hash: the opening a Glitch reset deals again (R676) and the Created cards'
+/// generators (R1956001). The text comes from `direct::canonical_text`, or the `Value` path for a shape it
+/// leaves alone, byte for byte the same, so the hash never depends on which path ran.
 pub fn hash_state(state: &GameState) -> String {
     if let Some(text) = direct::canonical_text(state, &["applied", "opening", "generators"]) {
         return fnv1a32_utf16(&text);
@@ -146,15 +141,11 @@ pub fn hash_state(state: &GameState) -> String {
 }
 
 /// `canonical(&serde_json::to_value(value))`, written from `Serialize` without the `Value` tree. Every
-/// shape is written as `to_value` would build it: an object's keys in UTF-16 order (a later duplicate
-/// replacing an earlier, as a `Value` map's insert does), `None` and `()` as `null`, a unit variant as
-/// its name, a newtype variant as `{"variant":value}`, an `f64` through `Value::from` and `js_number`.
-/// What it cannot write (128-bit integers, bytes, a map key that is not a string, char, bool or
-/// integer) is an error, and the caller takes the `Value` path instead.
-///
-/// Entries go out as they come and are put in key order when the object closes. A struct's keys are
-/// its `&'static str` field names, so their sorted order is worked out once per set and remembered
-/// (`Out::orders`, keyed by the names' addresses and lengths: the same pair is the same text).
+/// shape is written as `to_value` would build it, a later duplicate key replacing an earlier. What it
+/// cannot write (128-bit integers, bytes, a map key that is not a string, char, bool or integer) is an
+/// error, and the caller takes the `Value` path instead. A struct's keys are its `&'static str` field
+/// names, so their sorted order is worked out once per set (`Out::orders`, keyed by the names' addresses
+/// and lengths).
 mod direct {
     use std::borrow::Cow;
     use std::cmp::Ordering;
@@ -191,7 +182,6 @@ mod direct {
     /// replaced duplicate left out.
     type Order = Option<Vec<u32>>;
 
-    /// The text being written, and the orders worked out for struct key sets so far.
     struct Out {
         bytes: Vec<u8>,
         orders: IndexMap<Vec<usize>, Order, crate::catalog::IdHash>,
@@ -656,9 +646,8 @@ mod direct {
         }
     }
 
-    /// A map key as `to_value` takes it: a string, a char, a bool or an integer as its text, a unit
-    /// variant as its name, a newtype as what it wraps. Anything else is left to the `Value` path. A
-    /// map's keys are owned (`Cow::Owned`), so its order is never taken for a struct's.
+    /// A map key as `to_value` takes it; anything else is left to the `Value` path. A map's keys are
+    /// owned (`Cow::Owned`), so its order is never taken for a struct's.
     struct KeyWriter;
 
     type NoKey = ser::Impossible<Key, Unsupported>;
@@ -792,7 +781,8 @@ mod direct {
     }
 }
 
-/// What a fold starts from.
+/// What a fold starts from. Each optional field is setup, exactly as the live `create_game` had it
+/// (R923000's sandbox flag and R915006's custom cards among them).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplayInput {
@@ -801,22 +791,16 @@ pub struct ReplayInput {
     pub log: Vec<Action>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub catalog: Option<CardDefs>,
-    /// R180, R187: the same handicaps the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handicaps: Option<PerPlayerOpt<Handicap>>,
-    /// R433: the same dealt seats the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dealt: Option<Vec<PlayerId>>,
-    /// R417: the same last boards the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_boards: Option<LastBoardInput>,
-    /// R678: the same Glitch boards the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub glitch_boards: Option<LastBoardInput>,
-    /// R923000: the same sandbox flag the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<bool>,
-    /// R915006: the same custom cards the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_cards: Option<Vec<crate::wire::CustomCard>>,
 }
@@ -897,10 +881,9 @@ pub fn catalog_for(
 /// R768, R767000: fold a finished game once and check it before any step is shown: a catalog version
 /// `build_version` neither is nor carries is refused as `earlier_patch` before anything is folded, a
 /// log that does not fold to `record.final_hash` as `rules_changed`. A carried version folds under its
-/// own catalog, which the checkpoints name. Otherwise the answer holds the step count (step 0 is the
-/// state after `begin_game`, step k the one after the k-th accepted action; a rejected one is no
-/// step) and a state every `REPLAY_CHECKPOINT_EVERY` accepted actions. As with `fold`, a setup
-/// `create_recorded_game` refuses panics; the WASM binding checks it first.
+/// own catalog, which the checkpoints name. Step 0 is the state after `begin_game`, step k the one
+/// after the k-th accepted action. As with `fold`, a setup `create_recorded_game` refuses panics; the
+/// WASM binding checks it first.
 pub fn replay_open(input: &ReplayInput, record: &ReplayRecord, build_version: &str) -> ReplayOpen {
     let shipped = match catalog_for(&record.catalog_version, build_version) {
         Ok(shipped) => shipped,
@@ -947,9 +930,8 @@ pub fn under_checkpoints<T>(checkpoints: &ReplayCheckpoints, run: impl FnOnce() 
 /// R768: steps `[from, from + count)` of an opened replay as `seat` saw them, each `view_for` (never
 /// the clock's) and its turn. `count` is capped at REPLAY_PAGE_STEPS and at the last step, and the
 /// page ends early rather than make more than REPLAY_CHECKPOINT_EVERY `reduce` calls, so the next
-/// page starts at `from + steps.len()`. `reduces` counts them (a pure crate keeps no counter).
-/// R767000: the steps are reached under the catalog the checkpoints name, and checkpoints naming a
-/// version this build does not carry give none.
+/// page starts at `from + steps.len()`. `reduces` counts them (a pure crate keeps no counter). R767000:
+/// the steps are reached under the catalog the checkpoints name (`under_checkpoints`).
 pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
     if let Some(version) = &checkpoints.catalog_version
         && shipped_catalog(version).is_none()
@@ -1031,8 +1013,7 @@ mod tests {
     }
 
     /// `hash_state`'s direct writer writes exactly `canonical(&to_value(..))` for every shape serde
-    /// derives: unsorted struct fields, flattened duplicates (the later one kept, as a `Value` map's
-    /// insert keeps it), every enum representation, floats, escapes and keys outside the BMP.
+    /// derives.
     #[test]
     fn the_direct_writer_writes_what_canonical_writes() {
         use indexmap::IndexMap;

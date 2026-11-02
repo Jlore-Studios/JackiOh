@@ -1,14 +1,9 @@
 //! A ladder bot's sealed picks in a Conquest series (SPEC §9.5, R641000, with R330–R333): which
 //! deck of its trio it plays in the next game, and when it says so.
 //!
-//! Pure. The sweeper (`api/series.rs`) hands it the series row and applies `bot_pick` through
-//! `pick_deck`, as a person's pick is applied. It reads only what the bot's own side of the series
-//! sees (R336): its trio, which of its decks have won and who goes first in the next game (R335),
-//! never the opponent's trio or pick, as R185 holds for its play. Its two streams are drawn from the
-//! series seed, which no client holds, beside the bot's seat and the game picked for:
-//! `{seed_base}:bot-pick-delay:{seat}:{game}` for when and `{seed_base}:bot-pick:{seat}:{game}` for
-//! which. Neither is a game's seed (`{seed_base}:{game}`), each starts at cursor 0, and nothing they
-//! draw reaches a state, a log or a replay hash; a re-read row draws the same pick.
+//! Pure. Reads only what the bot's own side sees (R336): its trio, which decks won, and who goes
+//! first next (R335), never the opponent's trio or pick (R185). Delays and picks are drawn from
+//! `{seed_base}:bot-pick-delay:{seat}:{game}` and `{seed_base}:bot-pick:{seat}:{game}`.
 
 use jackioh_engine::{CardDefs, Rng, query_cost};
 
@@ -23,7 +18,6 @@ use crate::db::store::{SeriesRow, SeriesSeat, SeriesSide, SeriesStatus};
 /// Games are numbered from one (`SeriesGame.game_no`), as in `series_rules.rs`.
 const FIRST_GAME: i32 = 1;
 
-/// The game the series' pick phase is for.
 fn picking_for(series: &SeriesRow) -> i32 {
     series.games.len() as i32 + FIRST_GAME
 }

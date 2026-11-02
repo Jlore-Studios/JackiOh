@@ -1,6 +1,5 @@
-// R279: a name in a card's text that its `refs` link is a reference. Marked everywhere; a control
-// where the surface allows one (the collection's detail view, the touch sheet), which shows the
-// named card's printed face in a tooltip; and the hover preview lists the named faces beside it.
+// R279: a name in a card's text that its `refs` link is a reference: marked everywhere, a control where
+// the surface allows one (a tooltip with the named face), and the hover preview lists the named faces.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -70,7 +69,7 @@ describe("R279 the names a text links", () => {
         );
         const shown = [...container.querySelectorAll(".cf-ref")].map((ref) => ref.getAttribute("data-ref"));
         expect(shown, `${card.id} radiant=${String(radiant)}`).toEqual(expected);
-        // A face on its own is not a control: no tab stop, nothing to open.
+        // A face on its own is not a control.
         expect(container.querySelector(".cf-ref[tabindex]"), card.id).toBeNull();
         unmount();
       }
@@ -91,7 +90,6 @@ describe("R279 the names a text links", () => {
     const jade = def("meditative-039-2");
     // The "Jade" in "Jade Counter" names nothing (R961, R381's rules phrase).
     expect(findRefs("Add 1 to your Jade Counter. Gain 1 mana.", [jade])).toEqual([]);
-    // Outside the phrase the same name still points at Jade.
     expect(
       findRefs("Your Jade Beauties become Radiant.", [jade]).map((match) => [
         "Your Jade Beauties become Radiant.".slice(match.start, match.end),
@@ -152,7 +150,7 @@ describe("R279 a reference that is a control opens the card it names", () => {
     const tooltip = screen.getByTestId(REF_TOOLTIP_TESTID);
     expect(tooltip).toHaveAttribute("data-ref-face", "radiant");
     expect(tooltip.querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
-    // Its keyword line and its text are two lines of the face (Pierce since patch v0.3.10), read as one.
+    // Its keyword line and its text are two lines of the face, read as one.
     expect(tooltip.querySelector(".card-text")).toHaveTextContent(fillParams(def("core-090-1"), "radiant").replace(/\s+/g, " "));
   });
 
@@ -189,8 +187,7 @@ describe("R279 a reference that is a control opens the card it names", () => {
       </div>,
     );
     const ref = maskRef(container);
-    // A real tap: pointerdown, the focus it gives, pointerup, click — the focus opening it must not
-    // be undone by the click that ends the same press.
+    // A real tap (pointerdown, focus, pointerup, click): its click must not undo the focus that opened it.
     await user.pointer({ keys: "[TouchA]", target: ref });
     expect(screen.getByTestId(REF_TOOLTIP_TESTID)).toHaveAttribute("data-ref", "core-065-1");
     await user.pointer({ keys: "[TouchA]", target: ref });

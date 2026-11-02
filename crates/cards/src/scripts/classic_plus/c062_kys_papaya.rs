@@ -7,15 +7,9 @@
 //!
 //! The curve is the engine's (E32): the player Discovers 4 cells in different lanes, each among
 //! `PAPAYA_BASE_OFFERS` random cells of the lanes not used yet (`PAPAYA_OFFERS` on the Radiant face),
-//! with no "done" (R1704000; R831003's 1 to 4 before it, and any cell on the board before that). The
-//! curve is the lowest-degree polynomial through them in exact rationals, announced in a public
-//! `curveDrawn`, and the top card at every cell on it is destroyed. The running face decides the offers
-//! and the rows: the subsystem reads `ctx.radiant` and keeps to the enemy's rows 2 and 3 on the Radiant
-//! one.
-//!
-//! Through v0.4.0f both faces offered 3 cells, "done" ended the picks after the first, and the curve
-//! exiled its cards (`PAPAYA_RULES_V0_4_0F`); `script_v0_4_0f` keeps that for those versions' replays
-//! (R767000).
+//! with no "done" (R1704000). The curve is the lowest-degree polynomial through them in exact
+//! rationals, announced in a public `curveDrawn`; the top card at every cell on it is destroyed, the
+//! Radiant face keeping to the enemy's rows 2 and 3.
 
 use jackioh_engine::prelude::*;
 
@@ -36,7 +30,6 @@ fn papaya(rules: subsystems::PapayaRules) -> Script {
 
 pub fn script() -> CardScripts {
     let base = papaya(subsystems::PAPAYA_RULES);
-    // The same script.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -49,11 +42,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, R831003, R1704000, BUILD M9 row C+ 62: four Discovers, one
-// at a time (2 random cells of the unused lanes, 3 on the Radiant face, never "done"), x the lane and y
-// the row from the caster's seat, the lowest-degree curve in exact rationals, every card on it destroyed
-// (a pile's top; face-down too; Indestructible stays, Reborn returns; nothing between lanes); cells never
-// cards (R177); a random cast answers itself (R452); radiant only enemy cards.
+// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, R831003, R1704000, BUILD M9 row C+ 62 (R177, R452).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{cast_new, lock};

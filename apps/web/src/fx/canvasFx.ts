@@ -1,10 +1,7 @@
 /**
- * Shaped canvas effects (docs/polish/1-animations.md, S5; B31): projectiles, death cracks, shock
- * rings and flash blooms. Loose particles belong to the ParticleSystem; each shape here ends exactly
- * when its time is up, so nothing outlives the tail the runner allows (R200).
- *
- * Glow comes from layered strokes and radial gradients under `lighter` blending, never from
- * `shadowBlur` or text, and every random choice comes from the injected `FxRng`.
+ * Shaped canvas effects (docs/polish/1-animations.md, S5; B31): projectiles, death cracks, shock rings and
+ * flash blooms, each ending exactly when its time is up, so nothing outlives the runner's tail (R200). Glow
+ * is layered strokes and gradients under `lighter` blending, never `shadowBlur`; randomness is `FxRng`'s.
  */
 import { PARTICLE_PRESETS } from "./presets.ts";
 import type { ParticleSystem, EmitOptions } from "./particles.ts";
@@ -13,19 +10,13 @@ import { createShots } from "./shots.ts";
 import type { FxBox, FxPreset, FxShot, FxVec } from "./types.ts";
 
 export type CanvasFx = {
-  /** A glowing head on a shallow arc, trailing `preset` particles until flightMs; `density` (default 1) scales the trail and the arrival burst. */
+  /** A glowing head on a shallow arc, trailing `preset` particles; `density` (default 1) scales the trail and arrival burst. */
   projectile(preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
-  /** #1442: a flavor's shot (`shots.ts`) from `from` to `to`, bursting `preset` where it lands; `density` (default 1) scales its trail and that burst. */
+  /** #1442: a flavor's shot (`shots.ts`), bursting `preset` where it lands; `density` as for `projectile`. */
   shot(shot: FxShot, colors: readonly string[], preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
-  /** Jagged branching polyline from the box center, white-hot fading to dark over durationMs. */
   crack(box: FxBox, durationMs: number): void;
-  /** An expanding elliptical shock wave about the box (RING.scaleFrom to RING.scaleTo), fading over durationMs. */
   ring(preset: FxPreset, box: FxBox, durationMs: number): void;
-  /**
-   * The preset's bloom at `at`, sized against `box` and the burst's `count`; a preset without a flash paints
-   * nothing. `colors` (#1447, a burst's palette, hot first) gives it the first color as its core and the last as its
-   * glow; the preset still sets its size and length.
-   */
+  /** The preset's bloom (if it has one) at `at`, sized by `box` and `count`; `colors` (#1447, hot first) sets its core and glow. */
   flash(preset: FxPreset, at: FxVec, box: FxBox, count: number, colors?: readonly string[]): void;
   /** `dtMs` (clamped frame time) paces the trail; `ageMs` (real time, default `dtMs`) ages shapes, so a stalled frame never stretches one past its end (R200). */
   step(dtMs: number, ageMs?: number): void;
@@ -45,7 +36,7 @@ const PROJECTILE = {
   trailPower: 0.35,
   /** Each trail particle is born this far (CSS px, either way) off the path, so the trail has body. */
   trailJitter: 4,
-  /** Head glow: a radial gradient, radii in CSS px; the body color sits at `bodyRadius`, the halo at `haloAt` of the radius. */
+  /** Head glow radii, CSS px. */
   haloRadius: 24,
   haloAt: 0.7,
   haloAlpha: 0.25,
@@ -239,7 +230,6 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
     power: PROJECTILE.arrivalPower,
   };
 
-  /** The quadratic Bézier point for `t`, written into `at` (no allocation per trail particle). */
   const at = { x: 0, y: 0 };
   const pointAt = (pr: Projectile, t: number): void => {
     const u = 1 - t;

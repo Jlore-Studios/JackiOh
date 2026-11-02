@@ -21,7 +21,6 @@ pub const ID: &str = "classic-045";
 /// "Tribute 1" (§6.3): one of your units, or one Sheep Token.
 const TRIBUTE_COST: i32 = 1;
 
-/// "Draw {draw} and heal your hero {heal}", the text the Cry and the attack trigger share.
 fn titan(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let count = param(&*ctx, "draw");
     let amount = param(&*ctx, "heal");
@@ -43,18 +42,13 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's draw 2 and heal 6 are its declared numbers, which `param` reads off the running face.
     CardScripts {
         radiant: base.clone(),
         base,
     }
 }
 
-// C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45: Tribute 1 (§6.3, R101), refused
-// with no Unit to Tribute; on a full board it takes the tributed Unit's zone unless Reborn, Locked or
-// a Stack pile's top (R391); a Sheep overpays; Cry and each attack, forced included, before its damage
-// (R2285000): draw 1, heal 3, no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal)
-// via `param()` (R386).
+// C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45 (§6.3, R101, R391, R2285000, R386).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -146,7 +140,6 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [TEMPO] },
                 }));
 
-                // "ribute" is in the message whichever case its first letter takes.
                 s.expect_refused_with(|s| s.play(TITAN, json!({ "tributes": [TEMPO] })), "ribute");
                 s.expect_in_zone(TITAN, "hand").expect_in_zone(TEMPO, "field");
             }

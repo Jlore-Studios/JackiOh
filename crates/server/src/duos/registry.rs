@@ -1,17 +1,9 @@
-//! The live co-op actors (fullsend SPEC S6, B40), as `actor/registry.rs` holds the 1v1 ones: `start`
-//! creates an actor for a match a join just wrote, `actor_for` rebuilds one that is not in memory by
-//! folding `(seed, options, log)` (`duos_fold`) on the blocking pool, under the catalog the match was
-//! played on (R767000), and `stop` drops one and leaves its log alone, which is what a crash looks
-//! like from outside. A socket is told it holds no seat before anything is folded for it (§9.1).
-//! A finished match is folded back for a seat only within `REMATCH_OFFER_TTL_MS` of its `ended_at`;
-//! past that the seat is told the match is not found (R1398000).
-//! The registry also keeps the co-op replays opened lately (`duos::replay`).
+//! Live co-op actors (fullsend SPEC S6, B40): `start` creates an actor, `actor_for` rebuilds one by
+//! folding on the blocking pool under its pinned catalog (R767000), and `stop` drops one.
+//! Sockets are checked for seats before folding (§9.1). A finished match folds back only within
+//! `REMATCH_OFFER_TTL_MS` of `ended_at` (R1398000).
 //!
-//! One registry per running `App`, reached through `registry(app)`. It is not a field of `App`, so
-//! nothing that builds an `App` changes: it lives in a map keyed by the app's address, beside a weak
-//! handle that tells a live app from one dropped and its address reused, as `ws_server.rs` keeps its
-//! per-app socket counts. An actor holds its `Arc<App>`, so an app is never dropped while its
-//! registry holds an actor.
+//! One registry per running `App` via `registry(app)`, keyed by app address beside a weak handle.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
@@ -229,12 +221,9 @@ impl DuosRegistry {
         outcome
     }
 
-    /// B35: hands a socket to the seat `profile_id` holds, rebuilding the actor first when needed.
-    /// The seat's view and legal actions follow on the actor's queue. A profile that holds no seat
-    /// in the match is refused from the match's row before anything is folded (§9.1): a match id is
-    /// no key to the server's work. A finished match whose `ended_at` is more than
-    /// `REMATCH_OFFER_TTL_MS` ago, and that has no actor in memory, is refused the same way
-    /// (R1398000).
+    /// B35: hands a socket to the seat `profile_id` holds, rebuilding if needed. Sockets holding no
+    /// seat are refused before folding (§9.1); finished matches past `REMATCH_OFFER_TTL_MS` are
+    /// refused similarly (R1398000).
     pub async fn attach(
         &self,
         app: &Arc<App>,
@@ -254,9 +243,7 @@ impl DuosRegistry {
                     return Err(DuosAttachError::NotFound);
                 }
                 // R1398000: a finished match is folded back only inside the window a finished 1v1
-                // match's socket reopens in (R1285000), counted from the row's `ended_at` as
-                // `ws_server::seats_finished_match` counts `finished_at`; past it the seat is answered
-                // as a stranger is and nothing is folded, so no report is filed for an old game.
+                // match reopens in (R1285000), counted from `ended_at`; past it nothing is folded.
                 let past_window = row
                     .as_ref()
                     .and_then(|row| row.ended_at)
@@ -302,9 +289,8 @@ impl DuosRegistry {
         tracing::info!(event = "duos.stopped", matchId = %match_id);
     }
 
-    /// Drops every finished actor no person holds a socket on, as the 1v1 reaper drops one: a
-    /// socket that comes back within `REMATCH_OFFER_TTL_MS` of the end folds it again (R1398000).
-    /// Answers the ids it dropped.
+    /// Drops finished actors with no open socket. Sockets returning within `REMATCH_OFFER_TTL_MS`
+    /// fold it again (R1398000).
     pub async fn reap_finished(&self) -> Vec<String> {
         let reaped: Vec<(String, DuosActor)> = {
             let mut actors = lock(&self.actors);

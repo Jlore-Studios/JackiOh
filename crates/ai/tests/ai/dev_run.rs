@@ -1,12 +1,5 @@
-//! SPEC §9.11, R378: the AI's development run. A development game is an All Random game with two AI
-//! pilots on this spec's resources, dealt exactly as the server deals a live one, and it is filed as
-//! a record of its own source, which no live figure counts unless it is asked for. The games here run
-//! at a small budget so the file stays fast; `cargo jackioh stats` plays at the browser's.
-//!
-//! Port of `packages/ai/test/dev-run.test.ts`. Its third case, "reads the run's options, and refuses
-//! one it does not know", tests `scripts/stats.ts`'s `parseDevRunArgs`, which is the CLI's own
-//! argument parser now (`crates/tools/src/stats.rs`, SURFACE §12, part 22): this test binary cannot
-//! link the tools crate (it depends on this one), so that case belongs with the CLI's tests.
+//! SPEC §9.11, §12, R378: AI development run. Two AI pilots on spec resources, dealt as All Random,
+//! filed as a development record. Small budget for tests; `cargo jackioh stats` plays full.
 
 use jackioh_ai::{
     AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchConfig, MatchHooks, MatchSetup, SearchBudget,
@@ -32,7 +25,7 @@ const QUICK: SearchBudget = SearchBudget {
     finalists: 1,
 };
 
-/// TS `expect(record).toMatchObject(fields)`: every field named holds its value, read as the wire writes it.
+/// Every field named holds its value, read as the wire writes it.
 fn assert_matches_object(record: &GameRecord, fields: serde_json::Value) {
     let written = serde_json::to_value(record).expect("a record serializes");
     for (key, value) in fields.as_object().expect("an object literal") {

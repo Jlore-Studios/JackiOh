@@ -3,9 +3,6 @@
 //!   Radiant: the same text, discards 4.
 //!   Engine:  "Random from their hand (R682): no prompt opens; fewer cards → all they have, none →
 //!            nothing; a discarded unit-token card ceases to exist (R11). Tunes: discards 2 ↑."
-//!
-//! No prompt opens (R682), so the caster never waits on the opponent. The discard lands as the Cry
-//! reaches it.
 
 use jackioh_engine::effects::discard_random;
 use jackioh_engine::prelude::*;
@@ -24,10 +21,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #56 Book of Pain — SPEC §8.7 row 56, BUILD M9 Classic+ row C+ 56: "The opponent discards 2 cards
-// at random (R682), with no prompt; the opponent's remaining hand stays hidden (§10.6) while the
-// discards are public; fewer cards, all of them; an empty hand, nothing; the count reads through
-// `param()`; radiant 4".
+// C+ #56 Book of Pain — SPEC §8.7 row 56, BUILD M9 Classic+ row C+ 56 (§10.6).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -42,7 +36,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `pain({ radiant?, theirs? })`: `None` is TS's `[A, B, C]`.
     fn pain(radiant: bool, theirs: Option<&[&str]>) -> Scenario {
         let theirs: Vec<&str> = theirs.map_or_else(|| vec![A, B, C], |cards| cards.to_vec());
         scenario(json!({

@@ -1,17 +1,8 @@
-//! The username routes (SPEC §9.4, R1432–R1435): the preview a player sees while typing, the save,
-//! and the skip that answers the prompt after activation. Every route acts on the caller's own
-//! account, named by the token; none takes a profile id or another player's name.
+//! Username preview, claim, and skip routes (SPEC §9.4, §9.1, R1432–R1435).
 //!
-//! The server is the only judge of a name (§9.1, CLAUDE.md rule 7). The client sends what was
-//! typed, shows the preview's verdict as it stands, and saves exactly the username that verdict
-//! named; a save whose outcome has changed since (someone took `Max` first, so it would now be
-//! `Max#1`) is refused with 409 and a fresh preview, so a player never ends up with a tag they were
-//! not shown. The checks are `crate::username`; the taken-name lookup and the claim are the store's
-//! (`profiles_username_tag_for`, `profiles_claim_username`). All three routes are
-//! `AuthLevel::Active`, so R109's per-account limit counts them like every other request.
-//!
-//! A name is never logged (R1436): it is a label the player chose, and nothing here needs it in a
-//! log line to be diagnosed.
+//! All routes are `AuthLevel::Active` and rate-limited per account (R109).
+//! The server authoritatively validates usernames and tag allocation (CLAUDE.md rule 7).
+//! Usernames are never logged (R1436).
 
 use std::sync::Arc;
 
@@ -81,10 +72,8 @@ fn cooldown_preview(next_change_at: i64) -> Value {
     })
 }
 
-/// R1435: what a save of `raw` would give the caller now, checked in this order: the cooldown, the
-/// name's form and the filter (R1432, R1433), then the tag it would carry (R1434) and whether that
-/// is the name they already have. `{ ok: true, base, username, tagged }` names the exact username
-/// a save would give, `base` in its stored NFKC form and `tagged` true when the bare base is taken.
+/// R1435: evaluates username preview against cooldown, filter (R1432, R1433),
+/// tag availability (R1434), and current username.
 async fn preview(app: &App, profile: &Profile, raw: &str, now: i64) -> Result<Value, ApiError> {
     if let Some(next_change_at) = next_change_at(profile, now) {
         return Ok(cooldown_preview(next_change_at));
@@ -111,9 +100,6 @@ fn refused(code: ApiErrorCode, message: impl Into<String>, preview: Value) -> Ap
     ApiError::with_details(code, message, preview)
 }
 
-// The three `AuthLevel::Active` rows of `app.rs`'s `ROUTES`: GET /api/username/preview →
-// get_preview; PUT /api/username → put_username; POST /api/username/skip → post_skip.
-
 /// `GET /api/username/preview?name=…`: the preview of `name` (R1435). Always 200: a refused name
 /// is a verdict, not an error. An empty or missing `name` is previewed as typed, too short.
 pub async fn get_preview(app: &Arc<App>, req: Req) -> ApiResult {
@@ -122,15 +108,8 @@ pub async fn get_preview(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json(200, preview(app, &profile, raw, now_ms()).await?))
 }
 
-/// `PUT /api/username` with `{ "username": "Max#3" }`, the username a preview gave, exactly (R1435).
-///
-/// - 200 `{ username }`, the caller's own username as `/me` carries it, once the claim lands: the
-///   cooldown starts and the prompt is answered.
-/// - 400 `bad_request` for a body that is not a username, or one whose base the checks refuse
-///   (`details` is that refusal, as a preview gives it).
-/// - 409 `conflict` when the save no longer gives what was sent: the base would carry another tag
-///   now, the name is the caller's already, the cooldown runs, or the base was not sent in its
-///   stored form. `details` is a fresh preview of the sent base, which the client shows instead.
+/// `PUT /api/username`: claims username exactly as previewed (R1435).
+/// Returns 200 with claimed username, 400 on invalid shape, or 409 on conflict/cooldown.
 pub async fn put_username(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let sent = str(&req.body, "username")?;

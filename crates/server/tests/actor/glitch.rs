@@ -1,16 +1,5 @@
 //! The Glitch Easter egg on the server (SPEC §7, R676–R679): what the server does with the swap,
-//! boards and void outcomes the engine announces. The scripted cards of `support::engine`
-//! (`test-glitch-swap`, `test-glitch-void`) reach each on demand, under the real registry, actor and
-//! results writer, over the fake store. The reset outcome (R676) needs nothing of the server: the
-//! engine rebuilds its own state, and `(seed, log)` still folds to it.
-//!
-//! The trust model these prove: only the engine's state moves an account to the other seat or voids
-//! a match. A client frame reaches either only as a legal `play` of the card.
-//!
-//! The engine is the real one with the test cards installed (docs/v0.3.0/SURFACE.md §11.3): it opens
-//! on both mulligans (answered keeping everything before the sockets attach), it shuffles (the seed
-//! is searched so the scripted cards are dealt into p1's opening hand), and a card is named by its
-//! definition, not by instance id.
+//! boards and void outcomes the engine announces. Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -43,10 +32,7 @@ const SEED_SEARCH: usize = 5_000;
 /// When the boards below were stored; nothing reads it back.
 const BOARD_AT: i64 = 1_700_000_000_000;
 
-/// How long `frame` waits for an action's reply. A game's last action is answered only once its
-/// result is written, the ladder payout's fold of the log off the runtime included
-/// (`api/results.rs`, §14.12), so its reply can land after the queue first drains. Every other
-/// reply is found at the first look.
+/// How long `frame` waits for an action's reply (§14.12: last action waits for result).
 const REPLY_WITHIN: Duration = Duration::from_secs(1);
 /// How long `frame` sleeps between two looks for the reply.
 const REPLY_STEP: Duration = Duration::from_millis(10);
@@ -121,9 +107,7 @@ fn event_of(entry: &Value) -> Option<&str> {
 
 // The world
 
-/// A live, ranked match on the real registry: account `P1` began in p1 with `p1_deck`'s scripted
-/// cards dealt into its hand, `P2` in p2. `a` is P1's socket and `b` is P2's, attached the way
-/// `ws_server.rs` attaches them.
+/// Live ranked match with P1 in p1 and P2 in p2 attached via sockets.
 struct World {
     app: Arc<App>,
     a: FakeSocket,
@@ -414,9 +398,7 @@ mod glitchs_swap {
             "playerId": "p1",
         }));
         idle(&w).await;
-        // #2213: the first `idle` can be queued before the socket's reader has queued the frame; the second
-        // follows it, so it waits for the frame's whole ending. The result's write holds no store lock
-        // while it folds, so no read of the tables waits it out any more.
+        // #2213: wait for frame's complete ending.
         idle(&w).await;
         // Stamped p2, the seat P1 plays now: p1 — P2 — wins.
         let actions = table(&w.app, |data| json!(data.tables.match_actions)).await;

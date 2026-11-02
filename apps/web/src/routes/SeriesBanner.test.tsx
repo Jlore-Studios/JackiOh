@@ -1,6 +1,5 @@
 // The board's series banner (R336): the score and each side's won decks while a series game is on,
-// and once it is over the way on to the next game or the series' result. A match that is not a
-// series game shows nothing.
+// and once it is over the way on to the next game or the series' result.
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

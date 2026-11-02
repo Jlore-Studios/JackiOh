@@ -1,38 +1,20 @@
 //! What a player may know of their own library (SPEC §10.8, R310–R312): which cards are left in it,
-//! never in what order, and only the cards they were shown going in.
+//! never in what order (§9.1 hides the order, not the contents), and only the cards they were shown.
 //!
-//! A player built their deck, drew and returned their own opening hand, and watched every card that
-//! went in openly after that: a CN-Virus's copies, an Unstable Clone Machine's, the virus the
-//! opponent's CN-Viral Injection shuffled in (a play both players saw, whose text names the card). So
-//! the list is theirs to read, as a list without order: §9.1 hides the order, not the contents.
-//!
-//! Three rules, and this module owns them:
 //!   - R310: the list is a multiset. One entry per definition and face, with a count, sorted by the
-//!     definition's printed cost (R65's `query_cost`), then its name, then its id, base face first:
-//!     an order the cards alone decide, so two libraries holding the same cards in any order give the
-//!     same list. It carries no instance id, no position, no live cost and no rolled power.
-//!   - R311: each library card carries `knownAs`, what its owner was shown of it as it went in. The
-//!     list reads that record and never the card itself, so a change made inside a library, where
-//!     nobody sees it (#28 or #42 making a card Radiant, #95's discount, #98's roll), shows nothing:
-//!     the card is listed with the face it went in with. Only the openings named below write it.
-//!   - R312: a card with no record was never shown to its owner, and is counted as unknown. That is
-//!     every card of a library Pocket Chaos swapped (#87: its new owner never saw it; `hide_from_owner`
-//!     clears the record the old owner had) and every card Transmogulate put in a library (#83: a new
-//!     instance, and the `transformed` event names it to nobody, R177). A card stays unknown until it
-//!     leaves the library, even one a prompt has since revealed (#51's options): the list may show
-//!     less than its owner could piece together, never more.
+//!     definition's printed cost (R65's `query_cost`), then its name, then its id, base face first.
+//!     It carries no instance id, no position, no live cost and no rolled power.
+//!   - R311: each library card carries `knownAs`, what its owner was shown of it as it went in. The list
+//!     reads that record and never the card itself, so a change made inside a library, where nobody sees
+//!     it (#28, #42, #95, #98), shows nothing.
+//!   - R312: a card with no record was never shown to its owner, and is counted as unknown until it leaves
+//!     (a library Pocket Chaos swapped, #87; a card Transmogulate put in one, #83, R177; even one a prompt
+//!     has since revealed, #51). It may show less than its owner knows, never more.
 //!
-//! The record is written where a card goes in openly: the starting deck (`state::create_game`), a
-//! mulligan's returns (`setup::finish_mulligan`) and a shuffle-in (`draw::shuffle_into_library`, which
-//! every Core shuffle goes through). A path that forgets to write it shows a card back, never a card.
-//!
-//! R433 (rewrites R310's dealt decks): a deck its player was DEALT rather than built — All Random's
-//! (R258), practice's fresh random deck — was never shown to them, so `create_game` writes no record
-//! for the seats it is told were dealt one (`CreateGameOptions.dealt`). Every card of that library
-//! counts as unknown until it leaves; what goes in openly afterwards (a mulligan's returns, a
-//! shuffle-in) is recorded as for any deck, so the list shows only what its owner has been shown.
-//!
-//! Port of `packages/engine/src/ownLibrary.ts`.
+//! The record is written where a card goes in openly (`state::create_game`, `setup::finish_mulligan`,
+//! `draw::shuffle_into_library`); a path that forgets to write it shows a card back, never a card.
+//! R433: a deck its player was DEALT (All Random's, R258; practice's) gets no record from `create_game`
+//! (`CreateGameOptions.dealt`); what goes in openly afterwards is recorded as for any deck.
 
 use std::cmp::Ordering;
 
@@ -55,8 +37,8 @@ pub fn hide_from_owner(card: &mut CardInstance) {
     card.known_as = None;
 }
 
-/// Plain code-unit order: the same in every runtime, unlike `localeCompare`. (TS `<` compares UTF-16
-/// code units, so the comparison walks them, not the UTF-8 bytes: a name may carry non-ASCII.)
+/// Plain UTF-16 code-unit order, the same in every runtime: not `localeCompare`, and not the UTF-8
+/// bytes, since a name may carry non-ASCII.
 fn compare_text(a: &str, b: &str) -> Ordering {
     if a == b {
         return Ordering::Equal;
@@ -80,7 +62,6 @@ fn compare_entries(state: &GameState, a: &LibraryEntryView, b: &LibraryEntryView
         }
         return compare_text(&a.def_id, &b.def_id);
     }
-    // `Number(a.radiant) - Number(b.radiant)`: base (false) before Radiant (true).
     a.radiant.cmp(&b.radiant).then(a.created.cmp(&b.created))
 }
 

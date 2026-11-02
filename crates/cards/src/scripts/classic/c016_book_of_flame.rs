@@ -31,14 +31,11 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 8 is its declared `damage`, which `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// C #16 Book of Flame — SPEC §8.6 row 16, BUILD M9 Classic row C 16: "One targeted hit of 4 on any
-// Unit or hero, either side; it is the Book of Flame C #23 and C #29 make (`classic-016`, R381);
-// radiant 8; its tuned number (damage) reads through `param()` (R386)".
+// C #16 Book of Flame — SPEC §8.6 row 16, BUILD M9 Classic row C 16 (#23, #29, R381, R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,7 +51,6 @@ mod tests {
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
     const FILLER: &str = "core-005";
 
-    /// Each `damage` event's `{ targetId, amount }`.
     fn hits(s: &Scenario) -> Vec<(String, i32)> {
         s.events()
             .iter()

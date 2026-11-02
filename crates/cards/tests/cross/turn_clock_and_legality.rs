@@ -38,7 +38,6 @@ use super::{fixture, in_hand, scenario, targets_of, tributes_of};
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// An action through `reduce` with a fresh nonce; the result as `reduce` gives it, a refusal included.
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     reduce(
@@ -103,8 +102,6 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
 
     #[test]
     fn r79_the_active_player_s_timeout_answers_every_prompt_of_theirs_a_chain_opens_then_ends_the_turn_2_5() {
-        // KY's Private Tutor opens three chained prompts and Craft a Card two: one timeout answers them
-        // all and the turn passes.
         let cases: [(&str, Vec<&str>); 2] = [
             (TUTOR, vec![MENACE, "core-020", STOCKPILE, "core-006", "core-035"]),
             (CRAFT, LIBRARY.to_vec()),
@@ -167,7 +164,6 @@ mod r36_a_draw_offer_is_answered_once {
         );
         assert!(accepted.error.is_some());
         assert_eq!(accepted.state.result, None);
-        // And the offerer is blocked, so the offer cannot simply be made again this turn.
         assert!(
             !legal_actions(&declined.state, PlayerId::P1)
                 .iter()
@@ -222,7 +218,6 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
             );
         }
 
-        // The top of the pile and a hero are what the ping reaches, as the prompt would offer them.
         let on_top = act(
             g.state(),
             json!({
@@ -348,10 +343,8 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
                 "field": [PANTHER],
                 "library": [{ "def": HINDER, "radiant": true }, VANILLA, VANILLA, VANILLA, VANILLA],
             },
-            // p2's #9 Moths to the Flame, worn to 4 health: at p2's start of turn p1's Panther attacks it.
             "p2": { "hand": [VANILLA], "field": [{ "def": "core-009", "damage": 10 }], "library": LIBRARY },
         }));
-        // p1's own turn: Quickstriker, then a second card (X = 1 on p2's hero).
         g.play(QUICKSTRIKER, json!({}));
         g.play(VANILLA, json!({}));
         assert_eq!(g.state().players.p2.hero.health, 29);
@@ -366,7 +359,6 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
                 .any(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == HINDER))
         );
 
-        // p1 played nothing earlier on this turn, so the cast deals 0.
         assert_eq!(g.state().players.p2.hero.health, 29);
     }
 }
@@ -380,7 +372,6 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
         // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the four
         // permanents Classic #40 MC Tech's Radiant face picks from in a prompt its Cry opens (§10.6).
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-prompt-keys",
             "p1": { "hand": [{ "def": MC_TECH, "radiant": true }, RENO], "mana": 8 },
             "p2": { "field": [FELINORS, FELINORS, MENACE], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
@@ -399,8 +390,6 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
                 .count(),
             2
         );
-        // `PendingOption.key` is what the client sends back, so one key names one option; two options
-        // sharing a key leave one of them unpickable.
         let keys: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
         let distinct: IndexSet<String> = keys.iter().cloned().collect();
         assert_eq!(distinct.len(), keys.len());
@@ -412,8 +401,6 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
 
     // R177's last channel, closed by R227: an instance id is the only handle the action protocol has
     // for a face-down target, so `legalActions` names one whenever a card may target a face-down trap.
-    // A card set face-down takes a fresh id, so an id seen while the card was public (here, in p2's
-    // graveyard) names nothing once the card is set again: not in the actions, the view or the events.
     #[test]
     fn r227_r177_legal_actions_never_names_a_face_down_trap_by_an_id_its_viewer_saw_while_the_card_was_public()
      {
@@ -450,7 +437,6 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
         assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{trap_id}\"")));
         assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{}\"", set.id)));
 
-        // Magic Jammed can target the face-down trap: the action names it by the fresh id only.
         let actions = legal_actions(g.state(), PlayerId::P1);
         assert_eq!(
             actions
@@ -484,7 +470,6 @@ mod s3_2_9_3_a_play_s_zone_is_one_of_the_row_s_lanes {
         );
         let mana = s.state().players.p1.mana.current;
 
-        // `legalActions` offers lanes 1 to 5 only…
         let offered = legal_actions(s.state(), PlayerId::P1)
             .iter()
             .any(|action| match action {
@@ -590,11 +575,8 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
     }
 }
 
-// A play's own choices, as legalActions offers them
-
 const EDGE_VANILLA: &str = "core-008";
 
-/// The plays `legalActions` offers for `card`.
 fn plays_of(s: &Scenario, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
     legal_actions(s.state(), player)
         .into_iter()
@@ -643,8 +625,6 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
                 })
             })
             .collect();
-        // Mismatched: tributes [a] with the pick b, and tributes [b] with the pick a — the unit
-        // sacrificed and the unit the script is told it sacrificed are two different units.
         assert_eq!(
             mismatched
                 .iter()
@@ -700,8 +680,8 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
             "p1": { "hand": [EDGE_VANILLA] },
             "p2": { "field": [EDGE_VANILLA, EDGE_VANILLA], "hand": [EDGE_VANILLA] },
         }));
-        // One declaration that picks two enemy units, exiled in turn. The exile pile is public and
-        // chronological (§3), so the order the picks are exiled in is on the table for both seats.
+        // The exile pile is public and chronological (§3), so the order the picks are exiled in is on the
+        // table for both seats.
         fixture(
             &mut s,
             "edge-r8-exile-two",
@@ -727,7 +707,6 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
         let a = must(s.unit(PlayerId::P2, 1), "p2's lane-1 unit");
         let b = must(s.unit(PlayerId::P2, 2), "p2's lane-2 unit");
 
-        // legalActions offers the set {a, b} once, in the order the declaration offers its options.
         assert_eq!(
             plays_of(&s, PlayerId::P1, &spell)
                 .iter()

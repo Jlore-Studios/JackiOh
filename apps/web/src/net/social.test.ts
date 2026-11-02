@@ -1,9 +1,6 @@
-// #936 S7/S8: `net/social.ts`, one fetch wrapper per social route. Each test asserts what goes on the
-// wire (method, path, query, JSON body) and what comes back: the parsed answer, or the repo's
-// `ApiRequestError` carrying the refusal's status and code (B43, B45, B46, B48, B52, B53).
-//
-// The wrappers take no token (SPEC S8), so the signed-in session is put where `net/session.ts`
-// keeps it before each test.
+// #936 S7/S8: `net/social.ts`, one fetch wrapper per social route: what each sends, and the parsed
+// answer or the `ApiRequestError` carrying the refusal's status and code (B43, B45, B46, B48, B52, B53).
+// The wrappers take no token (SPEC S8), so each test first puts a session where `net/session.ts` keeps it.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,7 +66,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Run one wrapper against a server that answers `reply`; the one request it made, and its result. */
 async function sent(run: () => Promise<unknown>, reply: Reply): Promise<{ call: Call; result: unknown }> {
   const server = stubServer(() => reply);
   const result = await run();
@@ -77,7 +73,6 @@ async function sent(run: () => Promise<unknown>, reply: Reply): Promise<{ call: 
   return { call: must(server.calls[0], "the request"), result };
 }
 
-/** Run one wrapper against a server that refuses it; the error it rejected with. */
 async function refused(run: () => Promise<unknown>, reply: Reply): Promise<ApiRequestError> {
   stubServer(() => reply);
   const outcome = await run().then(

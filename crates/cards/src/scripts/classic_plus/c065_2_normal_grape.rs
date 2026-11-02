@@ -41,10 +41,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #65.2 Normal Grape — SPEC §8.7 row 65.2, BUILD M9 Classic+ row C+ 65.2: a target Unit or hero chosen
-// with the play: an enemy takes 2 damage (Spell Damage raises it), one of yours is healed 2; you draw 1
-// and it gets `costMod` −1, but not a card cast on draw, a burned card or a fatigue draw; amount and draw
-// read through `param()`; radiant amount 4, draw 2, each drawn card costs (1) less.
+// C+ #65.2 Normal Grape — SPEC §8.7 row 65.2, BUILD M9 Classic+ row C+ 65.2.
 #[cfg(test)]
 mod tests {
     use super::*;

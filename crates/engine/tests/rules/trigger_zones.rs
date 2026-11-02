@@ -1,8 +1,6 @@
 //! R153: a card registers only the triggers its zone allows (SPEC §10.3's registry, §6.2's
 //! start-of-turn and end-of-turn hooks, §3.2 and R13 on a Stack, R68 on the graveyard return).
-//!
 //! The registry is keyed by hook AND by zone, and the zone half is what this file pins:
-//!
 //!   * field or backrow: `triggers` plus `startOfTurn`, `endOfTurn`, `aura`, `setStat`, `onPlayHook`;
 //!   * hand: only `handTriggers` (#89 Corpse Eater);
 //!   * graveyard: only the end-of-turn return of a spell flagged when played (#23, #24, #31, R68);
@@ -10,9 +8,8 @@
 //!
 //! A card in a hand or graveyard that answered every hook would change the board silently (#58 Rush
 //! Token Farm summoning from a hand, #64 Gifted Program making plays Radiant), so the tests assert the
-//! board. Each has a second half: the same card on the field or in the backrow must fire.
-//!
-//! Fixtures are this file's own: `tz-` defs indexed above 2500 (BUILD §0).
+//! board, each with a second half: the same card on the field or in the backrow must fire. Fixtures are
+//! this file's own: `tz-` defs indexed above 2500 (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
@@ -334,7 +331,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
 
         let after_hand = round_to_p1_start(&held);
         assert!(notes(&after_hand).is_empty());
-        // The observable damage the bug did: a unit in a lane, from a card that was never on the board.
+        // The observable damage: a unit in a lane, from a card that was never on the board.
         assert_eq!(tokens_of(&after_hand, PlayerId::P1), 0);
         assert!(
             after_hand
@@ -437,7 +434,6 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         let mut state = playing("tz-gy-start");
         let spell = bury(&mut state, &wanderer().id, PlayerId::P1);
         card_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
-        // The same instance that answers `endOfTurn` above answers no `startOfTurn` at all.
         assert!(trigger_holders_with_hook(&state, HookName::StartOfTurn, Some(PlayerId::P1)).is_empty());
 
         let after_start = round_to_p1_start(&state);

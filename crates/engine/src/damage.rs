@@ -1,38 +1,14 @@
 //! One damage instance: the ten ordered steps of SPEC §4.4, plus heal and lose health.
 //! M2-T3 adds a test per step; combat's Cleave step lives in combat.rs (M2-T4).
 //!
-//! Patch v0.2.0 (docs/classic-sets.md B5) adds to the pipeline, in the order a hit meets them:
-//!   - E6 Spell Damage, before step 1: a Spell's hit is raised by the Spell Damage on its controller's
-//!     side (`spell_damage_of`), once — a Trample excess or a redirected hit is the same hit going on,
-//!     and is not raised again;
-//!   - E6 on a hero, after step 2's Armor: the divisors its controller's cards set (several multiply,
-//!     rounded up once), then step 3's caps, the lowest of every cap (`hero_hit_amount`);
-//!   - E5 and E9, after the caps and before step 5: a hit that would bring its hero to 0 or less meets
-//!     the "would take lethal damage" replacements (`replacements::lethal_hit_window`), which may send it
-//!     to the other hero as a new instance from the same source;
-//!   - E6 Trample stated by an effect (`flags.trample`), as R346 has an effect state Pierce;
-//!   - E5 and E8 in every heal: "would be healed" and its conversion into Pierce damage
-//!     (`replacements::healing_replaced`);
-//!   - E7 set health (`set_hero_health`): no pipeline, not damage, not a heal.
+//! docs/classic-sets.md B5 adds, in a hit's order: E6 Spell Damage before step 1, once; E6's hero
+//! divisors after step 2's Armor, then step 3's lowest cap; E5 and E9's lethal-hit replacements before
+//! step 5; E6 Trample stated by an effect, as R346 states Pierce; E5 and E8 in every heal; E7 set health.
+//! Stinkyscape's steps (#1849) are each read off a static flag. Duos (#936 S3) writes a hero's health
+//! only through `duos_life.rs`, which without a Duos life is the plain arithmetic, so 1v1 is unchanged (B3).
 //!
-//! Patch v0.3.X (docs/meditative-set.md M8, MN05) reports what Armor does: the `damage` event carries
-//! the Armor's part of the hit (`absorbed`, R1360), and a hit the Armor takes whole, which R63's zero
-//! rule stops, is reported by `damageAbsorbed` (R1361), a report that nothing answers.
-//!
-//! Stinkyscape's verbs (#1849) add three steps, each read off a static flag and skipped without it:
-//! a Spell's hit on a Unit immune to Spell Damage is no instance (R1849000); before Divine Shield and
-//! Armor, an own-turn redirect moves a hero's hit to the opponent (step 0a, R1849004); and after
-//! Lifesteal, a reflecting Unit deals what it took again, from itself (step 8a, R1849003).
-//!
-//! Duos co-op (#936 S3) writes a hero's health only through `duos_life.rs`: a Duos seat's own HP,
-//! then its team's pool (B13, B14), and step 4a judges a hit against both (B17). Without a Duos life
-//! on the hero each of those is the arithmetic it replaced, so a 1v1 game is unchanged (B3).
-//!
-//! Port of `packages/engine/src/damage.ts` (part 3). TS's `DamageTarget` held the live
-//! `CardInstance`; here a unit target carries the instance as the caller had it, and every read and
-//! write of the target goes to the card under that id in the state as it stands now (the TS object
-//! was live). A source is read as the caller handed it (TS read the object it was handed: a Death
-//! hook's source is the snapshot of the card as it died, R89).
+//! A unit target carries its instance as the caller had it, but every read and write goes to the card
+//! under that id in the state now; a source is read as handed (a Death hook's: the card as it died, R89).
 
 use serde::{Deserialize, Serialize};
 
@@ -45,9 +21,8 @@ use crate::wire::{
     opponent_of,
 };
 
-/// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
-/// object was: a target is built once per hit and matched at every card and test that aims one, and a
-/// `Box` there would buy nothing but noise at those sites.
+/// The unit is carried by value: a target is built once per hit and matched at every card and test
+/// that aims one, where a `Box` would buy nothing but noise.
 #[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -56,8 +31,6 @@ pub enum DamageTarget {
     Hero { player: PlayerId },
 }
 
-/// `DamageArgs.flags`.
-///
 /// `trample` (E6): the effect states that its own damage has Trample, as `ignore_armor` states Pierce
 /// (R346) and `lifesteal` Lifesteal (R85), so a Spell's printed Trample (Classic #83 Flame Lance)
 /// still tramples on a repeat that has no source left.
@@ -72,15 +45,13 @@ pub struct DamageFlags {
     pub lifesteal: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample: Option<bool>,
-    /// MD-D4, R1120: the effect states that its own damage has Poisonous, as `lifesteal` states
-    /// Lifesteal — so a combat strike an attack modifier gilded destroys its Unit target (step 7)
-    /// without the source having the keyword. Only ever `Some(true)`.
+    /// MD-D4, R1120: the effect states that its own damage has Poisonous, as `lifesteal` does, so a
+    /// strike an attack modifier gilded destroys its Unit target (step 7). Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub poisonous: Option<bool>,
-    /// #1750, R1750000: the hit is the attacker's own strike (its hit on the defender and its
-    /// Cleave's), the only damage a Unit's Trample applies to: a defender's strike back and the
-    /// damage a Unit's text deals never trample. A Spell's printed Trample and an effect's stated
-    /// `trample` do not need it. Only ever `Some(true)`.
+    /// #1750, R1750000: the hit is the attacker's own strike (on the defender, and its Cleave's), the
+    /// only damage a Unit's Trample applies to; a Spell's printed Trample and a stated `trample` do not
+    /// need it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attacking: Option<bool>,
     /// #1841, R1841001: "deals half damage to heroes": a hit on a hero is divided by
@@ -88,9 +59,8 @@ pub struct DamageFlags {
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub half_to_heroes: Option<bool>,
-    /// R1848001 (Stinkyscape #3 Meteor, "Tramples onto adjacent Units"): the hit tramples, and its
-    /// excess goes onto the Units adjacent to its target instead of its controller's hero
-    /// (`trample_onto_adjacent`), on to that hero after them where it says so.
+    /// R1848001 (Stinkyscape #3 Meteor): the hit tramples, its excess onto its target's adjacent Units
+    /// instead of its controller's hero (`trample_onto_adjacent`), and on to that hero where it says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample_onto: Option<TrampleOnto>,
 }
@@ -114,7 +84,7 @@ pub struct DamageArgs {
     pub flags: Option<DamageFlags>,
 }
 
-/// TS `DamageSink = { state, events }`: every caller hands the engine's sink (SURFACE §6.5).
+/// Every caller hands the engine's sink (SURFACE §6.5).
 pub type DamageSink<'a> = EngineSink<'a>;
 
 fn target_id(target: &DamageTarget) -> String {
@@ -131,23 +101,10 @@ fn controller_of(target: &DamageTarget) -> PlayerId {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Private copies of `scripts.rs`'s readers (fullsend rule 5): the running face's script, its static
-// flags, and every text a card carries (`scripts.ts`'s `scriptOf`, `flagsOf`, `textsOf`).
-// ---------------------------------------------------------------------------------------------
-
-/// §4.4 step 2 for a hero: the Armor written on the hero itself plus every backrow card that grants
-/// it (#84 Going Long), each contributing the `HERO_ARMOR` value its own face and price select.
-///
-/// R124: hero Armor from several sources **adds up**, exactly as §6.2's Armor stacks on a unit
-/// (printed + Defense +1 + auras) — two Going Longs paid 2 are Armor 4. That is deliberately the
-/// opposite of `hero_damage_cap` below, which takes the *smallest* cap on offer: a cap is a ceiling,
-/// Armor is a reduction, so they compose in opposite directions and are not unified.
-///
-/// Nothing about the grant is stored, so it stops the moment the granting card leaves the backrow.
-/// R757: #98's Armor Up adds its player modifier's Armor while the modifier stands.
-/// Every reader of hero Armor goes through here — the pipeline, `subsystems::lethal`'s projection,
-/// `subsystems::scorer` and §10.8's hero block — so no projection can disagree with the hit (R44).
+/// §4.4 step 2 for a hero: the Armor on it, every backrow grant (#84 Going Long) at the `HERO_ARMOR`
+/// its face and price select, and R757's modifiers (#98 Armor Up), summed as §6.2's Armor stacks (R124;
+/// a cap takes the smallest). Every reader of hero Armor (the lethal projection, the scorer, §10.8's
+/// hero block) goes through here, so no projection can disagree with the hit (R44).
 pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
     let mut sum = state.players[player].hero.armor + modifier_armor_of(state, player);
     for slot in crate::zones::slots_of(player, Row::Backrow) {
@@ -159,8 +116,7 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
             continue;
         }
         let side = HERO_ARMOR.on(card.radiant);
-        // R124, R102: every Going Long text a card carries grants its own Armor, at the price that
-        // text's card was played for — a Going Long fused onto a Going Long is Armor 4 as two apart are.
+        // R124, R102: each Going Long text a card carries grants its own Armor, at its card's price.
         for text in crate::scripts::texts_of(state, card) {
             let grants = text.flags.hero_armor.map_or(0, |grant| grant.count());
             if grants <= 0 {
@@ -191,10 +147,9 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
         })
 }
 
-/// The cards acting on a player's side of the field (§3.2), each once (`zones::acting_on`): the top of
-/// each unit pile, the Units its carriers hold (R446), a Unit standing in the backrow among them
-/// (R1081000), and each backrow card, a face-down Trap left out — its text is in nobody's use until it
-/// fires (R33) or is revealed (R1487000). What E6's hero guards read.
+/// The cards acting on a player's side (§3.2), each once (`zones::acting_on`): unit pile tops, the
+/// Units its carriers hold (R446), a Unit in the backrow among them (R1081000), and each backrow card
+/// but a face-down Trap, whose text is in nobody's use until it fires (R33) or is revealed (R1487000).
 pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
         .into_iter()
@@ -221,11 +176,9 @@ fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
         .collect()
 }
 
-/// §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor acting on this player's side,
-/// in its backrow zone or animated into a unit zone (R383: it keeps all of its text), and every
-/// per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins. A hero immune
-/// to damage (Meditative #48, MD-C21) caps every hit at 0, and a floored hero (R2201000) every hit at
-/// what it has above its floor.
+/// §4.4 step 3: the lowest hero cap on offer: any Anti-oneshot Armor acting on this player's side,
+/// animated into a unit zone too (R383), every per-hit cap its cards set (E6, Classic+ #11 Anime
+/// Armor's 1), a floor (R2201000), and 0 for a hero immune to damage (Meditative #48, MD-C21).
 pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut caps: Vec<i32> = acting_texts_of(state, player)
         .iter()
@@ -254,8 +207,7 @@ pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
 }
 
 /// R2179005: the smallest per-hit cap a Unit's own guards set on it (`HeroGuard.guards_self`, C+ #11
-/// Anime Armor's "Your hero and this"), or `None` when none does. Read like the hero's caps, after
-/// Armor at §4.4 step 3, and before a Trample's excess is split off at step 5.
+/// Anime Armor's "Your hero and this"), read at §4.4 step 3, before step 5 splits off a Trample excess.
 pub fn unit_damage_cap(state: &GameState, unit: &CardInstance) -> Option<i32> {
     let script = crate::scripts::script_of(state, unit);
     let guard = script.hero_guard.as_ref()?;
@@ -282,9 +234,8 @@ pub fn hero_damage_divisor(state: &GameState, player: PlayerId) -> i32 {
 }
 
 /// §4.4 steps 2 and 3 on a hero, with E6 between them: Armor (unless the hit pierces, R346), then the
-/// divisors, rounded up once (R463), then the lowest cap. The one reading of what a hit takes off a
-/// hero, which the pipeline, R44's lethal projection and the Zephyrs scorer all call, so no projection
-/// disagrees with the hit. (TS `pierce = false`: pass `false` for an ordinary hit.)
+/// divisors, rounded up once (R463), then the lowest cap. The pipeline, R44's lethal projection and
+/// the Zephyrs scorer all read a hero's hit here, so no projection disagrees with the hit.
 pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce: bool) -> i32 {
     if amount <= 0 {
         return 0;
@@ -295,7 +246,7 @@ pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce:
         (amount - hero_armor_of(state, player)).max(0)
     };
     let divisor = hero_damage_divisor(state, player);
-    // `Math.ceil(afterArmor / divisor)` on a non-negative amount and a divisor of at least 1.
+    // Rounded up, on a non-negative amount and a divisor of at least 1.
     let divided = (after_armor + divisor - 1) / divisor;
     match hero_damage_cap(state, player) {
         None => divided,
@@ -303,13 +254,10 @@ pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce:
     }
 }
 
-/// E6, §4.4 step 0: a player's Spell Damage — every "Spell Damage +N" among the keywords of the units
-/// acting on their field (the top of each pile, an animated card standing in a unit zone included),
-/// summed, as Armor sums (a numbered keyword, §10.4). R1180000: one sum, whatever gives it — it adds
-/// every Spell Damage aura acting on either side that reaches this player (Meditative+ #9's "Both
-/// players have Spell Damage +X") and, R1180001, their live "Spell Damage +N this turn" modifiers
-/// (Meditative+ #11). Without either, the number is the Units' alone, as before (D9). R1563002: the
-/// keyword printed on a face-up backrow card it controls counts as a Unit's does (C #23 Devil's Pact).
+/// E6, §4.4 step 0: a player's Spell Damage, summed as Armor sums (a numbered keyword, §10.4): every
+/// "Spell Damage +N" on the units acting on their field, an animated card in a unit zone included, or
+/// on a face-up backrow card they control (R1563002, C #23 Devil's Pact); every aura reaching them from
+/// either side (R1180000, Meditative+ #9); their live "this turn" modifiers (R1180001, Meditative+ #11).
 pub fn spell_damage_of(state: &GameState, player: PlayerId) -> i32 {
     let mut total = 0;
     let units = crate::zones::active_units_of(state, player);
@@ -341,11 +289,9 @@ pub fn spell_damage_of(state: &GameState, player: PlayerId) -> i32 {
     total.max(0)
 }
 
-/// R1180000: the Spell Damage the auras acting on either side give this player — each text that
-/// carries `spellDamageAura`, on a card acting on its controller's field (face-up, the top of its
-/// pile: `acting_texts_of`), gives its controller its amount, and the opponent too when it says
-/// `both`. The amount moves with the card's declared number `spellDamage` (R386), so a Nerf or a Buff
-/// moves it.
+/// R1180000: the Spell Damage the auras acting on either side (`acting_texts_of`) give this player:
+/// each `spellDamageAura` text gives its controller its amount, and the opponent too when it says
+/// `both`. The amount is the card's declared number `spellDamage` (R386), so a Nerf or a Buff moves it.
 fn spell_damage_auras_for(state: &GameState, player: PlayerId) -> i32 {
     let mut total = 0;
     for side in crate::wire::PLAYER_IDS {
@@ -379,10 +325,9 @@ fn spell_damage_for(state: &GameState, source: Option<&CardInstance>) -> i32 {
     spell_damage_of(state, controller)
 }
 
-/// R42: a unit something has already killed and the state check has not collected yet — at 0 or less
-/// health, or marked destroyed (a Poisonous hit, a destroy). A unit is killed once, so whatever lands
-/// on it afterwards changes nothing about who killed it: not a later hit (a Cleave, a second spell, a
-/// Death of the same pass), not a Poisonous one, and not a destroy (`effects::destroy`).
+/// R42: a unit something has already killed that the state check has not collected yet: at 0 or less
+/// health, or marked destroyed. A unit is killed once, so nothing landing on it afterwards (a later
+/// hit, a Poisonous one, a destroy) changes who killed it.
 pub fn already_killed(state: &GameState, unit: &CardInstance) -> bool {
     let view = crate::layers::unit_view(state, unit);
     // §4.5 step 1's own test: an Indestructible unit dies only once its max health is gone (R69).
@@ -392,13 +337,9 @@ pub fn already_killed(state: &GameState, unit: &CardInstance) -> bool {
     unit.marked_destroyed == Some(true) || view.health <= 0
 }
 
-/// R42, R89: "a death whose lethal damage instance came from this unit". A hit is lethal when it
-/// takes a unit nothing has killed yet (`already_killed`) to 0 or less health, and that is the moment
-/// it is credited — never at death, which a layer can cause long after the last hit (an aura
-/// lowering max health, #46): a hit that left such a unit standing clears any older credit, and a hit
-/// on a unit something already killed changes nothing, since the first one killed it. Poisonous
-/// credits its own hit in step 7 on the same terms. The state check forgets a credit whose unit is
-/// standing again.
+/// R42, R89: "a death whose lethal damage instance came from this unit", credited when a hit takes a
+/// unit nothing has killed yet to 0 or less, never at death, which a layer can cause later (#46); a hit
+/// that leaves it standing clears an older credit. Poisonous credits its own hit in step 7 alike.
 fn credit_killer(unit: &mut CardInstance, source: Option<&CardInstance>, killed_before: bool, after: i32) {
     if killed_before {
         return;
@@ -412,12 +353,9 @@ fn credit_killer(unit: &mut CardInstance, source: Option<&CardInstance>, killed_
     unit.last_damaged_by = Some(killer);
 }
 
-/// R346: whether a hit skips §4.4 step 2. Pierce is a keyword of the source — a unit's, read through
-/// the layers like its Lifesteal and Trample (§10.4), or a spell's, printed on its face (#44 True
-/// Strike) or given by a Buff (R1748001), which the same reading finds on the card while it resolves —
-/// or the effect's own `ignore_armor`, which states that its damage pierces without the source having
-/// the keyword, as R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine
-/// Shield, the hero cap and Indestructible all still apply.
+/// R346: whether a hit skips §4.4 step 2, and nothing else: the source's Pierce through the layers
+/// (§10.4), a spell's printed (#44 True Strike) or Buff-given (R1748001) included, or the effect's own
+/// `ignore_armor`, as R85's `lifesteal` states Lifesteal.
 pub fn pierces(state: &GameState, source: Option<&CardInstance>, flags: Option<&DamageFlags>) -> bool {
     if flags.is_some_and(|flags| flags.ignore_armor == Some(true)) {
         return true;
@@ -448,11 +386,9 @@ pub fn deal_damage(sink: &mut DamageSink<'_>, args: DamageArgs) -> i32 {
     land_hit(sink, &args, raised, 0, &[])
 }
 
-/// §4.4 from step 1, for a hit already raised by Spell Damage. A Trample excess (step 9) and a
-/// redirected hit (E9) are new instances of the same hit, so they come back in here rather than
-/// through `deal_damage`, which would raise them a second time. `redirects` counts how often this hit
-/// has moved already (`DAMAGE_REDIRECT_CAP`); `caught` names the guards that have caught it, so each
-/// catches a given hit once (R1204, R460).
+/// §4.4 from step 1, for a hit already raised by Spell Damage: a Trample excess (step 9) and a
+/// redirect (E9) come back in here, not through `deal_damage`, which would raise them twice. `caught`
+/// names the guards that have caught it, so each catches a hit once (R1204, R460).
 fn land_hit(
     sink: &mut DamageSink<'_>,
     args: &DamageArgs,
@@ -487,10 +423,9 @@ fn land(
     if amount_in <= 0 {
         return Landed::default();
     }
-    // §4: damage is a unit's on the field — it stays there between turns and leaving the field takes
-    // it off (R78). A card that has left the field, or lies dormant under a Stack (R13), is no unit to
-    // hit: an effect still aimed at it fizzles (§8 Conventions), rather than leaving damage on a card
-    // in a graveyard or a hand that would follow it back onto the field.
+    // §4: damage stays on a unit on the field and leaving the field takes it off (R78). A card that has
+    // left, or lies dormant under a Stack (R13), is no unit to hit: an effect aimed at it fizzles (§8
+    // Conventions) rather than leave damage that would follow the card back onto the field.
     let unit: Option<CardInstance> = match target {
         DamageTarget::Unit { instance } => {
             let Some(live) = find_instance(sink.state, &instance.id).cloned() else {
@@ -512,9 +447,8 @@ fn land(
         return Landed::default();
     }
 
-    // R1849004, step 0a: on its controller's own turn, a hit on a hero whose side carries an own-turn
-    // redirect goes to the opponent's hero instead, up to each card's cap this turn; what no cap takes
-    // lands here as the rest of the same hit.
+    // R1849004, step 0a: on its controller's own turn, a hero's hit goes to the opponent's hero, up to
+    // each own-turn redirect's cap this turn; what no cap takes lands here as the rest of the same hit.
     if let DamageTarget::Hero { player } = target
         && redirects < DAMAGE_REDIRECT_CAP
         && let Some(moved) = own_turn_redirect(sink, args, *player, amount_in, redirects, caught)
@@ -545,15 +479,10 @@ fn land(
         }
     }
 
-    // Step 2: Armor, unless the hit pierces it (R346). A hero's total is `hero_armor_of`: what is
-    // written on the hero plus every backrow grant (#84), summed per R124. Fatigue is an ordinary
-    // instance on its own hero and pays this step like any other hit (R125); only "lose health"
-    // bypasses the pipeline (R18), and that never comes through here.
-    // Step 3 on a hero, with E6's divisors between the two: `hero_hit_amount`.
-    // R1360: `absorbed` is what the Armor took off the hit at step 2, and nothing after it — not a
-    // hero's divisors or cap — so a hit that pierces has none.
-    // R1841001: `struck` is the hit as it meets Armor — a hit that deals half damage to heroes is
-    // halved on a hero here, rounded down, and whole on a Unit.
+    // Step 2: Armor, unless the hit pierces it (R346); a hero's is `hero_armor_of` (#84, R124). Fatigue
+    // pays it like any hit (R125); only "lose health" bypasses the pipeline (R18). Step 3 on a hero, E6's
+    // divisors between: `hero_hit_amount`. R1360: `absorbed` is Armor's part at step 2 alone, none for a
+    // piercing hit. R1841001: `struck` is the hit as it meets Armor, halved on a hero, rounded down.
     let mut struck = amount_in;
     let mut amount = amount_in;
     let mut absorbed = 0;
@@ -581,10 +510,8 @@ fn land(
         (DamageTarget::Unit { .. }, None) => {}
     }
 
-    // E5, E9: after the caps and before step 5, a hit that would bring its hero to 0 or less — this
-    // hit alone, as R44 judges it — meets the "would take lethal damage" replacements, which may send
-    // it to the other hero as a new instance from the same source, through that hero's Armor and caps,
-    // or cancel it (R1704001).
+    // E5, E9: after the caps and before step 5, a hit that alone would bring its hero to 0 or less (R44)
+    // meets the lethal-hit replacements, which may send it to the other hero or cancel it (R1704001).
     // #936 B17: in a Duos duel the hit is judged against own HP and the team's pool together.
     if let DamageTarget::Hero { player } = target
         && amount > 0
@@ -599,9 +526,8 @@ fn land(
         }
         if let Some(LethalHitTo::Target(to)) = to {
             let to = *to;
-            // R1204: the hit the guard catches is never caught again by the same guard — and a
-            // hero-to-hero redirect changes controllers, so the old side's catchers can never answer
-            // the new walk anyway. Only a Unit destination names its catcher.
+            // R1204: a guard never catches the same hit twice; a hero-to-hero redirect changes
+            // controllers, so only a Unit destination names its catcher.
             let mut next_caught: Vec<String> = caught.to_vec();
             if let DamageTarget::Unit { instance } = &to {
                 next_caught.push(instance.id.clone());
@@ -614,11 +540,9 @@ fn land(
         }
     }
 
-    // The zero rule: a hit reduced to 0 by steps 2 and 3 stops there, emits no `damage` and triggers
-    // nothing (R63). R1361: one the target's Armor took whole is reported by `damageAbsorbed`, a
-    // report nothing answers (`triggers::dispatch_event`); a hit a cap alone stopped is not Armor's.
-    // The rule stands before step 4, as §4.4 orders it, so an Indestructible unit's Armor that takes
-    // a hit whole reports it like any other unit's.
+    // The zero rule (R63): a hit reduced to 0 by steps 2 and 3 stops here, before step 4 as §4.4 orders
+    // it. R1361: one the target's Armor took whole (an Indestructible's too) is reported by
+    // `damageAbsorbed`, which nothing answers (`triggers::dispatch_event`); a cap's stop is not Armor's.
     if amount <= 0 {
         if absorbed > 0 && absorbed >= struck {
             sink.events.push(GameEvent::DamageAbsorbed {
@@ -644,10 +568,8 @@ fn land(
     }
 
     // ME-LETHALGUARD (R1204): §4.4 step 4a opens for Units too. A hit that alone would leave a Unit
-    // nothing has killed yet (R42) at 0 or less — judged after steps 0 to 4, so a Divine Shield
-    // that took the hit and an Indestructible that takes nothing never open it — meets the
-    // replacements, which may send it to a guard as a new instance from the same source, through
-    // the guard's own pipeline.
+    // nothing has killed yet (R42) at 0 or less, judged after steps 0 to 4 (so a Divine Shield or an
+    // Indestructible never opens it), meets the replacements, which may send it on to a guard.
     if let Some(live) = &unit
         && amount > 0
         && redirects < DAMAGE_REDIRECT_CAP
@@ -678,9 +600,8 @@ fn land(
     let mut trample_excess = 0;
     if let Some(live) = &unit {
         let view = crate::layers::unit_view(sink.state, live);
-        // E6: a Spell's printed Trample is read off it while it resolves, as a unit's is, or stated.
-        // R1750000: a Unit's own Trample is for the hits of its attack only, never for a strike back
-        // or for the damage of its text.
+        // E6: a Spell's printed Trample is read off it while it resolves, or stated. R1750000: a Unit's
+        // own Trample is for its attack's hits only, never a strike back or its text's damage.
         // R1848001: a hit whose excess goes onto its target's neighbours tramples, stated.
         let trample = flags.is_some_and(|flags| flags.trample == Some(true) || flags.trample_onto.is_some())
             || (source_has(sink.state, source, KeywordKind::Trample)
@@ -692,11 +613,8 @@ fn land(
         }
     }
 
-    // R63's zero rule, now for the Trample cap: a unit already at 0 or less health (max health
-    // dragged down by Suppressive Aura, or damage the state check has not collected yet) has no
-    // health for the hit to count against, so nothing is dealt to it. Nothing dealt is not a damage
-    // instance: no `damage` event, no `lastDamagedBy`, and none of steps 6 to 8. Step 9 still runs,
-    // with the whole amount, because the excess beyond that unit's health is all of it.
+    // R63's zero rule for the Trample cap: a unit already at 0 or less health is dealt nothing, which is
+    // no damage instance (no event, no `lastDamagedBy`, no steps 6 to 8); step 9 sends the whole amount.
     if dealt <= 0 {
         let held = send_excess(sink, args, &unit, trample_excess, caught, hold);
         return Landed { dealt: 0, held };
@@ -737,18 +655,15 @@ fn land(
         && let Some(card) = find_instance_mut(sink.state, &live.id)
     {
         card.marked_destroyed = Some(true);
-        // R42: the Poisonous hit is the one that destroys it, whatever health it left — unless something
-        // had already killed it, in which case this hit landed on a dead unit and kills nothing.
+        // R42: the Poisonous hit destroys it, whatever health it left, unless something killed it first.
         if !killed_before {
             let killer = crate::kill_credit::credited_killer_id(source_card, card);
             card.last_damaged_by = Some(killer);
         }
     }
 
-    // MD-D31, R1124: exile on damage rides beside Poisonous — when the source's card exiles on
-    // damage, the damaged Unit is marked, and the next state check exiles it ahead of deaths (§4.5
-    // step 1). A hit the pipeline stopped (Divine Shield, Indestructible, the zero rule) never
-    // reaches here, so none of them is exiled.
+    // MD-D31, R1124: exile on damage rides beside Poisonous: the damaged Unit is marked and the next
+    // state check exiles it ahead of deaths (§4.5 step 1). A hit the pipeline stopped never gets here.
     if let (Some(live), Some(source_card)) = (&unit, source)
         && dealt >= 1
         && crate::scripts::flags_of(sink.state, source_card).exiles_on_damage == Some(true)
@@ -757,9 +672,8 @@ fn land(
         card.marked_exiled = Some(true);
     }
 
-    // Step 8: Lifesteal heals the source's controller's hero by the amount dealt. R85: an effect
-    // may state that its own damage has Lifesteal, which heals without granting the source the keyword.
-    // R85's heal goes to the source's controller, so an effect with no source heals nobody.
+    // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may
+    // state it without granting the source the keyword. With no source it heals nobody.
     let source_has_lifesteal = source_has(sink.state, source, KeywordKind::Lifesteal);
     if let Some(source_card) = source
         && (source_has_lifesteal || flags.is_some_and(|flags| flags.lifesteal == Some(true)))
@@ -777,10 +691,9 @@ fn land(
     Landed { dealt, held }
 }
 
-/// §4.4 step 9: a Trample excess goes on as its own instance — of the same hit, so not raised again
-/// by Spell Damage, and keeping the hit's catchers (R1204) — to the target's controller's hero; or,
-/// R1848001, onto the target's neighbours (`trample_onto_adjacent`); or, from a hit that holds it, back
-/// to its caller untouched. Returns what is held: the excess for a hit that holds it, else 0.
+/// §4.4 step 9: a Trample excess goes on as a new instance of the same hit (not raised again, keeping
+/// its catchers, R1204) to the target's controller's hero, or onto its neighbours (R1848001), or back
+/// to a caller that holds it. Returns what is held, else 0.
 fn send_excess(
     sink: &mut DamageSink<'_>,
     args: &DamageArgs,
@@ -811,15 +724,10 @@ fn send_excess(
     0
 }
 
-/// R1848001 (Stinkyscape #3 Meteor, "Tramples onto adjacent Units", Radiant "and the enemy hero"): a
-/// hit's Trample excess carried onto the Units adjacent to its target — §3.1's neighbours in its row
-/// on its side, as Cleave's are (`zones::adjacent`, R1081000), a Unit a Spell may not affect passed by
-/// (R81) — and with `AdjacentAndHero` on to the target's controller's hero. The excess goes to one
-/// neighbour first, drawn from the match rng when there are two (Hearthstone's Rolling Fireball, whose
-/// excess rolls left or right at random), as a new instance of the same hit that counts only up to
-/// that Unit's health; what passes it goes to the other neighbour the same way, and what passes both
-/// to the hero. A neighbour that takes the hit whole (its Divine Shield, its Armor, Indestructible)
-/// stops the rest, as a target that takes a Trample hit whole sends nothing on.
+/// R1848001 (Stinkyscape #3 Meteor): a Trample excess carried onto its target's §3.1 neighbours, as
+/// Cleave's (`zones::adjacent`, R1081000), passing a Unit a Spell may not affect (R81), then with
+/// `AdjacentAndHero` the hero. One neighbour first, by match rng when there are two (Rolling Fireball),
+/// each a new instance counting up to its health; one that takes the hit whole stops the rest.
 fn trample_onto_adjacent(
     sink: &mut DamageSink<'_>,
     args: &DamageArgs,
@@ -907,12 +815,9 @@ struct Moved {
     dealt: i32,
 }
 
-/// R1849004 (Stinkyscape #5 Masochism Unmasked), §4.4 step 0a: on `player`'s own turn, a hit of
-/// `amount` on their hero is taken off it by each card acting on their side that redirects, in R68's
-/// order, as much as the card's cap has left this turn, and dealt to the opponent's hero as a new
-/// instance from the same source, times the card's multiplier. The cap counts what is taken off the
-/// hero, so the Radiant face's doubling deals up to twice it. `None` when nothing moved, which is
-/// every hit without such a card: nothing is read but the flag, and nothing is written.
+/// R1849004 (Stinkyscape #5 Masochism Unmasked), §4.4 step 0a: on `player`'s own turn, each card that
+/// redirects, in R68's order, takes what its cap has left this turn off their hero's hit (the Radiant
+/// doubling deals up to twice it) and deals it to the opponent's hero. `None` when nothing moved.
 fn own_turn_redirect(
     sink: &mut DamageSink<'_>,
     args: &DamageArgs,
@@ -979,11 +884,9 @@ fn own_turn_redirect(
     })
 }
 
-/// R1849003 (Stinkyscape #104 Reflective Plating), §4.4 step 8a: what `unit` was just dealt, when its
-/// text reflects it, is dealt again from it as new instances — to the enemy hero, and on the Radiant
-/// face also to the attacker whose own strike it was (Cleave's included), while that attacker is on
-/// the field. A strike back, a Unit's text and a Spell are never "the attacker", so two Radiant
-/// Platings fighting end after one reflection each: a reflected hit is no attacker's strike.
+/// R1849003 (Stinkyscape #104 Reflective Plating), §4.4 step 8a: what a reflecting `unit` was just
+/// dealt is dealt again from it, to the enemy hero, and on the Radiant face to the attacker on the field
+/// whose own strike it was. A reflected hit is no strike, so two Radiant Platings end after one each.
 fn reflect_damage(
     sink: &mut DamageSink<'_>,
     unit: &CardInstance,
@@ -1030,7 +933,7 @@ fn reflect_damage(
     land_hit(sink, &hit, dealt, 0, &[]);
 }
 
-/// `controllerOf(target)` on TS's live object: the unit's controller as it stands now.
+/// The target's controller as it stands now.
 fn controller_of_now(unit: &Option<CardInstance>, target: &DamageTarget) -> PlayerId {
     match unit {
         Some(live) => live.controller,
@@ -1038,11 +941,10 @@ fn controller_of_now(unit: &Option<CardInstance>, target: &DamageTarget) -> Play
     }
 }
 
-/// §6.3 Heal: units are capped at max health, heroes are not. E5, E8: the heal first meets the "would
-/// be healed" replacements on its stated amount, a heal on an undamaged unit included (R462) — one
-/// that replaced it heals nothing. R1180003: a heal no replacement took is then multiplied by its
-/// controller's healing multiplier (`query::heal_multiplier_of`, Meditative+ #7's Radiant face), the
-/// cap still holding, so a heal a replacement turned into damage is never doubled.
+/// §6.3 Heal: units are capped at max health, heroes are not. E5, E8: the stated amount first meets
+/// the "would be healed" replacements, on an undamaged unit too (R462), and one replaced heals nothing.
+/// R1180003: only a heal no replacement took is then multiplied by its controller's healing
+/// multiplier (`query::heal_multiplier_of`, Meditative+ #7's Radiant face), the cap still holding.
 pub fn heal_unit(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32) -> i32 {
     heal_unit_by(sink, instance, amount, true)
 }
@@ -1092,9 +994,8 @@ pub fn heal_hero(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i3
     heal_hero_by(sink, player, amount, true)
 }
 
-/// A hero's heal. R1180003: `multiplied` is whether the player's healing multiplier reaches it —
-/// every heal of an amount, Lifesteal's included, but not "heal up to N", which sets a floor the
-/// multiplier would only push past (§6.3).
+/// A hero's heal. R1180003: `multiplied` is whether the player's healing multiplier reaches it: every
+/// heal of an amount, Lifesteal's included, but not "heal up to N", a floor (§6.3).
 fn heal_hero_by(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32, multiplied: bool) -> i32 {
     if amount <= 0 {
         return 0;

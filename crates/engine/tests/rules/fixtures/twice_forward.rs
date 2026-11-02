@@ -1,8 +1,5 @@
-//! Port of `packages/engine/test/fixtures/twiceForward.ts`.
-//!
-//! Test-only definitions and scripts for `subsystems/twiceForward.ts` (C+ #74 Twice Forward One Step
-//! Backwards, R425). The engine does not depend on `packages/cards`; the real card's test covers the same
-//! cases again (packages/cards/test/classic-plus/074-twice-forward-one-step-backwards.test.ts).
+//! Test-only definitions and scripts for `subsystems::twice_forward` (C+ #74 Twice Forward One Step
+//! Backwards, R425), as the engine does not depend on `crates/cards`.
 
 use std::sync::LazyLock;
 
@@ -76,7 +73,7 @@ pub fn crier() -> CardDef {
     )
 }
 
-/// A Spell whose resolution casts the plain Spell (R70): the cast is the later play, though it resolves first.
+/// A Spell whose resolution casts the plain Spell (R70): the cast is the later play, yet resolves first.
 pub fn caster() -> CardDef {
     spell_def(
         966,
@@ -103,7 +100,6 @@ pub fn twice_forward_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// `castNew({ def })`: a new card of that definition, cast by the running card's controller.
 fn cast_new_of(def_id: String) -> Effect {
     effects::cast_new(effects::CastNewArgs {
         def: effects::CastNewDef::from(def_id),

@@ -1,14 +1,9 @@
 //! The verbs over a last board (docs/classic-sets.md B5 E30, SPEC §8.7 C+ #29, R417, R564): Discover
-//! a card of the caster's frozen board, add the Discovered one, add random ones. The board is
-//! `subsystems::last_boards`'; these only read it and make cards from it.
-//!
-//! Each card made is a NEW card the caster owns, on its entry's face, through `add_to_hand`'s one
-//! creation path (§2.4's hand cap burns it, R317; a unit-token card in hand is R11's). A fused entry
-//! is rebuilt from its id into this match the first time it is offered or made
-//! (`subsystems::fuse::rebuild_fused_def`, R179). An empty board opens no prompt and draws nothing (R129).
-//!
-//! Its two numbers, `DISCOVER_OPTIONS` (§6.3 Discover) and `LAST_BOARD_CARD_COST` (C+ #29,
-//! a `costOverride`, R65), live in `crate::config` (CLAUDE.md rule 9).
+//! a card of the caster's frozen board (`subsystems::last_boards`'), add the Discovered one, add random
+//! ones. Each card made is a NEW card the caster owns, on its entry's face, through `add_to_hand` (§2.4's
+//! hand cap burns it, R317; a unit-token card in hand is R11's); a fused entry is rebuilt into this
+//! match first (`rebuild_fused_def`, R179). An empty board opens no prompt and draws nothing (R129).
+//! The numbers live in `crate::config` (§6.3 Discover; C+ #29's `costOverride`, R65; CLAUDE.md rule 9).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -68,8 +63,7 @@ pub struct DiscoverFromLastBoardArgs {
 }
 
 /// C+ #29 base (R417): Discover among `count` different cards of the caster's last board (all of
-/// them when it holds fewer), drawn without replacement and shown to the chooser only (§10.8, R81).
-/// Each option is the card's definition id, on its entry's face; the answer re-enters `step`.
+/// them when it holds fewer), shown to the chooser only (§10.8, R81); the answer re-enters `step`.
 pub fn discover_from_last_board(args: DiscoverFromLastBoardArgs) -> Effect {
     Effect::new("discoverFromLastBoard", move |ctx| {
         let pool = candidates_for(ctx);
@@ -148,7 +142,7 @@ pub struct AddRandomFromLastBoardArgs {
 }
 
 /// C+ #29 Radiant (R417): `count` different random cards of the caster's last board (all of them when
-/// it holds fewer) straight into the caster's hand, drawn without replacement in one shuffle.
+/// it holds fewer) straight into the caster's hand.
 pub fn add_random_from_last_board(args: AddRandomFromLastBoardArgs) -> Effect {
     Effect::new("addRandomFromLastBoard", move |ctx| {
         let pool = candidates_for(ctx);

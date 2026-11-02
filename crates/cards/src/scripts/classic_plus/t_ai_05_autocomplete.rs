@@ -67,14 +67,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-5 Autocomplete — SPEC §8.7 row T-AI-5, BUILD M9 Classic+ row T-AI-5: "Adds a copy, by definition
-// and face, of the last Unit, Spell or Field Spell your opponent played face-up (a cast counts, R70; not on draw, R2179002),
-// skipping AI generated cards so two Autocompletes never feed each other; Traps and Field Traps never
-// count, being set face-down, so nothing hidden is copied; nothing played yet, nothing; the record
-// outlives the card leaving play; the copy reaches your hand under the sentinel for the opponent (R97);
-// radiant the copy costs (0)".
-//
-// p2 plays first on its own turn, then ends it, and p1 plays Autocomplete on the next.
+// T-AI-5 Autocomplete — SPEC §8.7 row T-AI-5, BUILD M9 Classic+ row T-AI-5 (R97).
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -313,7 +306,6 @@ mod tests {
                     false,
                 );
                 s.play(AUTOCOMPLETE, json!({}));
-                // Through v0.5.2 the Hinder was the last play and copied (R70).
                 assert_eq!(copies_in(&s, HINDER), 0);
                 assert_eq!(copies_in(&s, STOCKPILE), 1);
             }

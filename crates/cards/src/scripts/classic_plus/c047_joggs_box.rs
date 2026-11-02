@@ -43,10 +43,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #47 Jogg's Box — SPEC §8.7 row 47, BUILD M9 Classic+ row C+ 47: casts 10 random non-token Spells
-// of any set but Jogg's Box (R380, R387), every choice random with X the current mana (at least 1), so
-// it never opens a prompt; each cast is a play (R70); a Call to Chaos among them counts against
-// `CALL_TO_CHAOS_CHAIN_CAP` (R28); radiant Echo 1 runs ten more with fresh random picks.
+// C+ #47 Jogg's Box — SPEC §8.7 row 47, BUILD M9 Classic+ row C+ 47.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -58,9 +55,8 @@ mod tests {
     const BOX: &str = "classicplus-047";
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
-    /// Every Call to Chaos edition (R380): Core #95, C+ #73 and M #95. Re-pinned for v0.3.5: the
-    /// Meditative set joins the pool; for the Stinkyscape release (#1884): its #150 and #151; and for
-    /// the Training Grounds release (#2204): its #39 (R2200004).
+    /// Every Call to Chaos edition (R380): Core #95, C+ #73, M #95, Stinkyscape #150 and #151 (#1884)
+    /// and Training Grounds #39 (#2204, R2200004).
     const CALLS: [&str; 6] = [
         "core-095",
         "classicplus-073",
@@ -260,9 +256,7 @@ mod tests {
             assert!(!seen.contains(BOX));
             assert!(defs.iter().all(|entry| entry.type_ == CardType::Spell && !entry.token));
             let sets: IndexSet<SetName> = defs.iter().map(|entry| entry.set).collect();
-            // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-            // #1187): the Meditative+ set joins it; for the Stinkyscape release (#1884): that set; and for
-            // the Training Grounds release (#2204): that set.
+            // Spells of every set that ships, Meditative+ (#1187) among them.
             assert_eq!(
                 sets,
                 IndexSet::from([
@@ -594,10 +588,10 @@ mod tests {
                     guard += 1;
                 }
                 if s.state().result.is_none() {
-                    // The paused rest followed the answers: the owed start-of-turn draw landed. Re-pinned
-                    // for the Training Grounds release (#2204): the first game that pauses now has the box
-                    // cast Core #90 CN-Viral Injection, so p2's draw takes a CN-Virus, cast on its draw
-                    // (§2.4), and goes on to the next card; one card of p2's draws reached its hand.
+                    // The paused rest followed the answers: the owed start-of-turn draw landed. The first
+                    // game that pauses has the box cast Core #90 CN-Viral Injection (#2204), so p2's draw
+                    // takes a CN-Virus, cast on its draw (§2.4), and goes on to the next card; one card of
+                    // p2's draws reached its hand.
                     assert!(s.state().pending.is_none());
                     assert_eq!(
                         s.events()[from..]

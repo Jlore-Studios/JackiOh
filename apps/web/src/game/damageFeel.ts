@@ -57,7 +57,7 @@ export function damageTier(amount: number): DamageTier {
 /** R700–R702: how hard a Unit lands, by the size tier `unitSlam.ts` reads off its stats. */
 export type SlamTier = "tiny" | "small" | "medium" | "large" | "huge" | "massive";
 
-/** What the board does under a landing Unit, from a few grains shifting to a crater. */
+/** What the board does under a landing Unit. */
 export type SlamBoard = "none" | "grains" | "puff" | "cloud" | "cracks" | "crater";
 
 export type SlamFeel = {

@@ -1,8 +1,7 @@
 // The account's custom cards (SPEC §12.9, R915008; #918, #920): the creator's door onto
-// `crates/server/src/api/custom_cards.rs`. Each card travels as the engine's `CustomCard`
-// (`crates/engine/src/wire/custom.rs`), the shape a practice game's setup takes too. The server
-// mints a card's id at its first save and judges every save with the engine's own validator, so a
-// refusal's issues are the validator's sentences, relayed (`api.ts`' header, CLAUDE.md rule 7).
+// `crates/server/src/api/custom_cards.rs`, each card the engine's `CustomCard` (`crates/engine/src/wire/custom.rs`).
+// The server mints the id and judges every save with the engine's validator, whose sentences a refusal
+// relays (CLAUDE.md rule 7).
 
 import type { CustomCard, CustomFrame, CustomIssue } from "@jackioh/shared";
 
@@ -26,19 +25,14 @@ function bodyOf(input: CustomCardInput): Record<string, unknown> {
   };
 }
 
-/**
- * `POST /api/custom-cards`: a new card at version 1, its id minted by the server. Refusals: 400
- * `bad_request` with the validator's issues as `details.issues`, 409 `conflict` with
- * `details.limit` when the account already keeps `limits.cards`.
- */
+/** Version 1. Refusals: 400 with the validator's `details.issues`, 409 `conflict` with `details.limit` at `limits.cards`. */
 export function createCustomCard(token: string, input: CustomCardInput): Promise<{ card: CustomCard }> {
   return apiRequest<{ card: CustomCard }>("/api/custom-cards", { method: "POST", token, body: bodyOf(input) });
 }
 
 /**
- * `PUT /api/custom-cards/:id`: replaces the card whole, naming the version it replaces. A version
- * another save has moved past is a 409 with the current one as `details.version`, so a stale tab
- * never overwrites a newer save; 404 when the id is not the caller's.
+ * Replaces the card whole, naming the version it replaces: a version another save moved past is a 409
+ * with the current `details.version`, so a stale tab never overwrites a newer save; 404 when not the caller's.
  */
 export function updateCustomCard(token: string, id: string, version: number, input: CustomCardInput): Promise<{ card: CustomCard }> {
   return apiRequest<{ card: CustomCard }>(`/api/custom-cards/${encodeURIComponent(id)}`, {

@@ -1,32 +1,13 @@
 // Issue #219: the emote picker, the Mute emotes menu and a voice line's speech bubble, measured in a
-// real browser. A click on a portrait hangs its menu off the portrait, where each is measured, and a
-// hold opens the hero's inspect view with the same menu in it (R1449, R1330), which is measured too,
-// with the portraits' vivid layers (R1332). The view is opened here by a right-click, the hold's mouse
-// twin, since a spec waits on no clock.
+// real browser (jsdom has none; ui.test.tsx reads the stylesheet's text instead). A click on a portrait
+// hangs its menu off the portrait, and a hold opens the hero's inspect view with the same menu in it
+// (R1449, R1330), measured with the portraits' vivid layers (R1332). A right-click opens that view, the
+// hold's mouse twin, since a spec waits on no clock.
 //
-// Only a layout engine can say what these measure (jsdom has none; ui.test.tsx reads the
-// stylesheet's text instead):
-//   - every emoji in the picker is drawn at least EMOJI_MIN_PX square,
-//   - every voice label is at least LABEL_MIN_PX, and on a touch-sized screen every picker item is
-//     at least TOUCH_PX square (B29's floor),
-//   - both menus stay on the screen, also where the seat puts the portrait at its left edge
-//     (narrower than 761 px, or shorter than 501 px),
-//   - a voice line's bubble is sized by its line rather than wrapped word by word, and stays on the
-//     screen,
-//   - nothing on the board is drawn over the opponent's bubble, sticker or Mute menu, and none of
-//     them is faded by its hero (#257),
-//   - the hero's inspect view stays on the screen with its portrait large and Close a touch target
-//     (R1330), and the board's portraits draw their vivid layers inside the 44 px oval (R1332).
-//
-// The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest
-// container the board is given, here with the routes' own `useEmotes` (no audio engine), so a pick
-// shows what it shows in a match. No portraits frame is passed, so both seats wear the default
-// portrait, vanilla, whose Well Played line is "Well played. Plainly.", and the picker holds the
-// default hand (R1343): three voice lines, Well Played among them, and five emoji, the shape of
-// every hand a game deals.
-//
-// Every measurement is taken inside a `should` callback so it is retried until the layout has
-// settled after `cy.viewport()`, and until the bubble's pop-in has finished.
+// The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest container
+// the board is given, with the routes' own `useEmotes` (no audio engine). Both seats wear the default
+// portrait and the picker holds the default hand (R1343). Every measurement is taken inside a `should`
+// callback so it is retried until the layout has settled after `cy.viewport()`, and the bubble has popped in.
 
 import { StrictMode, useEffect, type ReactElement } from "react";
 
@@ -42,9 +23,9 @@ type Legal = GameProps["legal"];
 
 /** WCAG 2.5.5 / Apple HIG, the floor B29 sets for every touch target. */
 const TOUCH_PX = 44;
-/** An emoji's drawing in the picker; before #219 it was squeezed to a few px. */
+/** An emoji's drawing in the picker. */
 const EMOJI_MIN_PX = 36;
-/** A voice item's label; before #219 it was under 8 px on a phone. */
+/** A voice item's label. */
 const LABEL_MIN_PX = 11;
 /** "Well played. Plainly." on one line is about 140 px; wrapped word by word it was about 60. */
 const BUBBLE_MIN_PX = 120;
@@ -126,7 +107,6 @@ function openMenu(side: "you" | "opponent"): void {
   cy.get(`${ts(`hero-${side}`)} ${ts(side === "you" ? "emote-menu" : "emote-mute-menu")}`).should("be.visible");
 }
 
-/** Opens your portrait's picker. */
 function openPicker(): void {
   openMenu("you");
 }
@@ -145,9 +125,8 @@ function opponentEmotes(emote: Parameters<EmotesApi["receive"]>[1]): void {
 }
 
 /**
- * #257: nothing is drawn over `element` and nothing above it fades it. Nine points across it are
- * asked what the browser draws there; a show is blind to the pointer, so it is made hittable first,
- * which changes what is hit and nothing about what is drawn. Only points on the screen are asked.
+ * #257: nothing is drawn over `element` and nothing above it fades it, asked at nine points on the screen. A show
+ * is blind to the pointer, so it is made hittable first, which changes what is hit, not what is drawn.
  */
 function expectDrawnOnTop(element: HTMLElement, what: string): void {
   element.style.pointerEvents = "auto";
@@ -268,7 +247,7 @@ for (const viewport of VIEWPORTS) {
       cy.get(`${ts("hero-opponent")} ${ts("emote-mute-menu")}`).should(($menu) => {
         expectDrawnOnTop($menu[0] as HTMLElement, "the mute menu");
       });
-      // A click Cypress cannot land (the item covered) fails here: before #257 the field took it.
+      // A click Cypress cannot land (the item covered by the field) fails here.
       cy.get(ts("emote-mute")).click();
       cy.get(ts("emote-mute-menu")).should("not.exist");
       cy.then(() => {

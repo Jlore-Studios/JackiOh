@@ -1,6 +1,5 @@
-// R388: what a patch changed in a card, diffed between the snapshot before the patch and the patch's
-// own. Hand-made fixtures in the real files' shape first (fixtures.ts), then the real history
-// (crates/cards/patches/, through the real source).
+// R388: what a patch changed in a card, from hand-made fixtures (fixtures.ts), then the real history
+// (crates/cards/patches/).
 
 import { describe, expect, it } from "vitest";
 
@@ -265,7 +264,7 @@ describe("R388 the real history's changes", () => {
   it("R388 v0.2.0: Call to Chaos's Radiant face becomes three different effects, the recursion moved to the list", async () => {
     const [before, after] = await Promise.all([real("v0.1.1"), real("v0.2.0")]);
     const words = changedWords(text(changed(diffCard(defIn(before, "core-095"), defIn(after, "core-095"))), "radiant.text"));
-    // Also marked: the (N) Cost style's moved words (R432), which the house-style pass changed too.
+    // Also marked: the (N) Cost style's moved words (R432).
     expect(words.added).toEqual(expect.arrayContaining(["Three different", "resolved in the order listed", "Cost", "cast a random Call to Chaos"]));
     expect(words.added[0]).toBe("Three different");
     expect(words.added.at(-1)).toBe("cast a random Call to Chaos");

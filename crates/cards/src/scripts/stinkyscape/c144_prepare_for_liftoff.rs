@@ -62,11 +62,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #144 Prepare For Liftoff — SPEC §8.10 row 144, BUILD M12 row S 144: "Tradable in the hand (one Trade
-// a turn, R1838000); set, it reveals when a Starship Piece it owns dies, fusing into their Starship
-// (R1859012), and their next launch by the Activate costs (0) (R1852006), a launch by an effect spending
-// none; Flashback lets it be set again once from the graveyard; radiant the dead piece is summoned back
-// from the graveyard first, its fused copy staying".
+// S #144 Prepare For Liftoff — SPEC §8.10 row 144, BUILD M12 row S 144 (R1838000, R1852006,
+// R1859012).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -88,7 +85,6 @@ mod tests {
         board(seed, radiant, "p1", json!({}), json!({}))
     }
 
-    /// `setup`'s board with `active` to act and each side's entries replaced by `p1`'s and `p2`'s.
     fn board(seed: &str, radiant: bool, active: &str, p1: Value, p2: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -122,8 +118,6 @@ mod tests {
         id
     }
 
-    /// p1 sets the Prepare For Liftoff in their graveyard into backrow lane 1 again (Flashback, §6.1),
-    /// as `legalActions` offers it: the harness's `play` takes a card from a hand.
     fn set_from_graveyard(s: &mut Scenario) {
         let trap = s.card(ID).id.clone();
         s.act(
@@ -147,7 +141,6 @@ mod tests {
         );
     }
 
-    /// Whether `legalActions` offers p1 a play of the Prepare For Liftoff.
     fn offered(s: &Scenario) -> bool {
         let trap = s.card(ID).id.clone();
         legal_actions(s.state(), P1)
@@ -175,7 +168,6 @@ mod tests {
         assert!(trap_fired(&s));
         s.expect_in_zone(ID, "graveyard");
         assert_eq!(launch_cost(s.state(), P1), 0);
-        // The base face leaves the piece in the graveyard, its copy in the Starship.
         s.expect_in_zone(piece.as_str(), "graveyard");
         let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship").id.clone();
         s.state_mut().players.p1.mana.current = 0;
@@ -205,7 +197,6 @@ mod tests {
         let ship = dormant_starship_of(s.state(), P1).expect("p1's Starship");
         assert_eq!(starship_pieces_of(ship).len(), 1);
         assert_eq!(launch_cost(s.state(), P1), 0);
-        // Its next death fuses again.
         let Zone::Field { lane, .. } = back.zone else {
             panic!("the piece is on the field");
         };
@@ -276,7 +267,6 @@ mod tests {
         assert_eq!(launch_cost(s.state(), P1), 0, "still held for the next launch by the Activate");
     }
 
-    /// Tradable (R1838000): either face goes from the hand into the deck for a draw, one Trade a turn.
     #[test]
     fn both_faces_trade_from_the_hand_for_a_draw_once_a_turn() {
         for radiant in [false, true] {
@@ -318,7 +308,6 @@ mod tests {
         assert!(trap.face_up != Some(true), "set face-down");
         assert_eq!(trap.flashback_spent, Some(true));
 
-        // Set again, it reveals on the next of p1's pieces to die, then Flashback is spent.
         hit(&mut s, P1, 3);
         assert!(trap_fired(&s));
         s.expect_in_zone(ID, "graveyard");

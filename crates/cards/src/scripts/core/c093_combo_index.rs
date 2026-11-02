@@ -1,15 +1,7 @@
 //! #93 Combo-Index (SPEC §8.4, R27, R60, R62, R85, R86, BUILD M4-T4 row 93).
-//!
-//! Base: a Field Spell with a grade counter starting at E; at the end of its controller's turn it
-//! rises if they played at least `grade` cards, running every step from E to the new grade. Radiant:
-//! "Start of turn: add a Combo-Fodder to your hand; same" — one clause ADDED ("same" keeps the base
-//! text, §8 Conventions), so the radiant face is the base script plus a `startOfTurn`.
-//!
-//! The `combo_index` subsystem owns the counter and the cascade and is the only writer of
-//! `counters.grade`, so the counter, `view_for` and a replay read one number (§10.1); the hooks only
-//! call it. `cry` writes the counter on resolve (§10.5 step 5); `endOfTurn` runs at R62's point,
-//! before the trap window, while `turnLog.cardsPlayed` is still this turn's. Rulings, each with a
-//! test: R27 (S is terminal), R60, R85 (grade A's Lifesteal is the effect's own) and R86.
+//! Base: Field Spell with grade counter; at end of turn rises if cards played >= grade, running steps E to new grade.
+//! Radiant adds "Start of turn: add a Combo-Fodder to your hand; same" (§8 Conventions).
+//! Grade counter tracks played count (§6.2, R62, R27, §10.5). Step rewards trigger sequentially (R85, R86, R60).
 
 use jackioh_engine::prelude::*;
 
@@ -102,13 +94,8 @@ pub fn script() -> CardScripts {
 }
 
 // #93 Combo-Index and #93.1 Combo-Fodder (SPEC §8 rows 93 / 93.1, §7, §2.2, §10.1, §10.4;
-// R4, R11, R27, R50, R60, R62, R63, R81, R85, R86).
-//
-// BUILD M4-T4 row 93:   "Grade 1 needs 1 play, grade 2 needs 2; cascade E→new grade in order;
-//                        E adds a copy (R27); S terminal (R27); radiant adds Combo-Fodder each
-//                        start of turn".
-// BUILD M4-T4 row 93.1: "2 damage with Lifesteal; no radiant change" (R276 gave it a Radiant face,
-//                        4 damage, R275). One file: #93.1 only exists through radiant #93.
+// R4, R11, R27, R50, R60, R62, R63, R81, R85, R86; BUILD M4-T4 rows 93 and 93.1).
+// #93.1's Radiant face, 4 damage (R276, R275), exists only through radiant #93: one file.
 //
 // The grade is STATE, `counters.grade` as 1..6 for E..S (§10.1); the S step is "run E–A again".
 // R195's glow answers are checked in condition-active.test.ts with the other hooked cards (README §5).

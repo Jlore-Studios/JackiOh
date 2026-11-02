@@ -1,49 +1,16 @@
 //! Fuse and Craft a Card (SPEC §6.3 Fuse, R77): the transient definition two or three cards make,
-//! and the instance the result lives on. Used by #85 Unlicensed Experimentation and #99 Craft a Card.
+//! and the instance the result lives on (#85 Unlicensed Experimentation, #99 Craft a Card).
 //!
-//! Three things make Fuse unlike every other verb.
+//! The result is a *definition*, not an instance: both faces fuse, so Make Radiant keeps working (§5.2),
+//! written into `state.transient_defs` as match state surviving a JSON round-trip (§10.1). Scripts are
+//! code no JSON can hold, so Rust registers nothing (SURFACE §3, §6.6): they are composed from the
+//! ingredients' scripts by `combine_objects`'s rules, and R179's id names the ingredients, so a replay
+//! of the same action list runs the same scripts (§9.3).
 //!
-//! First, the result is a *definition*, not an instance: two cards' base forms make the fused base
-//! form and their radiant forms make the fused radiant one, so the fused card still has both faces
-//! and Make Radiant keeps working on it (§5.2). Definitions are shared by every copy of a card and
-//! are never edited, so the fusion writes a fresh one into `state.transient_defs`, where `def_of`
-//! finds it ahead of the catalog. It is match state and survives a JSON round-trip (§10.1).
-//!
-//! Second, the scripts are code, which no JSON state can hold. In TS the concatenated pair joined the
-//! process's script registry under the new def id, and `syncFusedScripts` re-registered any of a
-//! state's fused scripts the registry lacked wherever the engine was entered. Rust registers nothing
-//! (SURFACE §3, §6.6): the fused scripts are built from the state — `scripts::script_of(state, def_id)`
-//! finds the fused definition in `state.transient_defs` and answers the scripts `reduce` composed for it
-//! into `state.fused_scripts` (`scripts::sync_fused_scripts`), or calls `compose_fused_scripts`, which
-//! composes them from the ingredients' scripts by TS's `combineObjects` rules, then and there. R179's
-//! id names the ingredients (`t-<n>:<a>+<b>`), and the fused scripts are a function of the
-//! ingredients' ids and nothing else (`fused_script`), so one id means one pair of scripts in every
-//! state that can mint it, and a replay of the same action list runs the same scripts (§9.3).
-//!
-//! Third, R77 keeps an ingredient's *instance* when one of them is a target already on the field:
-//! the fused card is that card, with its zone, damage, exertion, counters and memory intact, and the
-//! other ingredients cease to exist without dying. So the only instance-level work here is the def
-//! id, the summed buffs and the united granted keywords; everything else is deliberately untouched.
-//!
-//! Patch v0.2.0 (docs/classic-sets.md B5 E23) adds three things, each a ruling of its own. R468: an
-//! id that would spell out a list longer than `FUSED_ID_CAP` is a digest of that list instead, and
-//! the definition keeps the list (`CardDef.ingredients`), which is what rebuilds a digest's scripts.
-//! R469: an ingredient may go in on its Radiant face ("fuse a random Radiant card"), lending that
-//! face and its text to both fused forms; the id marks it `*`. R470: the kept instance may be a card
-//! in a hand or a library (`into`), which stays where it is, and "its cost doesn't change" keeps the
-//! cost it had (`keep_cost`).
-//!
-//! Port of `packages/engine/src/subsystems/fuse.ts`, minus `syncFusedScripts`, `ensureFused` and the
-//! writes to the process-wide registry and digest table (SURFACE §6.6). `FUSE_MIN_INGREDIENTS` (R77:
-//! Craft a Card fuses "two or three cards", and #85 fuses two; fewer is not a fusion) and
-//! `CRAFTED_CARD_COST` (§8 #99: "the result costs 0 and goes to your hand", as a `costOverride` per
-//! R65) live in `crate::config` (CLAUDE.md rule 9).
-//!
-//! TS combined scripts generically, key by key over untyped objects (`combineValues`,
-//! `combineObjects`, `isPlainObject`). A Rust `Script` is a struct, so `combine_objects` combines it
-//! field by field, each field by the rule `combineValues` applied to that kind of value: a hook by
-//! `combined_hook`, an eager read by `eager_read`/`eager_condition`, a list by concatenation, a nested
-//! table (`resume`, `targetChecks`, `staticFlags`, `quests`) key by key by the same rules.
+//! R77 keeps an ingredient's *instance* already on the field, zone, damage and counters intact; only the
+//! def id, summed buffs and united keywords change. R468–R470 (B5 E23): digest ids past `FUSED_ID_CAP`,
+//! Radiant-face ingredients (`*`), a kept hand/library card (`into`) keeping its cost. Numbers live in
+//! `crate::config` (CLAUDE.md rule 9).
 
 use std::sync::Arc;
 
@@ -72,30 +39,21 @@ use crate::wire::{
 /// The `Script` key of the step table a continuation re-enters (`prompts::RESUME_HOOK`).
 const RESUME_KEY: &str = "resume";
 
-/// The script keys whose functions return something other than effects, so they combine by building
-/// every ingredient's list at once: an aura's entries are read off the field on every stat read
-/// (§10.4), and there is no "when the list reaches it" for them. `preview` (R280) is the other: the
-/// labeled numbers `view_for` shows, a pure read with nothing to resolve, so a fusion's list is its
-/// ingredients' lists in ingredient order, each asked with the fused card's own context (the fused
-/// instance as `self`, the face it runs, the zone it is asked about), as R196 asks `conditionMet` —
-/// and each label still sits in the fused face's text, which prints every ingredient's text whole.
-/// `drawLimit` (B5 E3, R457) is a third: the limits a card sets while it acts, read on every draw, so a
-/// fusion sets every ingredient's limit and the lowest holds.
-// B5 E6, E35: `heroGuard` and `conditionalKeywords` are pure reads returning lists too, so a fusion
-// guards its hero with every ingredient's guard and has every ingredient's conditional keywords.
+/// Keys whose reads return lists, not effects, so a fusion builds every ingredient's list at once: auras
+/// (§10.4), `preview` (R280), `drawLimit` (B5 E3, R457; the lowest holds), `costAura` and `graveyardPlay`
+/// (R455, R454), `heroGuard` and `conditionalKeywords`, each asked with the fused card's own context, as
+/// R196 asks `conditionMet`.
 const EAGER_KEYS: &[&str] = &[
     "aura",
     "preview",
-    // B5 E3 (R457): a draw limit is a pure read of the field.
     "drawLimit",
-    // B5 E15, E11 (R455, R454): a price rule and a graveyard permission are pure reads of the field too.
     "costAura",
     "graveyardPlay",
     "heroGuard",
     "conditionalKeywords",
 ];
 
-/// §8's rarity ladder, lowest first, so a fusion can report the rarest ingredient's rarity.
+/// §8's rarity ladder, lowest first: a fusion reports the rarest ingredient's rarity.
 const RARITY_ORDER: &[Rarity] = &[
     Rarity::Token,
     Rarity::Common,
@@ -105,14 +63,13 @@ const RARITY_ORDER: &[Rarity] = &[
     Rarity::Mythic,
 ];
 
-/// TS `FuseArgs`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FuseArgs {
     /// Every card going into the fusion, in the order the fusing card names them.
     pub ingredients: Vec<CardInstance>,
-    /// R77: an ingredient already on the field that the result keeps as its instance. #85 fuses the
-    /// permanent the opponent just played onto one of yours, and that one is the target.
+    /// R77: an ingredient already on the field that the result keeps as its instance (#85 fuses the
+    /// permanent the opponent just played onto one of yours).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<CardInstance>,
     /// Craft a Card: no target on the field, so the result is a fresh card in this player's hand.
@@ -126,22 +83,17 @@ pub struct FuseArgs {
     /// R352: the hand card is Radiant (radiant Stitching). Absent is R77's non-Radiant hand card.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
-    // ---- v0.2.0, generation (E23, R468–R470) ----
-    /// R470: a card in a hand or a library that the result keeps as its instance, as R77's `target`
-    /// keeps one on the field — Classic+ #31 Fusion Lab's hand card, Classic+ #73's deck cards, the
-    /// card Classic #78's Radiant face picks from a hand or a deck. It stays where it is; its type is
-    /// the result's (R77). A card named here that is not in a hand or a library, or is Immutable (R23),
-    /// refuses the fusion. `target` wins when both are named.
+    /// R470: a card in a hand or a library that the result keeps as its instance (Classic+ #31's hand
+    /// card, #73's deck cards, #78's Radiant-face pick), staying where it is; its type is the result's
+    /// (R77). One not in a hand or library, or Immutable (R23), refuses; `target` wins over both.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub into: Option<CardInstance>,
-    /// R469: the ingredients, by instance id, that go in on their Radiant face — "fuse a random Radiant
-    /// card into it", "a Radiant copy of it is fused into this". Such an ingredient puts its Radiant face
-    /// and text into both of the fused forms; every other ingredient puts in the face the form is.
+    /// R469: ingredients, by instance id, going in on their Radiant face, lending it and its text to
+    /// both fused forms; every other ingredient puts in the face the form is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant_ingredients: Option<Vec<String>>,
-    /// R470: "its cost doesn't change" — the kept card (`target` or `into`) keeps the cost it had:
-    /// a `costOverride` of its own cost as it stood (its override if it had one), or, for an X-cost or
-    /// embiggen card with no override, that printed cost form on the fused definition.
+    /// R470: "its cost doesn't change" — the kept card keeps its cost as it stood: its own override,
+    /// or, for an X-cost or embiggen card with none, that printed cost form on the fused definition.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
 }
@@ -155,14 +107,10 @@ pub enum HandPrice {
     Fused,
 }
 
-// ---------------------------------------------------------------------------------------------
 // The fused definition (R77).
-// ---------------------------------------------------------------------------------------------
 
-/// R77's unions: one keyword per distinct keyword — except Armor, which every ingredient keeps. Armor
-/// is the keyword whose number stacks from every source (§6.1, §10.4 sums it), so it adds up on the
-/// fused face the way the stats beside it do: Armor 7 and Armor 3 print 10, and so do Armor 7 and
-/// Armor 7 print 14 rather than collapsing into one because the numbers happen to match (R102).
+/// R77's unions: one keyword per distinct keyword — except Armor, which every ingredient keeps, its
+/// number stacking from every source (§6.1, §10.4) the way the stats beside it do (R102).
 fn union_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
     let mut seen: IndexSet<String> = IndexSet::new();
     let mut out: Vec<Keyword> = Vec::new();
@@ -181,10 +129,9 @@ fn union_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
     out
 }
 
-/// R102's literal union of the ingredients' tags, but for `Token` (R1177000): the fused card carries
-/// that tag only when it is a token itself (`token`, every ingredient one), so a token fused onto a
-/// real card makes a real card, which neither wears the Token label nor counts as a token by its tag
-/// (`CardDef::is_token`).
+/// R102's literal union of the ingredients' tags, except `Token` (R1177000): the fused card carries
+/// it only when a token itself, so a token fused onto a real card makes a real card, neither labeled
+/// Token nor counted as one (`CardDef::is_token`).
 fn union_tags(defs: &[CardDef], token: bool) -> Vec<Tag> {
     let mut seen: IndexSet<Tag> = IndexSet::new();
     for def in defs {
@@ -198,10 +145,9 @@ fn union_tags(defs: &[CardDef], token: bool) -> Vec<Tag> {
     seen.into_iter().collect()
 }
 
-/// R279, R102: the cards a fused text names are every ingredient's — the fused face prints both texts
-/// (`fused_face`), so each name in them still links. The union keeps the first appearance of each id,
-/// in ingredient order, and is `None` when no ingredient names any card, so the def omits the key just
-/// as a catalog card with no reference does.
+/// R279, R102: the cards a fused text names are every ingredient's, since each face prints both texts
+/// whole (`fused_face`), so every name still links. First appearance wins, in ingredient order; `None`
+/// when no ingredient names any card, as a catalog card with no reference omits the key.
 fn union_refs(defs: &[CardDef]) -> Option<Vec<String>> {
     let mut seen: IndexSet<String> = IndexSet::new();
     for def in defs {
@@ -229,10 +175,9 @@ fn sum_defined(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
 }
 
 /// One ingredient's face as its instance wears it. §7 and R175: a token summoned X/X carries its X as
-/// `stats_override`, and the Bread Token its "Armor X" as `armor_override`, because neither number can
-/// be printed — they ARE its printed face, §10.4's layer 1. So a Fuse sums that X/X, not the printed
-/// 0/0 it stands in for, and the X replaces only that token's own Armor, never an Armor another
-/// ingredient prints (#85 fusing a 7/7 onto #18's Bread Token keeps the 7/7's Armor 7).
+/// `stats_override` (the Bread Token its "Armor X" as `armor_override`), since neither number can be
+/// printed — they ARE its printed face, §10.4's layer 1. A Fuse sums that X/X, and the X replaces only
+/// that token's own Armor (#85 fusing a 7/7 onto #18's Bread Token keeps the 7/7's Armor 7).
 fn worn_face(def: &CardDef, card: Option<&CardInstance>, radiant: bool) -> CardFace {
     let face = if radiant { &def.radiant } else { &def.base };
     // R349: a token with no Radiant form of its own (the Ghoul Token) doubles its X/X on the Radiant
@@ -299,12 +244,9 @@ fn fused_face(ingredients: &[CardInstance], defs: &[CardDef], radiant: bool, for
 }
 
 /// R77: "Its type is the target's, or the ingredients' shared type when there is no target on the
-/// field (Field Trap if any ingredient is one)". The parenthetical settles a trap fusion, because a
-/// Field Trap is not consumed when it fires and a plain Trap is, so the Field Trap half wins; it
-/// cannot turn a unit fusion into a trap, and #85 only ever fuses two cards of the same type.
-///
-/// Ingredients of different types with no target is a shape no Core card makes (#99 Discovers Units);
-/// the first ingredient's type is the fallback rather than a fizzle.
+/// field (Field Trap if any ingredient is one)" — a Field Trap is not consumed when it fires and a
+/// plain Trap is, so the Field Trap half wins. #85 only ever fuses two cards of the same type; with
+/// no target and mixed types (#99 Discovers Units), the first ingredient's type is the fallback.
 fn fused_type(defs: &[CardDef], target_def: Option<&CardDef>) -> CardType {
     let types: Vec<CardType> = defs.iter().map(|def| def.type_).collect();
     let first = types.first().copied().unwrap_or(CardType::Unit);
@@ -347,25 +289,15 @@ fn rarest_of(defs: &[CardDef]) -> Rarity {
     best
 }
 
-/// The id a transient def gets (R102, R179): `t-<n>`, where n depends only on how many transient defs
-/// the state already holds, so the same action list always produces the same id (§9.3) — followed by
-/// the ids of the ingredients it was fused from, `t-<n>:<a>+<b>`. An ingredient that is itself a
-/// fused card is written in parentheses, `t-2:(t-1:<a>+<b>)+<c>`, so the id reads back one way:
-/// without them `t-2:t-1:a+b+c+d` could be `t-1:a+b` fused with c and d, or `t-1:a+b+c` with d.
+/// The id a transient def gets (R102, R179): `t-<n>`, n from how many transient defs the state holds,
+/// so the same action list always produces the same id (§9.3), then the ingredient ids, `t-<n>:<a>+<b>`.
+/// A fused ingredient goes in parentheses, so the id reads back one way (R179).
 ///
-/// The suffix is what keeps the scripts right. A def is match state, but its scripts are code, built
-/// from the id's ingredients (see this file's header), and one server process runs every match (§9.2)
-/// and folds a match's log to rebuild it (§9.3). The fused scripts are a function of the ingredients'
-/// ids and nothing else (`fused_script`), so an id that carries them names the same scripts in every
-/// match that can mint it. R469: an ingredient that went in on its Radiant face is written with a
-/// trailing `*`, since its scripts are its Radiant ones on both forms.
-///
-/// R468: the list is spelled out only while it fits `FUSED_ID_CAP`. A card fused onto again and
-/// again (Classic+ #74) nests every earlier id inside the next, so the spelled-out id grows with every
-/// fusion; past the cap the id is `t-<n>:#<digest>`, the digest a pure hash of the very list the id
-/// would have spelled out (`fused_digest`). It still names one list and so one pair of scripts in every
-/// match (R179), and the definition keeps the list itself (`CardDef.ingredients`), which is where the
-/// scripts are rebuilt from (`compose_fused_scripts`).
+/// The suffix keeps the scripts right: one server process runs every match (§9.2), folding its log to
+/// rebuild them (§9.3), so an id carrying the ingredients names the same scripts in every match that can
+/// mint it. R469: a Radiant-face ingredient takes `*`. R468: past `FUSED_ID_CAP` the list becomes
+/// `t-<n>:#<digest>`, a pure hash of the list (Classic+ #74's nested fusions); `CardDef.ingredients`
+/// keeps it.
 fn next_transient_id(state: &GameState, specs: &[FusedIngredient]) -> String {
     let taken = |n: usize| {
         let bare = format!("t-{n}");
@@ -395,8 +327,7 @@ fn next_transient_id(state: &GameState, specs: &[FusedIngredient]) -> String {
     }
 }
 
-/// An ingredient as a fused id writes it: in parentheses when it is itself a fused card (R179), and
-/// followed by `*` when it went in on its Radiant face (R469).
+/// An ingredient as a fused id writes it: parentheses when itself fused (R179), `*` on its Radiant face (R469).
 fn ingredient_name(spec: &FusedIngredient) -> String {
     let name = if crate::catalog::fused_head_len(&spec.def_id).is_some() {
         format!("({})", spec.def_id)
@@ -410,11 +341,9 @@ fn ingredient_name(spec: &FusedIngredient) -> String {
     }
 }
 
-/// R468: a pure, deterministic 64-bit digest of a string, as 16 hex digits — two 32-bit lanes of
-/// multiply-xorshift mixing (the cyrb53 construction, widened to both lanes), so no `crypto` and no
-/// I/O (CLAUDE.md rule 4). It names an ingredient list, not a secret: all it must do is give two
-/// different lists two different ids in any process that could hold both. Over UTF-16 code units, as
-/// TS's `charCodeAt`, with TS's `Math.imul` as `wrapping_mul` and `>>>` as a `u32` shift.
+/// R468: a pure, deterministic 64-bit digest of a string, as 16 hex digits: two 32-bit lanes of
+/// multiply-xorshift mixing over UTF-16 code units (CLAUDE.md rule 4: no crypto, no I/O; it names a list,
+/// not a secret).
 pub fn fused_digest(text: &str) -> String {
     let units: Vec<u16> = text.encode_utf16().collect();
     let length = units.len() as u32;
@@ -430,10 +359,8 @@ pub fn fused_digest(text: &str) -> String {
 }
 
 /// R179: the ingredient ids a fused def's id names, in ingredient order, or `None` for an id no Fuse
-/// minted (a catalog card's, or a bare `t-<n>`). The inverse of `next_transient_id`: the list is split
-/// at the `+` signs outside parentheses, and a parenthesised ingredient loses its parentheses
-/// (`fused_id_specs_in`, which R387's self-exclusion reads too). R468: a digest id's list comes from
-/// its definition in the state.
+/// minted. Split at `+` outside parentheses (R387's self-exclusion reads this too); a digest id's list
+/// comes from its definition in the state (R468).
 pub fn fused_ingredients(state: &GameState, def_id: &str) -> Option<Vec<String>> {
     let parts: Vec<String> = crate::catalog::fused_id_specs(Some(state), def_id)?
         .into_iter()
@@ -511,9 +438,8 @@ fn build_def(
     };
     let refs = union_refs(defs);
     let loc = summed_loc(defs);
-    // A fusion is a real card unless every ingredient was a token, so fusing a token onto a unit
-    // gives a result that no longer ceases to exist off the field (R11), and that sheds the Token tag
-    // (R1177000).
+    // A fusion is a real card unless every ingredient was a token: fusing one onto a unit sheds the
+    // Token tag (R1177000) and it no longer ceases to exist off the field (R11).
     let token = defs.iter().all(|def| def.token);
     CardDef {
         // Transient defs are not catalog cards, so no random pool or Discover can reach one (§5.1);
@@ -562,9 +488,8 @@ fn build_def(
     }
 }
 
-/// R1852001: a fusion that keeps a card prints Starship Piece only when the kept card's own face does,
-/// so a piece fused onto a card that is no piece — an Equip onto its host, a copy into the Starship —
-/// leaves it no piece. A fusion that keeps no card unites the keyword as it unites every other (R77).
+/// R1852001: a fusion that keeps a card prints Starship Piece only when the kept card's own face does;
+/// keeping no card unites the keyword as every other (R77).
 fn kept_piece_only(mut face: CardFace, kept: Option<&CardFace>) -> CardFace {
     if let Some(kept) = kept
         && !kept
@@ -579,11 +504,9 @@ fn kept_piece_only(mut face: CardFace, kept: Option<&CardFace>) -> CardFace {
 }
 
 /// R470: what "its cost doesn't change" writes, read off the kept card before it becomes the fusion:
-/// nothing when it already has a `cost_override` (which the kept instance keeps); for an X-cost or
-/// embiggen card with no cost hook, that printed form (`form`), which the fused definition then
-/// prints; otherwise its own cost as it stands (`override_`, R65's printed cost with a hook's computed
-/// one), which becomes its `cost_override`. `cost_mod` is the instance's and stays, so the card's cost
-/// after the fusion is the one it had before it.
+/// nothing when it already has a `cost_override`; for an X-cost or embiggen card with no cost hook,
+/// that printed form, which the fused definition then prints; otherwise its own cost as it stands
+/// (`override_`, R65's printed cost with a hook's computed one). `cost_mod` stays the instance's.
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 struct KeptCost {
     form: Option<CardCost>,
@@ -607,10 +530,7 @@ fn kept_cost_of(state: &GameState, kept: &CardInstance) -> KeptCost {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// What a fused card remembers of its ingredients (TS `scripts.ts`'s `INGREDIENTS_KEY` readers and
-// `work.ts`'s part paths), private copies so this module reads them exactly as it writes them.
-// ---------------------------------------------------------------------------------------------
+// What a fused card remembers of its ingredients: private copies, so this module reads them as it writes them.
 
 /// How much of `PART_KEY`'s path the combined hooks above the running one have used (`PART_DEPTH_KEY`).
 fn part_depth(data: &IndexMap<String, Value>) -> usize {
@@ -620,9 +540,7 @@ fn part_depth(data: &IndexMap<String, Value>) -> usize {
         .unwrap_or(0)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The concatenated scripts (R77).
-// ---------------------------------------------------------------------------------------------
 
 /// Builds an `EffectApply` from a closure, so its signature is the higher-ranked one.
 fn effect_apply(f: impl Fn(&mut EffectContext<'_>) + Send + Sync + 'static) -> EffectApply {
@@ -636,7 +554,7 @@ fn trigger_run(
     Arc::new(f)
 }
 
-/// TS `fused:part${index}`: an effect's kind is a static name, read by nothing but the debug output.
+/// An effect's kind is a static name, read by nothing but the debug output.
 fn part_kind(index: usize) -> &'static str {
     const KINDS: [&str; 8] = [
         "fused:part0",
@@ -651,8 +569,7 @@ fn part_kind(index: usize) -> &'static str {
     KINDS.get(index).copied().unwrap_or("fused:part")
 }
 
-/// TS `{ ...ctx }`: a second context over the same sink (state, events, rng and the per-call flags,
-/// borrowed again) with every fact of the run copied, for a caller to change before it hands it on.
+/// A second context reborrowed over the same sink, every fact of the run copied for the caller to change onward.
 fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
     let events_from = ctx.events_from;
     let exits_from = ctx.exits_from;
@@ -691,14 +608,10 @@ fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
     }
 }
 
-/// §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that
-/// ingredient was played for (R102, `as_ingredient`): #46 Suppressive Aura played for 4 and
-/// fused onto a Mana Well is still "paid 4: −5/−5", though the kept instance's own price is the Mana
-/// Well's.
-///
-/// An aura's entries may borrow the card it was asked about, and a card read at an ingredient's price
-/// is a copy made here; so an entry of such a reading carries that copy and asks its aura again for
-/// each unit it is applied to (a pure read: the same answer as the first asking).
+/// §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that ingredient
+/// was played for (R102, `as_ingredient`): #46 Suppressive Aura played for 4 and fused onto a Mana Well
+/// is still "paid 4: −5/−5". An entry that borrows the card read at that price carries the copy and asks
+/// its aura again for each unit applied to (a pure read: same answer).
 fn fused_aura(faces: &[Face]) -> Option<AuraHook> {
     let hooks: Vec<Option<AuraHook>> = faces.iter().map(|face| face.script.aura.clone()).collect();
     if hooks.iter().all(Option::is_none) {
@@ -748,11 +661,9 @@ fn fused_aura(faces: &[Face]) -> Option<AuraHook> {
     }))
 }
 
-/// The context ingredient `index`'s text builds and applies with (R102): its place in the fusion
-/// appended to the path the combined hooks above it have used (`work::PART_KEY`). A re-entry names the
-/// whole path from the top (`work::PART_DEPTH_KEY`), so a path that already names this ingredient at
-/// this level keeps the rest of it, for the levels below to route by: a question asked two fusions
-/// down comes back to its own ingredient, not to the first one there that names its step the same.
+/// The context ingredient `index`'s text builds and applies with (R102): its place in the fusion on the
+/// path above it (`work::PART_KEY`); a re-entry names the whole path from the top, so a question asked
+/// two fusions down comes back to its own ingredient (`work::PART_DEPTH_KEY`).
 fn part_data(data: &IndexMap<String, Value>, index: usize) -> IndexMap<String, Value> {
     let depth = part_depth(data);
     let named = crate::work::part_path_of(data).unwrap_or_default();
@@ -769,9 +680,8 @@ fn part_data(data: &IndexMap<String, Value>, index: usize) -> IndexMap<String, V
     patch
 }
 
-/// The context an ingredient's text runs in: its place in the fusion (`part_data`'s patch), and the
-/// price its card was played for as `embiggened` (R102, `ingredient_paid`), found by that
-/// place's path — #59's trigger reads it.
+/// The context an ingredient's text runs in: its place in the fusion, and the price its card was played
+/// for as `embiggened` (R102, `ingredient_paid`) — #59's trigger reads it by that place's path.
 fn in_place<'b>(ctx: &'b mut EffectContext<'_>, patch: &IndexMap<String, Value>) -> EffectContext<'b> {
     let path = crate::work::part_path_of(patch).unwrap_or_default();
     let embiggened = match ctx.live_self() {
@@ -841,19 +751,17 @@ fn ingredient_part(
     })
 }
 
-/// A combined hook: each ingredient's list in turn, as parts (R102, R113). A continuation one
-/// ingredient's text left — the step its prompt re-enters, the delayed effect it scheduled — names
-/// that ingredient (`work::PART_KEY`, which `prompts::resume_self` carries in the card's data), and comes
-/// back to its list alone: the answer to one Masochism Mask's "choose one" is that Mask's pick, not a
-/// pick for every ingredient that names its step the same.
+/// A combined hook: each ingredient's list in turn, as parts (R102, R113). A continuation one text left —
+/// the step its prompt re-enters, the delayed effect it scheduled — names that ingredient (`work::PART_KEY`),
+/// and comes back to its list alone: one Masochism Mask's "choose one" is that Mask's pick, not every
+/// ingredient's that names its step the same.
 fn combined_hook(fns: Vec<Option<Hook>>, step: bool) -> Hook {
     let fns = Arc::new(fns);
     hook(move |ctx| {
         let depth = part_depth(&ctx.data);
-        // A step of the `resume` table is one continuation of one text, so one that names no part — the
-        // engine left it for the card as a whole, not one of its texts: the prompt of the power R43
-        // activates once (`hero_power::activate_power`) — comes back to the first ingredient that has the
-        // step, once, rather than to every ingredient that names its step the same (R43, R102).
+        // A `resume` step is one continuation of one text, so one naming no part — left for the card as
+        // a whole, like the prompt of the power R43 activates once (`hero_power::activate_power`) — comes
+        // back to the first ingredient having the step, once, not every one naming it the same (R43, R102).
         let first = fns.iter().position(Option::is_some);
         let routed: Option<usize> = crate::work::part_path_of(&ctx.data)
             .and_then(|path| path.get(depth).copied())
@@ -874,12 +782,10 @@ fn combined_hook(fns: Vec<Option<Hook>>, step: bool) -> Hook {
     })
 }
 
-/// One named target predicate across the ingredients that define it (§10.6, R102). It is not a hook:
-/// a declaration's filter asks it with the candidate and gets a boolean back, in a context that
-/// carries no instance data to route a part by, so wrapping it as a fused Cry threw on the first ask
-/// and would have answered with a list of effects had it not. One ingredient's predicate stays as it
-/// is; ingredients that name the same predicate must each admit the candidate, the one stricter
-/// requirement that flags and numbers also take when they combine.
+/// One named target predicate across the ingredients defining it (§10.6, R102). Not a hook: a declaration's
+/// filter asks it with the candidate for a boolean, in a context with no instance data to route a part by
+/// (wrapping it as a fused Cry threw on the first ask). One predicate stays as is; ingredients naming the
+/// same one must each admit the candidate — the stricter requirement flags and numbers take to combine.
 fn combined_checks(checks: Vec<TargetCheck>) -> TargetCheck {
     if checks.len() == 1
         && let Some(only) = checks.first()
@@ -889,12 +795,11 @@ fn combined_checks(checks: Vec<TargetCheck>) -> TargetCheck {
     target_check(move |args| checks.iter().all(|check| check(args)))
 }
 
-/// TS `combineValues` for a hook-valued key (a Cry, Death, a start/end-of-turn hook, a resume step, a
-/// delayed hook): one hook that runs each of them in turn, so "both Cry and Death lists run" (R77) —
-/// each ingredient's list built only when the one before it has resolved (`lazy_part`, R102), so a
-/// later ingredient reads the board the earlier ones left: #68's "8 if your hero is below 10" after
-/// Reno has set the hero to 30, #22's meal after #100 has exiled it — and a continuation one of them
-/// left comes back to that one alone (`combined_hook`). A key among `EAGER_KEYS` runs each at once.
+/// A hook-valued key (a Cry, Death, a start/end-of-turn or delayed hook, a resume step): one hook running
+/// each in turn, so "both Cry and Death lists run" (R77), each built only when the one before resolved
+/// (`lazy_part`, R102), so a later ingredient reads the board the earlier ones left (#68's "8 if your hero
+/// is below 10" after Reno set it to 30, #22's meal after #100 exiled it). An `EAGER_KEYS` key runs each at
+/// once; a continuation left comes back to that one alone (`combined_hook`).
 fn combine_hooks(values: Vec<Option<Hook>>, key: &str, parent: &str) -> Option<Hook> {
     if values.iter().all(Option::is_none) {
         return None;
@@ -918,7 +823,7 @@ fn combine_hooks(values: Vec<Option<Hook>>, key: &str, parent: &str) -> Option<H
 type ReadListHook<R> = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<R> + Send + Sync>;
 type ConditionListHook<R> = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<R> + Send + Sync>;
 
-/// TS `combineValues` for an `EAGER_KEYS` read of `{ state, self, radiant }`: one ingredient's read
+/// An `EAGER_KEYS` read of `{ state, self, radiant }`: one ingredient's read
 /// stays as it is, several become their lists in ingredient order, each asked with the same arguments.
 fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadListHook<R>> {
     let defined: Vec<ReadListHook<R>> = values.into_iter().flatten().collect();
@@ -932,9 +837,8 @@ fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadLi
 }
 
 /// R1878001: a fused card's texts lend no Starship Piece. R1852001 keeps the keyword only from the card a
-/// Fuse keeps, whose own lend became its grant as it was fused (`keep_instance`); an ingredient's would
-/// otherwise reach the card it was fused onto, read at that card's price (an Embiggened S #129 equipped
-/// onto a host played at its own Embiggened price).
+/// Fuse keeps, whose own lend became its grant as fused (`keep_instance`); an ingredient's would otherwise
+/// reach the card fused onto, read at that card's price (Embiggened S #129 onto its own-priced host).
 fn without_lent_piece(lend: Option<ReadListHook<Keyword>>) -> Option<ReadListHook<Keyword>> {
     lend.map(|lend| {
         read_hook(move |args| {
@@ -1035,7 +939,7 @@ fn combine_target_checks(records: &[Script]) -> IndexMap<&'static str, TargetChe
     }
 }
 
-/// A flag of the combined static flags: true when any ingredient set it (TS `combineValues` on booleans).
+/// A combined static flag: true when any ingredient set it.
 fn any_flag(values: impl IntoIterator<Item = Option<bool>>) -> Option<bool> {
     let defined: Vec<bool> = values.into_iter().flatten().collect();
     if defined.is_empty() {
@@ -1073,13 +977,10 @@ fn least_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     values.into_iter().flatten().min()
 }
 
-/// The static flags that are an amount of what the text does, not a quality the card has: #79's
-/// "the next Spell you play gains Echo +1", #38's granted Combo and #84's hero Armor (TS
-/// `SUMMED_FLAGS`: `echoGrant`, `quickstriker`, `heroArmor`). R102: a card fused from two such texts
-/// carries both, so its amount is theirs added — a Twinspell fused onto a Twinspell grants Echo +2,
-/// and a Going Long onto a Going Long gives Armor twice, as two standing apart do (R124) — where a
-/// quality (`castOnDraw`, `immutable`) is had once and a requirement (`tribute`) takes the stricter.
-/// A `true` is one.
+/// The static flags that are an amount of what the text does, not a quality the card has: #79's Echo +1,
+/// #38's Combo, #84's hero Armor. R102: a card fused from two such texts carries both, so amounts add (a
+/// Twinspell onto a Twinspell grants Echo +2, as two standing apart do, R124), where a quality
+/// (`castOnDraw`, `immutable`) is had once, a requirement (`tribute`) takes the stricter, a `true` is one.
 fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option<FlagOrCount> {
     let defined: Vec<FlagOrCount> = values.into_iter().flatten().collect();
     if defined.is_empty() {
@@ -1104,9 +1005,8 @@ fn summed_spell_damage_aura(
     })
 }
 
-/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply.
-/// None when no ingredient names one; otherwise each direction is the product of the ingredients
-/// that name it, and a direction none names is none.
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply — each
+/// direction the product of the ingredients naming it, a direction none names none.
 fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> Option<TuneMultiplier> {
     let defined: Vec<TuneMultiplier> = values.into_iter().flatten().collect();
     if defined.is_empty() {
@@ -1126,9 +1026,8 @@ fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> 
     })
 }
 
-/// `staticFlags`, a nested object, combined key by key by the same rules: a flag is true when any
-/// ingredient set it, a number takes the larger, an amount adds up (`summed_count`), a list is the
-/// lists in order. One ingredient's flags stay exactly as they are.
+/// `staticFlags`, a nested object, combined key by key by the same rules: a flag is true when any set it,
+/// a number takes the larger, an amount adds up, a list is the lists in order. One ingredient's stay as is.
 fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
     let defined: Vec<&StaticFlags> = records
         .iter()
@@ -1223,9 +1122,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
     }
 }
 
-/// `quests`, a nested object: one ingredient's book stays as it is; several combine key by key — the
-/// quests and the rewards are the lists in order, and `first`, a string, is the last ingredient's
-/// (TS: "nothing in `Script` mixes kinds under one key; the last ingredient wins").
+/// `quests`, a nested object: one ingredient's book stays as is; several combine key by key — quests and
+/// rewards in order, and `first`, a string, is the last ingredient's (nothing mixes kinds under one key).
 fn combine_quests(records: &[Script]) -> Option<QuestBook> {
     let defined: Vec<&QuestBook> = records
         .iter()
@@ -1242,24 +1140,16 @@ fn combine_quests(records: &[Script]) -> Option<QuestBook> {
     }
 }
 
-/// TS `combineObjects` over the ingredients' scripts: combine every member of several scripts,
-/// `records` aligned with the ingredients. The rule is the same for every kind of value a script
-/// holds, which is what keeps this working as `Script` grows new hooks:
-///   - a hook becomes one hook that runs each of them in turn (`combine_hooks`); an aura, which
-///     returns no effects, runs each at once (`EAGER_KEYS`);
-///   - a list (triggers, declared targets and modes) becomes the lists in ingredient order, so a
-///     fused trap carries every ingredient's trigger condition;
-///   - a nested object (static flags, the resume table) is combined key by key by the same rules;
-///   - a flag is true when any ingredient set it, and a number takes the larger, which is the one
-///     stricter requirement rather than a doubled one (`staticFlags.tribute`) — except an amount of
-///     what the text does, which adds up (`summed_count`).
+/// The ingredients' scripts combined, `records` aligned with the ingredients: every kind of value
+/// combines by one rule, which keeps this working as `Script` grows new hooks: a hook becomes one hook
+/// running each in turn (`combine_hooks`), an aura running each at once; a list becomes the lists in
+/// ingredient order; a nested object combines key by key; a flag is true when any set it, a number takes
+/// the larger, an amount of what the text does adds up (`summed_count`).
 ///
-/// `cost`, `setStat`, `conditionMet`, `tributeWhen`, `plagueMultiplier` and `wouldCounter` were taken
-/// out of each record (`script_record`) and are combined on their own (`fused_script`), as are `cry`
-/// and `aura`, which `fused_cry` and `fused_aura` replace. `targetingDiscards` and `recordsPlayAs`
-/// return no list either; TS's combination of them is never asked, since their readers take a fused
-/// card's ingredients one by one (`targeting.ts`'s `fusedCost`, `playCounts.playRecordOf`), so a
-/// fusion carries neither.
+/// `cost`, `setStat`, `conditionMet`, `tributeWhen`, `plagueMultiplier`, `wouldCounter`, `attackMods` and
+/// `echoX` leave each record (`script_record`) to combine on their own, as `cry` and `aura` do.
+/// `targetingDiscards` and `recordsPlayAs` ride no fusion: their readers take a fused card's ingredients
+/// one by one.
 fn combine_objects(records: &[Script]) -> Script {
     let hooks = |read: fn(&Script) -> Option<Hook>, key: &str| {
         combine_hooks(records.iter().map(read).collect(), key, "")
@@ -1416,15 +1306,12 @@ fn fused_attack_mods(faces: &[Face]) -> Option<AttackModHook> {
     }))
 }
 
-/// One ingredient's script, ready to be combined: without its `cost` hook, because R77 fixes the
-/// fused cost at min(sum, 4) and a surviving Ceaseless Void hook would overrule it (R65); without the
-/// members that return no list (`setStat`, summed like every other stat R77 sums; `conditionMet`,
-/// R195's yellow glow, which answers a boolean, so the ingredients' hooks are or-ed (R196);
-/// `tributeWhen` and `wouldCounter` (R403, R667), or-ed the same way; `plagueMultiplier` (R471), which
-/// multiplies; `attackMods` (R1120), summed the same way; `echoX` (R802), the larger), each combined on its own; and with its trigger ids namespaced, so two ingredients that
-/// both call a trigger "turn-end" stay two distinct conditions on the fused card — each running in its
-/// ingredient's place (R102), so a question it asks comes back to its own step — and its Activate
-/// abilities run in its place (R102, R384).
+/// One ingredient's script, ready to combine: without its `cost` hook (R77 fixes the fused cost at
+/// min(sum, 4); a surviving Ceaseless Void hook would overrule it, R65), and without the members that
+/// combine on their own: `setStat`, `conditionMet` (R195's glow answers a boolean, so or-ed, R196),
+/// `tributeWhen` and `wouldCounter` (R403, R667), `plagueMultiplier` (R471), `attackMods` (R1120, summed),
+/// `echoX` (R802, the larger). Trigger ids and Activate abilities are namespaced, so two "turn-end"s stay
+/// distinct, each running in its ingredient's place (R102, R384).
 fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
     let namespaced = |list: &[TriggerDef]| -> Vec<TriggerDef> {
         list.iter()
@@ -1480,10 +1367,9 @@ fn in_preview_ingredient(preview: PreviewHook, index: usize) -> PreviewHook {
     })
 }
 
-/// R102, R384: an ingredient's Activate ability in its place in the fusion. Its effect list builds
-/// and applies there, as a trigger's does (`in_trigger_ingredient`), so it reads its own numbers
-/// (`param`) and what its own text remembered (`recalled`); its `canActivate` and `has`, which carry
-/// no context to name a place, read the card as that ingredient's text does (`as_ingredient_text`).
+/// R102, R384: an ingredient's Activate ability in its place in the fusion. Its list builds and applies
+/// there, so it reads its own numbers and what its text remembered; `canActivate` and `has` read the card
+/// as that ingredient's text does (`as_ingredient_text`), carrying no context to name a place.
 fn in_activation_ingredient(decl: &ActivationDecl, index: usize) -> ActivationDecl {
     let run = decl.run.clone();
     let can_activate: Option<ConditionHook> = decl.can_activate.clone().map(|can_activate| {
@@ -1527,9 +1413,8 @@ fn in_activation_ingredient(decl: &ActivationDecl, index: usize) -> ActivationDe
     }
 }
 
-/// R102: the card as ingredient `index`'s text reads it from a hook with no context to name its
-/// place: at that ingredient's price (`as_ingredient`), with what that text remembered under
-/// its own keys (`memory_of_part`), so `recalled` with no part named reads it back.
+/// R102: the card as ingredient `index`'s text reads it, with no context to name its place: at that
+/// ingredient's price, with what that text remembered under its own keys (`memory_of_part`).
 fn as_ingredient_text(instance: &CardInstance, index: usize) -> CardInstance {
     let mut card = crate::scripts::as_ingredient(instance, index);
     card.memory = crate::work::memory_of_part(&card.memory, index);
@@ -1591,9 +1476,8 @@ fn fused_set_stat(scripts: &[&Script]) -> Option<SetStatHook> {
     }
 }
 
-/// R802: a computed Echo X on a fused card. A number in `staticFlags` takes the larger of the
-/// ingredients' (`combine_static_flags`), so the computed one does too, each hook asked about the fused
-/// card at its own ingredient's price (`as_ingredient`, R102).
+/// R802: a computed Echo X on a fused card takes the larger of the ingredients', each asked about the
+/// fused card at its own ingredient's price (`as_ingredient`, R102).
 fn fused_echo_x(scripts: &[&Script]) -> Option<EchoXHook> {
     let hooks: Vec<Option<EchoXHook>> = scripts.iter().map(|script| script.echo_x.clone()).collect();
     if hooks.iter().all(Option::is_none) {
@@ -1618,9 +1502,8 @@ fn fused_echo_x(scripts: &[&Script]) -> Option<EchoXHook> {
 }
 
 /// R471: "Plague Counters placed on this are doubled" (Classic #27). Each ingredient's text multiplies
-/// what is placed on the fused card, so two such texts multiply: a Pestilent Slime fused onto a
-/// Pestilent Slime quadruples, as two doublings in a row do. Each hook is asked about the fused card
-/// at its own ingredient's price (`as_ingredient`, R102).
+/// what is placed on the fused card — a Pestilent Slime onto a Pestilent Slime quadruples, as back-to-back
+/// doublings do — each asked at its own ingredient's price (`as_ingredient`, R102).
 fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> {
     let hooks: Vec<Option<PlagueMultiplierHook>> = scripts
         .iter()
@@ -1648,9 +1531,8 @@ fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> 
     }))
 }
 
-/// R820: a trigger multiplier (Meditative #9, #10). Multipliers never stack, so a fused card carrying
-/// two such texts gives the higher of its ingredients' extras, not their sum, as two cards on the field
-/// do. Each hook is asked about the fused card at its own ingredient's price (`as_ingredient`, R102).
+/// R820: a trigger multiplier (Meditative #9, #10). Multipliers never stack, so a fused card carrying two
+/// takes the higher extra, as two on the field do — each asked at its own ingredient's price (R102).
 fn fused_highest_extra(
     scripts: &[&Script],
     read: fn(&Script) -> Option<TriggerExtraHook>,
@@ -1677,8 +1559,7 @@ fn fused_highest_extra(
     }))
 }
 
-/// One ingredient's face script (TS `type Face = { defId; script }`): a registered card's borrowed
-/// from the registry, a fused ingredient's composed.
+/// One ingredient's face script: a registered card's borrowed from the registry, a fused one's composed.
 #[derive(Clone)]
 struct Face {
     def_id: String,
@@ -1700,23 +1581,16 @@ fn with_choices(effect: Effect, targets: Vec<Selection>, modes: Vec<String>) -> 
     }
 }
 
-/// R102 concatenates the ingredients' declared targets and modes in ingredient order, and R90 reads
-/// that flat list declaration by declaration — so each ingredient's Cry must resolve with its OWN
-/// slice of the play's choices, not the whole list. Handed the whole list, every ingredient read its
-/// first slot: a crafted Bigot + Twisted Sorcerer aimed the Sorcerer's 4 damage at the unit Bigot
-/// destroyed, and an Archivist + Silly Silas rotated by Archivist's "highest". Modes split by each
-/// ingredient's count of mode declarations; targets split by R90's rule over the declarations that
-/// the ingredient's own modes make active (`forModes`) — with the lengths §10.5 step 1 read the play
-/// with, which the pipeline hands over in `data` (`DECLARATION_SLICES_KEY`), because the board at
-/// resolution is not the one the play was checked against: by step 5 a crafted Postdoc + Sorcerer
-/// stands on the field and is itself a Human the Postdoc's declaration could take. Only a Cry run
-/// with no play behind it measures against the board as it stands.
+/// R102 concatenates the ingredients' declared targets and modes in ingredient order, and R90 reads that
+/// flat list declaration by declaration, so each ingredient's Cry resolves with its OWN slice of the play's
+/// choices: handed the whole list, every ingredient would read its first slot. Modes split by
+/// mode-declaration counts; targets split by R90's rule over the active declarations (`forModes`), with the
+/// lengths §10.5 step 1 read the play with, handed over in `data` (`DECLARATION_SLICES_KEY`), since the
+/// board at resolution is not the checked one. Only a Cry with no play behind it measures the board as is.
 ///
-/// Every effect an ingredient's Cry returns is bound to that slice, because an effect reads
-/// `ctx.targets` when it applies, and the context applying it is the fused card's. And each
-/// ingredient's Cry is its own part of the list (`lazy_part`), built when the list reaches it,
-/// so it reads the board the ingredients before it left (R102), and a pause inside it resumes into
-/// the rest of that part and then every part after it (`prompts::apply_resumable`, R113).
+/// Every effect an ingredient's Cry returns is bound to that slice (`ctx.targets` reads at apply time, in
+/// the fused card's context), and each Cry is its own part (`lazy_part`), reading the board the earlier
+/// ingredients left (R102); a pause inside resumes into the rest of that part, then the parts after (R113).
 fn fused_cry(faces: &[Face]) -> Option<Hook> {
     if !faces.iter().any(|face| face.script.cry.is_some()) {
         return None;
@@ -1753,9 +1627,8 @@ fn fused_cry(faces: &[Face]) -> Option<Hook> {
             },
         };
 
-        // Each ingredient's Cry is built as the list reaches it (`lazy_part`), so it reads the board the
-        // ingredients before it left (R102); its slice of the play's choices is fixed now, as step 1
-        // checked them.
+        // Each ingredient's Cry builds as the list reaches it (`lazy_part`), reading the board left by the
+        // earlier ingredients (R102); its slice of the choices is fixed now, as step 1 checked them.
         let mut decl_at = 0;
         faces
             .iter()
@@ -1810,11 +1683,9 @@ fn cut_slices(selections: &[Selection], lengths: &[usize]) -> Vec<Vec<Selection>
         .collect()
 }
 
-/// R196: a fusion's yellow glow. Its Cry, Death and triggers run every ingredient's list, so each
-/// ingredient's printed condition still picks its own branch when the fused card resolves, and the
-/// fused card glows when any of them holds. Each hook is asked with the fused card's own context
-/// (the fused instance as `self`, the face it runs), and only an answer of exactly `true` counts,
-/// as `conditionActive` counts it. One hooked ingredient's hook is the fusion's unchanged.
+/// R196: a fusion's yellow glow. Every ingredient's list still runs, so each printed condition still picks
+/// its own branch, and the fused card glows when any holds — each asked with the fused card's own context,
+/// where only exactly `true` counts, as `conditionActive` counts it.
 fn fused_condition_met(scripts: &[&Script]) -> Option<ConditionHook> {
     let hooks: Vec<ConditionHook> = scripts
         .iter()
@@ -1889,13 +1760,10 @@ fn fused_script(
     combined
 }
 
-// ---------------------------------------------------------------------------------------------
-// Building a fused card's scripts on lookup (SURFACE §6.6, in place of TS's registry sync).
-// ---------------------------------------------------------------------------------------------
+// Building a fused card's scripts on lookup (SURFACE §6.6).
 
-/// R179, R468: the ingredients a fused id names — its definition's list when the state holds the
-/// definition, else the id read back (`fused_ingredient_specs`) — with R77's two-ingredient minimum;
-/// `None` for any id no Fuse minted.
+/// R179, R468: the ingredients a fused id names — its definition's list when the state holds it, else the
+/// id read back — with R77's two-ingredient minimum; `None` for any id no Fuse minted.
 fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> {
     let from_def = state
         .transient_defs
@@ -1917,14 +1785,10 @@ fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> 
     }
 }
 
-/// The script an ingredient runs on one form: a fused ingredient's composed here on that form, its
-/// fused ingredients first (TS `ensureFused`); any other id's from the registry (`scripts::script_of`).
-/// `seen` stops a malformed id that names itself: TS left such an id unregistered, so it ran no script.
-///
-/// Only the form asked for is composed. TS composed each fused id once, into its registry, so a chain
-/// of fusions cost one composition per link; composing both forms of every ingredient on every lookup
-/// doubles the work at each link, and a Fuse of a Fuse of a Fuse … fourteen deep (golden seed 68) is
-/// then 2^14 compositions on every `script_of`.
+/// The script an ingredient runs on one form: a fused ingredient's composed here on that form, its fused
+/// ingredients first; any other id's from the registry. `seen` stops a malformed id naming itself.
+/// Only the asked-for form is composed: both forms on every lookup would double the work per link, and a
+/// fourteen-deep Fuse of Fuses (golden seed 68) would cost 2^14 per `script_of`.
 fn face_for(
     state: &GameState,
     def_id: &str,
@@ -1942,7 +1806,6 @@ fn face_for(
     }
 }
 
-/// TS `{ base: fusedScript(from, false), radiant: fusedScript(from, true) }`, with `def_id` marked seen.
 fn compose_specs(
     state: &GameState,
     def_id: &str,
@@ -1957,12 +1820,10 @@ fn compose_specs(
     }
 }
 
-/// SURFACE §6.6: a fused (or crafted) definition's two scripts, composed from its ingredients'
-/// scripts by TS's `combineObjects` rules — what TS registered under the def's id as it minted it,
-/// and what `syncFusedScripts` rebuilt from the id alone (R179). `scripts::script_of` calls it for an
-/// id it finds in `state.transient_defs`. R468: a digest id's list is read off its definition
-/// (`CardDef.ingredients`), so a digest that names another digest finds both. A definition that names
-/// no fusion has no script, as TS's registry held none for it.
+/// SURFACE §6.6: a fused (or crafted) definition's two scripts, composed from its ingredients' scripts
+/// from the id alone (R179).
+/// R468: a digest id's list is read off its definition, so a digest naming another digest finds both.
+/// A definition naming no fusion has no script.
 pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
     match fused_def_specs(state, def) {
         Some(specs) => compose_specs(state, &def.id, &specs, &IndexSet::new()),
@@ -1970,8 +1831,7 @@ pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
     }
 }
 
-/// One face of `compose_fused_scripts(state, def)` (`radiant`: its radiant script, else its base),
-/// composed alone: what a lookup of a fused instance's running face needs, at half the work.
+/// One face of `compose_fused_scripts`, composed alone: what a running-face lookup needs, at half the work.
 pub fn compose_fused_face(state: &GameState, def: &CardDef, radiant: bool) -> Script {
     let Some(specs) = fused_def_specs(state, def) else {
         return Script::default();
@@ -1981,10 +1841,9 @@ pub fn compose_fused_face(state: &GameState, def: &CardDef, radiant: bool) -> Sc
     fused_script(state, &specs, radiant, &inside)
 }
 
-/// R2226000: whether `trigger_id`, a trigger of the fused definition `def_id`, is the text of a Trap or
-/// Field Trap ingredient, or of one fused inside an ingredient: `script_record` names each ingredient's
-/// trigger `<its def id>:<its own id>`, an ingredient's fused ingredients' within it. `false` for a
-/// definition that names no fusion.
+/// R2226000: whether `trigger_id` of fused def `def_id` is a Trap/Field Trap ingredient's text, or one
+/// fused inside an ingredient (`script_record` namespaces each trigger `<def id>:<own id>`). `false` for
+/// a definition naming no fusion.
 pub fn is_trap_ingredient_trigger(state: &GameState, def_id: &str, trigger_id: &str) -> bool {
     let Some(specs) = fused_specs(state, def_id) else {
         return false;
@@ -2002,8 +1861,8 @@ pub fn is_trap_ingredient_trigger(state: &GameState, def_id: &str, trigger_id: &
     })
 }
 
-/// The ingredients `compose_fused_scripts` composes a definition from: its own list (R468) with R77's
-/// minimum, else the ones its id names; `None` when it names no fusion.
+/// The ingredients `compose_fused_scripts` composes from: the def's own list (R468) with R77's minimum,
+/// else the id's; `None` when it names no fusion.
 fn fused_def_specs(state: &GameState, def: &CardDef) -> Option<Vec<FusedIngredient>> {
     let own = def
         .ingredients
@@ -2020,12 +1879,10 @@ fn fused_def_specs(state: &GameState, def: &CardDef) -> Option<Vec<FusedIngredie
     }
 }
 
-/// R179, R417, R564: the definition `def_id` names in this state — a catalog card's, one the state
-/// already holds, or a fused one rebuilt from the id alone into `transient_defs` (its fused
-/// ingredients first); its scripts are composed on lookup like any fused card's. No instance stands
-/// behind it, so each ingredient is worn as printed and priced as R65 reads it out of play, with no
-/// target on the field (R77's shared type). `None` for an id that cannot be rebuilt: a digest
-/// (R468), a bare `t-<n>`, an ingredient the catalog lacks. C+ #29 brings fused cards back this way.
+/// R179, R417, R564: the definition `def_id` names in this state — a catalog card's, one already held, or
+/// a fused one rebuilt from the id alone (ingredients first), scripts composed on lookup. Ingredients are
+/// worn as printed and priced as R65 reads them out of play, targetless (R77's shared type). `None` for a
+/// digest (R468), a bare `t-<n>`, an unknown ingredient. C+ #29 brings fused cards back this way.
 pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -> Option<CardDef> {
     if let Some(known) = crate::catalog::find_def(Some(&*state), def_id).cloned() {
         return Some(known);
@@ -2052,19 +1909,14 @@ pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -
     Some(def)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The result.
-// ---------------------------------------------------------------------------------------------
 
-/// R77's keep-the-instance path. The fused card *is* the target: only its def id, its buffs (the sum
-/// of every ingredient's) and its granted keywords (their union) change, and the rest of the
-/// instance — zone, position, damage, exertion, summoned_turn, counters, memory, the radiant flag and
-/// the Vanilla flag — is left exactly as it was. A token's `stats_override` and `armor_override` are one
-/// exception: they were its printed face (§7, R175), which `worn_face` has already summed into the
-/// fused definition, so they leave the instance with it — kept, §10.4's layer 1 would read them in
-/// place of the fused face and a 3/3 Bread Token fused with a 7/7 would still be a 3/3. The other is
-/// R77's own: the memory gains the ingredients' prices (`scripts::INGREDIENTS_KEY`) when they were not
-/// all the kept card's, so each ingredient's text reads its own (R102).
+/// R77's keep-the-instance path. The fused card *is* the target: only its def id, summed buffs and united
+/// granted keywords change; zone, position, damage, exertion, summoned_turn, counters, memory, the radiant
+/// and Vanilla flags stay as they were. A token's `stats_override`/`armor_override` were its printed face
+/// (§7, R175), already summed into the fused definition by `worn_face`, so they leave with it: kept,
+/// §10.4's layer 1 would read them in place of the fused face. The memory gains the ingredients' prices
+/// when not all the kept card's, so each text reads its own (R102).
 fn keep_instance(
     state: &mut GameState,
     def: &CardDef,
@@ -2077,8 +1929,7 @@ fn keep_instance(
         .iter()
         .flat_map(|card| card.granted_keywords.iter().cloned())
         .collect();
-    // R1878001: a Starship Piece the kept card's own text lent it (its Embiggened version's) becomes its
-    // grant, since the fused card's texts lend none (`without_lent_piece`).
+    // R1878001: a Starship Piece the kept card's own text lent it becomes its grant (fused texts lend none).
     let lent_itself = crate::layers::conditional_keywords_of(state, kept)
         .iter()
         .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece);
@@ -2102,13 +1953,11 @@ fn keep_instance(
     let record = crate::scripts::ingredient_record(kept, ingredients);
     let at = ingredients.iter().position(|card| card.id == kept.id);
     if let Some(live) = find_instance_mut(state, &kept.id) {
-        // R1850000: a copier fused onto runs the fused text, its own printed text among it, and no
-        // copy any more.
+        // R1850000: a copier fused onto runs the fused text — its own printed text among it — and copies no more.
         live.memory
             .shift_remove(crate::subsystems::unit_text::UNIT_TEXT_KEY);
-        // R77, R102: the kept card's texts become ingredient `index` of the fusion, and what they
-        // remembered moves with them to the path they now run at (`reroot_remembered`). (TS's
-        // `findIndex` of a kept card that is no ingredient was -1; `work`'s index is a `usize`.)
+        // R77, R102: the kept card's texts become ingredient `index` of the fusion, and what they remembered
+        // moves with them to the path they now run at (`reroot_remembered`).
         if let Some(at) = at {
             crate::work::reroot_remembered(&mut live.memory, at);
         }
@@ -2116,8 +1965,6 @@ fn keep_instance(
         live.def_id = def.id.clone();
         live.buffs = AttackHealth { attack, health };
         live.granted_keywords = granted;
-        // R102, B3.4 rule 4, R443: the fused card sums its ingredients' tuning and carries all their
-        // enchantments.
         carry_instance_data(live, ingredients);
         match record {
             None => {
@@ -2154,12 +2001,10 @@ fn keep_instance(
     crate::zones::live_or(state, kept)
 }
 
-/// §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's
-/// own face did not — Jilliax's Divine Shield fused onto a K-Pop Fanatic, a Radiant Saintess's Reborn
-/// onto a unit that came back through a granted one — and the card gains it with the new text, so a
-/// shield or a Reborn the card had spent is up again, as radiant #50's printed shield is after a
-/// granted one was spent (`effects::radiant`). A keyword the kept face already printed is not newly
-/// gained, and stays spent. A Vanilla unit prints nothing on either face (§6.3).
+/// §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's face did
+/// not — Jilliax's Divine Shield onto a K-Pop Fanatic, a Radiant Saintess's Reborn onto a unit back through
+/// a granted one — and the card gains it with the new text, so a spent shield or Reborn is up again (as
+/// radiant #50's), while one the kept face already printed stays spent. A Vanilla unit prints nothing (§6.3).
 fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &CardDef) {
     if kept.vanilla {
         return;
@@ -2177,10 +2022,9 @@ fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &Card
     }
 }
 
-/// R102, B3.4 rule 4, R443: what a fusion's card carries of its ingredients' instance data — their
-/// tuning summed (`tuning::sum_tunings`) and their enchantments united — and their granted tags
-/// united (MD-B15, R923). A Brittle count is a counter, which a Fuse keeps only on the kept card as
-/// it keeps its other counters (R77).
+/// R102, B3.4 rule 4, R443: what a fusion's card carries of its ingredients — tuning summed, enchantments
+/// and granted tags united (MD-B15, R923). A Brittle count is a counter, kept only on the kept card with
+/// its other counters (R77).
 fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
     let tunings: Vec<_> = ingredients
         .iter()
@@ -2188,8 +2032,7 @@ fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
         .collect();
     card.tuning = crate::tuning::sum_tunings(&tunings);
     card.enchantments = crate::enchantments::united_enchantments(ingredients);
-    // MD-B15, R923: a Fuse unites the granted tags of every ingredient, the kept card itself
-    // included, in order — and carries none when no ingredient has any.
+    // MD-B15, R923: every ingredient's granted tags united in order — none when no ingredient has any.
     let mut seen: IndexSet<Tag> = IndexSet::new();
     for tags in std::iter::once(card.granted_tags.clone().unwrap_or_default()).chain(
         ingredients
@@ -2205,8 +2048,7 @@ fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
     } else {
         Some(seen.into_iter().collect())
     };
-    // ME-GRANT (MD-D13): a Fuse unites the granted Death abilities of every ingredient, the kept
-    // card itself included, in order — and carries none when no ingredient has any.
+    // ME-GRANT (MD-D13): every ingredient's granted Death abilities united in order, none when lacking any.
     let mut united: Vec<Grant> = card.grants.clone().unwrap_or_default();
     for ingredient in ingredients {
         for grant in ingredient.grants.clone().unwrap_or_default() {
@@ -2218,20 +2060,17 @@ fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
     card.grants = if united.is_empty() { None } else { Some(united) };
 }
 
-/// The terms a crafted hand card is made on (TS `craftInHand`'s `terms`).
+/// The terms a crafted hand card is made on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct CraftTerms {
     hand_price: HandPrice,
     radiant: bool,
 }
 
-/// R77's Craft a Card path: "a fresh, non-Radiant hand card with `costOverride` 0". The ingredients
-/// went into it, so they cease to exist here too — #99's are Discovered definitions that were never
-/// cards on a board, and for anything else a consumed ingredient is what a fusion means.
-/// A full hand burns the result like any other card reaching it (§2.4, R4), and the 0 goes with the
-/// hand: §8 #99's "the result costs 0 and goes to your hand" is a price for the card in that hand,
-/// the reading `add_to_hand`'s cost riders have (R4), so a burned result is an ordinary graveyard card
-/// that R78 would otherwise carry the price for into every later zone (a Reminisce, a Gravedigger).
+/// R77's Craft a Card path: "a fresh, non-Radiant hand card with `costOverride` 0". The ingredients cease
+/// to exist here too (#99's are Discovered definitions, never board cards). A full hand burns the result
+/// like any other (§2.4, R4) — the 0 prices the card in that hand — so a burned result is an ordinary
+/// graveyard card, though R78 would otherwise carry the price into every later zone.
 fn craft_in_hand(
     sink: &mut EngineSink<'_>,
     def: &CardDef,
@@ -2246,8 +2085,7 @@ fn craft_in_hand(
     }
     // R102, B3.4 rule 4, R443: as `keep_instance`'s.
     carry_instance_data(&mut card, ingredients);
-    // ME-CN, R1300: a newly made fused card is Chinese when any ingredient was (a kept instance keeps
-    // its own flag, as it keeps its id).
+    // ME-CN, R1300: a newly made fused card is Chinese when any ingredient was (a kept instance keeps its own).
     if ingredients
         .iter()
         .any(|ingredient| ingredient.chinese == Some(true))
@@ -2258,7 +2096,6 @@ fn craft_in_hand(
         crate::zones::cease_to_exist(sink.state, &mut ingredient.clone());
     }
     let _ = crate::draw::add_to_hand(sink, &mut card);
-    // TS: `addToHand(sink, card) === "hand"`, which is where the card now stands.
     if let Some(landed) = find_instance_mut(sink.state, &card.id)
         && landed.zone.z() == ZoneName::Hand
         && terms.hand_price == HandPrice::Free
@@ -2268,9 +2105,8 @@ fn craft_in_hand(
     find_instance(sink.state, &card.id).cloned().unwrap_or(card)
 }
 
-/// An argument's card as it stands now (TS held the live object): the state's copy, or — for a card
-/// the state no longer holds, an ingredient an earlier fusion consumed or a definition Discovered
-/// into no pile — the caller's copy, in no zone, as a card that ceased to exist is (R86).
+/// An argument's card as it stands now: the state's copy, or — for a card the state no longer holds, an
+/// ingredient an earlier fusion consumed or a definition Discovered into no pile — the caller's (R86).
 fn as_it_stands(state: &GameState, card: &CardInstance) -> CardInstance {
     match find_instance(state, &card.id) {
         Some(live) => live.clone(),
@@ -2281,22 +2117,16 @@ fn as_it_stands(state: &GameState, card: &CardInstance) -> CardInstance {
     }
 }
 
-/// §6.3 Fuse per R77. Returns the fused card — the kept target instance, the kept hand or library
-/// card (R470), or the crafted hand card — or `None` when the fusion cannot happen, in which case
-/// nothing has changed.
+/// §6.3 Fuse per R77: the fused card — the kept target, the kept hand/library card (R470), or the
+/// crafted hand card — or `None` when the fusion cannot happen, nothing changed.
 ///
-/// It does not happen when there are fewer than two ingredients, when a named target is not on the
-/// field or a card named `into` is not in a hand or a library, when the kept card is Immutable (R23:
-/// an Immutable permanent is never chosen as a Fuse target, and R61 has the trap fire and do
-/// nothing), or when the call names neither a kept card nor a hand to craft into. A target the caller did not also list as an ingredient is one anyway, so #85
-/// may name the played card and its victim separately.
+/// Fewer than two ingredients, a target off the field, an `into` outside hand and library, an Immutable
+/// kept card (R23; R61: the trap fires and does nothing), or neither a kept card nor a hand named. A target
+/// not listed as an ingredient is one anyway, so #85 may name its two cards separately.
 ///
-/// An ingredient only ever contributes its definition, so an ingredient that already ceased to exist
-/// in an earlier fusion still fuses: that is what lets radiant #85 fuse the played permanent "onto
-/// each matching permanent separately, one fusion at a time" (R77), each fusion its own transient
-/// definition, without the card having to rebuild the permanent it consumed.
+/// An ingredient gives only its definition, so one an earlier fusion consumed still fuses: radiant #85 fuses
+/// the played permanent "onto each matching permanent separately" (R77), each its own transient definition.
 pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
-    // R470: the kept instance — R77's target on the field, or a hand or library card (`into`).
     let target: Option<CardInstance> = args
         .target
         .as_ref()
@@ -2377,8 +2207,7 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         None,
     );
 
-    // The def is match state; its id names the scripts (R179, SURFACE §6.6), composed now into
-    // `state.fused_scripts` as TS registered them as it minted them, and a digest id's list rides on
+    // The def is match state; its id names the scripts (R179, SURFACE §6.6); a digest id's list rides on
     // the def (R468).
     sink.state.transient_defs.insert(def.id.clone(), def.clone());
     crate::scripts::sync_fused_scripts(sink.state);
@@ -2391,11 +2220,10 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
             live.cost_override = Some(kept_override);
             result = live.clone();
         }
-        // R43, R151: the kept card now carries every ingredient's text, a #98 Heroic Power's included —
-        // and "one created later rolls when it is created". The ingredient's rolled power ceased to exist
-        // with it, and the kept instance's memory is the target's (R77), so without the roll the card
-        // would carry "Once per turn, spend X" and no power for as long as it stood. A card that already
-        // has its power keeps it (`hero_power::ensure_power`). A crafted card rolls as it reaches the hand.
+        // R43, R151: the kept card now carries every ingredient's text, a #98 Heroic Power's included, and
+        // "one created later rolls when it is created": the rolled power ceased to exist with its ingredient
+        // and the kept memory is the target's (R77), so the card would carry no power, only "Once per turn,
+        // spend X". A card with its power keeps it (`hero_power::ensure_power`); a crafted one rolls in hand.
         let controller = result.controller;
         let _ = crate::prompts::run_start_of_game(sink, &result, controller);
         // R781004: and a text that draws for its own card (Keymaster Keenus's Aura) draws for this one.

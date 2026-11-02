@@ -1,8 +1,6 @@
 //! The buff and grantKeyword effects (BUILD M3-T1): layer 4 of §10.4, under the auras of layer 5,
 //! plus §6.1's keyword set, Armor summing across sources, and R21's random keyword pool.
 //! The all-keyword fixture unit this file needs is defined and registered here (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-buff.test.ts`.
 
 use jackioh_engine::effects::{
     buff, buff_all_units, grant_keyword, grant_random_keywords, random_pool_keywords,
@@ -51,7 +49,7 @@ fn view(state: &GameState, id: &str) -> UnitView {
     unit_view(state, &live(state, id))
 }
 
-/// Apply one effect the way the engine does: a context over the sink, then `apply` (§10.9).
+/// Apply one effect the way the engine does (§10.9).
 fn run(
     bench: &mut Bench,
     state: &mut GameState,
@@ -422,7 +420,6 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
 
     #[test]
     fn armor_sums_across_sources_so_a_granted_armor_1_adds_to_printed_armor_and_defense() {
-        // §6.1.
         let mut state = game("grant-armor");
         let unit = put(
             &mut state,
@@ -618,7 +615,7 @@ mod r21_random_keywords_m3_t1 {
             .position = Some(Position::Def);
         let mut b = Bench::new(&state);
 
-        // Every draw the 14-entry pool has room for but Taunt, and nothing it has (R781005, R1025000, R1615000).
+        // Every draw the 14-entry pool has room for but Taunt, nothing it has (R781005, R1025000, R1615000).
         let me = Some(live(&state, &unit.id));
         let count = RANDOM_KEYWORD_POOL.len() - 1;
         run(
@@ -647,8 +644,7 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Drawing the pool dry on a unit with no keyword hands out every entry, and Armor 1 and
-        // Spell Damage +1 are not among them.
+        // Drawn dry on a keywordless unit: every entry, never Armor 1 or Spell Damage +1.
         run(
             &mut b,
             &mut state,
@@ -663,7 +659,7 @@ mod r21_random_keywords_m3_t1 {
         assert!(!kinds.contains(&"Armor".to_string()));
         assert!(!kinds.contains(&"Spell Damage".to_string()));
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
-        // Taunt is no longer held down, since the pool draws no Indestructible (R1615000).
+        // Taunt is not held down, since the pool draws no Indestructible (R1615000).
         assert!(kinds.len() >= RANDOM_KEYWORD_POOL.len() - 1);
         for keyword in &live(&state, &unit.id).granted_keywords {
             assert!(!matches!(
@@ -684,8 +680,7 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Drawing the pool dry on a unit with no keyword hands out all fourteen entries, Taunt
-        // among them, and Charge and Indestructible are not among them.
+        // Drawn dry on a keywordless unit: all fourteen, Taunt among them, never Charge or Indestructible.
         run(
             &mut b,
             &mut state,
@@ -716,7 +711,7 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Its printed Indestructible is no pool entry now, and still keeps Taunt out (R347).
+        // Its printed Indestructible is no pool entry, and still keeps Taunt out (R347).
         run(
             &mut b,
             &mut state,

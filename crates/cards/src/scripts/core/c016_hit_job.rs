@@ -2,25 +2,18 @@
 //! adjacent to it on its side". Engine cell: "Adjacency 3.1; Indestructible survives".
 //!
 //! The target is destroyed on both faces (§8 Conventions); only the neighbours are radiant-only.
-//!
-//! Nothing here knows about Indestructible: §6.3 Destroy only marks the card and §4.5 step 1 collects
-//! it at the next state check, where R46 lets an Indestructible unit ignore the mark. Both destroys
-//! are in one effect list, so the target and its neighbours die together (R59).
-//!
-//! §3.1: "Adjacent means index N-1 and N+1 on the same side and same row", never across the center
-//! line. The target is picked with the play (R81), so it arrives in `ctx.targets` as
-//! `{ of: "chosen" }`. `destroy_adjacent_to` (engine/src/effects/destroy.rs) only marks, like
-//! `destroy`, and fizzles silently when the target is off the field or has no neighbour.
+//! Nothing here knows about Indestructible: §6.3 Destroy only marks, and §4.5 step 1 collects at the
+//! next state check, where R46 spares an Indestructible unit. Both destroys are one effect list, so
+//! the target and its neighbours die together (R59). §3.1's adjacency is N-1 and N+1 on the same side
+//! and row; `destroy_adjacent_to` fizzles silently when the target is off the field or alone.
 
 use jackioh_engine::effects::{destroy, destroy_adjacent_to};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-016";
 
-/// R81: "target" with no narrowing is any unit on either side (§8 Conventions), picked as part of the
-/// `play` action and never as a prompt. `min: 1` with an empty board is R90's "a declaration the
-/// board cannot satisfy asks for what the board has": the play stays legal and the spell fizzles,
-/// which is §8's "a spell whose target set is empty fizzles: the spell still counts as played".
+/// R81: an unnarrowed "target" is any unit on either side (§8 Conventions), picked in the `play`
+/// action. On an empty board R90 keeps the play legal and the spell fizzles, still counted as played.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
 }
@@ -44,9 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16. Must-pass: "Target destroyed; Indestructible
-// survives; radiant also kills same-side neighbours, never across" (R46, §3.1). The target travels
-// in the `play` action (R81), so every test names it with `play(..., { targets })`.
+// #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16. Must-pass. (R46, §3.1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -147,7 +138,6 @@ mod tests {
             s.expect_in_zone(&target, "graveyard");
             s.expect_in_zone(&left, "graveyard");
             s.expect_in_zone(&right, "graveyard");
-            // Lane 4 is two lanes away: §3.1's adjacency is N-1 and N+1 and nothing wider.
             s.expect_in_zone(&far, "field");
             // R59: one effect, one state check, so all three deaths land together.
             s.expect_events(json!(["destroyed", "destroyed", "destroyed"]));
@@ -168,7 +158,6 @@ mod tests {
             let target = s.unit_at(PlayerId::P2, 2);
             s.play("core-016", json!({ "targets": pick::instance(&target) }));
 
-            // The target's lane and both its neighbours, on the other side of the line: all untouched.
             s.expect_in_zone(&across_left, "field");
             s.expect_in_zone(&across_target, "field");
             s.expect_in_zone(&across_right, "field");

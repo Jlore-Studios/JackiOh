@@ -1,7 +1,7 @@
-// R339: trio codes. Encode and decode are proved against each other (a trio of legal decks survives
-// the round trip exactly, empty slots included) and decode is proved total (no input makes it
-// throw). The byte-level cases build payloads by hand with their own copy of the checksum, so a test
-// can write exactly the bytes it means, including ones `encodeTrioCode` would never produce.
+// R339: trio codes. Encode and decode are proved against each other and decode is proved total (no
+// input makes it throw). The byte-level cases build payloads by hand with their own copy of the
+// checksum, so a test can write exactly the bytes it means, including ones `encodeTrioCode` would
+// never produce.
 
 import { Buffer } from "node:buffer";
 
@@ -43,7 +43,7 @@ const FULL_TRIO: readonly TrioCodeSlot[] = [
   { name: "Ramp", cards: deckOf(2 * DECK_SIZE) },
 ];
 
-// --- a hand-built payload, with its own copy of the checksum -------------------------------------
+// A hand-built payload
 
 function fnv1a16(bytes: readonly number[]): number {
   let hash = 0x811c9dc5;
@@ -102,8 +102,6 @@ const slotArb: fc.Arbitrary<TrioCodeSlot> = fc.option(
 );
 
 const BASE64URL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".split("");
-
-// ---------------------------------------------------------------------------------------------
 
 describe("R339 — the round trip", () => {
   it("R339 decode(encode(trio)) is the same trio name and the same decks, slot by slot, empty slots included", () => {
@@ -438,7 +436,6 @@ describe("R1410 a trio's decks carry the Stinkyscape set's numbers, 5000 + n (th
       "stinkyscape-148": inSet("stinkyscape-148", "Stinkyscape", "148"),
     },
   };
-  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
   const withoutSet: CatalogSnapshot = {
     version: catalog.version,
     cards: Object.fromEntries(Object.entries(sixSets.cards).filter(([, def]) => def.set !== "Stinkyscape")),
@@ -473,7 +470,6 @@ describe("R1410 a trio's decks carry the Stinkyscape set's numbers, 5000 + n (th
     const code = encodeTrioCode("Stinkyscape", slots, sixSets);
     const decoded = expectOk(decodeTrioCode(code, sixSets, null));
     expect(decoded.slots[1]?.cards).toEqual(["stinkyscape-148", fixtureCardId(1), "meditativeplus-024", "stinkyscape-001"]);
-    // A catalog without the set (one from before the release, R1420) drops both as unknown.
     const before = expectOk(decodeTrioCode(code, withoutSet, null));
     expect(before.slots[1]?.cards).toEqual([fixtureCardId(1), "meditativeplus-024"]);
     expect(before.slots[1]?.dropped.unknown).toEqual([5148, 5001]);
@@ -492,7 +488,6 @@ describe("R1410 a trio's decks carry the Training Grounds set's numbers, 6000 + 
       "traininggrounds-041": inSet("traininggrounds-041", "Training Grounds", "41"),
     },
   };
-  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
   const withoutSet: CatalogSnapshot = {
     version: catalog.version,
     cards: Object.fromEntries(Object.entries(sevenSets.cards).filter(([, def]) => def.set !== "Training Grounds")),
@@ -523,7 +518,6 @@ describe("R1410 a trio's decks carry the Training Grounds set's numbers, 6000 + 
     const code = encodeTrioCode("Training Grounds", slots, sevenSets);
     const decoded = expectOk(decodeTrioCode(code, sevenSets, null));
     expect(decoded.slots[1]?.cards).toEqual(["traininggrounds-041", fixtureCardId(1), "stinkyscape-148", "traininggrounds-001"]);
-    // A catalog without the set (one from before the release, R1420) drops both as unknown.
     const before = expectOk(decodeTrioCode(code, withoutSet, null));
     expect(before.slots[1]?.cards).toEqual([fixtureCardId(1), "stinkyscape-148"]);
     expect(before.slots[1]?.dropped.unknown).toEqual([6041, 6001]);

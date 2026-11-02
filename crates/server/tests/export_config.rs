@@ -1,23 +1,6 @@
-//! Writes `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4): one
-//! `export const NAME = <JSON value>;` line per constant of `crates/server/src/config.rs` that a file
-//! under `apps/web/src` or `e2e/` imported from `apps/server/src/config.ts` before the rewrite, sorted
-//! by name, so the client keeps reading the server's numbers (CLAUDE.md rule 9) without importing the
-//! server. Part 21 points those imports at `@jackioh/server-config`, the alias for this file; CI runs
-//! this test and fails on a diff.
-//!
-//! The list is the 50 names `apps/web/src` and `e2e/` imported from it (multi-line imports and
-//! `export { … } from` included), web tests and e2e specs among them: the 42 a one-line grep found,
-//! and the 8 the e2e specs import in multi-line lists (`05-reconnect`, `06-room-code`,
-//! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
-//! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
-//! them for the lobby's room links (R767), the four `USERNAME_*` hints for the username field
-//! (R1432, R1435), the three `WS_*` heartbeat numbers for the match client's wake probe and the
-//! tests that read them (R1441), `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442),
-//! `MIN_ACCOUNT_AGE_YEARS`, `BIRTH_YEAR_EARLIEST` and `TERMS_VERSION` for the age screen, the terms
-//! box and the legal pages (R757000, R757001), and `REPLAY_LIST_PAGE` and
-//! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768), and
-//! `CUSTOM_CARDS_PER_ACCOUNT` for the card creator (R915008), and `RANK_STREAK_FLAME_LENGTH` for the
-//! win-streak flame (R2101000).
+//! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
+//! Ensures client reads server constants (CLAUDE.md rule 9).
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R915008, R2101000.
 
 use serde_json::{Value, json};
 
@@ -210,8 +193,8 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SOCIAL_POLL_MS", json!(c::SOCIAL_POLL_MS)),
         ("SPECTATE_DELAY_MS", json!(c::SPECTATE_DELAY_MS)),
         ("SPECTATORS_PER_MATCH", json!(c::SPECTATORS_PER_MATCH)),
-        // ---- end Social ----
-        // ---- Duos co-op (#946) ----
+        // end Social
+        // Duos co-op (#946)
         ("DUOS_AI_STEP_DELAY_MS", json!(c::DUOS_AI_STEP_DELAY_MS)),
         ("DUOS_MULLIGAN_CLOCK_MS", json!(c::DUOS_MULLIGAN_CLOCK_MS)),
         ("DUOS_PROMPT_CLOCK_MS", json!(c::DUOS_PROMPT_CLOCK_MS)),
@@ -220,11 +203,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PING_RATE_LIMIT", json!(c::PING_RATE_LIMIT)),
         ("PING_RATE_WINDOW_MS", json!(c::PING_RATE_WINDOW_MS)),
         ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
-        // ---- end Duos co-op (#946) ----
-        // ---- The collection economy (SPEC §14, #1294; built by #1298) ----
-        // Every number of §14's constant table but the environment's DEV_PROFILE_IDS, so the client
-        // reads the same balances as the server (CLAUDE.md rule 9), and the ECONOMY_LIVE switch the
-        // client's full-art faces read (R1313000).
+        // Economy constants (SPEC §14, #946, #1294, #1298, CLAUDE.md rule 9, R1313000).
         ("PACK_PRICE_JLORE", json!(c::PACK_PRICE_JLORE)),
         ("PACK_SLOTS", json!(c::PACK_SLOTS)),
         (
@@ -325,7 +304,7 @@ fn constants() -> Vec<(&'static str, Value)> {
             "GLOBAL_COSMETIC_FLOOR_RARITY",
             json!(c::GLOBAL_COSMETIC_FLOOR_RARITY),
         ),
-        // ---- end the collection economy ----
+        // end the collection economy
         // R1935000: how often `/stats`'s open Daily runs tab asks for the daily runs again.
         ("CI_RUNS_CACHE_TTL_SECONDS", json!(c::CI_RUNS_CACHE_TTL_SECONDS)),
     ]
@@ -348,17 +327,9 @@ fn every_name_is_listed_once() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
+    // Social: friends, presence, challenges, chat (#937, #938, #941)
     assert_eq!(
-        // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
-        // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-five
-        // economy numbers (#1298's thirty-eight, less #1333's CHASE_DROP_RATE, plus #1483's two,
-        // less #1339's PACK_BASE_RATES, PACK_TARGET_RATES, PACK_RATE_TOLERANCE and
-        // COSMETIC_PACK_RATES), its ECONOMY_LIVE switch (R1313000), the pack roll's one (#1301, less
-        // #1339's two rates), the cosmetic pack's one (#1306, less #1339's guaranteed rates), the
-        // going live's starter cards (R1310000), #1339's tiered roll's six (R1339000), #1661's
-        // global cosmetic roll's two (R1661001), the Daily runs tab's refresh (R1935000), the win-streak flame's threshold (R2101000) and the
-        // daily quest replace's allowance (R2210000).
+        // Count verified across features: #936, S7, Duos (#946), SPEC §14 economy (#1298, #1333, #1483, #1339, R1313000, #1301, #1306, R1310000, #1661, R1661001, R1935000, R2101000, R2210000).
         listed,
         88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \

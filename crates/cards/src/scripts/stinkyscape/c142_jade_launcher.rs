@@ -6,7 +6,6 @@
 //!            Activate 2: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock
 //!            gives." — damage 2
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! The Activate's target is a declared enemy Unit or the enemy hero (R81, R1862000), once a turn and
@@ -66,10 +65,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #142 Jade Launcher — SPEC §8.10 row 142, BUILD M12 row S 142: its Activate deals 2 to a
-// chosen enemy, Unit or hero, then adds a Dud, a Jade or a Red Jade to its controller's hand by the
-// Auspicious Rock's odds, a roll that replays; no health is lost; a full hand burns it; once a turn;
-// damage reads through `param()`; radiant 0/12 and Activate 2.
+// Stinkyscape #142 Jade Launcher — SPEC §8.10 row 142, BUILD M12 row S 142.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,9 +76,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    /// The Rock's rewards (M #39.2 to #39.4).
     const REWARDS: [&str; 3] = ["meditative-039-2", "meditative-039-3", "meditative-039-4"];
-    /// The printed `damage`, the same on both faces.
     const DAMAGE: i32 = 2;
 
     fn at(target: &str) -> Value {
@@ -99,7 +93,6 @@ mod tests {
         weapon_board("s142", p1, json!({ "field": [VANILLA] }))
     }
 
-    /// The rewards among `cards`.
     fn rewards(cards: &[CardInstance]) -> Vec<String> {
         def_ids(cards)
             .into_iter()

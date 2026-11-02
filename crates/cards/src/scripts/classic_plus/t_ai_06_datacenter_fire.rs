@@ -27,8 +27,7 @@ const DAMAGE_PER: ByFaceDamage = ByFaceDamage { base: 1, radiant: 2 };
 
 /// R280: the formula as each face prints it, read off the catalog text so it is always a substring.
 /// Matches `/Deal \d+ damage to [^.]+ for each one destroyed/` by hand (no regex crate in a pure crate,
-/// SURFACE §8): the leftmost "Deal <digits> damage to ", then the longest non-"." run ending in
-/// " for each one destroyed".
+/// SURFACE §8).
 fn formula_in(text: &str) -> String {
     const HEAD: &str = "Deal ";
     const MIDDLE: &str = " damage to ";
@@ -81,8 +80,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-AI-6 Datacenter Fire — SPEC §8.7 row T-AI-6, BUILD M9 Classic+ row T-AI-6. A destroyed Field Spell that
-// prints Death fires it (§4.5); the preview is the damage each hero would take now (R280). Each hero's hit
+// T-AI-6 Datacenter Fire — SPEC §8.7 row T-AI-6, BUILD M9 Classic+ row T-AI-6 (§4.5). Each hero's hit
 // is one `damage` event of N, so a per-hit cap (C+ #11 Anime Armor) caps it once, and an Ivory Tower
 // holding a Unit (R418) is swept: both are proved with fixtures in the engine's tests.
 #[cfg(test)]

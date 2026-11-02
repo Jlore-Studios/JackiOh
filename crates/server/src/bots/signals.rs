@@ -1,16 +1,10 @@
-//! A ladder bot's end-of-game habits (SPEC §9.12, R639000; #639): whether it concedes, answers a
-//! draw offer, lets its turn clock run out, offers or meets a rematch, and how long its aim arrow
-//! shows before a targeted move, each drawn from `crate::config`'s fitted rows (R1442's telemetry,
-//! printed by `jackioh-server timing-fit`) as a person's would be; and whether it offers a draw, at
-//! `BOT_DRAW_OFFER`'s hand-set chance (R2660001). Since R2660000 a concession also needs a lethal the
-//! bot cannot stop, which the caller proves (`jackioh_ai::unstoppable_lethal`).
+//! A ladder bot's end-of-game habits (SPEC §9.12, R639000; #639): concessions, draw answers,
+//! timeouts, and rematch behavior fitted from telemetry (R1442), and draw offers at `BOT_DRAW_OFFER`'s
+//! hand-set chance (R2660001). Since R2660000 a concession also needs a lethal the bot cannot stop,
+//! which the caller proves (`jackioh_ai::unstoppable_lethal`).
 //!
-//! Every roll draws on its own stream, `Rng::new("{seed}:bot-…:{home}…", 0)`, from the match seed and
-//! the seat the bot began in, apart from the match rng (`state.rng`), the search's and the think
-//! time's. A stream always starts at cursor 0, so the actor keeps no cursor for it and an actor
-//! rebuilt after a restart draws the same. Nothing here reaches the engine's state, the log or a
-//! replay hash. The one read of the state is `standing`, through `redact` and `determinize`, so a
-//! hidden card never changes what a bot does (R185).
+//! Independent RNG streams are seeded per behavior without modifying engine state or replay hashes.
+//! Evaluates `standing` via `redact` and `determinize` so hidden cards remain unread (R185).
 
 use jackioh_ai::{AI_EVAL, DeterminizeOptions, NextSwing, determinize, evaluate, redact};
 use jackioh_engine::{GameState, PlayerId, Rng};
@@ -32,20 +26,13 @@ pub fn standard_normal(rng: &mut Rng) -> f64 {
 /// R639000: where a seat stands, read at one moment of its game.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Standing {
-    /// How far behind it stands as R1442 measures a person's concession: the AI's evaluation from
-    /// its side, negated, the scale `ConcedeFit`'s threshold is fitted on. The evaluation is not
-    /// centered on an even board (it counts the enemy hero's health against the seat), so this alone
-    /// never says whether the seat is behind.
+    /// Negated AI evaluation matching `ConcedeFit` threshold scale (R1442).
     pub deficit: f64,
-    /// How far it trails its opponent: half the gap between the opponent's evaluation from its own
-    /// side and the seat's, so about 0 on an even board and above 0 only while the seat is behind.
+    /// Half the gap between opponent's evaluation and seat's (> 0 when behind).
     pub behind: f64,
 }
 
-/// R639000: where `seat` (the bot that began in `home`) stands on `state`, the next swing the
-/// active seat's. It reads the state only through `redact` (R185), and evaluates one world
-/// `determinize` fills that in with, on the stream `{seed}:bot-standing:{home}:{turn}`, as the
-/// search evaluates only determinized worlds: the evaluation cannot read a face-down placeholder.
+/// R639000: evaluates seat standing via `redact` (R185) and determinized world evaluation.
 pub fn standing(state: &GameState, seat: PlayerId, seed: &str, home: PlayerId) -> Standing {
     let mut rng = Rng::new(&format!("{seed}:bot-standing:{home}:{}", state.turn), 0);
     let world = determinize(
@@ -74,12 +61,10 @@ fn uniform_ms(rng: &mut Rng, min: i64, max: i64) -> i64 {
     (min as f64 + rng.next() * (max - min) as f64).round() as i64
 }
 
-/// R639000, R2660000: whether the bot that began in `home` concedes now, at the start of its own
-/// turn. Its temper is drawn once a match, on the stream `{seed}:bot-concede:{home}`: whether it is
-/// one who concedes at all (`share`). One who is concedes only when `doomed` holds: the caller's
-/// proof that a lethal shows on the opponent's board that nothing the bot does this turn stops (its
-/// seat's `jackioh_ai::unstoppable_lethal`). `doomed` runs a search, so it is called for a conceder
-/// alone. The fit's `min_turn` and deficit are no longer read.
+/// R639000, R2660000: whether the bot that began in `home` concedes now, at its own turn start. Its
+/// temper (`share`) is drawn once a match on `{seed}:bot-concede:{home}`; a conceder concedes only when
+/// `doomed` (the caller's proof of a lethal nothing this turn stops) holds. `doomed` runs a search, so
+/// it is called for a conceder alone.
 pub fn concedes(seed: &str, home: PlayerId, doomed: impl FnOnce() -> bool, fit: &ConcedeFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-concede:{home}"), 0);
     rng.next() < fit.share && doomed()
@@ -95,22 +80,19 @@ pub fn offers_draw(seed: &str, home: PlayerId, turn: i32, standing: &Standing, r
     standing.behind >= rule.min_behind && rng.next() < rule.chance_per_turn
 }
 
-/// R639000: whether the bot that began in `home` accepts the draw offered in turn `turn`. Only a
-/// bot that stands behind its opponent accepts, and then at the fitted share; the AI's own answer,
-/// a refusal (R188), stands otherwise.
+/// R639000: whether the bot accepts a draw offer while behind; otherwise refuses (R188).
 pub fn accepts_draw(seed: &str, home: PlayerId, turn: i32, standing: &Standing, fit: &DrawAnswerFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-draw:{home}:{turn}"), 0);
     standing.behind > 0.0 && rng.next() < fit.accept_share
 }
 
-/// R639000: whether the bot that began in `home` lets its own turn `turn` run out (R79) rather than
-/// play it.
+/// R639000: whether the bot lets its turn clock run out (R79).
 pub fn idles_turn(seed: &str, home: PlayerId, turn: i32, fit: &TimeoutFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-idle:{home}:{turn}"), 0);
     rng.next() < fit.chance_per_turn
 }
 
-/// R639000: what the bot does once a ranked match it played is over (R672).
+/// R639000: post-match behavior in ranked play (R672).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RematchPlan {
     /// How long it stays on the match, present for a rematch, from the game's end.
@@ -125,8 +107,7 @@ pub struct RematchPlan {
     pub reply_ms: i64,
 }
 
-/// R639000: the bot that began in `home`'s plan for the end of its match, drawn in a fixed order:
-/// the linger, whether it offers, whether it accepts, then the two delays.
+/// R639000: draws rematch plan parameters (linger, offer, accept, delays).
 pub fn rematch_plan(seed: &str, home: PlayerId, fit: &RematchFit) -> RematchPlan {
     let mut rng = Rng::new(&format!("{seed}:bot-rematch:{home}"), 0);
     let linger_ms = uniform_ms(&mut rng, BOT_REMATCH_LINGER_MIN_MS, BOT_REMATCH_LINGER_MAX_MS);
@@ -143,8 +124,7 @@ pub fn rematch_plan(seed: &str, home: PlayerId, fit: &RematchFit) -> RematchPlan
     }
 }
 
-/// R639000, R738: how long the bot that began in `home` shows its aim before the move it decided
-/// when the log's next seq was `seq`.
+/// R639000, R738: draws aim display duration prior to move dispatch.
 pub fn aim_lead_ms(seed: &str, home: PlayerId, seq: i64) -> i64 {
     let mut rng = Rng::new(&format!("{seed}:bot-aim:{home}:{seq}"), 0);
     uniform_ms(&mut rng, BOT_AIM_LEAD_MIN_MS, BOT_AIM_LEAD_MAX_MS)

@@ -1,10 +1,7 @@
-//! Patch v0.2.0's pools (docs/classic-sets.md B2.2, B2.6, B4.1): one format across Core, Classic
+//! The pools (docs/classic-sets.md B2.2, B2.6, B4.1): one format across Core, Classic
 //! and Classic+ (R380), the Fruit pool's Grapes and Dropshipping's "including tokens" (R382), and a
 //! card that never generates itself, named by its id because an index repeats across sets (R387).
-//! Fixture definitions only (CLAUDE.md: the engine does not depend on packages/cards).
-//!
-//! Port of `packages/engine/test/pools.test.ts`. TS's `beforeEach` is `setup()` at the top of each
-//! test (the registry override is per thread, and each test runs on its own).
+//! Fixture definitions only (CLAUDE.md: the engine does not depend on `crates/cards`).
 
 use std::borrow::Borrow;
 
@@ -12,12 +9,11 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::spread;
 
-/// TS `FACE`.
 fn face() -> Value {
     json!({ "keywords": [], "text": "fixture" })
 }
 
-/// TS `card(id, set, index, overrides = {})`: `set` as the catalog spells it ("Classic+").
+/// `set` as the catalog spells it ("Classic+").
 fn card(id: &str, set: &str, index: &str, overrides: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -73,12 +69,11 @@ fn ids<D: Borrow<CardDef>>(defs: &[D]) -> Vec<String> {
     defs.iter().map(|def| def.borrow().id.clone()).collect()
 }
 
-/// A query from its TS object literal.
+/// A query from its JSON.
 fn q(args: Value) -> CatalogQueryArgs {
     json_as(args)
 }
 
-/// TS `ids(query(args))`.
 fn pool(args: Value) -> Vec<String> {
     ids(&query(&q(args)))
 }
@@ -87,7 +82,7 @@ fn as_json(args: &CatalogQueryArgs) -> Value {
     serde_json::to_value(args).expect("serializes")
 }
 
-/// TS `beforeEach`.
+/// Run at the top of each test: the registry override is per thread, and each test runs on its own.
 fn setup() {
     // Registered in reverse, so the order `query` returns cannot be the registry's insertion order.
     let mut reversed = defs();
@@ -336,7 +331,7 @@ mod r1444_the_luck_based_pool_is_read_off_the_definitions {
         // Lucky printed on either face, or "Flip a coin" in either face's text, any case. Lucky named
         // in a text that prints none (#101's own "Give it Lucky") is not a roll, and a token is in no
         // pool that does not name tokens (§5.1).
-        // The Meditative set ships (v0.3.5), so its card is in the pool like Core's.
+        // The Meditative set ships, so its card is in the pool like Core's.
         assert_eq!(
             pool(json!({ "luckBased": true })),
             vec!["core-201", "core-202", "classic-206", "meditative-207"]
@@ -476,8 +471,8 @@ mod r1178001_the_embiggen_pool_is_the_cards_that_print_two_prices {
         register_catalog(catalog_of(embiggen_defs()));
         // Read off the printed cost: two prices, never an X or a single price. A token is in no
         // pool that does not name tokens (§5.1), and a held set (R1420, the reserved Boss set here)
-        // in none that names no set. The Meditative+ set ships since v0.3.15 (R1178000), so its
-        // card is in the pool like Core's.
+        // in none that names no set. The Meditative+ set ships (R1178000), so its card is in the
+        // pool like Core's.
         assert_eq!(
             pool(json!({ "embiggen": true })),
             vec!["core-301", "classic-304", "meditativeplus-306"]

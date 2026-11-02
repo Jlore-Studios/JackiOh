@@ -1,7 +1,6 @@
-// Polish 6: the prompt pickers that offer cards (a mulligan, a Discover, a card from hand) draw each
-// option as the card's face, with the same hover preview the hand has, instead of a text square.
-// The picking itself is Prompt.test.tsx's and is unchanged: the option is still the
-// `prompt-option-<key>` button, and a click still picks it.
+// The prompt pickers that offer cards (a mulligan, a Discover, a card from hand) draw each option as
+// the card's face, with the same hover preview the hand has. The picking itself is Prompt.test.tsx's:
+// the option is the `prompt-option-<key>` button, and a click picks it.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -79,7 +78,6 @@ describe("card options are card faces", () => {
       expect(face?.querySelector(".card-name")?.textContent, defId).toBe(nameOf(defId));
       expect(face?.querySelector(".cf-art"), defId).not.toBeNull();
       expect(option.querySelector(".prompt-card-name"), defId).toBeNull();
-      // The name, then the cost its gem shows (integration: the cost is read out, not only drawn).
       expect(option.getAttribute("aria-label"), defId).toBe(`${nameOf(defId)}, costs (${costOf(defId)})`);
     }
   });
@@ -106,9 +104,7 @@ describe("card options are card faces", () => {
     expect(names).toEqual([nameOf("core-002"), nameOf("core-019")]);
   });
 
-  // Integration (task 3's review of the mulligan): every card shows its cost, the one the hand
-  // shows, opens kept (R9 names the cards kept; Hearthstone keeps the hand until a card is marked),
-  // and says what Confirm will do to it.
+  // Open kept: R9 names the cards kept, and Hearthstone keeps the hand until a card is marked.
   it("a mulligan's options show each card's live cost, open kept, and say Keep or Redraw", () => {
     const onAction = vi.fn();
     const view = baseView({
@@ -243,8 +239,7 @@ describe("R831004: #82 KY's Trial's first Discover offers sets", () => {
 describe("R247: #82 KY's Trial's Discover offers numbers", () => {
   /**
    * The chooser's view exactly as `viewFor` builds it for #82 (the "R247 …" test beside its script,
-   * crates/cards/src/scripts/core/c082_kys_trial.rs): each option is the number, keyed `mode:<n>`
-   * and labeled `<n>`, with no definition.
+   * crates/cards/src/scripts/core/c082_kys_trial.rs).
    */
   const NUMBERS = ["17", "42", "88"] as const;
 
@@ -307,8 +302,7 @@ describe("R247: #82 KY's Trial's Discover offers numbers", () => {
 describe("R1183005: Meditative+ #25 KY's Intuition's Discover offers code", () => {
   /**
    * The chooser's view as `viewFor` builds it for M+ #25 (crates/engine's `option_view`): each option
-   * is a place in the offer, keyed `mode:code-<n>`, labeled with a card's code block and marked
-   * `code`, with no definition.
+   * is a place in the offer, labeled with a card's code block.
    */
   const CODES = [
     'fn tech(radiant: bool) -> Script {\n    Script {\n        cry: Some(hook(move |_ctx| ...)),',

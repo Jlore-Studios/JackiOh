@@ -1,22 +1,18 @@
-//! A Duos seat's life (#936 S3, B12–B18): its own HP, then its team's shared pool. Every write to a
-//! hero's health goes through here — `damage.rs`'s deal, heal, lose and set, and `effects/swap.rs`'s
-//! health swap — and so does §4.4 step 4a's lethal judge (B17, `effective_life`).
+//! A Duos seat's life (#936 S3, B12–B18): its own HP, then its team's shared pool. Every write to a hero's
+//! health goes through here — `damage.rs`'s deal, heal, lose and set, and `effects/swap.rs`'s health swap —
+//! and so does §4.4 step 4a's lethal judge (B17, `effective_life`).
 //!
-//! - B13: damage and life loss take Armor first, as ever (the pipeline's step 2), then own HP, then
-//!   the pool. Own HP that reaches 0 or less is spent for the rest of the game, what the hit had left
-//!   over comes off the pool, and the hero's `health` reads the pool from then on — so §4.5's hero
-//!   death (`state_check`) is the pool running out, with no rule of its own.
-//! - B14: while spent, damage and life loss come off the pool and healing goes to the pool, never
-//!   above its cap; while not spent, healing works as today, without a cap.
-//! - B15 is the wrapper's: after every step `duos::reduce` copies each team's pool to the team's
-//!   seat in the other duel.
+//! - B13: damage and life loss take Armor first (the pipeline's step 2), then own HP, then the pool. Own HP
+//!   that reaches 0 or less is spent for the game, the rest of the hit comes off the pool, and the hero's
+//!   `health` reads the pool from then on, so §4.5's hero death is the pool running out.
+//! - B14: while spent, damage and life loss come off the pool and healing goes to it, never above its cap;
+//!   while not spent, healing is uncapped. B15 is the wrapper's: `duos::reduce` copies each team's pool to
+//!   the team's seat in the other duel.
 //!
-//! Without `PlayerState.duos` — every 1v1 game — each helper is exactly the arithmetic it replaced,
-//! so no 1v1 state, hash, golden trace or fuzz seed moves (B3).
+//! Without `PlayerState.duos` (every 1v1 game) each helper is plain 1v1 arithmetic (B3).
 //!
-//! R2201000: a seat whose handicap sets `heroFloor` never reads below it after any write here. The
-//! damage pipeline and life loss already stop at the floor; this holds set health, the swap and
-//! anything else that writes, so no path takes a floored hero to 0.
+//! R2201000: a seat whose handicap sets `heroFloor` never reads below it after any write here (set
+//! health and the swap included, past the pipeline's own stop), so no path takes a floored hero to 0.
 
 use crate::state::{GameState, PlayerState};
 use crate::wire::PlayerId;

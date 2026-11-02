@@ -1,13 +1,9 @@
 // The page-wide half of sound (SPEC §10.11; B52): the gesture unlock and the UI click and hover
 // ticks, installed once on the document for as long as anything holds them, and the main menu
 // theme on every screen without a board (R631, musicScene.ts).
-//
-// `main.tsx` holds it for the page's lifetime, so every screen ticks and the first tap unlocks the
-// context before a game starts; every mounted `Game` holds it too (`useGameAudio`), so a Game
-// rendered on its own still does. However many hold it, there is one set of listeners.
-//
-// The listeners call `getAudioEngine()` on every event, so a test that swaps the singleton
-// (`setAudioEngineForTests`) is heard.
+// `main.tsx` holds it for the page's lifetime, so the first tap unlocks the context before a game
+// starts; every mounted `Game` holds it too, so a Game rendered on its own still does. The listeners
+// call `getAudioEngine()` on every event, so a test that swaps the singleton is heard.
 
 import { getAudioEngine } from "./engine.ts";
 import { holdMenuMusic } from "./musicScene.ts";

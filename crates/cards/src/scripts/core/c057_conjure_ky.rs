@@ -1,16 +1,8 @@
 //! #57 Conjure KY (SPEC §8.3): Spell, cost 2, tag KY. "Add 3 random KY cards to your hand" /
 //! radiant "2 random plus 2 random Radiant KY cards". Engine cell: "KY pool = #31, #51, #82 (no
-//! tokens, not #57); repeats allowed" — and every set's KY cards (R380), Classic+'s and, since
-//! v0.3.5, Meditative's.
-//!
-//! The pool is §5.1's one query: `{ tags: ["KY"] }` already leaves out the Token-tagged KY card
-//! ("random pools never include Token-tagged cards"), and `excludeDefId` is §5.1's other half: never
-//! the generating card's own definition (R387).
-//! R60: generated cards may repeat unless the card says "different"; this one does not.
-//! R4: the hand caps at 10 and extra adds are burned; the add-to-hand pipeline owns that (§2.4).
-//! R74/§5.2: a card generated "Radiant" is Radiant — an instance flag, so the radiant face is two calls.
-//! A hook may not roll dice itself (`ctx.rng.*` advances state), so the picks happen inside
-//! `add_random_from_catalog` (engine/src/effects/add_to_hand.rs), shared with #54 Straaza and #59.
+//! tokens, not #57); repeats allowed" — and every set's KY cards (R380; #54, #59).
+//! Uses §5.1 catalog query excluding tokens (R382) and own def (R387).
+//! Match RNG draws from pool (R60; repeats allowed); full hand burns cards (R4, §2.4).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -51,11 +43,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: pool #31, #51, #82 with repeats allowed; radiant 2
-// base + 2 radiant). The pool, every set's KY cards (R380), is asserted twice: against §5.1's query
-// directly and through seeded play.
-// Also proved: R60 (generated cards may repeat), R4 (hand cap 10, extras burned), R74/§5.2 (a generated
-// Radiant card carries the instance flag), §5.1 (no tokens, never the generating card).
+// #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: radiant 2 base + 2 radiant). The pool, every set's KY
+// cards (R380), is asserted twice: against §5.1's query directly and through seeded play. Also proved: R60
+// (generated cards may repeat), R4 (hand cap 10, extras burned), R74/§5.2 (a generated Radiant card carries
+// the instance flag), §5.1 (no tokens, never the generating card).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -66,10 +57,8 @@ mod tests {
 
     /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62, Meditative #34
     /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
-    /// tribes) and Meditative+ #20 KY's Competition and #25 KY's Intuition — no token, never #57.
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-    /// #1187): M+ #20 and #25 join it (§8.1 #57); and for the Stinkyscape release (#1884): its #25
-    /// KY's Tricknology.
+    /// tribes), Meditative+ #20 KY's Competition and #25 KY's Intuition (§8.1 #57, #1187) and Stinkyscape's
+    /// #25 KY's Tricknology (#1884) — no token, never #57.
     const KY_POOL: [&str; 14] = [
         "core-031",
         "core-051",
@@ -120,10 +109,8 @@ mod tests {
             assert!(!ids.iter().any(|id| id == "meditativeplus-020-1"));
             assert!(!ids.iter().any(|id| id == "core-057"));
             // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
-            // Prime, Meditative+ #20.1 Lil' Kenny) are only reachable by naming the token pool, which
-            // this card never does. Re-pinned for v0.3.5: the Meditative set joins the pool; and for
-            // v0.3.15 (Meditative+ ships, #1187): M+ #20.1 joins the token pool; and for the Stinkyscape
-            // release (#1884): its #4.2 KY's Last Exam.
+            // Prime, Meditative+ #20.1 Lil' Kenny, Stinkyscape #4.2 KY's Last Exam, #1187, #1884) are only
+            // reachable by naming the token pool, which this card never does.
             assert!(!ids.iter().any(|id| id == "stinkyscape-004-2"));
             assert_eq!(
                 query_ids(json!({ "tags": ["KY", "Token"] })),

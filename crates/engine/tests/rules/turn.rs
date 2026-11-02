@@ -456,7 +456,7 @@ fn fixture_def(name: &str, type_: &str, index: i32) -> CardDef {
 fn log_card() -> CardDef {
     fixture_def("log", "Field Spell", 2401)
 }
-/// R126: its continuation sits in the `resume` step table, the shape `runHook` could not reach.
+/// R126: its continuation sits in the `resume` step table.
 fn table_card() -> CardDef {
     fixture_def("table", "Field Spell", 2402)
 }
@@ -651,7 +651,6 @@ fn resume(def_id: &str, hook: &str, step: &str, instance_id: Option<&str>, data:
     }
 }
 
-/// Schedule one end-of-turn delayed effect for p1.
 fn delay_at_end_of_p1(state: &mut GameState, resume: Resume) -> String {
     let mut sink = sink_for(state);
     schedule_delayed(
@@ -743,7 +742,7 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
 
         let ended = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
 
-        // Both resolved, both with `ctx.self === null`, and R113's "never dropped in silence" holds.
+        // Both resolved, both with no `ctx.self`, and R113's "never dropped in silence" holds.
         assert_eq!(notes(&ended), vec!["noSelf", "noSelf"]);
         assert!(ended.delayed.is_empty());
     }

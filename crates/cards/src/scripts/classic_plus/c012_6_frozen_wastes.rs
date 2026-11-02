@@ -20,12 +20,12 @@ fn doomed(state: &GameState) -> i32 {
         .count() as i32
 }
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed: instance ids.
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -66,13 +66,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6: "Spell (a Field
-// Spell until balance patch 1): destroys every Unit on both sides, then exiles the top card of
-// your deck once for each Unit that died (Indestructible survivors don't count, a Reborn unit that died
-// does), a short deck exiling what it has with no fatigue; the exiles are public (R97); it then goes to
-// the graveyard, needing no backrow zone to play; its preview is the cards it would exile now (R280);
-// radiant exiles from the top of the
-// opponent's deck instead". The R280 proof is here (its preview reads deck sizes, never contents).
+// C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6 (R97).
+// The R280 proof is here (its preview reads deck sizes, never contents).
 #[cfg(test)]
 mod tests {
     use super::ID;

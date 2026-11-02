@@ -17,7 +17,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-026";
 
-/// The whole hand, when it holds no more cards than the discard asks for; otherwise nothing.
 fn whole_hand_if_no_choice(ctx: &mut EffectContext<'_>) -> Vec<String> {
     if zone_count(&*ctx.state, ctx.controller, OffFieldZone::Hand) > param(&*ctx, "discard") {
         return vec![];
@@ -44,14 +43,11 @@ pub fn script() -> CardScripts {
         })),
         ..Script::default()
     };
-    // The same script: the Radiant face's 5 draws are its declared `draw`, which `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26: "Draw 4 (§2.4: burns, fatigue, a
-// draw limit), then discard 4 cards at random (R682; 4 or fewer in hand → all of them), with no prompt;
-// radiant: draw 5, discard 4; its tuned numbers (draw, discard) read through `param()` (R386)".
+// C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26 (§2.4, R682, R386).
 // The draw-limit case puts C #4 Palantir in the opponent's backrow (B5 E3, R457).
 #[cfg(test)]
 mod tests {
@@ -66,7 +62,6 @@ mod tests {
     const PALANTIR: &str = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
     const FILLER: &str = "core-005"; // Stockpile
     const VIRUS: &str = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
-    // Library cards nobody else holds, so a view can be searched for their ids.
     const A: &str = "core-019";
     const B: &str = "core-011";
     const C: &str = "core-001";
@@ -100,7 +95,6 @@ mod tests {
             crate::register_all();
             let scripts = script();
             assert_eq!(crate::card_def(ID).id, RAPID);
-            // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(
                 scripts.radiant.cry.as_ref().unwrap(),
                 scripts.base.cry.as_ref().unwrap()
@@ -160,11 +154,9 @@ mod tests {
 
                 s.play(RAPID, json!({}));
 
-                // The CN-Virus cast itself in the first draw's chain, which then drew A.
                 s.expect_health(P1, 29);
                 let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![E]);
-                // Four drawn into a five-card hand, then four random discards: one card left, no prompt.
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(P1).len(), 1);
                 let discarded = discarded_defs(&s);
@@ -199,7 +191,6 @@ mod tests {
 
                 s.play(RAPID, json!({}));
 
-                // Three burned on the draw, four discarded at random: six cards left, no prompt.
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(P1).len(), 6);
                 assert_eq!(count(&s, GameEventType::Burned), 3);
@@ -231,7 +222,6 @@ mod tests {
                 s.play(RAPID, json!({}));
 
                 assert!(s.state().pending.is_none());
-                // Four drawn, four discarded at random: the one card left is hidden, the discards are not.
                 let left = s.hand(P1).first().map(|card| card.id.clone());
                 let theirs = serde_json::to_string(&s.view(P2)).unwrap();
                 assert!(!theirs.contains(left.as_deref().unwrap_or("no-card-in-hand")));

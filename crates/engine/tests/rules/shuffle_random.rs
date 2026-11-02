@@ -1,9 +1,6 @@
-// `shuffleRandomFromCatalog` (effects/shuffleRandom.ts): random catalog cards shuffled into a library,
-// Radiant and enchanted (Classic+ #40 Appropriations' Education, E39, R60, R80, R387), through a
-// test-only Book that shuffles three. The real card is proved in packages/cards
-// (test/classic-plus/040-appropriations.test.ts).
-//
-// Port of `packages/engine/test/shuffle-random.test.ts`.
+// `shuffle_random_from_catalog`: random catalog cards shuffled into a library, Radiant and enchanted
+// (Classic+ #40 Appropriations' Education, E39, R60, R80, R387), through a test-only Book that
+// shuffles three. The real card is proved in its script, `classic_plus/c040_appropriations.rs`.
 
 use jackioh_engine::effects::shuffle_random_from_catalog;
 use jackioh_engine::testkit::*;

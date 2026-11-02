@@ -1,6 +1,5 @@
-// Conquest series banner renders server-supplied data (SPEC §9.5; R330, R332, R336).
-// Poll while the series is active because the server may advance its next pick or game.
-// It never enforces rules (CLAUDE.md rule 7).
+// Conquest series banner renders server-supplied data and enforces no rule (SPEC §9.5; R330, R332,
+// R336; CLAUDE.md rule 7). Poll while the series is active: the server may advance its next pick or game.
 
 import { useEffect, useState, type ReactElement } from "react";
 

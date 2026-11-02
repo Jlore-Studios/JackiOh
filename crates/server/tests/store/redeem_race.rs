@@ -1,22 +1,5 @@
-//! docs/polish/5-sign-in.md B14: concurrent redemptions, against both stores.
-//!
-//! §9.4 step 6 says "increment uses and set the account active, atomically", and `Tx::redeem` is
-//! the whole six-step transaction. `contract.rs` proves each step one call at a time; this proves
-//! it holds when calls overlap:
-//!
-//!  - one pending profile redeeming several good codes at once is activated once and spends one code;
-//!  - several profiles racing for a code's last use get exactly one `ok`;
-//!  - at §9.4 step 3's per-IP boundary, concurrent redemptions from DIFFERENT profiles at one
-//!    address get exactly one more lookup (held across profiles by migration 0006's advisory lock);
-//!  - a redemption that overlaps another request's transaction stays committed when that one rolls
-//!    back.
-//!
-//! ONE suite, TWO stores, like `contract.rs`: every case runs against `Db::Fake` always, and against
-//! `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time per database).
-//!
-//! Every call is started before any is awaited (`join_all`), so the stores see them overlap. The fake
-//! serializes them on its one lock; Postgres runs them on separate connections under
-//! `app.redeem_invite_code`'s row and advisory locks.
+//! docs/polish/5-sign-in.md B14: concurrent redemptions against both stores (SPEC §9.4 step 3, step 6).
+//! Proves activation atomicity, single-winner races, IP bounds, and rollback isolation.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -145,10 +128,7 @@ impl Harness {
             .expect("auth.users insert returned no id")
             .try_get("id")
             .expect("id");
-        // Migration 0001's `on_auth_user_created` trigger has just made the pending profile row.
-        // The contract exercises `profiles.create` itself — the path `resolve_caller` takes for a
-        // user whose row is missing — so the trigger's row is removed here and asserted separately
-        // in `postgres.rs`, where it belongs.
+        // Remove 0001 trigger profile row so contract directly tests `profiles.create`.
         sqlx::query("delete from public.profiles where id = $1")
             .bind(id)
             .execute(admin)

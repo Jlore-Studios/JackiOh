@@ -31,11 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #69 Buff Billy — SPEC §8.7 row 69, BUILD M9 row C+ 69: X at least 1 (R348), chosen with the play;
-// a 3X/3X from its `xStats`; its Cry Upgrades it X times, each its own draw from what fits it now
-// (R386) — the stats split or an R21 keyword it lacks, never cost or X (it is an X-cost card, and on the
-// field it costs its X, R396); the upgrades are `tuning`, kept by a copy (R57); summoned outside a play
-// (a Recruit) it has X 0, arrives 0/0 and dies at the state check; radiant 6X/6X and 2X Upgrades.
+// C+ #69 Buff Billy — SPEC §8.7 row 69, BUILD M9 row C+ 69 (R21, R57).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,7 +44,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `run(s, effects)`: the effects applied through a context of p1's, then a state check.
+    /// The effects applied through a context of p1's, then a state check.
     fn run(s: &mut Scenario, effects: Vec<Effect>) {
         let mut events: Vec<GameEvent> = Vec::new();
         let state = s.state_mut();
@@ -68,8 +64,7 @@ mod tests {
         state.rng_cursor = rng.cursor();
     }
 
-    /// The `upgraded` events, each as TS's `Extract<GameEvent, { type: "upgraded" }>` reads it: the
-    /// card's id and the change's JSON.
+    /// The `upgraded` events, each as the card's id and the change's JSON.
     fn upgrades(events: &[GameEvent]) -> Vec<(String, Value)> {
         events
             .iter()
@@ -80,7 +75,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `billy(x, { radiant?, seed? })`: Buff Billy played into lane 1 for `x`.
+    /// Buff Billy played into lane 1 for `x`.
     fn billy(x: i32, radiant: bool, seed: Option<&str>) -> (Scenario, CardInstance) {
         let mut options = json!({
             "p1": { "hand": [{ "def": BILLY, "radiant": radiant }, FILLER], "mana": 10 },

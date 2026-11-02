@@ -20,8 +20,6 @@ pub const ID: &str = "classic-046";
 /// R280: the label the preview's value follows, an exact substring of both faces' text.
 const PREVIEW_LABEL: &str = "Draw";
 
-/// The cards still wanted: `multiplier ×` the opponent's hand less your own, never below 0. `leaving`
-/// counts the cards about to leave your hand before the draws begin (this card, asked in hand).
 fn draws_wanted(state: &GameState, player: PlayerId, multiplier: i32, leaving: i32) -> i32 {
     let yours = zone_count(state, player, OffFieldZone::Hand) - leaving;
     let mark = multiplier * zone_count(state, opponent_of(player), OffFieldZone::Hand);
@@ -54,18 +52,14 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs only in its declared multiplier (2), read through `param`.
     CardScripts {
         radiant: base.clone(),
         base,
     }
 }
 
-// C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46: draws one at a time (this Spell
-// already out of your hand) until your hand holds as many cards as the opponent's; a draw that adds no
-// card ends it; its preview is the draws asked for now (R280); radiant: twice as many; its tuned number
-// (multiplier) reads through `param()` (R386), on the Radiant face only (R749).
-// The preview's proofs are in `test/preview.test.ts` (its C #46 section).
+// C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46 (R280, R386, R749). The preview's
+// proofs are in `tests/cross/preview.rs` (its C #46 section).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -105,7 +99,6 @@ mod tests {
             );
             let scripts = script();
             assert!(scripts.base.preview.is_some());
-            // The Radiant face is the same script, the same hooks present.
             assert_eq!(scripts.radiant.preview.is_some(), scripts.base.preview.is_some());
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
         }
@@ -198,7 +191,6 @@ mod tests {
                     serde_json::from_str(&serde_json::to_string(s.state()).expect("the state serializes"))
                         .expect("the state parses back");
                 assert_eq!(&round, s.state());
-                // Hinder's chain repeats into one Menace; Divine Favor asks for no more.
                 assert_eq!(js(&s.card(FILLER).zone)["z"], "graveyard");
                 assert_eq!(s.state().players.p1.hand.iter().map(|card| card.def_id.as_str()).collect::<Vec<_>>(), vec![MENACE]);
                 assert_eq!(s.state().players.p1.library.len(), 1);
@@ -238,7 +230,6 @@ mod tests {
                 assert!(!applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Degrade).contains(&TuneRow::Number));
                 step_param(s.card_mut(FAVOR), "multiplier", 1);
                 s.play(FAVOR, json!({}));
-                // As many as the opponent's three, as the text says: the Filler and two draws.
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
                 assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 2);
             }

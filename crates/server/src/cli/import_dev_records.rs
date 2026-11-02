@@ -1,31 +1,25 @@
 //! Admin script: loads an AI development run's game records into `public.game_records` (SPEC §9.11,
-//! R378; ← `apps/server/src/db/import-dev-records.ts`), so `stats-cards --source=dev
-//! --patch=<version>` reads the pre-release run, to compare with the same patch's live games, which
-//! `stats-cards --patch=<version>` reads.
+//! R378), so `stats-cards --source=dev --patch=<version>` reads the pre-release run, to compare with
+//! the same patch's live games, which `stats-cards --patch=<version>` reads.
 //!
 //! ```text
 //! jackioh-server stats-import <records.jsonl>
 //! ```
 //!
-//! The file is what `cargo jackioh stats` writes: one GameRecord per line, at a path read from the
-//! directory the command was started in, as `--out`'s is. Every line is read and checked before
-//! anything is written, and a file holding a record that is not a development record, one whose
-//! id does not begin `dev:`, or a forced-run record, is refused whole (R1284000 refuses the forced
-//! file): a live record is the server's alone to write, at the
-//! end of a match, so nothing typed into a file can ever count as live play or stand in a live
-//! game's place. A record already in the table (the same run imported twice) is skipped, never
-//! doubled.
+//! The file is what `cargo jackioh stats` writes: one GameRecord per line. Every line is read and
+//! checked before anything is written, and a file holding a record that is not a development record,
+//! one whose id does not begin `dev:`, or a forced-run record, is refused whole (R1284000 refuses the
+//! forced file): a live record is the server's alone to write. A record already in the table is
+//! skipped, never doubled.
 //!
 //! ```text
 //! jackioh-server stats-import --totals-only <records.jsonl>
 //! ```
 //!
 //! R1976000: the same checks, then the file's records are folded into the totals and no row of
-//! `game_records` is written for them, so the database keeps their counts and nothing per game:
-//! the file is the run's copy of every game. The file itself is the one row kept, the SHA-256 of
-//! its contents in `game_record_batches`, so the same file imported twice is folded once. A record
-//! whose id `game_records` holds (imported a record at a time) is left out, and so is a repeat of an
-//! id the file named before. The learn lane's import and the gather workflow import this way.
+//! `game_records` is written for them. The one row kept is the file's SHA-256 in `game_record_batches`,
+//! so the same file imported twice is folded once. A record whose id `game_records` holds, or a repeat
+//! of an id the file named before, is left out. The learn lane's import and the gather workflow use it.
 
 use std::path::{Component, Path, PathBuf};
 
@@ -67,8 +61,8 @@ pub struct TotalsOutcome {
     pub again: bool,
 }
 
-/// Node's `path.resolve(base, path)`: `path` itself when it is absolute, else `base` joined with
-/// it (and `base` itself made absolute against `cwd` first), with `.` and `..` folded away.
+/// `path` itself when it is absolute, else `base` joined with it (and `base` itself made absolute
+/// against `cwd` first), with `.` and `..` folded away.
 fn resolve(cwd: &str, base: &str, path: &str) -> PathBuf {
     let mut joined = PathBuf::from(cwd);
     joined.push(base);
@@ -87,17 +81,13 @@ fn resolve(cwd: &str, base: &str, path: &str) -> PathBuf {
 }
 
 /// The file a path names, read from the directory the command was started in, as `cargo jackioh
-/// stats --out` writes it. Under pnpm the TS script ran in apps/server and was passed the caller's
-/// directory as INIT_CWD; that variable is still honored when set, and otherwise the binary's own
-/// working directory is the caller's.
+/// stats --out` writes it. INIT_CWD, the caller's directory under pnpm, is honored when set, and
+/// otherwise the binary's own working directory is the caller's.
 pub fn run_file_path(path: &str, env: &IndexMap<String, String>, cwd: &str) -> PathBuf {
     let base = env.get("INIT_CWD").map(String::as_str).unwrap_or(cwd);
     resolve(cwd, base, path)
 }
 
-/// R378, R1284000: the file's records, each read and checked before anything is written: every
-/// one a development record, under a development id, and none a forced run's, or the file is
-/// refused whole.
 fn dev_records(contents: &str) -> anyhow::Result<Vec<GameRecord>> {
     // R1371000: a file written before the version retcon names its versions the old way.
     let records =
@@ -142,7 +132,6 @@ pub fn batch_of(contents: &str) -> String {
         .collect()
 }
 
-/// R378: every record a development record, or nothing is written.
 pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<ImportOutcome> {
     let records = dev_records(contents)?;
 
@@ -163,7 +152,6 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
     })
 }
 
-/// R1976000: the file folded into the totals in one transaction, with no row per record, once.
 pub async fn import_dev_records_totals_only(db: &Db, contents: &str) -> anyhow::Result<TotalsOutcome> {
     let records = dev_records(contents)?;
     let batch = batch_of(contents);
@@ -188,7 +176,6 @@ pub async fn import_dev_records_totals_only(db: &Db, contents: &str) -> anyhow::
     })
 }
 
-/// TS `main()`: `stats-import`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let totals_only = args.iter().any(|arg| arg == TOTALS_ONLY_FLAG);
     let mut paths = args.into_iter().filter(|arg| arg != TOTALS_ONLY_FLAG);
@@ -206,7 +193,6 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let contents = tokio::fs::read_to_string(&file)
         .await
         .map_err(|error| anyhow!("{}: {error}", Path::new(&file).display()))?;
-    // One connection: this process runs its inserts one after another and exits.
     let db = connect_one(&connection_string).await?;
     if totals_only {
         let outcome = import_dev_records_totals_only(&db, &contents).await;

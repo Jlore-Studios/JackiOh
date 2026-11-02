@@ -1,6 +1,4 @@
-// #936 B64's ping places and S6's socket frames, as pure functions: a board's elements read back as
-// spots, a spot as S6's `PingTarget` in the duel that board shows (and back again), the shape check a
-// relayed ping passes, and where the co-op socket lives. No engine and no socket.
+// #936 B64's ping places and S6's socket frames, as pure functions: no engine and no socket.
 
 import { describe, expect, it } from "vitest";
 

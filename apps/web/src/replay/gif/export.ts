@@ -1,8 +1,7 @@
 // Exporting a clip as a GIF (#513, R513000, decisions D5 and D6): the clip's frame plan, drawn and
-// encoded in a worker (or on the main thread where a worker cannot draw), tried at a smaller size
-// and then a slower frame rate when it comes out over the byte cap, and refused when nothing fits.
-// `ShareGif.tsx` loads this file with `import()`, so neither it, the raster nor the encoder is in the
-// main bundle. Nothing here is uploaded: the result is a `File` in memory.
+// encoded in a worker (or on the main thread where a worker cannot draw), tried smaller and then slower
+// when it comes out over the byte cap, and refused when nothing fits. `ShareGif.tsx` loads this file
+// with `import()`, so neither it, the raster nor the encoder is in the main bundle. Nothing is uploaded.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
@@ -43,10 +42,7 @@ function pixels(preset: ReplayGifPreset): number {
   return REPLAY_GIF_SIZES[preset].width * REPLAY_GIF_SIZES[preset].height;
 }
 
-/**
- * The tries, in order: the picked size at the normal rate, then every smaller size (the larger of
- * them first) at the normal rate, then the smallest at the slower rate.
- */
+/** The tries: the picked size, then each smaller one (larger first), then the smallest at the slower rate. */
 export function attemptsFor(preset: ReplayGifPreset): GifAttempt[] {
   const smaller = PRESETS.filter((other) => pixels(other) < pixels(preset)).sort((a, b) => pixels(b) - pixels(a));
   const smallest = smaller.at(-1) ?? preset;
@@ -59,9 +55,8 @@ function artFor(defId: string, tags: Parameters<typeof themeFor>[0], type: Param
 }
 
 /**
- * What the raster needs to draw `plan`: each card a frame names with its name, type, rarity and
- * procedural art, read from the catalog and the match's own definitions of the step it is drawn
- * from (R243), and each portrait's art. A card the lookup does not know is drawn as a blank face.
+ * What the raster needs to draw `plan`: each card's face, read from the catalog and the match's own
+ * definitions of its step (R243), and each portrait's art. A card the lookup lacks is a blank face.
  */
 export function assetsFor(plan: GifPlan, clip: readonly ReplayStep[], lookup: CardLookup | null): GifAssets {
   const faces: Record<string, GifFace> = {};
@@ -154,9 +149,8 @@ async function viaThread(plan: GifPlan, assets: GifAssets, options: RenderOption
 }
 
 /**
- * The GIF's bytes, or null when they pass `options.maxBytes`. In a worker where there is one that
- * can draw (`via` "worker" insists on it and throws where there is none), else on the main thread
- * (`via` "thread"). A canceled signal rejects with an `AbortError`.
+ * The GIF's bytes, or null when they pass `options.maxBytes`. In a worker that can draw (`via` "worker"
+ * insists on it), else on the main thread. A canceled signal rejects with an `AbortError`.
  */
 export async function renderGif(
   plan: GifPlan,

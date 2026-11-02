@@ -1,12 +1,10 @@
-// R2208000, R2560000: the AI's clock in a practice game that earns. The server no longer re-runs a
-// claim's AI moves, so a game on a server seed (`earning: true`) decides under PRACTICE_AI_CLOCK_MS
-// like a free game, a lesson and a sandbox game, and a cut decision marks nothing: not the game's
-// save, not the claim's answer.
+// R2208000, R2560000: the AI's clock in a practice game that earns. The server does not re-run a
+// claim's AI moves, so a game on a server seed (`earning: true`) decides under PRACTICE_AI_CLOCK_MS like
+// any other, and a cut decision marks nothing: not the game's save, not the claim's answer.
 //
 // `@jackioh/ai` is mocked with a `decide` that is the real search until a test says its next decisions
-// were cut short by the clock (`stoppedBy: "clock"`), and that records the deadlines it was asked with.
-// The real search runs without its deadline: the fake clock is not `Date.now()`, which the engine's
-// deadline reads.
+// were cut short by the clock (`stoppedBy: "clock"`). The real search runs without its deadline: the
+// fake clock is not `Date.now()`, which the engine's deadline reads.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

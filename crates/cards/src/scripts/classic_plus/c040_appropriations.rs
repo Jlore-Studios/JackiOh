@@ -6,9 +6,6 @@
 //!   Culture:    each card on your field, in your hand and in your deck has a 7X% chance to become Radiant.
 //!   Healthcare: your Units on the field, in your hand and in your deck get +(2X−1) Health and Armor X.
 //!   Radiant:    +(4X−2) Attack; 4X Books; 17X%; +5X Health and Armor 2X.
-//!   Patch v0.3.12 (#1149) lowered Culture's 10X% to 8X% and the Radiant's +5X Attack, 25X% and +7X
-//!   Health; `script_v0_3_7b` keeps the numbers before it. #1704 lowered each option again, from +2X
-//!   Attack, 2X Books, 8X% and +2X Health (Radiant +4X, 5X, 20X% and +6X); `script_v0_4_0f` keeps those.
 //!
 //! Military and Healthcare are E38's buffs and grants over your field (tops of piles), hand and deck,
 //! carried onto the field as a card enters, silent where a card is hidden (R440). Education's Books are
@@ -124,8 +121,7 @@ pub fn script_v0_3_7b() -> CardScripts {
 }
 
 // C+ #40 Appropriations — SPEC §8.7 row 40, E38, E39, R60, R80, R81, R97, R177, R311, R348, R380,
-// R440, R581, BUILD M9 row C+ 40. Education's verb is proved in packages/engine/test/shuffle-random.test.ts
-// (a Book it made is cast as it is drawn, R58), the grants and buffs in the engine's E38 tests.
+// R440, R581, BUILD M9 row C+ 40.
 #[cfg(test)]
 mod tests {
     use crate::events_json;
@@ -217,8 +213,6 @@ mod tests {
         s.expect_refused_with(|s| s.play(APPROPRIATIONS, json!({ "x": 0, "modes": ["Military"] })), "X");
     }
 
-    /// R767000: a game on v0.3.7 folds under the kept script, whose Radiant Military gave +5X Attack
-    /// and Healthcare +7X Health
     #[test]
     fn r767000_a_game_on_v0_3_7_folds_under_the_kept_script_radiant_5x_attack_and_7x_health() {
         crate::register_all();
@@ -235,8 +229,6 @@ mod tests {
         });
     }
 
-    /// R767000: a game on v0.4.0f folds under the kept script, +2X Attack [+4X], 2X Books [5X] and +2X
-    /// Health [+6X]
     #[test]
     fn r767000_the_kept_v0_4_0f_script_gives_2x_attack_5x_radiant_books_and_6x_radiant_health() {
         crate::under_kept(APPROPRIATIONS, super::script_v0_4_0f(), || {

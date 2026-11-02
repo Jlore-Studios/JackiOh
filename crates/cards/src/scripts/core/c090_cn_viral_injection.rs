@@ -4,21 +4,13 @@
 //! Engine cell: "The opponent owns the token, so its cast-on-draw chain runs on their draws; a full
 //! library refuses the shuffle (R80)."
 //!
-//! §8's Conventions: the radiant cell restates only WHAT is shuffled, so the count (one), the
-//! destination (the opponent's library) and everything else are kept.
+//! §8's Conventions: the radiant cell restates only WHAT is shuffled, so everything else is kept.
 //!
 //! OWNERSHIP IS THE WHOLE POINT. `shuffleInto` with `player: "enemy"` makes the opponent the OWNER of
-//! the virus, not merely its controller, and off the field ownership decides everything (R12): the
-//! card sits in their library, feeds their draws, and its cast-on-draw chain runs on their turn and
-//! damages their hero. A steal-style control change would do none of that, hence `player`, not a target.
-//!
-//! The shuffle lands at a uniformly random position, drawn from the match rng so a replay reproduces it
-//! (§9.2). R80: a library holds at most `LIBRARY_CAP` cards and a card shuffled into a full one "is not
-//! created", so a full library refuses the shuffle and this spell fizzles but still counts as played.
-//!
-//! THE RADIANT FLAG TRAVELS, NOTHING ELSE DOES. `shuffleInto`'s `radiant` sets the flag on the fresh
-//! instance (R57), and the flag decides which face runs on the draw (§5.2): a Radiant CN-Virus casts
-//! its radiant text and shuffles 3 copies instead of 2, with the flag copied onto them.
+//! the virus, and off the field ownership decides everything (R12): it feeds their draws and damages
+//! their hero. A steal-style control change would do none of that, hence `player`, not a target. The
+//! position is drawn from the match rng so a replay reproduces it (§9.2). The radiant flag travels
+//! (R57) and decides which face runs on the draw (§5.2).
 
 use jackioh_engine::prelude::*;
 
@@ -52,12 +44,9 @@ pub fn script() -> CardScripts {
 // #90 CN-Viral Injection and #90.1 CN-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
 // R11, R12, R57, R58, R63, R70, R80, R316, R350).
 //
-// Both are tested here because #90 hands #90.1 to the OTHER player: ownership (R12) makes the token's
-// cast-on-draw chain run on the opponent's draws. R11: #90.1 is a SPELL token, so it reaches the
-// graveyard after resolving and is never `gone` (R86). R275 scales the radiant face's damage too. The
-// virus's script is reached from hand (its `cry` alone) and by a draw (`staticFlags.castOnDraw`, where
-// R58's chain cap lives). R350 holds a cast's copies to the end of the turn, so a chain casts only the
-// viruses the library already held: 21 in a library cost exactly 20 health and leave the 21st uncast.
+// Both are tested here because #90 hands #90.1 to the OTHER player (R12). R275 scales the radiant
+// face's damage too. The virus's script is reached from hand (its `cry` alone) and by a draw
+// (`staticFlags.castOnDraw`, where R58's chain cap lives).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,7 +132,6 @@ mod tests {
 
             assert_eq!(library_of(&s, P2).len(), 5);
             assert!(def_ids(&library_of(&s, P2)).contains(&VIRUS.to_string()));
-            // Nothing was added to the caster's own library.
             assert_eq!(library_of(&s, P1).len(), 3);
             assert!(!def_ids(&library_of(&s, P1)).contains(&VIRUS.to_string()));
             s.expect_events(json!(["cardPlayed", "shuffledIn"]));
@@ -223,7 +211,6 @@ mod tests {
             // A uniformly random spot in a pile of 4 is one of the 5 gaps 0..4 (`shuffleIntoLibrary`).
             assert!(first[0].position >= 0);
             assert!(first[0].position <= 4);
-            // Same seed, same steps, same position — which is what makes replay and fuzz meaningful.
             assert_eq!(second, first);
         }
 
@@ -265,7 +252,6 @@ mod tests {
 
             let virus = library_of(&s, P2).into_iter().find(|card| card.def_id == VIRUS);
             assert_eq!(virus.as_ref().map(|card| card.radiant), Some(true));
-            // Still ONE virus, still the opponent's library, still their card.
             assert_eq!(shuffled_in(&s, None).len(), 1);
             assert_eq!(virus.map(|card| card.owner), Some(P2));
             assert_eq!(library_of(&s, P2).len(), 5);
@@ -290,7 +276,6 @@ mod tests {
 
             s.end_turn();
 
-            // R350, R57: three copies at the end of the turn, all Radiant.
             let copies: Vec<Shuffled> =
                 shuffled_in(&s, Some(P1)).into_iter().filter(|event| event.def_id == VIRUS).collect();
             assert_eq!(copies.len(), 3);
@@ -315,10 +300,8 @@ mod tests {
 
             s.play(INJECTION, json!({}));
 
-            // The play was public and its text names the card, so p2 knows what went in; never where.
-            // Both cost 1, so the list goes by name (R310): CN-Virus before Stockpile. The virus is
-            // effect-made, so R943 marks it Created; the dealt Stockpiles carry no mark. Re-pinned for
-            // v0.3.5: the Meditative set ships, so R943's Created mark is live.
+            // The play was public and its text names the card, so p2 knows what went in; never where. Both
+            // cost 1, so the list goes by name (R310). The virus is effect-made, so R943 marks it Created.
             assert_eq!(
                 js(&s.view(Some(P2)).you.own_library),
                 json!({
@@ -348,8 +331,7 @@ mod tests {
             let list = s.view(Some(P1)).you.own_library;
             assert_eq!(list.as_ref().map(|list| list.unknown), Some(0));
             let cards: Vec<Value> = list.map(|list| list.cards.iter().map(js).collect()).unwrap_or_default();
-            // R943: the copies are effect-made, so Created (re-pinned for v0.3.5: the Meditative set
-            // ships, so R943's Created mark is live).
+            // R943: the copies are effect-made, so Created.
             assert!(cards.contains(&json!({ "defId": VIRUS, "radiant": false, "count": 2, "created": true })));
             assert!(cards.contains(&json!({ "defId": "core-005", "radiant": false, "count": 3 })));
         }
@@ -503,8 +485,7 @@ mod tests {
         #[test]
         fn s4_4_step_2_its_pierce_goes_through_armor_2_the_1_damage_lands_and_the_copies_still_land() {
             crate::register_all();
-            // Pierce (patch v0.3.10) skips §4.4 step 2's Armor, so Going Long (#84) no longer reduces it;
-            // the two clauses stay independent.
+            // Pierce skips §4.4 step 2's Armor (#84 Going Long's), and the two clauses stay independent.
             let mut s = scenario(json!({
                 "seed": "core-090-1-armor",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3), "armor": 2 },
@@ -531,7 +512,6 @@ mod tests {
             }));
 
             s.play(VIRUS, json!({}));
-            // The damage clause is unaffected by the library being full.
             s.expect_health(P1, 29);
 
             s.end_turn();
@@ -667,7 +647,6 @@ mod tests {
 
             s.start_turn();
 
-            // Through v0.5.2 each cast of the chain counted (R70).
             assert_eq!(s.state().players[P1].turn_log.cards_played, 0);
             assert!(s.state().players[P1].turn_log.played_ids.is_empty());
             // A cast is free (R70): the mana the start of turn refreshed is untouched.
@@ -749,7 +728,6 @@ mod tests {
 
             s.play(VIRUS, json!({})).end_turn();
 
-            // Three Radiant copies went in; p2's turn is running.
             assert_eq!(library_of(&s, P1).len(), 3);
             assert!(library_of(&s, P1).iter().all(|card| card.radiant));
 
@@ -795,7 +773,6 @@ mod tests {
             crate::register_all();
             assert!(!query_ids(json!({})).contains(&VIRUS.to_string()));
             assert!(!query_ids(json!({ "type": "Spell", "cost": 1 })).contains(&VIRUS.to_string()));
-            // Reachable only by a query that asks for tokens or names it.
             assert!(query_ids(json!({ "tags": ["Token"] })).contains(&VIRUS.to_string()));
             assert_eq!(query_ids(json!({ "defId": VIRUS })), vec![VIRUS.to_string()]);
         }

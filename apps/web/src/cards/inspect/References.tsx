@@ -1,10 +1,7 @@
-// The cards a face's text names, in a column beside it in the hover preview (SPEC §10.10, R279).
-//
-// The hover preview takes no pointer events and is hidden from assistive tech (B22), so a reference
-// inside its face cannot be hovered or focused: the names are marked there, and this column shows
-// each card they name, as a small printed face, so resting on any card on the board or in the
-// collection shows what it refers to. A name the text calls Radiant shows the Radiant face.
-// Presentation only: printed catalog faces (§5.1).
+// The cards a face's text names, in a column beside it in the hover preview (SPEC §10.10, R279). The
+// preview takes no pointer events (B22), so a reference in its face cannot be hovered: this column
+// shows each named card as a small printed face (Radiant when the text says so). Presentation only:
+// printed catalog faces (§5.1).
 
 import type { ReactElement } from "react";
 

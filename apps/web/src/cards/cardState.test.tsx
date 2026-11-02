@@ -1,14 +1,9 @@
-// Patch v0.2.0's per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8):
-// a Brittle count (R385), what a Nerf and a Buff changed (R386, R513, R1320), the enchantments riding a
-// card (B5 E39), a backrow pile's depth (E21), an Animated card's stats and its standing as a Unit
-// (R383), a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693); and
-// a Lucky given to a hand card, summed with the Lucky it prints (R1438).
-//
-// Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types of
-// crates/engine/src/wire/view.rs), rendered on the board — a hand card (the tall face), a unit (the
-// minion), a face-up backrow card (the compact face), a face-down one (a back) — and in the inspect
-// overlays a hover and the I key open. Each state is checked on each surface, and its absence
-// draws nothing.
+// The per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8): a Brittle count (R385),
+// what a Nerf and a Buff changed (R386, R513, R1320), the enchantments riding a card (B5 E39), a backrow pile's depth
+// (E21), an Animated card's stats and standing as a Unit (R383), a face's own type (B2.7), a card's lines of code
+// (E36), which a match hides (R693), and a Lucky given to a hand card (R1438). Every view is a fixture shaped as
+// `viewFor` builds it (src/test/fixtures.ts), rendered on the board and in the inspect overlays; each state is
+// checked on each surface, and its absence draws nothing.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -73,8 +68,7 @@ import {
   tuningSummary,
 } from "./tuning.ts";
 
-// R1017001: the hero portraits' cards print full art and none of their words; these tests read the
-// rules box, so full art is off here (fullArt.test.tsx covers it).
+// R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
 beforeEach(() => {
   writeCardSettings({ fullArt: false });
 });
@@ -90,7 +84,7 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-/* -------------------------------------------------------------------------------------- helpers */
+/* helpers */
 
 const lookup = lookupFromDefs(CATALOG);
 
@@ -132,7 +126,7 @@ function inPlay(id: string, over: Partial<Parameters<typeof faceModel>[0]["inPla
   return faceModel({ defId: id, def: def(id), radiant, inPlay: { ...over } });
 }
 
-/* ------------------------------------------------------------------------------- R385 Brittle */
+/* R385 Brittle */
 
 describe("R385 Brittle: a cracked-glass badge with the count, on every face that shows one", () => {
   it("R385 the words: \"Brittle 2: crumbles at 0\"", () => {
@@ -197,7 +191,7 @@ describe("R385 Brittle: a cracked-glass badge with the count, on every face that
   });
 });
 
-/* ------------------------------------------------------------------------ R386 Nerf / Buff */
+/* R386 Nerf / Buff */
 
 describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", () => {
   const BOOK = "classic-012"; // Book of Blood: "Deal {damage} damage to a Unit.", damage 4, better up.
@@ -391,7 +385,7 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
   });
 });
 
-/* ------------------------------------------------------------------------- E39 enchantments */
+/* E39 enchantments */
 
 describe("E39 enchantments: a glyph and words on every face that shows the card", () => {
   it("E39 R432 the words: \"Returns to hand · can't cost less than (2)\", \"Cast on draw\", \"Targets enemies\"", () => {
@@ -451,7 +445,7 @@ describe("E39 enchantments: a glyph and words on every face that shows the card"
   });
 });
 
-/* ------------------------------------------------------------------------- E21 backrow piles */
+/* E21 backrow piles */
 
 describe("E21 a backrow pile shows its depth, as a unit pile does", () => {
   it("E21 a face-up top with cards under it, and a face-down one, each show the count in their zone", () => {
@@ -517,7 +511,7 @@ describe("E21 the pile badge's stylesheets", () => {
   });
 });
 
-/* -------------------------------------------------------------------------------- R383 Animated */
+/* R383 Animated */
 
 describe("R383 Animated: its face prints the Unit it becomes, and a card standing as a Unit says so", () => {
   it("R383 an Animated Field Trap in hand and in the collection shows its attack and health; another Field Trap shows none", () => {
@@ -568,7 +562,7 @@ describe("R383 Animated: its face prints the Unit it becomes, and a card standin
   });
 });
 
-/* ----------------------------------------------------------------------------- B5 E35 Berserk */
+/* B5 E35 Berserk */
 
 describe("B5 E35 Berserk: a sword badge on the unit, in its glossary row's words", () => {
   it("E35 a Berserk unit wears the badge on the board and says why in its preview; a calm one wears none", () => {
@@ -591,7 +585,7 @@ describe("B5 E35 Berserk: a sword badge on the unit, in its glossary row's words
   });
 });
 
-/* ----------------------------------------------------------------------------- R1174000 Frozen */
+/* R1174000 Frozen */
 
 describe("R1174000 Frozen: a frost badge on a Frozen unit, on either seat", () => {
   it("R1174000 a Frozen unit wears the snowflake badge and says why in its preview; a thawed one wears none", () => {
@@ -620,7 +614,7 @@ describe("R1174000 Frozen: a frost badge on a Frozen unit, on either seat", () =
   });
 });
 
-/* ---------------------------------------------------------------------------- R1839000 Dormant */
+/* R1839000 Dormant */
 
 describe("R1839000 Dormant: a moon badge and its countdown on a Dormant card, on either seat, from the view alone", () => {
   it("R1839000 R1839001 a Dormant card wears the moon with the turns its countdown has left, or the moon alone; an awake one wears none", () => {
@@ -659,7 +653,7 @@ describe("R1839000 Dormant: a moon badge and its countdown on a Dormant card, on
   });
 });
 
-/* ----------------------------------------------------------------------------- #2437 Temporary */
+/* #2437 Temporary */
 
 describe("#2437 Temporary: an hourglass badge with the count left, on a hand card alone", () => {
   it("#2437 the words and the glyph", () => {
@@ -745,7 +739,7 @@ describe("#2437 Temporary: an hourglass badge with the count left, on a hand car
   });
 });
 
-/* ----------------------------------------------------------------------------- R1848000 Frozen forever */
+/* R1848000 Frozen forever */
 
 describe("R1848000 Frozen forever: the frost badge says it never thaws, on either seat", () => {
   it("R1848000 a unit Frozen forever wears the frost badge in its own words; one Frozen until it thaws keeps the old ones", () => {
@@ -770,7 +764,7 @@ describe("R1848000 Frozen forever: the frost badge says it never thaws, on eithe
   });
 });
 
-/* -------------------------------------------------------------------------- R1852000 Starship */
+/* R1852000 Starship */
 
 describe("R1852000 the Starship: a comet badge with its pieces on a Dormant Starship, and its launched name, from the view alone", () => {
   it("R1852000 R1852005 a Dormant Starship wears the comet with its piece count on either seat, and a launched one prints the name it took", () => {
@@ -838,7 +832,7 @@ describe("MD-B6 R943 R2647000: a Created card says so in its hover preview, not 
   });
 });
 
-/* ----------------------------------------------------------------------------- B2.7 face type */
+/* B2.7 face type */
 
 describe("B2.7 a card the view gives a type of its own draws as that type", () => {
   it("B2.7 Blood Moon's Radiant face is a Field Trap: in hand by the view's type, in the collection by its face's", () => {
@@ -860,7 +854,7 @@ describe("B2.7 a card the view gives a type of its own draws as that type", () =
   });
 });
 
-/* ------------------------------------------------------------------------ R1438 a given Lucky */
+/* R1438 a given Lucky */
 
 describe("R1438 a Lucky given to a card in hand rides on its face", () => {
   const BOOK = "classicplus-053"; // Book of Tokens: its base face prints no keyword, its Radiant face Lucky 1.
@@ -886,7 +880,7 @@ describe("R1438 a Lucky given to a card in hand rides on its face", () => {
   });
 });
 
-/* ------------------------------------------------------------------------- E36 lines of code */
+/* E36 lines of code */
 
 // R693 (#88): lines of code is a hidden stat in a match. The view still carries every count (§5) and
 // the face model reads it, which is what the collection's overlays print (inspect.test.tsx), but no
@@ -934,7 +928,7 @@ describe("E36 a card's lines of code in the inspect overlays", () => {
   });
 });
 
-/* --------------------------------------------------------------------- the glossary of states */
+/* the glossary of states */
 
 describe("R512 the glossary beside a face explains the states it wears", () => {
   it("R512 Brittle, Buff, Nerf, an added keyword, Cast on draw and Animated join the terms its text names", () => {

@@ -7,7 +7,7 @@
 //! face), each resolution its own run. Each run draws one enemy from the match rng (R60) among the
 //! enemy hero and the acting enemy Units still standing, a Unit the last hit killed never drawn
 //! again, and deals it one hit of the declared damage (§4.4: Spell Damage raises each hit). With no
-//! enemy Unit the hero takes every hit. (ST-S13-6 is decided by §6.2: no ruling.)
+//! enemy Unit the hero takes every hit.
 
 use jackioh_engine::prelude::*;
 
@@ -44,10 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #11.2 Arcane Missiles — SPEC §8.10 row S 11.2, BUILD M12 row S 11.2: "at (0) three hits of 1,
-// each on a random enemy (the hero or a Unit) drawn as it resolves; a Unit killed by one is not
-// drawn by the next; Spell Damage +1 makes each hit 2; damage reads through `param()`; radiant six
-// hits".
+// S #11.2 Arcane Missiles — SPEC §8.10 row S 11.2, BUILD M12 row S 11.2.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -62,7 +59,6 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2.
     const FILLER: &str = "core-005";
 
-    /// Every `damage` event's target, in order.
     fn hits(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -76,7 +72,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// p1 holds the Missiles (radiant or not) and a Vanilla; p2 holds a filler and its board.
         fn board(radiant: bool, seed: &str, field: Value) -> Scenario {
             crate::register_all();
             scenario(json!({
@@ -116,7 +111,6 @@ mod tests {
                     }
                 }
             }
-            // Both halves of the pool come up across the seeds: the hero and the Units alike.
             assert!(heroes > 0 && units > 0, "heroes {heroes}, units {units}");
         }
 
@@ -132,7 +126,6 @@ mod tests {
                 s.play(MISSILES, json!({}));
 
                 let on_weak = hits(&s).into_iter().filter(|target| target == &weak).count();
-                // One hit kills it (1 Health left); a dead Unit is never drawn again.
                 assert!(on_weak <= 1, "seed missiles-kill-{seed}");
             }
         }

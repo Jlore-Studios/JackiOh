@@ -11,8 +11,7 @@
 //! Dormant card is no Unit (R1839000) (R1843000). Activate (R384, once a turn): a Discover of three
 //! different combat keywords drawn from R21's pool (R781005), offered as a `mode` prompt, the pick
 //! granted to each of its controller's Units as the answer resolves (`grant_keyword`); with no Unit,
-//! nothing is asked. Radiant: `grant_random_keywords` of `keywords` on each Unit, each drawing its own
-//! (R21). Tunes: keywords 3 ↑, on the Radiant face only.
+//! nothing is asked.
 
 use jackioh_engine::prelude::*;
 
@@ -109,10 +108,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #18.1 MELCHIOR — SPEC §8.10 row S 18.1, BUILD M12 row S 18.1: "Start of turn: votes (R1843000) only
-// while the opponent has more Units than you; Activate: a Discover of three different combat keywords,
-// the pick given to each of your Units; Indestructible; radiant: each Unit gains its own 3 random combat
-// keywords" (R1866001).
+// S #18.1 MELCHIOR — SPEC §8.10 row S 18.1, BUILD M12 row S 18.1 (R1843000, R1866001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -128,7 +124,6 @@ mod tests {
     const HONEYPOT: &str = "core-060"; // A Trap to set beside it.
     const GUY_ATT: &str = "classicplus-005"; // Cry: Destroy every backrow card you control.
 
-    /// MELCHIOR (Radiant on `radiant`) in p1's backrow over these two fields, on p1's turn.
     fn table(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
             "p1": {
@@ -141,7 +136,6 @@ mod tests {
         }))
     }
 
-    /// How many votes MELCHIOR cast in the last step.
     fn votes(s: &Scenario) -> usize {
         s.last_events()
             .iter()
@@ -149,7 +143,6 @@ mod tests {
             .count()
     }
 
-    /// The votes at p1's start of turn, MELCHIOR in p1's backrow over these two fields.
     fn votes_at_start(mine: Value, theirs: Value) -> usize {
         let mut s = scenario(json!({
             "active": "p2",
@@ -165,17 +158,14 @@ mod tests {
         s.card(MELCHIOR).id.clone()
     }
 
-    /// The keywords this card shows now, by key.
     fn keywords(s: &Scenario, id: &str) -> Vec<String> {
         s.stats(id).keywords.iter().map(keyword_key).collect()
     }
 
-    /// The ids of the Units on `player`'s field.
     fn units(s: &Scenario, player: PlayerId) -> Vec<String> {
         active_units_of(s.state(), player).iter().map(|unit| unit.id.clone()).collect()
     }
 
-    /// The options of the open prompt, which must be a `mode` one for p1.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.as_ref().expect("MELCHIOR's Discover");
         assert_eq!(pending.kind, PromptKind::Mode);
@@ -260,7 +250,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// p1's two Units' keyword sets after one Radiant Activate on this seed.
         fn gained(seed: &str) -> Vec<Vec<String>> {
             let mut s = scenario(json!({
                 "seed": seed,

@@ -1,14 +1,7 @@
 // 37 — rematch offers after a finished match, between the browser and cy.task("wsPlayer") (#728; §9.5, R672).
-//
-// Key assertion (issue #728): "Each flow above has a case that fails if the rendezvous, stakes check,
-// presence gate, or ranked flag regresses". The flows: a room match refuses its double-or-nothing, makes
-// nothing of one seat's offer and one unranked rematch of both seats' equal offers; a ranked match makes
-// nothing of mismatched stakes and a ranked double-or-nothing of matched ones; the buttons show only while
-// the opponent's match socket is open; a Conquest game offers no rematch and continues the series instead.
-//
-// Daily only: the super run plays every spec file, while a pull request's `e2e smoke` plays only SMOKE in
-// scripts/shard-specs.mjs, which does not hold 37. No wait depends on REMATCH_OFFER_TTL_MS: every wait is a
-// retried DOM assertion, and server state is read after the UI has changed.
+// Daily only: a pull request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 37.
+// No wait depends on REMATCH_OFFER_TTL_MS: every wait is a retried DOM assertion, and server state is read
+// after the UI has changed.
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
@@ -43,9 +36,6 @@ import {
   type QueueMode,
 } from "../../support/testids.ts";
 
-// Constants
-
-/** Seconds to milliseconds. */
 const MS_PER_SECOND = 1000;
 
 /** Pairing waits out the rating window's widening to MAX_FAIR_GAP (R640001), a sweep, a poll and a render. */
@@ -57,15 +47,14 @@ const PAIRING_TIMEOUT_MS =
 /** The buttons re-read the offers every poll, so a change lands within a poll plus a render. */
 const POLL_TIMEOUT_MS = SERIES_POLL_SECONDS * MS_PER_SECOND + timeouts.view;
 
-/** A plain rematch's stakes, mirroring STAKE_NORMAL in crates/server/src/api/rematch.rs. */
+/** Mirrors STAKE_NORMAL in crates/server/src/api/rematch.rs. */
 const STAKE_NORMAL = 1;
-/** Double-or-nothing's stakes, mirroring STAKE_DOUBLE in crates/server/src/api/rematch.rs. */
+/** Mirrors STAKE_DOUBLE in crates/server/src/api/rematch.rs. */
 const STAKE_DOUBLE = 2;
 
 /** The Node second-player client, as in spec 06. */
 const SEAT_TWO = "seat-two";
 
-/** A match page, capturing its id. */
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 
 /** installLoadout's default deck index. */
@@ -95,7 +84,7 @@ type JoinBody = {
 
 type MeBody = { currentMatchId: string | null; currentSeriesId?: string | null };
 
-/** Both offers, the opponent's presence, the created game and its mode, as rematch.rs answers them. */
+/** As rematch.rs answers it. */
 type RematchStatusBody = {
   youOffered: number | null;
   opponentOffer: number | null;
@@ -106,7 +95,7 @@ type RematchStatusBody = {
 
 type RematchOfferBody = { matchId: string | null };
 
-/** Whether the match is ranked, as ranked.rs answers it. */
+/** As ranked.rs answers it. */
 type RanksBody = { ranked: boolean };
 
 type SeriesView = { status: "picking" | "playing" | "over"; currentMatchId: string | null };
@@ -141,7 +130,6 @@ function offerAs(account: E2EAccount, matchId: string, stakes: number): Cypress.
     .its("body");
 }
 
-/** Read `account`'s rematch status for `matchId`. */
 function statusAs(account: E2EAccount, matchId: string): Cypress.Chainable<RematchStatusBody> {
   return cy
     .request<RematchStatusBody>({
@@ -168,7 +156,6 @@ function refused(
   });
 }
 
-/** Whether `matchId` is ranked. */
 function ranksOf(account: E2EAccount, matchId: string): Cypress.Chainable<RanksBody> {
   return cy
     .request<RanksBody>({ method: "GET", url: apiUrl(`/api/matches/${matchId}/ranks`), headers: bearerHeaders(account.token) })
@@ -198,10 +185,7 @@ function movedOn(from: string, timeout: number): Cypress.Chainable<string> {
     .then((pathname) => MATCH_PATH.exec(pathname)?.[1] ?? "");
 }
 
-/**
- * A finished Best-of-1 room match: seat one hosts, seat two joins, the browser plays seat one while
- * the Node client plays seat two, and seat two concedes. Yields the finished match's id.
- */
+/** A finished Best-of-1 room match: the browser plays seat one, the Node client seat two, which concedes. */
 function finishedRoomMatch(seed: string, seatOneDeck: string, seatTwoDeck: string): Cypress.Chainable<string> {
   const seatOne = accounts.p1();
   const seatTwo = accounts.p2();
@@ -237,8 +221,6 @@ function finishedRoomMatch(seed: string, seatOneDeck: string, seatTwoDeck: strin
   cy.expectResult("Win");
   return cy.then(() => matchId);
 }
-
-// ---------------------------------------------------------------------------------------------
 
 describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
   beforeEach(() => {

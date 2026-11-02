@@ -93,10 +93,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #56 Cannon v4 — SPEC §8.10 row 56, BUILD M12 row S 56: its Activate deals 7 to a chosen
-// enemy Unit; the enemy hero is never offered as its target, and aiming at it is refused; once a turn,
-// a second use refused; equipped onto a Unit, the host takes the Activate; damage reads through
-// `param()`; radiant 0/12, 14 damage.
+// Stinkyscape #56 Cannon v4 — SPEC §8.10 row 56, BUILD M12 row S 56.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,11 +106,9 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 7;
     const RADIANT_DAMAGE: i32 = 14;
     const RADIANT_HEALTH: i32 = 12;
-    /// The Armor on the target: it has no Pierce, so the Armor takes its part.
     const ARMOR: i32 = 3;
 
     fn at(target: &str) -> Value {

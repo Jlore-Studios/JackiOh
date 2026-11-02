@@ -10,12 +10,12 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-012-7";
 
-/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+/// `forEachCard`'s `cards`, typed: instance ids.
 fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
     Arc::new(f)
 }
 
-/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+/// `forEachCard`'s `each`, typed.
 fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
     Arc::new(f)
 }
@@ -23,7 +23,6 @@ fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEac
 fn legion(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // R408's reading, the Spell's resolution (a Field Spell's Cry until patch v0.3.10, #831).
             // maxi-tail: the picks are drawn as it resolves; nothing in this list can pause between them.
             let library = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library);
             let shuffled = ctx.rng.shuffle(&library);
@@ -65,12 +64,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7: "Spell
-// (patch v0.3.10; a Field Spell whose unlabeled text was its Cry before, R408): exiles 5 different random cards of your deck (all if fewer,
-// R60), then summons the Units among them out of exile into your leftmost open zones, no Cry (R1),
-// until your board is full, the rest staying exiled; an empty deck does nothing and draws nothing
-// (R129); the exiles are public and the deck's order stays hidden (R97); the card count reads through
-// `param()`; radiant the summoned Units are made Radiant".
+// C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7 (R129, R97).
 #[cfg(test)]
 mod tests {
     use crate::def_ids;
@@ -196,7 +190,7 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(LEGION, json!({}));
             assert_eq!(s.state().rng_cursor, cursor);
-            // A Spell since patch v0.3.10: it goes to the graveyard, no backrow card.
+            // A Spell: it goes to the graveyard, no backrow card.
             assert!(s.backrow(P1, 1).is_none());
             s.expect_in_zone(LEGION, "graveyard");
         }

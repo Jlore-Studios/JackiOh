@@ -1,6 +1,5 @@
-// R502: a cast on draw is read off the order of the redacted events (castOnDraw.ts), and the
-// planner's memory keeps what it needs across entries: the last events, and the plays still resolving
-// (memory.ts).
+// R502: a cast on draw is read off the order of the redacted events (castOnDraw.ts), and the planner's
+// memory (memory.ts) keeps the last events and the plays still resolving across entries.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

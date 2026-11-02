@@ -14,7 +14,6 @@ const CATALOG_HERE: CatalogSnapshot = { version: "test", cards: CATALOG };
 const CARD = "core-002";
 const HANDLER = "oncontentvisibilityautostatechange";
 
-/** Fire the browser's skip report on `holder`. */
 function report(holder: Element, skipped: boolean): void {
   act(() => {
     holder.dispatchEvent(Object.assign(new Event("contentvisibilityautostatechange"), { skipped }));

@@ -32,12 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #67 Sentient Cat Ears — SPEC §8.8 row 67, BUILD M10 row M 67: "Played into an empty zone it is
-// a plain Unit; played as Equip onto your acting non-Immutable Unit it resolves on top (its Cry
-// included), then fuses into the host, which keeps its zone, damage and exertion and gains +1/+1,
-// Felinor and the end-of-turn line (R1086), the Cat Ears ceasing to exist with no Death; an enemy
-// or Immutable Unit is no host; at your end of turn only, one Love Bomb shuffled into your deck
-// (R80's cap); bombs reads through `param()`; radiant 2/2 and two Love Bombs".
+// M #67 Sentient Cat Ears — SPEC §8.8 row 67, BUILD M10 row M 67.
 #[cfg(test)]
 mod tests {
     use super::*;

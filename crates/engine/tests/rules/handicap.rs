@@ -5,10 +5,6 @@
 //!
 //! Fixtures: the vanilla catalog (`fx-1` up to twice `DECK_SIZE`), the Hinder and Going Long fixtures, and two
 //! cast-on-draw Spells of this file's own (`hc-`, from 2800) for R183's draw chain.
-//!
-//! `create_game` and `fold` panic, caught by `refusal`; `validate_handicap` answers `Result`. A value
-//! `Handicap`'s `i32`s cannot hold is built as JSON and counts as refused when it does not deserialize
-//! (`handicap_refused`).
 
 use jackioh_engine::testkit::*;
 
@@ -38,8 +34,6 @@ fn on_both(p1: Handicap, p2: Handicap) -> Handicaps {
         p2: Some(p2),
     }
 }
-
-// Fixtures: two cast-on-draw Spells for R183.
 
 fn spell(id: &str, index: &str) -> CardDef {
     json_as(json!({
@@ -345,14 +339,14 @@ fn refusal(run: impl FnOnce()) -> Option<String> {
     }
 }
 
-/// Why `createGame` refused these options, or `None` when it made a game.
+/// Why `create_game` refused these options, or `None` when it made a game.
 fn create_refusal(options: CreateGameOptions) -> Option<String> {
     refusal(move || {
         create_game(&options);
     })
 }
 
-/// `createGame` on options written as JSON: refused when the typed options cannot hold them (a
+/// `create_game` on options written as JSON: refused when the typed options cannot hold them (a
 /// fractional number), else as `create_refusal`.
 fn create_refusal_json(options: Value) -> Option<String> {
     match serde_json::from_value::<CreateGameOptions>(options) {
@@ -1248,7 +1242,6 @@ mod r183_extra_draws_per_turn {
         let hand_before = ids(&state.players.p2.hand);
 
         let paused = pass_turn(&state);
-        // The first draw cast the asker and stopped: nothing further was drawn.
         assert_eq!(
             paused.state.pending.as_ref().map(|p| p.player_id),
             Some(PlayerId::P2)
@@ -1283,7 +1276,6 @@ mod r183_extra_draws_per_turn {
             ),
         );
 
-        // The rest of the first draw's chain, then the second draw: both cards, once each.
         assert_eq!(
             drawn_by(&answered.events, PlayerId::P2),
             vec![first.id.clone(), second.id.clone()]

@@ -1,8 +1,6 @@
-// R506 through the director: the plays in progress a cue may answer, and a card cast as it is
-// drawn, followed through the stream the way the runner plays it; then the same against real engine
-// games, both seats, with `viewFor`'s own redaction (R97, R203): #21 Hinder cast on draw cracks its
-// victim's mana, and #27 Blood Ridden Glowy Jelly Bean's Radiant card bursts gold on the seat that
-// cannot read it too.
+// R506 through the director: the plays in progress a cue may answer, and a card cast as it is drawn;
+// then the same in real engine games, both seats, with `viewFor`'s own redaction (R97, R203): #21 Hinder
+// cast on draw cracks its victim's mana, and #27's Radiant card bursts gold on the seat that cannot read it.
 
 import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -16,9 +14,7 @@ import { newEventsSince, planEntries } from "../game/animations.ts";
 import { baseView, emptySide, withEvents } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Rig
- * --------------------------------------------------------------------------------------------- */
+/* Rig */
 
 type Sent = { id: SfxId; params: SfxParams | undefined; delayMs: number };
 type Recorder = SoundSink & { sfx: Sent[] };
@@ -84,9 +80,7 @@ const radiantInHand = (instanceId: string, defId: string, player: PlayerId = "p2
 const healthLost = (player: PlayerId, amount: number): GameEvent => ({ type: "healthLost", player, amount });
 const SPELL = "core-005";
 
-/* --------------------------------------------------------------------------------------------- *
- * The stream, synthetic
- * --------------------------------------------------------------------------------------------- */
+/* The stream, synthetic */
 
 describe("R506 the director follows the plays in progress", () => {
   it("R506 Hinder drawn and cast: the cast-on-draw sting, then the victim's rider cracks", () => {
@@ -206,9 +200,7 @@ describe("R506 the director follows the plays in progress", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Against real engine games and viewFor's redaction
- * --------------------------------------------------------------------------------------------- */
+/* Against real engine games and viewFor's redaction */
 
 type Seats = { p1: Recorder; p2: Recorder };
 /** `fresh`: each seat's new events, as its view redacts them. */
@@ -247,9 +239,8 @@ function castOnDrawOf(events: readonly GameEvent[], defId: string): boolean {
 }
 
 /**
- * A real game (p1 on cheap20; p2 on cheap20 with `defId` in place of a card) played until p1
- * ends a turn and p2's turn-start draw casts `defId` as it is drawn, with `also` holding too.
- * Deterministic: the same seeds in the same order, the first that produces it wins.
+ * A real game (cheap20 each, p2's with `defId` in place of a card) played until p2's turn-start draw
+ * casts `defId` as it is drawn, with `also` holding too. Deterministic: the first seed that does wins.
  */
 function castOnDrawGame(defId: string, also: (events: readonly GameEvent[]) => boolean = () => true): Heard | null {
   const cheap = devDeck("cheap20");

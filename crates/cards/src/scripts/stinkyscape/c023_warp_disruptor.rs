@@ -3,14 +3,8 @@
 //!   Base:    "Stack, Brittle 3 / Aura: Units can't be in Defense Position and have +{attack} Attack. /
 //!            After your opponent summons a Unit, a random Unit of yours attacks it."
 //!   Radiant: the same, and "Your Units have First Strike."
-//! Engine: Stack and Brittle 3 are catalog keywords (§6.1, R638). While it acts face-up on the field:
-//! `staticFlags.unitsNeverDefense` keeps every Unit of both sides out of Defense Position, one in it
-//! switching to Attack at the state check, spending nothing (R1849006); an aura (§10.4) gives every Unit
-//! of both sides +{attack} Attack (R1875003). After a Unit arrives on the opponent's side, however
-//! summoned — a played Unit once it resolves, its Cry first, as C #5 Tesla reads it (R1875003) — one of
-//! its controller's Units makes a forced attack on it, drawn from the match rng among those that may
-//! attack it, none able drawing nothing (`forced_attacks` with `random`, R1849007, R53). Radiant: its
-//! controller's Units have First Strike too (an aura). Tunes: attack 2 ↑.
+//! Stack, Brittle 3 (§6.1, R638). unitsNeverDefense keeps units out of Defense (R1849006); +attack aura (§10.4, R1875003).
+//! Forced attack on opponent summons (C #5, R1875003, R1849007, R53). Radiant grants First Strike.
 
 use jackioh_engine::effects::forced_attacks;
 use jackioh_engine::prelude::*;
@@ -114,12 +108,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #23 Warp Disruptor — SPEC §8.10 row 23, BUILD M12 row S 23: "while it stands no Unit of either side
-// can switch to Defense, and one already in it switches to Attack at the next state check; every Unit
-// has +2 Attack; after the opponent plays or summons a Unit, one random Unit of its controller's that can
-// attack it does so, a Flying arrival drawing only a Flying or Ranged attacker; with none able nothing
-// happens and the rng does not move; Brittle 3 destroys it in time (R638); attack reads through
-// `param()`; radiant its controller's Units have First Strike too".
+// S #23 Warp Disruptor — SPEC §8.10 row 23, BUILD M12 row S 23 (R638).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -133,11 +122,8 @@ mod tests {
     const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged.
     const GREASER: &str = "meditative-100"; // (2) 7/7.
     const ATTACK: i32 = 2;
-    /// "that unit cannot be in Defense Position" (R1849006).
     const NO_DEFENSE: &str = "cannot be in Defense Position";
 
-    /// p1, active with 10 mana, plays Warp Disruptor (`radiant` its face) into backrow zone 1 with
-    /// `mine` on its unit zones; p2 has `theirs` and `hand`. No turn ends by itself.
     fn played(radiant: bool, mine: Value, theirs: Value, hand: Value) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": "warp-disruptor",
@@ -156,7 +142,6 @@ mod tests {
         s
     }
 
-    /// The forced attacks among the last events, each `(attacker, target)`.
     fn forced(s: &Scenario) -> Vec<(String, String)> {
         s.last_events()
             .iter()
@@ -172,7 +157,6 @@ mod tests {
             .collect()
     }
 
-    /// p2's turn, with 10 mana.
     fn their_turn(s: &mut Scenario) {
         s.end_turn();
         s.state_mut().players[P2].mana.current = 10;
@@ -226,7 +210,6 @@ mod tests {
             assert_eq!(attacks.len(), 1, "one of them attacks");
             assert!(mine.contains(&attacks[0].0));
             assert_eq!(attacks[0].1, s.card(VANILLA).id);
-            // The draw follows the play's resolution: its `cardResolved` comes before the attack.
             let types: Vec<GameEventType> = s.last_events().iter().map(GameEvent::event_type).collect();
             let resolved = types.iter().position(|t| *t == GameEventType::CardResolved);
             let declared = types.iter().position(|t| *t == GameEventType::AttackDeclared);
@@ -313,7 +296,6 @@ mod tests {
             let mine = s.unit_at(P1, 1).id;
             their_turn(&mut s);
             s.play(VANILLA, json!({ "zone": 1 }));
-            // 9 First Strike damage kills the 6/4 before it strikes back.
             s.expect_in_zone(VANILLA, "graveyard");
             s.expect_stats(mine.as_str(), json!({ "health": 7 }));
         }

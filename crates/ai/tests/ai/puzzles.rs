@@ -1,23 +1,5 @@
-//! Hand-built puzzles P1–P14 (docs/polish/3-ai.md B17–B19, the puzzle table), and P15–P17 for The
-//! Coin (SPEC §2.1, §7, R244, R245), which the seat going second holds from its first turn.
-//!
-//! Every puzzle is a `scenario({ active: "p1", turn: 9, … })` with the AI as p1, p2 at 30 health
-//! unless stated and every p1 unit not summoning sick (the harness default). The AI plays one whole
-//! turn through `playAiTurn` at AI_BUDGET, the budget the browser plays at, and each puzzle holds
-//! its stated assertion. The gate is at least 12 of the 14 passing: all 14 are written, and a
-//! puzzle may be removed at reconcile only with a written reason in this file.
-//!
-//!   B17 lethal   P1–P6: the enemy hero is dead at the end of the AI's turn, and the AI's first
-//!                decision already says "lethal".
-//!   B18 tactics  P7–P10, P12, P13: no bad trade; survive a scripted all-out attack next turn;
-//!                spend the mana on the stronger play; spend removal on the biggest threat.
-//!   B19 prompts  P11 discovers True Strike off Reminisce and casts it for lethal; P14 answers
-//!                Masochism Mask's start-of-turn prompt at 3 health without losing health or
-//!                summoning the Spikey Pillow, through the search (reason "prompt").
-//!   The Coin     P15 plays it for the mana a lethal line needs; P16 plays it to put a 2-drop down
-//!                with 1 mana; P17 keeps it when the extra mana would buy nothing.
-//!
-//! Port of `packages/ai/test/puzzles.test.ts`. TS's per-test `{ timeout }` has no `cargo test` twin.
+//! Hand-built puzzles P1–P14 (docs/polish/3-ai.md B17–B19) and P15–P17 for The Coin (SPEC §2.1, §7,
+//! R244, R245). Each puzzle sets up a position and asserts expected plays over one turn of `play_ai_turn`.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -67,14 +49,11 @@ fn expect_survives_all_out(run: &PuzzleRun) -> GameState {
     after
 }
 
-// ---------------------------------------------------------------------------------------------
 // B17: lethal
-// ---------------------------------------------------------------------------------------------
 
 mod lethal_b17 {
     use super::*;
 
-    /// B17 P1: two attackers into an empty board finish a 6-health hero, lethal from the first decision
     #[test]
     fn b17_p1_two_attackers_into_an_empty_board_finish_a_6_health_hero_lethal_from_the_first_decision() {
         let run = puzzle(
@@ -85,7 +64,6 @@ mod lethal_b17 {
         expect_first_reason_lethal(&run);
     }
 
-    /// B17 P2: Pointmaster clears the Defense-Position blocker and the rest go face for 6
     #[test]
     fn b17_p2_pointmaster_clears_the_defense_position_blocker_and_the_rest_go_face_for_6() {
         let run = puzzle(
@@ -99,7 +77,6 @@ mod lethal_b17 {
         expect_first_reason_lethal(&run);
     }
 
-    /// B17 P3: Plastic Surgery on Tempo Timmy, then the attack, for 6
     #[test]
     fn b17_p3_plastic_surgery_on_tempo_timmy_then_the_attack_for_6() {
         let run = puzzle(
@@ -119,7 +96,6 @@ mod lethal_b17 {
         );
     }
 
-    /// B17 P4: True Strike to the face past a Taunt the attacker cannot get through
     #[test]
     fn b17_p4_true_strike_to_the_face_past_a_taunt_the_attacker_cannot_get_through() {
         let run = puzzle(
@@ -133,7 +109,6 @@ mod lethal_b17 {
         expect_first_reason_lethal(&run);
     }
 
-    /// B17 P5: Deft Duelist's Charge from hand into an empty board for 4
     #[test]
     fn b17_p5_deft_duelists_charge_from_hand_into_an_empty_board_for_4() {
         let run = puzzle(
@@ -144,7 +119,6 @@ mod lethal_b17 {
         expect_first_reason_lethal(&run);
     }
 
-    /// Silence on the 9/9 Taunt, then Pointmaster and Mr. Vanilla to the face for 11 into 10
     #[test]
     fn silence_on_the_enemy_taunt_then_pointmaster_and_mr_vanilla_to_the_face_for_11_into_10() {
         let run = puzzle(
@@ -158,7 +132,6 @@ mod lethal_b17 {
         expect_first_reason_lethal(&run);
     }
 
-    /// B17 P6: Lunar Eclipse to the face plus Tempo Timmy's attack for 6
     #[test]
     fn b17_p6_lunar_eclipse_to_the_face_plus_tempo_timmys_attack_for_6() {
         let run = puzzle(
@@ -170,14 +143,11 @@ mod lethal_b17 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B18: tactics
-// ---------------------------------------------------------------------------------------------
 
 mod tactics_b18 {
     use super::*;
 
-    /// B18 P7: Mr. Vanilla does not throw itself into the 7/7 with Armor 7
     #[test]
     fn b18_p7_mr_vanilla_does_not_throw_itself_into_the_7_7_with_armor_7() {
         let run = puzzle(
@@ -208,7 +178,6 @@ mod tactics_b18 {
         );
     }
 
-    /// B18 P8: at 8 health against 7 + 3 on board, the 7/7 deals with the threat and p1 survives the swing back
     #[test]
     fn b18_p8_at_8_health_against_7_plus_3_on_board_the_7_7_deals_with_the_threat_and_p1_survives_the_swing_back()
      {
@@ -219,7 +188,6 @@ mod tactics_b18 {
         expect_survives_all_out(&run);
     }
 
-    /// B18 P9: at 5 health with an empty board, Jilliax goes down to block 4 + 3 and p1 survives the swing back
     #[test]
     fn b18_p9_at_5_health_with_an_empty_board_jilliax_goes_down_to_block_4_plus_3_and_p1_survives_the_swing_back()
      {
@@ -230,7 +198,6 @@ mod tactics_b18 {
         expect_survives_all_out(&run);
     }
 
-    /// B18 P10: at 3 health facing Tempo Timmy, Fig of Life heals and p1 survives the swing back
     #[test]
     fn b18_p10_at_3_health_facing_tempo_timmy_fig_of_life_heals_and_p1_survives_the_swing_back() {
         let run = puzzle(
@@ -240,7 +207,6 @@ mod tactics_b18 {
         expect_survives_all_out(&run);
     }
 
-    /// B18 P12: with 4 mana on empty boards the AI plays the 4-mana 7/7, not the 1-drop
     #[test]
     fn b18_p12_with_4_mana_on_empty_boards_the_ai_plays_the_4_mana_7_7_not_the_1_drop() {
         let run = puzzle(
@@ -250,13 +216,12 @@ mod tactics_b18 {
         assert!(on_field(&run.end, AI, "core-025"), "{}", trace(&run.turn));
     }
 
-    /// B18 P13: Hit Job goes on Midrange Menace, the biggest threat
     #[test]
     fn b18_p13_hit_job_goes_on_midrange_menace_the_biggest_threat() {
         let run = puzzle(
             "P13",
             json!({
-                // Hit Job costs (3) since patch v0.2.0.
+                // Hit Job costs (3).
                 "p1": { "hand": ["core-016"], "mana": 3, "field": ["core-011"] },
                 "p2": { "field": ["core-019", "core-008"] },
             }),
@@ -264,14 +229,11 @@ mod tactics_b18 {
         assert!(in_graveyard(&run.end, HUMAN, "core-019"), "{}", trace(&run.turn));
     }
 
-    /// #1062: five Tempo Timmys and four Burns (C #36) with no mana, into an empty board. Each Burn
-    /// offers the AI's five units and its hero before the enemy hero, so the 24 plays at its own side
-    /// came first and no Burn at the enemy was among any root's AI_BUDGET.root_branching candidates or
-    /// any deeper step's branching ones: the AI swung for 15 and ended its turn. It attacks first, and
-    /// burns the face below the root. The hand eval fires all four Burns, for 8 more. How many to fire
-    /// is the evaluation's to judge: the next turn's swing reaches the enemy either way, and a Burn kept
-    /// can clear a blocker. A learned network keeps one (#466). #1062's bug was that none at the enemy
-    /// was searched.
+    /// #1062: five Tempo Timmys and four Burns (C #36) with no mana, into an empty board. Each Burn offers
+    /// the AI's five units and its hero before the enemy hero, 24 plays at its own side ahead of any at
+    /// the enemy. It attacks first, and burns the face below the root. How many Burns to fire is the
+    /// evaluation's to judge: the next turn's swing reaches the enemy either way, and a Burn kept can clear
+    /// a blocker. A learned network keeps one (#466).
     #[test]
     fn five_attacks_then_four_burns_to_the_face_past_twenty_four_plays_at_its_own_side() {
         let run = puzzle(
@@ -300,14 +262,11 @@ mod tactics_b18 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B19: prompts through the search
-// ---------------------------------------------------------------------------------------------
 
 mod prompts_through_the_search_b19 {
     use super::*;
 
-    /// B19 P11: Reminisce discovers True Strike from the graveyard, and True Strike finishes the hero
     #[test]
     fn b19_p11_reminisce_discovers_true_strike_from_the_graveyard_and_true_strike_finishes_the_hero() {
         jackioh_cards::register_all();
@@ -348,7 +307,6 @@ mod prompts_through_the_search_b19 {
             "{}",
             trace(&run.turn)
         );
-        // The discovered True Strike is the card the AI then played.
         assert!(
             run.turn.actions.iter().any(
                 |action| matches!(&action.body, ActionBody::Play { instance_id, .. } if *instance_id == true_strike.id)
@@ -364,7 +322,6 @@ mod prompts_through_the_search_b19 {
         );
     }
 
-    /// B19 P14: at 3 health the AI answers Masochism Mask with neither 'lose 3' nor the Spikey Pillow, through the search
     #[test]
     fn b19_p14_at_3_health_the_ai_answers_masochism_mask_with_neither_lose_3_nor_the_spikey_pillow_through_the_search()
      {
@@ -410,16 +367,13 @@ mod prompts_through_the_search_b19 {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The Coin (R244, R245): a 0-cost Spell token, "gain 1 mana this turn"
-// ---------------------------------------------------------------------------------------------
 
 const COIN: &str = "core-t-coin";
 
 mod the_coin_r245 {
     use super::*;
 
-    /// P15: with 1 mana, The Coin pays for Deft Duelist's Charge, and Duelist plus Tempo Timmy finish a 7-health hero
     #[test]
     fn p15_with_1_mana_the_coin_pays_for_deft_duelists_charge_and_duelist_plus_tempo_timmy_finish_a_7_health_hero()
      {
@@ -432,7 +386,6 @@ mod the_coin_r245 {
         assert!(in_graveyard(&run.end, AI, COIN), "{}", trace(&run.turn));
     }
 
-    /// P16: with 1 mana on empty boards, the AI plays The Coin and then Pointmaster rather than pass
     #[test]
     fn p16_with_1_mana_on_empty_boards_the_ai_plays_the_coin_and_then_pointmaster_rather_than_pass() {
         let run = puzzle(
@@ -443,7 +396,6 @@ mod the_coin_r245 {
         assert!(in_graveyard(&run.end, AI, COIN), "{}", trace(&run.turn));
     }
 
-    /// P17: with 1 mana and only a 1-drop to spend it on, the AI plays the 1-drop and keeps The Coin
     #[test]
     fn p17_with_1_mana_and_only_a_1_drop_to_spend_it_on_the_ai_plays_the_1_drop_and_keeps_the_coin() {
         let run = puzzle(

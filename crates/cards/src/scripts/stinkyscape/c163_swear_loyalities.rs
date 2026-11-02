@@ -9,13 +9,10 @@
 //! to #162), a full hand burning it (§2.4), Radiant on the Radiant face (§5.2). A faction is its Faction
 //! card and the cards that card adds (#2521's table, the consts below). Then one `exile` per card in its
 //! caster's library, then hand (#94 Genn's Greed's order, R135), whose definition is of another faction
-//! and not of the chosen one (R2521004): S #6 Tylannt, of ETHICS and Vanguard Coalition both, stays when
-//! either is sworn to; a card of no faction never goes; the piles are read once the Faction card is
-//! added, so it and every card of the chosen faction stay. The field, its caster's graveyard and the
-//! opponent's piles are not read (the opponent's untouched as in R1880001, its "wherever it is" narrowed
-//! to the hand and deck by R2521004). "Golden" is Golden Accord (ST8). Declares no numbers. Through
-//! v0.5.11 it exiled only the four other Faction cards, from its caster's library, hand and graveyard,
-//! which `script_v0_5_11` keeps (R767000).
+//! and not of the chosen one (R2521004); the piles are read once the Faction card is added, so it stays.
+//! The field, its caster's graveyard and the opponent's piles are not read (the opponent's untouched as
+//! in R1880001, its "wherever it is" narrowed to the hand and deck by R2521004). "Golden" is Golden
+//! Accord (ST8). Declares no numbers.
 
 use jackioh_engine::prelude::*;
 
@@ -170,11 +167,7 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S #163 Swear Loyalities — SPEC §8.10 row S 163, BUILD M12 row S 163, R2521004: it offers all five
-// factions to its caster alone; the chosen faction's Faction card is added to the hand; every card in its
-// caster's hand and library of another faction and not of the chosen one is exiled, Tylannt staying for
-// ETHICS and Vanguard Coalition alike; a card of no faction, the field, the graveyard and the opponent are
-// untouched; radiant the Faction card Radiant.
+// S #163 Swear Loyalities — SPEC §8.10 row S 163, BUILD M12 row S 163 (R2521004).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -221,9 +214,8 @@ mod tests {
         }))
     }
 
-    /// R2521004: sworn to Vanguard Coalition, ETHICS' xxFreshJack leaves the hand, and Golden Accord's
-    /// Paragon Mk1 and a Faction: ETHICS leave the library; the Stockpiles, Scornboi, Tylannt (ETHICS'
-    /// too, but of the faction sworn to) and a second Faction: Vanguard Coalition stay.
+    /// R2521004: sworn to Vanguard Coalition, the other factions' cards leave the hand and the library;
+    /// Tylannt, ETHICS' too but of the faction sworn to, stays.
     fn swears_to_vanguard_coalition(radiant: bool) {
         let mut s = board(
             radiant,
@@ -243,7 +235,7 @@ mod tests {
     }
 
     /// R2521004: sworn to Golden Accord, Tylannt is of neither faction kept and leaves the library and
-    /// the hand, as Scornboi and xxFreshJack do; Paragon Mk1, Falcon and the Stockpile stay.
+    /// the hand.
     fn swears_to_golden_accord(radiant: bool) {
         let mut s = board(
             radiant,
@@ -260,9 +252,7 @@ mod tests {
         assert_eq!(def_ids(&s.pile(P1, "exile")), [TYLANNT, SCORNBOI, FRESH_JACK, TYLANNT]);
     }
 
-    /// R2521004: only its caster's hand and library are read. Golden Accord's Paragon Mk1 on the field,
-    /// ETHICS' xxFreshJack in the graveyard and the opponent's Scornboi, Paragon Mk1 and Faction: ETHICS in
-    /// every pile stay where they are when Pegasus is sworn to (the opponent's untouched, R1880001).
+    /// R2521004: only its caster's hand and library are read (the opponent's untouched, R1880001).
     fn leaves_the_field_the_graveyard_and_the_opponent(radiant: bool) {
         crate::register_all();
         let others = json!([SCORNBOI, PARAGON_MK1, ETHICS]);
@@ -321,8 +311,7 @@ mod tests {
         }
 
         /// R767000: the script kept for the replays of v0.5.11 and before exiled the other four Faction
-        /// cards alone, from its caster's library, hand and graveyard in that order: Scornboi and
-        /// xxFreshJack stay.
+        /// cards alone, from its caster's library, hand and graveyard in that order.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_exiles_the_other_faction_cards_alone_the_graveyard_too() {
             crate::under_kept(SWEAR, super::super::script_v0_5_11(), || {

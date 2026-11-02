@@ -72,7 +72,6 @@ mod tests {
     const DANDY_LAD: &str = "stinkyscape-113";
     const ARCTIC_CITADEL: &str = "stinkyscape-114";
     const GOLEM: &str = "stinkyscape-150-1";
-    /// R1882001: the Field Spells tagged Quest or Wincon, of every set the catalog orders.
     const QUEST_FIELD_SPELLS: [&str; 4] = [
         "classic-090",
         "stinkyscape-007",
@@ -87,12 +86,9 @@ mod tests {
     const BEAR: &str = "core-060"; // (1) Trap
 
     const SEED: &str = "chaos-stinky";
-    /// How many cursors the sweeps of the table walk.
     const SWEEP: u32 = 800;
-    /// How many games a pool sweep plays.
     const GAMES: u32 = 40;
 
-    /// The names of the entries the roll at `cursor` of `seed` picks, with this card's table.
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {
         let mut rng = Rng::new(seed, cursor);
         subsystems::roll_chaos_effects(&mut rng, radiant, Some(subsystems::CHAOS_STINKY_EFFECTS))
@@ -122,7 +118,6 @@ mod tests {
         json!({ "hand": hand, "library": filler(6), "mana": 10 })
     }
 
-    /// p1 plays this card with its roll pinned to `cursor` of `seed`.
     fn chaos_in(seed: &str, cursor: u32, p1: Value, p2: Value) -> Scenario {
         let mut p2 = p2;
         if p2.get("library").is_none() {
@@ -134,7 +129,6 @@ mod tests {
         s
     }
 
-    /// The base face, rolling `entry`.
     fn chaos(entry: &str, p1: Value, p2: Value) -> Scenario {
         chaos_in(SEED, cursor_in(SEED, entry), p1, p2)
     }
@@ -155,7 +149,6 @@ mod tests {
             .collect()
     }
 
-    /// The hand cards an `addedToHand` of this game named.
     fn added_to(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         let ids: Vec<String> = events_of(s, "addedToHand")
             .iter()
@@ -171,7 +164,6 @@ mod tests {
         jackioh_engine::mana::effective_cost(s.state(), card, Default::default())
     }
 
-    /// The (player, defId) of every play or cast of the most recent step.
     fn casts(s: &Scenario) -> Vec<(String, String)> {
         last_of(s, "cardPlayed")
             .iter()
@@ -289,7 +281,6 @@ mod tests {
             for def_id in QUEST_FIELD_SPELLS {
                 assert!(seen.iter().any(|id| id == def_id), "{def_id} never summoned");
             }
-            // Repeats are allowed, and only those four ever land.
             assert!(seen.iter().all(|id| QUEST_FIELD_SPELLS.contains(&id.as_str())));
         }
 
@@ -327,7 +318,6 @@ mod tests {
             assert_eq!(def.type_, CardType::Unit);
             assert!(!def.token);
             let mana = &s.state().players.p1.mana;
-            // 10 mana, 4 paid for this card, then refreshed by the Unit's printed cost.
             assert_eq!(mana.current, 10 - 4 + jackioh_engine::catalog::query_cost(&def));
             assert!(mana.current <= mana.max);
         }
@@ -370,11 +360,9 @@ mod tests {
                 assert_eq!(unit.position.unwrap_or(Position::Atk), Position::Atk);
                 assert!(unit.frozen.is_some(), "lane {lane}");
             }
-            // Its caster's own Unit is passed by.
             let mine = s.unit(P1, 1).expect("p1's Unit");
             assert_eq!(mine.position, Some(Position::Def));
             assert!(mine.frozen.is_none());
-            // A hero is never touched; one switch reported, an effect's (no exertion spent).
             assert_eq!(events_of(&s, "positionSwitched").len(), 1);
             let switched = s.unit(P2, 1).expect("an enemy Unit");
             assert!(!switched.exertion.switched);
@@ -412,8 +400,6 @@ mod tests {
             assert_eq!(s.card(&prey).controller, P1);
         }
 
-        /// p1 rolls the death rule with a Menace and a Siva 1 on the field against p2's Siva 1 and
-        /// a Vanilla, each Siva facing a bigger Unit.
         fn death_rule() -> Scenario {
             let mut p1 = side(false, json!([]));
             p1["field"] = json!([{ "def": MENACE, "lane": 1 }, { "def": SIVA, "lane": 2 }]);
@@ -512,7 +498,6 @@ mod tests {
             s.attack(mine, prey.clone());
             s.expect_in_zone(prey.as_str(), "graveyard");
             assert!(casts(&s).is_empty(), "{:?}", casts(&s));
-            // The bound is each player's own: p1's Siva still casts, and counts.
             let siva = s.unit(P1, 2).expect("p1's Siva").id.clone();
             let vanilla = s.unit(P2, 2).expect("p2's Vanilla").id.clone();
             s.attack(siva, vanilla);

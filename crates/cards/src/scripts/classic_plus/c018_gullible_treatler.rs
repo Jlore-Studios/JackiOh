@@ -47,16 +47,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #18 Gullible Treatler — SPEC §8.7 row 18, BUILD M9 Classic+ row C+ 18: "At its controller's start
-// of turn, if they control no Field Spell, Trap or Field Trap (face-down cards count; an animated one
-// standing in a unit zone is a Unit and doesn't, §6.1), it Tributes itself: a Sacrifice that bypasses
-// Indestructible and counts as a death; with one it stays; nothing at the opponent's start of turn;
-// `conditionMet` on the field answers whether it would be Tributed now (R195); radiant only when no
-// player controls one".
-//
-// R195's proofs for this card are in its own file (the `describe("R195 conditionMet …")` block).
+// C+ #18 Gullible Treatler — SPEC §8.7 row 18, BUILD M9 Classic+ row C+ 18 (§6.1).
 
-/// `describe("C+ #18 Gullible Treatler")`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,7 +98,6 @@ mod tests {
         js(&s.view(P1))["you"]["units"][0]["conditionActive"] == json!(true)
     }
 
-    /// is a (2) 8/9 Human Unit with a start-of-turn hook and no play-time choice
     #[test]
     fn is_a_2_8_9_human_unit_with_a_start_of_turn_hook_and_no_play_time_choice() {
         crate::register_all();
@@ -120,11 +111,9 @@ mod tests {
         assert!(scripts.base.targets.is_empty());
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
-        /// with no Field Spell or Trap of yours, it Tributes itself at your start of turn: a death with no killer
         #[test]
         fn with_no_field_spell_or_trap_of_yours_it_tributes_itself_at_your_start_of_turn_a_death_with_no_killer() {
             let mut s = with_treatler(false, vec![], json!({ "backrow": [{ "def": FIELD_SPELL }] }), P1);
@@ -141,7 +130,6 @@ mod tests {
             assert_eq!(s.state().counters.destroyed, destroyed_before + 1);
         }
 
-        /// a Field Spell of yours keeps it
         #[test]
         fn a_field_spell_of_yours_keeps_it() {
             let mut s = with_treatler(false, vec![json!({ "def": FIELD_SPELL, "row": "backrow" })], json!({}), P1);
@@ -149,7 +137,6 @@ mod tests {
             assert!(treatler_at(&s).is_some());
         }
 
-        /// a face-down Trap of yours keeps it
         #[test]
         fn a_face_down_trap_of_yours_keeps_it() {
             let mut s = with_treatler(false, vec![json!({ "def": TRAP, "row": "backrow", "faceUp": false })], json!({}), P1);
@@ -157,7 +144,6 @@ mod tests {
             assert!(treatler_at(&s).is_some());
         }
 
-        /// a Field Trap counts as a Trap
         #[test]
         fn a_field_trap_counts_as_a_trap() {
             let mut s = with_treatler(false, vec![json!({ "def": FIELD_TRAP, "row": "backrow", "faceUp": false })], json!({}), P1);
@@ -215,7 +201,6 @@ mod tests {
             s.expect_in_zone(&treatler, "graveyard");
         }
 
-        /// an enemy Field Spell does not keep the base face
         #[test]
         fn an_enemy_field_spell_does_not_keep_the_base_face() {
             let mut s = with_treatler(
@@ -238,11 +223,9 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
-        /// an enemy Field Spell or face-down Trap keeps it
         #[test]
         fn an_enemy_field_spell_or_face_down_trap_keeps_it() {
             let mut spell = with_treatler(true, vec![], json!({ "backrow": [{ "def": FIELD_SPELL }] }), P1);
@@ -254,7 +237,6 @@ mod tests {
             assert!(treatler_at(&trap).is_some());
         }
 
-        /// with no player controlling one, it Tributes itself
         #[test]
         fn with_no_player_controlling_one_it_tributes_itself() {
             let mut s = with_treatler(true, vec![], json!({}), P1);
@@ -264,7 +246,6 @@ mod tests {
             s.expect_in_zone(&treatler, "graveyard");
         }
 
-        /// a Field Spell of its own keeps it too
         #[test]
         fn a_field_spell_of_its_own_keeps_it_too() {
             let mut s = with_treatler(true, vec![json!({ "def": FIELD_SPELL, "row": "backrow" })], json!({}), P1);
@@ -277,7 +258,6 @@ mod tests {
     mod r195_condition_met_on_the_field_whether_it_would_be_tributed_now {
         use super::*;
 
-        /// base: lit with no Field Spell or Trap of yours, and the start of turn Tributes it
         #[test]
         fn base_lit_with_no_field_spell_or_trap_of_yours_and_the_start_of_turn_tributes_it() {
             let mut s = with_treatler(false, vec![], json!({ "backrow": [{ "def": FIELD_SPELL }] }), P1);
@@ -287,7 +267,6 @@ mod tests {
             assert!(treatler_at(&s).is_none());
         }
 
-        /// base: unlit with a Trap of yours, and the start of turn keeps it
         #[test]
         fn base_unlit_with_a_trap_of_yours_and_the_start_of_turn_keeps_it() {
             let mut s = with_treatler(false, vec![json!({ "def": TRAP, "row": "backrow", "faceUp": false })], json!({}), P1);
@@ -296,7 +275,6 @@ mod tests {
             assert!(treatler_at(&s).is_some());
         }
 
-        /// radiant: unlit while the opponent controls one, lit when nobody does
         #[test]
         fn radiant_unlit_while_the_opponent_controls_one_lit_when_nobody_does() {
             let mut kept = with_treatler(true, vec![], json!({ "backrow": [{ "def": TRAP, "faceUp": false }] }), P1);

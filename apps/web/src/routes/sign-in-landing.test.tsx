@@ -1,9 +1,6 @@
-// Issue #479: a successful sign-in lands on the main menu (the landing page), and a failed one keeps
-// the player on the sign-in screen, its sentence shown and the form as they left it. That holds for a
-// sign-in a protected screen sent the player to as well: it lands on the main menu, not back there.
-//
-// Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
-// mounts itself outside vitest), with the auth provider and the API answered by a stubbed `fetch`.
+// #479: a sign-in lands on the main menu, even one a protected screen sent the player to; a failed one
+// keeps the sign-in screen, its sentence shown and the form as left. `main.tsx` mounts itself outside
+// vitest, hence `await import`; the provider and the API answer through a stubbed `fetch`.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -89,14 +86,12 @@ function signIn(password: string): void {
   fireEvent.submit(screen.getByTestId(loginTestid.form));
 }
 
-/** The landing page's corner "Sign in", as a player presses it. */
 async function pressSignInOnTheMainMenu(): Promise<void> {
   fireEvent.click(await screen.findByTestId(landingTestid.signIn, undefined, SLOW));
   await screen.findByTestId(loginTestid.form, undefined, SLOW);
   expect(window.location.pathname).toBe(paths.login);
 }
 
-/** A failed sign-in: still on `/login`, the sentence shown, the form as the player left it. */
 async function expectStillSigningIn(password: string): Promise<void> {
   expect((await screen.findByTestId(loginTestid.error, undefined, SLOW)).textContent).toBe(SIGN_IN_FAILED_MESSAGE);
   expect(window.location.pathname).toBe(paths.login);
@@ -135,7 +130,6 @@ describe("issue #479 a successful sign-in lands on the main menu", () => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
     expect(readSession()?.accessToken).toBe(SIGNED_IN.access_token);
-    // The main menu itself, and it knows the player is signed in.
     await waitFor(() => {
       expect(screen.getByTestId(landingTestid.root)).toHaveAttribute("data-account", "signed-in");
     }, SLOW);
@@ -192,7 +186,6 @@ describe("issue #479 a failed sign-in stays on the sign-in screen", () => {
     expect(window.location.pathname).toBe(paths.login);
     expect(screen.getByTestId(loginTestid.form)).toBeInTheDocument();
 
-    // The form is still the way in.
     signIn(PASSWORD);
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);

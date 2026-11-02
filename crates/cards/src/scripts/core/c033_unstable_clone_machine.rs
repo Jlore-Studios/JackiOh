@@ -1,17 +1,13 @@
 //! #33 Unstable Clone Machine (SPEC §8.2 row 33): Field Spell, "After you play a card, shuffle 3
 //! copies of it into your library"; radiant "3 Radiant copies" (R275), which restates only which copies
 //! are Radiant, so the rest is kept (§8 Conventions).
-//!
-//! R34 token cards are copied too (no token filter); R11 lets a unit-token card sit in a library.
-//! R57 a copy is a fresh instance carrying only the radiant flag (and `statsOverride`, see ENGINE GAP).
-//! R80 a library never takes a copy past `LIBRARY_CAP` (60), so no cap check here; R316 reports the
-//!     refusal as `libraryOverflow`, `copyOf` naming the played card for a view to judge it by: a Trap
-//!     set face-down stays unnamed.
-//! R70 a cast is a play too, but not a cast on draw (R2179002). R17 it answers `cardResolved` (§10.5 step 7), never `cardPlayed`, or a
-//!     Stockpile could draw its own copies; the event carries the resolved face (R34, R57), since #41
-//!     Sheepish transforms a played Unit at step 4. R119: a permanent is on the field before its own
-//!     `cardResolved` (the play places it at step 4), so it would copy itself; it starts counting from
-//!     the next play.
+//! R34 token cards are copied too; R11 lets a unit-token card sit in a library. R57 a copy is a fresh
+//! instance carrying only the radiant flag. R80 a library never takes a copy past `LIBRARY_CAP` (60),
+//! so no cap check here; R316 reports the refusal as `libraryOverflow`, `copyOf` naming the played card.
+//! R70 a cast is a play too, but not a cast on draw (R2179002). R17 it answers `cardResolved` (§10.5
+//! step 7), never `cardPlayed`, or a Stockpile could draw its own copies; the event carries the
+//! resolved face, since #41 Sheepish transforms a played Unit at step 4. R119: a permanent is on the
+//! field before its own `cardResolved` (step 4), so it starts counting from the next play.
 //! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats,
 //! which R57 says it should keep.
 
@@ -115,10 +111,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33: "After each play,
-// library +3 fresh copies with the radiant flag preserved; token spells copied (R34); nothing is
-// added to a 60-card library (R80)". Radiant (R275): all three are Radiant whatever the played card
-// was, and R80 still caps the library.
+// #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33 (R34, R80).
 // R119: a Clone Machine a play's own resolution put onto the field (#98's Recruit) starts counting
 // from the next play, as the played Clone Machine itself does.
 #[cfg(test)]
@@ -126,13 +119,12 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
     }
 
-    /// The copies of one def sitting in a library.
     fn copies_in(cards: &[CardInstance], def_id: &str) -> Vec<CardInstance> {
         cards.iter().filter(|card| card.def_id == def_id).cloned().collect()
     }
@@ -174,7 +166,6 @@ mod tests {
 
             let copies = copies_in(&s.pile("p1", "library"), "core-015");
             assert_eq!(copies.len(), 3);
-            // R57: fresh instances — no damage, no buffs, not radiant, distinct ids.
             assert!(copies.iter().all(|card| card.damage == 0));
             assert!(copies.iter().all(|card| card.buffs.attack == 0 && card.buffs.health == 0));
             assert!(copies.iter().all(|card| !card.radiant));
@@ -301,10 +292,8 @@ mod tests {
             let copies = copies_in(&s.pile("p1", "library"), "core-015");
             assert_eq!(copies.len(), 3);
             assert!(copies.iter().all(|card| card.radiant));
-            // R57: still fresh instances, three of them.
             assert!(copies.iter().all(|card| card.damage == 0));
             assert_eq!(distinct_ids(&copies), 3);
-            // The played card itself is untouched: only the copies are Radiant.
             assert_eq!(s.unit("p1", 2).map(|card| card.radiant), Some(false));
         }
 
@@ -453,7 +442,6 @@ mod tests {
                     })
                 );
             }
-            // Nothing in the other seat's view names the trap.
             let theirs_text = serde_json::to_string(&s.view("p2")).expect("a view is JSON");
             assert!(!theirs_text.contains("core-041"));
         }
@@ -480,13 +468,10 @@ mod tests {
 
             s.play("classic-060", json!({}));
 
-            // The Recruit put the Clone Machine on p1's backrow while Pile On's play was resolving.
             let backrow: Vec<String> = (1..=5)
                 .filter_map(|lane| s.backrow("p1", lane).map(|card| card.def_id))
                 .collect();
             assert!(backrow.contains(&"core-033".to_string()));
-            // R119: "does not fire on the play that put it onto the field: it starts counting from the next
-            // play". No copies of Pile On are shuffled in.
             assert_eq!(copies_in(&s.pile("p1", "library"), "classic-060").len(), 0);
         }
     }
@@ -510,10 +495,8 @@ mod tests {
             assert_eq!(list["unknown"], json!(0));
             let cards = list["cards"].as_array().expect("the owner's library list has cards");
             // The copies are effect-made, so R943 marks them Created; the dealt card carries no mark.
-            // Re-pinned for v0.3.5: the Meditative set ships, so R943's Created mark is live.
             assert!(cards.contains(&json!({ "defId": "core-015", "radiant": true, "count": 3, "created": true })));
             assert!(cards.contains(&json!({ "defId": "core-025", "radiant": false, "count": 1 })));
-            // p2 reads p1's library as a count and nothing else.
             let theirs = view_json(&s, "p2");
             assert!(theirs["opponent"]["ownLibrary"].is_null());
             assert_eq!(theirs["opponent"]["libraryCount"], json!(4));

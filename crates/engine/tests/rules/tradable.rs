@@ -182,7 +182,6 @@ fn r1838000_the_limit_is_the_players_own_figure_and_resets_each_turn() {
 #[test]
 fn r1838000_refused_off_turn_for_an_untradable_card_and_into_a_full_deck() {
     let (mut state, spell, unit) = holding("r1838000-refused");
-    // Not Tradable: neither listed nor taken.
     assert_eq!(
         trade(&state, P1, &unit, "t1").error.as_deref(),
         Some(format!("{} is not Tradable", plain_unit().name).as_str())
@@ -450,7 +449,6 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
     let (mut state, spell, unit) = holding("r2574000-view");
     let theirs = state.players.p2.hand[0].id.clone();
 
-    // 1. Without aura: printed Tradable has tradable: true; plain unit has None.
     let view_plain = view_for(&state, P1);
     assert_eq!(
         hand_card(&view_plain, &spell).tradable,
@@ -463,7 +461,6 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
         "a plain unit has no tradable key"
     );
 
-    // 2. A card given Tradable by an effect has tradable: true.
     let mut state_given = state.clone();
     find_instance_mut(&mut state_given, &unit)
         .expect("the Unit in hand")
@@ -476,9 +473,6 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
         "a card given Tradable has tradable: true"
     );
 
-    // 3. With fixture aura lending Tradable to controller's hand:
-    // Every card in viewer's hand has tradable: true.
-    // The hand card's keywords still lack Tradable (R1864002).
     put(&mut state, &lender().id, slot(P1, Row::Backrow, 1), json!({}));
     let view_aura = view_for(&state, P1);
     let c_spell = hand_card(&view_aura, &spell);
@@ -497,7 +491,6 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
         "the hand card's keywords still lack Tradable (R1864002)"
     );
 
-    // 4. Opponent's hand in live game has no tradable key.
     let view_p2 = view_for(&state, P2);
     assert_eq!(
         hand_card(&view_p2, &theirs).tradable,
@@ -509,7 +502,6 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
         HandView::Cards(_) => panic!("opponent hand during live game must be HandView::Count"),
     }
 
-    // 5. With aura gone, a card that only the aura made Tradable has no tradable key.
     let mut state_removed = state.clone();
     state_removed.players.p1.backrow[0] = None;
     let view_removed = view_for(&state_removed, P1);
@@ -524,7 +516,6 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
         "printed Tradable still has tradable: true"
     );
 
-    // 6. Post-game hands never carry the key (for both viewer and opponent).
     let mut finished = state.clone();
     finished.result = Some(GameResult {
         winner: Winner::P1,

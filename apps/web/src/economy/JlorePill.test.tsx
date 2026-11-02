@@ -1,7 +1,5 @@
-// The Jlore pill (#1659, part of #1651; SPEC §14.1): the balance `GET /api/wallet` answers, in the top
-// bar of a signed-in screen. A server answer's balance (`announceWallet(jlore)`) shows at once with no
-// request, `announceWallet()` and a navigation read the wallet again, and a visitor or a refused read
-// shows nothing. The balance is the server's (CLAUDE.md rule 7): no test here sums anything.
+// The Jlore pill (#1659, part of #1651; SPEC §14.1). The balance is the server's (CLAUDE.md rule 7):
+// no test here sums anything.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

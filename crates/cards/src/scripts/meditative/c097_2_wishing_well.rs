@@ -6,11 +6,6 @@
 //!            rolling it again and keeping a success (§6.1 Lucky); a success adds a random non-token card
 //!            of every set (R380), Radiant, hidden in your hand (R97), burned by a full hand (§2.4).
 //!            Tunes: chance 10 ↑ (the same on both faces, step 2); Lucky 1 ↑, on the Radiant face only."
-//!
-//! One script serves both faces: the Radiant face's Lucky 1 is a numbered keyword on the face, read as
-//! Nerf and Buff have moved it, plus any Lucky given to the Well (`lucky_on`, R1438) and its controller's
-//! Luck (R987), so with neither the base face rolls once and the Radiant face twice. `script_v0_3_7b`
-//! keeps the roll without them for the replays of v0.3.7b and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -90,14 +85,10 @@ pub fn script_v0_3_7b() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M 97.2 Wishing Well — SPEC §8.8 row 97.2, BUILD M10 row M 97.2: "Can't attack; Activate, once a turn in
-// your main phase, the turn it arrives included: a 10% roll adds a random Radiant non-token card to your
-// hand, a failure nothing; a second use that turn is refused; chance reads through `param()`; radiant 0/12,
-// 10% with Lucky 1, two rolls keeping a success".
+// M 97.2 Wishing Well — SPEC §8.8 row 97.2, BUILD M10 row M 97.2.
 //
-// The seed sweeps assert what holds for any seed (a miss draws once, or twice with Lucky 1; the Radiant
-// face hits wherever the base face does), never what one seed drew. Every scenario keeps a 0-cost Spell
-// in each hand and spares in the libraries, so R82 does not end the turn after the Activate.
+// The seed sweeps assert what holds for any seed, never what one seed drew. Every scenario keeps a 0-cost
+// Spell in each hand and spares in the libraries, so R82 does not end the turn after the Activate.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

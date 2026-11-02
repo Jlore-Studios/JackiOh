@@ -1,10 +1,7 @@
 //! Test-only definitions for `subsystems/call_to_chaos_meditative.rs` (Meditative #95 Call to Chaos
 //! (Meditative Edition)'s table, R1240–R1244). The engine does not depend on `crates/cards`, so each pool
-//! its entries name — CN cards, the Prime tokens (R1421), the Acclaimed permanents, the "Call to Chaos"
-//! pool of every edition, the Jade Beauty and CN Golem tokens — gets stand-ins under the tags, sets and
-//! indices the real cards carry; the real card's test covers the same cases against the real catalog
-//! (`crates/cards/src/scripts/meditative/c095_call_to_chaos_meditative_edition.rs`). They sit on top of
-//! C+ #73's stand-ins (`call_to_chaos_plus.rs`), whose two editions and Immutable card they reuse.
+//! its entries name gets stand-ins under the tags, sets and indices the real cards carry. They sit on
+//! top of C+ #73's stand-ins (`call_to_chaos_plus.rs`), whose two editions and Immutable card they reuse.
 
 use std::sync::LazyLock;
 

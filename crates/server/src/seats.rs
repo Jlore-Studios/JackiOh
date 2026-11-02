@@ -1,29 +1,21 @@
 //! The seat ledger (SPEC §9.5, §13.9; R1523000, which amends R890000): the one game each profile
-//! holds, a live 1v1 match, a Conquest series that is not over or a live co-op match, kept in this
-//! process so that every door into a game asks one question and takes its seats in the same step.
+//! holds, kept in this process so that every door into a game asks one question and takes its
+//! seats in the same step.
 //!
-//! A door reserves all of its seats at once (`Seats::reserve`): every profile it names, or none. A
-//! reserved seat is pending until the door's game stands (`Lease::commit`), and a pending seat
-//! already counts as taken, so a rival door is refused at once; a lease dropped uncommitted puts
-//! back what each profile held before it. A held seat admits only itself again (an idempotent
-//! retry, and R639000's bot that its rematch claim seated first) and, for a series between games,
-//! that series' next game (R264). Anything else is `Taken`, which the doors answer with R1065000's
-//! refusals. Bots are profiles and reserve like people.
+//! A door reserves all of its seats at once (`Seats::reserve`) or none; a reserved seat is pending, and
+//! already taken, until the door's game stands (`Lease::commit`). A held seat admits only itself again (an
+//! idempotent retry, and R639000's bot that its rematch claim seated first) and, for a series between
+//! games, that series' next game (R264). Anything else is `Taken`, which the doors answer with R1065000's
+//! refusals.
 //!
 //! The in-match flag (`profiles.current_match_id`) stays the record and a second guard: the doors
 //! still write it compare-and-set (R890000) and the endings still clear it. Boot fills the ledger
-//! from the record (`boot`), and every reaper tick compares the two (`reconcile`): a seat whose
-//! game ended without its release is freed, and one the record holds that the ledger lacks is
-//! adopted, each logged as `seats.drift`.
+//! from the record (`boot`), and every reaper tick compares the two (`reconcile`).
 //!
-//! Two processes overlap while a deploy hands over, each with its own ledger, so every claim fences
-//! on `app.seat_epoch` (migration 0054) inside the transaction that writes its seats: boot bumps the
-//! epoch before it fills the ledger, and a claim made on an older epoch writes nothing
-//! (`StoreError::Fenced`, answered 503). The fence's shared row lock makes the bump wait for the
-//! claims in flight, so the new ledger reads every seat the old process committed. No lock is held
-//! in the database past a transaction.
-//!
-//! The mutex is held only for an in-memory check and write, never across an `.await`.
+//! Two processes overlap while a deploy hands over, each with its own ledger, so every claim fences on
+//! `app.seat_epoch` (migration 0054) inside the transaction that writes its seats: boot bumps the epoch,
+//! which waits for the claims in flight, before it fills the ledger, and a claim on an older epoch writes
+//! nothing (`StoreError::Fenced`, answered 503). The mutex is never held across an `.await`.
 
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Mutex, MutexGuard};
@@ -448,8 +440,7 @@ pub fn held_seats(
     record
 }
 
-/// The record's seats, read in one transaction: the in-match flags, the series that are not over
-/// and the live co-op matches.
+/// The record's seats, read in one transaction.
 async fn read_record(app: &App) -> Result<IndexMap<String, Seat>, StoreError> {
     let mut tx = app.db.begin(None).await?;
     let seated = tx.profiles_seated().await?;

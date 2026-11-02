@@ -1,8 +1,6 @@
-//! Adapters between the engine's hook types and Luau functions in the VM.
-//!
-//! Each adapter returns an engine hook (an `Arc<dyn Fn ...>`) that captures its `Site` and the card's
-//! bytecode. When invoked, it calls into the thread-local VM, wraps the context in scoped userdata,
-//! invokes the Luau function, and translates the returned value back to the engine's types.
+//! Adapters between the engine's hook types and Luau functions in the VM. Each returns an engine hook
+//! that captures its `Site` and the card's bytecode and, when invoked, calls into the thread-local VM
+//! with the context as scoped userdata and translates the returned value back to the engine's types.
 
 use std::sync::Arc;
 
@@ -144,13 +142,10 @@ pub fn check_named_hook(site: Site, bytecode: &'static [u8], name: &str) -> Resu
     })
 }
 
-/// Runs a closure verb's named face function as `face[name](ctx, data)` and builds the
-/// effect list it returns: the card's chunk re-run through the thread-local VM, the
-/// function indexed out of its face and called in a `lua.scope` with the scoped `ctx`,
-/// the way part 4 builds every hook. The closure captures only the card, the face, the
-/// name, the data and the site: nothing a script sets survives the call (L8).
-/// A failure names the card, face and function; the caller panics with it, since an
-/// engine hook has no error to return.
+/// Runs a closure verb's named face function as `face[name](ctx, data)` and builds the effect list it
+/// returns. The closure captures only the card, the face, the name, the data and the site: nothing a
+/// script sets survives the call (L8). A failure of any `call_named_*` names the card, face and
+/// function; the caller panics with it, since an engine hook has no error to return.
 pub fn call_named_effects(
     site: Site,
     bytecode: &'static [u8],
@@ -172,9 +167,8 @@ pub fn call_named_effects(
         .collect()
 }
 
-/// Runs `with_kill_credit`'s named `pairs` function as `face[name](ctx, data)` and reads its
-/// answer as kill credits: a list of `{ victimId, toId }` records. A failure names the card, face
-/// and function; the caller panics with it, since an engine hook has no error to return.
+/// Runs `with_kill_credit`'s named `pairs` function as `face[name](ctx, data)` and reads its answer as
+/// kill credits: a list of `{ victimId, toId }` records.
 pub fn call_named_kill_pairs(
     site: Site,
     bytecode: &'static [u8],
@@ -200,9 +194,7 @@ pub fn call_named_kill_pairs(
     })
 }
 
-/// Runs `with_kill_credit`'s named `then` function as `face[name](pair, data)` and builds the
-/// effect list it returns. A failure names the card, face and function; the caller panics with
-/// it, since an engine hook has no error to return.
+/// Runs `with_kill_credit`'s named `then` function as `face[name](pair, data)`.
 pub fn call_named_kill_then(
     site: Site,
     bytecode: &'static [u8],
@@ -223,11 +215,9 @@ pub fn call_named_kill_then(
         .collect()
 }
 
-/// Runs a closure verb's named face function as `face[name](id, data)` — `for_each_card`'s
-/// `each`, which takes no context — and builds the effect list it returns. `data` is what the
-/// verb's `data` field carried (#464 gap 2); a function written before it ignores the second
-/// argument. A failure names the card, face and function; the caller panics with it, since an
-/// engine hook has no error to return.
+/// Runs a closure verb's named face function as `face[name](id, data)` — `for_each_card`'s `each`,
+/// which takes no context — and builds the effect list it returns. `data` is what the verb's `data`
+/// field carried (#464 gap 2).
 pub fn call_named_each(
     site: Site,
     bytecode: &'static [u8],
@@ -247,12 +237,10 @@ pub fn call_named_each(
         .collect()
 }
 
-/// Adapts a direct effect-list hook (`cry`, `death`, `start_of_turn`, etc.). One function value
-/// held by two hook keys — or by both faces (#464 gaps 10 and 14) — shares this one adapter.
-/// An adapter both faces share (`across_faces`) reads its function from the RUNNING face's table,
-/// by `ctx.radiant`, so a named sub-hook resolves where the run runs, while `param` reads off
-/// `ctx` either way. Any other runs its own face's function, as a Rust face runs its own closure:
-/// a Radiant ingredient's text fused into a base host runs Radiant with `ctx.radiant` false.
+/// Adapts a direct effect-list hook (`cry`, `death`, `start_of_turn`, etc.), which one function value
+/// held by two hook keys or both faces shares (#464 gaps 10 and 14). One both faces share reads its
+/// function from the RUNNING face's table, by `ctx.radiant`; any other runs its own face's function, as
+/// a Rust face runs its own closure (a Radiant ingredient fused into a base host runs Radiant).
 pub fn adapt_hook(site: Site, bytecode: &'static [u8], across_faces: bool) -> Hook {
     Arc::new(move |ctx: &mut EffectContext<'_>| {
         let running = if !across_faces {

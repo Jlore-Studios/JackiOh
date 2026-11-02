@@ -100,12 +100,10 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     const putBody = { stats: payload };
     const stringifiedLength = JSON.stringify(putBody).length;
 
-    // Must fit under PLAYER_STATS_BYTES_MAX
     expect(stringifiedLength).toBeLessThanOrEqual(PLAYER_STATS_BYTES_MAX);
     // Every catalog card is included because all of them fit under the cap
     expect(Object.keys(payload.cards).length).toBe(catalogIds.length);
 
-    // Seen is omitted
     const firstId = catalogIds[0] ?? "core-001";
     expect(payload.cards[firstId]).not.toHaveProperty("seen");
     expect(payload.cards[firstId]).toEqual({
@@ -149,7 +147,6 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     const putBody = { stats: payload };
     expect(JSON.stringify(putBody).length).toBeLessThanOrEqual(PLAYER_STATS_BYTES_MAX);
 
-    // Summary computed over payload is identical to summary computed over full stats
     const originalSummary = computeSummary(stats.cards);
     const payloadSummary = computeSummary(payload.cards);
 
@@ -216,11 +213,9 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
     const payload = syncPayload(stats);
 
-    // All-zero cards or cards with only seen are excluded completely
     expect(payload.cards).not.toHaveProperty("card-only-seen");
     expect(payload.cards).not.toHaveProperty("card-zeros");
 
-    // Mixed card keeps only non-zero summary counters and drops seen
     expect(payload.cards["card-mixed"]).toEqual({
       played: 5,
       destroyed: 2,
@@ -283,7 +278,6 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
     vi.mocked(putPlayerStats).mockRejectedValueOnce(new Error("Network error"));
 
-    // Should not throw
     await expect(syncPlayerStats()).resolves.toBeUndefined();
 
     expect(putPlayerStats).toHaveBeenCalledWith("token-private", {

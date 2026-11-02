@@ -1,9 +1,6 @@
-//! Make Radiant (SPEC §6.3, §5.2, R74): set the instance's `radiant` flag, and nothing else. The
-//! flag is the whole model — never a separate card id — so in hand or library the stats and text
-//! swap on the next read, and on the field the base-stat layer swaps at once while damage and buffs
-//! stay and no Cry re-fires, because setting a flag is not an entry to the field (R22).
-//!
-//! Port of `packages/engine/src/effects/radiant.ts`.
+//! Make Radiant (SPEC §6.3, §5.2, R74): set the instance's `radiant` flag, never a separate card id,
+//! so the face swaps on the next read; on the field damage and buffs stay and no Cry re-fires, as
+//! setting a flag is not an entry to the field (R22).
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -57,14 +54,10 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     card_type == CardType::Trap || card_type == CardType::FieldTrap
 }
 
-/// §5.2: the flag is never unset, so a card that is already Radiant is untouched (§6.3). The cue is
-/// another matter on a card someone may not read: R97 keeps a hidden card's event in the other seat's
-/// stream, redacted but present, so a cue only for the cards that changed would count, for the
-/// opponent, which of #29's hand or #26's chosen card were Radiant already — the face R177 hides. So a
-/// named Make Radiant on a hidden card is always reported, changed or not; the random picks only ever
-/// pick non-Radiant cards (R60), and a public card's face is public either way.
-///
-/// `card` is a snapshot; the card is read again by its id, as it stands now, and written there.
+/// §5.2, §6.3: a card already Radiant is untouched, but a hidden one is cued anyway: R97 keeps its
+/// redacted event in the other seat's stream, so cueing only changed cards would tell which of #29's
+/// hand or #26's pick was Radiant already, the face R177 hides (random picks take non-Radiant cards
+/// only, R60). `card` is a snapshot; the card is read again by its id and written there.
 pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     let card = crate::zones::live_or(ctx.state, card);
     if card.radiant {
@@ -77,8 +70,7 @@ pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> 
         }
         return false;
     }
-    // R311: a library card's `knownAs` is left as it was, so its owner's list keeps showing the face
-    // it went in with — the change was made where nobody reads it.
+    // R311: a library card's `knownAs` is left as it was: the change was made where nobody reads it.
     if let Some(live) = find_instance_mut(ctx.state, &card.id) {
         live.radiant = true;
     }
@@ -91,10 +83,9 @@ pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> 
     true
 }
 
-/// §5.2: on the field "newly gained keywords apply at once". A radiant face that prints Divine Shield
-/// where the base face does not (#20, #50, #89) gives the unit a shield it did not have, so one an
-/// earlier, granted Divine Shield spent is up again — the same as a shield granted again (§10.4,
-/// `buff::grant_to`). A shield printed on both faces is not newly gained, and stays spent.
+/// §5.2: on the field "newly gained keywords apply at once", so a radiant face printing Divine Shield
+/// the base face lacks (#20, #50, #89) puts a spent shield up again, as a shield granted again does
+/// (§10.4, `buff::grant_to`). One printed on both faces is not newly gained, and stays spent.
 fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     // A Vanilla unit has no printed text on either face (§6.3), so its face prints no shield.
     if card.zone.z() != ZoneName::Field || card.divine_shield_spent != Some(true) || card.vanilla {
@@ -113,7 +104,7 @@ fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 }
 
 /// §3.2 and R13: only the top of a Stack pile, or a Unit a carrier holds (R446, R1824000), is on the
-/// field, so only it can be picked — in `zones::acting_on`'s order.
+/// field, so only it can be picked.
 fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance> {
     acting_on(ctx.state, player, StandingAt::ItsLane)
         .into_iter()
@@ -124,9 +115,7 @@ fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance
 }
 
 /// Every card of the named zones, Radiant ones included, in hand order, library top down and lane
-/// order, so a draw over them depends only on (seed, cursor). A random pick narrows it to the
-/// non-Radiant cards group by group (R60, R242); a per-card roll (#42) takes every one
-/// (`radiant_chance`).
+/// order, so a draw over them depends only on (seed, cursor). A random pick narrows it (R60, R242).
 fn pool_of(ctx: &EffectContext<'_>, player: PlayerId, zones: &[RadiantZone]) -> Vec<CardInstance> {
     let side = &ctx.state.players[player];
     let mut seen: IndexSet<String> = IndexSet::new();
@@ -159,11 +148,10 @@ pub fn set_radiant(args: RadiantTarget) -> Effect {
     })
 }
 
-/// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed. A card
-/// that is not Radiant is untouched; otherwise the flag is cleared and `deradianted` reports it.
-/// The layers read the flag, so the face swaps back while damage, buffs and tuning stay, keywords
-/// only the Radiant face printed are lost, ongoing triggers read the base text from then on, and no
-/// Cry fires. A fused card returns to its fused base form (R77), since the face is the flag.
+/// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed, reported by
+/// `deradianted`. The layers read the flag, so the face swaps back while damage, buffs and tuning stay,
+/// keywords only the Radiant face printed are lost, triggers read the base text and no Cry fires. A
+/// fused card returns to its fused base form (R77).
 pub fn clear_radiant(args: RadiantTarget) -> Effect {
     Effect::new("clearRadiant", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
@@ -218,8 +206,7 @@ pub fn set_radiant_random(args: SetRadiantRandomArgs) -> Effect {
             }
             groups.push(group);
         }
-        // R242: a public card's face is public, so only its non-Radiant cards are slots; a hidden
-        // card is a slot whatever its face, since whether it is Radiant is what the reader may not see.
+        // R242: a public group's slots are its non-Radiant cards; a hidden card is one whatever its face.
         let sizes: Vec<usize> = groups
             .iter()
             .enumerate()
@@ -255,10 +242,8 @@ pub fn set_radiant_random(args: SetRadiantRandomArgs) -> Effect {
                 chosen.insert(card.id.clone());
             }
         }
-        // R242: the events go out group by group — the public cards', the owner's hidden cards', then
-        // the library's — each in the zones' own order (hand order, lane order, the library top down).
-        // In the zones' order a pick's place beside a public pick would say which zone it was in, and
-        // so which hidden card was base-face: the hand's comes before a unit's, a face-down trap's after.
+        // R242: the events go out group by group (`READERS`), not in the zones' order, where a pick's
+        // place beside a public pick would tell which zone, so which hidden card, it was.
         for cards in &groups {
             for card in cards {
                 if chosen.contains(&card.id) {
@@ -269,12 +254,10 @@ pub fn set_radiant_random(args: SetRadiantRandomArgs) -> Effect {
     })
 }
 
-/// R242: who may read a card of a random pick's pool where it sits — everyone (a unit, a face-up
-/// backrow card), only the player whose side it is on (their hand, their face-down trap: §9.1, R33),
-/// or nobody (a library, §3). The groups are listed in the order their events go out.
+/// R242: who may read a pool card where it sits — everyone, only its side's player (their hand, their
+/// face-down trap: §9.1, R33), or nobody (a library, §3) — in the order the groups' events go out.
 const READERS: [Readers; 3] = [Readers::Everyone, Readers::Owner, Readers::Nobody];
 
-/// `(typeof READERS)[number]`: "everyone" | "owner" | "nobody". Private, as TS's was.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Readers {
     Everyone,
@@ -293,13 +276,10 @@ fn readers_of(ctx: &EffectContext<'_>, card: &CardInstance) -> Readers {
     }
 }
 
-/// R242: how many of `count` picks each reader group takes — a uniform draw of `count` different
-/// slots among all of them, which is how a uniform pick of `count` cards over the whole pool falls,
-/// except that a hidden card is a slot whatever its face. So the chance that a public card is picked,
-/// and how many picks land among each player's unread cards, hang on the groups' sizes alone, which
-/// both players can count: never on a face a player may not read (§9.1). When every slot is taken, or
-/// the pool is one group only, there is nothing random to decide and nothing is drawn (R129) — which
-/// leaves a single group's pick exactly R60's.
+/// R242: how many of `count` picks each reader group takes — a uniform draw of `count` slots among all
+/// of them, a hidden card being a slot whatever its face, so the split hangs on the groups' sizes alone,
+/// never on a face a player may not read (§9.1). With every slot taken, or one group only, nothing is
+/// drawn (R129), which leaves a single group's pick exactly R60's.
 fn split_picks(rng: &mut Rng, sizes: &[usize], count: usize) -> Vec<usize> {
     let total: usize = sizes.iter().sum();
     let groups = sizes.iter().filter(|size| **size > 0).count();
@@ -342,22 +322,12 @@ pub struct RadiantChanceArgs {
 }
 
 /// A per-card chance rather than a pick of N (#42 Eugenics: "each remaining library card has a 30%
-/// chance to become Radiant", radiant "Lucky 1 at 40%"). One INDEPENDENT `rng.chance` roll per
-/// card in the named zones, in `pool_of`'s order — hand order, library top down, lane order — so the
-/// draws depend only on (seed, cursor) and nothing else (§10.7).
+/// chance to become Radiant"): one independent roll per card in `pool_of`'s order (§10.7).
 ///
-/// EVERY card is rolled, a Radiant one included. §8 #42 rolls "each remaining library card", and it
-/// is not one of R60's random picks, which choose among the non-Radiant cards: skipping the Radiant
-/// ones made the number of draws, and so every later draw, hang on how many of a library nobody may
-/// read were Radiant already, and a success on one is cued like any other (R177), so the cues cannot
-/// count them either (§9.1). A success on a card that is already Radiant changes nothing (§6.3).
-/// `lucky: n` is §6.1's Lucky X — n extra rolls per card, keeping the success — so the draw count is
-/// (n + 1) per card, which is what makes "Lucky 1 at 40%" two rolls a card.
-///
-/// ORDER WITHIN AN EFFECT LIST. #42 exiles 8 cards first and then rolls over what is LEFT. The pool
-/// is read here, when this effect applies, straight off the live library, so an exile earlier in the
-/// same list has already taken its cards out and they are never rolled — §4.5 and R59 put the state
-/// check after the whole list, never between two of its effects.
+/// EVERY card is rolled, a Radiant one included (§8 #42 is not one of R60's picks): skipping them would
+/// make the number of draws hang on how many of a library nobody may read were Radiant, and a success
+/// is cued either way (R177, §9.1). The pool is read as this effect applies, so an earlier exile in the
+/// list is never rolled (§4.5, R59).
 pub fn radiant_chance(args: RadiantChanceArgs) -> Effect {
     Effect::new("radiantChance", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

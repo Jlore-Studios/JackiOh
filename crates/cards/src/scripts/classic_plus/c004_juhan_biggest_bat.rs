@@ -17,11 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #4 Juhan Biggest Bat — SPEC §8.7 row 4, BUILD M9 Classic+ row C+ 4: "Stack; played onto your
-// occupied unit zone, every dormant card beneath becomes a copy of Juhan on its face, keeping each old
-// card's owner and controller and staying dormant, an Immutable card staying itself (R23); no copy
-// fires a Cry (R1); when the top Juhan leaves, the next Juhan resumes; played onto an empty zone nothing
-// is transformed; radiant Stack, First Strike, and the copies are Radiant".
+// C+ #4 Juhan Biggest Bat — SPEC §8.7 row 4, BUILD M9 Classic+ row C+ 4.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -80,7 +76,7 @@ mod tests {
         );
         assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Stack]);
         assert_eq!(kinds(&def.radiant.keywords), vec![KeywordKind::Stack, KeywordKind::FirstStrike]);
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face's very script.
+        // The Radiant face is the base face's very script.
         let scripts = script();
         assert!(matches!(
             (&scripts.base.cry, &scripts.radiant.cry),

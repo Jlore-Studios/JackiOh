@@ -18,7 +18,6 @@ export const PRACTICE_PACING: PracticePacing = {
   firstActionMs: 800,
   actionGapMs: 550,
   promptAnswerMs: 450,
-  // Wait for lethal replay and result effects.
   resultDelayMs: FX_LETHAL_LEAD_MAX_MS + FX_RESULT_MS,
 };
 
@@ -57,10 +56,7 @@ export const PRACTICE_RESULT_PARTICLES = 18;
 /** R768: retained free-game replays. */
 export const PRACTICE_REPLAYS_KEPT = 10;
 
-/**
- * R768: how many of the kept games opened last the worker holds folded, so going back to one folds
- * it no second time. Each holds a state every `REPLAY_CHECKPOINT_EVERY` steps.
- */
+/** R768: how many kept games opened last the worker holds folded, so going back to one folds it no second time. */
 export const PRACTICE_REPLAYS_CACHED = 5;
 
 /** R923001: the most cards the practice sandbox's search shows at once. */

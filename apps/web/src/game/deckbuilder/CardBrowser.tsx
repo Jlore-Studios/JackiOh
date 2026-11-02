@@ -1,15 +1,9 @@
 // The browse pane: the filter bar, the pool grid in its frame, the empty state and a card's detail
 // view. The deck editor (DeckEditor.tsx) and the Card Almanac (routes/almanac.tsx, R630) both render
-// it, so the two screens share one browse UI and one look (deckbuilder.css).
-//
-// The pane decides nothing. The screen hands it the pool (`visiblePool` or `almanacPool`), the
-// filter and the sort it holds, and the card whose detail is open. What only a deck has comes in
-// through props: the "owned only" control, the grid's deck half (the "+", the drag, where each
-// card already is), a status line under the filters, and the detail view's meta and actions.
-// Without the grid's deck half the grid is read-only (PoolGrid.tsx). R1956000: the cards the
-// screen names as the viewer's own (`own`, the signed-in Almanac's) are drawn as their own copies,
-// in the grid and in the detail view.
-// The "Win %" sort's notice (loading, or failed with a retry) reads the screen's useCardWinRates.
+// it, so the two screens share one browse UI and one look (deckbuilder.css). The pane decides
+// nothing: the screen hands it the pool, the filter and the sort it holds, and the card whose detail
+// is open. R1956000: the cards the screen names as the viewer's own (`own`) are drawn as their own
+// copies, in the grid and in the detail view.
 
 import type { ReactElement, ReactNode } from "react";
 
@@ -59,10 +53,9 @@ export type CardBrowserProps = {
   status?: ReactNode;
   /** A click, right-click or long-press on a pool card. */
   onInspect: (cardId: string) => void;
-  /** The open detail view, or null when none is. */
   detail: BrowserDetail | null;
   onCloseDetail: () => void;
-  /** SPEC §9.11, R654: render the compact card statistics block in the detail view (deckbuilder and almanac). */
+  /** SPEC §9.11, R654: render the compact card statistics block in the detail view. */
   showStats?: boolean;
   /** The screen's `useCardWinRates`: while the "Win %" sort's rates load, or after they failed, a
    *  notice over the pool says the cards are in cost order (a retry after a failure). */

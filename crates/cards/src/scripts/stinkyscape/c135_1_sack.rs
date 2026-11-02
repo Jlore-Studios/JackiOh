@@ -40,10 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #135.1 Sack — SPEC §7, BUILD M12 row S 135.1: "a Sack holding a Unit, destroyed, summons that Unit for
-// the Sack's controller, summoning sick and with no Cry; Bounced or exiled, the same; with no open zone the
-// Unit is exiled; a Sack holding nothing summons nothing; radiant 0/8 with Brittle 1, crumbling once its
-// count ticks (R638) and summoning the Unit then".
+// S #135.1 Sack — SPEC §7, BUILD M12 row S 135.1 (R638).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -60,9 +57,6 @@ mod tests {
     const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile a permanent and a random card …"
     const POLYMORPH: &str = "meditative-024"; // (3) Spell: "Transform a Unit into a Sheep Token."
 
-    /// p1 has played a Twisted Sorcerer (its Cry at p2's hero) into unit zone 2, which p2's Sacked
-    /// (`radiant` its face) stuffed into a Sack (`radiant` the Sack's face too); then it is p2's turn
-    /// with 10 mana and `hand`. `p1_field` stands beside it. No turn ends by itself.
     fn sacked(radiant: bool, p1_field: Value, hand: Value) -> (Scenario, String) {
         let mut s = crate::scenario(json!({
             "seed": "sack",
@@ -128,7 +122,6 @@ mod tests {
                 let sack = sack(&s);
                 if spell == FLOOD {
                     s.play(FLOOD, json!({}));
-                    // Flood came first, so the Sorcerer arrives after it and stays.
                 } else {
                     s.play(COLLATERAL, json!({ "targets": pick::id(&sack.id) }));
                 }
@@ -157,7 +150,6 @@ mod tests {
             }
             let sorcerer = s.card(SORCERER).id.clone();
             s.play(SORCERER, json!({ "zone": 2, "targets": [{ "pick": "hero", "player": "p2" }] }));
-            // The Sorcerer left its zone before the Sack was summoned, so the Sack took it.
             assert_eq!(s.unit_at(P1, 2).def_id, ID);
             let refill = s.hand(P1).into_iter().find(|card| card.def_id == VANILLA).expect("a Vanilla").id;
             s.play(refill.as_str(), json!({ "zone": 5 }));
@@ -170,8 +162,6 @@ mod tests {
 
         #[test]
         fn r1850003_a_sack_that_finds_no_zone_holds_nothing_and_the_unit_owed_to_that_side_is_exiled() {
-            // A Radiant Sacked summons the Sack on its own side, which is full, and the Unit would come
-            // back to that side's player too.
             let mut s = crate::scenario(json!({
                 "seed": "sack-none",
                 "p1": { "hand": [SORCERER, FILLER], "library": crate::filler(6), "mana": 10 },
@@ -204,8 +194,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// No card summons a Radiant Sack with a Unit inside it (S #135's Radiant face summons a plain
-        /// one), so a Radiant Sack set up on p1's side takes over the hold Sacked made.
         #[test]
         fn r638_a_radiant_sack_is_0_8_and_crumbles_at_its_brittle_1_releasing_the_unit() {
             let (mut s, sorcerer) = sacked(false, json!([{ "def": ID, "radiant": true, "lane": 5 }]), json!([FILLER]));

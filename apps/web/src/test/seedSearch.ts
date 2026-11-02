@@ -1,8 +1,6 @@
-// The web tests' seed search (#2569), after the Rust testkit's `seed_where` (#848,
-// crates/engine/src/testkit/seed_search.rs): a test that needs a seeded game to land one way finds the
-// seed at run time instead of pinning one that every card change re-deals. The search is deterministic
-// (`<prefix>-0`, `<prefix>-1`, … tried in order), so a test replays the same game every run, and it
-// throws naming its prefix and its bound when no seed fits.
+// The web tests' seed search (#2569), after the Rust testkit's `seed_where` (#848): a test that needs
+// a seeded game to land one way finds the seed at run time instead of pinning one that every card
+// change re-deals. The search is deterministic, so a test replays the same game every run.
 
 /**
  * How many seeds `seedWhere` tries before it throws. Far below the engine's own `SEED_SEARCH_BOUND`
@@ -11,9 +9,8 @@
 export const SEED_SEARCH_BOUND = 40;
 
 /**
- * The first seed `<prefix>-0`, `<prefix>-1`, … that `accept` takes. `accept` builds the game from the
- * seed and reads what the test needs of it; the test then builds the same game on the seed it got and
- * runs its assertions as they are.
+ * The first seed `<prefix>-0`, `<prefix>-1`, … that `accept` takes, or a throw naming the prefix and
+ * the bound. `accept` builds the game from the seed and reads what the test needs of it.
  */
 export function seedWhere(prefix: string, accept: (seed: string) => boolean): string {
   for (let index = 0; index < SEED_SEARCH_BOUND; index += 1) {

@@ -1,7 +1,7 @@
 // `/invite` — the pending-account code screen (SPEC §9.4, BUILD M6-T1).
 // R145/§9.8: render code and account refusals as received; identical code errors are a security property.
-// R192/R109/R194: server-provided waits/messages, renew/retry once, and retain known status after other failures.
-// R191 reads input without guessing; waits recheck after expiry or wake; config is R79/R104 (CLAUDE.md rule 9).
+// R192/R109/R194: waits and messages come from the server; renew or retry once.
+// R191 reads input without guessing; config is R79/R104 (CLAUDE.md rule 9).
 
 import { useEffect, useRef, useState } from "react";
 
@@ -56,10 +56,7 @@ const LONGEST_TIMER_MS = 2_147_483_647;
 /** Unit conversions, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/**
- * A rate-limited refusal (R192): the wait it stated (kept for `data-retry-after-ms`), and the
- * deadline that wait makes on the clock, or null for both when it stated none.
- */
+/** A rate-limited refusal (R192): its stated wait and the deadline it makes, both null if none. */
 type RateLimit = { retryAfterMs: number | null; until: number | null };
 
 function isRateLimited(cause: unknown): cause is ApiRequestError {
@@ -70,7 +67,7 @@ function isPausedRefusal(cause: unknown): boolean {
   return cause instanceof ApiRequestError && cause.status === 503 && cause.code === "unavailable";
 }
 
-/** Names both account and network without revealing which limit refused; the server error says what happened. */
+/** Never says which limit (account or network) refused; the server's error says what happened. */
 function waitText(leftMs: number | null): string {
   if (leftMs === null) return t("This account or network can try again in a few minutes.");
   return t("This account or network can try again in {wait}.", { wait: waitInWords(leftMs) });
@@ -90,10 +87,6 @@ function statusDeadlines(read: StatusRead | null): { pausedUntil: number | null;
   return { pausedUntil, triesBackAt };
 }
 
-/**
- * When to read the status again: the soonest deadline it stated, but never sooner than
- * `CODE_STATUS_RECHECK_FLOOR_SECONDS` after it was read, or null when it stated none that matters.
- */
 function recheckAt(read: StatusRead | null): number | null {
   const { pausedUntil, triesBackAt } = statusDeadlines(read);
   const due = [pausedUntil, triesBackAt].filter((deadline): deadline is number => deadline !== null);
@@ -199,7 +192,6 @@ function InviteScreen({ account }: { account: Account }) {
   const [statusReads, setStatusReads] = useState(0);
   /** The code R145's error just refused: Redeem stays off while the field still holds it. */
   const [refusedCode, setRefusedCode] = useState<string | null>(null);
-  /** §9.4 step 1 refused a redemption for this account's unconfirmed email. */
   const [unverifiedRefusal, setUnverifiedRefusal] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [resendNotice, setResendNotice] = useState<string | null>(null);
@@ -210,7 +202,7 @@ function InviteScreen({ account }: { account: Account }) {
   const [confirmedHere, setConfirmedHere] = useState(false);
   const codeRef = useRef(code);
   codeRef.current = code;
-  /** Set when a refusal should put the caret back in the field once it is unlocked. */
+  /** A refusal puts the caret back in the field once it unlocks. */
   const focusField = useRef(false);
   const [redeemed, setRedeemed] = useState(false);
   const redeemedRef = useRef<HTMLDivElement>(null);
@@ -259,7 +251,6 @@ function InviteScreen({ account }: { account: Account }) {
     };
   }, [token, statusReads]);
 
-  // Re-read status when its stated wait expires.
   useWhenDue(recheckAt(statusRead), () => {
     setStatusReads((count) => count + 1);
   });
@@ -370,8 +361,7 @@ function InviteScreen({ account }: { account: Account }) {
           }));
         }
         if (cause instanceof ApiRequestError && cause.status === 409) announceAccountChange();
-        // R757000, R757001: the account owes the consent screen (the terms changed since the gate
-        // read it): the gate reads the account again and shows it.
+        // R757000, R757001: consent owed (the terms changed): the gate reads the account again.
         if (cause instanceof ApiRequestError && cause.code === "consent_owed") announceAccountChange();
         setStatusReads((count) => count + 1);
       })
@@ -400,8 +390,7 @@ function InviteScreen({ account }: { account: Account }) {
 
   const helpId = `${INVITE_CODE_INPUT}-help`;
 
-  // Sentences with an address or a link inside: one entry each, split around what is inserted, so
-  // English keeps the text it always had.
+  // A sentence with an address or a link inside is one entry, split around what is inserted.
   const [confirmBefore = "", confirmAfter = ""] = t(
     "Confirm your email address first: open the link we emailed to {address}, then check again here. If you already have, check again in a moment.",
   ).split("{address}");
@@ -566,8 +555,7 @@ function InviteScreen({ account }: { account: Account }) {
                   setCode(next.formatted);
                   // The refusal was about the code as it was; a rate limit's wait still stands.
                   if (rateLimit === null) setError(null);
-                  // A rate limit that stated no wait lasts until the player changes the code; the
-                  // server still decides, this only stops the button looking dead forever.
+                  // A waitless rate limit ends at a code change, so the button never looks dead; the server decides.
                   if (rateLimit !== null && rateLimit.retryAfterMs === null) {
                     setRateLimit(null);
                     setError(null);
@@ -606,7 +594,6 @@ function InviteScreen({ account }: { account: Account }) {
           )}
 
           {error === null && rateLimit === null ? null : (
-            // One message: what the server said, then (for a rate limit) how long to wait.
             <div className="invite-screen__refusal">
               {error === null ? null : (
                 <p className="notice" data-testid={INVITE_ERROR} role="alert">
@@ -628,16 +615,14 @@ function InviteScreen({ account }: { account: Account }) {
           )}
 
           {refusedAgain ? (
-            // The client's own sentence beside R145's, the same for every refused code: it says
-            // nothing about which of the three kinds of failure this was.
+            // The same for every refused code: it says nothing about which failure this was (R145).
             <p className="invite-screen__help" data-testid={inviteTestid.refused}>
               {t("Change the code to try again.")}
             </p>
           ) : null}
 
           {done ? null : (
-            // For whoever has no code yet: under Redeem, set apart like the sign-in board's links,
-            // so it never stands between the field and the button.
+            // Under Redeem, so it never stands between the field and the button.
             <p className="invite-screen__where" data-testid={inviteTestid.whereFrom}>
               {noCodeBefore}
               <a href={paths.practice} data-testid={inviteTestid.playAi} onClick={followInApp(paths.practice)}>

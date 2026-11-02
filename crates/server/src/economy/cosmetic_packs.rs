@@ -2,30 +2,16 @@
 //! cosmetic token cycle's last step pays, the bar each opening fills and the chase it buys.
 //!
 //! - [`roll_cosmetic_pack`]: the pure roll, from the shipped sets' pool, the account's
-//!   [`CosmeticHoldings`] and a seed to what each slot grants (R1306000, R1306001). Each slot's
-//!   rarity is a tiered roll on `COSMETIC_TIER_WEIGHTS`, the floored slot's at
-//!   `COSMETIC_PACK_FLOOR_RARITY` (R1339000), on the cosmetics' own scale and with no pity; a slot
-//!   grants one unowned cosmetic, for a card or the account, leaning toward the cards the account
-//!   owns, and its card when the account lacks it, or falls to the nearest rarity with something
-//!   unowned, or, with nothing unowned at all, grants nothing.
-//! - [`open_cosmetic_pack`]: under the account's lock, one unopened cosmetic pack spent, its
-//!   slots rolled from a fresh seed and every grant written, its cards, cosmetics, the Chase
-//!   Shard bar's one and both token bars' points for every slot (R1306002, R1999000), with the
-//!   opening's log (its catalog, cosmetics, seed and result) in the `ref` of every economy row it
-//!   writes (R1306003). The whole opening or nothing: every refusal returns before the commit,
-//!   and the dropped `Tx` rolls it all back.
-//! - [`buy_chase`]: a full Chase Shard bar buys one Legendary or Mythic cosmetic the account
-//!   chooses and empties (R1306002).
-//! - [`open_cosmetic_pack_once`] and [`buy_chase_once`]: either under an optional
-//!   `Idempotency-Key`, under which a retry answers as its first try did and spends nothing again
-//!   (R2124000).
-//! - The routes, all `AuthLevel::Active`: `GET /api/cosmetic-packs` (the bar, the packs held and
-//!   the slots' odds), `POST /api/cosmetic-packs/open` and `POST /api/cosmetic-packs/chase`
-//!   (`{ cosmeticId, cardId? }`), each spend in the account's turn (`economy::spend_slots`,
+//!   [`CosmeticHoldings`] and a seed to what each slot grants (R1306000, R1306001), on the cosmetics'
+//!   own scale and with no pity, leaning toward the cards the account owns.
+//! - [`open_cosmetic_pack`] and [`buy_chase`], either under an optional `Idempotency-Key`
+//!   ([`open_cosmetic_pack_once`], [`buy_chase_once`]), under which a retry answers as its first try
+//!   did and spends nothing again (R2124000).
+//! - The routes, all `AuthLevel::Active`, each spend in the account's turn (`economy::spend_slots`,
 //!   R2378000).
 //!
-//! An opening and a purchase run under the account's lock (R1301003), so neither rolls on, nor
-//! spends, counters the other is moving.
+//! An opening and a purchase run under the account's lock (R1301003), so neither rolls on, nor spends,
+//! counters the other is moving.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -70,8 +56,7 @@ pub struct CosmeticHoldings {
 }
 
 impl CosmeticHoldings {
-    /// The holdings of an account with `owned` copies and `cosmetics` on its ledger. The starter
-    /// and default cosmetics have no row, and no pack drops them (R1306000).
+    /// The starter and default cosmetics have no row, and no pack drops them (R1306000).
     pub fn of(owned: IndexMap<String, i64>, cosmetics: &OwnedCosmetics) -> Self {
         CosmeticHoldings {
             owned,
@@ -127,10 +112,9 @@ pub struct CosmeticOpening {
 }
 
 /// What every economy row of an opening logs in its `ref` (R1306003, §14.11): everything the roll
-/// read but the holdings before it (the catalog version its pool came from, the cosmetics it could
-/// drop and the seed) and its result (the slots and the draws taken). [`roll_cosmetic_pack`] over
-/// that catalog's pool, the holdings before it and `cosmetics`, with `seed`, replays it however the
-/// live catalog or registry has moved since.
+/// read but the holdings before it, and its result. [`roll_cosmetic_pack`] over that catalog's
+/// pool, the holdings before it and `cosmetics`, with `seed`, replays it however the live catalog
+/// or registry has moved since.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticOpeningLog {
@@ -145,8 +129,6 @@ pub struct CosmeticOpeningLog {
 }
 
 impl CosmeticOpeningLog {
-    /// The log of `opening`, rolled from the pool of catalog `catalog`, over `registry`, with
-    /// `seed`.
     pub fn of(catalog: &str, registry: &[Cosmetic], seed: &str, opening: &CosmeticOpening) -> Self {
         CosmeticOpeningLog {
             catalog: catalog.to_string(),
@@ -182,8 +164,7 @@ pub struct CosmeticPackOdds {
     pub floored_slot: TierOdds,
 }
 
-/// What `GET /api/cosmetic-packs` reads back (R1306002, R1339000): the Chase Shard bar, the
-/// cosmetic packs unopened and the slots' odds.
+/// What `GET /api/cosmetic-packs` reads back (R1306002, R1339000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticPacks {
@@ -220,8 +201,7 @@ fn is_open(cosmetic: &Cosmetic, pool: &[PoolCard], holdings: &CosmeticHoldings) 
 }
 
 /// A per-card cosmetic's card (R1306000): one of `placements`, each weighed by
-/// `COSMETIC_PACK_CARD_WEIGHTS`, `.owned` when the account owns the card and `.unowned` when it
-/// does not. One draw; no placement is `None` and draws nothing.
+/// `COSMETIC_PACK_CARD_WEIGHTS`. One draw; no placement is `None` and draws nothing.
 pub fn pick_card<'c>(
     placements: &[&'c str],
     owned: &IndexMap<String, i64>,
@@ -250,11 +230,10 @@ pub fn pick_card<'c>(
 }
 
 /// What a slot grants once its rarity `rolled` (R1306000, R1306001): the first rarity in
-/// `rolled.floored_fallback_order(floor)` with a cosmetic of `droppable` still open, every rarity
-/// at or above `floor` ahead of those below it, supplies one, picked uniformly (one draw); a per-card
-/// one then takes its card by [`pick_card`] (one draw), and an account one has none. A Legendary
-/// or Mythic one is a chase, and drops like any other (R1333000). With nothing open in any rarity
-/// the slot is spent: `Bars`, with no draw.
+/// `rolled.floored_fallback_order(floor)` with a cosmetic of `droppable` still open supplies one,
+/// picked uniformly (one draw); a per-card one then takes its card by [`pick_card`] (one draw), and
+/// an account one has none. A Legendary or Mythic one is a chase, and drops like any other
+/// (R1333000). With nothing open in any rarity the slot is spent: `Bars`, with no draw.
 pub fn slot_grant(
     rolled: CosmeticRarity,
     floor: CosmeticRarity,
@@ -286,13 +265,12 @@ pub fn slot_grant(
     CosmeticSlotGrant::Bars
 }
 
-/// The whole opening (R1306003, R1339002), pure from the pool, the account's holdings before it,
-/// the cosmetics registry and the opening's seed. Slot by slot, its draws in this order and no
-/// other: the slot's tier, then its cosmetic's pick and, for a per-card one, its card's, each only
-/// when there is something to pick. Each slot's tier is a tiered roll on `COSMETIC_TIER_WEIGHTS`,
-/// the one at `PACK_FLOORED_SLOT` floored at `COSMETIC_PACK_FLOOR_RARITY`, and falls no lower than
-/// that floor while anything there or above is open (R1339000, R1306001). Ownership moves slot by
-/// slot, so a cosmetic or a card granted earlier in the pack is owned later in it (R1306000).
+/// The whole opening (R1306003, R1339002). Slot by slot, its draws in this order and no other: the
+/// slot's tier, then its cosmetic's pick and, for a per-card one, its card's, each only when there
+/// is something to pick. A slot's tier is a tiered roll on `COSMETIC_TIER_WEIGHTS`, the one at
+/// `PACK_FLOORED_SLOT` floored at `COSMETIC_PACK_FLOOR_RARITY`, and falls no lower than that floor
+/// while anything there or above is open (R1339000, R1306001). Ownership moves slot by slot, so a
+/// grant earlier in the pack is owned later in it (R1306000).
 pub fn roll_cosmetic_pack(
     pool: &[PoolCard],
     holdings: &CosmeticHoldings,
@@ -347,16 +325,13 @@ fn no_pack_held() -> ApiError {
     ApiError::new(ApiErrorCode::Conflict, "no unopened cosmetic pack")
 }
 
-/// §14.6: opens one unopened cosmetic pack, in one transaction. Under the account's lock
-/// (R1301003) it reads the pack held, the collection, the cosmetics and the counters, rolls the
-/// opening from `seed` ([`roll_cosmetic_pack`] over the shipped sets' pool) and writes every
-/// grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the
-/// cosmetics, the Chase Shard bar's one unless it is full (R1306002), and both token bars' points
-/// for every slot, each its rolled cosmetic rarity's whatever it grants (R1953000, R1999000), each
-/// bar that reached its size paying its tokens with the overflow kept (R1305000, R1306001). Every
-/// economy row's `ref` is the opening's log; the collection's rows have no `ref` and share the
-/// opening's `at`. No pack held is 409. Every refusal and failure returns before the commit, so it
-/// writes nothing. With no key, [`open_cosmetic_pack_once`]'s opening.
+/// §14.6: opens one unopened cosmetic pack, in one transaction. Under the account's lock (R1301003) it
+/// rolls the opening from `seed` ([`roll_cosmetic_pack`] over the shipped sets' pool) and writes every
+/// grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the cosmetics, the
+/// Chase Shard bar's one, and both token bars' points, each full bar paying its tokens with the overflow
+/// kept (R1305000, R1306001). Every economy row's `ref` is the opening's log; the collection's rows have no
+/// `ref` and share the opening's `at`. No pack held is 409, writing nothing. With no key,
+/// [`open_cosmetic_pack_once`]'s opening.
 pub async fn open_cosmetic_pack(
     app: &App,
     profile_id: &str,
@@ -416,7 +391,6 @@ pub async fn open_cosmetic_pack_once(
         .await?
         .ok_or_else(no_pack_held)?;
 
-    // The new cards, summed per card.
     let mut unlocked: IndexMap<String, i64> = IndexMap::new();
     for slot in &opening.slots {
         if let CosmeticSlotGrant::Cosmetic {
@@ -507,14 +481,13 @@ pub async fn open_cosmetic_pack_once(
     Ok(Spent::Now(opened))
 }
 
-/// §14.6: a full Chase Shard bar buys any chase cosmetic, a Legendary or Mythic one (R1333000),
-/// the account does not own: a per-card one for a card the account owns (a full art names its own
-/// card alone, R1313000) or an account one, in one transaction: the cosmetic's grant, then the
-/// bar emptied (reason `chase_shard`), with the same `at`; one commit (R1306002). An unknown
-/// cosmetic id is 400. Refuses with 409, writing nothing, when the bar is not full, the cosmetic
-/// sits below Legendary, a per-card cosmetic names no owned card, an account cosmetic is given
-/// one, or it is already owned (a ledger row, or a default or starter, which §14.2 gives every
-/// account), in that order. With no key, [`buy_chase_once`]'s purchase.
+/// §14.6: a full Chase Shard bar buys any chase cosmetic (Legendary or Mythic, R1333000) the account does
+/// not own, per-card for a card the account owns (a full art names its own card alone, R1313000) or on the
+/// account, in one transaction: the cosmetic's grant, then the bar emptied (R1306002). An unknown cosmetic
+/// id is 400. Refuses with 409, writing nothing, when the bar is not full, the cosmetic sits below
+/// Legendary, a per-card cosmetic names no owned card, an account cosmetic is given one, or it is already
+/// owned (a ledger row, or a default or starter, which §14.2 gives every account), in that order. With no
+/// key, [`buy_chase_once`]'s purchase.
 pub async fn buy_chase(
     app: &App,
     profile_id: &str,
@@ -605,8 +578,6 @@ pub async fn buy_chase_once(
     Ok(Spent::Now(packs))
 }
 
-/// Reads [`CosmeticPacks`] for `get_cosmetic_packs`, in a transaction of its own
-/// ([`cosmetic_packs_in`]). Read-only, like the collection.
 async fn read_cosmetic_packs(app: &App, profile_id: &str) -> Result<CosmeticPacks, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
     let packs = cosmetic_packs_in(&mut tx, profile_id).await?;
@@ -614,9 +585,8 @@ async fn read_cosmetic_packs(app: &App, profile_id: &str) -> Result<CosmeticPack
     Ok(packs)
 }
 
-/// [`CosmeticPacks`] as `tx` reads them: the bar from the counters, the packs from the inventory
-/// and the odds from `COSMETIC_TIER_WEIGHTS`. A chase's purchase reads its answer through it
-/// before its commit.
+/// [`CosmeticPacks`] as `tx` reads them. A chase's purchase reads its answer through it before its
+/// commit.
 async fn cosmetic_packs_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<CosmeticPacks, ApiError> {
     let counters = tx.economy_counters_get(profile_id).await?;
     let inventory = tx.economy_inventory_get(profile_id).await?;
@@ -741,7 +711,6 @@ mod tests {
             .collect()
     }
 
-    /// Holdings owning `cosmetics` on `card_id`.
     fn wearing(card_id: &str, cosmetics: &[&str]) -> CosmeticHoldings {
         CosmeticHoldings::of(
             IndexMap::new(),
@@ -758,7 +727,6 @@ mod tests {
         )
     }
 
-    /// The cosmetic a grant names.
     fn named(grant: &CosmeticSlotGrant) -> Option<&str> {
         match grant {
             CosmeticSlotGrant::Cosmetic { cosmetic_id, .. } => Some(cosmetic_id),
@@ -979,7 +947,6 @@ mod tests {
         let grants: Vec<&CosmeticSlotGrant> = opening.slots.iter().map(|slot| &slot.grant).collect();
         let cosmetics: Vec<&str> = grants.iter().filter_map(|grant| named(grant)).collect();
         assert_eq!(cosmetics.len(), COSMETIC_PACK_SLOTS.min(2));
-        // Each cosmetic once.
         assert_eq!(cosmetics.iter().collect::<BTreeSet<_>>().len(), cosmetics.len());
         for (at, grant) in grants.iter().enumerate() {
             match grant {
@@ -1005,7 +972,6 @@ mod tests {
             "owned share {share} outside tolerance of {expected}"
         );
         assert_eq!(rng.cursor() as usize, DRAWS);
-        // No placement is no card and no draw.
         assert_eq!(pick_card(&[], &owned, &mut rng), None);
         assert_eq!(rng.cursor() as usize, DRAWS);
     }
@@ -1120,7 +1086,6 @@ mod tests {
             roll_cosmetic_pack(&pool, &holdings, &registry, "r1306003-other"),
             first
         );
-        // At least a rarity's draw per slot, and no more than three.
         assert!(first.draws as usize >= COSMETIC_PACK_SLOTS);
         assert!(first.draws as usize <= COSMETIC_PACK_SLOTS * 3);
     }

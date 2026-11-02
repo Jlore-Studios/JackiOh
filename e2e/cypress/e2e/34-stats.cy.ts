@@ -1,16 +1,7 @@
 // Spec 34 — the public Statistics page (issues #131 and #255; SPEC §9.11, R654, R661), on the landing
-// page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints.
-//
-// BUILD M8's key assertions for this row: "the landing's calls to action carry no Stats link and the
-// footer's "Stats" link opens `/stats`; no provisional banner and no reading notes (R2325000); no data
-// source is named anywhere; summary tiles render the patch's games once, with no data source; cards table
-// searches and filters; card drill-down opens CardFace modal; players tab renders public stats
-// without Elo; Back returns to the landing page".
-//
-// Run it:
-//   pnpm build:e2e
-//   pnpm --dir apps/web exec vite preview --port 5173 --strictPort
-//   pnpm --dir e2e exec cypress run --spec cypress/e2e/34-stats.cy.ts
+// page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints. BUILD M8's key assertions
+// for this row: the landing's calls to action carry no Stats link and the footer's "Stats" link opens
+// `/stats`; no provisional banner and no reading notes (R2325000); no data source is named anywhere.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { seedFor } from "../../support/config.ts";
@@ -136,19 +127,16 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
       req.reply(CARD_DRILL_DOWN_FIXTURE);
     }).as("getCardDrillDown");
 
-    // Intercept public card aggregates
     cy.intercept("GET", "**/api/stats/cards*", (req) => {
       if (!req.url.includes("/api/stats/cards/")) {
         req.reply(PROVISIONAL_CARDS_FIXTURE);
       }
     }).as("getCards");
 
-    // Intercept public player summaries
     cy.intercept("GET", "**/api/stats/players*", (req) => {
       req.reply(PLAYERS_FIXTURE);
     }).as("getPlayers");
 
-    // All unauthenticated auth checks return 401
     cy.intercept({ url: /\/api\/auth\// }, (request) => {
       request.reply({ statusCode: 401, body: { code: "unauthenticated", message: "signed out" } });
     });
@@ -172,7 +160,6 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
       .prev()
       .should("have.attr", "data-testid", SITE_FOOTER_ALMANAC);
 
-    // Click the footer link to navigate to /stats
     cy.get(ts(SITE_FOOTER_STATS)).click();
     cy.location("pathname").should("eq", "/stats");
     cy.title().should("eq", "Statistics · JackiOh");
@@ -193,11 +180,9 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
       .should("contain.text", "Games on patch v0.2.0")
       .and("contain.text", "1,412");
 
-    // Cards table renders rows
     cy.get(ts(STATS_CARDS_TABLE)).should("be.visible");
     cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("contain.text", "Bigot");
 
-    // Search filters cards
     cy.get(ts(STATS_SEARCH_INPUT)).type("D-fender");
     cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("not.contain.text", "Bigot");
     cy.get(ts(STATS_SEARCH_INPUT)).clear();
@@ -209,16 +194,13 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(STATS_DRILL_DOWN_CLOSE)).click();
     cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("not.exist");
 
-    // Players tab renders public player data without exposing Elo
     cy.get(ts(STATS_TAB_PLAYERS)).click();
     cy.get(ts(STATS_PLAYERS_TABLE)).should("be.visible");
     cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "AcePlayer");
     cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "150");
     cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "Big D-fender");
-    // Assert Elo and ratings are kept separate and not exposed
     cy.get(ts(STATS_PLAYERS_TABLE)).should("not.contain.text", "Elo").and("not.contain.text", "Rating");
 
-    // Back returns to landing page
     cy.get(ts(NAV_BACK)).click();
     cy.location("pathname").should("eq", "/");
     cy.get(ts(landingTestid.root)).should("be.visible");

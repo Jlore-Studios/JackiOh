@@ -1,37 +1,14 @@
-//! Deaths and the state check (SPEC §4.5). Run after each action, each whole effect or trigger, each
-//! cast-on-draw cast and each combat, never between the hits of one effect (R59).
-//! M2-T5 adds the full test set; the loop itself is here.
+//! Deaths and the state check (SPEC §4.5, SURFACE §4). Run after each action, each whole effect or
+//! trigger, each cast-on-draw cast and each combat, never between the hits of one effect (R59).
 //!
-//! §4.5 step 3 fires one Death hook per collected card, and a hook is an effect list like any other:
-//! it can open a prompt. A prompt ends the action — "mid-action choices are state, not callbacks"
-//! (§9.3) — so step 3 is an engine sequence that can span a pause, and `work.ts`'s header names it
-//! as one. It is therefore resumable through `state.work` and through nothing else (R113, R117):
-//!
-//!   * the hook's own effect list pauses through `prompts.applyResumable`, which parks the effects
-//!     after the one that asked;
-//!   * the *pass* — which cards still owe a Death hook in R68's order, which ones reserved a zone for
-//!     step 4's Reborn, and which ones step 5 has to report — is parked in the same work item, as
-//!     plain JSON, so the paused board survives `JSON.parse(JSON.stringify(state))` and replays
-//!     exactly. Holding the remaining units in a live array was the bug: the rest of an interrupted
-//!     hook ran straight over the open prompt and the next dying card's prompt was silently dropped,
-//!     since `openPrompt` refuses to overwrite one that is already open.
-//!
-//! R78 and R89 are why the parked item carries whole instances rather than ids. Leaving the field
-//! resets an instance, so a Death hook reads the snapshot taken just before the move — and a
-//! continuation cannot re-derive that snapshot from the board, because the board no longer has it.
-//! The snapshot therefore travels in `resume.data` and is what `ctx.self` is on the way back too,
-//! which is the whole of R89's "a Death hook still reads the whole snapshot".
-//!
-//! R117: the pass is owed at the moment it pauses and never in advance. While `runDeathPass` is on
-//! the stack the cards it has not reached are its own, so a resolution loop running inside one of
-//! them can neither take nor re-run the step it is standing in.
-//!
-//! Port of `packages/engine/src/stateCheck.ts` (part 3, SURFACE §4). TS walked live instances and
-//! wrote through them; here a card is read as a copy and written back through the state by its id,
-//! and a card taken off the field is moved as the copy it was read as (`zones::move_to_zone` and
-//! `zones::place_on_field` take the instance they move, as TS's did). The work handler TS registered
-//! for `DEATHS_WORK` (`registerWorkHandler`) is `run_owed_deaths`, which `work.rs`'s dispatcher calls
-//! (SURFACE §6.6). `STATE_CHECK_PASS_CAP` lives in `config.rs` (CLAUDE.md rule 9).
+//! A Death hook (§4.5 step 3) can open a prompt, which ends the action (§9.3), so the pass is resumable
+//! through `state.work` and nothing else (R113): the hook's list parks its own tail, and the pass (the
+//! hooks still owed in R68's order, step 4's reserved zones, step 5's report) rides in the same work
+//! item as plain JSON, so a paused board round-trips and replays exactly and the rest of an interrupted
+//! hook cannot run over the open prompt. It carries whole instances, not ids (R78, R89): leaving the
+//! field resets an instance, so the snapshot taken before the move is `ctx.self` on the way back too.
+//! R117: the pass is owed the moment it pauses, never in advance, so a resolution loop inside one of
+//! its hooks can neither take nor re-run the step it stands in.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -52,21 +29,12 @@ use crate::wire::{
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
 
-/// Every unit on the field: the card that acts in each unit zone, the top of its pile (§3.2).
-///
-/// §4.5 step 1 collects "units with health 0 or less", and a card dormant under a Stack is not on
-/// the field (§3.2, R13, R174) — so the check never reaches under a pile. The top shields what is
-/// buried: an aura or a layer-2 Felinor that stops reaching a buried card cannot kill it there, and a
-/// dormant card that could not survive is judged the moment it resumes on top, when the check reads
-/// it with the board's auras again. It keeps its damage meanwhile (§3.2), and nothing can mark it
-/// destroyed, since nothing can target it (R90). Collecting buried cards killed a damaged card the
-/// moment a Stack card buried it and a positive aura stopped reaching it, and let a buried Reborn
-/// card come back on top of the card acting in its zone (R175 returns onto a pile only a unit that
-/// died on top of it).
-///
-/// TS read this through `zones.activeUnitsOf`; this is that walk, kept here: each unit zone's top in
-/// lane order, then the Units the carriers hold, in backrow lane order (R446), then the Units standing
-/// in the backrow zones themselves (R1081000), which the death pass takes from here and not from `backrow_of`.
+/// Every unit on the field: the top of each unit zone's pile in lane order, then the Units the carriers hold
+/// in backrow lane order (R446), then the Units standing in the backrow zones (R1081000), which the death
+/// pass takes from here and not from `backrow_of`. A card dormant under a Stack is not on the field (§3.2,
+/// R13, R174), so §4.5 step 1 never reaches under a pile: an aura that stops reaching a buried card cannot
+/// kill it there; it keeps its damage, cannot be marked (R90) and is judged once it resumes on top.
+/// Collecting buried cards also let a buried Reborn card come back over the card acting in its zone (R175).
 fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut units: Vec<CardInstance> = Vec::new();
@@ -91,9 +59,8 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     units
 }
 
-/// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed. Indestructible units are
-/// not collected for damage or a destroy mark, but one whose max health has fallen to 0 or less is
-/// (R69); one merely at 0 or less health with positive max health stays.
+/// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed; an Indestructible one only
+/// when its max health has fallen to 0 or less (R69).
 fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
     let view = auras.unit_view(unit);
     let indestructible = has_keyword(&view.keywords, KeywordKind::Indestructible);
@@ -141,16 +108,10 @@ fn backrow_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
         .collect()
 }
 
-/// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn.
-/// A backrow card has no position, so an Indestructible Field Spell simply keeps its zone and the
-/// mark is dropped with no event.
-///
-/// §10.3: both halves are reported. The switch is `positionSwitched`, and only when there is one
-/// (R91); the Taunt the knock-down takes — one the unit still has in Attack Position, printed,
-/// granted or from an aura — is a `keywordGranted` with `lost` set, since no event type says a
-/// keyword went and one is not added for this (R46). A unit already in Attack Position has nothing
-/// to switch, so without it the change both views show, and the one that decides what may be
-/// attacked (§4.2 step 3), would go out with no event at all.
+/// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn; a backrow card
+/// has no position, so an Indestructible Field Spell only has its mark dropped. §10.3: both are reported, the
+/// switch as `positionSwitched` only when there is one (R91), the Taunt as a `keywordGranted` with `lost`
+/// set, so the Taunt that decides what may be attacked (§4.2 step 3) never goes silently.
 fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         for unit in units_of(sink.state, player) {
@@ -164,8 +125,7 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             if let Some(card) = find_instance_mut(sink.state, &unit.id) {
                 card.marked_destroyed = Some(false);
             }
-            // R91: a unit already in Attack Position has nothing to switch, so no switch is reported — the
-            // event is §10.10's 90° turn, and a unit that did not move must not be seen to.
+            // R91: the event is §10.10's 90° turn, so a unit already in Attack Position reports none.
             if view.position != Position::Atk {
                 if let Some(card) = find_instance_mut(sink.state, &unit.id) {
                     card.position = Some(Position::Atk);
@@ -175,10 +135,8 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
                     position: Position::Atk,
                 });
             }
-            // The Taunt it has in Attack Position, which the suppression takes (a second knock-down the
-            // same turn finds none left to take). R347 keeps Taunt off a unit while it is Indestructible,
-            // so there is none here to report; the stamp still matters if it stops being Indestructible
-            // before the turn ends (a Vanilla).
+            // R347 keeps Taunt off an Indestructible unit, so there is none to report (nor on a second
+            // knock-down); the stamp still matters if it stops being Indestructible this turn (a Vanilla).
             let now = live_or(sink.state, &unit);
             let had_taunt = has_keyword(
                 &crate::layers::unit_view(sink.state, &now).keywords,
@@ -213,12 +171,11 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor),
-/// every Unit on either side in Defense Position switches to Attack Position, active player's first
-/// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
-/// exertion is spent; `positionSwitched` reports it. R2179000: so does an Indestructible Unit in
-/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it —
-/// and R2657000 a Unit with Can't Defend, the same way.
+/// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor), every
+/// Unit on either side in Defense Position switches to Attack Position, active player's first (R68), whether
+/// it arrived in it or stood in it as the aura came. An effect's switch (R20), so no exertion is spent;
+/// `positionSwitched` reports it. R2179000: so does an Indestructible Unit in Defense Position, aura or not
+/// (one that arrived in it, or became Indestructible standing in it), and R2657000 a Unit with Can't Defend.
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
@@ -243,61 +200,47 @@ fn leave_defense(sink: &mut EngineSink<'_>) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // One pass of §4.5 steps 3 to 5, and the remainder it owes (R113, R117)
-// ---------------------------------------------------------------------------
 
-/// R113: the `resume.hook` of the one work item this module parks — the rest of a state-check pass.
-/// It is an engine sequence and not a card's, so the name is one no `Script` can hold, and
-/// `runOwedDeaths` below is registered for it at module scope, in the module that owns the sequence
-/// and never from a test: `work.runWorkItem` raises on a hook nothing knows, and a pass that cannot
-/// be resumed is exactly the lost sequence R113 exists to prevent.
+/// R113: the `resume.hook` of the one work item this module parks, the rest of a state-check pass.
+/// An engine sequence's, so no `Script` can hold the name; `work.rs` dispatches it to
+/// `run_owed_deaths`, since a pass that cannot be resumed is the lost sequence R113 prevents.
 pub const DEATHS_WORK: &str = "@deaths";
 
 /// The pass has one step, named so a reader of `state.work` can see what is owed.
 const DEATHS_STEP: &str = "hooks";
 
-/// Where the pass sits inside `resume.data`, so `work.ts`'s pause block keeps its own key.
+/// Where the pass sits inside `resume.data`, so the pause block (`PAUSE_KEY`) keeps its own key.
 const PASS_KEY: &str = "pass";
 
-/// What one pass of the check still owes once its collected cards have moved (§4.5 steps 3 to 5),
-/// as plain JSON:
+/// What one pass of the check still owes once its collected cards have moved (§4.5 steps 3 to 5):
 ///
-///  - `owed`   — step 3's Death hooks still to fire, in R68's order, each as the snapshot of the card
-///    taken just before it left the field. R78 has already reset the instance on the
-///    board, so the snapshot is the only place the hook's `ctx.self` can come from (R89),
-///    and a continuation cannot re-derive it — hence it travels here (R127).
-///  - `reborn` — step 4's returns: which collected unit had Reborn and which zone it reserved (R64).
-///    The instance is found again by id when the step runs, so a Death hook that removed
-///    it in between cannot be resurrected by a stale reference.
-///  - `collected` — step 5's report: `enteredGraveyard` for everything that is still in a graveyard
-///    once Reborn has taken its own back out (R47).
+///  - `owed`: step 3's Death hooks, in R68's order, each the card's snapshot from just before it left the
+///    field, the only `ctx.self` once R78 has reset the instance (R89, R127).
+///  - `reborn`: step 4's returns, each unit by id with the zone it reserved (R64), so one a Death hook
+///    removed in between is not resurrected from a stale reference.
+///  - `collected`: step 5's `enteredGraveyard` report, of what Reborn left in a graveyard (R47).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DeathPass {
     pub owed: Vec<CardInstance>,
     pub reborn: Vec<RebornEntry>,
     pub collected: Vec<CollectedEntry>,
-    /// A Sacrifice's pass (§6.3, `sacrificeNow`, `sacrificeTogether`) rather than the state check's own:
-    /// one effect inside the list that made it, so finishing it after a Death hook's question does not
-    /// run the check — that is owed after the whole list (§4.5, R59), as it is when nothing asks. Only
-    /// the check's own pass goes round again (§4.5 step 5). Only ever `Some(true)`.
+    /// A Sacrifice's pass (§6.3) rather than the check's own: one effect of the list that made it, so
+    /// finishing it after a Death hook's question does not run the check, owed after the whole list
+    /// (§4.5, R59); only the check's own pass goes round again (§4.5 step 5). Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sacrificed: Option<bool>,
-    /// R1852000: the Starship Pieces among the collected cards, each the snapshot of the card as it
-    /// died (R89), in R68's order: once the pass has returned its Reborn bodies and reported its
-    /// graveyard, a copy of each fuses into its owner's Dormant Starship. Absent when none died, so a
-    /// pass without one serializes as before (D14).
+    /// R1852000: the Starship Pieces among the collected cards, each its snapshot as it died (R89), in
+    /// R68's order, which fuse into their owners' Dormant Starships at the pass's end. Absent when none
+    /// died, so a pass without one serializes as before (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pieces: Option<Vec<CardInstance>>,
 }
 
-/// One of step 4's returns (`DeathPass.reborn`).
-///
-/// `token` is set for a unit token, which ceased to exist as it left the field (R11) and so cannot
-/// be found again by id: it is the card as it left, which step 4 brings back instead (R175).
-/// `face` is the X/X a token was summoned with (§7's `statsOverride`, and the Bread Token's
-/// `armorOverride`), which is its printed face (§10.4 layer 1) and so comes back with it (R175).
+/// One of step 4's returns (`DeathPass.reborn`). `token` is the card as it left, for a unit token, which
+/// ceased to exist (R11) and cannot be found by id; `face` is the X/X a card was summoned with (§7), its
+/// printed face (§10.4 layer 1), which comes back with it (R175).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RebornEntry {
@@ -321,11 +264,9 @@ pub struct CollectedEntry {
     pub owner: PlayerId,
 }
 
-/// R175: the face a Reborn body comes back with when the card was summoned X/X. §10.4 layer 1 reads a
-/// token's printed stats off `statsOverride` ("printed 0/0; always summoned as X/X", §7), so it is the
-/// card's face and not a change to it: R78's reset takes the override off a card that leaves the field
-/// for a pile, but a body that returns at 1 health returns as the card it was printed as, and a Bread
-/// Token that came back 0/0 at 0 health would only die again at the next pass.
+/// R175: the face a Reborn body summoned X/X comes back with. §10.4 layer 1 reads a token's printed
+/// stats off `statsOverride`, so it is the card's face and outlasts R78's reset on a returning body: a
+/// Bread Token back at 0/0 would only die again at the next pass.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RebornFace {
@@ -361,7 +302,6 @@ fn instances_of(raw: Option<&Value>) -> Vec<CardInstance> {
         .collect()
 }
 
-/// The entries of a parked list, read back one by one (TS kept whatever the array held).
 fn entries_of<T: serde::de::DeserializeOwned>(raw: Option<&Value>) -> Vec<T> {
     let Some(Value::Array(items)) = raw else {
         return Vec::new();
@@ -372,8 +312,8 @@ fn entries_of<T: serde::de::DeserializeOwned>(raw: Option<&Value>) -> Vec<T> {
         .collect()
 }
 
-/// What a `DEATHS_WORK` item owes, or null when it is not one: the reader for its payload, read back
-/// defensively because the item came through JSON (§10.1).
+/// What a `DEATHS_WORK` item owes, or `None` for another item, read back defensively because the item
+/// came through JSON (§10.1).
 pub fn owed_deaths_of(resume: &Resume) -> Option<DeathPass> {
     if resume.hook != DEATHS_WORK {
         return None;
@@ -395,10 +335,9 @@ pub fn owed_deaths_of(resume: &Resume) -> Option<DeathPass> {
     })
 }
 
-/// The continuation of the pass as it stands now. `prompts.applyResumable` is handed this as its
-/// plan, so the tail of a Death hook that asks is parked as *this* item — the hook's own remaining
-/// effects and the rest of the pass in one record, which is what keeps R113's order right without
-/// two items racing each other.
+/// The continuation of the pass as it stands now, `run_resumable_list`'s plan, so a Death hook that
+/// asks parks its own remaining effects and the rest of the pass as one item, which keeps R113's order
+/// without two items racing.
 fn plan_for(pass: &DeathPass, owner: PlayerId) -> ResumePlan {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(PASS_KEY.to_string(), pass_json(pass));
@@ -415,14 +354,9 @@ fn plan_for(pass: &DeathPass, owner: PlayerId) -> ResumePlan {
     )
 }
 
-/// Park the rest of the pass (R113). `work.ts` owns `state.work`, so this only ever calls `owe`: the
-/// item lands at `state.workCursor`, which puts it behind anything the pausing hook's own effects
-/// parked inside it and — when a resumption parks again — in front of everything else still owed.
-///
-/// R117: every caller calls this at the moment it actually pauses and never in advance.
-///
-/// TS's `owe(sink, resume)` parks a `Resume` as a new item through `pushWork` with the default owner
-/// (the active player); that is the call made here.
+/// Park the rest of the pass (R113) with the default owner (the active player): the item lands at the
+/// work cursor, behind anything the pausing hook's own effects parked and, when a resumption parks
+/// again, in front of everything else still owed. R117: every caller calls this the moment it pauses.
 fn owe_deaths(sink: &mut EngineSink<'_>, pass: &DeathPass, step: Option<&PausedStep>) {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(PASS_KEY.to_string(), pass_json(pass));
@@ -449,7 +383,6 @@ fn prepare_body(card: &mut CardInstance, entry: &RebornEntry) {
     card.granted_keywords
         .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
     card.vanilla = false;
-    // R175: an X/X token's X/X is its printed face, so the body keeps it through the reset.
     if let Some(face) = &entry.face {
         if let Some(stats) = face.stats_override {
             card.stats_override = Some(stats);
@@ -460,15 +393,12 @@ fn prepare_body(card: &mut CardInstance, entry: &RebornEntry) {
     }
 }
 
-/// §4.5 step 4: each collected unit that had Reborn returns to its reserved zone (Locked since or
-/// not, R688: the return is no play) at 1 health without Reborn, as a reset instance (R78); its Cry
-/// does not fire, and because it has entered the field again it is summoning sick for the rest of
-/// that turn (R83).
+/// §4.5 step 4: each collected unit that had Reborn returns to its reserved zone (Locked or not, R688:
+/// the return is no play) at 1 health without Reborn, as a reset instance (R78), its Cry unfired and
+/// summoning sick for the turn (R83).
 fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
-    // §4.5 step 4 returns every collected Reborn unit in one step, at 1 health: the bodies are all put
-    // back first, and each one's 1 health is read once they all stand, so a body whose layers read the
-    // others — a Felinor Fiender's layer 2 summing the Felinors that came back with it (R116) — is at 1
-    // whichever lane comes first (R89's "read before any of them moves", from the other side).
+    // Every body goes back before any one's 1 health is set, so one whose layers read the others (a
+    // Felinor Fiender's layer 2, R116) is at 1 whichever lane comes first (R89).
     let mut back: Vec<(String, ZoneRef)> = Vec::new();
     for entry in &pass.reborn {
         // R563: a C+ #35 Rollback that let the zone go has given it to the snapshot's card; no return.
@@ -476,11 +406,8 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             continue;
         }
         crate::zones::release_zone(sink.state, entry.at);
-        // R127's shape at the level of a unit: the pass names it by id, so a Death hook that exiled or
-        // unmade it in between leaves nothing to bring back rather than a stale object to resurrect.
-        // A unit token is the exception R175 makes: it ceased to exist as it left (R11), so no pile
-        // holds it and the pass carries the card as it left instead, reset the way R78 resets any
-        // Reborn body on its way out.
+        // R127: found by id, so a unit a Death hook exiled or unmade in between is not resurrected; a
+        // unit token is in no pile (R11, R175), so the pass carries it, reset as R78 resets any body.
         let mut copy = match &entry.token {
             None => match find_instance(sink.state, &entry.id) {
                 Some(card) => card.clone(),
@@ -488,25 +415,21 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             },
             Some(token) => reborn_token(token),
         };
-        // §4.5 step 4 returns the card from the graveyard step 1 moved it to. A Death hook of the same
-        // pass can have moved it on — exiled with the graveyard, returned to a hand — and it returns from
-        // nowhere else: taken off the field from there, it would stay in that pile as well, one card in
-        // two zones (§10.1).
+        // §4.5 step 4 returns it only from the graveyard: one a Death hook moved on (exiled, to a hand)
+        // would otherwise be in two zones at once (§10.1).
         if entry.token.is_none() && copy.zone.z() != ZoneName::Graveyard {
             continue;
         }
         prepare_body(&mut copy, entry);
-        // TS changed the graveyard's own object, so a body that finds no room keeps these changes there.
+        // A body that finds no room keeps these changes in the graveyard.
         if entry.token.is_none()
             && let Some(card) = find_instance_mut(sink.state, &entry.id)
         {
             prepare_body(card, entry);
         }
-        // R175: a unit that died on top of a Stack pile left the card beneath to resume in its zone
-        // (§3.2), and that card never left the zone (sick though it is, R1829000), so the zone is still
-        // the one R64 reserved. The body returns on top of the pile, and the card beneath goes dormant
-        // again. With no pile the zone is empty, which `stack` never changes: every other card was kept
-        // out by the reservation.
+        // R175: a unit that died atop a Stack pile returns on top of it, and the card beneath, which never
+        // left the zone R64 reserved (§3.2, R1829000), goes dormant again; with no pile the reservation
+        // kept the zone empty, so `stack` changes nothing.
         let slot = ZoneSlot {
             player: entry.at.player,
             row: entry.at.row,
@@ -527,7 +450,6 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         let turn = sink.state.turn;
         if let Some(body) = find_instance_mut(sink.state, &id) {
             body.reborn_spent = Some(true);
-            // R83: it enters the field again now, so it is summoning sick like any fresh summon.
             body.summoned_turn = Some(turn);
         }
         back.push((id, entry.at));
@@ -563,11 +485,11 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     }
 }
 
-/// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the
-/// field, so R78's reset is applied here, where `moveToZone` would have applied it had the token
-/// reached a pile: damage, buffs, granted keywords, counters, memory, exertion and controller go,
-/// and the zone is set by `placeOnField`. It comes back as the card of the player it died under, as a
-/// card the move took to that player's graveyard does (R2618000).
+/// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the field, so
+/// R78's reset is applied here, where `moveToZone` would have applied it had the token reached a pile:
+/// damage, buffs, granted keywords, counters, memory, exertion and controller go, and `placeOnField` sets the
+/// zone. It comes back as the card of the player it died under, as a card the move took to that player's
+/// graveyard does (R2618000).
 fn reborn_token(snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
     body.owner = body.controller;
@@ -594,16 +516,14 @@ fn graveyard_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     }
 }
 
-/// §4.5 steps 3 to 5 for one pass, resumably. Returns true when the pass finished, false when a
-/// prompt (or the end of the game) stopped it — in which case what is left is on `state.work`.
-///
-/// `at` is the control block a resumption brings back: the first card in `owed` is then part-way
-/// through its own effect list and continues at that index, with the selections the pause captured.
+/// §4.5 steps 3 to 5 for one pass, resumably: true when it finished, false when a prompt or the game's
+/// end stopped it, the rest then on `state.work`. `at` is a resumption's control block: the first card
+/// in `owed` continues part-way through its list, with the selections the pause captured.
 fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<PausedStep>) -> bool {
     let mut resume_at = at;
 
     loop {
-        // The game ending stops the pass for good: there is nothing left to resume into.
+        // A game that ended leaves nothing to resume into.
         if sink.state.result.is_some() {
             return false;
         }
@@ -612,9 +532,8 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
             break;
         };
 
-        // §9.3: a prompt is state, so the cards from here on wait for the answer action — and they have
-        // not had their Death hook, which is precisely what is owed (R113). A prompt already open when
-        // the pass begins means it has fired nothing at all, so the whole of step 3 is owed.
+        // §9.3: a prompt is state, so the cards from here on, their Death hooks unfired, wait for the
+        // answer (R113); one open as the pass begins owes the whole of step 3.
         if sink.state.pending.is_some() {
             owe_deaths(sink, pass, resume_at.as_ref());
             return false;
@@ -636,13 +555,10 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
             serde_json::to_value(&snapshot).expect("an instance is plain JSON (§10.1)"),
         );
 
-        // A fused Death runs every ingredient's list (R77, R102), and a pause inside one continues in it.
-        // `applyResumable` parks the whole rest of the hook as this pass's item (`planFor`), so the item
-        // owes the cards after this one and steps 4 and 5 too. When the hook's very last effect asked,
-        // there was nothing of the hook to park, and the pass still owes the rest: the card is done, so
-        // the pass parks itself without it. Counting the pass's items before and after to tell the two
-        // apart was fooled by a nested pass — a sacrifice in the hook whose own Death asked — which
-        // parks an item of its own (R156).
+        // A fused Death runs every ingredient's list (R77, R102), and a pause continues in it. A pause
+        // parks the rest of the hook with the pass (`plan_for`); when the hook's last effect asked there
+        // is none to park, so the pass parks itself without the card. The status tells the two apart,
+        // not a count of items: a nested pass parks an item of its own (R156).
         let status = {
             let mut ctx = make_context(
                 sink,
@@ -656,8 +572,8 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
                             .unwrap_or_default(),
                     ),
                     modes: Some(paused.as_ref().map(|step| step.modes.clone()).unwrap_or_default()),
-                    // R89: a prompt this hook opens is answered in a later action, when the instance on the board
-                    // is R78's reset one; the step it re-enters reads this snapshot instead (`prompts.runResume`).
+                    // R89: a prompt this hook opens is answered once R78 has reset the instance; the step
+                    // it re-enters reads this snapshot instead.
                     data: Some(data),
                 },
             );
@@ -693,9 +609,9 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
     true
 }
 
-/// R1852000: the pass's last step — each Starship Piece that died in it fuses a copy of itself into its
-/// owner's Dormant Starship, in R68's order, once the Reborn bodies are back and the graveyard has been
-/// reported, so the Starship takes the leftmost zone open after them. It asks nothing.
+/// R1852000: the pass's last step, each Starship Piece that died in it fusing a copy into its owner's
+/// Dormant Starship in R68's order, after the Reborn bodies are back, so the Starship takes the leftmost
+/// zone open after them. It asks nothing.
 fn starship_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     for snapshot in pass.pieces.iter().flatten() {
         if sink.state.result.is_some() {
@@ -705,16 +621,10 @@ fn starship_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     }
 }
 
-/// `work.ts`'s handler for a parked pass: the same pass, continued where it stopped (R113, R122).
-/// Once a pass of the check is done the check goes round again, because §4.5 step 5 repeats until
-/// nothing changes and the pause did not excuse the pass from its repeat. A Sacrifice's pass is one
-/// effect of the list that made it, and the check waits for the whole list (§4.5, R59): the rest of
-/// that list is owed behind this item (R113), so a question in the sacrificed unit's Death changes
-/// nothing about when the check runs — a heal later in the same Cry still lands first, and a Tribute
-/// paid at §10.5 step 2 still leaves the check to step 4's loop, which holds it (R118).
-///
-/// TS registered this for `DEATHS_WORK` at module scope (`registerWorkHandler`); `work.rs`'s
-/// dispatcher calls it for that hook (SURFACE §6.6).
+/// `work.rs`'s handler for `DEATHS_WORK` (SURFACE §6.6): the parked pass, continued (R113, R122), then
+/// the check again, as §4.5 step 5 repeats until nothing changes; not after a Sacrifice's pass, whose
+/// list's rest is owed behind this item and the check waits for it (§4.5, R59), so a heal later in the
+/// same Cry still lands first and a Tribute paid at §10.5 step 2 leaves the check to step 4's loop (R118).
 pub fn run_owed_deaths(sink: &mut EngineSink<'_>, item: &WorkItem) {
     let Some(mut pass) = owed_deaths_of(&item.resume) else {
         return;
@@ -727,12 +637,10 @@ pub fn run_owed_deaths(sink: &mut EngineSink<'_>, item: &WorkItem) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The check itself (§4.5)
-// ---------------------------------------------------------------------------
 
-// §4.5 loops until nothing changes; `STATE_CHECK_PASS_CAP` (config.rs) bounds a pathological loop
-// loudly (R69, R89).
+// §4.5 loops until nothing changes; `STATE_CHECK_PASS_CAP` (config.rs, CLAUDE.md rule 9) bounds a
+// pathological loop loudly (R69, R89).
 
 /// How a collected card left: the state check's own collection, or a Sacrifice (§6.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -755,19 +663,11 @@ struct ReadCard {
     snapshot: CardInstance,
 }
 
-/// §4.5 step 1: collect, in R68's order, and move them all at once — units by health or a destroy
-/// mark, backrow cards by a destroy mark, since they have no health of their own — leaving the pass
-/// that steps 3 to 5 still owe.
-///
-/// "At once" is two loops, not one. Every collected card is read — its layers for R89's `destroyed`
-/// event, its Reborn for step 4 and its snapshot for step 3 — before any of them moves, because a
-/// card's layers depend on the others: an aura source (#65.1 Spikey Pillow's −2 attack) or a Felinor
-/// a #92 Felinor Fiender counts at layer 2 that was moved first would leave the next card read
-/// without it, so what it "was as it died" would hang on nothing but lane order.
-///
-/// A Sacrifice (§6.3) "counts as a death" and reaches the same pass through `sacrificeNow`: it is no
-/// damage instance, so it names no killer (R42), and it bypasses Indestructible, which is why the
-/// caller rather than `isDying` decides it dies.
+/// §4.5 step 1: move the collected cards (units by health or a destroy mark, backrow cards by a mark) all at
+/// once, in R68's order, leaving the pass steps 3 to 5 owe. Every card is read (layers, Reborn, snapshot)
+/// before any moves, since a card's layers depend on the others (#65.1 Spikey Pillow's aura, a #92 Felinor
+/// Fiender's count), so what it "was as it died" (R89) does not hang on lane order. A Sacrifice (§6.3) names
+/// no killer (R42) and bypasses Indestructible, so its caller decides it dies.
 fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause) -> DeathPass {
     let mut pass = DeathPass::default();
 
@@ -819,9 +719,9 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     for card in &read {
         crate::zones::remove_from_field(sink.state, &card.unit, Default::default());
     }
-    // R823 (Meditative #10 Double Counting): a Death hook runs again for each extra run its card's
-    // controller's multiplier gives, back to back on the same snapshot (R89), the multiplier read once
-    // the collected cards are off the field (R463), so one dying in this pass doubles nothing.
+    // R823 (Meditative #10 Double Counting): a Death runs again for each extra run its controller's
+    // multiplier gives, on the same snapshot (R89), the multiplier read with the collected cards gone
+    // (R463), so one dying in this pass doubles nothing.
     let mut extra: IndexMap<PlayerId, usize> = IndexMap::new();
     for player in PLAYER_IDS {
         let runs =
@@ -868,9 +768,8 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             && let Some(at) = card.at
         {
             crate::zones::reserve_zone(sink.state, at);
-            // R175: a unit token ceases to exist below and no pile will hold it, so its return is
-            // carried by the pass itself, with the X/X it was summoned as.
-            // Read off the snapshot: the move above has already reset the instance (R78).
+            // R175: a unit token is in no pile, so the pass carries its return with the X/X it was
+            // summoned as, read off the snapshot since the move above reset the instance (R78).
             let face = reborn_face_of(sink.state, &card.snapshot);
             pass.reborn.push(RebornEntry {
                 id: card.unit.id.clone(),
@@ -923,13 +822,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
 }
 
 /// §6.3 Sacrifice: the card goes from the field to its controller's graveyard at once (R2618000), bypassing
-/// Indestructible, and "counts as a death" — so it is §4.5's death in full rather than a move with a
-/// Death hook bolted on: the destroyed counter (R55) and the `destroyed` event (R89), its Death hook
-/// off the snapshot (R78), and §6.1's Reborn, which returns a sacrificed Reborn unit to the zone it
-/// reserved at 1 health (R64, R83), exactly as the state check returns a unit that died there. A
-/// Death hook that asks pauses the rest of the pass on `state.work` like any other (R113). Step 2's
-/// hero check is left to the state check that follows the whole effect (R59): a sacrifice is one
-/// effect among the list that made it, and nothing about it touches a hero.
+/// Indestructible, and "counts as a death", so it is §4.5's death in full rather than a move with a Death
+/// hook bolted on: the destroyed counter (R55) and `destroyed` event (R89), its Death hook off the snapshot
+/// (R78), and §6.1's Reborn, which returns a sacrificed Reborn unit to the zone it reserved at 1 health (R64,
+/// R83), exactly as the state check does. A Death hook that asks pauses the rest of the pass on `state.work`
+/// (R113). Step 2's hero check is left to the state check that follows the whole effect (R59): a sacrifice
+/// touches no hero.
 pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
     // R1220: a Sacrifice of an Untributable card does nothing.
     if crate::query::is_untributable(sink.state, card) {
@@ -940,12 +838,9 @@ pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
     run_death_pass(sink, &mut pass, None);
 }
 
-/// §6.3 Tribute: "sacrifice X of your units" is one payment, the tributed set of R101, so the set
-/// dies together, the way §4.5 step 1 moves everything it collects at once: every unit is read before
-/// any of them moves, then all move, and their Death hooks fire in R68's order — "Death triggers use
-/// the same side and lane order (§4.5)" — not in the order a play happened to list them. Listed one
-/// by one, the first sacrifice's Death ran before the others had died, so the client chose the order
-/// the Deaths resolved in (#81's Death radiating a unit #86's Death was about to steal, or not).
+/// §6.3 Tribute: "sacrifice X of your units" is one payment, R101's tributed set, so it dies together
+/// as §4.5 step 1's collection does, its Deaths in R68's order and not the order a play listed them,
+/// which would let the client order the Deaths (#81's Death radiating a unit #86's was to steal).
 pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     // R1220: Untributable cards are dropped from a Sacrifice first; when none is left, nothing happens.
     let cards: Vec<CardInstance> = cards
@@ -979,10 +874,9 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     run_death_pass(sink, &mut pass, None);
 }
 
-/// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths — in R68's order,
-/// the active player's units first. The move is §6.3 Exile's (`zones::exile_to_pile`): to the
-/// exile pile (a unit token ceases to exist instead, R11), the exile counter fed (R55), `exiled`
-/// reported. No Death, no Reborn, no `destroyed` (R461), even when the hit was lethal.
+/// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths, in R68's order, by §6.3
+/// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R461), even
+/// when the hit was lethal.
 fn exile_marked(sink: &mut EngineSink<'_>) {
     let order = active_first(sink.state);
     let mut marked: Vec<CardInstance> = Vec::new();
@@ -1004,9 +898,8 @@ fn exile_marked(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// R42: `lastDamagedBy` names the hit that took a unit to 0 or less health. A unit the check leaves
-/// standing above 0 — healed, buffed, or given back its health by an aura leaving — was killed by no
-/// hit, so an older credit must not name the killer of a death the layers cause later.
+/// R42: `last_damaged_by` names the hit that took a unit to 0 or less health, so a unit the check leaves
+/// standing above 0 drops it, and a death the layers cause later names no killer.
 fn forget_spent_killers(sink: &mut EngineSink<'_>, survivors: &[CardInstance]) {
     for unit in survivors {
         if unit.last_damaged_by.is_none() {
@@ -1020,8 +913,7 @@ fn forget_spent_killers(sink: &mut EngineSink<'_>, survivors: &[CardInstance]) {
     }
 }
 
-/// TS `plague.permanentsOnField(state)`: the cards acting on the field, the active player's side first
-/// (units, then the backrow, lane 1 up). A private copy.
+/// The cards acting on the field, the active player's side first (units, then the backrow, lane 1 up).
 fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
     let first = state.active;
     let mut out: Vec<CardInstance> = Vec::new();
@@ -1056,8 +948,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         leave_defense(sink);
         crate::modifiers::end_orphaned_modifiers(sink);
         crate::modifiers::install_lasting_modifiers(sink);
-        // R403: a permanent whose "When …, Tribute this" (`Script.tributeWhen`) holds now — face-down ones
-        // included — is sacrificed before anything is collected; a Vanilla one has no text (`scriptOf`).
+        // R403: a permanent whose "When …, Tribute this" (`tribute_when`) holds now, face-down ones
+        // included, is sacrificed before anything is collected; a Vanilla one has no text.
         let tributes: Vec<CardInstance> = {
             let state = &*sink.state;
             // #892: one aura table for every permanent's Untributable.
@@ -1124,9 +1016,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             .cloned()
             .collect();
         forget_spent_killers(sink, &survivors);
-        // R68's order, which §4.5 step 3's Death hooks keep: side by side, the active player's first, and
-        // within a side the units by lane and then the backrow by lane — a backrow card with a Death
-        // (Classic+ #61, #12.8) fires in its side's place, not after every unit of both sides.
+        // R68's order, which §4.5 step 3's Deaths keep: the active player's side first, each side's units
+        // by lane, then its backrow, so a backrow Death (Classic+ #61, #12.8) fires in its side's place.
         let mut dying: Vec<CardInstance> = Vec::new();
         for player in order {
             dying.extend(
@@ -1166,9 +1057,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                     continue;
                 }
             };
-        // R1849002: what a destroy-to-exile aura reaches is exiled instead, judged for every card
-        // before any moves, and exiled first in R68's order — not collected, so no Death, Reborn or
-        // `destroyed` (R461, R1124's shape). Without such an aura every card is collected, as before.
+        // R1849002: what a destroy-to-exile aura reaches, judged for every card before any moves, is
+        // exiled first in R68's order, not collected: no Death, Reborn or `destroyed` (R461, R1124).
         let (exiled, remaining): (Vec<CardInstance>, Vec<CardInstance>) = remaining
             .into_iter()
             .partition(|card| crate::replacements::destroy_exiles(sink.state, &live_or(sink.state, card)));
@@ -1184,7 +1074,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
 
         // Steps 3 to 5, which a Death hook's prompt can pause: what is left is then owed in state and
-        // `runOwedDeaths` brings the check back, repeat included.
+        // `run_owed_deaths` brings the check back, repeat included.
         if !run_death_pass(sink, &mut collected, None) {
             return;
         }

@@ -3,12 +3,8 @@
 //! Base:    "End of turn: Unlock a random zone. If you do, add {coins|Coin|Coins} to your hand."
 //! Radiant: "End of turn: Unlock a random zone. If you do, add {coins|Coin|Coins} to your hand. If
 //! no zone is Locked, Lock a random enemy zone."
-//! Engine: the end-of-turn hook first reads the Locked zones on both sides and in both rows, with
-//! `zones::is_locked` over `slots_of` (both in the prelude).
-//! - If at least one is Locked, it runs NEW `unlock_random_zone(ZoneScope)`, then
-//!   `add_to_hand({ defId: "core-t-coin" })` `coins` times.
-//! - If none is Locked, the base face does nothing. The Radiant face runs
-//!   `lock_random_zone({ side: enemy })`.
+//! Engine: the end-of-turn hook first reads the Locked zones on both sides and in both rows. With
+//! one, it unlocks one at random and adds `coins` Coins; with none, only the Radiant face acts.
 //!
 //! The card's `refs` are `[core-t-coin]`; "Coin" names The Coin ([[R903]]).
 
@@ -54,12 +50,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #27 Clip-Farming Lawyer — SPEC §8.8 row 27, BUILD M10 row M 27: "At your end of turn only,
-// with a Locked zone on either side and in either row, one Locked zone is unlocked at random
-// (`unlocked`) and The Coin is added to your hand (MD-B4); with no Locked zone nothing happens and
-// no random number is drawn (R129); the hand cap burns the Coin; coins reads through `param()`;
-// radiant 12/10, 2 Coins, and with no Locked zone a random unlocked enemy zone of either row is
-// Locked".
+// M #27 Clip-Farming Lawyer — SPEC §8.8 row 27, BUILD M10 row M 27 (MD-B4); with no Locked zone no
+// random number is drawn (R129).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,7 +97,6 @@ mod tests {
         out
     }
 
-    /// The coins in p1's hand.
     fn coins_in_hand(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id == COIN).collect()
     }

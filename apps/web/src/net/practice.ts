@@ -1,9 +1,6 @@
 // Earning in practice (SPEC §14.8, R1303000): the page's door onto `crates/server/src/api/practice.rs`.
-//
-// A free practice game an active account starts asks the server for its seed first, and the server
-// keeps the setup beside it; once the game is over the page sends the worker's log, and the server
-// folds it to its result before it pays anything (R2560000). The page decides
-// nothing here (CLAUDE.md rule 7): a refusal's reason is the server's, relayed.
+// The server hands a free game its seed and keeps the setup beside it, then folds the finished game's
+// log to its result before it pays (R2560000). The page decides nothing here (CLAUDE.md rule 7).
 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { LeanPick, PlayerId } from "@jackioh/shared";
@@ -12,15 +9,12 @@ import type { QuestPaid, TrackGain } from "../economy/xp.ts";
 import type { LastBoardCard, PracticeClaim } from "../practice/protocol.ts";
 import { apiRequest, type SendOptions } from "./api.ts";
 
-/**
- * `POST /api/practice/seeds`' body: the setup the server keeps beside the seed. A preset or a saved
- * deck travels as its cards; a random deck as the set it leans on, which the server deals again.
- */
+/** The setup the server keeps beside the seed; a random deck travels as its lean, which the server deals again. */
 export type PracticeSeedRequest = {
   difficulty: Difficulty;
   humanSeat: PlayerId;
   deck: { kind: "cards"; cards: string[] } | { kind: "random"; lean: LeanPick | null };
-  /** The catalog version this build plays on (`CATALOG_VERSION`). */
+  /** `CATALOG_VERSION`. */
   catalog: string;
 };
 
@@ -28,10 +22,9 @@ export type PracticeSeedRequest = {
 export type PracticeSeedIssued = { seed: string; lastBoard: LastBoardCard[]; expiresAt: number };
 
 /**
- * What a claim earned, or why it earned nothing (`economy::practice`'s `ClaimRefusal`, snake case).
- * R1483000: `jloreCapped` is true when the day's Jlore cap held some or all of the game's Jlore back,
- * which `jlore` already leaves out. #1664: `tracks` and `quests` are what the game moved and completed
- * (`economy::rewards::GameEconomy`, the same as the match socket's `economy`), which the result plays.
+ * What a claim earned, or why not (`economy::practice`'s `ClaimRefusal`). R1483000: `jloreCapped`: the
+ * day's cap held Jlore back (`jlore` leaves it out). #1664: `tracks` and `quests` are
+ * `economy::rewards::GameEconomy`'s, as the match socket's `economy`.
  */
 export type PracticeClaimAnswer =
   | { paid: true; jlore: number; xp: number; jloreCapped: boolean; tracks: TrackGain[]; quests: QuestPaid[] }
@@ -47,10 +40,9 @@ export function claimPracticeGame(token: string, claim: PracticeClaim): Promise<
   return apiRequest<PracticeClaimAnswer>("/api/practice/claims", { method: "POST", token, body: claim });
 }
 
-/** R2379000: `DELETE /api/practice/seeds/:seed`'s answer, the caller's unclaimed seed given back. */
 export type PracticeSeedReleased = { released: true };
 
-/** R2379000: `DELETE /api/practice/seeds/:seed`, the caller's unclaimed seed given back; a 404 when it is not the caller's open seed. */
+/** R2379000: the caller's unclaimed seed given back; a 404 when it is not the caller's open seed. */
 export function releasePracticeSeed(token: string, seed: string, options: SendOptions = {}): Promise<PracticeSeedReleased> {
   return apiRequest<PracticeSeedReleased>(`/api/practice/seeds/${encodeURIComponent(seed)}`, { method: "DELETE", token, ...options });
 }

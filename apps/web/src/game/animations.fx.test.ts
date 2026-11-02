@@ -1,9 +1,8 @@
 // docs/polish/1-animations.md, behaviors B1 to B5: the animation table's `fx` column, the runner's
 // lifecycle signals, and the viewer's effects-speed and reduce settings (R201).
 //
-// `animations.test.ts` is B3's real proof: it must stay green without a single edit. This file adds
-// what that one cannot see. Settings are injected through the queue's `settings` option, never by
-// mutating the global store, and `fakeClock` is a local copy of `animations.test.ts`'s (not exported).
+// `animations.test.ts` is B3's real proof. Settings are injected through the queue's `settings` option, never
+// by mutating the global store, and `fakeClock` is a local copy of `animations.test.ts`'s (not exported).
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,11 +44,8 @@ afterEach(() => {
   resetFxSettingsForTests();
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Fixtures
- * ------------------------------------------------------------------------------------------- */
+/* Fixtures */
 
-/** A `schedule` spy that records its calls and lets the test run the callbacks by hand. */
 function fakeClock() {
   const calls: { ms: number; run: () => void }[] = [];
   const schedule = vi.fn((fn: () => void, ms: number) => {
@@ -58,13 +54,11 @@ function fakeClock() {
   return {
     schedule,
     calls,
-    /** Fires the oldest pending callback. */
     tick(): void {
       const next = calls.shift();
       expect(next, "nothing scheduled").toBeDefined();
       next?.run();
     },
-    /** Fires callbacks until none is left. */
     flush(): void {
       let guard = 0;
       while (calls.length > 0) {
@@ -74,7 +68,6 @@ function fakeClock() {
         next?.run();
       }
     },
-    /** Every duration handed to `schedule`, in order. */
     scheduled(): number[] {
       return schedule.mock.calls.map((call) => Number(call[1]));
     },
@@ -95,7 +88,7 @@ const TURN_AUTO_ENDED: GameEvent = { type: "turnAutoEnded", player: "p1", turn: 
 const TURN_ENDED: GameEvent = { type: "turnEnded", player: "p1", turn: 4, unspentMana: 0 };
 const GAME_OVER: GameEvent = { type: "gameOver", winner: "p1", reason: "hero-death" };
 
-/** One event of every type, copied in spirit from `animations.test.ts` (inline, per the brief). */
+/** One event of every type, copied in spirit from `animations.test.ts`. */
 const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   cardPlayed: { type: "cardPlayed", player: "p1", instanceId: "c1", defId: "core-002", costPaid: 1 },
   cardResolved: { type: "cardResolved", player: "p1", instanceId: "c1", defId: "core-002", permanent: true, costPaid: 1 },
@@ -143,7 +136,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
   countered: { type: "countered", player: "p1", instanceId: "c1", defId: "core-035", byInstanceId: "b5", to: "graveyard" },
   stolen: { type: "stolen", instanceId: "c1", defId: "core-035", from: "p2", to: "p1", zone: "hand" },
@@ -181,7 +173,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
-  // Issue #1853 (the Marketplace, R1853003).
   marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
   marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
@@ -191,7 +182,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   fled: { type: "fled", player: "p1", opponent: "draw" },
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
-  // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
   // Issue #2652 (R2652001).
   rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
@@ -203,7 +193,6 @@ function longStream(rounds: number): GameEvent[] {
   return out;
 }
 
-/** Runs `events` through a fresh queue at `speed` and returns every duration it scheduled. */
 function scheduledAt(speed: number, events: readonly GameEvent[]): number[] {
   const clock = fakeClock();
   const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: false, settings: at(speed) });
@@ -230,11 +219,9 @@ function startOf(signal: RunnerSignal | undefined) {
   return signal.entry;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B1: the fx column
- * ------------------------------------------------------------------------------------------- */
+/* B1: the fx column */
 
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 19 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -282,8 +269,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   drawAnswered: null,
   emoted: null,
   gameOver: null,
-  // Patch v0.2.0: the new events ride the existing recipes, each with a look of its own (fx/v020.test.ts),
-  // and `rolledBack` rewinds the whole board.
+  // These ride the existing recipes, each with a look of its own (fx/v020.test.ts).
   cardAnnounced: "cast",
   countered: "fizzle",
   stolen: "mindControl",
@@ -311,7 +297,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   translated: null,
   // R800: a discard a discard guard stopped fizzles over the hand.
   discardPrevented: "fizzle",
-  // Patch v0.3.X (MN05, R1363): a hit the Armor took whole blooms a shield.
+  // MN05, R1363: a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
   jadeChanged: null,
@@ -336,8 +322,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   // R1852000: a piece's fusion is drawn by the `fused` before it; R1852003: a launch brands.
   starshipFused: null,
   starshipLaunched: "brand",
-  // Issue #1843 (R1843000, R1843002): a vote flares its card with no effect; the agreement and the
-  // escape take the banner.
+  // Issue #1843 (R1843000, R1843002): a vote flares its card with no effect.
   voteCast: null,
   votedOut: "banner",
   fled: "banner",
@@ -391,7 +376,7 @@ const FX_RECIPES = [
   "curve",
 ];
 
-/** The pre-task table's `animation`, `durationMs` and `testid` per row, which S4 keeps byte for byte. */
+/** Each row's `animation`, `durationMs` and `testid`, which S4 keeps byte for byte. */
 const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   cardPlayed: ["jk-card-played", 400, "hand-card-<instanceId>"],
   cardResolved: ["jk-card-resolved", 150, "resolved-<instanceId>"],
@@ -404,7 +389,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   enteredGraveyard: ["jk-pile-pulse", 150, "graveyard-<side>"],
   exiled: ["jk-exile-fade", 350, "card-<instanceId>"],
   bounced: ["jk-bounce-to-hand", 350, "card-<instanceId>"],
-  // R318 made the burn the full hand's own motion, and added the two library overflows.
+  // R318: the burn is the full hand's own motion, beside the two library overflows.
   burned: ["jk-hand-full", 700, "hand-<side>"],
   fatigue: ["jk-fatigue", 600, "library-<side>"],
   libraryOverflow: ["jk-library-full", 500, "library-<side>"],
@@ -440,7 +425,6 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   drawAnswered: ["jk-toast-resolve", 300, "draw-toast"],
   emoted: ["jk-loss-pop", 0, "hero-<side>"],
   gameOver: ["jk-result-overlay", 0, "result-overlay"],
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: ["jk-card-played", 300, "hand-card-<instanceId> | hand-<side>"],
   countered: ["jk-exile-fade", 450, "hand-card-<instanceId> | graveyard-<side> | exile-<side> | hand-<side>"],
   stolen: ["jk-cross-center", 450, "hand-<side>"],
@@ -555,9 +539,7 @@ describe("B1 the fx column of ANIMATIONS", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B2: runner signals
- * ------------------------------------------------------------------------------------------- */
+/* B2: runner signals */
 
 describe("B2 subscribeSignals", () => {
   it("B2 planEntries sets entry.view to the view it planned against", () => {
@@ -737,9 +719,7 @@ describe("B2 subscribeSignals", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B3: default settings change nothing
- * ------------------------------------------------------------------------------------------- */
+/* B3: default settings change nothing */
 
 describe("B3 default settings", () => {
   it("B3 the default settings schedule exactly what a queue with no settings option schedules", () => {
@@ -772,9 +752,7 @@ describe("B3 default settings", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B4: R201, the speed setting
- * ------------------------------------------------------------------------------------------- */
+/* B4: R201, the speed setting */
 
 describe("B4 the effects speed scales the table", () => {
   it("R201 R435 the effects speed divides every non-zero duration and the burst budget, clamped to [0.25, 3]", () => {
@@ -893,9 +871,7 @@ describe("B4 the effects speed scales the table", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B5: the reduce setting
- * ------------------------------------------------------------------------------------------- */
+/* B5: the reduce setting */
 
 describe("B5 the motion reduce setting", () => {
   it("B5 motion reduce drains a long stream synchronously: no timer and one onSettled", () => {

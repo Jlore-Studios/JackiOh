@@ -14,7 +14,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: Armor 6 and Immune to Spells are the Radiant face's catalog keywords.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -26,9 +25,8 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune.
-// Its Armor is a numbered keyword, which B3.4's X change tunes rather than a declared param (R386):
-// the "reads through param()" clause is proved by an Upgrade of that number.
+// SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune. Its Armor is
+// a numbered keyword that B3.4's X change tunes (R386): an Upgrade of it proves "reads through param()".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,7 +244,6 @@ mod tests {
                     }
                     made += attacks.len();
                 }
-                // The roll came up on some of the seeds, so a forced attack was drawn, and never on it.
                 assert!(made > 0);
             }
 

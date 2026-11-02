@@ -1,28 +1,7 @@
-//! The policy prior (#1171; `docs/learned-eval.md`, learned move ordering): a table of weights, fitted
-//! by `training/ml` on the moves the AI played, that re-sorts the moves the beam expands before it
-//! takes its prefix, so a move the heuristic tiers rank past the prefix can still be searched.
-//!
-//! - **Where.** `AI_MOVE_ORDER` (`config.rs`) chooses. With `MoveOrder::Heuristic`, the default,
-//!   nothing changes. With `MoveOrder::Learned`, `search::expansion` sorts each line's moves by the
-//!   prior (`prior_order`) before it takes the first `root_branching` or `branching` of them. It
-//!   re-sorts and never adds, drops or changes a move, End Turn is always kept, and it spends no node
-//!   (R1171001).
-//! - **What.** A move is a handful of text keys (`policy_keys`): its kind, its rank in the heuristic
-//!   order, the card it plays or acts with, where it lands and what it aims at. Its score is the sum
-//!   of its keys' weights; a key the table lacks adds nothing, so a new or custom card is ordered by
-//!   its other keys alone.
-//! - **What it reads.** Only `redact(state, seat)` (R185): a card is named only where the seat may
-//!   read it, by R1006000's rule, and is `hidden` otherwise, and no key holds an instance id, a hero
-//!   id or a prompt's id (R1171000). So two states that differ only in what the seat cannot see give
-//!   the same keys.
-//! - **Labels.** `policy_label` is a decision as `cargo jackioh positions --policy` records it: the
-//!   keys of every candidate decide's probe lists there and which one was played (R1171000).
-//! - **Which games.** 1v1 only. A Duos duel keeps the heuristic order: the table never saw a team.
-//! - **Arithmetic.** `f64` sums in key order and a stable sort, so the order is the same on every
-//!   machine (CLAUDE.md rule 4).
-//! - **Weights.** `src/policy/weights.json`, compiled in by `build.rs` as `POLICY_PRIOR` (rule 4: data
-//!   reaches the crate at compile time). It records `POLICY_KEYS_VERSION` and the catalog it was fitted
-//!   on. The checked-in table may be the null one, with no keys, which leaves every order as it is.
+//! The policy prior (#1171; `docs/learned-eval.md`, learned move ordering): a table of weights
+//! that re-sorts candidate moves before beam expansion prefix without adding/dropping moves (R1171001).
+//! Reads only `redact(state, seat)` (R185, R1006000), omitting volatile instance IDs (R1171000).
+//! Deterministic f64 arithmetic in 1v1 (CLAUDE.md rule 4).
 
 use std::cmp::Ordering;
 

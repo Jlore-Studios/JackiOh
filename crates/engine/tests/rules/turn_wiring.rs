@@ -157,7 +157,6 @@ fn since(state: &GameState, from: usize) -> Vec<String> {
     notes(state).into_iter().skip(from).collect()
 }
 
-/// The entries that are not p2's.
 fn without_p2(entries: Vec<String>) -> Vec<String> {
     entries
         .into_iter()
@@ -187,7 +186,6 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
             .into_iter()
             .filter(|entry| !entry.ends_with(":p2") && !entry.contains(":p2:"))
             .collect();
-        // The tick sees the refreshed mana (turn 3: two crystals).
         assert_eq!(
             p1,
             vec![
@@ -200,7 +198,6 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
                 "cast-spell"
             ]
         );
-        // And the other player's turn ran the same stages for p2, on p2's turn only.
         assert_eq!(
             since(&after, before)
                 .into_iter()

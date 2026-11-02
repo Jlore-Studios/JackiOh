@@ -1,8 +1,6 @@
 // BUILD M8: P2's Sheepish interrupts then resumes P1's play (R1, R17, R23, R118, R427; §10.3).
-// #15 Me and Mr Token triggers it; #3 Right-house defender verifies a later play (#81 Radiant Saintess
-// did until #2220 made it cost (2), more than the one mana Me and Mr Token leaves on player-turn 2).
-// The trap validates hidden information (R33; CLAUDE.md rule 7, §10.8); the modifier validates face-up views (R169).
-// R48's discount is dormant until its controller's next turn, then expires.
+// #15 Me and Mr Token triggers it; #3 is the later play (#81 costs (2) by #2220, over the one mana left).
+// The trap checks hidden information (R33; CLAUDE.md rule 7, §10.8), the modifier face-up views (R169).
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -24,10 +22,9 @@ const SEED = seedFor("03-sheep-19");
 /** §8 seed brings #77 in on player-turn 3. */
 const CURVATURE_SEED = seedFor("03-curvature-4");
 
-/** #3, a choice-free (1) Unit in player 1's hand on player-turn 2: the play after the trap fired (R118). */
+/** #3, a choice-free (1) Unit in player 1's hand on player-turn 2 (R118). */
 const LATER_PLAY = "Right-house defender";
 
-/** §8 #77's card label. */
 const CURVATURE = "Professor Curvature";
 
 /** R48 / R65: exact text distinguishes a dormant discount from a live one. */
@@ -69,7 +66,6 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
 
       advanceToTurn(3);
 
-      // R33 / §10.8: the other seat never receives the set trap's identity.
       cy.get(ts(zoneId("opponent", "backrow", 3))).find(ts(cardId(trap))).should("not.exist");
       cy.get(ts(cardId(trap))).should("not.exist");
 
@@ -148,7 +144,6 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
       expectAnimating: "modifierChanged",
     });
 
-    // R169: controller sees the view's one badge.
     cy.get(ts(modifiersId("you"))).should("have.attr", "data-count", "1");
     cy.get(ts(modifiersId("you"))).find(MODIFIER_BADGE).should("have.length", 1);
     // R48: the landing turn's discount remains dormant.

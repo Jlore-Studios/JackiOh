@@ -194,9 +194,7 @@ fn hero(player: PlayerId) -> Value {
     json!([{ "pick": "hero", "player": player.as_str() }])
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915002: official cards, rewritten in the kit, play as their Rust cards do
-// ---------------------------------------------------------------------------------------------
 
 mod r915002_parity {
     use super::*;
@@ -429,9 +427,8 @@ mod r915002_parity {
         );
     }
 
-    /// The third mode reduces the Cost of a card in your hand since patch v0.3.10 (#831; it gained mana
-    /// before), which the kit has no verb for, so the twin names it and only the two it can write are
-    /// compared.
+    /// The third mode reduces the Cost of a card in your hand (#831), which the kit has no verb for, so the
+    /// twin names it and only the two it can write are compared.
     #[test]
     fn r915002_classic_081_an_activate_asks_which_of_its_three() {
         let source = "return Card {\n  activate = {\n    label = \"Choose one\",\n    run = function(c, n)\n      local pick = c:choose({ \"heal\", \"draw\", \"reduce\" })\n      if pick == \"heal\" then\n        c:heal(\"your hero\", n.heal)\n      elseif pick == \"draw\" then\n        c:draw(n.draw)\n      end\n    end,\n  },\n}\n";
@@ -458,9 +455,7 @@ mod r915002_parity {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915003: questions mid-script
-// ---------------------------------------------------------------------------------------------
 
 /// A custom 1-mana 1/1 Unit with `source`, under `id`.
 fn custom_unit(id: &str, source: &str) -> CustomCard {
@@ -505,7 +500,6 @@ fn r915003_a_target_asked_mid_script_is_a_prompt_and_the_run_goes_on_with_its_an
         }));
         s.play("custom-ask", json!({ "zone": 2 }));
         assert_eq!(failures(&s), Vec::<String>::new());
-        // The draw before the question resolved, then the question opened.
         assert_eq!(
             s.state().players[P1].hand.len(),
             2,
@@ -604,9 +598,7 @@ fn r915003_a_target_with_nothing_to_choose_asks_nothing_and_its_verbs_do_nothing
     });
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1174000: c:freeze, the kit's Freeze
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r1174000_c_freeze_freezes_every_enemy_unit_its_words_name_and_no_hero() {
@@ -643,9 +635,7 @@ fn r1174000_c_freeze_freezes_every_enemy_unit_its_words_name_and_no_hero() {
     });
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915004: a script that fails does nothing, and says so
-// ---------------------------------------------------------------------------------------------
 
 fn played_failure(id: &str, source: &str) -> (Vec<String>, Scenario) {
     let card = custom_unit(id, source);
@@ -718,9 +708,7 @@ fn r915004_a_script_that_does_not_load_says_so_when_its_cry_would_run() {
     });
 }
 
-// ---------------------------------------------------------------------------------------------
 // The creator's check (#913): every problem on its line, before a card is saved
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915002_the_check_names_the_line_of_each_kind_of_problem() {
@@ -764,9 +752,7 @@ fn the_kit_is_held_to_the_lint_but_for_its_key_count() {
     assert_eq!(findings.len(), 1, "{findings:?}");
 }
 
-// ---------------------------------------------------------------------------------------------
 // R915006: a game with custom cards folds the same
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r915006_a_game_with_a_kit_card_folds_to_its_own_hash() {

@@ -1,6 +1,5 @@
 // #258: the switch (⟳) out of the card. It is the card's sibling in its zone (Card.tsx), where
-// board.css gives it a full 44 px target at the zone's corner; a click on it is the switch's alone,
-// and a press on it is never a drag source or a drop spot (drag/targets.ts).
+// board.css gives it a full 44 px target at the zone's corner.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

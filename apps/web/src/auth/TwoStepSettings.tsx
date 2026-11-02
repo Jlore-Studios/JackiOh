@@ -1,7 +1,5 @@
-// `/account`'s two-step sign-in (R665): turn an authenticator app on or off for this account.
-// Enrolling makes an UNVERIFIED factor that counts for nothing until a code from the app is typed
-// here. That raises the session to `aal2`, which the server then requires (R665), so the raised
-// session is written over the stored one, never adopted: `adoptSession` would revoke the session in use.
+// `/account`'s two-step sign-in (R665). Verifying a code raises the session to `aal2`, which the server
+// then requires: it is written over the stored session, never adopted (`adoptSession` revokes the one in use).
 
 import { useEffect, useState, type FormEvent, type ReactElement } from "react";
 
@@ -48,7 +46,6 @@ type Phase =
   /** The factors could not be read: nothing is offered rather than the wrong thing. */
   | { kind: "unknown" };
 
-/** The session behind `token`: the stored one when it is that token's, else the token alone. */
 function sessionFor(token: string): Session {
   const stored = readSession();
   return stored !== null && stored.accessToken === token ? stored : { accessToken: token };
@@ -74,7 +71,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       .then((factors) => {
         if (canceled) return;
         const verified = factors.find((factor) => factor.verified);
-        // Read once per attempt: a token handed down later (a renewal, this screen's own raise) is the same account.
+        // Read once per attempt: a later token (a renewal, this screen's own raise) is the same account.
         setPhase((now) => (now.kind !== "loading" ? now : verified === undefined ? { kind: "off" } : { kind: "on", factorId: verified.id }));
       })
       .catch(() => {
@@ -120,7 +117,6 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
     setError(null);
     verifySecondFactor(sessionFor(token), factorId, code)
       .then((raised) => {
-        // The same session, raised to aal2: written over the stored one (see the header).
         writeSession(raised);
         announceAccountChange();
         setPhase({ kind: "on", factorId });

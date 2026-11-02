@@ -1,10 +1,7 @@
 //! Degrade and Upgrade (docs/classic-sets.md B3.4; R386, R440, R442) and KY's Constant's number set
-//! outright (Classic+ #41): every row of the menu with its bounds, the draw (the row, then the item),
-//! Immutable, "N times", random picks over hidden piles and their cues, R242's order, what the views
-//! show and hide (R177, R311), and how the changes ride the card — through leaving the field (R78),
-//! onto a copy (R57), into a Fuse (R102), and not through a Transform.
-//!
-//! Port of `packages/engine/test/effects-tune.test.ts`.
+//! outright (Classic+ #41): the menu's rows and bounds, the draw (the row, then the item), R242's order,
+//! the views (R177, R311), and the changes riding the card through leaving the field (R78), onto a copy
+//! (R57) and into a Fuse (R102), but not through a Transform.
 
 use jackioh_engine::effects::{
     TuneDirection, applicable_changes, degrade, set_number, shuffle_copies_of_self, shuffle_into,
@@ -25,7 +22,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `HookOptions & { self?: CardInstance | null }`.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<CardInstance>,
@@ -33,8 +29,7 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// Apply one effect as `resolve.ts` does and hand back its events; the rng cursor is kept. TS's
-/// `sinkFor(state)` is the sink built here: its rng starts at the state's cursor, as reduce does.
+/// One effect's events; the rng starts at the state's cursor, as reduce does, and the cursor is kept.
 fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -55,8 +50,6 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     events
 }
 
-/// One application at a time, as `tuneOnce` makes it. TS handed it the live card; Rust reads the
-/// card by id as it stands now.
 fn once(state: &mut GameState, id: &str, direction: TuneDirection) -> Vec<GameEvent> {
     let card = live(state, id);
     let mut events = Vec::new();
@@ -77,7 +70,7 @@ fn once(state: &mut GameState, id: &str, direction: TuneDirection) -> Vec<GameEv
     events
 }
 
-/// TS `sinkFor(state)` for a call that does not write the cursor back.
+/// A sink at the state's cursor, for a call that does not write the cursor back.
 fn with_sink<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> R {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -95,7 +88,6 @@ fn changes(events: &[GameEvent]) -> Vec<TuningChange> {
         .collect()
 }
 
-/// `changes(events).map((change) => change.kind)`.
 fn change_kinds(events: &[GameEvent]) -> Vec<String> {
     changes(events)
         .iter()
@@ -103,14 +95,12 @@ fn change_kinds(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// A `degraded` or `upgraded` event's fields.
 struct Tuned {
     instance_id: String,
     hidden_from: Option<Vec<PlayerId>>,
     change: TuningChange,
 }
 
-/// `eventsOfType(events, "degraded")` / `"upgraded"`.
 fn tuned(events: &[GameEvent], type_: GameEventType) -> Vec<Tuned> {
     events
         .iter()
@@ -137,7 +127,6 @@ fn tuned(events: &[GameEvent], type_: GameEventType) -> Vec<Tuned> {
         .collect()
 }
 
-/// TS `card(state, defId, player = "p1")`: a fresh card of that definition in the player's hand.
 fn card(state: &mut GameState, def_id: &str) -> CardInstance {
     in_hand(state, def_id, PlayerId::P1, 1)
         .into_iter()
@@ -145,17 +134,14 @@ fn card(state: &mut GameState, def_id: &str) -> CardInstance {
         .expect("no card")
 }
 
-/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// `applicableChanges(state, card, direction)`, as the rows' names.
 fn rows(state: &GameState, id: &str, direction: TuneDirection) -> Value {
     json_of(applicable_changes(state, &live(state, id), direction))
 }
 
-/// `card.tuning?.x?.[key]`.
 fn x_tuning(card: &CardInstance, key: &str) -> Option<i32> {
     card.tuning
         .as_ref()
@@ -172,7 +158,6 @@ fn param(state: &GameState, id: &str, key: &str) -> i32 {
     param_value(state, Some(&live(state, id)), key, Default::default())
 }
 
-/// `numbersOn(state, card)` as JSON (`{ id, ref, label, value }` each).
 fn numbers(state: &GameState, id: &str) -> Vec<Value> {
     numbers_on(state, &live(state, id)).iter().map(json_of).collect()
 }
@@ -181,7 +166,6 @@ fn has_rush(keywords: &[Keyword]) -> bool {
     keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush)
 }
 
-/// The viewer's own hand in a view, as JSON entries (TS asserted it is a list).
 fn own_hand(view: &PlayerView) -> Vec<Value> {
     let hand = json_of(&view.you.hand);
     assert!(hand.is_array(), "own hand is a list");
@@ -205,8 +189,8 @@ mod b3_4_the_menu_row_by_row_r386 {
             degrade(json_as(json!({ "instanceId": spell.id, "times": 4 }))),
             RunOptions::default(),
         );
-        // 1 → 2 → 3 → 4, and at (4) nothing is left to change: the fourth application is cued `none`
-        // because the card is in a hand the other player may not read (R440).
+        // At (4) nothing is left to change: the fourth application is cued `none` because the card is
+        // in a hand the other player may not read (R440).
         assert_eq!(
             json_of(changes(&degraded)),
             json!([
@@ -397,7 +381,6 @@ mod b3_4_the_menu_row_by_row_r386 {
                     ..HookOptions::default()
                 },
             );
-            // Draw until the keyword row takes Rush, then read what is left.
             for _ in 0..40 {
                 let now = live(&*ctx.state, &unit.id);
                 if !has_rush(&unit_view(&*ctx.state, &now).keywords) {
@@ -540,7 +523,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             [Some(1), Some(2), Some(2)]
         );
 
-        // Upgrade's X row: one better each — Echo 2, Activate 3, Tribute 1.
+        // Upgrade's X row: one better each.
         for (id, key) in [
             (&echo.id, "Echo"),
             (&active.id, "Activate"),
@@ -561,11 +544,10 @@ mod b3_4_the_menu_row_by_row_r386 {
             ],
             [Some(2), Some(3), Some(1)]
         );
-        // TS called `printedEcho(echo)` without the state; the Rust port takes it, and a hand card copies
-        // no Echo, so the number is the card's own either way.
+        // A hand card copies no Echo, so the number is the card's own.
         assert_eq!(printed_echo(&live(&state, &echo.id), &state), 2);
         assert_eq!(tuned_count(&live(&state, &tribute.id), "Tribute", 2), 1);
-        // Tribute 1 is as good as it gets: no Upgrade X item is left on it, and a Degrade raises it.
+        // Tribute 1 is the best it gets: no Upgrade X item is left on it, and a Degrade raises it.
         assert_eq!(x_tuning(&live(&state, &tribute.id), "Tribute"), Some(-1));
     }
 
@@ -586,7 +568,7 @@ mod b3_4_the_menu_row_by_row_r386 {
         assert_eq!(x_of(&live(&state, &spell.id)), 1);
         live_mut(&mut state, &spell.id).x = Some(5);
         assert_eq!(x_of(&live(&state, &spell.id)), 3);
-        // The context a resolution runs in reads it (`resolve.makeContext`).
+        // The context a resolution runs in reads it.
         let spell = live(&state, &spell.id);
         let x = with_sink(&mut state, |sink| {
             make_context(sink, Some(&spell), HookOptions::default()).x
@@ -675,9 +657,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             once(&mut state, &held.id, TuneDirection::Upgrade);
         }
         assert_eq!(x_tuning(&live(&state, &held.id), "Brittle"), Some(1));
-        // TS placed `held`, the one object that is still in the hand too (`placeOnField` takes nothing
-        // out of the hand), and read `held.brittle`. Rust's hand keeps its own copy, so the object TS
-        // read is the copy `place_on_field` leaves as it landed.
+        // The Brittle is read off the copy `place_on_field` leaves as it landed.
         let mut held_now = live(&state, &held.id);
         assert!(place_on_field(
             &mut state,
@@ -1478,7 +1458,6 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
             &json!({ "attack": 3, "health": 3, "maxHealth": 4 }),
         ));
         {
-            // TS `unit.tuning = { ...unit.tuning, x: { Armor: 1 } }`.
             let card = live_mut(&mut state, &unit.id);
             let mut spread = card.tuning.clone().unwrap_or_default();
             spread.x = Some(IndexMap::from([("Armor".to_string(), 1)]));
@@ -1611,7 +1590,7 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
     }
 }
 
-/// The keywords a hand card will carry onto the field, for the X row test.
+/// The keywords a hand card will carry onto the field.
 fn stats_of_keywords(state: &GameState, c: &CardInstance) -> Vec<Value> {
     if !numbers_on(state, c).is_empty() {
         unit_view_keywords(state, c)
@@ -1808,7 +1787,7 @@ mod r1160_tune_multiplier {
             .find(|item| item.param.key == "huge")
             .expect("huge is steppable");
         assert_eq!((huge.steps, huge.delta), (1, 4));
-        // Times 1 is today's walk.
+        // Times 1 is the unmultiplied walk.
         let fresh = live(&state, &spell.id);
         assert_eq!(
             steppable_params_times(&state, &fresh, TuneDirection::Upgrade, 1),
@@ -1979,7 +1958,7 @@ mod r1160_tune_multiplier {
         let after = live(&state, &unit.id);
         assert_eq!((after.buffs.attack, after.buffs.health), (2, 2));
 
-        // KY's Constant sets the number outright (copied from `r386_each_number_is_set…`).
+        // KY's Constant sets the number outright.
         let spell = card(&mut state, &instance_fx::volatile.id);
         let events = run(
             &mut state,
@@ -2027,7 +2006,6 @@ mod r1748000_in_play {
             json!(["stats", "keyword"])
         );
         assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
-        // Ten Buffs and ten Nerfs on the field leave its price as it was.
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
             for _ in 0..10 {
                 once(&mut state, &unit.id, direction);
@@ -2075,7 +2053,6 @@ mod r2261000_tribute_in_play {
             json!(["stats", "keyword"])
         );
         assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
-        // Ten Buffs and ten Nerfs on the field leave its Tribute as it was.
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
             for _ in 0..10 {
                 once(&mut state, &unit.id, direction);

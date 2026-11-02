@@ -1,6 +1,4 @@
-//! Test-only cards for the Blueprint systems (MB26, R1280–R1284).
-//!
-//! Ids are prefixed `bp-` and indexed from 7100 up.
+//! Test-only cards for the Blueprint systems (MB26, R1280–R1284): ids `bp-`, indexed from 7100 up.
 
 use std::sync::LazyLock;
 

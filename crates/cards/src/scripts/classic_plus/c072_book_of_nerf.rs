@@ -1,6 +1,6 @@
 //! C+ #72 Book of Nerf (SPEC §8.7 row 72, R386; BUILD M9 row C+ 72). (1) Spell, Book, Epic.
-//!   Base:    "Nerf a permanent {times|time|times}." — times 4 (5 through v0.5.2)
-//!   Radiant: "Nerf a card {times|time|times}. It may be a card in your hand." — times 8 (10 through v0.5.2)
+//!   Base:    "Nerf a permanent {times|time|times}." — times 4
+//!   Radiant: "Nerf a card {times|time|times}. It may be a card in your hand." — times 8
 //!
 //! A declared target (R81): a permanent on either side, and on the Radiant face also a card in your own
 //! hand (a broader scope, R275). `times` separate Degrades, each its own draw (R386): attack floors at
@@ -29,11 +29,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #72 Book of Nerf — SPEC §8.7 row 72, BUILD M9 row C+ 72: Degrades a target permanent on either
-// side 4 times, each its own draw (R386): attack floors at 0, current health never below 1 (it never
-// kills), cost never above (4), no harmful keyword removed, what the floors refuse lost; an Immutable
-// target is unchanged; the count reads through `param()`; radiant 8 times on a permanent or a card in
-// your hand (the hand clause is the Radiant face's alone).
+// C+ #72 Book of Nerf — SPEC §8.7 row 72, BUILD M9 row C+ 72.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,7 +65,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `book({ radiant?, seed? })`.
     fn book(radiant: bool, seed: Option<&str>) -> Scenario {
         let mut options = json!({
             "p1": { "hand": [{ "def": BOOK, "radiant": radiant }, UNIT, FILLER], "field": [UNIT] },

@@ -1,10 +1,7 @@
 // The five commands BUILD's repo layout names — seedGame, playCard, attack, answerPrompt,
 // endTurn — plus the waiting primitives that let the suite obey the M8 house rule: no fixed
-// `cy.wait(ms)` anywhere. Every wait here is an assertion Cypress retries (a testid appearing, or
-// `data-animating` clearing), never a sleep.
-//
-// All DOM knowledge lives in support/testids.ts. All URL and account knowledge lives in
-// support/config.ts. A spec should not contain a raw selector.
+// `cy.wait(ms)` anywhere, only assertions Cypress retries. All DOM knowledge lives in
+// support/testids.ts, all URL and account knowledge in support/config.ts.
 
 import { CARD_NAMES, allCardIds, cardId as catalogId } from "./cards.ts";
 import {
@@ -67,20 +64,13 @@ export type SeedGameOptions = {
   /** Deck fixture ids, i.e. `e2e/fixtures/decks/<id>.json` without the extension. */
   a: string;
   b: string;
-  /**
-   * `keep` answers the opening mulligan prompts by keeping every card, which is what all but
-   * spec 02 want. `manual` leaves them open for the spec to drive.
-   */
+  /** `keep` answers the opening mulligans keeping every card; `manual` leaves them to the spec (02). */
   mulligan?: "keep" | "manual";
-  /**
-   * Runs in the visit's `onBeforeLoad` after the deck injection, for a spec that has to seed more of
-   * the page's storage before the app boots (spec 25 slows the effects down for its screenshots).
-   */
+  /** Runs in the visit's `onBeforeLoad` after the deck injection, to seed more storage (spec 25). */
   onBeforeLoad?: (win: Cypress.AUTWindow) => void;
   /**
-   * Decks given inline, by the ids `a` and `b` name, instead of read from `e2e/fixtures/decks/`: spec
-   * 36 builds its decks from the catalog at run time, so a card a later part adds is dealt the day it
-   * lands with no fixture to edit. Each is checked exactly as a fixture is (A9).
+   * Decks given inline, by the ids `a` and `b` name, instead of read from `e2e/fixtures/decks/` (spec
+   * 36 builds its decks from the catalog at run time). Each is checked exactly as a fixture is (A9).
    */
   decks?: Readonly<Record<string, Pick<FixtureDeck, "cards" | "handicap"> & Partial<FixtureDeck>>>;
   /** R1420: the sets the hotseat engine previews before it creates the game (spec 36: `["Meditative"]`). */
@@ -102,20 +92,8 @@ export type SaveDeckInput = {
 export type SaveTrioInput = { id?: string; name: string; deckIds: (string | null)[] };
 
 /**
- * Every acting command ends by draining `data-animating` (`cy.settled()`), which is what keeps the
- * suite free of fixed waits — but it also closes the window BUILD M5-T4 asks three specs to look
- * through ("glow animation", "AI actions animate", `rotated` / `swapped`). `expectAnimating` is
- * that window, asserted by the command itself, between the click and the drain: acting and
- * capturing in one step, so a spec never has to hand-roll the clicks to get in between them.
- *
- *     cy.playByName("Knockoff Temu", { expectAnimating: "radiantSet" });
- *     cy.attack(attacker, { hero: "opponent" }, { expectAnimating: ["attackCancelled"] });
- *
- * `during` is the same window for anything else a spec has to see before the board catches up — a
- * notice that stays until the next view, a number pop — run after `expectAnimating` and before the
- * drain. Its commands must be retried assertions: nothing in it may wait on a clock.
- *
- *     cy.endTurn({ expectAnimating: "fatigue", during: () => cy.get(ts(pileNoticeId("opponent"))).should(…) });
+ * Every acting command drains `data-animating` (`cy.settled()`), which closes the window BUILD M5-T4 looks through:
+ * `expectAnimating` asserts it, `during` runs anything else a spec must see there (retried assertions, never a clock).
  */
 export type ActOptions = {
   expectAnimating?: EventType | EventType[];
@@ -124,10 +102,8 @@ export type ActOptions = {
 
 export type PlayCardOptions = ActOptions & {
   /**
-   * Click the hand card where it can be seen rather than at its center. On a phone a full hand fans
-   * out and overlaps (each card tilted, its right part under the next one), so the center is often
-   * another card's, and a player taps the part that shows: `visiblePart` finds that part the way
-   * the browser would hit-test a tap (`elementFromPoint`) and clicks there.
+   * Click the hand card where it shows rather than at its center: on a phone a full hand fans out and overlaps, so the
+   * center is often another card's. It hit-tests as a tap does (`elementFromPoint`).
    */
   visiblePart?: boolean;
   /** R81: the zone travels in the play action; the client builds it from a board click. */
@@ -139,13 +115,8 @@ export type PlayCardOptions = ActOptions & {
 export type AttackTarget = { card: string } | { hero: Side };
 
 /**
- * Mirrors `WsPlayerCommand` in support/tasks/wsPlayer.ts, which is the file that actually speaks
- * the protocol. Anything the task accepts must be declarable here or a spec cannot ask for it.
- *
- * There is no `joinRoom`: `crates/server/src/actor/protocol.rs` answers that frame with
- * `error { code: "malformed" }`. Joining a room is `POST /api/rooms/:code/join` — the
- * atomic single-claim and the loadout re-check are HTTP concerns, and a socket is only ever opened
- * onto a match that already exists.
+ * Mirrors `WsPlayerCommand` in support/tasks/wsPlayer.ts, which speaks the protocol: whatever the task accepts is
+ * declarable here. No `joinRoom`: a room is joined by `POST /api/rooms/:code/join`; sockets open onto existing matches.
  */
 export type WsPlayerCommand =
   | {
@@ -181,10 +152,7 @@ export type ViewPredicate = {
   hasResult?: boolean;
   /** `view.turn >= n`. §10.1's turn counter is 1-based and counts player-turns (R2). */
   turnAtLeast?: number;
-  /**
-   * R265, R266: `view.mulligan.opponentReady` — whether the OTHER seat has answered its mulligan.
-   * Only a view inside the mulligan window carries `mulligan`, so no view outside it matches.
-   */
+  /** R265, R266: `view.mulligan.opponentReady`; a view outside the mulligan window never matches. */
   mulliganOpponentReady?: boolean;
   /** R269: `view.drawOffer.by` — the seat whose draw offer stands — or `null` for none. */
   drawOfferBy?: PlayerId | null;
@@ -204,9 +172,7 @@ export type WsPlayerResult = {
   seq?: number;
 };
 
-// ---------------------------------------------------------------------------------------------
 // helpers
-// ---------------------------------------------------------------------------------------------
 
 /** A non-negative integer, as R180 wants every handicap field to be. */
 function isCount(value: unknown): value is number {
@@ -214,10 +180,8 @@ function isCount(value: unknown): value is number {
 }
 
 /**
- * A fixture's `handicap` (R180), checked the way the engine's `validateHandicap` checks one — five
- * non-negative integers, a deck size a library can hold (1..LIBRARY_CAP, R184) and an optional
- * positive `heroHealth` (R290) — so a bad one fails here with the fixture's name instead of as the
- * route's "no game" panel.
+ * A fixture's `handicap` (R180), checked as the engine's `validateHandicap` checks one (R184, R290),
+ * so a bad one fails here with the fixture's name instead of as the route's "no game" panel.
  */
 function asHandicap(raw: unknown, id: string): FixtureHandicap {
   expect(raw, `decks/${id}.json handicap`).to.be.an("object");
@@ -246,9 +210,8 @@ const CORE_IDS: ReadonlySet<string> = new Set(Object.keys(CARD_NAMES).map((index
 const CATALOG_PATH = "../crates/cards/catalog.json";
 
 /**
- * A9: every deckable id of every set (one format, R380), read off `crates/cards/catalog.json` at
- * run time, so `e2e/` stays self-contained at compile time (tsconfig.json) and a Classic or Classic+
- * fixture is checked against the catalog the build serves. Tokens are left out: L3 bans them.
+ * A9: every deckable id of every set (one format, R380), read off the catalog at run time, so `e2e/` stays
+ * self-contained and a fixture is checked against the catalog the build serves. Tokens are out: L3 bans them.
  */
 function deckableIds(): Cypress.Chainable<ReadonlySet<string>> {
   return cy.readFile(CATALOG_PATH, { log: false }).then((raw: Record<string, { token?: boolean }>) => {
@@ -265,9 +228,8 @@ function asDeck(raw: unknown, id: string, known: ReadonlySet<string> = CORE_IDS)
   expect(deck.cards, `decks/${id}.json cards`).to.be.an("array");
   const cards = deck.cards ?? [];
   const handicap = deck.handicap === undefined ? undefined : asHandicap(deck.handicap, id);
-  // L2/L3 (SPEC §9.4) are enforced by `validateDeck` in the engine, which throws inside
-  // `createGame`. Failing here instead gives a readable message before the app is even loaded. A
-  // handicapped seat's deck holds its handicap's size instead of L2's (R184).
+  // L2/L3 (SPEC §9.4) are enforced by the engine's `validateDeck` inside `createGame`; failing here
+  // gives a readable message before the app loads. A handicapped deck holds its handicap's size (R184).
   const size = handicap?.deckSize ?? constants.DECK_SIZE;
   expect(
     cards.length,
@@ -307,10 +269,8 @@ function clickPick(...selectors: string[]): void {
 const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
 
 /**
- * Whether a toggle is already chosen. A4: the client marks a picked option with `aria-pressed`
- * (`apps/web/src/game/Prompt.tsx`); `data-selected` is the board's spelling of the same thing
- * (`Board.test.tsx`). Either counts, and the attribute may sit on the clickable ancestor when the
- * testid is on an inner label.
+ * Whether a toggle is already chosen. A4: the client marks a picked option with `aria-pressed` (`Prompt.tsx`), the
+ * board with `data-selected`; either counts, and it may sit on the clickable ancestor of an inner-label testid.
  */
 function isPicked($option: JQuery<HTMLElement>): boolean {
   const marked = $option.closest('[aria-pressed], [data-selected]');
@@ -318,10 +278,7 @@ function isPicked($option: JQuery<HTMLElement>): boolean {
   return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
 }
 
-/**
- * BUILD M5-T4: assert the animation this command just caused, and run the caller's `during`, before
- * it is drained.
- */
+/** BUILD M5-T4: assert the animation this command just caused, and run `during`, before the drain. */
 function captureAnimating(options: ActOptions): void {
   const expected = options.expectAnimating;
   if (expected !== undefined) {
@@ -332,9 +289,7 @@ function captureAnimating(options: ActOptions): void {
   options.during?.();
 }
 
-// ---------------------------------------------------------------------------------------------
 // waiting: BUILD M8 forbids fixed waits, so everything below is a retried assertion
-// ---------------------------------------------------------------------------------------------
 
 Cypress.Commands.add("settled", () => {
   cy.get(ANIMATING, { timeout: timeouts.animation, log: false }).should("not.exist");
@@ -352,9 +307,7 @@ Cypress.Commands.add("noPrompt", () => {
   cy.get(PROMPT, { timeout: timeouts.animation }).should("not.exist");
 });
 
-// ---------------------------------------------------------------------------------------------
 // the dev handle (BUILD M5-T3)
-// ---------------------------------------------------------------------------------------------
 
 Cypress.Commands.add("jackioh", () => {
   return cy
@@ -370,9 +323,8 @@ Cypress.Commands.add("gameState", () => {
 });
 
 /**
- * Setup shortcut only: `reduce` refuses illegal actions itself (SPEC §9.3), so dispatching is
- * never a way past the rules — but it is a way past the UI, so specs use it to reach a
- * pre-condition, never to exercise the behavior under test.
+ * Setup shortcut only: `reduce` refuses illegal actions itself (SPEC §9.3), so dispatching is a way past the UI, never
+ * past the rules; specs use it to reach a pre-condition, never to exercise the behavior under test.
  */
 Cypress.Commands.add("dispatchAction", (action: ActionInput) => {
   cy.jackioh().then((handle) => {
@@ -381,9 +333,7 @@ Cypress.Commands.add("dispatchAction", (action: ActionInput) => {
   cy.settled();
 });
 
-// ---------------------------------------------------------------------------------------------
 // finding cards: by name through the DOM, or by defId/zone through the dev handle
-// ---------------------------------------------------------------------------------------------
 
 /** The instance id in `hand-card-<instanceId>` / `card-<instanceId>`. */
 function instanceIdOf($element: JQuery<HTMLElement>): string {
@@ -411,10 +361,7 @@ Cypress.Commands.add("fieldCardByName", (name: string) => {
     .then(($card) => instanceIdOf($card));
 });
 
-/**
- * The instance id of the first `defId` in a player's hand, read off the dev handle. Use it only
- * where the DOM cannot answer (the other seat's hand, or a card whose name is not rendered).
- */
+/** The instance id of the first `defId` in a player's hand, off the dev handle, where the DOM cannot answer. */
 Cypress.Commands.add("instanceInHand", (player: PlayerId, defId: string) => {
   return cy.gameState().then((state) => {
     const side = state.players[player] as { hand?: { id: string; defId: string }[] };
@@ -445,9 +392,7 @@ Cypress.Commands.add("playByName", (name: string, options: PlayCardOptions = {})
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // seedGame
-// ---------------------------------------------------------------------------------------------
 
 Cypress.Commands.add("seedGame", (options: SeedGameOptions) => {
   const { seed, a, b, mulligan = "keep" } = options;
@@ -504,41 +449,16 @@ Cypress.Commands.add("seedGame", (options: SeedGameOptions) => {
 });
 
 /**
- * R9 / §2.1: the opening mulligans, answered by keeping the whole opening hand.
- *
- * BOTH SEATS MULLIGAN AT ONCE (R265). Both prompts open with the deal, either seat may answer first,
- * and an answer is sealed until the other is in (R266). On `/dev/hotseat` the device follows the
- * seat that still owes one (`hotseat.ts`), so after the first Ready the second seat's picker is the
- * one on screen and this answers it too. Networked, this client only ever holds its own seat: after
- * its Ready the picker gives way to `mulligan-waiting` (no `data-prompt-kind`), so the loop ends
- * there, and the other seat answers from wherever it is driven (the `wsPlayer` task in 05, 06, 20).
- *
- * THE ANSWER NAMES THE CARDS KEPT, NOT THE CARDS RETURNED. The engine's prompt is "Choose the
- * cards to keep; the rest are returned and redrawn" with `min: 0` and one option per hand card
- * (`crates/engine/src/setup.rs`), and `answerMulligan` returns every card *not* in `keep`. So
- * keeping everything means every option selected when Confirm is pressed: submitting with nothing
- * toggled sends `keep: []`, which mulligans the entire hand — the opposite of this command's name,
- * and a silent change to the opening hand of every spec that seeds a game. The picker opens with
- * every card kept (Prompt.tsx), so this normally clicks Confirm alone; it still selects any card
- * that is not, so it holds whatever the picker's default.
+ * R9 / §2.1: the opening mulligans, kept whole; both seats mulligan at once (R265), each answer sealed until the other
+ * is in (R266), so on `/dev/hotseat` the device follows the seat that owes one and networked the loop ends at this
+ * seat's `mulligan-waiting`. THE ANSWER NAMES THE CARDS KEPT, NOT THE CARDS RETURNED (`crates/engine/src/setup.rs`):
+ * Confirm with nothing toggled sends `keep: []` and mulligans the whole hand.
  */
 Cypress.Commands.add("keepMulligans", () => {
-  // WAIT FOR THE CLIENT TO HAVE A VIEW BEFORE ASKING WHETHER A PICKER IS OPEN.
-  //
-  // `exists()` is one non-retrying DOM read, which is right for "is the SECOND seat's mulligan up?"
-  // — by then the answer is already settled — and wrong for the first. A networked board has no
-  // view at all for the first few frames after `cy.visit`: §9.5 has the actor push a fresh full
-  // view on attach, and until that frame lands there is no prompt in the DOM to find. Asking then
-  // answers "no", and this command returns having silently done nothing: seat 1 never mulligans,
-  // the game never starts, and the spec fails much later somewhere else. (Measured, back when the
-  // mulligans were answered in turn: spec 05 died in `wsPlayer` with "timed out waiting for a view
-  // matching {promptKind: mulligan}", and spec 06 only escaped because twenty board assertions ran
-  // first.)
-  //
-  // `window.__jackioh.state` is the client's own answer to "have I got a view yet": the hotseat
-  // handle's is a getter over the live session and is never null, so this is a no-op there, while
-  // `net.ts`'s is null until the first `view` frame arrives. Waiting on it costs the hotseat specs
-  // nothing and closes the race for the networked ones in one place.
+  // WAIT FOR THE CLIENT TO HAVE A VIEW BEFORE ASKING WHETHER A PICKER IS OPEN. `exists()` is one non-retrying DOM read,
+  // wrong for the first seat's mulligan: a networked board has no view until the actor's first full view lands (§9.5),
+  // and asking then silently skips seat 1's mulligan. The handle's `state` is null until `net.ts`'s first `view` frame
+  // and never null in hotseat, so waiting on it closes the race for every spec at once.
   cy.window({ timeout: timeouts.view, log: false }).should((win) => {
     const handle = win.__jackioh;
     expect(handle, "window.__jackioh (BUILD M5-T3)").to.not.eq(undefined);
@@ -569,9 +489,8 @@ Cypress.Commands.add("keepMulligans", () => {
 });
 
 /**
- * §2.5: concede, through the confirmation the `concede` control opens ("Concede this game?"). The
- * control only asks; `concede-confirm` is what sends `{ type: "concede" }` (ConfirmConcede.tsx), so
- * a spec that clicks `concede` alone has conceded nothing.
+ * §2.5: concede, through the confirmation the `concede` control opens. The control only asks;
+ * `concede-confirm` sends `{ type: "concede" }`, so clicking `concede` alone concedes nothing.
  */
 Cypress.Commands.add("concede", () => {
   cy.get(ts(CONCEDE), { timeout: timeouts.view }).should("not.be.disabled").click();
@@ -581,14 +500,9 @@ Cypress.Commands.add("concede", () => {
   cy.settled();
 });
 
-// ---------------------------------------------------------------------------------------------
 // playCard / attack / answerPrompt / endTurn
-// ---------------------------------------------------------------------------------------------
 
-/**
- * A point of `element` no other element covers, relative to its box, found on a grid the way a tap
- * is hit-tested; `null` when every point of the grid belongs to something else.
- */
+/** A point of `element` no other element covers, relative to its box, hit-tested on a grid; else `null`. */
 function uncoveredPoint(element: HTMLElement): { x: number; y: number } | null {
   const rect = element.getBoundingClientRect();
   const steps = 8;
@@ -641,9 +555,8 @@ Cypress.Commands.add("answerPrompt", (kind: PromptKind | null, answer: PromptAns
   const root = kind === null ? PROMPT : promptOf(kind);
   cy.get(root, { timeout: timeouts.view }).should("be.visible");
 
-  // §10.6: a Discover's three options are drawn by the match rng, so a spec cannot name a key —
-  // it can only say "the first". Taken in DOM order, which is `PendingChoice.options` order and
-  // therefore the same on every machine (crates/engine/src/prompts.rs).
+  // §10.6: a Discover's three options are drawn by the match rng, so a spec cannot name a key, only
+  // "the first": DOM order, which is `PendingChoice.options` order on every machine.
   if (answer.first !== undefined) {
     const wanted = answer.first;
     cy.get(root)
@@ -742,9 +655,7 @@ Cypress.Commands.add("usePower", (options: ActOptions = {}) => {
   cy.settled();
 });
 
-// ---------------------------------------------------------------------------------------------
 // Reading a seat's piles, and getting to a turn
-// ---------------------------------------------------------------------------------------------
 
 type SidePeek = {
   hand?: { id: string; defId: string }[];
@@ -756,20 +667,14 @@ function peek(state: GameStateLike, player: PlayerId): SidePeek {
 }
 
 /**
- * The instance ids in a seat's hand, read off `window.__jackioh.state`.
- *
- * CLAUDE.md rule 7: this answers exactly one question — "which instance ids might I click?" — and
- * never what the game says happened. Every assertion belongs on the DOM, which is `viewFor`. Use
- * it where the DOM cannot answer: the other seat's hand, or a card whose name is not rendered.
+ * The instance ids in a seat's hand, read off `window.__jackioh.state`, where the DOM cannot answer. CLAUDE.md rule 7:
+ * it answers only "which instance ids might I click?"; every assertion belongs on the DOM, which is `viewFor`.
  */
 Cypress.Commands.add("handIds", (player: PlayerId) => {
   return cy.gameState().then((state) => (peek(state, player).hand ?? []).map((card) => card.id));
 });
 
-/**
- * The top card of each of a seat's unit zones, in lane order, skipping empty lanes. §3.2: only a
- * Stack pile's top card is the active one, so that is the only id worth clicking.
- */
+/** The top card of each of a seat's unit zones, in lane order (§3.2: only a Stack pile's top is active). */
 Cypress.Commands.add("unitIds", (player: PlayerId) => {
   return cy.gameState().then((state) =>
     (peek(state, player).units ?? []).flatMap((pile) => {
@@ -780,13 +685,8 @@ Cypress.Commands.add("unitIds", (player: PlayerId) => {
 });
 
 /**
- * End turns until `turn` is the current player-turn (§10.1: 1-based, player 1 takes the odd ones).
- *
- * R82-SAFE. "A turn ends by itself when the active player's only legal actions are ending the
- * turn, conceding and offering a draw" — so the turn under a spec's feet may already have moved on
- * and there may be no `end-turn` left to press, only a device to hand over (BUILD M5-T3). This
- * therefore re-reads the state every step, hands the device to whoever is active, and only presses
- * `end-turn` when the client is still offering it.
+ * End turns until `turn` is current (§10.1: 1-based, p1 takes the odd ones). R82-SAFE: a turn can end by itself, so
+ * each step re-reads state, hands the device to the active seat (BUILD M5-T3) and presses `end-turn` only if offered.
  */
 Cypress.Commands.add("advanceToTurn", (turn: number, options: { budget?: number } = {}) => {
   const budget = options.budget ?? turn * 2 + 4;
@@ -810,14 +710,11 @@ Cypress.Commands.add("advanceToTurn", (turn: number, options: { budget?: number 
   step(budget);
 });
 
-// ---------------------------------------------------------------------------------------------
 // Sessions (A10): the networked specs sign in before they visit
-// ---------------------------------------------------------------------------------------------
 
 /**
- * The account `cy.signIn` last named, for the rest of this spec file. `testIsolation: true` clears
- * the browser's copy between tests, so a remembered account is re-installed on every load rather
- * than assumed to still be there — which is what makes `cy.signIn` usable from a `before` hook.
+ * The account `cy.signIn` last named, for the rest of this spec file. `testIsolation: true` clears the browser's copy
+ * between tests, so it is re-installed on every load, which makes `cy.signIn` usable from a `before` hook.
  */
 let signedIn: E2EAccount | null = null;
 
@@ -831,15 +728,8 @@ function writeSession(win: Window, account: E2EAccount): void {
 }
 
 /**
- * Sign in as a fixture account.
- *
- * STORAGE, NOT IN-PAGE STATE: spec 05 reloads mid-match and the session has to survive it, so it
- * is `localStorage[SESSION_STORAGE_KEY]`, written in `onBeforeLoad` so the very first boot already
- * has it (the client reads the session while it decides which screen to render, §9.4's gate).
- *
- * It composes with a visit two ways, and both install the session before the page's own scripts
- * run: `cy.visitAs(account, path)`, or `cy.signIn(account)` followed by any later `cy.visit` —
- * `visit` is overwritten below to carry whatever session was last signed in.
+ * Sign in as a fixture account. The session is `localStorage[SESSION_STORAGE_KEY]`, so it survives spec 05's mid-match
+ * reload, written in `onBeforeLoad` so the first boot has it (§9.4's gate). `visit` below carries the last session.
  */
 Cypress.Commands.add("signIn", (account: E2EAccount) => {
   signedIn = account;
@@ -865,8 +755,7 @@ Cypress.Commands.add("visitAs", (account: E2EAccount, path: string, options: Par
 });
 
 // A signed-in session is installed by the visit itself, chained onto whatever `onBeforeLoad` the
-// caller passed (so `seedGame`'s deck injection still runs). With no session signed in this is a
-// pass-through and every hotseat spec behaves exactly as before.
+// caller passed (so `seedGame`'s deck injection still runs); with none signed in it passes through.
 const carrySession = (originalFn: (...args: unknown[]) => unknown, ...args: unknown[]): unknown => {
   const account = signedIn;
   if (account === null) return originalFn(...args);
@@ -882,21 +771,14 @@ const carrySession = (originalFn: (...args: unknown[]) => unknown, ...args: unkn
   return typeof first === "string" ? originalFn(first, merged) : originalFn(merged);
 };
 
-// `as never` only silences the overload gymnastics of Commands.overwrite, exactly as the fixed-wait
-// guard in support/e2e.ts does; the function itself is fully typed above.
+// `as never` only silences the overload gymnastics of Commands.overwrite, as support/e2e.ts does.
 Cypress.Commands.overwrite("visit", carrySession as never);
 
-// ---------------------------------------------------------------------------------------------
 // Saved decks and trios (A12) and the deck workshop (A11)
-// ---------------------------------------------------------------------------------------------
 
 /**
- * A12: one scenario deck, padded into a trio R253's Best of 3 will accept.
- *
- * L1 wants exactly `DECKS_PER_LOADOUT` decks and L4 wants no card in two of them, so a one-deck
- * scenario fixture cannot make a trio on its own. The padding is the next `DECK_SIZE * 2` Core ids
- * the fixture did not use, which keeps all three decks disjoint and — with R111's one copy of
- * every non-token card — inside L5.
+ * A12: one scenario deck, padded into a trio R253's Best of 3 accepts (L1's `DECKS_PER_LOADOUT` decks, no card in two
+ * by L4) with `DECK_SIZE * 2` unused Core ids, which with R111's one copy of each non-token card stays inside L5.
  */
 export function loadoutFrom(deck: readonly string[], deckIndex = 0): string[][] {
   const used = new Set(deck);
@@ -921,10 +803,7 @@ export type SavedDecksBody = {
 
 /** What `cy.installLoadout` saved: three decks, oldest first, and the trio that holds them. */
 export type InstalledLoadout = {
-  /**
-   * The three deck ids in saved order, which is `GET /api/decks` order (oldest first, ties on id)
-   * and therefore R257's legacy order: `deckIds[n]` is the deck a `{ deckIndex: n }` body names.
-   */
+  /** In saved order, `GET /api/decks`'s (oldest first, ties on id): `deckIds[n]` is R257's `{ deckIndex: n }`. */
   deckIds: [string, string, string];
   /** The trio ("E2E trio") holding `deckIds` in slot order. */
   trioId: string;
@@ -939,10 +818,7 @@ export const INSTALLED_DECK_NAMES = ["Deck 1", "Deck 2", "Deck 3"] as const;
 /** The trio name `cy.installLoadout` saves. */
 export const INSTALLED_TRIO_NAME = "E2E trio";
 
-/**
- * R256: a deck or trio id, minted by the client exactly as the workshop mints one. The fallback is
- * a version-4 UUID built by hand, for a runner whose spec frame is not a secure context.
- */
+/** R256: a deck or trio id, minted as the workshop mints one; hand-built when not a secure context. */
 export function mintId(): string {
   const webCrypto = globalThis.crypto as Crypto | undefined;
   if (webCrypto !== undefined && typeof webCrypto.randomUUID === "function") return webCrypto.randomUUID();
@@ -954,10 +830,8 @@ export function mintId(): string {
 }
 
 /**
- * `count` fresh ids in ascending order. `GET /api/decks` lists oldest first and breaks a
- * `createdAt` tie on the id (`memory-stores.ts`, and Postgres orders a `uuid` the way its lower-case
- * text sorts), and three saves in a row can land in one millisecond — so decks saved in the order
- * of these ids list in that order whatever the clock did.
+ * `count` fresh ids in ascending order: `GET /api/decks` breaks a `createdAt` tie on the id (Postgres sorts a `uuid` as
+ * its lower-case text) and three saves can land in one millisecond, so decks saved in these ids' order list in it.
  */
 export function mintIds(count: number): string[] {
   return Array.from({ length: count }, mintId)
@@ -975,9 +849,8 @@ Cypress.Commands.add("savedDecks", (account: E2EAccount) => {
 });
 
 /**
- * Delete every trio and every deck an account has saved, and yield the catalog version the server
- * is serving (a save needs it: a stale one is 409 `update_required`, R253). Trios go first only for
- * tidiness: deleting a deck empties the slots that named it anyway (R252).
+ * Delete every trio and deck an account has saved, and yield the catalog version the server serves (a save needs it: a
+ * stale one is 409 `update_required`, R253). Deleting a deck empties the slots that named it anyway (R252).
  */
 Cypress.Commands.add("clearDecks", (account: E2EAccount) => {
   return cy.savedDecks(account).then((saved) => {
@@ -1031,17 +904,8 @@ Cypress.Commands.add("saveTrio", (account: E2EAccount, trio: SaveTrioInput) => {
 });
 
 /**
- * Install a fixture deck as saved deck `deckIndex` of an account, beside two padding decks, and a
- * trio of the three (SPEC §9.4, R250–R253).
- *
- * Everything the account had saved is deleted first, so the account holds exactly these three
- * decks ("Deck 1".."Deck 3", oldest first) and this one trio ("E2E trio", slot order), and a legacy
- * `{ deckIndex: n }` body (R257) names `deckIds[n]`. The decks go in one at a time, in the order of
- * ascending ids (`mintIds`), so their saved order is fixed whatever the clock does.
- *
- * `deckIndex` defaults to 0, which is the deck a legacy room or queue body with `deckIndex: 0`
- * freezes (§9.5). Yields the ids, so a spec can queue `{ mode: "bo1", deckId }` or
- * `{ mode: "bo3", trioId }` with them.
+ * Replace everything an account saved with a fixture deck as deck `deckIndex` (default 0), two padding decks and a trio
+ * (SPEC §9.4, R250–R253), saved in `mintIds` order so `deckIds[n]` is what `{ deckIndex: n }` names (R257, §9.5).
  */
 Cypress.Commands.add(
   "installLoadout",
@@ -1075,9 +939,7 @@ Cypress.Commands.add(
   },
 );
 
-// ---------------------------------------------------------------------------------------------
 // Leaving nothing behind on the E2E server (§9.5, R259–R261)
-// ---------------------------------------------------------------------------------------------
 
 /** `GET /api/auth/me`, as far as the cleanup reads it. */
 type MeBody = { currentMatchId: string | null; currentSeriesId?: string | null };
@@ -1086,9 +948,8 @@ type MeBody = { currentMatchId: string | null; currentSeriesId?: string | null }
 type SeriesStatusBody = { status: "picking" | "playing" | "over"; currentMatchId: string | null };
 
 /**
- * §2.5: concede `matchId` as `account`, from a socket of its own (`wsPlayer`'s `concede`: connect,
- * concede and close in one task, so the account's browser cannot take the seat back in between).
- * Yields the task's answer; a match that was already over is not an error.
+ * §2.5: concede `matchId` as `account`, from a socket of its own in one task, so the account's
+ * browser cannot take the seat back in between. A match that was already over is not an error.
  */
 Cypress.Commands.add("concedeAs", (account: E2EAccount, matchId: string) => {
   return cy
@@ -1109,20 +970,13 @@ Cypress.Commands.add("concedeAs", (account: E2EAccount, matchId: string) => {
 
 /**
  * How many things `cy.freeAccount` may have to undo: a match, then (in a series) the forfeit that
- * follows it, with room for a concede the account's own browser raced. Not a rule number: a bound
- * on a cleanup loop.
+ * follows it, with room for a concede its own browser raced. A bound on a cleanup loop, not a rule.
  */
 const FREE_ACCOUNT_STEPS = 8;
 
 /**
- * Take an account out of everything the E2E server could still hold it in: an open queue ticket
- * (`DELETE /api/queue`), a live match (a concede, §2.5) and a Best-of-3 series that is not over (a
- * forfeit between games, a concede of the game being played, R261). The server keeps its state for
- * its whole life, so a spec that failed half-way — or an earlier run of this one — would otherwise
- * answer the next `POST /api/queue` with 409 `already_in_match` or `already_queued`.
- *
- * Every step is re-read from `/api/auth/me`, and the loop has a budget, so a state this cannot
- * clear fails loudly here rather than as a misleading 409 later.
+ * Take an account out of an open queue ticket, a live match (§2.5) and a series not over (R261): the server keeps them,
+ * so a failed spec draws a 409 on the next `POST /api/queue`; the loop's budget fails loudly on one it cannot clear.
  */
 Cypress.Commands.add("freeAccount", (account: E2EAccount) => {
   cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(account.token), failOnStatusCode: false });
@@ -1163,22 +1017,16 @@ Cypress.Commands.add("freeAccount", (account: E2EAccount) => {
 });
 
 /**
- * R897000: stand in for a queued client. The queue cancels a ticket nobody has heard from for
- * `QUEUE_TICKET_STALE_MS`, and a client polls `GET /api/auth/me` every `SERIES_POLL_SECONDS`; an
- * account a spec enqueues over HTTP and leaves waiting for the rating window to widen (50 s for a
- * gap of 320) polls through the `stayQueued` task, which ends itself once the ticket is gone.
+ * R897000: stand in for a queued client. The queue cancels a ticket unheard from for `QUEUE_TICKET_STALE_MS`, so an
+ * account enqueued over HTTP polls as a client does, via the `stayQueued` task, which ends once the ticket is gone.
  */
 Cypress.Commands.add("stayQueued", (account: E2EAccount, everyMs: number) => {
   cy.task("stayQueued", { url: server.http(), token: account.token, everyMs }, { log: false });
 });
 
 /**
- * A11: drag a card from the pool into the open deck, in the deck workshop.
- *
- * A drag is a multi-event gesture — `dragstart` on the source with a `DataTransfer`, `dragover` and
- * `drop` on the target, `dragend` to let go — that no spec should hand-roll. The `DataTransfer` is
- * built in the app's own window so the events carry an object the page can read. The workshop has
- * one deck open at a time, so the target is its one drop region (`DECK_DROP`).
+ * A11: drag a card from the pool into the open deck, the whole multi-event gesture so no spec
+ * hand-rolls it. The `DataTransfer` is built in the app's own window so the page can read it.
  */
 Cypress.Commands.add("dragCardToDeck", (catalogCardId: string) => {
   const source = ts(poolCardId(catalogCardId));
@@ -1201,23 +1049,18 @@ Cypress.Commands.add("dragCardToDeck", (catalogCardId: string) => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // replay determinism (spec 01) and the Node WebSocket player (spec 06)
-// ---------------------------------------------------------------------------------------------
 
 /**
- * BUILD M8 spec 01: "final state hash equals the vitest replay of the recorded actions".
- * The browser hands over (seed, decks, log, final state); `cy.task("replayHash")` folds the log
- * with the Rust engine (`jackioh replay`, support/tasks/replay-runner.ts) — the same fold the Rust
- * tests use — and hashes both states with `hashState`.
+ * BUILD M8 spec 01: "final state hash equals the vitest replay of the recorded actions". The log is
+ * folded with the Rust engine (`jackioh replay`, support/tasks/replay-runner.ts) and both states hashed.
  */
 Cypress.Commands.add("replayCheck", (label: string) => {
   cy.jackioh().then((handle) => {
     const { seed, decks, log, state } = handle;
     expect(decks, "window.__jackioh.decks (ASSUMPTION A2)").to.be.an("array");
     expect(log, "window.__jackioh.log (ASSUMPTION A2)").to.be.an("array");
-    // R180: a handicapped game (a fixture's `handicap`) folds only with the handicaps it was created
-    // with. None is `{}` on the handle, and then the payload is exactly what it always was.
+    // R180: a handicapped game folds only with the handicaps it was created with; none is `{}`.
     const handicaps = handle.handicaps ?? {};
     return cy
       .task<{ replayHash: string; browserHash: string; errors: unknown[] }>(
@@ -1246,8 +1089,6 @@ Cypress.Commands.add("expectResult", (text: "Win" | "Loss" | "Draw") => {
   cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.game }).should("be.visible");
   cy.get(ts(RESULT_OVERLAY)).should("contain.text", text);
 });
-
-// ---------------------------------------------------------------------------------------------
 
 // Augmenting Cypress's own `Chainable` means using its namespace and repeating its
 // `Subject = any` default exactly, or declaration merging fails.
@@ -1279,9 +1120,7 @@ declare global {
       expectAnimating(event: EventType): Chainable<void>;
       waitForPrompt(kind: PromptKind): Chainable<void>;
       noPrompt(): Chainable<void>;
-      /** The instance id of the named card in the shown hand. */
       handCardByName(name: string): Chainable<string>;
-      /** The instance id of the named card on the field. */
       fieldCardByName(name: string): Chainable<string>;
       instanceInHand(player: PlayerId, defId: string): Chainable<string>;
       instanceAt(player: PlayerId, row: "units" | "backrow", lane: number): Chainable<string>;
@@ -1298,10 +1137,7 @@ declare global {
       signOut(): Chainable<void>;
       /** `cy.signIn(account)` then `cy.visit(path)`, session installed before the page runs. */
       visitAs(account: E2EAccount, path: string, options?: Partial<Cypress.VisitOptions>): Chainable<void>;
-      /**
-       * Replace an account's saved decks with a fixture deck at `deckIndex` and two padding decks,
-       * plus a trio of the three (§9.4, R250–R253). Yields the ids.
-       */
+      /** Replace an account's saved decks with a fixture's loadout (§9.4, R250–R253); yields the ids. */
       installLoadout(account: E2EAccount, fixtureId: string, options?: { deckIndex?: number }): Chainable<InstalledLoadout>;
       /** `GET /api/decks` as `account`. */
       savedDecks(account: E2EAccount): Chainable<SavedDecksBody>;

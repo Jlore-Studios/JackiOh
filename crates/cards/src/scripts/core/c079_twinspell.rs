@@ -1,14 +1,6 @@
 //! #79 Twinspell (SPEC §8.3, R30, R70, §2.2, §3.2, §6.2 Echo, §10.5 step 6).
-//!
-//! Base: "The next Spell you play gains Echo +1"; radiant "Echo +2" (§8 Conventions). No "Cry:": R169
-//! says #79 installs its modifier "without a Cry". It is the Field Spell's lasting effect (§5.1, R209),
-//! held while it stands on the field however it got there (a summon fires no Cry, §6.2).
-//!
-//! So the card is one static flag, `echoGrant`; the engine installs an `echoNextSpell` rider owned by
-//! the card, moved with it when control changes and ended when it leaves (R209). §10.5 step 4 has the
-//! next Spell take it and sends this card to its owner's graveyard (R30, R178). §2.2: the rider is not
-//! turn-scoped, so it is `{ until: "used" }`. R70: a CAST spell uses Twinspell's Echo though it never
-//! uses a cost discount.
+//! Base: "The next Spell you play gains Echo +1"; radiant "Echo +2" (§8 Conventions).
+//! Lasting Field Spell modifier installed without Cry (R169, §5.1, R209; §6.2, §10.5 step 6, R30, R70, §2.2, §3.2, R178).
 
 use jackioh_engine::prelude::*;
 
@@ -35,14 +27,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4: "Next spell echoes once (radiant twice); consumed to GY on use (R30); survives
-// cleanup".
-//
-// The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes each resolution
-// a number: one extra resolution is +2 instead of +1, two extra is +3.
-// The "fresh prompts per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every
-// resolution opens a Discover of a set and then one of a number (§10.6, R831004); #80 Zao Gao's discard
-// is random (R354), so it opens no prompt.
+// BUILD M4-T4 (R30). The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes
+// each resolution a number: one extra resolution is +2 instead of +1, two extra is +3. The "fresh prompts
+// per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every resolution opens a
+// Discover of a set and then one of a number (§10.6, R831004); #80 Zao Gao's discard is random (R354).
 #[cfg(test)]
 mod tests {
     use super::*;

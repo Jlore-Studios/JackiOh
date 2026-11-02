@@ -55,10 +55,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #12.2 Shadow Word Pain — SPEC §8.10 row S 12.2, BUILD M12 row S 12.2: "destroys a chosen Unit
-// with 3 Attack or less, a 0-Attack one included; a 4-Attack Unit can't be chosen; attack reads
-// through `param()`; radiant its neighbours die too, a 9-Attack one included" (R1867005, proven
-// here and in S #12.1's file).
+// S #12.2 Shadow Word Pain — SPEC §8.10 row S 12.2, BUILD M12 row S 12.2 (R1867005).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

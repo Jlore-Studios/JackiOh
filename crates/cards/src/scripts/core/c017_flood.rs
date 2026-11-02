@@ -1,22 +1,9 @@
 //! #17 Flood (SPEC §8.1): "Bounce all units on both sides", radiant "Choose one: bounce all units,
 //! bounce all enemy units, destroy all enemy units; then draw 1". Engine cell: "Tokens vanish on
 //! bounce; hand cap burns extras".
-//!
-//! The radiant cell restates the whole effect, so the base "bounce all units on both sides" survives
-//! only as one of the three options (§8 Conventions).
-//!
-//! Neither the vanishing nor the burning is this card's business: §6.3 Bounce goes through
-//! `effects/move_.rs`, where a unit token ceases to exist (R11) and a full hand burns the card to
-//! the graveyard (R4, §2.4).
-//!
-//! R81: "the targets and modes a card's script declares travel in the `play` action … so Glowy Jelly
-//! Bean's hand card and Silly Silas's direction are chosen with the play and never pause resolution".
-//! So "choose one" is a declared `modes`, not a `PendingChoice`: the pick arrives in `ctx.modes`,
-//! which `chosen_options` reads.
-//!
-//! `bounce_all` sends each card through the body of `bounce`, so R11 and R4 hold card by card;
-//! `destroy_all` marks every match and stops like `destroy`, so Indestructible survives (R46) and
-//! all deaths land in the one state check that follows (R59).
+//! Radiant "choose one" declared modes (§8 Conventions, R81; chosen_options).
+//! Bounce handles token vanishing (R11) and hand cap burning (R4, §2.4, §6.3).
+//! destroy_all marks matches (R59; R46 Indestructible survives); draw draws.
 
 use jackioh_engine::effects::{bounce_all, chosen_options, destroy_all, draw};
 use jackioh_engine::prelude::*;
@@ -81,15 +68,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #17 Flood — SPEC §8.1 row 17, BUILD M4-T4 row 17.
-//
-// Must-pass (M4-T4): "Bounces both sides, tokens vanish, hand cap burns; radiant three modes each
-// tested plus draw 1". Engine cell: "Tokens vanish on bounce; hand cap burns extras" — R11 and R4.
-//
-// R81 is why no test calls `answer()`: the radiant "choose one" is a DECLARED mode that travels in
-// the play action and never opens a `PendingChoice`. The strings are the same constants the script
-// declares; a drift between the two would fail `refuse_modes` (play_choices.rs) rather than silently
-// pick the first option.
+// #17 Flood — SPEC §8.1 row 17, BUILD M4-T4 row 17. R81 is why no test calls `answer()`: the radiant
+// "choose one" is a DECLARED mode that travels in the play action and never opens a `PendingChoice`. The strings are the script's own constants; a drift would fail `refuse_modes`
+// (play_choices.rs) rather than silently pick the first option.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

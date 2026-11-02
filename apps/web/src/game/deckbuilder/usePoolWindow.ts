@@ -1,13 +1,10 @@
 // The rows of a virtual pool grid to mount, kept as the pool scrolls and resizes (#2334); the
-// arithmetic and the reads of the page are poolWindow.ts's.
-//
-// The grid's first render knows nothing of its layout, so it draws POOL_FIRST_CARDS (the hook says
-// null) and the layout effect after it reads the page and settles the rows before the first paint.
-// Where the page has no layout to read (a test's jsdom), nothing can be windowed and every card is
-// drawn, as in a grid that is not virtual (the hook says "all").
-//
-// The rows follow every scroll of the grid or of what holds it (one listener in the capture phase on
-// the document, which sees them all), and every resize.
+// arithmetic and the reads of the page are poolWindow.ts's. The grid's first render knows nothing of
+// its layout, so it draws POOL_FIRST_CARDS (the hook says null) and the layout effect after it reads
+// the page and settles the rows before the first paint. Where the page has no layout to read (a test's
+// jsdom), nothing can be windowed and every card is drawn (the hook says "all"). The rows follow every scroll
+// of the grid or of what holds it (one listener in the capture phase on the document, which sees them
+// all), and every resize.
 
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { flushSync } from "react-dom";
@@ -31,7 +28,6 @@ function sameView(before: PoolView, after: PoolView): boolean {
   return sameWindow(before, after);
 }
 
-/** The rows of the `count` cards that `ref`, the grid, should mount now. */
 export function usePoolWindow(ref: RefObject<HTMLElement | null>, count: number): PoolView {
   const [view, setView] = useState<PoolView>(null);
   const counted = useRef(count);

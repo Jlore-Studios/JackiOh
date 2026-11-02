@@ -6,8 +6,7 @@
 //! hand goes to their graveyard (not a discard; a unit-token card ceases to exist, R11) and the top N
 //! distinct cards arrive in rank order, N being how many there were (R416).
 //!
-//! "Refresh your mana" is §6.3 Refresh (R364): current mana rises toward max and never past it,
-//! so a Refresh of every crystal gives back what was spent, and a player at or above max gains nothing.
+//! "Refresh your mana" is §6.3 Refresh (R364): current mana rises toward max and never past it.
 
 use jackioh_engine::effects::{refresh_mana, replace_hand_with_perfect};
 use jackioh_engine::prelude::*;
@@ -15,10 +14,8 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classicplus-027";
 
 /// "Refresh your mana": every spent crystal, capped at max mana (R364), whatever the player's max is
-/// (§9.9's handicaps).
-/// An `i32` has no infinity; the Refresh adds this to current mana before capping
-/// (`mana::refresh_some_mana`), so `i32::MAX` would overflow: half of it is still
-/// more than any max mana, and the sum stays in range.
+/// (§9.9's handicaps). Half of `i32::MAX`, as the Refresh adds this to current mana before capping
+/// (`mana::refresh_some_mana`) and the sum must stay in range.
 const ALL_MANA: i32 = i32::MAX / 2;
 
 /// The faces differ only in which face the scorer ranks and the new cards arrive with.
@@ -41,9 +38,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #27 Zephrys Zealotism (SPEC §8.7 row 27; B5 E34, R29, R364, R387, R416, R1446): replaces hand
-// with the scorer's top distinct non-token picks of every set that ships for current state. Replaced cards
-// go to graveyard and new ones are hidden (R97). Refreshes mana up to max. Radiant cards arrive radiant.
+// C+ #27 Zephrys Zealotism — SPEC §8.7 row 27, B5 E34; the new cards are hidden (R97).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -181,7 +176,6 @@ mod tests {
                     assert!(!is_token(&entry.def));
                     assert_ne!(card.def_id, ZEALOTISM);
                 }
-                // R1446: the pool is every non-token card of every set that ships but this one (R387).
                 let mut pool: Vec<String> =
                     ranked(&json!({}), false).iter().map(|scored| scored.def.id.clone()).collect();
                 pool.sort();
@@ -227,7 +221,6 @@ mod tests {
                 assert!(matches!(top.priority, subsystems::ScorePriority::Lethal));
                 let s = play(&setup, false);
                 assert_eq!(def_ids(&s.hand(P1))[0], top.def.id);
-                // With no lethal on the board, nothing ranks for it.
                 assert!(
                     ranked(&json!({ "p1": { "hand": [STOCKPILE, MENACE], "mana": 8 } }), false)
                         .iter()

@@ -5,8 +5,6 @@
 //! its user. "Whenever this attacks" (`afterAttackEvenIfGone`) runs the same hook at the same point for
 //! an attacker that died or left too, as the snapshot it fought with, once (R2396000): Core #32 Prem
 //! Panther (R426).
-//!
-//! Port of `packages/engine/test/after-attack.test.ts`.
 
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -19,12 +17,11 @@ use crate::rules::fixtures::damage_combat::{
 };
 use crate::rules::fixtures::harness::{put, sink_for, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a JSON object (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -36,7 +33,6 @@ fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The id of the top card of a unit pile, if there is one.
 fn top_id(pile: &Option<Pile>) -> Option<&str> {
     pile.as_ref()
         .and_then(|pile| pile.first())
@@ -366,7 +362,6 @@ mod r2396000_whenever_this_attacks {
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
         })));
-        // The body Reborn brought back stands in its lane, and the attack was answered once, as it died.
         assert_eq!(
             top_id(&game.state().players.p1.units[0]),
             Some(striker.id.as_str())

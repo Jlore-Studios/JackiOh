@@ -5,13 +5,6 @@
 //! the game. A draw scores 0.5 for both, a concede and a disconnect are losses (§2.5's endings decide
 //! who won; this file only reads the score), and a fled game scores 1 for the fleer and 0.5 for the
 //! other side (R1843004, `rate_game_scored`).
-//!
-//! Pure and deterministic: only IEEE-754 arithmetic, `exp`, `ln` and `sqrt`, and the volatility
-//! iteration runs a fixed rule to a fixed tolerance. `tests/api/glicko2.rs` checks it against
-//! Glickman's worked example and reference values computed at 50 digits.
-//!
-//! The update depends only on rating differences, so the scale's center is any fixed number; this
-//! file uses `RATING_START`, and an Elo rating carries over as it is (R603).
 
 use serde::{Deserialize, Serialize};
 
@@ -47,9 +40,8 @@ pub const START_GLICKO: Glicko = Glicko {
     volatility: RATING_VOLATILITY_START,
 };
 
-/// R1560000: a ladder bot's rating after `promotions` AI promotions it has not been rated under: the
-/// rating and volatility kept, the deviation widened by `BOT_PROMOTION_DEVIATION_BOOST` in quadrature
-/// for each, capped at a new player's. No promotions changes nothing.
+/// R1560000: a ladder bot's deviation widened by `BOT_PROMOTION_DEVIATION_BOOST` in quadrature
+/// for each promotion, capped at a new player's.
 pub fn widen_for_promotions(glicko: &Glicko, promotions: i64) -> Glicko {
     if promotions <= 0 {
         return *glicko;
@@ -115,10 +107,8 @@ fn next_volatility(sigma: f64, phi: f64, v: f64, delta: f64, tau: f64) -> f64 {
     (big_a / 2.0).exp()
 }
 
-/// Glickman's steps 2–8 for one player over one rating period. A period with no games only widens
-/// the deviation (step 6 alone); the server never rates one, but the formula is defined there too.
+/// Glickman's steps 2–8 for one player over one rating period.
 pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Glicko {
-    // Step 2: onto the Glicko-2 scale.
     let mu = (player.rating - RATING_START) / GLICKO_SCALE;
     let phi = player.deviation / GLICKO_SCALE;
     let sigma = player.volatility;
@@ -131,7 +121,6 @@ pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Gli
         };
     }
 
-    // Steps 3 and 4: the estimated variance v and the improvement Δ.
     let mut v_inverse = 0.0;
     let mut improvement = 0.0;
     for game in games {
@@ -145,13 +134,11 @@ pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Gli
     let v = 1.0 / v_inverse;
     let delta = v * improvement;
 
-    // Steps 5 to 7: the new volatility, then the deviation and rating it allows.
     let sigma_next = next_volatility(sigma, phi, v, delta, tau);
     let phi_star = (phi * phi + sigma_next * sigma_next).sqrt();
     let phi_next = 1.0 / (1.0 / (phi_star * phi_star) + 1.0 / v).sqrt();
     let mu_next = mu + phi_next * phi_next * improvement;
 
-    // Step 8: back onto the displayed scale.
     Glicko {
         rating: mu_next * GLICKO_SCALE + RATING_START,
         deviation: phi_next * GLICKO_SCALE,

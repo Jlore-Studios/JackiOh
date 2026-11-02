@@ -21,12 +21,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #5 Guy Att — SPEC §8.7 row 5, BUILD M9 Classic+ row C+ 5: "Cry destroys every backrow card you
-// control, face-down traps and Field Spells alike, an Indestructible one staying (R46); a destroyed
-// backrow card that prints Death fires it (§4.5, C+ #61); an 'Animated on your turn' card animated as a
-// Unit is not a backrow card and stays; no Cry when copied or recruited (R1); radiant destroys every
-// backrow card on both sides, the opponent's face-down cards reaching their graveyard openly (R97)".
-//
+// C+ #5 Guy Att — SPEC §8.7 row 5, BUILD M9 Classic+ row C+ 5 (§4.5, R97).
 // The "prints Death" clause is proved with C+ #12.8 Frostspatula, a Field Spell whose Death fires when
 // it is destroyed in the backrow (C+ #61 proves it again in its own file).
 #[cfg(test)]

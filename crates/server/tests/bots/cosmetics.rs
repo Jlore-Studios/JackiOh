@@ -1,12 +1,4 @@
-//! R1834005 (SPEC §14.2): the ladder bots' cosmetics. A bot's wardrobe holds a non-starter only when
-//! `BOT_COSMETIC_MIN_OWNERS` people own it, where it is held, and the first of them got it
-//! `BOT_COSMETIC_MIN_AGE_DAYS` ago; it wears a loadout drawn from that wardrobe at the fit's shares
-//! (the prior's while `BOT_COSMETIC_FITS` is empty); one seed draws one wardrobe and one loadout; a
-//! deck dealt again draws its slots and its cards' picks again, and every `BOT_COSMETIC_REDRAW_DAYS`
-//! the bot ages; and none of it ever reaches the ledger (R1454: a bot owns nothing).
-//!
-//! `jackioh_server::bots::cosmetics`, pure, over the shipped registry (and a test one built on it),
-//! and `refresh_pool` against the fake store.
+//! R1834005 (SPEC §14.2, R1454): ladder bots' cosmetics and wardrobe generation.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -181,9 +173,7 @@ fn close(actual: f64, expected: f64, what: &str) {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // One seed, one wardrobe and one loadout
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r1834005_deterministic_from_the_seed() {
@@ -241,9 +231,7 @@ fn r1834005_deterministic_from_the_seed() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // The floor: widely enough owned, and long enough
-// ---------------------------------------------------------------------------------------------
 
 /// Every holding the floor test names, owned by every bot: a wardrobe that still lacks one lacks
 /// it because it is not eligible.
@@ -435,14 +423,9 @@ fn r1834005_nothing_below_the_owner_floor_or_too_young() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The pool wears what the fit says
-// ---------------------------------------------------------------------------------------------
 
-/// A fit with shares of its own: the playmat and the foil listed (the Neon Grid playmat and the
-/// Cracked Ice foil at none), every other kind left to the prior's split; half the seats pick
-/// two cards of their own; Big D-fender's full art printed by three in ten of the seats that own it
-/// and owned by four in ten bots.
+/// Fit with playmat and foil shares; half seats pick two cards of their own.
 static SHARES: [CosmeticFit; 1] = [CosmeticFit {
     max_age_days: Some(30),
     samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
@@ -557,10 +540,7 @@ fn wear(fit: &CosmeticFit) -> Worn {
     }
 }
 
-/// The share of bots `fit` gives `cosmetic` in its slot, as `CosmeticFit` says: its listed share
-/// when the fit lists its kind (none when it lists the kind and not it), else the prior's split,
-/// `BOT_COSMETIC_PRIOR_DEFAULT_SHARE` to the default and the rest evenly among the starters. `wear`
-/// draws from an empty wardrobe, so a non-starter (#1833's, R1833000) is worn at a share of none.
+/// Share of bots `fit` assigns `cosmetic` in its slot; non-starters have zero share (#1833, R1833000).
 fn slot_share(fit: &CosmeticFit, cosmetic: &Cosmetic) -> f64 {
     if !cosmetic.default && !cosmetic.starter {
         return 0.0;
@@ -690,8 +670,7 @@ static OWNED_SHARES: CosmeticFit = CosmeticFit {
 
 #[test]
 fn r1834005_a_fitted_non_starter_is_worn_at_its_share_of_seats() {
-    // A fitted share counts every seat, owners or not: a bot that owns a non-starter wears it more
-    // often than the share, and the pool, whose wardrobes hold it at its owners' share, at the share.
+    // Fitted share counts every seat; owners wear non-starters.
     let registry = registry();
     let none = OwnedCosmetics::default();
     let eligible = vec![holding("table-marble", None), holding("table-chessboard", None)];
@@ -732,10 +711,7 @@ fn r1834005_a_fitted_non_starter_is_worn_at_its_share_of_seats() {
     }
 }
 
-/// A fit as `cosmetics-fit` prints one: the seats wear the card kinds' defaults alone (an earned
-/// foil is owned only on a card, so no seat's slot ever wears one), every seat picks one card of its
-/// own, the starter Rainbow foil when a starter, and one person in two owns the earned Glitter foil
-/// on Big D-fender's card, three in five of whom wear it there when they play it.
+/// Cosmetic fit fixture: defaults for slots, Rainbow starter foil, and shared Glitter foil on core-001.
 static CARD_SHARES: CosmeticFit = CosmeticFit {
     max_age_days: Some(90),
     samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
@@ -762,10 +738,7 @@ static CARD_SHARES: CosmeticFit = CosmeticFit {
 
 #[test]
 fn r1834005_a_fitted_cards_picks_wear_an_earned_foil_at_its_share() {
-    // Under a fitted row the seat's slots list the card kinds' defaults alone, yet a bot's cards
-    // still pick: the earned foil, worn only where its wardrobe holds it, by the bots that play its
-    // card at its owners' share times its wear there (one in two times three in five), however many
-    // other cards their deck holds, and a starter on the cards the fit's mean still leaves to dress.
+    // Fitted row uses defaults for seat slots; bot cards pick earned foil at expected owner share.
     let registry = registry();
     let none = OwnedCosmetics::default();
     let eligible = vec![holding("foil-glitter", Some("core-001"))];
@@ -820,9 +793,7 @@ fn r1834005_a_fitted_cards_picks_wear_an_earned_foil_at_its_share() {
 
 #[test]
 fn r1834005_an_aging_bot_owns_at_its_ages_share_not_more() {
-    // The pool draws each refresh from a seed of its own; a bot that ages six times still owns Big
-    // D-fender's full art at the share of people of its age that do, since its roll for it is the
-    // one its first draw made.
+    // Aging bot retains Big D-fender full art at original age share.
     static AGING: [CosmeticFit; 1] = [CosmeticFit {
         max_age_days: Some(90),
         samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
@@ -898,9 +869,7 @@ fn r1834005_an_aging_bot_owns_at_its_ages_share_not_more() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // Drawn again: a deck dealt again, and a bot that ages
-// ---------------------------------------------------------------------------------------------
 
 /// A bot up to a week old picks something of its own for cards of every deck; one up to a month
 /// old owns Big D-fender's full art once it is eligible and never prints it.
@@ -1042,9 +1011,7 @@ fn r1834005_redealt_decks_draw_again() {
     dressed.trio = Some(trio);
     dressed.cosmetics = Some(third.cosmetics.clone());
 
-    // BOT_COSMETIC_REDRAW_DAYS after it drew, it ages, as a month-old account: it gains the full
-    // art people came to own since (and never prints it), keeps every pick it still owns, and wears
-    // only what it owns.
+    // Bot ages after BOT_COSMETIC_REDRAW_DAYS, updating cosmetics ownership.
     let due = NOW + BOT_COSMETIC_REDRAW_DAYS * DAY;
     assert_eq!(fit_for(&REDRAW_FITS, (due - born) / DAY), &REDRAW_FITS[1]);
     let now_eligible = vec![holding("full-art-big-d-fender", Some("core-001"))];
@@ -1098,9 +1065,7 @@ fn trio_of(bot: &BotRow) -> FrozenTrio {
     bot.trio.clone().expect("the bot's trio")
 }
 
-// ---------------------------------------------------------------------------------------------
 // Never in the ledger
-// ---------------------------------------------------------------------------------------------
 
 /// The bot `r1834005_never_in_the_ledger` makes, by a known id so its refresh seed can be chosen.
 const LEDGER_BOT: &str = "00000000-0000-4000-8000-000001834005";

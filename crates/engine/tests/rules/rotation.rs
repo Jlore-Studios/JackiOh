@@ -326,7 +326,7 @@ mod r14_rotation_m3_t7 {
 
         let (events, result) = rotate(&mut state, "right", json!({}));
 
-        // Patch v0.3.10 (#831): the Lock evicts nothing and stops no rotation; it was bounced before.
+        // #831: the Lock evicts nothing and stops no rotation.
         assert_eq!(
             card_at(&state, slot(PlayerId::P2, Row::Units, 5)).map(|card| card.id.clone()),
             Some(crossing.id.clone())
@@ -540,8 +540,7 @@ mod r14_rotation_m3_t7 {
 
     #[test]
     fn r11_a_unit_token_a_radiant_crossing_bounces_ceases_to_exist() {
-        // A Locked destination bounced it before patch v0.3.10; now only the Radiant face's crossing
-        // bounces (R831000).
+        // Only the Radiant face's crossing bounces it, not a Locked destination (R831000).
         let mut state = game("rotate-token-bounce");
         let token = put(
             &mut state,

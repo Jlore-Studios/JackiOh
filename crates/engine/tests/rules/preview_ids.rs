@@ -3,12 +3,8 @@
 //! (SPEC §8.7 rows 44 and 45). `previewOf` copies the ids beside the label and the value, as it copies
 //! `display` (R372), so the view holds its own array and never a reference into the hook's answer.
 //!
-//! The definitions are test-only, on top of the fixture catalog, put back in `afterAll` as
-//! preview.test.ts does.
-//!
-//! Port of `packages/engine/test/preview-ids.test.ts`. The registries are the testkit's per-thread
-//! override (SURFACE §8) and each test runs on its own thread, so TS's `beforeAll`/`afterAll` save and
-//! restore have nothing left to do. TS's module `let answered` is a thread-local the hook reads.
+//! The definitions are test-only, on top of the fixture catalog. The registries are the testkit's
+//! per-thread override (SURFACE §8) and each test runs on its own thread, so nothing is restored.
 
 use std::cell::Cell;
 
@@ -112,7 +108,6 @@ fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
         .unwrap_or_else(|| panic!("{instance_id} is not in the hand"))
 }
 
-/// R280 a preview value may carry the set of cards it counts
 mod r280_a_preview_value_may_carry_the_set_of_cards_it_counts {
     use super::*;
 

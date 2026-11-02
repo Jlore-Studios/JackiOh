@@ -18,7 +18,6 @@ use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, instance_of,
 
 pub const ID: &str = "classic-039";
 
-/// "a permanent": the top of any unit pile or any backrow card, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))]
 }
@@ -49,7 +48,6 @@ fn outcome(ctx: &EffectContext) -> Option<Outcome> {
     })
 }
 
-/// The first `forEachCard`'s `cards`: the chosen permanent, when the steal branch holds.
 fn stolen_ones(c: &mut EffectContext) -> Vec<String> {
     match outcome(c) {
         Some(read) if read.steals => vec![read.id],
@@ -57,8 +55,6 @@ fn stolen_ones(c: &mut EffectContext) -> Vec<String> {
     }
 }
 
-/// The second `forEachCard`'s `cards`: one entry per token, each a draw of 1 — "draw a card for each
-/// Plague Counter on it".
 fn draws_owed(c: &mut EffectContext) -> Vec<String> {
     match outcome(c) {
         Some(read) if !read.steals => vec![read.id; usize::try_from(read.tokens).unwrap_or(0)],
@@ -73,8 +69,6 @@ fn steal_it(instance_id: &str) -> Effect {
 /// "draw 1 per Plague Counter" as v0.4.4b printed it, before it was the declared `drawPer` (R1748003).
 const PRINTED_DRAW_PER: i32 = 1;
 
-/// Both faces: the cards drawn per counter are the declared `drawPer`, or the printed 1 when
-/// `declared` is off.
 fn outbreak(declared: bool) -> CardScripts {
     let base = Script {
         targets: targets(),
@@ -99,7 +93,6 @@ fn outbreak(declared: bool) -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 2 tokens are its declared `tokens`, which `param` reads off the running face.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -116,15 +109,8 @@ pub fn script_v0_4_4b() -> CardScripts {
     outbreak(false)
 }
 
-// C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39: "A declared target, any permanent
-// either side, face-down included; one placement of 1 (C #27 doubles it); then, if it is an enemy
-// permanent with at least as many Plague Counters as its cost (R65 on the field; an X card its X, 0 with
-// none chosen, R396), steal it (§6.3, R15), an entry (R171); no free zone → it stays with them and
-// nothing is drawn; otherwise draw one card per token on it (hand cap); your own permanent always
-// draws; a (0) Cost enemy permanent is always stolen; a stolen face-down trap is read by you alone
-// from then on (R33); a face-down option, and the placement on it, never name it to you (R177);
-// radiant: 2 tokens; its tuned number (tokens) reads through `param()` (R386)".
-//
+// C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39 (#27, R65, R396, §6.3, R15, R171, R33, R177,
+// R386).
 // The R396 cases read costs through the engine's `costNow`. A Plague Chalice played for X enters with
 // X Plague Counters (SPEC §8.6 row 87), so any placement brings it to its X; the cases that need an X card
 // played for 3 with fewer tokens than its X use C+ #69 Buff Billy, the other X permanent R396 names.
@@ -364,7 +350,6 @@ mod tests {
                 assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(UNLICENSED));
                 s.play(OUTBREAK, json!({ "targets": [{ "pick": "instance", "instanceId": trap }] }));
 
-                // (2) Cost with 1 token: not stolen, so it stays theirs, face-down, and you draw 1.
                 assert!(stolen_ids(&s).is_empty());
                 assert_eq!(drawn(&s), 1);
                 assert_eq!(s.card(&trap).counters.plague, Some(1));

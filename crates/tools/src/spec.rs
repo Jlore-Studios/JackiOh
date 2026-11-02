@@ -1,6 +1,5 @@
 //! `cargo jackioh spec check`, `spec index` and `spec fold`: the spec graph's structural checks
-//! (SURFACE §15, part 28), and the two files every ruling's branch once wrote. They replace
-//! `packages/engine/test/rulings.test.ts`'s index and `packages/engine/scripts/rulings-coverage.ts`.
+//! (SURFACE §15, part 28), and the two files every ruling's branch once wrote.
 //!
 //! `spec/` is the specification as notes: one per section (`spec/NN-<slug>.md`, its `## N.` and
 //! `### N.M` headings the section ids) and one per ruling (`spec/rulings/R<nnnn>.md`), whose front
@@ -19,39 +18,25 @@
 //! `check` holds eight rules:
 //!
 //! 1. every ruling note's `id` matches its file name (`R195` is `R0195.md`), and ids are unique;
-//! 2. every note lists at least one `proven_in` path, and each exists and holds a proof of the id, a
-//!    test that runs (#1718): a Rust `fn` whose name has the `_`-delimited token `r<n>`, marked
-//!    `#[test]` or `#[tokio::test]` and not `#[ignore]`d but for a `daily:` reason (super.yml runs
-//!    those), or listed in a call of a macro the same file defines to make tests (`both_stores!`), or
-//!    a `mod` so named whose body holds such a test; a TypeScript `it(`, `test(` or `describe(` whose
-//!    title has `R<n>` as a word, with no `.skip`, `.todo`, `.fixme` or `.only` on it or on a call
-//!    around it; or an SQL evidence script's `\echo '### R<n>: … ###'` heading (the heading form
-//!    `rulings.test.ts` credited; a mention in prose is not a proof);
-//! 3. every `r<n>` token of a Rust `fn` or `mod` name, and every `R<n>` cited in `crates/`,
-//!    `apps/web/src/` and `e2e/` (comments included, recursively), has a note;
-//! 4. every `[[…]]` link in `spec/` resolves: `[[R113]]` to a ruling note, `[[§10.3]]` to a section
-//!    heading, anything else to a note's file name. Links inside code are not links;
-//! 5. every ruling note's `title` and `cards` are present and not empty, and every ruling (`R113`),
-//!    section (`§10.3`) and card (`#10`, `C+ #12.1`, its set read as `cards_refs` says) its `cards`
-//!    names exists (#2047);
-//! 6. every file in `spec/pending/` is `<n>.md`, `n` the issue or pull request whose §11 paragraph
-//!    it holds, and holds text, so `fold` can place it. A branch writes its paragraph there and
-//!    never `spec/11-rulings.md`'s end or `spec/INDEX.md`, the two files every ruling's branch
-//!    conflicted on (`reviews/2026-10-22-issue-682-subscriptions.md`, finding 3). This rule used to
-//!    hold the index to the notes on every branch (#669); the daily fold keeps it now;
-//! 7. no file the third rule reads holds an unresolved-ruling marker (`UNRESOLVED_MARKERS`, in any
-//!    case, where a word starts): once a ruling exists, a comment still saying it is to be written
-//!    invites a second decision of the same point (#1243);
-//! 8. every ruling marker in the notes of §2 to §10 (`MARKED_SECTIONS`), a `(ruling)` or a
-//!    `Ruling:` in any case and its emphasis read through, links a ruling (`[[R<n>]]`) between it
-//!    and the end of its sentence (REVIEW A2.3, #2048): a marker no link follows names no note a
-//!    reader can open.
+//! 2. every note has a `proven_in` path, and each exists and holds a test of the id that runs (#1718,
+//!    `proves`): a Rust `fn` or `mod` named with the token `r<n>`, a TypeScript `it`, `test` or
+//!    `describe` titled with `R<n>`, or an SQL `\echo` heading naming it;
+//! 3. every `r<n>` token of a Rust `fn` or `mod` name and every `R<n>` cited in `CITING_ROOTS`
+//!    (comments included) has a note;
+//! 4. every `[[…]]` link in `spec/` outside code resolves to a ruling note, a section heading or a note;
+//! 5. every note's `title` and `cards` are filled in, and each ruling, section and card `cards` names
+//!    exists (#2047);
+//! 6. every file in `spec/pending/` is a non-empty `<n>.md`, `n` the issue whose §11 paragraph it
+//!    holds: a branch writes there, never `spec/11-rulings.md`'s end or `spec/INDEX.md`, which every
+//!    ruling's branch conflicted on, and the index is the daily fold's to keep (#669);
+//! 7. no file rule 3 reads holds an `UNRESOLVED_MARKERS` phrase, which invites a second decision of a
+//!    point already ruled (#1243);
+//! 8. every ruling marker in §2 to §10 links a ruling before its sentence ends (REVIEW A2.3, #2048).
 //!
-//! It reads ids, file names, headings, test names and the references in `cards`, never the wording but rule 7's and rule 8's markers (#133): a reworded sentence
-//! fails nothing. `index` rewrites `spec/INDEX.md` from the ruling notes: id, title, note and the
-//! files that prove it, one line each. `fold` appends the pending paragraphs to
-//! `spec/11-rulings.md` in number order, deletes them and runs `index`; `spec-fold.yml` runs it on
-//! `main` daily and opens the result as a pull request that merges itself.
+//! It reads ids, file names, headings, test names and `cards`' references, never the wording but rule
+//! 7's and rule 8's markers (#133). `index` rewrites `spec/INDEX.md` from the notes; `fold` appends the
+//! pending paragraphs to `spec/11-rulings.md` in number order, deletes them and runs `index`
+//! (`spec-fold.yml`, on `main` daily).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -162,7 +147,7 @@ const INDEX_HEADER: &str = "# Rulings index\n\nGenerated by `cargo jackioh spec 
 /// The note `fold` appends the pending paragraphs to, in `spec/`.
 const RULINGS_NOTE: &str = "11-rulings.md";
 
-/* ------------------------------------------------------------------------------------- notes */
+/* notes */
 
 /// One ruling note, as its front matter states it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -452,7 +437,7 @@ fn note_stem(number: u64) -> String {
     format!("R{number:04}")
 }
 
-/* ------------------------------------------------------------------------------- the scanners */
+/* the scanners */
 
 fn is_word_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
@@ -1112,7 +1097,7 @@ fn proves(path: &str, src: &str, number: u64) -> Result<bool, String> {
     Err("is not a Rust, TypeScript or SQL test file".to_string())
 }
 
-/* --------------------------------------------------------------------------------- the walk */
+/* the walk */
 
 fn relative(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
@@ -1147,7 +1132,7 @@ fn line_of(text: &str, offset: usize) -> usize {
     text[..offset].bytes().filter(|b| *b == b'\n').count() + 1
 }
 
-/* ------------------------------------------------------------------------------- the links */
+/* the links */
 
 /// Every `[[…]]` link outside code in a Markdown note, with its line number and its target (the
 /// part before any `|alias` or `#heading`).
@@ -1228,7 +1213,7 @@ fn section_ids(text: &str) -> Vec<String> {
     ids
 }
 
-/* ------------------------------------------------------------------------------- the checks */
+/* the checks */
 
 fn check(root: &Path) -> Result<()> {
     let notes = read_notes(root)?;
@@ -1402,7 +1387,7 @@ fn check(root: &Path) -> Result<()> {
     Ok(())
 }
 
-/* -------------------------------------------------------------------------------- the index */
+/* the index */
 
 fn render_index(notes: &[RulingNote]) -> Result<String> {
     let mut rows: Vec<(u64, &RulingNote)> = Vec::with_capacity(notes.len());
@@ -1440,7 +1425,7 @@ fn index(root: &Path) -> Result<()> {
     Ok(())
 }
 
-/* ------------------------------------------------------------------------------ the pending */
+/* the pending */
 
 /// Every file in `spec/pending/`, in name order: its path, the number its name gives (`2198.md` is
 /// 2198, anything else `None`) and its text. No directory is no paragraph.

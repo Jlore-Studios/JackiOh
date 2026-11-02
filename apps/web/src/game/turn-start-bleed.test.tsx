@@ -1,7 +1,6 @@
 // #37, Global Cosmetic: the mulligan (and a turn passing) bled into the start-turn animation. Game
 // holds the previous view while a burst's entries play, which left two stale things on screen over
-// the `turnStarted` entry: the banner still read the old turn ("Mulligan", or the turn just ended),
-// and a prompt that had faded out came back at full opacity and stayed until the burst was done.
+// the `turnStarted` entry: the banner and a prompt that had faded out.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -44,7 +43,6 @@ describe("#37 the turn banner names the turn it announces", () => {
     const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
     rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
 
-    // First the end of your turn: the board is still the one it ended on.
     expect(screen.getByTestId("animation-queue")).toHaveAttribute("data-animating", "turnEnded");
     expect(banner()).toHaveTextContent("Your turn");
 

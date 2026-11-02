@@ -1,45 +1,9 @@
-// `/account` — who you are signed in as, how you have done, and the way out.
-//
-// LAYOUT: first paint is the summary only (signed-in identity, rank, record, sign out); username
-// change, email change, two-step, and delete mount only inside "Manage sign-in & account" once opened.
-//
-// NO SPEC DRIVES THIS SCREEN. §9.4 gives an account a status, §9.5 a results history and §9.12
-// a visible rank; none of it was reachable from the client, so a player could not see which
-// address they were signed in as, could not see their record, and — the one that actually traps
-// people — could not sign out at all. `net/session.ts` held the token and nothing ever cleared it.
-//
-// The record comes from `GET /api/profile`, which counts `results` server-side. The win rate is
-// computed there too rather than here, so the number on screen cannot disagree with the counts
-// beside it.
-//
-// A PENDING ACCOUNT has no record, and `/api/profile` is `auth: "active"`, so it refuses one with
-// 403 `account_pending`. The gate opens this screen to a pending account precisely because it
-// still has an address, a status and a way to sign out, so for one the screen shows what the
-// gate's own read (`/api/auth/me`) already says, and the way on: redeeming an invite code.
-//
-// THE SAME TAVERN AS THE WAY IN. The landing's corner pill opens this screen, and for a pending
-// account it is the road to the code screen, so it wears the sign-in screens' frame
-// (`auth/tavern.css`): the board, the gold call to action, wood for the rest. A status is said in
-// a player's words; the raw value rides on `data-status` for tests.
-//
-// THE USERNAME (R1435, R1436) comes from the gate's read too (`me.username`), with when it may next
-// change. An active account changes it here through the same field as the prompt after activation
-// (`auth/UsernameField.tsx`), or is told when it may during the cooldown. Every name on the screen,
-// the rank line's included, is drawn through `auth/Username.tsx`.
-//
-// THE ACCOUNT SECRET ID (R1300000) is the profile id, which a developer needs before the server's
-// `DEV_PROFILE_IDS` can list them: "Manage sign-in & account" offers it to every signed-in account,
-// hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
-// gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
-//
-// THE SHOP (#1580, R1580000): packs, opening, pity, tokens and cosmetic packs live on `/shop`. This
-// screen keeps account things only and links no other menu (R1646000): the tavern home's doors lead
-// to the Collection and the Shop.
-//
-// DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
-// `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
-// Only then does this device forget the session, the way signing out does, and load the landing
-// page. A refusal leaves everything as it was and says why.
+// `/account` — who you are signed in as, how you have done, and the way out. No spec drives this
+// screen (§9.4 gives an account a status, §9.5 a results history, §9.12 a visible rank). The record
+// and win rate are counted by `GET /api/profile`, so the rate cannot disagree with the counts. A
+// pending account, which that route refuses (403 `account_pending`), is shown from the gate's
+// `/api/auth/me` read, with the way on: an invite code. The username is R1435's and R1436's; the
+// shop lives on `/shop` (#1580, R1580000); this screen links no other menu (R1646000).
 
 import {
   useEffect,
@@ -137,31 +101,15 @@ export function formatWinRate(winRate: number | null): string {
 }
 
 /**
- * Signing out clears the token, revokes it at the provider, and then does a REAL navigation rather
- * than a pushState.
- *
- * REVOKE (R194). Clearing the device alone left the refresh token valid at the provider, so a copy
- * of it (a synced profile, a stolen backup) could keep renewing sessions after the player believed
- * they had signed out. `revokeSignedOutSession` posts `/auth/v1/logout?scope=local` with
- * `keepalive`, so the request survives the page load below. For a live session it is fired and NOT
- * awaited: the device's copy is already gone, the call never throws, and a slow provider must not
- * hold the player on this screen.
- *
- * An EXPIRED session is the exception. The provider refuses to log out an expired access token, so
- * it has to be renewed first, and the revocation can only be sent once the renewal answers, which a
- * page load would cut off. So sign-out waits for the two, at most `AUTH_SIGN_OUT_WAIT_SECONDS`, and
- * then loads the landing page whatever happened.
- *
- * `useAccount` reads the session once, in a mount effect, so a client-side navigate would leave
- * every already-mounted gate holding the account it resolved before the token was cleared. A
- * document load is the honest way to drop that state, and signing out is rare enough that the
- * reload costs nothing.
+ * Clears the token, revokes it at the provider (R194: a copied refresh token must not keep renewing
+ * sessions) and does a REAL navigation: `useAccount` reads the session once on mount, so a pushState
+ * would leave mounted gates holding the old account. A live session's revoke goes with `keepalive`,
+ * not awaited; an expired one must be renewed before the provider revokes it, so sign-out waits for
+ * both, at most `AUTH_SIGN_OUT_WAIT_SECONDS`, then loads the landing page whatever happened.
  */
 export function signOut(): void {
-  // ONE SIGN-OUT AT A TIME. While an expired session is being renewed so it can be revoked, the
-  // device's copy is already gone, so a second press would find no session and load the page at
-  // once, cutting off the renewal before the revocation was ever sent. A press while one is in
-  // flight joins it instead; the buttons say "Signing out…" meanwhile (`useSigningOut`).
+  // One at a time: during an expired session's renewal the device's copy is already gone, so a
+  // second press would load the page at once and cut off the revocation. It joins the first instead.
   if (signingOut) return;
   const session = readSession();
   clearSession();
@@ -210,10 +158,7 @@ export function resetSigningOutForTests(): void {
   setSigningOut(false);
 }
 
-/**
- * Whether a sign-out is under way, for the Sign out buttons to show "Signing out…" and stay
- * disabled until the page leaves.
- */
+/** Whether a sign-out is under way: Sign out buttons show "Signing out…", disabled, till the page leaves. */
 export function useSigningOut(): boolean {
   return useSyncExternalStore(
     (listener) => {
@@ -227,7 +172,6 @@ export function useSigningOut(): boolean {
   );
 }
 
-/** The label a Sign out button shows. */
 export function signOutLabel(busy: boolean): string {
   return busy ? t("Signing out…") : t("Sign out");
 }
@@ -445,10 +389,8 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 }
 
 /**
- * "Manage sign-in & account": the rare and destructive options behind a second click, so the
- * summary above fits a phone screen. Closed, only the toggle renders: the username field, the
- * email form, the two-step panel, and the delete confirmation mount only once opened, so they
- * make no network or focus demands until asked.
+ * "Manage sign-in & account": the rare and destructive options behind a second click, so the summary
+ * fits a phone screen; they mount only once opened, making no network or focus demands until asked.
  */
 function AccountManage({
   open,
@@ -498,9 +440,8 @@ function AccountManage({
 }
 
 /**
- * R1300000: the account secret ID, the profile id a developer sends to be listed in
- * `DEV_PROFILE_IDS`. Hidden until asked for; then shown with a copy button. A copy that fails
- * stays silent, as the room code's does (`play.tsx`): the ID is on screen to copy by hand.
+ * R1300000: the account secret ID, hidden until asked for. A failed copy stays silent, as the room
+ * code's does (`play.tsx`): the ID is on screen to copy by hand.
  */
 function AccountSecretId({ id }: { id: string }): ReactElement {
   const [shown, setShown] = useState(false);
@@ -542,10 +483,7 @@ function AccountSecretId({ id }: { id: string }): ReactElement {
   );
 }
 
-/**
- * R1300000: the Dev tools behind a toggle of their own, in "Manage sign-in & account"'s markup, so
- * the panel mounts only once opened. Rendered only when `/api/auth/me` says `isDev`.
- */
+/** R1300000: the Dev tools behind a toggle of their own, mounted once opened; only when `isDev`. */
 function AccountDevTools({
   open,
   onToggle,
@@ -580,9 +518,8 @@ function AccountDevTools({
 }
 
 /**
- * After the server deleted the account: this device forgets the session and any sign-up or reset
- * it was waiting on, then loads the landing page, a document load for the reason `signOut` gives.
- * Nothing is revoked at the provider, because the account it would be revoked for is gone.
+ * After the server deleted the account: forget the session and pending addresses and load the
+ * landing page, as `signOut` does. Nothing is revoked at the provider: the account is gone.
  */
 function leaveDeletedAccount(): void {
   clearSession();
@@ -685,10 +622,9 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
 }
 
 /**
- * R1435: the username, from the gate's read of the account, and the way to change it: the field
- * while a change is allowed, and during the cooldown the moment the next one is. A save is announced,
- * so the gate reads the account again and this shows the new name and its cooldown. Only an active
- * account may change it (the preview and the save are `auth: "active"`).
+ * R1435: the username and the way to change it, or during the cooldown when it next may. A save is
+ * announced so the gate reads the account again. Only an active account may change it (the preview
+ * and the save are `auth: "active"`).
  */
 function AccountUsername({
   token,

@@ -12,7 +12,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-059";
 
-/// TS `cardDef("core-t-rush").id`.
 const RUSH_TOKEN: &str = "core-t-rush";
 
 /// §8 Conventions: "Deal N damage" with no target named is targeted — any unit or hero, either side.
@@ -41,11 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #59 All Purpose Apple — SPEC §8.7 row 59, BUILD M9 Classic+ row C+ 59: "Summons a Rush Token (3/3
-// Rush) into your leftmost open zone (none on a full board, the rest still resolving), heals your hero
-// 2 (past 30 allowed) and deals 1 damage to a target chosen with the play, any Unit or hero, which
-// Spell Damage raises; heal and damage read through `param()`; radiant a Radiant Rush Token, heal 4,
-// 2 damage".
+// C+ #59 All Purpose Apple — SPEC §8.7 row 59, BUILD M9 Classic+ row C+ 59.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -58,17 +53,15 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
+    /// The unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }
 
-    /// TS `ENEMY_HERO: Selection[]`.
     fn enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// TS `apple({ radiant?, field?, health? })`.
     fn apple(radiant: bool, field: Value, health: Option<i32>) -> Scenario {
         let mut p1 = json!({ "hand": [{ "def": APPLE, "radiant": radiant }, FILLER], "field": field });
         if let Some(health) = health {

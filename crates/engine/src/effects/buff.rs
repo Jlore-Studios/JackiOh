@@ -1,16 +1,11 @@
-//! Permanent stat buffs and keyword grants. A buff is layer 4 of §10.4, under the auras of layer 5,
-//! so it is stored on the instance and survives the aura that came and went; §10.4 computes the
-//! totals, so nothing here ever writes a stat. R78 drops both when the card leaves the field.
+//! Permanent stat buffs and keyword grants: layer 4 of §10.4, under layer 5's auras, so stored on the
+//! instance; §10.4 computes the totals, so nothing here writes a stat. R78 drops both as the card
+//! leaves the field.
 //!
-//! B5 E38 (patch v0.2.0): a buff or a granted keyword may land on a card in a hand or a deck as well —
-//! a named card anywhere, or `buffCards` / `grantKeywordCards` over a card scope — and rides it onto
-//! the field: a draw, a play and a Recruit move a card without R78's reset, so what it gained in its
-//! hand or deck is still on it there (R243 shows it to the hand's owner). It goes when the card leaves
-//! the field (R78), or reaches a graveyard or an exile pile from a hand or a deck (R215).
-//!
-//! Port of `packages/engine/src/effects/buff.ts`. TS wrote through the live instance a target
-//! resolved to; Rust writes through `state::find_instance_mut` by the instance's id (the resolvers
-//! hand back copies), so the change lands on the card as it stands in the state.
+//! B5 E38: a buff or grant may land on a card in a hand or a deck too and ride it onto the field, as a
+//! draw, a play and a Recruit skip R78's reset (R243 shows it to the hand's owner); it goes as the card
+//! reaches a graveyard or an exile pile from there (R215). The resolvers hand back copies, so every
+//! write goes through `state::find_instance_mut` by id.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -37,9 +32,7 @@ pub struct BuffAmount {
     pub health: Option<i32>,
 }
 
-/// R21's pool is written as text in config; every entry is an unnumbered keyword since patch v0.3.Y
-/// took Armor 1 and Spell Damage +1 out (R1025000), and issue #1615 took Charge and Indestructible out
-/// too (R1615000).
+/// R21's pool, as text in config; each entry an unnumbered keyword (R1025000; #1615, R1615000).
 const POOL_KEYWORDS: &[(&str, Keyword)] = &[
     ("Taunt", Keyword::Taunt),
     ("Flying", Keyword::Flying),
@@ -68,7 +61,6 @@ pub fn random_pool_keywords() -> Vec<Keyword> {
         .collect()
 }
 
-/// The amount a `{ attack?, health? }` argument carries.
 fn amount_of(attack: Option<i32>, health: Option<i32>) -> BuffAmount {
     BuffAmount { attack, health }
 }
@@ -85,7 +77,7 @@ fn apply_buff(ctx: &mut EffectContext<'_>, unit: &CardInstance, amount: &BuffAmo
         live.buffs.attack += attack;
         live.buffs.health += health;
     }
-    // The event carries the change this buff made; a unit's totals are read through `unitView`.
+    // The event carries this buff's change; totals are read through `unitView`.
     if report {
         ctx.sink.events.push(GameEvent::Buffed {
             instance_id: unit.id.clone(),
@@ -173,8 +165,7 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
     })
 }
 
-/// R21, §10.4: the grant itself, on one instance — the set rule, the stacking numbers, the shield and
-/// the Reborn coming back.
+/// R21, §10.4: the grant itself, on one instance, by the rules `grant_to` states.
 fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
     if keyword.kind() == KeywordKind::DivineShield {
         unit.divine_shield_spent = None;
@@ -190,17 +181,10 @@ fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
     }
 }
 
-/// Add a keyword to `grantedKeywords` (§10.4). Keywords are a set, so a kind the unit was already
-/// granted is not stored twice, while Armor and Lucky carry a number and sum across sources (§6.1).
-/// A spent Divine Shield and a used Reborn come back when the keyword is granted again (§10.4).
-///
-/// `unit` is the caller's copy of the card: the grant lands on the card as it stands in the state
-/// when it is there (TS's live object), and the copy is brought up to date from it, so a caller that
-/// grants again reads what this grant left; a card in no pile is granted on the copy alone, as TS
-/// granted on the detached object.
-///
-/// R2280001: an Animated granted to a backrow card with stats that first gives it both owes it its
-/// animation at the next state check (`animated::owe_animation`).
+/// Add a keyword to `grantedKeywords` (§10.4): a set, except that Armor and Lucky sum across sources
+/// (§6.1); a spent Divine Shield or used Reborn comes back. The grant lands on the live card and `unit`
+/// is brought up to date from it (a card in no pile: the copy). R2280001: an Animated granted to a
+/// backrow card with stats that first gives it both owes it its animation at the next state check.
 fn grant_to(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
     let animated = keyword.kind() == KeywordKind::Animated;
     let was = animated && crate::animated::ready_to_animate(ctx.sink.state, &unit.id);
@@ -255,11 +239,9 @@ pub struct GainEchoArgs {
     pub amount: i32,
 }
 
-/// R1870002 (Stinkyscape #4.2 KY's Last Exam, "this gains Echo +1"): the resolving card is owed
-/// `amount` more Echo repeats (§6.2 Echo, one more entry on `state.echoQueue` as Core #79 Twinspell's
-/// grant is), each a whole resolution of it again, read by step 6's loop after this one ends. A play
-/// gives itself at most `SELF_ECHO_GAIN_CAP` in all, counted under `ECHO_GAINED_KEY`. Nothing on a card
-/// that is not resolving: a Spell's own list that has put it back in a hand gains it nothing.
+/// R1870002 (Stinkyscape #4.2 KY's Last Exam): the resolving card is owed `amount` more Echo repeats
+/// (§6.2, on `state.echoQueue` as Core #79 Twinspell's grant is), at most `SELF_ECHO_GAIN_CAP` a play.
+/// A card no longer resolving (its own list put it back in a hand) gains nothing.
 pub fn gain_echo(args: GainEchoArgs) -> Effect {
     Effect::new("gainEcho", move |ctx| {
         let Some(card) = ctx.live_self().cloned() else {
@@ -303,15 +285,12 @@ pub struct GrantAbilityArgs {
     pub params: IndexMap<String, i32>,
 }
 
-/// ME-GRANT (MD-D13): grant the card a Death ability — append the grant to a card on the field, and
-/// do nothing to a card anywhere else. The hook itself is never stored: the instance carries the
-/// name and the numbers as plain data, the granting card's script registers the hook
-/// (`Script.grants`), and `grants::death_hook_of` runs it after the card's own Death. A grant
-/// already held is not added twice.
+/// ME-GRANT (MD-D13): grant a card on the field a Death ability. The instance carries only the name and
+/// numbers as data; the granting card's script registers the hook (`Script.grants`), and
+/// `grants::death_hook_of` runs it after the card's own Death.
 pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
     Effect::new("grantAbility", move |ctx| {
-        // R174: as `setRadiant` resolves it, a card named by id is aimed at the stay it had when
-        // the run began, else the first chosen selection.
+        // R174: as `setRadiant` resolves it: by id at its stay when the run began, else the first chosen.
         let card = instance_by_id_or_spec(
             ctx,
             args.target.instance_id.as_deref(),
@@ -338,15 +317,14 @@ pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
     })
 }
 
-/// Every pool keyword this unit does not have yet, read through the layers (§10.4, R21). A unit is
-/// never offered a keyword kind it already holds from any source, as R21 counts by keyword.
+/// Every pool keyword this unit does not hold from any source, read through the layers (§10.4, R21).
 fn pool_candidates(ctx: &EffectContext<'_>, unit: &CardInstance) -> Vec<Keyword> {
     let held = unit_view(ctx.sink.state, unit).keywords;
     candidates_beside(&held)
 }
 
-/// R21, R781004: the combat keywords a card holding `held` may still be given — none it has, and no
-/// Taunt beside Indestructible, which an Indestructible card can never have (R347).
+/// R21, R781004: the combat keywords a card holding `held` may still be given: none it has, and no
+/// Taunt beside Indestructible (R347).
 pub(crate) fn candidates_beside(held: &[Keyword]) -> Vec<Keyword> {
     let indestructible = has_keyword(held, KeywordKind::Indestructible);
     random_pool_keywords()
@@ -369,12 +347,10 @@ pub struct DrawCombatKeywordsArgs {
     pub key: Option<String>,
 }
 
-/// R781004: Meditative #65 Keymaster Keenus's "Aura: Has N random combat keywords". §10.4's layers read
-/// with no rng, so the keywords are drawn at an event and kept on the card itself (`memory`), where its
-/// text reads them back (`conditionalKeywords`, so a Vanilla takes them, and R78's reset as it leaves the
-/// field clears them). It draws `count` different keywords from the combat keyword pool (R21's), each
-/// with `ctx.rng`, none the card already has and no Taunt beside Indestructible; with fewer left it takes
-/// what there is. A card that holds a draw already keeps it, so one arrival draws once.
+/// R781004 (Meditative #65 Keymaster Keenus): §10.4's layers read with no rng, so the keywords are
+/// drawn at an event and kept in the card's `memory`, read back through `conditionalKeywords` (so a
+/// Vanilla takes them and R78's reset clears them). It draws `count` different ones (R21's pool, by
+/// `candidates_beside`); a card holding a draw keeps it, so one arrival draws once.
 pub fn draw_combat_keywords(args: DrawCombatKeywordsArgs) -> Effect {
     Effect::new("drawCombatKeywords", move |ctx| {
         let key = args
@@ -424,15 +400,12 @@ pub struct GrantRandomKeywordsArgs {
     pub count: Option<i32>,
 }
 
-/// R21: #63 Plastic Surgery's and #80 Zao Gao's random keywords. Each draw comes from `ctx.rng`,
-/// never picks a keyword the unit already has, and never repeats inside one grant; a unit that
-/// already holds the whole pool gets nothing.
+/// R21: #63 Plastic Surgery's and #80 Zao Gao's random keywords, none the unit already has.
 pub fn grant_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
     Effect::new("grantRandomKeywords", move |ctx| {
         let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
             return;
         };
-        // The unit as it stands now (TS read the live object through every draw).
         let mut unit = find_instance(ctx.sink.state, &instance.id)
             .cloned()
             .unwrap_or(instance);
@@ -465,12 +438,8 @@ pub struct BuffCardsArgs {
 }
 
 /// B5 E38: every card a card scope reaches, on the field and in hands and decks, gets "+X/+Y" (Classic+
-/// #40 Appropriations' Military and Healthcare: "your Units on the field, in your hand and in your deck
-/// get +2X Attack", `{ scope: { zones: ["field", "hand", "library"], types: ["Unit"] }, attack }`). A
-/// card on the field acts at once; one in a hand or a deck carries it onto the field. R440: a card of a
-/// pile someone may not read (a hand, a deck, a face-down trap) changes silently — a `buffed` there
-/// would count the cards the scope's filters let through — and its owner reads its stats off its view
-/// (R243); a public card's buff is reported as `buff`'s is.
+/// #40 Appropriations). R440: a card of a pile someone may not read changes silently, as a `buffed`
+/// there would count the cards the scope's filters let through; its owner reads it off its view (R243).
 pub fn buff_cards(args: BuffCardsArgs) -> Effect {
     Effect::new("buffCards", move |ctx| {
         let amount = amount_of(args.attack, args.health);
@@ -490,9 +459,8 @@ pub struct GrantKeywordCardsArgs {
     pub keyword: Keyword,
 }
 
-/// B5 E38: every card a card scope reaches gains `keyword` (Military's Rush, Healthcare's Armor X,
-/// Classic+ #77 Anti-Softlock's Stack and Pierce on every card on the field and in hands and decks),
-/// carried onto the field as `buffCards`' stats are and reported the same way (R440).
+/// B5 E38: every card a card scope reaches gains `keyword` (Classic+ #77 Anti-Softlock), carried onto
+/// the field as `buffCards`' stats are and reported the same way (R440).
 pub fn grant_keyword_cards(args: GrantKeywordCardsArgs) -> Effect {
     Effect::new("grantKeywordCards", move |ctx| {
         let scoped = cards_in_card_scope(ctx, &args.scope, None);

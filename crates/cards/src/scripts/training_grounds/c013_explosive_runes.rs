@@ -1,12 +1,7 @@
 //! TG #13 Explosive Runes (SPEC §8.11 row 13). (1) Trap, Common. "Reveals when an enemy Unit attacks
 //! your hero: Deal {damage} damage to all enemies." (Radiant: Pierce, 6 damage.)
-//! C+ #1 Doom Shroom's trigger: a declared attack (a forced one opens no window, R121) by an enemy
-//! Unit on this trap's controller's hero, in §4.2 step 4's trap window, after the exertion is spent
-//! (R44). Then S #13's `damage_all` over every enemy Unit and the enemy hero, one hit each before one
-//! state check (R59). An attacker it kills is collected there, so step 5 finds no attack still standing
-//! and resolves no combat (R220): the hero takes nothing, the designer's note. The Radiant face's
-//! printed Pierce is stated on its hits (`ignoreArmor`): a Trap's own keyword reaches no hit by itself
-//! (§6.1, R2199001).
+//! C+ #1 trigger: declared attack (forced opens no window, R121) on hero in §4.2 step 4 trap window after exertion (R44).
+//! S #13 damage_all before state check (R59); killing attacker resolves no combat (R220). Radiant states Pierce (§6.1, R2199001).
 
 use jackioh_engine::prelude::*;
 
@@ -48,7 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #13 Explosive Runes — SPEC §8.11 row 13, BUILD M13 row TG 13. p1 sets it face-down in backrow
+// TG #13 Explosive Runes — SPEC §8.11 row 13, BUILD M13 row TG 13.
 // lane 2; p2 is active and attacks.
 #[cfg(test)]
 mod tests {

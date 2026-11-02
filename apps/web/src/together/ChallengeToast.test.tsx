@@ -1,13 +1,8 @@
-// #936 S8 B57: `ChallengeToast`, mounted once in the shell. While signed in it reads
-// `GET /api/challenges`; an incoming challenge shows a toast naming the challenger, whose Accept joins
-// the room by its code with the deck picked in the toast and goes to the game (R1831000), with the
-// lobby's room link (R767) as the way in when the join is refused, and whose Decline declines the
-// challenge.
-//
-// SPEC S8 names no test id for the toast, so its buttons are found by their role and name, or by
-// the ids #1831 gave its Accept, deck picker and lobby link. R2031000: an All Random challenge's
-// toast offers "More cards from" on the device's online pick, and Accept joins with it.
-// R915005: a deck with a custom card, or a trio holding one, is listed off and never picked.
+// #936 S8 B57: `ChallengeToast`, mounted once in the shell. An incoming challenge's Accept joins the
+// room with the deck picked in the toast and goes to the game (R1831000), with the lobby's room link
+// (R767) when the join is refused. SPEC S8 names no test id for the toast, so its buttons are found by
+// their role and name, or by the ids #1831 gave them. R2031000: an All Random toast offers "More cards
+// from" on the device's online pick. R915005: a deck with a custom card is listed off, never picked.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

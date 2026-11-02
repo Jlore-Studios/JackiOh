@@ -1,28 +1,15 @@
 //! The practice sandbox's tools (issue #923, R923000–R923003; #962, R962000): one action, `sandbox`,
 //! whose `op` spawns a card for either seat, sets a hero's health and Armor or a player's mana, draws,
-//! or destroys or removes a card. This module owns the rule: `why_sandbox_refused` is every refusal
-//! and `apply_sandbox` every change, and `reduce` calls the one after the other.
+//! or destroys or removes a card. `why_sandbox_refused` is every refusal, `apply_sandbox` every change.
+//! A tool waits on an open prompt and the mulligan (`reduce`'s gates), on either seat's turn.
 //!
-//! - **Only in a sandbox** (R923000): a game created with `CreateGameOptions.sandbox` holds
-//!   `GameState.sandbox`, and no other game accepts a tool. `legal_actions` never lists one, so the
-//!   AI and every policy leave them alone, and the server's match actor refuses them before the
-//!   engine sees them. A tool is an action like any other: it is logged, deduped by its nonce and
-//!   folded by a replay, which passes the same flag (`ReplayInput.sandbox`).
+//! - **Only in a sandbox** (R923000): `legal_actions` never lists a tool, the server's match actor
+//!   refuses one elsewhere, and a replay folds them with the same flag (`ReplayInput.sandbox`).
 //! - **Placed, not played** (R923001): every tool goes through the engine's own verbs, so a card
-//!   arrives as an effect's card does. On the field it is summoned (`effects::summon`: a Trap
-//!   face-down, a Unit as summoning sick as any summon, no Cry), in the hand it is added (§2.4: a
-//!   full hand burns it), on top of the library it is put there (`draw::put_into_library`), and in
-//!   the graveyard it is a fresh card that enters it. No play is counted and nothing is paid.
-//! - **The game's own custom cards** (R962000): a spawn may also name a custom card the game was
-//!   created with; a custom id it does not carry is refused as an unshipped card is.
-//! - **Numbers in bounds** (R923002): a hero's health 1 to `SANDBOX_HERO_HEALTH_MAX`, its Armor 0 to
-//!   `SANDBOX_ARMOR_MAX`, mana 0 to `SANDBOX_MANA_MAX`, a draw 1 to `SANDBOX_DRAW_MAX` cards.
-//! - **Destroy and remove** (R923003): destroy marks a card on the field as a destroy effect does, so
-//!   the state check after the action moves it and runs its Death; remove exiles a card from
-//!   wherever it is, its Death not run.
-//!
-//! A tool runs between the turn's moves, so it waits on what blocks one: an open prompt and the
-//! mulligan refuse it (`reduce`'s gates), while either seat may use one on either turn.
+//!   arrives as an effect's card does (no Cry; §2.4: a full hand burns it); no play is counted.
+//! - **Numbers in bounds** (R923002), each to its `SANDBOX_*` constant.
+//! - **Destroy and remove** (R923003): destroy marks a field card as a destroy effect does, so its
+//!   Death runs in the state check; remove exiles it from wherever it is, its Death not run.
 
 use crate::catalog::{find_def, set_is_open};
 use crate::config::{SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX};

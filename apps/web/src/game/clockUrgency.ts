@@ -1,9 +1,8 @@
 // The last 30 seconds of a turn clock (R439), as pure functions of the readout `Clock.tsx` already
 // computes. Presentation only: the server runs every clock (R79), and nothing here decides or
 // predicts a timeout (CLAUDE.md rule 7). A paused turn clock, a prompt's clock and the mulligan's
-// clock are never urgent: the stretch belongs to the turn clock, the one the issue names ("the final
-// 30s of your turn"). A prompt clock is short and already its own countdown, and the mulligan is
-// nobody's turn (§2.1, R268).
+// clock are never urgent: the stretch belongs to the turn clock. A prompt clock is short and already
+// its own countdown, and the mulligan is nobody's turn (§2.1, R268).
 
 import type { ClockLine, ClockReadout, ClockSide } from "./Clock.tsx";
 import { FUSE_EDGES, MS_PER_SECOND, PERCENT, TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "./clockConstants.ts";
@@ -24,11 +23,7 @@ export type TurnClockUrgency = {
 
 export const NO_URGENCY: TurnClockUrgency = { level: "none", side: null, secondsLeft: null };
 
-/**
- * R439: a running turn clock at or under 30 seconds is "final", at or under 10 it is "last10".
- * Anything else — no line, a prompt or mulligan clock, a paused turn clock (the server gave it no
- * deadline, R79), no number at all, or more time than that — is "none".
- */
+/** R439: a running turn clock at or under 30 seconds is "final", at or under 10 it is "last10". */
 export function turnClockUrgency(line: ClockLine | null): TurnClockUrgencyLevel {
   if (line === null || line.kind !== "turn" || line.paused || line.remainingMs === null) return "none";
   if (line.remainingMs > TURN_CLOCK_FINAL_MS) return "none";
@@ -69,7 +64,6 @@ export type FuseGeometry = {
 
 export function fuseGeometry(fraction: number): FuseGeometry {
   const left = Math.min(1, Math.max(0, fraction));
-  /** How far round the burn has come, in edges: 0 at the start, FUSE_EDGES at the end. */
   const burnt = (1 - left) * FUSE_EDGES;
   const edge = (index: number): number => Math.min(1, Math.max(0, index + 1 - burnt));
   const edges = [edge(0), edge(1), edge(2), edge(3)] as const;
@@ -92,7 +86,6 @@ export function urgencyLabel(side: ClockSide): string {
   return side === "you" ? "Your turn" : "Their turn";
 }
 
-/** The urgent readout's accessible name: "Your turn ends in 12 seconds". */
 export function urgencyAccessibleName(side: ClockSide, seconds: number): string {
   const count = String(seconds);
   if (side === "you") {

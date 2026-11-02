@@ -4,13 +4,12 @@
 //!   Radiant: "Cry: Summon a random Radiant Trap face-down into your backrow zone in this lane." —
 //!            any Trap, summoned Radiant, the face's raise (R275); the rest is the base's.
 //! §3.1: "this lane" is the Cry's own unit's lane (`slot_of`); `summon` derives the row from the
-//! def's type, so naming the lane is the whole placement. R47: an occupied zone fizzles the summon
-//! and the unit still enters; a Locked zone takes it (R688). `summon`'s `zone_for`/`can_place`
-//! already does both, so this card must not grow a check. §3.2, R33: the trap is face-down; R1: a
-//! summon pays nothing. Pool: base is the Cost (1) traps, radiant every trap, #85 included, with
-//! §5.2's flag set. `TRAP_TYPES` is "Trap" and "Field Trap" because filters match `def.type`
-//! exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61). `summon_random` draws
-//! the def (§5 index order, §5.1, §9.3, R60); a card file never picks it (CLAUDE.md rules 4 and 5).
+//! def's type. R47: an occupied zone fizzles the summon and the unit still enters; a Locked zone
+//! takes it (R688); `summon` already does both, so this card must not grow a check. §3.2, R33: the
+//! trap is face-down; R1: a summon pays nothing. Radiant's pool includes #85, with §5.2's flag set.
+//! `TRAP_TYPES` is "Trap" and "Field Trap" because filters match `def.type` exactly while SPEC
+//! reads "Field Trap counts as Trap" (§8 #51, R35, R61). `summon_random` draws the def (§5 index
+//! order, §5.1, §9.3, R60); a card file never picks it (CLAUDE.md rules 4 and 5).
 
 use jackioh_engine::effects::summon_random;
 use jackioh_engine::prelude::*;
@@ -22,7 +21,6 @@ pub const ID: &str = "core-067";
 /// §8.3: the base text names 1-cost traps; §5.1's `cost` reads a def's cost out of play (R65).
 const TRAP_COST: i32 = 1;
 
-/// Both pools: the Cost (1) traps, and every trap.
 fn one_cost_traps() -> CardQuery {
     json_as(json!({ "type": TRAP_TYPES, "cost": TRAP_COST }))
 }
@@ -31,10 +29,8 @@ fn any_trap() -> CardQuery {
     json_as(json!({ "type": TRAP_TYPES }))
 }
 
-/// The faces differ in the pool and in whether the trap comes Radiant, so one factory takes both.
-///
-/// §10.9 lets a hook read state to compute an effect's arguments; it never writes. The single read
-/// here is the engine's own `slot_of`, which turns the Cry's unit into `{ player, row, lane }`.
+/// One factory for both faces, which differ in the pool and in whether the trap comes Radiant.
+/// §10.9: the hook's one read is the engine's own `slot_of`.
 fn oomen(pool: CardQuery, radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -65,11 +61,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4: "Random trap face-down and unpaid into own lane's
-// backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps, radiant all six".
-// Base pool: #18, #41, #60, #71, #96, Classic #10, Classic+ #22 and, since v0.3.5, Meditative #64 and
-// #68 (R380's one format); radiant: every trap of
-// every set, #85 included, summoned Radiant and hidden from the opponent, face and all (R33, R97, R177).
+// #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4 (R47).
+// Radiant: every trap of every set, summoned Radiant, hidden face and all (R33, R97, R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -83,14 +76,10 @@ mod tests {
     const MANA_WELL: &str = "core-006"; // A Field Spell: something to occupy a backrow zone with.
     const SIPHON_SQUAD: &str = "classic-088"; // Field Trap that Tributes itself while the opponent has no Units (R403).
 
-    /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
-    /// #71, #96, Classic #63 Crop Dusting, and Meditative #64 Traitorous Blood and #68 Catnip (a Field
-    /// Trap). Re-pinned for v0.3.5: the Meditative set joins the pool; for v0.3.10, where Classic #10
-    /// Exile went to (2) and #63 Crop Dusting to (1); for the Stinkyscape release (#1884), where its #5
-    /// Masochism Unmasked and #131 Spacerace Stimulus (Field Traps), #135 Sacked, #138 Pocket Peptides
-    /// and #144 Prepare For Liftoff join it; for #2179, where Classic+ #22 Blood Moon went to (2); and
-    /// for the Training Grounds release (#2204), where its #13 Explosive Runes, #14 Explosive Trap and
-    /// #24 Goliath Situation (a Field Trap) join it.
+    /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380), Core #18, #41,
+    /// #60, #71, #96, Classic #63, Meditative #64 and #68, Stinkyscape (#1884) #5, #131, #135, #138
+    /// and #144, and Training Grounds (#2204) #13, #14 and #24. Classic #10 Exile and Classic+ #22
+    /// Blood Moon (#2179) cost (2).
     const TRAP_POOL: [&str; 16] = [
         "core-018",
         "core-041",
@@ -120,13 +109,11 @@ mod tests {
         query_ids(json!({ "type": TRAP_TYPES }))
     }
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
-    /// `reduce` checks that after EVERY action, so a play that empties the hand and leaves no unit
-    /// would hand the turn over under the assertion. Each scenario keeps one free 0-cost Spell in
-    /// p1's hand, never played, so one legal action always remains.
+    /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
+    /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand, the shipped cards registered first.
+    /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {
         crate::register_all();
         let mut opts = opts;
@@ -160,8 +147,7 @@ mod tests {
 
         #[test]
         fn build_row_67_r380_the_base_pool_is_every_sets_cost_1_traps_and_the_radiant_pool_every_trap() {
-            // The base face asks for Cost (1) traps, the radiant face for any trap. Field Trap counts as
-            // Trap (§8 #51, R35, R61), and #85 costs 2, so only the radiant query reaches it.
+            // #85 costs 2, so only the radiant query reaches it.
             assert_eq!(query_ids(json!({ "type": TRAP_TYPES, "cost": 1 })), TRAP_POOL);
             let every_trap = query_ids(json!({ "type": TRAP_TYPES }));
             for id in TRAP_POOL.iter().chain(["core-085"].iter()) {
@@ -216,8 +202,6 @@ mod tests {
         #[test]
         fn r60_the_seeded_pick_stays_inside_the_pool_and_reaches_every_member_of_it() {
             let mut seen: IndexSet<String> = IndexSet::new();
-            // Re-pinned for the Stinkyscape release (#1884): forty seeds reached every one of the nine,
-            // and eighty reach every one of the fourteen.
             for seed in 0..80 {
                 let mut s = board(json!({ "seed": format!("oomen-{seed}"), "p1": { "hand": [OOMEN] } }));
                 s.play(OOMEN, json!({ "zone": LANE }));
@@ -253,15 +237,14 @@ mod tests {
             s.play(OOMEN, json!({ "zone": LANE }));
 
             s.expect_in_zone(OOMEN, "field");
-            // Nothing moved, nothing spilled into another lane (§3.1: this card names one zone only).
             assert_eq!(backrow_ids(&s), vec![None, None, Some(MANA_WELL.to_string()), None, None]);
         }
 
         #[test]
         fn r688_a_locked_backrow_zone_takes_the_summon_a_lock_refuses_only_plays_and_this_text_names_none() {
             let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-            // §3.2 Lock is a zone flag. The harness has no way to lock a zone, and #36 Magic Jammed only
-            // locks the zone of a backrow card it destroys, so the flag is set here directly.
+            // The harness cannot lock a zone and #36 Magic Jammed locks only a zone it destroys a card
+            // in, so §3.2's Lock flag is set here directly.
             s.state_mut().players.p1.locks.backrow[(LANE - 1) as usize] = true;
             s.play(OOMEN, json!({ "zone": LANE }));
 
@@ -304,7 +287,6 @@ mod tests {
             assert!(trap.radiant);
             assert_ne!(trap.face_up, Some(true));
             assert_eq!(backrow_ids(&s), vec![None, None, Some(trap.def_id.clone()), None, None]);
-            // Still a summon: only Oomen's own cost was paid (R1).
             s.expect_mana(P1, 3);
         }
 
@@ -333,7 +315,6 @@ mod tests {
             assert!(!serialized.contains(&format!("\"{}\"", trap.id)));
             assert!(!serialized.contains(&format!("\"{}\"", trap.def_id)));
 
-            // Its controller reads it, Radiant face included (R33).
             let mine = js(&s.view(P1).you.backrow[at]);
             assert!(matches_object(
                 &mine,
@@ -351,9 +332,8 @@ mod tests {
                     "p1": { "hand": [{ "def": OOMEN, "radiant": true }] }
                 }));
                 s.play(OOMEN, json!({ "zone": LANE }));
-                // The pick is read off its `summoned` event, not off lane 3's zone: R403 makes C #88 Siphon
-                // Squad live from the moment it is set, its self-Tribute included, and p2 controls no Units
-                // here, so the state check right after the summon Tributes it. It still came, Radiant.
+                // The pick is read off its `summoned` event: R403 makes C #88 Siphon Squad live once
+                // set, and with p2 holding no Units the state check right after the summon Tributes it.
                 let picks: Vec<String> = s
                     .events()
                     .iter()
@@ -373,7 +353,6 @@ mod tests {
                 }
                 seen.insert(trap.def_id);
             }
-            // Forty seeds over a pool of every set's traps reach beyond the Cost (1) ones.
             assert!(seen.iter().any(|id| !TRAP_POOL.contains(&id.as_str())));
             assert!(seen.len() > TRAP_POOL.len());
         }

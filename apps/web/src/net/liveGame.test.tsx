@@ -116,7 +116,6 @@ describe("R765 the live game an account read names", () => {
     expect(read).toHaveBeenCalledWith("tok-1");
     expect(result.current?.path).toBe("/match/m-1");
 
-    // A read that fails changes nothing on screen.
     read.mockRejectedValueOnce(new Error("network down"));
     await advance(POLL_MS);
     expect(result.current?.path).toBe("/match/m-1");
@@ -125,7 +124,7 @@ describe("R765 the live game an account read names", () => {
     await advance(POLL_MS);
     expect(result.current).toBeNull();
 
-    // With no game left there is nothing to watch: no more reads.
+    // No game left: no more reads.
     const reads = read.mock.calls.length;
     await advance(POLL_MS * 3);
     expect(read).toHaveBeenCalledTimes(reads);
@@ -182,7 +181,7 @@ describe("R765 the live game an account read names", () => {
       expect(read).toHaveBeenCalledTimes(3);
       expect(result.current?.path).toBe("/match/m-1");
 
-      // Its answer lands, and the next wake reads again: the game ended while the tab slept.
+      // The game ended while the tab slept.
       read.mockResolvedValue(me(null));
       answer(me("m-1"));
       await flush();
@@ -356,7 +355,7 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
       answer(me(null));
       await flush();
 
-      // Paired while the tab slept: the wake finds the game, announces it and takes the player there.
+      // Paired while the tab slept.
       read.mockResolvedValue(me("m-9"));
       setVisibility("visible");
       await flush();
@@ -425,6 +424,7 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     cleanup();
 
     // A server that never names the queue (older than R897000) never ends it either.
+    // A server that never names the queue never ends it either.
     rememberQueued("random");
     const silent = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));
     render(<Follower path={paths.decks} read={silent} />);

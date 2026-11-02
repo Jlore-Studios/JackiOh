@@ -5,9 +5,8 @@
 //!          becomes Radiant."
 //! Engine:
 //! - **The hand size** (ME-HANDCAP, R1143): `set_hand_cap` sets this player's hand cap to `handSize`
-//!   for the rest of the game, whatever becomes of this card. A setting, not an increase: a second
-//!   Touched by KY changes nothing and the latest setting wins. Every rule that reads the hand cap
-//!   reads it (`hand_cap_of`), and both views show it. The designer's order is reversed so the cap is
+//!   for the rest of the game, whatever becomes of this card; the latest setting wins. Every rule
+//!   that reads the hand cap reads it (`hand_cap_of`). The designer's order is reversed so the cap is
 //!   set before the draws, which then use the new room.
 //! - **The draws:** `draw` separate §2.4 draws, each with its own cast-on-draw chain. The Radiant
 //!   face's are `draw_priced` draws whose card, if the draw put it in the hand, becomes Radiant
@@ -41,11 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #79 Touched by KY — SPEC §8.8 row 79, BUILD M10 row M 79: "Cry (played or cast): your hand cap
-// becomes 12 for the rest of the game, shown on both views, then you draw 4 (R1143): with 9 cards in
-// hand none burns; the cap stays after it dies; a second Touched by KY leaves it 12; every draw, add,
-// steal and fill reads the new cap; handSize and draw read through `param()`; radiant 8/8, and each
-// card the draws put in your hand becomes Radiant".
+// M #79 Touched by KY — SPEC §8.8 row 79, BUILD M10 row M 79.
 #[cfg(test)]
 mod tests {
     use super::ID;

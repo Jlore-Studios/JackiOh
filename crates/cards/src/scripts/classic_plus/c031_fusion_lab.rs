@@ -3,11 +3,7 @@
 //!   Base:    "Activate: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
 //!   Radiant: "… Fuse a random Radiant card into it …"
 //!
-//! Controller chooses hand card: declared with activation in `activate` action (R81). Immutable
-//! cards can't be chosen (R23); empty hand offers no activation.
-//!
-//! B5 E23's `fuseRandomInto`: one random non-token card of every set (R380) but Fusion Lab (R387)
-//! is fused per R77 and R102 into the chosen hand card, keeping instance, type and cost (R65).
+//! An empty hand offers no activation.
 //! On Radiant, the ingredient lends its Radiant face to both forms (R561). Opponent's view hides
 //! hand card, ingredient and fused id (R97, R179).
 
@@ -65,10 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #31 Fusion Lab — SPEC §8.7 row 31: Activate fuses a random non-token card of any set but
-// Fusion Lab (R387) into a hand card chosen with activation (R81); hand card is kept instance,
-// keeping type (R77) and cost; Immutable is never offered (R23); opponent's view hides all ids
-// (R97, R179); radiant ingredient lends its Radiant face to both forms (R561).
+// C+ #31 Fusion Lab — SPEC §8.7 row 31.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

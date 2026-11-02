@@ -57,8 +57,7 @@ type Landed = { instanceId: string; card: CardView | null; at: Point; view: Play
 const BOARD = '[data-testid="board"]';
 /**
  * The longest a landed card waits for the board to catch up. A drop only ever sends an action the
- * engine listed, so the view always moves on; this only covers a refusal the client cannot see
- * coming (a networked match whose clock ran out as the card was dropped).
+ * engine listed, so the view always moves on; this only covers a refusal the client cannot see coming.
  */
 const LANDING_TIMEOUT_MS = 4_000;
 const RETICLE_MIN_PX = 44;

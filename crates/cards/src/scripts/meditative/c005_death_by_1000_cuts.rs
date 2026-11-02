@@ -7,13 +7,9 @@
 //! fixed while the card resolves — mana gained mid-resolution changes nothing, and a random cast
 //! uses its caster's max mana. The larger of the hook and `staticFlags.echo` holds (here there is no
 //! fixed one); the card's "Echo" tuning step and a Twinspell grant then add on (`echo::printed_echo`,
-//! R30, R386). At 4 max mana that is 9 hits (17 on the Radiant face).
-//!
-//! The declared target is any Unit on either side (R81); each repeat asks a fresh target prompt (§6.2
-//! Echo, §10.6), and a repeat with no Unit to hit fizzles. Lifesteal is printed on the Radiant face,
-//! as on Core #93.1 Combo-Fodder, and heals once per hit (§4.4 step 8). Pierce, on both faces since patch v0.3.10, is printed
-//! on the Spell, so every hit skips Armor (§4.4 step 2, R346). Both numbers are declared and
-//! read through `param` (R386).
+//! R30, R386). The target is any Unit (R81); each repeat asks a fresh target prompt (§6.2 Echo, §10.6),
+//! and a repeat with no Unit to hit fizzles. Lifesteal, as on Core #93.1 Combo-Fodder, heals once per
+//! hit (§4.4 step 8). Pierce is printed on the Spell, so every hit skips Armor (§4.4 step 2, R346).
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -45,10 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #5 Death by 1000 cuts — SPEC §8.8 row 5, BUILD M10 row M 5: "Echo X with X fixed at play from the
-// caster's max mana (R802): 3 hits at 1 max mana, 9 at 4 (17 Lifesteal hits on the Radiant face); a
-// random cast uses its caster's max mana; Twinspell adds 1; a repeat with no Unit fizzles; its tuned
-// numbers (echo, damage) read through `param()` (R386)".
+// M #5 Death by 1000 cuts — SPEC §8.8 row 5, BUILD M10 row M 5.
 #[cfg(test)]
 mod tests {
     use super::*;

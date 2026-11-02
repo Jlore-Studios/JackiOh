@@ -1,6 +1,6 @@
 // Catalog IDs mirror SPEC §8; only `cardId` and fixture decks depend on their zero-padded format.
 
-/** SPEC §8 Core cards. L3 excludes Tokens from decks. */
+/** SPEC §8 Core cards. */
 export const CARD_NAMES: Record<number, string> = {
   1: "Big D-fender",
   2: "Bigot",
@@ -114,12 +114,7 @@ export function allCardIds(): string[] {
   return Array.from({ length: CORE_CARD_COUNT }, (_, index) => cardId(index + 1));
 }
 
-// Tokens
-
-/**
- * Tokens stay out of `CARD_NAMES`: L3 bans them from fixtures' decks.
- * The catalog defines numbered and named IDs; `tokenId` handles both.
- */
+/** Tokens stay out of `CARD_NAMES`: L3 bans them from fixtures' decks. */
 export const TOKEN_NAMES: Record<string, string> = {
   "51.1": "KY's Empty Notebook",
   "65.1": "Spikey Pillow",

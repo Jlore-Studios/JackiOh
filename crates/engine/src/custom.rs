@@ -1,26 +1,17 @@
 //! Custom cards in one game (#915, SPEC §12, R915000–R915009).
 //!
-//! - **The id space** (R915000): `custom-` and a tail of lowercase letters, digits and hyphens. No
-//!   catalog id starts with it (`cargo jackioh catalog check`), so a custom card never shadows a
-//!   catalog card or a token.
+//! - **The id space** (R915000): `custom-` and a tail of lowercase letters, digits and hyphens; no
+//!   catalog id starts with it (`cargo jackioh catalog check`).
 //! - **The frame** (R915001): `validate_custom_card` is §12.2's every limit, the one check the
-//!   server, the practice worker, the creator and `create_game` share; `custom_def` turns a valid
-//!   frame into the `CardDef` the game reads, of set `Custom`, which never ships, so no pool, Discover
-//!   or random deck finds one.
-//! - **The game's copy** (R915006): `create_game` keeps each custom card (frame, version, source; the
-//!   builder's model dropped) in `GameState.custom_cards` and its definition in
-//!   `GameState.custom_defs`, so `hash_state` covers them and a fold with the same input folds the
-//!   same game. `catalog::find_def` reads `custom_defs` after `transient_defs`.
-//! - **The scripts** (R915002): only a host that runs Luau can build a custom card's scripts, and the
-//!   engine depends on none. `with_custom_scripts` lends the engine such a host for the length of one
-//!   call: `scripts::scripts_ref` and `face_ref` ask it for a custom card's scripts, by the card the
-//!   state holds. With no host lent, a custom card has no script, as a vanilla card has none.
+//!   server, the practice worker, the creator and `create_game` share; `custom_def` builds a `CardDef`
+//!   of set `Custom`, which never ships, so no pool, Discover or random deck finds one.
+//! - **The game's copy** (R915006): `GameState.custom_cards` and `custom_defs`, so `hash_state` covers
+//!   them; `catalog::find_def` reads `custom_defs` after `transient_defs`.
+//! - **The scripts** (R915002): the engine runs no Luau; `with_custom_scripts` lends it a host for one
+//!   call. With none lent, a custom card has no script, as a vanilla card has none.
 //!
-//! CLAUDE.md rule 4: the host is held in a thread-local `Cell` for exactly the call
-//! `with_custom_scripts` wraps, and put back as it was when the call returns or unwinds. It holds no
-//! game state: what it answers is a function of the custom card the state hands it, which the state
-//! carries, so a reduce under it is still a pure function of its inputs, on any thread. Like
-//! `jackioh-luau`'s VM it caches only compiled scripts, keyed by the card's id and source.
+//! CLAUDE.md rule 4: the thread-local host is put back when its call returns or unwinds and holds no
+//! game state (it answers from the custom card the state carries), caching only compiled scripts.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -47,8 +38,7 @@ pub fn is_custom_id(id: &str) -> bool {
     id.starts_with(CUSTOM_ID_PREFIX)
 }
 
-/// R915000: whether `id` is a well-formed custom id: the prefix, then 1 or more lowercase ASCII
-/// letters, digits and hyphens, `CUSTOM_ID_MAX_LENGTH` characters in all at most.
+/// R915000: whether `id` is a well-formed custom id.
 pub fn custom_id_well_formed(id: &str) -> bool {
     let Some(tail) = id.strip_prefix(CUSTOM_ID_PREFIX) else {
         return false;
@@ -298,7 +288,6 @@ fn keyword_of(kind: KeywordKind) -> Option<Keyword> {
     })
 }
 
-/// The rarity a printed rarity is.
 fn rarity_of(printed: PrintedRarity) -> Rarity {
     match printed {
         PrintedRarity::Common => Rarity::Common,
@@ -429,9 +418,7 @@ pub fn check_custom_setup(cards: &[CustomCard], decks: &(Vec<String>, Vec<String
     Ok(())
 }
 
-// ---------------------------------------------------------------------------------------------
 // The scoped script host (R915002)
-// ---------------------------------------------------------------------------------------------
 
 /// A host that builds a custom card's scripts from its source: `jackioh-luau`'s card kit, in the
 /// browser's Luau module, or a test's fixture. It answers the same scripts for the same card (id,

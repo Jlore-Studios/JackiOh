@@ -9,10 +9,6 @@
 //! `activate` action (R81): "defender" summons a Right-house defender (Core #3, R406), "attacker" a
 //! Wrong-House Attacker (C+ #6), fresh cards, yours, no Cry (R1), R64's placement, on their Radiant faces
 //! on the Radiant face. With no counter on it, or no unit zone free, it cannot be activated (R1704002).
-//!
-//! Through v0.4.0f its Cry and each start of its controller's turn summoned a Right-house defender with
-//! chance 2 in 3, else a Wrong-House Attacker, and the Radiant face one of each (R406);
-//! `script_v0_4_0f` keeps that for those versions' replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -112,12 +108,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// C+ #7 The House — SPEC §8.7 row 7, BUILD M9 Classic+ row C+ 7: "Field Spell: its Cry places 3 Plague
-// Counters on itself; Activate, once per turn (R384), the twin a mode declared in the action (R81): spend
-// a counter to summon a Right-house defender (Core #3, R406) or a Wrong-House Attacker (C+ #6), generated
-// from the catalog (cards, not tokens), yours, no Cry (R1), R64's placement; refused with no counter or
-// no free unit zone (R1704002); radiant the twin is Radiant". `mod v0_4_0f` keeps the summons on its Cry
-// and each start of your turn, the kept script's (R767000).
+// C+ #7 The House — SPEC §8.7 row 7, BUILD M9 Classic+ row C+ 7.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -189,7 +180,7 @@ mod tests {
             s.play(HOUSE, json!({ "zone": 1 }));
             assert_eq!(counters(&s), 3);
             assert_eq!(summoned(&s), Vec::<String>::new());
-            // Nothing at the start of a turn any more.
+            // Nothing at the start of a turn.
             next_turn(&mut s);
             assert_eq!(summoned(&s), Vec::<String>::new());
             assert_eq!(counters(&s), 3);

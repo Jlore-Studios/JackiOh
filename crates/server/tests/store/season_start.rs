@@ -1,10 +1,4 @@
-//! `src/cli/season_start.rs` — R609's season-open admin script — driven against the in-memory
-//! store, where `--dry-run`'s rollback is the observable half: the report must describe the reset
-//! exactly while the store holds none of its writes.
-//!
-//! The port of `apps/server/test/db/season-start.test.ts`. TS's `createTestDeps()` is
-//! `support::test_app::test_app()` (a fake store and the test patch version); its store's
-//! `seedProfile` is `FakeData::seed_profile`, reached through the `Db::Fake` handle's lock.
+//! Season start administrative CLI (`src/cli/season_start.rs`, R609, SURFACE §11.3).
 
 use jackioh_server::api::ranked::{SeasonDeps, rate_ranked_game};
 use jackioh_server::cli::season_start::{SeasonStartOptions, parse_season_start_args, start_season};
@@ -16,8 +10,7 @@ use serde_json::{Value, json};
 
 use crate::support::test_app::{TEST_CATALOG_VERSION, test_app};
 
-/// One transaction around one store call, as TS's store gave every method called outside
-/// `store.tx`: begin, the call, commit. Answers the call's value, or the first error's text.
+/// One transaction around one store call: begin, call, commit.
 macro_rules! once {
     ($db:expr, $sub:expr, |$tx:ident| $call:expr) => {
         async {
@@ -77,7 +70,7 @@ fn player(profile_id: &str) -> Value {
 const A: &str = "profile-a";
 const B: &str = "profile-b";
 
-/// TS `deps.store.seedProfile(input)`: an active profile written straight into the fake's tables.
+/// Active profile written straight into tables.
 async fn seed_profile(db: &Db, input: Value) {
     let Db::Fake(data) = db else {
         panic!("the test app's store is the fake")
@@ -134,10 +127,7 @@ fn deps(patch_version: &str) -> SeasonDeps {
     }
 }
 
-/// The version of the next season's build: one minor past the compiled-in catalog version, which
-/// is the season the test app rates in. TS rated its tests in `TEST_PATCH_VERSION` (`v0.1.1`) and
-/// opened `v0.2.0`'s season over it; the Rust server rates in `jackioh_cards::catalog_version()`'s
-/// season (SURFACE §11.3), so the season these tests open is the one after that.
+/// Next season build version: one minor past compiled-in catalog version (SURFACE §11.3).
 fn next_patch() -> String {
     let current = season_id_of(TEST_CATALOG_VERSION);
     let (major, minor) = current
@@ -148,7 +138,7 @@ fn next_patch() -> String {
     format!("v{major}.{}.0", minor + 1)
 }
 
-/// `next_patch`'s season (TS's `"v0.2"`).
+/// `next_patch`'s season.
 fn next_season() -> String {
     season_id_of(&next_patch())
 }

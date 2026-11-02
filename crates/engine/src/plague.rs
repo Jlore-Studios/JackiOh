@@ -1,21 +1,16 @@
 //! Plague Counters (SPEC §6.3 Plague Counter; docs/classic-sets.md B5 E19; R471): the counter on a
-//! permanent, how many a placement puts there, and how they come off again.
-//!
-//! A Plague Counter is `instance.counters.plague` (§10.1), cleared by R78 when the card leaves the
-//! field. This module owns all three things that touch it, so no caller can disagree about them:
-//!   - a placement (`place_plague_on`): N tokens on one card, multiplied by what that card says
-//!     (Classic #27 Pestilent Slime's "doubled", `Script.plague_multiplier`), reported once as
-//!     `counterChanged` with `placed`, which "whenever Plague Counters are placed on this" answers once
-//!     per placement however many tokens (R471). Every gain is a placement, Core #91 Fed Fauci's
-//!     "+1 Plague Counter" included;
-//!   - a removal (`remove_plague`): Classic #78 Mutate Spell's "remove a Plague Counter" and Classic
-//!     #74 Corpse Plantation's tokens spent as mana, paid through this. It carries no `placed`;
+//! permanent (`instance.counters.plague`, §10.1, cleared by R78 when the card leaves the field). This
+//! module owns all three things that touch it, so no caller can disagree about them:
+//!   - a placement (`place_plague_on`): N tokens times the card's multiplier (Classic #27 Pestilent
+//!     Slime's "doubled"), reported once as `counterChanged` with `placed`, which "whenever Plague
+//!     Counters are placed on this" answers once per placement (R471). Every gain is a placement, Core
+//!     #91 Fed Fauci's "+1 Plague Counter" included;
+//!   - a removal (`remove_plague`), with no `placed`: Classic #78 Mutate Spell's "remove a Plague
+//!     Counter" and Classic #74 Corpse Plantation's tokens spent as mana;
 //!   - the reads (`plague_on`, `plague_on_field`, `permanents_on_field`), re-exported by `query.rs`.
 //!
-//! Only a permanent on the field carries tokens: the top of a unit pile, a Unit a carrier holds, or a
-//! backrow card, face-down ones included (R471, R446, R1824000), never a card dormant under a Stack (R13)
-//! or one in a hand, deck or pile. The two writers take the card as the caller holds it and write the
-//! counter on the card as it stands in the state (found by id).
+//! Only a permanent on the field carries tokens (R471, R446, R1824000), never a card dormant under a
+//! Stack (R13). The writers write the counter on the card as it stands in the state (found by id).
 
 use crate::config::PLAGUE_MULTIPLIER_NONE;
 use crate::script::{EngineSink, HookArgs};
@@ -61,7 +56,6 @@ pub fn carries_plague(state: &GameState, card: &CardInstance) -> bool {
 /// #27), read on the face it wears; a card with no such text, a Vanilla one (§6.3) or a face-down one,
 /// whose text sleeps (R1487000), multiplies by 1. Never below 1, since a multiplier shrinks nothing.
 pub fn plague_multiplier_of(state: &GameState, card: &CardInstance) -> i32 {
-    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
     if crate::preview::lasting_text_dormant(state, card) {
         return PLAGUE_MULTIPLIER_NONE;
     }
@@ -101,9 +95,8 @@ pub fn place_plague_on(sink: &mut EngineSink<'_>, card: &CardInstance, amount: i
     placed
 }
 
-/// Take up to `amount` Plague Counters off a card (Classic #78's "remove a Plague Counter", Classic #74's
-/// tokens spent as mana). Returns how many came off; the count floors at 0, and a removal that takes
-/// nothing reports nothing.
+/// Take up to `amount` Plague Counters off a card. Returns how many came off; the count floors at 0,
+/// and a removal that takes nothing reports nothing.
 pub fn remove_plague(sink: &mut EngineSink<'_>, card: &CardInstance, amount: i32) -> i32 {
     let had = crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);
     let removed = had.min(amount.max(0));

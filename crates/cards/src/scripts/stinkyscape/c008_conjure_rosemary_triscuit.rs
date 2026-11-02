@@ -39,9 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #8 Conjure Rosemary Triscuit — SPEC §8.10 row S 8, BUILD M12 row S 8: "adds a base Rosemary
-// Triscuit (S 8.1) to its caster's hand and shuffles one base Wardrum (C+ 37) into its caster's
-// deck; a full deck refuses the Wardrum (R80); radiant both are Radiant".
+// S #8 Conjure Rosemary Triscuit — SPEC §8.10 row S 8, BUILD M12 row S 8 (R80).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -55,7 +53,6 @@ mod tests {
     const WARDRUM: &str = "classicplus-037";
     const FILLER: &str = "core-005";
 
-    /// p1 holds Conjure over `hand`; p2 holds a filler.
     fn conjuring(hand: Value) -> Scenario {
         scenario(json!({ "p1": { "hand": hand }, "p2": { "hand": [FILLER] } }))
     }
@@ -104,8 +101,6 @@ mod tests {
         #[test]
         fn r4_a_full_hand_burns_the_triscuit() {
             crate::register_all();
-            // Full as the add comes: a hand one past the cap, so the play leaves it full (as a cast by
-            // an effect, which frees no slot, would find it).
             let mut hand = vec![json!(CONJURE)];
             hand.extend((0..HAND_CAP).map(|_| json!(FILLER)));
             let mut s = conjuring(json!(hand));

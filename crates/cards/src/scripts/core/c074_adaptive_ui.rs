@@ -3,13 +3,12 @@
 //! changes only the four multipliers (§8 Conventions). The token is a Ghoul Token (§7, R353: X/X with
 //! Pierce); X is at least 1 (R348).
 //!
-//! X is a PLAY choice, not a prompt (R81, §10.6): the play action carries it, `make_context` hands it
-//! to the hook as `ctx.x`, and R65 makes an X-cost card cost exactly X. R348 (`MIN_CHOSEN_X`) keeps
-//! X = 0 out of the hook; the guard below covers a run with no X. Clauses resolve in §8's order:
-//! damage before heal, draw before summon (a draw into a full hand burns, R4, before the board grows).
-//! "Heal your hero X" is `{ of: "selfHero" }`, not the target (R19's license is #47 Fig of Life's);
-//! §3 gives a hero no maximum. The token is the Ghoul Token plus a §7 `statsOverride`, summoned on its
-//! base face on both faces (R349 would double the 3X); R64 places it in the leftmost empty unit zone.
+//! X is a PLAY choice, not a prompt (R81, §10.6), handed to the hook as `ctx.x`; R65 makes an X-cost
+//! card cost exactly X, and R348 (`MIN_CHOSEN_X`) keeps X = 0 out of the hook. Clauses resolve in §8's
+//! order: a draw into a full hand burns (R4) before the board grows. "Heal your hero X" is
+//! `{ of: "selfHero" }`, not the target (R19's license is #47 Fig of Life's); §3 gives a hero no
+//! maximum. The token is summoned on its base face on both faces (R349 would double the 3X); R64
+//! places it in the leftmost empty unit zone.
 
 use jackioh_engine::effects::{damage, draw, heal, summon};
 use jackioh_engine::prelude::*;
@@ -19,24 +18,20 @@ pub const ID: &str = "core-074";
 /// §7, R353: the token is the catalog's Ghoul Token, named by id.
 const GHOUL_TOKEN: &str = "core-t-ghoul";
 
-/// R81: "a target" travels in the play action and never pauses resolution. §8's Conventions make it
-/// "all legal units and heroes on either side"; a hero is always on the board, so this declaration
-/// can never make a play illegal, and R90 fizzles it rather than refusing the play if it somehow has
-/// no answer.
+/// §8 Conventions: any unit or hero on either side, so a hero is always legal; R90 fizzles it
+/// rather than refusing the play if it somehow has no answer.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. This card's only
-/// read is the declared X off the context — negative and fractional values are impossible (the play
-/// validator refuses X < 0), and the clamp is belt and braces so no clause can go backwards.
+/// §10.9: the only read is the declared X. The play validator refuses X < 0; the clamp is belt and
+/// braces so no clause can go backwards.
 fn chosen_x(ctx: &EffectContext<'_>) -> i32 {
     ctx.x.max(0)
 }
 
-/// The four multipliers are the whole of the radiant text: the declared numbers `damage`, `heal`,
-/// `draw` and `ghoul` (R386), 2, 3, 2 and 3 on the Radiant face and tuned there alone — the base face
-/// prints a bare X, which is always 1X (R749).
+/// The multipliers are the declared numbers `damage`, `heal`, `draw` and `ghoul` (R386), tuned on the
+/// Radiant face alone: the base face prints a bare X, which is always 1X (R749).
 fn adaptive_ui() -> Script {
     Script {
         targets: targets(),
@@ -67,10 +62,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #74 Adaptive UI — SPEC §8.3, BUILD M4-T4: "X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token;
-// radiant 4 / 6 / 4 / 6-6; X=0 refused (R348)".
-// X is a play choice (R81): every test passes it as `play(..., { x })` with the declared target,
-// never as an answered prompt (§10.6: no Core card opens an `x` prompt).
+// #74 Adaptive UI — SPEC §8.3, BUILD M4-T4 (R348).
 // Each hero starts below HERO_HEALTH (`health: 20`) so the heal shows as a number.
 #[cfg(test)]
 mod tests {
@@ -82,7 +74,6 @@ mod tests {
 
     const X_REFUSAL: &str = "X must be at least 1";
 
-    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -133,14 +124,11 @@ mod tests {
 
             s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
 
-            // Deal X damage to a target.
             s.expect_health(P2, 28);
-            // Heal your hero X.
             s.expect_health(P1, 22);
             // Draw X: one card played out of two, two drawn.
             assert_eq!(s.hand(P1).len(), 3);
             assert_eq!(s.pile(P1, "library").len(), 1);
-            // Summon an X/X Ghoul Token: the catalog's Ghoul Token with a §7 stat override (R353).
             let token = s.unit(P1, 1);
             assert_eq!(token.as_ref().map(|card| card.def_id.as_str()), Some("core-t-ghoul"));
             let token = token.expect("a Ghoul Token in lane 1");
@@ -182,7 +170,6 @@ mod tests {
             // A play that names no X is X = 0 too, and refused the same way.
             s.expect_refused_with(|s| s.play("core-074", json!({ "targets": at_enemy_hero() })), X_REFUSAL);
 
-            // Nothing happened: no damage, no heal, no draw, no token, and the card is still in hand.
             s.expect_health(P2, 30).expect_health(P1, 20);
             let hand = def_ids(&s.hand(P1));
             assert_eq!(hand, ["core-074", "core-005"]);
@@ -243,14 +230,10 @@ mod tests {
 
             s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
 
-            // 2X damage.
             s.expect_health(P2, 26);
-            // Heal 3X.
             s.expect_health(P1, 26);
-            // Draw 2X.
             assert_eq!(s.hand(P1).len(), 5);
             assert_eq!(s.pile(P1, "library").len(), 1);
-            // A 3X/3X token.
             let token = s.unit(P1, 1);
             assert_eq!(token.as_ref().map(|card| card.def_id.as_str()), Some("core-t-ghoul"));
             let token = token.expect("a Ghoul Token in lane 1");

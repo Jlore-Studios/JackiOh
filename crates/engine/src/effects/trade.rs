@@ -2,27 +2,14 @@
 //! of their turn. You give them any card in your hand and they have to Discover a card in their own to
 //! give to you."
 //!
-//! `trade_offer` is a delayed effect (`delay`, R62) made "in 1 turn" of the opponent's own
-//! (`TRADE_OFFER_TURNS`, R1181000), so it waits for the start of their next turn with a countdown badge
-//! on the offerer's side (R169), and it comes whatever becomes of the card that made it (R76). Its three
-//! steps are the engine's own, under `TRADE_OFFER_HOOK`, which `work::script_step_for` answers with
-//! `trade_offer_step` whatever card made the offer, as it answers `CHAOS_ETERNAL_HOOK` (R1241):
+//! A delayed effect (`delay`, R62) "in 1 turn" of the opponent's own (`TRADE_OFFER_TURNS`, R1181000),
+//! badged on the offerer's side (R169), that comes whatever becomes of its card (R76), its steps under
+//! `TRADE_OFFER_HOOK` (answered as `CHAOS_ETERNAL_HOOK` is, R1241). The offerer's `hand` prompt opens on
+//! the other player's turn (R1279000), a card changes hands as C #9's does, a full hand burning it (R12,
+//! R317), and the opponent's Discover answer continues the offerer's sequence (B5 E18).
 //!
-//! 1. `offer`: with a card in each hand, the offerer picks one of their own hand cards (a `hand` prompt
-//!    of their own, which opens on the other player's turn as a controller's prompt may, R1279000);
-//! 2. `give`: that card goes to the opponent's hand as theirs, a full hand burning it (C #9's change of
-//!    hands, R12, R317); then the opponent Discovers one of their other hand cards (a `discover` prompt,
-//!    theirs on their own turn), its answer continuing the offerer's sequence (`owner`, B5 E18);
-//! 3. `take`: that card goes to the offerer's hand as theirs, the same way.
-//!
-//! Both prompts are ordinary ones, so `legalActions`, the reducer's refusal, the view, the random policy,
-//! the timeout and the AI answer them as they answer any other.
-//!
-//! R1877001 (#77 Yuma's Radiant Lucky 1): the offer carries the Lucky its card has as it is made
-//! (`lucky_on`, R1438), under `TRADE_OFFER_LUCKY_KEY`, so it holds whatever becomes of the card (R76).
-//! With Lucky X, step 2 draws the Discover's options 1 + X times and keeps the set best for the offerer:
-//! the one whose cheapest card costs most (R65's cost, `effective_cost`), the earlier draw on a tie. A
-//! hand with no more cards than the options draws them once, since every draw offers the same cards.
+//! R1877001: the offer carries its card's Lucky as made (`lucky_on`, R1438); with Lucky X the Discover
+//! draws 1 + X times (R65's cost picks the set), once when the hand holds no more than the options.
 
 use indexmap::IndexMap;
 

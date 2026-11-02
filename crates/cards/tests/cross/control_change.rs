@@ -3,7 +3,6 @@
 //! unit it moves enter its new controller's side on that turn: summoning sick exactly as a unit
 //! summoned that turn is, with Rush and Charge applying as usual, and with a fresh exertion for its
 //! new controller. A unit that only moves between lanes on its own side has entered nothing.
-//!
 //! R172: a stolen unit dies as its controller's: its Death runs for that player (#81, radiant #3)
 //! and a Reborn body comes back on that player's side, sick. Radiant #52 still takes the
 //! opponent's card that crosses onto its side (R14), and a played #52 that crossed onto #85's side
@@ -36,7 +35,6 @@ const SICK: &str = "summoning sick";
 const RUSH_NOT_HERO: &str = "Rush cannot hit the hero";
 const ALREADY_ACTED: &str = "already acted";
 
-/// The harness with every card script registered: the engine's testkit cannot name the cards crate.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -47,7 +45,6 @@ fn backrow_at(g: &Scenario, player: &'static str, lane: i32) -> CardInstance {
         .unwrap_or_else(|| panic!("setup: {player} should hold a backrow card in lane {lane}"))
 }
 
-/// The attacks `legalActions` offers this unit right now, as target ids.
 fn offered_attacks(g: &Scenario, card: &CardInstance) -> Vec<String> {
     let live = g.card(card).clone();
     legal_actions(g.state(), live.controller)
@@ -106,7 +103,6 @@ fn keyword_kinds(g: &Scenario, card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// R171 with the cards that change control
 mod r171_with_the_cards_that_change_control {
     use super::*;
 
@@ -187,7 +183,6 @@ mod r171_with_the_cards_that_change_control {
         g.attack(&duelist, "hero");
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
-        // Exertion resets at its controller's own turn start, so it is still spent on p1's turn.
         assert!(g.card(&duelist).exertion.attacked);
 
         g.play(MIND_CONTROL, json!({ "targets": pick::instance(&duelist) }));
@@ -220,7 +215,6 @@ mod r171_with_the_cards_that_change_control {
         assert!(offers_switch(&g, &switcher));
         g.switch_position(&switcher);
         assert_eq!(g.card(&switcher).position, Some(Position::Atk));
-        // Still sick: the switch was its exertion, and it could not have attacked anyway.
         g.expect_refused_with(|g| g.attack(&switcher, "hero"), ALREADY_ACTED);
     }
 
@@ -240,7 +234,6 @@ mod r171_with_the_cards_that_change_control {
 
         g.end_turn().end_turn();
 
-        // The steal ran at p1's start of turn, after the exertion reset: the headline bug.
         assert_eq!(g.state().active, PlayerId::P1);
         assert_eq!(g.card(&prey).controller, PlayerId::P1);
         expect_entered_now(&g, &prey);
@@ -265,7 +258,6 @@ mod r171_with_the_cards_that_change_control {
         let seven_seven = g.unit_at("p2", 3);
         let vanilla = g.unit_at("p2", 4);
 
-        // Radiant Mrow has Rush: 2 into Armor 7 is nothing, and 7 back kills it, so the 7/7 destroyed it.
         g.attack(&mrow, &seven_seven);
 
         g.expect_in_zone(&mrow, "graveyard");
@@ -273,7 +265,6 @@ mod r171_with_the_cards_that_change_control {
         expect_entered_now(&g, &seven_seven);
         g.expect_refused_with(|g| g.attack(&seven_seven, "hero"), SICK);
         assert_eq!(offered_attacks(&g, &seven_seven), Vec::<String>::new());
-        // The unit that had no part in it stays with p2.
         assert_eq!(g.card(&vanilla).controller, PlayerId::P2);
     }
 
@@ -305,7 +296,6 @@ mod r171_with_the_cards_that_change_control {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         let before = hero_health(&g, PlayerId::P2);
-        // p2's Mr. Vanilla walls nothing (no Taunt), so the 7/7 goes to the hero.
         g.attack(&seven_seven, "hero");
         g.expect_health("p2", before - 7);
     }
@@ -333,14 +323,12 @@ mod r171_with_the_cards_that_change_control {
             expect_entered_now(&g, card);
         }
         assert_eq!(g.card(&trap).controller, PlayerId::P1);
-        // The caster's new units: Charge still charges, anything else waits.
         g.expect_refused_with(|g| g.attack(&seven_seven, "hero"), SICK);
         assert_eq!(offered_attacks(&g, &seven_seven), Vec::<String>::new());
         let before = hero_health(&g, PlayerId::P2);
         g.attack(&duelist, "hero");
         g.expect_health("p2", before - 4);
 
-        // The opponent's new unit entered on p1's turn, so it is ready on p2's.
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P2);
         assert_eq!(g.card(&mine).controller, PlayerId::P2);
@@ -369,7 +357,6 @@ mod r171_with_the_cards_that_change_control {
         let inbound = g.unit_at("p2", 1);
         g.attack(&spent, "hero");
 
-        // Right from p1's seat: p1 lane n → n+1, p1 lane 5 → p2 lane 5, p2 lane 1 → p1 lane 1.
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
 
         assert_eq!(g.card(&inbound).controller, PlayerId::P1);
@@ -378,7 +365,6 @@ mod r171_with_the_cards_that_change_control {
         expect_entered_now(&g, &outbound);
         g.expect_refused_with(|g| g.attack(&inbound, "hero"), SICK);
 
-        // Along its own side: the spent unit is still spent, the ready one still ready.
         assert_eq!(g.card(&spent).summoned_turn, None);
         g.expect_refused_with(|g| g.attack(&spent, "hero"), ALREADY_ACTED);
         assert_eq!(g.card(&ready).summoned_turn, None);
@@ -418,7 +404,6 @@ mod r171_with_the_cards_that_change_control {
         assert_eq!(changed, std::slice::from_ref(&inbound.id));
         assert_eq!(g.card(&inbound).summoned_turn, Some(g.state().turn));
         assert_eq!(offered_attacks(&g, &inbound), Vec::<String>::new());
-        // A card moving along its own side is not marked at all.
         assert_eq!(g.card(&ready).summoned_turn, None);
         assert!(offered_attacks(&g, &ready).contains(&"hero-p2".to_string()));
     }
@@ -456,7 +441,6 @@ mod r171_with_the_cards_that_change_control {
         let fresh = g.unit_at("p1", 1);
         g.play(MIND_CONTROL, json!({ "targets": pick::instance(&prey) }));
 
-        // Both entered p1's side this turn, and the aura's Rush lets both attack a unit.
         for unit in [&fresh, &prey] {
             expect_entered_now(&g, unit);
             assert!(keyword_kinds(&g, unit).contains(&"Rush".to_string()));
@@ -566,7 +550,6 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
             "{:?} should match {{ owner: \"p1\" }}",
             died[0]
         );
-        // Death: "Make your other Units Radiant" — "your" is the thief.
         assert!(g.card(&mine).radiant);
         assert!(!g.card(&theirs).radiant);
         // She died on the thief's side, so she is the thief's card in the thief's graveyard (R2618000).
@@ -604,7 +587,6 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
         g.play(MIND_CONTROL, json!({ "targets": pick::instance(&defender) }));
         g.end_turn();
 
-        // p2 breaks the shield, then kills it: it dies as p1's.
         g.attack(&first, &defender);
         g.attack(&second, &defender);
 
@@ -632,9 +614,6 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
     #[test]
     fn r61_r77_unlicensed_experimentation_fuses_a_played_silly_silas_that_crossed_to_its_side_onto_its_controllers_other_unit_never_onto_silas_himself_s8_c85()
      {
-        // Seed chosen so that, with the played card wrongly among the candidates, the random pick lands
-        // on Silas himself: the trap then fires, is consumed and fuses nothing although Pointmaster was
-        // a legal target all along.
         let mut g = setup(json!({
             "seed": "ue-self-0",
             "p1": { "hand": [SILAS, VANILLA], "library": LIBRARY },
@@ -653,8 +632,7 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
         g.play(&silas, json!({ "zone": 5, "modes": ["right"] }));
 
         // p2's trap answers p1's played Unit (R17): "Fuse it onto a random permanent of yours of that
-        // type". "It" is the played card, so the permanent it is fused onto is another one: the only
-        // candidate is Pointmaster, and the fusion happens.
+        // type".
         assert!(
             g.events()
                 .iter()
@@ -676,7 +654,6 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
     }
 }
 
-/// R14: radiant Silly Silas bounces only the cards that would move to the opponent
 mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_opponent {
     use super::*;
 
@@ -689,10 +666,9 @@ mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_oppone
         }));
         let inbound = g.unit_at("p2", 1);
 
-        // Right from p1's seat: p2's lane 1 steps to p1's lane 1. That card moves to p1, not "to the
-        // opponent", so the radiant clause does not touch it and the base clause keeps it: it crosses
-        // and changes control (§8 Conventions: every base clause the radiant cell does not restate is
-        // kept), entering p1's side this turn (R171).
+        // That card moves to p1, not "to the opponent", so the radiant clause does not touch it and the base
+        // clause keeps it: it crosses and changes control (§8 Conventions: every base clause the radiant cell
+        // does not restate is kept), entering p1's side this turn (R171).
         g.play(SILAS, json!({ "zone": 3, "modes": ["right"] }));
 
         assert_eq!(g.unit("p1", 1).map(|c| c.id), Some(inbound.id.clone()));

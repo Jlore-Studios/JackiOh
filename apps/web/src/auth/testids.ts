@@ -1,10 +1,6 @@
-// Every `data-testid` the sign-in, reset, invite, landing and shell screens render, in one plain
-// TypeScript module so the Cypress `.ts` specs can import the same names the components use.
-//
-// PLAIN DATA ONLY. No React, no DOM, no import from the rest of `src`: `e2e/` compiles this file on
-// its own, and anything more than string literals would drag the client into the Cypress bundle.
-// The literal is fixed by docs/polish/5-sign-in.md ("Test ids"); a rename here is a rename in every
-// spec that reads it.
+// Every `data-testid` the auth, landing and shell screens render, shared with the Cypress specs. PLAIN
+// DATA ONLY, no import: `e2e/` compiles this file on its own. The literals are fixed by
+// docs/polish/5-sign-in.md ("Test ids"); a rename here is a rename in every spec that reads it.
 
 export const landingTestid = {
   root: "landing",
@@ -14,7 +10,6 @@ export const landingTestid = {
   play: "landing-play",
   /** #1307: the collection screen. */
   collection: "landing-collection",
-  /** #1577: the Shop door, to the shop. */
   shop: "landing-shop",
   /** R2035000: the quests bookmark on the doors' box, its count and its parchment. */
   questsBookmark: "landing-quests-bookmark",
@@ -33,7 +28,6 @@ export const landingTestid = {
   showcaseFx: "landing-showcase-fx",
 } as const;
 
-/** `landing-fan-card-${index}`, 0..4. */
 export function landingFanCardTestid(index: number): string {
   return `landing-fan-card-${String(index)}`;
 }
@@ -141,7 +135,6 @@ export const codeFieldTestid = {
   hint: "code-field-hint",
 } as const;
 
-/** `code-field-segment-${index}`. */
 export function codeFieldSegmentTestid(index: number): string {
   return `code-field-segment-${String(index)}`;
 }
@@ -164,12 +157,10 @@ export const consentTestid = {
   birthMonth: "consent-birth-month",
   birthYear: "consent-birth-year",
   birthError: "consent-birth-error",
-  /** The checkbox itself. */
   agree: "consent-agree",
   /** The box and its sentence (on the sign-up form, `signUpPrivacyTestid` instead). */
   agreeLine: "consent-agree-line",
   agreeError: "consent-agree-error",
-  /** The neutral refusal shown in place of the form. */
   refused: "consent-refused",
   prompt: "consent-prompt",
   /** The terms changed since the account last agreed to them. */
@@ -190,7 +181,6 @@ export const shellTestid = {
   loadFailed: "load-failed",
   reload: "load-failed-reload",
   loadFailedHome: "load-failed-home",
-  /** #778: the panel a screen that calls the engine waits in while its module loads. */
   engineLoading: "engine-loading",
   /** #778: the engine's module did not load; the panel's retry is `retry`. */
   engineFailed: "engine-failed",

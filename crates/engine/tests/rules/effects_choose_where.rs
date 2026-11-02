@@ -1,9 +1,5 @@
-//! §10.6 A target prompt narrowed by a card's own condition — `chooseTargetWhere`
-//! (effects/chooseWhere.ts), the prompt Classic #32 Felinor Feelings' Radiant face asks after its token
-//! lands. The real card's test (packages/cards/test/classic/032-felinor-feelings.test.ts) covers the
-//! same cases again through the card.
-//!
-//! Port of `packages/engine/test/effects-choose-where.test.ts`.
+//! §10.6 A target prompt narrowed by a card's own condition — `chooseTargetWhere`, the prompt
+//! Classic #32 Felinor Feelings' Radiant face asks after its token lands.
 
 use jackioh_engine::effects::{ChooseTargetWhereArgs, choose_target_where};
 use std::sync::Arc;
@@ -12,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{new_game, put, slot};
 
-/// TS `run(state, effect)`: the effect applied for p1 on a fresh sink over `state`; its events.
+/// The effect applied for p1 on a fresh sink over `state`; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);

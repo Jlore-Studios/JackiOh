@@ -1,9 +1,7 @@
-// Meditative+ batch 07 (issue #1185): the engine systems M+ #1.1 Base Camp, #21 Harmony Spirit and #24
-// Bob are written with, each through a fixture script (`fixtures/mplus_b07.rs`) before a card uses it:
-// R1185001's play count raised (`raise_times_played`), R1185002's set stats (`set_stats_all`) and the
-// `chinese` rider on `fill_board`, R1185003's card on the field taken into a hand (`take_to_hand`,
-// `ownership::take_into_hand`), and R1185004's draw that fills the hand with copies (`draw_priced`'s
-// `fillWithCopies`).
+// Meditative+ batch 07 (issue #1185): the engine systems of M+ #1.1 Base Camp, #21 Harmony Spirit and
+// #24 Bob, each through a fixture script: R1185001's play count raised (`raise_times_played`),
+// R1185002's set stats (`set_stats_all`) and `fill_board`'s `chinese` rider, R1185003's card on the
+// field taken into a hand (`take_to_hand`), and R1185004's draw that fills the hand with copies.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

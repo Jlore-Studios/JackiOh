@@ -1,12 +1,9 @@
 //! SPEC §8.11 Training Grounds 2 Personal Trainer: (1) Unit, Human, Common, 3/2 → 6/4, a card of the held
 //! Training Grounds set (R1420, R2194000).
-//!
 //! Base:    "Cry: Give one of your other Humans +2/+2."
 //! Radiant: "Cry: Give one of your other Humans +4/+4."
-//! Engine: C+ #57 Book of Stats' shape: one declared target, a Unit of your own with the Human tag (a
-//! granted tag counts, R923), aimed to help (R656), then a permanent `buff` (§10.4 layer 4). The pick is
-//! made while the Trainer is still in hand (R81, R90), so neither face can pick the Trainer itself
-//! (R2196000); with no other Human of yours the Cry fizzles and the Trainer still enters (R90).
+//! Friendly Human target (granted tag counts, R923; Help aim, R656; §10.4 layer 4 buff).
+//! Pick made in hand (R81, R90; R2196000 cannot pick itself); with no target Cry fizzles and unit enters (R90; C+ #57).
 
 use jackioh_engine::effects::buff;
 use jackioh_engine::prelude::*;
@@ -34,11 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #2 Personal Trainer — SPEC §8.11 row 2, BUILD M13 row TG 2: "base: played with another friendly Human
-// chosen, that Human gets +2/+2 permanently (one `buffed` event); an enemy Human and a friendly non-Human
-// are not legal picks; with no other friendly Human it can be played, the Cry fizzles, the Trainer enters
-// 3/2; a Unit given the Human tag is a legal pick (R923); the buff reads `param("buff")` (a test that
-// tunes it). radiant 6/4; the chosen friendly Human gets +4/+4; it cannot pick itself (TG-P3-1)".
+// TG #2 Personal Trainer — SPEC §8.11 row 2, BUILD M13 row TG 2 (TG-P3-1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

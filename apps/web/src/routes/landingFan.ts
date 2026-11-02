@@ -1,7 +1,6 @@
 // R374 deals real, non-token Core cards into four rarities in random order, with the middle Radiant.
 // Randomness is client-owned (CLAUDE.md rule 4) and injected so tests can deal deterministically.
-// R1017002 deals only the cards that print whole on a fan card, a full-art card favored (R2655001: any
-// card the cosmetics registry has a full art of).
+// R1017002 deals only the cards that print whole on a fan card, a full-art card (R2655001) favored.
 
 import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh/shared";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -29,10 +28,8 @@ export const FAN_RADIANT_AT = 2;
 export const FAN_CARD_MAX_PX = 158;
 
 /**
- * R1017002: the most text a fan card prints whole, measured in Chromium on every catalog face. At
- * FAN_CARD_MAX_PX the rules box prints at the reading floor and holds 5 lines of about 25
- * characters before the art would give way (issue #1017's long layout); a narrower fan card only
- * shrinks its text. `faceLines` wraps by words to count, as for FACE_TEXT_LIMIT.
+ * R1017002: the most text a fan card prints whole at FAN_CARD_MAX_PX and the reading floor before the art
+ * gives way (issue #1017's long layout), measured in Chromium on every catalog face.
  */
 export const FAN_TEXT_LIMIT: TextLimit = { charsPerLine: 25, lines: 5 };
 
@@ -48,10 +45,8 @@ export const ROTATION_POOL: readonly CardDef[] = Object.values(CATALOG).filter(
 );
 
 /**
- * R1017002: whether both of `def`'s faces print whole on a fan card without the long layout: a
- * full-art face prints no words, and any other face its whole catalog text, with no short
- * form (issue #1017), within FAN_TEXT_LIMIT. With the Full-art cards setting off, a full-art card is
- * held to its text like any card.
+ * R1017002: whether both of `def`'s faces print whole on a fan card: a full-art face prints no words,
+ * any other its whole catalog text, with no short form, within FAN_TEXT_LIMIT.
  */
 export function fitsTheFan(def: CardDef, fullArtOn: boolean): boolean {
   return [false, true].every((radiant) => {
@@ -106,10 +101,10 @@ export const EVEN: CardWeight = () => 1;
 const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 3, xxl: 4 };
 
 /**
- * R639 favors faces whose name and rules text print at the largest size, but never excludes dense
- * cards. A full-art card counts as one (R1017002, R2655001): in the fan it prints its art and no words, and with
- * full art off it is dealt only when its text fits the fan. A Training Grounds Legacy card of one is
- * named apart (R2511000) and prints its words, so it does not.
+ * R639 favors faces whose name and rules text print at the largest size, never excluding dense cards.
+ * A full-art card counts as one (R1017002, R2655001): it prints art and no words, and with full art off it
+ * is dealt only when its text fits. A Training Grounds Legacy card of one is named apart (R2511000) and
+ * prints its words, so it does not.
  */
 export function featureWeight(def: CardDef): number {
   const known = WEIGHTS.get(def.id);

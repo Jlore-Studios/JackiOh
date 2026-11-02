@@ -1,14 +1,9 @@
-// Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
-// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, a
-// `PointerEvent` that keeps `pointerType`, and the engine, and an empty read cache before each test
-// (R2125000: a test never starts on another's kept answers). A test imports from here the switches
-// for the page's state (`setReducedMotion`, `setVisibility`) and `readSheet`, a stylesheet as text.
-//
-// The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
-// (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
-// does, so its bytes are read from disk here and instantiated before any test file is imported
-// (`scripts/build-wasm.sh`, which `pretest` runs, writes them). Every test then reaches the engine
-// synchronously, as the page does after `main.tsx` has awaited `loadWasm()`.
+// Vitest setup. jsdom lacks `matchMedia`, which the animation table needs (BUILD M5-T4); each test
+// starts on an empty read cache (R2125000: never on another's kept answers). The Rust engine
+// (docs/v0.3.0/SURFACE.md §10.3) loads synchronously from the bytes `scripts/build-wasm.sh` (run by
+// `pretest`) writes, as jsdom cannot fetch a file URL, before any test file is imported. A test imports
+// from here the page-state switches (`setReducedMotion`, `setVisibility`) and `readSheet` (a stylesheet
+// as text).
 
 import "@testing-library/jest-dom/vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -19,8 +14,8 @@ import { beforeEach } from "vitest";
 import { clearReadCache } from "../net/readCache.ts";
 import { loadWasmSync } from "../wasm/index.ts";
 
-// A path, not `new URL("../wasm/pkg/…", import.meta.url)`: Vite rewrites that literal pattern into an
-// asset URL against the page's origin, which `readFileSync` refuses ("The URL must be of scheme file").
+// A path, not `new URL(…, import.meta.url)`: Vite rewrites that into an asset URL against the page's
+// origin, which `readFileSync` refuses.
 loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
 
 let reducedMotion = false;
@@ -77,9 +72,8 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
   });
 }
 
-// jsdom's `window.scrollTo` only logs "Not implemented" on the console, and `navigate` scrolls every
-// new screen to the top (#1756), so each test that follows a link would log it. `net/navigate.test.ts`
-// spies on this no-op.
+// jsdom's `window.scrollTo` logs "Not implemented", and `navigate` scrolls each new screen to the top
+// (#1756). `net/navigate.test.ts` spies on this no-op.
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "scrollTo", { configurable: true, writable: true, value: () => {} });
 }

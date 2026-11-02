@@ -47,21 +47,13 @@ import { preferReducedMotion } from "../../support/tutorial.ts";
 /** The seed the replay, reload and save games below derive theirs from (`${SEED}:replay`, …). */
 const SEED = seedFor("13-practice-t");
 
-/**
- * BUILD M8 seed keeps the Easy game alive for four human turns despite R635's cost-bucket deal. Patch
- * v0.3.10's costs dealt `SEED`'s Easy game a deck that kills the passive human on turn 7, so this game
- * has its own: on `13-practice-z` the human lived until turn 11, and AI gen 13 (learn) kills it on turn 9.
- */
+/** `SEED`'s Easy deal (R635's cost buckets) kills the passive human on turn 7, so this game has its own. */
 const EASY_SEED = seedFor("13-practice-z");
 
 /** The Hard seed yields an observable first AI turn. */
 const HARD_SEED = `${seedFor("13-practice")}:hard`;
 
-/**
- * The human turns the Easy game ends after its first, before the log and the concede. The passive
- * human must outlive every AI a training lane promotes, and a stronger one kills it sooner, so the
- * game plays only the turns its checks need (R745's own proof is `Log.test.tsx`).
- */
+/** Few human turns: the passive human must outlive any AI a training lane promotes (R745: `Log.test.tsx`). */
 const HUMAN_TURNS = 1;
 
 /** The worker loads engine, card scripts, and AI before its first answer. */
@@ -184,8 +176,7 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
 // Drive the page.
 
 function practiceUrl(seed: string, difficulty: Difficulty, seat: PlayerId): string {
-  // Issue #1113: the seeded games deal the AI from the frozen fixture pool, so a shadow-ban
-  // change re-deals none of them. The frozen pool copies the table as it stood when they were dealt.
+  // Issue #1113: seeded games deal the AI from the frozen fixture pool, so a shadow-ban change re-deals none.
   const params = new URLSearchParams({ seed, difficulty, deck: "random", seat, pace: "fast", aipool: "fixture" });
   return `/practice?${params.toString()}`;
 }
@@ -270,7 +261,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
     cy.get(ts(PRACTICE_SETUP)).should("not.exist");
 
-    // R265: the AI answers its mulligan while the human picker remains open.
     cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(promptOf("mulligan"))
       .find(ts(MULLIGAN_OPPONENT_READY), { timeout: timeouts.view })
@@ -374,13 +364,11 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.concede();
     cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
 
-    // Watch the replay: step 0, a step forward and back, and Back returns to the dialog.
     cy.get(ts(PRACTICE_WATCH_REPLAY)).click();
     stepForwardAndBack();
     cy.get(ts(REPLAY_BACK)).click();
     cy.get(ts(PRACTICE_RESULT)).should("be.visible");
 
-    // Share the last turn: the last step, its turn's GIF made and downloaded; then leave.
     cy.get(ts(PRACTICE_SHARE_LAST_TURN)).click();
     expectLastTurnGif();
     cy.get(ts(REPLAY_BACK)).click();

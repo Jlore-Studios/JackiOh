@@ -1,8 +1,7 @@
-// The Almanac and the deck builder with the Training Grounds set previewed (issue #2202, R2202001), as
-// almanac-preview-stinkyscape.test.tsx previews Stinkyscape: `@jackioh/shared` is mocked so that
-// `SHIPPED_SETS` lists the set the day before its release (#2204) does, and every pool and mark that
-// follows what ships (R1380, R1381) shows it, in the set's own art (R2202000). The mock keeps the list
-// free of repeats, so it stays valid once the release lists the set itself.
+// The Almanac and the deck builder with the Training Grounds set previewed (#2202, R2202001):
+// `@jackioh/shared` is mocked so `SHIPPED_SETS` lists the set as its release (#2204) does, and every
+// pool and mark that follows what ships (R1380, R1381) shows it, in the set's own art (R2202000). The
+// mock keeps the list free of repeats, so it stays valid once the release lists the set itself.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,8 +18,8 @@ vi.mock("@jackioh/shared", async (importOriginal) => {
     newestShippedSet: (): SetName => "Training Grounds",
   };
 });
-// The Almanac's shelf (`shelf.ts`) reads the wire module itself, without the client's aliases, so the
-// static `/almanac` page can import it: the same preview goes there too.
+// The shelf (`shelf.ts`) reads the wire module without the client's aliases, for the static `/almanac`
+// page, so the same preview goes there too.
 vi.mock("../wire/catalog.ts", async (importOriginal) => {
   const real = await importOriginal<typeof import("../wire/catalog.ts")>();
   const shipped: readonly SetName[] = [...new Set<SetName>([...real.SHIPPED_SETS, "Training Grounds"])];

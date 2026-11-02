@@ -1,7 +1,5 @@
 //! Random pools and the draws they take (SPEC §5.1, §10.7, R60, R129). Found by the polish-4
-//! edge-case hunt, round 4 (docs/polish/4-edge-cases.md, lens "card by card"); every case here failed
-//! before its fix.
-//!
+//! edge-case hunt, round 4 (docs/polish/4-edge-cases.md, lens "card by card").
 //!  - §5.1: a random pool never offers the card that generated it, unless the card names the pool
 //!    itself. #95's "add 3 random cards" named no pool; and a card's own exclusion (§8 #54's "pool
 //!    excluding #54") holds when a fused card runs that text, whose own definition is a transient id.
@@ -32,7 +30,6 @@ const CALL_TO_CHAOS: &str = "core-095";
 const ZEPHYRS: &str = "core-097";
 const CRAFT: &str = "core-099";
 
-/// The def ids of the `addedToHand` events among `events`.
 fn added_to_hand(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -43,7 +40,6 @@ fn added_to_hand(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// The `(defId, row)` of the `summoned` events among `events`.
 fn summoned(events: &[GameEvent]) -> Vec<(String, Row)> {
     events
         .iter()
@@ -54,7 +50,6 @@ fn summoned(events: &[GameEvent]) -> Vec<(String, Row)> {
         .collect()
 }
 
-/// The name of the first Call to Chaos effect the rng rolls at `cursor` of `seed` (base face).
 fn chaos_roll(seed: &str, cursor: u32) -> Option<String> {
     subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
         .first()
@@ -98,7 +93,6 @@ mod s5_1_a_random_pool_never_offers_the_card_that_generated_it {
     {
         register_all();
         // Craft a Card's result for #54 Straaza and #56 Jilliax (a keyword-only body), made directly (R77):
-        // the test is about the fused card, not about which two Discover offers the pools of every set
         // (R380) make. The seed is arbitrary: the cursor is set before the play, whatever the fuse drew.
         const SEED: &str = "craft-straaza";
         let mut added: Vec<String> = Vec::new();
@@ -135,7 +129,6 @@ mod r129_an_effect_that_finds_nothing_to_do_draws_no_random_numbers {
             }));
             let before = s.state().rng_cursor;
             s.play(DREAM, json!({}));
-            // Nothing is left in the hand, so "a random card in your hand becomes Radiant" finds nothing.
             assert_eq!(s.hand(PlayerId::P1).len(), 0);
             assert_eq!(s.state().rng_cursor, before);
         }
@@ -151,8 +144,6 @@ mod r129_an_effect_that_finds_nothing_to_do_draws_no_random_numbers {
         let menace = s.unit(PlayerId::P1, 1).map(|card| card.id.clone());
         let before = s.state().rng_cursor;
         s.play(TRANSMOGULATE, json!({}));
-        // The Menace is Immutable and the hand, library, graveyard and exile are empty: nothing is
-        // replaced, so the effect found nothing to do.
         assert_eq!(s.unit(PlayerId::P1, 1).map(|card| card.id.clone()), menace);
         assert_eq!(s.state().rng_cursor, before);
     }
@@ -191,7 +182,6 @@ mod r129_an_effect_that_finds_nothing_to_do_draws_no_random_numbers {
     fn r129_call_to_chaos_s_summon_3_random_3_cost_units_into_a_full_unit_row_draws_no_randomness_past_the_roll_r64()
      {
         register_all();
-        // The seed is arbitrary: the cursor is searched for the roll that summons Units.
         const SEED: &str = "chaos-full-row";
         // R2248000: a Flying Unit of the pool would stand in an open backrow zone, so it is full too.
         let backrow = vec![json!({ "def": TRAP, "faceUp": false }); 5];
@@ -264,7 +254,6 @@ mod s10_7_the_zephyrs_scorer_s_lethal_available {
             subsystems::ScorePriority::Lethal
         );
 
-        // And on an open board with room it is lethal, which is what the priority is for.
         let open = scenario(json!({ "p1": { "hand": [ZEPHYRS], "mana": 4 }, "p2": { "health": 3 } }));
         assert_eq!(
             subsystems::score_def(
@@ -293,14 +282,9 @@ mod seed_search_survives_a_pool_change {
     const SURGERY: &str = "core-063";
     const TWISTED_SORCERER: &str = "core-068";
     const RUSH_TOKEN: &str = "core-t-rush";
-    /// Core #1 Big D: a Unit no converted test names, first in every Unit pool, so removing it moves
-    /// the picks a pool of Units makes.
     const UNINVOLVED_UNIT: &str = "core-001";
-    /// How many seeds' first Discover the test compares across the two catalogs.
     const SEEDS_COMPARED: usize = 50;
 
-    /// Back to the production catalog when it drops, so a failure mid-test cannot leak the changed
-    /// pool (a thread-local override) onto whatever test runs next on this thread.
     struct ClearOnDrop;
     impl Drop for ClearOnDrop {
         fn drop(&mut self) {
@@ -308,7 +292,6 @@ mod seed_search_survives_a_pool_change {
         }
     }
 
-    /// The def ids the open Discover offers.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = serde_json::to_value(s.state().pending.as_ref()).unwrap_or_default();
         pending["options"]
@@ -320,7 +303,6 @@ mod seed_search_survives_a_pool_change {
             .collect()
     }
 
-    /// What Craft a Card's first Discover offers under each of the seeds, on the catalog registered now.
     fn first_offers() -> Vec<Vec<String>> {
         (0..SEEDS_COMPARED)
             .map(|n| {
@@ -341,13 +323,10 @@ mod seed_search_survives_a_pool_change {
         let _clear = ClearOnDrop;
         let shipped = first_offers();
 
-        // The shipped catalog with one uninvolved Unit removed: a pool that changed.
         let mut defs = (*jackioh_cards::CATALOG).clone();
         assert!(defs.shift_remove(UNINVOLVED_UNIT).is_some());
         register_catalog(defs);
 
-        // A seed pinned for what Craft a Card's Discover offers (what the old tests answered by name)
-        // stops offering it: most seeds' first Discover is not the one it was.
         let changed = first_offers();
         let moved = shipped
             .iter()
@@ -386,8 +365,8 @@ mod seed_search_survives_a_pool_change {
         assert_eq!(s.card(&panther.id).zone.z().as_str(), "graveyard");
         assert_eq!(s.state().players.p2.hero.health, 26);
 
-        // The converted Reborn position searches for its seed. Plastic Surgery's pool is
-        // `RANDOM_KEYWORD_POOL` (R21), which no catalog change moves, so this part holds either way.
+        // Plastic Surgery's pool is `RANDOM_KEYWORD_POOL` (R21), which no catalog change moves, so this part
+        // holds either way.
         let setup = |seed: &str| {
             let s = scenario(json!({
                 "seed": seed,

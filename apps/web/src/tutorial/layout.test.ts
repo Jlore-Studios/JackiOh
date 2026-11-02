@@ -1,7 +1,5 @@
-// Where the floating coach bubble goes (tutorial/layout.ts, R2434003): docked to a corner of the
-// viewport, never in the middle of the board, inside the viewport and below the HUD, and off its
-// anchor whenever a corner is clear of it. On a phone the coach does not float (it is a panel in the
-// page, Coach.test.tsx), so nothing here places a bubble on a phone's screen.
+// Where the floating coach bubble goes (tutorial/layout.ts, R2434003). On a phone the coach does not
+// float (it is a panel in the page, Coach.test.tsx), so nothing here places a bubble on a phone's screen.
 
 import { describe, expect, it } from "vitest";
 

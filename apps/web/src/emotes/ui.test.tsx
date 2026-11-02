@@ -52,7 +52,6 @@ describe("R644 EmoteShow", () => {
     expect(bubble).toHaveClass("emote-bubble");
     expect(bubble).toHaveTextContent("Hey there, friend! Feeling lucky?");
     expect(bubble).toHaveAttribute("role", "status");
-    // A voice show is a bubble, not a sticker: no emoji marker, and its span rides --emote-hold.
     expect(bubble).not.toHaveAttribute("data-emoji");
     expect(bubble.style.getPropertyValue("--emote-hold")).toMatch(/^\d+ms$/);
   });
@@ -75,13 +74,11 @@ describe("R643 R1343 the emote picker", () => {
 
     const items = screen.getAllByRole("menuitem");
     expect(items).toHaveLength(EMOTE_HAND_SIZE);
-    // In the hand's own (the pool's) order, the lines first, then the emoji.
     expect(items.map((item) => item.dataset.testid)).toEqual(HAND.map((emote) => `emote-${emote}`));
     const arc = screen.getByTestId("emote-menu").querySelector(".emote-voice-arc");
     const row = screen.getByTestId("emote-menu").querySelector(".emote-emoji-row");
     expect(arc?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_VOICE);
     expect(row?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE);
-    // The voice items are labeled by name; the emoji carry their title/aria label and a sticker.
     for (const label of ["Greetings", "Thanks", "Threaten"]) {
       expect(screen.getByRole("menuitem", { name: label })).toBeInTheDocument();
     }
@@ -89,7 +86,6 @@ describe("R643 R1343 the emote picker", () => {
       const item = screen.getByRole("menuitem", { name: EMOJI_LABEL[emote as keyof typeof EMOJI_LABEL] });
       expect(item.querySelector("svg.emote-emoji-svg")).not.toBeNull();
     }
-    // Nothing of the pool outside the hand is offered.
     for (const emote of EMOTE_IDS.filter((id) => !HAND.includes(id))) {
       expect(screen.queryByTestId(`emote-${emote}`), emote).toBeNull();
     }
@@ -133,7 +129,6 @@ describe("R643 R1343 the emote picker", () => {
     expect(waits).toHaveLength(EMOTE_HAND_SIZE);
     expect(waits[0]).toHaveTextContent("3");
 
-    // The press is still guarded: a limited menu reports nothing and stays open.
     fireEvent.click(screen.getByTestId("emote-threaten"));
     expect(onPick).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
@@ -278,10 +273,8 @@ describe("R2127000 Back closes the portrait's emote menus", () => {
   });
 });
 
-// #219: jsdom has no layout engine, so what the slide does to a real rect is pinned on `menuShift`
-// and the stylesheet's own text; the rendered menu proves the hook writes the variable and keeps
-// it across an effect replay. The measurements themselves (emoji and label sizes, 44px targets,
-// menus and bubble on screen) are e2e/cypress/component/emotes-layout.cy.tsx's, in Chrome.
+// #219: jsdom has no layout engine, so the slide is pinned on `menuShift` and the stylesheet's own
+// text; the measurements themselves are e2e/cypress/component/emotes-layout.cy.tsx's, in Chrome.
 describe("#219 menuShift, the slide that keeps a menu on the screen", () => {
   it("#219 shifts right by what pokes out on the left, left by what pokes out on the right, nothing when it fits", () => {
     // The fixture board at 360px puts your portrait at the screen's left edge: a 320px menu
@@ -289,7 +282,6 @@ describe("#219 menuShift, the slide that keeps a menu on the screen", () => {
     expect(menuShift({ left: -131, right: 189 }, 360, EMOTE_MENU_EDGE_PX)).toBe(139);
     expect(menuShift({ left: 300, right: 420 }, 360, EMOTE_MENU_EDGE_PX)).toBe(-68);
     expect(menuShift({ left: 20, right: 300 }, 360, EMOTE_MENU_EDGE_PX)).toBe(0);
-    // Exactly at the margin is still on the screen.
     expect(menuShift({ left: EMOTE_MENU_EDGE_PX, right: 352 }, 360, EMOTE_MENU_EDGE_PX)).toBe(0);
   });
 
@@ -329,10 +321,9 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
   });
 
   it("#219 a StrictMode replay — dev's second layout-effect run — keeps the shift, it does not cancel it", () => {
-    // jsdom has no layout, so the stub plays the layout engine: the centered rect plus whatever
-    // --emote-menu-shift the element already carries, what a real getBoundingClientRect reports
-    // once the transform applies. main.tsx mounts the app under StrictMode, so in dev the hook's
-    // effect runs twice — a second run that took the slid rect for centered would write 0 back.
+    // The stub plays the layout engine: the centered rect plus whatever --emote-menu-shift the
+    // element already carries. Under StrictMode (main.tsx) the hook's effect runs twice in dev, and a
+    // second run that took the slid rect for centered would write 0 back.
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
       const applied = Number.parseFloat(this.style.getPropertyValue("--emote-menu-shift")) || 0;
       return rect(-131 + applied, 189 + applied, 320);
@@ -412,8 +403,7 @@ describe("#219 each voice item carries its arc drop as the --emote-arc-drop the 
   });
 });
 
-// R1345: MN03's fourteen emoji are stickers like the five — inline SVG and no words, each with its
-// own accessible name, and still under Reduce Motion but for the fade.
+// R1345: MN03's fourteen emoji are stickers: inline SVG, no words, each with its own accessible name.
 describe("R1345 every emoji of the pool is an inline sticker with its own name", () => {
   it("R1345 each draws one emote-emoji-svg, hidden from the accessibility tree, with no <text> in it", () => {
     for (const emote of EMOJI_EMOTE_IDS) {
@@ -494,11 +484,9 @@ describe("R1345 every emoji of the pool is an inline sticker with its own name",
 });
 
 // #257: a hero that is not a target is drawn at 0.9 opacity (board.css), which makes it a stacking
-// context, so the show's and the menus' z-indexes counted only inside it: the field, which follows
-// the opponent's seat in the document, painted over their bubble, sticker and Mute menu. The sheet
-// lifts the hero and its seat while a piece is up, and draws the hero at full strength. Whether
-// anything still covers a piece takes a layout engine (emotes-layout.cy.tsx); what the sheets pin is
-// the lift itself, and that it stays under every overlay the issue keeps above an emote.
+// context, so the field painted over the opponent's bubble, sticker and Mute menu. The sheet lifts the
+// hero and its seat while a piece is up; the sheets pin the lift, and that it stays under every
+// overlay the issue keeps above an emote (what still covers a piece is emotes-layout.cy.tsx's).
 function sheet(path: string): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), path), "utf8");
 }

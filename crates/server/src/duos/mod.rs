@@ -1,20 +1,9 @@
 //! Duos co-op (#936, #946; fullsend SPEC S6, B33–B42): two people against an AI team, as two 1v1
 //! duels side by side (the engine's `DuosState` wrapper), served by its own rooms, its own socket
-//! (`/ws/duos`) and one actor per match.
+//! (`/ws/duos`) and one actor per match (`registry`, `protocol`, `engine`, `store`).
 //!
-//! - `rooms`: the HTTP routes: make, read, join and free a room, and the caller's live co-op match.
-//! - `again`: Play again after a finished match: the two seats' offers and the game they make
-//!   (R2092000).
-//! - `replay`: a finished match's steps as the caller's seat saw them (B41).
-//! - `ws`: the socket's authentication and hello, before the actor takes it (B35).
-//! - `actor`: the match itself: the state, the log, the clocks, the AI's seats and the pings
-//!   (B35–B40). `registry`: the live actors, and a crashed one folded back (B40).
-//! - `protocol`: every `/ws/duos` frame. `engine`: the one path to the engine's Duos API and the
-//!   decks a match is dealt. `store`: the three tables of migration 0039.
-//!
-//! The upgrade is `actor::ws_server::handle_duos` and the routes are `app::ROUTES`' co-op block.
-//! Nothing here touches a 1v1 match: a co-op match sets no profile's in-match flag, writes no
-//! results row and moves no rating (S6: co-op games are unranked). Its result pays both people
+//! Submodules: `rooms` (HTTP routes), `again` (R2092000), `replay` (B41), `ws` (B35), `actor` (B35–B40).
+//! Nothing touches a 1v1 match (S6: co-op games are unranked). Its result pays both people
 //! through the reward hook (`finish_match`, [[R1502000]]).
 
 pub mod actor;
@@ -87,11 +76,9 @@ pub fn ceiling_draw() -> DuosResult {
     }
 }
 
-/// B40, §14.8, [[R1502000]]: writes `result` and `ended_at` once (`duos_matches_finish`); the write
-/// that lands pays both people in the same transaction while `ECONOMY_LIVE` is on ([[R1302006]]), so
-/// a payout failure rolls the result back. A game a void ended pays nothing, as a voided 1v1 match
-/// does not ([[R679]]). `None`, paying nothing, when the match already had its result; else what it
-/// paid each person, by `HUMAN_SEATS` (#1657), `None` for both when it paid nothing.
+/// B40, §14.8, [[R1502000]]: writes `result` and `ended_at` once; the write pays both people in the
+/// same transaction when `ECONOMY_LIVE` is on ([[R1302006]]), rolling back on failure. Void pays
+/// nothing ([[R679]]). Paid each person by `HUMAN_SEATS` (#1657), or None.
 pub async fn finish_match(
     t: &mut Tx<'_>,
     app: &App,
@@ -109,12 +96,9 @@ pub async fn finish_match(
     Ok(Some([None, None]))
 }
 
-/// R1483000: whether the daily Jlore cap held back each person's pay for the finished co-op
-/// match `match_id`, by `HUMAN_SEATS`. Read off the ledger after the write, so a fresh result, a
-/// repeat of it and an actor rebuilt on the finished match all answer alike: a seat's pay was held
-/// back when its `game` row for the match is below `GameMode::Coop`'s rate for its result and its
-/// UTC day has reached `JLORE_GAMES_DAILY_CAP`. A voided game pays nothing (`finish_match` skips
-/// it). A bot's side is never paid (`pay_coop` pays people only), so there is no bot row to skip.
+/// R1483000: whether the daily Jlore cap held back each person's pay for finished match `match_id`,
+/// by `HUMAN_SEATS`. Held back when the `game` row is below `GameMode::Coop`'s rate and UTC day has
+/// reached `JLORE_GAMES_DAILY_CAP`.
 pub async fn duos_game_jlore_caps(app: &App, match_id: &str) -> StoreResult<[bool; 2]> {
     let none = [false, false];
     if !app.economy_live {
@@ -219,11 +203,9 @@ fn seat_moves(log: &[DuosActionRow], seat: DuosSeat) -> (i64, i64) {
     (moves, attacks)
 }
 
-/// R1047001: a live match no actor can be folded back for, once it is past its ceiling (R1047000), ends
-/// as the ceiling's draw with the result the actor would have written, which frees both people as the
-/// 1v1 reaper frees a stuck match's (§9.5). `duos_matches_finish` writes once and the first writer
-/// stands, so an actor racing this sweep to the same result leaves one. Before the ceiling nothing
-/// is written and the next sweep folds the match back again.
+/// R1047001: an abandoned live match past its ceiling (R1047000) ends as the ceiling's draw (§9.5).
+/// `duos_matches_finish` writes once; before the ceiling nothing is written and the next sweep
+/// folds the match back again.
 async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
     let ended = one_tx!(app.db, |t| {
         match t.duos_matches_get(match_id).await? {
@@ -256,11 +238,8 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
     }
 }
 
-/// One sweep: B34's expired rooms go (a joined room one TTL later than an unjoined one, so its host's
-/// poll still reads the match), finished actors no socket holds leave memory, and a live match with no
-/// actor (a restart) is folded back, so its people find it running and an abandoned one is played out
-/// by the AI (B37) and gets its result. One that cannot be folded back is ended once past its ceiling
-/// (R1047000, R1047001).
+/// One sweep: reaps B34's expired rooms, drops finished actors, and folds back live matches with no
+/// actor so the AI plays them out (B37). Matches that cannot fold back end past ceiling (R1047000, R1047001).
 pub async fn sweep(app: &Arc<App>) -> Result<(), StoreError> {
     let now = now_ms();
     let reaped = one_tx!(app.db, |t| t.duos_rooms_reap(now, now - DUOS_ROOM_TTL_MS).await?)?;

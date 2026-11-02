@@ -1,9 +1,7 @@
 /**
- * Seeded randomness for the effects layer (docs/polish/1-animations.md, S5).
- *
- * Every random draw the canvas engine makes (particle spread, crack shapes, projectile arcs) comes
- * from an `FxRng` built here, so one seed and one sequence of calls always draw the same picture.
- * That keeps the particle tests exact and lets two runs of the same game look the same.
+ * Seeded randomness for the effects layer (docs/polish/1-animations.md, S5). Every random draw the
+ * canvas engine makes comes from an `FxRng` built here, so one seed and one sequence of calls always
+ * draw the same picture: the particle tests stay exact and two runs of one game look the same.
  */
 
 /** Uniform in [0, 1). */
@@ -30,9 +28,8 @@ export function createRng(seed: number): FxRng {
 }
 
 /**
- * Smooth 1D value noise in [-1, 1]. Random values sit on the integer lattice and a smoothstep blends
- * neighbours, so the output is continuous with a bounded slope (at most 3 per unit of t). The shake
- * reads it at `t = seconds × frequency`, which is what makes it feel like a rumble, not static.
+ * Smooth 1D value noise in [-1, 1]: a smoothstep blends random lattice values, so the output is
+ * continuous with a bounded slope (at most 3 per unit of t), a rumble rather than static.
  */
 export function createNoise1D(seed: number): (tSeconds: number) => number {
   const rng = createRng(seed);

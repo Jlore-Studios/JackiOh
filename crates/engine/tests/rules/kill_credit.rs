@@ -1,15 +1,13 @@
-//! Port of `packages/engine/test/kill-credit.test.ts`.
-//!
-//! A kill credited to another unit (R42, R412: `killCredit.ts`, `effects/killCredit.ts`'s
-//! `withKillCredit`), as Classic+ #19.2 Jungle Loser credits Classic+ #19.5 Bot Loser; and whether a card
-//! is being cast on draw (`castOnDrawNow.ts`, R58), which Classic+ #26 Tommy Tempo's ability reads.
+//! A kill credited to another unit (R42, R412: `with_kill_credit`), as Classic+ #19.2 Jungle Loser
+//! credits Classic+ #19.5 Bot Loser; and whether a card is being cast on draw (`is_cast_on_draw`, R58),
+//! which Classic+ #26 Tommy Tempo's ability reads.
 //!
 //! Pinned: with a credit in force, a lethal hit on a paired victim names the paired unit as R42's killer
 //! — in the `destroyed` event and for its kill triggers — while the striker stays the hit's source; the
 //! credit is gone once the watched effect is; a kill of an unpaired victim is the striker's own; without
 //! a transfer the striker keeps the kill and the follow-up runs for the pair whose victim died; a Death
 //! that asks during the watched attack loses nothing, and the paused game survives JSON and replays. A
-//! cast-on-draw card's Cry reads `isCastOnDraw` true; the same card played from hand reads it false.
+//! cast-on-draw card's Cry reads `is_cast_on_draw` true; the same card played from hand reads it false.
 
 use jackioh_engine::testkit::*;
 
@@ -25,8 +23,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed, as the
-/// harness's `put` does with that option.
+/// The card is made Radiant before it is placed, as the harness's `put` does with `radiant: true`.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let mut card = state::new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
     card.radiant = true;
@@ -37,7 +34,6 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
         .clone()
 }
 
-/// `{ ...body, playerId }`.
 fn input(player: PlayerId, body: ActionBody) -> ActionInput {
     ActionInput {
         body,
@@ -85,7 +81,6 @@ mod r42_r412_with_kill_credit {
             destroyed(&ended.events),
             vec![(victim.id.clone(), Some(credited.id.clone()))]
         );
-        // The hit was the striker's: its damage event names it as the source.
         assert!(ended.events.iter().any(|event| matches!(
             event,
             GameEvent::Damage { source_id: Some(source), target_id, .. }
@@ -216,7 +211,7 @@ mod r58_is_cast_on_draw {
         let mut state = game("kc-cast");
         let library = set_library(&mut state, PlayerId::P1, &[tempo.id.clone(), grunt.id.clone()]);
         let drawn = library.first().expect("no card").clone();
-        // `sinkFor(state)`: an rng at the state's cursor; TS did not write it back.
+        // An rng at the state's cursor, not written back.
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let outcome = {

@@ -1,5 +1,4 @@
-// The end of a lesson (tutorial/TutorialResult.tsx): a win completes the lesson and offers the next
-// one, a loss offers the lesson's tip and Retry, and a concede is a loss that says so (R2434002).
+// The end of a lesson (tutorial/TutorialResult.tsx): a win, a loss, and a concede that says so (R2434002).
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

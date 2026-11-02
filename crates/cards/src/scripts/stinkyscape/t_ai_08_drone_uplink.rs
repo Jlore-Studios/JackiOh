@@ -37,10 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-8 Drone Uplink — SPEC §8.10 row T-AI-8, BUILD M12 row S T-AI-8: "at its controller's end of turn
-// summons a Drone Interceptor that has Starship Piece, none at the opponent's; when it dies a plain copy
-// fuses into its owner's Dormant Starship (R1881005); a full unit row puts it in the backrow (R2248000);
-// radiant a Radiant one".
+// S T-AI-8 Drone Uplink — SPEC §8.10 row T-AI-8, BUILD M12 row S T-AI-8 (R1881005, R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

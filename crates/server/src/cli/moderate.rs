@@ -10,33 +10,21 @@
 //! jackioh-server moderate chat-reports
 //! ```
 //!
-//! The server enforces every abuse control and, until this tool, nothing invoked any of them:
-//! `ProfileStatus::Banned` refuses every `Active` route and the `/ws/match` upgrade
-//! (`api::http::assert_active`), `invite_codes.revoked_at` gates step 5's lookup, and
-//! `app.settings.redemption_enabled` is §9.4's database-side circuit breaker. The `invite-clusters`
-//! watch and the rejection-rate alert produce the signal; these are the levers that act on it.
+//! A ban applies at once even mid-match: new requests and upgrades are refused through
+//! `assert_active`, while the running actor is untouched and the reaper owns the in-flight game (the
+//! account-deletion posture).
 //!
-//! Each lever is idempotent and prints what changed; an unknown profile or code is refused
-//! without writing anything. A ban applies at once even mid-match: new requests and upgrades are
-//! refused through `assert_active`, while the running actor is untouched and the reaper owns the
-//! in-flight game (the account-deletion posture). Unbanning refuses a pending account without
-//! writing: activating it would skip the invite gate and R111's launch grant, which rides the
-//! redemption's own `pending → active` transition.
-//!
-//! Why this reads the whole environment through `load_env()` when it only needs two variables:
-//! the code hash revoked here has to be byte-identical to the one the running server computes
-//! when it redeems, and `load_env` plus the `{CODE_PEPPER}:code` derivation is the single
-//! contract that guarantees it (`cli/mint_code.rs`). Stdout is the audit trail: the CLI has no
-//! log pipeline, so the line it prints is the record of the lever.
+//! This reads the whole environment through `load_env()`, so the code hash revoked here is the one the
+//! running server computes when it redeems (`cli/mint_code.rs` says why). Stdout is the audit trail: the
+//! CLI has no log pipeline, so the line it prints is the record.
 //!
 //! Like `mint-code`, banning a never-activated account then unbanning it leaves it active without
 //! R111's launch collection (the trigger only sees `pending → active`): operators ban pending
 //! accounts only to stop abuse.
 //!
-//! `chat-reports` writes nothing. It prints every report the store holds, oldest first: when, the
-//! reason, the reporter, the sender and the message as stored (masked by the word filter). A
-//! report lives as long as its message, `CHAT_RETENTION_DAYS` after it was sent, so a report
-//! unread by then is gone; `docs/compliance.md` §6 is the routine.
+//! `chat-reports` prints each message as stored (masked by the word filter). A report lives as long
+//! as its message, `CHAT_RETENTION_DAYS` after it was sent, so a report unread by then is gone;
+//! `docs/compliance.md` §6 is the routine.
 
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
@@ -73,7 +61,6 @@ pub enum ModerateCommand {
     ChatReports,
 }
 
-/// The verb and its arguments after `moderate` (`main.rs`), refusing anything else with the usage.
 pub fn parse_moderate_args(argv: &[String]) -> anyhow::Result<ModerateCommand> {
     let Some((verb, rest)) = argv.split_first() else {
         bail!("Moderate needs a command.\n\n{USAGE}");
@@ -214,7 +201,7 @@ pub async fn set_redemption(db: &Db, enabled: bool) -> anyhow::Result<String> {
 
 /// B53, #970: every chat report the store holds, oldest first, as the lines `chat-reports` prints:
 /// per report, when and why, who reported whom, and the message (`{:?}`, so a newline in it stays on
-/// its line). Writes nothing.
+/// its line).
 pub async fn chat_reports(db: &Db) -> anyhow::Result<String> {
     let mut tx = db.begin(None).await?;
     let reports = tx.chat_reports_all().await?;
@@ -248,14 +235,11 @@ fn report_lines(listing: &ChatReportListing) -> String {
     )
 }
 
-/// `moderate`'s arguments after the subcommand (`main.rs`): parse, read the environment, run one
-/// lever over one connection, print what changed, close.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let command = parse_moderate_args(&args)?;
     let source: IndexMap<String, String> = std::env::vars().collect();
     let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
 
-    // One connection: this process runs a single lever and exits.
     let db = connect_one(&env.database_url).await?;
     let outcome = match &command {
         ModerateCommand::Ban { profile_id } => ban_profile(&db, profile_id).await,

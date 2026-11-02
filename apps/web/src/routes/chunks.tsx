@@ -1,10 +1,6 @@
-// #2116, R2116000: every lazy screen's `import()` in one map, shared by `main.tsx`'s route
-// table and `prefetchRoute(path)`, so a prefetch and the route make one request.
-//
-// `Screen` exists because a plain `lazy()` shows the fallback once, even over an import that has
-// already resolved: once a chunk's code is in, its screen draws at once with no loading panel.
-//
-// None of this is a rule (CLAUDE.md rule 7): only code is fetched, never game state.
+// #2116, R2116000: every lazy screen's `import()` in one map, so a prefetch and the route make one request.
+// `Screen` exists because a plain `lazy()` shows the fallback even over a resolved import. Only code is
+// fetched, never game state (CLAUDE.md rule 7).
 
 import { lazy, useState, type ComponentType, type ReactElement } from "react";
 
@@ -49,10 +45,9 @@ export function routeChunk<P extends object>(importScreen: () => Promise<ScreenM
 }
 
 export const routeChunks = {
-  // Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
-  // behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
+  // Behind DEV_ONLY, the bundler leaves the hotseat chunk (and its developer text) out of production.
   hotseat: DEV_ONLY ? routeChunk(() => import("./dev/hotseat.tsx")) : null,
-  // #936 B65: the four-seat Duos hotseat, outside production only, as the 1v1 hotseat is.
+  // #936 B65: the four-seat Duos hotseat.
   duosDev: DEV_ONLY ? routeChunk(() => import("../duos/DevDuosRoute.tsx")) : null,
   // #936 B61–B64: the networked co-op board.
   duos: routeChunk(() => import("../duos/DuosRoute.tsx")),
@@ -81,7 +76,6 @@ export const routeChunks = {
   shop: routeChunk(() => import("./shop.tsx")),
   stats: routeChunk(() => import("./stats.tsx")),
   creator: routeChunk(() => import("./creator.tsx")),
-  // #936: Play together and a friend's game watched.
   together: routeChunk(() => import("../together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute }))),
   watch: routeChunk(() => import("../together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute }))),
 };
@@ -91,7 +85,7 @@ export type RouteChunkName = keyof typeof routeChunks;
 /** Intent toward these starts the engine too. */
 const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>(["practice", "play", "match", "series", "duos", "watch"]);
 
-/** The chunk drawing `path` (query ignored), or null (the landing, `/account`, a 404). */
+/** The chunk drawing `path` (query ignored), or null. */
 export function chunkAt(path: string): RouteChunkName | null {
   const pathname = new URL(path, window.location.origin).pathname.replace(/\/+$/u, "") || "/";
   if (matchIdOf(pathname) !== null) return "match";
@@ -114,12 +108,12 @@ function savingData(): boolean {
 /** Each chunk once per page load. */
 const prefetched = new Set<RouteChunkName>();
 
-/** Test seam: a new page, which has prefetched nothing yet. */
+/** Test seam: a new page. */
 export function resetRoutePrefetchForTests(): void {
   prefetched.clear();
 }
 
-/** Starts the code of the screen at `path` (and the engine, for a game's screen); a failure is the route's to report. */
+/** A failure is the route's to report. */
 export function prefetchRoute(path: string): void {
   if (savingData()) return;
   const name = chunkAt(path);
@@ -142,7 +136,6 @@ export function startScreen(path: string, engine: boolean): void {
 
 const INTENT_EVENTS = ["pointerenter", "focus", "touchstart"] as const;
 
-/** A same-origin link's path, or a navigating button's `data-route`. */
 function routeOf(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null;
   const control = target.closest("a[href], [data-route]");
@@ -153,7 +146,7 @@ function routeOf(target: EventTarget | null): string | null {
   return url.origin === window.location.origin ? url.pathname : null;
 }
 
-/** Prefetches the route of every control the player shows intent toward (capture phase: `pointerenter` and `focus` do not bubble). Returns the stop. */
+/** Capture phase: `pointerenter` and `focus` do not bubble. Returns the stop. */
 export function watchRouteIntent(root: Document): () => void {
   const onIntent = (event: Event): void => {
     const path = routeOf(event.target);

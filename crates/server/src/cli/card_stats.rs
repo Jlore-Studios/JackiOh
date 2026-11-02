@@ -1,32 +1,24 @@
-//! Admin script: card win rates off the game records (SPEC §9.11, R377, R378;
-//! ← `apps/server/src/db/card-stats.ts`).
+//! Admin script: card win rates off the game records (SPEC §9.11, R377, R378).
 //!
 //! ```text
 //! jackioh-server stats-cards [--source=live|dev|all] [--mode=bo1|bo3|random]
 //!   [--patch=<version>] [--pilot=human|ai|unified] [--card=<id>] [--json]
 //! ```
 //!
-//! Reads the totals every record is folded into as it is written (R1044000, migration 0041) through
-//! the store (DATABASE_URL), keeps the ones the filter names, and prints every card's four
-//! breakdowns — in deck, in the opening hand, going first and going second, played against drawn but
-//! not played — each with the games behind it. With nothing named
-//! it reads every counted seat of live games of every mode and patch (R807000's merged display):
-//! a development run's records are read only with `--source=dev` or `--source=all` (R378), and
-//! `--pilot=human` reads the people's sides only, `--pilot=ai` the bots'. Forced runs never reach
-//! the table because `stats-import` refuses their records whole, so no `--source=dev` figure counts
-//! rigged games (R1284000). `--json` prints the
-//! report as data instead.
+//! Reads the totals every record is folded into as it is written (R1044000, migration 0041) through the
+//! store (DATABASE_URL), keeps the ones the filter names, and prints every card's four breakdowns, each with
+//! the games behind it. With nothing named it reads every counted seat of live games of every mode and patch
+//! (R807000's merged display): a development run's records are read only with `--source=dev` or
+//! `--source=all` (R378). Forced runs never reach the table, as `stats-import` refuses their records whole
+//! (R1284000).
 //!
-//! R1367000, R1368000: `--window[=<version>]` prints, as JSON, every card over its own window at the
-//! version (the newest shipped by default), off every patch's totals, as `GET /api/stats/cards`
-//! reads them: the input `cargo jackioh winrates --refresh` takes. Only the totals hold every game
-//! a window spans (R1044001 purges a record's detail after `GAME_RECORD_RAW_RETENTION_DAYS`, so a
-//! `stats-export` file undercounts it).
+//! R1367000, R1368000: `--window[=<version>]` prints the input `cargo jackioh winrates --refresh` takes.
+//! Only the totals hold every game a window spans (R1044001 purges a record's detail after
+//! `GAME_RECORD_RAW_RETENTION_DAYS`, so a `stats-export` file undercounts it).
 //!
-//! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats` (TS
-//! `packages/shared/src/stats.ts`), which `card_stats` reads record files with too, the same the AI's
-//! development run prints its own games with, so a pre-release run and the live games after it
-//! compare figure for figure: run both with the same `--patch`.
+//! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which the AI's development run prints
+//! its own games with too, so a pre-release run and the live games after it compare figure for figure: run
+//! both with the same `--patch`.
 
 use anyhow::bail;
 use serde::Serialize;
@@ -74,8 +66,6 @@ pub(crate) fn literal<T: Serialize>(value: &T) -> String {
     }
 }
 
-/// The value of a `--name=value` flag among `allowed`, or a refusal listing them and ending with the
-/// command's own `usage`.
 pub(crate) fn one_of<T: Copy + Serialize>(
     name: &str,
     raw: &str,
@@ -93,7 +83,7 @@ pub(crate) fn one_of<T: Copy + Serialize>(
     )
 }
 
-/// TS's `/^--(?<name>[a-z]+)=(?<value>.+)$/u`: the name, then the value, or `None` when the argument
+/// `/^--(?<name>[a-z]+)=(?<value>.+)$/u`: the name, then the value, or `None` when the argument
 /// is not of that form. `.` matches anything but a line terminator, so a value holding one does not
 /// match either.
 pub(crate) fn flag(arg: &str) -> Option<(&str, &str)> {
@@ -112,7 +102,6 @@ pub(crate) fn flag(arg: &str) -> Option<(&str, &str)> {
     Some((name, value))
 }
 
-/// Parses `--flag=value` arguments (and the bare `--json`), refusing anything it does not know.
 pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions> {
     let mut filter: CardStatsFilter = DEFAULT_CARD_STATS_FILTER.clone();
     let mut card: Option<String> = None;
@@ -170,7 +159,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
 
 /// R1367000: every card over its own window at `at`, off every patch's totals, as
 /// `GET /api/stats/cards` reads them (`windowed_card_stats`, the shipped history compiled in), the
-/// live seats `options`' pilot names. One card only with `--card`.
+/// live seats `options`' pilot names.
 pub async fn card_stats_window(
     db: &Db,
     options: &CardStatsOptions,
@@ -225,7 +214,6 @@ pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<Ca
     Ok(report)
 }
 
-/// The report as the script prints it: the table, with the catalog's names, or JSON.
 pub fn render_card_stats(
     report: &CardStatsReport,
     options: &CardStatsOptions,
@@ -244,14 +232,11 @@ pub fn render_card_stats(
     table
 }
 
-/// TS `main()`: `stats-cards`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_card_stats_args(&args)?;
     let connection_string = database_url()?;
 
-    // The catalog's names come from the compiled-in catalog (TS read it with `loadCatalog()`).
     let catalog = &*jackioh_cards::CATALOG;
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     if let Some(at) = &options.window {
         let outcome = card_stats_window(&db, &options, at).await;

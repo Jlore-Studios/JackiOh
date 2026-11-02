@@ -1,8 +1,5 @@
 //! Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's ownership, R33's face-down trap and
-//! #86's "steal all enemy units". The fixture Trap this file needs is registered here, so no shared
-//! fixture has to grow for it (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-steal.test.ts`.
+//! #86's "steal all enemy units". Its fixture Trap is registered here, so no shared one grows (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
@@ -47,7 +44,6 @@ fn controls(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     run(state, steal(json_as(json!({ "instanceId": card.id }))), as_p1())
 }
 
-/// `cardAt(state, slot(player, row, lane))?.id`.
 fn id_at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<String> {
     card_at(state, slot(player, row, lane)).map(|card| card.id.clone())
 }
@@ -100,8 +96,7 @@ mod r15_steal_s6_3_m3_t1 {
             }
         );
 
-        // The card never left the field, so R78's reset does not apply: damage, buffs, position and
-        // counters stay.
+        // It never left the field, so R78's reset does not apply: damage, buffs, position, counters stay.
         assert_eq!(now.damage, 1);
         assert_eq!(now.buffs, AttackHealth { attack: 2, health: 0 });
         assert_eq!(now.position, Some(Position::Def));

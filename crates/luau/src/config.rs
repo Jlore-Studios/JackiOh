@@ -1,58 +1,48 @@
 //! Every number the Luau host states (CLAUDE.md rule 9).
 
-/// #442 L5: how many interrupts one hook call may take before it is stopped, naming its card. Luau
-/// interrupts about once per loop iteration and three times per function call, so a card's hook,
-/// which runs a few loops over the board, never comes near it, and a loop that never ends stops
+/// #442 L5: how many interrupts one hook call may take before it is stopped, naming its card. A card's
+/// hook, which runs a few loops over the board, never comes near it, and a loop that never ends stops
 /// within a few milliseconds.
 pub const LUAU_HOOK_INTERRUPTS: u32 = 1_000_000;
 
-/// R915004 (K7): a custom card's hook call's budget, in the same interrupts. A tenth of an official
-/// script's: the kit's verbs and readers spend a few hundred, a question's re-run a few thousand, so
-/// a card that does what the kit offers never nears it, and one that loops stops within a millisecond
-/// or two, doing nothing, while a turn's AI search runs its hooks thousands of times.
+/// R915004 (K7): a custom card's hook call's budget, in the same interrupts: a tenth of an official
+/// script's. A card that does what the kit offers never nears it, and one that loops stops within a
+/// millisecond or two, while a turn's AI search runs its hooks thousands of times.
 pub const CUSTOM_HOOK_INTERRUPTS: u32 = 100_000;
 
-/// #442 L5: how deep hook calls may nest (a hook running another card's hook from a reader) before
-/// the innermost is stopped, naming its card. A reader nests a level or two; a hook that runs itself
-/// would otherwise go on until the thread's stack overflowed, which aborts the process, well before
-/// it spent `LUAU_HOOK_INTERRUPTS`.
+/// #442 L5: how deep hook calls may nest (a hook running another card's hook from a reader) before the
+/// innermost is stopped, naming its card. A hook that runs itself would otherwise overflow the thread's
+/// stack, which aborts the process, well before it spent `LUAU_HOOK_INTERRUPTS`.
 pub const LUAU_HOOK_DEPTH: usize = 16;
 
-/// #843: how many bytes a thread's VM may hold, all told: its libraries, its cache of loaded chunks,
-/// what the calls in flight hold and the garbage not yet collected. An allocation that would pass it
-/// fails, and so does the hook call that asked, naming its card, so a call that builds one huge
-/// string or table without looping (`string.rep`), which spends no interrupts, is bounded too. A
-/// sandbox holding 370 loaded chunks of a two-reader fixture peaked at about 2.5 MB over 200,000
-/// module runs (measured for #843), so a card's hook never comes near it.
+/// #843: how many bytes a thread's VM may hold, all told. An allocation that would pass it fails, and so
+/// does the hook call that asked, naming its card, so a call that builds one huge string or table
+/// without looping (`string.rep`), which spends no interrupts, is bounded too.
 pub const LUAU_MEMORY_BYTES: usize = 64 * 1024 * 1024;
 
 /// #843: how many bytes the VM may hold when an outermost hook call begins before the call first
 /// collects all its garbage. Luau collects nothing when an allocation fails, so the garbage of a call
-/// that ran out of memory would fail the next one too. Half `LUAU_MEMORY_BYTES`, which a VM serving
-/// cards' hooks never comes near, so the collection runs only after a call that took that much.
+/// that ran out of memory would fail the next one too.
 pub const LUAU_MEMORY_COLLECT_BYTES: usize = LUAU_MEMORY_BYTES / 2;
 
-/// #442 L5: the optimization level `compile` asks of Luau's compiler: mlua's default, stated so that
-/// a bump of `mlua` cannot change it. Level 2 folds `math`'s constants (`math.pi`, `math.huge`, …)
-/// into the bytecode without reading the global the sandbox removed, and no disabled builtin turns
-/// that off.
+/// #442 L5: the optimization level `compile` asks of Luau's compiler: mlua's default, stated so that a
+/// bump of `mlua` cannot change it. Level 2 folds `math`'s constants (`math.pi`, `math.huge`, …) into
+/// the bytecode without reading the global the sandbox removed.
 pub const LUAU_OPTIMIZATION_LEVEL: u8 = 1;
 
-/// #442 L6: how deep a value from Luau may nest before the walk refuses it. A table that holds
-/// itself would otherwise never end; an effect's arguments nest a few levels at most.
+/// #442 L6: how deep a value from Luau may nest before the walk refuses it. A table that holds itself
+/// would otherwise never end; an effect's arguments nest a few levels at most.
 pub const LUAU_VALUE_DEPTH: usize = 32;
 
 /// #442 L6: how many values and keys, all told, one value from Luau may hold before the walk refuses
-/// it. Under `LUAU_VALUE_DEPTH` a table can still hold another twice over at every level, which
-/// would walk to billions of values; a hook's effects hold a few dozen.
+/// it. Under `LUAU_VALUE_DEPTH` a table can still hold another twice over at every level, which would
+/// walk to billions of values.
 pub const LUAU_VALUE_NODES: usize = 10_000;
 
-/// #464 gap 7: the engine config constants card scripts read as `J.config.<NAME>`, from the same
-/// source as `engineConfig.ts` (`crates/engine/src/config.rs`), so a script never restates one
-/// (CLAUDE.md rule 9). The rule for membership: every `i32` constant of the engine's `config.rs`
-/// that a card script names. A script needing one not listed here adds it to this list — never a
-/// literal — and both the runtime table (`api::module`) and the typed module (`tests/export_api`)
-/// read this list, so the two cannot drift.
+/// #464 gap 7: the engine config constants card scripts read as `J.config.<NAME>`, so a script never
+/// restates one (CLAUDE.md rule 9): every `i32` constant of the engine's `config.rs` a card script names.
+/// A script needing another adds it here, never a literal; the runtime table (`api::module`) and the
+/// typed module (`tests/export_api`) both read this list, so the two cannot drift.
 pub const CONFIG_I32: &[(&str, i32)] = &[
     (
         "ACTIVATE_UNLIMITED_CAP",

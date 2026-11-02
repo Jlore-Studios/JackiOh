@@ -9,14 +9,10 @@
 //! (`lucky_on`, printed plus given) and its player's Luck roll it again, any `HIT` a hit (R1440). The
 //! Radiant face rolls `RADIANT_ROLLS` dice of 1 to `RADIANT_SIDES`, each lucky the same way, either a
 //! hit. Every roll is made, hit or not, so the draws a play takes never hang on the faces. Embiggened,
-//! the instance first gains Lucky +1 for good (`gain_keyword_for_good`, written into its tuning, R386,
-//! so it is kept in every zone, R1438), and that Lucky counts toward this play's roll. A hit adds one
-//! new card of each Terminus definition (S #4's `TERMINUS_CARDS`, R1857002) at `costOverride` 0, a
-//! full hand burning the rest (§2.4). End of turn: Core #31's return without its cost raise, from the
-//! graveyard on the turn it was played (R153, R155; M #8 Reach the Summit's), a full hand burning it.
-//! Quickdraw is its static flag (R640) (R1870007). The dice are reported to both players as one batch
-//! before the Lucky gain and the Terminus cards, every roll of each die with the one it kept, a 67 if
-//! any (R2652001).
+//! the instance first gains Lucky +1 for good (`gain_keyword_for_good`, R386, kept in every zone,
+//! R1438), counting toward this play's roll. A hit adds each Terminus card (S #4's `TERMINUS_CARDS`,
+//! R1857002) at `costOverride` 0. The dice are reported to both players as one batch before the Lucky
+//! gain and the Terminus cards, every roll of each die with the one it kept (R2652001).
 
 use jackioh_engine::effects::{add_to_hand, gain_keyword_for_good};
 use jackioh_engine::prelude::*;
@@ -89,11 +85,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #154 Dice of Doom — SPEC §8.10 row S 154, BUILD M12 row S 154: "(0): one roll of 1 to 100, a 67
-// adding the six Terminus tokens and Ceaseless Void at (0) (a fixture rng or a high Lucky), anything
-// else nothing; at its controller's end of turn it is back in their hand; Embiggened at (1) it gains
-// Lucky +1, kept in hand, deck and graveyard, and rolls once more for each; Quickdraw; radiant two
-// rolls of 1 to 80, either 67 a hit" (R1870007).
+// S #154 Dice of Doom — SPEC §8.10 row S 154, BUILD M12 row S 154 (R1870007).
 #[cfg(test)]
 mod tests {
     use super::{HIT, ID, RADIANT_SIDES};
@@ -108,7 +100,6 @@ mod tests {
 
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
 
-    /// p1 holds the dice and `fillers` Stockpiles, with mana to spare.
     fn board_with(seed: &str, radiant: bool, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
         hand.extend(std::iter::repeat_n(json!(FILLER), fillers));
@@ -138,7 +129,6 @@ mod tests {
             .expect("the dice are in hand or in the graveyard")
     }
 
-    /// The Terminus cards p1's hand gained.
     fn added(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1)
             .into_iter()
@@ -172,7 +162,6 @@ mod tests {
                 assert_eq!(card.cost_override, Some(0), "{} costs (0)", card.def_id);
                 assert!(!card.radiant);
             }
-            // The hit was a 67 of 100.
             assert_eq!(Rng::new(&seed, cursor).int(100) + 1, HIT);
         }
 
@@ -186,7 +175,6 @@ mod tests {
 
         #[test]
         fn r1870007_a_full_hand_burns_the_rest() {
-            // Five held beside the dice leave room for five of the seven.
             let fillers = 5;
             let seed = seed_where("dice-of-doom-full", |seed| {
                 let mut s = board_with(seed, false, fillers);
@@ -243,7 +231,6 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({ "embiggen": true }));
             assert_eq!(s.state().rng_cursor, cursor + 2, "its new Lucky rolls again this play");
-            // Back in hand with Lucky 1, an Embiggened play again gains another and rolls twice more.
             s.end_turn();
             s.end_turn();
             s.state_mut().players.p1.mana.current = 10;
@@ -251,7 +238,6 @@ mod tests {
             s.play(ID, json!({ "embiggen": true }));
             assert_eq!(s.state().rng_cursor, cursor + 3, "Lucky 2: three rolls");
             assert_eq!(lucky_on(s.state(), &dice(&s)), 2, "every Embiggened play makes it luckier");
-            // A plain play keeps the Lucky and gains none.
             s.end_turn();
             s.end_turn();
             let cursor = s.state().rng_cursor;
@@ -350,7 +336,6 @@ mod tests {
 
         #[test]
         fn r1870007_radiant_two_rolls_of_80() {
-            // A seed whose first die misses and whose second lands on 67.
             let seed = seed_where("dice-of-doom-radiant", |seed| {
                 let cursor = board(seed, true).state().rng_cursor;
                 let mut rng = Rng::new(seed, cursor);
@@ -361,7 +346,6 @@ mod tests {
             s.play(ID, json!({}));
             assert_eq!(s.state().rng_cursor, cursor + 2, "two dice");
             assert_eq!(added(&s).len(), TERMINUS_CARDS.len(), "the second die's 67 hits");
-            // And a seed where neither lands on 67 adds nothing.
             let seed = seed_where("dice-of-doom-radiant-miss", |seed| !hits(seed, true));
             assert!(added(&rolled(&seed, true, json!({}))).is_empty());
         }

@@ -1,6 +1,4 @@
-// The bar's pure parts (#1658): the sweeps a bar plays from its points before to its points after,
-// each sweep's share of the time, the flights a spent slot's points take into the bars and their time
-// (R1953000), the reward each fill reveals and the sting a reward plays.
+// The bar's pure parts (#1658, R1953000).
 
 import { describe, expect, it } from "vitest";
 

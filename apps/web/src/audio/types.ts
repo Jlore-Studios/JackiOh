@@ -10,26 +10,25 @@ export type SfxId =
   | "death" | "burn" | "trapSet" | "trapSting" | "spell" | "mana" | "turnStart" | "victory"
   | "defeat" | "uiClick" | "uiHover" | "whoosh" | "radiant" | "lock" | "poof" | "sand" | "endTurn" | "notify" | "drain"
   | "cancel" | "entrance" | "fatigue" | "refuse"
-  // Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
+  // R506: card moments, Call to Chaos's roll (R436), a mark (R437), the turn clock (R439).
   | "manaCrack" | "bloodDrain" | "goldBurst" | "castOnDraw" | "chaosRoll" | "brand" | "heartbeat" | "clockTick"
-  // Patch v0.2.X (R644): the five emoji emotes (issue §4), synthesized on the effects channel.
+  // R644: the five emoji emotes (issue §4), synthesized on the effects channel.
   | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah"
-  // Patch v0.2.X (#259, R669): the play sting of a card below Legendary.
+  // #259, R669: the play sting of a card below Legendary.
   | "sting"
-  // Patch v0.3.X (MN05): Armor's clank and ring (R1363), and the niche moments (R1364–R1366).
+  // MN05: Armor's clank and ring (R1363), and the niche moments (R1364–R1366).
   | "armorClank" | "armorRing" | "overkill" | "crumble" | "unlock" | "steal" | "give" | "counterspell" | "bleat" | "fuse"
   | "degrade" | "upgrade"
-  // Patch v0.3.X (MN03, #545, R1345): the fourteen new emoji emotes, synthesized like the five.
+  // MN03, #545, R1345: the fourteen new emoji emotes, synthesized like the five.
   | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
   | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral";
 
 /**
- * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
- * card art's theme order): the summon thud gains the family's accent and the spell shimmer its
- * chimes. Absent: the plain recipe, which is all a card the viewer cannot name ever gets (R203).
- * Patch v0.2.0 adds the Book, Pancake and AI tags' families.
+ * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
+ * the family's accent and the spell shimmer its chimes. Absent: the plain recipe, which is all a card
+ * the viewer cannot name ever gets (R203).
  */
 export type SfxTimbre =
   | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token" | "field"
@@ -48,18 +47,15 @@ export type SfxParams = {
   timbre?: SfxTimbre;
   /** entrance: a Mythic's prismatic sting rather than a Legendary's brass. */
   mythic?: boolean;
-  /**
-   * notify: a notice that waits on the viewer's answer (the other seat's draw offer), which rings
-   * like a doorbell rather than the routine two blips, inside the same durationMs.
-   */
+  /** notify: a notice awaiting the viewer's answer (a draw offer): a doorbell, not two blips, in the same durationMs. */
   urgent?: boolean;
   /** brand: the mark lifting from its card, a soft release, rather than the brand landing (R437). */
   release?: boolean;
   /** sting: the played card's rarity below Legendary (R669). Absent: Common. */
   tier?: StingTier;
   /**
-   * R669: where on the board the sound comes from, -1 (the leftmost lane) to 1 (the rightmost), read
-   * off the lane of the unit it is about. Absent: centered. The engine pans; no recipe reads it.
+   * R669: where on the board the sound comes from, -1 (the leftmost lane) to 1 (the rightmost).
+   * Absent: centered. The engine pans; no recipe reads it.
    */
   pan?: number;
   /** #185: a landing Unit's size tier; the summon thud is weighed by it rather than by `amount`. */
@@ -80,17 +76,12 @@ export type StingTier = "common" | "rare" | "epic";
 export type CardKind = "unit" | "spell" | "trap";
 /** R655: when a card's sounds play (constants.ts CARD_HOOKS, the one list of them). */
 export type CardHook = keyof typeof CARD_HOOKS;
-/** A voice line is a hook's line, so its kinds are the hooks. */
 export type VoiceLineKind = CardHook;
-/**
- * What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>`
- * files). The split-from-the-end VoiceKey convention holds either way.
- */
+/** What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>` files). */
 export type PlayableLineKind = VoiceLineKind | VoiceEmoteId | `trigger${number}`;
 /** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast", "emote-gary-thanks". Parse from the END: defIds contain "-". */
 export type VoiceKey = `${string}-${PlayableLineKind}`;
 
-/** What every voice (once called a persona) carries, whichever synthesizer rendered its files. */
 type PersonaCommon = {
   /** For the speechSynthesis fallback: SpeechSynthesisUtterance pitch (0–2) and rate (0.1–10). */
   web: { pitch: number; rate: number };
@@ -173,10 +164,7 @@ export type VoiceManifest = {
   files: Record<string, { hash: string; bytes: number }>;
 };
 
-/**
- * How much a line matters when another is already speaking (constants.ts VOICE_PRIORITY): a line
- * cuts in on one of lower priority and waits briefly behind one of equal or higher priority.
- */
+/** How much a line matters when another is already speaking (constants.ts VOICE_PRIORITY). */
 export type VoicePriority = number;
 
 export type SoundCue =
@@ -188,10 +176,9 @@ export type SoundCue =
 export type AudioState = "unsupported" | "locked" | "running" | "suspended" | "closed";
 
 /**
- * "pending" until the line starts or is given up on. "dropped": it never started, because a more
- * important line took its place in the queue or the channel, or sound was muted or voice lines
- * turned off first. "suspended": accepted while the context was not running, so nothing was
- * scheduled (a suspended context would otherwise release every queued sound at once on resume).
+ * "dropped": it never started (a more important line took its place, or sound or voice lines were
+ * turned off first). "suspended": accepted while the context was not running, so nothing was scheduled
+ * (a suspended context would otherwise release every queued sound at once on resume).
  */
 export type VoiceOutcome = "pending" | "file" | "speech" | "late" | "failed" | "dropped" | "suspended";
 export type PlayedCue =
@@ -201,7 +188,6 @@ export type PlayedCue =
       params?: SfxParams;
       delayMs: number;
       atMs: number;
-      /** Present when the cue was accepted while the context was not running, so nothing was scheduled. */
       suspended?: true;
     }
   | {
@@ -221,7 +207,6 @@ export type PlayedCue =
       effect: string;
       delayMs: number;
       atMs: number;
-      /** Present when the cue was accepted while the context was not running, so nothing was scheduled. */
       suspended?: true;
     };
 
@@ -245,9 +230,8 @@ export type AudioSettings = {
   /** The music dips under voice lines and the important effects (MUSIC_DUCK_SFX). */
   duckMusic: boolean;
   /**
-   * The music keeps playing while the page is hidden or the window has lost focus. Off (the default):
-   * it fades out then, and back in when the player returns. Settings saved before this key read the
-   * old `pauseMusicOnBlur` inverted (`parseAudioSettings`).
+   * The music keeps playing while the page is hidden or unfocused; off (the default), it fades out.
+   * Settings saved before this key read the old `pauseMusicOnBlur` inverted (`parseAudioSettings`).
    */
   playMusicInBackground: boolean;
 };
@@ -262,7 +246,6 @@ export type MusicTrack = {
   loop: boolean;
   /** Seconds of intro before the loop's music begins (a result's or a Mythic's sting); a sting's whole length. */
   intro: number;
-  /** The file's length in seconds. */
   duration: number;
   /** Where the loop starts and ends in the file, in seconds; null for a sting. */
   loopStart: number | null;
@@ -298,9 +281,8 @@ export type SoundSink = {
 
 export type AudioEngine = SoundSink & {
   /**
-   * R655: the viewer picked up their own Unit to attack (a drag lifted, or a click chose it): its
-   * `attack` hook, effect then line, at once. Refused within PICKUP_MIN_GAP_MS of the last one
-   * accepted; otherwise it cuts off whatever the last pick-up is still playing.
+   * R655: the viewer picked up their own Unit to attack: its `attack` hook, effect then line, at once.
+   * Refused within PICKUP_MIN_GAP_MS of the last one accepted; else it cuts off the last pick-up.
    */
   playPickup(defId: string): boolean;
   state(): AudioState;
@@ -309,9 +291,8 @@ export type AudioEngine = SoundSink & {
   /** Held while busy (the newest call only) and skipped while muted or with voice lines off. */
   preloadVoices(keys: readonly VoiceKey[]): void;
   /**
-   * true while the board animates (useGameAudio: the runner has an entry in flight). Background
-   * voice work (the prefetch and preloads) waits until it is false again; a line asked to play
-   * never does (B58).
+   * true while the board animates (useGameAudio). Background voice work (the prefetch and preloads)
+   * waits until it is false again; a line asked to play never does (B58).
    */
   setBusy(busy: boolean): void;
   /** Accepted cues, oldest first, at most LOG_LIMIT. */
@@ -320,9 +301,8 @@ export type AudioEngine = SoundSink & {
   /** How many AudioContexts this engine has constructed (grows when a closed one is rebuilt). */
   contextsCreated(): number;
   /**
-   * true while a voice line holds the one voice channel: from the moment it takes the channel
-   * (loading its file included) until it ends, is cut or is given up on. Practice holds the AI's
-   * next step on it through the page's `data-speaking` mark (SPEC §9.9, `useVoiceSpeaking`).
+   * true while a voice line holds the one voice channel (loading its file included). Practice holds
+   * the AI's next step on it through the page's `data-speaking` mark (SPEC §9.9, `useVoiceSpeaking`).
    */
   speaking(): boolean;
   /** Called after every change of `speaking()`, never for a non-change. Returns the unsubscribe. */

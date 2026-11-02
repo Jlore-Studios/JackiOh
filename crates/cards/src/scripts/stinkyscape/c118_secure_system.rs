@@ -6,9 +6,7 @@
 //! minus its Attack as it stands now through the layers, before layer 5's floor (`unclamped_attack`,
 //! the reading KY's Constant sets a number with), so it shows exactly 0, a Unit Nerfed below 0
 //! included, and a later Buff adds from 0 (R1868001); a Unit Immune to Spells is passed by. Nothing
-//! here opens a prompt, so the Units read now are the ones the list reaches. Then `next_turn_mana`
-//! of minus `loss` on its caster (R1848004). Radiant: the enemy's Units alone. The 0 is the card's
-//! structure (R1748003).
+//! here opens a prompt, so the Units read now are the ones the list reaches.
 
 use jackioh_engine::prelude::*;
 
@@ -44,10 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #118 Secure System — SPEC §8.10 row S 118, BUILD M12 row S 118: "every Unit of both sides shows
-// 0 Attack, a 7/3 becoming 0/3; a Buff afterwards adds to 0; a Unit Nerfed below 0 stands at 0 too
-// (R1868001); its caster's next refresh gives 1 less; loss reads through `param()`; radiant only
-// enemy Units, its caster's keeping their Attack" (R1868001, proven here and in S #119's file).
+// S #118 Secure System — SPEC §8.10 row S 118, BUILD M12 row S 118 (#119, R1868001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -110,7 +105,6 @@ mod tests {
         fn r1868001_a_unit_nerfed_below_0_stands_at_0() {
             let mut s = secure_board(false, json!([VANILLA]), json!([]));
             let nerfed = s.unit_at(P1, 1);
-            // A Nerf of 5 leaves it at −1 under layer 5's floor, shown 0.
             s.card_mut(&nerfed).buffs.attack = -5;
             assert_eq!(unclamped_attack(s.state(), s.card(&nerfed)), -1);
 

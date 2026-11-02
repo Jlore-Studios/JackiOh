@@ -44,10 +44,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #123 Gokugains — SPEC §8.10 row 123, BUILD M12 row S 123: "Cry (played or revealed): one random
-// Unit of the opponent's hand takes 3 hidden Nerfs, no event and no view showing them to either seat
-// (R1845000); played, they land at step 3, its cost untouched (R1845001); no Unit in hand, nothing; times
-// reads through `param()`; radiant 4/2 and 30". An Immutable card's refusal is the engine's (R1845000).
+// Stinkyscape #123 Gokugains — SPEC §8.10 row 123, BUILD M12 row S 123 (R1845000, R1845001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,7 +59,6 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const FILLER: &str = "core-005"; // (1) Spell: a non-Unit hand card.
 
-    /// p1 holds Gokugains (Radiant on `radiant`); p2 holds `theirs`.
     fn board(radiant: bool, seed: &str, theirs: Value) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
@@ -73,7 +69,6 @@ mod tests {
         s
     }
 
-    /// The hidden counts on p2's hand, by definition.
     fn hidden(s: &Scenario) -> Vec<(String, Option<i32>)> {
         s.hand(P2)
             .into_iter()

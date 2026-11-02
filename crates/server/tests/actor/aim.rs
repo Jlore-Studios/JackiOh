@@ -1,10 +1,4 @@
-//! R738 — the opponent's aim through the actor (§9.5): a top-level `aim` frame, never an
-//! `ActionBody`, relayed to the opponent alone, coalesced to one relay per `AIM_RELAY_INTERVAL_MS`
-//! per seat, and dropped when an end names anything the opponent may not see.
-//!
-//! `support::engine`'s test cards run as real engine scripts under the testkit's thread-local
-//! override, so the views are the real `view_for`'s, which shows the opponent's hand as a count.
-//! Tokio's paused clock stands in for timers; frames are read as the JSON the wire carries.
+//! R738: the opponent's aim through the actor (§9.5).
 //! Surface contract: docs/v0.3.0/SURFACE.md §5.1, §8, §11.2.
 
 use std::sync::Arc;
@@ -98,7 +92,6 @@ struct Harness {
 }
 
 async fn harness() -> Harness {
-    // The scripted cards, as real engine scripts under this thread's testkit override.
     install_test_cards();
     let app = test_app().await;
     let input: StartMatchInput = serde_json::from_value(json!({
@@ -191,7 +184,6 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
         assert_eq!(h.p1.of_type("ack"), Vec::<Value>::new());
         assert_eq!(match_actions(&h.app, MATCH_ID).await, Vec::<Value>::new());
-        // Never part of the view: no view frame went to either seat for it.
         assert_eq!(h.p1.of_type("view"), Vec::<Value>::new());
         assert_eq!(h.p2.of_type("view"), Vec::<Value>::new());
 
@@ -272,7 +264,6 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         sleep_settled(1).await;
         assert_eq!(relayed_aims(&h.p2), vec![at_hero(), third.clone()]);
 
-        // A repeat of what the opponent was last told is not sent again.
         sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": third }));
         h.idle().await;
@@ -307,7 +298,6 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p2", 0) }));
         h.idle().await;
-        // Silently: no relay, no error.
         assert_eq!(relays(&h.p2), Vec::<Value>::new());
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
 
@@ -316,7 +306,6 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         h.idle().await;
         assert_eq!(relayed_aims(&h.p2), vec![from_hand("p1", count - 1)]);
 
-        // An aim dropped while an arrow is up clears that arrow instead of leaving it standing.
         sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p1", count) }));
         h.idle().await;

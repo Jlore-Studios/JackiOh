@@ -5,9 +5,7 @@
 //! keyword|random combat keywords}." Keywords 2, Radiant 4.
 //! Engine: Starship Piece is catalog data: its death fuses a copy into its owner's Dormant Starship
 //! (R1852000). When launched (`when_launched`, R1852003) runs only as part of that Starship, after its
-//! fused Cries; on the field it does nothing. `grant_random_keywords` onto the Starship ("self" there),
-//! R21's draws from the combat keyword pool, each one it lacks, fewer when fewer are left (R1859000).
-//! The count is read on the face the piece fused on (`piece_number`, R1859001). Tunes: keywords 2 ↑.
+//! fused Cries; on the field it does nothing.
 
 use jackioh_engine::prelude::*;
 
@@ -32,10 +30,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #90 After Burner — SPEC §8.10 row 90, BUILD M12 row S 90: "on the field it does nothing; its death
-// fuses a copy into its owner's Dormant Starship (R1852000); when that Starship launches, after its fused
-// Cries, the Starship gains 2 random combat keywords it lacks (R21, R1852003); keywords read on the face
-// it fused on (R1859001); radiant 8/16 and 4".
+// S #90 After Burner — SPEC §8.10 row 90, BUILD M12 row S 90 (R1852000, R1852003, R1859001, R21).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -49,7 +44,6 @@ mod tests {
         s.stats(id).keywords.iter().map(Keyword::kind).collect()
     }
 
-    /// The keywords the launch gave the Starship: those it has after it and lacked before.
     fn gained_on_launch(seed: &str, radiant: bool) -> Vec<KeywordKind> {
         let (mut s, ship) = built_starship(
             seed,

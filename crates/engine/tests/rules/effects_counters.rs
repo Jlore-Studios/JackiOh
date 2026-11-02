@@ -1,7 +1,5 @@
 //! Plague Counters on an instance and Locks on a zone (BUILD M3-T1): §6.3's Plague Counter row with
 //! R78's reset, and §3.2's Lock, which the current occupant survives and which outlives it.
-//!
-//! Port of `packages/engine/test/effects-counters.test.ts`.
 
 use jackioh_engine::effects::{clear_plague, lock, plague};
 use jackioh_engine::testkit::*;
@@ -15,7 +13,6 @@ use super::fixtures::harness::{Bench, events_of_type, new_game, put, slot};
 use super::fixtures::scripts::mana_well;
 use crate::rules::fixtures::harness::{json_of, live};
 
-/// TS `run`'s options: `{ self?: CardInstance | null; controller?: PlayerId; targets?: Selection[] }`.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<CardInstance>,
@@ -23,8 +20,7 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// TS `effect.apply(makeContext(sink, self, rest))`. TS handed over the live card object; the card
-/// is looked up again by id, so the context sees it as it stands now.
+/// The card is looked up again by id, so the context sees it as it stands now.
 fn run(sink: &mut EngineSink<'_>, effect: Effect, options: RunOptions) {
     let RunOptions {
         self_,
@@ -56,7 +52,6 @@ fn hand_card(state: &mut GameState, def_id: &str) -> CardInstance {
     card
 }
 
-/// `eventsOfType(events, "counterChanged").map((e) => e.value)`.
 fn counter_values(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CounterChanged)
         .iter()
@@ -255,7 +250,6 @@ mod lock_s3_2_m3_t1 {
             },
         );
 
-        // The occupant stays where it was, with its stats and its zone untouched.
         assert_eq!(
             card_at(&state, slot(P2, Units, 2)).map(|card| card.id.clone()),
             Some(occupant.id.clone())

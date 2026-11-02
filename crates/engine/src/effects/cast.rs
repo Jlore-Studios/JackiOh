@@ -3,26 +3,11 @@
 //!
 //! A cast is §10.5's pipeline entered at step 3 (`resolve.castCard`): free, counted as a play (R70),
 //! announced like one (E1), its Cry or spell script fired, its choices its caster's — or, for a random
-//! cast, the rng's (R452). These verbs only choose the card and how it is cast:
-//!
-//!  - `cast` — a card that exists, in a hand, a library, a graveyard or an exile pile (Classic #56 Spell
-//!    Tyrant's Spells, cast out of the graveyard and exiled after, R453);
-//!  - `castEach` — every card of a set read once as the list reaches it (#56 Radiant's "every Spell in
-//!    your graveyard, oldest first"), so a pause inside one cast resumes over the same set (R113);
-//!  - `castNew` — a new card of a named definition (Classic #47 casts #34 Ancient Acquisition; #7
-//!    InfiniScepter's copy of the Spell it remembers; Classic+ #37 Wardrum's copies), which the caster
-//!    owns and which lands in the caster's graveyard after it resolves (R87);
-//!  - `castRandom` — random cards from a pool, every choice random (Classic+ #47 Jogg's Box, #38.1
-//!    Solarius Prime), never the casting card's own definition (B4.1, R387);
-//!  - `helpfulCast` — a `castNew` of the perfect pool's top card ranked for the caster (Stinkyscape
-//!    #147.2 Wardrum Blob, R1844002).
+//! cast, the rng's (R452). These verbs only choose the card and how it is cast.
 //!
 //! A cast verb that would begin a cast past RANDOM_CAST_CHAIN_CAP inside a random cast's chain resolves
-//! into nothing (R452), as R28's Call to Chaos cap does.
-//!
-//! Port of `packages/engine/src/effects/cast.ts`. An argument TS typed as a value or a function of the
-//! context (`castNew`'s `def`, `castRandom`'s `query` and `count`) is an enum here with one variant per
-//! form; an argument struct that holds a function derives `Clone` only (a function is not data).
+//! into nothing (R452), as R28's Call to Chaos cap does. An argument that may be a function of the
+//! context is an enum, one variant per form; a struct holding a function derives `Clone` only.
 
 use std::sync::Arc;
 
@@ -117,10 +102,9 @@ pub struct CastArgs {
     pub how: CastHow,
 }
 
-/// E12, R453: cast a card that exists (default: the first chosen one). It is cast by the running card's
-/// controller, who makes its choices (R70), from whatever pile it lies in; its owner does not change,
-/// so it lands in its owner's piles afterwards. A card on the field, or one that has ceased to exist,
-/// is not cast.
+/// E12, R453: cast a card that exists (default: the first chosen one), from whatever pile it lies in, by
+/// the running card's controller, who makes its choices (R70); its owner does not change, so it lands
+/// in its owner's piles afterwards.
 pub fn cast(args: CastArgs) -> Effect {
     Effect::new("cast", move |ctx| {
         let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
@@ -150,8 +134,7 @@ pub fn cast(args: CastArgs) -> Effect {
 }
 
 /// R1180005: whether `aimed` names a legal pick of the first target declaration `card` makes as
-/// `caster` casts it now (its face's, a copier's copied text's; R81, R90). No aim, or a card that
-/// declares no target, has none.
+/// `caster` casts it now (its face's, a copier's copied text's; R81, R90).
 fn aim_is_legal(
     state: &crate::state::GameState,
     caster: PlayerId,
@@ -172,11 +155,10 @@ fn aim_is_legal(
         .any(|option| crate::targeted::aims_at_pick(option, aimed))
 }
 
-/// What `castEach` reads its set from: the ids of the cards, read once as the list reaches the clause
-/// (TS `(ctx) => readonly (CardInstance | string)[]`; a card file maps its instances to their ids).
+/// What `castEach` reads its set from: the ids of the cards, read once as the list reaches the clause.
 pub type CastEachCards = Arc<dyn Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync>;
 
-/// `castEach`'s argument: `{ cards } & CastHow`.
+/// `castEach`'s argument.
 #[derive(Clone)]
 pub struct CastEachArgs {
     pub cards: CastEachCards,
@@ -184,9 +166,8 @@ pub struct CastEachArgs {
 }
 
 /// E12, R453: `cast` each card of a set read once, as the list reaches it (`forEachCard`, R113), one
-/// after another, each with its caster's choices — Classic #56 Radiant's "Cast every Spell in your
-/// graveyard, oldest first": a Spell a cast puts in the graveyard is not one of them. A card that has
-/// left its pile by its turn (an earlier cast exiled it) is passed over.
+/// after another: for Classic #56 Radiant a Spell a cast puts in the graveyard is not one of them. A
+/// card that has left its pile by its turn (an earlier cast exiled it) is passed over.
 pub fn cast_each(args: CastEachArgs) -> Effect {
     let how = args.how.clone();
     for_each_card(ForEachCardArgs {
@@ -258,10 +239,9 @@ pub struct CastNewArgs {
     pub how: CastHow,
 }
 
-/// E12, R453: cast a new card of a named definition — the running card's controller makes it, owns it
-/// and casts it; it lands in their graveyard after it resolves (R87). `def` may be read off the context
-/// as the effect applies (#7's remembered Spell); null casts nothing. `radiant` is the face when `def`
-/// does not say (Classic+ #37's copy "by definition and face").
+/// E12, R453: cast a new card of a named definition (Classic #47 casts #34), made, owned and cast by the
+/// running card's controller and landing in their graveyard after (R87). `radiant` is the face when
+/// `def` does not say (Classic+ #37's copy "by definition and face").
 pub fn cast_new(args: CastNewArgs) -> Effect {
     Effect::new("castNew", move |ctx| {
         let named: Option<CastDef> = match &args.def {
@@ -308,11 +288,10 @@ pub struct HelpfulCastArgs {
     pub radiant: Option<bool>,
 }
 
-/// R1844002 (Stinkyscape #147.2 Wardrum Blob): "do something helpful". The perfect pool is ranked
-/// for the caster as C+ #27's hand is (`rank_perfect_hand`, the running card's ids left out, R387),
-/// and its top card is `castNew`'s: free, counted as a play, its choices the caster's (R70). With
-/// `radiant` the pool is ranked by its Radiant faces and the pick is cast Radiant. Outside the
-/// caster's main phase the ranking reads printed data alone, as §10.7's always does there.
+/// R1844002 (Stinkyscape #147.2 Wardrum Blob): "do something helpful": `castNew` of the perfect pool's
+/// top card, ranked for the caster as C+ #27's hand is (`rank_perfect_hand`, the running card's ids left
+/// out, R387), by its Radiant faces with `radiant`. Outside the caster's main phase the ranking reads
+/// printed data alone, as §10.7's always does there.
 pub fn helpful_cast(args: HelpfulCastArgs) -> Effect {
     let radiant = args.radiant == Some(true);
     cast_new(CastNewArgs {
@@ -432,19 +411,15 @@ pub struct CastRandomArgs {
 }
 
 /// E12, R452: cast `count` random cards from a pool (§5.1's `query`: no tokens unless it asks, never the
-/// casting card's own definition), one after another, each a random cast — every choice random, its X
-/// the caster's current mana (R453) — made and owned by the caster, landing in their graveyard (R87).
-/// Classic+ #47 Jogg's Box: `{ query: { type: "Spell" }, count: 10 }`; #38.1 Solarius Prime: five, with
-/// `targetEnemies` and, on its Radiant face, `radiant`. The casts are parts of the list read once as it
-/// reaches them, so one the other player's prompt pauses is followed by the rest when it is answered.
+/// casting card's own definition), each a random cast with its X the caster's current mana (R453),
+/// owned by the caster (R87). The casts are parts of the list read once (Classic+ #47, #38.1), so one a
+/// prompt pauses is followed by the rest when it is answered.
 pub fn cast_random(args: CastRandomArgs) -> Effect {
     cast_random_with(args, None)
 }
 
-/// R1862004: `castRandom` with every cast aimed (`CastHow.aimAt`, R946): each takes `aim_at` (an
-/// instance id or a `prompts::option_key`) for its first target declaration where it is legal, else
-/// makes that pick at random (Stinkyscape #141 Fruit Launcher, #143 Book Launcher: "cast a random …
-/// on it").
+/// R1862004: `castRandom` with every cast aimed (`CastHow.aimAt`, R946): each takes `aim_at` for its
+/// first target declaration where it is legal, else picks at random (Stinkyscape #141, #143).
 pub fn cast_random_at(args: CastRandomArgs, aim_at: String) -> Effect {
     cast_random_with(args, Some(aim_at))
 }
@@ -484,9 +459,7 @@ fn cast_random_with(args: CastRandomArgs, aim_at: Option<String>) -> Effect {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Price rules on a player (E15, E39, R455)
-// ---------------------------------------------------------------------------
 
 /// How long a price rule lasts: until the play it prices is made ("your next …"), this turn, through the
 /// named player's next turn (R48: "during their next turn", AI Alignment Tax), or for the rest of the
@@ -526,11 +499,9 @@ pub struct AddCostRuleArgs {
     pub lasts: CostRuleSpan,
 }
 
-/// E15, R455: a price rule on a player's cards (`costRules.ts`) — Classic #2's "Your next Trap or Field
-/// Spell costs (2) less" (`{ types: ["Trap", "Field Trap", "Field Spell"], amount: -2 }` until used, or
-/// `setTo: 0` on its Radiant face), AI Alignment Tax's "Your opponent's cards cost (1) more during
-/// their next turn" (`player: "enemy"`, `{ amount: 1 }`, "theirNextTurn"). A rule until used is spent by
-/// the play whose price it changed (never by a cast, R70).
+/// E15, R455: a price rule on a player's cards (Classic #2's "Your next Trap or Field Spell costs (2)
+/// less", AI Alignment Tax's "Your opponent's cards cost (1) more during their next turn"). A rule until
+/// used is spent by the play whose price it changed (never by a cast, R70).
 pub fn add_cost_rule(args: AddCostRuleArgs) -> Effect {
     Effect::new("addCostRule", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

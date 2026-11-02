@@ -6,20 +6,12 @@
 //! - **Cast on draw** is the static flag §2.4's draw reads (R58): drawn, it casts itself at once and
 //!   the draw repeats, so its owner draws again. Setup never deals it (R635, R748).
 //! - **The card:** `add_random_from_catalog` of one non-token card of every open set but this one
-//!   (R380, R387), Radiant, carrying the NEW rider `chinese` (ME-CN), on the base face `costMod: 1`
-//!   with `costModUpTo: 4` (R1704003: the raise stops at (4), so a card at (4) or more, or an X-cost
-//!   card, costs what it did) and on the Radiant face `costOverride: 0`. It is a card generated into a
-//!   hand, so R673's Glitch roll applies, and it runs its own arrival hooks (R151), so a Heroic Power
-//!   rolls its power. Only the owner sees it (R97). A full hand burns it (§2.4, R4).
+//!   (R380, R387), Radiant, `chinese` (ME-CN), on the base face `costMod: 1` up to (4) (R1704003)
+//!   and on the Radiant face `costOverride: 0`. R673's Glitch roll and its own arrival hooks (R151)
+//!   apply. Only the owner sees it (R97). A full hand burns it (§2.4, R4).
 //! - **The (1) and the play** are R1149001's: a bottle that reaches a hand any other way (an add, a
 //!   bounce, a steal, a draw past R58's chain cap) stays there as a (1) Spell, and played from it, it
 //!   does the same.
-//!
-//! Through patch v0.3.7b it cost (X) and was replaced in place on any arrival in a hand (the
-//! `enters_hand` hook, R925, R926); `script_v0_3_7b` keeps that for those versions' replays
-//! (R767000). Through v0.4.0f the base face's card took no raise; `script_v0_4_0f` keeps that.
-//! Through v0.4.4b the raise and the Radiant face's (0) were printed, not declared;
-//! `script_v0_4_4b` keeps that.
 //!
 //! Tunes: surcharge 1 ↓, on the base face only; setCost 0 ↓, on the Radiant face only (R1431, R824000,
 //! R1748003). The cap of (4) stays printed (R1704003).
@@ -29,17 +21,15 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-037";
 
-/// R1704003: "It costs (1) more (up to (4))", the raise as v0.4.4b printed it before it was the
-/// declared `surcharge` (R1748003).
+/// R1704003: "It costs (1) more (up to (4))", the printed raise `script_v0_4_4b` keeps (R1748003).
 const RAISE: i32 = 1;
 const RAISE_UP_TO: i32 = 4;
 
-/// The Radiant face's "It costs (0)", as v0.4.4b printed it before it was the declared `setCost`.
+/// The Radiant face's printed "It costs (0)", which `script_v0_4_4b` keeps.
 const FREE: i32 = 0;
 
-/// The bottle; `raised`, the base face's card costs more, up to (4) (none through v0.4.0f): by the
-/// declared `surcharge` and, on the Radiant face, at the declared `setCost` when `declared` is on, by
-/// the printed (1) and at the printed (0) when it is off.
+/// The bottle; `raised`, the base face's card costs more, up to (4); `declared`, its numbers are the
+/// declared `surcharge` and `setCost`, else the printed (1) and (0).
 fn bottle(radiant: bool, raised: bool, declared: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -114,12 +104,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     }
 }
 
-// M #37 CN in a Bottle — SPEC §8.8 row 37, BUILD M10 row M 37: "Cast on draw (R58, R1149001): drawn,
-// it is cast and adds a random non-token Radiant card of any set but this one, carrying `chinese`,
-// hidden from the opponent (R97), costing (1) more up to (4) (R1704003); the new card is generated for
-// R673 and runs its own arrival hooks (R151); a full hand burns the new card; setup never deals it
-// (R635); added to a hand without a draw it stays there at (1), and played it does the same; radiant
-// the new card costs (0)".
+// M #37 CN in a Bottle — SPEC §8.8 row 37, BUILD M10 row M 37.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,8 +119,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
     const FILLER: &str = "core-005";
 
-    /// `effects` applied for p1 on a sink over the scenario's state, then settled; the rng cursor
-    /// written back; their events.
+    /// `effects` applied for p1 on a sink over the scenario's state, then settled; their events.
     fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
@@ -250,15 +234,13 @@ mod tests {
                 assert!(new_card.radiant);
                 assert_eq!(new_card.chinese, Some(true));
                 assert_eq!(new_card.cost_override, None);
-                // The opponent sees a count, never the card (R97).
                 let view: Value = js(&view_for(s.state(), P2));
                 assert_eq!(view["opponent"]["hand"], json!({ "count": 4 }));
             }
 
             #[test]
             fn r1149001_a_full_hand_casts_it_and_burns_the_new_card() {
-                // Ten in hand and the bottle on top of the library: the turn draw casts it anyway, and
-                // the card it adds finds no room and is burned (§2.4, R4).
+                // Ten in hand: the turn draw casts it anyway and burns the card it adds (§2.4, R4).
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "bottle-burn",
@@ -314,7 +296,6 @@ mod tests {
 
             #[test]
             fn r926_r1149001_it_costs_1_and_declares_a_cry() {
-                // The printed-only (X) is gone: it costs (1) like any card in a hand.
                 crate::register_all();
                 let s = scenario(json!({
                     "seed": "bottle-cost",
@@ -437,7 +418,6 @@ mod tests {
 
             #[test]
             fn r673_the_new_card_is_generated_for_glitch() {
-                // With Glitch's odds at certainty, the new card is a Glitch.
                 let mut s = quiet("bottle-glitch");
                 s.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
                 let new_card = cast_bottle(&mut s, false);

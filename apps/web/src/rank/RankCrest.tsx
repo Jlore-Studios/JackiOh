@@ -1,17 +1,8 @@
 // A rank drawn as a crest (#1650; SPEC §9.12, R605, R607, R608, R612): an inline SVG for Raisin, each
-// Grape tier at each division and Jlorious, so a rank reads at a glance wherever it shows. Like
-// `game/LockIcon.tsx` and `game/Clock.tsx` it draws its own art, so no raster asset ships.
-//
-// Presentation only (CLAUDE.md rule 7). It takes a `VisibleRank`, a `PeakBadge`, or a tier and a
-// division (the ladder's headings and rows, which carry no pips), reads nothing else and never sees
-// a rating (R612). The crest is an `img` named and titled with `rankWords` or `badgeWords`, so a
-// screen reader reads what it read before the art.
-//
-// The tier art is one table (`TIER_ART`). A division adds the same embellishment to every Grape tier,
-// one function (`divisionEmbellishment`): a stud at the crest's base per step up, and an inner
-// frame line for each step after the first, so a division reads the same in every tier. Pips and
-// placements are a pip bar beside the crest, and Jlorious's position is printed beside it. Its
-// shimmer is the one animation: it is left out under Reduce motion, panel or OS (rankCrest.css).
+// Grape tier at each division and Jlorious, so no raster asset ships.
+// Presentation only (CLAUDE.md rule 7): it reads nothing but its props and never sees a rating (R612).
+// The crest is an `img` named and titled with `rankWords` or `badgeWords`, so a screen reader reads
+// the same words. Its shimmer is left out under Reduce motion, panel or OS (rankCrest.css).
 
 import type { ReactElement } from "react";
 
@@ -34,7 +25,6 @@ export type RankCrestProps =
   // The ladder's headings and rows, which carry no pipsPerDivision.
   | { tier: GrapeTier; division?: number; size: RankCrestSize };
 
-/** Studs per Grape division: one more at each step from III to I, in every tier. */
 const DIVISION_STUDS: Readonly<Record<number, number>> = { 3: 1, 2: 2, 1: 3 };
 
 /** The one division rule (#1650): the studs, and one inner frame line fewer. */

@@ -1,17 +1,5 @@
-//! Online replays on the server (SPEC §9.3, R768, issue #510): `GET /api/replays` and
-//! `GET /api/replays/:matchId` (`src/api/replays.rs`), over the fake store and the real engine.
-//!
-//!  - Both seats' steps are `view_for` after a fresh fold of the first k accepted actions, for every
-//!    k, and follow the seat the account played after a Glitch's swap (R677).
-//!  - An account that held no seat gets what an unknown id gets (404); a match still open or live is
-//!    409; a purged log is 410 `gone`; a fold that misses its recorded hash, or its results row when
-//!    it has none, is 422 with part 1's reason.
-//!  - No body holds the seed or the log; a page holds at most `REPLAY_PAGE_STEPS` steps; the list
-//!    pages by `REPLAY_LIST_PAGE`; the cache keeps at most `REPLAY_CACHE_MATCHES` replays for at most
-//!    `REPLAY_CACHE_TTL_SECONDS`; the routes answer 429 past `REPLAY_REQUESTS_PER_MINUTE`.
-//!
-//! Each match is written straight to the store as the actor and `api/results.rs` leave a finished
-//! one: its row, its log, its results row, then the final hash.
+//! Online replays on the server (SPEC §9.3, R768, #510): `GET /api/replays` and `GET /api/replays/:matchId`.
+//! R677: steps follow seat after Glitch swap; paging, cache and rate limits.
 
 use std::sync::Arc;
 
@@ -51,10 +39,6 @@ const PLAYED_ACTIONS: usize = 36;
 /// A catalog version no build has: a match played on it is refused before anything is folded.
 const OLD_CATALOG: &str = "v0.0.1-old";
 
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
-
 /// The three accounts' tokens: A and B play, C never holds a seat.
 struct Tokens {
     a: String,
@@ -81,9 +65,7 @@ async fn get(app: &Arc<App>, path: &str, token: &str) -> (u16, Value) {
     (status, body)
 }
 
-// ---------------------------------------------------------------------------------------------
 // Games
-// ---------------------------------------------------------------------------------------------
 
 /// A finished game: what made it and the state it ended on.
 #[derive(Clone)]
@@ -312,9 +294,7 @@ fn error_code(body: &Value) -> &str {
     body["error"]["code"].as_str().unwrap_or("")
 }
 
-// ---------------------------------------------------------------------------------------------
 // The steps
-// ---------------------------------------------------------------------------------------------
 
 mod r768_the_steps {
     use super::*;
@@ -438,9 +418,7 @@ mod r768_the_steps {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The refusals
-// ---------------------------------------------------------------------------------------------
 
 mod r768_the_refusals {
     use super::*;
@@ -593,9 +571,7 @@ mod r768_the_refusals {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The list
-// ---------------------------------------------------------------------------------------------
 
 mod r768_the_list {
     use super::*;
@@ -917,9 +893,7 @@ mod r768_the_list {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Bounded cost
-// ---------------------------------------------------------------------------------------------
 
 mod r768_bounded_cost {
     use super::*;
@@ -994,9 +968,7 @@ mod r768_bounded_cost {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Older shipped versions (R767000)
-// ---------------------------------------------------------------------------------------------
 
 mod r767000_the_versions {
     use super::*;
@@ -1130,9 +1102,7 @@ mod r767000_the_versions {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The fold off the runtime (#1035)
-// ---------------------------------------------------------------------------------------------
 
 mod off_the_runtime {
     use super::*;
@@ -1236,14 +1206,9 @@ mod off_the_runtime {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1834002, R1834003 — the loadouts on a replay's pages
-// ---------------------------------------------------------------------------------------------
 
-/// R1834002, R1834003: each page carries both seats' seat-level loadouts as the match froze them,
-/// and the own picks of the cards its steps show (a card of that seat's deck, as dealt), by the rule
-/// the live sockets keep, so a replay's viewer learns no card its views did not show. A match from
-/// before loadouts wears every default and carries no card's picks.
+/// R1834002, R1834003: replay pages carry frozen seat loadouts and revealed card picks without leaking hidden cards.
 mod r1834003_a_replays_pages_carry_the_loadouts {
     use super::*;
     use crate::support::store::named_cards;

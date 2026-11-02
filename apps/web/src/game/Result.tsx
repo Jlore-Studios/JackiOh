@@ -1,24 +1,14 @@
-// The board's game-over state (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw").
-//
-// It used to be a small box printing `result.reason` as the engine spells it ("hero-death",
-// "concede") over an undimmed board, with no way on. Now the reason reads as a sentence from the
-// viewer's side of the table, and the overlay comes in two forms:
-//
-//  - `panel`: a dimmed board and a panel in the middle of the screen with the outcome, why, and the
-//    route's own ways on (`actions`: hotseat's Play again and Back, the match's Back to lobby),
-//    plus "View the board", which folds it to the chip;
-//  - `chip`: one line at the foot of the screen, over nothing that matters once the game is done,
-//    with "Result" to open the panel again. Practice asks for this form from the start, because
-//    its own result dialog (PracticeResult) is the panel there.
-//
+// The board's game-over state (BUILD M5-T4 `gameOver`), in two forms:
+//  - `panel`: a dimmed board and a panel with the outcome, why, and the route's own ways on
+//    (`actions`), plus "View the board", which folds it to the chip;
+//  - `chip`: one line at the foot of the screen, with "Result" to open the panel again. Practice asks
+//    for this form from the start, because its own result dialog (PracticeResult) is the panel there.
 // Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
 // its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
-// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests
-// and tools.
+// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests.
 //
-// R434: the game's end reveals both hands. When the view shows the opponent's hand (`reveal.ts`),
-// the panel lists it as "Their hand", every card a face that opens large, and the chip offers
-// "Their hand" as a button that opens the same cards in the list dialog (TheirHand.tsx).
+// R434: the game's end reveals both hands. When the view shows the opponent's (`reveal.ts`), the
+// panel lists it as "Their hand", and the chip's button opens it in the list dialog (TheirHand.tsx).
 
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -48,8 +38,8 @@ export function outcomeFor(result: Result, viewer: PlayerId): ResultOutcome {
 export const RESULT_WORD: Readonly<Record<ResultOutcome, string>> = { win: "Win", loss: "Loss", draw: "Draw" };
 
 /**
- * Why the game ended, as the viewer would say it. Every `GameOverReason` has a sentence. `winner` is
- * the result's, which tells a draw by two fleers from the other player's flight (R1843002).
+ * Why the game ended, as the viewer would say it. `winner` is the result's, which tells a draw by two
+ * fleers from the other player's flight (R1843002).
  */
 export function resultReason(outcome: ResultOutcome, reason: GameOverReason, winner: PlayerId | "draw" | null = null): string {
   switch (reason) {
@@ -99,8 +89,7 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason, win
 
 /**
  * How long the result waits: the effects layer replays the killing blow in at most
- * FX_LETHAL_LEAD_MAX_MS and then plays Victory / Defeat in FX_RESULT_MS. With no effects to watch
- * (reduced motion, the setting or the OS's, or effects off) it shows at once.
+ * FX_LETHAL_LEAD_MAX_MS and then plays Victory / Defeat in FX_RESULT_MS; with no effects to watch, 0.
  */
 export function resultRevealMs(): number {
   let reduced = prefersReducedMotion();
@@ -136,7 +125,7 @@ type GameResultProps = {
   form: ResultForm;
   /** The route's ways on, shown in the panel form. */
   actions?: ReactNode;
-  /** The animation-runner marker the overlay has always carried (BUILD M5-T4). */
+  /** The animation-runner marker (BUILD M5-T4). */
   animating?: string;
   /** R434: the opponent's hand, once the view reveals it (`revealedOpponentHand`), and its view. */
   theirHand?: TheirHandProps | null;
@@ -145,8 +134,7 @@ type GameResultProps = {
 export function GameResult({ result, viewer, form, actions, animating, theirHand = null }: GameResultProps): ReactElement {
   useLocale();
   const outcome = outcomeFor(result, viewer);
-  // The panel folds to the chip ("View the board") and opens again ("Result"). Only the first
-  // appearance waits for the effects layer; a fold or an unfold is immediate.
+  // Only the first appearance waits for the effects layer; a fold or an unfold is immediate.
   const [open, setOpen] = useState(form === "panel");
   const [toggled, setToggled] = useState(false);
   const [revealMs] = useState(resultRevealMs);

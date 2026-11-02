@@ -1,5 +1,4 @@
 // `/dev/hotseat` route tests (BUILD M5-T3).
-// The session tests fake-port behavior; this route tests URL, deck injection, browser rendering, and `window.__jackioh`.
 // `apps/web/package.json` builds E2E in development: the handle exists there and never in production.
 // The fake port proves route requests and drawing only (CLAUDE.md rule 7).
 
@@ -25,14 +24,11 @@ import {
   readParams,
 } from "./hotseat.tsx";
 
-// Fake engine and catalog
-
 type FakeState = { turn: number; active: PlayerId; pendingFor: PlayerId | null };
 
 type Fake = {
   port: EnginePort;
   createGameArgs: CreateGameArgs[];
-  /** Actions the route handed to `reduce`. */
   actions: Action[];
   viewedBy: PlayerId[];
   /** Next accepted `reduce` leaves this prompt open; consumed once. */
@@ -51,7 +47,7 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
     tags: [],
     rarity: "Common",
     token: false,
-    // Non-monotonic costs ensure `first20` and `cheap20` differ.
+    // Non-monotonic, so `cheap20` is not `first20`.
     cost: (index * 3) % 7,
     base: { attack: 1, health: 1, keywords: [], text: "" },
     radiant: { attack: 2, health: 2, keywords: [], text: "" },
@@ -59,7 +55,7 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
   };
 }
 
-/** More cards than a deck holds, so `first20` and `cheap20` (each `DECK_SIZE` long) hold different cards. */
+/** More cards than a deck holds, so `first20` and `cheap20` differ. */
 function fakeCatalog(): CardDefs {
   const defs: CardDef[] = [];
   for (let i = 1; i <= DECK_SIZE + 5; i += 1) defs.push(def(i));
@@ -129,9 +125,7 @@ function makeEngine(options: { catalog?: CardDefs | "throws"; pendingAfterBegin?
   return fake;
 }
 
-// Mounting
-
-/** Render the route and wait for the engine promise the route resolves in an effect. */
+/** Render the route and wait for the engine promise it resolves in an effect. */
 async function mount(search = "?seed=42&a=first20&b=cheap20"): Promise<void> {
   at(`/dev/hotseat${search}`);
   await act(async () => {
@@ -235,8 +229,6 @@ describe("readInjectedHandicaps (R180: a fixture deck's handicap, spec 25)", () 
   });
 });
 
-// Starting the game
-
 describe("the route starts one game from the URL", () => {
   it("hands the engine the seed and the two decks the a= and b= ids resolve to", async () => {
     const fake = makeEngine();
@@ -336,7 +328,6 @@ describe("the route starts one game from the URL", () => {
 
   it("renders the missing exports when the engine cannot be loaded, and draws no board", async () => {
     // CLAUDE.md rule 7 / §10.8: an unavailable port shows its failure, never a stubbed game.
-    // The dynamic import needs the module mock and re-import.
     vi.resetModules();
     vi.doMock("../../game/engine.ts", async () => {
       const actual = await vi.importActual<typeof import("../../game/engine.ts")>("../../game/engine.ts");
@@ -425,10 +416,7 @@ describe("the seat", () => {
   });
 });
 
-// window.__jackioh
-
 // R1341 emote hands
-
 describe("R1341 the hotseat's emote hands", () => {
   function offered(): (string | undefined)[] {
     fireEvent.click(screen.getByTestId("hero-you"));
@@ -534,7 +522,6 @@ describe("window.__jackioh outside a production build", () => {
 });
 
 describe("window.__jackioh in a production build", () => {
-  /** The E2E build uses development mode for the handle; production must never publish it. */
   it("publishes nothing: MODE=production removes the handle the twelve specs drive", async () => {
     vi.stubEnv("MODE", "production");
     vi.resetModules();

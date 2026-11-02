@@ -33,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #14 Potion Pouch — SPEC §8.9 row 14, BUILD M11 row M+ 14: "adds 2 random Potion cards (M+
-// 11, 12 or 13, R1178000), repeats seen over the seeds; a full hand burns the second;
-// never a crafted potion or a non-Potion card; cards reads through `param()`; radiant both
-// Radiant".
+// M+ #14 Potion Pouch — SPEC §8.9 row 14, BUILD M11 row M+ 14 (R1178000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -44,13 +41,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const POUCH: &str = "meditativeplus-014";
-    /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, nothing else.
     const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
     const FILLER: &str = "core-005"; // (1) Spell
 
     use crate::scenario;
 
-    /// The def ids Pouch added to p1's hand, beside the Filler held throughout.
     fn added(s: &Scenario) -> Vec<String> {
         s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).map(|card| card.def_id).collect()
     }
@@ -149,8 +144,6 @@ mod tests {
     #[test]
     fn s2_4_a_full_hand_burns_the_second() {
         crate::register_all();
-        // The Pouch and nine more: after the Pouch is played the hand holds nine, so the first
-        // potion fills it and the second burns.
         let mut hand = vec![json!(POUCH)];
         hand.extend((0..HAND_CAP - 1).map(|_| json!(FILLER)));
         let mut s = scenario(json!({

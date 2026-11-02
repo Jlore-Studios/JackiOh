@@ -1,43 +1,14 @@
 //! The opponent's reply (SPEC §9.9, docs/polish/3-ai.md "The opponent's reply"). A line that passes
-//! the turn is worth what is left of it after the opponent answers, so `decide` scores its best lines
-//! one turn deeper: on the determinization, the opponent plays its turn by a fixed rule and ends it,
-//! and the line is scored at the seat's next decision.
+//! the turn is worth what remains after the opponent answers, scored one turn deeper.
 //!
-//! The rule, one step at a time:
-//!   1. A card the line itself put in the opponent's hand (a Pocket Chaos it was handed, the units a
-//!      Flood bounced) is no guess: the seat watched it arrive. The opponent plays the one whose
-//!      result its own evaluation likes best, if that beats standing still.
-//!   2. An Activate of a card the seat can see face-up on the field (The Power to Punish's damage, a
-//!      Heroic Power's rolled Ping) is no guess either. The opponent tries up to
-//!      AI_REPLY.visible_activations, those aimed at the seat's hero first, and uses the one its own
-//!      evaluation likes best if that beats standing still.
-//!   3. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
-//!      best value read off the layers (lethal, a kill it survives, a trade up, the face). Lethal
-//!      counts every attack it has left (#1634, `AI_REPLY.open_lethal`): when `ready_gap` says they
-//!      reach the seat's hero together, every attack on it counts as the win, so the face goes first
-//!      rather than a kill. First, a unit of its with Deft in Defense Position, its switch and its
-//!      attack unspent, is switched to Attack on trial (R49: it can still attack): the switch is kept
-//!      when the best attack after it is one of the unit's own, ranked one hit at a time, and
-//!      otherwise the unit stays in Defense.
-//!   4. When none is worth doing, a unit of its in Attack Position whose switch it still has (one that
-//!      attacked has spent it, §4.1, unless it has Deft, R49) is switched to Defense on trial, up to
-//!      AI_REPLY.defense_switches of them, and the one its own evaluation likes best is kept if that
-//!      beats standing still (#1696). Otherwise it ends its turn.
+//! Rule order:
+//! 1. Play handed cards (e.g. bounced units).
+//! 2. Face-up activations (up to AI_REPLY.visible_activations).
+//! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
+//! 4. Defense switches up to AI_REPLY.defense_switches (#1696).
 //!
-//! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
-//! noise, not information; nor does it use a face-down card's Reveal, whose card is a sample too.
-//! Every step is a real `reduce` (one node each), so the engine decides what actually happens: traps,
-//! First Strike, Divine Shield, Taunt, Lifesteal, end-of-turn damage and the seat's own start of turn.
-//! Nothing here recurses.
-//!
-//! A countdown (an effect "in N turns" with its public badge, R1181000) still waiting where the reply
-//! ends is scored a second time (#1995): `reply_score` plays the reply again on a copy of the line's
-//! end whose countdowns come due at the seat's next turn start, so the engine resolves them as their
-//! owners', and blends the two scores by `AI_REPLY.countdown_share` for each turn the farthest of them
-//! would still wait past its owner's next turn start.
-//!
-//! Port of `packages/ai/src/reply.ts`. TS's `try { reduce } catch` is `catch_unwind` around
-//! `reduce`, whose refusals come back as `error` and whose impossible states panic (SURFACE §4.4.9).
+//! Step evaluation uses real `reduce` calls (catching unwinds, SURFACE §4.4.9). Countdowns
+//! waiting where reply ends are blended via `AI_REPLY.countdown_share` (#1995, R1181000).
 
 use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -71,19 +42,12 @@ pub(crate) struct Trade {
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
-/// (`kill_worth`: a unit with Reborn unspent less the body it comes back as, §4.5 step 4, #1796), less
-/// what its own death removes when it dies too, with First Strike deciding who strikes first and no
-/// strike back at all on a Ranged attacker unless the target is Ranged too (R783000). A hit that kills
-/// nothing is worth a little per point dealt, so a second attacker can finish what the first one
-/// started. A Cleave attack also prices what its splash kills or unshields on the target's neighbours
-/// (R63): a killed neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the
-/// same share of the Divine Shield weight. A Trample attacker's hits add what they land beyond each
-/// struck unit's health on the target's hero, priced as a face hit (`reply_face_value`, §4.4 step 9),
-/// and a Lifesteal attacker's add what healing its own hero by all they deal is worth (`heal_worth`,
-/// step 8; #1820). `kills` says whether the strike kills the target itself, `splash_kills` whether the
-/// splash kills a neighbour; the move order reads all three (`candidates.rs`'s even trades, #1779,
-/// #1821). Its screen (#1796), 400 games of improve-dev against the parent (`633568b99`), read 196-202
-/// with 2 aborted, edge -0.015 (-0.041 to 0.011).
+/// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
+/// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
+/// A hit that kills nothing is worth a little per point dealt, so a second attacker can finish what the
+/// first started. A Cleave splash is priced at `AI_REPLY.cleave_share` of what it kills or unshields
+/// (R63), a Trample excess as a face hit and a Lifesteal heal by `heal_worth` (#1820). The move order
+/// reads `kills` and `splash_kills` too (`candidates.rs`'s even trades, #1779, #1821).
 pub(crate) fn trade_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -191,10 +155,8 @@ pub(crate) fn trade_value(
     }
 }
 
-/// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
-/// the game, judged against all of `seat`'s life (`effective_life`: in a Duos duel its own HP and its
-/// team's pool while unspent, R964000), else AI_REPLY.face_per_damage a point. R2201000: never the win
-/// on a seat that cannot lose.
+/// Static trader's value of `damage` to `seat`'s hero: `AI_EVAL.win` if lethal against `effective_life`
+/// (pool in Duos, R964000; never if cannot lose, R2201000), else `AI_REPLY.face_per_damage` per point.
 pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
     if jackioh_engine::can_lose(state, seat) && damage >= effective_life(state, seat) {
         AI_EVAL.win
@@ -203,9 +165,7 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
     }
 }
 
-/// The opponent's attacks worth making out of `legal` (legal_actions(state, opp)), best static value
-/// first (ties keep legal_actions order). With `face_is_lethal` every attack on the seat's hero is
-/// worth AI_EVAL.win: the attacks left reach it together (#1634).
+/// Ranked attacks worth making from `legal`. When `face_is_lethal`, every hero attack is `AI_EVAL.win` (#1634).
 fn ranked_attacks(
     state: &GameState,
     seat: PlayerId,
@@ -244,9 +204,7 @@ fn ranked_attacks(
     ranked.into_iter().map(|(action, _)| action).collect()
 }
 
-/// One opponent action through the reducer; `None` when it panics or is refused, a panic counted as
-/// `simulate` counts one (#1429). A step whose reduce runs the expensive work `surcharge_nodes` knows
-/// (a whole AI turn inside a trap's answer) pays its nodes the same way `simulate` does.
+/// Reduces one opponent action; `None` on panic or refusal. Counts node and charges surcharges (#1429).
 fn reduce_for(
     state: &GameState,
     actor: PlayerId,
@@ -278,18 +236,16 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer: TS's
-/// `GameState | null | undefined`.
+/// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer.
 pub(crate) enum Known {
-    /// The counter refused a node (TS `null`).
+    /// The counter refused a node.
     Cut,
-    /// No such play is worth making (TS `undefined`).
+    /// No such play is worth making.
     Nothing,
     Played(Box<GameState>),
 }
 
-/// Step 1: the best play of a card the opponent holds that is not in `hidden`, by the opponent's own
-/// evaluation, when it beats standing still. `legal` is legal_actions(state, opp), already in hand.
+/// Step 1: best play of a known hand card not in `hidden` if beating standing still.
 fn known_play(
     state: &GameState,
     seat: PlayerId,
@@ -380,10 +336,8 @@ fn aim_of(state: &GameState, seat: PlayerId, action: &ActionBody) -> Aim {
     if at_seat_card { Aim::SeatCard } else { Aim::Other }
 }
 
-/// Whether the seat can see the source of `action`, an `activate` (or the `activatePower` alias, which
-/// `legal_actions` no longer lists, R752): a card acting face-up on the field (`is_acting_on_field`, so
-/// never a face-down card's Reveal, R783006, nor a card determinization filled in) that is none of the
-/// cards the opponent held unseen.
+/// Whether the seat can see the source of `action` (R752): face-up on the field,
+/// not a face-down Reveal (R783006) or determinized unseen card.
 fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionBody) -> bool {
     let (ActionBody::Activate { instance_id, .. } | ActionBody::ActivatePower { instance_id, .. }) = action
     else {
@@ -393,11 +347,10 @@ fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionB
         && find_instance(state, instance_id).is_some_and(|card| subsystems::is_acting_on_field(state, card))
 }
 
-/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's
-/// own evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried,
-/// ordered by `aim_of` and in legal_actions order within each aim: `legal_actions` lists the
-/// activating side's own targets first, so the seat's hero would otherwise come last. R2564000: the
-/// root's activation probes try each unit's uses through it too.
+/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's own
+/// evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried, ordered by
+/// `aim_of`: `legal_actions` lists the activating side's own targets first, so the seat's hero would
+/// otherwise come last. R2564000: the root's activation probes try each unit's uses through it too.
 pub(crate) fn visible_activation(
     state: &GameState,
     seat: PlayerId,
@@ -454,12 +407,8 @@ fn deft_switch(
     Known::Nothing
 }
 
-/// Step 4, #1696: once no attack is worth making, so that every unit's best attack is worth nothing,
-/// the opponent's units in Attack Position whose switch `legal` lists (a unit that attacked has spent
-/// it, §4.1, unless it has Deft, R49) are switched to Defense on trial, at most
-/// AI_REPLY.defense_switches of them in legal_actions order, one node each, and the one its own
-/// evaluation likes best is kept if that beats standing still. A unit already in Defense is never
-/// tried: its switch back to Attack is `deft_switch`'s.
+/// Step 4 (#1696): trials switching up to `AI_REPLY.defense_switches` units from Attack to
+/// Defense when no attack is worth making (§4.1, R49).
 fn defense_switch(
     state: &GameState,
     seat: PlayerId,
@@ -490,14 +439,8 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
         .collect()
 }
 
-/// The opponent's reply to a line that handed it the turn: from `state` (the opponent's main phase,
-/// or a prompt on the way there) it plays by the rule in this file's header and ends its turn.
-/// Prompts on either side get their answerer's best of AI_SEARCH.max_auto_answer_options answers
-/// drawn from all of them (`best_auto_answer`), the seat's own off-turn prompts too. `hidden` holds
-/// the ids of the cards the opponent held unseen when the decision began (`hidden_card_ids` of the
-/// decision's determinization, TS's default); any other card in its hand is one it may play. Returns
-/// the state at the seat's next main phase or prompt, or where the game ended; `None` when the
-/// counter refused a node.
+/// Simulates the opponent's reply turn according to the reply rules until the seat's next main phase
+/// or prompt, or game end. Prompts get `best_auto_answer`. Returns `None` when the node counter exhausts.
 pub fn simulate_reply(
     state: &GameState,
     seat: PlayerId,
@@ -607,12 +550,7 @@ pub fn simulate_reply_with(
     Some(current)
 }
 
-/// A closed line's value after the opponent's reply: `end` is where the line stopped. A line that
-/// handed the opponent the turn is scored at the seat's next decision, where the seat swings first,
-/// less the crystals it left unspent and with the coming refreshes priced as at the line's end
-/// (`coming_mana`); a line that ended the game, or stopped on the seat's own prompt, keeps its static
-/// score. `hidden` is as for `simulate_reply` (TS's default: `hidden_card_ids(end, seat)`).
-/// A countdown still waiting at the seat's next decision is weighed past it (`countdowns_due`, #1995).
+/// Scores a closed line after opponent's reply, evaluated at next decision (`coming_mana`, #1995).
 /// `None` when the counter ran out.
 pub fn reply_score(
     end: &GameState,
@@ -666,10 +604,8 @@ fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i3
     finalist_score(after, seat, next, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
 }
 
-/// #1995: `end` with every countdown still waiting at `after` (an entry with its public badge, R1181000,
-/// R169: nothing hidden, R185) due at the seat's next turn start, where the reply ends, so the reply
-/// fires it through `reduce` as its owner; and how many turns the farthest of them still waits past
-/// its owner's next turn start, which `AI_REPLY.countdown_share` is raised to. `None` when none waits.
+/// #1995: advances countdowns waiting at `after` (public badges, R1181000, R169, R185) to seat's
+/// next turn start; calculates wait turns for `AI_REPLY.countdown_share`. `None` when none waits.
 fn countdowns_due(end: &GameState, after: &GameState, seat: PlayerId) -> Option<(GameState, i32)> {
     if !after.delayed.iter().any(has_countdown) {
         return None;

@@ -16,12 +16,10 @@ export type AudioDebugHandle = {
 
 declare global {
   interface Window {
-    /** Outside production builds only (like window.__jackioh). */
     __jackiohAudio?: AudioDebugHandle;
   }
 }
 
-/** Sets window.__jackiohAudio when import.meta.env.MODE !== "production"; the remover deletes it if it is still ours. */
 export function exposeAudioDebug(engine: AudioEngine): () => void {
   if (import.meta.env.MODE === "production") return () => {};
   const handle: AudioDebugHandle = {

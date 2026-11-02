@@ -1,18 +1,9 @@
 // `/dev/duos?seed=42&a1=first20&a2=first20&b1=first20&b2=first20` (#936 B65): a four-seat hotseat
-// Duos game over the WASM duos bindings, with a seat switcher, outside production only.
-//
-// As `/dev/hotseat` is for a duel, this route runs the engine in the browser and renders, for
-// whichever seat holds the device, the engine's own `duos_view_for` and `duos_legal_actions` through
-// the same `DuosBoard` the networked route renders (CLAUDE.md rule 7: it computes no view and no
-// legality of its own). The state is opaque (`DuosState`); every action goes through `duos_reduce`,
-// which refuses an illegal one in `error`. The dev decks are `/dev/hotseat`'s (`game/decks.ts`),
-// one per seat, and both teams play by DUOS_HUMAN_TEAM's rules.
-//
-// Pings travel nowhere: a seat's ping is kept here and shown to its own team's seats as the server
-// would relay it (B39), so a hand-over to the teammate shows it.
-//
-// `window.__jackiohDuos` (development builds only) holds the state, the log and a dispatch per seat,
-// for a spec or a person at the console.
+// Duos game over the WASM duos bindings, with a seat switcher, outside production only. It renders
+// the engine's own `duos_view_for` and `duos_legal_actions` through the networked route's `DuosBoard`
+// (CLAUDE.md rule 7: no view or legality of its own). Both teams play by DUOS_HUMAN_TEAM's rules. A
+// ping is shown to its own team's seats, as the server would relay it (B39). `window.__jackiohDuos`
+// (development builds only) holds the state, the log and a dispatch per seat, for a spec or a person.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 

@@ -1,8 +1,4 @@
 // Emailed auth links (docs/polish/5-sign-in.md, B29, B30, R193; PKCE codes, R323, R324).
-//
-// `parseAuthRedirect` is pure over a URL; `consumeAuthRedirect` reads jsdom's location once, scrubs
-// the address bar when any auth parameter is present, and caches its answer until cleared. A
-// recovery session is held for this tab only: memory and `sessionStorage`, never `localStorage`.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -43,10 +39,7 @@ function params(values: Record<string, string>): string {
   return new URLSearchParams(values).toString();
 }
 
-/**
- * A link's parameters. `expires_in` is left out so the expiry is the fixed `expires_at` and the
- * rows below compare whole sessions; the two tests on expiry put it back.
- */
+/** No `expires_in`, so the expiry is the fixed `expires_at` and rows compare whole sessions. */
 function tokenParams(type: string | null, token = TOKEN): Record<string, string> {
   const values: Record<string, string> = {
     access_token: token,
@@ -77,8 +70,6 @@ afterEach(() => {
   clearConsumedAuthRedirect();
   releaseRecoverySession();
 });
-
-// parseAuthRedirect
 
 describe("R193 parseAuthRedirect", () => {
   it("R193 a URL with no auth parameters is none", () => {
@@ -197,8 +188,6 @@ describe("R193 parseAuthRedirect", () => {
   });
 });
 
-// consumeAuthRedirect
-
 describe("R193 a link's address is a claim", () => {
   it("R193 the email and the user id are read from a payload nobody has verified", () => {
     // Anyone can write this token: the reading is a claim for the server to check, not a fact.
@@ -290,8 +279,6 @@ describe("R193 consumeAuthRedirect", () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 });
-
-// The recovery session: memory only
 
 describe("R193 B30 the recovery session", () => {
   it("R193 is held for this tab only: memory and sessionStorage, never localStorage", () => {

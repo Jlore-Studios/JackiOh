@@ -15,10 +15,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * A 2D context that accepts any call: gradients come back as objects with `addColorStop`, every
- * other method records itself, and properties read back what was written.
- */
+/** A 2D context that accepts any call. */
 function stubContext(): CanvasRenderingContext2D {
   const gradient = { addColorStop: () => {} };
   const state: Record<string | symbol, unknown> = {
@@ -140,7 +137,7 @@ describe("B27 the sprite cache", () => {
     expect(stopsOf(own)).toContain("rgba(255, 255, 255, 0.5)");
     expect(stopsOf(own)).not.toContain("rgba(16, 32, 48, 0.5)");
 
-    // A repeat of each request reuses its own sprite, and the default palette is the one it always was.
+    // A repeat of each request reuses its own sprite; no palette or an empty one is the default.
     expect(cache.get("spark", 0, 1, blue)).toBe(inBlue);
     expect(cache.get("spark", 0, 1, [...pink])).toBe(inPink);
     expect(cache.get("spark", 0, 1)).toBe(own);
@@ -189,9 +186,7 @@ describe("B27 the sprite cache", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * No image assets
- * ------------------------------------------------------------------------------------------- */
+/* No image assets */
 
 const FX_DIR = dirname(fileURLToPath(import.meta.url));
 

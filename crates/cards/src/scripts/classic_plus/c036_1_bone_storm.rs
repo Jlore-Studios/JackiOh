@@ -35,12 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #36.1 Bone Storm — SPEC §8.7 row 36.1, BUILD M9 Classic+ row C+ 36.1: "Cast on draw (R70: free,
-// counts as played): 1 damage to the enemy hero and to each enemy Unit, separate instances all
-// landing before the state check, then you draw again; one draw casts at most 20 in a row
-// (`CAST_ON_DRAW_CHAIN_CAP`, R58), the next going to hand uncast (burned when the hand is full);
-// played from a hand it does the same; Spell Damage raises each hit; the damage reads through
-// `param()`; radiant Echo: it resolves a second time".
+// C+ #36.1 Bone Storm — SPEC §8.7 row 36.1, BUILD M9 Classic+ row C+ 36.1.
 #[cfg(test)]
 mod tests {
     use crate::def_ids;
@@ -87,10 +82,9 @@ mod tests {
             s.expect_stats(MENACE, json!({ "health": 8 }));
             s.expect_stats(TIMMY, json!({ "health": 3 })); // your own side untouched
             assert_eq!(s.card(BONE_STORM).zone.z(), ZoneName::Graveyard);
-            // Then you draw again: the next card arrived in hand.
             assert_eq!(def_ids(&s.hand(P1)), vec![FILLER, FILLER]);
             assert_eq!(s.pile(P1, "library").len(), 1);
-            // It is no play and paid nothing (R2179002; through v0.5.2 it was a play, R70).
+            // It is no play and paid nothing (R2179002).
             let id = s.card(BONE_STORM).id.clone();
             assert!(!s.state().players.p1.turn_log.played_ids.contains(&id));
             s.expect_mana(P1, 4);

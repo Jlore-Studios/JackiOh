@@ -46,10 +46,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// M #93.1 Growing Felinor Sr — SPEC §8.8 row 93.1, BUILD M10 row M 93.1: "It can't switch to
-// Defense; its Death summons a base Growing Felinor Sr Sr (M 93.2), not another Sr (MD-E19); a
-// unit token, it vanishes and still fires its Death (R11); radiant 4/4, Divine Shield, Rush, and
-// the Sr Sr is Radiant".
+// M #93.1 Growing Felinor Sr — SPEC §8.8 row 93.1, BUILD M10 row M 93.1 (R11).
 #[cfg(test)]
 mod tests {
     use super::{ID, NEXT, script_v0_5_9f};

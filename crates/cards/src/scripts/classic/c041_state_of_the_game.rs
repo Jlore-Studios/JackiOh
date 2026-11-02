@@ -23,15 +23,11 @@ pub const ID: &str = "classic-041";
 pub fn script() -> CardScripts {
     let base = Script::default();
 
-    // The same empty script: the Radiant face differs only in what the engine reads off the catalog
-    // (its doubled stats and the added Lifesteal).
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41: damage and destroy effects
-// don't remove it, while exile, bounce and a Tribute do; never has Taunt (R347) and is never in Defense
-// (R2179000); Immutable, so no Spell targets it (R781001); radiant adds Lifesteal. Both scripts are
-// empty: these fixtures prove the catalog keywords do the work (§4.1, §4.2, §4.4, §4.5). Removal
+// C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41 (R347, R2179000, R781001). Both
+// scripts are empty: these fixtures prove the catalog keywords do the work (§4.1, §4.2, §4.4, §4.5). Removal
 // sources, none of them aimed at it: Whirlwind (classicplus-021), Twisting Nether (core-088), Lag in
 // the System (classic-025), Flood (core-017) and Carnivorous Cube (core-022, whose Cry Tributes, R428).
 #[cfg(test)]
@@ -269,7 +265,6 @@ mod tests {
                 }));
                 let state = s.card(STATE).id.clone();
                 s.card_mut(&state).position = Some(Position::Def);
-                // The next state check switches it to Attack Position.
                 s.end_turn();
                 s.play(WHIRLWIND, json!({}));
                 assert_eq!(js(&s.stats(&state).position), "ATK");

@@ -15,7 +15,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-050";
 
-/// `{ id: "voidwalker", on: "toGraveyard", instead: { to: "exile" } }`, with the face's `when`.
 fn voidwalker(when: Option<ReplacementWhen>) -> ReplacementDef {
     ReplacementDef {
         id: "voidwalker".to_string(),
@@ -57,9 +56,6 @@ pub fn script() -> CardScripts {
 // C #50 Voidwalker (SPEC §8.6 row 50, BUILD M9 Classic row C 50): the aura takes a death, a discard, a
 // resolved Spell, a fired trap and a burn; unit tokens still cease to exist (R11); its own card reaches
 // the graveyard (R398). Radiant judges by owner: a stolen Unit of theirs dying on your side is exiled.
-//
-// A scenario places its graveyards after its field, through the engine's own moves, so a Voidwalker
-// already on the field would exile them as they were laid; the Cry's cases play it from hand instead.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

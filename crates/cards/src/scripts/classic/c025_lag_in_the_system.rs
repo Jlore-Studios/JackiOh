@@ -24,7 +24,6 @@ enum Whose {
 }
 
 impl Whose {
-    /// The `BoardScope.side` literal.
     fn side(self) -> &'static str {
         match self {
             Whose::Any => "any",
@@ -33,9 +32,6 @@ impl Whose {
     }
 }
 
-/// Every card on the field and in the hands and decks of `whose` sides, in the order the header
-/// gives — or the field alone (the whole board) when `field_only`, which is the base face's scope
-/// (balance patch 1).
 fn reachable(ctx: &EffectContext<'_>, whose: Whose, field_only: bool) -> Vec<CardInstance> {
     let scope: BoardScope = json_as(json!({ "side": whose.side(), "rows": ["units", "backrow"] }));
     let field = cards_in_scope(ctx, &scope);
@@ -185,12 +181,10 @@ mod tests {
                 for card in &gone {
                     s.expect_in_zone(card, "exile");
                 }
-                // What costs more stays where it was.
                 assert_eq!(def_id_of(s.unit(P1, 2)), Some(MENACE.to_string()));
                 assert_eq!(def_id_of(s.backrow(P1, 2)), Some(MANA_WELL.to_string()));
                 assert_eq!(def_id_of(s.unit(P2, 2)), Some(SEVEN.to_string()));
                 assert_eq!(def_id_of(s.backrow(P2, 2)), Some(EXPERIMENT.to_string()));
-                // Hands and decks are out of scope now.
                 assert_eq!(def_ids(&s.hand(P1)), vec![FELINORS, VANILLA]);
                 assert_eq!(def_ids(&s.pile(P1, "library")), vec![REPLENISH, SEVEN]);
                 assert_eq!(def_ids(&s.hand(P2)), vec![FELINORS, STOCKPILE]);
@@ -249,7 +243,6 @@ mod tests {
                 }));
                 let trap = s.card(EXPERIMENT).clone();
                 s.play(LAG, json!({}));
-                // The aura prices plays from the hand, not set cards: the (2) Trap stays.
                 s.expect_in_zone(&trap, "field");
                 s.expect_in_zone(TOE_CRACKER, "field");
             }
@@ -300,7 +293,6 @@ mod tests {
                 let timmy = s.card(TIMMY).clone();
                 s.play(LAG, json!({}));
                 s.expect_in_zone(&timmy, "exile");
-                // The Vanilla beneath was dormant when the set was read; it now tops the lane.
                 s.expect_in_zone(&vanilla, "field");
                 assert_eq!(s.unit(P2, 1).map(|card| card.id), Some(vanilla.id.clone()));
             }
@@ -338,7 +330,6 @@ mod tests {
                 let mut s = lag_board(false);
                 step_param(s.card_mut(LAG), "threshold", -1);
                 s.play(LAG, json!({}));
-                // A (1) Cost card still goes: the Timmy on your field. Hands are out of scope.
                 assert_eq!(def_ids(&s.hand(P1)), vec![FELINORS, VANILLA]);
                 assert!(s.unit(P1, 1).is_none());
             }
@@ -352,7 +343,6 @@ mod tests {
                 assert!(s.unit(P1, 1).is_none());
                 assert!(s.backrow(P2, 2).is_none());
                 assert_eq!(def_id_of(s.unit(P1, 2)), Some(MENACE.to_string()));
-                // Hands and decks stay whatever the threshold is.
                 assert_eq!(def_ids(&s.hand(P1)), vec![FELINORS, VANILLA]);
                 assert_eq!(def_ids(&s.hand(P2)), vec![FELINORS, STOCKPILE]);
             }

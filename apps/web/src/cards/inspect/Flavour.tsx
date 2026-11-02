@@ -1,10 +1,6 @@
-// A card's flavour line and artist credit (R660) where a card is read at leisure: the hover
-// preview's column, the touch sheet and the detail view (the deck builder's and the Card Almanac's).
-// Never on a face itself, where the rules have the room. A card with neither draws nothing.
-//
-// R711000: a Chinese reader who is shown a card the view flagged Chinese (R1301, `face.flagged`) also
-// gets one small line where the flavour sits, that it would have been translated, and already is.
-// Presentation only: no sound, no state.
+// A card's flavour line and artist credit (R660) where a card is read at leisure (hover preview, touch
+// sheet, detail view), never on a face, where the rules have the room. Presentation only. R711000: a
+// Chinese reader shown a card the view flagged Chinese (R1301) also gets the easter egg line there.
 
 import type { ReactElement } from "react";
 import type { CardFlavour } from "@jackioh/cards";

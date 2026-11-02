@@ -5,13 +5,6 @@
 //! below it to the floor and leaves the tiers above alone. The table is exactly what one roll does:
 //! pity sits on top of it (`economy::math`, R1339001), and the item within the tier is the caller's
 //! own draw. No store, no clock, no I/O.
-//!
-//! - [`roll_tier`]: the one pure function every roll goes through, from a table, its fallback, an
-//!   optional floor and a draw to a tier.
-//! - [`card_tier`] and [`cosmetic_tier`]: one draw on `CARD_TIER_WEIGHTS` or
-//!   `COSMETIC_TIER_WEIGHTS`.
-//! - [`card_odds`] and [`cosmetic_odds`]: where one roll lands, counted over every draw, which the
-//!   odds `GET`s answer, the fallback included.
 
 use jackioh_engine::rng::Rng;
 use jackioh_engine::wire::PrintedRarity;
@@ -252,7 +245,6 @@ mod tests {
                 );
             }
         }
-        // The fallback's share is the weight the set tiers leave.
         assert_eq!(
             fallback_weight(&card_set(CARD_TIER_WEIGHTS)),
             Some(TIER_WEIGHT_TOTAL - CARD_TIER_WEIGHTS.set_total())

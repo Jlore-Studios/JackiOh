@@ -33,9 +33,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #30.1 Love Bomb — SPEC §8.8 row 30.1, BUILD M10 row M 30.1: "Cast on draw: heals its caster's
-// hero 7 with no cap, then the draw repeats (§2.4); an enemy C+ 22 Blood Moon turns it into 7 Pierce
-// damage; uncast in a hand it may be played for (1); heal reads through `param()`; radiant 14".
+// M #30.1 Love Bomb — SPEC §8.8 row 30.1, BUILD M10 row M 30.1 (the draw repeats, §2.4).
 #[cfg(test)]
 mod tests {
     use super::*;

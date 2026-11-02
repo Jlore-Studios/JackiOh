@@ -39,9 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #10.2 Divine Spirit — SPEC §8.10 row S 10.2, BUILD M12 row S 10.2: "a chosen 3/4 becomes 3/8;
-// one with 2 Health left of 4 becomes 3/6 with 4 left; a Unit Immune to Spells can't be chosen;
-// radiant 3/4 becomes 3/12, and 2 left of 4 becomes 3/8 with 6 left" (R1867003).
+// S #10.2 Divine Spirit — SPEC §8.10 row S 10.2, BUILD M12 row S 10.2 (R1867003).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

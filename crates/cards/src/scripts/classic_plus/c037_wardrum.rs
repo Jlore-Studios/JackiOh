@@ -3,9 +3,9 @@
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
 //! A hand and deck trigger (B5 E26) on the resolution of the play that is the threshold-th non-Unit play
-//! of the turn (casts count, R70, but a cast on draw is no play, R2179002); `summonThis` puts it in the leftmost open unit zone with no Cry, or
-//! leaves it where it is. The end of turn casts fresh copies by definition and face (E12, R87), skipping
-//! played cards that no longer exist (R86).
+//! of the turn (casts count, R70, but a cast on draw is no play, R2179002) summons it into the leftmost open
+//! unit zone with no Cry, or leaves it where it is. The end of turn casts fresh copies by definition and face
+//! (E12, R87), skipping played cards that no longer exist (R86).
 
 use jackioh_engine::effects::{
     CastDef, CastHow, CastNewArgs, CastNewDef, ForEachCardArgs, cast_new, for_each_card, summon_this,
@@ -153,9 +153,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1) once 3rd non-Unit resolves (casts count, R70; not a cast on draw, R2179002).
-// At end of turn casts a copy of a played non-Unit; a Trap copy stays hidden (R33, R97).
-// `conditionMet` in hand answers whether next play summons it (R195).
+// C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1); a Trap copy stays hidden (R33, R97).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -204,7 +202,6 @@ mod tests {
         s
     }
 
-    /// Play p1's hand card of this definition.
     fn play_from_hand(s: &mut Scenario, def_id: &str, opts: Value) {
         let id = hand(s, def_id);
         s.play(&id, opts);
@@ -233,7 +230,6 @@ mod tests {
             .is_some_and(|card| card["conditionActive"] == true)
     }
 
-    /// The first position, or -1.
     fn index_of(list: &[String], item: &str) -> i64 {
         list.iter().position(|entry| entry == item).map_or(-1, |at| at as i64)
     }
@@ -308,7 +304,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             play_from_hand(&mut s, REPLENISH, json!({}));
-            // Draws the Bone Storm: it casts itself, no play (through v0.5.2 the 3rd, R70), then draws again.
+            // Draws the Bone Storm: it casts itself, no play, then draws again.
             play_from_hand(&mut s, STOCKPILE, json!({}));
             assert_eq!(wardrum_in(&s), ZoneName::Hand);
             play_from_hand(&mut s, REPLENISH, json!({})); // the 3rd

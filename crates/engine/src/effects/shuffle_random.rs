@@ -1,10 +1,7 @@
 //! Shuffle random catalog cards into a library (§6.3 Shuffle into, §5.1; Classic+ #40 Appropriations'
-//! Education, E39): `count` independent picks from the pool (repeats allowed, R60; never the running
-//! card, R387), each made Radiant and enchanted as asked before it goes in at a uniformly random
-//! position, so the enchantment rides it from the start (`enchantments.rs`). R80's cap turns the rest
-//! away, as `shuffle_into` does; an empty pool does nothing and draws nothing (R129).
-//!
-//! Port of `packages/engine/src/effects/shuffleRandom.ts`.
+//! Education, E39): `count` independent picks (repeats allowed, R60; never the running card, R387),
+//! each made Radiant and enchanted as asked before it goes in, so the enchantment rides it from the
+//! start. R80's cap turns the rest away, as `shuffle_into` does; an empty pool draws nothing (R129).
 
 use serde::{Deserialize, Serialize};
 

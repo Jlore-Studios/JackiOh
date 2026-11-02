@@ -1,10 +1,9 @@
 //! `jackioh_ai`: the practice opponent (SPEC §9.9, docs/polish/3-ai.md; SURFACE §9). Pure and seeded
 //! like the engine (CLAUDE.md rule 4, SURFACE §3): every exported name below is unique across the
-//! crate, because this root re-exports every module whole, as `packages/ai/src/index.ts` did.
+//! crate, because this root re-exports every module whole.
 //!
-//! The R645 emote personas (`personas.ts`) are presentation and live in the web client
-//! (`apps/web/src/practice/personas.ts`, part 21), so they are not a module here. Written once by
-//! part 1 (SURFACE §1); the modules are part 17's.
+//! The R645 emote personas are presentation and live in the web client
+//! (`apps/web/src/practice/personas.ts`), so they are not a module here. The module tree is SURFACE §1's.
 
 pub mod baselines;
 pub mod candidates;

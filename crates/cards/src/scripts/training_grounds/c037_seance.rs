@@ -3,14 +3,11 @@
 //!   Base:    "Add an exact copy of a permanent to your hand, keeping its cost changes."
 //!   Radiant: "Add an exact copy of a permanent to your hand. It costs ({setCost})." — 0.
 //!
-//! Engine: one declared target, any permanent on either side's field (Core #34's "a permanent",
-//! R81), then `add_to_hand { copyOf, exact }` (R1242, R2198001): a fresh card of its definition in
-//! its caster's hand, owned and controlled by the caster (R12), the source staying, carrying R57's
-//! whole copy of a card on the field (its Radiant face, buffs, granted keywords, Vanilla state,
-//! `statsOverride` and `tuning`) and its price (`costMod`, `costOverride`), with its damage,
-//! exertion, counters, memory and its Brittle and times-played counts starting afresh. A full hand
-//! burns it (§2.4). The Radiant face states its price (`costOverride: setCost`), which replaces the
-//! copied one outright.
+//! Engine: any permanent on either side's field (Core #34's, R81), then `add_to_hand { copyOf, exact }`
+//! (R1242, R2198001): a fresh card in its caster's hand, theirs to own and control (R12), the source
+//! staying, with R57's whole copy (face, buffs, keywords, Vanilla, `statsOverride`, `tuning`) and its
+//! price (`costMod`, `costOverride`); damage, exertion, counters, memory, Brittle and times-played start
+//! afresh. A full hand burns it (§2.4). The Radiant `costOverride: setCost` replaces the copied price.
 
 use jackioh_engine::prelude::*;
 

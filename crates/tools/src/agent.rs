@@ -1,8 +1,6 @@
 //! `cargo jackioh agent`: this build's AI as an arena agent, on JSON lines (SURFACE §14.1;
 //! docs/v0.3.0/README.md §8). The training arena's referee (`arena.rs`) spawns `<path> agent` for a
-//! `bin:<path>` seat, which is how a promotion run plays the AI on `main` (the parent) against the
-//! candidate built from the lane's branch.
-//!
+//! `bin:<path>` seat, which is how a promotion run plays the AI on `main` against the lane's candidate.
 //! One request per stdin line, one answer per stdout line:
 //!
 //! ```text
@@ -15,17 +13,14 @@
 //! → {"op":"quit"}
 //! ```
 //!
-//! The agent never sees the true state: the referee holds it and sends `redact(state, seat)` (R185),
-//! and the AI decides on that. The AI's own stream is the referee's to keep: a request names the seed
-//! and the cursor to resume it at, and the answer hands the cursor back, so the referee can fall back
-//! to the random policy on the same stream when the AI has no move (match.ts's `playMatch`), and a
-//! game played through this protocol is the game the in-process `self` agent plays.
-//!
-//! `"verbose":true` (default false) adds the `Decision`'s other fields to the answer: the arena's
-//! referee sets it, to count a decision off the fallback path and the panics its search caught
-//! (`reason`, `stats.simPanics`, R1489000), and a person reading a game back may. `{"action":null,…}`
-//! means the AI had no move. A request the agent cannot read, or a decision that
-//! panicked, is answered `{"error":"…"}`, which the referee records as a thrown controller.
+//! The agent never sees the true state: the referee holds it and sends `redact(state, seat)` (R185).
+//! The AI's stream is the referee's to keep: a request names the seed and the cursor to resume it at,
+//! and the answer hands the cursor back, so the referee can fall back to the random policy on the same
+//! stream when the AI has no move (`{"action":null,…}`), and a game played through this protocol is the
+//! game the in-process `self` agent plays. `"verbose":true` (default false) adds the `Decision`'s other
+//! fields, which the referee sets to count decisions off the fallback path and the panics its search
+//! caught (`reason`, `stats.simPanics`, R1489000). An unreadable request or a panicked decision is
+//! answered `{"error":"…"}`, which the referee records as a thrown controller.
 
 use std::io::{BufRead, Write};
 
@@ -168,10 +163,9 @@ fn answer_decide(request: Request) -> Value {
     }
 }
 
-/// The AI's whole decision for `seat` on `state` (the referee's `redact(state, seat)`), at
-/// `budget`, and the stream after it. `answer_decide` and the arena's `self` seat pass
-/// `AI_GATE_BUDGET`, the browser's own, so a promotion measures the AI that ships, except in a test
-/// that starves it (`ArenaGame::self_budget`, R1489000).
+/// The AI's whole decision for `seat` on `state` at `budget`, and the stream after it. `answer_decide`
+/// and the arena's `self` seat pass `AI_GATE_BUDGET`, the browser's own, so a promotion measures the AI
+/// that ships, except in a test that starves it (`ArenaGame::self_budget`, R1489000).
 pub(crate) fn decide_full(
     state: &GameState,
     seat: PlayerId,
@@ -207,7 +201,7 @@ pub(crate) fn own_info() -> AgentInfo {
     }
 }
 
-/// match.ts's `messageOf`: a panic's message, as TS read a thrown error's.
+/// A caught panic's message.
 pub(crate) use jackioh_ai::panic_message;
 
 #[cfg(test)]

@@ -3,13 +3,10 @@
 //! attackers (`damage_past_taunts`); and the opponent's reply prices the splash, ranking a double
 //! kill above a single kill and a kill-plus-pop above a bare kill (`trade_value`).
 //!
-//! The cards: Nurse Cleaver (classic-073) 3/6 Cleave, Zoomerbin Oomen (core-067) 1/2, Paul Allen's
-//! Ghost (classic-089) 5/6 Divine Shield, Jay Fungus (classicplus-049) 3/6 Taunt, Midrange Menace
-//! (core-019) 9/9 Taunt, Voidwalker (classic-050) 6/3, and Tempo Timmy (core-011) 3/3, the non-Cleave
-//! control attacker. The shield is the Ghost rather than Jilliax: Jilliax's Taunt would bind every
-//! reply attack to itself, and its direct hit pops the shield even without Cleave, leaving the
-//! control with nothing to prove. Field entries without a `lane` fill consecutive lanes, so two
-//! listed units are adjacent; the reply boards pin lanes to leave lane 3 empty.
+//! The cards: Nurse Cleaver 3/6 Cleave, Zoomerbin Oomen 1/2, Paul Allen's Ghost 5/6 Divine Shield, Jay Fungus
+//! 3/6 Taunt, Midrange Menace 9/9 Taunt, Voidwalker 6/3, and Tempo Timmy 3/3, the non-Cleave control
+//! attacker. The shield is the Ghost rather than Jilliax, whose Taunt would bind every reply attack to itself
+//! and whose direct hit pops the shield even without Cleave.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -23,7 +20,6 @@ fn board(setup: Value) -> GameState {
     scenario(setup).state().clone()
 }
 
-/// Grants `keyword` to `player`'s unit of `def_id` on the field.
 fn grant(state: &mut GameState, player: PlayerId, def_id: &str, keyword: Keyword) {
     let id = active_units_of(state, player)
         .into_iter()
@@ -67,9 +63,8 @@ mod threat {
 mod reply_cleave {
     use super::*;
 
-    /// Oomens in lanes 1, 2 and 4, each damaged to 1 health (worth about 2.2): lane 3 empty,
-    /// so a Cleave into lane 1 or 2 kills two. A lone kill loses to the face (3.0); only the double
-    /// kill (about 4.4) beats it, so the test fails unless the reply prices the splash.
+    /// Oomens in lanes 1, 2 and 4, each damaged to 1 health, lane 3 empty: a Cleave into lane 1 or 2
+    /// kills two, and only that double kill beats the face.
     fn oomen_field() -> Value {
         json!([
             { "def": "core-067", "lane": 1, "damage": 1 },
@@ -78,10 +73,8 @@ mod reply_cleave {
         ])
     }
 
-    /// An Oomen in lane 1, the Ghost (Divine Shield) in lane 2, a Plague Crawler (2/2, worth
-    /// about 4.4) in lane 4. The Crawler's lone kill beats the Oomen's (about 3.2), but the Oomen
-    /// beside the Ghost is a kill plus a pop (about 5.2) — so the test fails unless the reply prices
-    /// the splash.
+    /// An Oomen in lane 1, the Ghost (Divine Shield) in lane 2, a Plague Crawler (2/2) in lane 4: the
+    /// Crawler's lone kill beats the Oomen's, but the Oomen beside the Ghost is a kill plus a pop.
     fn ghost_field() -> Value {
         json!([
             { "def": "core-067", "lane": 1 },
@@ -125,7 +118,6 @@ mod reply_cleave {
             .count()
     }
 
-    /// Whether `player`'s unit zone `lane` holds a card of `def_id`.
     fn unit_in_lane(state: &GameState, player: PlayerId, lane: i32, def_id: &str) -> bool {
         active_units_of(state, player)
             .iter()

@@ -64,10 +64,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137.1 Land Doctrine — SPEC §8.10 row 137.1, BUILD M12 row S 137.1: "after it, every Unit its caster
-// controls has Trample, Units summoned later included, the Doctrine in the graveyard; once, their launched
-// Starship attacks one random enemy Unit it may attack (R53); no launched Starship, no attack; radiant it
-// attacks each enemy Unit in lane order, stopping if it dies".
+// S #137.1 Land Doctrine — SPEC §8.10 row 137.1, BUILD M12 row S 137.1 (R53).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -88,7 +85,6 @@ mod tests {
             .any(|keyword| keyword.kind() == KeywordKind::Trample)
     }
 
-    /// The forced attacks among the last action's events, as (attacker, target).
     fn forced_attacks(s: &Scenario) -> Vec<(String, String)> {
         s.last_events()
             .iter()

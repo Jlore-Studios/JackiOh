@@ -33,10 +33,7 @@ const SHARP_S = CLOCK_ALARM_SHARP_FROM_MS / CLOCK_ALARM_BEAT_MS;
 
 type Heard = ClockAlarmBeat & { atMs: number };
 
-/**
- * Reads a clock that starts at `startMs` left, every `stepMs`, down to 0, and returns each beat with
- * the moment it lands: the reading's time plus its delay.
- */
+/** Reads a clock from `startMs` left every `stepMs` down to 0; returns each beat at the moment it lands. */
 function countdown(startMs: number, stepMs: number, audible = true, own = true): Heard[] {
   let memory: ClockAlarmMemory = CLOCK_ALARM_IDLE;
   const heard: Heard[] = [];
@@ -119,9 +116,7 @@ describe("R506 the turn clock's alarm: the schedule (R439)", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Into a real engine over the fake context
- * --------------------------------------------------------------------------------------------- */
+/* Into a real engine over the fake context */
 
 describe("R506 the turn clock's alarm through the engine", () => {
   let engine: AudioEngine | null = null;
@@ -210,9 +205,7 @@ describe("R506 the turn clock's alarm through the engine", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * The hook
- * --------------------------------------------------------------------------------------------- */
+/* The hook */
 
 describe("R506 useTurnClockAlarm", () => {
   afterEach(() => {

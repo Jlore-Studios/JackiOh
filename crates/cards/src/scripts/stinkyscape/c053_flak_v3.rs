@@ -8,16 +8,13 @@
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses its base version into its owner's Dormant Starship
 //! (R1852000, R2521000).
-//! #2657: "each enemy Unit" is every enemy Unit and no hero (every enemy Unit and then the enemy hero,
-//! R1862001's "each enemy", through v0.5.9f, `script_v0_5_9f`), one hit each before one state
-//! check (`damage_all`, R59). R2521001: each of those hits is
-//! its own roll, made just before it lands: `ODDS` laid over `least..=most` from the low end (a value
-//! past the third weighted as the third, the two swapped if a Nerf crossed them). Lucky is the card's
-//! Lucky now plus its controller's Luck, as S #145 Fortify Flesh reads it (R1438, R987): the Radiant
-//! face prints Lucky 1, so each target rolls twice and takes the higher. Once a turn (R384). Both ends
-//! are declared numbers (R386), read through `param`.
-//! Through v0.5.11 it dealt its declared `damage` to all enemies, no roll, which `script_v0_5_11`
-//! keeps (R767000).
+//! #2657: "each enemy Unit" is every enemy Unit and no hero, one hit each before one state check
+//! (`damage_all`, R59). R2521001: each hit is its own roll, made just before it lands: `ODDS` laid
+//! over `least..=most` from the low end (a value past the third weighted as the third, the two
+//! swapped if a Nerf crossed them). Lucky is the card's Lucky now plus its controller's Luck, as
+//! S #145 Fortify Flesh reads it (R1438, R987): the Radiant face prints Lucky 1, so each target rolls
+//! twice and takes the higher. Once a turn (R384). Both ends are declared numbers (R386), read
+//! through `param`. `script_v0_5_9f` and `script_v0_5_11` keep the older behavior for replays (R767000).
 
 use jackioh_engine::effects::{DamageOdds, damage_all};
 use jackioh_engine::prelude::*;
@@ -129,12 +126,7 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #53 Flak v3 — SPEC §8.10 row 53, BUILD M12 row S 53: its Activate deals each enemy Unit
-// its own random 1 to 3 (60%, 30%, 10%), and the enemy hero nothing (#2657); two enemies can
-// take different amounts; once a turn, a second use refused; equipped onto a Unit, the host takes the
-// Activate; least and most read through `param()`, a value past the third weighted as the third;
-// given Lucky keeps the higher roll; radiant 0/8, 2 to 4 with Lucky 1: two rolls per target, the
-// higher kept (R2521001).
+// Stinkyscape #53 Flak v3 — SPEC §8.10 row 53, BUILD M12 row S 53 (#2657, R2521001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,7 +144,6 @@ mod tests {
     const RADIANT_RANGE: (i32, i32) = (2, 4);
     const RADIANT_LUCKY: i32 = 1;
     const RADIANT_HEALTH: i32 = 8;
-    /// One round.
     const ROUNDS: i32 = 1;
     /// The printed odds as the test reads them, lowest first.
     const PRINTED: [i32; 3] = [60, 30, 10];

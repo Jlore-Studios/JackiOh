@@ -1,25 +1,5 @@
-//! Play again after a finished co-op match (SPEC §13.9, R2092000):
-//! `POST`/`GET /api/duos/matches/:matchId/again` (`src/duos/again.rs`), the two seats' offers and
-//! the one new match they make, started through the room join's shared start (`src/duos/rooms.rs`).
-//!
-//! - **R2092000**: both seats offering starts exactly one new co-op match with the same `a1`, `a2`
-//!   and `difficulty`, a fresh seed and the server's catalog; the second offer's answer and both
-//!   seats' `GET` give its id, and a seat that polls late still learns where to go.
-//! - One offer answers null, and each side's `GET` mirrors its own offer.
-//! - A saved-deck seat replays its frozen deck; a dealt seat is dealt afresh on its latest lean.
-//! - A stranger, an unknown id and a live match get the replay route's answers; an offer past
-//!   `REMATCH_OFFER_TTL_MS` lapses silently and makes nothing.
-//! - A stale catalog is `update_required`; a seat in another game is `already_in_match` with no
-//!   details, whichever seat offers (R1065000); a block made after the game answers as an unknown
-//!   code; a seat emptied by a deleted account is refused; a frozen deck with a custom card is
-//!   `loadout_invalid`.
-//! - Two offers racing make exactly one match; `teammateHere` follows the teammate's socket,
-//!   reading false with no actor in memory.
-//!
-//! Everything runs on tokio's paused clock through `empty_test_app()`, with the real registry: the
-//! created match is asserted off the store and off `registry(app).has`. Finished rows are written
-//! straight into the store (no actor, no ledger seat), so `assert_free_to_play` passes until a test
-//! puts a seat elsewhere.
+//! Play again after a finished co-op match (SPEC §13.9, R2092000, R1065000).
+//! Two seats offering starts one new match; respects TTL, blocks, and active games.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,8 +19,6 @@ use jackioh_server::seats::Seat;
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::playable;
 use crate::support::store::{advance, fake, from, store, to_json, uuid};
-
-// Plumbing (private copies: each test file of this binary keeps its own)
 
 fn millis<T>(value: T) -> u64
 where
@@ -110,10 +88,7 @@ fn default_options(app: &App) -> Value {
     })
 }
 
-/// A finished co-op match between the two profiles, written straight into the store: medium
-/// difficulty, `a1` frozen and `a2` dealt under the server's catalog, ended now, drawn. `extra`'s
-/// top-level keys replace the row's (a whole `options` to redeal, a stale `catalogVersion`, an
-/// emptied seat).
+/// Seeds a finished co-op match row directly into the store with optional `extra` overrides.
 async fn finished_row(app: &Arc<App>, id: &str, a1: &str, a2: &str, extra: Value) -> Value {
     let now = now_ms();
     let mut row = json!({
@@ -479,10 +454,7 @@ async fn r2092000_two_offers_racing_make_exactly_one_match() {
     let finished_id = uuid(110);
     finished_row(&app, &finished_id, &a1.id, &a2.id, json!({})).await;
 
-    // `a1`'s offer is already in when the pair lands together: `join!` polls in order and each
-    // offer runs without yielding (the store is in memory), so `a2`'s completes the pair and makes
-    // the game while `a1`'s retry reads its id. The claim and the mint run under one lock, so no
-    // interleaving mints two games.
+    // Concurrent offers make exactly one match under lock; retry reads created match id.
     assert_eq!(
         offer(&app, &a1.token, &finished_id, json!({})).await.1["matchId"],
         Value::Null

@@ -11,8 +11,6 @@
 //! up (§10.7). What was picked is the part's memo (picked indices as a JSON array): resuming builds
 //! the same effects again and rolls nothing a second time. The announcement heads the part, so a
 //! resumed part, which goes on after what it had already run, never announces it again (R436).
-//!
-//! Port pattern: `subsystems/call_to_chaos.rs` (`roll_chaos_effects`, `announce_chaos`, `call_to_chaos`).
 
 use serde_json::json;
 

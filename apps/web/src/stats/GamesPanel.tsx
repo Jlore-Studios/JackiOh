@@ -1,10 +1,7 @@
 // The Games panel of /stats (SPEC §9.11, R1994000): how the patch's games went, for the match type
-// shown. The first player's win share of the decided games with its margin (half its 95% interval),
-// or that it is unknown when no game was won, and no draw figure (R2567000); the median game's
-// length in turns and the share of games that reach fatigue, each on its own line, and nothing of the
-// set traps (R2446000); a patch with fewer games than the sample floor says only that. When some of
-// the patch's games were recorded before these figures were kept, a note says how many of them it
-// counts. It names no data source and no gate (R661), and sits in the scrolling panel, never the
+// shown: the first player's win share of the decided games with its margin, and no draw figure
+// (R2567000); the median game's length and the share that reach fatigue, and nothing of the set traps
+// (R2446000). It names no data source and no gate (R661), and sits in the scrolling panel, never the
 // fixed top (R1646000).
 
 import { useEffect, useState, type ReactElement } from "react";
@@ -20,7 +17,7 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PublicStatsGamesResponse | null>(null);
   const [error, setError] = useState(false);
-  /** Bumped by Try again, which loads the figures again. */
+  /** Bumped by Try again, to load the figures again. */
   const [attempt, setAttempt] = useState(0);
 
   useLocale();

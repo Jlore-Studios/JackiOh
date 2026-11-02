@@ -7,14 +7,11 @@
 //! ```
 //!
 //! Reads `public.game_records` through the store (DATABASE_URL) for the sources, mode and patch the
-//! flags name, as `stats-cards` reads the totals for them. R1044001: only the records written in the
-//! last `GAME_RECORD_RAW_RETENTION_DAYS` hold their detail, so only those are written; the figures
-//! of the older ones are in the totals alone. It writes one GameRecord per line in id order: the format `cargo jackioh
-//! stats --out` and the training lanes write, which `stats-import` and `cargo jackioh stats report`
-//! read and `analysis/` loads. Live games only unless `--source=dev` or `--source=all` says
-//! otherwise (R378). Pilots are per seat, so the file holds every seat of every game it names; the
-//! pilot filter and the card are for the report that reads it. `--out` is resolved against the
-//! directory the command was started in, and an existing file there is replaced.
+//! flags name. R1044001: only the records written in the last `GAME_RECORD_RAW_RETENTION_DAYS` hold
+//! their detail, so only those are written. One GameRecord per line in id order, every seat of every
+//! game: the format `cargo jackioh stats --out` and the training lanes write, which `stats-import` and
+//! `cargo jackioh stats report` read and `analysis/` loads. `--out` is resolved against the directory
+//! the command was started in, and an existing file there is replaced.
 
 use std::path::{Path, PathBuf};
 
@@ -42,7 +39,6 @@ pub struct ExportOptions {
     pub out: PathBuf,
 }
 
-/// Parses `--flag=value` arguments, refusing anything it does not know and a call with no `--out`.
 pub fn parse_export_args(argv: &[String]) -> anyhow::Result<ExportOptions> {
     let mut query = GameRecordQuery {
         source: DEFAULT_CARD_STATS_FILTER.source,
@@ -72,7 +68,6 @@ pub fn parse_export_args(argv: &[String]) -> anyhow::Result<ExportOptions> {
     Ok(ExportOptions { query, out })
 }
 
-/// The records the query names, in id order, as the store lists them.
 pub async fn read_records(db: &Db, query: &GameRecordQuery) -> Result<Vec<GameRecord>, StoreError> {
     let mut tx = db.begin(None).await?;
     let records = tx.game_records_list(query).await?;
@@ -80,7 +75,6 @@ pub async fn read_records(db: &Db, query: &GameRecordQuery) -> Result<Vec<GameRe
     Ok(records)
 }
 
-/// One JSON object per line, each ended by a newline: what `cargo jackioh stats --out` writes.
 pub fn render_records(records: &[GameRecord]) -> anyhow::Result<String> {
     let mut text = String::new();
     for record in records {
@@ -90,7 +84,6 @@ pub fn render_records(records: &[GameRecord]) -> anyhow::Result<String> {
     Ok(text)
 }
 
-/// Reads the records the options name and writes them to the file, answering how many.
 pub async fn export_records(db: &Db, options: &ExportOptions) -> anyhow::Result<usize> {
     let records = read_records(db, &options.query).await?;
     let text = render_records(&records)?;
@@ -100,12 +93,10 @@ pub async fn export_records(db: &Db, options: &ExportOptions) -> anyhow::Result<
     Ok(records.len())
 }
 
-/// `stats-export`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_export_args(&args)?;
     let connection_string = database_url()?;
 
-    // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
     let outcome = export_records(&db, &options).await;
     db.close().await;

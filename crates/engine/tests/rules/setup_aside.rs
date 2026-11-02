@@ -211,7 +211,7 @@ fn defs_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-/// `{ type, player? }` of each event `p1` is shown, as `type` or `type:player`.
+/// Each event `p1` is shown, as `type` or `type:player`.
 fn viewed_types(state: &GameState) -> Vec<String> {
     view_for(state, PlayerId::P1)
         .events

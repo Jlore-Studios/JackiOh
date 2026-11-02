@@ -5,10 +5,8 @@
 //! Rows whose behavior belongs to a card that does not exist until M4 test the engine machinery the
 //! card will call and name the card test that proves the rest.
 //!
-//! Port of `packages/engine/test/rulings-b.test.ts` (SURFACE §4.1, §8). TS held live
-//! `CardInstance` objects and wrote through them; here a card handed back by a helper is a copy, so a
-//! write goes through `edit` (the card under that id in the state) and a read after a change re-reads
-//! it with `instance_in`.
+//! Surface contract: SURFACE §4.1, §8. A card a helper hands back is a copy: write through `edit`,
+//! re-read with `instance_in`.
 
 use std::borrow::Borrow;
 use std::collections::BTreeSet;
@@ -32,10 +30,8 @@ const P2: PlayerId = PlayerId::P2;
 const UNITS: Row = Row::Units;
 const BACKROW: Row = Row::Backrow;
 
-// ---------------------------------------------------------------------------
 // Fixture definitions. Ids are `rb-` prefixed and indexes start above every other
-// fixture file's, so `defByIndex` and the catalog query stay unambiguous.
-// ---------------------------------------------------------------------------
+// fixture file's, so `def_by_index` and the catalog query stay unambiguous.
 
 const PLAIN: &str = "rb-plain";
 const BIG_BODY: &str = "rb-big-body";
@@ -84,7 +80,7 @@ const WINDOW_TRAP: &str = "rb-window-trap";
 const BREAD_TRAP: &str = "rb-bread-trap";
 const EMPTY_TRAP: &str = "rb-empty-trap";
 
-/// TS `unitDefOf`: a Core unit fixture whose index is the next of this file's (1201 on).
+/// A Core unit fixture whose index is the next of this file's (1201 on).
 fn unit_def_of(
     next: &mut i32,
     name: &str,
@@ -112,7 +108,6 @@ fn unit_def_of(
     json_as(def)
 }
 
-/// TS `cardDefOf`: a Core fixture of any type without stats.
 fn card_def_of(next: &mut i32, name: &str, card_type: &str, overrides: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -133,7 +128,7 @@ fn card_def_of(next: &mut i32, name: &str, card_type: &str, overrides: Value) ->
     json_as(def)
 }
 
-/// TS `DEFS`, in declaration order (so each index is the one TS gave it), which is also `DEFS`' order.
+/// The definitions, built in a fixed order so each index is stable.
 fn defs() -> Vec<CardDef> {
     let mut next = 1200;
     let n = &mut next;
@@ -243,14 +238,11 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// One of this file's definitions by id (TS named each def by its `const`).
 fn def(id: &str) -> CardDef {
     must(defs().into_iter().find(|def| def.id == id), id)
 }
 
-// ---------------------------------------------------------------------------
 // Fixture effects: the verbs these rows need that no card ships until M4.
-// ---------------------------------------------------------------------------
 
 /// R51 "all enemies": every enemy unit plus the enemy hero, one damage instance each.
 fn rb_damage_all_enemies(amount: i32) -> Effect {
@@ -336,9 +328,7 @@ fn rb_steps(state: &GameState) -> Vec<String> {
         .unwrap_or_default()
 }
 
-// ---------------------------------------------------------------------------
 // Fixture scripts.
-// ---------------------------------------------------------------------------
 
 fn ping_enemy_hero(amount: i32) -> Script {
     Script {
@@ -549,9 +539,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 /// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
@@ -588,7 +576,6 @@ fn only<T: Clone>(items: &[T]) -> T {
     }
 }
 
-/// TS `handCard(state, defId, player = "p1")`.
 fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     only(&in_hand(state, def_id, player, 1))
 }
@@ -597,7 +584,7 @@ fn instance_in(state: &GameState, id: &str) -> CardInstance {
     must(find_instance(state, id).cloned(), &format!("instance {id}"))
 }
 
-/// TS wrote through the live instance (`card.costMod = -2`): here, the card under that id in the state.
+/// A write to the card under that id in the state, not to the caller's copy.
 fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut CardInstance)) {
     change(must(
         find_instance_mut(state, &card.id),
@@ -605,8 +592,7 @@ fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut Car
     ));
 }
 
-/// TS handed the engine the live instance, so what the engine wrote to it was in the state: the
-/// copy it wrote to goes back under its id.
+/// The copy the engine wrote to goes back under its id, so the write lands in the state.
 fn put_back(state: &mut GameState, card: &CardInstance) {
     *must(
         find_instance_mut(state, &card.id),
@@ -655,7 +641,6 @@ fn unit_hit(card: &CardInstance) -> DamageTarget {
     }
 }
 
-/// `dealDamage`'s `{ source, target, amount }`.
 fn hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> DamageArgs {
     DamageArgs {
         source,
@@ -676,7 +661,6 @@ fn attack_hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -
     }
 }
 
-/// `{ kind: "costDiscount", amount, minCurrentCost? }`.
 fn cost_discount(amount: i32, min_current_cost: Option<i32>) -> ModifierKind {
     ModifierKind::CostDiscount {
         amount,
@@ -686,7 +670,6 @@ fn cost_discount(amount: i32, min_current_cost: Option<i32>) -> ModifierKind {
     }
 }
 
-/// `{ defId, hook: "delayed", step: "", radiant: false, instanceId?, data }`.
 fn delayed_resume(def_id: &str, instance_id: Option<&str>, data: Value) -> Resume {
     json_as(json!({
         "defId": def_id,
@@ -698,13 +681,11 @@ fn delayed_resume(def_id: &str, instance_id: Option<&str>, data: Value) -> Resum
     }))
 }
 
-/// `effectiveCost(state, card)` on the card as it stands in the state now.
 fn price_now(state: &GameState, card: &CardInstance) -> i32 {
     effective_cost(state, &instance_in(state, &card.id), Default::default())
 }
 
-/// TS `why…` refusals are `string | null` and `CombatResult` is `{ error? }`; here
-/// `Result<_, EngineError>` (SURFACE §4.4.9).
+/// A refusal's message, or `None` when the call succeeded (SURFACE §4.4.9).
 fn refusal<T>(result: Result<T, EngineError>) -> Option<String> {
     result.err().map(|error| error.message)
 }
@@ -728,12 +709,10 @@ fn owned<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<Car
     cards.into_iter().map(|card| card.borrow().clone()).collect()
 }
 
-/// `cardAt(state, zone)?.id`.
 fn id_at(state: &GameState, zone: ZoneSlot) -> Option<String> {
     card_at(state, zone).map(|card| card.id.clone())
 }
 
-/// `cardAt(state, zone)?.defId`.
 fn def_at(state: &GameState, zone: ZoneSlot) -> Option<String> {
     card_at(state, zone).map(|card| card.def_id.clone())
 }
@@ -742,13 +721,12 @@ fn plays_card(action: &ActionBody, instance: &str) -> bool {
     matches!(action, ActionBody::Play { instance_id, .. } if instance_id == instance)
 }
 
-/// `events.map((e) => e[key])`.
 fn pluck(events: &[Value], key: &str) -> Vec<Value> {
     events.iter().map(|event| event[key].clone()).collect()
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; arrays match
-/// element for element and in length; anything else is equal.
+/// Every key the expected object names matches, recursively; arrays match element for element and
+/// in length; anything else is equal.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (_, Value::Object(wanted)) => wanted.iter().all(|(key, value)| {
@@ -770,11 +748,6 @@ fn assert_matches(actual: Value, expected: Value) {
         "{actual} does not match {expected}"
     );
 }
-
-// R79: the server owns these, in apps/server/src/config.ts (BUILD §2, M7) — the match lifecycle,
-// and the ranked ladder's R603–R612 numbers. TS's `SERVER_CONSTANTS` list fed one assertion that
-// `config.ts` exports none of them; Rust cannot list a module's names at run time, so that assertion
-// is in `78f131c^:.fullsend/notes/spec-gaps-part-25-5.md` and the list is not ported.
 
 mod spec_11_rulings_r43_r84_m3_gate {
     use super::*;
@@ -827,7 +800,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(def_ids(active_units_of(sink.state, P1)), vec![PLAIN]);
         assert_eq!(def_ids(&sink.state.players.p1.library), vec![NOOP]);
 
-        // And that activation is the turn's use.
         sink.state.players.p1.mana.current = 3;
         assert_eq!(
             refusal(why_cannot_activate_ability(sink.state, P1, &card.id, None)),
@@ -858,8 +830,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(chosen.is_some_and(|chosen| legal_actions(&live, P1).contains(&chosen)));
         assert_eq!(AI_END_TURN_PROBABILITY, 0.1);
 
-        // The cancellation itself is My Pawn's, and rides the `attackCancelled` event (§10.3).
-        // M4: cards/test/96-my-pawn.test.ts proves the card half.
+        // The cancellation itself is My Pawn's, and rides the `attackCancelled` event (§10.3); My Pawn's own
+        // tests (M4) prove the card half.
         assert!(
             GameEventType::ALL
                 .iter()
@@ -949,7 +921,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
             KeywordKind::Taunt
         ));
 
-        // The Indestructible Field Spell simply stays and the mark is dropped.
         assert_eq!(id_at(&state, slot(P1, BACKROW, 1)), Some(field.id.clone()));
         assert_eq!(instance_in(&state, &field.id).marked_destroyed, Some(false));
     }
@@ -1090,7 +1061,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             })
             .unwrap_or_default();
         assert!(selections.contains(&sel(&token)));
-        // M4: cards/test/72-reminisce.test.ts proves the card half.
+        // M4: Reminisce's own tests prove the card half.
     }
 
     #[test]
@@ -1122,7 +1093,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         assert_eq!(def_ids(active_units_of(&state, P2)), vec![UNIT_TOKEN]);
         assert!(active_units_of(&state, P1).is_empty());
-        // M4: cards/test/18-bread-and-butter.test.ts proves the card half.
+        // M4: Bread and Butter's own tests prove the card half.
     }
 
     #[test]
@@ -1203,7 +1174,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
                 .iter()
                 .any(|option| matches!(&option.selection, Selection::Mode { option } if option == PLAIN))
         );
-        // M4: cards/test/82-kys-trial.test.ts proves the 1–100 index roll.
+        // M4: KY's Trial's own tests prove the card half.
     }
 
     #[test]
@@ -1238,7 +1209,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             &mut make_context(&mut sink, None, targeted(P1, pick(&banished))),
         );
         assert_eq!(sink.state.counters.exiled, 1);
-        // M4: cards/test/100-ceaseless-void.test.ts proves the card half.
+        // M4: Ceaseless Void's own tests prove the card half.
     }
 
     #[test]
@@ -1320,8 +1291,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             on_field.as_ref().map(|card| json_of(card.exertion)),
             Some(json!({ "attacked": false, "switched": false }))
         );
-        // M4: cards/test/12-prejudiced-postdoc.test.ts and cards/test/33-unstable-clone-machine.test.ts
-        // prove the card halves.
+        // M4: Prejudiced Postdoc's and Unstable Clone Machine's own tests prove the card halves.
     }
 
     #[test]
@@ -1535,7 +1505,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
                 .any(|card| card.def_id == EMPTY_TRAP)
         );
         assert_eq!(def_at(&live, slot(P1, UNITS, 1)), Some(PLAIN.to_string()));
-        // M4: cards/test/85-unlicensed-experimentation.test.ts proves the card half.
+        // M4: Unlicensed Experimentation's own tests prove the card half.
     }
 
     #[test]
@@ -1765,7 +1735,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(is_x_cost(&state, &x));
         assert_eq!(price_now(&state, &x), 0);
         assert_eq!(query_cost(def_of(Some(&state), X_CARD)), 0); // neither odd nor 2: exempt from both
-        // M4: cards/test/94-genns-greed.test.ts proves the card half.
+        // M4: Genn's Greed's own tests prove the card half.
     }
 
     #[test]
@@ -1791,7 +1761,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // R429: the index is the plays + 1 (Radiant + 3); the cost reads nowhere in it (R67).
         assert_eq!(fib(times_played_of(&played) + 1), 1);
         assert_eq!(fib(times_played_of(&played) + 3), 3);
-        // M4: cards/test/31-kys-math-equation.test.ts proves the card half.
+        // M4: KY's Math Equation's own tests prove the card half.
     }
 
     #[test]
@@ -1887,7 +1857,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
                 .iter()
                 .any(|card| card.id == spell.id)
         );
-        // M4: cards/test/79-twinspell.test.ts proves that a cast Spell still uses Echo.
+        // M4: Twinspell's own tests prove that a cast Spell still uses Echo.
     }
 
     #[test]
@@ -1916,7 +1886,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         // The card played after it is copied; the recycler never copies itself.
         assert_eq!(def_ids(&state.players.p1.hand), vec![NOOP]);
-        // M4: cards/test/39-recycling-initiative.test.ts proves the card half.
+        // M4: Recycling Initiative's own tests prove the card half.
     }
 
     #[test]
@@ -1946,8 +1916,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         heal_hero(&mut sink, P1, 10);
         assert_eq!(sink.state.players.p1.hero.health, HERO_HEALTH + 10);
         assert_eq!(0.max(HERO_HEALTH - sink.state.players.p1.hero.health), 0);
-        // M4: cards/test/40-echoes-of-the-forgotten.test.ts and cards/test/70-spiteful-stab.test.ts
-        // prove the card halves.
+        // M4: Echoes of the Forgotten's and Spiteful Stab's own tests prove the card halves.
     }
 
     #[test]
@@ -2022,7 +1991,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         std::mem::swap(&mut players.p1.library, &mut players.p2.library);
         assert_eq!(state.players.p1.fatigue_count, 4);
         assert_eq!(state.players.p2.fatigue_count, 0);
-        // M4: cards/test/87-pocket-chaos.test.ts proves the card half.
+        // M4: Pocket Chaos's own tests prove the card half.
     }
 
     #[test]
@@ -2081,7 +2050,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(generated.map(|card| card.radiant), Some(true));
 
         // A definition whose radiant face is its base face is unchanged, but the flag still sets. No
-        // Core card is one any more (R276); the engine still reads such a face, as this fixture shows.
+        // Core card is one (R276); the engine still reads such a face, as this fixture shows.
         let formless = put(ctx.sink.state, SAME_FACE, slot(P1, UNITS, 2), json!({}));
         apply_effects(&[set_radiant(&formless)], &mut ctx);
         let formless_now = instance_in(ctx.sink.state, &formless.id);
@@ -2188,7 +2157,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let back = act_result(&own, json!({ "type": "endTurn", "playerId": "p2" }));
         assert_eq!(back.error, None);
         assert!(events_json(&back.events, GameEventType::ControlChanged).is_empty());
-        // M4: cards/test/050-k-pop-fanatic.test.ts proves the card half.
+        // M4: K-Pop Fanatic's own tests prove the card half.
     }
 
     #[test]
@@ -2412,10 +2381,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
             Some(75_000)
         );
         assert_eq!(view_for(&clean, P1).clock_ms, None);
-        // TS also asserted that `config.ts` exports none of the server's constant names (its
-        // `Object.keys(engineConfig)` over SERVER_CONSTANTS); Rust has no run-time list of a module's
-        // names, so that one assertion is in `78f131c^:.fullsend/notes/spec-gaps-part-25-5.md`.
-        // M6/M7: apps/server/src/config.ts carries the clock, grace, ceiling, room-code and rating values.
+        // R79: the server owns the clock, grace, ceiling, room-code and ranked ladder (R603–R612) numbers, in
+        // `crates/server/src/config.rs` (BUILD §2, M6/M7).
     }
 
     #[test]
@@ -2562,7 +2529,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut sink = sink_for(&mut state);
         assert_eq!(refusal(declare_attack(&mut sink, &rb, &unit_target(&wall))), None);
 
-        // It died in that combat and came back in its reserved zone, at 1 health.
         assert_eq!(id_at(sink.state, slot(P1, UNITS, 1)), Some(rb.id.clone()));
         let back = instance_in(sink.state, &rb.id);
         assert_eq!(unit_view(sink.state, &back).health, 1);

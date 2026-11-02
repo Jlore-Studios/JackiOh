@@ -2,7 +2,6 @@
 // test without a window), so every caller degrades to "nothing stored" the same way; and the reads,
 // writes and removals every module makes through it (#2160).
 
-/** `localStorage`: what this browser keeps across visits. */
 export function localStorageOrNull(): Storage | null {
   try {
     return window.localStorage ?? null;
@@ -11,7 +10,6 @@ export function localStorageOrNull(): Storage | null {
   }
 }
 
-/** `sessionStorage`: what this tab keeps until it closes. */
 export function sessionStorageOrNull(): Storage | null {
   try {
     return window.sessionStorage;

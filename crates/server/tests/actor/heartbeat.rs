@@ -1,19 +1,17 @@
-//! R1441 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that
-//! stops reading is let go.
+//! R1441 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that stops
+//! reading is let go.
 //!
-//!  - the pump pings every `WS_PING_INTERVAL_SECONDS`; a socket that has sent no frame of any kind
-//!    for `WS_IDLE_TIMEOUT_SECONDS` is dropped, which is a disconnect: its seat's grace starts and the
-//!    opponent is shown it;
-//!  - a socket that answers its pings stays;
-//!  - a socket's outgoing queue holds `WS_OUTBOX_MAX_FRAMES` frames, and one more closes it;
-//!  - the page's wake probe reopens a socket at most once per ping interval, a pace the account's
-//!    request budget, which every upgrade counts against (R2478000), never refuses.
+//!  - the pump pings every `WS_PING_INTERVAL_SECONDS`; a socket that has sent no frame for
+//!    `WS_IDLE_TIMEOUT_SECONDS` is dropped, which is a disconnect: its seat's grace starts and the opponent
+//!    is shown it, while one that answers its pings stays;
+//!  - an outgoing queue holds `WS_OUTBOX_MAX_FRAMES` frames, and one more closes the socket;
+//!  - the wake probe reopens a socket at most once per ping interval, a pace the account's request budget,
+//!    which every upgrade counts against (R2478000), never refuses.
 //!
-//! The first two run the real `/ws/match` upgrade and the real registry on tokio's paused clock. Real
-//! TCP races a paused clock (the header of `actor/ws_server.rs`), so the connection is an in-memory
-//! pipe (`MemoryListener`): `axum::serve` accepts the server end of a `tokio::io::duplex`, and the
-//! test is the client on the other. Every duration is read from `config.rs`, so these tests state
-//! R1441's numbers nowhere.
+//! The ping tests run the real `/ws/match` upgrade and registry on tokio's paused clock. Real TCP races a
+//! paused clock, so the connection is an in-memory pipe (`MemoryListener`: `axum::serve` accepts the server
+//! end of a `tokio::io::duplex`). Every duration is read from `config.rs`, so these tests state R1441's
+//! numbers nowhere.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};

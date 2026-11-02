@@ -39,12 +39,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #18 Cognitive Offloading — SPEC §8.9 row 18, BUILD M11 row M+ 18: "drawn on your turn it is
-// cast: +1 temporary mana, a draw (repeating under R58), then every action until the turn ends is the
-// engine's, each one legal, the turn ending within the bound, the seat's own actions refused
-// meanwhile; the same seed plays the same turn; drawn on the opponent's turn (an effect's draw) it
-// gains and draws only; never dealt at setup (R635); mana and draw read through `param()`; radiant 3
-// mana and 2 cards".
+// M+ #18 Cognitive Offloading — SPEC §8.9 row 18, BUILD M11 row M+ 18 (R58, R635).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -54,18 +49,12 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// Ceaseless Void, (100): drawn, it is never affordable, so it plays nothing.
     const VOID: &str = "core-100";
-    /// Tempo Timmy, (1) 3/3 Rush and First Strike.
     const TIMMY: &str = "core-011";
-    /// Mr. Vanilla, (1) 4/4.
     const VANILLA: &str = "core-008";
-    /// Pickle, (1): the opponent answers its deferred choices (R1279000).
     const PICKLE: &str = "classic-008";
     const FILLER: &str = "core-005";
 
-    /// p2 to end turn 9; p1's library is Cognitive Offloading (Radiant if `radiant`) on top of Voids,
-    /// so p1's turn 10 draws it. p1 holds `hand` and fields `field`; p2 keeps a card to play.
     fn on_top(seed: &str, radiant: bool, hand: Value, field: Value) -> Scenario {
         crate::register_all();
         scenario(json!({
@@ -93,8 +82,6 @@ mod tests {
         fn drawn_on_your_turn_it_gains_1_mana_and_draws_1_and_the_draw_repeats() {
             let mut s = on_top("offload-mana", false, json!([]), json!([]));
             s.end_turn();
-            // Nothing to play, nothing to attack with: the autopilot ends the turn at once, so the
-            // mana it leaves is the refresh and the 1 it gained.
             let side = &s.state().players.p1;
             assert_eq!(side.turn_log.unspent_at_end, Some(side.mana.max + 1));
             // Its own draw and the turn's repeated draw (§2.4): two Voids, and it in the graveyard.
@@ -108,7 +95,7 @@ mod tests {
         fn r1183002_then_the_engine_plays_the_rest_of_your_turn_and_ends_it() {
             let mut s = on_top("offload-turn", false, json!([TIMMY]), json!([VANILLA]));
             s.end_turn();
-            // It played Tempo Timmy and swung Mr. Vanilla at the empty board's hero; Timmy's Rush
+            // Vanilla at the empty board's hero; Timmy's Rush
             // reaches no hero the turn it lands (§6.1).
             assert!(
                 (1..=5).any(|lane| s.unit(P1, lane).is_some_and(|unit| unit.def_id == TIMMY)),
@@ -125,7 +112,6 @@ mod tests {
             let mut s = on_top("offload-bound", false, json!([TIMMY, VANILLA]), json!([VANILLA]));
             let turn = s.state().turn + 1;
             s.end_turn();
-            // The autopilot's turn: what p1 played and declared on turn 10.
             let mut taken = 0;
             let mut in_turn = false;
             for event in s.events() {
@@ -153,15 +139,12 @@ mod tests {
             assert_eq!(s.state().players.p1.autopilot, None);
             let pending = s.state().pending.clone().expect("Pickle's choice is open");
             assert_eq!(pending.player_id, P2);
-            // p1 may not act while the opponent answers: only concede is legal, and the
-            // turn cannot pass under the open prompt either.
             s.expect_refused_with(|s| s.end_turn(), "prompt");
             let own: Vec<ActionBody> = legal_actions(s.state(), P1)
                 .into_iter()
                 .filter(|action| action.action_type() != ActionType::Concede)
                 .collect();
             assert!(own.is_empty(), "p1 may only concede: {own:?}");
-            // p2 answers every choice; the chain resolves on p2's turn.
             while s.state().pending.as_ref().is_some_and(|open| open.player_id == P2) {
                 let first = s.state().pending.as_ref().expect("open").options[0].key.clone();
                 s.answer(json!(first));
@@ -207,7 +190,6 @@ mod tests {
                             ..HookOptions::default()
                         },
                     );
-                    // p2's effect makes p1 draw: the Cognitive Offloading on top is cast.
                     let draw = jackioh_engine::effects::draw(json_as(json!({ "count": 1, "player": "enemy" })));
                     (draw.apply)(&mut ctx);
                 }
@@ -229,8 +211,6 @@ mod tests {
             assert_eq!(s.state().active, P2);
         }
 
-        /// DECK_SIZE legal Core cards with no other cast-on-draw card among them, Cognitive Offloading
-        /// first.
         const DECK: [&str; DECK_SIZE as usize] = [
             ID, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
             "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
@@ -241,7 +221,6 @@ mod tests {
         fn r635_never_dealt_at_setup_and_a_game_it_plays_replays_from_its_log() {
             crate::register_all();
             let deck: Vec<String> = DECK.iter().map(|id| id.to_string()).collect();
-            // A seed whose shuffle-in puts it on top of p1's library, so turn 1's draw casts it.
             let mut found: Option<(String, GameState, Vec<Action>)> = None;
             for at in 0..300 {
                 let seed = format!("offload-deal-{at}");
@@ -272,7 +251,6 @@ mod tests {
             let Some((seed, state, log)) = found else {
                 panic!("no seed in offload-deal-0..299 puts it on top of p1's library");
             };
-            // Turn 1 was the autopilot's, played and ended inside the second mulligan's action.
             assert!(state.turn >= 2, "p1's turn 1 is over");
             let replayed = fold(&json_as::<FoldArgs>(json!({
                 "seed": seed,

@@ -20,7 +20,6 @@ pub const ID: &str = "classic-074";
 /// was armed on remembered here; the play that uses it, or the turn's end, disarms it.
 const ARMED: &str = "armed";
 
-/// Whether a remembered turn is this very turn.
 fn is_this_turn(state: &GameState, value: Option<&Value>) -> bool {
     value.and_then(Value::as_i64) == Some(i64::from(state.turn))
 }
@@ -40,8 +39,6 @@ fn plant() -> ActivationDecl {
     }
 }
 
-/// The play from your graveyard that the arming allowed spends it. A field trigger's `when` is not read
-/// (only a trap's reveal condition is), so `run` asks it.
 fn spent() -> TriggerDef {
     TriggerDef::new("plantation-spent", &[GameEventType::CardPlayed], |ctx, event| {
         let GameEvent::CardPlayed { player, from, .. } = event else {
@@ -83,7 +80,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts {
-        // The same script: the Radiant face's 4 tokens are its declared `tokens`.
         radiant: base.clone(),
         base,
     }
@@ -111,7 +107,6 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
     const RUSH_TOKEN: &str = "core-t-rush";
 
-    /// `standing`'s default graveyard: Units and a Spell.
     const GRAVEYARD: [&str; 4] = [MENACE, MR_TOKEN, STOCKPILE, SLIME];
 
     use crate::scenario;
@@ -131,7 +126,6 @@ mod tests {
             .collect()
     }
 
-    /// The token counts legalActions offers for a play of `card`, each once.
     fn token_options(state: &GameState, card: &CardInstance) -> Vec<Option<i32>> {
         let offered: IndexSet<Option<i32>> = graveyard_plays(state, card)
             .into_iter()
@@ -141,12 +135,10 @@ mod tests {
             })
             .collect();
         let mut options: Vec<Option<i32>> = offered.into_iter().collect();
-        // Compares the values as strings ("1" < "2" < "null").
         options.sort_by_key(|option| option.map_or_else(|| "null".to_string(), |tokens| tokens.to_string()));
         options
     }
 
-    /// A `play` from p1 with the body's fields, nonces numbered by applied actions.
     fn send(state: &GameState, body: Value) -> Step {
         let mut action = json!({ "type": "play", "playerId": "p1" });
         if let (Some(into), Some(from)) = (action.as_object_mut(), body.as_object()) {
@@ -194,14 +186,12 @@ mod tests {
         s.activate(PLANTATION, json!({}));
     }
 
-    /// The Plantation already standing with `tokens` on it and armed, and a graveyard of Units and a Spell.
     fn standing(tokens: i32, graveyard: &[&str], mana: Option<i32>) -> Scenario {
         let mut s = standing_unarmed(tokens, graveyard, mana);
         arm(&mut s);
         s
     }
 
-    /// The same, its Activate not used.
     fn standing_unarmed(tokens: i32, graveyard: &[&str], mana: Option<i32>) -> Scenario {
         let counters = if tokens > 0 { json!({ "plague": tokens }) } else { json!({}) };
         let mut p1 = json!({
@@ -215,7 +205,6 @@ mod tests {
         scenario(json!({ "p1": p1, "p2": { "hand": [ANCHOR] } }))
     }
 
-    /// declares its one number and its permission (Units, paid with its tokens), one script on both faces
     #[test]
     fn declares_its_one_number_and_its_permission_units_paid_with_its_tokens_one_script_on_both_faces() {
         let def = crate::card_def(PLANTATION);
@@ -236,7 +225,6 @@ mod tests {
         // R831015: nothing until its Activate arms it, then Units paid with its tokens.
         assert_eq!(answer(&standing_unarmed(0, &GRAVEYARD, None)), json!([]));
         assert_eq!(answer(&standing(0, &GRAVEYARD, None)), json!([{ "units": true, "plague": true }]));
-        // The Radiant face is the base face, every hook the same one.
         assert!(Arc::ptr_eq(
             grant,
             scripts.radiant.graveyard_play.as_ref().expect("a graveyard permission")
@@ -244,11 +232,9 @@ mod tests {
         assert!(Arc::ptr_eq(&scripts.base.activations[0].run, &scripts.radiant.activations[0].run));
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
-        /// Cry: one placement of 2 Plague Counters on itself; the Activate places none, once per turn
         #[test]
         fn its_cry_places_2_plague_counters_on_itself_and_its_activate_is_once_per_turn() {
             let mut s = scenario(json!({ "p1": { "hand": [PLANTATION, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
@@ -303,7 +289,6 @@ mod tests {
             assert!(!graveyard_plays(s.state(), s.card(MENACE)).is_empty());
         }
 
-        /// while it has tokens, legalActions offers each graveyard Unit with 1 up to min(tokens, price) tokens paying, and no Spell
         #[test]
         fn while_it_has_tokens_legal_actions_offers_each_graveyard_unit_with_1_up_to_min_tokens_price_tokens_paying_and_no_spell() {
             let s = standing(2, &GRAVEYARD, None);
@@ -312,7 +297,6 @@ mod tests {
             assert_eq!(token_options(s.state(), &menace), vec![Some(1), Some(2)]);
             assert_eq!(token_options(s.state(), &mr_token), vec![Some(1)]);
             assert!(graveyard_plays(s.state(), &stockpile).is_empty());
-            // Every offer spends tokens: the permission pays in tokens and mana, never in mana alone.
             let plantation = s.card(PLANTATION).id.clone();
             assert!(graveyard_plays(s.state(), &menace).iter().all(|play| matches!(
                 play,
@@ -320,7 +304,6 @@ mod tests {
             )));
         }
 
-        /// a play: each counter pays (1), the rest in mana, and the spent tokens come off it
         #[test]
         fn a_play_each_counter_pays_1_the_rest_in_mana_and_the_spent_tokens_come_off_it() {
             let s = standing(2, &GRAVEYARD, None);
@@ -338,7 +321,6 @@ mod tests {
             );
         }
 
-        /// it is a play, not a free cast: the Unit's Cry fires and it counts as played
         #[test]
         fn it_is_a_play_not_a_free_cast_the_units_cry_fires_and_it_counts_as_played() {
             let s = standing(2, &GRAVEYARD, None);
@@ -380,7 +362,6 @@ mod tests {
             assert_eq!(tokens_on(s.state(), &vanilla), 1);
         }
 
-        /// a (0) Cost Unit can't use it
         #[test]
         fn a_0_cost_unit_cant_use_it() {
             let s = standing(2, &GRAVEYARD, None);
@@ -395,7 +376,6 @@ mod tests {
             );
         }
 
-        /// the refusals agree with legalActions: no tokens, too many, more than the price, or mana alone
         #[test]
         fn the_refusals_agree_with_legal_actions_no_tokens_too_many_more_than_the_price_or_mana_alone() {
             let s = standing(2, &GRAVEYARD, None);
@@ -422,7 +402,6 @@ mod tests {
             );
         }
 
-        /// the rest of the price must be in mana: with none, only a full token payment is offered
         #[test]
         fn the_rest_of_the_price_must_be_in_mana_with_none_only_a_full_token_payment_is_offered() {
             let s = standing(2, &[MENACE, MR_TOKEN], Some(0));
@@ -431,7 +410,6 @@ mod tests {
             assert_eq!(token_options(s.state(), s.card(MR_TOKEN)), vec![Some(1)]);
         }
 
-        /// with no tokens left it offers nothing
         #[test]
         fn with_no_tokens_left_it_offers_nothing() {
             let s = standing(1, &[MR_TOKEN, VANILLA], None);
@@ -444,7 +422,6 @@ mod tests {
             assert!(graveyard_plays(zero.state(), zero.card(VANILLA)).is_empty());
         }
 
-        /// tokens others place add to it: a Plague Crawler's placement makes 3 to pay with
         #[test]
         fn tokens_others_place_add_to_it_a_plague_crawlers_placement_makes_3_to_pay_with() {
             let mut s = scenario(json!({
@@ -503,7 +480,6 @@ mod tests {
             );
         }
 
-        /// only your own graveyard: the opponent's Units are not offered
         #[test]
         fn only_your_own_graveyard_the_opponents_units_are_not_offered() {
             let mut s = scenario(json!({
@@ -532,11 +508,9 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
-        /// Cry: one placement of 4 on itself, and once armed a 3 Cost Unit may be paid wholly in tokens
         #[test]
         fn its_cry_places_4_on_itself_and_a_3_cost_unit_may_be_paid_wholly_in_tokens() {
             let mut s = scenario(json!({
@@ -550,7 +524,6 @@ mod tests {
 
             let plantation = s.card(PLANTATION).clone();
             assert_eq!(plantation.counters.plague, Some(4));
-            // 0 mana left: only the full payment in tokens is offered.
             assert_eq!(token_options(s.state(), s.card(MENACE)), vec![Some(3)]);
             let after = play_from_graveyard(s.state(), s.card(MENACE), &plantation, 3, None);
             assert_eq!(tokens_on(&after.state, &plantation), 1);

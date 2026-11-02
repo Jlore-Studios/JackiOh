@@ -1,9 +1,6 @@
 //! Test-only cards for a card's play gate (`Script.play_allowed`, R1851000–R1851002, issue #1851):
-//! Spells whose play needs an enemy Unit on the field though they declare no target, the shape of
-//! Meditative #53 Prestige's Radiant face ("De-Radiant every enemy card on the field"), which tests it
-//! again in its own file.
-//!
-//! Ids are prefixed `pg-` and indexed from 18510 up, clear of every other fixture file (BUILD §0).
+//! Spells whose play needs an enemy Unit on the field though they declare no target (Meditative #53
+//! Prestige's Radiant face). Ids `pg-…` from 18510, clear of every other fixture file (BUILD §0).
 
 use std::sync::LazyLock;
 
@@ -12,7 +9,6 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// A Core Common at (1) whose faces both print `keywords`; a Unit's are 2/2.
 fn def(index: u32, name: &str, type_: &str, keywords: Value) -> CardDef {
     let face = if type_ == "Unit" {
         json!({ "attack": 2, "health": 2, "keywords": keywords, "text": name })
@@ -54,12 +50,10 @@ pub fn plain_spell() -> CardDef {
     def(18513, "plain-spell", "Spell", json!([]))
 }
 
-/// A 2/2 Unit with no text.
 pub fn dummy() -> CardDef {
     def(18514, "dummy", "Unit", json!([]))
 }
 
-/// The gate: an enemy Unit on the field.
 fn enemy_unit_stands() -> PlayAllowedHook {
     play_allowed_hook(|state, player| !active_units_of(state, opponent_of(player)).is_empty())
 }
@@ -108,7 +102,6 @@ pub static PLAY_GATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock
     table
 });
 
-/// Merge this file's cards into whatever catalog and scripts the test registered first.
 pub fn register_play_gate() {
     let mut defs = registered_catalog().clone();
     for entry in PLAY_GATE_DEFS.iter() {

@@ -1,11 +1,9 @@
 //! The only source of randomness in the engine (§10.7, §9.3). The cursor lives in GameState, so
 //! (seed, cursor) reproduces a sequence exactly, in this process or any other.
 //!
-//! A bit-for-bit port of `packages/engine/src/rng.ts` (SURFACE §6.3): xmur3 over the seed's UTF-16
-//! code units seeds mulberry32, and draw `n` is mulberry32 evaluated at `(seed_int, n)`, so a
-//! generator is nothing but its seed and its cursor. `Math.imul` is `wrapping_mul` on `u32`, `>>>`
-//! is `>>` on `u32`, and the `a + Math.imul(…)` sums are `wrapping_add` (their `>>> 0` / `^=`
-//! reduce them mod 2^32, which is exactly what wrapping does to the same bit patterns).
+//! Bit for bit as SURFACE §6.3 fixes it, which the golden traces replay on: xmur3 over the seed's
+//! UTF-16 code units seeds mulberry32, and draw `n` is mulberry32 evaluated at `(seed_int, n)`, so a
+//! generator is nothing but its seed and its cursor. Every sum and product wraps mod 2^32.
 
 /// xmur3: string seed to a 32-bit integer stream, used once to seed mulberry32.
 fn seed_to_int(seed: &str) -> u32 {
@@ -14,7 +12,6 @@ fn seed_to_int(seed: &str) -> u32 {
     let mut h: u32 = 1_779_033_703_u32 ^ (units.len() as u32);
     for unit in units {
         h = (h ^ u32::from(unit)).wrapping_mul(3_432_918_353);
-        // `(h << 13) | (h >>> 19)`
         h = h.rotate_left(13);
     }
     h = (h ^ (h >> 16)).wrapping_mul(2_246_822_507);
@@ -30,8 +27,8 @@ fn value_at(seed_int: u32, n: u32) -> f64 {
     f64::from(a ^ (a >> 14)) / 4_294_967_296.0
 }
 
-/// A seeded generator: TS's `Rng`. It holds no state but its seed and its cursor, so cloning it
-/// forks the sequence and `Rng::new(seed, rng.cursor())` resumes it anywhere.
+/// A seeded generator holding only its seed and its cursor, so cloning it forks the sequence and
+/// `Rng::new(seed, rng.cursor())` resumes it anywhere.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rng {
     seed_int: u32,
@@ -39,7 +36,6 @@ pub struct Rng {
 }
 
 impl Rng {
-    /// TS `createRng(seed, cursor)`.
     pub fn new(seed: &str, cursor: u32) -> Rng {
         Rng {
             seed_int: seed_to_int(seed),
@@ -110,14 +106,13 @@ impl Rng {
     }
 
     /// R1440: a coin flip is a luck-based roll whose better side is heads (§6.1), so Lucky X flips X
-    /// more coins and keeps heads if any lands heads. With no Lucky it is exactly one draw, as `coin`
-    /// is, so a flip that nothing made lucky replays as it always did.
+    /// more coins and keeps heads if any lands heads. With no Lucky it is the one draw `coin` takes.
     pub fn lucky_coin(&mut self, x: i32) -> bool {
         self.lucky(x, |rng| rng.coin(), |a, b| a || b)
     }
 }
 
-/// TS `createRng(seed, cursor = 0)`, by its TS name (SURFACE §4.2): the same as `Rng::new`.
+/// `Rng::new` by its SURFACE §4.2 name.
 pub fn create_rng(seed: &str, cursor: u32) -> Rng {
     Rng::new(seed, cursor)
 }
@@ -126,8 +121,7 @@ pub fn create_rng(seed: &str, cursor: u32) -> Rng {
 mod tests {
     use super::*;
 
-    /// SURFACE §6.3 (V3): the first ten draws TS prints for two seeds, pinned as exact `f64`s
-    /// (`pnpm exec tsx -e '… createRng(s) … r.next() …'` at the plan's commit).
+    /// SURFACE §6.3 (V3): the first ten draws for two seeds, pinned as exact `f64`s.
     #[test]
     fn first_ten_draws_match_typescript() {
         let golden = [
@@ -176,9 +170,7 @@ mod tests {
         assert_eq!(resumed.next(), from_start.next());
     }
 
-    /// TS: `int(10), int(7), int(1), int(0), int(100)` on "golden" is [6, 6, 0, 0, 83] at cursor 4
-    /// (`int(0)` draws nothing); `shuffle([1..8])` on "jackioh-fuzz-1" at cursor 5 is
-    /// [2, 6, 4, 3, 5, 7, 1, 8] at cursor 12.
+    /// `int(0)` draws nothing, so five ints end at cursor 4.
     #[test]
     fn int_and_shuffle_match_typescript() {
         let mut q = Rng::new("golden", 0);
@@ -190,7 +182,7 @@ mod tests {
         assert_eq!(w.cursor(), 12);
     }
 
-    /// The seed is read as UTF-16 code units, as JS reads it: "xé♥😀" (the emoji is two units).
+    /// The seed is read as UTF-16 code units: the emoji is two.
     #[test]
     fn seeds_hash_utf16_code_units() {
         let mut u = Rng::new("x\u{e9}\u{2665}\u{1f600}", 0);
@@ -223,9 +215,7 @@ mod tests {
         }
     }
 
-    /// R1440: "golden" lands tails, tails, heads (0.66, 0.92, 0.49), so Lucky 1 from the start is two
-    /// tails and stays tails, Lucky 1 one draw on is tails then heads and keeps heads, and Lucky 2 from
-    /// the start reaches the heads: 1 + X draws each time.
+    /// R1440: "golden" lands tails, tails, heads (0.66, 0.92, 0.49); each flip takes 1 + X draws.
     #[test]
     fn r1440_lucky_coin_keeps_heads_if_any_of_its_1_plus_x_coins_lands_heads() {
         let mut first = Rng::new("golden", 0);

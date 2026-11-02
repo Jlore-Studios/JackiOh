@@ -39,11 +39,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5: "Draw 2, heal 2 (hero may exceed 30); hand cap burns;
-// radiant 4/4".
-//
-// §3 gives a hero no maximum health, so the heal runs past 30; R4 caps a hand at 10 and burns what
-// a draw cannot fit to the graveyard. `library[0]` is the top of the library (the next card drawn).
+// BUILD M4-T4 row 5: Draw 2 heal 2, Radiant draw 4 heal 4 (§3, R4).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

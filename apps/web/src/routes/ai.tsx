@@ -1,14 +1,12 @@
 // DRAFT — needs owner and legal review
 //
-// `/ai`: how JackiOh uses AI (R2631000). Public, like `/accessibility`, and linked from the site footer.
-// Every statement is something the repository does: the computer opponents (the practice AI, §9.9;
-// the ranked AI opponents, §9.12 and R2614000; the co-op team, §13.7), each reading only what its
-// seat may (R185); the music composed as code by an AI model (`assets/music/LICENSES.md`); the voice
-// lines' text-to-speech (`apps/web/scripts/gen-voice.mjs`, `assets/voice/SOURCES.md`); the procedural
-// card art (`cards/art/`); and what online games' records are used for (R1442, R1454, the Privacy
-// Policy). Nothing here calls an AI service. Keep it true when any of those changes
-// (docs/compliance.md §9). It is no part of the Terms or the Privacy Policy, so changing it moves
-// no `TERMS_VERSION`.
+// `/ai`: how JackiOh uses AI (R2631000), public and linked from the site footer. Every statement is
+// something the repository does: the computer opponents (the practice AI, §9.9; the ranked AI
+// opponents, §9.12 and R2614000; the co-op team, §13.7), each reading only what its seat may (R185);
+// the music (`assets/music/LICENSES.md`); the voice lines' text-to-speech (`assets/voice/SOURCES.md`);
+// the procedural card art; and what online games' records are used for (R1442, R1454). Keep it true
+// when any of those changes (docs/compliance.md §9). It is no part of the Terms or the Privacy Policy,
+// so changing it moves no `TERMS_VERSION`.
 
 import type { ReactElement } from "react";
 

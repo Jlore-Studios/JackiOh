@@ -1,8 +1,6 @@
 //! R1714000 (issue #1714): the concealed copy a dry run plays on (R222) and the autopilot's tries
-//! play on (R1183003) keeps no record its viewer may not read — not the decks the match began with,
-//! the Glitch boards, the other seat's last board or unrevealed secret choices, nor a problem's key.
-//! So a try there cannot "peek", and two states that differ only in what the viewer may not read give
-//! the same copy and the same scores.
+//! play on (R1183003) keeps no record its viewer may not read, so two states that differ only in what
+//! the viewer may not read give the same copy and the same scores.
 
 use jackioh_engine::effects::{answered_correctly, choose_answer, damage, guess_secret};
 use jackioh_engine::subsystems::autopilot;
@@ -22,12 +20,10 @@ const OTHER_SNARE: &str = "cc-other-snare";
 const QUIZ: &str = "cc-quiz";
 /// A vanilla Unit: what both seats' hands and libraries are dealt.
 const FILLER: &str = "fx-10";
-/// The card p1's own last board holds.
 const OWN_BOARD: &str = "fx-3";
 const ANSWERED: &str = "answered";
 const PRIZE: i32 = 3;
 
-/// The fixture catalog with the two Traps and the quiz Spell, and the quiz's script, registered.
 fn register() {
     register_outside_data();
     let mut catalog = registered_catalog().clone();
@@ -80,8 +76,7 @@ fn register() {
     register_scripts(scripts);
 }
 
-/// p2 holds a face-down `trap` in lane 1 with two Plague Counters; the board as the turn began is
-/// recorded in the history (R419).
+/// p2's face-down `trap` in lane 1 with two Plague Counters, the board recorded in the history (R419).
 fn board(trap: &str) -> GameState {
     register();
     let s = scenario(json!({
@@ -105,8 +100,7 @@ fn entry(def_id: &str) -> LastBoardEntry {
     }
 }
 
-/// Every record a viewer may not read, written into `state`: the decks the match began with, both
-/// seats' Glitch boards, both last boards and three secrets (p2's unrevealed one holds `choice`).
+/// Every record a viewer may not read, written into `state` (p2's unrevealed secret holds `choice`).
 fn hide_records(state: &mut GameState, deck: &str, their_board: &str, choice: SecretChoice) {
     state.opening = Some(OpeningRecord {
         decks: (vec![deck.to_string()], vec![deck.to_string()]),
@@ -146,7 +140,6 @@ fn choice_of(state: &GameState, id: &str) -> Option<SecretChoice> {
     secret_of(state, id).expect("the secret is filed").choice
 }
 
-/// The effect applied for `player` on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, player: PlayerId, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, player)
 }
@@ -202,7 +195,6 @@ mod r1714000_a_dry_runs_concealed_copy {
             .expect("the snapshot holds the trap");
         assert_eq!(held.def_id, HIDDEN_TRAP_DEF_ID);
         assert_eq!(held.counters.plague, Some(2));
-        // The state itself is untouched.
         let real = state.board_history.as_ref().and_then(|history| history.last());
         let real = real.expect("the history holds a snapshot").sides[P2].backrow[0]
             .as_ref()

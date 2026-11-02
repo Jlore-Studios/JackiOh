@@ -224,8 +224,7 @@ mod r940 {
     #[test]
     fn r940_a_shipped_catalog_that_printed_the_keyword_still_reads_and_the_view_leaves_it_out() {
         // Through v0.4.4b the Felinor printed the immunity as a keyword; a game folded under such a catalog
-        // (R767000) reads it, the unit stays immune, and the client, whose types no longer name it, is not
-        // shown it.
+        // (R767000) reads it and the unit stays immune, but the client is not shown it.
         jackioh_cards::register_all();
         let shipped = jackioh_cards::catalog_at("v0.4.4").expect("v0.4.4 is carried");
         jackioh_engine::with_shipped(Some(shipped), || {
@@ -377,9 +376,8 @@ mod r943 {
         );
     }
 
-    /// D14: until the Meditative set shipped nothing was marked, so a game of the shipped sets hashed
-    /// as it did before the set. It shipped in v0.3.5: with nothing previewed, a game's setup now
-    /// hands out a Created Coin and deals every deck card unmarked.
+    /// D14: once the Meditative set ships, a game's setup with nothing previewed hands out a Created
+    /// Coin and deals every deck card unmarked.
     #[test]
     fn r943_since_the_meditative_set_shipped_every_game_marks_the_coin_and_no_dealt_card() {
         jackioh_cards::register_all();
@@ -441,10 +439,8 @@ mod r943 {
         }));
         let id = s.unit(P1, 1).expect("unit").id.clone();
         s.card_mut(&id).created = Some(true);
-        // A reset keeps it.
         reset_instance(s.card_mut(&id));
         assert_eq!(s.card(&id).created, Some(true), "a reset keeps the mark");
-        // A draw moves it to the hand with the mark on.
         let mut sink = Bench::new(s.state());
         {
             let state = s.state_mut();
@@ -457,7 +453,6 @@ mod r943 {
             .find(|card| card.def_id == VANILLA)
             .expect("drawn");
         assert_eq!(drawn.created, Some(true), "a move keeps the mark");
-        // A JSON round trip keeps it.
         let value = serde_json::to_value(&drawn).expect("serializes");
         assert_eq!(value.get("created"), Some(&json!(true)));
         let back: CardInstance = serde_json::from_value(value).expect("deserializes");
@@ -623,9 +618,8 @@ mod r831008 {
 
     #[test]
     fn r831008_lane_is_empty_counts_every_zone() {
-        // One card in each of the four zones a lane has, in lanes 1 to 4: p1's unit zone, p1's
-        // backrow (a face-up Field Spell), p2's unit zone and p2's backrow (a face-down Trap, which
-        // occupies its zone as any card does). Lane 5 alone is empty.
+        // One card in each of the four zones a lane has, in lanes 1 to 4 (a face-down Trap occupies its
+        // zone as any card does). Lane 5 alone is empty.
         jackioh_cards::register_all();
         let s = scenario(json!({
             "p1": {
@@ -805,7 +799,6 @@ mod r1956001 {
         let trap = s.backrow(P1, 1).expect("the Trap");
         assert_eq!(generator(&s, &unit.id).as_deref(), Some(VANILLA));
         assert_eq!(generator(&s, &trap.id).as_deref(), Some(VANILLA));
-        // A card A gives the other player is theirs, and records nothing of A's.
         run_as(
             &mut s,
             &a,
@@ -847,8 +840,7 @@ mod r1956001 {
         assert_eq!(own_trap.created_by.as_deref(), Some(VANILLA));
         assert!(json_text(&own).contains("createdBy"));
 
-        // The other player is told nothing: not on the public unit, not through the hidden hand or
-        // the face-down Trap, and not on the card it was given.
+        // The other player is told nothing.
         let foe = s.view(P2);
         let seen = foe.opponent.units[0].as_ref().expect("the unit is public");
         assert_eq!(seen.created, Some(true), "Created is public on the field (R943)");

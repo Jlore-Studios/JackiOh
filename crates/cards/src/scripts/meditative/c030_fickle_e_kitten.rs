@@ -5,19 +5,12 @@
 //! Radiant: "End of turn: If your opponent has a pricier permanent and a bigger deck, they gain
 //! control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
 //! Engine: at the end of its controller's turn (§2.2, R62's queue).
-//! - **The condition** compares each side's most expensive permanent with NEW read helper
-//!   `highest_permanent_cost(state, player)` (R901, MD-B5), this card counting for its controller.
-//!   The Radiant face also needs the opponent's library to be larger than its controller's.
+//! - **The condition** is `opponent_outbids`, this card counting for its controller.
 //! - **When it holds**, `give_control({ instanceId: self })` (R1423): R15's placement, R171's entry.
 //!   With no free unit zone the card stays, and the "Otherwise" clause does not run. Given at your
 //!   end of turn, it has been theirs since their turn began, so it may attack on it.
-//! - **Otherwise**, `shuffle_into({ defId: "meditative-030-1", count: 1, radiant: face })` into its
-//!   controller's deck.
 //!
 //! Its new controller asks again from their side, so it settles with the cheaper board.
-//!
-//! Through v0.4.0f it asked at the start of its controller's turn; `script_v0_4_0f` keeps that for
-//! those versions' replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -94,14 +87,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// M #30 Fickle E-Kitten — SPEC §8.8 row 30, BUILD M10 row M 30: "At its controller's end of
-// turn: with the opponent's highest field cost strictly above yours (tops of piles and backrow, X
-// cards at their X, face-down cards at their public cost; MD-B5) it moves to their side by R15,
-// summoning sick (R171), `controlChanged` public; equal or lower, or with no enemy permanent, a
-// base Love Bomb is shuffled into its controller's deck; with their side full it stays and nothing
-// is shuffled; under its new controller the comparison runs from their side; radiant 6/8, it moves
-// only when their deck is also larger, and the Love Bomb is Radiant". `mod v0_4_0f` keeps the start
-// of turn, the kept script's (R767000).
+// M #30 Fickle E-Kitten — SPEC §8.8 row 30, BUILD M10 row M 30.
 #[cfg(test)]
 mod tests {
     use super::*;

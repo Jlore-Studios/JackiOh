@@ -7,8 +7,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{big_body, plain};
 use crate::rules::fixtures::harness::{Bench, events_of_type, live, live_mut, new_game, put, slot};
 
-/// `self_` is the card under this id as it stands when the run starts; the rest go to
-/// `make_context` as they are.
+/// `self_` is the card under this id as it stands when the run starts.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<String>,
@@ -119,7 +118,6 @@ mod heal_x_r19_m3_t1 {
             ])
         );
 
-        // An undamaged unit heals nothing and emits nothing.
         run(
             &mut sink,
             &mut state,
@@ -276,7 +274,6 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
             json!([{ "type": "healed", "targetId": unit.id, "amount": 9 }])
         );
 
-        // Already at full: nothing to remove, nothing emitted.
         run(
             &mut sink,
             &mut state,

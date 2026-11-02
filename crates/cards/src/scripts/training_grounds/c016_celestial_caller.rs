@@ -1,15 +1,8 @@
 //! SPEC §8.11 Training Grounds 16 Celestial Caller: (4) Unit, Rare, 3/3 → 6/6, Divine Shield, Taunt,
 //! Armor 3 (Radiant 6), a card of the held Training Grounds set (R1420, R2194000).
-//!
-//! Base:    "Cry: Summon a Chosen by the Sun to the left of this and a Chosen by the Moon to the right
-//!           of this."
-//! Radiant: "Cry: Summon a Radiant Chosen by the Sun to the left of this and a Radiant Chosen by the Moon
-//!           to the right of this."
-//! Engine: M #49 YileGPT's aimed summon, read off this card's lane as the Cry resolves: TG #6 into the
-//! unit zone one lane lower on its side, then TG #7 one lane higher (R1060's right, mirrored for the
-//! left; R2196001). Lane 1 has no left and the last lane no right, so that summon is not made (R129); an
-//! occupied or reserved zone makes that one summon fail (R47, R64) and a Locked one takes it (R688). The
-//! summoned cards fire no Cry (R1).
+//! Base:    "Cry: Summon a Chosen by the Sun to the left of this and a Chosen by the Moon to the right of this."
+//! Radiant: "Cry: Summon a Radiant Chosen by the Sun to the left of this and a Radiant Chosen by the Moon to the right of this."
+//! M #49 aimed summon: TG #6 left, TG #7 right (mirrored R1060, R2196001). Edges make no summon (R129); occupied/reserved fail (R47, R64); Locked takes it (R688); no Cry (R1).
 
 use jackioh_engine::prelude::*;
 
@@ -45,12 +38,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #16 Celestial Caller — SPEC §8.11 row 16, BUILD M13 row TG 16: "printed Divine Shield, Taunt, Armor 3;
-// played into lane 3 with lanes 2 and 4 open: a Chosen by the Sun (3/3 Divine Shield) in lane 2, a Chosen
-// by the Moon (3/3 Taunt, Armor 3) in lane 4; in lane 1: only the Moon, in lane 2; in lane 5: only the
-// Sun, in lane 4; an occupied lane 2: no Sun, the Moon still lands; a Locked neighbour zone takes its
-// summon; summoned rather than played: no Cry; radiant 6/6, Armor 6; a Radiant Chosen by the Sun (9/9)
-// and a Radiant Chosen by the Moon (6/6, Armor 6)".
+// TG #16 Celestial Caller — SPEC §8.11 row 16, BUILD M13 row TG 16.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

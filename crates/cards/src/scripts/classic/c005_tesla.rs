@@ -20,7 +20,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-005";
 
-/// The instance id of the opponent's Unit this event summons (or resolves, for a play), or None.
 fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     match event {
         GameEvent::Summoned { player, row, exits_from, instance_id, .. } => {
@@ -93,8 +92,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 8 is its declared damage, which `param` reads off the face;
-    // its 2/8 body and keywords are printed on the catalog face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -104,8 +101,6 @@ pub fn script() -> CardScripts {
 // fires on a Unit summoned on the opponent's side, not on a steal (R171) or an animating card (R383); a
 // played one only after it resolves (R17); Lifesteal heals the amount dealt; the move keeps its damage and
 // counters (R78 does not apply); radiant 2/8, 8 damage; its tuned number (damage) reads via `param()` (R386).
-//
-// Tesla sits face-down in p1's backrow lane 3; p2, the opponent, is active and brings Units in.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,8 +216,6 @@ mod tests {
                 s.play(&man, json!({ "zone": 1 }));
 
                 assert_eq!(count(s.events(), "trapFired"), 1);
-                // The Cry's token is hit (its summon reveals Tesla); the played Unit, answered once the play
-                // has resolved, is a later Unit and is not hit.
                 let token = s.events().iter().find_map(|event| match event {
                     GameEvent::Summoned { def_id, instance_id, .. } if def_id == "core-t-rush" => Some(instance_id.clone()),
                     _ => None,
@@ -240,7 +233,6 @@ mod tests {
                     .collect();
                 assert_eq!(hits, vec![token]);
                 s.expect_in_zone(&man, "field");
-                // The one hit heals: 4 into the 3/3 token.
                 s.expect_health(P1, 24);
             }
 
@@ -251,8 +243,6 @@ mod tests {
 
                 s.play(CALL, json!({}));
 
-                // Call to Arms recruits the three (1) Cost Units (Timmy, Timmy, Vanilla), never the (3) Menace;
-                // the first one's summon reveals Tesla, and the other two are later Units.
                 assert_eq!(count(s.events(), "trapFired"), 1);
                 let graveyard = s.pile(P2, "graveyard");
                 assert_eq!(graveyard.iter().filter(|card| card.def_id == TIMMY).count(), 1);
@@ -262,8 +252,6 @@ mod tests {
             #[test]
             fn s4_5_a_reborn_body_is_summoned_and_answered_on_its_controller_s_own_turn_too() {
                 crate::register_all();
-                // On p1's turn p1 destroys p2's Right-house defender; Reborn brings it back on p2's side, which
-                // is a Unit summoned there, so p1's Tesla answers it (its Divine Shield takes the hit).
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "backrow": [set_tesla(false, 3)], "health": 20, "library": [VANILLA] },
                     "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "lane": 2 }] },
@@ -341,8 +329,6 @@ mod tests {
             #[test]
             fn r383_an_animated_card_animating_on_the_opponent_s_side_was_not_summoned_and_leaves_it_set() {
                 crate::register_all();
-                // p1 plays a Unit on p1's turn: p2's own Tesla answers it and animates on p2's side. That move
-                // is no summon, so p1's Tesla stays face-down.
                 let mut s = scenario(json!({
                     "p1": { "hand": [VANILLA, FILLER], "backrow": [set_tesla(false, 3)], "library": [VANILLA] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": TESLA, "faceUp": false, "lane": 3 }], "library": [VANILLA] },
@@ -418,7 +404,6 @@ mod tests {
                 assert_eq!(count(s.events(), "animated"), 1);
                 s.expect_in_zone(VANILLA, "graveyard");
                 s.expect_in_zone(TIMMY, "field");
-                // Nor on a later turn.
                 s.end_turn();
                 s.end_turn();
                 let Some(later) = s.hand(P2).into_iter().find(|card| card.def_id == VANILLA) else {
@@ -448,8 +433,6 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [VANILLA, FILLER] }), json!({}), false);
                 s.play(VANILLA, json!({ "zone": 2 }));
-                // p1's own turn comes: Tesla entered the unit row on p2's turn, so it may attack now — but the
-                // turn it animated on, a p1 attack would have been refused.
                 let tesla = s.card(TESLA).clone();
                 assert_eq!(s.card(&tesla).summoned_turn, Some(s.state().turn));
             }

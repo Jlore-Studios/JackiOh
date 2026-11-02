@@ -2,34 +2,13 @@
 // lookup every user-visible sentence goes through. Presentation only (CLAUDE.md rule 7): no rule reads
 // it, and nothing about it reaches the engine, the wire or the server.
 //
-// The English stays inline where it is written, wrapped in `t()`: `t("Your turn")` is the chosen
-// language's entry for that exact English string, with `{name}` parameters filled, and the English
-// itself when the language has no entry, so English needs no file and a sentence nobody has
-// translated yet reads as it always did. The engine's and the server's English (prompt titles,
-// refusals, validator issues) is looked up where it is displayed, by the same call; a dictionary key
-// that holds `{name}` tokens also matches a sentence whose values are already filled in, since those
-// arrive complete from Rust ("Choose 2 cards" finds "Choose {n} cards").
-// That fallback is for the engine's and the server's sentences: every literal the client itself
-// wraps in `t()` has an entry in `zh-CN.json` (an identity entry when it reads as written, as
-// "English" has), which `i18n.test.ts` checks (R711000).
-//
-// A language is one dictionary file (`<tag>.json`, English to its words; a value is a string, or
-// `{ one, other }` and the other CLDR plural categories, chosen by `Intl.PluralRules` over the
-// `count` parameter), its card tables beside the catalog (`cards/chinese.ts`, CARD_TABLES) and one
-// line of LOCALES. A dictionary loads on demand (a dynamic `import()`), so the English bundle does
-// not carry any of them.
-//
-// The choice is the device's: `localStorage["jackioh.locale"]` inside try/catch, applied live (the
-// store notifies, `useLocale()` re-renders) and set on `<html lang>`. A first visit takes the best
-// match of `navigator.languages`, else English; the browser's pick is not written down, so only a
-// click on the language button fixes it. Never call `t()` at module scope: it would freeze the
-// language the module loaded in.
-//
-// The language button stays until the device has settled on its language (R1916000):
-// localStorage["jackioh.locale.settledVisits"] counts the boots (countLocaleVisit, main.tsx), every
-// language change and the settings' reset set it back to 0, and from the boot it reaches
-// LANGUAGE_SETTLED_VISITS the button leaves the top bar and the board; settings' Language row stays.
-// Storage that throws never settles.
+// The English stays inline, wrapped in `t()`, and reads as itself where the language has no entry.
+// The engine's and the server's English arrives complete from Rust, so a key holding `{name}` tokens
+// also matches a filled-in sentence; `i18n.test.ts` checks each literal in `t()` has a `zh-CN.json` entry.
+// A language is one `<tag>.json`, its card tables (`cards/chinese.ts`) and one line of LOCALES; each
+// dictionary loads on demand, so the English bundle carries none. Only the language button writes
+// the choice down, never the browser's pick. The button stays until the device settles (R1916000).
+// Never call `t()` at module scope: it would freeze the language the module loaded in.
 
 import { useSyncExternalStore } from "react";
 import { getStored, removeStored, setStored } from "../net/storage.ts";
@@ -56,7 +35,7 @@ type LocaleSpec = {
   day?: Intl.DateTimeFormatOptions;
 };
 
-/** Every language the client reads, in the order the button cycles them. A new one is a line here. */
+/** Every language the client reads, in the order the button cycles them. */
 export const LOCALES = {
   en: { name: "English", short: "EN", load: () => Promise.resolve({}) },
   "zh-CN": {
@@ -76,7 +55,7 @@ export const LOCALE_STORAGE_KEY = "jackioh.locale";
 /** The boots since this device's last language change (R1916000), beside the language itself. */
 export const LOCALE_VISITS_STORAGE_KEY = "jackioh.locale.settledVisits";
 
-/** Boots with no language change after which the device has settled on its language: the language button leaves the top bar and the board, settings' Language row staying (R1916000). */
+/** Boots with no language change after which the device has settled and the language button leaves (R1916000). */
 export const LANGUAGE_SETTLED_VISITS = 3;
 
 const LOCALE_TAGS = Object.keys(LOCALES) as Locale[];
@@ -117,7 +96,7 @@ function stateFor(locale: Locale, dictionary: Dictionary): State {
 let state: State = stateFor(DEFAULT_LOCALE, {});
 let latest = 0;
 const listeners = new Set<() => void>();
-/** R1916000: whether this boot found the device settled on its language; a language change clears it. */
+/** Whether this boot found the device settled (R1916000); a language change clears it. */
 let settled = false;
 
 const TOKEN = /\{(\w+)\}/g;
@@ -138,24 +117,21 @@ function patternsOf(dictionary: Dictionary): Pattern[] {
     let enclosed = true;
     for (const match of key.matchAll(TOKEN)) {
       const end = match.index + match[0].length;
-      // A token in parentheses ("({cost}) Cost") holds only what stands inside them, never words.
       const inParentheses = key[match.index - 1] === "(" && key[end] === ")";
       enclosed &&= inParentheses;
       source += escapeRegex(key.slice(last, match.index)) + (inParentheses ? "([^()]+?)" : "(.+?)");
       names.push(match[1] ?? "");
       last = end;
     }
-    // A key whose own words are fewer than two ("{n} cards") would take any sentence that ends the
-    // same way and leave it half translated, so it only ever answers its own calls, unless each of
-    // its tokens is held in parentheses ("({cost}) Cost" takes "(3) Cost" and nothing longer).
+    // A key with fewer than two words of its own ("{n} cards") would half-translate any sentence that
+    // ends the same way, so it answers only its own calls, unless each of its tokens is in parentheses.
     const own = (key.replace(TOKEN, " ").match(/\p{L}+/gu) ?? []).length;
     if (names.length > 0 && (own >= MIN_PATTERN_WORDS || (enclosed && own > 0))) {
       const regex = new RegExp(`^${source}${escapeRegex(key.slice(last))}$`, "s");
       patterns.push({ key, names, regex, literal: key.replace(TOKEN, "").length });
     }
   }
-  // The most specific key first: "In the {mode} queue. …" is tried before a shorter key that would
-  // also match the same sentence.
+  // The most specific key first, before a shorter key that would also match the same sentence.
   return patterns.sort((a, b) => b.literal - a.literal);
 }
 
@@ -170,9 +146,8 @@ export function words(entry: Entry, locale: Locale, params: Params | undefined):
 }
 
 /**
- * The sentence a complete English sentence reads as when a `{name}` key matches it. Each value is
- * looked up in turn, since the engine nests its sentences ("{label} (next turn)", "Next {type} costs
- * {amount} less"); a value is shorter than the sentence it came from, so the lookup ends.
+ * When a `{name}` key matches a complete English sentence, each value is looked up in turn, as the
+ * engine nests its sentences; a value is shorter than the sentence it came from, so the lookup ends.
  */
 function matched(english: string): string | null {
   state.patterns ??= patternsOf(state.dictionary);
@@ -192,7 +167,7 @@ function matched(english: string): string | null {
 /**
  * The chosen language's words for this exact English sentence, `{name}`s filled from `params`; the
  * English, filled the same way, when the language has none. Without `params` a key with `{name}`
- * tokens may also match a finished sentence (the engine's and the server's).
+ * tokens may also match a finished sentence.
  */
 export function t(english: string, params?: Params): string {
   const { dictionary } = state;
@@ -266,14 +241,13 @@ export function countLocaleVisit(): void {
     visits = parseVisits(window.localStorage.getItem(LOCALE_VISITS_STORAGE_KEY)) + 1;
     window.localStorage.setItem(LOCALE_VISITS_STORAGE_KEY, String(visits));
   } catch {
-    // Storage is unavailable: the device never settles and the button stays.
     setSettled(false);
     return;
   }
   setSettled(visits >= LANGUAGE_SETTLED_VISITS);
 }
 
-/** A language change: the count starts again and the button is back until the device settles again (R1916000). */
+/** A language change: the count starts again and the button is back (R1916000). */
 function restartLocaleVisits(): void {
   // Storage that is unavailable counted nothing.
   setStored(LOCALE_VISITS_STORAGE_KEY, "0");
@@ -285,7 +259,6 @@ export function isLocaleSettled(): boolean {
   return settled;
 }
 
-/** isLocaleSettled(); the component re-renders when it changes. */
 export function useLocaleSettled(): boolean {
   return useSyncExternalStore(subscribeLocale, isLocaleSettled, isLocaleSettled);
 }
@@ -355,25 +328,21 @@ export function nextLocale(locale: Locale): Locale {
   return LOCALE_TAGS[(LOCALE_TAGS.indexOf(locale) + 1) % LOCALE_TAGS.length] ?? DEFAULT_LOCALE;
 }
 
-/**
- * The language tag numbers and moments are written in: the reader's, or for English the browser's own,
- * as the bare `toLocaleString()` these helpers replace wrote them, so English reads as it always did.
- */
+/** The language tag numbers and moments are written in: the reader's, or for English the browser's own. */
 function formatTag(): string | undefined {
   return state.locale === DEFAULT_LOCALE ? undefined : state.locale;
 }
 
-/** A number in the reader's language (replaces the bare `toLocaleString()`). */
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat(formatTag(), options).format(value);
 }
 
-/** A span of seconds as the clock reads it: "5s", "7200s", "5秒"; never grouped, as `${n}s` never was. */
+/** A span of seconds as the clock reads it, never grouped. */
 export function formatSeconds(seconds: number): string {
   return new Intl.NumberFormat(state.locale, { style: "unit", unit: "second", unitDisplay: "narrow", useGrouping: false }).format(seconds);
 }
 
-/** A moment (epoch ms, or a Date) as the reader's date and time (replaces the bare `toLocaleString()`). */
+/** A moment (epoch ms, or a Date) as the reader's date and time. */
 export function formatDateTime(at: Date | number, options?: Intl.DateTimeFormatOptions): string {
   return new Date(at).toLocaleString(formatTag(), options);
 }

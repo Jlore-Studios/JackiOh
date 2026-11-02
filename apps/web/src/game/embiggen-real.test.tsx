@@ -1,15 +1,11 @@
 // #492: every Embiggen card asks whether to pay its embiggen price, against the REAL engine.
 //
-// The engine lists a play of an "A embiggen B" card with `embiggen: false` and, once B is affordable,
-// the same play with `embiggen: true` (R81), for every zone the card may take. The client builds the
-// play from those (CLAUDE.md rule 7): with both forms listed it opens the embiggen picker, two cards
-// in the middle of the screen, and sends the form picked; with only the normal form listed it asks
-// nothing about the price. Here the view and the legal list are `viewFor` and `legalActions` of real
-// states (the WebAssembly module, docs/v0.3.0/SURFACE.md §10.3), the board is `<Game/>`, and the play
-// is made the two ways a player makes it, click-click and drag to play. The Embiggened card shows the
-// view's `embiggenCost`, the engine's price for that play under every cost change (a discount R363's
-// "(4)+ Cost" threshold gives the embiggen price alone included), and the play then pays it. Every
-// Embiggen card in the catalog is driven, on both faces, so a new one is covered the day it is added.
+// The engine lists a play of an "A embiggen B" card with `embiggen: false` and, once B is affordable, the
+// same play with `embiggen: true` (R81). The client builds the play from those (CLAUDE.md rule 7): with
+// both forms listed it opens the embiggen picker and sends the form picked; with only the normal form it
+// asks nothing about the price. The view and the legal list are real states' (docs/v0.3.0/SURFACE.md
+// §10.3); the Embiggened card shows the view's `embiggenCost`. Every Embiggen card in the catalog is
+// driven, on both faces, so a new one is covered the day it is added.
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -37,7 +33,6 @@ const SEED = "jackioh-492";
 const TURN = 9;
 const el = (id: string): HTMLElement => screen.getByTestId(id);
 
-/** Every "A embiggen B" card in the catalog, with its two printed prices. */
 const EMBIGGEN: { def: CardDef; base: number; embiggen: number }[] = Object.values(registeredCatalog()).flatMap((def) =>
   typeof def.cost === "object" ? [{ def, base: def.cost.base, embiggen: def.cost.embiggen }] : [],
 );
@@ -53,11 +48,7 @@ function fillerDeck(): string[] {
 /** A cost change on the board: the card's own `costMod` (R65), and p1's player modifiers (§10.1). */
 type CostChange = { costMod?: number; mods?: unknown[] };
 
-/**
- * p1's main phase on turn 9 with `defId` (on the face asked for) the only card in hand and `mana`
- * to spend, under `change`. The card is a copy of one the engine dealt, so it carries every field a
- * new card has.
- */
+/** The card is a copy of one the engine dealt, so it carries every field a new card has. */
 function board(defId: string, radiant: boolean, mana: number, change: CostChange = {}): { state: GameState; cardId: string } {
   const deck = fillerDeck();
   const state = createGame({ seed: SEED, decks: [deck, deck] });
@@ -92,15 +83,10 @@ function render492(state: GameState) {
   return { legal, onAction };
 }
 
-/** The `play`s the engine lists for the card. */
 function plays(legal: readonly ActionBody[], cardId: string): Extract<ActionBody, { type: "play" }>[] {
   return legal.flatMap((body) => (body.type === "play" && body.instanceId === cardId ? [body] : []));
 }
 
-/**
- * The one body the board sent: one the engine listed, and one it accepts. Returns the price the play
- * paid and whether it was embiggened, as the engine's `cardPlayed` says.
- */
 function sent(
   state: GameState,
   legal: readonly ActionBody[],
@@ -122,7 +108,6 @@ function rowOf(def: CardDef): "units" | "backrow" {
   return def.type === "Unit" ? "units" : "backrow";
 }
 
-/** The open picker's kind, if one is open. */
 function promptKind(): string | null | undefined {
   return screen.queryByTestId("prompt-modal")?.getAttribute("data-prompt-kind");
 }
@@ -138,7 +123,6 @@ function chooseFirstMode(press: (target: Element) => void): void {
   if (first !== null) press(first);
 }
 
-/** Finishes a play whose price is picked: its mode, if it asks one, and a permanent still takes its zone, clicked on the board. */
 function placeIfAsked(def: CardDef): void {
   chooseFirstMode((target) => {
     fireEvent.click(target);
@@ -172,7 +156,6 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
         for (const form of [true, false]) {
           const { state, cardId } = board(def.id, radiant, embiggen);
           const { legal, onAction } = render492(state);
-          // The engine lists both forms, for every zone alike.
           const listed = plays(legal, cardId);
           expect(new Set(listed.map((play) => play.embiggen))).toEqual(new Set([false, true]));
           expect(listed.filter((play) => play.embiggen === true)).toHaveLength(listed.length / 2);
@@ -289,10 +272,8 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
   }
 });
 
-// ---------------------------------------------------------------------------------------------
 // Drag to play. jsdom has no layout, so `document.elementsFromPoint` answers whatever the pointer is
 // "over" (drag-layer.test.tsx does the same); the press goes to the card, the rest to `window`.
-// ---------------------------------------------------------------------------------------------
 
 let under: Element[] = [];
 const START = { x: 200, y: 400 };

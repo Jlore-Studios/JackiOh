@@ -1,9 +1,6 @@
-// #2123 (part of #2036): tabular numbers and balanced headlines across the menus.
-//
-// Vitest stubs CSS imports, so the sheets are read as text with `node:fs` and parsed as
-// `fx/css.test.ts` parses them (its parser, copied below): a rule is its selector list, its
-// declarations and the @media it sits in, so the checks hold whatever the sheet's formatting.
-// Card faces get neither change: `cards/fit.ts` measures and fits their text.
+// #2123 (part of #2036): tabular numbers and balanced headlines across the menus. The sheets are read
+// as text (Vitest stubs CSS imports) and parsed with `fx/css.test.ts`'s parser, copied below. Card
+// faces get neither: `cards/fit.ts` fits their text.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -103,7 +100,6 @@ function parseSheet(css: string): Sheet {
   return sheet;
 }
 
-/** Selector text with quotes dropped and the whitespace that carries no meaning removed. */
 function normSelector(selector: string): string {
   return selector
     .replace(/['"]/g, "")
@@ -120,7 +116,7 @@ function sheet(path: string): Sheet {
   return parseSheet(readFileSync(join(SRC, path), "utf8"));
 }
 
-/** The declarations every rule listing `selector` (compared normalized) gives it, later rules winning. */
+/** The declarations every rule listing `selector` gives it, later rules winning. */
 function declsFor(parsed: Sheet, selector: string): Map<string, string> {
   const wanted = normSelector(selector);
   const merged = new Map<string, string>();
@@ -159,7 +155,7 @@ const BALANCED = [
 /** A card face's selectors: the face `.cf` and its parts `.cf-*` (cards/CardFace.tsx). */
 const CARD_FACE = /\.cf(?![\w-])|\.cf-[\w-]/;
 
-/** The card-face rules that set font-variant-numeric before #2123 (sorted): the stats, the cost gem and the state text. */
+/** The card-face rules that set font-variant-numeric before #2123 (sorted). */
 const FACE_NUMERIC = [
   "cards/cards.css: .cf .cf-num",
   "cards/cards.css: .cf .cost-gem",

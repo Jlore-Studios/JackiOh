@@ -1,11 +1,4 @@
-//! R645 (SPEC §9.9, §6): a ladder bot's persona chatter is cosmetic and cannot affect game state,
-//! replays or decisions. R1344: its pools start with §6's emotes, add the MN03 emoji, and every roll
-//! is limited to the dealt hand. R643's `emote_gate` judges the send instant; a blocked emote is
-//! dropped, never queued.
-//!
-//! The port of `apps/web/src/practice/personas.test.ts`, case for case, against
-//! `jackioh_server::bots::persona` (the server's port of `personas.ts`). TS's cases generated per
-//! persona and trigger or reply row are one test each here, looping over the same tables.
+//! Bot persona chatter (SPEC §9.9, §6, R645, R1344, R643).
 
 use jackioh_engine::wire::{EMOTE_COOLDOWN_MS, EMOTE_IDS, EmoteId, GameEvent, PlayerId, PlayerView};
 use jackioh_server::bots::persona::{
@@ -19,18 +12,16 @@ use jackioh_server::config::{
 };
 use serde_json::{Value, json};
 
-// ---------------------------------------------------------------------------------------------
 // Scripted draws
-// ---------------------------------------------------------------------------------------------
 
 type Rng = Box<dyn FnMut() -> f64 + Send>;
 
-/// TS `low`: every draw is 0.
+/// Every draw is 0.
 fn low() -> Rng {
     Box::new(|| 0.0)
 }
 
-/// TS `seq`: the draws in order, then the last one for ever (0 for none).
+/// Draws in order, then last for ever (0 for none).
 fn seq(draws: &[f64]) -> Rng {
     let draws = draws.to_vec();
     let mut next = 0;
@@ -44,7 +35,7 @@ fn seq(draws: &[f64]) -> Rng {
     })
 }
 
-/// TS `exact`: the draws in order, and a panic for one past the script.
+/// Draws in order, panics if past script.
 fn exact(draws: &[f64]) -> Rng {
     let draws = draws.to_vec();
     let mut next = 0;
@@ -58,16 +49,14 @@ fn exact(draws: &[f64]) -> Rng {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // Minimal watching-client views
-// ---------------------------------------------------------------------------------------------
 
 /// The bot.
 const SEAT: PlayerId = PlayerId::P1;
 /// The human, `opponent_of(SEAT)`: the view's own seat.
 const FOE: PlayerId = PlayerId::P2;
 
-/// TS's `{ ...base, ...over }`: `over`'s keys replace `base`'s.
+/// `over`'s keys replace `base`'s.
 fn merged(mut base: Value, over: Value) -> Value {
     if let (Some(fields), Value::Object(over)) = (base.as_object_mut(), over) {
         for (key, value) in over {
@@ -188,7 +177,7 @@ fn hero_hit(player: PlayerId, amount: i32) -> GameEvent {
     }))
 }
 
-/// TS `heroHit(player)`: a hit of exactly `bigHit`.
+/// Hit of exactly `bigHit`.
 fn big_hit(player: PlayerId) -> GameEvent {
     hero_hit(player, AI_EMOTE.big_hit)
 }
@@ -206,7 +195,7 @@ fn unit_died_by(controller: PlayerId, attack: i32, killer_id: Option<&str>) -> G
     }))
 }
 
-/// TS `unitDied(controller, attack)`: killed by a unit.
+/// Killed by a unit.
 fn unit_died(controller: PlayerId, attack: i32) -> GameEvent {
     unit_died_by(controller, attack, Some("u-killer"))
 }
@@ -244,7 +233,7 @@ fn at_min(emote: EmoteId) -> AiEmote {
     }
 }
 
-/// TS `MIN_DELAY`: the greeting after the shortest delay.
+/// Greeting after shortest delay.
 fn min_delay() -> AiEmote {
     at_min(EmoteId::Greetings)
 }
@@ -253,9 +242,7 @@ fn in_delay_window(delay_ms: f64) -> bool {
     (AI_EMOTE.delay_min_ms..=AI_EMOTE.delay_max_ms).contains(&delay_ms)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The deal
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r645_deals_balanced_below_0_4_polite_below_0_65_bm_below_0_85_and_silent_for_the_rest() {
@@ -282,13 +269,10 @@ fn r645_the_weights_are_40_25_20_15_in_deal_order_and_sum_to_one() {
     let weights = PERSONA_NAMES.map(|persona| persona_spec(persona).weight);
     assert_eq!(weights, [0.4, 0.25, 0.2, 0.15]);
     let sum: f64 = weights.iter().sum();
-    // TS `toBeCloseTo(1, 10)`: within half of 10^-10.
     assert!((sum - 1.0).abs() < 5e-11, "the weights sum to {sum}");
 }
 
-// ---------------------------------------------------------------------------------------------
 // Trigger table
-// ---------------------------------------------------------------------------------------------
 
 /// Every persona × trigger pair, with its row when the table gives it one.
 fn trigger_cells() -> Vec<(PersonaName, EmoteTrigger, Option<&'static PersonaRow>)> {
@@ -390,9 +374,7 @@ fn r645_silent_sends_nothing_ever_no_trigger_no_reply_whatever_the_draw() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Reply table
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r645_r1344_each_emote_of_the_pool_lands_on_its_reply_row_a_yawn_a_shrug_a_thinking_face_and_a_gasp_on_none()
@@ -516,9 +498,7 @@ fn r645_a_yawn_earns_no_reply_row_for_any_persona() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Polite pools
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r645_r1344_polite_never_picks_a_taunt_emote_anywhere_it_may_draw() {
@@ -548,9 +528,7 @@ fn r645_r1344_polite_never_picks_a_taunt_emote_anywhere_it_may_draw() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Session trigger detection
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r645_the_mulligans_end_sends_the_greeting_balanced_takes_it_every_time() {
@@ -852,9 +830,7 @@ fn r645_a_players_long_turn_rolls_player_turn_long_once_per_turn_never_on_the_ai
     assert_eq!(s.on_player_turn_long(&turn_view(FOE, 9), 5_000), yawn);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Session replies
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r645_a_players_emote_can_earn_a_reply_each_reply_rule_at_most_once_a_match() {
@@ -888,9 +864,7 @@ fn r645_a_missed_roll_does_not_spend_the_rule_the_same_emote_can_still_earn_the_
     assert_eq!(s.on_player_emote(EmoteId::Greetings, 31_000), vec![]);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Session caps and rate limit
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r645_the_caps_live_in_config_balanced_1_1_8_polite_1_1_6_bm_2_2_20_silent_0_0_0() {
@@ -1060,9 +1034,7 @@ fn r645_the_shared_rate_limit_judges_the_send_instant_a_fast_follow_up_is_droppe
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1344: dealt-hand choices
-// ---------------------------------------------------------------------------------------------
 
 /// One persona's §6 rows: each row's name as the wire spells it, and its pool.
 type Section6Rows = Vec<(&'static str, Vec<EmoteId>)>;
@@ -1269,9 +1241,7 @@ fn r1344_over_dealt_hands_nothing_any_persona_rolls_is_outside_its_hand() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Not a TS case: the server holds a persona in a match actor's tokio task, so it must be `Send`.
-// ---------------------------------------------------------------------------------------------
+// Persona held in match actor tokio task, must be Send.
 
 #[test]
 fn r645_a_persona_can_live_in_a_match_actors_task() {
@@ -1279,9 +1249,7 @@ fn r645_a_persona_can_live_in_a_match_actors_task() {
     assert_send(&session(PersonaName::Balanced, low()));
 }
 
-// ---------------------------------------------------------------------------------------------
 // R639000: a ladder bot's refit rows
-// ---------------------------------------------------------------------------------------------
 
 /// Two refit windows, apart from the practice AI's and from each other.
 const TRIGGER_WINDOW: EmoteDelayFit = EmoteDelayFit {

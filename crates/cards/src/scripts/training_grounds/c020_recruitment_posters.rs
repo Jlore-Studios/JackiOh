@@ -1,9 +1,8 @@
 //! TG #20 Recruitment Posters (SPEC §8.11 row 20). (2) Field Spell, Rare. "Start of turn: Add a random
 //! Training Grounds card to your hand." (Radiant: a random Radiant Training Grounds card.)
 //! Core #59 Unbiased Immigration's `start_of_turn` with C+ #75.1's set-named pool: a pool that names a
-//! set draws from it, shipped or not, so it worked while the set was held (R1420, R2194001), as it does
-//! since the release (#2204), and takes in the snapshots #41–#60. Tokens are left out (no `token`/`withTokens`), and so is this
-//! card (R387, R2199004). One match-rng pick (R60); a full hand burns it (§2.4).
+//! set draws from it, shipped or not (R1420, R2194001, #2204), snapshots #41–#60 included. Tokens and
+//! this card are left out (R387, R2199004). One match-rng pick (R60); a full hand burns it (§2.4).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -30,9 +29,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #20 Recruitment Posters — SPEC §8.11 row 20, BUILD M13 row TG 20. `start_turn()` runs the active
-// side's start of turn, its own draw included; the libraries hold Core cards only, so a Training
-// Grounds card in hand came from the Posters.
+// TG #20 Recruitment Posters — SPEC §8.11 row 20, BUILD M13 row TG 20. The libraries hold Core cards
+// only, so a Training Grounds card in hand came from the Posters.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::catalog::def_of;
@@ -65,8 +63,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// Re-pinned for the Training Grounds release (#2204): written while the set was held, the pool
-        /// that names the set reaches it now that it ships, as it did then.
         #[test]
         fn r2194001_at_your_start_of_turn_one_random_training_grounds_card_is_added() {
             let mut s = board(false, "posters", json!([]));
@@ -75,7 +71,6 @@ mod tests {
 
             assert_eq!(recruits(&s).len(), 1);
             assert_eq!(s.hand(P1).len(), 2, "the Posters' card and the turn's draw");
-            // It came before the turn's draw.
             let added = s.events().iter().position(|e| matches!(e, GameEvent::AddedToHand { .. })).unwrap();
             let drawn = s.events().iter().position(|e| matches!(e, GameEvent::Drawn { .. })).unwrap();
             assert!(added < drawn);

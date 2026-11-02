@@ -1,6 +1,4 @@
-// R503: v0.2.0's art. The Book, Pancake and AI families, the motif a card's name calls up, one
-// distinct picture for every catalog entry and face, and Core's pictures kept where no motif moves
-// them. Pure: nothing renders here (CardArt.test.tsx and CardFace.test.tsx cover the DOM).
+// R503's art, tested pure (CardArt.test.tsx and CardFace.test.tsx cover the DOM).
 
 import { describe, expect, it } from "vitest";
 
@@ -42,7 +40,7 @@ function def(id: string): CardDef {
   return found;
 }
 
-/** One face's picture as CardFace draws it: the face's own type (B2.7), its theme and its motif. */
+/** One face's picture as CardFace draws it, from the face's own type (B2.7). */
 function faceSpec(card: CardDef, radiant: boolean): ArtSpec {
   const type: CardType = (radiant ? card.radiant.type : card.base.type) ?? card.type;
   const theme = themeFor(card.tags, type);
@@ -317,7 +315,6 @@ describe("R503 how a motif is drawn", () => {
     expect(flagbearer.motifGlyphs).toHaveLength(1);
     const [hero] = flagbearer.motifGlyphs;
     expect(hero?.glyph).toBe("flag");
-    // In the upper part of the band a full face's window shows (about y 18 to 82 of the box).
     expect(hero?.y).toBeGreaterThanOrEqual(22);
     expect(hero?.y).toBeLessThanOrEqual(40);
   });

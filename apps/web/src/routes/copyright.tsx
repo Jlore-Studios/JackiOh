@@ -1,10 +1,9 @@
 // DRAFT — needs owner and legal review
 //
-// `/copyright`: the copyright and takedown page (issue #757). Public, like the terms, and linked
-// from the site footer and from `/terms`. What players put where others can see it is their
-// username and the names they give (terms.tsx, "What you submit"); everything else on the site is
-// JackiOh's own. The designated agent is the owner's to register with the U.S. Copyright Office and
-// to fill in below (docs/compliance.md). Change the date on the page whenever the text changes.
+// `/copyright`: the copyright and takedown page (#757). What players put where others can see it is
+// their username and the names they give (terms.tsx, "What you submit"); the rest is JackiOh's own.
+// The designated agent is the owner's to register with the U.S. Copyright Office and fill in below
+// (docs/compliance.md). Change the date on the page whenever the text changes.
 
 import type { ReactElement } from "react";
 

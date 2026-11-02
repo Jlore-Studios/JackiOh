@@ -8,7 +8,7 @@
 //! reset (R78), a token vanishing and a full hand burning the rest (§2.4); a Dormant card is out of
 //! reach (R1839000), and so is one Immune to Spells. Then `next_turn_mana` of minus `loss` on its
 //! caster (R1848004): their next refresh gives their max mana less it, never below 0, a badge both
-//! seats read. Radiant: the enemy's permanents alone.
+//! seats read.
 
 use jackioh_engine::prelude::*;
 
@@ -33,10 +33,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #117 Core System — SPEC §8.10 row S 117, BUILD M12 row S 117: "every Unit and backrow card of
-// both sides returns to its controller's hand, a token vanishing; a full hand burns the rest; its
-// caster's next turn starts with their max mana less 2, the badge shown to both; radiant only the
-// enemy's return".
+// S #117 Core System — SPEC §8.10 row S 117, BUILD M12 row S 117.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -53,7 +50,6 @@ mod tests {
     const RUSH_TOKEN: &str = "core-t-rush"; // A Unit token.
     const FILLER: &str = "core-005";
 
-    /// The label of `of`'s next-refresh badge as `viewer` reads it.
     fn refresh_label(s: &Scenario, viewer: PlayerId, of: PlayerId) -> Option<String> {
         let view = s.view(viewer);
         let side = if of == viewer { &view.you } else { &view.opponent };
@@ -63,7 +59,6 @@ mod tests {
             .map(|modifier| modifier.label.clone())
     }
 
-    /// Both sides' Units, a Field Spell, a face-down Trap and a token, p1 holding the System.
     fn full_board(radiant: bool) -> Scenario {
         crate::register_all();
         scenario(json!({

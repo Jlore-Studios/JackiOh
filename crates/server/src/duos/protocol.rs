@@ -1,21 +1,10 @@
-//! The `/ws/duos` frames (fullsend SPEC S6, B35, B39), as `actor/protocol.rs` is `/ws/match`'s.
+//! The `/ws/duos` frames (fullsend SPEC S6, B35, B39).
+//! Client: `hello`, `action`, `ping`. Server: `view`, `ack`, `error`, `clock`, `teammate`, `ping`.
 //!
-//! Client to server: `hello` (which match), `action` (a nonce and a `DuosActionBody`) and `ping`.
-//! Server to client: `view` (the seat's `DuosView` and, beside it, that same seat's legal actions),
-//! `ack`, `error`, `clock`, `teammate` and `ping`.
-//!
-//! Parsing is total and rebuilds every field it keeps. A `duel` body is the 1v1 action union, so it
-//! goes through the 1v1 parser (`actor::protocol::parse_client_message`) itself: the same whitelist,
-//! the same refusal of the server-only types (R79's `timeout`, `disconnectExpired`, `ceilingReached`,
-//! R1127's `emote`) and of a smuggled `playerId`, and the same nonce rules (R270: a nonce starting
-//! `srv-` is the server's), and one more: a nonce starting `duos:` is the engine's own, the one its
-//! round's close reaches the duels under (`DUOS_NONCE_PREFIX`), which the engine refuses from a seat
-//! too. The seat is never the client's: the actor stamps the authenticated one.
-//!
-//! A ping is cosmetic, like an emote or an aim (R643, R738): a top-level frame, never an action, so it
-//! never reaches the reducer, the log, a replay or a view (B39). Its shape is checked here; whether
-//! its hand target names the sender's own side and a card that is there is the actor's call, against
-//! the live state.
+//! A `duel` body parses through `actor::protocol::parse_client_message`: refuses server-only types
+//! (R79: `timeout`, `disconnectExpired`, `ceilingReached`; R1127: `emote`), smuggled `playerId`,
+//! server nonces (R270: `srv-`), and `duos:` nonces (`DUOS_NONCE_PREFIX`).
+//! Pings are cosmetic (R643, R738), never logged or viewed (B39).
 
 use serde::Serialize;
 use serde_json::{Map, Value, json};
@@ -32,9 +21,7 @@ use crate::actor::protocol::{
 };
 use crate::economy::rewards::GameEconomy;
 
-// ---------------------------------------------------------------------------
 // Pings (S6, B39, B64)
-// ---------------------------------------------------------------------------
 
 /// S6's `PingKind`.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -101,9 +88,7 @@ pub struct PingTarget {
     pub index: Option<usize>,
 }
 
-// ---------------------------------------------------------------------------
 // Client -> server
-// ---------------------------------------------------------------------------
 
 /// A frame a co-op socket may send.
 #[derive(Debug)]
@@ -260,9 +245,7 @@ pub fn parse_duos_message(text: &str) -> Result<DuosClientMessage, MalformedMess
     }
 }
 
-// ---------------------------------------------------------------------------
 // Server -> client
-// ---------------------------------------------------------------------------
 
 /// S6's `graceDeadlines`: each person's disconnect grace, epoch ms, or null.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -275,19 +258,9 @@ pub struct GraceDeadlines {
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DuosServerMessage {
-    /// B23, B35: the seat's own `duos_view_for` and `duos_legal_actions` for that same seat, read off
-    /// one state, so the array is always true of the view it travels with.
-    ///
-    /// `jlore_capped` is the receiving seat's own flag: true once the match has ended and the daily
-    /// cap (`JLORE_GAMES_DAILY_CAP`) held back some or all of that seat's Jlore for it
-    /// (R1483000). It is the seat's own economy, so a seat never gets the teammate's; false is left
-    /// off the frame.
-    ///
-    /// `economy` is what the result's write paid the receiving seat's person (#1657), as the 1v1
-    /// `view` carries it (`actor::protocol::ServerMessage::View`): set once the result is written,
-    /// carried by every view of that seat from then on, never the teammate's. A write that finds the
-    /// result already there pays nothing and an actor rebuilt on a finished match has nothing to
-    /// send, so their frames leave it off.
+    /// B23, B35: the seat's own view and legal actions. `jlore_capped` indicates whether
+    /// `JLORE_GAMES_DAILY_CAP` held back Jlore for this seat (R1483000). `economy` is what the
+    /// result paid this seat's person (#1657).
     View {
         view: Box<DuosView>,
         legal: Vec<DuosActionBody>,
@@ -413,7 +386,7 @@ mod tests {
         };
         let missing = "every action carries a client nonce (SPEC §9.3)";
         let too_long = "that nonce is too long";
-        // §9.8's bound counts UTF-16 units, as TS's `length` does: one emoji is two.
+        // §9.8's bound counts UTF-16 units, as JavaScript's `length` does: one emoji is two.
         let half = MAX_NONCE_LENGTH / 2;
         for (nonce, refused) in [
             (Value::Null, Some(missing)),
@@ -442,7 +415,6 @@ mod tests {
             );
             assert!(parse_duos_message(&frame).is_err(), "{frame}");
         }
-        // The old round-end shape is an ordinary client nonce now: the round's own are `duos:`'s.
         let frame = r#"{"type":"action","nonce":"mine:end:r1:d0","body":{"kind":"concede"}}"#;
         assert!(parse_duos_message(frame).is_ok(), "{frame}");
     }

@@ -1,4 +1,4 @@
-//! A hero immune to damage (`makeHeroImmune`, `ModifierKind::HeroImmune`): every damage instance
+//! A hero immune to damage (`make_hero_immune`, `ModifierKind::HeroImmune`): every damage instance
 //! to that hero is 0 — combat, effects and fatigue alike — so Lifesteal against it heals nothing,
 //! while Lose health and Set health still apply. It lasts until its player's next turn begins.
 //! Meditative #48 Tranquility (MD-C21, R1021) is its user.
@@ -10,12 +10,11 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{grunt, playing, recorder};
 use crate::rules::fixtures::harness::{act, put, sink_for, slot};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` written as `json!` (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

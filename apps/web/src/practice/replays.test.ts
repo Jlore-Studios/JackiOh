@@ -1,8 +1,6 @@
 // R768, issue #509: the practice worker keeps each finished free game and replays it, through the
-// in-thread host (the same core a Worker runs). A kept game's steps are `viewFor` of the human's seat
-// after a fresh fold of that many accepted actions; nothing a response holds is the log, the seed, a
-// deck or a card the human's view lacked at that step (CLAUDE.md rule 7); and every game it cannot
-// vouch for is listed unavailable and refused.
+// in-thread host. Nothing a response holds is the log, the seed, a deck or a card the human's view lacked
+// at that step (CLAUDE.md rule 7), and every game it cannot vouch for is listed unavailable and refused.
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -69,7 +67,6 @@ async function page(host: PracticeHost, game: number, from: number, count: numbe
   return response;
 }
 
-/** Every step of a kept game, page after page, each page checked on its way. */
 async function allSteps(host: PracticeHost, game: number): Promise<{ steps: ReplayStep[]; total: number; wire: string[] }> {
   const steps: ReplayStep[] = [];
   const wire: string[] = [];
@@ -92,7 +89,6 @@ async function failed(host: PracticeHost, body: PracticeRequestBody): Promise<st
   return response.message;
 }
 
-/** A game started and conceded at once: the human loses. */
 async function concededGame(host: PracticeHost, seed: string, over: Partial<PracticeStartConfig> = {}): Promise<void> {
   await host.request({ type: "start", config: config(seed, over) });
   const done = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
@@ -158,7 +154,6 @@ describe("R768 practice replays", () => {
         expect(step.view, `step ${String(k)} is what the human was shown`).toEqual((live[k] as PracticeSnapshot).view);
         expect(step.turn).toBe(step.view.turn);
 
-        // Nothing of the AI's hand or library that the human's view lacked at this step.
         const shown = JSON.stringify(live[k]);
         const sent = JSON.stringify(step);
         const side = folded.state.players[AI];
@@ -169,7 +164,6 @@ describe("R768 practice replays", () => {
         }
       });
 
-      // The boundary: no response carries the log, the seed, a deck or a handicap.
       const sent = [JSON.stringify(replays), ...wire, JSON.stringify(await host.request({ type: "replays" }))];
       for (const text of sent) {
         for (const forbidden of [seed, '"nonce"', '"log"', '"decks"', '"handicaps"']) {
@@ -217,7 +211,6 @@ describe("R768 practice replays", () => {
       }
       expect(await failed(host, { type: "replay", game: 1, from: 0, count: 16 })).toContain("no finished practice game 1");
 
-      // A reload: a new worker on the same store.
       const reloaded = hostOn(saves, { now: () => 5_000 });
       expect(await listed(reloaded)).toEqual(replays);
       const newest = replays[0] as PracticeReplayListing;
@@ -292,7 +285,6 @@ describe("R768 practice replays", () => {
     if (kept === undefined) throw new Error("the conceded game was not kept");
     const setup = kept.setup;
     if (setup === undefined) throw new Error("the kept game kept no setup");
-    // The setup is what `createGame` had: the log folds from it to the kept hash.
     expect(hashState(fold({ seed: kept.config.seed, ...setup, log: kept.log }).state)).toBe(kept.hash);
 
     // The module carries the newest of the older versions, in order, up to the one before its own

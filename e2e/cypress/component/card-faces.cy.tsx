@@ -1,39 +1,15 @@
-// Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviors B15 and B21).
-//
-// jsdom has no layout, so apps/web/src/cards/CardFace.test.tsx can only check the DOM. Whether a
-// name and a rules box fit their boxes is a question for a real layout engine, and so is whether
-// the board still fits BUILD M5-T1's two viewports once every card on it wears a full face with the
-// real catalog's names. Both are measured here, in Chrome, on real client components.
-//
-//   B15  every catalog card, base and radiant face, as a full CardFace in a 5:7 box 270 px wide
-//        and 170 px wide: `.card-name` and `.card-text` stay inside their own boxes on both axes
-//        (scroll <= client + 1), and no face takes the long layout, so no face shrinks its art for
-//        its words (R1017000). At 270 px nothing may clamp; at 170 px only a face that prints less
-//        than its whole text (a short form or a clamp, `faceText`) may carry `data-clamped`, and a
-//        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
-//        A hero portrait's full-art face (R1017001) has only its name to fit: it carries
-//        data-full-art and prints no rules box.
-//   R1017002  every card the homescreen's hand can deal (`rotationPool`, the widest pool), both
-//        faces, at the fan's widest card (FAN_CARD_MAX_PX): no long layout, no clamp, the name and
-//        text inside their boxes.
-//   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
-//        per ingredient, each of #98's thirteen rolled powers on both faces, Call to Chaos's ???, a
-//        Vanilla unit with the keywords it kept — all inside their boxes at 270 and 170 px; and
-//        #82's Discover of numbers (R247) drawn inside its options at both viewports.
-//   B21  `Game` rendering `fullBoardView()` inside `.app-shell.app-shell--wide`, WITH the real
-//        catalog in `CatalogContext`: no horizontal overflow and all 20 field cards visible at
-//        1280x720 and 390x844. board-layout.cy.tsx measures the same board with no catalog, where
-//        every name is a short def id; this is the long-name case. The center of every field card
-//        must also hit the card itself, because that is where a click lands.
-//
-// Every measurement sits inside `.should()`, so it retries while `useFitText` settles. Each also
-// carries a control, because "fits" is satisfied perfectly by a box that collapsed to nothing:
-// the face must fill its 5:7 box, the name must have a box of its own, and the board must span
-// the viewport.
-//
-// The catalog comes from `@jackioh/cards`, which the client's aliases resolve to its wire layer's
-// reader of crates/cards/catalog.json (e2e/cypress.config.ts). Client code comes from apps/web/src, and
-// from outside apps/web/src/cards only through its barrel, cards/index.ts.
+// Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviors B15 and B21). jsdom has no layout, so
+// apps/web/src/cards/CardFace.test.tsx can only check the DOM; whether a name and a rules box fit their boxes, and
+// whether the board fits BUILD M5-T1's two viewports with the real catalog's names, is measured here, in Chrome:
+//   B15  every catalog card, base and radiant face, as a full CardFace 270 px and 170 px wide.
+//   R1017002  every card the homescreen's hand can deal (`rotationPool`, the widest pool).
+//   §10.10  faces in play (the live card, `faceModel` with `inPlay`), and #82's Discover of numbers (R247).
+//   B21  `Game` rendering `fullBoardView()` with the real catalog in `CatalogContext`; board-layout.cy.tsx
+//        measures the same board with no catalog, where every name is a short def id.
+// Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and carries a control, because
+// "fits" is satisfied by a box that collapsed to nothing. The catalog comes from `@jackioh/cards`, which the client's
+// aliases resolve to its wire layer's reader of crates/cards/catalog.json (e2e/cypress.config.ts). Client code comes
+// from apps/web/src, and from outside apps/web/src/cards only through its barrel, cards/index.ts.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -59,7 +35,7 @@ const DEFS: readonly CardDef[] = Object.values(CATALOG);
 /** Retries cover `useFitText`'s binary search and the ResizeObserver passes behind it. */
 const SETTLE_TIMEOUT_MS = 15_000;
 
-/* ----------------------------------------------------------------------------------------- B15 */
+/* B15 */
 
 type FitBox = { width: number; clampAllowed: boolean };
 
@@ -70,10 +46,8 @@ const FIT_BOXES: readonly FitBox[] = [
 ];
 
 /**
- * R1017000: a face whose text runs past the measured limit prints less than its whole text (a
- * short form, or its text clamped, shortText.ts), and only such a face may clamp, at 170 px. #98
- * Heroic Power's thirteen powers clamped at every width before #1017; its face now prints the
- * header over them, which fits at both widths.
+ * R1017000: only a face that prints less than its whole text (a short form, or its text clamped, shortText.ts)
+ * may clamp, at 170 px. #98 Heroic Power's face prints the header over its thirteen powers: no clamp (#1017).
  */
 function clampAllowedFor(def: CardDef, box: FitBox, radiant: boolean): boolean {
   return box.clampAllowed && faceText(faceModel({ defId: def.id, def, radiant })).less;
@@ -200,7 +174,7 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
   }
 });
 
-/* ------------------------------------------------------------------------------- R1017002 */
+/* R1017002 */
 
 describe("R1017002: every card the homescreen's hand can deal prints whole on a fan card", () => {
   const FAN_DEFS = rotationPool(true);
@@ -227,7 +201,7 @@ describe("R1017002: every card the homescreen's hand can deal prints whole on a 
   }
 });
 
-/* ------------------------------------------------------------------- Radiant frames, B13/B14 */
+/* Radiant frames, B13/B14 */
 
 // A radiant face is gold foil, but gilds its frame rather than replacing it: the type's panel
 // color and the rarity's edge still show, so a radiant Trap and a radiant Field Trap, or a radiant
@@ -266,11 +240,8 @@ describe("radiant frames keep their type and rarity", () => {
   });
 });
 
-/* ---------------------------------------------------------------------------------------- R503 */
+/* R503 */
 
-// R503: every face shows its set as a small mark on the frame, clear of everything else the frame
-// carries, legible at the inspect and hand sizes and gone on the smallest faces; a token that prints
-// a rarity wears that rarity's frame; and the Book, Pancake and AI families draw pictures of their own.
 describe("R503: the set mark, printed rarity and the new families on real faces", () => {
   /** One card per set, and the frames that crowd the band the mark sits in. */
   const MARKED = [
@@ -397,7 +368,7 @@ describe("R503: the set mark, printed rarity and the new families on real faces"
   });
 });
 
-/* ----------------------------------------------------------------------------------------- B21 */
+/* B21 */
 
 /** BUILD M5-T1's two viewports. */
 const VIEWPORTS = [
@@ -440,8 +411,7 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
         expect(names.filter((name) => /^core-\d/.test(name)), "def ids standing in for names").to.deep.equal([]);
       });
 
-      // Card by card: the collection form of be.visible passes if ANY card is visible (see the
-      // note in board-layout.cy.tsx).
+      // Card by card: the collection form of be.visible passes if ANY card is visible.
       cy.get(FIELD_CARDS)
         .should("have.length", FIELD_CARD_COUNT)
         .each(($card) => {
@@ -487,7 +457,7 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
         for (const card of doc.querySelectorAll<HTMLElement>(`${BOARD} .field .card.cf-host`)) {
           const name = card.querySelector(".cf .card-name")?.getBoundingClientRect();
           const gem = card.querySelector(".cf .cost-gem")?.getBoundingClientRect();
-          // #258: the switch's glyph is in the card's zone now, beside the card, and is held to the same rule.
+          // #258: the switch's glyph sits beside the card, in its zone, and is held to the same rule.
           const badges = [
             ...card.querySelectorAll<HTMLElement>(":scope > .counter, :scope > .buried-badge"),
             ...(card.parentElement?.querySelectorAll<HTMLElement>(":scope > .switch-button > .switch-glyph") ?? []),
@@ -513,7 +483,7 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
 
     // Cypress (and a player) clicks a card at its center. Every field unit carries a switch-position
     // <button>, disabled unless switching is legal, and a disabled button swallows the click, so a
-    // badge drawn over the center makes the card unclickable (found by e2e specs 02, 04 and 11).
+    // badge drawn over the center makes the card unclickable.
     it(`B21 the center of every field card hits the card itself, not a control inside it, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.get(`${BOARD} .field [data-testid^="card-"]`).should("have.length.at.least", 10);
@@ -532,11 +502,11 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
   }
 });
 
-/* -------------------------------------------------------------------------- prompt card options */
+/* prompt card options */
 
-// The mulligan is the first thing a player sees in every game. Its options (and Discover's) draw
-// the card's face, and the face fills the option box prompt.css gives it: index.css pads every
-// `.app-shell button` 9px 16px, which had squeezed the face to 48 px of an 82 px box.
+// A prompt's card options (the mulligan's, Discover's) draw the card's face across the option box
+// prompt.css gives it: index.css pads every `.app-shell button` 9px 16px, which had squeezed the
+// face to 48 px of an 82 px box.
 describe("a card option in a prompt draws the card's face across its box", () => {
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${viewport.width}x${viewport.height}`;
@@ -580,7 +550,7 @@ describe("a card option in a prompt draws the card's face across its box", () =>
   }
 });
 
-/* ------------------------------------------------------------------- faces in play, §10.10 */
+/* faces in play, §10.10 */
 
 // A face in play prints the card as the view says it stands, which can be text no catalog face
 // has: a fused card's ingredients a line each (R102), a Heroic Power's one rolled power (R43), ???

@@ -2,23 +2,13 @@
 //! Base: "Cry: flip 5 coins; +1 attack per heads, +1 max health per tails. Then flip a coin:
 //! heads gains Divine Shield, tails gains Rush".
 //! Radiant: "10 coins; +1 per heads, +1 per tails" plus the same rider verbatim — the cell changes
-//! only the numbers of the base clause (§8 Conventions), so it is the same flip at 10 coins and 1
-//! per side with an identical keyword coin.
+//! only the numbers of the base clause (§8 Conventions).
 //!
-//! Engine cell: 5 or 10 seeded rolls and a permanent buff layer (§10.4 layer 4), then one seeded
-//! coin granting Divine Shield on heads, Rush on tails. R1440 (revising R32/R130): a coin flip is a
-//! luck-based roll whose better side is heads, so Gary's own Lucky X (none printed; a Lucky given to
-//! it, R1438) flips each coin X more times and keeps heads. The verbs read that Lucky themselves, so
-//! this file asks for plain coins and passes no `lucky` option.
-//!
-//! A card file may not call `ctx.rng` itself — that is state and randomness in a card script
-//! (CLAUDE.md rules 4 and 5) — so the rolls live in `flip_coins` and `flip_coin_keyword`
-//! (engine/src/effects/coins.rs). With no Lucky the stat flip makes exactly `coins` seeded draws
-//! and applies the totals as ONE layer-4 buff (one `buffed` event), so heads + tails always
-//! accounts for every flip; the rider takes exactly one more seeded draw and grants the keyword
-//! (§10.4 granted keywords, one `keywordGranted` event), so a replay at the same seed and cursor
-//! reproduces both (§10.7). With Lucky X every coin takes 1 + X draws. Stats first, rider second:
-//! the draw prefix is unchanged.
+//! R1440 (revising R32/R130): a coin is a luck-based roll whose better side is heads, so a Lucky X
+//! given to Gary (R1438) flips each coin X more times and keeps heads; the verbs read that Lucky, so
+//! this file passes no `lucky` option. A card file may not call `ctx.rng` (CLAUDE.md rules 4 and 5):
+//! `flip_coins` draws the stats as ONE layer-4 buff (§10.4), then `flip_coin_keyword` one draw for the
+//! rider, so a replay at the same seed and cursor reproduces both (§10.7).
 
 use jackioh_engine::effects::{flip_coin_keyword, flip_coins};
 use jackioh_engine::prelude::*;
@@ -50,24 +40,16 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
-// (radiant 10 at +1 each); second coin grants Divine Shield on heads, Rush on tails, identical on
-// both faces; with no Lucky the 5 coins and the second coin take exactly 6 seeded draws (R32/R130);
-// with Lucky X each coin flips 1 + X times keeping heads (R1440), so a given Lucky 1 (R1438) takes
-// 12 draws and lands more heads over many seeds".
+// SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4 (R32, R130, R1440, R1438).
 //
-// The flips land as ONE permanent layer-4 buff (§10.4), so `buffs.attack` is the heads total and
-// `buffs.health` the tails total: the invariant the row asks for is that those two always account
-// for exactly 5 flips (radiant 10) at the card's per-flip rate, whatever the seed rolled. The exact
-// numbers under a fixed seed are asserted as determinism — the same seed twice gives the same
-// stats. After the stat flip, one more seeded coin grants Divine Shield on heads, Rush on tails
-// (§10.4 granted keywords), identical on both faces.
+// The flips land as ONE layer-4 buff, so `buffs.attack` is the heads total and `buffs.health` the
+// tails total, accounting for every flip whatever the seed; a fixed seed's exact numbers are asserted
+// as determinism (the same seed twice gives the same stats).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// The buff the Cry left, read back off the live instance (never off a captured one), as
-    /// `(attack, health)`.
+    /// The Cry's buff as `(attack, health)`, read off the live instance (never off a captured one).
     fn gains(s: &Scenario, card: &str) -> (i32, i32) {
         let gary = s.card(card);
         (gary.buffs.attack, gary.buffs.health)
@@ -95,7 +77,6 @@ mod tests {
             assert_eq!(heads + tails, 5);
             assert!(heads >= 0);
             assert!(tails >= 0);
-            // Base 1/1 plus the buff, read through the layers.
             s.expect_stats("core-004", json!({ "attack": 1 + heads, "maxHealth": 1 + tails }));
         }
 
@@ -143,7 +124,6 @@ mod tests {
 
             let (attack, health) = gains(&s, "core-004");
             assert_eq!(attack + health, 10);
-            // Radiant 2/2 plus the buff.
             s.expect_stats(
                 "core-004",
                 json!({ "attack": 2 + attack, "maxHealth": 2 + health }),
@@ -173,10 +153,8 @@ mod tests {
         #[test]
         fn r32_r130_with_no_lucky_5_coins_plus_the_rider_coin_take_exactly_6_seeded_rolls() {
             crate::register_all();
-            // Lucky is `rng.lucky(x, roll, better)` (rng.rs): it rolls x extra times and keeps the best,
-            // so a Lucky flip shows up as extra draws on the cursor. Gary prints no Lucky, so with none
-            // given each flip is the one draw it always was (R1440). The control play cancels whatever
-            // a play costs in draws by itself. 5 stat flips + 1 keyword coin.
+            // A Lucky flip shows as extra draws on the cursor (`rng.lucky`, rng.rs); Gary prints no
+            // Lucky, so each flip is one draw (R1440): 5 stat flips + 1 keyword coin.
             assert_eq!(coin_draws("core-004-r32", false, 0), 6);
         }
 
@@ -226,16 +204,13 @@ mod tests {
                 let mut s = scenario(json!({ "seed": seed, "p1": { "hand": ["core-004"] } }));
                 s.play("core-004", json!({}));
 
-                // The stat flip is untouched: heads + tails still accounts for all 5 coins.
                 let (attack, health) = gains(&s, "core-004");
                 assert_eq!(attack + health, 5);
 
-                // Exactly one granted keyword, on one face of the coin or the other.
                 let kind = granted_kind(&s, "core-004");
                 assert!(["Divine Shield", "Rush"].contains(&kind.as_deref().unwrap_or("")));
                 seen.insert(kind.clone().unwrap_or_default());
 
-                // The same seed played twice grants the same keyword.
                 let mut again = scenario(json!({ "seed": seed, "p1": { "hand": ["core-004"] } }));
                 again.play("core-004", json!({}));
                 assert_eq!(granted_kind(&again, "core-004"), kind);
@@ -258,16 +233,13 @@ mod tests {
                 }));
                 s.play("core-004", json!({}));
 
-                // The stat flip is untouched: 10 coins at +1 a side, totalling 10.
                 let (attack, health) = gains(&s, "core-004");
                 assert_eq!(attack + health, 10);
 
-                // Byte-identical rider: the same two keywords, one per face.
                 let kind = granted_kind(&s, "core-004");
                 assert!(["Divine Shield", "Rush"].contains(&kind.as_deref().unwrap_or("")));
                 seen.insert(kind.clone().unwrap_or_default());
 
-                // The same seed played twice grants the same keyword.
                 let mut again = scenario(json!({
                     "seed": seed,
                     "p1": { "hand": [{ "def": "core-004", "radiant": true }] }

@@ -1,11 +1,4 @@
-//! `cli/mint_code.rs`'s argument parsing, and the one property that makes the script worth having:
-//! a code it mints hashes to what redemption will look up.
-//!
-//! The hash is the whole risk here. Nothing reports a pepper that is merely *different* from the
-//! server's — the insert succeeds, the code prints, and it is simply never redeemable. So the
-//! second module mints through the fake store with the same `{CODE_PEPPER}:code` derivation
-//! `app.rs` and `cli/mint_code.rs` both use, then looks the printed plaintext up again.
-//! (← `apps/server/test/db/mint-code.test.ts`)
+//! Code minting CLI and hash derivation (`src/cli/mint_code.rs`, §9.4, §9.8).
 
 fn args(list: &[&str]) -> Vec<String> {
     list.iter().map(|arg| (*arg).to_owned()).collect()

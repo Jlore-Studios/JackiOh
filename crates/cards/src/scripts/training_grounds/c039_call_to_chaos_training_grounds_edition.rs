@@ -13,8 +13,8 @@
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_TG_EFFECTS`,
 //! `subsystems/call_to_chaos_training_grounds.rs`): the roll, the announcement both players read (R436),
-//! the chain cap counting casts of every edition (R28) and the order the Radiant's three resolve in
-//! (R423) are the one rule every edition shares. The face is passed explicitly, as C+ #73's file does.
+//! the chain cap counting every edition's casts (R28) and the Radiant's order (R423) are shared by every
+//! edition. The face is passed explicitly, as C+ #73's file does.
 
 use jackioh_engine::prelude::*;
 
@@ -57,8 +57,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos pool of the sets that ship (R380, R1420): this edition joins it with its set.
-    /// Re-pinned for the Training Grounds release (#2204): it has (R2200004).
+    /// The Call to Chaos pool of the sets that ship (R380, R1420, R2200004), this edition among them.
     const SHIPPED_EDITIONS: [&str; 6] = [
         "core-095",
         "classicplus-073",
@@ -161,9 +160,7 @@ mod tests {
         def.set == SetName::TrainingGrounds && !def.token && def_id != ID
     }
 
-    /// The Calls to Chaos at (0) in p1's hand. Re-pinned for the Training Grounds release (#2204): this
-    /// edition is one of them since its set ships (R2200004), so a copy is told from the free ones by
-    /// its printed cost alone, as the entry's adds cost (0).
+    /// The Calls to Chaos at (0) in p1's hand, the adds; this edition is a Call to Chaos too (R2200004).
     fn free_calls(s: &Scenario) -> Vec<String> {
         s.hand(P1)
             .iter()
@@ -200,7 +197,6 @@ mod tests {
         }
     }
 
-    /// Re-pinned for the Training Grounds release (#2204): the set ships.
     #[test]
     fn r2194000_the_card_is_of_the_training_grounds_set_which_ships_since_its_release() {
         crate::register_all();
@@ -255,7 +251,6 @@ mod tests {
                 assert!(has(&s, card, KeywordKind::Taunt), "{} Taunt", card.def_id);
                 assert!(has(&s, card, KeywordKind::DivineShield), "{} Divine Shield", card.def_id);
             }
-            // The opponent's Unit is untouched.
             let theirs = s.unit(P2, 1).expect("their Unit");
             assert!(!has(&s, &theirs, KeywordKind::DivineShield));
         }
@@ -419,7 +414,6 @@ mod tests {
             for def_id in free_calls(&s) {
                 assert!(SHIPPED_EDITIONS.contains(&def_id.as_str()), "{def_id}");
             }
-            // Nothing for the opponent.
             assert!(
                 s.hand(P2)
                     .iter()
@@ -471,11 +465,7 @@ mod tests {
             }
         }
 
-        /// BUILD M13 TG 39: "a cast of another edition at chain depth 1". The other editions' Cries are
-        /// replaced, on this thread only, by one that reports the chain depth its cast card carries (R28,
-        /// `chaos_chain_of`) and does nothing else, so the depth is read while the cast resolves (it is
-        /// gone once the card lands, R215). The edition is a later draw than the roll, so the first
-        /// cursor whose roll is the recast and whose cast is another edition is taken.
+        /// BUILD M13 TG 39, R28, R215: tests cast of another edition at chain depth 1.
         #[test]
         fn r2200004_entry_recast_casts_a_shipped_edition_at_chain_depth_one() {
             crate::register_all();
@@ -516,7 +506,6 @@ mod tests {
                 }
                 assert!(SHIPPED_EDITIONS.contains(&def_id.as_str()), "{def_id}");
                 assert_eq!(cast[0]["costPaid"], json!(0));
-                // The cast card is a base form (R28).
                 assert_ne!(cast[0]["radiant"], json!(true));
                 // R28: the played card is depth 0, so the card it casts is the chain's first cast.
                 let cast_id = cast[0]["instanceId"].as_str().unwrap_or("").to_string();
@@ -526,8 +515,7 @@ mod tests {
             panic!("no cursor below {SWEEP} rolls the recast into another edition");
         }
 
-        /// Re-pinned for the Training Grounds release (#2204): while the set was held no pool held this
-        /// card; now it ships, the pool that names no set holds it, last in catalog order.
+        /// The pool that names no set holds this card, last in catalog order.
         #[test]
         fn r2200004_once_its_set_ships_the_call_to_chaos_pool_holds_this_card() {
             crate::register_all();

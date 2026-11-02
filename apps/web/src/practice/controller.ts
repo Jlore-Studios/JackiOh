@@ -1,42 +1,15 @@
 // The practice game as the page drives it: one host, one request in flight, and the pacing loop
-// that plays the AI's turn one visible action at a time (SPEC §9.9).
+// that plays the AI's turn one visible action at a time (SPEC §9.9). Framework-free, so it tests with
+// fake timers and a scripted host. It holds snapshots and never a state (CLAUDE.md rule 7).
 //
-// Framework-free, so it tests with fake timers and a scripted host, and the route only subscribes.
-// It holds snapshots and never a state (CLAUDE.md rule 7): whatever the host answered last is what
-// the page renders.
+// Nothing here waits on the human: during the mulligan (R265) both seats owe an answer, and neither
+// changes the other (R266). One clock acts for the human, the host's own (R1563006): when a question
+// sequence (Meditative+ #20 KY's Competition) runs out, the controller sends its Stop, as the server does.
 //
-// The pacing loop. After every snapshot whose `aiToAct` is true (and the game is not over),
-// `thinking` goes true, the controller waits one gap and then sends one `aiStep`, and repeats. The
-// gap is `promptAnswerMs` when the view shows a prompt waiting on the AI — its own opening mulligan
-// included, which is open at the same time as the human's (R265), so the AI answers it at once
-// rather than after the turn's longer first pause — `firstActionMs` for the AI's first step since
-// `view.turn` changed, and `actionGapMs` otherwise. `thinking` goes false as
-// soon as a snapshot has `aiToAct === false`. Every request — the human's actions, the AI's steps,
-// `debug` — goes through one queue, so at most one is ever in flight, and a human action sent while
-// the AI is mid-step waits behind it.
-//
-// Nothing here ever waits on the human. During the mulligan both seats owe an answer: the AI's step
-// goes out on its own gap, and the human's Ready goes out whenever it is pressed — before the AI's
-// step, queued behind it, or after it — and neither answer changes the other (R266).
-//
-// One clock acts for the human, the host's own (R1563006): a question sequence (Meditative+ #20 KY's
-// Competition) has `KY_COMPETITION_SECONDS` from its first question, and when they run out with a
-// question still open the controller sends its Stop, as the server's match clock does online.
-//
-// The gap starts when the board has caught up. The board holds each new view back while its
-// events animate (BUILD M5-T4), so a timer alone runs the AI ahead of what the player can see:
-// measured with animations on, the AI finished its whole first turn while the board was still
-// drawing the mulligan, and "AI is thinking…" went out seconds before the board showed its last
-// play. The page reports `setBoardBusy(true)` while anything animates; no step is scheduled while
-// it is busy, a step already waiting is re-planned, and the gap is timed from the moment it idles.
-// A page that never reports keeps the plain timer.
-//
-// The board is one reason to hold the AI back; a voice line is another (polish task 2 speaks a
-// card's play and death lines, which run past the animation). `setHold(reason, held)` is the
-// general form: the AI's next step waits while any reason is held, and `setBoardBusy(busy)` is
-// `setHold("board", busy)`. The route turns the page's `data-speaking` attribute into
-// `setHold("voice", …)` (routes/practice.tsx), so the audio layer needs no handle on this
-// controller: it marks an element while a line plays and clears it when the line ends.
+// The gap starts when the board has caught up: the board holds each new view back while its events animate
+// (BUILD M5-T4), and a timer alone ran the AI's whole first turn while the board still drew the mulligan.
+// The AI's next step waits while any `setHold` reason is held ("voice" from the route's `data-speaking`, so
+// the audio layer needs no handle on this controller), and is timed from the idle.
 
 import { opponentOf, type ActionBody, type CardDefs, type PlayerId, type PlayerView } from "@jackioh/shared";
 
@@ -79,20 +52,13 @@ export type PracticeController = {
   getState(): PracticeControllerState;
   subscribe(fn: () => void): () => void;
   start(config: PracticeStartConfig): Promise<void>;
-  /**
-   * R668: pick up the free game this device left in progress, named by its setup. When the worker
-   * has no such game or it does not fold, the device forgets it and the phase goes to "failed", as
-   * a start's refusal does.
-   */
+  /** R668: pick up the game this device left in progress; one that does not fold is forgotten. */
   resume(config: PracticeStartConfig): Promise<void>;
   /** Queued behind any in-flight request. */
   act(action: ActionBody): void;
   /** Whether the board is still animating a view; the AI's next step waits until it is not. */
   setBoardBusy(busy: boolean): void;
-  /**
-   * Hold the AI's next step for a named reason ("board", "voice", …) until the same reason is
-   * released; a step waits while any reason is held. Holding a reason twice is holding it once.
-   */
+  /** Hold the AI's next step for a named reason until it is released; holding it twice is holding it once. */
   setHold(reason: string, held: boolean): void;
   debug(): Promise<PracticeDebug>;
   /**
@@ -154,10 +120,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   let lastStepTurn: number | null = null;
   /** What the page is still showing (the board animating, a voice line): no AI step until it is done. */
   const holds = new Set<string>();
-  /**
-   * R1563006: the human's question sequence clock — the first question it started on and its timer.
-   * The practice host is this client, so it answers Stop itself when the window runs out.
-   */
+  /** R1563006: the human's question sequence clock — the first question it started on and its timer. */
   let sequence: { first: string; handle: unknown } | null = null;
 
   function set(patch: Partial<PracticeControllerState>): void {
@@ -173,9 +136,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     timerPending = false;
   }
 
-  // -------------------------------------------------------------------------------------------
   // the queue: one request in flight
-  // -------------------------------------------------------------------------------------------
 
   function send(body: PracticeRequestBody, done: (response: PracticeResponse) => void): void {
     jobs.push({ body, done });
@@ -210,9 +171,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     });
   }
 
-  // -------------------------------------------------------------------------------------------
   // snapshots and the pacing loop
-  // -------------------------------------------------------------------------------------------
 
   function clearSequence(): void {
     if (sequence === null) return;
@@ -221,10 +180,8 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   }
 
   /**
-   * R1563006: a sequence's first question (streak 0, a choice this clock has not started on) starts a
-   * window of `KY_COMPETITION_SECONDS`; a later question keeps it; none open clears it. When it runs
-   * out with a question still open, its Stop goes out as the human's answer, as the server answers it
-   * online.
+   * R1563006: a sequence's first question (streak 0, a choice this clock has not started on) starts the
+   * window; a later question keeps it; none open clears it.
    */
   function syncSequence(view: PlayerView): void {
     const question = view.result === null ? sequenceQuestionOf(view) : null;
@@ -348,9 +305,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     });
   }
 
-  // -------------------------------------------------------------------------------------------
   // the public surface
-  // -------------------------------------------------------------------------------------------
 
   return {
     getState(): PracticeControllerState {

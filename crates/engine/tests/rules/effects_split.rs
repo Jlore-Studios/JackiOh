@@ -1,7 +1,5 @@
-//! B5 E37 random split damage (`effects/split.ts`): "deal N damage split among enemies" — N hits of 1,
+//! B5 E37 random split damage: "deal N damage split among enemies" — N hits of 1,
 //! each a damage instance of its own on a random enemy still standing (Classic+ #3's Death).
-//!
-//! Port of `packages/engine/test/effects-split.test.ts`.
 
 use jackioh_engine::testkit::*;
 
@@ -15,13 +13,11 @@ use jackioh_engine::state_check::state_check;
 use super::fixtures::damage_combat::{bolt, grunt, playing, rattle, snake, wall, warded};
 use super::fixtures::harness::{events_json, in_hand, put, slot};
 
-/// A JSON string field, as an owned string.
 fn text(value: &Value, key: &str) -> String {
     value[key].as_str().unwrap_or_default().to_string()
 }
 
-/// A state check on a sink over `state` (`sinkFor`: the rng at the state's cursor), handing back the
-/// events it emitted.
+/// A state check over `state`, the rng at its cursor; its events.
 fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -32,7 +28,6 @@ fn snake_dies(state: &mut GameState) -> Vec<GameEvent> {
     events
 }
 
-/// `applyEffects([effect], makeContext(sinkFor(state), self, options))`, handing back the events.
 fn split_from(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -182,7 +177,6 @@ mod e37_damage_split {
                 json!([target.id, 1])
             ]
         );
-        // With no enemy unit standing there is nothing to hit.
         let mut empty = clone_state(&state);
         for zone in empty.players.p2.units.iter_mut() {
             *zone = None;
@@ -265,7 +259,6 @@ mod s03_damage_random_enemies {
         unique.sort();
         unique.dedup();
         assert_eq!(unique.len(), 2, "no enemy takes both hits: {targets:?}");
-        // The same seed and board draw the same enemies (R60: the match rng).
         let (mut again, source) = two_walls();
         let redrawn = events_json(
             &random_enemies_from(

@@ -1,7 +1,6 @@
 //! Copy a Unit's text (`subsystems/unit_text.rs`, R1850000; Stinkyscape #20 Tnack Trav): the copier
 //! runs the text the target runs now, on its own stats, and leaving the field ends it. Through the
-//! fixtures in `fixtures/card_on_card.rs`, moved here from `card_on_card.rs` so the subsystem has its
-//! own module (#2273); the real card's tests cover the same cases again.
+//! fixtures in `fixtures/card_on_card.rs` (#2273); the real card's tests cover the same cases again.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::P1;

@@ -6,11 +6,7 @@
 //! that deals damage|random Spells that deal damage} to your hand." Spells 1, Radiant 2.
 //! Engine: its keywords are catalog data — Equip fuses it into a Unit of yours (R1086), its Spell
 //! Damage going with it into a host and into the Starship — and its death fuses a copy into its
-//! owner's Dormant Starship (R1852000). When launched (`when_launched`, R1852003) runs only as part of
-//! that Starship: `add_random_from_catalog` over the non-token Spells marked `dealsDamage` (R1748001,
-//! the query's `dealsDamage`, R1859005), Field Spells out, of the sets that ship (R380), repeats
-//! allowed; a full hand burns the rest. The count is read on the face the piece fused on
-//! (`piece_number`, R1859001). Tunes: spells 1 ↑.
+//! owner's Dormant Starship (R1852000).
 
 use jackioh_engine::prelude::*;
 
@@ -35,10 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #136 Magic Module — SPEC §8.10 row 136, BUILD M12 row S 136: "its Spell Damage +2 raises its
-// controller's Spell hits by 2 while it is on the field; when the Starship it fused into launches, one
-// random Spell marked `dealsDamage` goes to its controller's hand; spells read on the face it fused on
-// (R1859001); radiant 8/6, Spell Damage +4 and two Spells".
+// S #136 Magic Module — SPEC §8.10 row 136, BUILD M12 row S 136 (R1859001).
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -48,7 +41,6 @@ mod tests {
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage.
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
 
-    /// The hand's new cards once p1's Starship holding the Module (Radiant if `radiant`) launches.
     fn added_on_launch(seed: &str, radiant: bool) -> Vec<CardDef> {
         let (mut s, ship) = built_starship(
             seed,

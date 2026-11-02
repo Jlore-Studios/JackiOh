@@ -7,9 +7,6 @@
 //! that play has resolved, the Unit on it is fused into this per R77, this the kept card: a Field Spell
 //! still, with the Unit's text and keywords, and the Unit ceases to exist. The Radiant face makes the
 //! Unit Radiant as it lands, so its Cry runs on that face, and fuses it in on its Radiant face (R469).
-//! The Aura (patch v0.3.13, #1194) lends Flying and Stack to its controller's Units on the field and to
-//! the Unit cards in their hand and resolving zone, where a play's placement reads them (R1194000);
-//! `script_v0_3_7b` keeps the Tower without it for the replays of v0.3.7b and before (R767000).
 
 use jackioh_engine::effects::{fuse_cards, set_radiant};
 use jackioh_engine::prelude::*;
@@ -116,11 +113,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     tower(None)
 }
 
-// C+ #33 Ivory Tower (SPEC §8.7, R418, R653): the first Unit played onto its zone stands on it
-// while play resolves, then fuses in per R77 (kept card). If Tower leaves early, Unit steps down
-// (R446). Radiant makes the Unit Radiant as it lands and fuses on Radiant face (R469). Both faces'
-// Aura gives your Units in hand and on the field Flying and Stack, the opponent's neither, so a Unit
-// in hand is offered occupied zones and empty backrow zones; it ends with the Tower (R1194000).
+// C+ #33 Ivory Tower — SPEC §8.7 row 33.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -316,7 +309,6 @@ mod tests {
                 let held = s.hand(P1).len();
                 s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": tower }] }));
                 s.expect_in_zone(&tower, "graveyard");
-                // Magic Jammed left the hand; Sheeople's Death drew 2.
                 assert_eq!(s.hand(P1).len(), held - 1 + 2);
             }
 

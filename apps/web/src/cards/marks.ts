@@ -1,17 +1,11 @@
 // R437: the marks a card carries, as the client draws them.
 //
-// A mark is an effect aimed at a card and waiting (#50 K-Pop Fanatic's steal at the start of its
-// controller's next turn). The engine puts it on the card's view in both views, `CardView.marks`
-// (`{ mark, color }`), and reports it coming and going with the `marked` event. This module is the
-// one place the client reads either, so a rename in the view or the event is one line here:
-// `marksOf` for the view, `markEventOf` for the event.
-//
-// Two tables turn a mark into something a player can read and see, and both are open to any card:
-// - `MARK_PALETTES`: a color key ("purple") → the colors of the corruption aura and the brand
-//   flourish, and the particle preset the effects layer throws in that color. An unknown key falls
-//   back to DEFAULT_MARK_COLOR, so a new card's color never draws nothing.
-// - `MARK_WORDS`: a mark ("steal") → its short name and the sentence the badge's tooltip and hidden
-//   text say, so the mark never rests on color alone. An unknown mark gets the generic words.
+// A mark is an effect aimed at a card and waiting (#50 K-Pop Fanatic's steal). The engine puts it on
+// `CardView.marks` in both views and reports it coming and going with the `marked` event; this module
+// is the one place the client reads either.
+// `MARK_PALETTES` and `MARK_WORDS` are open to any card: an unknown color falls back to
+// DEFAULT_MARK_COLOR, so a new card's color never draws nothing, and an unknown mark gets generic
+// words (the words keep a mark from resting on color alone).
 //
 // Nothing here decides a rule or reads anything but the view and the event (CLAUDE.md rule 7).
 
@@ -20,7 +14,7 @@ import type { CardMark, CardView, GameEvent } from "@jackioh/shared";
 import type { FxPreset } from "../fx/types.ts";
 import { BERSERK_WORDS, FROZEN_WORDS } from "./cardState.ts";
 
-/** The colors one mark is drawn in: a bright rim, a pale core, a deep glow; and its particles. */
+/** The colors one mark is drawn in, and its particles. */
 export type MarkPalette = {
   /** The crackling edge, the badge's ring and the motes. */
   rim: string;
@@ -42,24 +36,21 @@ export const MARK_PALETTES = {
   cyan: { rim: "#4fe3ff", core: "#e0fbff", glow: "#0fa3c4", preset: "frost" },
   blue: { rim: "#6b94ff", core: "#e3eaff", glow: "#2349c9", preset: "frost" },
   orange: { rim: "#ff9a3d", core: "#fff1de", glow: "#d1570a", preset: "ember" },
-  // Allure's (`ALLURE_MARK_COLOR`), pink: Jade Beauty's and K-Pop Fanatic's (R963, R1045000).
+  // Allure's (`ALLURE_MARK_COLOR`).
   pink: { rim: "#ff7ac8", core: "#ffe3f3", glow: "#c2187a", preset: "arcane" },
-  // #2270: Brittle's last count (`BRITTLE_LAST_COLOR`), Allure's aura in gray; no mark is drawn in it.
   gray: { rim: "#b8bec8", core: "#f0f2f5", glow: "#5f6672", preset: "smoke" },
-  // #2437: Temporary's last count in a hand (`TEMPORARY_LAST_COLOR`), Allure's aura in fuchsia; no mark is drawn in it.
   fuchsia: { rim: "#e879f9", core: "#fae8ff", glow: "#a21caf", preset: "arcane" },
 } as const satisfies Readonly<Record<string, MarkPalette>>;
 
 export type MarkColor = keyof typeof MARK_PALETTES;
 
-/** What an unknown color key is drawn in: the corruption purple of the `steal` mark. */
+/** The corruption purple of the `steal` mark. */
 export const DEFAULT_MARK_COLOR: MarkColor = "purple";
 
 function isMarkColor(color: string): color is MarkColor {
   return Object.prototype.hasOwnProperty.call(MARK_PALETTES, color);
 }
 
-/** The color key a mark is actually drawn in: its own when the table has it, else the default. */
 export function markColorOf(color: string): MarkColor {
   return isMarkColor(color) ? color : DEFAULT_MARK_COLOR;
 }
@@ -89,14 +80,14 @@ export const END_OF_TURN_MARK = "endOfTurn";
 /** The engine's `END_OF_TURN_MARK_COLOR` (`effects/delay.rs`). */
 export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
 
-/** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recolored gray. */
+/** #2270: what a card on the field at its last Brittle count wears: Allure's aura in gray, no badge, no mark. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
 
-/** #2437: what a hand card at its last Temporary count wears (R637, R2179001), the aura alone (no badge, no mark): Allure's, recolored fuchsia. */
+/** #2437: what a hand card at its last Temporary count wears (R637, R2179001): Allure's aura in fuchsia, no badge, no mark. */
 export const TEMPORARY_LAST_COLOR: MarkColor = "fuchsia";
 
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
-  // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
+  // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card".
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
   // B5 E35: the mark a unit going Berserk is announced with (C+ #19.2, C+ #19.5).
   berserk: { name: "Berserk", text: BERSERK_WORDS },
@@ -115,7 +106,6 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   [END_OF_TURN_MARK]: { name: "End of turn", text: "Marked: destroyed at the end of this turn" },
 };
 
-/** The words for a mark the table does not know. */
 export const UNKNOWN_MARK_WORDS: MarkWords = { name: "Mark", text: "Marked: an effect is waiting on this card" };
 
 export function markWords(mark: string): MarkWords {
@@ -135,9 +125,8 @@ function isMark(entry: unknown): entry is CardMark {
 }
 
 /**
- * The marks the view puts on a card: a `CardView`, or a face-down backrow entry, whose back carries
- * its mark to the player who cannot read it (R437, R33), read defensively as Backrow reads its cost.
- * None for a card without marks, or a malformed entry.
+ * The marks the view puts on a card, or on a face-down backrow entry, whose back carries its mark to
+ * the player who cannot read it (R437, R33); read defensively, none for a malformed entry.
  */
 export function marksOf(card: Pick<CardView, "marks"> | object | null | undefined): readonly CardMark[] {
   if (card === null || card === undefined || !("marks" in card)) return [];

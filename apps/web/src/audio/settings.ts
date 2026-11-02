@@ -1,11 +1,8 @@
-// The audio settings store (docs/polish/2-sound.md, Surface; B12, B13).
-//
-// One cached `AudioSettings` object, persisted as JSON under `localStorage["jackioh.audio.v1"]`.
-// Every storage access sits inside try/catch: private windows, blocked site data and quota errors
-// must never break the game, so a failed read gives the defaults and a failed write still updates
-// memory. The cached object is frozen and replaced (never mutated) on each change, which is what
-// lets `useSyncExternalStore` compare snapshots by identity. A "storage" event from another tab
-// re-reads the key, so two open games share one mute switch.
+// The audio settings store (docs/polish/2-sound.md, Surface; B12, B13): one cached `AudioSettings`,
+// persisted as JSON under `localStorage["jackioh.audio.v1"]`. Every storage access sits inside try/catch:
+// private windows, blocked site data and quota errors must never break the game. The cached object is
+// frozen and replaced on each change, so `useSyncExternalStore` compares snapshots by identity. A
+// "storage" event from another tab re-reads the key, so two open games share one mute switch.
 
 import { useSyncExternalStore } from "react";
 
@@ -42,18 +39,15 @@ function station(value: unknown, fallback: MusicStation): MusicStation {
 }
 
 /**
- * Settings saved before `playMusicInBackground` named this switch the other way round
- * (`pauseMusicOnBlur`, default on). A saved value is read inverted, so a player who had turned the old
- * switch off keeps their music playing and nobody else hears a change.
+ * A saved `pauseMusicOnBlur` (this switch the other way round, default on) is read inverted, so a player
+ * who turned it off keeps their music playing and nobody else hears a change.
  */
 function legacyBackground(o: Record<string, unknown>): boolean {
   return typeof o.pauseMusicOnBlur === "boolean" ? !o.pauseMusicOnBlur : DEFAULT_AUDIO_SETTINGS.playMusicInBackground;
 }
 
-/** Total: any input → valid settings. Each field independently: a finite number is clamped to [0,1],
- *  anything else takes the default; a boolean field that is not a boolean takes the default, and a
- *  station that is not one of MUSIC_STATIONS takes the default. Settings saved before the music
- *  existed read with the music's defaults. */
+/** Total: any input → valid settings, each field independently: a finite number is clamped to [0,1];
+ *  a value not of its field's kind (a station not in MUSIC_STATIONS) takes the default. */
 export function parseAudioSettings(raw: unknown): AudioSettings {
   const o: Record<string, unknown> = isRecord(raw) ? raw : {};
   return {
@@ -100,13 +94,13 @@ function notify(next: AudioSettings): void {
   }
 }
 
-/** Cached after the first read. Reads localStorage[AUDIO_SETTINGS_KEY] inside try/catch. */
+/** Cached after the first read. */
 export function readAudioSettings(): AudioSettings {
   if (cache === null) cache = loadFromStorage();
   return cache;
 }
 
-/** Merges, parses (clamps), caches, persists as JSON inside try/catch, notifies each subscriber once. */
+/** Merges, parses (clamps), caches, persists, and notifies each subscriber once. */
 export function writeAudioSettings(patch: Partial<AudioSettings>): AudioSettings {
   const merged: Record<string, unknown> = { ...readAudioSettings() };
   for (const [key, value] of Object.entries(patch)) {

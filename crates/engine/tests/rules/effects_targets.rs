@@ -1,12 +1,7 @@
 //! The target and scope vocabulary every other verb's arguments are written in (SPEC §3.1, §3.2,
-//! §6.3, §10.6, R13, R68, R81). Two things are under test: `{ of: "instance" }`, the TargetSpec
-//! variant that lets a verb name a card a script already holds the id of, and the board scope
-//! (`cardsInScope`, `adjacentTo`, `matchesScope`) that the board-wide verbs are thin walks over.
-//!
-//! The scope lives here rather than on `TargetSpec` because `resolveTarget` answers with one
-//! `DamageTarget | null`: every verb written in a TargetSpec is single-target by construction, so a
-//! multi-card spec could not be threaded through them. The fixture cards these tests need are
-//! registered here, so no shared fixture has to grow (BUILD §0).
+//! §6.3, §10.6, R13, R68, R81): `{ of: "instance" }`, the TargetSpec variant that names a card a
+//! script holds the id of, and the board scope that board-wide verbs walk. The scope is not a
+//! `TargetSpec` since one resolves to a single target. Fixture cards are registered here (BUILD §0).
 
 use jackioh_engine::effects::{
     BoardScope, TargetSpec, adjacent_to, cards_in_scope, instance_of, matches_scope, resolve_target,
@@ -59,7 +54,7 @@ fn game() -> GameState {
     state
 }
 
-/// A context with p1 as the controller. It borrows the state, so the test's reads run inside `f`.
+/// p1 controls the context; it borrows the state, so the test's reads run inside `f`.
 fn with_ctx<R>(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -84,7 +79,6 @@ fn instance_spec(instance_id: &str) -> TargetSpec {
     json_as(json!({ "of": "instance", "instanceId": instance_id }))
 }
 
-/// A board scope from a JSON literal; `{}` is the default.
 fn scope(literal: Value) -> BoardScope {
     json_as(literal)
 }
@@ -149,7 +143,7 @@ mod target_spec_of_instance {
     }
 }
 
-// `cardsInScope`
+// `cards_in_scope`
 
 mod cards_in_scope {
     use super::*;
@@ -310,7 +304,7 @@ mod cards_in_scope {
             )
         });
         assert_eq!(tagged, vec![the_human.id.clone()]);
-        // "non-Felinor" keeps everything that is not tagged Felinor, the untagged card included (#43).
+        // "non-Felinor" keeps all not tagged Felinor, the untagged card included (#43).
         assert_eq!(not_felinor, vec![the_human.id, the_untagged.id]);
     }
 
@@ -376,7 +370,7 @@ mod cards_in_scope {
             .cloned();
         assert_eq!(top, Some(live(&state, &bottom.id)));
 
-        // A Stack card lands on the occupied zone and becomes the only active card there.
+        // A Stack card lands on the occupied zone as its only active card.
         let mut stacked = put(
             &mut state,
             &stackable().id,
@@ -416,7 +410,7 @@ mod cards_in_scope {
     }
 }
 
-// `adjacentTo`
+// `adjacent_to`
 
 mod adjacent_to {
     use super::*;
@@ -640,7 +634,7 @@ mod adjacent_to {
     }
 }
 
-// `matchesScope`
+// `matches_scope`
 
 mod matches_scope {
     use super::*;

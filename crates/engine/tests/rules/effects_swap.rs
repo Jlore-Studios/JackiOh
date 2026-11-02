@@ -1,7 +1,6 @@
 //! Swap (SPEC §6.3's Swap row, R73; BUILD M3-T1): #87 Pocket Chaos's three swaps — hero health,
 //! the board lane by lane, and the libraries — with R12's ownership rule and its one exception,
-//! R33's face-down trap and §3.2's Stack pile. The fixture Trap this file needs is registered here,
-//! so no shared fixture has to grow for it (BUILD §0).
+//! R33's face-down trap and §3.2's Stack pile. Its fixture Trap is registered here (BUILD §0).
 
 use jackioh_engine::effects::{swap, swap_board, swap_health, swap_library};
 use jackioh_engine::testkit::*;
@@ -19,7 +18,6 @@ fn trap() -> CardDef {
     )
 }
 
-/// The shared fixture unit token (R11).
 const TOKEN_ID: &str = "fx-token-rush";
 
 fn game() -> GameState {
@@ -33,8 +31,7 @@ fn game() -> GameState {
     state
 }
 
-/// Apply one effect and hand back the events it emitted. The sink's rng starts at the state's
-/// cursor, as reduce does; the controller is the options', else p1.
+/// One effect's events; the sink's rng starts at the state's cursor, as reduce does.
 fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -51,7 +48,7 @@ fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameE
     events
 }
 
-/// A Stack card pushed onto an occupied unit zone (§3.2); the harness's `put` fills empty zones.
+/// A Stack card pushed onto an occupied unit zone (§3.2); `put` fills empty zones only.
 fn stack_onto(state: &mut GameState, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     assert!(place_on_field(
@@ -63,7 +60,6 @@ fn stack_onto(state: &mut GameState, def_id: &str, player: PlayerId, lane: i32) 
     card
 }
 
-/// Where a card sits now, as "p2 units 5", for readable assertions.
 fn where_is(state: &GameState, card: &CardInstance) -> String {
     match find_instance(state, &card.id).map(|found| found.zone.clone()) {
         None => "gone".to_string(),
@@ -113,7 +109,7 @@ mod swap_s6_3_r73_m3_t1 {
         assert_eq!(state.players.p1.hero.armor, 3);
         assert_eq!(state.players.p2.hero.armor, 5);
 
-        // A swap is not damage, not a heal and not "lose health" (R18): one event, and that is all.
+        // Not damage, a heal or "lose health" (R18): one event, and that is all.
         assert_eq!(json_of(&events), json!([{ "type": "swapped", "what": "health" }]));
     }
 
@@ -164,7 +160,7 @@ mod swap_s6_3_r73_m3_t1 {
 
         let events = run(&mut state, swap_board(), HookOptions::default());
 
-        // Lane-preserving: every card is in the same row and lane on the other side (R73, §3.1).
+        // Lane-preserving: the same row and lane on the other side (R73, §3.1).
         assert_eq!(where_is(&state, &mine), "p2 units 2");
         assert_eq!(where_is(&state, &my_back), "p2 backrow 4");
         assert_eq!(where_is(&state, &theirs), "p1 units 5");
@@ -195,7 +191,7 @@ mod swap_s6_3_r73_m3_t1 {
             [PlayerId::P1, PlayerId::P1, PlayerId::P2, PlayerId::P2]
         );
 
-        // Nothing left the field, so R78's reset never ran: damage, buffs, counters and position came along.
+        // Nothing left the field, so no R78 reset: damage, buffs, counters and position came along.
         assert_eq!(mine_now.damage, 1);
         assert_eq!(mine_now.buffs, AttackHealth { attack: 3, health: 4 });
         assert_eq!(
@@ -206,8 +202,7 @@ mod swap_s6_3_r73_m3_t1 {
             }
         );
         assert_eq!(mine_now.position, Some(Position::Def));
-        // R171: summoning sickness does not come along. Changing sides is an entry on this turn, with a
-        // fresh exertion for the new controller.
+        // R171: changing sides is an entry on this turn, with a fresh exertion for the new controller.
         assert_eq!(mine_now.summoned_turn, Some(3));
         assert_eq!(
             mine_now.exertion,
@@ -218,7 +213,7 @@ mod swap_s6_3_r73_m3_t1 {
             }
         );
 
-        // §10.3: one `swapped`, then a `controlChanged` per card — no new event type is needed.
+        // §10.3: one `swapped`, then a `controlChanged` per card; no new event type.
         assert_eq!(
             events.iter().map(GameEvent::event_type).collect::<IndexSet<_>>(),
             IndexSet::from([GameEventType::Swapped, GameEventType::ControlChanged])
@@ -326,13 +321,13 @@ mod swap_s6_3_r73_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        // §3.2: the current occupant is unaffected by the lock and the lock persists after it leaves.
+        // §3.2: the lock spares the current occupant and outlasts it.
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 1));
 
         run(&mut state, swap_board(), HookOptions::default());
 
         assert_eq!(where_is(&state, &card), "p2 units 1");
-        // The lock stayed on the zone it was set on; the card's new zone did not become Locked (R73).
+        // The lock stayed on its zone; the card's new zone did not become Locked (R73).
         assert_eq!(
             state.players.p1.locks.units,
             vec![true, false, false, false, false]
@@ -346,8 +341,7 @@ mod swap_s6_3_r73_m3_t1 {
 
     #[test]
     fn r88_a_card_whose_destination_is_locked_bounces_to_its_owners_hand_as_r14_does_for_a_rotation() {
-        // R88: R73 is silent on a card swapped into a Locked zone; §3.2's "accepts no summons" plus
-        // R14's answer for the other whole-board move is the reading implemented here.
+        // R88: R73 is silent on a swap into a Locked zone; read by §3.2's "accepts no summons" and R14.
         let mut state = game();
         let blocked = put(
             &mut state,
@@ -466,7 +460,7 @@ mod swap_s6_3_r73_m3_t1 {
             control_changed_ids(&events),
             vec![top.id.clone(), under.id.clone()]
         );
-        // Nothing beneath the top resumed, so no Stack note is kept against it (R212, `withPile`).
+        // Nothing beneath the top resumed, so no Stack note is kept against it (R212, `with_pile`).
         assert!(
             state
                 .field_exits
@@ -509,7 +503,7 @@ mod swap_s6_3_r73_m3_t1 {
 
         let events = run(&mut state, swap_library(), HookOptions::default());
 
-        // The piles changed places whole and kept their order, so each top card is still the next draw.
+        // The piles swapped whole and in order, so each top card is still the next draw.
         assert_eq!(ids_of(&state.players.p1.library), ids_of(&theirs));
         assert_eq!(ids_of(&state.players.p2.library), ids_of(&mine));
 
@@ -538,7 +532,7 @@ mod swap_s6_3_r73_m3_t1 {
             vec![Zone::Library { player: PlayerId::P2 }; mine.len()]
         );
 
-        // R73: fatigue is the player's, not the library's, so the counters stay where they were.
+        // R73: fatigue is the player's, not the library's: the counters stay.
         assert_eq!(state.players.p1.fatigue_count, 2);
         assert_eq!(state.players.p2.fatigue_count, 0);
 

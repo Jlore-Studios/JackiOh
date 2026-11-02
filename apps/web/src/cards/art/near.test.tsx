@@ -38,7 +38,6 @@ class FakeIntersectionObserver {
   }
 }
 
-/** Reports `target` as inside (or outside) its observer's margin. */
 function intersect(observer: Observer, target: Element, isIntersecting = true): void {
   act(() => {
     observer.callback([{ target, isIntersecting } as IntersectionObserverEntry], {} as IntersectionObserver);
@@ -97,7 +96,6 @@ describe("lazy procedural art", () => {
     advance(ART_DWELL_MS);
     expect(window.hasAttribute("data-art-pending")).toBe(false);
     expect(window.style.backgroundImage).toContain("data:image/svg+xml");
-    // Once drawn it is no longer watched.
     expect(observer.targets.size).toBe(0);
   });
 
@@ -202,7 +200,6 @@ describe("whenNear", () => {
     intersect(observer, second);
     advance(ART_DWELL_MS);
     expect(near).toHaveBeenCalledExactlyOnceWith("second");
-    // A window reported twice is called once.
     intersect(observer, second);
     advance(ART_DWELL_MS);
     expect(near).toHaveBeenCalledTimes(1);
@@ -237,7 +234,6 @@ describe("whenNear", () => {
     });
     intersect(observer, window);
     advance(ART_DWELL_MS);
-    // The first watch's dwell is gone: the latest onNear runs once and nothing is left ticking.
     expect(near).toHaveBeenCalledExactlyOnceWith("second");
     expect(vi.getTimerCount()).toBe(0);
     box.remove();

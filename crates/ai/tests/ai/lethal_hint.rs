@@ -1,18 +1,16 @@
 //! R2102000: the practice AI's lethal hint (`lethal_hint`, SPEC §9.9): whether the human has a
 //! sure win this turn by what they can see, and the same answer whatever the AI's hidden cards are.
 //!
-//! The human sits in p2 with Tempo Timmy 3/3 and Mr. Vanilla 4/4 ready on the field, 7 to the face;
-//! the AI sits in p1 with nothing on its field. The AI's hidden cards come in the two sets the
-//! observe tests' fixed pair uses (#2 Bigot and #11 Tempo Timmy against #53 Reno and #20
-//! Pointmaster in hand, different libraries, a face-down #41 Sheepish against a face-down #60 Bear
-//! Honeypot, which show the same cost). `observe.rs` holds the property over real states.
+//! The human in p2 has Tempo Timmy 3/3 and Mr. Vanilla 4/4 ready, 7 to the face; the AI in p1 has an
+//! empty field and the observe tests' two sets of hidden cards (#2 Bigot and #11 Tempo Timmy against
+//! #53 Reno and #20 Pointmaster, a face-down #41 Sheepish against #60 Bear Honeypot, the same cost).
+//! `observe.rs` holds the property over real states.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 use super::support::{HUMAN, register_cards};
 
-/// The AI's hidden cards: its hand, its library and the face-down trap it may have set.
 struct Hidden {
     hand: [&'static str; 2],
     library: [&'static str; 3],
@@ -31,8 +29,6 @@ const SET_B: Hidden = Hidden {
     trap: "core-060",
 };
 
-/// p2's 7 attack facing p1 at `health`, p1 holding `hidden` (its trap set face down when `trapped`),
-/// with `active` the seat whose turn it is.
 fn board(seed: &str, active: PlayerId, hidden: &Hidden, trapped: bool, health: i32) -> GameState {
     register_cards();
     let backrow = if trapped {
@@ -64,8 +60,7 @@ fn r2102000_a_board_the_human_cannot_win_this_turn_lights_nothing() {
     assert!(!lethal_hint(&state, HUMAN, None));
 }
 
-/// R2102000: a clock that has run out (the browser's cap) stops the search before it proves the
-/// lethal, and a search the clock stopped lights nothing
+/// R2102000: a clock that has run out (the browser's cap) stops the search, which lights nothing
 #[test]
 fn r2102000_a_search_the_clock_stops_lights_nothing() {
     let state = board("lethal-hint", PlayerId::P2, &SET_A, false, 6);
@@ -82,8 +77,8 @@ fn r2102000_off_the_humans_own_turn_the_hint_is_dark() {
     assert!(!lethal_hint(&state, HUMAN, None));
 }
 
-/// R2102000, R185: states that differ only in the AI's hand, library, face-down trap and the seed
-/// redact alike and give one answer, with and without a trap and with and without a lethal
+/// R2102000, R185: states that differ only in the AI's hidden cards and the seed redact alike and give
+/// one answer
 #[test]
 fn r2102000_two_states_that_differ_only_in_the_ais_hidden_cards_give_one_answer() {
     for trapped in [false, true] {

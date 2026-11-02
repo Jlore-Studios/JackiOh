@@ -1,14 +1,5 @@
-//! What `play_match` does when a controller misbehaves (docs/polish/3-ai.md §Surface, match.rs): "A
-//! refused action is recorded in `rejected` and replaced by endTurn (or the first legal answer); a
-//! throw is recorded and ends the match", and a controller that returns nothing is counted in
-//! `fallbacks` and replaced by the random policy. No real controller does any of this (the gates
-//! insist on zero of each), so this file scripts the baselines: `random_action` or `greedy_action`
-//! misbehaves once, at the first main phase the scripted seat owns, and is the real one otherwise.
-//!
-//! Port of `packages/ai/test/match-refusal.test.ts`. TS scripted the baselines with `vi.mock`, which
-//! Rust has no twin of: the controller's answer is rewritten through `MatchHooks.override_choice`
-//! instead (called with each controller call's answer, inside the call, before a null is replaced),
-//! and a scripted throw is a panic there. That seam is a GAP for `match_.rs` (see the notes).
+//! What `play_match` does when a controller misbehaves (docs/polish/3-ai.md §Surface): refused action
+//! is recorded in `rejected` and replaced by endTurn; throws end the match; null replaced by random policy.
 
 use std::cell::OnceCell;
 

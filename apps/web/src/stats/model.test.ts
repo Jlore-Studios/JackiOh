@@ -59,7 +59,6 @@ describe("R639 the device's totals", () => {
     const twice = addGame(once, log, "loss");
     expect(twice).toMatchObject({ games: 2, wins: 1, losses: 1 });
     expect(twice.cards["core-001"]?.seen).toBe(2);
-    // The totals it started from are untouched: the fold returns a new value.
     expect(once.games).toBe(1);
     expect(addGame(twice, EMPTY_LOG, "draw")).toMatchObject({ games: 3, draws: 1 });
   });
@@ -132,7 +131,6 @@ describe("R1743000 the new counters and totals", () => {
     stats = addGame(addGame(stats, second, "win"), third, "win");
     expect(stats.cards["core-001"]).toEqual({ ...NO_COUNTS, damageDealt: 8, attacks: 1, biggestHit: 5, overkill: 6 });
     expect(stats.cards["core-002"]).toEqual({ ...NO_COUNTS, healing: 4, drawn: 1, radiant: 1 });
-    // A game with a smaller hit leaves the held maximum alone.
     expect(addGame(stats, logMax(EMPTY_LOG, "biggestHit", "core-001", 1), "loss").cards["core-001"]?.biggestHit).toBe(5);
   });
 
@@ -180,7 +178,6 @@ describe("R1743000 the new counters and totals", () => {
     expect(stats).toMatchObject({ longestGame: 23, longestGamePlayed: { "core-001": 1, "core-002": 1 } });
     stats = addGame(stats, { ...logWith(EMPTY_LOG, "played", "core-009"), turns: 24 }, "loss");
     expect(stats).toMatchObject({ longestGame: 24, longestGamePlayed: { "core-009": 1 } });
-    // A game with no turns counted never replaces it.
     expect(addGame(stats, EMPTY_LOG, "win").longestGame).toBe(24);
   });
 

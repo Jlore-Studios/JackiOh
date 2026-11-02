@@ -1,9 +1,6 @@
 // The discovery coach (coach.ts's moments, discoveries.ts's Field Guide), on hand-built views and
-// fixture scripts: R2205000. A moment poses a question with nothing pointed at, and is done once the
-// player finds what it sets up, however they found it; its hints escalate only while the player
-// stalls, or when they ask; it never holds the AI; past its turns it retires and the lesson's end
-// names what it set up (R314). Each Field Guide entry is recognized from the human's view alone
-// (R292): the fresh events, the view and the public catalog.
+// fixture scripts: R2205000; past its turns a moment retires and the lesson's end names what it set up
+// (R314). Each Field Guide entry is recognized from the human's view alone (R292).
 
 import { describe, expect, it } from "vitest";
 
@@ -31,7 +28,7 @@ import { moment } from "./steps.ts";
 import { coachTargets } from "./targets.ts";
 
 const VANILLA = "core-008";
-/** The lesson ids of the remade tutorial (§9.10): the four kept and the fifth. */
+/** The lesson ids in path order (§9.10). */
 const LESSON_IDS: readonly string[] = ["basics", "keywords", "casting", "backrow", "finale"];
 
 function ctx(view: PlayerView, fresh: GameEvent[] = [], legal: ActionBody[] = [{ type: "endTurn" }], aiToAct = false): CoachCtx {
@@ -49,7 +46,6 @@ function aiTurn(turn: number): PlayerView {
 const played: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "h1", defId: VANILLA, costPaid: 1 };
 const shieldPopped: GameEvent = { type: "divineShieldLost", instanceId: "u9" };
 
-/** Two fixture entries: X is found by a play of the player's, Y by a popped shield. */
 const GUIDE: readonly Discovery[] = [
   { id: "x", name: "Mana", rule: "each card costs mana, and you get one more crystal every turn.", lesson: "basics", found: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.player === c.view.viewer) },
   { id: "y", name: "Divine Shield", rule: "the first hit on a shielded unit does nothing but pop the shield.", lesson: "keywords", found: (c) => c.fresh.some((event) => event.type === "divineShieldLost") },
@@ -101,7 +97,6 @@ describe("R2205000 the discovery coach", () => {
     expect(display.canHint).toBe(true);
     expect(activeStep(script, state)?.id).toBe("ask");
 
-    // The player plays the card: the view's events show it, the entry is found, the moment is done.
     state = coachObserve(script, state, ctx(myTurn(3), [played]));
     expect(state.found).toEqual(["x"]);
     expect(state.outcomes.ask).toBe("done");
@@ -128,7 +123,6 @@ describe("R2205000 the discovery coach", () => {
     let state = coachObserve(script, COACH_START, ctx(myTurn(3)));
     expect(hintLevel(script, state)).toBe(0);
 
-    // A turn later, still not found: the nudge, and still nothing pointed at.
     state = stall(script, state, 5, 5);
     expect(hintLevel(script, state)).toBe(1);
     let display = coachDisplay(script, state, ctx(myTurn(5)));
@@ -136,7 +130,6 @@ describe("R2205000 the discovery coach", () => {
     expect(display.hint).toBe("Your cards show their cost in the corner.");
     expect(display.anchor).toBeNull();
 
-    // The player asks: the pointed hint, ringing the card.
     state = coachHint(script, state);
     display = coachDisplay(script, state, ctx(myTurn(5)));
     if (display.mode !== "step") throw new Error("the moment shows");
@@ -190,12 +183,10 @@ describe("R2205000 the discovery coach", () => {
   });
 
   it("R2434001 an entry a later lesson holds is found without a bubble, even never met; one of this lesson or an earlier one bubbles", () => {
-    // Lesson 1 never names lesson 2's Divine Shield, though the AI's shield popped and the player never met it.
     const first = scriptOf({ lessonId: "basics", steps: [], teaches: ["x"] });
     let state = coachObserve(first, coachStart([]), ctx(aiTurn(2), [shieldPopped], [], true));
     expect(state.found).toEqual(["y"]);
     expect(state.discoveryQueue, "lesson 2's: recorded silently in lesson 1").toEqual([]);
-    // Lesson 2 itself, or a later one, names it the first time it is met.
     for (const lessonId of ["keywords", "finale"]) {
       const later = scriptOf({ lessonId, steps: [], teaches: [] });
       state = coachObserve(later, coachStart([]), ctx(aiTurn(2), [shieldPopped], [], true));
@@ -264,7 +255,7 @@ describe("R2205000 the discovery coach", () => {
     state = coachObserve(script, state, ctx(aiTurn(2), [shieldPopped], [], true));
     expect(state.found).toContain("y");
     expect(state.discoveryQueue).toEqual([]);
-    // The player moves: the count starts again, and the find it brings is named.
+    // The player's move starts the count again.
     state = coachObserve(script, state, ctx(myTurn(3), [played]));
     expect(state.discoveryQueue).toEqual(["x"]);
   });

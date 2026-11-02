@@ -107,22 +107,14 @@ describe("R277 the word diff", () => {
       const radiant = fillParams(card, "radiant");
       return radiant !== base && radiantMarks(base, radiant).length === 0;
     }).map((card) => card.id);
-    // Designer patch v0.1.1: Core #55 Lava Golem's Radiant face is its base text less the drawback, so
-    // it is a pure deletion by design; its doubled stats carry its marks (R277). So are Classic #60
-    // Pile On's (no longer returns to the deck) and Classic+ #5 Guy Att's (destroys every backrow
-    // card, not only yours), the brief's own Radiant texts (docs/classic-sets.md, B6, B7). Patch
-    // v0.2.1 adds Classic+ #34 Memory Leak: its Radiant face is its base text less "Choose one."
-    // (both modes, no choice). Balance patch 1 gives Classic #28 Second Wind's base face the same
-    // minimum price as its Radiant face, so its Radiant face is its base text less the exile
-    // replacement. Meditative #89 Jlarna's Radiant face is the designer's: its base text less the
-    // end-of-turn Tribute (R1225). So are #22.1 Fortify Mind's (no penalty when discarded, R862) and
-    // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.10's Classic #29 Book of Vital
-    // Kill's (its Radiant face does not end the turn either). Meditative+ #11 Living Mana Potion's is the
-    // designer's: its base text less the Tribute it activates with; its doubled stats carry its marks.
-    // So are #12 Living Armor Potion's and #13 Living Health Potion's. The Stinkyscape set's #9
-    // Ticketed's Radiant face is the designer's base text less Brittle 3 (R1857000): thirteen silent
-    // faces in all, #149 Wildar's marked since #2657, when its Radiant face kept the opponent's Call to
-    // Chaos and made its own cost (0) too.
+    // Faces with no marks: Core #55 Lava Golem's is its base text less the drawback, a pure deletion by design (its
+    // doubled stats carry its marks, R277), as are Classic #60 Pile On's and Classic+ #5 Guy Att's, the brief's own
+    // Radiant texts (docs/classic-sets.md, B6, B7), Classic+ #34 Memory Leak's (less "Choose one.") and Classic #28
+    // Second Wind's (less the exile replacement; its base face has the same minimum price). The designer's own:
+    // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #48 Tranquility's
+    // (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
+    // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000). #149 Wildar's is marked (#2657): its
+    // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too.
     expect(silent).toEqual([
       "core-055",
       "classic-028",

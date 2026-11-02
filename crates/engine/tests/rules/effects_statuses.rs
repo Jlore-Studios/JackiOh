@@ -1,7 +1,5 @@
-//! B5 E35 unit statuses (`effects/statuses.ts`): Berserk (Classic+ #19.2 sends Classic+ #19.5 there)
+//! B5 E35 unit statuses: Berserk (Classic+ #19.2 sends Classic+ #19.5 there)
 //! and "may attack again" (Classic+ #73.1's Classic Golem after a kill).
-//!
-//! Port of `packages/engine/test/effects-statuses.test.ts`.
 
 use jackioh_engine::testkit::*;
 
@@ -26,12 +24,10 @@ fn controlled_by(player: PlayerId) -> HookOptions {
     }
 }
 
-/// `{ target: { of: "instance", instanceId } }`.
 fn on(id: &str) -> Value {
     json!({ "target": { "of": "instance", "instanceId": id } })
 }
 
-/// `{ kind: "hero", player: "p2" }`: the attack target `canAttack` is asked about.
 fn enemy_hero() -> DamageTarget {
     DamageTarget::Hero { player: PlayerId::P2 }
 }

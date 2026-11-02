@@ -2,15 +2,10 @@
 //! Plague Chalice). `view_for` sets `counteredOnPlay` from this on the viewer's own hand cards, and the
 //! client draws it and decides nothing (CLAUDE.md rule 7).
 //!
-//! It asks the cards that would answer the play's announce — the holders `triggers::dispatch_event`
-//! offers a `cardAnnounced` to, acting on the field with a trigger registered for it — through their
-//! `wouldCounter` hook, the predicate their own counter trigger asks, so the warning and the counter
-//! are one rule. Only a counter the viewer may read counts: a face-down card's would say what it is
-//! (R33, R97). A card is flagged only when every price it could be played at now (each X and embiggen
-//! choice, R65) would be countered, since a price that escapes is a play worth making; whether the
-//! mana is there to pay it does not matter, as the glow it rides beside does not wait for mana either.
-//!
-//! Port of `packages/engine/src/counterWarning.ts` (part 5).
+//! It asks the field cards that would answer the play's `cardAnnounced` through their `wouldCounter`
+//! hook, the predicate their own counter trigger asks, so the warning and the counter are one rule.
+//! Only a counter the viewer may read counts (R33, R97). A card is flagged only when every price it
+//! could be played at now (R65) would be countered; whether the mana is there does not matter.
 
 use indexmap::IndexSet;
 

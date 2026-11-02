@@ -10,10 +10,8 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { KY_COMPETITION_SECONDS } from "@jackioh/engine/config";
 
-/** A sequence's window in milliseconds. */
 export const SEQUENCE_WINDOW_MS = KY_COMPETITION_SECONDS * 1000;
 
-/** The question of a sequence the viewer must answer now, or null. */
 export function sequenceQuestionOf(view: PlayerView): { choiceId: string; streak: number } | null {
   const pending = view.pending;
   if (pending === null || !pending.forYou || pending.kind !== "answer" || pending.streak === undefined) return null;
@@ -32,9 +30,8 @@ export function stopAnswerOf(view: PlayerView): ActionBody | null {
 let open: { first: string; at: number } | null = null;
 
 /**
- * When the open sequence began, in `now`'s terms: a first question (streak 0) this client has not
- * started on begins a new one; a later question keeps the one it is part of, or begins one if this
- * client came in mid-sequence.
+ * When the open sequence began, in `now`'s terms: a later question keeps the one it is part of, or
+ * begins one if this client came in mid-sequence.
  */
 export function sequenceStartedAt(choiceId: string, streak: number, now: number): number {
   if (open === null || (streak === 0 && open.first !== choiceId)) open = { first: choiceId, at: now };

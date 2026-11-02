@@ -45,7 +45,6 @@ const CATALOG_PATH = resolve(WEB, "../../crates/cards/catalog.json");
 /** VOICE_FILE_MAX_MS in constants.ts, in seconds. */
 const MAX_SECONDS = 4;
 
-/** The hash formula, recomputed here rather than imported from the script. */
 function voiceHash(values: { say: string; rate: number; pbas: number; pmod: number; text: string }): string {
   const { say, rate, pbas, pmod, text } = values;
   return createHash("sha1").update(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).digest("hex").slice(0, 16);

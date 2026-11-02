@@ -1,14 +1,8 @@
-//! Brittle X's verbs (docs/classic-sets.md B3.3 rule 4, R385): "Give Brittle N" sets a card's count to
-//! N, starting now; "gain +N Brittle" adds N to it. A card anywhere may take one — on the field, in a
-//! hand, in a deck (Classic+ #23 Dropshipping gives Brittle 2 to the cards it adds to your hand, T-AI-3
-//! Hallucination to its copy, #74 Twice Forward One Step Backwards gains +1 on the field). The count
-//! lives on the instance (`brittle_count.rs`) and ticks at its controller's start of turn (`brittle.rs`).
-//!
-//! Events (R440): a named card's count is reported by `counterChanged` "brittle" wherever it is, hidden
-//! by where it sits (R97); a scope's cards are reported only where both players read them, since a cue
-//! on each hidden card a scope reached would count the ones its filters let through.
-//!
-//! Port of `packages/engine/src/effects/brittle.ts`.
+//! Brittle X's verbs (docs/classic-sets.md B3.3 rule 4, R385), on a card anywhere (Classic+ #23
+//! Dropshipping, T-AI-3 Hallucination, #74). The count lives on the instance (`brittle_count.rs`) and
+//! ticks at its controller's start of turn (`brittle.rs`). Events (R440): a named card's is hidden by
+//! where it sits (R97); a scope's cards are reported only where both players read them, or the cues
+//! would count what its filters let through.
 
 use serde::{Deserialize, Serialize};
 
@@ -44,7 +38,6 @@ pub struct GiveBrittleArgs {
     pub n: i32,
 }
 
-/// `gain_brittle`'s arguments: the same shape as `give_brittle`'s.
 pub type GainBrittleArgs = GiveBrittleArgs;
 
 /// One card a Brittle verb reached, and whether its change is reported.
@@ -55,7 +48,7 @@ struct Reached {
 
 fn reached(ctx: &EffectContext<'_>, args: &BrittleTarget) -> Vec<Reached> {
     if let Some(scope) = &args.scope {
-        // MD-B1, R940: Brittle is harmful — an immune card in a tribal scope is passed by.
+        // MD-B1, R940: Brittle is harmful.
         return cards_in_card_scope(
             ctx,
             scope,
@@ -88,8 +81,7 @@ fn reached(ctx: &EffectContext<'_>, args: &BrittleTarget) -> Vec<Reached> {
     }
 }
 
-/// The count as the verb left it: read off the card where it stands now (TS read the live object the
-/// verb had just written).
+/// The count as the verb left it, read off the card where it stands now.
 fn report(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     let Some(live) = find_instance(ctx.state, &card.id) else {
         return;
@@ -106,8 +98,7 @@ fn report(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     });
 }
 
-/// Change the count of the card as it stands in the state (TS wrote through the live object the scope or
-/// target handed back): the verb runs on a copy of the live card, and the count it leaves is written back.
+/// Change the count of the card as it stands in the state, through a copy written back.
 fn write_count(
     ctx: &mut EffectContext<'_>,
     card: &CardInstance,
@@ -120,7 +111,7 @@ fn write_count(
     }
 }
 
-/// B3.3 rule 4: "Give Brittle N" — the count is N from now, whatever it was (a given count, R385).
+/// B3.3 rule 4: "Give Brittle N": N from now, whatever it was (R385).
 pub fn give_brittle(args: GiveBrittleArgs) -> Effect {
     Effect::new("giveBrittle", move |ctx| {
         for entry in reached(ctx, &args.on) {
@@ -147,9 +138,8 @@ pub fn gain_brittle(args: GainBrittleArgs) -> Effect {
     })
 }
 
-/// R1861001: "lower Brittle by N" — N less on the count in force, never below 0; a card with no count in
-/// force has none to lower. A card on the field that it leaves at 0 crumbles at once (B3.3 rule 3), an
-/// ordinary destroy the next state check collects, so its Death reads the count spent
+/// R1861001: "lower Brittle by N", never below 0 and only a count in force. A card on the field left
+/// at 0 crumbles at once (B3.3 rule 3), an ordinary destroy, so its Death reads the count spent
 /// (`query::brittle_spent`).
 pub fn lower_brittle(args: GainBrittleArgs) -> Effect {
     Effect::new("lowerBrittle", move |ctx| {

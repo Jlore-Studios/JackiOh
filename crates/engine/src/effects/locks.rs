@@ -1,12 +1,7 @@
 //! The Lock variants and Unlock (docs/classic-sets.md B5 E20; SPEC §3.2 Lock). A Lock lives on the zone
 //! and outlives every occupant: it evicts nothing, and the zone takes no summon, play or return until an
 //! Unlock opens it again. `effects/counters.rs` keeps the single `lock` and `unlock`; these are the
-//! forms the new cards name — a whole lane (Classic #71 Lane Eater), the zone a permanent was just
-//! played into (Classic #84 Lockdown, Classic+ #34 Memory Leak), a random zone not already Locked
-//! (Classic+ #34), the firing trap's own zone (Classic+ #1 Doom Shroom) and every zone (Classic+ #77
-//! Anti-Softlock), and a random Locked zone to Unlock (Meditative #27 Clip-Farming Lawyer).
-//!
-//! Port of `packages/engine/src/effects/locks.ts`.
+//! forms the cards name.
 
 use serde::{Deserialize, Serialize};
 
@@ -88,7 +83,7 @@ fn lane_of(ctx: &EffectContext<'_>, spec: &LaneSpec) -> Option<i32> {
                 None
             };
         }
-        // TS read the live `ctx.self`: the card as it stands now.
+        // The card as it stands now.
         LaneSpec::Card(TargetSpec::SelfCard) => ctx.live_self().cloned(),
         LaneSpec::Card(other) => instance_of(ctx, other),
     }?;
@@ -106,10 +101,9 @@ pub struct LockLaneArgs {
     pub scope: ZoneScope,
 }
 
-/// B5 E20, §3.1: Lock a whole lane — every zone of it the scope covers, both sides' unit and backrow
-/// zones by default (Classic #71's "Lock this lane"; its Radiant "the enemy side of this lane" is
-/// `side: "enemy"`). "This lane" is the lane the card running the script stands in. A zone Locked
-/// already stays as it is; a Lock evicts nothing, so the card that locked its own zone stays in it.
+/// B5 E20, §3.1: Lock every zone of a lane the scope covers (Classic #71's "Lock this lane"; its
+/// Radiant is `side: "enemy"`), "this lane" the one the running card stands in. A Lock evicts nothing,
+/// so the card that locked its own zone stays in it.
 pub fn lock_lane(args: LockLaneArgs) -> Effect {
     Effect::new("lockLane", move |ctx| {
         let spec = args.lane.clone().unwrap_or(LaneSpec::Card(TargetSpec::SelfCard));
@@ -124,9 +118,8 @@ pub fn lock_lane(args: LockLaneArgs) -> Effect {
     })
 }
 
-/// The zone the permanent an arrival event names was just put into: a `summoned` event names it; a
-/// `cardPlayed` names the card, whose zone is where it stands, if it still stands there on the stay the
-/// play put it on (R174, R212). A Spell's play puts nothing anywhere.
+/// The zone an arrival event's permanent was just put into: a `summoned` names it; a `cardPlayed` names
+/// the card, if it still stands on the stay the play put it on (R174, R212).
 fn zone_played_into(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<ZoneSlot> {
     let instance_id = match event {
         GameEvent::Summoned {
@@ -164,14 +157,12 @@ pub struct LockPlayedZoneArgs {
     pub event: Option<GameEvent>,
 }
 
-/// B5 E20: Lock the zone a permanent was just played into (Classic #84 Lockdown's "After a permanent is
-/// played, Lock its zone", Classic+ #34). `event` is the trigger's own (`ctx.event`, read from the
-/// context's captured event when omitted): a `summoned`, a `cardPlayed` or a `cardResolved`. A played
-/// Spell, or a permanent already gone from where it landed, locks nothing.
+/// B5 E20: Lock the zone a permanent was just played into (Classic #84 Lockdown, Classic+ #34). `event`
+/// is the trigger's own (the captured one when omitted). A played Spell, or a permanent already gone
+/// from where it landed, locks nothing.
 pub fn lock_played_zone(args: LockPlayedZoneArgs) -> Effect {
     Effect::new("lockPlayedZone", move |ctx| {
-        // The captured event is JSON in the data bag (SURFACE §4.4.10): anything that does not read as
-        // an event is no event, as TS's `typeof event !== "object"` guard had it.
+        // The captured event is JSON in the data bag (SURFACE §4.4.10): what does not read as one is none.
         let event = match &args.event {
             Some(event) => Some(event.clone()),
             None => ctx
@@ -188,9 +179,8 @@ pub fn lock_played_zone(args: LockPlayedZoneArgs) -> Effect {
     })
 }
 
-/// B5 E20: Lock one random zone the scope covers that is not Locked already — an occupied one is fine,
-/// a Lock evicts nothing (Classic+ #34 Memory Leak: "a random zone on your opponent's side", `side:
-/// "enemy"`). One uniform draw from the match rng among the candidates (R60); none left, nothing.
+/// B5 E20: Lock one random zone the scope covers not Locked already, occupied or not (Classic+ #34
+/// Memory Leak, `side: "enemy"`): one draw from the match rng (R60).
 pub fn lock_random_zone(args: ZoneScope) -> Effect {
     Effect::new("lockRandomZone", move |ctx| {
         let open: Vec<ZoneSlot> = zones_in_scope(ctx, &args)
@@ -207,10 +197,8 @@ pub fn lock_random_zone(args: ZoneScope) -> Effect {
     })
 }
 
-/// R900: Unlock one random Locked zone the scope covers, both sides and both rows by default (Meditative
-/// #27 Clip-Farming Lawyer's "Unlock a random zone"), the mirror of `lock_random_zone`. One uniform draw
-/// from the match rng among the Locked candidates (R60), an occupied one as fair a pick as an empty one;
-/// none Locked, nothing is drawn (R129).
+/// R900: `lock_random_zone`'s mirror (Meditative #27 Clip-Farming Lawyer's "Unlock a random zone"):
+/// one draw among the Locked zones (R60), none when none is Locked (R129).
 pub fn unlock_random_zone(args: ZoneScope) -> Effect {
     Effect::new("unlockRandomZone", move |ctx| {
         let locked: Vec<ZoneSlot> = zones_in_scope(ctx, &args)
@@ -227,13 +215,10 @@ pub fn unlock_random_zone(args: ZoneScope) -> Effect {
     })
 }
 
-/// B5 E20: Lock the zone the card running the script stands in — a firing trap's own backrow zone
-/// (Classic+ #1 Doom Shroom's "Lock this zone"). The trap is still in it while its list runs, and is
-/// consumed after (`traps::consume_trap`), leaving the zone Locked behind it. A card its own list moved
-/// off the field first locks nothing.
+/// B5 E20: Lock the zone the running card stands in (Classic+ #1 Doom Shroom's "Lock this zone"). The
+/// trap is consumed after its list runs (`traps::consume_trap`), leaving the zone Locked.
 pub fn lock_own_zone() -> Effect {
     Effect::new("lockOwnZone", move |ctx| {
-        // TS read the live `ctx.self`, whose zone is where the card stands now.
         let slot = ctx.live_self().and_then(|this| slot_of(ctx.state, this));
         if let Some(slot) = slot {
             lock_one(ctx, &slot);
@@ -241,8 +226,7 @@ pub fn lock_own_zone() -> Effect {
     })
 }
 
-/// B5 E20: Unlock every Locked zone the scope covers — both sides and both rows by default (Classic+
-/// #77 Anti-Softlock's "Unlock every zone") — one `unlocked` event per zone opened, in R68's walk.
+/// B5 E20: Unlock every Locked zone the scope covers (Classic+ #77 Anti-Softlock), in R68's walk.
 pub fn unlock_all(args: ZoneScope) -> Effect {
     Effect::new("unlockAll", move |ctx| {
         for slot in zones_in_scope(ctx, &args) {

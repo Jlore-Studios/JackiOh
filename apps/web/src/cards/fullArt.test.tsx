@@ -1,7 +1,6 @@
-// R1017001: the full-art cards print full art and no words, as Hearthstone's Signature cards do; no
-// other card does, a full face is the only layout that does, and the Full-art cards setting turns it
-// off. R2655001: they are the cards the cosmetics registry has a full art of, the hero portraits'
-// six among them. The pixels are cards.css's ("full art"), seen in the Almanac.
+// R1017001: the full-art cards print full art and no words. R2655001: they are the cards the
+// cosmetics registry has a full art of, the hero portraits' six among them. The pixels are cards.css's
+// ("full art"), seen in the Almanac.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -140,8 +139,7 @@ describe("R1017001 full-art faces", () => {
   });
 });
 
-// R1108000: a tutorial lesson's board (practice.tsx) sits below a FullArtAllowed of false, and the
-// faces and inspect overlays below it print no full art whatever the setting says.
+// R1108000: a tutorial lesson's board (practice.tsx) sits below a FullArtAllowed of false.
 describe("R1108000 no full art on a tutorial lesson's board", () => {
   it("R1108000 below FullArtAllowed false a hero's full face prints its text, the Full-art cards setting on", () => {
     expect(readCardSettings().fullArt).toBe(true);

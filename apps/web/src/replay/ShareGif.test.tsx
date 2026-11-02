@@ -1,8 +1,6 @@
 // "Share as GIF" in the replay player (#513, R513000): the panel in a real player over a folded game,
-// with the export itself stubbed (its own tests are `gif/export.test.ts`'s). It holds what the viewer
-// can do: make a GIF of the shown turn or of a range marked on the scrubber, watch its progress,
-// cancel, be told a clip is too long, and share or download the result. The state sits above the board,
-// so the jumps these tests make, each of which mounts the board afresh, keep it.
+// with the export itself stubbed (its own tests are `gif/export.test.ts`'s). The state sits above the
+// board, so the jumps these tests make, each of which mounts the board afresh, keep it.
 
 import { CATALOG } from "@jackioh/cards";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -89,7 +87,6 @@ describe("Share as GIF", () => {
     expect(screen.getByTestId(gifTestid.clip)).toHaveTextContent("Clip: this turn");
     expect(screen.getByTestId(gifTestid.turn)).toBeDisabled();
     expect(screen.getByTestId(gifTestid.shape)).toHaveValue("landscape");
-    // The toolbar's own buttons are the player's, and the panel is not among them.
     expect(screen.getByTestId(replayTestid.controls)).not.toContainElement(screen.getByTestId(gifTestid.panel));
   });
 
@@ -162,7 +159,6 @@ describe("Share as GIF", () => {
     expect(hi - lo + 1).toBeLessThanOrEqual(REPLAY_GIF_MAX_STEPS);
     expect(screen.getByTestId(gifTestid.clip)).toHaveTextContent(`Clip: steps ${String(lo + 1)} to ${String(hi + 1)}`);
 
-    // This turn puts the marks away.
     click(gifTestid.turn);
     expect(screen.getByTestId(gifTestid.clip)).toHaveTextContent("Clip: this turn");
   });
@@ -175,7 +171,6 @@ describe("Share as GIF", () => {
     expect(screen.getByTestId(gifTestid.tooBig)).toBeInTheDocument();
     expect(screen.queryByTestId(gifTestid.share)).toBeNull();
     expect(screen.getByTestId(gifTestid.make)).toBeEnabled();
-    // Changing the clip clears it.
     click(gifTestid.start);
     expect(screen.queryByTestId(gifTestid.tooBig)).toBeNull();
   });

@@ -7,8 +7,6 @@
 //! alone, as do the replacement and text guards that read it), and a Field Trap keeps firing either
 //! way. R78's reset clears it with the card leaving the field. No event is emitted: the next view
 //! shows the card, which is the whole of the reveal.
-//!
-//! Port of `packages/engine/src/effects/reveal.ts`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;

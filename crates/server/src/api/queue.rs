@@ -1,46 +1,15 @@
-//! Matchmaking (BUILD M7-T3, SPEC §9.5), in three modes (R257).
+//! Matchmaking (BUILD M7-T3, SPEC §9.5) in three modes (R257): Best of 1, Conquest (a trio played
+//! as a series, R330, `series.rs`) and All Random (R258); a ticket pairs only within its mode.
+//! Pairing runs on enqueue plus a sweeper, the window widening every 10 s up to `MAX_FAIR_GAP`
+//! (R640001), in R166's order. R1453: with `LADDER_BOTS=on`, a ticket past its fallback time with no
+//! person to pair with, after every pair of people the sweep could make, gets a ladder bot (for
+//! Conquest a series, R641000); R1555000: a queue holding no ticket kicks off one match between two
+//! grinding bots.
 //!
-//! §9.5: enqueue asserts the account is active and not in a match, validates the loadout, freezes the
-//! chosen deck into the ticket and returns its id. Pairing runs on enqueue plus a sweeper every few
-//! seconds; the window widens ±50 rating every 10 s from ±100 and stops at `MAX_FAIR_GAP` (R640001,
-//! which replaced its going uncapped after 60 s); both tickets are claimed in one atomic statement.
-//!
-//! R257 adds the mode: Best of 1 (one saved deck), Conquest (a trio, played as a series, R330) and
-//! All Random (R258). A ticket pairs only with a ticket of its own mode; inside a mode the window
-//! and R166's order are exactly as before. What a pair becomes depends on the mode: a Best-of-1
-//! match on the two frozen decks, an All Random match on two dealt ones, or a Conquest series whose
-//! first game waits for both players to pick (`series.rs`).
-//!
-//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a ticket that has waited past its
-//! fallback time with no person to pair with is paired with a ladder bot, after every pair of people
-//! the sweep could make (`pair_with_bots`, `bots::fallback`). Since the window stops at
-//! `MAX_FAIR_GAP` (R640001), a bot is that ticket's opponent rather than a person further from its
-//! rating. A Conquest ticket and its bot (R641000) become a series, claimed and written in one
-//! transaction (`start_bot_series`), whose picks the bot makes through the series sweeper
-//! (`bots::pick`); a bot that is a side of a series not over is seated nowhere else.
-//!
-//! R1555000 adds the match between two bots: while the top bots grind (`bots::pool`), a sweep that
-//! finds the queue holding no ticket at all kicks off one ranked Best-of-1 match between the
-//! lowest-rated free grinder and the free bot closest in rating to it (`kick_off_bot_match`,
-//! `bots::fallback::choose_bot_pair`), at most `BOT_VS_BOT_MAX_LIVE` live and
-//! `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended. The queue is read at kickoff only: a match
-//! already started plays out whoever queues meanwhile, and they are paired as above, with a person
-//! or a bot not in it.
-//!
-//! Three pieces: the endpoints, one pairing sweep (`try_pair`) and the sweeper (`run_matchmaker`).
-//! Two invariants:
-//!
-//!  - **The deck is frozen at enqueue** (§9.4). `freeze_choice` copies the deck or trio into the
-//!    ticket and nothing below re-reads a saved deck, so an edit while queued cannot change the game
-//!    (M7-T3's second acceptance item, §9.8).
-//!  - **Both tickets are claimed in one atomic statement**, `tickets_claim_pair`. A match or series is
-//!    created only after it returns true, so racing matchers cannot pair a ticket twice (M7-T3's race
-//!    test). Losing the race is not an error.
-//!
-//! The window is `rating_window` from `config.rs`, so its numbers are written down once. The route
-//! table is `app.rs`'s (SURFACE §11.2): `enqueue` (`POST /api/queue`, active), `dequeue` (`DELETE`,
-//! active) and `population` (`GET /api/queue/population`, user): the queue readout, each mode's
-//! expected wait and the last hour's games (R640002).
+//! Two invariants. The deck is frozen at enqueue (§9.4), so an edit while queued cannot change the
+//! game (§9.8). Both tickets are claimed in one atomic statement, `tickets_claim_pair`, before a
+//! match or series is made, so racing matchers cannot pair a ticket twice. Routes (SURFACE §11.2):
+//! `POST`/`DELETE /api/queue` and `GET /api/queue/population`, the readout (R640002).
 
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
@@ -93,17 +62,8 @@ pub(crate) fn json_list<T: serde::Serialize>(items: &[T]) -> String {
     serde_json::to_string(items).unwrap_or_default()
 }
 
-// R143 — the end-to-end mode's optional seed
-
-/// SPEC §11 R143: the server mints a match's seed and a client never supplies one, except that in
-/// end-to-end mode the room and queue endpoints accept an optional seed and use it verbatim so a
-/// networked spec can be seeded; outside that mode the field is rejected.
-///
-/// Rejected, not ignored: a client that sends a seed to a production server is told its request was
-/// not understood.
-///
-/// Public because R143 names two endpoints: `actor/rooms.rs` reads the field through this same
-/// function, so the rule is decided in one place.
+/// SPEC §11 R143: a client never supplies a seed, except in end-to-end mode, where the room and queue
+/// endpoints accept one; elsewhere it is rejected, not ignored. Public so `actor/rooms.rs` shares the rule.
 pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiError> {
     let Some(value) = body.get("seed") else {
         return Ok(None);
@@ -119,15 +79,8 @@ pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiEr
     }
 }
 
-/// ticket id -> the seed its enqueue asked for, until the ticket is paired or canceled.
-///
-/// Module state because `try_pair` is also run by the sweeper, which never sees a handler's locals.
-/// Nothing is written here outside end-to-end mode (`seed_override_of` refuses the field), and the
-/// map empties as tickets resolve.
-///
-/// Not in SPEC, no R-row: `Ticket` carries no seed, since adding one would put a test-mode field into
-/// the shape `db/**` persists, so R143's exception is confined to this map. `actor/rooms.rs` holds
-/// `room code -> seed` for the same reason.
+/// Ticket id -> the seed its enqueue asked for (R143). Module state because the sweeper runs `try_pair`
+/// too; kept off `Ticket`, whose shape `db/**` persists. `actor/rooms.rs` holds `room code -> seed` alike.
 static E2E_SEED_BY_TICKET: LazyLock<Mutex<IndexMap<String, String>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -146,19 +99,9 @@ fn forget_seed(ticket_id: &str) {
     seeds().shift_remove(ticket_id);
 }
 
-// R1989000 — the end-to-end mode's optional seat
-
-/// SPEC §11 R1989000: the match or series seed's coin decides every 1v1 door's seats, so a networked
-/// spec pins the seats it was written for the way it pins the seed (R143): `seat: "p1"` asks for
-/// Player 1's seat, `"p2"` for Player 2's, beside the seed, on the queue and room endpoints, and is
-/// refused outside end-to-end mode like the seed is. A honored pin skips the coin; a conflict pins
-/// the precedence-first profile (the older ticket, the host) and the other takes the free seat.
-///
-/// Rejected, not ignored, like the seed: a client that sends a seat to a production server is told
-/// its request was not understood.
-///
-/// Public because R1989000 names four doors: `actor/rooms.rs` reads the field through this same
-/// function, so the rule is decided in one place.
+/// SPEC §11 R1989000: a networked spec pins its seats as it pins the seed (R143), `seat: "p1"` or
+/// `"p2"`, refused outside end-to-end mode. A honored pin skips the seed's coin; in a conflict the
+/// precedence-first profile (the older ticket, the host) is pinned.
 pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine::PlayerId>, ApiError> {
     use jackioh_engine::PlayerId;
     let Some(value) = body.get("seat") else {
@@ -176,10 +119,7 @@ pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine
     }
 }
 
-/// ticket id -> the seat its enqueue asked for, until the ticket is paired or canceled.
-///
-/// Module state beside `E2E_SEAT_BY_TICKET`, for the same reason: the R1989000 pin is a test-mode
-/// field and `Ticket` must not carry it. `actor/rooms.rs` holds `room code -> seat` the same way.
+/// Ticket id -> the seat its enqueue asked for (R1989000), kept off `Ticket` as the seed is.
 static E2E_SEAT_BY_TICKET: LazyLock<Mutex<IndexMap<String, jackioh_engine::PlayerId>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -198,21 +138,16 @@ fn forget_seat(ticket_id: &str) {
     seat_pins().shift_remove(ticket_id);
 }
 
-/// SPEC §11 R1989000: one draw of the match or series seed on `{seed}:seats` at cursor 0. True
-/// means the precedence-first profile (the older ticket, the host, the person a bot pairs with,
-/// the grinder a kickoff names first) takes Player 1's seat; false hands it to the other side.
-/// Only the seed goes in, so the same seed always seats the same way and a replay folds unchanged.
-///
-/// Public for the R1989000 tests, which derive the seats a fixed seed deals; `src/` calls it at
-/// every 1v1 door.
+/// SPEC §11 R1989000: one draw of the seed on `{seed}:seats` at cursor 0; true seats the
+/// precedence-first side (the older ticket, the host, the person a bot pairs with, a kickoff's
+/// first grinder) as Player 1. Only the seed goes in, so a replay folds unchanged.
 pub fn seat_coin_p1_first(seed: &str) -> bool {
     jackioh_engine::Rng::new(&format!("{seed}:{SEAT_COIN_LABEL}"), 0).int(2) == 0
 }
 
-/// R1989000: the seat pin for a pair of tickets, consumed. The older ticket's pin wins over the
-/// younger's, mirroring `take_seed_for_pair`'s precedence; a pin for the younger ticket alone pins
-/// the younger and hands the older the free seat. Answers whether the older ticket takes P1, or
-/// `None` when neither ticket asked, and drops both entries either way.
+/// R1989000: the seat pin for a pair of tickets, consumed. The older ticket's pin wins, mirroring
+/// `take_seed_for_pair`; a pin for the younger alone hands the older the free seat. Answers whether the
+/// older ticket takes P1, `None` when neither asked, and drops both entries either way.
 fn take_seat_pin_for_pair(a: &Ticket, b: &Ticket) -> Option<bool> {
     use jackioh_engine::PlayerId;
     let (older, younger) = older_first(a, b);
@@ -232,16 +167,9 @@ fn take_seat_pin_for_pair(a: &Ticket, b: &Ticket) -> Option<bool> {
     })
 }
 
-// R897000 — a queued ticket's presence
-
-/// SPEC §11 R897000: when each profile with an open ticket was last heard from, in epoch ms.
-///
-/// Every signed-in request refreshes its caller (`api::http`'s router), which a queued client
-/// already sends every `SERIES_POLL_SECONDS` from wherever it is, so a silent profile reads as
-/// gone and its ticket expires before it can seat anyone. In memory, beside `E2E_SEED_BY_TICKET`:
-/// a restart loses it, and live clients re-touch within one poll, so `enqueued_at` covers what was
-/// never heard. One per `App`, not module state: profile ids repeat across parallel tests. Each
-/// sweep forgets a profile with no open ticket once it has been silent a window (`sweep`).
+/// SPEC §11 R897000: when each profile with an open ticket was last heard from, in epoch ms. Every
+/// signed-in request refreshes its caller, so a silent profile's ticket expires before it can seat
+/// anyone. One per `App`, not module state: profile ids repeat across parallel tests.
 pub struct QueuePresence {
     born: i64,
     heard: Mutex<IndexMap<String, i64>>,
@@ -272,10 +200,8 @@ impl QueuePresence {
             .shift_remove(profile_id);
     }
 
-    /// The sweep's tidy-up (`try_pair`): forgets each profile unheard from for longer than
-    /// `QUEUE_TICKET_STALE_MS` that owns none of the `open` tickets, whose entry nothing reads, so the
-    /// map stays the size of the queue rather than of everyone heard since boot. An open ticket's
-    /// owner keeps its entry for the sweep's verdict, so no verdict changes.
+    /// The sweep's tidy-up: forgets each profile unheard from for longer than `QUEUE_TICKET_STALE_MS`
+    /// that owns no `open` ticket, so the map stays the size of the queue.
     pub fn sweep(&self, now: i64, open: &[Ticket]) {
         let owners: IndexSet<&str> = open.iter().map(|ticket| ticket.profile_id.as_str()).collect();
         self.heard
@@ -292,7 +218,6 @@ impl QueuePresence {
         now - self.born >= QUEUE_TICKET_STALE_MS
     }
 
-    /// When this profile was last heard from, or never.
     pub fn last_heard(&self, profile_id: &str) -> Option<i64> {
         self.heard
             .lock()
@@ -308,20 +233,15 @@ impl Default for QueuePresence {
     }
 }
 
-// R1996000 — the readout, kept
-
-/// SPEC §11 R1996000: the queue readout last counted, with when, in epoch ms, kept for
-/// `QUEUE_READOUT_CACHE_TTL_SECONDS` so the polls of every waiting client inside it share one
-/// count. One answer for every caller: the readout names nobody (R640002). Not shared in flight:
-/// readouts that miss together each count, and the last to finish is kept. One per `App`, so a
-/// restart or a test starts with none.
+/// SPEC §11 R1996000: the readout last counted, kept `QUEUE_READOUT_CACHE_TTL_SECONDS` so every
+/// waiting client's polls share one count, one answer for all as it names nobody (R640002). Not shared
+/// in flight: readouts that miss together each count, and the last to finish is kept. One per `App`.
 #[derive(Default)]
 pub struct KeptReadout {
     kept: Mutex<Option<(i64, Value)>>,
 }
 
 impl KeptReadout {
-    /// The answer counted less than `QUEUE_READOUT_CACHE_TTL_SECONDS` before `now`, if one was.
     fn fresh(&self, now: i64) -> Option<Value> {
         let ttl_ms = QUEUE_READOUT_CACHE_TTL_SECONDS * MS_PER_SECOND;
         self.kept
@@ -332,7 +252,6 @@ impl KeptReadout {
             .map(|(_, body)| body.clone())
     }
 
-    /// `body` was counted at `now`: it replaces what was kept.
     fn keep(&self, now: i64, body: Value) {
         *self.kept.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((now, body));
     }
@@ -344,26 +263,22 @@ fn older_first<'a>(a: &'a Ticket, b: &'a Ticket) -> (&'a Ticket, &'a Ticket) {
     if a_first { (a, b) } else { (b, a) }
 }
 
-/// One pair of a sweep whose claim or start failed after the sweep had moved past the
-/// whole-sweep reads: the match id the claim reserved (or minted for the attempt), the ticket
-/// ids it concerned, and the error the caller whose ticket is among them still answers with.
-/// A lost claim race (`!won`) is not a failure: another matcher legitimately took the ticket.
+/// One pair of a sweep whose claim or start failed after the whole-sweep reads, and the error a caller
+/// whose ticket is among them answers with. A lost claim race is no failure: another matcher took it.
 pub struct FailedStart {
     pub match_id: String,
     pub ticket_ids: Vec<String>,
     pub error: ApiError,
 }
 
-/// What one pairing sweep did: how many matches and series it made, and which pairs failed to
-/// start without ending the sweep. Lives only for the sweep; dropped with the response.
+/// What one pairing sweep did: the matches and series it made, and the pairs that failed to start.
 pub struct SweepReport {
     pub made: usize,
     pub failed: Vec<FailedStart>,
 }
 
-/// The seed for a pair, consumed. Two seeded tickets can disagree — each spec seeds its own
-/// enqueue — so the older ticket's seed wins, which is the same "oldest first" tie-break `try_pair`
-/// already uses, and both entries are dropped either way.
+/// The seed for a pair, consumed. Two seeded tickets can disagree (each spec seeds its own enqueue), so
+/// the older ticket's seed wins, as in `try_pair`'s "oldest first", and both entries are dropped.
 fn take_seed_for_pair(a: &Ticket, b: &Ticket) -> Option<String> {
     let (older, younger) = older_first(a, b);
     let mut map = seeds();
@@ -375,12 +290,9 @@ fn take_seed_for_pair(a: &Ticket, b: &Ticket) -> Option<String> {
 
 // Enqueue
 
-/// §9.5's enqueue (the route's handler is `enqueue` below). The order of the checks is the order
-/// §9.5 writes them, and it matters: a player already in a match (or a series, R264) or already
+/// §9.5's enqueue, its checks in §9.5's order: a player already in a match (or a series, R264) or
 /// queued is told so before their deck is validated, so a stale client gets the useful error.
-///
-/// `seed` is R143's: the seed this enqueue asked for, or `None`. `seat` is R1989000's: the
-/// seat it asked for, or `None`. Only ever `Some` in end-to-end mode.
+/// `seed` (R143) and `seat` (R1989000) are only ever `Some` in end-to-end mode.
 async fn enqueue_ticket(
     app: &App,
     profile: &Profile,
@@ -400,9 +312,9 @@ async fn enqueue_ticket(
         ));
     }
 
-    // §9.4: "checked by one validator module shared by client and server, at save and again at
-    // queue". R253: a Best-of-1 deck on L2, L3, L5, L6 and a trio on L1–L6, both against the
-    // current catalog; All Random needs no deck at all (R258).
+    // §9.4: "checked by one validator module shared by client and server, at save and again at queue".
+    // R253: a Best-of-1 deck on L2, L3, L5, L6 and a trio on L1–L6, against the current catalog; All
+    // Random needs no deck (R258).
     let frozen = freeze_choice(app, &profile.id, choice).await?;
 
     let (mode, deck, portrait, deck_slots, trio, lean) = match frozen {
@@ -461,8 +373,7 @@ async fn enqueue_ticket(
     if let Some(seed) = seed {
         seeds().insert(ticket.id.clone(), seed);
     }
-    // R1989000, the same: a pin remembered for a ticket that does not exist would never be
-    // consumed and never dropped.
+    // R1989000, the same for a pin.
     if let Some(seat) = seat {
         seat_pins().insert(ticket.id.clone(), seat);
     }
@@ -510,12 +421,10 @@ fn trio_of(ticket: &Ticket) -> Result<FrozenTrio, ApiError> {
     }
 }
 
-/// R890000: undoes a pair's start — or a seat the compare-and-set refused — by letting go only of
-/// the seats that point at this match, then forgetting the `open` skeleton. The clears are
-/// conditional, so a rival match that seated a player meanwhile keeps its flag; the tickets stay
-/// claimed, as a failed start leaves them today. R1523000: once the clears have landed the ledger
-/// lets go of the same seats (a seat still pending is its lease's to give back); clears that fail
-/// leave both held in the ledger as in the record, until the reaper frees them (R1450).
+/// R890000: undoes a pair's start by letting go only of the seats that point at this match, then
+/// forgetting the `open` skeleton; a rival match's flag stays, as do the tickets' claims. R1523000:
+/// the ledger lets go of the same seats once the clears have landed; clears that fail leave both
+/// held until the reaper frees them (R1450).
 async fn cleanup_pair_start(app: &App, a_profile_id: &str, b_profile_id: &str, match_id: &str) {
     let cleanup = async {
         let mut tx = app.db.begin(None).await?;
@@ -540,10 +449,9 @@ pub(crate) async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiErr
     Ok(())
 }
 
-/// R259: a Conquest pair becomes a series, not a match. Its first game's match id is the one
-/// `tickets_claim_pair` just reserved (R263), and nobody is put in a match yet: the series opens on
-/// a pick phase, and `series.rs` starts game 1 once both players have chosen a deck. Series seat p1
-/// is R1989000's coin winner, who goes first in odd games.
+/// R259: a Conquest pair becomes a series, its first game's match id the one `tickets_claim_pair`
+/// reserved (R263); nobody is put in a match until both have picked a deck (`series.rs`). Series
+/// seat p1 is R1989000's coin winner, who goes first in odd games.
 async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
     let (older, younger) = older_first(a, b);
     // R1523000: both sides' seats in the series, or neither, before anything is written: a side
@@ -567,8 +475,7 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
     };
     // R143 and R259: the server mints the series seed (each game's is `{seed_base}:{n}`), unless an
     // end-to-end enqueue supplied one. R1989000: sides index 0 is the coin winner on the seed base
-    // (an end-to-end pin honored before the coin, the older ticket's first), and R335's alternation
-    // runs from there.
+    // (a pin honored first), and R335's alternation runs from there.
     let seed_base = take_seed_for_pair(a, b).unwrap_or_else(new_seed);
     let older_is_p1 = take_seat_pin_for_pair(a, b).unwrap_or_else(|| seat_coin_p1_first(&seed_base));
     let (p1, p2) = if older_is_p1 {
@@ -592,7 +499,6 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
             ),
             seed_base,
             catalog_version: app.catalog.version.clone(),
-            // R604: a series the queue pairs is ranked.
             ranked: true,
         };
         // One transaction, so the series row and `start_series`'s stale-ticket cancels land together: a
@@ -612,7 +518,8 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
             series
         }
         Err(error) => {
-            // `start_paired_match`'s cleanup for a pair that becomes a series: the `open` skeleton `tickets_claim_pair` wrote points at nothing, so delete it now rather than leave it to the reaper's open-row sweep (R1450).
+            // As `start_paired_match`'s cleanup: the `open` skeleton `tickets_claim_pair` wrote points at
+            // nothing, so delete it now rather than leave it to the reaper's open-row sweep (R1450).
             if let Err(cleanup) = discard_open(app, match_id).await {
                 tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
             }
@@ -644,21 +551,16 @@ fn dealt_portrait(seed: &str, seat: &str) -> Option<String> {
     Some(jackioh_engine::wire::pick_portrait_from_seed(&format!("{seed}:portrait:{seat}")).to_string())
 }
 
-/// Creates the paired match — or, for Conquest, the series. Called only with two tickets this
-/// process has already claimed, which is what makes it safe to write.
-///
-/// Best of 1 plays the two frozen decks. All Random (R258) deals both from the match seed and seat,
-/// each leaning on the set its own ticket picked, if any (R1372, R924000: a leaning ticket pairs with
-/// one that does not, or one that leans on another set), and the dealt decks go into the match row so `(seed, decks, log)` replays
-/// it. Portraits ride the same way (R642): the ticket's own for Best of 1, a uniform pick dealt from
-/// the seed for All Random.
+/// Creates the paired match, or for Conquest the series, from two tickets this process has claimed.
+/// Best of 1 plays the two frozen decks and portraits (R642); All Random (R258) deals both from the
+/// seed, each on its own ticket's lean (R1372, R924000), into the match row so `(seed, decks, log)`
+/// replays it.
 async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
     if a.mode == QueueMode::Bo3 {
         return start_paired_series(app, a, b, match_id).await;
     }
-    // R1523000: both seats, or neither, before anything is written. A player who took another game
-    // since the sweep's read (a room, a series, a co-op match) fails the start here, through the
-    // failed-start cleanup a lost seat takes; the lease gives the other seat back as it drops.
+    // R1523000: both seats, or neither, before anything is written: a player who took another game
+    // since the sweep's read fails the start here, as a lost seat does.
     let lease = match app
         .seats
         .reserve(&[&a.profile_id, &b.profile_id], Seat::Match(match_id.to_string()))
@@ -672,9 +574,8 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     };
     // R143: the server mints the seed, unless an end-to-end enqueue supplied one.
     let seed = take_seed_for_pair(a, b).unwrap_or_else(new_seed);
-    // R1989000: the older ticket's pin wins, else the younger's; without a pin the seed's coin
-    // seats the older ticket, so the same seed always seats the same way. Decks, portraits, slots
-    // and leans travel with the profile; All Random deals stay seat-keyed.
+    // R1989000: a pin, else the seed's coin, seats the older ticket. Decks, portraits, slots and
+    // leans travel with the profile; All Random deals stay seat-keyed.
     let (older, younger) = older_first(a, b);
     let older_is_p1 = take_seat_pin_for_pair(a, b).unwrap_or_else(|| seat_coin_p1_first(&seed));
     let (p1, p2) = if older_is_p1 {
@@ -717,33 +618,25 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         },
     );
 
-    // No `matches_create` here: `Registry::start` builds the row (seed, frozen decks, R79's clocks,
-    // status live) and calls it itself, so a create here made it twice and the second player's enqueue
-    // returned 500 after the match existed. The room path has the working shape: `rooms_claim` writes
-    // the `open` row and the registry's create promotes it to `live`; `tickets_claim_pair` writes the
-    // same skeleton.
-    //
-    // What stays in a transaction is the pair of `set_in_match` writes (§9.5's in-match state);
-    // `profiles.current_match_id` is a foreign key into `matches`, satisfied by the `open` row.
+    // `Registry::start` creates the row (R79's clocks), promoting to `live` the `open` skeleton
+    // `tickets_claim_pair` wrote, which satisfies `profiles.current_match_id`'s foreign key for the
+    // `set_in_match` writes (§9.5's in-match state) made first.
     {
         let mut tx = app.db.begin(None).await?;
-        // R1523000: fenced first, so a claim a newer server's epoch has overtaken writes nothing.
         if let Err(error) = tx.seats_fence(app.seats.epoch()).await {
             drop(tx);
             cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
             return Err(ApiError::from(error));
         }
-        // §9.5: in-match state is set here and cleared by `results.rs` at every ending. Both
-        // seats are claimed compare-and-set (R890000), the record and a second guard behind the
-        // ledger's: a seat it refuses after the ledger granted it is drift, and dropping `tx`
-        // rolls both stores back, so the rival flag is never touched.
+        // §9.5: in-match state is set here and cleared by `results.rs` at every ending. Both seats
+        // are claimed compare-and-set (R890000), a guard behind the ledger's: a refusal is drift,
+        // and dropping `tx` rolls both back, so the rival flag is never touched.
         let a_seated = tx.profiles_set_in_match(&a.profile_id, Some(match_id)).await?;
         let b_seated = tx.profiles_set_in_match(&b.profile_id, Some(match_id)).await?;
         if !a_seated || !b_seated {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
-            // Before the commit, so nothing was written: undo the claim's skeleton and let
-            // `try_pair` record the failed start (the tickets stay claimed). Dropped first: the
-            // fake store's lock is held by this transaction, and the cleanup begins its own.
+            // Dropped first: the fake store's lock is held by this transaction, and the cleanup
+            // begins its own. The tickets stay claimed.
             drop(tx);
             cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
             return Err(already_in_match());
@@ -754,7 +647,6 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     // lets go of them through its cleanup, as it clears the flags.
     lease.commit();
 
-    // R604: a match the queue pairs is ranked.
     let started = app
         .matches
         .start(
@@ -771,10 +663,8 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         )
         .await;
     if let Err(error) = started {
-        // The `set_in_match` transaction has committed, so a failed start leaves the `open` skeleton
-        // `tickets_claim_pair` wrote with both profiles pointing at it: the players would stay locked
-        // out until the reaper's open-row sweep (R1450) deletes it. Undo it now, before the error
-        // stands (the tickets stay claimed).
+        // The flags have committed, so a failed start would lock both players out until the reaper's
+        // open-row sweep (R1450): undo it now (the tickets stay claimed).
         cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
         return Err(error);
     }
@@ -788,15 +678,9 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     Ok(())
 }
 
-/// One pairing sweep. Oldest ticket first, each against the oldest qualifying opponent.
-///
-/// R166: the oldest ticket is paired first, against the oldest opponent its window admits, not the
-/// closest in rating. Ties break on ticket id, so a sweep is deterministic.
-///
-/// Answers what this sweep made and which pairs failed to start. A failed claim or start for
-/// one pair is logged (`queue.start_failed`) and the sweep moves on to the next pair instead of
-/// returning early, so a later pair still starts and `pair_with_bots` still runs. Only a failure
-/// that concerns the whole sweep (the opening reads and their commits) is returned as `Err`.
+/// One pairing sweep. R166: the oldest ticket is paired first, against the oldest opponent its window
+/// admits, not the closest in rating; ties break on ticket id. A pair's failed claim or start is
+/// logged (`queue.start_failed`) and the sweep moves on; only a failure of its opening reads is `Err`.
 pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
@@ -815,11 +699,9 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
     }
 
     // SPEC §11 R897000: a ticket unheard from for longer than `QUEUE_TICKET_STALE_MS` is canceled
-    // before pairing, so an absent player is never seated, never charged the disconnect grace and
-    // never takes a phantom ranked loss. A profile never heard from gets `enqueued_at`'s grace of
-    // one window (an old client that never touches), and a restarted server judges nothing until it
-    // has listened one window (`expiry_due`). `tickets_cancel` only closes an open ticket, so a
-    // claim that landed between the list and the cancel stands.
+    // before pairing, so an absent player is never seated nor takes a phantom ranked loss. A profile
+    // never heard from gets `enqueued_at`'s grace, and a restarted server judges nothing until it has
+    // listened one window. `tickets_cancel` only closes an open ticket, so a claim landed since stands.
     if app.queue_presence.expiry_due(now) {
         let mut live = Vec::with_capacity(open.len());
         let mut stale = Vec::new();
@@ -859,10 +741,8 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
         }
     }
 
-    // §9.5's "not in a match" holds at pairing too: a ticket left open while its owner joined a room
-    // match must not become a second match, nor (R264) while they are in a series, nor (R1065000)
-    // while a live co-op match holds them. One read each for the sweep; `taken` covers the pairs this
-    // sweep makes.
+    // §9.5's "not in a match" holds at pairing too: a ticket whose owner joined a room match, a
+    // series (R264) or a live co-op match (R1065000) must not become a second match.
     let owners: Vec<String> = open.iter().map(|ticket| ticket.profile_id.clone()).collect();
     let mut busy: IndexSet<String> = tx
         .profiles_get_many(&owners)
@@ -983,13 +863,9 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
 }
 
 /// R1453: pairs each ticket still open and past its fallback time, oldest first, with the bot
-/// `choose_bot` names for it, claimed in one statement as a pair of tickets is
-/// (`tickets_claim_for_bot`; a Conquest ticket's in `start_bot_series`, R641000). A claim that loses
-/// (the ticket went, or the bot was taken) is not an error: that ticket waits for the next sweep.
-/// `in_series` holds the sides of every series not over: a bot among them is taken already. Answers
-/// how many matches and series it made. A failed claim or start for one bot pairing is logged
-/// (`queue.start_failed`), collected into `failed`, and the loop moves on; only a failure that
-/// concerns the whole fallback (the opening `bots_list` and its commit) is returned as `Err`.
+/// `choose_bot` names, claimed in one statement (`tickets_claim_for_bot`; a Conquest ticket's in
+/// `start_bot_series`, R641000). A lost claim waits for the next sweep; a failed claim or start is
+/// logged and collected into `failed`; only a failure of the opening `bots_list` is `Err`.
 async fn pair_with_bots(
     app: &Arc<App>,
     open: &[Ticket],
@@ -1029,8 +905,7 @@ async fn pair_with_bots(
                     app.queue_presence.forget(&ticket.profile_id);
                 }
                 Ok(false) => continue,
-                // One bot pairing's failed start ends that pairing, not the fallback: the ticket
-                // is marked taken so no later iteration retries it, and the loop moves on.
+                // One bot pairing's failed start ends that pairing, not the fallback.
                 Err(error) => {
                     tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
                     failed.push(FailedStart {
@@ -1084,10 +959,8 @@ async fn pair_with_bots(
         }
         taken.insert(ticket.id.clone());
         busy.insert(bot.profile_id.clone());
-        // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
         app.queue_presence.forget(&ticket.profile_id);
-        // One bot pairing's failed start ends that pairing, not the fallback: `start_bot_match`
-        // already freed both sides, and the ticket and bot are marked taken above.
+        // A failed start ends this pairing only: `start_bot_match` already freed both sides.
         if let Err(error) = start_bot_match(app, ticket, bot, &match_id, lease).await {
             tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
             failed.push(FailedStart {
@@ -1102,14 +975,10 @@ async fn pair_with_bots(
     Ok(made)
 }
 
-/// R641000: the series a Conquest ticket and its bot play, as `start_paired_series` makes a pair's,
-/// with the claim (`tickets_claim_for_bot_series`) and the series row in one transaction: between
-/// games the bot is in no match, and the series is all that holds it, so a claim must never land
-/// without its series. Series p1 is R1989000's coin winner on the seed base (the person's pin
-/// honored before the coin) and goes first in odd games (R335); the other side plays the trio the
-/// pool dealt it. The series is ranked
-/// (R604) and opens on game 1's pick phase; `bots::pick` makes the bot's picks from the sweeper.
-/// Answers false, with nothing written, when the bot holds no trio or the claim lost.
+/// R641000: the ranked (R604) series a Conquest ticket and its bot play, the claim and the series row
+/// in one transaction; between games the series alone holds the bot. Series p1 is R1989000's coin
+/// winner (the person's pin first), first in odd games (R335). False when the bot has no trio or the
+/// claim lost.
 async fn start_bot_series(
     app: &Arc<App>,
     ticket: &Ticket,
@@ -1138,7 +1007,6 @@ async fn start_bot_series(
         .tickets_claim_for_bot_series(&ticket.id, &bot.profile_id, match_id, now)
         .await?;
     if !won {
-        // Dropping `tx` rolls it back.
         return Ok(false);
     }
     // R143 and R259: the server mints the series seed, unless an end-to-end enqueue supplied one.
@@ -1177,7 +1045,6 @@ async fn start_bot_series(
         sides: (first, second),
         seed_base,
         catalog_version: app.catalog.version.clone(),
-        // R604: a series the queue pairs is ranked, whoever it was paired with.
         ranked: true,
     };
     let series = start_series(app, input, &mut tx).await?;
@@ -1195,14 +1062,10 @@ async fn start_bot_series(
     Ok(true)
 }
 
-/// R1453: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
-/// pair's. The seed is the server's (or R143's end-to-end one). R1989000 seats the person and the
-/// bot by the seed's coin (the person's pin honored first); whoever takes p1 goes first. Best of 1 plays
-/// the ticket's frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`),
-/// with its portrait; All Random deals both seats as for two people (R258, R642), the bot's with no
-/// lean.
-/// The match is ranked (R604): a ticket the queue paired, whoever it was paired with. `lease` holds
-/// both seats in the ledger (R1523000), committed once the record holds them too.
+/// R1453: the ranked (R604) match a ticket and its claimed bot play, seated by the seed's coin
+/// (R1989000, the person's pin first). Best of 1 plays the frozen deck against a bot deck picked from
+/// the seed (`{seed}:bot-deck`); All Random deals both seats (R258, R642), the bot's with no lean.
+/// `lease` holds both seats in the ledger (R1523000) until the record holds them too.
 async fn start_bot_match(
     app: &Arc<App>,
     ticket: &Ticket,
@@ -1237,18 +1100,12 @@ async fn start_bot_match(
         },
         deck_slots: if random { None } else { ticket.deck_slots.clone() },
     };
-    // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
-    // in the match, and otherwise only the sweeper's release of stale starts would let them go,
-    // `BOT_STALE_START_SECONDS` after the claim (R1454), or the reaper's open-row sweep (R1450).
-    //
-    // §9.5's in-match state for the player, compare-and-set (R890000): a room join that seated
-    // them between the claim and now loses the seat here instead of seating them twice.
-    // `tickets_claim_for_bot` put the bot in the match. A lost seat and a failed write both
-    // undo the claim below; the transaction is over either way before the cleanup begins its
-    // own (the fake store's lock is held by it).
+    // Everything after the claim lets both go if it fails, as the claim already seated the bot;
+    // else only the stale-start release (R1454) or the open-row sweep (R1450) would. §9.5's in-match
+    // state for the player, compare-and-set (R890000): a room join that seated them since loses the
+    // seat here; the transaction is over before the cleanup begins its own (the fake store's lock).
     let seated: Result<bool, ApiError> = async {
         let mut tx = app.db.begin(None).await?;
-        // R1523000: a newer server holds the seats once the epoch has moved on.
         tx.seats_fence(app.seats.epoch()).await?;
         let won = tx
             .profiles_set_in_match(&ticket.profile_id, Some(match_id))
@@ -1264,8 +1121,7 @@ async fn start_bot_match(
         Ok(true) => lease.commit(),
         Ok(false) => {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
-            // Before any commit, so nothing was written: undo the claim and let the fallback
-            // record the failed start (the ticket stays claimed).
+            // Nothing was committed: undo the claim (the ticket stays claimed).
             cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;
             return Err(already_in_match());
         }
@@ -1305,7 +1161,7 @@ async fn start_bot_match(
             (bot_seat, human)
         };
 
-        // R604: a match the queue pairs is ranked. The mode is read off the claimed ticket.
+        // The mode is read off the claimed ticket.
         app.matches
             .start(
                 app,
@@ -1340,20 +1196,11 @@ async fn start_bot_match(
     Ok(())
 }
 
-/// R1555000: kicks off a match between two bots when the sweep at `now` finds none live (fewer than
-/// `BOT_VS_BOT_MAX_LIVE`), no ticket open in any mode, a bot grinding, none ended in the last
-/// `BOT_VS_BOT_MIN_GAP_SECONDS`, and a pair `choose_bot_pair` names: a grinder, and the ready bot
-/// closest in rating to it that is none of its last `BOT_RECENT_OPPONENTS` opponents. Each read
-/// waits for the checks before it to pass, so a sweep with nothing to kick off reads only the bots
-/// and the queue's count. Both are claimed in one statement (`bots_claim_pair`), and a claim that
-/// loses is no error. R1989000 seats the grinder and its opponent by the seed's coin; whoever
-/// takes p1 goes first. Each side plays one of its own Best-of-1
-/// decks picked from the seed (`{seed}:bot-deck:{seat}`) with its portrait, and the match is ranked
-/// (R604) and Best of 1, stated on the row since no ticket made it: the bot seat (`bots::seat`)
-/// plays both sides, and it is rated and recorded as any match with a bot side is (R610, R611,
-/// R640000). Before any of that, a match between two bots that a restart cut off, which no socket
-/// will come back to rebuild, is folded back so it plays on (§9.5). Answers the match it started,
-/// or none.
+/// R1555000: kicks off a ranked (R604) Best-of-1 match between two bots when fewer than
+/// `BOT_VS_BOT_MAX_LIVE` are live, no ticket is open, a bot is grinding, none ended in the last
+/// `BOT_VS_BOT_MIN_GAP_SECONDS`, and `choose_bot_pair` names a pair, claimed in one statement
+/// (`bots_claim_pair`). R1989000: the seed's coin seats them; rated as any bot game (R610, R611,
+/// R640000). A bot match a restart cut off is folded back first (§9.5).
 pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<String>, ApiError> {
     let (bots, queued) = {
         let mut tx = app.db.begin(None).await?;
@@ -1376,7 +1223,6 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
     }
     let (busy, games) = {
         let mut tx = app.db.begin(None).await?;
-        // R641000: the sides of every series not over, which no bot claim may seat.
         let busy: IndexSet<String> = tx
             .series_active()
             .await?
@@ -1414,7 +1260,6 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
         return Ok(None);
     };
     let mut tx = app.db.begin(None).await?;
-    // R1523000: a newer server holds the seats once the epoch has moved on; nothing is written.
     tx.seats_fence(app.seats.epoch()).await?;
     if !tx
         .bots_claim_pair(&players, &match_id, &app.catalog.version, now)
@@ -1424,8 +1269,6 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
         return Ok(None);
     }
     tx.commit().await?;
-    // R1523000: the record holds both seats now, so the ledger does: a start that fails from here
-    // lets go of them through its cleanup, as it clears the flags.
     lease.commit();
 
     let seed = new_seed();
@@ -1476,8 +1319,7 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
     }
     .await;
     if let Err(error) = started {
-        // As `start_bot_match`'s: both bots are let go and the skeleton discarded before the error
-        // stands.
+        // As `start_bot_match`'s: both bots are let go and the skeleton discarded.
         cleanup_pair_start(app, &players.0, &players.1, &match_id).await;
         return Err(error);
     }
@@ -1490,16 +1332,14 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
     Ok(Some(match_id))
 }
 
-/// §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" (R108: every 3 s,
-/// `MATCHMAKER_SWEEP_INTERVAL_SECONDS`). `app.rs` spawns this loop (SURFACE §11.2) and aborting the
-/// task stops it. Each sweep starts one interval after the last finished, on tokio's clock, so a test
-/// drives it with `tokio::time::advance`.
+/// §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" (R108,
+/// `MATCHMAKER_SWEEP_INTERVAL_SECONDS`); `app.rs` spawns it (SURFACE §11.2). Each sweep starts one
+/// interval after the last, on tokio's clock, so a test drives it with `tokio::time::advance`.
 pub async fn run_matchmaker(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
         // R1454: a bot (and its player) a cut-off start still holds is let go before the sweep,
-        // whatever `LADDER_BOTS` says now: a start cut off before a restart that turned it off
-        // holds them too.
+        // whatever `LADDER_BOTS` says now, since a restart may have turned it off.
         if let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await {
             tracing::warn!(event = "bots.start.release_failed", message = %error);
         }
@@ -1519,24 +1359,17 @@ pub async fn run_matchmaker(app: Arc<App>) {
 
 // Routes
 
-/// `POST /api/queue` (active): §9.5's enqueue. `AuthLevel::Active` is §9.4's gate, so a pending
-/// account gets 403 before this handler runs.
-///
-/// Pairing is attempted inline, so a player who pairs at once learns it from the response's status.
-///
-/// It takes `&Arc<App>` where SURFACE §11.2 writes `&App`: `Registry::start` takes `&Arc<App>`.
+/// `POST /api/queue` (active, §9.4's gate: a pending account gets 403 before this runs): §9.5's
+/// enqueue, pairing inline so a player who pairs at once learns it from the response's status. Takes
+/// `&Arc<App>` where SURFACE §11.2 writes `&App`, as `Registry::start` does.
 pub async fn enqueue(app: &Arc<App>, req: Req) -> ApiResult {
     enqueue_route(app, req).await
 }
 
 async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    // R257: the mode and the deck or trio.
     let choice = read_mode_choice(&req.body)?;
-    // R143: an optional `seed`, accepted only by an end-to-end test server and rejected — never
-    // ignored — anywhere else.
     let seed = seed_override_of(app, &req.body)?;
-    // R1989000: an optional `seat` beside it, under the same end-to-end-only rule.
     let seat = seat_override_of(app, &req.body)?;
     let ticket = enqueue_ticket(app, &profile, &choice, seed, seat).await?;
     let report = try_pair(app).await?;
@@ -1583,12 +1416,9 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// `DELETE /api/queue` (active): leaving the queue. Idempotent; `cancelled: false` when there was
-/// nothing open to cancel.
-///
-/// R167: a queued player may cancel, and canceling is idempotent, because the sweeper (R108) can
-/// pair a ticket between the client deciding to cancel and the request arriving: cancel never
-/// unmakes a pairing, it only closes a ticket still open.
+/// `DELETE /api/queue` (active): leaving the queue, idempotent (`cancelled: false` when nothing was
+/// open). R167: the sweeper (R108) can pair a ticket before the request arrives; cancel never unmakes
+/// a pairing, it only closes a ticket still open.
 pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
     dequeue_route(app, req).await
 }
@@ -1606,7 +1436,6 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
     // its seat pin goes with it.
     forget_seed(&ticket.id);
     forget_seat(&ticket.id);
-    // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
     app.queue_presence.forget(&profile.id);
     tracing::info!(event = "queue.cancelled", profileId = %profile.id, ticketId = %ticket.id);
     Ok(json(200, json!({ "cancelled": true, "ticketId": ticket.id })))
@@ -1627,17 +1456,11 @@ pub fn expected_wait_seconds(waits_ms: &[i64]) -> Option<i64> {
     Some((sorted[rank - 1].max(0) / step_ms + 1) * QUEUE_WAIT_STEP_SECONDS)
 }
 
-/// `GET /api/queue/population` (user): §9.5's readout instead of an endless spinner.
-///
-/// `AuthLevel::User`, not `Active` or `None`: the readout is aggregates that name nobody, and §9.4's
-/// "no queue" is about joining, which `POST /api/queue` still refuses. `None` would give an
-/// anonymous caller a live-traffic feed.
-///
-/// R640002: every number in it was counted over the last `QUEUE_READOUT_WINDOW_SECONDS`: per mode
-/// (R257), the expected wait the tickets claimed in it call for (`expected_wait_seconds`, null when
-/// too few were), and the games that ended in it. A pairing with a bot is a claim and a game against
-/// one is a game, like any other. No count of open tickets: one told a lone queuer that a bot came.
-///
+/// `GET /api/queue/population` (user, §9.5): the readout instead of an endless spinner. `AuthLevel::User`
+/// because it holds aggregates that name nobody (§9.4's "no queue" is about joining); `None` would give an
+/// anonymous caller a live-traffic feed. R640002: per mode (R257), the expected wait the tickets claimed
+/// in the last `QUEUE_READOUT_WINDOW_SECONDS` call for (null when too few) and the games that ended in
+/// it, bot ones included; no count of open tickets, which would tell a lone queuer that a bot came.
 /// R1996000: counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept (`KeptReadout`).
 pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
     population_route(app).await
@@ -1645,7 +1468,6 @@ pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
 
 async fn population_route(app: &App) -> ApiResult {
     let now = now_ms();
-    // R1996000: a readout counted inside the TTL answers until it runs out.
     if let Some(body) = app.queue_readout.fresh(now) {
         return Ok(json(200, body));
     }

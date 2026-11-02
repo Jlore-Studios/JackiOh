@@ -1,10 +1,8 @@
 // R2521001 (issue #2521): `damage_all`'s weighted roll, `odds` and `lucky` (Stinkyscape #53, #57, #61
-// Flak's "Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first)"). With
-// `odds`, each target of the sweep rolls its own amount just before its hit, the units in
-// `cardsInScope` order and then the heroes, as Hearthstone's Lightning Storm rolls each minion apart;
-// Lucky X rolls each of those X more times and keeps the highest (§6.1). Without `odds` the sweep is
-// what it always was, and draws nothing. The fixture cards live here (ids `odds-`, indexed from
-// 252100), so no other fixture file's collide with them.
+// Flak). With `odds`, each target rolls its own amount just before its hit, the units in `cardsInScope`
+// order and then the heroes, as Hearthstone's Lightning Storm rolls each minion apart; Lucky X rolls each
+// X more times and keeps the highest (§6.1). Without `odds` the sweep draws nothing. The fixture ids
+// (`odds-`, indexed from 252100) collide with no other file's.
 
 use std::collections::BTreeSet;
 
@@ -14,7 +12,6 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{both, json_of, new_game, put, round_trip, run_effect, slot};
 
-/// The fixture's printed odds, lowest first: 1 at 60, 2 at 30, 3 at 10.
 const ODDS: [DamageOdds; 3] = [
     DamageOdds {
         amount: 1,
@@ -29,20 +26,17 @@ const ODDS: [DamageOdds; 3] = [
         weight: 10,
     },
 ];
-/// The test's own reading of those odds, independent of the engine's walk: a draw of `int(100)`
-/// below 60 is a 1, below 90 a 2, and the rest a 3.
+/// The test's own reading of those odds, independent of the engine's walk.
 const ODDS_TOTAL: i32 = 100;
 const ONE_BELOW: i32 = 60;
 const TWO_BELOW: i32 = 90;
-/// The fixture's Radiant face prints Lucky 1.
 const RADIANT_LUCKY: i32 = 1;
 /// What the plain sweep (no odds) deals.
 const PLAIN_AMOUNT: i32 = 2;
-/// How many seeds a test walks.
 const SEEDS: usize = 60;
 
 /// A 0/4 Unit: "Activate: Deal a random 1 to 3 damage to each enemy (60%, 30%, 10%, lowest first)."
-/// Radiant: the same with Lucky 1. Its Lucky is the card's own, read as a Flak reads it.
+/// Radiant: the same with Lucky 1.
 const FLAK: &str = "odds-flak";
 /// A 0/40 Unit with no text: nothing here brings it down, so every sweep hits it.
 const WALL: &str = "odds-wall";
@@ -90,7 +84,6 @@ fn volley() -> ActivationDecl {
     }
 }
 
-/// The engine's fixture catalog with these cards and the flak's script on top.
 fn register_odds_fixtures() {
     crate::rules::fixtures::harness::setup_catalog();
     let mut catalog: CardDefs = registered_catalog().clone();
@@ -133,7 +126,6 @@ fn board(seed: &str, radiant: bool) -> Scenario {
     s
 }
 
-/// Each `damage` event's target and amount, in order.
 fn damage_hits(events: &[GameEvent]) -> Vec<(String, i32)> {
     events
         .iter()
@@ -146,7 +138,6 @@ fn damage_hits(events: &[GameEvent]) -> Vec<(String, i32)> {
         .collect()
 }
 
-/// One roll of the fixture's odds as the test reads them.
 fn read_roll(rng: &mut Rng) -> i32 {
     let at = rng.int(ODDS_TOTAL);
     if at < ONE_BELOW {
@@ -158,9 +149,8 @@ fn read_roll(rng: &mut Rng) -> i32 {
     }
 }
 
-/// What the flak's Activate deals on `s` as it stands, read off a copy of the match rng: each of p2's
-/// walls in lane order and then p2's hero, each its own roll, `lucky` more kept at the highest. The
-/// hits, and the cursor the rolls leave.
+/// What the flak's Activate deals on `s`, read off a copy of the match rng: p2's walls in lane order,
+/// then p2's hero, each its own roll with `lucky` more kept at the highest; and the cursor left.
 fn foreseen(s: &Scenario, lucky: i32) -> (Vec<(String, i32)>, u32) {
     let mut targets: Vec<String> = (1..=UNIT_ZONES)
         .filter_map(|lane| s.unit(P2, lane))

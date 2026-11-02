@@ -1,14 +1,11 @@
-// One of R169's modifier badges beside a hero, readable in full on touch (#2321).
-//
-// The rail beside the portrait gives a badge a few words at most (board.css's `max-width`, 12ch on a
-// phone), so a long label ("Add a random Call to Chaos …") is cut with an ellipsis, and its `title`
-// is a hover a touch screen never shows. So the badge is a button: a tap, a click, Enter or Space
-// opens its whole label in a bubble beside it, laid on the page (the hero row clips, and a label
-// wrapped in place would push the row apart). The badge again (a tap, or Enter or Space on it), a tap
-// elsewhere, or focus leaving it (Tab) closes it. It adds no key handler: the board's are frozen
-// (R2126000), and Enter and Space are the button's own click. The press stops at the badge, so it
-// never reaches the hero's own click (an emote menu, R1449); an attack or a drag still lands on the
-// portrait. It reads the label the view gives and nothing else (§10.8, CLAUDE.md rule 7).
+// One of R169's modifier badges beside a hero, readable in full on touch (#2321). The rail beside the
+// portrait gives a badge a few words at most (board.css's `max-width`), so a long label is cut with an
+// ellipsis, and its `title` is a hover a touch screen never shows. So the badge is a button: a tap, a
+// click, Enter or Space opens its whole label in a bubble beside it, laid on the page (the hero row
+// clips, and a label wrapped in place would push the row apart). It adds no key handler: the board's
+// are frozen (R2126000), and Enter and Space are the button's own click. The press stops at the badge,
+// so it never reaches the hero's own click (an emote menu, R1449); an attack or a drag still lands on
+// the portrait. It reads the label the view gives and nothing else (§10.8, CLAUDE.md rule 7).
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -17,7 +14,6 @@ import type { ModifierView } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 
-/** The bubble's testid: `modifier-full-<id>`. */
 export function modifierFullTestid(id: string): string {
   return `modifier-full-${id}`;
 }

@@ -1,17 +1,9 @@
 //! The event registry, the trigger queue and the resolution loop of SPEC §10.3 (BUILD M3-T2).
 //!
 //! The §10.3 diagram is the subject: apply → emit → traps fire immediately → queue the other
-//! triggers in R68's order → state check → repeat. One named test per acceptance item:
+//! triggers in R68's order → state check → repeat.
 //!
-//!   * R68 — two end-of-turn triggers on one side resolve in lane order;
-//!   * §10.3 — a trap fires before a queued trigger, because a trap is a response;
-//!   * R62 — except in the end-of-turn trap window, which comes after the end-of-turn triggers;
-//!   * R59 — the state check never runs between two hits of one effect;
-//!   * §10.3 — a trap that prompts its owner during the opponent's turn pauses the loop until answered;
-//!   * R1 — `CRY_ON_PLAY_ONLY` makes `summon` never fire Cry while `play` does, and R70's casts
-//!     (Cast on draw, a Call to Chaos cast) do fire it.
-//!
-//! Echo's repeats live in `echo.test.ts` (`state.echoQueue`). Fixtures are this file's own: `tg-`
+//! Echo's repeats live in `echo.rs` (`state.echo_queue`). Fixtures are this file's own: `tg-`
 //! defs indexed above 1400 (BUILD §0).
 
 use jackioh_engine::testkit::*;

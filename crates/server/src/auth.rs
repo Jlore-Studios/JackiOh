@@ -3,12 +3,10 @@
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 //!
 //! Managed auth (SPEC §9.4) over Supabase Auth. Per §9.2 the browser signs in against Supabase
-//! directly with the publishable key; this server only verifies the bearer token, so `verify` is the
-//! load-bearing method. Its one password path is R1443's sign-in by username (`password_grant`),
-//! which asks the provider for the session with the address only the server may read, behind the
-//! route's own limits. It never signs anyone up: a service-role sign-up would bypass the provider's
-//! rate limits and email confirmation, which §9.4's invite gate relies on. `sign_in_with_password`
-//! (`/api/auth/signin`) still answers unavailable on Supabase.
+//! directly; this server only verifies the bearer token, so `verify` is the load-bearing method. Its
+//! one password path is R1443's sign-in by username (`password_grant`), which asks the provider for the
+//! session with the address only the server may read. It never signs anyone up: a service-role sign-up
+//! would bypass the provider's rate limits and email confirmation, which §9.4's invite gate relies on.
 //!
 //! Security notes (§9.8's "Invite code brute force" row lists "verified email"):
 //!  - `email_verified` NEVER comes from the token's `user_metadata` (users can edit it, which would
@@ -17,9 +15,7 @@
 //!  - Deleting a user does not invalidate issued tokens: the admin lookup turns "no such user" into a
 //!    failed verification, and `profiles.status` (§9.4) stays the authority on what an account may do.
 //!  - Nor does ending a SESSION (R194): a token naming its session (`session_id`) is checked against
-//!    `GET /auth/v1/user`, and only a live answer is remembered, per session, for
-//!    `AUTH_SESSION_LIVE_CACHE_SECONDS`. That answer is also the authoritative user, so it stands in
-//!    for the admin lookup while fresh.
+//!    `GET /auth/v1/user` (`check_session`).
 //!  - TWO-STEP SIGN-IN (R665): an account with a verified TOTP factor is honored only with an `aal2`
 //!    token. Whether it has a factor comes from the provider's user, never the token, and the last
 //!    answer is remembered per user so an outage cannot lower the bar (`mfa_enrolled`).
@@ -38,13 +34,10 @@ use crate::config::{
     JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS, MS_PER_SECOND,
 };
 
-// The identity a verified token names
-
 /// Who a verified bearer token belongs to.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthUser {
-    /// The provider's user id (Supabase `auth.users.id`).
     pub user_id: String,
     pub email: Option<String>,
     pub email_verified: bool,
@@ -92,7 +85,6 @@ pub enum PasswordGrantOutcome {
 
 /// Why a provider call did not produce what was asked.
 ///
-/// - `Invalid`: the token is not currently valid.
 /// - `Rejected`: a provider's plain error (a wrong password). The routes turn it into the one
 ///   identical 401 (`api::auth::call_provider`); its text is logged, never sent.
 /// - `Unavailable`: passed through to the client as 503 with this message.
@@ -105,8 +97,6 @@ pub enum AuthError {
     #[error("{0}")]
     Unavailable(String),
 }
-
-// Tunables SPEC does not pin down
 
 /// Supabase issues project JWTs with this audience for a signed-in user.
 const AUTHENTICATED_AUDIENCE: &str = "authenticated";
@@ -124,8 +114,6 @@ pub const ACCOUNT_DELETION_RETRY_MESSAGE: &str =
 /// The level a token claims to be (`aal`): `aal2` once a second factor was proved (R665).
 const SECOND_FACTOR_LEVEL: &str = "aal2";
 
-// The slice of the provider's shapes this file reads
-
 /// GoTrue's user object, narrowed to the fields §9.4 needs. `user_metadata` is deliberately absent:
 /// it is user-editable, so this file has no way to read it by accident.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -141,7 +129,6 @@ pub struct AuthApiUser {
     pub mfa_enrolled: bool,
 }
 
-/// What an admin lookup of a user can say.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AdminLookup {
     Ok(AuthApiUser),
@@ -151,15 +138,12 @@ pub enum AdminLookup {
     Unavailable,
 }
 
-/// What deleting a user can say: done, already gone, or nobody answered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdminDeletion {
     Deleted,
     Missing,
     Unavailable,
 }
-
-// Helpers
 
 fn as_record(value: Option<&Value>) -> IndexMap<String, Value> {
     match value {
@@ -194,7 +178,6 @@ fn as_auth_api_user(value: &Value) -> Option<AuthApiUser> {
     })
 }
 
-/// R665: GoTrue's `factors` list holds a verified TOTP factor.
 fn has_verified_totp(factors: Option<&Value>) -> bool {
     let Some(Value::Array(factors)) = factors else {
         return false;
@@ -286,14 +269,11 @@ pub(crate) fn is_uuid(id: &str) -> bool {
     uuid::Uuid::parse_str(id).is_ok()
 }
 
-// The real Supabase clients
-
 /// The admin half (secret key only): §9.4 step 1's authoritative `email_confirmed_at`, and
 /// `DELETE /api/account`'s last step.
 #[derive(Clone)]
 pub struct AdminAuthClient {
     http: reqwest::Client,
-    /// `${SUPABASE_URL}/auth/v1`.
     auth_base: String,
     secret_key: String,
 }
@@ -376,7 +356,6 @@ impl AdminAuthClient {
     }
 }
 
-/// The Supabase clients; no password half.
 #[derive(Clone, Debug)]
 pub struct SupabaseAuthClients {
     pub admin: Option<AdminAuthClient>,
@@ -401,12 +380,9 @@ pub fn create_real_clients(input: &SupabaseAuthClientInput, http: &reqwest::Clie
     }
 }
 
-// The provider
-
 /// No `Debug`: it holds the secret key and the shared secret.
 #[derive(Clone, Default)]
 pub struct SupabaseAuthInput {
-    /// `env.supabase_url`, e.g. `https://<ref>.supabase.co`.
     pub url: String,
     /// `env.supabase_secret_key`. Server-only; bypasses RLS; never leaves this module.
     pub secret_key: String,
@@ -417,11 +393,9 @@ pub struct SupabaseAuthInput {
     /// Not in SPEC, and no R-row: test seam for the JWKS. Production leaves it unset and fetches
     /// `jwks_url`; a test hands it a local key set instead.
     pub key_set: Option<JwkSet>,
-    /// Not in SPEC, and no R-row: test seam for the clock behind the provider's caches
-    /// (`EMAIL_CONFIRMED_CACHE_TTL_MS`, R194's live sessions, the key set's age); defaults to the
-    /// server's clock (`app::now_ms`). A test drives the caches with it
-    /// while the provider's requests run in real time: tokio's paused clock would jump to their
-    /// timeouts whenever the runtime waits on the socket.
+    /// Not in SPEC, and no R-row: test seam for the caches' clock, default `app::now_ms`. Tests drive the
+    /// caches with it: tokio's paused clock would jump to the requests' timeouts whenever the runtime
+    /// waits on the socket.
     pub now: Option<ProviderClock>,
 }
 
@@ -433,9 +407,7 @@ struct LocalClaims {
     sub: String,
     email: Option<String>,
     app_metadata: IndexMap<String, Value>,
-    /// The provider's session this token belongs to (`session_id`), when the token names one.
     session_id: Option<String>,
-    /// R665: the token's assurance level (`aal`), from the verified payload.
     aal: Option<String>,
 }
 
@@ -452,7 +424,6 @@ enum SessionCheck {
     Unavailable,
 }
 
-/// A confirmed email as last read from the auth server.
 #[derive(Clone, Debug)]
 struct Confirmed {
     at: i64,
@@ -465,8 +436,7 @@ struct KeyCache {
     keys: Option<JwkSet>,
     fetched_at: i64,
     fixed: bool,
-    /// When the last refetch failed, so failures are retried at most once per `JWKS_COOLDOWN_MS`
-    /// (R1144000). Cleared by a success.
+    /// When the last refetch failed: retried at most once per `JWKS_COOLDOWN_MS` (R1144000).
     last_failed_at: Option<i64>,
 }
 
@@ -502,9 +472,7 @@ impl Drop for FetchGuard<'_> {
 enum JwksFetchError {
     /// The request never answered (the fetch timeout included).
     Transport,
-    /// The endpoint answered with this status.
     Status(u16),
-    /// The body was not a key set.
     Body,
 }
 
@@ -529,23 +497,20 @@ pub struct SupabaseAuth {
     clients: SupabaseAuthClients,
     /// The JWKS. Fetched on first use so constructing the provider does no I/O.
     key_set: tokio::sync::Mutex<KeyCache>,
-    /// The key-set fetch in flight, if one request is fetching while others wait (R1144000). Set
-    /// when a fetch starts and cleared by its `FetchGuard`, so at most one fetch runs at a time.
+    /// The key-set fetch in flight while others wait (R1144000); cleared by its `FetchGuard`, so at most
+    /// one runs.
     inflight: Mutex<Option<Arc<tokio::sync::Notify>>>,
     // The shared secret is discouraged: a leaked one lets an attacker mint any `sub`. It is only
     // tried when the JWKS path has already failed, and only if configured.
     hs_key: Option<Vec<u8>>,
-    /// userId -> when its *confirmed* email was last read from the auth server. Each insert first drops
-    /// the entries past `EMAIL_CONFIRMED_CACHE_TTL_MS`, as `check_session` prunes `live_sessions`.
+    /// userId -> when its *confirmed* email was last read from the auth server.
     confirmed: Mutex<IndexMap<String, Confirmed>>,
-    /// R665: the users the provider last said have a verified authenticator app. Kept for as long as
-    /// that stays the latest answer (positives only; a later answer without one removes the entry), so
-    /// an `aal1` token for such an account is refused even while the provider cannot be reached or the
-    /// answer is being served from `confirmed`.
+    /// R665: the users the provider last said have a verified authenticator app (positives only; a later
+    /// answer without one removes the entry), so an `aal1` token for such an account is refused even while
+    /// the provider cannot be reached or `confirmed` serves the answer.
     mfa_enrolled: Mutex<IndexSet<String>>,
     /// session id -> when the provider last said that session is live (R194). Positives only.
     live_sessions: Mutex<IndexMap<String, i64>>,
-    /// The caches' clock (`SupabaseAuthInput.now`).
     now: ProviderClock,
 }
 
@@ -686,8 +651,6 @@ impl SupabaseAuth {
         response.json::<JwkSet>().await.map_err(|_| JwksFetchError::Body)
     }
 
-    /// The keys of the set that could have signed a token with this header: its `kid` when it names
-    /// one, an `alg` the key allows, a key type of the algorithm's family, and a signing use.
     fn candidates(keys: &JwkSet, header: &Header) -> Vec<DecodingKey> {
         keys.keys
             .iter()
@@ -717,12 +680,10 @@ impl SupabaseAuth {
             .collect()
     }
 
-    /// The key set: fetched on first use, refetched once it is old, and refetched (at most once
-    /// per cooldown) when no key in it matches the token. The mutex is never held across a fetch:
-    /// one request fetches while the others wait on its `Notify`. A failed refetch keeps serving
-    /// the last good set for at most `JWKS_STALE_MAX_MS` past its age (R1144000), so a key
-    /// endpoint that is down signs nobody out. A successful fetch replaces the set whole, so a key
-    /// the endpoint dropped is refused at once.
+    /// The key set: fetched on first use, refetched once old, and on a key miss (at most once per
+    /// cooldown). The mutex is never held across a fetch: one request fetches while the others wait on
+    /// its `Notify`. A failed refetch keeps serving the last good set for at most `JWKS_STALE_MAX_MS`
+    /// past its age (R1144000), so a down key endpoint signs nobody out.
     async fn keys_for(&self, header: &Header) -> Vec<DecodingKey> {
         loop {
             let now = (self.now)();
@@ -805,9 +766,8 @@ impl SupabaseAuth {
         }
     }
 
-    /// What the cache answers once no fetch is running: the set while it is inside the stale cap,
-    /// nothing past it. A success lands here with a fresh age, so a key a successful refetch
-    /// dropped is refused at once.
+    /// What the cache answers once no fetch is running: the set while inside the stale cap, nothing past
+    /// it, so a key a successful refetch dropped is refused at once.
     fn served(cache: &KeyCache, header: &Header, now: i64) -> Vec<DecodingKey> {
         let age = now - cache.fetched_at;
         if cache.keys.is_some() && age < JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS {
@@ -822,9 +782,8 @@ impl SupabaseAuth {
     }
 
     // Both verifiers swallow their error: it covers a forged or expired token, a project that
-    // signs symmetrically (the JWKS then publishes no matching key) and a key set past
-    // R1144000's stale cap while the endpoint is down (`keys_for` still serves the last good set
-    // inside it). The caller falls through to the next tier.
+    // signs symmetrically (the JWKS then publishes no matching key) and a key set past R1144000's
+    // stale cap while the endpoint is down. The caller falls through to the next tier.
     async fn verify_against_jwks(&self, token: &str) -> Option<LocalClaims> {
         let header = jsonwebtoken::decode_header(token).ok()?;
         if header.alg.family() == AlgorithmFamily::Hmac {
@@ -845,10 +804,8 @@ impl SupabaseAuth {
         Self::claims_from(&data.claims)
     }
 
-    /// Ask the auth server who a token belongs to. Two callers: tier 3, the last-resort verification
-    /// for a project still signing with a symmetric secret this server has not been given, and
-    /// `check_session` (R194), since the provider refuses a token whose session it has ended. The
-    /// `apikey` header is the secret key, Supabase's own credential, never echoed back to a caller.
+    /// Ask the auth server who a token belongs to (tier 3 and `check_session`). The `apikey` header
+    /// is the secret key, Supabase's own credential, never echoed back to a caller.
     async fn fetch_user_by_token(&self, token: &str) -> AdminLookup {
         let response = match self
             .http
@@ -907,8 +864,7 @@ impl SupabaseAuth {
                 id: user_id.to_string(),
                 email: cached.email,
                 mfa_enrolled,
-                // Only confirmed emails are cached, so a hit means confirmed. The timestamp's value is
-                // never shown to anyone; `is_email_confirmed` only asks whether it is set.
+                // Only confirmed emails are cached, so a hit means confirmed.
                 email_confirmed_at: Some(iso_of(cached.at)),
                 app_metadata: IndexMap::new(),
             });
@@ -927,10 +883,9 @@ impl SupabaseAuth {
         lookup
     }
 
-    /// R194: is the session this verified token names still live at the provider? Asked of
-    /// `GET /auth/v1/user` with the token itself, which the provider refuses once the session (or the
-    /// user) is gone. Only a live answer is remembered, per session, so a session ended at the
-    /// provider is refused here within `AUTH_SESSION_LIVE_CACHE_SECONDS`.
+    /// R194: is the session this token names still live at the provider? Asked of `GET /auth/v1/user`
+    /// with the token itself, which the provider refuses once the session (or user) is gone. Only a live
+    /// answer is remembered, so an ended session is refused within `AUTH_SESSION_LIVE_CACHE_SECONDS`.
     async fn check_session(&self, session_id: &str, sub: &str, token: &str) -> SessionCheck {
         let live_session_ttl_ms = AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND;
         let seen = {
@@ -1049,11 +1004,10 @@ impl SupabaseAuth {
             };
         }
 
-        // Tier 3: unverifiable locally — ask the auth server, which is the authority either way.
-        // Only for the one token this server could not have checked itself: a legacy HS256 token
-        // while no shared secret is configured. Anything else that failed tiers 1 and 2 is forged,
-        // expired or not a JWT at all, and asking the provider about it would let any caller make
-        // this server send one request upstream per request it receives.
+        // Tier 3: unverifiable locally — ask the auth server, which is the authority either way. Only for
+        // the one token this server could not have checked itself: a legacy HS256 token while no shared
+        // secret is configured. Anything else that failed tiers 1 and 2 is forged, expired or not a JWT,
+        // and asking the provider would let any caller make this server send a request upstream per request.
         if self.hs_key.is_some() || !signed_with_shared_secret(token) {
             return None;
         }
@@ -1147,8 +1101,6 @@ impl SupabaseAuth {
     }
 }
 
-// BUILD M8's fixture provider (`E2E=1`) and the test double, one struct
-
 /// One fixture account (`e2e/support/config.ts`, `accounts`): user id, email, password, token.
 /// A private copy of `api::e2e::E2E_ACCOUNTS`' identity half; `api::e2e` owns the reseed.
 const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
@@ -1198,15 +1150,10 @@ struct E2eState {
     deletion: E2eDeletion,
 }
 
-/// The provider BUILD M8's fixture accounts sign in with. `verify` maps each static token in
-/// `e2e/support/config.ts` to its account and everything else to `Invalid`; `sign_in` accepts the
-/// fixture email/password pairs. The test support (`tests/support/deps.rs`) also registers users on
-/// it (`add_user`).
-///
-/// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts
-/// `emailVerified === true` on the *pending* account before it redeems. So every fixture is
-/// verified; what distinguishes `e2e-pending` and `e2e-econ` is their `profiles.status`.
-/// `app_metadata` stays empty: nothing here is an authorization claim.
+/// The provider BUILD M8's fixture accounts sign in with, and the test double (`tests/support/deps.rs`
+/// registers users on it with `add_user`). §9.4 makes a verified email a precondition of redemption,
+/// and spec 10 asserts it on the pending account, so every fixture is verified and `profiles.status`
+/// tells them apart. `app_metadata` stays empty: nothing here is an authorization claim.
 #[derive(Debug)]
 pub struct E2eAuth {
     state: Mutex<E2eState>,
@@ -1290,7 +1237,6 @@ impl E2eAuth {
         let found = state.users.values().find(|entry| {
             entry.user.email.as_deref().map(str::to_lowercase).as_deref() == Some(wanted.as_str())
         });
-        // A plain error, not an unavailable one: the route turns it into the one 401.
         let Some(entry) = found else {
             return Err(AuthError::Rejected(INVALID_LOGIN_CREDENTIALS.to_string()));
         };
@@ -1342,8 +1288,6 @@ impl E2eAuth {
         }
     }
 }
-
-// The enum
 
 /// The auth provider: Supabase in production, the fixtures under `E2E=1` and in the tests.
 ///

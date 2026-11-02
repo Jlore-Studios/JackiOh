@@ -6,8 +6,6 @@
 //! score is optimal, ties count, and only plays are judged — no verdict without a judge, none for a
 //! card that is not theirs to play. The verdict is stored on the play, follows a face-down Trap to
 //! its fresh id (R227), and never reaches a view (§10.8). The same play twice folds identically.
-//!
-//! Port of `packages/engine/test/pareto.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

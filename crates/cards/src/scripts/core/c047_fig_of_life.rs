@@ -1,15 +1,7 @@
 //! #47 Fig of Life (SPEC §8.2): "Heal a target 20", radiant "40" — a radiant cell that changes only
 //! a number changes only that number (§8 Conventions), so the two faces are one effect at two sizes.
-//!
-//! R19 is the whole of the §8.2 Engine cell ("any unit or hero"): `side: "any"` with
-//! `of: ["unit", "hero"]`, so either side's units and both heroes are offered.
-//!
-//! The pick is a DECLARED play-time target: it travels in the play action's `targets` and never
-//! pauses resolution (R81), and R90 validates what the play carried. It arrives as `{ of: "chosen" }`.
-//! An empty target set fizzles and the spell still counts as played (§8 Conventions).
-//!
-//! "Heal 20" is §6.3's Heal row, not this card's: a unit loses up to 20 damage and never rises past
-//! its max health, while a hero gains 20 with no cap, since §3 gives a hero no maximum.
+//! R19: target any unit or hero (R81, R90).
+//! Heal 20 is §6.3 Heal: units capped by max health; heroes have no max health (§3). Props have no script beyond keywords.
 
 use jackioh_engine::effects::heal;
 use jackioh_engine::prelude::*;
@@ -42,15 +34,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
-// radiant 40".
-//
-// R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero"): the tests heal
-// an ally unit, an enemy unit, an own hero and an enemy hero.
+// #47 Fig of Life — SPEC §8.2, BUILD M4-T4 (R19).
 //
 // §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. What is
 // asserted instead is the §6.3 Heal split: a unit never rises past its max health, while a hero
-// has no maximum (§3) and goes straight past 30. The props have no script beyond printed keywords.
+// has no maximum (§3) and goes straight past 30.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

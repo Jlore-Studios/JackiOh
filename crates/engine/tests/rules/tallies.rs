@@ -93,7 +93,6 @@ mod r2321000_a_count_kept_on_a_unit_rides_on_its_view {
             .insert(COUNTS.to_string(), Value::Object(counts));
     }
 
-    /// What `viewer` reads on the Unit `id` of either side.
     fn tallies_seen(s: &Scenario, viewer: PlayerId, id: &str) -> Option<Vec<TallyView>> {
         let view = s.view(viewer);
         view.you

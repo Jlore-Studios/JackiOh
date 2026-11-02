@@ -44,10 +44,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #102 Book of Nono-Words — SPEC §8.10 row S 102, BUILD M12 row S 102: "adds four No-No Words with
-// X set at 1, 2, 3 and 4, in that order, each costing exactly that and played with no X chosen; a
-// discount does not lower one; a hand with room for two keeps X = 1 and 2; one Bounced back keeps its
-// X; radiant the four are Radiant" (R1848003).
+// S #102 Book of Nono-Words — SPEC §8.10 row S 102, BUILD M12 row S 102 (R1848003).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -111,7 +108,6 @@ mod tests {
             for card in nonos(&s.hand(P1)) {
                 assert_eq!(Some(cost_now(s.state(), &card)), card.fixed_x, "R65: no modifier reaches it");
             }
-            // Played with no X chosen, for its set X.
             let two = nonos(&s.hand(P1))[1].clone();
             let target = s.unit_at(P2, 1);
             let before = s.state().players[P1].mana.current;

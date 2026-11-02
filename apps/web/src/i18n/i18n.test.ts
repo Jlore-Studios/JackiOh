@@ -1,10 +1,4 @@
 // R711000: client-wide internationalisation (#711).
-// Covers:
-// 1. t() with fallback, params, and plurals;
-// 2. the card rule and the easter egg;
-// 3. the language button switching live, persisting, and updating <html lang>;
-// 4. every zh-CN.json dictionary entry's {params} matching its English key;
-// 5. every literal sentence a non-test source wraps in t() having a zh-CN.json entry.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -91,7 +85,6 @@ describe("R711000 internationalisation and reader language", () => {
   });
 
   it("R711000 t() translates with fallback, parameter interpolation, and plural selection", async () => {
-    // 1. English (default)
     expect(getLocale()).toBe("en");
     expect(t("Your turn")).toBe("Your turn");
     expect(t("Looking for a {mode} opponent…", { mode: "Best of 1" })).toBe("Looking for a Best of 1 opponent…");
@@ -112,15 +105,12 @@ describe("R711000 internationalisation and reader language", () => {
     expect(formatSeconds(7200)).toBe("7200s");
     expect(formatDateTime(1900000000000)).toBe(new Date(1900000000000).toLocaleString());
 
-    // 2. Switch to zh-CN
     await setLocale("zh-CN");
     expect(getLocale()).toBe("zh-CN");
     expect(t("Your turn")).toBe("你的回合");
     expect(t("Looking for a {mode} opponent…", { mode: "单局" })).toBe("正在寻找单局对手…");
-    // Missing entries fall back to English
     expect(t("An untranslated engine sentence")).toBe("An untranslated engine sentence");
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
-    // Parameter formatting
     expect(t("{seat} drew a card", { seat: t("You") })).toBe("你抽了一张牌");
     expect(conquestText("winsNeeded")).toBe(
       `用你的 ${String(SERIES_WINS_NEEDED)} 套卡组各赢一局即可拿下系列赛（先拿到 ${String(SERIES_WINS_NEEDED)} 场胜利者获胜）。`,
@@ -138,7 +128,6 @@ describe("R711000 internationalisation and reader language", () => {
     expect(words(plural, "en", { count: 1 })).toBe("{count} card");
     expect(words(plural, "en", { count: 2 })).toBe("{count} cards");
     expect(words(plural, "zh-CN", { count: 1 })).toBe("{count} cards");
-    // Governing legal notice and date helpers
     expect(t("The English text governs.")).toBe("以英文版本为准。");
     expect(formatDay("2026-10-10")).toBe("2026年10月10日");
     expect(formatNumber(1234)).toBe("1,234");
@@ -150,12 +139,10 @@ describe("R711000 internationalisation and reader language", () => {
     const sampleDefId = Object.keys(CATALOG)[0] ?? "c-01";
     const sampleDef = CATALOG[sampleDefId]!;
 
-    // Reader in English:
     expect(getLocale()).toBe("en");
     expect(drawnInChinese(false)).toBe(false);
     expect(drawnInChinese(true)).toBe(true);
 
-    // Normal card for English reader: English face, not flagged, no easter egg
     const enFaceNormal = faceModel({ defId: sampleDefId, def: sampleDef, radiant: false });
     expect(enFaceNormal.chinese).toBeUndefined();
     expect(enFaceNormal.flagged).toBeUndefined();
@@ -167,13 +154,11 @@ describe("R711000 internationalisation and reader language", () => {
     expect(enFaceFlagged.flagged).toBe(true);
     expect(showsEasterEgg(enFaceFlagged)).toBe(false);
 
-    // Reader in Simplified Chinese:
     await setLocale("zh-CN");
     expect(getLocale()).toBe("zh-CN");
     expect(drawnInChinese(false)).toBe(true);
     expect(drawnInChinese(true)).toBe(true);
 
-    // Normal card for Chinese reader: Chinese face, not flagged, NO easter egg
     const zhFaceNormal = faceModel({ defId: sampleDefId, def: sampleDef, radiant: false });
     expect(zhFaceNormal.chinese).toBe(true);
     expect(zhFaceNormal.flagged).toBeUndefined();
@@ -185,11 +170,9 @@ describe("R711000 internationalisation and reader language", () => {
     expect(zhFaceFlagged.flagged).toBe(true);
     expect(showsEasterEgg(zhFaceFlagged)).toBe(true);
 
-    // Verify Flavour component rendering the easter egg text:
     const { container } = render(createElement(Flavour, { defId: sampleDefId, easter: true }));
     expect(container).toHaveTextContent("本来要把它翻译成中文的——可它已经是中文了！");
 
-    // Verify CardDetail modal inspect view also renders the easter egg line for Chinese reader:
     render(createElement(CardDetail, { def: sampleDef, onClose: () => {}, easter: true }));
     expect(document.body).toHaveTextContent("本来要把它翻译成中文的——可它已经是中文了！");
   });
@@ -221,7 +204,6 @@ describe("R711000 internationalisation and reader language", () => {
     expect(button).toHaveTextContent("EN");
     expect(button).toHaveAttribute("data-locale", "en");
 
-    // Click button to switch to Chinese:
     fireEvent.click(button);
     await vi.waitFor(() => {
       expect(button).toHaveTextContent("中文");
@@ -231,7 +213,6 @@ describe("R711000 internationalisation and reader language", () => {
     expect(document.documentElement.lang).toBe("zh-CN");
     expect(window.localStorage.getItem("jackioh.locale")).toBe("zh-CN");
 
-    // Click again to switch back to English:
     fireEvent.click(button);
     await vi.waitFor(() => {
       expect(button).toHaveTextContent("EN");

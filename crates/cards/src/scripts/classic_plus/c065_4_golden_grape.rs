@@ -74,10 +74,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M9 Classic+ row C+ 65.4: the pick is declared with the play (R81), in your hand or a permanent
-// you control (face-down included); it becomes Radiant, no change if it already is (§5.2); a hand or
-// face-down card's change is reported to the opponent by a redacted `radiantSet` either way (R177);
-// radiant also the cards next to it: its row neighbours on your side, or the neighbouring hand indices.
+// BUILD M9 Classic+ row C+ 65.4.
 #[cfg(test)]
 mod tests {
     use super::*;

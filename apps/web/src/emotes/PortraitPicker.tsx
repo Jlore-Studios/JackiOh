@@ -1,15 +1,9 @@
 // The deck builder's portrait picker (issue §8, R641): the deck's current portrait, and on tap a
-// grid of the portraits the account owns and the deck's own, in roster order (R1827000,
-// `useOfferedPortraits`; all six where ownership does not decide). Each tile has a Preview button
-// that lists the whole pool in that portrait's voice — its five voice lines and the nineteen emoji,
-// any of which a game may deal (R1343) — and a press on one plays it exactly as in a match — the
-// voice channel's line plus the speech bubble for a voice emote, the effects channel's synth plus
-// the sticker for an emoji. Picking a tile reports the id; the caller saves it through the deck
-// store's usual upsert (D5), which the server refuses for a portrait the account does not own.
-//
-// The preview runs the same pieces the board does — `emoteShowInfo` for the bubble's text and
-// span, `playEmote` for the sound, `EmoteShow` for what draws — so a preview can't drift from a
-// match: same text, same file, same 2s sticker.
+// grid of the portraits the account owns and the deck's own, in roster order (R1827000). Each tile's
+// Preview lists the whole pool in that portrait's voice, any of which a game may deal (R1343), and
+// plays it through the board's own pieces (`emoteShowInfo`, `playEmote`, `EmoteShow`), so a preview
+// can't drift from a match. A pick is saved through the deck store's usual upsert (D5), which the
+// server refuses for a portrait the account does not own.
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
 
@@ -74,10 +68,7 @@ function PortraitTile({
   );
 }
 
-/**
- * The picker itself. `portrait` is the deck's current one (`vanilla` when the column is null);
- * `onPick` gets the chosen id, to be saved through the same upsert every deck edit takes.
- */
+/** `portrait` is the deck's current one (`vanilla` when the column is null). */
 export function PortraitPicker({
   portrait,
   onPick,

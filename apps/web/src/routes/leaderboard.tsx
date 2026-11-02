@@ -1,10 +1,7 @@
-// `/leaderboard` — the global ranked ladder (SPEC §9.12, R608, R612).
-//
-// Jlorious #1–#100 first, then every other placed player grouped by Grape tier, highest tier
-// first, then how many are still playing placements. The caller's own standing heads the page.
-// The page is read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
-// through `rank/RankCrest.tsx` (#1650), and the hidden rating never reaches it. A row is keyed by its profile id and
-// shows the player's username, never the id (R1436).
+// `/leaderboard` — the global ranked ladder (SPEC §9.12, R608, R612): Jlorious #1–#100, then each
+// Grape tier. Read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
+// through `rank/RankCrest.tsx` (#1650), and the hidden rating never reaches it. A row is keyed by its
+// profile id and shows the player's username, never the id (R1436).
 
 import { useEffect, useState, type ReactElement } from "react";
 

@@ -18,10 +18,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #101 Overdrive Module — SPEC §8.10 row 101, BUILD M12 row S 101: "a 5/5 Reborn
-// Starship Piece with Brittle 2, destroyed as its count reaches 0 (§6.1 Brittle); its death fuses
-// a copy (R1852000) and Reborn returns it at 1 health; played as an Equip, the host gains +5/+5,
-// Brittle 2 and Reborn; radiant 10/10 and Brittle 4".
+// Stinkyscape #101 Overdrive Module — SPEC §8.10 row 101, BUILD M12 row S 101 (R1852000, §6.1).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,7 +94,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(MODULE, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 5/5, with Reborn.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 9, "health": 9 }));
         let host_kinds = live_kinds(&s, host.id.as_str());

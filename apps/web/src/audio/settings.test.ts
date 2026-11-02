@@ -50,9 +50,7 @@ afterEach(() => {
   resetAudioSettingsForTests();
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B12: reading
- * --------------------------------------------------------------------------------------------- */
+/* B12: reading */
 
 describe("B12 reading the settings", () => {
   it("B12 DEFAULT_AUDIO_SETTINGS is master 0.8, sfx 0.8, voice 1, not muted, voice on", () => {
@@ -190,9 +188,7 @@ describe("B12 reading the settings", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B13: writing, persisting and notifying
- * --------------------------------------------------------------------------------------------- */
+/* B13: writing, persisting and notifying */
 
 describe("B13 writing the settings", () => {
   it("B13 AUDIO_SETTINGS_KEY is jackioh.audio.v1", () => {

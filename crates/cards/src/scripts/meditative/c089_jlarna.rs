@@ -74,11 +74,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #89 Jlarna — SPEC §8.8 row 89, BUILD M10 row M 89: "A (4) Field Spell Aura credit line: spend
-// mana you don't have, owing up to 4 at once, paid back in 4 instalments over your next four
-// refreshes (R1223, R1224); missed instalments forgiven; the base face is Tributed at the end of a
-// turn you borrowed nothing on, the turn it is played included (R1225); credit and instalments read
-// through `param()`; radiant never tributes itself".
+// M #89 Jlarna — SPEC §8.8 row 89, BUILD M10 row M 89.
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -120,7 +116,6 @@ mod tests {
                 }));
                 s.play(ID, json!({ "zone": 1 }));
                 s.expect_in_zone(ID, "field");
-                // Nothing borrowed for the rest of the turn: the end of turn tributes it.
                 s.end_turn();
                 s.expect_in_zone(ID, "graveyard");
             }
@@ -133,7 +128,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
                 s.play(ID, json!({ "zone": 1 }));
-                // Jlarna cost 4 of 4 (3 before patch v0.3.10); a (1) vanilla now borrows 1 of the line.
+                // Jlarna cost 4 of 4; a (1) vanilla borrows 1 of the line.
                 s.play(VANILLA, json!({ "zone": 1 }));
                 assert_eq!(s.state().players.p1.turn_log.mana_borrowed, Some(1));
                 s.end_turn();
@@ -162,7 +157,6 @@ mod tests {
             #[test]
             fn r1224_a_shortfall_of_3_is_paid_1_1_1_0() {
                 let mut s = fielded("jlarna-split", false);
-                // Borrow 3 of nothing: the schedule is 1, 1, 1.
                 s.play(VANILLA, json!({ "zone": 1 }));
                 s.play(VANILLA, json!({ "zone": 2 }));
                 s.play(VANILLA, json!({ "zone": 3 }));
@@ -225,7 +219,6 @@ mod tests {
                 assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1, 1]));
                 s.end_turn();
                 s.end_turn();
-                // p1's refresh gave 1 less than its max: one instalment paid.
                 let mana = s.state().players.p1.mana;
                 assert_eq!(mana.current, mana.max - 1);
                 assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1, 1, 1]));
@@ -321,7 +314,6 @@ mod tests {
             #[test]
             fn radiant_never_tributes_itself() {
                 let mut s = fielded("jlarna-radiant", true);
-                // A turn with nothing borrowed: the Radiant face has no self-Tribute.
                 assert!(!credit_used_this_turn(s.state(), P1));
                 s.end_turn();
                 s.expect_in_zone(ID, "field");

@@ -1,11 +1,7 @@
-//! Trigger a Cry (docs/classic-sets.md B5 E13, R467): a Unit's Cry run again, on the field or out of a
-//! graveyard, for the player whose card triggered it, who makes its choices (R70) — Classic #54 Rewind.
-//! On the field the Unit is the Cry's "this"; out of a graveyard "this" finds nothing. A Cry's declared
-//! choices (R81) are asked as prompts, because a triggered Cry has no play to carry them; nothing is
-//! played, so nothing counts a play; and a Cry that asks parks its own tail ahead of what the
-//! triggering list still owes (R113).
-//!
-//! Port of `packages/engine/test/effects-cry.test.ts`.
+//! Trigger a Cry (docs/classic-sets.md B5 E13, R467; Classic #54 Rewind): a Unit's Cry run again, on
+//! the field or out of a graveyard, for the triggering card's controller, who makes its choices (R70).
+//! A Cry's declared choices (R81) are asked as prompts, because a triggered Cry has no play to carry
+//! them, and a Cry that asks parks its own tail ahead of what the triggering list still owes (R113).
 
 use jackioh_engine::effects::{has_triggerable_cry, trigger_cry};
 use jackioh_engine::testkit::*;
@@ -69,7 +65,6 @@ mod e13_trigger_a_cry {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
         assert_eq!(live(&state, &unit).buffs, AttackHealth { attack: 1, health: 1 });
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 1);
-        // Nothing was played, cast or announced.
         assert!(!has_type(&events, "cardPlayed"));
         assert!(!has_type(&events, "cardAnnounced"));
         assert!(!has_type(&events, "cardResolved"));
@@ -343,13 +338,12 @@ mod e13_trigger_a_cry {
     }
 }
 
-// R1873003 (Stinkyscape #6 Tylannt's Radiant summon of #7 The Greatest Heist): a face-up Field Spell on
-// the field has its Cry triggered where it stands, as itself; out of a graveyard only a Unit's is.
+// R1873003 (Stinkyscape #6 Tylannt): a face-up Field Spell on the field has its Cry triggered where it
+// stands, as itself; out of a graveyard only a Unit's is.
 mod r1873003_a_field_spell_on_the_field {
     use super::*;
     use jackioh_engine::Row::Backrow;
 
-    /// `trigger_cry` aimed at `card` by id, for p1, settled.
     fn trigger(state: &mut GameState, card: &CardInstance) {
         let mut sink = Bench::new(state);
         {
@@ -393,7 +387,7 @@ mod r1873003_a_field_spell_on_the_field {
 mod r1869001_a_random_trigger {
     use super::*;
 
-    /// `trigger_cry` with `random` on `card`, for p1, its rng cursor written back as `rewind_on`'s is.
+    /// `trigger_cry` with `random` on `card` for p1, its rng cursor written back.
     fn random_trigger(state: &mut GameState, card: &CardInstance) -> Vec<String> {
         let mut sink = Bench::new(state);
         {

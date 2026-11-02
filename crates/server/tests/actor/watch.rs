@@ -3,15 +3,12 @@
 //! views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`, whatever the friend's
 //! settings say (R2615000); full, non-friend and blocked are `forbidden` then closed; a watcher's
 //! frames never reach the reducer; a watcher leaving changes nothing in the match; the players' own
-//! match sockets hear `watchers {count}` when the count changes. A watcher already in is let go the
-//! same way (`forbidden`, then closed) once the two unfriend or either blocks the other. Once the match is over, a watcher that has had the view with the result is
-//! closed with 1000 (R1107000). A block made mid-match also mutes the two players' emotes toward
-//! each other (R1351000).
+//! match sockets hear `watchers {count}` when the count changes.
 //!
 //! The match is a real one on the registry, played with the server tests' cards
-//! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
-//! actor tests attach them. The watcher is a real WebSocket over the app served on in-memory pipes
-//! (`actor/duos.rs`'s harness), on tokio's paused clock.
+//! (`support::engine`); its players are attached with in-memory sockets (`support::socket`). The watcher
+//! is a real WebSocket over the app served on in-memory pipes (`actor/duos.rs`'s harness), on tokio's
+//! paused clock.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -261,9 +258,7 @@ async fn assert_forbidden(client: &WsClient) {
     assert!(client.of_type("view").is_empty(), "{:?}", client.frames());
 }
 
-// ---------------------------------------------------------------------------------------------
 // B50 — who may watch, and what they see
-// ---------------------------------------------------------------------------------------------
 
 mod b50_watching_a_friend {
     use super::*;
@@ -499,9 +494,7 @@ mod b50_watching_a_friend {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B51 — the count on the players' sockets
-// ---------------------------------------------------------------------------------------------
 
 mod b51_the_watcher_count {
     use super::*;
@@ -525,9 +518,7 @@ mod b51_the_watcher_count {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B50, B46 — a watch the friend withdraws, or that an unfriend or a block ends, ends at once
-// ---------------------------------------------------------------------------------------------
 
 mod b50_b46_a_watch_ends_when_its_leave_does {
     use super::*;
@@ -677,9 +668,7 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R835002 — the gate before the hello
-// ---------------------------------------------------------------------------------------------
 
 mod r835002_the_hello_gate {
     use super::*;
@@ -707,9 +696,7 @@ mod r835002_the_hello_gate {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1107000 — a watch ends with the match
-// ---------------------------------------------------------------------------------------------
 
 mod r1107000_a_watch_ends_with_the_match {
     use super::*;
@@ -821,9 +808,7 @@ mod r1107000_a_watch_ends_with_the_match {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1103000 — a watcher's later hello is answered, so a wake probe hears a live socket
-// ---------------------------------------------------------------------------------------------
 
 mod r1103000_a_watchers_later_hello {
     use super::*;
@@ -888,9 +873,7 @@ mod r1103000_a_watchers_later_hello {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2609000 — a watcher's socket keeps a seat's limits
-// ---------------------------------------------------------------------------------------------
 
 mod r2609000_a_watcher_keeps_a_seats_limits {
     use super::*;
@@ -998,9 +981,7 @@ mod r2609000_a_watcher_keeps_a_seats_limits {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1351000 — a block mutes the players' emotes
-// ---------------------------------------------------------------------------------------------
 
 mod r1351000_a_block_mutes_the_players_emotes {
     use super::*;
@@ -1045,14 +1026,10 @@ mod r1351000_a_block_mutes_the_players_emotes {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1379000 — the credential on the handshake
-// ---------------------------------------------------------------------------------------------
 
 mod r1379000_the_credential_on_the_handshake {
-    //! R1379000: a watcher offers its token as a `jackioh.bearer.` subprotocol beside `jackioh.v1`,
-    //! and `jackioh.v1` is all the server answers with. No usable credential is R148's 4401 and
-    //! lets no one in, and a renewed token lets in what the refused one could not (R1115000).
+    //! R1379000, R148, R1115000: watcher offers token as `jackioh.bearer.` subprotocol beside `jackioh.v1`.
     use super::*;
 
     impl World {
@@ -1105,13 +1082,7 @@ mod r1379000_the_credential_on_the_handshake {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// R1834003 — a watcher wears the seats' loadouts, by the view it watches
-// ---------------------------------------------------------------------------------------------
-
-/// R1834002, R1834003: a watcher is sent both seats' loadouts as it attaches, before any view, as a
-/// seat's socket is; a card's own picks follow only the delayed view that first shows that card of
-/// that seat's deck, once, so the watcher learns no card sooner than its views show it.
+/// R1834002, R1834003: watcher is sent both seats' loadouts as it attaches; picks follow delayed view.
 mod r1834003_a_watcher_wears_the_seats_loadouts {
     use super::*;
     use crate::support::store::named_cards;

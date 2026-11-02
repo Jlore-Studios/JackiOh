@@ -31,17 +31,12 @@ fn curse() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The Radiant face's Pierce is catalog data the damage pipeline reads (R346).
     let base = curse();
     let radiant = curse();
     CardScripts { base, radiant }
 }
 
-// M #28.1 Ancient Curse — SPEC §8.8 row 28.1, BUILD M10 row M 28.1: "Cast on draw when its holder
-// draws it (R40), out of either deck (R549): one hit of 7 on its caster's own hero, Armor reducing
-// it, then the draw repeats (§2.4) under R58's cap; never dealt at setup (R635, R748); uncast in a
-// hand (past the chain cap) it can be played for (2) with the same hit; damage reads through
-// `param()`; radiant Pierce: the hit skips Armor (R346)".
+// M #28.1 Ancient Curse — SPEC §8.8 row 28.1, BUILD M10 row M 28.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,7 +171,6 @@ mod tests {
 
                 s.start_turn();
 
-                // The full 7 lands and the Armor is untouched.
                 assert_eq!(damage_to(&s, "hero-p1"), vec![7]);
                 assert_eq!(s.state().players[P1].hero.health, 23);
                 assert_eq!(s.state().players[P1].hero.armor, 3);

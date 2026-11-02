@@ -1,4 +1,4 @@
-// Glitch's face (issue #170): a blank card whose name, type, text and cost are corrupted, drawn the
+// Glitch's face (#170): a blank card whose name, type, text and cost are corrupted, drawn the
 // same on every client, with a blob that spills over the frame and stands still under reduced motion.
 
 import { readFileSync } from "node:fs";

@@ -1,12 +1,6 @@
 //! Stinkyscape #4.2 KY's Last Exam's bank of impossible problems (SPEC §8.10 row S 4.2, R420, R465,
-//! R1870002). Card data like `ky_test_bank.rs`: public, shipped with the catalog, so changing a problem
-//! is a patch.
-//!
-//! "Solve an impossible problem": each statement leaves its unknowns open, so none of its four options
-//! follows from it and nothing in the words gives an answer away. No option is the answer here: the
-//! right one is drawn from the match rng when the problem is asked, then the options are shown under
-//! letters in an rng order (`choose_answer`), the key kept in the engine (R465). Every answerer, the AI
-//! included, guesses one in four. Plain text with Unicode maths, as KY's Test's bank is.
+//! R1870002). Card data shipped with catalog; changing a problem is a patch.
+//! "Solve an impossible problem": four open options; match RNG draws the answer and letters order (R465).
 
 /// How many options each problem offers.
 pub const KY_LAST_EXAM_OPTIONS: usize = 4;

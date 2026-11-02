@@ -1,8 +1,6 @@
-//! R1824000: every walk of a side's acting cards takes a Unit a carrier holds, once — a Unit for every
-//! rule (R446), its text read wherever a card acting on the field's is: a "your Units on the field"
-//! scope, the Plague reads, price rules, graveyard plays, Quickstriker, natural mana, a credit line, an
-//! Echo grant, a reveal Echo, a random Make Radiant and a Fuse onto your card. And a Unit standing in a
-//! backrow zone (R1081000) is read once, its draw limit and trigger multiplier asked once a read.
+//! R1824000: every walk of a side's acting cards takes a Unit a carrier holds once, a Unit for every
+//! rule (R446), its text read wherever a field card's is; a Unit standing in a backrow zone (R1081000)
+//! is read once too, its draw limit and trigger multiplier asked once a read.
 //!
 //! Fixtures are this file's own: a `cu-` carrier and `fx-` Units indexed from 18241 (BUILD §0).
 
@@ -17,19 +15,13 @@ use crate::rules::fixtures::harness::{act, both, in_hand, put, sink_for, slot};
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-/// The backrow lane the carrier stands in.
 const CARRIER_LANE: i32 = 2;
 /// The lane a Unit stands in the backrow by itself (R1081000).
 const STANDING_LANE: i32 = 4;
-/// The credit line the lender opens.
 const CREDIT: i32 = 3;
-/// The Echo the twin grants the next Spell.
 const ECHO: i32 = 1;
-/// The Echo the paranoid adds to a revealed Spell.
 const REVEAL_ECHO: i32 = 1;
-/// The Plague Counters one placement puts on the carried Unit.
 const PLAGUE: i32 = 2;
-/// The mana p1 has for the test's plays.
 const MANA: i32 = 10;
 
 // Fixtures.
@@ -50,7 +42,6 @@ fn carrier() -> CardDef {
         "radiant": { "keywords": [], "text": "carrier" },
     }))
 }
-/// A Unit with no text.
 fn rider() -> CardDef {
     unit_def(18242, json!({}))
 }
@@ -82,8 +73,7 @@ fn twin() -> CardDef {
 fn paranoid() -> CardDef {
     unit_def(18249, json!({}))
 }
-/// A Flying Unit, so it stands in a backrow zone (R1081000), with a draw limit and a trigger
-/// multiplier that count every time they are asked.
+/// A Flying Unit standing in a backrow zone (R1081000), its draw limit and multiplier counting each ask.
 fn flyer() -> CardDef {
     unit_def(18250, json!({ "keywords": [{ "kind": "Flying" }] }))
 }
@@ -164,7 +154,6 @@ fn scripts() -> Vec<(String, CardScripts)> {
 
 // Harness.
 
-/// p1's main phase of turn 1 with this file's cards registered and mana for the plays.
 fn board(seed: &str) -> GameState {
     let mut state = playing(&format!("carried-reads-{seed}"));
     let mut catalog = registered_catalog().clone();
@@ -211,7 +200,6 @@ fn carrying(seed: &str, def_id: &str) -> (GameState, CardInstance, CardInstance)
     (state, carrier, unit)
 }
 
-/// TS `makeContext(sink, null, { controller: "p1" })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),

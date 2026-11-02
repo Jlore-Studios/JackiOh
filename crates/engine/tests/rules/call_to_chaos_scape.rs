@@ -1,9 +1,7 @@
-//! Stinkyscape #151 Call to Chaos (Scape Edition)'s entry builders (`subsystems/call_to_chaos_scape.rs`),
-//! whose table is the card's (its first entry lays an Anomaly board, data the cards crate holds): the
-//! entries that summon or add the set's cards, against `fixtures::call_to_chaos_stinkyscape` — the
-//! Corvettes, the Drone Battleship's pile (R1842000), the Interceptor in every zone (R1882007), the
-//! Starship Pieces (R1878000) and the Weapons. The real card's tests (S #151) cover every entry against
-//! the real catalog.
+//! Stinkyscape #151 Call to Chaos (Scape Edition)'s entry builders (`subsystems/call_to_chaos_scape.rs`;
+//! the table, its first entry laying an Anomaly board, is the cards crate's data): the entries that summon or
+//! add the set's cards, against `fixtures::call_to_chaos_stinkyscape`: the Corvettes, the Drone Battleship's
+//! pile (R1842000), the Interceptor in every zone (R1882007), the Starship Pieces (R1878000), the Weapons.
 
 use jackioh_engine::config::{
     CHAOS_SCAPE_CORVETTES, CHAOS_SCAPE_HAND_PIECES, CHAOS_SCAPE_WEAPONS, CHAOS_STINKYSCAPE_COST, UNIT_ZONES,

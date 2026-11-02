@@ -38,13 +38,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative+ #20 KY's Competition — SPEC §8.9 row 20, R1184000, R1184001, R420, R465, BUILD M11 row
-// M+ 20: "asks a three-digit sum, then another after each right answer, the key in no view or event
-// (R420); a wrong answer ends it, a Stop ends it, a timeout ends it; after 3 right then a miss, summons
-// Lil' Kenny 3/3; after 0, nothing; at the cap, 30/30; the paused state survives a JSON round trip and
-// replays; the AI answers within its budget; radiant the problems are one- or two-digit and the Kenny
-// is Radiant (2X/2X)". The AI's answer is `crates/ai/tests/ai/ky_competition.rs`'s (R1184002); the
-// engine proves the machinery with fixtures (`crates/engine/tests/rules/ky_competition.rs`).
+// Meditative+ #20 KY's Competition — SPEC §8.9 row 20, R1184000, R1184001, R420, R465, BUILD M11
+// row (R1184002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,7 +51,6 @@ mod tests {
 
     const FILLER: &str = "core-005";
 
-    /// The Competition cast from p1's hand, its first question open.
     fn cast(seed: &str, radiant: bool) -> Scenario {
         let mut s = crate::scenario(json!({
             "seed": seed,
@@ -80,7 +74,6 @@ mod tests {
         }
     }
 
-    /// Answer the open question rightly or wrongly.
     fn answer(s: &mut Scenario, right: bool) {
         let correct = key(s);
         let letter = if right {
@@ -107,7 +100,6 @@ mod tests {
         s.state().pending.as_ref().and_then(|prompt| prompt.streak)
     }
 
-    /// `a op b = ?`'s two operands.
     fn operands(text: &str) -> (i32, i32) {
         let pieces: Vec<&str> = text.trim_end_matches(" = ?").split(' ').collect();
         let number = |at: usize| {
@@ -119,7 +111,6 @@ mod tests {
         (number(0), number(2))
     }
 
-    /// The Lil' Kennies on p1's field: (X, attack, health, Radiant).
     fn kennies(s: &Scenario) -> Vec<(i32, i32, i32, bool)> {
         active_units_of(s.state(), P1)
             .into_iter()
@@ -345,7 +336,6 @@ mod tests {
                     .collect();
                 state = act(&state, ActionBody::Mulligan { keep }, player, &mut log);
             }
-            // p1's first turn has 1 mana: pass to p1's second turn, at 2.
             state = act(&state, ActionBody::EndTurn, P1, &mut log);
             state = act(&state, ActionBody::EndTurn, P2, &mut log);
             let card = state

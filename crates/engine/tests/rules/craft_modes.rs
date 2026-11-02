@@ -1,9 +1,8 @@
 //! ME-CRAFT's two Meditative+ modes (issue #1182), through the fixture Spells of
 //! `fixtures/craft.rs`: the potion frame of M+ #16 Jazakus and M+ #16.1 Jazakus Prime
-//! (`pm-potion-crafter`, `pm-huge-potion-crafter`; R1182000, R1182001; a Spell with no stats since
-//! #1563, R1563008) and Scratch Pad's from-scratch canvas (`pm-scratch-crafter`, R1182002), and
-//! #1563's offer (R1563007) and retired Armor verb (R1563009). The cards themselves are proved again
-//! in `crates/cards`.
+//! (`pm-potion-crafter`, `pm-huge-potion-crafter`; R1182000, R1182001; a Spell with no stats,
+//! R1563008) and Scratch Pad's from-scratch canvas (`pm-scratch-crafter`, R1182002), and
+//! #1563's offer (R1563007) and retired Armor verb (R1563009).
 
 use jackioh_engine::subsystems::craft::{
     compile_crafted_def, compile_crafted_scripts, craft_id, craft_potion_presets, craft_presets,
@@ -16,7 +15,6 @@ use crate::rules::fixtures::craft::register_craft_fixtures;
 use crate::rules::fixtures::harness::act;
 use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, open_as, round_trip};
 
-/// An `Action` from its JSON, as the socket sends it.
 fn action(literal: Value) -> Action {
     json_as(literal)
 }
@@ -36,7 +34,6 @@ fn dealing_four() -> Value {
     potion("potion", 1, json!([{ "verb": "damageEnemyHero", "n": 4 }]))
 }
 
-/// The fixture Spell `def_id` cast by p1 (Radiant when asked): its craft prompt open.
 fn crafting(seed: &str, def_id: &str, radiant: bool) -> GameState {
     let mut state = board(seed);
     register_craft_fixtures();
@@ -44,8 +41,7 @@ fn crafting(seed: &str, def_id: &str, radiant: bool) -> GameState {
     state
 }
 
-/// R1563007: the open craft prompt's offer widened to every block, so a test about something else
-/// may answer with any verb.
+/// R1563007: the open craft prompt's offer widened to every block, for a test about something else.
 fn any_block(mut state: GameState) -> GameState {
     if let Some(pending) = state.pending.as_mut() {
         pending.craft_offer = Some(whole_palette());
@@ -53,7 +49,6 @@ fn any_block(mut state: GameState) -> GameState {
     state
 }
 
-/// The open craft prompt's presets, in order.
 fn presets(state: &GameState) -> Vec<CraftRecipe> {
     must(state.pending.clone(), "a craft prompt")
         .options
@@ -77,7 +72,6 @@ fn answered(state: &GameState, recipe: Value) -> ReduceResult {
     )
 }
 
-/// The crafted card in p1's hand.
 fn crafted(state: &GameState) -> CardInstance {
     must(
         state.players[P1]
@@ -106,7 +100,6 @@ fn refused(state: &GameState, recipe: Value, reason: &str) {
     );
 }
 
-/// p1 casts the crafted Potion with `targets`.
 fn cast_potion(state: &GameState, targets: Value) -> GameState {
     let potion = crafted(state).id;
     act(
@@ -145,8 +138,7 @@ fn r1182000_r1563007_r1563008_a_potion_crafter_opens_a_potion_prompt_at_cost_1_w
                 "{recipe:?}"
             );
         }
-        // The holder's view carries the mode and the offer; the opponent's shows only that a prompt
-        // is open.
+        // The holder's view carries the mode and the offer; the opponent's, only that a prompt is open.
         match view_for(&state, P1).pending {
             Some(PendingView::ForYou(view)) => {
                 assert_eq!(view.craft_mode, Some(CraftMode::Potion));
@@ -211,7 +203,6 @@ fn r1182000_r1563008_a_radiant_potion_doubles_its_numbers() {
 
 #[test]
 fn r1563008_an_aimed_potion_declares_its_target_with_the_cast() {
-    // A Potion that deals 3 to a target: 3 points.
     let aimed = potion("potion", 1, json!([{ "verb": "damageTarget", "n": 3 }]));
     let scripts = compile_crafted_scripts(&json_as(aimed.clone()));
     assert_eq!(scripts.base.targets.len(), 1, "the cast declares it");
@@ -235,7 +226,6 @@ fn r1182000_r1563008_a_recipe_outside_the_potion_frame_is_refused_and_the_prompt
         potion("hugePotion", 3, json!([{ "verb": "damageEnemyHero", "n": 4 }])),
         "this prompt crafts a Potion",
     );
-    // A Cry is no Potion's hat; two hats, nor are they; no hat at all, nor is that.
     let mut cry = dealing_four();
     cry["hats"][0]["hat"] = json!("cry");
     refused(&state, cry, "exactly one hat, its When cast");
@@ -248,7 +238,6 @@ fn r1182000_r1563008_a_recipe_outside_the_potion_frame_is_refused_and_the_prompt
     let mut bare = dealing_four();
     bare["hats"] = json!([]);
     refused(&state, bare, "exactly one hat, its When cast");
-    // The frame fixes the type, its stats and the cost.
     let mut unit = dealing_four();
     unit["type"] = json!("Unit");
     unit["attack"] = json!(2);
@@ -260,15 +249,12 @@ fn r1182000_r1563008_a_recipe_outside_the_potion_frame_is_refused_and_the_prompt
     let mut dearer = dealing_four();
     dearer["cost"] = json!(2);
     refused(&state, dearer, "a Potion costs (1)");
-    // One point over the budget of 4.
     refused(
         &state,
         potion("potion", 1, json!([{ "verb": "damageEnemyHero", "n": 5 }])),
         "over the budget of 4",
     );
-    // A When cast with nothing under it.
     refused(&state, potion("potion", 1, json!([])), "has no effect under it");
-    // The Activate it had until #1563.
     let mut activate = dealing_four();
     activate["hats"][0]["hat"] = json!("activate");
     refused(&state, activate, "exactly one hat, its When cast");
@@ -575,8 +561,8 @@ fn r1182002_the_random_policy_and_a_timeout_answer_from_scratch_with_a_preset() 
 fn r1563008_r1563009_a_potion_crafted_before_1563_still_compiles_as_it_did() {
     use jackioh_engine::subsystems::craft::{compile_crafted_def, compile_crafted_scripts};
 
-    // A Unit Potion whose Activate gains Armor: no prompt takes it now, but its recipe, kept in an
-    // older game's state, still builds the card it built.
+    // A Unit Potion whose Activate gains Armor: no prompt takes it, but an older game's recipe
+    // still builds the card it built.
     let old: CraftRecipe = json_as(json!({
         "cost": 1, "type": "Unit", "adjective": "Pure", "noun": "Closure",
         "attack": 2, "health": 2, "keywords": [], "echo": 0,

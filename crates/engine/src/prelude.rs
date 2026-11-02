@@ -1,20 +1,13 @@
 //! What a card script may name (SURFACE §7.1): `use jackioh_engine::prelude::*;` at the top of every
-//! `crates/cards/src/scripts/<set>/<file>.rs`. Written once by part 1.
-//!
-//! It re-exports the modules TS card scripts import values and types from (research A §5.3: the 74
-//! values and the engine types they name), the whole effects library (TS `@jackioh/engine/effects`),
-//! `subsystems` as a module (TS `subsystems.callToChaos(…)` is `subsystems::call_to_chaos(…)`), the
-//! wire types (TS `@jackioh/shared`), and the few outside names a script needs: `json!`, `Value`,
+//! `crates/cards/src/scripts/<set>/<file>.rs`. It re-exports the modules scripts read (research A
+//! §5.3), the whole effects library, `subsystems` as a module, the wire types, and `json!`, `Value`,
 //! `IndexMap`, `Arc` and `json_as`.
 //!
-//! Left out on purpose, because their names collide with the effects library's verbs and a card
-//! means the verb: `draw` (its `draw`, `add_to_hand`), `turn` (`end_turn`) and `damage`
-//! (`lose_health`). `mana` is in for `cost_now`, `effective_cost` and friends, so its `gain_mana`
-//! and `refresh_mana` are resolved to the effects' below. A script that wants anything else names
-//! its full path (`jackioh_engine::draw::draws_this_turn`).
-//!
-//! A script never touches `GameState` fields directly (CLAUDE.md rule 5): it reads through these
-//! helpers and writes through effects.
+//! Left out because their names collide with the effects' verbs, which a card means: `draw` (its
+//! `draw`, `add_to_hand`), `turn` (`end_turn`) and `damage` (`lose_health`). `mana` is in for `cost_now`
+//! and friends, so its `gain_mana` and `refresh_mana` are resolved to the effects' below. Anything else
+//! is named by full path (`jackioh_engine::draw::draws_this_turn`). A script reads through these
+//! helpers and writes through effects, never `GameState` fields (CLAUDE.md rule 5).
 
 pub use crate::animated::*;
 pub use crate::book_swap::*;
@@ -70,7 +63,7 @@ pub use crate::subsystems;
 pub use crate::wire::*;
 
 // Resolved explicitly: the effects' verbs over `mana`'s engine functions of the same names, and
-// `@jackioh/engine`'s `UnitView`/`HeroView` over the view's (see `lib.rs`).
+// `layers::UnitView` and `query::HeroView` over the view's (see `lib.rs`).
 pub use crate::effects::{gain_mana, refresh_mana};
 pub use crate::layers::UnitView;
 pub use crate::query::HeroView;
@@ -79,7 +72,7 @@ pub use indexmap::IndexMap;
 pub use serde_json::{Value, json};
 pub use std::sync::Arc;
 
-/// A TS object literal as a typed argument: `json_as::<SummonArgs>(json!({ "defId": "core-t-rush" }))`
+/// A JSON literal as a typed argument: `json_as::<SummonArgs>(json!({ "defId": "core-t-rush" }))`
 /// (SURFACE §6.6, §7.1). The literal is written once, at the card's build, so a mismatch is a bug in
 /// the card file: it panics naming the type and the JSON, which every test of that card shows.
 pub fn json_as<T: serde::de::DeserializeOwned>(v: Value) -> T {
