@@ -14253,33 +14253,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/CardFace.tsx",
-            "apps/web/src/cards/FullArtSignature.tsx",
-            "apps/web/src/cards/art/svg.ts",
-            "apps/web/src/cards/cosmetics.ts",
-            "apps/web/src/cards/fullArt.ts",
-            "apps/web/src/collection/collection.ts",
-            "crates/server/src/api/card_picks.rs",
-            "crates/server/src/cosmetics.rs",
-            "crates/server/src/loadout.rs",
-            "crates/server/tests/api/dev.rs",
-            "e2e/cypress/component/full-art-tiers.cy.tsx"
-          ],
-          "from": "d3a75aa8d7f721e8a88058c0d6f58066a8c9442d",
-          "main": "b2c1635fee6d6dad5172958281e0e83d6274e994"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41381993422",
+            "run": "41396233904",
             "tier": "strong"
           }
         ],
-        "sha": "c7c6470d5020fd03b3ada6681fb4ea1f3b27b9dc",
+        "sha": "598f4c342654c78570330f9ae4c4b84f18ebea47",
         "tiers": {
           "claude": "strong"
         }
