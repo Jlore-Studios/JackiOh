@@ -424,7 +424,7 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
 **Locked conversations.** `lock-conversations.yml` locks every issue and pull request as it opens,
 and an hourly sweep locks the rest, so only collaborators can comment: the people, the night bot
 and Squishy, whose tokens have write access. The threads `github-actions[bot]` opened (the CI
-alerts, the production countdown, the hygiene issues) stay unlocked, since the workflow's own
+alerts, the production issue, the hygiene issues) stay unlocked, since the workflow's own
 token cannot comment on a locked thread; `patches ship`'s "Shipped as" comment unlocks a locked
 thread, comments and locks it again (`titles.RetitleShipped`).
 

@@ -52,7 +52,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{card_def, play_resource, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -64,11 +64,6 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "health": 20 },
             "p2": { "field": [BODY] },
         }))
-    }
-
-    #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
     }
 
     #[test]

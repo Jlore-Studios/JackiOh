@@ -1,42 +1,39 @@
-# Merges main into production through a pull request, once a day, with one countdown issue anyone
-# can hold or delay, which lists what is queued; then deploys production to jackioh.com, the site and
-# its game server together. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is
-# the logic (read its header first) and apps/web/src/net/promote-production.test.ts holds it.
-# Staging is deploy-staging.yml's, which deploys every green commit of main by itself.
+# Moves production, by hand only (#2750; the owner made it manual on 2026-11-02). Someone comments
+# `/promote` on the open issue labeled `production merge` (or runs this from the Actions tab); the script
+# opens a pull request of a commit of main into production; the daily super run (super.yml) tests it;
+# and it merges once every one of that run's jobs passed, then deploys production to jackioh.com, the
+# site and its game server together. Nothing else moves production: no clock, no green run on main.
+# docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is the logic (read its header
+# first) and apps/web/src/net/promote-production.test.ts holds it. Staging is deploy-staging.yml's,
+# which deploys every green commit of main by itself.
 #
 # The `jackioh` Worker serves what the `production` branch holds, and nothing else. This workflow is
 # the only thing that moves it, and only by merging a pull request whose head is a commit of main
-# whose push-to-main CI run passed. It never force-pushes: a `production` that carries anything main
-# does not fails the run, loudly, for a human to look at.
+# whose push-to-main CI run passed and whose super run passed every job, or, the emergency way, one a
+# person merged with a written reason (`/skip-super <reason>`, or the `skip_super_reason` input), which
+# the issue records. It never force-pushes: a `production` that carries anything main does not fails
+# the run, loudly, for a human to look at.
 #
-# The open issue labelled `production merge` says "Merging to production in N hours" and stays open
-# for good: a merge is a comment on it. The check merges when the issue's time has passed and nobody
-# has put it on hold. The issue's body shows the queue: every pull request on main not yet in
-# production, with its CI, read from the runs. GitHub has not started this repository's scheduled
-# runs at all (CLAUDE.md, the night bot), so the check never rests on the cron: every green CI run on
-# main runs it too, and main moves many times a day.
-#
-# Four ways in:
-#   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest),
-#                      if GitHub starts it: read the new comments, merge if due and not on hold, then
-#                      say so on the issue and count down to the next.
-#   issue_comment      a /hold, /resume, /delay or /fast-forward on the countdown issue, from someone GitHub calls an
-#                      owner, member or collaborator: the same check, so the answer is quick and a
-#                      /resume on an overdue merge goes out at once.
-#   workflow_run (CI)  right after a green CI run on main: the same check, and the one that does the
-#                      work in practice. A catalog bump waits for it like any other change: the site
-#                      and the server go out together from production, so they always agree on the
-#                      catalog version (SPEC §9.4, R105).
-#   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
-#                      commit, or the `sha` given, which must also be green and on main. A hold does
-#                      not stop it.
+# Three ways in:
+#   issue_comment      `/promote [sha]` (or `/fast-forward`), `/skip-super <reason>` or `/cancel` on the
+#                      production issue, from someone GitHub calls an owner, member or collaborator.
+#                      `/hold`, `/resume` and `/delay` are answered that production no longer merges by
+#                      itself.
+#   workflow_run       a finished super run on a promotion pull request (`promote/*`): it merges when
+#                      the run passed, and says so on the issue when it did not. A green push-to-main CI
+#                      run wakes it too, to bring the issue's queue up to date; it moves nothing.
+#   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): `/promote` for the
+#                      `sha` given or main's newest green commit, or `/skip-super` when
+#                      `skip_super_reason` is filled; `redeploy` deploys production as it is.
 #
 # The promote branch, its pull request and the merge go out with the bot's token (BOT_GITHUB_TOKEN),
 # because GitHub refuses the Actions token any update to production that carries a change to
-# .github/workflows. Nothing loops: a pull request's CI never starts this workflow (only a green push
-# to main does), no workflow runs on a push to a promote branch, and the one that runs on a push to
-# production, releases.yml (when it brings patches.json), writes only GitHub releases. The countdown
-# issue stays on the Actions token, whose writes start no workflow.
+# .github/workflows, and because a pull request the Actions token opens starts no workflow, so super
+# would never test it. Nothing loops: CI and super run on the promotion pull request, and this
+# workflow wakes on their completion only to reconcile; no workflow runs on a push to a promote branch;
+# and the one that runs on a push to production, releases.yml (when it brings patches.json), writes
+# only GitHub releases. The production issue stays on the Actions token, whose writes start no
+# workflow.
 #
 # Once production has moved, `technical-log` logs what went live (#1360, part 5's `cargo jackioh
 # patches log`, R1369000): each App, AI and Internal commit between the main commit production
@@ -61,19 +58,23 @@
 # apps/edge/README.md), never this repository's.
 name: promote production
 
+# No `schedule`: production moves only when someone asks (the owner's call of 2026-11-02, which
+# CLAUDE.md rule 13 asks for before a schedule goes).
 on:
-  schedule:
-    - cron: "7 * * * *"
   issue_comment:
     types: [created]
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, super]
     types: [completed]
-    branches: [main]
+    branches: [main, "promote/**"]
   workflow_dispatch:
     inputs:
       sha:
         description: "Commit of main to promote (default: the newest one whose CI passed)"
+        required: false
+        default: ""
+      skip_super_reason:
+        description: "Emergency only: merge at once without the super run, for this reason (recorded on the production issue)"
         required: false
         default: ""
       redeploy:
@@ -96,23 +97,30 @@ permissions:
 
 jobs:
   promote:
-    name: merge main into production
-    # A workflow_run fires for every completed CI run, and an issue_comment for every comment in the
-    # repository; only a green push to main, or a command on the countdown issue, gets past here.
-    # The label is `RELEASE_LABEL` in scripts/promote-production.sh, which the test holds equal. The
-    # concurrency group is the job's, not the workflow's, so a comment that wakes nothing never takes
-    # the place of a run waiting its turn.
+    name: promote production
+    # A workflow_run fires for every completed CI or super run, and an issue_comment for every comment
+    # in the repository; only a green push to main, a super run on a promotion pull request, or a
+    # command on the production issue gets past here. The label is `RELEASE_LABEL` in
+    # scripts/promote-production.sh, which the test holds equal. The concurrency group is the job's,
+    # not the workflow's, so a comment that wakes nothing never takes the place of a run waiting its
+    # turn; and every run reconciles with the super run, so one that GitHub drops from the group's
+    # queue is made up by the next.
     if: >-
-      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      github.event_name == 'workflow_dispatch'
       || (github.event_name == 'workflow_run'
-        && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+        && ((github.event.workflow_run.name == 'CI' && github.event.workflow_run.conclusion == 'success'
+            && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
+          || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'
+            && startsWith(github.event.workflow_run.head_branch, 'promote/'))))
       || (github.event_name == 'issue_comment' && !github.event.issue.pull_request
         && contains(github.event.issue.labels.*.name, 'production merge')
         && github.event.comment.user.type != 'Bot'
         && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
-        && (contains(github.event.comment.body, '/hold') || contains(github.event.comment.body, '/resume')
+        && (contains(github.event.comment.body, '/promote') || contains(github.event.comment.body, '/fast-forward')
+          || contains(github.event.comment.body, '/skip-super') || contains(github.event.comment.body, '/cancel')
+          || contains(github.event.comment.body, '/hold') || contains(github.event.comment.body, '/resume')
           || contains(github.event.comment.body, '/release') || contains(github.event.comment.body, '/unhold')
-          || contains(github.event.comment.body, '/delay') || contains(github.event.comment.body, '/fast-forward')))
+          || contains(github.event.comment.body, '/delay')))
     concurrency:
       group: promote-production
       cancel-in-progress: false
@@ -130,13 +138,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
 
-      - name: merge main into production and keep the countdown issue
+      - name: promote production and keep its issue
         id: promote
         env:
           GH_TOKEN: ${{ github.token }}
           PROMOTE_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           EVENT: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
           INPUT_SHA: ${{ inputs.sha }}
+          INPUT_SKIP_REASON: ${{ inputs.skip_super_reason }}
         run: bash scripts/promote-production.sh
 
   # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge

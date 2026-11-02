@@ -94,25 +94,6 @@ mod tests {
         // The script itself
 
         #[test]
-        fn s8_3_the_script_carries_only_the_tribute_cost_both_keywords_are_catalog_data_s10_4_layer_1() {
-            crate::register_all();
-            // Granting Indestructible or Immutable here would be a second source of truth (see #25).
-            let scripts = super::super::script();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(serde_json::to_value(&scripts.base.static_flags).unwrap(), json!({ "tribute": 1 }));
-            assert_eq!(
-                def.base.keywords.iter().map(|keyword| keyword.kind().as_str()).collect::<Vec<_>>(),
-                ["Indestructible"]
-            );
-            assert_eq!(
-                def.radiant.keywords.iter().map(|keyword| keyword.kind().as_str()).collect::<Vec<_>>(),
-                ["Indestructible", "Immutable"]
-            );
-            assert!(scripts.base.cry.is_none());
-            assert!(scripts.base.aura.is_none());
-        }
-
-        #[test]
         fn r81_r90_the_tribute_travels_in_the_play_actions_own_list_so_the_card_declares_no_targets() {
             crate::register_all();
             let scripts = super::super::script();

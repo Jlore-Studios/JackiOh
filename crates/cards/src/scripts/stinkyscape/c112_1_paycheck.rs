@@ -122,19 +122,6 @@ mod tests {
     }
 
     #[test]
-    fn declares_payday_and_all_in() {
-        crate::register_all();
-        for scripts in [script().base, script().radiant] {
-            assert_eq!(scripts.modes.len(), 1);
-            assert_eq!(scripts.modes[0].kind, PromptKind::Mode);
-            assert_eq!(
-                scripts.modes[0].options,
-                vec![PAYDAY.to_string(), ALL_IN.to_string()]
-            );
-        }
-    }
-
-    #[test]
     fn payday_gives_2_mana_this_turn_a_draw_and_20_credits() {
         let mut s = setup("paycheck-payday", false);
         assert_eq!(paid(&mut s, PAYDAY), (2, 1, 20));

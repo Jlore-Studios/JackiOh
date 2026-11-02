@@ -18,6 +18,15 @@
 #   check-production    writes nothing: whether PRODUCTION_SUPABASE_SECRET_KEY is shaped like a secret
 #                       key, and whether PRODUCTION_DATABASE_URL reaches JackiOh-Production and what it
 #                       holds. Run it after setting either secret.
+#   production-auth     JackiOh-Production's sign-in settings, copied from staging's project through
+#                       Supabase's Management API (SUPABASE_ACCESS_TOKEN, a personal access token): email
+#                       confirmations, SMTP, the email templates, rate limits, MFA, sessions, providers,
+#                       with production's own Site URL and Redirect URLs (infra/supabase.tf's) and
+#                       leaked-password protection on. It also adds https://staging.jackioh.com/login to
+#                       staging's Redirect URLs, keeping the rest (section 4, step 4). A value that names
+#                       staging's project, and a secret the API does not hand back, stay out and are
+#                       named. With `dry_run` (the default) it lists what it would change and writes
+#                       nothing. Run it before the copy's real run.
 #   copy                staging's database into the empty JackiOh-Production (section 8): roles, schema
 #                       and data, the four statistics tables' live rows alone and none of
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
@@ -46,9 +55,10 @@ on:
           - drop-ping
           - production-secrets
           - check-production
+          - production-auth
           - copy
       dry_run:
-        description: "copy only: dump and count, and write nothing to production"
+        description: "copy and production-auth: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
@@ -290,6 +300,118 @@ jobs:
           (cd apps/edge && pnpm exec wrangler secret bulk "$file" --config ../../wrangler.jsonc --env="")
           rm -f "$file"
           echo "production's server reads these from its next deploy: promote production with redeploy (section 4, step 6.3)"
+
+      - name: copy staging's sign-in settings to JackiOh-Production
+        if: ${{ inputs.step == 'production-auth' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          # infra/supabase.tf's, so Terraform's first full apply finds nothing to change.
+          PRODUCTION_SITE: https://jackioh.com
+          PRODUCTION_REDIRECTS: https://jackioh.com/login
+          STAGING_REDIRECT: https://staging.jackioh.com/login
+        run: |
+          set -euo pipefail
+          umask 077
+          case "$SUPABASE_ACCESS_TOKEN" in
+            sbp_*) ;;
+            "") echo "::error::SUPABASE_ACCESS_TOKEN is not set: a personal access token from https://supabase.com/dashboard/account/tokens"; exit 1 ;;
+            *) echo "::error::SUPABASE_ACCESS_TOKEN is not a Supabase personal access token (sbp_…)"; exit 1 ;;
+          esac
+          api() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          config=https://api.supabase.com/v1/projects
+          api "$config/$STAGING_REF/config/auth" > "$RUNNER_TEMP/auth.staging.json"
+          api "$config/$PRODUCTION_REF/config/auth" > "$RUNNER_TEMP/auth.production.json"
+
+          # Prints the plan, writes the two PATCH bodies (an empty object when nothing changes).
+          python3 - "$RUNNER_TEMP" <<'EOF'
+          import json, os, re, sys
+          tmp = sys.argv[1]
+          staging = json.load(open(f"{tmp}/auth.staging.json"))
+          production = json.load(open(f"{tmp}/auth.production.json"))
+          staging_ref = os.environ["STAGING_REF"]
+          secret = re.compile(r"(pass|secret|key|token)", re.I)
+          # The project's own sizing and SAML (an add-on of its own), not sign-in behaviour.
+          own = re.compile(r"^(db_max_pool_size|db_max_pool_size_unit|api_max_request_duration|saml_.*)$")
+          template = re.compile(r"^mailer_(templates|subjects|notifications)_")
+          def hidden(value):
+              # A secret the API masks rather than hands back.
+              return isinstance(value, str) and re.fullmatch(r"[*\u2022]{3,}", value) is not None
+          def shown(key, value):
+              if value in (None, ""):
+                  return "(empty)"
+              if isinstance(value, str) and secret.search(key):
+                  return "(a secret, set)"
+              if template.match(key):
+                  return f"({len(str(value))} characters)"
+              text = json.dumps(value)
+              return text if len(text) <= 80 else text[:77] + "..."
+          # A provider, a hook or SMTP goes over whole or not at all: half of one breaks sign-in.
+          def group(key):
+              m = re.match(r"^(smtp_|external_[a-z0-9]+_|hook_[a-z0-9_]+?_(?=uri$|secrets$|enabled$))", key)
+              return m.group(1) if m else None
+          patch, left, broken = {}, [], set()
+          for key, value in sorted(staging.items()):
+              if key in ("site_url", "uri_allow_list") or own.match(key):
+                  continue
+              if isinstance(value, str) and staging_ref in value:
+                  left.append(f"{key}: names staging's project ({value})")
+                  broken.add(group(key))
+                  continue
+              if secret.search(key) and (hidden(value) or value in (None, "")):
+                  if hidden(value):
+                      left.append(f"{key}: the API hands it back masked")
+                      broken.add(group(key))
+                  continue
+              if value != production.get(key):
+                  patch[key] = value
+          patch["site_url"] = os.environ["PRODUCTION_SITE"]
+          patch["uri_allow_list"] = os.environ["PRODUCTION_REDIRECTS"]
+          patch["password_hibp_enabled"] = True
+          patch = {k: v for k, v in patch.items() if v != production.get(k)}
+          if staging.get("smtp_host") and not staging.get("smtp_pass"):
+              broken.add("smtp_")
+          broken.discard(None)
+          for prefix in sorted(broken):
+              for k in [k for k in patch if k.startswith(prefix)]:
+                  del patch[k]
+              left.append(f"{prefix}*: all of it, since a part could not come over; set it by hand")
+          if "smtp_" in broken:
+              # Supabase's own mailer takes no higher email rate limit.
+              patch.pop("rate_limit_email_sent", None)
+              left.append("SMTP: staging's password does not come back from the API, so production keeps "
+                          "Supabase's own mailer: Authentication -> Emails -> SMTP Settings, by hand")
+          print(f"JackiOh-Production: {len(patch)} setting(s) to change")
+          for key in sorted(patch):
+              print(f"  {key}: {shown(key, production.get(key))} -> {shown(key, patch[key])}")
+          for line in left:
+              print(f"::warning::left out: {line}")
+          json.dump(patch, open(f"{tmp}/auth.production.patch.json", "w"))
+          redirect = os.environ["STAGING_REDIRECT"]
+          urls = [u for u in (staging.get("uri_allow_list") or "").split(",") if u]
+          staging_patch = {} if redirect in urls else {"uri_allow_list": ",".join(urls + [redirect])}
+          print(f"staging's Redirect URLs: {', '.join(urls) or '(none)'}"
+                + ("" if not staging_patch else f" -> adds {redirect}"))
+          json.dump(staging_patch, open(f"{tmp}/auth.staging.patch.json", "w"))
+          EOF
+
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: nothing written. Run it again without dry_run to apply." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          for ref in "$PRODUCTION_REF" "$STAGING_REF"; do
+            case "$ref" in "$PRODUCTION_REF") body=auth.production.patch.json ;; *) body=auth.staging.patch.json ;; esac
+            if [ "$(cat "$RUNNER_TEMP/$body")" = "{}" ]; then echo "$ref: nothing to change"; continue; fi
+            api -X PATCH "$config/$ref/config/auth" --data-binary "@$RUNNER_TEMP/$body" > /dev/null
+            echo "$ref: changed $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/$body")" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+          # Read back what matters most.
+          api "$config/$PRODUCTION_REF/config/auth" \
+            | jq -r '"production now: site_url \(.site_url), redirects \(.uri_allow_list), leaked-password protection \(.password_hibp_enabled), confirm email \(.mailer_autoconfirm | not), SMTP host \(.smtp_host // "Supabase'"'"'s own")"' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}
