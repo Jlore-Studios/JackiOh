@@ -14165,6 +14165,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "8027fc54d9e902e6a526ecbfa406e09b48840fdc"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
