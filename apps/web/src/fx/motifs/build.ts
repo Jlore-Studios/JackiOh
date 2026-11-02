@@ -108,13 +108,20 @@ export type MotifHit = { event: GameEvent; tgt: string; at: FxAnchor };
 /**
  * The entry's events of `types` a motif draws on, each with its target. Combat damage is never a card's,
  * and nor is a hit another card dealt while the play resolves (a Trap answering it): a damage counts when
- * it names no source or the play's own instance. An event with no target is dropped.
+ * it names no source or the play's own instance. A card the play's hits already reached (a bolt's
+ * damage, then its death) leaves the stage under its own row, so the motif lands once. An event with no
+ * target is dropped.
  */
 export function readEvents(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, types: readonly GameEvent["type"][]): MotifHit[] {
   const play = env.memory.resolving();
+  const struck = new Set(earlierHits(env, entry));
   const hits: MotifHit[] = [];
   for (const event of entry.events) {
+    const id = hitIdOf(event);
+    const again = id !== null && struck.has(id);
+    if (id !== null) struck.add(id);
     if (!types.includes(event.type)) continue;
+    if (again && event.type !== "damage") continue;
     if (event.type === "damage") {
       if (event.combat) continue;
       if (play !== undefined && event.sourceId !== null && event.sourceId !== play.instanceId) continue;

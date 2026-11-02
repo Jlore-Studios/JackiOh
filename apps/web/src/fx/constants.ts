@@ -64,6 +64,7 @@ export const FX_DEFAULT_SEED = 0x5eed;
 export const FX_MEMORY_LIMIT = 64;            // entries each FxMemory map keeps (oldest evicted)
 export const FX_MEMORY_RECENT = 16;           // R502: the last events the planner keeps in order (a cast on draw is read off them)
 export const FX_MEMORY_RESOLVING = 8;         // R502: the plays still resolving it keeps, innermost last
+export const FX_MEMORY_HITS = 44;             // R2784000: the hit ids each keeps, a damage and a removal of all 20 zones' cards and both heroes
 
 // R502: a cast on draw. The card bursts out of its drawer's Deck pile as its `cardPlayed` starts.
 export const FX_CAST_ON_DRAW_TRAUMA = 0.25;

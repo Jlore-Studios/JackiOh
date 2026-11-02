@@ -110,7 +110,8 @@ their row recipe. It never keys on an event's own `defId` (a destroyed card's is
 the caster's), draws nothing on a damage another card dealt while the play resolved (a Trap
 answering it keeps its own row) and leaves a run over a whole pile to its one wave. The runner gives
 each hit of a run that sweeps no whole side its own entry, so the play remembers the ids its hits
-landed on (`FxPlay.hits`): a volley gathers once, a chain hops on from its last hit, a lance beams a lane once.
+landed on (`FxPlay.hits`): a volley gathers once, a chain hops on from its last hit, a lance beams a lane once,
+and a card its hits already reached dies under its own row, so a lethal bolt flies once.
 
 ## Constraints
 

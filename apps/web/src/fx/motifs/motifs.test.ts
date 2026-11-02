@@ -198,6 +198,16 @@ const resolved = (player: PlayerId, instanceId: string, defId: string): GameEven
   permanent: false,
   costPaid: 1,
 });
+const destroyed = (unit: PlayerView["you"]["units"][number] | undefined, killerId: string | null = "ex"): GameEvent => ({
+  type: "destroyed",
+  instanceId: unit?.instanceId ?? "",
+  defId: unit?.defId ?? "",
+  owner: unit?.owner ?? "p1",
+  controller: unit?.controller ?? "p1",
+  attack: unit?.attack ?? 0,
+  maxHealth: unit?.maxHealth ?? 0,
+  killerId,
+});
 
 /** The twelve example cards and the motif each names. */
 const EXAMPLES: readonly (readonly [string, DrawnMotif])[] = [
@@ -286,16 +296,6 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
 
   it("R2784000 Lane Eater's cry lances its lane once: the later card it destroys in that lane only flares it", () => {
     const view = fullBoardView();
-    const destroyed = (unit: (typeof view.you.units)[number] | undefined): GameEvent => ({
-      type: "destroyed",
-      instanceId: unit?.instanceId ?? "",
-      defId: unit?.defId ?? "",
-      owner: unit?.owner ?? "p1",
-      controller: unit?.controller ?? "p1",
-      attack: unit?.attack ?? 0,
-      maxHealth: unit?.maxHealth ?? 0,
-      killerId: "ex",
-    });
     const stream = [played("p1", "ex", "classic-071"), destroyed(view.opponent.units[2]), destroyed(view.you.units[2]), resolved("p1", "ex", "classic-071")];
     const removals = planAll(stream, view).filter(({ entry }) => entry.events.every((event) => event.type === "destroyed"));
     expect(removals).toHaveLength(2);
@@ -307,6 +307,20 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
       expect(flared, zone).toContain(zone);
     }
     expect(second.some((cue) => cue.kind === "crack")).toBe(true);
+  });
+
+  it("R2784000 a card the motif already struck dies under its own row: a lethal bolt flies once", () => {
+    const view = fullBoardView();
+    const killed = destroyed(view.opponent.units[0]);
+    const stream = [played("p1", "ex", "core-035"), ...motifFixture("bolt", view, "ex", "p1"), killed, resolved("p1", "ex", "core-035")];
+    const entries = planAll(stream, view);
+    expect(entries.flatMap(({ cues }) => cues).filter((cue) => cue.kind === "shot")).toHaveLength(1);
+    const death = entries.filter(({ entry }) => entry.events.every((event) => event.type === "destroyed")).flatMap(({ cues }) => cues);
+    const bare = planAll([...motifFixture("bolt", view, "ex", "p1"), killed], view)
+      .filter(({ entry }) => entry.events.every((event) => event.type === "destroyed"))
+      .flatMap(({ cues }) => cues);
+    expect(death.length).toBeGreaterThan(0);
+    expect(death).toEqual(bare);
   });
 
   it("R2784000 a hit another card deals while the play resolves keeps its own row", () => {

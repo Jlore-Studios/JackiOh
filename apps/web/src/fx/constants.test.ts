@@ -68,6 +68,7 @@ const S2 = {
   // R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand; R436's Call to Chaos.
   FX_MEMORY_RECENT: 16,
   FX_MEMORY_RESOLVING: 8,
+  FX_MEMORY_HITS: 44,
   FX_CAST_ON_DRAW_TRAUMA: 0.25,
   FX_CRACK_HIT_AT: 0.45,
   FX_CRACK_STAGGER_MS: 50,

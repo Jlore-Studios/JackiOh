@@ -8,7 +8,7 @@
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
 import { castOnDrawAt } from "./castOnDraw.ts";
-import { FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
+import { FX_MEMORY_HITS, FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
 import type { FxMemory, FxPlay, FxTrapZone } from "./types.ts";
 
 const HIDDEN_ID = "hidden";
@@ -60,7 +60,7 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
         for (const play of resolving) {
           play.step += 1;
           play.seen[event.type] = (play.seen[event.type] ?? 0) + 1;
-          if (hit !== null) play.hits = [...(play.hits ?? []), hit].slice(-FX_MEMORY_RECENT);
+          if (hit !== null) play.hits = [...(play.hits ?? []), hit].slice(-FX_MEMORY_HITS);
         }
         recent.push(event);
         if (recent.length > FX_MEMORY_RECENT) recent = recent.slice(recent.length - FX_MEMORY_RECENT);

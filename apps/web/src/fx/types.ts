@@ -253,7 +253,7 @@ export type FxPlay = {
   seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
   /**
    * R2784000: the public ids its damage, destroyed, exiled and bounced events landed on, oldest first,
-   * the planned entry's included (at most FX_MEMORY_RECENT); absent before the first. A chain hops on from the last.
+   * the planned entry's included (at most FX_MEMORY_HITS); absent before the first. A chain hops on from the last.
    */
   hits?: readonly string[];
 };
