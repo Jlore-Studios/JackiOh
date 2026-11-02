@@ -24,7 +24,7 @@ export function tokenBars(): TokenBarsResponse {
     cardBar: { points: 149, size: 150 },
     cosmeticBar: { points: 30, size: 150 },
     nextStep: "epic",
-    tokens: { card: 1, cosmeticRare: 1, cosmeticEpic: 0, cosmeticPack: 1 },
+    tokens: { card: 1, cosmeticRare: 1, cosmeticEpic: 0, cosmeticLegendary: 0, cosmeticPack: 1 },
   };
 }
 
