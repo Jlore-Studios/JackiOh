@@ -14177,6 +14177,11 @@
     "2863": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-11-02T20:30:59Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "63c5c5a1afff2cf1ae8f6277959bf3a71fa5d0ae"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
