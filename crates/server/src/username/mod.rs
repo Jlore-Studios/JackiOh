@@ -148,7 +148,8 @@ fn is_letter(ch: char) -> bool {
     ch.general_category_group() == GeneralCategoryGroup::Letter
 }
 
-fn is_mark(ch: char) -> bool {
+/// A combining mark (Unicode category M), read alike by the name filter and the chat's words (B53).
+pub(crate) fn is_mark(ch: char) -> bool {
     ch.general_category_group() == GeneralCategoryGroup::Mark
 }
 

@@ -1024,7 +1024,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/ai/tests/ai/support.rs",
-        names: &["det", "ai_options", "js"],
+        names: &["det", "ai_options", "js", "unit"],
         statics: &[],
         structs: &[],
         dirs: &["crates/ai/tests"],

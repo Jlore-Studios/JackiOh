@@ -219,8 +219,9 @@ export type LoadingProps = {
 };
 
 /**
- * A holding panel. With `slow`, a wait past `GATE_SLOW_NOTICE_SECONDS` says why it may be slow (Render's
- * free tier sleeps about a minute) and offers the way out, so a server that never answers is not a trap.
+ * A holding panel. With `slow`, a wait past `GATE_SLOW_NOTICE_SECONDS` says why it may be slow (the
+ * server's container stops when idle and the next request waits for it to start, apps/edge) and offers
+ * the way out, so a server that never answers is not a trap.
  */
 export function Loading({ what, slow = false, testId, children, skeleton }: LoadingProps): ReactElement {
   const [late, setLate] = useState(false);

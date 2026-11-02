@@ -1547,17 +1547,6 @@ impl DuosActor {
         self.enqueue(Task::Attach { seat });
     }
 
-    /// Detaches socket, starting disconnect grace.
-    pub fn detach(&self, seat: DuosSeat) {
-        let Some(index) = human(seat) else { return };
-        let socket = self.lock().sockets[index].clone();
-        let Some(socket) = socket else { return };
-        if socket.is_open() {
-            socket.close(Some(CLOSE_NORMAL), Some("detached"));
-        }
-        self.on_socket_gone(seat);
-    }
-
     /// Submits action for `seat`, returning ack or error.
     pub async fn submit(&self, seat: DuosSeat, nonce: String, body: DuosActionBody) -> DuosServerMessage {
         let (reply, answer) = oneshot::channel();
