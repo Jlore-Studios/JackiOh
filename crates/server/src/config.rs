@@ -2632,6 +2632,12 @@ const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
 /// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
 /// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
 pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
+/// SPEC §14.2, R2725001: the fewest cards each version and each augment is offered on, across the shipped
+/// sets (the registry's check holds every one to it).
+pub const VERSION_OFFER_MIN_CARDS: usize = 20;
+/// SPEC §14.2, R2725001: the fewest cards of each shipped set each version and each augment is offered on, so
+/// every set has some.
+pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
 /// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
 /// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter

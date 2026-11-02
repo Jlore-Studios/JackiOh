@@ -213,6 +213,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         chase: rarity.is_chase(),
         jlorious: false,
         card: None,
+        offer: Vec::new(),
     }
 }
 

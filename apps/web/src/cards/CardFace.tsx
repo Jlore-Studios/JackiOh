@@ -36,6 +36,12 @@
 // (`data-art-motion`, CardArt's `motion`), taking a foil's slot (`useArtMotion`), and hold still under reduced
 // motion, with Animated foil off and on a lazy face.
 //
+// R2725000: the face wears its look (fullArt.ts `useCardLook`): its version (`data-version`; the Full art version prints
+// the full-art layout) and the augments layered on it (`data-augments`), its `data-full-art-tier` the tier the look
+// printed as before #2725 (`tierOfLook`). R2725003: Animated moves the art on either face; Signature signs the name on
+// either, over the art window on the normal face, so it never covers the rules text. R2725004: a Radiant face keeps
+// every Radiant mark under every look.
+//
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
 // 2–5") under its text.
@@ -64,7 +70,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, printsFullArt, showsFullArt, useFullArtTier } from "./fullArt.ts";
+import { artMotionOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
@@ -74,6 +80,7 @@ import { useCardSettings } from "./settings.ts";
 import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
 import { questFaceText } from "./questFace.ts";
 import { MINUS } from "./tuning.ts";
+import { NORMAL_LOOK, VERSION_FULL_ART_ID, augmentsOf } from "./versions.ts";
 
 import "./cards.css";
 import "./setmark.css";
@@ -280,10 +287,10 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
-  // R2655000: at the tier its pick names.
-  const fullArtTier = useFullArtTier(face.defId, worn);
-  // R2715000: the Animated art prints the normal face.
-  const fullArtOn = printsFullArt(fullArtTier);
+  // R2725000: the look its pick names, its version and augments (R2655000's tiers among them).
+  const cardLook = useCardLook(face.defId, worn);
+  // R2715000: the Animated art prints the normal face; R2725000: only the Full art version prints full art.
+  const fullArtOn = cardLook.version === VERSION_FULL_ART_ID;
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -319,12 +326,15 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const glitch = isGlitch(face.defId);
   // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
   const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
-  // R2715000: any full layout keeps its tier, the Animated art's too, which prints no full art.
-  const tier = full ? fullArtTier : null;
-  const moving = tier === "Legendary" || tier === "Mythic";
-  const signed = tier === "Mythic" && !bare;
-  // R2715001: the Animated, Legendary and Mythic move their art's own layers while a slot is theirs.
-  const artMoves = tier !== null && tier !== "Epic";
+  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none.
+  const look = full ? cardLook : NORMAL_LOOK;
+  const tier = tierOfLook(look);
+  const augments = augmentsOf(look);
+  // R2725003: Animated on full art lays the band over it and drifts it; Signature signs on either face.
+  const moving = fullArt && look.animated;
+  const signed = look.signed && !bare;
+  // R2715001: an Animated look moves its art's own layers while a slot is theirs.
+  const artMoves = look.animated;
   const artMotion = useArtMotion(artMoves && settings.animatedFoil && !lazyArt);
 
   return (
@@ -345,7 +355,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-full-art={fullArt ? "true" : undefined}
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
-      data-full-art-motion={moving ? (settings.animatedFoil ? "animated" : "static") : undefined}
+      data-version={look.version ?? undefined}
+      data-augments={augments.length > 0 ? augments.join(" ") : undefined}
+      data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
       {...cosmetics}
       style={scales}
@@ -385,6 +397,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
             />
           )}
           {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
+          {signed && !fullArt && <FullArtSignature name={face.englishName ?? face.name} defId={face.defId} />}
         </span>
 
         {bare ? (
@@ -395,7 +408,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
           </span>
         )}
 
-        {signed && <FullArtSignature name={face.englishName ?? face.name} defId={face.defId} />}
+        {signed && fullArt && <FullArtSignature name={face.englishName ?? face.name} defId={face.defId} />}
 
         {hasRarityGem(rarity) && !bare && (
           <span className="cf-gem" data-rarity={rarity ?? undefined}>

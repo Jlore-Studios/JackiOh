@@ -9,7 +9,7 @@ import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } 
 
 import { readerName } from "../cards/chinese.ts";
 import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
-import { FULL_ART_STRIP_TIERS, fullArtTierOfEntry } from "../cards/fullArt.ts";
+import { offeredOn } from "../cards/versions.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
@@ -139,19 +139,23 @@ export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
       return t("Full art");
     case "portrait":
       return t("Portrait");
+    case "version":
+      return t("Version");
+    case "augment":
+      return t("Augments");
   }
 }
 
-/** R1655000: the kinds a card's strip offers, in the registry's order, its full art last. */
-export const STRIP_KINDS = [...CARD_SLOT_KINDS, "fullArt"] as const;
+/** R1655000: the kinds a card's strip offers, in the registry's order; R2725000: its version and its augments last. */
+export const STRIP_KINDS = [...CARD_SLOT_KINDS, "version", "augment"] as const;
 export type StripKind = (typeof STRIP_KINDS)[number];
 
-/** R1655000: the face without a full art, the default of that kind and a pick of its own, which no registry entry names. */
+/** R1655000, R2725000: the normal face, the first version, the default of that kind and a pick of its own, which no registry entry names. */
 export const NO_FULL_ART_ID = "no-full-art";
 
 export type StripItem = {
   kind: StripKind;
-  /** The registry's id; `NO_FULL_ART_ID` for the face with no full art. */
+  /** The registry's id; `NO_FULL_ART_ID` for the normal face. */
   id: string;
   /** In the reader's language. */
   name: string;
@@ -165,8 +169,9 @@ export type StripGroup = { kind: StripKind; items: StripItem[] };
 
 /**
  * R1655000: what a card may wear, by kind: the registry's foils, finishes and borders (the default
- * first), and the face with no full art then the card's own (R2655000: its Epic, Legendary and
- * Mythic; R2715000: its Animated art first, `FULL_ART_STRIP_TIERS`), the kind absent where it has none.
+ * first); R2725000: the normal face then each version the card is offered, and the augments it is offered
+ * (R2725001), each kind absent where it has none. A retired full art (R2655000, R2715000) is listed nowhere: the
+ * versions and augments it implies stand for it (R2725002).
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
   const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
@@ -179,19 +184,20 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
       owned: canEquip(defId, cosmetic.id),
     })),
   }));
-  const place = (cosmetic: Cosmetic): number => {
-    const tier = fullArtTierOfEntry(cosmetic);
-    return tier === null ? FULL_ART_STRIP_TIERS.length : FULL_ART_STRIP_TIERS.indexOf(tier);
-  };
-  const fullArts: StripItem[] = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt" && cosmetic.card === defId)
-    .sort((a, b) => place(a) - place(b))
-    .map((cosmetic) => ({ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }));
-  if (fullArts.length > 0) {
-    groups.push({
-      kind: "fullArt",
-      items: [{ kind: "fullArt", id: NO_FULL_ART_ID, name: t("No full art"), rarity: "Common", owned: true }, ...fullArts],
-    });
+  const offered = (kind: "version" | "augment"): StripItem[] =>
+    COSMETICS.filter((cosmetic) => cosmetic.kind === kind && offeredOn(cosmetic.id, defId)).map((cosmetic) => ({
+      kind,
+      id: cosmetic.id,
+      name: t(cosmetic.name),
+      rarity: cosmetic.rarity,
+      owned: canEquip(defId, cosmetic.id),
+    }));
+  const versions = offered("version");
+  if (versions.length > 0) {
+    groups.push({ kind: "version", items: [{ kind: "version", id: NO_FULL_ART_ID, name: t("Normal"), rarity: "Common", owned: true }, ...versions] });
   }
+  const augments = offered("augment");
+  if (augments.length > 0) groups.push({ kind: "augment", items: augments });
   return groups;
 }
 
