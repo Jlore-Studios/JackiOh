@@ -2,10 +2,10 @@
 // view's own ids, the entry it fills, and a card's table entry as a play that resolves. Pure, so the
 // motif tests plan from the same fixtures the gallery shows.
 
-import type { Flavor, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
-import { FLAVOR_LOOKS } from "../flavors.ts";
+import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
 import type { FxCue } from "../types.ts";
 import { planMotif } from "./index.ts";
@@ -98,9 +98,11 @@ export function gallerySource(view: PlayerView): string | null {
 }
 
 /** One motif in one palette at one scale, on its fixture, as a card of that scale would play it. */
-export function galleryCues(motif: DrawnMotif, palette: Flavor, scale: number, view: PlayerView, intensity: number, speed = 1): FxCue[] {
+export function galleryCues(motif: DrawnMotif, palette: FxPalette, scale: number, view: PlayerView, intensity: number, speed = 1): FxCue[] {
   const entry = galleryEntry(motifFixture(motif, view, gallerySource(view), view.viewer), view, speed);
-  const spec = { motif, look: FLAVOR_LOOKS[palette], scale: scale * intensity, row: "replace" } as const;
+  const look = paletteLook(palette);
+  if (look === undefined) return [];
+  const spec = { motif, look, scale: scale * intensity, row: "replace" } as const;
   return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
 }
 

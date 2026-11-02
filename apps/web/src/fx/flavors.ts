@@ -48,10 +48,10 @@ export const FLAVOR_LOOKS: Readonly<Record<Flavor, FlavorLook>> = {
     particle: "arcane",
     projectile: { motion: "arc", sprites: ["book"], turn: "spin", count: 1 },
   },
-  Tech: { colors: ["#e8fdff", "#38e1ff", "#0077ff"], particle: "frost", projectile: { motion: "beam" } },
+  Tech: { colors: ["#e8fdff", "#38e1ff", "#0077ff"], particle: "circuit", projectile: { motion: "beam" } },
   Nature: {
     colors: ["#eaffc2", "#5fbf3a", "#2e7d32"],
-    particle: "poison",
+    particle: "leaf",
     projectile: { motion: "arc", sprites: ["seed"], turn: "point", count: 3 },
   },
   Toxic: {
@@ -61,7 +61,7 @@ export const FLAVOR_LOOKS: Readonly<Record<Flavor, FlavorLook>> = {
   },
   Snack: {
     colors: ["#fff1c2", "#d9a066", "#8b5a2b"],
-    particle: "ember",
+    particle: "crumb",
     projectile: { motion: "arc", sprites: ["snack"], turn: "spin", count: 1 },
   },
   Hustle: {
@@ -98,4 +98,72 @@ export function chaosFlavor(instanceId: string): Exclude<Flavor, "Chaos"> {
 /** The look `flavor` draws for the card `instanceId`. Chaos's own row is for accents; its shot is never fired. */
 export function flavorLook(flavor: Flavor, instanceId: string): FlavorLook {
   return FLAVOR_LOOKS[flavor === "Chaos" ? chaosFlavor(instanceId) : flavor];
+}
+
+/** #2792: a flavor's look or one of its sub-looks, presentation only; no card's `flavor` changes. */
+export type FxPalette = Flavor | `${Flavor}/${string}`;
+
+/**
+ * #2792: presentation-only variants of the crowded flavors' looks. A card's fx table entry picks one
+ * with `palette: "<Flavor>/<sub-look>"`; a card with no sub-look keeps its flavor's base look, which
+ * the event rows always draw.
+ */
+export const FLAVOR_SUB_LOOKS: { readonly [F in Flavor]?: Readonly<Record<string, FlavorLook>> } = {
+  Physical: {
+    steel: { colors: ["#ffffff", "#c7d0db", "#5d6773"], particle: "shard", projectile: FLAVOR_LOOKS.Physical.projectile },
+    wind: { colors: ["#f4fbff", "#cde6ef", "#86aebf"], particle: "dust", projectile: { motion: "bolt", trail: "dust", wave: true } },
+    sport: { colors: ["#ffffff", "#ff7a2e", "#2f6fdb"], particle: "confetti", projectile: { motion: "arc", sprites: ["boulder"], turn: "spin", count: 1 } },
+    blade: { colors: ["#ffffff", "#e3e8ef", "#b3202d"], particle: "frost", projectile: { motion: "swipe" } },
+  },
+  Beast: {
+    felinor: { colors: ["#fff0f6", "#ffb3d1", "#a77bd6"], particle: "sparkle", projectile: FLAVOR_LOOKS.Beast.projectile },
+    swarm: { colors: ["#fff7b3", "#f2c200", "#2b2200"], particle: "ember", projectile: FLAVOR_LOOKS.Beast.projectile },
+    wool: { colors: ["#ffffff", "#f1ede4", "#b9b2a5"], particle: "smoke", projectile: FLAVOR_LOOKS.Beast.projectile },
+  },
+  Dark: {
+    blood: { colors: ["#ffd6dc", "#c8102e", "#4a0010"], particle: "blood", projectile: { motion: "bolt", trail: "blood" } },
+    shadow: { colors: ["#c9c9d6", "#3a3a4a", "#0b0b12"], particle: "smoke", projectile: { motion: "bolt", trail: "smoke" } },
+    curse: { colors: ["#eaffd6", "#6bbf3a", "#2a1a3d"], particle: "arcane", projectile: { motion: "bolt", trail: "arcane" } },
+  },
+  Nerd: {
+    ink: { colors: ["#e8ecf5", "#2b3a67", "#0d1430"], particle: "blood", projectile: FLAVOR_LOOKS.Nerd.projectile },
+    chalk: { colors: ["#ffffff", "#e9efe6", "#3f5a48"], particle: "dust", projectile: FLAVOR_LOOKS.Nerd.projectile },
+    pixel: { colors: ["#ffffff", "#5bff8a", "#3a7bff"], particle: "circuit", projectile: FLAVOR_LOOKS.Nerd.projectile },
+  },
+  Tech: {
+    laser: { colors: ["#fff0f0", "#ff3b4a", "#b0001e"], particle: "spark", projectile: { motion: "beam" } },
+    rocket: { colors: ["#fff4d6", "#ff9a3c", "#6b7a99"], particle: "exhaust", projectile: { motion: "bolt", trail: "exhaust" } },
+    starfield: { colors: ["#ffffff", "#bfd4ff", "#1b2a5c"], particle: "star", projectile: { motion: "bolt", trail: "star" } },
+    hologram: { colors: ["#f0fffb", "#7dffe0", "#b48cff"], particle: "sparkle", projectile: { motion: "beam" } },
+    glitch: { colors: ["#ffffff", "#ff2bd6", "#2bffea"], particle: "circuit", projectile: { motion: "bolt", trail: "circuit" } },
+  },
+  Hustle: {
+    jade: { colors: ["#e9fff2", "#3fbf7f", "#0e6b44"], particle: "shard", projectile: FLAVOR_LOOKS.Hustle.projectile },
+    cash: { colors: ["#f1ffe8", "#7fcf6a", "#2e7d32"], particle: "confetti", projectile: { motion: "arc", sprites: ["bill"], turn: "spin", count: 4, scatter: true } },
+    ore: { colors: ["#f4f0ff", "#9aa7c7", "#4b3f72"], particle: "crumb", projectile: { motion: "arc", sprites: ["boulder"], turn: "spin", count: 3, scatter: true } },
+  },
+};
+
+const FLAVOR_NAMES = Object.keys(FLAVOR_LOOKS) as Flavor[];
+
+/** #2792: every flavor then every sub-look, each once; the event rows keep the base look. */
+export const FX_PALETTES: readonly FxPalette[] = [
+  ...FLAVOR_NAMES,
+  ...FLAVOR_NAMES.flatMap((flavor) => Object.keys(FLAVOR_SUB_LOOKS[flavor] ?? {}).map((name): FxPalette => `${flavor}/${name}`)),
+];
+
+const own = (table: object, key: string): boolean => Object.prototype.hasOwnProperty.call(table, key);
+
+/** #2792: the base look a flavor names, or the sub-look `"<Flavor>/<sub-look>"` names; nothing else. */
+export function paletteLook(palette: string): FlavorLook | undefined {
+  const [flavor = "", sub, ...rest] = palette.split("/");
+  if (rest.length > 0 || !own(FLAVOR_LOOKS, flavor)) return undefined;
+  if (sub === undefined) return FLAVOR_LOOKS[flavor as Flavor];
+  const subs = FLAVOR_SUB_LOOKS[flavor as Flavor];
+  return subs !== undefined && own(subs, sub) ? subs[sub] : undefined;
+}
+
+/** #2792: whether `name` is a flavor or one of its sub-looks. */
+export function isPalette(name: string): name is FxPalette {
+  return paletteLook(name) !== undefined;
 }

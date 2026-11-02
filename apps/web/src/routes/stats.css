@@ -707,6 +707,12 @@
     flex-direction: column;
     align-items: center;
   }
+
+  /* Stretched, not centered: centered, the column shrank to its content and the loading skeleton's
+     rows (`width: 100%` of it) had no room left for their lines. */
+  .stats-drilldown-details {
+    align-self: stretch;
+  }
 }
 
 /* R1966000: the Sets tab's three leaders sit in one row, at a phone's width too. */

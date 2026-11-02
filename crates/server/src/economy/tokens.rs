@@ -479,10 +479,7 @@ pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
 mod tests {
     use super::*;
     use crate::config::CosmeticTokenStep::{CosmeticPack, Epic, Legendary, Rare};
-    use crate::config::{
-        CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
-        COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_CYCLE,
-    };
+    use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_CYCLE};
 
     #[test]
     fn r1305000_settle_bar_pays_once_and_keeps_the_overflow() {
@@ -523,7 +520,6 @@ mod tests {
         assert_eq!(cards, [1, 2, 3, 5, 10]);
         assert_eq!(cosmetics, [1, 2, 3, 5, 10]);
         assert_eq!(cards.iter().sum::<i64>(), 21);
-        assert_eq!(CARD_TOKEN_BAR_SIZE, 200);
         assert_eq!(settle_bar(195, 10, CARD_TOKEN_BAR_SIZE), (1, 5));
         assert_eq!(
             settle_cosmetic_bar(COSMETIC_TOKEN_BAR_SIZE_RARE - 5, 10, 0),
@@ -533,10 +529,6 @@ mod tests {
 
     #[test]
     fn r2728000_each_step_pays_at_its_own_size() {
-        assert_eq!(COSMETIC_TOKEN_BAR_SIZE_RARE, 50);
-        assert_eq!(COSMETIC_TOKEN_BAR_SIZE_EPIC, 75);
-        assert_eq!(COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, 100);
-        assert_eq!(COSMETIC_TOKEN_BAR_SIZE_PACK, 100);
         assert_eq!(
             [Rare, Epic, Legendary, CosmeticPack].map(CosmeticTokenStep::bar_size),
             [50, 75, 100, 100]

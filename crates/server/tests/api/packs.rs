@@ -1253,7 +1253,6 @@ async fn r1953000_get_publishes_a_two_percent_global_roll() {
     let (app, token) = setup().await;
     let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
-    assert_eq!(GLOBAL_COSMETIC_ROLL_WEIGHT, 20);
     assert_eq!(body["odds"]["globalCosmetic"]["chance"], json!(0.02));
 }
 
