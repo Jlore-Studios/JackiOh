@@ -13943,6 +13943,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2856": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-02T14:15:38Z",
+      "issue": 2789,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
