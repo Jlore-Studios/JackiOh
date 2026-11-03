@@ -13330,9 +13330,7 @@
       "source": "",
       "started_at": "2026-11-02T23:43:09Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6591295038"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
