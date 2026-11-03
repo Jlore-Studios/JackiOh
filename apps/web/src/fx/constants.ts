@@ -197,6 +197,10 @@ export const FX_TIDE_TRAUMA = 0.35;
 export const FX_WISH_TRAUMA = 0.3;
 export const FX_FORGE_TRAUMA = 0.4;
 export const FX_FORGE_REACH = 0.2;
+// #2798: Stinkyscape's flourishes (fx/cards/stinkyscape/): each shake at Land.
+export const FX_FLASH_FREEZE_TRAUMA = 0.35;
+export const FX_DUO_BOND_TRAUMA = 0.3;
+export const FX_STRATOS_SWARM_TRAUMA = 0.3;
 // #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land.
 export const FX_CELESTIAL_TRAUMA = 0.35;
 export const FX_DINO_STOMP_TRAUMA = 0.55;

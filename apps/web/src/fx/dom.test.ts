@@ -69,6 +69,7 @@ const anchor = { kind: "testid", testid: "card-u1" } as const;
 const SPLAT_DAMAGE: FxDomCue = { kind: "splat", tone: "damage", amount: 5, at: anchor, delayMs: 0, durationMs: 950 };
 const SPLAT_HEAL: FxDomCue = { kind: "splat", tone: "heal", amount: 3, at: anchor, delayMs: 60, durationMs: 890 };
 const SPLAT_LOSS: FxDomCue = { kind: "splat", tone: "loss", amount: 2, at: anchor, delayMs: 0, durationMs: 950 };
+const SPLAT_ABSORB: FxDomCue = { kind: "splat", tone: "absorb", amount: 4, at: anchor, delayMs: 0, durationMs: 950 };
 const RAYS: FxDomCue = { kind: "rays", tone: "mythic", at: anchor, delayMs: 0, durationMs: 850 };
 const SHEEN: FxDomCue = { kind: "sheen", at: anchor, delayMs: 0, durationMs: 400 };
 const GHOST: FxDomCue = { kind: "ghost", from: anchor, to: { kind: "testid", testid: "hand-you" }, delayMs: 0, durationMs: 250 };
@@ -114,6 +115,15 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const el = expectMounted(mountDomEffect(root, SPLAT_LOSS, { at: AT }), SPLAT_LOSS);
     expect(el.getAttribute("data-tone")).toBe("loss");
     expect(el.getAttribute("data-amount")).toBe("-2");
+  });
+
+  it("Issue #2790 an absorb splat carries its tone and a hyphen-minus amount", () => {
+    const el = expectMounted(mountDomEffect(root, SPLAT_ABSORB, { at: AT }), SPLAT_ABSORB);
+    expect(el.getAttribute("data-tone")).toBe("absorb");
+    const amount = el.getAttribute("data-amount") ?? "";
+    expect(amount).toBe("-4");
+    expect(amount.charCodeAt(0)).toBe(0x2d);
+    expectCenteredOn(el, AT);
   });
 
   it("B39 rays carry their tone and are centered on their box", () => {
@@ -393,7 +403,9 @@ describe("R2789000 — a keyword's callout", () => {
   it("R2789000 a callout with no box, or no icon for its keyword, mounts nothing", () => {
     expect(mountDomEffect(root, callout("Cleave"), {})).toBeNull();
     expect(mountDomEffect(root, callout("Cleave"), { at: null })).toBeNull();
-    expect(mountDomEffect(root, callout("Taunt"), { at: AT })).toBeNull();
+    // Rush had no icon when this probed it; R2791000 gave it one, and Issue #2790 gave
+    // Taunt one, so the iconless probe moves to Cloaked, which neither lane iconified.
+    expect(mountDomEffect(root, callout("Cloaked"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
   });
 });

@@ -7,6 +7,18 @@
 // and the stagger scales with it. R202: a beat reads `via`, the keywords a view shows and the ids it
 // shows, never a defId; a hidden source has no `via` and no beat. Built from the motif helpers
 // (build.ts) and the shared callout (callout.ts), over cues that exist already.
+//
+// Issue #2790: the defensive and life keywords' beats, on the same machinery and the same caps.
+// Divine Shield and Armor fold into the `ward` motif (R2784000): the row draws the gold ring, shards
+// and shield flash, the beat only the callout (and Armor's grey absorbed-amount splat, R1361).
+// Indestructible keys on the absorption R1361 reports when Armor takes a hit whole on its holder (a
+// hit meeting Indestructible itself is stopped unreported, so no `damage` key could fire); Immutable
+// and Immune to Spells key on the grant that raises their shell and ward (a refused change emits
+// nothing, and a Spell can never name an Immune unit, so no bounce or fizzle key could fire); Can't
+// attack keys on a forced declaration naming its holder (a declared one is refused with no event, a
+// forced attack skips the validator, R53). Brittle, Taunt and Can't Defend read the keywords the view
+// shows; Reborn keys on the `via` the engine sets on its `summoned` (R2783001).
+//
 // R2791000: the tempo keyword beats. Charge, Rush, Equip, Tradable, Stack, Spell Damage, Lucky, Deft,
 // Flashback and Temporary key on `via` where one exists, else on the existing events plus the keywords
 // and ids the view shows: a landing reads the played card's hand keywords (its delta, else its printed
@@ -17,7 +29,7 @@
 
 import { hasKeyword, type GameEvent, type Keyword, type KeywordKind, type PlayerId, type PlayerView, type UnitView } from "@jackioh/shared";
 
-import { animTestid, animationRow, HIDDEN_ID, locateInstance, type AnimationEntry } from "../../game/animations.ts";
+import { animTestid, animationRow, HIDDEN_ID, locateInstance, targetFor, type AnimationEntry } from "../../game/animations.ts";
 import { TEMPORARY_GLYPH } from "../../cards/cardState.ts";
 import { temporaryLeft } from "../../cards/keywordVisuals.ts";
 import { sideOf, testid, type Side } from "../../game/contract.ts";
@@ -30,6 +42,7 @@ import {
   FX_CALLOUTS_PER_HIT,
   FX_CENTER,
   FX_CHARGE_LINE_SPREAD,
+  FX_CRACK_TAIL_MS,
   FX_DEFT_FEINT_STEP,
   FX_FIRST_STRIKE_BREAK_AT,
   FX_FIRST_STRIKE_BREAK_REACH,
@@ -44,7 +57,7 @@ import { ZONE_DEFAULT, ZONE_LOOKS } from "../looks.ts";
 import { extraDraws, rollBatchOf, rollLandAt } from "../rolls.ts";
 import { shieldCues } from "../shield.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "../types.ts";
-import { flies, hit, hitAnchor, isFirstEntry, MOTIF_TUNING, motifBurst, motifShot, placeOf, sourceOf, timesOf, type CueSpec } from "./build.ts";
+import { flies, hit, hitAnchor, isFirstEntry, MOTIF_FOOT, MOTIF_TUNING, motifBurst, motifRing, motifShot, placeOf, sourceOf, timesOf, type CueSpec } from "./build.ts";
 import { calloutCue } from "./callout.ts";
 
 /** The keywords with a beat: the nine combat ones in the order a hit's beats play, then R2791000's ten. */
@@ -70,7 +83,21 @@ export const FX_BEAT_KEYWORDS = [
   "Temporary",
 ] as const;
 
-type BeatKeyword = (typeof FX_BEAT_KEYWORDS)[number];
+/** Issue #2790: the defensive and life keywords with a beat, in the order a hit's beats play them after the combat ones. */
+export const FX_DEFENSIVE_BEAT_KEYWORDS = [
+  "Divine Shield",
+  "Armor",
+  "Indestructible",
+  "Immutable",
+  "Reborn",
+  "Brittle",
+  "Immune to Spells",
+  "Taunt",
+  "Can't Defend",
+  "Can't attack",
+] as const;
+
+type BeatKeyword = (typeof FX_BEAT_KEYWORDS)[number] | (typeof FX_DEFENSIVE_BEAT_KEYWORDS)[number];
 
 /** The beats' own particle counts at scale 1 (rule 9); the landing bursts reuse MOTIF_TUNING's. */
 const BEAT_TUNING = {
@@ -383,6 +410,246 @@ function breakOffBeat(event: Extract<GameEvent, { type: "destroyed" }>, ctx: Ctx
   ];
 }
 
+/** Divine Shield: the `ward` row's gold ring and shards draw the pop, so the beat is the callout alone: the hit did nothing. */
+function divineShieldBeat(event: Extract<GameEvent, { type: "divineShieldLost" }>, ctx: Ctx): Beat[] {
+  const holder = anchorOf(ctx.view, event.instanceId);
+  if (holder === null) return [];
+  return [{ keyword: "Divine Shield", event, holder, replaces: false, plan: () => [] }];
+}
+
+/**
+ * Armor (R1361): the `ward` row draws the shield flash, the beat the absorbed amount as a grey
+ * splat chipping the plate. A routed hit's own combat beat draws it instead (Cleave keeps its
+ * full shield), so this keys on an absorption with no `via`.
+ */
+function armorBeat(event: Extract<GameEvent, { type: "damageAbsorbed" }>, ctx: Ctx): Beat[] {
+  if (event.via !== undefined) return [];
+  const holder = anchorOf(ctx.view, event.targetId);
+  if (holder === null) return [];
+  const spec = looking(FLAVOR_LOOKS.Holy, ctx.env, "keep");
+  return [
+    {
+      keyword: "Armor",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [
+          { kind: "splat", tone: "absorb", amount: event.absorbed, at: holder, delayMs: t.L, durationMs: D - t.L + FX_SPLAT_HOLD_MS },
+          motifBurst(spec, holder, "ring", t.L, MOTIF_TUNING.small, "shard"),
+        ];
+      },
+    },
+  ];
+}
+
+/**
+ * Indestructible (R1361): a hit its Armor takes whole, lethal and with no `destroyed` of the unit on
+ * the way: the unit flashes white-hot and rings, and it does not die. A hit meeting Indestructible
+ * itself is stopped unreported (§4.4 step 4, before any event), so a `damage` key could never fire;
+ * the absorption its Armor reports is the reachable half. A routed hit's own combat beat draws it
+ * instead, so this keys on an absorption with no `via`, as the Armor beat does. The ward row's flash
+ * and the Armor beat's grey splat stay: the beat adds only the flash and the ring.
+ */
+function indestructibleBeat(event: Extract<GameEvent, { type: "damageAbsorbed" }>, ctx: Ctx): Beat[] {
+  if (event.via !== undefined) return [];
+  const unit = unitOf(ctx.view, event.targetId);
+  const holder = anchorOf(ctx.view, event.targetId);
+  if (unit === null || holder === null) return [];
+  if (!hasKeyword(unit.keywords, "Indestructible") || event.absorbed < unit.health) return [];
+  const destroyed = [...ctx.history, ...ctx.entry.events].some((past) => past.type === "destroyed" && past.instanceId === event.targetId);
+  if (destroyed) return [];
+  const spec = looking(FLAVOR_LOOKS.Physical, ctx.env, "keep");
+  return [
+    {
+      keyword: "Indestructible",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [
+          { kind: "sheen", at: holder, delayMs: 0, durationMs: t.L },
+          motifBurst(spec, holder, "point", 0, MOTIF_TUNING.small),
+          ringCue(D, "spark", holder, t.L),
+          ...shakeCues(spec.scale, FX_BEAT_TRAUMA, t.L),
+        ];
+      },
+    },
+  ];
+}
+
+/**
+ * Immutable (R23, R386): gaining the keyword snaps a glassy shell shut around the unit. A nerf,
+ * tune-up, transform or number set aimed at it is refused with no event, so no bounce key could
+ * fire; the grant is the reachable half. Keyed on the granted kind, as Taunt's arrival is: the
+ * pre-action view has no keyword to read yet.
+ */
+function immutableBeat(event: Extract<GameEvent, { type: "keywordGranted" }>, ctx: Ctx): Beat[] {
+  if (event.keyword.kind !== "Immutable" || event.lost === true) return [];
+  const holder = anchorOf(ctx.view, event.instanceId);
+  if (holder === null) return [];
+  const spec = looking(FLAVOR_LOOKS.Tech, ctx.env, "keep");
+  return [
+    {
+      keyword: "Immutable",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [ringCue(D, "arcane", holder, t.T), motifBurst(spec, holder, "point", t.L, MOTIF_TUNING.small)];
+      },
+    },
+  ];
+}
+
+/** Reborn: on a `summoned` with `via: Reborn` (R2783001), the unit rises from ashes in its own lane. */
+function rebornBeat(event: Extract<GameEvent, { type: "summoned" }>, ctx: Ctx): Beat[] {
+  if (event.via !== "Reborn") return [];
+  const zone = targetFor(event, ctx.view);
+  const holder = anchorOf(ctx.view, event.instanceId);
+  if (zone === null || holder === null) return [];
+  const spec = looking(FLAVOR_LOOKS.Spirit, ctx.env, "keep");
+  return [
+    {
+      keyword: "Reborn",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [
+          { kind: "ghost", from: tid(zone, MOTIF_FOOT), to: holder, delayMs: t.T, durationMs: t.L - t.T },
+          motifBurst(spec, holder, "area", t.L, MOTIF_TUNING.land),
+          motifRing(spec, D, holder, t.L),
+        ];
+      },
+    },
+  ];
+}
+
+/** Brittle: hairline cracks grow on the unit as it takes damage. */
+function brittleCrackBeat(event: Extract<GameEvent, { type: "damage" }>, ctx: Ctx): Beat[] {
+  const unit = unitOf(ctx.view, event.targetId);
+  const holder = anchorOf(ctx.view, event.targetId);
+  if (unit === null || holder === null) return [];
+  if (!hasKeyword(unit.keywords, "Brittle")) return [];
+  return [
+    {
+      keyword: "Brittle",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [{ kind: "crack", at: holder, delayMs: t.L, durationMs: D - t.L + FX_CRACK_TAIL_MS }];
+      },
+    },
+  ];
+}
+
+/**
+ * Whether the view shows `instanceId` as Brittle: a unit's keywords, or a backrow card's (a
+ * Brittle Trap crumbles where it stands, and `unitOf` sees no backrow card). R202 draws nothing
+ * beyond what the view shows, so a crumble the view does not show as Brittle draws no beat.
+ */
+function brittleShown(view: PlayerView, instanceId: string): boolean {
+  const unit = unitOf(view, instanceId);
+  if (unit !== null) return hasKeyword(unit.keywords, "Brittle");
+  for (const side of [view.you, view.opponent]) {
+    for (const slot of side.backrow) {
+      if (slot !== null && slot.faceDown === false && slot.instanceId === instanceId) {
+        return hasKeyword(slot.keywords ?? [], "Brittle");
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Brittle: the shatter on its death (R385). The engine only ever crumbles a Brittle count, but
+ * the beat still keys on the keywords the view shows (R202), as the crack beat does; the holder
+ * is the row's target, so a pile stands in off the board. The death row draws the shatter
+ * itself, so the beat is the callout alone.
+ */
+function brittleShatterBeat(event: Extract<GameEvent, { type: "crumbled" }>, ctx: Ctx): Beat[] {
+  if (!brittleShown(ctx.view, event.instanceId)) return [];
+  const tgt = targetFor(event, ctx.view);
+  if (tgt === null) return [];
+  return [{ keyword: "Brittle", event, holder: tid(tgt), replaces: false, plan: () => [] }];
+}
+
+/**
+ * Immune to Spells (R81): gaining the keyword raises a rune ward around the unit, in the `negate`
+ * motif's ring-and-smoke vocabulary. A Spell can never name the unit (no declaration offers it, and
+ * every resolving effect passes it by in silence), so no fizzle key could fire; the grant is the
+ * reachable half. Keyed on the granted kind, as Taunt's arrival is.
+ */
+function immuneBeat(event: Extract<GameEvent, { type: "keywordGranted" }>, ctx: Ctx): Beat[] {
+  if (event.keyword.kind !== "Immune to Spells" || event.lost === true) return [];
+  const holder = anchorOf(ctx.view, event.instanceId);
+  if (holder === null) return [];
+  const spec = looking(FLAVOR_LOOKS.Tech, ctx.env, "keep");
+  return [
+    {
+      keyword: "Immune to Spells",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [motifRing(spec, D, holder, t.G), motifBurst(spec, holder, "point", t.L, MOTIF_TUNING.linger, "smoke")];
+      },
+    },
+  ];
+}
+
+/** Taunt arriving: a dust-ring shield wall over the unit, beside the bless row's arrows. */
+function tauntArrivalBeat(event: Extract<GameEvent, { type: "keywordGranted" }>, ctx: Ctx): Beat[] {
+  if (event.keyword.kind !== "Taunt" || event.lost === true) return [];
+  const holder = anchorOf(ctx.view, event.instanceId);
+  if (holder === null) return [];
+  return [
+    {
+      keyword: "Taunt",
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        return [ringCue(D, "dust", holder, timesOf(D).T)];
+      },
+    },
+  ];
+}
+
+/** A chain clink over the unit the game stops from the action it cannot take. */
+function chainBeat(keyword: "Can't attack" | "Can't Defend", event: GameEvent, ctx: Ctx, holder: FxAnchor): Beat[] {
+  const spec = looking(FLAVOR_LOOKS.Physical, ctx.env, "keep");
+  return [
+    {
+      keyword,
+      event,
+      holder,
+      replaces: false,
+      plan(D) {
+        const t = timesOf(D);
+        return [ringCue(D, "dust", holder, t.T), motifBurst(spec, holder, "ring", t.L, MOTIF_TUNING.small, "shard")];
+      },
+    },
+  ];
+}
+
+/** Can't Defend: the unit is skipped by the position switch it cannot make. */
+function cantDefendBeat(event: Extract<GameEvent, { type: "positionSwitched" }>, ctx: Ctx): Beat[] {
+  const unit = unitOf(ctx.view, event.instanceId);
+  const holder = anchorOf(ctx.view, event.instanceId);
+  if (unit === null || holder === null) return [];
+  if (!hasKeyword(unit.keywords, "Can't Defend")) return [];
+  return chainBeat("Can't Defend", event, ctx, holder);
+}
+
 /** Windfury, Flying and Ranged on an attack: read off the keywords the view shows on its attacker. */
 function attackBeats(event: Extract<GameEvent, { type: "attackDeclared" }>, ctx: Ctx): Beat[] {
   const unit = unitOf(ctx.view, event.attackerId);
@@ -406,6 +673,28 @@ function attackBeats(event: Extract<GameEvent, { type: "attackDeclared" }>, ctx:
   }
   for (const keyword of ["Flying", "Ranged"] as const satisfies readonly KeywordKind[]) {
     if (hasKeyword(unit.keywords, keyword)) beats.push({ keyword, event, holder, replaces: false, plan: () => [] });
+  }
+  // Issue #2790: Taunt forced the attack onto its wall: a brief pull of the wall toward the attacker.
+  const wall = unitOf(ctx.view, event.targetId);
+  const wallAt = anchorOf(ctx.view, event.targetId);
+  if (event.forced === true && wall !== null && wallAt !== null && hasKeyword(wall.keywords, "Taunt")) {
+    beats.push({
+      keyword: "Taunt",
+      event,
+      holder: wallAt,
+      replaces: false,
+      plan: (D) => {
+        const t = timesOf(D);
+        return [{ kind: "ghost", from: wallAt, to: holder, delayMs: t.T, durationMs: t.L - t.T }];
+      },
+    });
+  }
+  // Issue #2790: Can't attack. A declared attack by the holder is refused with no event, but a
+  // forced attack skips the validator (R53), so a forced declaration naming it is the reachable
+  // "chosen for the action it can't take": chains clink over it. The `forced` gate matters: a
+  // non-forced declaration by it is what the engine refuses, so that stream cannot occur live.
+  if (event.forced === true && hasKeyword(unit.keywords, "Can't attack")) {
+    beats.push(...chainBeat("Can't attack", event, ctx, holder));
   }
   beats.push(...dashBeats(event, ctx), ...deftBeat(event, ctx));
   return beats;
@@ -841,16 +1130,27 @@ function temporaryBeat(event: Extract<GameEvent, { type: "discarded" }>, ctx: Ct
 function beatsAt(event: GameEvent, ctx: Ctx): Beat[] {
   switch (event.type) {
     case "damage":
+      // R2791000's Spell Damage answers a non-combat hit on either hit event; Issue #2790's
+      // crack reads the view's Brittle on a `damage`.
+      return [...hitBeats(event, ctx), ...brittleCrackBeat(event, ctx), ...spellDamageBeat(event, ctx)];
     case "damageAbsorbed":
-      return [...hitBeats(event, ctx), ...spellDamageBeat(event, ctx)];
+      return [...hitBeats(event, ctx), ...armorBeat(event, ctx), ...indestructibleBeat(event, ctx), ...spellDamageBeat(event, ctx)];
     case "healed":
       return event.via === "Lifesteal" ? lifestealBeat(event, ctx) : [];
     case "destroyed":
       return deathBeats(event, ctx);
     case "attackDeclared":
       return attackBeats(event, ctx);
+    case "divineShieldLost":
+      return divineShieldBeat(event, ctx);
     case "summoned":
-      return [...chargeLandingBeat("Charge", event, ctx), ...chargeLandingBeat("Rush", event, ctx), ...stackBeat(event, ctx)];
+      return [...chargeLandingBeat("Charge", event, ctx), ...chargeLandingBeat("Rush", event, ctx), ...stackBeat(event, ctx), ...rebornBeat(event, ctx)];
+    case "crumbled":
+      return brittleShatterBeat(event, ctx);
+    case "keywordGranted":
+      return [...tauntArrivalBeat(event, ctx), ...immutableBeat(event, ctx), ...immuneBeat(event, ctx)];
+    case "positionSwitched":
+      return cantDefendBeat(event, ctx);
     case "fused":
       return equipBeat(event, ctx);
     case "traded":
