@@ -190,6 +190,26 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(root.childElementCount).toBe(1);
     expect(root.firstElementChild).toBe(second?.el);
   });
+
+  it("R2800000 a set piece mounts its shape's layers, its side, its spin and its swallow, centred on its box", () => {
+    const vortex: FxDomCue = { kind: "setPiece", shape: "vortex", tint: TINT, spin: -1, side: "opponent", at: anchor, holdMs: 2000, delayMs: 0, durationMs: 3200 };
+    const el = expectMounted(mountDomEffect(root, vortex, { at: AT }), vortex);
+    expect(el.getAttribute("data-shape")).toBe("vortex");
+    expect(el.getAttribute("data-side")).toBe("opponent");
+    expect(cssVar(el, "--fx-spin")).toBe("-1");
+    expect(cssVar(el, "--fx-hold")).toBe("2000ms");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-setPiece-dark", "fx-setPiece-spiral", "fx-setPiece-core"]);
+    // It names no card (R202): no text at all.
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+
+    const fold: FxDomCue = { ...vortex, shape: "fold", spin: 1, side: null };
+    const folded = expectMounted(mountDomEffect(root, fold, { at: AT }), fold);
+    expect(folded.getAttribute("data-side")).toBe("both");
+    expect([...folded.children].map((child) => child.className)).toEqual(["fx-setPiece-edges", "fx-setPiece-light"]);
+    expect(mountDomEffect(root, fold, {})).toBeNull();
+  });
 });
 
 /* What it refuses, and what it never does */
