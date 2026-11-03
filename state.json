@@ -16491,15 +16491,13 @@
     "what": "revise #2955 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-03T23:44:22Z",
+    "at": "2026-11-03T23:55:31Z",
     "notes": [
-      "delivered review #2955 on gpt (run 41740099449): interrupted",
-      "delivered revise #2964 on muse (run 41740003738): blocked",
-      "delivered review #2967 on claude-4 (run 41736367277): approved",
-      "started review #2955 on claude-7 (run 41741960686)",
-      "started plan #2942 on claude-1 (run 41742035597)",
+      "CI on #2964: #2964: queued a CI fix",
+      "delivered review #2955 on claude-7 (run 41741960686): reviewed",
+      "started revise #2955 on claude-7 (run 41743201771)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17203,7 +17201,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T23:44:22Z",
+  "loop_tick": "2026-11-03T23:55:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
