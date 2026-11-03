@@ -29622,7 +29622,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-03T19:33:03Z",
         "every": 5,
+        "findings": 0,
         "head": "90403063cd7b7ab74c238e5247c51de4ea75d07e",
         "issue": 2922,
         "last_why": "stopped: #2951 was closed",
@@ -29630,18 +29632,19 @@
         "n": 25,
         "pr": 2951,
         "queued_at": "2026-11-03T18:23:54Z",
+        "reason": "stopped: #2951 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:dd5c2387-1793733605",
         "sha": "a40d16827f642753b8bc3973c45b842343f50781",
         "started_at": "2026-11-03T19:20:35Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the dungeon run's curses and Combat artifacts change its fights",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 27
