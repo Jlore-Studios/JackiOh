@@ -71,6 +71,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -169,7 +171,6 @@ mod tests {
 
             #[test]
             fn r397_offers_any_permanent_on_either_side_face_down_cards_included_unfiltered_and_never_itself() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [SHRIMP, FILLER], "field": [VANILLA], "backrow": [MANA_WELL] },
                     "p2": { "hand": [FILLER], "field": [CUBE], "backrow": [{ "def": GAMBIT, "faceUp": false }] },
@@ -182,7 +183,6 @@ mod tests {
 
             #[test]
             fn r13_a_card_dormant_under_a_stack_pile_is_no_permanent_on_the_field_only_the_piles_top_is_offered() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [SHRIMP, FILLER] },
                     "p2": { "hand": [FILLER], "field": [CUBE, { "def": FIENDER, "stack": true }] },
@@ -215,7 +215,6 @@ mod tests {
 
             #[test]
             fn r397_more_is_strictly_more_another_hired_shrimp_has_as_many_lines_and_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [SHRIMP, FILLER] }, "p2": { "hand": [FILLER], "field": [SHRIMP] } }));
                 let Some(theirs) = s.unit(P2, 1) else {
                     panic!("p2's Hired Shrimp should be on the board");
@@ -302,7 +301,6 @@ mod tests {
 
             #[test]
             fn r90_with_no_permanent_on_the_field_it_enters_anyway_its_cry_finding_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [SHRIMP, FILLER] }, "p2": { "hand": [FILLER] } }));
                 assert_eq!(offered(&s, P1), IndexSet::new());
                 s.play(SHRIMP, json!({}));
@@ -339,7 +337,6 @@ mod tests {
 
             #[test]
             fn r397_an_offered_target_with_more_lines_is_destroyed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "field": [CUBE, VANILLA] },
@@ -352,7 +349,6 @@ mod tests {
 
             #[test]
             fn r90_a_target_that_is_not_highlighted_is_refused_and_legal_actions_agrees() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "field": [VANILLA, CUBE] },
@@ -366,7 +362,6 @@ mod tests {
 
             #[test]
             fn r177_a_face_down_card_it_may_not_read_is_judged_at_resolution_a_shorter_trap_survives_unnamed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }] },
@@ -381,7 +376,6 @@ mod tests {
 
             #[test]
             fn r177_and_a_longer_one_is_destroyed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": HONEYPOT, "faceUp": false }] },
@@ -395,7 +389,6 @@ mod tests {
 
             #[test]
             fn r177_the_offer_never_reveals_a_face_down_cards_lines_a_shorter_and_a_longer_trap_are_offered_alike() {
-                crate::register_all();
                 let short = scenario(json!({
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }] },
@@ -416,7 +409,6 @@ mod tests {
 
             #[test]
             fn none_qualifies_and_no_face_down_card_no_target_and_it_enters_anyway() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER], "field": [VANILLA] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },

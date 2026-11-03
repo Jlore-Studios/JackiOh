@@ -7,7 +7,7 @@ use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::harness::{Bench, both, events_of_type, json_of, new_game, put, slot};
+use crate::rules::fixtures::harness::{Bench, both, events_of_type, ids, json_of, new_game, put, slot};
 
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no instance {id}"))
@@ -15,10 +15,6 @@ fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no instance {id}"))
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {

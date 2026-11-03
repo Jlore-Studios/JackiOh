@@ -157,6 +157,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const MIND: &str = "meditative-022";
     const FORTIFY: &str = "meditative-022-1";
     const FILLER: &str = "core-005"; // (1) Spell.
@@ -165,7 +167,6 @@ mod tests {
 
     /// p1 keeps `secret`; p2 holds the linked Fortify Mind and it is p2's turn.
     fn table(secret: &str, p1field: Value, p2hand: Value, p2field: Value) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": MIND }, FILLER],
@@ -324,7 +325,6 @@ mod tests {
 
         #[test]
         fn r862_with_no_link_it_does_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER, FILLER] },
                 "p2": {
@@ -347,7 +347,6 @@ mod tests {
 
         #[test]
         fn r862_discarded_by_temporary_it_takes_all_three_penalties() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [FILLER],
@@ -385,7 +384,6 @@ mod tests {
 
         #[test]
         fn r862_discarded_by_an_effect_it_takes_all_three_penalties() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [FILLER],
@@ -410,7 +408,6 @@ mod tests {
 
         #[test]
         fn r863_the_secrets_owner_playing_it_takes_the_penalty() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": MIND }, FILLER, FILLER, FILLER],

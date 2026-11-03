@@ -60,7 +60,6 @@ mod tests {
 
         #[test]
         fn adds_an_inner_fire_a_divine_spirit_and_a_power_word_shield_in_that_order() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [ENDURANCE, FILLER] }, "p2": { "hand": [FILLER] } }));
 
             s.play(ENDURANCE, json!({}));
@@ -99,7 +98,6 @@ mod tests {
 
         #[test]
         fn r1867001_adds_all_three_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": ENDURANCE, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER] },

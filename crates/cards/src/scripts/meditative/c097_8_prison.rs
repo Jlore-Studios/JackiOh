@@ -179,7 +179,6 @@ mod tests {
 
         #[test]
         fn r1284_captures_at_chance_100() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -211,7 +210,6 @@ mod tests {
 
         /// A board with Prison at chance 100 in p1's lane 1 and `p1_hand` and `p2_hand` to play.
         fn prison_at_100(p1_hand: Value, p2_hand: Value) -> jackioh_engine::testkit::Scenario {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": p1_hand,
                         "library": [SPARE, SPARE], "mana": 10 },
@@ -292,7 +290,6 @@ mod tests {
 
         #[test]
         fn r1284_summon_is_not_captured() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -321,7 +318,6 @@ mod tests {
 
         #[test]
         fn r1284_capturing_felinor_fiender_uncovers_p2_unit_beneath() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -354,7 +350,6 @@ mod tests {
 
         #[test]
         fn r1284_hit_job_on_prison_resumes_captive_under_p1() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -392,7 +387,6 @@ mod tests {
 
         #[test]
         fn r2271000_its_own_controllers_unit_is_not_captured_on_the_radiant_face() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": { "field": [{ "def": ID, "lane": 1, "radiant": true }], "hand": [VANILLA],
                         "library": [SPARE, SPARE], "mana": 10 },
@@ -413,7 +407,6 @@ mod tests {
 
         #[test]
         fn r1284_radiant_face_has_lucky_1() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "radiant": true, "lane": 1 }],
@@ -526,7 +519,6 @@ mod tests {
     /// zone is.
     #[test]
     fn r1081000_a_flying_unit_played_into_the_backrow_is_captured() {
-        crate::register_all();
         let mut s = crate::scenario(json!({
             "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
             "p2": { "hand": [VANILLA, FILLER], "library": [SPARE, SPARE], "mana": 10 },
@@ -549,7 +541,6 @@ mod tests {
     /// standing there when Prison leaves.
     #[test]
     fn r1081000_a_prison_standing_in_the_backrow_captures_beneath_itself() {
-        crate::register_all();
         let mut s = crate::scenario(json!({
             "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
             "p2": { "hand": [VANILLA, FILLER], "library": [SPARE, SPARE], "mana": 10 },

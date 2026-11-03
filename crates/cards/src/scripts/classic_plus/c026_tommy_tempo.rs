@@ -70,6 +70,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -189,7 +191,6 @@ mod tests {
 
             #[test]
             fn r831010_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_6_6() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -201,7 +202,6 @@ mod tests {
 
             #[test]
             fn r831010_with_no_mana_left_it_stays_a_5_5_and_nothing_is_lost() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK, "mana": 3 },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -213,7 +213,6 @@ mod tests {
 
             #[test]
             fn r386_its_per_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -323,7 +322,6 @@ mod tests {
 
             #[test]
             fn played_from_a_hand_it_ends_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FREE], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -466,7 +464,6 @@ mod tests {
 
             #[test]
             fn r831010_played_from_a_hand_it_gains_2_2_for_each_mana_lost() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOMMY, "radiant": true }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },

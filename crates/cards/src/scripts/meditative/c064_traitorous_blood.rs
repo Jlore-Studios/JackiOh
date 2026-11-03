@@ -83,6 +83,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -101,7 +103,6 @@ mod tests {
     }
 
     fn blood_game() -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "backrow": [{ "def": ID, "faceDown": true }] },
             "p2": { "field": [VANILLA, SCARAB] },
@@ -172,7 +173,6 @@ mod tests {
     #[test]
     fn lonely_stays_set() {
         // No adjacent Unit: Blood stays set and the hero takes the hit.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "backrow": [{ "def": ID, "faceDown": true }] },
             "p2": { "field": [VANILLA] },
@@ -193,7 +193,6 @@ mod tests {
     #[test]
     fn two_neighbours_random() {
         // Either neighbour may take it; both are legal re-aims of the same declaration.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "backrow": [{ "def": ID, "faceDown": true }] },
             "p2": { "field": [SCARAB, VANILLA, BIG] },
@@ -238,7 +237,6 @@ mod tests {
 
     #[test]
     fn r121_a_forced_attack_never_sets_it_off() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "field": [MOTHS],
@@ -264,7 +262,6 @@ mod tests {
 
     #[test]
     fn its_own_sides_attack_never_sets_it_off() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [VANILLA, SCARAB], "backrow": [{ "def": ID, "faceDown": true }] },
             "p2": { "field": [BIG] },
@@ -277,7 +274,6 @@ mod tests {
 
     #[test]
     fn taunt_is_ignored() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [MENACE], "backrow": [{ "def": ID, "faceDown": true }] },
             "p2": { "field": [VANILLA, SCARAB] },
@@ -323,7 +319,6 @@ mod tests {
 
     #[test]
     fn radiant_copies_each_unit_the_combat_destroyed() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "backrow": [{ "def": ID, "faceDown": true }] },
             "p2": { "field": [SCARAB, SCARAB] },
@@ -345,7 +340,6 @@ mod tests {
 
     #[test]
     fn radiant_a_full_board_takes_fewer_copies() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "field": [VANILLA, VANILLA, VANILLA, VANILLA],

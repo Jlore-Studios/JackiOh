@@ -16,14 +16,10 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::{add_to_hand, discard_random};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{act, new_game, setup_catalog};
+use crate::rules::fixtures::harness::{act, ids, input, new_game, setup_catalog};
 use crate::rules::fixtures::scripts::{hinder, super_virus};
 
 const SEATS: [PlayerId; 2] = [P1, P2];
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
 
 /// A random subset of the seat's offered cards, drawn from the test's own stream.
 fn some_keep(state: &GameState, player: PlayerId, pick: &mut Rng) -> Vec<String> {
@@ -61,10 +57,6 @@ fn answer_in(begun: &GameState, order: &[PlayerId], keep: &PerPlayer<Vec<String>
         log.push(action);
     }
     Answered { state, log }
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 mod r265_the_mulligans_are_open_at_once {

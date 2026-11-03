@@ -89,7 +89,6 @@ mod tests {
     const SEEDS: u32 = 200;
 
     fn setup(seed: &str, radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": PAYCHECK, "radiant": radiant }], "library": [FILLER, FILLER, FILLER, FILLER] },

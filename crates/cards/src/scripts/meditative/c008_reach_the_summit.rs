@@ -156,6 +156,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -233,7 +235,6 @@ mod tests {
 
         #[test]
         fn r840_a_copy_starts_at_0() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "summit-copy",
                 "p1": {
@@ -292,7 +293,6 @@ mod tests {
 
         #[test]
         fn r841_level_3_discards_2_random_enemy_cards() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "summit-discard",
                 "p1": {
@@ -338,7 +338,6 @@ mod tests {
 
         #[test]
         fn r841_level_4_exiles_2_different_enemy_permanents_including_a_face_down_trap() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "summit-exile",
                 "p1": {
@@ -365,7 +364,6 @@ mod tests {
 
         #[test]
         fn r841_level_5_adds_2_radiant_cards_costing_0_never_itself() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "summit-add",
                 "p1": {

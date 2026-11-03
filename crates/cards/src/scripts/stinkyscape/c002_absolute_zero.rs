@@ -98,7 +98,6 @@ mod tests {
 
         #[test]
         fn r1848000_the_chosen_unit_never_thaws() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ZERO, FILLER], "library": filler(8) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(8) },
@@ -152,7 +151,6 @@ mod tests {
 
         #[test]
         fn r1848000_a_bounce_or_a_vanilla_ends_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ZERO, ZERO, SILENCE, FLOOD, FILLER], "mana": 10 },
                 "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA] },
@@ -175,7 +173,6 @@ mod tests {
 
         #[test]
         fn r1848000_a_change_of_control_keeps_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ZERO, STEAL, FILLER], "mana": 10, "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -196,7 +193,6 @@ mod tests {
 
         #[test]
         fn r1848000_an_ordinary_freeze_after_changes_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ZERO, BOB, FILLER], "mana": 10, "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA], "library": filler(4) },
@@ -222,7 +218,6 @@ mod tests {
         use super::*;
 
         fn radiant_zero_at_a_vanilla(mode: &str) -> (Scenario, CardInstance) {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": ZERO, "radiant": true }, HIT_JOB, METEOR, FILLER],

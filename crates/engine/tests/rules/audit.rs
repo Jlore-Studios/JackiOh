@@ -80,7 +80,7 @@ fn board() -> GameState {
     state
 }
 
-fn ids<C: std::borrow::Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
+fn def_ids<C: std::borrow::Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().def_id.clone()).collect()
 }
 
@@ -110,7 +110,7 @@ mod the_audits_sweep_e36 {
         put(&mut state, &small().id, slot(P1, Row::Units, 2), json!({}));
         put(&mut state, &big().id, slot(P2, Row::Units, 2), json!({}));
         assert_eq!(
-            ids(&audit_targets(&state, args(P2, P1, 10, false, false))),
+            def_ids(&audit_targets(&state, args(P2, P1, 10, false, false))),
             vec![small().id, small().id]
         );
         let targets = audit_targets(&state, args(P2, P1, 10, false, false));
@@ -124,7 +124,7 @@ mod the_audits_sweep_e36 {
         put(&mut state, &even().id, slot(P2, Row::Units, 1), json!({}));
         put(&mut state, &big().id, slot(P2, Row::Units, 2), json!({}));
         assert_eq!(
-            ids(&audit_targets(&state, args(P1, P1, 10, true, false))),
+            def_ids(&audit_targets(&state, args(P1, P1, 10, true, false))),
             vec![big().id]
         );
     }
@@ -151,11 +151,11 @@ mod the_audits_sweep_e36 {
             PlaceOnFieldOptions { stack: Some(true) }
         ));
         assert_eq!(
-            ids(&audit_targets(&state, args(P1, P1, 10, false, false))),
+            def_ids(&audit_targets(&state, args(P1, P1, 10, false, false))),
             vec![trap().id]
         );
         assert_eq!(
-            ids(&audit_targets(&state, args(P1, P1, 10, true, false))),
+            def_ids(&audit_targets(&state, args(P1, P1, 10, true, false))),
             vec![stacker().id]
         );
     }
@@ -182,7 +182,7 @@ mod the_audits_sweep_e36 {
         let fused_def = fused.as_ref().map(|card| card.def_id.clone()).unwrap_or_default();
         assert_eq!(lines_of_code(&state, &fused_def), 23);
         assert_eq!(
-            ids(&audit_targets(&state, args(P2, P1, 23, false, false))),
+            def_ids(&audit_targets(&state, args(P2, P1, 23, false, false))),
             Vec::<String>::new()
         );
         assert_eq!(audit_targets(&state, args(P2, P1, 24, false, false)).len(), 1);

@@ -113,6 +113,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -216,7 +218,6 @@ mod tests {
 
             #[test]
             fn refuses_a_play_without_a_mode() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LEAK, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.expect_refused(|s| s.play(LEAK, json!({})));
             }
@@ -354,7 +355,6 @@ mod tests {
 
             #[test]
             fn after_play_your_own_plays_lock_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LEAK, MENACE, FILLER], "library": [FILLER], "mana": 7 },
                     "p2": { "hand": [FILLER] },
@@ -368,7 +368,6 @@ mod tests {
 
             #[test]
             fn r70_a_cast_counts_the_opponent_s_wardrum_s_copy_of_their_field_spell_is_locked_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LEAK }, FILLER], "library": [FILLER, FILLER], "mana": 4 },
                     "p2": { "hand": [MANA_WELL, FILLER], "field": [{ "def": WARDRUM, "radiant": true }], "library": [FILLER, FILLER] },
@@ -390,7 +389,6 @@ mod tests {
 
             #[test]
             fn r175_r688_a_locked_unit_zone_takes_a_reborn_return_there_a_lock_refuses_plays_not_the_return() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LEAK, BONE_STORM, BONE_STORM, FILLER], "library": [FILLER, FILLER], "mana": 4 },
                     "p2": { "hand": [DEFENDER, FILLER], "library": [FILLER, FILLER] },
@@ -418,7 +416,6 @@ mod tests {
 
             #[test]
             fn r1850006_crater_locks_the_backrow_zone_it_enters_on_the_radiant_face_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LEAK, "radiant": true }, FILLER], "library": [FILLER, FILLER], "mana": 4 },
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },

@@ -19,7 +19,7 @@ use jackioh_engine::zones::{PlaceOnFieldOptions, place_on_field};
 
 use super::fixtures::catalog::unit_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{events_json, in_hand, live, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_json, ids, in_hand, live, new_game, put, set_library, slot};
 
 /// A Cry that would be loud if making a card Radiant ever re-fired one (R22).
 fn crier() -> CardDef {
@@ -125,10 +125,6 @@ fn radiant_ids(events: &[GameEvent]) -> Vec<String> {
 
 fn named(id: &str) -> Effect {
     set_radiant(json_as(json!({ "instanceId": id })))
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {

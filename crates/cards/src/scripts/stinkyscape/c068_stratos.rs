@@ -40,7 +40,6 @@ mod tests {
 
     #[test]
     fn flying_a_unit_without_flying_or_ranged_cannot_attack_it() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [ANCHOR], "field": [STRATOS], "library": filler(4) },
@@ -53,7 +52,6 @@ mod tests {
 
     #[test]
     fn ranged_takes_no_strike_back_from_a_defender_without_ranged() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ANCHOR], "field": [STRATOS], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
@@ -68,7 +66,6 @@ mod tests {
 
     #[test]
     fn its_death_fuses_nothing_it_is_no_starship_piece() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [STRATOS], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -87,7 +84,6 @@ mod tests {
 
     #[test]
     fn radiant_is_a_6_2_with_the_same_keywords() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": STRATOS, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

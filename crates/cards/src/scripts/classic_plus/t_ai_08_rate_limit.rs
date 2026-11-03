@@ -71,6 +71,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const RATE_LIMIT: &str = "classicplus-t-ai-08";
     const REFUSAL: &str = "classicplus-t-ai-09";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
@@ -91,7 +93,6 @@ mod tests {
     }
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "active": "p2",
             "p1": merged(
@@ -167,7 +168,6 @@ mod tests {
 
             #[test]
             fn your_own_plays_never_set_it_off() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [VANILLA, REPLENISH, STOCKPILE, VANILLA],

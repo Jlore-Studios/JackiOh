@@ -95,6 +95,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -172,7 +174,6 @@ mod tests {
 
         #[test]
         fn s8_the_cry_is_gone_playing_her_radiates_nothing_herself_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess",
                 "p1": { "hand": [SAINTESS], "field": [TIMMY] },
@@ -189,7 +190,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_the_base_face_prints_no_keywords_reborn_included() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "saintess", "p1": { "hand": [SAINTESS] } }));
             s.play(SAINTESS, json!({ "zone": 1 }));
 
@@ -199,7 +199,6 @@ mod tests {
 
         #[test]
         fn s8_your_units_is_yours_the_opponent_s_units_are_untouched() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess",
                 "p1": { "hand": [SAINTESS] },
@@ -260,7 +259,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_played_base_she_dies_once_the_first_true_strike_puts_her_in_the_graveyard_for_good() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess",
                 "p1": { "hand": [SAINTESS, TRUE_STRIKE, TIMMY, STOCKPILE] }
@@ -280,7 +278,6 @@ mod tests {
 
         #[test]
         fn s8_the_base_death_reaches_the_board_only_the_hand_keeps_its_faces() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess-base-hand",
                 "p1": { "field": [SAINTESS, TIMMY], "hand": [TRUE_STRIKE, TIMMY, STOCKPILE] },
@@ -304,7 +301,6 @@ mod tests {
 
         #[test]
         fn the_radiant_face_is_a_4_4_with_reborn_and_it_radiates_nothing_on_arrival_either() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess",
                 "p1": { "hand": [{ "def": SAINTESS, "radiant": true }, TIMMY], "field": [TIMMY] }
@@ -320,7 +316,6 @@ mod tests {
 
         #[test]
         fn death_every_other_unit_becomes_radiant_the_hand_keeps_its_faces_and_reborn_brings_her_back() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess-radiant-hand",
                 "p1": {
@@ -350,7 +345,6 @@ mod tests {
 
         #[test]
         fn her_second_death_radiates_the_units_that_arrived_since() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "saintess-twice",
                 "p1": {

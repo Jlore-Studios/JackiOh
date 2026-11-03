@@ -68,7 +68,6 @@ mod tests {
     }
 
     fn unsecure_board(radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [{ "def": UNSECURE, "radiant": radiant }, FILLER],

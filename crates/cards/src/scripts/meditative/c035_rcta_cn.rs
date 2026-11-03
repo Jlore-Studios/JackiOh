@@ -69,6 +69,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -83,7 +85,6 @@ mod tests {
     /// p1 holds RCTA (base unless `radiant_face`) and a Vanilla stands in lane 1; both sides keep
     /// cards in hand so no turn auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -178,7 +179,6 @@ mod tests {
             #[test]
             fn a_cn_unit_is_refused() {
                 // The only permanent is CN and no backrow card is offered: the play is refused.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "rcta-refused",
                     "p1": {
@@ -204,7 +204,6 @@ mod tests {
 
             #[test]
             fn r924_an_enemy_face_down_trap_is_a_legal_pick() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "rcta-trap",
                     "p1": {
@@ -227,7 +226,6 @@ mod tests {
 
             #[test]
             fn a_target_that_is_cn_by_resolution_fizzles() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "rcta-fizzle",
                     "p1": {
@@ -267,7 +265,6 @@ mod tests {
 
             #[test]
             fn an_enemy_permanent_is_a_legal_target() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "rcta-enemy",
                     "p1": { "hand": [{ "def": RCTA }, FILLER], "library": filler(4) },

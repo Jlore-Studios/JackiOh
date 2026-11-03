@@ -34,6 +34,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -89,7 +91,6 @@ mod tests {
 
         #[test]
         fn r673_after_a_in_the_system_play_a_generated_card_may_be_glitch_at_10000_in_10000_every_one_is() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "seed": "t-glitch-odds",
                 "p1": { "hand": ["classic-025", "core-057"], "mana": 4 },
@@ -104,7 +105,6 @@ mod tests {
 
         #[test]
         fn r673_with_no_system_play_the_same_generation_makes_no_glitch_and_draws_as_it_always_did() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "seed": "t-glitch-none",
                 "p1": { "hand": ["core-057"], "mana": 4 },

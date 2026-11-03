@@ -43,6 +43,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const CURSE: &str = "meditative-028-1";
@@ -62,7 +64,6 @@ mod tests {
 
     /// The curse on top of its owner's library, so the next draw casts it.
     fn cursed_top(radiant_face: bool, armor: i32) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": if radiant_face { "curse-radiant" } else { "curse-drawn" },
             "p1": {
@@ -127,7 +128,6 @@ mod tests {
 
             #[test]
             fn played_from_hand_for_2_it_deals_the_same_hit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "curse-played",
                     "p1": { "hand": [CURSE, FILLER], "library": filler(3) },
@@ -144,7 +144,6 @@ mod tests {
 
             #[test]
             fn damage_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "curse-param",
                     "p1": {

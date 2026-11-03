@@ -67,6 +67,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::{degrade_number, upgrade_number};
 
     const GOLIATH: &str = super::ID;
@@ -139,7 +140,6 @@ mod tests {
 
         #[test]
         fn r2199005_a_later_dearer_unit_fires_it_again() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "goliath",
                 "active": "p2",
@@ -171,7 +171,6 @@ mod tests {
 
         #[test]
         fn r61_its_controllers_own_unit_fires_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [BIG_FELINOR, ONE, TWO, HIT_JOB], "mana": 20,
@@ -186,7 +185,6 @@ mod tests {
 
         #[test]
         fn r56_a_discounted_unit_is_read_at_the_price_paid() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "goliath",
                 "active": "p2",

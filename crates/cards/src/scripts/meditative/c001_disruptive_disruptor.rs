@@ -49,6 +49,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const DISRUPTOR: &str = "meditative-001";
@@ -76,6 +78,7 @@ mod tests {
 
     mod meditative_001 {
         use super::*;
+        use crate::ids;
 
         #[test]
         fn is_a_2_cost_common_field_spell_guarding_on_both_faces() {
@@ -94,7 +97,6 @@ mod tests {
 
         #[test]
         fn r800_book_of_pain_on_the_opponents_turn_discards_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [VANILLA, VANILLA, VANILLA], "backrow": [backrow(DISRUPTOR, false)] },
@@ -119,7 +121,6 @@ mod tests {
 
         #[test]
         fn r800_your_own_devils_pact_still_discards() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [DEVILS_PACT, VANILLA, VANILLA, FILLER],
@@ -138,7 +139,6 @@ mod tests {
 
         #[test]
         fn r800_two_disruptors_report_one_prevention() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -156,7 +156,6 @@ mod tests {
 
         #[test]
         fn r800_in_the_graveyard_it_guards_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [VANILLA, VANILLA, VANILLA], "graveyard": [DISRUPTOR] },
@@ -171,7 +170,6 @@ mod tests {
 
         #[test]
         fn its_cry_draws_1_and_gains_no_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA] },
                 "p2": { "hand": [FILLER] },
@@ -188,7 +186,6 @@ mod tests {
 
         #[test]
         fn r386_its_draw_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA, VANILLA] },
                 "p2": { "hand": [FILLER] },
@@ -202,7 +199,6 @@ mod tests {
 
         #[test]
         fn radiant_cry_draws_2_and_gains_2_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
@@ -223,7 +219,6 @@ mod tests {
 
         #[test]
         fn r386_radiant_draw_and_mana_read_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
@@ -260,16 +255,11 @@ mod tests {
 
         /// p2 to act, p1 guarded by a face-up Disruptor and holding three cards.
         fn guarded() -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [VANILLA, VANILLA, VANILLA], "backrow": [backrow(DISRUPTOR, false)] },
                 "p2": { "hand": [BOOK_OF_PAIN, FILLER], "mana": 9 },
             }))
-        }
-
-        fn ids(cards: &[CardInstance]) -> Vec<String> {
-            cards.iter().map(|card| card.id.clone()).collect()
         }
 
         #[test]
@@ -321,7 +311,6 @@ mod tests {
 
         #[test]
         fn r800_r637_temporarys_discard_at_your_own_end_of_turn_is_untouched() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [FORTIFY_MIND, VANILLA],
@@ -340,7 +329,6 @@ mod tests {
 
         #[test]
         fn r800_pickle_s_deferred_question_opens_on_your_turn_where_the_guard_sleeps() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -373,7 +361,6 @@ mod tests {
 
         #[test]
         fn r800_leaving_the_field_lifts_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [VANILLA, VANILLA, VANILLA], "backrow": [backrow(DISRUPTOR, false)] },
@@ -391,7 +378,6 @@ mod tests {
 
         #[test]
         fn r1_radiant_cry_fires_when_cast() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],

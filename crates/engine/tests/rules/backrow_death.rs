@@ -12,19 +12,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{
     bauble, grunt, notes, playing, rattle, recorder, replays_to, storm, voidwalker,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, sink_for, slot};
-
-/// An `ActionInput` from a JSON object (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{by, events_of_type, in_hand, input, put, sink_for, slot};
 
 fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))

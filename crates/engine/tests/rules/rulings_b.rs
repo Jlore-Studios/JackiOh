@@ -21,7 +21,7 @@ use jackioh_engine::subsystems::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    act, act_result, both, events_json, in_hand, json_of, new_game, play_random_game, put, set_library,
+    act, act_result, both, events_json, ids, in_hand, json_of, new_game, play_random_game, put, set_library,
     sink_for, slot, spread,
 };
 
@@ -692,10 +692,6 @@ fn refusal<T>(result: Result<T, EngineError>) -> Option<String> {
 
 fn says(text: &str) -> Option<String> {
     Some(text.to_string())
-}
-
-fn ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
-    cards.into_iter().map(|card| card.borrow().id.clone()).collect()
 }
 
 fn def_ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {

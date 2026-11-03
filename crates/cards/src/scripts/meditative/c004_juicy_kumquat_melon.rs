@@ -108,6 +108,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const MELON: &str = "meditative-004";
@@ -138,7 +140,6 @@ mod tests {
 
         #[test]
         fn r801_draws_the_topmost_meditative_card_of_each_cost_0_to_5_in_cost_order() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [MELON, FILLER],
@@ -161,7 +162,6 @@ mod tests {
 
         #[test]
         fn r801_a_non_meditative_card_of_that_cost_is_passed_over() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [MELON, FILLER],
@@ -181,7 +181,6 @@ mod tests {
 
         #[test]
         fn r801_a_cost_with_no_match_draws_nothing_and_no_fatigue() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [MELON, FILLER], "mana": 9, "library": [CHEAP, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -223,7 +222,6 @@ mod tests {
 
         #[test]
         fn draws_no_random_number() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-004-no-rng",
                 "p1": {
@@ -270,7 +268,6 @@ mod tests {
 
             #[test]
             fn radiant_each_card_that_reaches_the_hand_costs_2_less() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": MELON, "radiant": true }, FILLER],

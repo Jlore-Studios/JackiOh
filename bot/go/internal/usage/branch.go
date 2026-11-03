@@ -2,13 +2,9 @@ package usage
 
 import (
 	"errors"
-	"maps"
 	"os"
-	"path/filepath"
-	"slices"
 	"strings"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -39,10 +35,8 @@ type Branch struct {
 var ErrRejected = errors.New("the usage branch moved: the push was rejected")
 
 // OpenBranch clones `name` from `remote` (shallow: its tip alone) into a new directory under
-// `parent`, or, when the remote has no such branch yet, starts it there as an orphan holding
-// `config.NoDeploy`'s files (Vercel builds every branch it is pushed, unless the branch's own
-// `vercel.json` says not to), whose first push creates it. `token` ("" for none) is handed to
-// git for GitHub.
+// `parent`, or, when the remote has no such branch yet, starts it there as an orphan with an empty
+// first commit, whose first push creates it. `token` ("" for none) is handed to git for GitHub.
 func OpenBranch(parent, remote, name, token string, who *git.Identity) (*Branch, error) {
 	if err := os.MkdirAll(parent, 0o777); err != nil {
 		return nil, err
@@ -59,10 +53,7 @@ func OpenBranch(parent, remote, name, token string, who *git.Identity) (*Branch,
 		heads := b.run("ls-remote", "--heads", "origin", "refs/heads/"+name)
 		if py.Strip(heads) == "" {
 			b.New = true
-			for _, path := range slices.Sorted(maps.Keys(config.NoDeploy)) {
-				herr.Must(os.WriteFile(filepath.Join(dir, path), []byte(config.NoDeploy[path]), 0o666))
-			}
-			b.Git.CommitAll("usage: start [skip ci]", who)
+			b.Git.CommitEmpty("usage: start [skip ci]", who)
 			return
 		}
 		b.fetch()

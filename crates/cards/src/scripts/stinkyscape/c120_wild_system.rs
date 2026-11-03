@@ -77,7 +77,6 @@ mod tests {
     }
 
     fn wild_board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [{ "def": WILD, "radiant": radiant }, FILLER],

@@ -67,6 +67,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -118,7 +120,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_gives_armor_3_or_paid_6_and_a_degrade_armor_1_or_paid_4() {
         for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 6), (false, true, 4)] {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
                 "p2": spare(json!({ "field": [six_one()] })),
@@ -196,7 +197,6 @@ mod tests {
 
         #[test]
         fn s4_4_step_2_paid_2_gives_your_hero_armor_2_so_a_6_attack_hit_lands_for_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
@@ -211,7 +211,6 @@ mod tests {
 
         #[test]
         fn your_hero_the_armor_protects_its_controller_only() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [GOING_LONG], "field": [six_one()], "hand": [STOCKPILE] },
                 "p2": { "hand": [STOCKPILE] },
@@ -225,7 +224,6 @@ mod tests {
 
         #[test]
         fn embiggen_4_costs_4_mana_and_gives_armor_5_so_the_same_6_attack_hit_lands_for_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
                 "p2": spare(json!({ "field": [six_one()] })),
@@ -243,7 +241,6 @@ mod tests {
 
         #[test]
         fn the_base_price_is_still_2_and_paying_it_gives_armor_2_rather_than_5() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
                 "p2": spare(json!({ "field": [six_one()] })),
@@ -261,7 +258,6 @@ mod tests {
 
         #[test]
         fn the_armor_stops_the_moment_the_field_spell_leaves_the_backrow() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
@@ -287,7 +283,6 @@ mod tests {
 
         #[test]
         fn armor_4_paid_2_on_the_radiant_face_so_a_6_attack_hit_lands_for_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [{ "def": GOING_LONG, "radiant": true }], "hand": [STOCKPILE] },
@@ -304,7 +299,6 @@ mod tests {
 
         #[test]
         fn paid_4_armor_10_the_radiant_embiggen_price_gives_armor_10_so_a_6_attack_hit_is_nothing_r63() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": GOING_LONG, "radiant": true }, STOCKPILE],
@@ -328,7 +322,6 @@ mod tests {
 
         #[test]
         fn the_radiant_face_is_still_a_field_spell_in_the_backrow_and_has_no_quickdraw() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": GOING_LONG, "radiant": true }, STOCKPILE],

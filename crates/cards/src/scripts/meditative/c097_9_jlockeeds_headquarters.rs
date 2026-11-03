@@ -192,7 +192,6 @@ mod tests {
 
         #[test]
         fn s6_3_refuses_the_play_without_five_units_to_tribute() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "hand": [ID, FILLER],

@@ -61,6 +61,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const PING: &str = "classicplus-076-1";
     const LAR: &str = "classicplus-076";
     const FILLER: &str = "core-005";
@@ -162,7 +164,6 @@ mod tests {
 
             #[test]
             fn r384_it_activates_the_turn_it_arrives_brother_lars_death_leaves_a_ping_that_can_be_used_at_once() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
                 let lar = s.card(LAR).id.clone();
                 s.play(HIT_JOB, json!({ "targets": pick::id(&lar) }));
@@ -184,7 +185,6 @@ mod tests {
 
             #[test]
             fn r384_activating_is_not_a_play_no_card_played_the_play_count_and_ceaseless_voids_price_stand_still() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CEASELESS_VOID, FILLER], "field": [PING] },
                     "p2": { "hand": [FILLER] },
@@ -214,7 +214,6 @@ mod tests {
             #[test]
             fn r78_its_count_resets_on_leaving_the_field_used_destroyed_and_back_by_a_granted_reborn_it_may_activate_again_that_turn()
              {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [PING], "library": [FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -235,7 +234,6 @@ mod tests {
 
             #[test]
             fn r384_on_the_opponents_turn_it_is_neither_listed_nor_accepted() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "field": [PING] },

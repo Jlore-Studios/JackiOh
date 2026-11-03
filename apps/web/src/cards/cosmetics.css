@@ -33,10 +33,9 @@
  * under a pen tip, through a slanted, feathered mask, then bursts, slashes a flourish under itself and
  * shines now and then, its timings the custom properties FullArtSignature.tsx sets.
  *
- * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2725003: on the normal
- * face the signature sits over the lower part of the art window, inside it, clear of the name ribbon and the
- * rules text. R2725004: no part of it is Radiant's gold: the ink is a cool silver and the pen's glow and the
- * landing's burst white.
+ * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2949000: Signature signs
+ * only on Full art beside Animated, never on the normal face. R2725004: no part of it is Radiant's gold: the ink is
+ * a cool silver and the pen's glow and the landing's burst white.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -798,14 +797,6 @@
     top: 28cqh;
     height: 20cqh;
   }
-}
-
-/* R2725003: on the normal face the signature is the art window's, over its lower part. */
-.cf .cf-art-frame > .cf-signature {
-  top: 58%;
-  left: 6%;
-  right: 6%;
-  height: 36%;
 }
 
 .cf-signature > svg {

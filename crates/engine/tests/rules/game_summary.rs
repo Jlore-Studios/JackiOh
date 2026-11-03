@@ -6,7 +6,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{new_game, play_random_game};
+use crate::rules::fixtures::harness::{ids, new_game, play_random_game};
 
 fn p1_deck() -> Vec<String> {
     let mut deck = vec!["fx-hinder".to_string(), "fx-going-long".to_string()];
@@ -150,10 +150,6 @@ fn step_of(recorded: &Recorded) -> Step<'_> {
         events: &recorded.events,
         after: &recorded.after,
     }
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 mod summarize_game_s9_11 {

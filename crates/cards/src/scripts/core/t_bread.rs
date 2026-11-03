@@ -32,6 +32,8 @@ mod tests {
     use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
     use jackioh_engine::state::find_instance;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use jackioh_engine::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone};
 
     const P1: PlayerId = PlayerId::P1;
@@ -87,7 +89,7 @@ mod tests {
     }
 
     /// The ids of a query's answer.
-    fn ids<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
+    fn ids_of_defs<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
         defs.into_iter().map(|entry| entry.id.clone()).collect()
     }
 
@@ -167,7 +169,6 @@ mod tests {
 
             #[test]
             fn r37_a_bread_token_summoned_with_statsoverride_is_an_x_x_while_its_printed_face_stays_0_0() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let token = summon_bread_token(&mut s, json!({ "statsOverride": { "attack": 4, "health": 4 } }));
 
@@ -185,7 +186,6 @@ mod tests {
 
             #[test]
             fn r37_a_bread_token_has_no_keywords_and_no_text_of_its_own_at_any_x() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": "core-t-bread", "statsOverride": { "attack": 9, "health": 9 } }] },
@@ -216,7 +216,6 @@ mod tests {
 
             #[test]
             fn r11_a_bread_token_that_dies_in_combat_ceases_to_exist_and_never_reaches_a_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": "core-t-bread", "statsOverride": { "attack": 3, "health": 3 } }] },
@@ -259,16 +258,15 @@ mod tests {
                 crate::register_all();
                 let id = ID.to_string();
 
-                assert!(!ids(query(&json_as(json!({ "type": "Unit" })))).contains(&id));
-                assert!(!ids(query(&json_as(json!({ "cost": 0 })))).contains(&id));
-                assert!(!ids(query(&json_as(json!({ "costRange": { "min": 0, "max": 0 } })))).contains(&id));
-                assert!(ids(query(&json_as(json!({ "token": true })))).contains(&id));
-                assert_eq!(ids(query(&json_as(json!({ "defId": "core-t-bread" })))), vec![id]);
+                assert!(!ids_of_defs(query(&json_as(json!({ "type": "Unit" })))).contains(&id));
+                assert!(!ids_of_defs(query(&json_as(json!({ "cost": 0 })))).contains(&id));
+                assert!(!ids_of_defs(query(&json_as(json!({ "costRange": { "min": 0, "max": 0 } })))).contains(&id));
+                assert!(ids_of_defs(query(&json_as(json!({ "token": true })))).contains(&id));
+                assert_eq!(ids_of_defs(query(&json_as(json!({ "defId": "core-t-bread" })))), vec![id]);
             }
 
             #[test]
             fn s7_r52_and_r62_n18_bread_and_butter_summons_this_token_as_x_x_for_the_trap_s_controller_at_the_opponent_s_end_of_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "active": "p2",
@@ -290,7 +288,6 @@ mod tests {
 
             #[test]
             fn s7_and_r52_x_0_summons_no_bread_token_at_all_not_a_0_0_that_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "backrow": ["core-018"], "mana": 0, "library": ["core-010"] },
@@ -312,7 +309,6 @@ mod tests {
 
             #[test]
             fn s7_a_radiant_bread_token_summoned_as_x_x_carries_armor_x_the_same_x() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let token = summon_bread_token(
                     &mut s,
@@ -330,7 +326,6 @@ mod tests {
             /// Without the override the printed placeholder stands, which is Armor 0 — not Armor X.
             #[test]
             fn s7_a_radiant_bread_token_with_no_armor_override_reads_the_printed_armor_0() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let token = summon_bread_token(
                     &mut s,
@@ -342,7 +337,6 @@ mod tests {
 
             #[test]
             fn s7_a_radiant_bread_token_with_no_override_is_the_same_printed_0_0_and_dies_at_the_state_check() {
-                crate::register_all();
                 let s = scenario(json!({ "seed": SEED, "p1": { "field": [{ "def": "core-t-bread", "radiant": true }] } }));
 
                 assert!(s.unit(P1, 1).is_none());
@@ -351,7 +345,6 @@ mod tests {
 
             #[test]
             fn r11_a_radiant_bread_token_that_leaves_the_field_ceases_to_exist_just_as_the_base_face_does() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": {

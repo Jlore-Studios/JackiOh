@@ -85,6 +85,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -231,7 +233,6 @@ mod tests {
 
             #[test]
             fn only_your_own_graveyard_the_opponents_units_are_neither_offered_nor_summoned() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BACK, FILLER], "graveyard": [VANILLA] },
                     "p2": { "hand": [FILLER], "graveyard": [MENACE, SEVEN] },

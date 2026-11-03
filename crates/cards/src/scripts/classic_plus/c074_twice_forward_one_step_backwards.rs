@@ -64,6 +64,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const FORWARD: &str = "classicplus-074";
     const REFUSAL: &str = "classicplus-t-ai-09";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
@@ -91,7 +93,6 @@ mod tests {
 
     /// p1 sets the trap (lane 2) on turn 9 and ends its turn; p2's turn 10 begins, p2 with mana to spare.
     fn set_then_their_turn(radiant_face: bool, p1: Value, p2: Value, tune: impl FnOnce(&mut Scenario)) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": FORWARD, "radiant": radiant_face }, VANILLA], "library": deck(10, TIMMY) }), p1),
             "p2": merged(json!({ "hand": [STOCKPILE, RAPID, VANILLA, VANILLA], "library": deck(10, TIMMY) }), p2),
@@ -195,7 +196,6 @@ mod tests {
 
             #[test]
             fn r687_r97_destroyed_while_unrevealed_it_is_shown_to_the_opponent_their_view_names_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FORWARD, GUY_ATT], "backrow": [], "library": deck(10, TIMMY), "mana": 10 },
                     "p2": { "hand": [VANILLA], "library": deck(10, TIMMY) },

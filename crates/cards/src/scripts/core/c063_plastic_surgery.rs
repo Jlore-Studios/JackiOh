@@ -54,6 +54,8 @@ mod tests {
     use jackioh_engine::effects::random_pool_keywords;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const SURGERY: &str = "core-063"; // Spell, 1
@@ -103,7 +105,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_gives_4_4_or_2_keywords_and_a_degrade_2_2_and_a_keyword_at_its_floor_of_1() {
         for (upgrade, key, stat, keywords) in [(true, "buff", 4, 1), (true, "keywords", 3, 2), (false, "buff", 2, 1)] {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "field": [FELINOR], "mana": 4 } }));
             let felinor = s.card(FELINOR).clone();
             assert!(!crate::can_degrade_number(&s, SURGERY, "keywords"));
@@ -125,7 +126,6 @@ mod tests {
 
         #[test]
         fn gives_the_target_3_3_and_one_keyword_from_r21_s_pool() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "field": [FELINOR], "mana": 4 } }));
             let felinor = s.card(FELINOR).clone();
 
@@ -140,7 +140,6 @@ mod tests {
 
         #[test]
         fn buffs_a_unit_on_either_side() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "mana": 4 }, "p2": { "field": [FELINOR] } }));
             let felinor = s.card(FELINOR).clone();
 
@@ -151,7 +150,6 @@ mod tests {
 
         #[test]
         fn r21_never_grants_a_keyword_the_unit_already_has() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "field": [MENACE], "mana": 4 } }));
             let menace = s.card(MENACE).clone();
 
@@ -163,7 +161,6 @@ mod tests {
 
         #[test]
         fn r21_radiant_gives_6_6_and_two_distinct_keywords() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": SURGERY, "radiant": true }], "field": [FELINOR], "mana": 4 } }));
             let felinor = s.card(FELINOR).clone();
 
@@ -180,7 +177,6 @@ mod tests {
 
         #[test]
         fn r21_radiant_s_two_keywords_avoid_the_ones_the_unit_already_has() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": SURGERY, "radiant": true }], "field": [TIMMY], "mana": 4 } }));
             let timmy = s.card(TIMMY).clone();
 

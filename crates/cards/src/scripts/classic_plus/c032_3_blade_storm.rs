@@ -50,6 +50,8 @@ mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -250,7 +252,6 @@ mod tests {
 
             #[test]
             fn s9_3_the_storm_replays_from_a_json_copy_to_the_same_hash_and_events() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [STORM, FILLER], "field": [TIMMY, counter()] },
                     "p2": { "hand": [FILLER], "field": [HOGAR] },

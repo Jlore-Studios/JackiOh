@@ -34,13 +34,14 @@ mod tests {
     use jackioh_engine::script::EngineSink;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const SCARAB: &str = "core-007";
 
     /// The Cane in p1's backrow, facing one enemy.
     fn cane_game() -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "backrow": [ID] },
             "p2": { "field": [SCARAB] },
@@ -146,7 +147,6 @@ mod tests {
 
     #[test]
     fn r1126_no_open_zone_no_attack() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "field": ["core-008", "core-008", "core-008", "core-008", "core-008"],
@@ -168,7 +168,6 @@ mod tests {
 
     #[test]
     fn summoned_on_your_turn_it_attacks_from_its_second_turn() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [PARETO, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
@@ -217,7 +216,6 @@ mod tests {
 
     #[test]
     fn pierce_its_hit_ignores_hero_armor() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "backrow": [ID], "hand": [FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER], "armor": 3 },
@@ -252,7 +250,6 @@ mod tests {
 
     #[test]
     fn the_radiant_face_is_6_2() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [{ "def": PARETO, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER] },

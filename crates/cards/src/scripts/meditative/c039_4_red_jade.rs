@@ -34,6 +34,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const BEAUTY: &str = "meditative-039-5";
@@ -48,7 +50,6 @@ mod tests {
 
     #[test]
     fn r962_from_0_summons_a_jade_beauty() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
 
         s.play(ID, json!({}));
@@ -61,7 +62,6 @@ mod tests {
 
     #[test]
     fn r962_radiant_from_0_summons_then_makes_it_radiant_in_that_order() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -88,7 +88,6 @@ mod tests {
 
     #[test]
     fn jade_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
         set_param(s.card_mut(ID), "jade", 3);
         s.play(ID, json!({}));

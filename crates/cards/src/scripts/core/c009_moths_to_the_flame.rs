@@ -39,6 +39,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const LIBRARY: [&str; 3] = ["core-011", "core-011", "core-011"];
 
     /// One `attackDeclared` event: who attacked whom, and whether the attack was forced.
@@ -74,7 +76,6 @@ mod tests {
 
         #[test]
         fn r53_every_enemy_unit_attacks_it_in_lane_order_each_its_own_combat_and_it_strikes_back() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-009-base",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
@@ -109,7 +110,6 @@ mod tests {
 
         #[test]
         fn r53_the_forced_attacks_spend_no_exertion_and_ignore_position_and_the_validator() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-009-exertion",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
@@ -135,7 +135,6 @@ mod tests {
 
         #[test]
         fn r53_the_run_stops_once_moths_has_left_the_field() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
@@ -166,7 +165,6 @@ mod tests {
 
         #[test]
         fn r53_radiant_armor_1_reduces_each_hit_and_the_radiant_body_is_a_2_28() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-009-radiant",
                 "p1": { "field": [{ "def": "core-009", "radiant": true }], "library": LIBRARY },

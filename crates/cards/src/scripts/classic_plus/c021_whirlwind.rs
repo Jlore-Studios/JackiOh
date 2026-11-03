@@ -37,6 +37,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -94,7 +96,6 @@ mod tests {
 
             #[test]
             fn r346_deals_1_to_every_unit_on_both_sides_through_armor() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER], "field": [{ "def": BODY, "lane": 2 }] },
                     "p2": { "hand": [FILLER], "field": [{ "def": ARMORED, "lane": 1 }, { "def": BODY, "lane": 3 }] },
@@ -112,7 +113,6 @@ mod tests {
 
             #[test]
             fn r346_divine_shield_still_pops_the_shielded_unit_takes_nothing_and_loses_its_shield() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER] },
                     "p2": { "hand": [FILLER], "field": [SHIELDED] },
@@ -125,7 +125,6 @@ mod tests {
 
             #[test]
             fn r59_every_hit_lands_before_the_state_check_both_1_health_units_die_in_one_check() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER], "field": [{ "def": BODY, "lane": 1, "damage": 8 }] },
                     "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": 1, "damage": 8 }] },
@@ -140,7 +139,6 @@ mod tests {
 
             #[test]
             fn s3_2_only_the_top_of_a_stack_pile_is_hit_the_dormant_card_beneath_is_not() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": 1 }, { "def": "core-092", "lane": 1, "stack": true }] },
@@ -160,7 +158,6 @@ mod tests {
 
             #[test]
             fn b5_e6_spell_damage_raises_each_hit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER], "field": [{ "def": SOLARIUS, "lane": 1 }] },
                     "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": 1 }, { "def": ARMORED, "lane": 2 }] },
@@ -176,7 +173,6 @@ mod tests {
 
             #[test]
             fn s6_1_an_immune_to_spells_unit_takes_none() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": TOP_LOSER, "lane": 1, "radiant": true }, { "def": BODY, "lane": 2 }] },
@@ -190,7 +186,6 @@ mod tests {
 
             #[test]
             fn r386_the_damage_reads_through_param_an_upgrade_makes_it_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER] },
                     "p2": { "hand": [FILLER], "field": [BODY] },
@@ -203,7 +198,6 @@ mod tests {
 
             #[test]
             fn the_base_face_stays_in_the_graveyard_at_the_end_of_the_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -215,7 +209,6 @@ mod tests {
 
             #[test]
             fn a_reborn_unit_it_kills_comes_back_at_1_health() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WHIRLWIND, WHIRLWIND, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": ONE, "lane": 2 }] },
@@ -248,7 +241,6 @@ mod tests {
 
             #[test]
             fn r68_returns_from_the_graveyard_to_its_owner_s_hand_at_the_end_of_the_turn_it_was_played() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": WHIRLWIND, "radiant": true }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "field": [BODY], "library": DECK },
@@ -265,7 +257,6 @@ mod tests {
 
             #[test]
             fn r153_a_radiant_whirlwind_that_reached_the_graveyard_without_being_played_stays_there() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "graveyard": [{ "def": WHIRLWIND, "radiant": true }], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },

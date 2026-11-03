@@ -138,6 +138,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::js;
 
     const MIND: &str = "meditative-022";
@@ -147,7 +148,6 @@ mod tests {
 
     /// p1 plays Mind Games with `mode` (or the Radiant face), over `p1field`/`p2field` units.
     fn mind(mode: &str, radiant: bool, p1field: Value, p2field: Value) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": MIND, "radiant": radiant }, FILLER],
@@ -287,7 +287,6 @@ mod tests {
 
         #[test]
         fn a_full_hand_burns_the_fortify_mind_and_the_secret_stays() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": MIND }, FILLER],
@@ -317,7 +316,6 @@ mod tests {
 
         #[test]
         fn reads_damage_through_param_when_tuned() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": MIND }, FILLER],

@@ -89,7 +89,6 @@ mod tests {
 
         #[test]
         fn deals_3_to_a_unit_which_is_frozen_if_it_lives() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FROSTBOLT, FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -104,7 +103,6 @@ mod tests {
 
         #[test]
         fn deals_3_to_a_hero_and_nothing_is_frozen() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FROSTBOLT, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -117,7 +115,6 @@ mod tests {
 
         #[test]
         fn a_unit_the_hit_destroyed_is_not_frozen() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FROSTBOLT, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "damage": 3 }] },
@@ -131,7 +128,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_makes_it_deal_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FROSTBOLT, FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -150,7 +146,6 @@ mod tests {
 
         #[test]
         fn r1867004_deals_5_to_the_target_and_to_each_unit_beside_it_the_neighbours_not_frozen() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": FROSTBOLT, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE, MENACE, MENACE, MENACE] },

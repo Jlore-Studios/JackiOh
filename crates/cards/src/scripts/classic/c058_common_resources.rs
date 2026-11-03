@@ -45,6 +45,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const RESOURCES: &str = "classic-058";
@@ -111,7 +113,6 @@ mod tests {
 
             #[test]
             fn s2_2_r62_it_is_a_start_of_turn_trigger_of_yours_only_the_opponents_turn_draws_nothing_from_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": RESOURCES, "faceUp": true }], "library": [STOCKPILE] },
                     "p2": { "hand": [FILLER], "library": [VANILLA, MENACE] },
@@ -208,7 +209,6 @@ mod tests {
 
             #[test]
             fn s10_1_it_is_your_draw_in_your_per_turn_count_with_the_turns_own_draw_it_sets_off_c_9_income_tax() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER, VANILLA], "backrow": [{ "def": RESOURCES, "faceUp": true }], "library": [STOCKPILE] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": INCOME_TAX, "faceUp": false }], "library": [VANILLA, MENACE] },

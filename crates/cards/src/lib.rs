@@ -498,6 +498,12 @@ pub(crate) fn preview_seen(
         .collect()
 }
 
+/// The cards' ids, in order (#2930).
+#[cfg(test)]
+pub(crate) fn ids(cards: &[jackioh_engine::CardInstance]) -> Vec<String> {
+    cards.iter().map(|card| card.id.clone()).collect()
+}
+
 /// The cards' def ids, in order.
 #[cfg(test)]
 pub(crate) fn def_ids(cards: &[jackioh_engine::CardInstance]) -> Vec<String> {

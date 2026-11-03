@@ -93,6 +93,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -102,7 +104,6 @@ mod tests {
     /// p1's Playtester stands on the field (base unless `radiant_face`); both sides hold and draw
     /// fillers, so turns pass normally.
     fn standing(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -122,7 +123,7 @@ mod tests {
             .collect()
     }
 
-    fn ids(s: &Scenario) -> Vec<String> {
+    fn hand_ids(s: &Scenario) -> Vec<String> {
         s.hand(P1).iter().map(|card| card.id.clone()).collect()
     }
 
@@ -143,7 +144,7 @@ mod tests {
             #[test]
             fn r2179004_your_start_of_turn_adds_one_book_at_random_and_opens_no_prompt() {
                 let mut s = standing("playtester", false);
-                let before = ids(&s);
+                let before = hand_ids(&s);
                 s.start_turn();
                 assert!(s.state().pending.is_none());
                 let made = books_added(&s, &before);
@@ -162,11 +163,11 @@ mod tests {
                 let mut seen: IndexSet<String> = IndexSet::new();
                 for n in 0..16 {
                     let mut s = standing(&format!("playtester-{n}"), false);
-                    let before = ids(&s);
+                    let before = hand_ids(&s);
                     s.start_turn();
                     let made = books_added(&s, &before);
                     let mut again = standing(&format!("playtester-{n}"), false);
-                    let again_before = ids(&again);
+                    let again_before = hand_ids(&again);
                     again.start_turn();
                     assert_eq!(def_ids(&made), def_ids(&books_added(&again, &again_before)));
                     seen.extend(def_ids(&made));
@@ -177,7 +178,7 @@ mod tests {
             #[test]
             fn nothing_at_the_opponents_start_of_turn() {
                 let mut s = standing("playtester-foe", false);
-                let before = ids(&s);
+                let before = hand_ids(&s);
                 s.end_turn();
                 assert!(s.state().pending.is_none());
                 assert!(books_added(&s, &before).is_empty());
@@ -185,7 +186,6 @@ mod tests {
 
             #[test]
             fn a_full_hand_burns_the_book() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "playtester-full",
                     "p1": {
@@ -205,7 +205,7 @@ mod tests {
                 crate::register_all();
                 let mut s = standing("playtester-param", false);
                 crate::upgrade_number(&mut s, PLAYTESTER, "books");
-                let before = ids(&s);
+                let before = hand_ids(&s);
                 s.start_turn();
                 // The turn draw plus two Books, both the same one.
                 assert_eq!(s.hand(P1).len(), before.len() + 3);
@@ -221,7 +221,7 @@ mod tests {
             #[test]
             fn r2179004_radiant_the_book_is_radiant() {
                 let mut s = standing("playtester-radiant", true);
-                let before = ids(&s);
+                let before = hand_ids(&s);
                 s.start_turn();
                 assert!(s.state().pending.is_none());
                 let made = books_added(&s, &before);
@@ -238,7 +238,7 @@ mod tests {
             fn r767000_r1161_a_game_on_v0_5_2_asks_its_controller_and_adds_the_book_chosen() {
                 crate::under_kept(PLAYTESTER, script_v0_5_2(), || {
                     let mut s = standing("playtester-kept", false);
-                    let before = ids(&s);
+                    let before = hand_ids(&s);
                     s.start_turn();
                     let pending = s.state().pending.clone().expect("a prompt is open");
                     assert_eq!(pending.kind, PromptKind::Mode);

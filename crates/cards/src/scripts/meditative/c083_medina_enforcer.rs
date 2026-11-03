@@ -33,7 +33,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use crate::filler;
-    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -62,7 +63,6 @@ mod tests {
 
             #[test]
             fn r62_at_your_end_of_turn_each_hand_card_gets_one_buff() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "enforcer",
                     "p1": {
@@ -83,7 +83,6 @@ mod tests {
 
             #[test]
             fn nothing_at_the_opponents_end_of_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "enforcer-foe",
                     "p1": {
@@ -106,7 +105,6 @@ mod tests {
 
             #[test]
             fn radiant_three_buffs_each() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "enforcer-radiant",
                     "p1": {

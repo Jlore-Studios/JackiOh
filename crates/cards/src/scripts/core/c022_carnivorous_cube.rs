@@ -204,6 +204,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const CUBE: &str = "core-022"; // 4/6, radiant 8/12, cost 3.
@@ -262,7 +264,6 @@ mod tests {
 
             #[test]
             fn r81_cry_sacrifices_the_chosen_permanent_with_no_prompt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-eat",
                     "p1": { "hand": [CUBE, FILLER], "field": [TIMMY] },
@@ -280,7 +281,6 @@ mod tests {
 
             #[test]
             fn r41_r57_r64_death_summons_2_copies_of_the_remembered_card() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-death",
                     "p1": { "hand": [CUBE, FILLER], "field": [TIMMY] },
@@ -305,7 +305,6 @@ mod tests {
             #[test]
             fn r386_an_upgrade_summons_3_copies_and_a_degrade_1() {
                 for (upgrade, copies) in [(true, 3), (false, 1)] {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "seed": "cube-death",
                         "p1": { "hand": [CUBE, FILLER], "field": [TIMMY] },
@@ -331,7 +330,6 @@ mod tests {
 
             #[test]
             fn r428_a_backrow_permanent_is_no_meal_naming_one_refuses_the_play() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-backrow",
                     "p1": { "hand": [CUBE, FILLER], "backrow": [MANA_WELL], "field": [TIMMY] },
@@ -347,7 +345,6 @@ mod tests {
 
             #[test]
             fn r428_with_only_a_backrow_permanent_beside_it_the_cube_has_nothing_to_eat_the_cry_fizzles_and_death_does_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-backrow-only",
                     "p1": { "hand": [CUBE, FILLER], "backrow": [MANA_WELL] },
@@ -369,7 +366,6 @@ mod tests {
 
             #[test]
             fn r41_r57_copies_keep_the_eaten_card_s_radiant_flag_and_stats_override() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-stats",
                     "p1": { "hand": [CUBE, FILLER], "field": [{ "def": TIMMY, "radiant": true }] },
@@ -400,7 +396,6 @@ mod tests {
 
             #[test]
             fn r41_nothing_to_tribute_the_cry_fizzles_and_the_cube_still_enters() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-hungry",
                     "p1": { "hand": [CUBE, FILLER] },
@@ -415,7 +410,6 @@ mod tests {
 
             #[test]
             fn r41_nothing_eaten_death_does_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-hungry-death",
                     "p1": { "hand": [CUBE, FILLER] },
@@ -438,7 +432,6 @@ mod tests {
 
             #[test]
             fn r41_r64_death_fills_your_board_with_copies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-radiant-fill",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER], "field": [TIMMY] },
@@ -465,7 +458,6 @@ mod tests {
 
             #[test]
             fn r428_the_radiant_cube_cannot_eat_a_backrow_permanent_either() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-radiant-backrow",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER], "backrow": [MANA_WELL], "field": [TIMMY] },
@@ -483,7 +475,6 @@ mod tests {
 
             #[test]
             fn r41_nothing_eaten_death_does_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-radiant-hungry",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER] },
@@ -503,7 +494,6 @@ mod tests {
 
             #[test]
             fn the_cry_is_kept_the_radiant_face_still_eats_and_remembers_s8_conventions() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "cube-radiant-eat",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER], "field": [TIMMY] },
@@ -545,7 +535,6 @@ mod tests {
     /// R2476000, R41: a Cube whose Cry found nothing to eat shows the dash, and its Death copies nothing.
     #[test]
     fn r2476000_a_cube_that_ate_nothing_shows_the_dash() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "cube-preview-hungry",
             "p1": { "hand": [CUBE, FILLER] },
@@ -562,7 +551,6 @@ mod tests {
     /// R1081000: a Unit standing in the backrow is one of your other Units, so the Cube eats it.
     #[test]
     fn r1081000_it_eats_a_unit_standing_in_the_backrow() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "cube-eat-standing",
             "p1": { "hand": [CUBE, FILLER], "field": [TIMMY] },

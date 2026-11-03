@@ -105,6 +105,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const BREAD_TOKEN: &str = "core-t-bread";
 
     fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
@@ -125,7 +127,6 @@ mod tests {
 
         #[test]
         fn r62_fires_in_the_end_of_turn_trap_window_of_its_controller_s_own_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": ["core-018"], "mana": 2, "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] }
@@ -140,7 +141,6 @@ mod tests {
 
         #[test]
         fn r62_r52_fires_at_the_opponent_s_end_of_turn_and_the_token_goes_to_the_trap_s_controller() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": ["core-018"], "field": ["core-012"], "library": ["core-010"] },
@@ -160,7 +160,6 @@ mod tests {
 
         #[test]
         fn x_is_the_ending_player_s_unspent_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": ["core-018"], "mana": 4, "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] }
@@ -174,7 +173,6 @@ mod tests {
 
         #[test]
         fn a_turn_ended_with_no_unspent_mana_summons_nothing_and_leaves_the_trap_armed_and_face_down() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": ["core-018"], "field": ["core-012"], "mana": 0, "library": ["core-010"] },
                 "p2": { "field": ["core-020"], "library": ["core-010"] }
@@ -195,7 +193,6 @@ mod tests {
 
         #[test]
         fn s5_1_a_field_trap_is_not_consumed_it_stays_on_the_field_and_pays_out_again() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": ["core-018"], "mana": 1, "library": ["core-010", "core-011"] },
                 "p2": { "field": ["core-012"], "library": ["core-010", "core-011"] }
@@ -224,7 +221,6 @@ mod tests {
 
         #[test]
         fn summons_a_3x_3x_bread_token() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [{ "def": "core-018", "radiant": true }], "mana": 2, "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] }
@@ -239,7 +235,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_it_4x_and_a_degrade_2x_and_the_preview_reads_the_moved_multiplier() {
             for (upgrade, multiplier) in [(true, 4), (false, 2)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": [{ "def": "core-018", "radiant": true }], "mana": 2, "library": ["core-010"] },
                     "p2": { "field": ["core-012"], "library": ["core-010"] }
@@ -266,7 +261,6 @@ mod tests {
 
         #[test]
         fn r749_the_base_face_s_multiplier_of_1_is_never_tuned() {
-            crate::register_all();
             let s = scenario(json!({ "p1": { "backrow": ["core-018"] } }));
             assert!(!crate::can_upgrade_number(&s, "core-018", "multiplier"));
             assert!(!crate::can_degrade_number(&s, "core-018", "multiplier"));
@@ -274,7 +268,6 @@ mod tests {
 
         #[test]
         fn r52_the_3x_token_still_goes_to_the_trap_s_controller_at_the_opponent_s_end_of_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [{ "def": "core-018", "radiant": true }], "field": ["core-012"], "library": ["core-010"] },
@@ -292,7 +285,6 @@ mod tests {
 
         #[test]
         fn t3_0_is_still_nothing_no_token_at_0_unspent_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "backrow": [{ "def": "core-018", "radiant": true }],
@@ -406,7 +398,6 @@ mod tests {
 
         #[test]
         fn r662_in_hand_it_never_glows_its_condition_is_the_field_s() {
-            crate::register_all();
             let s = scenario(json!({ "seed": "r662-018-hand", "p1": { "hand": ["core-018", "core-010"], "mana": 3 } }));
             let id = s.card("core-018").id.clone();
             assert!(!hand_glows(&s, &id, PlayerId::P1));

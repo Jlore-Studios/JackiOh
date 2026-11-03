@@ -47,6 +47,8 @@ mod tests {
     use jackioh_engine::effects::summon_copy;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const EXPLORER: &str = "classicplus-075";
     const PACK: &str = "classicplus-075-1";
     const FILLER: &str = "core-005";
@@ -125,7 +127,6 @@ mod tests {
 
             #[test]
             fn r1_a_copy_summoned_of_it_fires_no_cry_no_pack() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [EXPLORER], "library": [FILLER] },
                     "p2": { "hand": [FILLER] },

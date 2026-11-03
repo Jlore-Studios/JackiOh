@@ -45,6 +45,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -61,7 +63,6 @@ mod tests {
 
     #[test]
     fn r386_a_degrade_makes_the_mythics_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, FILLER, TIMMY] }, "p2": { "hand": [FILLER] } }));
         assert!(!crate::can_upgrade_number(&s, MYTHIC_GRAPE, "setCost"));
         assert_eq!(crate::degrade_number(&mut s, MYTHIC_GRAPE, "setCost"), 1);
@@ -76,7 +77,6 @@ mod tests {
 
         #[test]
         fn s6_3_each_other_hand_card_goes_to_your_graveyard_and_is_replaced_one_for_one_by_a_mythic_costing_0() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, FILLER, TIMMY, FILLER] }, "p2": { "hand": [FILLER] } }));
             let old: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| card.def_id != MYTHIC_GRAPE).collect();
             s.play(MYTHIC_GRAPE, json!({}));
@@ -97,7 +97,6 @@ mod tests {
 
         #[test]
         fn build_it_is_not_a_discard_no_discarded_event_each_card_reported_by_enteredgraveyard() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, FILLER, TIMMY] }, "p2": { "hand": [FILLER] } }));
             let old: Vec<String> = s
                 .hand(P1)
@@ -140,7 +139,6 @@ mod tests {
 
         #[test]
         fn r11_a_unit_token_card_in_the_hand_ceases_to_exist_and_is_still_replaced() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, RUSH, FILLER] }, "p2": { "hand": [FILLER] } }));
             let token = s.card(RUSH).id.clone();
             s.play(MYTHIC_GRAPE, json!({}));
@@ -150,7 +148,6 @@ mod tests {
 
         #[test]
         fn r129_an_empty_hand_does_nothing_and_draws_nothing_from_the_rng() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE] }, "p2": { "hand": [FILLER] } }));
             let cursor = s.state().rng_cursor;
             s.play(MYTHIC_GRAPE, json!({}));
@@ -161,7 +158,6 @@ mod tests {
 
         #[test]
         fn r97_the_old_cards_are_public_in_the_graveyard_the_new_ones_reach_the_opponent_under_the_sentinel() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, TIMMY] }, "p2": { "hand": [FILLER] } }));
             let old = s.card(TIMMY).id.clone();
             s.play(MYTHIC_GRAPE, json!({}));
@@ -195,7 +191,6 @@ mod tests {
 
         #[test]
         fn r74_the_mythics_are_radiant_and_cost_0() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": MYTHIC_GRAPE, "radiant": true }, FILLER, TIMMY] },
                 "p2": { "hand": [FILLER] }
@@ -209,7 +204,6 @@ mod tests {
 
         #[test]
         fn r129_an_empty_hand_does_nothing_on_the_radiant_face_either() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": MYTHIC_GRAPE, "radiant": true }] }, "p2": { "hand": [FILLER] } }));
             let cursor = s.state().rng_cursor;
             s.play(MYTHIC_GRAPE, json!({}));

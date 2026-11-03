@@ -51,6 +51,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -60,7 +62,6 @@ mod tests {
     /// p1's Printer stands in the backrow (base unless `radiant_face`); both sides hold and draw
     /// fillers, so turns pass normally.
     fn standing(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -189,7 +190,6 @@ mod tests {
 
             #[test]
             fn the_hand_cap_burns_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "printer-burn",
                     "p1": {

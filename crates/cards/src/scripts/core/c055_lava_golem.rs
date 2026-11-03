@@ -52,6 +52,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -89,7 +91,6 @@ mod tests {
 
         #[test]
         fn s6_3_is_paid_with_three_of_your_own_units_which_are_sacrificed_to_your_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": fodder() } }));
             let paid = ids_at(&s, P1, &[1, 2, 3]);
 
@@ -108,7 +109,6 @@ mod tests {
 
         #[test]
         fn r90_a_play_with_too_few_units_is_refused_outright_s6_3_tribute_is_a_cost() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }] } }));
             let one = ids_at(&s, P1, &[1]);
 
@@ -123,7 +123,6 @@ mod tests {
 
         #[test]
         fn s3_2_one_sheep_plus_one_other_unit_pays_the_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }, { "def": "core-053", "lane": 2 }] },
             }));
@@ -140,7 +139,6 @@ mod tests {
 
         #[test]
         fn s3_2_the_sheep_is_worth_2_not_3_one_sheep_alone_does_not_pay_this_cost() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }] } }));
             let one = ids_at(&s, P1, &[1]);
 
@@ -151,7 +149,6 @@ mod tests {
         fn s6_3_two_sheep_pay_4_for_a_cost_of_3_and_nothing_smaller_would_do() {
             // Dropping either Sheep leaves 2, under the cost, so the pair is minimal even though it
             // overshoots — the one case §6.3's Sheep clause creates.
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }, { "def": "core-t-sheep", "lane": 2 }] },
             }));
@@ -173,7 +170,6 @@ mod tests {
         fn r101_an_enemy_unit_is_legal_fodder_and_it_is_sacrificed_not_destroyed() {
             // #66 The Rock is Indestructible, so a destroy would be ignored (§4.5 step 1, R46) — a
             // Sacrifice bypasses it (§6.3), which is what makes this the sharp test of the verb used.
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }] },
                 "p2": { "field": [{ "def": "core-066", "lane": 1 }] },
@@ -201,7 +197,6 @@ mod tests {
 
         #[test]
         fn r360_base_one_opposing_unit_in_the_tribute_puts_the_golem_on_the_opponent_s_side_in_the_lane_the_play_named() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }] },
                 "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
@@ -232,7 +227,6 @@ mod tests {
         /// their unit zone of that lane.
         #[test]
         fn r1081000_played_flying_into_the_backrow_it_is_still_summoned_for_the_opponent() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }] },
                 "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
@@ -250,7 +244,6 @@ mod tests {
 
         #[test]
         fn r360_base_the_opponent_s_leftmost_open_zone_when_the_lane_the_play_named_is_taken_there_r15() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"] },
                 "p2": { "field": [
@@ -271,7 +264,6 @@ mod tests {
 
         #[test]
         fn r360_base_a_tribute_of_the_player_s_own_units_only_keeps_the_golem_on_their_side() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": fodder() },
                 "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
@@ -286,7 +278,6 @@ mod tests {
 
         #[test]
         fn r360_radiant_opposing_units_may_pay_and_the_golem_stays_with_the_player() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-055", "radiant": true }] },
                 "p2": { "field": fodder() },
@@ -306,7 +297,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_no_armor_on_either_face_so_every_point_of_a_hit_lands() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "core-055", "lane": 1 }] },
                 "p2": { "field": [{ "def": "core-t-rush", "lane": 1 }], "hand": ["core-010"] },
@@ -320,7 +310,6 @@ mod tests {
 
         #[test]
         fn s4_2_step_3_taunt_the_enemy_cannot_go_past_it_to_the_hero() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "core-055", "lane": 2 }] },
                 "p2": { "field": [{ "def": "core-t-rush", "lane": 1 }], "hand": ["core-010"] },
@@ -339,7 +328,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_a_20_10_taunt_with_no_indestructible_so_it_takes_damage_and_can_die() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "core-055", "radiant": true, "lane": 1 }] },
                 "p2": { "field": [{ "def": "core-054", "lane": 1 }], "hand": ["core-010"] },
@@ -356,7 +344,6 @@ mod tests {
 
         #[test]
         fn s8_the_radiant_face_keeps_tribute_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-055", "radiant": true }], "field": [{ "def": "core-053", "lane": 1 }] },
             }));
@@ -367,7 +354,6 @@ mod tests {
 
         #[test]
         fn s6_3_a_radiant_golem_on_the_field_is_legal_fodder_like_any_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": ["core-055"],
@@ -391,7 +377,6 @@ mod tests {
 
         #[test]
         fn r65_a_costoverride_of_0_pays_no_mana_but_still_owes_the_tribute() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }], "mana": 0 } }));
             // The card #41 Sheepish's radiant creates; a Tribute is an additional cost no price touches (§6.3).
             set_cost_override(&mut s, "core-055", 0);
@@ -402,7 +387,6 @@ mod tests {
 
         #[test]
         fn r65_with_three_units_the_free_copy_plays_for_0_mana_and_still_sacrifices_all_three() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": fodder(), "mana": 0 } }));
             set_cost_override(&mut s, "core-055", 0);
             let paid = ids_at(&s, P1, &[1, 2, 3]);

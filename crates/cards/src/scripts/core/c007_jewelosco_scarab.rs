@@ -68,6 +68,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// The open Discover prompt as its owner sees it (§10.8).
     fn discover(s: &Scenario) -> PendingPromptView {
         match s.view(PlayerId::P1).pending {
@@ -104,7 +106,6 @@ mod tests {
 
         #[test]
         fn base_cry_offers_3_distinct_2_cost_non_token_cards_of_every_set_r380_and_never_n7_itself_s5_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-offer",
                 "p1": { "hand": ["core-007"], "mana": 4, "library": ["core-020"] },
@@ -138,7 +139,6 @@ mod tests {
 
         #[test]
         fn r81_the_answer_puts_the_chosen_card_in_hand_and_the_sequence_resumes() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-answer",
                 "p1": { "hand": ["core-007", "core-011"], "mana": 4, "library": ["core-020"] },
@@ -169,7 +169,6 @@ mod tests {
 
         #[test]
         fn an_empty_pool_would_fizzle_and_the_answer_only_ever_adds_one_card() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-single",
                 "p1": { "hand": ["core-007"], "mana": 4, "library": ["core-020"] }
@@ -185,7 +184,6 @@ mod tests {
 
         #[test]
         fn radiant_cry_discovers_a_3_cost_card_and_it_costs_2_s8_1_r65() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-radiant",
                 // #26 Glowy Jelly Bean makes a chosen hand card Radiant, the only way to hold one in hand:
@@ -225,7 +223,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_makes_the_radiant_discount_2_and_a_degrade_finds_it_at_its_floor_of_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-007-radiant",
                 "p1": { "hand": [{ "def": "core-007", "radiant": true }], "library": ["core-020"] },

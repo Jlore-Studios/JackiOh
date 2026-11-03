@@ -42,7 +42,6 @@ mod tests {
 
     #[test]
     fn r1066_cry_summons_a_ready_im_owned_and_controlled_by_the_opponent_leftmost() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [DOOM, FILLER] },
             "p2": { "hand": [FILLER], "field": [{ "def": "core-008", "lane": 2 }] },
@@ -71,7 +70,6 @@ mod tests {
 
     #[test]
     fn r1_cast_it_still_summons() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [DOOM, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -99,7 +97,6 @@ mod tests {
 
     #[test]
     fn radiant_also_a_radiant_one_for_you() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": DOOM, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER] },

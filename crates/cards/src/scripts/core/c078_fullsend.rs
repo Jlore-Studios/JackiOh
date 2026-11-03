@@ -83,6 +83,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -191,7 +193,6 @@ mod tests {
 
         #[test]
         fn r364_a_refresh_never_goes_past_max_temporary_mana_above_it_is_not_topped_up() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FULLSEND, COST_0], "library": LIBRARY, "mana": 6 },
                 "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }

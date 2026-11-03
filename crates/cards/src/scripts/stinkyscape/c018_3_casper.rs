@@ -192,7 +192,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, js, scenario};
+    use crate::{ids, filler, js, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -244,10 +244,6 @@ mod tests {
             }
         }
         json!("not on the field")
-    }
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
     }
 
     fn allured(s: &Scenario) -> String {

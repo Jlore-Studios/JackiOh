@@ -669,13 +669,53 @@ describe("R1655000 a card in context", () => {
     open(CUBE, new Map([[CUBE, new Set([VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID])]]));
     expect(large().getAttribute("data-full-art")).toBeNull();
     fireEvent.click(item(VERSION_FULL_ART_ID));
+    // R2949000: Signature, owned, waits for Animated, which is not: a click writes nothing.
+    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-owned", "true");
+    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
     fireEvent.click(item(AUGMENT_SIGNATURE_ID));
     fireEvent.mouseLeave(item(AUGMENT_SIGNATURE_ID));
-    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_SIGNATURE_ID] });
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID });
     expect(large().getAttribute("data-full-art")).toBe("true");
     expect(large().getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
-    expect(large().getAttribute("data-augments")).toBe(AUGMENT_SIGNATURE_ID);
+    expect(large().getAttribute("data-augments")).toBeNull();
     expect(item(AUGMENT_ANIMATED_ID)).toHaveAttribute("data-owned", "false");
+  });
+
+  it("R2949000 the Signature toggle waits for Full art and Animated, and turning either off turns it off", () => {
+    open(CUBE);
+    const signature = (): HTMLElement => item(AUGMENT_SIGNATURE_ID);
+    // On the normal face, and on Full art alone, it waits: it says what it needs, and a click writes nothing.
+    expect(signature()).toHaveAttribute("data-waits", "true");
+    expect(signature()).toHaveAttribute("aria-disabled", "true");
+    expect(signature()).toHaveTextContent("Needs Full art and Animated");
+    fireEvent.click(signature());
+    expect(readCardPicks(CUBE)).toEqual({});
+    fireEvent.click(item(VERSION_FULL_ART_ID));
+    expect(signature()).toHaveAttribute("data-waits", "true");
+    fireEvent.click(signature());
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID });
+    // With both on it is a toggle like any other, and the large card signs.
+    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    expect(signature()).not.toHaveAttribute("data-waits");
+    expect(signature()).not.toHaveAttribute("aria-disabled");
+    expect(signature()).not.toHaveTextContent("Needs Full art and Animated");
+    fireEvent.click(signature());
+    fireEvent.mouseLeave(signature());
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] });
+    expect(signature()).toHaveAttribute("data-equipped", "true");
+    expect(large().querySelector(".cf-signature")).not.toBeNull();
+    // Animated off takes Signature with it.
+    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: VERSION_FULL_ART_ID });
+    expect(signature()).toHaveAttribute("data-equipped", "false");
+    expect(signature()).toHaveAttribute("data-waits", "true");
+    // Back on, Signature on again, then the normal face: Animated stays, Signature goes.
+    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    fireEvent.click(signature());
+    fireEvent.click(item(NO_FULL_ART_ID));
+    fireEvent.mouseLeave(item(NO_FULL_ART_ID));
+    expect(readCardPicks(CUBE)).toEqual({ fullArt: false, augments: [AUGMENT_ANIMATED_ID] });
+    expect(large().querySelector(".cf-signature")).toBeNull();
   });
 
   it("R1655000 Escape closes the view, but the card's text open over it takes the Escape first", () => {
