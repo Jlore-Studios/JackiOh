@@ -11,8 +11,13 @@
 // Issue #2790: the defensive and life keywords' beats, on the same machinery and the same caps.
 // Divine Shield and Armor fold into the `ward` motif (R2784000): the row draws the gold ring, shards
 // and shield flash, the beat only the callout (and Armor's grey absorbed-amount splat, R1361).
-// Indestructible, Immutable, Brittle, Immune to Spells, Taunt, Can't Defend and Can't attack read the
-// keywords the view shows; Reborn keys on the `via` the engine sets on its `summoned` (R2783001).
+// Indestructible keys on the absorption R1361 reports when Armor takes a hit whole on its holder (a
+// hit meeting Indestructible itself is stopped unreported, so no `damage` key could fire); Immutable
+// and Immune to Spells key on the grant that raises their shell and ward (a refused change emits
+// nothing, and a Spell can never name an Immune unit, so no bounce or fizzle key could fire); Can't
+// attack keys on a forced declaration naming its holder (a declared one is refused with no event, a
+// forced attack skips the validator, R53). Brittle, Taunt and Can't Defend read the keywords the view
+// shows; Reborn keys on the `via` the engine sets on its `summoned` (R2783001).
 
 import { hasKeyword, type GameEvent, type KeywordKind, type PlayerView, type UnitView } from "@jackioh/shared";
 
@@ -367,24 +372,28 @@ function armorBeat(event: Extract<GameEvent, { type: "damageAbsorbed" }>, ctx: C
 }
 
 /**
- * Indestructible: a lethal hit lands, the unit flashes white-hot and rings, and no splat or crack
- * follows: it does not die. It plays only while no `destroyed` of the unit is on the way, in the
- * entry's own events or the ones before it; the damage row is replaced, so no number lands.
+ * Indestructible (R1361): a hit its Armor takes whole, lethal and with no `destroyed` of the unit on
+ * the way: the unit flashes white-hot and rings, and it does not die. A hit meeting Indestructible
+ * itself is stopped unreported (§4.4 step 4, before any event), so a `damage` key could never fire;
+ * the absorption its Armor reports is the reachable half. A routed hit's own combat beat draws it
+ * instead, so this keys on an absorption with no `via`, as the Armor beat does. The ward row's flash
+ * and the Armor beat's grey splat stay: the beat adds only the flash and the ring.
  */
-function indestructibleBeat(event: Extract<GameEvent, { type: "damage" }>, ctx: Ctx): Beat[] {
+function indestructibleBeat(event: Extract<GameEvent, { type: "damageAbsorbed" }>, ctx: Ctx): Beat[] {
+  if (event.via !== undefined) return [];
   const unit = unitOf(ctx.view, event.targetId);
   const holder = anchorOf(ctx.view, event.targetId);
   if (unit === null || holder === null) return [];
-  if (!hasKeyword(unit.keywords, "Indestructible") || event.amount < unit.health) return [];
+  if (!hasKeyword(unit.keywords, "Indestructible") || event.absorbed < unit.health) return [];
   const destroyed = [...ctx.history, ...ctx.entry.events].some((past) => past.type === "destroyed" && past.instanceId === event.targetId);
   if (destroyed) return [];
-  const spec = looking(FLAVOR_LOOKS.Physical, ctx.env, "replace");
+  const spec = looking(FLAVOR_LOOKS.Physical, ctx.env, "keep");
   return [
     {
       keyword: "Indestructible",
       event,
       holder,
-      replaces: true,
+      replaces: false,
       plan(D) {
         const t = timesOf(D);
         return [
@@ -398,12 +407,16 @@ function indestructibleBeat(event: Extract<GameEvent, { type: "damage" }>, ctx: 
   ];
 }
 
-/** Immutable: a nerf, tune-up or number set aimed at the unit bounces off a glassy shell. */
-function immutableBeat(event: Extract<GameEvent, { type: "degraded" | "upgraded" | "numberChanged" }>, ctx: Ctx): Beat[] {
-  const unit = unitOf(ctx.view, event.instanceId);
+/**
+ * Immutable (R23, R386): gaining the keyword snaps a glassy shell shut around the unit. A nerf,
+ * tune-up, transform or number set aimed at it is refused with no event, so no bounce key could
+ * fire; the grant is the reachable half. Keyed on the granted kind, as Taunt's arrival is: the
+ * pre-action view has no keyword to read yet.
+ */
+function immutableBeat(event: Extract<GameEvent, { type: "keywordGranted" }>, ctx: Ctx): Beat[] {
+  if (event.keyword.kind !== "Immutable" || event.lost === true) return [];
   const holder = anchorOf(ctx.view, event.instanceId);
-  if (unit === null || holder === null) return [];
-  if (!hasKeyword(unit.keywords, "Immutable")) return [];
+  if (holder === null) return [];
   const spec = looking(FLAVOR_LOOKS.Tech, ctx.env, "keep");
   return [
     {
@@ -475,15 +488,15 @@ function brittleShatterBeat(event: Extract<GameEvent, { type: "crumbled" }>, ctx
   return [{ keyword: "Brittle", event, holder: tid(tgt), replaces: false, plan: () => [] }];
 }
 
-/** Immune to Spells: a Spell aimed at the unit fizzles on a rune ward. */
-function immuneBeat(event: Extract<GameEvent, { type: "cardAnnounced" }>, ctx: Ctx): Beat[] {
-  if (event.cardType !== "Spell") return [];
-  const immune = event.targets.find((id) => {
-    const unit = unitOf(ctx.view, id);
-    return unit !== null && hasKeyword(unit.keywords, "Immune to Spells");
-  });
-  if (immune === undefined) return [];
-  const holder = anchorOf(ctx.view, immune);
+/**
+ * Immune to Spells (R81): gaining the keyword raises a rune ward around the unit, in the `negate`
+ * motif's ring-and-smoke vocabulary. A Spell can never name the unit (no declaration offers it, and
+ * every resolving effect passes it by in silence), so no fizzle key could fire; the grant is the
+ * reachable half. Keyed on the granted kind, as Taunt's arrival is.
+ */
+function immuneBeat(event: Extract<GameEvent, { type: "keywordGranted" }>, ctx: Ctx): Beat[] {
+  if (event.keyword.kind !== "Immune to Spells" || event.lost === true) return [];
+  const holder = anchorOf(ctx.view, event.instanceId);
   if (holder === null) return [];
   const spec = looking(FLAVOR_LOOKS.Tech, ctx.env, "keep");
   return [
@@ -535,15 +548,6 @@ function chainBeat(keyword: "Can't attack" | "Can't Defend", event: GameEvent, c
   ];
 }
 
-/** Can't attack: the unit is chosen for an attack it cannot make, and the attack is cancelled. */
-function cantAttackBeat(event: Extract<GameEvent, { type: "attackCancelled" }>, ctx: Ctx): Beat[] {
-  const unit = unitOf(ctx.view, event.attackerId);
-  const holder = anchorOf(ctx.view, event.attackerId);
-  if (unit === null || holder === null) return [];
-  if (!hasKeyword(unit.keywords, "Can't attack")) return [];
-  return chainBeat("Can't attack", event, ctx, holder);
-}
-
 /** Can't Defend: the unit is skipped by the position switch it cannot make. */
 function cantDefendBeat(event: Extract<GameEvent, { type: "positionSwitched" }>, ctx: Ctx): Beat[] {
   const unit = unitOf(ctx.view, event.instanceId);
@@ -592,15 +596,22 @@ function attackBeats(event: Extract<GameEvent, { type: "attackDeclared" }>, ctx:
       },
     });
   }
+  // Issue #2790: Can't attack. A declared attack by the holder is refused with no event, but a
+  // forced attack skips the validator (R53), so a forced declaration naming it is the reachable
+  // "chosen for the action it can't take": chains clink over it. The `forced` gate matters: a
+  // non-forced declaration by it is what the engine refuses, so that stream cannot occur live.
+  if (event.forced === true && hasKeyword(unit.keywords, "Can't attack")) {
+    beats.push(...chainBeat("Can't attack", event, ctx, holder));
+  }
   return beats;
 }
 
 function beatsAt(event: GameEvent, ctx: Ctx): Beat[] {
   switch (event.type) {
     case "damage":
-      return [...hitBeats(event, ctx), ...indestructibleBeat(event, ctx), ...brittleCrackBeat(event, ctx)];
+      return [...hitBeats(event, ctx), ...brittleCrackBeat(event, ctx)];
     case "damageAbsorbed":
-      return [...hitBeats(event, ctx), ...armorBeat(event, ctx)];
+      return [...hitBeats(event, ctx), ...armorBeat(event, ctx), ...indestructibleBeat(event, ctx)];
     case "healed":
       return event.via === "Lifesteal" ? lifestealBeat(event, ctx) : [];
     case "destroyed":
@@ -614,15 +625,7 @@ function beatsAt(event: GameEvent, ctx: Ctx): Beat[] {
     case "crumbled":
       return brittleShatterBeat(event, ctx);
     case "keywordGranted":
-      return tauntArrivalBeat(event, ctx);
-    case "cardAnnounced":
-      return immuneBeat(event, ctx);
-    case "degraded":
-    case "upgraded":
-    case "numberChanged":
-      return immutableBeat(event, ctx);
-    case "attackCancelled":
-      return cantAttackBeat(event, ctx);
+      return [...tauntArrivalBeat(event, ctx), ...immutableBeat(event, ctx), ...immuneBeat(event, ctx)];
     case "positionSwitched":
       return cantDefendBeat(event, ctx);
     default:
