@@ -59,10 +59,15 @@ func startMessage(assignment *Assignment, cfg *config.Config, chained bool) stri
 	}
 	var end string
 	if assignment.Review != nil && chained {
-		// Its own review run on this subscription reviews it (#2748, 2026-11-02).
+		// Its own review run on this subscription reviews it (#2748, 2026-11-02), on the model that
+		// built it (#2903).
+		reviewer := assignment.Review
+		if assignment.Build != nil {
+			reviewer = assignment.Build
+		}
 		steps = append(steps, fmt.Sprintf("open the pull request, so CI starts, and hand this lane to "+
-			"its own review run, where %s reviews the change adversarially and fixes what it finds, up "+
-			"to %s rounds", assignment.Review.Describe(),
+			"its own review run, where %s reviews the change adversarially in a fresh session and fixes "+
+			"what it finds, up to %s rounds", reviewer.Describe(),
 			py.Str(cfg.MaxReviewCycles.GetOr(assignment.Difficulty, 3))))
 		end = "It merges once " + reviewrule.Summary + " approved it."
 	} else if assignment.Review != nil {
@@ -204,6 +209,14 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				"spec first, then many agents writing its parts at once, each in its own worktree "+
 				"and branch, reconciled against tests written from the spec. %s",
 				RunLink(cfg), assignment.Build.Describe(), startMessage(assignment, cfg, chains))
+		case assignment.Action == "plan" && assignment.InLane:
+			// In a lane of its own subscription (#2903): its build follows there, on the same model.
+			planned.Set("build_next", true)
+			message = fmt.Sprintf("Planning this now%s, on %s (`%s`), in a lane of `%s`: it is "+
+				"difficulty:%s. The plan goes into this issue's description, under **Plan**; then this "+
+				"lane is kept for its build, which starts at once on the same model in a fresh session, "+
+				"and that build hands the lane on to its own review run, on the same model too.",
+				RunLink(cfg), assignment.Plan.Describe(), labelNeedsPlan, provider.ID, candidate.Difficulty)
 		case assignment.Action == "plan":
 			message = fmt.Sprintf("Planning this now%s, on %s (`%s`): it is difficulty:%s. The plan "+
 				"goes into this issue's description, under **Plan**, and the lane's owner builds "+
@@ -330,9 +343,10 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
-	if record.Truthy("session") {
+	if record.Truthy("session") && !candidate.OwnReview {
 		// The Claude session the item's last run kept, which a run on its subscription resumes
-		// (#2748): the record only; the work job fetches the sealed file itself.
+		// (#2748): the record only; the work job fetches the sealed file itself. Not an own review
+		// run's: it reviews and fixes in fresh sessions, never its build's (#2903).
 		planned.Set("session", record.Get("session"))
 	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).
@@ -382,6 +396,14 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		entry.Update(pyjson.New("run_id", cfg.RunID, "started_at", clock.ISO(ctx.Now()), "kind", kind,
 			"action", assignment.Action, "stop_requested", false, "pending_request", false,
 			"provider", provider.ID, "runs_on", planned.Get("runs_on"), "live", live))
+		if assignment.Action == "plan" && assignment.InLane {
+			entry.Set(queue.InLaneKey, true) // it holds a lane of its subscription (#2903)
+		} else {
+			entry.Pop(queue.InLaneKey)
+		}
+		if kind == "build" {
+			entry.Pop(queue.BuildNextKey) // the lane its planning run kept is this run's now (#2903)
+		}
 		handedOff := ""
 		if kind != "review" {
 			// The subscription that takes it up owns it (#2748); a held item waits no more.

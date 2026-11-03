@@ -8,6 +8,9 @@ import { manaCrack } from "./core/hinder.ts";
 import { legendaryTide } from "./core/transmogulate.ts";
 import { perfectWish } from "./core/zephrys.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
+import { jadeCrack } from "./meditative/auspiciousRock.ts";
+import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
+import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
 import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
@@ -19,6 +22,9 @@ export const CARD_RECIPES = {
   legendaryTide,
   perfectWish,
   fusionForge,
+  jadeCrack,
+  cnSweep,
+  harmonyWave,
   celestialCall,
   dinoStomp,
   gameDesign,
